@@ -16,3 +16,6 @@ build/
 # (keep migrations tracked)
 *.log
 .DS_Store
+
+# TypeScript incremental build cache — local/machine-specific
+tsconfig.tsbuildinfo
