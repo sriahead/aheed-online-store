@@ -1,0 +1,37 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "aheed-store"
+main = ".open-next/worker.js"
+compatibility_date = "2025-03-25"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets produced by the OpenNext build.
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# ---- Staging -------------------------------------------------------------
+[env.staging]
+name = "aheed-store-staging"
+
+[[env.staging.routes]]
+pattern = "staging.aheedfoodcentre.nocaped.com"
+custom_domain = true
+
+[[env.staging.r2_buckets]]
+binding = "IMAGES"
+bucket_name = "aheed-images-staging"
+
+# ---- Production ----------------------------------------------------------
+[env.production]
+name = "aheed-store-production"
+
+[[env.production.routes]]
+pattern = "aheedfoodcentre.nocaped.com"
+custom_domain = true
+
+[[env.production.r2_buckets]]
+binding = "IMAGES"
+bucket_name = "aheed-images-production"
+
+# NOTE: secrets (DATABASE_URL, S3_*, STRIPE_*, BETTER_AUTH_SECRET) are NOT set here.
+# Add them per environment with:  wrangler secret put NAME --env staging|production

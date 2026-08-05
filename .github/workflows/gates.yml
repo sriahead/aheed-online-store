@@ -1,0 +1,27 @@
+name: gates
+on:
+  pull_request:
+    branches: [staging, main]
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run db:generate         # generate Prisma client (no DB connection)
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Gate 4 — CHANGELOG updated on this branch
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qx 'CHANGELOG.md'; then
+            echo "CHANGELOG.md updated ✓"
+          else
+            echo "::error::Gate 4 failed — CHANGELOG.md was not updated on this branch."
+            exit 1
+          fi

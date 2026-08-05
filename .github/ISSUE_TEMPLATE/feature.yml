@@ -1,0 +1,30 @@
+name: SDD Feature
+description: A roadmap-mapped feature item that flows through the four SDD gates.
+labels: ["type:feature", "gate:propose"]
+body:
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Roadmap phase
+      options: [M0-skeleton, P0, P1, P2, P3, P4, P5, P6, P7, P8]
+    validations: { required: true }
+  - type: input
+    id: value
+    attributes: { label: Value delivered }
+    validations: { required: true }
+  - type: input
+    id: deps
+    attributes: { label: Dependencies }
+  - type: dropdown
+    id: complexity
+    attributes: { label: Estimated complexity, options: [S, M, L] }
+    validations: { required: true }
+  - type: checkboxes
+    id: gates
+    attributes:
+      label: SDD gate checklist
+      options:
+        - label: "Gate 1 — Propose: spec proposal linked and approved"
+        - label: "Gate 2 — Spec: specs/<date-feature>/{plan,requirements,validation}.md committed"
+        - label: "Gate 3 — Validate: tests + validation.md criteria pass"
+        - label: "Gate 4 — Changelog: CHANGELOG.md updated on the branch"

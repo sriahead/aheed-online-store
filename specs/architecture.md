@@ -1,0 +1,327 @@
+# System Architecture — Aheed Online Store
+
+**Status:** Approved architecture baseline. Supersedes the GCP-origin design in the original
+ADR-001. This document is the technical source of truth for infrastructure and layering; it is
+governed by the SDD constitution (propose → spec → validate → changelog).
+
+**Design goal:** a **PostgreSQL-first, vendor-agnostic, cost-effective** cloud-native storefront.
+Every external dependency (compute, database, object storage, payments, email) sits behind an
+environment-configured seam so the platform can move clouds without a rewrite.
+
+> Related decisions: `decisions/ADR-001-hosting.md` (revised — Cloudflare + Neon),
+> `decisions/ADR-002-auth-library.md` (unchanged — Better Auth),
+> `decisions/ADR-003-storage-abstraction.md` (new — S3-compatible storage port).
+
+---
+
+## 1. Updated Technology Stack
+
+| Concern | Choice | Portability seam |
+|---|---|---|
+| Web + API | **Next.js (App Router, TypeScript)** on **Cloudflare** (Pages/Workers via the OpenNext adapter) | Framework-standard; API is plain route handlers + Server Actions. Origin can move to Node/containers unchanged. |
+| Database | **Neon Serverless PostgreSQL** | Standard Postgres wire protocol. `DATABASE_URL` / `DIRECT_URL` only. |
+| ORM | **Prisma** (with driver adapter for the serverless/edge connection) | Schema + queries are provider-neutral Postgres. Adapter is the only swap point. |
+| Object storage | **Cloudflare R2**, accessed **only via the S3-compatible API** (AWS SDK v3 S3 client) | `StorageService` port; `S3_*` env vars. No R2-specific SDK or feature. |
+| Image delivery | CDN in front of the bucket | DB stores **relative keys**; `CDN_BASE_URL` resolved at runtime. |
+| Payments | **Stripe** (Elements/Checkout + webhooks) | `PaymentService` port; card data never touches our servers. |
+| Transactional email | **Resend** | `EmailService` port; swappable for SES/SendGrid. |
+| Auth | **Better Auth** (self-hosted, bearer tokens, RBAC) | Unchanged from ADR-002. |
+| Validation | **zod** (shared client/server, plus env parsing) | — |
+| Caching | Next.js Data/Route cache (portable) + optional edge KV behind a `CacheService` port | Degrades to DB-only; KV ↔ Redis swap. |
+
+**Cost posture:** Neon and R2 both scale to (near) zero when idle; Workers bill per request; R2 has
+**zero egress**. At the MVP's scale this is a low fixed-cost footprint with no idle compute bill.
+
+---
+
+## 2. System Architecture Diagram
+
+### 2.1 Request / data flow
+
+```mermaid
+flowchart TD
+    U["Users (mobile-first browsers)"] --> EDGE["Cloudflare Edge — CDN + WAF"]
+    EDGE --> APP["Next.js on Cloudflare Workers<br/>(Server Components · Server Actions · Route Handlers = REST API)"]
+
+    subgraph CleanArch["Application origin (Clean Architecture)"]
+      APP --> SVC["Application / Service layer<br/>(use cases, orchestration, transactions)"]
+      SVC --> REPO["Repository layer<br/>(ports: ProductRepo, OrderRepo, InventoryRepo …)"]
+      REPO --> PRISMA["Prisma Client (+ serverless driver adapter)"]
+    end
+
+    PRISMA --> NEON[("Neon Serverless PostgreSQL")]
+    SVC --> STORE["StorageService (S3 API port)"] --> R2[("Object Storage — R2 via S3 API")]
+    SVC --> PAY["PaymentService port"] --> STRIPE["Stripe"]
+    SVC --> MAIL["EmailService port"] --> RESEND["Resend"]
+
+    R2 --> CDN["CDN (CDN_BASE_URL)"] --> U
+    STRIPE -- "webhooks (idempotent)" --> APP
+```
+
+### 2.2 Layering (Dependency Inversion — arrows point inward)
+
+```mermaid
+flowchart LR
+    P["Presentation<br/>RSC · Server Actions · Route Handlers"] --> A["Application<br/>Use cases / Services"]
+    A --> D["Domain<br/>Entities · value objects · ports (interfaces)"]
+    A -. depends on abstractions .-> I["Infrastructure<br/>Prisma repos · S3 storage · Stripe · Resend · Cache"]
+    I -. implements ports .-> D
+```
+
+The **domain and application layers know nothing about Neon, R2, Cloudflare, or Stripe.** They
+depend on ports (interfaces). Infrastructure supplies implementations, wired at the composition
+root. That inversion is what makes the migrations in §4 mechanical.
+
+**Strict flow (enforced in review):**
+`Users → Next.js (Cloudflare) → Backend (Server Actions/Route Handlers) → Service → Repository → Prisma → Neon + Object Storage + Stripe.`
+No layer skips inward; components never touch Prisma or the S3 client directly.
+
+---
+
+## 3. Database Design Approach
+
+### 3.1 Modelling rules
+
+- **Strict relational / 3NF.** Every entity is a typed table with explicit foreign keys. **No
+  `Json` columns, no document blobs, no key-value bags** for domain data.
+- **No raw SQL in application code.** All access goes through Prisma's typed query API. (DDL for
+  indexes lives in migrations, which is standard portable SQL, not application queries.)
+- **Provider-neutral types only.** Integers, `text`/`varchar`, `boolean`, `timestamptz`, `numeric`,
+  Prisma enums (compile to standard Postgres enums), `uuid`. **No** `money`, no Neon/RDS-specific
+  extensions in the hot path. `citext`/`pg_trgm` are optional and only via portable migrations.
+- **Money as integer minor units (pence).** Currency stored explicitly (`GBP` default). Avoids
+  float drift and locale-bound types.
+- **Images/large files never in the DB.** Only a **relative storage key** (e.g.
+  `products/{sku}/main.webp`). Full URL is composed at read time from `CDN_BASE_URL`.
+- **Historical snapshots are intentional.** `OrderItem` stores name + unit price at purchase time —
+  a recorded fact, not a normalization breach.
+
+### 3.2 Core schema (representative Prisma excerpt)
+
+```prisma
+enum Role            { CUSTOMER STAFF ADMIN }
+enum OrderStatus     { CONFIRMED OUT_FOR_DELIVERY DELIVERED CANCELLED }
+enum PaymentStatus   { PENDING SUCCEEDED FAILED REFUNDED }
+enum DiscountType    { PERCENTAGE FIXED }
+enum LoyaltyTxnType  { EARN REDEEM }
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now())
+  addresses Address[]
+  orders    Order[]
+  loyalty   LoyaltyAccount?
+  @@index([role])
+}
+
+model Category {
+  id        String     @id @default(uuid())
+  slug      String     @unique
+  name      String
+  parentId  String?
+  parent    Category?  @relation("Sub", fields: [parentId], references: [id])
+  children  Category[] @relation("Sub")
+  sortOrder Int        @default(0)
+  isActive  Boolean    @default(true)
+  products  Product[]
+  @@index([parentId, isActive])
+}
+
+model Product {
+  id          String         @id @default(uuid())
+  slug        String         @unique
+  name        String
+  description String
+  categoryId  String
+  category    Category       @relation(fields: [categoryId], references: [id])
+  basePrice   Int            // pence
+  unitLabel   String         // "£2.40 / kg"
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  images      ProductImage[]
+  inventory   Inventory?
+  @@index([categoryId, isActive])
+  @@index([isActive, basePrice])   // catalogue filter + sort
+}
+
+model ProductImage {
+  id         String  @id @default(uuid())
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  storageKey String  // RELATIVE key only — never a URL
+  alt        String
+  sortOrder  Int     @default(0)
+  isPrimary  Boolean @default(false)
+  @@index([productId, sortOrder])
+}
+
+model Inventory {
+  id                String   @id @default(uuid())
+  productId         String   @unique
+  product           Product  @relation(fields: [productId], references: [id])
+  quantity          Int      @default(0)
+  lowStockThreshold Int      @default(3)
+  updatedAt         DateTime @updatedAt
+}
+
+model Order {
+  id             String        @id @default(uuid())
+  orderNumber    String        @unique
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id])
+  guestEmail     String?
+  status         OrderStatus   @default(CONFIRMED)
+  currency       String        @default("GBP")
+  subtotal       Int
+  deliveryFee    Int           @default(0)
+  discountTotal  Int           @default(0)
+  loyaltyRedeemed Int          @default(0)
+  total          Int
+  createdAt      DateTime      @default(now())
+  items          OrderItem[]
+  statusEvents   OrderStatusEvent[]
+  payment        Payment?
+  @@index([userId, createdAt])       // keyset order history
+  @@index([status, createdAt])       // staff dashboard
+}
+
+model OrderItem {
+  id         String  @id @default(uuid())
+  orderId    String
+  order      Order   @relation(fields: [orderId], references: [id])
+  productId  String
+  productName String // snapshot
+  unitPrice   Int    // snapshot, pence
+  quantity    Int
+  lineTotal   Int
+  @@index([orderId])
+}
+// … Address, OrderStatusEvent, Payment, Cart/CartItem, Discount,
+//    LoyaltyAccount, LoyaltyTransaction, LoyaltyConfig, Review …
+```
+
+### 3.3 Object-storage integration
+
+1. **Upload** (admin): `StorageService.put(key, bytes, contentType)` via the S3 API → returns the
+   **relative key**. Only the key is persisted (`ProductImage.storageKey`).
+2. **Read**: the presentation layer composes `${CDN_BASE_URL}/${storageKey}`. The DB has no
+   knowledge of which CDN or bucket is live.
+3. **Delete / signed uploads**: also through the port, using only standard S3 operations
+   (`PutObject`, `GetObject`, `DeleteObject`, presigned URLs).
+
+Because the key is relative and the base URL is env-resolved, moving buckets or CDNs is a config
+change, not a data migration of DB rows (see §4.2).
+
+### 3.4 Performance strategy (target: ~1,000 orders/day, mobile-first)
+
+**Indexing.** Composite indexes aligned to real access paths: `Product(categoryId, isActive)` and
+`Product(isActive, basePrice)` for browse+filter+sort; `Order(userId, createdAt)` for history;
+`Order(status, createdAt)` for the staff dashboard; unique indexes on `slug`, `orderNumber`,
+`Inventory.productId`. Add a partial/trigram index for name search only when the catalogue grows.
+
+**Pagination.** **Keyset (cursor) pagination** on `(createdAt, id)` everywhere lists can grow
+(product grids, order history, admin tables). Never `OFFSET` — it degrades linearly and is the
+classic mobile-scroll performance trap. Prisma `cursor` + `take` implements this directly.
+
+**Query optimization.** Explicit `select`/`include` (never over-fetch); batch relations to kill
+N+1; per-request memoization with React `cache()`; wrap order creation in a single
+`prisma.$transaction` that decrements `Inventory` atomically; push aggregation (reports) into the
+database rather than the app.
+
+**Caching (layered, portable-first).**
+- CDN caches images and static assets (swappable).
+- Next.js **Data Cache / ISR** for catalogue and product pages — framework-native, moves with the app.
+- Optional **edge KV** for hot reads (categories, homepage rails) behind a `CacheService` port; if
+  absent it falls through to the DB. KV ↔ Redis is a one-file swap.
+- The **database is always the source of truth**; caches are accelerators with explicit TTLs and
+  tag-based invalidation on write.
+
+**Connection handling.** Serverless functions use Neon's pooled endpoint (PgBouncer) at runtime and
+the **direct** endpoint for migrations (`DIRECT_URL`). This keeps connection counts flat under
+bursty Worker invocations.
+
+---
+
+## 4. Migration Strategy (zero lock-in, proven by construction)
+
+### 4.1 Database: Neon → AWS RDS / GCP Cloud SQL / Azure / self-hosted
+
+Because the schema uses only standard Postgres and all queries go through Prisma, the migration is
+config + data, not code:
+
+1. **Provision** the target at the **same major Postgres version**.
+2. **Recreate schema**: `prisma migrate deploy` against the target (schema is provider-neutral), or
+   `pg_dump --schema-only | psql`.
+3. **Move data**: `pg_dump`/`pg_restore` for a maintenance-window cutover, **or** Postgres **logical
+   replication** (Neon publisher → target subscriber) for near-zero downtime.
+4. **Swap the connection**: change `DATABASE_URL` / `DIRECT_URL`, and swap the Prisma **driver
+   adapter** (Neon serverless adapter → standard `pg` adapter / managed pooler such as RDS Proxy or
+   Cloudflare Hyperdrive). This is the *only* code touch, isolated to `lib/db`.
+5. **Verify & cut over**: `prisma migrate status`, run the smoke/integration suite (Gate 3), flip
+   traffic, keep the old DB read-only as a rollback for one cycle.
+
+*No application query, no schema definition, and no domain code changes.*
+
+### 4.2 Object storage: R2 → AWS S3 / GCP Cloud Storage / MinIO / any S3-compatible
+
+Because storage lives behind the `StorageService` port and the DB holds **relative keys**:
+
+1. **Provision** the target bucket.
+2. **Copy objects** preserving keys: `rclone sync` or `aws s3 sync` (both endpoints speak S3).
+   Relative keys are identical on both sides, so **every `storageKey` in the DB stays valid**.
+3. **Repoint config**: change `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`,
+   `S3_REGION`, and `CDN_BASE_URL`. Front the new bucket with CloudFront / Cloud CDN as needed.
+4. **Cut over**: dual-read during the sync window if desired, then flip `CDN_BASE_URL`.
+
+*No code change, no DB row change.* This is the payoff of storing keys, not URLs, and using the
+S3 API rather than an R2-specific SDK.
+
+---
+
+## 5. Development Guidelines
+
+- **Respect the layers.** Presentation → Service → Repository → Prisma. UI/components never import
+  Prisma or the S3 client. Cross-cutting integrations live behind ports in `lib/*`.
+- **Program to interfaces (DIP/SOLID).** Services depend on `ProductRepository`, `StorageService`,
+  `PaymentService`, `EmailService`, `CacheService` — not concretions. One implementation per port,
+  wired at the composition root.
+- **Config only through validated env.** Parse every variable through a typed zod schema in
+  `lib/config`. No literal endpoints, buckets, or keys in code. Required: `DATABASE_URL`,
+  `DIRECT_URL`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION`,
+  `CDN_BASE_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+- **Storage keys, never URLs, in the DB.** Compose URLs at read time only.
+- **No raw SQL, no `Json` columns** for domain data. If you reach for either, revisit the model.
+- **Money is integer pence + explicit currency.** Never floats.
+- **Writes that touch multiple tables run in a transaction.** Order placement decrements stock,
+  writes items, records payment intent, and emits a status event atomically.
+- **Webhooks are idempotent.** Verify Stripe signatures; key side effects on the event id.
+- **Every list is keyset-paginated; every hot query has an index** shipped in the same migration.
+- **SDD gates still apply.** Spec before code, tests + `validation.md` before done, changelog
+  before merge. NFR targets in §3.4 are Gate-3 acceptance criteria.
+
+---
+
+## 6. Future Scaling Roadmap
+
+The clean seams mean growth is handled by swapping or adding infrastructure, not rewriting.
+
+- **MVP (~1k orders/day).** Single Neon project (autoscale, scale-to-zero), Workers, R2 + CDN.
+  Low fixed cost; zero egress.
+- **Growth (~10k orders/day).** Turn on Neon autoscaling/read replicas; add the edge `CacheService`
+  (KV/Redis) for catalogue reads; introduce **Cloudflare Hyperdrive** (or a managed pooler) for
+  connection efficiency; move long-running work (emails, report rollups) to a queue behind a
+  `JobQueue` port.
+- **Scale-out reads.** Route read-heavy catalogue traffic to replicas; keep writes on primary. ISR +
+  CDN absorb most anonymous browsing before it reaches the DB.
+- **Enterprise / off-Cloudflare.** Migrate DB to RDS/Cloud SQL with replicas (§4.1) and storage to
+  S3/GCS (§4.2) — both are config-level. If the edge runtime is ever a constraint, the same Next.js
+  app runs on Node/containers unchanged because the API is standard route handlers.
+- **Specialized subsystems as they earn their place.** Dedicated search (Meilisearch/OpenSearch)
+  behind a `SearchService` port; a separate OLAP store for analytics so reporting never competes
+  with checkout on the OLTP database; multi-region read replicas for latency.
+
+Each step is an infrastructure swap at a single seam — the domain, application, and data model stay
+put. That is the definition of the vendor-agnostic posture this architecture was built to hold.

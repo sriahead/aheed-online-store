@@ -1,0 +1,27 @@
+name: deploy-staging
+on:
+  push:
+    branches: [staging]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging            # uses GitHub 'staging' environment secrets
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+
+      - name: Apply migrations (direct connection)
+        run: npx prisma migrate deploy
+        env:
+          # migrate uses the DIRECT (unpooled) Neon URL; set both so schema env resolves
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DIRECT_URL }}
+
+      - name: Build (OpenNext) & deploy to Workers
+        run: npx opennextjs-cloudflare build && npx wrangler deploy --env staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

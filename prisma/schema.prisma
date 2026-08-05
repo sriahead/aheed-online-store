@@ -1,0 +1,22 @@
+// Walking-skeleton schema: ONE model, just enough to prove the end-to-end DB path.
+// Real relational model (Users, Products, Orders, …) arrives in P1+ per specs/architecture.md.
+
+generator client {
+  provider = "prisma-client-js"
+  // Prisma 6+: driver adapters are GA (no preview flag needed).
+  // Prisma 5:  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")   // pooled (runtime)
+  directUrl = env("DIRECT_URL")     // direct (migrations)
+}
+
+model HealthCheck {
+  id        String   @id @default(uuid())
+  label     String   @default("ok")
+  checkedAt DateTime @default(now())
+
+  @@index([checkedAt])
+}

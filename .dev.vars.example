@@ -1,0 +1,9 @@
+# Cloudflare local-dev bindings (wrangler / OpenNext reads .dev.vars).
+# Copy to .dev.vars for `npm run preview`. NEVER commit real values.
+DATABASE_URL="postgres://...-pooler.../db?sslmode=require"
+S3_ENDPOINT="https://<ACCOUNT_ID>.r2.cloudflarestorage.com"
+S3_BUCKET="aheed-images-staging"
+S3_ACCESS_KEY=""
+S3_SECRET_KEY=""
+S3_REGION="auto"
+CDN_BASE_URL="https://images.aheedfoodcentre.nocaped.com"
