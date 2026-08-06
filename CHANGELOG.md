@@ -7,6 +7,16 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **KMS — front-matter backfill** (`specs/2026-08-06-kms-backfill/`), closing the last deferred
+  item from the KMS foundation slice (`specs/2026-08-06-kms/requirements.md` R8).
+  `ARTIFACT_INDEX.md` now indexes 19 docs instead of 1: `CLAUDE.md`, all three `docs/*.md`, the 9
+  persistent `specs/` docs (architecture, mission, roadmap, tech-stack, design-system,
+  sdd-workflow, and the 3 ADRs), and one representative file per dated slice folder. Matches the
+  precedent already set by `specs/2026-08-06-kms/plan.md`: one indexed entry per meaningful
+  doc/slice, not every acceptance-criteria file — sibling `requirements.md`/`validation.md` files
+  stay deliberately un-indexed. `specs/2026-08-06-p1-auth/requirements.md` is excluded from this
+  slice (doesn't exist on `staging` yet, only on PR #24) — its front-matter lands with that PR
+  instead.
 - **KMS — gate wiring** (`specs/2026-08-06-kms-gates/`), closing the last deferred item from the
   KMS design (`specs/2026-08-06-kms/plan.md` §2, `requirements.md` R8). `gates.yml` now runs
   `kms:validate` and an `ARTIFACT_INDEX.md` staleness check (regenerated and diffed with the

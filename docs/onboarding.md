@@ -1,3 +1,16 @@
+---
+id: onboarding
+title: Onboarding
+audience: [dev]
+type: doc
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: 5-minute start-here guide — prerequisites, local setup, and how to get a new developer running, tested, and branching quickly.
+tags: [onboarding, setup]
+---
+
 # Onboarding
 
 Start here. This gets a new developer running, tested, and branching quickly.

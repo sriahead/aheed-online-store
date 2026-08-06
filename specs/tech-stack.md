@@ -1,3 +1,17 @@
+---
+id: tech-stack
+title: Tech Stack
+audience: [dev]
+type: doc
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal.
+tags: [tech-stack, guardrails]
+related: [adr-001-hosting, adr-002-auth-library, adr-003-storage-abstraction]
+---
+
 # Tech Stack
 
 The technical guardrails for the Aheed Online Store. Where the original proposal and the accepted

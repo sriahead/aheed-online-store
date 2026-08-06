@@ -1,3 +1,16 @@
+---
+id: sdd-workflow
+title: SDD Workflow
+audience: [dev]
+type: doc
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: The seven-stage SDD workflow (Orient, Propose, Spec, Build, Validate, Document, Ship), each also an invokable Claude Code slash command, expanding CLAUDE.md's four gates.
+tags: [sdd, workflow, process]
+---
+
 # SDD Workflow
 
 The operational vocabulary for how work moves through this repo — seven keywords, one per stage,
