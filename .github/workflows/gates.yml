@@ -23,7 +23,7 @@ jobs:
         run: |
           cp ARTIFACT_INDEX.md /tmp/artifact-index-before.md
           npm run kms:build-index
-          normalize() { sed -E 's/Last build: `[^`]+`/Last build: TS/' "$1"; }
+          normalize() { sed -E 's/Last build: `[^`]+`/Last build: TS/; s/commit `[^`]+`/commit SHA/' "$1"; }
           if ! diff <(normalize /tmp/artifact-index-before.md) <(normalize ARTIFACT_INDEX.md) > /tmp/artifact-index.diff; then
             echo "::error::ARTIFACT_INDEX.md is stale — run 'npm run kms:build-index' and commit the result."
             cat /tmp/artifact-index.diff

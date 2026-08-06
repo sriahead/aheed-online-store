@@ -22,9 +22,11 @@ R3. After R1+R2, `npm run kms:validate` reports 0 invalid front-matter files aga
 R4. `.github/workflows/gates.yml` runs `npm run kms:validate` as a gate step — a hard failure
     (genuinely invalid KMS front-matter) fails the PR; missing or non-KMS front-matter does not.
 R5. `.github/workflows/gates.yml` regenerates `ARTIFACT_INDEX.md` (`npm run kms:build-index`) and
-    fails the PR if the result differs from the committed file — compared with the `Last build:`
-    timestamp line normalized out first (a raw `git diff --exit-code` would always show a diff
-    because of that line — flagged as a known follow-up need in
-    `specs/2026-08-06-kms-site/requirements.md` R2).
+    fails the PR if the result differs from the committed file — compared with both the
+    `Last build:` timestamp *and* the `commit` short-SHA normalized out first (a raw
+    `git diff --exit-code` would always show a diff because of the timestamp — flagged as a known
+    follow-up need in `specs/2026-08-06-kms-site/requirements.md` R2 — and the embedded commit SHA
+    is equally unstable: `pull_request`-triggered runs check out a synthetic merge-ref commit that
+    never matches any real local or head commit, confirmed the hard way on this slice's own PR).
 R6. Root `lint`, `typecheck`, `test`, `format:check` remain green after this slice.
 R7. `CHANGELOG.md` updated (Gate 4).
