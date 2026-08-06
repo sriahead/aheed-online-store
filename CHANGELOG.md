@@ -75,6 +75,11 @@ every branch merges.
   to P0 per `specs/roadmap.md`.
 
 ### Fixed
+- `kms/scripts/assemble.ts`, `kms/scripts/build-index.ts`, `kms/site-internal/tsconfig.json`
+  reformatted to satisfy `prettier --check` — missed locally because a Windows checkout
+  (`core.autocrlf=true`) masks real formatting diffs behind line-ending noise; `gates` runs on
+  Linux/LF and caught it. No logic changes. (Landed on `staging` via PR #10; this entry was
+  originally missed there — see #11.)
 - **M0 infrastructure fixes to actually reach `db.ok: true` in production:**
   - `PrismaNeon` adapter takes a `PoolConfig` (`{ connectionString }`), not a `Pool` instance.
   - `prisma/schema.prisma` generator now sets `engineType = "client"` — the default `"library"`
