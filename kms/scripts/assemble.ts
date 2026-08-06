@@ -28,9 +28,11 @@ const RESERVED = new Set(["index.mdx", "_meta.json"]);
 
 function parseArgs(): "internal" | "public" {
   const flag = process.argv.find((a) => a.startsWith("--visibility"));
-  const value = flag?.includes("=") ? flag.split("=")[1] : process.argv[process.argv.indexOf(flag ?? "") + 1];
+  const value = flag?.includes("=")
+    ? flag.split("=")[1]
+    : process.argv[process.argv.indexOf(flag ?? "") + 1];
   if (value !== "internal" && value !== "public") {
-    console.error('assemble — usage: tsx kms/scripts/assemble.ts --visibility internal|public');
+    console.error("assemble — usage: tsx kms/scripts/assemble.ts --visibility internal|public");
     process.exit(1);
   }
   return value;
