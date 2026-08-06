@@ -6,6 +6,21 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+- **KMS — front-matter schema & validator (foundation slice).** First piece of the knowledge-
+  management system design (`specs/2026-08-06-kms/plan.md`): `kms/schema/frontmatter.ts` (the Zod
+  contract — `id`, `title`, `audience`, `type`, `status`, `version`, `updated`, `visibility`,
+  `summary`, `tags`; `visibility` has no default, so a doc can never silently become public) and
+  `kms/schema/validate.ts` (`npm run kms:validate` — walks all `.md`/`.mdx`, hard-fails on invalid
+  front-matter, warns on missing front-matter without blocking). `ARTIFACT_INDEX.md` moved to the
+  repo root per the design's folder structure. Deliberately deferred to follow-up work: the index
+  generator, the internal/public site assembly, CI gate wiring, and backfilling front-matter onto
+  existing docs — see `specs/2026-08-06-kms/requirements.md` R8.
+### Milestone
+- **M0 — Walking Skeleton closed.** `/api/health` returns `db.ok: true` on both staging and
+  production; `gates`, `deploy-staging`, and `deploy-production` all green end-to-end. Proceeding
+  to P0 per `specs/roadmap.md`.
+
 ### Fixed
 - **M0 infrastructure fixes to actually reach `db.ok: true` in production:**
   - `PrismaNeon` adapter takes a `PoolConfig` (`{ connectionString }`), not a `Pool` instance.
