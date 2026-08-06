@@ -7,6 +7,41 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P1a — Email/password auth, RBAC, account shell** (`specs/2026-08-06-p1-auth/`), split from the
+  full P1 roadmap line since Google Sign-In needs a Google Cloud Console OAuth client only the
+  human can create (tracked as P1b, issue #23):
+  - **Prisma**: `User` (`role` enum — `CUSTOMER`/`STAFF`/`ADMIN`, default `CUSTOMER`), `Session`,
+    `Account`, `Verification` — Better Auth's standard relational shape, no `Json` columns,
+    explicit FKs. Migration applied directly to Neon staging (`prisma migrate dev` — confirmed
+    with the user, no separate local Postgres exists); CI's `prisma migrate deploy` no-ops on it.
+  - `lib/auth.ts` — Better Auth server instance (Prisma adapter, email/password, required email
+    verification, password reset). `role` added via `additionalFields` with `input: false` so a
+    signup request can never set its own role. No Google/OAuth provider — P1a is email/password
+    only. `lib/auth-rbac.ts` — `requireRole()` gates a route/action to one or more roles, returning
+    401/403 (never a silent pass-through) rather than throwing.
+  - `lib/email.ts` — new `EmailService` port + Resend adapter via plain `fetch` (no SDK, same
+    Workers-bundle-size reasoning as `lib/storage.ts`'s `aws4fetch` choice). Degrades to a logged
+    no-op, not a crash, when `RESEND_API_KEY` is unset.
+  - `app/api/auth/[...all]/route.ts`, and UI under a new `app/(storefront)/` route group:
+    `/login`, `/register`, `/forgot-password`, `/reset-password`, a protected `/account` shell.
+  - **Prerequisite fix, found stress-testing this slice against the real Workers runtime**
+    (`npm run preview`, not `next dev` — see below): `lib/db.ts`'s `getPrisma()` cached a Prisma/
+    Neon client across requests, which Cloudflare Workers forbids (I/O objects can't cross request
+    boundaries) — rapid sequential requests failed ~1-in-3 times with `"Cannot perform I/O on
+    behalf of a different request."` Pre-existing since M0 (affects `/api/health` too, just never
+    caught — validation never hammered it with back-to-back requests). Fixed: `getPrisma()` and
+    `getAuth()` now construct fresh per call rather than caching across requests, matching Neon's
+    own recommended pattern for serverless/edge. Stress-tested clean afterwards.
+  - `eslint.config.mjs` now excludes `.wrangler/**` (missed alongside `.next/**`/`.open-next/**` —
+    running `npm run preview` locally left bundled worker output that `npm run lint` was linting
+    as source, producing dozens of bogus errors from third-party code).
+  - **Still needed from the human before this is live end-to-end**: `RESEND_API_KEY` (a Resend
+    account/key — verification and password-reset emails currently log-and-skip, don't send) and
+    `BETTER_AUTH_SECRET`/`RESEND_API_KEY` set via `wrangler secret put` on staging/production.
+  - **Discovered while validating, not fixed (documented for awareness)**: `@prisma/client/wasm`
+    cannot load under plain `next dev` (Node.js runtime, not workerd) — any DB-touching route
+    silently shows an error state under `npm run dev`. Always use `npm run preview` (OpenNext +
+    local Workers runtime) to validate DB-touching code; `next dev` is UI-only from now on.
 - **KMS — gate wiring** (`specs/2026-08-06-kms-gates/`), closing the last deferred item from the
   KMS design (`specs/2026-08-06-kms/plan.md` §2, `requirements.md` R8). `gates.yml` now runs
   `kms:validate` and an `ARTIFACT_INDEX.md` staleness check (regenerated and diffed with the
