@@ -7,6 +7,23 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P0 — Design-system tokens** (`specs/design-system.md`, `specs/2026-08-06-design-system/`),
+  closing the last item deferred from the P0 foundation slice below. Encodes the Aheed brand kit
+  as real tokens rather than leaving Tailwind uninstalled:
+  - Tailwind CSS v4, CSS-first `@theme` config (no `tailwind.config.ts` — v4's own recommended
+    default; `docs/repo-structure.md`'s sketch of a JS config is stale, same as its now-wrong P6
+    tag on `tsconfig.json`).
+  - `design-system/tokens/tokens.css` — primitive brand-kit colors (`--color-brand-*`) layered
+    under semantic tokens (`--color-primary`/`--color-action`/`--color-accent`/`--color-danger`/
+    `--color-surface-muted`) plus radius tokens, so components read the semantic layer, never a
+    raw hex. Two hover/active shades are derived (not brand-sourced) and commented as such.
+  - Poppins loaded via `next/font/google` (self-hosted at build, no runtime request — matters on
+    Workers), one family at two weights (400/600), not two families.
+  - `app/globals.css`/`app/page.tsx` restyled with the tokens to prove they flow live, not just
+    sit as unused config; the old hand-rolled `.card`/`.ok`/`.bad` CSS is gone.
+  - Deliberately deferred: real logo source files (the brand kit is a reference image, not
+    exportable assets), `components/`/`design-system/{components,patterns,pages,guidelines}/`
+    (nothing consumes tokens yet), dark mode, and the hex/px-banning eslint rule (P6-tagged).
 - **P0 — Foundation & scaffolding (first slice).** Hardens what M0 proved, scoped to what wasn't
   already built during M0's infrastructure work (`specs/2026-08-06-p0-foundation/`):
   - Local SDD git hooks (`hooks/pre-commit` — Gate 2 spec-before-code, `hooks/pre-push` — Gate 4

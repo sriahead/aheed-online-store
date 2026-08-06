@@ -18,29 +18,35 @@ export default async function Home() {
 
   return (
     <main>
-      <h1>Aheed Food Centre</h1>
+      <h1 className="text-3xl font-semibold text-primary">Aheed Food Centre</h1>
       <p>
-        Walking skeleton — proving the full path <code>browser → Worker → Prisma → Neon</code>.
+        Walking skeleton — proving the full path{" "}
+        <code className="rounded-sm bg-black/10 px-1.5 py-0.5">
+          browser → Worker → Prisma → Neon
+        </code>
+        .
       </p>
 
-      <div className="card">
+      <div className="mt-4 rounded-md border border-black/10 bg-surface-muted p-5">
         <p>
           Database:{" "}
           {dbState === "connected" ? (
-            <span className="ok">connected ✓</span>
+            // text-primary (not text-action): --color-action's brand green is too
+            // light for AA text contrast on white — see specs/design-system.md.
+            <span className="font-semibold text-primary">connected ✓</span>
           ) : (
-            <span className="bad">error ✗</span>
+            <span className="font-semibold text-danger">error ✗</span>
           )}
         </p>
-        <p style={{ margin: 0 }}>
+        <p className="m-0">
           <small>{detail}</small>
         </p>
       </div>
 
-      <p style={{ marginTop: "1.5rem" }}>
+      <p className="mt-6">
         Machine-readable health:{" "}
-        <a href="/api/health">
-          <code>/api/health</code>
+        <a href="/api/health" className="text-primary underline">
+          <code className="rounded-sm bg-black/10 px-1.5 py-0.5">/api/health</code>
         </a>
       </p>
     </main>
