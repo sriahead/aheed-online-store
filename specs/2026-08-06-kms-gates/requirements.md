@@ -1,17 +1,3 @@
----
-id: kms-gate-wiring
-title: "KMS — Gate Wiring (requirements)"
-audience: [dev]
-type: spec
-status: approved
-version: "1.0.0"
-updated: 2026-08-06
-visibility: internal
-summary: Requirements for wiring kms:validate and an ARTIFACT_INDEX.md staleness check into gates.yml, plus two prerequisite bug fixes in the front-matter walk/validate logic.
-tags: [kms, gates, ci]
-related: [kms-design]
----
-
 # KMS — gate wiring (requirements / acceptance criteria)
 
 Closes the last deferred item from `specs/2026-08-06-kms/plan.md` §2 ("Gate wiring") and

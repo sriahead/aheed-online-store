@@ -56,14 +56,21 @@ Gate 1. Calibrate the ceremony to the size of the fork.
 
 Gate 2 — no source without `specs/<YYYY-MM-DD-feature>/requirements.md`.
 
+- **Every slice gets all three files: `plan.md`, `requirements.md`, `validation.md`.** Copy from
+  `specs/templates/feature-spec/`, don't write from a blank file or from memory of "the most recent
+  slice" — that's exactly how four slices drifted to a two-file pattern and lost `plan.md` before
+  this line existed (issue #27). `plan.md` carries the front-matter and is the file that gets an
+  `ARTIFACT_INDEX.md` entry — it's the narrative (goal, scope, deliberately-excluded, rationale)
+  that `requirements.md`'s terse `R1..Rn` list can't carry on its own. `requirements.md` and
+  `validation.md` deliberately don't get their own front-matter/index entry.
 - `requirements.md`: numbered `R1..Rn`, each one objectively checkable sentence (a tool exits 0, a
   file exists with property X, a route returns Y) — no "should" language. `validation.md`: a
-  `| Req | How to verify |` table, one concrete step per row. Match the exact format of the most
-  recent prior slice (currently `specs/2026-08-06-p0-foundation/`) rather than inventing a new shape.
+  `| Req | How to verify |` table, one concrete step per row.
 - If the slice also changes a **standing decision** (architecture, tech choice, design tokens), also
   write or update the relevant **persistent doc** (`specs/architecture.md`, `tech-stack.md`,
   `design-system.md`, ...) — the dated folder is the one-time slice, the persistent doc is what
-  future sessions read as current truth. Two-document pattern, not one.
+  future sessions read as current truth. Three-document pattern (plan/requirements/validation) plus
+  the persistent doc when a standing decision changes, not one file improvised per slice.
 - **Adversarial pass before presenting**: read your own draft asking what's missing, ambiguous, or
   quietly out of scope. Explicitly list deferred items (don't let them vanish silently) and check
   the spec doesn't contradict an existing ADR or persistent doc.

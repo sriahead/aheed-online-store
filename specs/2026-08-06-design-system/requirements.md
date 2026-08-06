@@ -1,17 +1,3 @@
----
-id: p0-design-system-tokens
-title: "P0 — Design-System Tokens (requirements)"
-audience: [dev]
-type: spec
-status: approved
-version: "1.0.0"
-updated: 2026-08-06
-visibility: internal
-summary: Requirements for encoding the Aheed brand kit as Tailwind v4 tokens (colors, typography, radius), proven live on the walking-skeleton page.
-tags: [p0, design-system, tailwind, tokens]
-related: [design-system]
----
-
 # P0 — Design-system tokens (requirements / acceptance criteria)
 
 Encodes the Aheed brand kit (`specs/design-system.md`) as real Tailwind v4 tokens and proves them

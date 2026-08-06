@@ -7,6 +7,22 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **SDD — backfill missing `plan.md` files + prevent future drift.** 4 slices had drifted to a
+  two-file (`requirements.md`/`validation.md`) pattern, missing `plan.md` — unintentional; started
+  with the design-system slice and got entrenched when `specs/sdd-workflow.md`'s own `/spec` stage
+  only mentioned the other two. Fixed:
+  - `specs/templates/feature-spec/{plan,requirements,validation}.md` — scaffolded for the first
+    time (`docs/repo-structure.md` documented this directory but it never existed), so future
+    slices copy a real template instead of improvising from "the most recent slice."
+  - `plan.md` backfilled for `design-system`, `kms-backfill`, `kms-gates`, `kms-site` — the
+    narrative (goal, scope, deliberately-excluded, rationale) that front-matter now lives on,
+    moved off `requirements.md` to match the established one-entry-per-slice precedent.
+  - `kms/schema/repo.ts`'s `walk()` now excludes `specs/templates/` — the template's placeholder
+    front-matter (`id: REPLACE-ME-...`) would otherwise hard-fail `kms:validate` once gate-wired.
+  - `specs/sdd-workflow.md` and `.claude/commands/spec.md` now require all three files for every
+    new slice, not just two.
+  - `specs/2026-08-06-p1-auth/plan.md` lands separately, directly on PR #24's branch (doesn't
+    exist on `staging` yet).
 - **KMS — front-matter backfill** (`specs/2026-08-06-kms-backfill/`), closing the last deferred
   item from the KMS foundation slice (`specs/2026-08-06-kms/requirements.md` R8).
   `ARTIFACT_INDEX.md` now indexes 19 docs instead of 1: `CLAUDE.md`, all three `docs/*.md`, the 9

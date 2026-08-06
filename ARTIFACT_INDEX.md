@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-06T17:47:10.692Z` · commit `5b83539` · `19` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-06T18:06:18.331Z` · commit `a2ad19a` · `20` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -27,10 +27,11 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Repository Structure](docs/repo-structure.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The agreed target folder layout for the Next.js + Prisma + Cloudflare app, Clean Architecture layering, and which phase scaffolds each folder. |
 | [Walking-Skeleton Runbook (M0)](docs/walking-skeleton-runbook.md) | runbook | 1.0.0 | 2026-08-06 | approved | internal | Step-by-step runbook to stand up the M0 walking skeleton — Cloudflare, R2, Neon, and GitHub environment provisioning through to a green production health check. |
 | [M0 — Walking Skeleton (plan)](specs/2026-08-05-m0-walking-skeleton/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for the smallest possible end-to-end app (Next.js on Workers, Neon, CI/CD) proving the Cloudflare + Neon pipeline before any feature work begins. |
-| [P0 — Design-System Tokens (requirements)](specs/2026-08-06-design-system/requirements.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Requirements for encoding the Aheed brand kit as Tailwind v4 tokens (colors, typography, radius), proven live on the walking-skeleton page. |
+| [P0 — Design-System Tokens (plan)](specs/2026-08-06-design-system/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for installing Tailwind CSS v4 and encoding the Aheed brand kit as design tokens, closing the last item deferred from P0's first slice. |
 | [Aheed KMS — Design (structure, deployment, schema)](specs/2026-08-06-kms/plan.md) | spec | 0.1.0 | 2026-08-06 | draft | internal | Folder structure, deployment plan, and front-matter schema for the Aheed knowledge system — phased to M0 reality, with a generated index and an internal/public publication split. |
-| [KMS — Gate Wiring (requirements)](specs/2026-08-06-kms-gates/requirements.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Requirements for wiring kms:validate and an ARTIFACT_INDEX.md staleness check into gates.yml, plus two prerequisite bug fixes in the front-matter walk/validate logic. |
-| [KMS — Index Generator, Assembly & Internal Site (requirements)](specs/2026-08-06-kms-site/requirements.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Requirements for the ARTIFACT_INDEX.md generator, the assemble script, and the internal Nextra docs site serving specs/docs/CLAUDE.md under /dev. |
+| [KMS — Front-Matter Backfill (plan)](specs/2026-08-06-kms-backfill/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for backfilling front-matter onto the docs that predate the KMS schema, closing the last deferred item from the KMS foundation slice. |
+| [KMS — Gate Wiring (plan)](specs/2026-08-06-kms-gates/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for wiring kms:validate and an ARTIFACT_INDEX.md staleness check into gates.yml, closing the last deferred item from the KMS design's Gate-wiring section. |
+| [KMS — Index Generator, Assembly & Internal Site (plan)](specs/2026-08-06-kms-site/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for the ARTIFACT_INDEX.md generator, the assemble script, and the internal Nextra docs site — the deferred follow-up to the KMS schema/validator foundation slice. |
 | [P0 — Foundation & Scaffolding (plan)](specs/2026-08-06-p0-foundation/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for P0's first slice — SDD git hooks, Prettier, SEO/PWA routes, and test setup — scoped to what M0 didn't already build. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |

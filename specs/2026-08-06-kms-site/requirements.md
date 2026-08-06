@@ -1,17 +1,3 @@
----
-id: kms-index-assembly-site
-title: "KMS — Index Generator, Assembly & Internal Site (requirements)"
-audience: [dev]
-type: spec
-status: approved
-version: "1.0.0"
-updated: 2026-08-06
-visibility: internal
-summary: Requirements for the ARTIFACT_INDEX.md generator, the assemble script, and the internal Nextra docs site serving specs/docs/CLAUDE.md under /dev.
-tags: [kms, nextra, docs-site]
-related: [kms-design]
----
-
 # KMS — Index Generator, Assembly & Internal Site (requirements)
 
 Follow-up slice to `specs/2026-08-06-kms/` (design in that folder's `plan.md`; not repeated here).
