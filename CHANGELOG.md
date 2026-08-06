@@ -38,6 +38,12 @@ every branch merges.
   - `eslint.config.mjs` now excludes `.wrangler/**` (missed alongside `.next/**`/`.open-next/**` —
     running `npm run preview` locally left bundled worker output that `npm run lint` was linting
     as source, producing dozens of bogus errors from third-party code).
+  - **Gate 3 fix, found validating locally against the `gates` CI job's actual env**: `lib/email.ts`'s
+    `getEmailService()` called the shared `getEnv()`, which requires `DATABASE_URL`/
+    `BETTER_AUTH_SECRET` — unrelated to email — so `tests/email.test.ts` failed in any environment
+    without those two set (including CI, which never provides them for the test step). Split a
+    narrow `getEmailEnv()`/`emailSchema` out of `lib/config.ts` covering only
+    `RESEND_API_KEY`/`RESEND_FROM_EMAIL`; `getEmailService()` now depends on that instead.
   - **Still needed from the human before this is live end-to-end**: `RESEND_API_KEY` (a Resend
     account/key — verification and password-reset emails currently log-and-skip, don't send) and
     `BETTER_AUTH_SECRET`/`RESEND_API_KEY` set via `wrangler secret put` on staging/production.

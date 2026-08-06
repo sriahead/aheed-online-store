@@ -1,4 +1,4 @@
-import { getEnv } from "./config";
+import { getEmailEnv } from "./config";
 
 /**
  * EmailService port. Transactional email via Resend's REST API using plain
@@ -10,7 +10,7 @@ export interface EmailService {
 }
 
 export function getEmailService(): EmailService {
-  const env = getEnv();
+  const env = getEmailEnv();
 
   return {
     async send({ to, subject, html }) {
