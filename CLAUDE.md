@@ -30,6 +30,18 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   `new PrismaNeon({ connectionString })`, a `neon.PoolConfig`, **not** a `Pool` instance (passing a
   `Pool` fails with `Type 'Pool' has no properties in common with type 'PoolConfig'`).
   Instantiate Prisma via `lib/db` (lazy singleton), never a long-lived global connection.
+- `generator client` in `prisma/schema.prisma` **must** set `engineType = "client"`. The default
+  `"library"` engine locates its native binary via `fs.readdir` at runtime — workerd's
+  `nodejs_compat` `fs` polyfill doesn't implement it, so every query fails with
+  `[unenv] fs.readdir is not implemented yet!`.
+- In runtime code (`lib/db.ts`), import `PrismaClient` from **`@prisma/client/wasm`**, never the
+  bare `@prisma/client` specifier. Next's build-time file tracer runs in real Node, so a bare
+  specifier resolves via the package's `"node"` export condition (`index.js`, which loads its WASM
+  via `fs.readFileSync`) even though the code runs in workerd — failing with
+  `[unenv] fs.readFileSync is not implemented yet!`. `@prisma/client/wasm` sidesteps
+  conditional-exports resolution and always uses the `import()`-based loader workerd actually
+  supports. `prisma/seed.ts` runs in real Node (CI runner via `tsx`), so it correctly keeps the
+  bare `@prisma/client` specifier there — don't "fix" it to `/wasm`.
 - **Neon Auth: leave OFF.** Auth is Better Auth (ADR-002), added in P1 via a normal Prisma migration.
 
 ## Schema rules
