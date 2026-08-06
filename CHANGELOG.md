@@ -6,6 +6,38 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **M0 infrastructure fixes to actually reach `db.ok: true` in production:**
+  - `PrismaNeon` adapter takes a `PoolConfig` (`{ connectionString }`), not a `Pool` instance.
+  - `prisma/schema.prisma` generator now sets `engineType = "client"` — the default `"library"`
+    engine calls `fs.readdir` at runtime, unsupported by workerd's `nodejs_compat` polyfill.
+  - `lib/db.ts` imports `PrismaClient` from `@prisma/client/wasm` explicitly, not the bare
+    `@prisma/client` specifier — Next's Node-based build tracer otherwise resolves the `"node"`
+    export condition (`fs.readFileSync`-based loader) even though the code runs in workerd.
+  - `package-lock.json` resynced with `package.json` (`npm ci` was failing in CI); restored the
+    `allowScripts` allowlist needed for native postinstall scripts under npm 11+.
+  - Wired up the GitHub Actions deploy pipeline: created the missing `staging` environment,
+    populated `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`/`DIRECT_URL` secrets on both
+    environments, set the Worker's own runtime `DATABASE_URL` secret (`wrangler secret put`),
+    enabled R2 and created the image buckets. Disabled the competing Cloudflare Workers Builds
+    git integration, which was misconfigured (wrong build command, no `--env`, skipped migrations)
+    and racing against the correct GitHub Actions pipeline.
+
+### Changed
+- **Upgraded to Next 16 / vitest 4** (deliberate major-version adoption, not incremental):
+  - `next lint` (removed in Next 16) replaced with plain `eslint .`; migrated `.eslintrc.json` to
+    flat config (`eslint.config.mjs`) using `eslint-config-next/core-web-vitals`.
+  - `dev`/`build` scripts pin `next ... --webpack` — Turbopack (Next 16's default) can't resolve
+    `@prisma/client/wasm`'s subpath export (`Module not found`), even though webpack and the
+    package's `exports` map both handle it fine.
+  - `vitest.config.ts` → `vitest.config.mts` (vitest 4's native config loader warns on ESM syntax
+    in a file loaded as CommonJS).
+  - `tsconfig.json`: `jsx` → `"react-jsx"` (Next 16 requires the automatic runtime); added
+    `.next/dev/types/**/*.ts` to `include`.
+  - Restored `@neondatabase/serverless` to an exact pin (`0.10.4`, no caret) and
+    `@opennextjs/cloudflare` to `^1.20.2` — both had drifted to older/looser ranges outside this
+    change.
+
 ### Added
 - **Milestone 0 — Walking Skeleton.** Minimal end-to-end app to validate the pivoted
   infrastructure before feature work: `HealthCheck` model, `/` page and `/api/health` route that

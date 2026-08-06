@@ -67,6 +67,15 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
 - `feature/<slug>` → PR into **`staging`** (auto-deploys to `staging.aheedfoodcentre.nocaped.com`).
 - **`staging` → `main`** via PR; merging to `main` requires **manual approval** (GitHub `production`
   environment) and deploys to `aheedfoodcentre.nocaped.com`. Never push directly to `main`/`staging`.
+- **Known gap:** GitHub's required-reviewers environment protection needs a paid plan for private
+  repos — rejected with a 422 on this repo's current (free) plan. `production` currently has no
+  enforced approval gate; treat PR review discipline as the real gate until this is resolved
+  (upgrade plan, make the repo public, or accept branch-protection-only review).
+- Both `staging` and `production` need their own GitHub environment secrets: `CLOUDFLARE_API_TOKEN`,
+  `CLOUDFLARE_ACCOUNT_ID`, `DIRECT_URL` (used for `prisma migrate deploy` in CI). Separately, each
+  Cloudflare Worker needs its own **runtime** secret set via `wrangler secret put NAME --env <env>`
+  (`DATABASE_URL` at minimum) — the GitHub Actions secrets above do not populate these; they're two
+  different secret stores.
 
 ## The four SDD gates (non-negotiable)
 1. **Propose before work** — open the issue + a spec proposal; wait for approval.
@@ -82,11 +91,23 @@ Every PR references its issue (`Closes #NN`), carries `phase:P_` + `gate:_` labe
   range but must not be used). `@cloudflare/workers-types` must match wrangler's major (v5).
 - **Do NOT run `npm audit fix --force`.** Here it downgrades wrangler and re-breaks the OpenNext peer.
   Audit findings are dev/build-tooling (undici→miniflare→wrangler); track under P7, don't force-fix.
-- **Do NOT jump breaking majors mid-stream.** Stay on **Prisma 6** and **Next 15**. Prisma 7 and
-  Next 16 are each their own P7 SDD item (breaking generator / removed `next lint`).
-- npm 12 blocks dependency install scripts by default: approve the toolchain
-  (`esbuild workerd sharp unrs-resolver @prisma/client @prisma/engines prisma`) before expecting
+- **Do NOT jump breaking majors mid-stream** without deliberately absorbing the migration (as done for
+  Next 16 / vitest 4 below) — don't let a version bump land as a side effect of an unrelated change.
+  Prisma 7 is still its own future item (breaking generator).
+- npm 11+ blocks dependency install scripts by default: approve the toolchain via `package.json`'s
+  `allowScripts` (`esbuild workerd sharp unrs-resolver @prisma/client @prisma/engines prisma dotenv`
+  — keys are exact `name@version`, must match what's actually resolved) before expecting
   test/build/preview to work.
+- **Next 16 defaults to Turbopack for `next build`/`next dev`, and Turbopack cannot resolve
+  `@prisma/client/wasm`'s subpath export** (`Module not found`) even though webpack handles it fine
+  and the package.json `exports` map is valid. Both `dev` and `build` scripts pin `--webpack`
+  explicitly until Turbopack's resolver catches up — don't remove that flag without re-verifying.
+- **ESLint 9 requires flat config** (`eslint.config.mjs`), not `.eslintrc.json`. `eslint-config-next`
+  (bumped to match `next`'s major) exports flat-config-ready arrays directly:
+  `eslint-config-next/core-web-vitals`. The `lint` script is plain `eslint .`, not `next lint`
+  (Next 16 removed that command).
+- `vitest.config.ts` must be `.mts` (or set `"type": "module"` in package.json) — vitest 4's native
+  config loader warns/will error on ESM syntax in a file it loads as CommonJS.
 
 ## Hard stops
 - Never invent infrastructure or credentials. If a resource/secret is missing, STOP and list what

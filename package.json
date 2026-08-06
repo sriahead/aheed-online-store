@@ -2,10 +2,10 @@
   "name": "aheed-online-store",
   "version": "0.0.0",
   "private": true,
-  "description": "Aheed Food Centre \u2014 walking skeleton (end-to-end smoke test on Cloudflare Workers + Neon).",
+  "description": "Aheed Food Centre — walking skeleton (end-to-end smoke test on Cloudflare Workers + Neon).",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && wrangler deploy",
     "cf-typegen": "wrangler types",
@@ -13,7 +13,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
@@ -23,7 +23,7 @@
     "@prisma/adapter-neon": "^6.19.3",
     "@prisma/client": "^6.19.3",
     "aws4fetch": "^1.0.20",
-    "next": "^15.5.21",
+    "next": "^16.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zod": "^3.24.0"
@@ -33,14 +33,14 @@
     "@types/node": "^22.13.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "dotenv": "^16.4.5",
     "eslint": "^9.0.0",
-    "eslint-config-next": "^15.5.21",
+    "eslint-config-next": "^16.3.0",
     "prisma": "^6.19.3",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
-    "vitest": "^2.1.0",
-    "wrangler": "^4.86.0",
-    "dotenv": "^16.4.5"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.86.0"
   },
   "allowScripts": {
     "esbuild@0.25.4": true,
