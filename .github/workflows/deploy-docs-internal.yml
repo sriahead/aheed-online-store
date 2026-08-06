@@ -1,0 +1,37 @@
+name: deploy-docs-internal
+on:
+  push:
+    branches: [staging, main]
+
+# Unlike the storefront app, the internal KMS site has no staging/production split — it's one
+# "internal" audience regardless of branch, so either branch triggers the same deploy.
+#
+# NOT YET LIVE: kms/site-internal/wrangler.toml has workers_dev = false and its custom-domain
+# route commented out, so this deploy publishes the Worker without any public route — safe to
+# run even before Cloudflare-side provisioning (DNS + Access application) exists. See
+# kms/site-internal/README.md.
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging # CLOUDFLARE_API_TOKEN/ACCOUNT_ID are account-level, same across envs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+
+      - name: Install root deps (needed for kms/scripts/assemble.ts)
+        run: npm ci
+
+      - name: Assemble internal content from single-source docs
+        run: npm run kms:assemble:internal
+
+      - name: Install site-internal deps
+        run: npm ci
+        working-directory: kms/site-internal
+
+      - name: Build (OpenNext) & deploy to Workers
+        run: npx opennextjs-cloudflare build && npx wrangler deploy
+        working-directory: kms/site-internal
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
