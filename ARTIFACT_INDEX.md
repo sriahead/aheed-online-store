@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-06T18:06:18.331Z` · commit `a2ad19a` · `20` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-06T18:19:13.472Z` · commit `9c0a4be` · `20` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -23,7 +23,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
 | [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow. |
-| [Onboarding](docs/onboarding.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | 5-minute start-here guide — prerequisites, local setup, and how to get a new developer running, tested, and branching quickly. |
+| [Onboarding](docs/onboarding.md) | doc | 1.1.0 | 2026-08-06 | approved | internal | 5-minute start-here guide — where the project actually is, prerequisites, local setup, and how to get a new developer running, tested, and branching independently. |
 | [Repository Structure](docs/repo-structure.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The agreed target folder layout for the Next.js + Prisma + Cloudflare app, Clean Architecture layering, and which phase scaffolds each folder. |
 | [Walking-Skeleton Runbook (M0)](docs/walking-skeleton-runbook.md) | runbook | 1.0.0 | 2026-08-06 | approved | internal | Step-by-step runbook to stand up the M0 walking skeleton — Cloudflare, R2, Neon, and GitHub environment provisioning through to a green production health check. |
 | [M0 — Walking Skeleton (plan)](specs/2026-08-05-m0-walking-skeleton/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for the smallest possible end-to-end app (Next.js on Workers, Neon, CI/CD) proving the Cloudflare + Neon pipeline before any feature work begins. |

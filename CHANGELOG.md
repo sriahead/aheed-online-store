@@ -7,6 +7,17 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **`docs/onboarding.md` refreshed** — was still framed around M0-only ("Feature work (P0+) starts
+  only after M0 is green"), badly stale now that M0/P0/KMS/design-system have shipped and P1a is
+  in flight. Updated: current phase status (pointing at `specs/roadmap.md`'s change log as the
+  source of truth, not duplicating it), `.env` vs `.dev.vars` distinction, the `npm run preview`
+  vs `npm run dev` DB-touching gotcha surfaced immediately rather than buried in `CLAUDE.md`, the
+  seven-stage SDD workflow + slash commands, and a pointer to the internal docs site. Verified no
+  real duplication with `kms/site-internal/`'s content — that site auto-assembles from `specs/`,
+  `docs/`, and `CLAUDE.md` (confirmed all 20 backfilled docs, including this one, assemble
+  correctly), nothing hand-duplicated there. Its one stale line (`content/dev/index.mdx` said
+  pages were "populated once those docs carry real front-matter" — no longer true post-backfill)
+  fixed to point at the now-real content instead.
 - **SDD — backfill missing `plan.md` files + prevent future drift.** 4 slices had drifted to a
   two-file (`requirements.md`/`validation.md`) pattern, missing `plan.md` — unintentional; started
   with the design-system slice and got entrenched when `specs/sdd-workflow.md`'s own `/spec` stage
