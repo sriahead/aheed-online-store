@@ -5,15 +5,16 @@ vendor-agnostic** stack: **Next.js on Cloudflare Workers** (via `@opennextjs/clo
 **Neon Serverless Postgres** through **Prisma**, **S3-compatible object storage (R2)**, and
 **Stripe**. Governed by **Spec-Driven Development (SDD), Solo Mode** — the four gates below.
 
-## Current state: Milestone 0 — Walking Skeleton 🩻
+## Current state: Milestone 0 done ✅ — starting P0
 
-This repo is currently the **walking skeleton**: the smallest app that exercises the whole pipeline
-end-to-end (`browser → Worker → Prisma → Neon`) so the infrastructure is proven **before** any
-feature work. It is one `HealthCheck` model, a landing page, and `/api/health`.
+**Milestone 0 (Walking Skeleton)** is closed: `/api/health` returns `db.ok: true` on both staging
+and production, with `gates`/`deploy-staging`/`deploy-production` all green end-to-end
+(`browser → Worker → Prisma → Neon`). The app is still just one `HealthCheck` model, a landing
+page, and `/api/health` — no feature work has started yet.
 
-- **Run it:** `docs/walking-skeleton-runbook.md`
+- **How M0 was run:** `docs/walking-skeleton-runbook.md`
 - **Its spec:** `specs/2026-08-05-m0-walking-skeleton/`
-- When production `/api/health` returns `db.ok: true`, M0 is done and **P0+** begins.
+- **Next up:** **P0 — Foundation & scaffolding**, per `specs/roadmap.md`, behind its own Gate-1 proposal.
 
 ## Quickstart
 

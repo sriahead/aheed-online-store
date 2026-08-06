@@ -16,6 +16,10 @@ every branch merges.
   repo root per the design's folder structure. Deliberately deferred to follow-up work: the index
   generator, the internal/public site assembly, CI gate wiring, and backfilling front-matter onto
   existing docs — see `specs/2026-08-06-kms/requirements.md` R8.
+### Milestone
+- **M0 — Walking Skeleton closed.** `/api/health` returns `db.ok: true` on both staging and
+  production; `gates`, `deploy-staging`, and `deploy-production` all green end-to-end. Proceeding
+  to P0 per `specs/roadmap.md`.
 
 ### Fixed
 - **M0 infrastructure fixes to actually reach `db.ok: true` in production:**
