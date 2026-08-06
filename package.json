@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "kms:validate": "tsx kms/schema/validate.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
@@ -37,6 +38,7 @@
     "esbuild": "0.28.1",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.3.0",
+    "gray-matter": "^4.0.3",
     "prisma": "^6.19.3",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
