@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# SDD Gate 4 — changelog-before-merge (local fast feedback; gates.yml is the real enforcement).
+# Mirrors gates.yml's check: CHANGELOG.md must differ from the merge-base with the remote base.
+set -euo pipefail
+
+base_ref="origin/staging"
+git rev-parse --verify "$base_ref" >/dev/null 2>&1 || base_ref="origin/main"
+git rev-parse --verify "$base_ref" >/dev/null 2>&1 || exit 0  # neither exists (offline) — don't block
+
+base=$(git merge-base HEAD "$base_ref" 2>/dev/null || echo "")
+[ -z "$base" ] && exit 0
+
+# Nothing to push relative to base (e.g. pushing the base branch itself) — don't block.
+[ "$base" = "$(git rev-parse HEAD)" ] && exit 0
+
+if git diff --name-only "$base"...HEAD | grep -qx "CHANGELOG.md"; then
+  exit 0
+fi
+
+echo "Gate 4 failed — CHANGELOG.md was not updated on this branch (vs. $base_ref)." >&2
+echo "  git push --no-verify   (only if you know this is exempt)" >&2
+exit 1

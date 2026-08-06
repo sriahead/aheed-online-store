@@ -6,7 +6,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: staging            # uses GitHub 'staging' environment secrets
+    environment: staging # uses GitHub 'staging' environment secrets
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

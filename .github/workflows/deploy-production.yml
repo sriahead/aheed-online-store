@@ -6,7 +6,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production         # 'production' env has REQUIRED REVIEWERS -> manual approval gate
+    environment: production # 'production' env has REQUIRED REVIEWERS -> manual approval gate
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

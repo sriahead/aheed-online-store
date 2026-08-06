@@ -8,7 +8,11 @@ import { getEnv } from "./config";
  * public URLs are composed at read time from CDN_BASE_URL.
  */
 export interface StorageService {
-  putObject(key: string, body: ArrayBuffer | Uint8Array | string, contentType?: string): Promise<void>;
+  putObject(
+    key: string,
+    body: ArrayBuffer | Uint8Array | string,
+    contentType?: string,
+  ): Promise<void>;
   publicUrl(key: string): string;
 }
 
