@@ -84,6 +84,12 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
 4. **Changelog before merge** — update `CHANGELOG.md` on the branch.
 Every PR references its issue (`Closes #NN`), carries `phase:P_` + `gate:_` labels, touches CHANGELOG.
 
+**Full operational workflow:** `specs/sdd-workflow.md` expands these four gates into seven stages —
+**Orient → Propose → Spec → Build → Validate → Document → Ship** — each also a slash command
+(`/orient`, `/propose`, `/spec`, `/build`, `/validate`, `/document`, `/ship`). Use them; that doc
+carries lessons already paid for (stale-doc traps, CI-vs-local-Windows drift, PR merge races) that
+are easy to relearn the hard way otherwise.
+
 ## Dependency & version discipline (learned the hard way)
 - **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their
   declared semver ranges are looser than real compatibility. Locked today:
