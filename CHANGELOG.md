@@ -7,6 +7,35 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P1b — Google Sign-In** (`specs/2026-08-06-p1b-google-signin/`), closing out P1's auth line on
+  top of P1a below. Unblocked by the human provisioning the Google Cloud Console OAuth client and
+  setting `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` as Cloudflare secrets on both `staging` and
+  `production` (issue #28) — the one credential P1a's proposal had deferred as P1b.
+  - `lib/auth.ts` — new exported pure `buildSocialProviders(env)`: returns a
+    `socialProviders.google` block only when both credentials are present, `undefined` otherwise
+    (never a half-configured provider). Split out specifically so it's unit-testable —
+    `getAuth()` itself has no tests, since it depends on `getPrisma()`. `emailAndPassword`
+    unchanged. No new Prisma migration — Google sign-ins land in the `Account` table P1a already
+    created, and get `role: CUSTOMER` via the same Prisma default as email/password sign-up.
+  - `lib/config.ts` gains `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, both optional (same
+    degrade-not-crash pattern as `RESEND_API_KEY`) — documented in `.env.example` and
+    `.dev.vars.example`.
+  - `features/auth/components/GoogleSignInButton.tsx` — one shared "Continue with Google" control
+    for both `/login` and `/register` (Better Auth's social sign-in creates an account on first
+    use, so login and register need the same control, not two).
+  - **Bug caught by `npm run build`'s route table, not local `next dev`**: `/login`/`/register`
+    were being statically prerendered, which would have baked the Google-button visibility check
+    in at *build* time — but `wrangler secret put` values only exist at Worker *request* time, so
+    the button would have silently never rendered in production regardless of the secrets being
+    set. Fixed with `export const dynamic = "force-dynamic"` on both pages (same pattern
+    `/account` already uses).
+  - **Deliberately incomplete**: the actual Google consent-screen flow can't be exercised against
+    `npm run preview` locally — the OAuth client's redirect URIs are only registered for
+    `staging`/`production`, not `localhost`. Verified as far as possible locally (the button
+    renders/hides correctly, and `POST /api/auth/sign-in/social` returns a correctly-built Google
+    authorization URL with the right `client_id`/scopes/PKCE challenge/redirect URI); the actual
+    consent screen + callback need a real sign-in against a deployed environment before this is
+    fully confirmed end-to-end.
 - **P1a — `plan.md`** added (`specs/2026-08-06-p1-auth/plan.md`) — part of backfilling the
   `plan.md` file every slice is now required to have (issue #27); this one lands directly on this
   branch since the spec folder doesn't exist on `staging` yet.
