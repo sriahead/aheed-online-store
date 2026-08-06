@@ -5,6 +5,11 @@ generator client {
   provider = "prisma-client-js"
   // Prisma 6+: driver adapters are GA (no preview flag needed).
   // Prisma 5:  previewFeatures = ["driverAdapters"]
+  // engineType = "client" (WASM query compiler, imported directly rather than
+  // discovered via fs) is required on Cloudflare Workers — the default
+  // "library" engine calls fs.readdir at runtime to locate its native engine
+  // binary, which workerd's nodejs_compat polyfill doesn't implement.
+  engineType = "client"
 }
 
 datasource db {
