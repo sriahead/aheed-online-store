@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# SDD Gate 2 — spec-before-code (local fast feedback; gates.yml is the real enforcement).
+# Blocks a commit that touches source dirs unless a specs/*/requirements.md is new on this branch.
+set -euo pipefail
+
+SOURCE_DIRS='^(app|components|features|lib|prisma|kms|design-system)/'
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$staged" ] && exit 0
+
+touches_source=$(echo "$staged" | grep -E "$SOURCE_DIRS" || true)
+[ -z "$touches_source" ] && exit 0
+
+base=$(git merge-base HEAD origin/main 2>/dev/null || echo "")
+if [ -z "$base" ]; then
+  # No origin/main reachable (e.g. offline, or this IS main) — can't compare, don't block.
+  exit 0
+fi
+
+new_specs=$(git diff --name-only --diff-filter=A "$base"...HEAD -- 'specs/*/requirements.md' 2>/dev/null || true)
+staged_specs=$(echo "$staged" | grep -E '^specs/.*/requirements\.md$' || true)
+
+if [ -z "$new_specs" ] && [ -z "$staged_specs" ]; then
+  echo "Gate 2 failed — source changes staged, but no specs/<date-feature>/requirements.md" >&2
+  echo "found on this branch (compared to origin/main). Add a spec first, or:" >&2
+  echo "  git commit --no-verify   (only if you know this is exempt)" >&2
+  exit 1
+fi
+
+exit 0

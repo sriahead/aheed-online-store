@@ -13,7 +13,12 @@ import { FrontMatter } from "./frontmatter";
 
 const ROOT = join(__dirname, "..", "..");
 const EXCLUDE_DIRS = new Set([
-  "node_modules", ".git", ".next", ".open-next", ".wrangler", ".vercel",
+  "node_modules",
+  ".git",
+  ".next",
+  ".open-next",
+  ".wrangler",
+  ".vercel",
 ]);
 
 function walk(dir: string, out: string[] = []): string[] {
