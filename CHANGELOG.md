@@ -7,6 +7,14 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **SDD workflow, generalized as keywords + slash commands** (`specs/sdd-workflow.md`,
+  `.claude/commands/`). Expands CLAUDE.md's four gates (Propose/Spec/Validate/Changelog) into seven
+  stages — **Orient → Propose → Spec → Build → Validate → Document → Ship** — each also an
+  invokable slash command, generalized from patterns and failure modes actually hit running the
+  process across the KMS and design-system-tokens slices (stale planning-doc traps, Windows
+  `core.autocrlf` giving false `prettier --check` positives against real CI, PRs merging before a
+  fast-follow commit landed, a Gate-4 CHANGELOG check whose diff base moves between pushes).
+  `CLAUDE.md`'s gate section now points to it.
 - **P0 — Design-system tokens** (`specs/design-system.md`, `specs/2026-08-06-design-system/`),
   closing the last item deferred from the P0 foundation slice below. Encodes the Aheed brand kit
   as real tokens rather than leaving Tailwind uninstalled:
