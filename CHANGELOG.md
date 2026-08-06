@@ -7,6 +7,9 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P1a — `plan.md`** added (`specs/2026-08-06-p1-auth/plan.md`) — part of backfilling the
+  `plan.md` file every slice is now required to have (issue #27); this one lands directly on this
+  branch since the spec folder doesn't exist on `staging` yet.
 - **P1a — Email/password auth, RBAC, account shell** (`specs/2026-08-06-p1-auth/`), split from the
   full P1 roadmap line since Google Sign-In needs a Google Cloud Console OAuth client only the
   human can create (tracked as P1b, issue #23):
