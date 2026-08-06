@@ -6,12 +6,17 @@ import { ROOT, walk, relPath, normalize, readFrontMatter } from "./repo";
  * against the FrontMatter schema. Files with no front-matter are reported as
  * warnings, not failures — most existing docs haven't been backfilled yet (see
  * requirements.md). Files WITH a front-matter block that fails schema validation
- * are hard failures.
+ * are hard failures — EXCEPT front-matter that doesn't even attempt the KMS schema
+ * (no `visibility` key, the one required field with no default that nothing else in
+ * this repo's own frontmatter conventions uses — Claude Code slash commands use
+ * `description:`, Nextra pages use `title:`). Those are a doc that was never opted
+ * into this schema, not a broken KMS doc, so they're reported separately, not failed.
  */
 
 function main() {
   const files = walk(ROOT);
   const noFrontMatter: string[] = [];
+  const nonKmsFrontMatter: string[] = [];
   const invalid: { file: string; errors: string[] }[] = [];
   let valid = 0;
 
@@ -21,6 +26,11 @@ function main() {
 
     if (Object.keys(data).length === 0) {
       noFrontMatter.push(rel);
+      continue;
+    }
+
+    if (!("visibility" in data)) {
+      nonKmsFrontMatter.push(rel);
       continue;
     }
 
@@ -40,6 +50,12 @@ function main() {
   console.log(`  no front-matter (warning, not blocking): ${noFrontMatter.length}`);
   if (noFrontMatter.length > 0) {
     for (const f of noFrontMatter) console.log(`    - ${f}`);
+  }
+  console.log(
+    `  non-KMS front-matter, e.g. Claude commands/Nextra pages (skipped): ${nonKmsFrontMatter.length}`,
+  );
+  if (nonKmsFrontMatter.length > 0) {
+    for (const f of nonKmsFrontMatter) console.log(`    - ${f}`);
   }
   console.log(`  invalid front-matter (failing): ${invalid.length}`);
   if (invalid.length > 0) {

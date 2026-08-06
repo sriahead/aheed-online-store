@@ -12,12 +12,19 @@ const EXCLUDE_DIRS = new Set([
   ".vercel",
 ]);
 
+// kms/site-*/content/ is assembled build output (kms/scripts/assemble.ts), gitignored
+// except its hand-authored index.mdx/_meta.json — never a source of truth. Walking it
+// would index the same doc twice (source path + assembled copy) and isn't even
+// deterministic in CI, since the assembled copies don't exist on a fresh checkout.
+const EXCLUDE_PATH_PATTERN = /^kms\/site-[^/]+\/content(\/|$)/;
+
 // Sorted for deterministic output — readdirSync's order isn't guaranteed across
 // platforms/filesystems, and build-index.ts's output needs to be diff-stable.
 export function walk(dir: string, out: string[] = []): string[] {
   for (const entry of [...readdirSync(dir)].sort()) {
     if (EXCLUDE_DIRS.has(entry)) continue;
     const full = join(dir, entry);
+    if (EXCLUDE_PATH_PATTERN.test(relPath(full))) continue;
     const stat = statSync(full);
     if (stat.isDirectory()) {
       walk(full, out);

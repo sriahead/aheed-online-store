@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-06T12:26:22.455Z` · commit `4d97dfb` · `2` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-06T15:17:50.470Z` · commit `04303cf` · `1` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -22,7 +22,6 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
-| [Aheed KMS — Design (structure, deployment, schema)](kms/site-internal/content/dev/kms-design.mdx) | spec | 0.1.0 | 2026-08-06 | draft | internal | Folder structure, deployment plan, and front-matter schema for the Aheed knowledge system — phased to M0 reality, with a generated index and an internal/public publication split. |
 | [Aheed KMS — Design (structure, deployment, schema)](specs/2026-08-06-kms/plan.md) | spec | 0.1.0 | 2026-08-06 | draft | internal | Folder structure, deployment plan, and front-matter schema for the Aheed knowledge system — phased to M0 reality, with a generated index and an internal/public publication split. |
 
 ## Track 2 — Staff / Operations (`staff-ops`)  ·  audience: staff
