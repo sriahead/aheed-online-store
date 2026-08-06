@@ -1,0 +1,31 @@
+/**
+ * Aheed design tokens — see specs/design-system.md for the authored decision
+ * doc this file implements. Primitives are exact brand-kit values; components
+ * should read the semantic layer (--color-action, --color-primary, ...), never
+ * a --color-brand-* primitive directly.
+ */
+@theme {
+  /* primitives — exact Aheed brand-kit hex, do not use directly in components */
+  --color-brand-green-dark: #1b5e20;
+  --color-brand-green: #4caf50;
+  --color-brand-orange: #f57c00;
+  --color-brand-red: #d32f2f;
+  --color-brand-cream: #f5f5f0;
+
+  /* semantic — what components actually use */
+  --color-primary: var(--color-brand-green-dark);
+  --color-action: var(--color-brand-green);
+  --color-accent: var(--color-brand-orange);
+  --color-danger: var(--color-brand-red);
+  --color-surface-muted: var(--color-brand-cream);
+
+  /* derived, not from brand kit — ~15% darker, for hover/active states */
+  --color-action-hover: #419544;
+  --color-accent-hover: #d06900;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 1rem;
+  --radius-full: 9999px;
+
+  --font-sans: var(--font-poppins), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
