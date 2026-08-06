@@ -17,6 +17,19 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm test
+      - name: KMS — front-matter validation
+        run: npm run kms:validate
+      - name: KMS — ARTIFACT_INDEX.md staleness check
+        run: |
+          cp ARTIFACT_INDEX.md /tmp/artifact-index-before.md
+          npm run kms:build-index
+          normalize() { sed -E 's/Last build: `[^`]+`/Last build: TS/' "$1"; }
+          if ! diff <(normalize /tmp/artifact-index-before.md) <(normalize ARTIFACT_INDEX.md) > /tmp/artifact-index.diff; then
+            echo "::error::ARTIFACT_INDEX.md is stale — run 'npm run kms:build-index' and commit the result."
+            cat /tmp/artifact-index.diff
+            exit 1
+          fi
+          echo "ARTIFACT_INDEX.md is current ✓"
       - name: Gate 4 — CHANGELOG updated on this branch
         run: |
           git fetch origin "${{ github.base_ref }}" --depth=1

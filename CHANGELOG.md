@@ -7,6 +7,19 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **KMS — gate wiring** (`specs/2026-08-06-kms-gates/`), closing the last deferred item from the
+  KMS design (`specs/2026-08-06-kms/plan.md` §2, `requirements.md` R8). `gates.yml` now runs
+  `kms:validate` and an `ARTIFACT_INDEX.md` staleness check (regenerated and diffed with the
+  `Last build:` timestamp normalized out, so the check is meaningful rather than always failing).
+  Includes two prerequisite bug fixes found while grounding — wiring the validator as originally
+  sketched would have broken every future PR:
+  - `kms/schema/repo.ts`'s `walk()` now excludes `kms/site-*/content/` (assembled/generated site
+    output) — it was indexing the same doc twice (source path + assembled copy) and wasn't even
+    deterministic in CI, since that gitignored directory doesn't exist on a fresh checkout.
+  - `kms/schema/validate.ts` now distinguishes "no front-matter" from "front-matter present but
+    missing `visibility`" (the schema's own required, no-default field) — the latter is reported
+    informationally, not hard-failed. Fixes false-positive failures on `.claude/commands/*.md`
+    (Claude Code's own `description:` frontmatter) and Nextra's `title:`-only stub pages.
 - **SDD workflow, generalized as keywords + slash commands** (`specs/sdd-workflow.md`,
   `.claude/commands/`). Expands CLAUDE.md's four gates (Propose/Spec/Validate/Changelog) into seven
   stages — **Orient → Propose → Spec → Build → Validate → Document → Ship** — each also an
