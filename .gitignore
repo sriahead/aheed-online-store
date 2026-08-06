@@ -19,3 +19,13 @@ build/
 
 # TypeScript incremental build cache — local/machine-specific
 tsconfig.tsbuildinfo
+
+# KMS — assembled site content is a build artifact (kms/scripts/assemble.ts),
+# never hand-edited; single source of truth stays in specs/, docs/, CLAUDE.md.
+# assemble.ts writes generated docs directly into content/<track>/*.mdx, alongside
+# hand-authored index.mdx/_meta.json (never touched by the script) — so ignore all
+# .mdx one level under content/ except index.mdx, rather than a _generated/ subdir
+# the script doesn't actually use.
+kms/site-*/content/*/*.mdx
+!kms/site-*/content/*/index.mdx
+kms/site-*/.next-env.d.ts

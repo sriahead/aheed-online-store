@@ -1,7 +1,5 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
-import matter from "gray-matter";
 import { FrontMatter } from "./frontmatter";
+import { ROOT, walk, relPath, normalize, readFrontMatter } from "./repo";
 
 /**
  * Walks the repo for markdown files (.md / .mdx), validates any front-matter block
@@ -11,40 +9,6 @@ import { FrontMatter } from "./frontmatter";
  * are hard failures.
  */
 
-const ROOT = join(__dirname, "..", "..");
-const EXCLUDE_DIRS = new Set([
-  "node_modules",
-  ".git",
-  ".next",
-  ".open-next",
-  ".wrangler",
-  ".vercel",
-]);
-
-function walk(dir: string, out: string[] = []): string[] {
-  for (const entry of readdirSync(dir)) {
-    if (EXCLUDE_DIRS.has(entry)) continue;
-    const full = join(dir, entry);
-    const stat = statSync(full);
-    if (stat.isDirectory()) {
-      walk(full, out);
-    } else if (/\.mdx?$/.test(entry)) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
-// gray-matter (js-yaml) parses unquoted YYYY-MM-DD as a Date, not a string.
-// Normalize back to an ISO date string before handing off to the schema.
-function normalize(data: Record<string, unknown>): Record<string, unknown> {
-  const { updated } = data;
-  if (updated instanceof Date) {
-    return { ...data, updated: updated.toISOString().slice(0, 10) };
-  }
-  return data;
-}
-
 function main() {
   const files = walk(ROOT);
   const noFrontMatter: string[] = [];
@@ -52,12 +16,11 @@ function main() {
   let valid = 0;
 
   for (const file of files) {
-    const raw = readFileSync(file, "utf8");
-    const { data } = matter(raw);
-    const relPath = relative(ROOT, file).replace(/\\/g, "/");
+    const data = readFrontMatter(file);
+    const rel = relPath(file);
 
     if (Object.keys(data).length === 0) {
-      noFrontMatter.push(relPath);
+      noFrontMatter.push(rel);
       continue;
     }
 
@@ -66,7 +29,7 @@ function main() {
       valid++;
     } else {
       invalid.push({
-        file: relPath,
+        file: rel,
         errors: result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
       });
     }

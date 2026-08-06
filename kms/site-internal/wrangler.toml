@@ -1,0 +1,25 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "aheed-kms-internal"
+main = ".open-next/worker.js"
+compatibility_date = "2025-03-25"
+compatibility_flags = ["nodejs_compat"]
+
+# A deployed Worker gets a public *.workers.dev URL by default REGARDLESS of the
+# custom-domain route below. This site carries internal content (ADRs, CLAUDE.md) —
+# leave this false. Do not flip it to true even temporarily "just to test": that
+# publishes the workers.dev URL to the internet with no Access gate in front of it.
+workers_dev = false
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# NOT YET LIVE — requires Cloudflare-side provisioning the human must do:
+#   1. Custom domain/DNS for docs.internal.aheedfoodcentre.nocaped.com on the zone.
+#   2. A Cloudflare Access application gating this route (zero-trust, email/SSO) —
+#      this site has no application-level auth of its own; Access IS the auth.
+# Until both exist, leave the route commented out — an uncommented route with no
+# Access policy would serve internal docs (ADRs, CLAUDE.md) to the public internet.
+# [[routes]]
+# pattern = "docs.internal.aheedfoodcentre.nocaped.com"
+# custom_domain = true
