@@ -41,3 +41,4 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
 | _pending_  | Baseline set                  | To be recorded at Phase 3 freeze |
 | 2026-08-05 | Architecture pivot to Cloudflare Workers + Neon + S3-compatible storage | PostgreSQL-first, vendor-agnostic, cost-effective mandate (supersedes GCP-origin ADR-001) |
 | 2026-08-05 | Added **Milestone 0 — Walking Skeleton** before P0 | De-risk infra end-to-end before feature work |
+| 2026-08-06 | **Milestone 0 closed.** `/api/health` returns `db.ok: true` on both staging and production; `gates`/`deploy-staging`/`deploy-production` all green. Infra learnings (Prisma driver-adapter config, Workers `fs` polyfill gaps, Next 16/Turbopack, CI secrets/environments) captured in `CLAUDE.md` and `CHANGELOG.md` rather than a separate retro. Known gap: no enforced required-reviewer gate on `production` (needs a paid GitHub plan). | Exit criteria met; proceeding to P0 |

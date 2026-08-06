@@ -6,6 +6,11 @@ every branch merges.
 
 ## [Unreleased]
 
+### Milestone
+- **M0 — Walking Skeleton closed.** `/api/health` returns `db.ok: true` on both staging and
+  production; `gates`, `deploy-staging`, and `deploy-production` all green end-to-end. Proceeding
+  to P0 per `specs/roadmap.md`.
+
 ### Fixed
 - **M0 infrastructure fixes to actually reach `db.ok: true` in production:**
   - `PrismaNeon` adapter takes a `PoolConfig` (`{ connectionString }`), not a `Pool` instance.
