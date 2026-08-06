@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.open-next/
+.wrangler/
+package-lock.json
+tsconfig.tsbuildinfo
+prisma/migrations/
+
+# Hand-crafted prose/tables — Prettier's markdown table reformatting pads every
+# cell to align columns, which wrecks readability on long-prose cells (e.g. the
+# roadmap changelog). Markdown is deliberately excluded, not an oversight.
+*.md
+*.mdx

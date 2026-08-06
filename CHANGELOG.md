@@ -7,6 +7,24 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P0 — Foundation & scaffolding (first slice).** Hardens what M0 proved, scoped to what wasn't
+  already built during M0's infrastructure work (`specs/2026-08-06-p0-foundation/`):
+  - Local SDD git hooks (`hooks/pre-commit` — Gate 2 spec-before-code, `hooks/pre-push` — Gate 4
+    changelog-before-merge), activated by the `core.hooksPath` wiring `scripts/bootstrap.sh`
+    already had. Fast local feedback only — `gates.yml` in CI remains the real enforcement.
+  - Prettier (`.prettierrc.json`, `.prettierignore`, `npm run format`/`format:check`), wired into
+    `gates.yml`. Deliberately excludes `.md`/`.mdx` — Prettier's markdown table reformatting pads
+    every cell to align columns, which wrecks readability on long-prose cells.
+  - `app/robots.ts`, `app/sitemap.ts`, `app/manifest.ts` — the Next.js App Router convention for
+    SEO/PWA metadata (route files under `app/`, not static files under `public/`). `robots.ts` is
+    host-aware: only the production domain allows crawling, staging always disallows. No brand
+    icon assets exist yet, so `manifest.ts` ships an empty `icons` array rather than fabricated
+    placeholders — a real follow-up needing actual brand input.
+  - `tests/setup.ts`, wired into `vitest.config.mts`'s `setupFiles` — loads `.env` for tests that
+    read `process.env`.
+  - Deliberately out of scope: design-system tokens (no `specs/design-system.md` spec exists yet),
+    `lib/repositories/` (nothing to wrap until P1's catalogue models exist), and GitHub
+    branch-protection rules on `main`/`staging` (a real gap, flagged as a follow-up recommendation).
 - **KMS — front-matter schema & validator (foundation slice).** First piece of the knowledge-
   management system design (`specs/2026-08-06-kms/plan.md`): `kms/schema/frontmatter.ts` (the Zod
   contract — `id`, `title`, `audience`, `type`, `status`, `version`, `updated`, `visibility`,

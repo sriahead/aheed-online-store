@@ -5,7 +5,9 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 // Seed runs in Node (locally or CI) — prefers DIRECT_URL.
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 if (!connectionString) {
-  throw new Error("DIRECT_URL/DATABASE_URL is empty in the seed process — check .env is present and loading.");
+  throw new Error(
+    "DIRECT_URL/DATABASE_URL is empty in the seed process — check .env is present and loading.",
+  );
 }
 console.log("seed connecting to:", connectionString.replace(/:[^:@/]+@/, ":****@")); // mask password
 
@@ -22,5 +24,10 @@ async function main() {
 }
 
 main()
-  .catch((e) => { console.error(e); process.exitCode = 1; })
-  .finally(async () => { await prisma.$disconnect(); });
+  .catch((e) => {
+    console.error(e);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
