@@ -34,7 +34,11 @@ function renderRow(path: string, fm: FrontMatter): string {
 
 function main() {
   const files = walk(ROOT);
-  const byTrack: Record<Track, string[]> = { "internal-eng": [], "staff-ops": [], "customer-help": [] };
+  const byTrack: Record<Track, string[]> = {
+    "internal-eng": [],
+    "staff-ops": [],
+    "customer-help": [],
+  };
   let total = 0;
 
   for (const file of files) {
@@ -86,7 +90,9 @@ ${sections.join("\n\n")}
 `;
 
   writeFileSync(join(ROOT, "ARTIFACT_INDEX.md"), content);
-  console.log(`build-index — wrote ARTIFACT_INDEX.md (${total} artifact(s) from ${files.length} scanned file(s))`);
+  console.log(
+    `build-index — wrote ARTIFACT_INDEX.md (${total} artifact(s) from ${files.length} scanned file(s))`,
+  );
 }
 
 main();
