@@ -1,0 +1,36 @@
+{
+  "name": "aheed-kms-internal",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Aheed KMS — internal docs site (dev + staff tracks). Behind Cloudflare Access; never public.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.2",
+    "next": "^16.3.0",
+    "nextra": "^4.6.1",
+    "nextra-theme-docs": "^4.6.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.86.0"
+  },
+  "allowScripts": {
+    "esbuild@0.25.4": true,
+    "esbuild@0.28.1": true,
+    "workerd@1.20260801.1": true
+  },
+  "overrides": {
+    "zod": "4.3.6"
+  }
+}

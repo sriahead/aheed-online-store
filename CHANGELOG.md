@@ -34,6 +34,24 @@ every branch merges.
   repo root per the design's folder structure. Deliberately deferred to follow-up work: the index
   generator, the internal/public site assembly, CI gate wiring, and backfilling front-matter onto
   existing docs — see `specs/2026-08-06-kms/requirements.md` R8.
+- **KMS — index generator, assembly & internal site** (`specs/2026-08-06-kms-site/`), the deferred
+  follow-up to the schema/validator foundation slice above:
+  - `kms/scripts/build-index.ts` (`npm run kms:build-index`) walks front-matter docs and regenerates
+    `ARTIFACT_INDEX.md` grouped by track; deterministic output aside from its `Last build:` timestamp.
+  - `kms/scripts/assemble.ts --visibility internal|public` (`npm run kms:assemble:internal`/`:public`)
+    copies single-source docs into a site's `content/` by `visibility`, so doc bodies are never
+    duplicated by hand. Both scripts share new `kms/schema/repo.ts` (walk/parse helpers factored out
+    of `validate.ts`).
+  - `kms/site-internal/` — a standalone Next.js + Nextra 4 app (own `package.json`, own toolchain,
+    excluded from the root's lint/typecheck via `eslint.config.mjs`/`tsconfig.json`) serving
+    assembled docs under `/dev`, with `/staff` stubbed. Its `wrangler.toml` targets a separate Worker
+    (`aheed-kms-internal`) with `workers_dev = false` and the custom-domain route commented out —
+    not internet-reachable until the human provisions DNS + a Cloudflare Access application gating it
+    (zero-trust; the site has no auth of its own).
+  - `.github/workflows/deploy-docs-internal.yml` mirrors `deploy-staging.yml`'s build-then-deploy
+    pattern, triggered on push to `staging`/`main`. Safe to run before Cloudflare-side provisioning
+    exists (no public route to expose), but won't do anything useful until it does.
+  - The public site (track 3) stays stubbed — no storefront exists yet to document.
 ### Milestone
 - **M0 — Walking Skeleton closed.** `/api/health` returns `db.ok: true` on both staging and
   production; `gates`, `deploy-staging`, and `deploy-production` all green end-to-end. Proceeding
