@@ -31,6 +31,119 @@ every branch merges.
   Verified: `npm run build` in `kms/site-internal` now compiles clean.
 
 ### Added
+- **P2.5b2 — Storefront visual redesign UI** (`specs/2026-08-07-p2-5b2-visual-ui/`), the UI half
+  of P2.5b and the slice that closes the "live site is nowhere near the mockup" gap that opened
+  P2.5 (closes #43). Applies P2.5b1's tokens/schema/seed to a real storefront matching the AI
+  Studio mockup (`docs/ui-ref/`).
+  - **Layout + header**: root `app/layout.tsx` drops the `max-w-2xl` body constraint that had
+    silently narrowed every page since P2a; a new `app/(storefront)/layout.tsx` (`force-dynamic`,
+    since it reads the session) hosts `components/layout/Header.tsx` — a **Server Component** (no
+    client JS) with a promo bar, logo, GET search form, an auth-aware account control
+    (`getSession()` → account link vs. "Sign in"), and an inert cart button (no count; no cart
+    until P3). The layout adds no second `<main>` — pages keep their own.
+  - **Hero homepage**: the M0 walking-skeleton `app/page.tsx` is removed and `/` is now served by
+    `app/(storefront)/page.tsx` — a hero band, a data-driven department grid, and a postcode
+    deliverability checker wired to P2.5b1's `isDeliverable()`. (`/api/health` is unchanged and
+    remains the machine-readable health surface.) The checker lives on the hero, not the sticky
+    header, because Next App Router layouts don't receive `searchParams` — only pages do.
+  - **Redesigned `ProductCard`**: Halal/Fresh badges, a discount "Offer" badge + "Save £X" +
+    strikethrough original price (derived from `originalPrice`), a star rating, `origin`, and an
+    inert Add-to-Cart control. All brand colors come from semantic tokens (no raw hex); the gold
+    rating star uses stock Tailwind `amber-400`, the one non-brand decorative color the design
+    system already defers to Tailwind for.
+  - **Category sidebar + speciality filters**: `components/layout/CategorySidebar.tsx`
+    (presentational, receives categories as props) renders on the category and search pages;
+    `ProductFilterForm` gains Halal/Fresh/Organic checkboxes wired to P2.5b1's real filter fields,
+    with both pages parsing the params, passing them to the repository, and carrying them through
+    pagination.
+  - **Two data-layer additions surfaced during Orient** (not pure UI, so called out): (1)
+    `ProductSummary`/`ProductDetail` now expose `averageRating`/`reviewCount` — P2.5a denormalized
+    these *for the cards* but no read path ever selected them; (2)
+    `components/product/category-icon.ts` maps a category slug to a lucide icon with a **generic
+    default fallback**, so a category added to the DB later still renders an icon without a schema
+    `iconName` field (honors the "auto-size to more categories" requirement).
+  - **Dynamic-sizing / performance / auth** (explicit human requirements on #43): every grid and
+    sidebar renders straight from `.map()` over DB results — no hardcoded 8-category/16-product
+    counts; loading stays Server-Component + keyset-paginated (P2b's cursor pattern, reused); the
+    header reflects real auth state, no mock.
+  - **Deliberately excluded**: cart/Add-to-Cart wiring (P3), the Dev Control Toolbar (#41),
+    `next/image`, a `Category.iconName` field, real photography, and a homepage "featured products"
+    rail (no backing data — no featured field or list-all method exists yet).
+  - **Post-preview adjustments** (from reviewing the running preview): the delivery area moved from
+    Leicester (LE1–LE5) to **Milton Keynes (MK1–MK19)** — `isDeliverable()`, its test, and all
+    locality copy (header/hero/metadata); the header now uses the **real logo** (`docs/logo.png`
+    resized to `public/images/brand/logo.png`) in place of the "A" placeholder; and `globals.css`
+    now forces `color-scheme: light` with an explicit white background + brand-ink text — a
+    dark-mode browser was painting a dark canvas, making dark text on the transparent category
+    cards unreadable.
+- **P2.5b1 — Visual redesign foundation** (`specs/2026-08-07-p2-5b1-visual-foundation/`), first of
+  two P2.5b slices (issue #40), split from a single oversized slice so tokens/schema/seed could be
+  validated before P2.5b2's UI work (issue #43) consumes them.
+  - **Design tokens**: `design-system/tokens/tokens.css` gains three tint primitives
+    (`#E8F5E9`/`#FFF3E0`/`#FFEBEE`, confirmed against both the brand kit and the mockup's own
+    `index.css`) as `--color-action-tint`/`--color-accent-tint`/`--color-danger-tint` — named
+    relative to their base color, matching the existing hover/active-shade convention rather than
+    inventing generic "success/warning" status vocabulary. `specs/design-system.md` (v1.1.0) also
+    documents the brand kit's type scale as Tailwind utility mappings and resolves its two
+    long-open items: real logo source (`docs/logo.png`, now committed) and red's dual role
+    (alert/danger **and** sale-badge color, confirmed via the mockup's `ProductCard.tsx`).
+  - `lucide-react` added — the mockup's actual icon library, not a guessed choice.
+  - **Prisma**: `Product` gains `origin` (String?), `originalPrice` (Int? pence — a discount badge
+    is derived from the gap to `basePrice` at render time, not a separate boolean that could drift),
+    and `isHalal`/`isFresh`/`isOrganic` (Boolean, default false). `lib/repositories/products.ts`'s
+    `ProductFilters`/`ProductSummary`/`ProductDetail` extended to match; `search()` and
+    `listByCategory()` both route through the same `buildFilterWhere()`, so the three new filters
+    behave identically from either entry point — no divergent behavior to maintain.
+  - **Seed**: adds 6 categories (halal-meat, groceries, international, beverages, snacks,
+    household) and 12 products, bringing the catalogue to 9 categories / 18 products — covers the
+    mockup's 8 real departments plus the existing `bakery` (which the mockup doesn't have and isn't
+    being removed; content parity matters more than exact slug parity with already-live URLs).
+    **Bug caught mid-build**: the original seed script's idempotency check was a single
+    `category.count() > 0` gate — since the existing 3 categories already exist in every
+    environment, it would have silently skipped all 6 new categories forever. Rewritten to check
+    per-category by slug, so partial catalogues extend correctly instead of getting stuck. New
+    product images go through the same real `putObject()` storage round-trip as P2a's seed, never
+    an external URL.
+  - `lib/delivery.ts` — pure `isDeliverable()`, checks a postcode's LE1–LE5 (Leicester) prefix,
+    case/whitespace-tolerant. No persistence; P3's checkout decides what to do with the result.
+  - **Fixed while validating**: `docs/ui-ref/` (the mockup's committed reference source, its own
+    separate Vite/React project) was never excluded from this repo's root `eslint.config.mjs`/
+    `tsconfig.json`, so both `lint` and `tsc --noEmit` failed on code that isn't part of this app at
+    all. Excluded, matching the existing pattern for `kms/site-internal`/`kms/site-public`.
+  - **Corrected during build**: `requirements.md`/`plan.md` originally said "5 new categories...
+    8 total" while separately listing 6 category names — an arithmetic slip, not a scope change.
+    Fixed to 6 new / 9 total (12 new products / 18 total) before implementing, matching the
+    enumerated list and the "add every mockup category we're missing" rationale that was always
+    the actual intent.
+  - **Deliberately excluded**: any layout/component/visual application of these tokens — P2.5b2
+    (issue #43). Real product photography remains deferred per P2a's original note.
+- **P2.5a — Ratings & reviews backend** (`specs/2026-08-07-p2-5a-ratings-reviews/`), first slice
+  of P2.5 — a phase inserted into the roadmap after P2's close (closes #39, see `specs/
+  roadmap.md` v1.2.0 for why: comparing the live site against the project's own AI Studio design
+  mockup surfaced that ratings/reviews were never in the original P0–P8 plan at all).
+  - **Prisma**: `Review` (one per user per product via `@@unique([userId, productId])` —
+    resubmitting updates rather than duplicates; cascade-deletes with the user, matching
+    `Session`/`Account`'s existing pattern). `Product` gains denormalized `averageRating`/
+    `reviewCount`, recomputed from a full aggregate (not incremental, avoids float drift) inside
+    the same transaction as every review write — matches `Inventory.quantity`'s existing
+    denormalized-for-read-performance precedent, needed because ratings render on every
+    paginated product-grid card.
+  - `lib/repositories/reviews.ts` — `upsert`/`delete` (ownership-checked via a single atomic
+    `deleteMany({ id, userId })`, not a read-then-check), `listByProduct`, `getByUserAndProduct`
+    (pre-fills the submission form for a returning reviewer).
+  - `features/reviews/` — **the first real use of `features/` since auth**, and for the same
+    underlying reason: a genuine session-gated write use-case, unlike P2's read-only browsing
+    which correctly stayed in `components/product/`. Two Server Actions
+    (`submit-review.ts`/`delete-review.ts`) behind a plain `<form>` — no client component, same
+    progressive-enhancement pattern as P2's GET forms.
+  - `features/reviews/validate-rating.ts` — pure, unit-tested `parseRating()`, same pattern as
+    `parse-price-input.ts`.
+  - `app/(storefront)/products/[slug]` extended with a review list, the submission form for
+    logged-in visitors, and a login prompt (not a redirect) for guests — browsing stays
+    guest-accessible, no regression.
+  - **Deliberately excluded**: review moderation (fits P6's admin panel better), verified-purchase
+    gating (impossible before P3/cart exists), review-list pagination (bounded to the most recent
+    20 for now), any visual/component redesign — all P2.5b (#40), once this lands.
 - **P2b — Catalogue search & filters** (`specs/2026-08-07-p2b-catalogue-search/`), second and
   final P2 slice, closing out P2 (closes #34).
   - `lib/repositories/products.ts` gains `search()` (global, across all categories, same keyset

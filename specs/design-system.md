@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-08-06
+version: "1.2.0"
+updated: 2026-08-07
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand]
@@ -38,11 +38,43 @@ Two hover/active shades (darker green, darker orange) are **derived** by reducin
 primitive, not sourced from the kit — marked `/* derived, not from brand kit */` in `tokens.css` so
 they're never mistaken for an authoritative value.
 
+Three tint shades — light backgrounds for badges/banners — **are** sourced from the brand kit
+(`#E8F5E9`/`#FFF3E0`/`#FFEBEE`) and confirmed against the mockup's own `docs/ui-ref/src/index.css`.
+Named `--color-action-tint`/`--color-accent-tint`/`--color-danger-tint`, relative to their base
+color — the same convention as the hover/active shades above, not a new "success/warning" status
+vocabulary this project has never used. The brand kit's fourth tint (`#FAFAFA`, "light neutral") is
+not added as a token — it's near-identical to the already-existing `--color-surface-muted`
+(`#F5F5F0`) and a separate near-duplicate token would only invite drift between the two.
+
+| Primitive | Hex | Semantic | Role |
+|---|---|---|---|
+| `--color-brand-green-tint` | `#E8F5E9` | `--color-action-tint` | Light backgrounds behind action-colored badges/banners |
+| `--color-brand-orange-tint` | `#FFF3E0` | `--color-accent-tint` | Light backgrounds behind accent badges (e.g. discount) |
+| `--color-brand-red-tint` | `#FFEBEE` | `--color-danger-tint` | Light backgrounds behind danger/alert badges |
+
 ## Typography
 
 One family — **Poppins** — at two weights: SemiBold (600) for headings, Regular (400) for body.
 Loaded via `next/font/google` (self-hosted at build time; no runtime request to Google Fonts, which
 matters running on Workers). No second family; the brand kit never specifies one.
+
+The brand kit's explicit type scale (H1 32px Bold, H2 24px Semibold, H3 18px Semibold, Body 14px
+Regular, Small 12px Regular) maps to Tailwind's existing utility scale rather than new CSS
+tokens — close enough that a parallel token set would just be indirection:
+
+| Brand kit | Tailwind utility |
+|---|---|
+| H1 — 32px Bold | `text-3xl md:text-4xl font-bold` |
+| H2 — 24px Semibold | `text-2xl font-semibold` |
+| H3 — 18px Semibold | `text-lg font-semibold` |
+| Body — 14px Regular | `text-sm font-normal` |
+| Small — 12px Regular | `text-xs font-normal` |
+
+## Icons
+
+**lucide-react** — confirmed as the mockup's actual choice (`docs/ui-ref/src/components/*.tsx`
+import every icon from it). Components import icons directly from `lucide-react`; no wrapper
+component, no hand-rolled SVG set.
 
 ## Shape
 
@@ -57,23 +89,49 @@ circular icon buttons) — **not pixel-measured**, safe to revise once real UI c
 
 Spacing scale and breakpoints are **not brand-derived** — Tailwind v4's defaults are used as-is.
 
+## Storefront components (P2.5b2)
+
+The first real storefront UI built against these tokens, matching the AI Studio mockup
+(`docs/ui-ref/`). The mockup's raw hex/`slate-*` are **translated to semantic tokens**, never
+copied literally:
+
+| Mockup element | Mockup color | Our token / utility |
+|---|---|---|
+| Promo bar, logo mark, cart button, Halal badge | `#1B5E20` | `bg-primary` |
+| Fresh badge | emerald ≈ `#4CAF50` | `bg-action` |
+| Offer badge, "Food Centre" wordmark | `#F57C00` | `text-accent` / `bg-accent` |
+| "Save £X" discount badge | red `#D32F2F` | `bg-danger` |
+| Soft hero / active-nav / category-chip background | light green `#E8F5E9` | `bg-action-tint` |
+| Card / input surfaces, borders | `slate-*` | `bg-surface-muted`, `border-black/10` (stock neutral) |
+| Rating star | amber-400 | stock Tailwind `text-amber-400 fill-amber-400` |
+
+- **The rating star deliberately uses stock Tailwind `amber-400`**, not a brand token — gold is a
+  decorative, non-brand convention, and this file already defers all non-brand color to Tailwind's
+  scale. It's the one "raw" color allowed in a card, and it's a utility class, not a hex literal.
+- **Icons** come from `lucide-react` (see below); `components/product/category-icon.ts` maps a
+  category slug to its icon with a generic-basket **default fallback**, so a category added to the
+  DB later still renders an icon without a schema change.
+- **The header is a Server Component** (`components/layout/Header.tsx`) — it reads the session and
+  renders auth state (account link vs. sign-in) with zero client JS, the same
+  progressive-enhancement stance as the GET-form search/filters.
+- **Cards and the cart button render `Add`/cart controls that are inert** until P3 wires a real
+  cart — visual fidelity without a fake count.
+
 ## What's deliberately not here yet
 
-- **Logo files.** The brand kit is a reference image, not exported source assets (SVG/PNG).
-  `public/images/brand/` stays an empty scaffold until real files exist.
 - **`components/`, `design-system/{components,patterns,pages,guidelines}/`.** Nothing consumes
   tokens yet — first real usage is P1+ feature UI. Building these now would be speculative.
 - **Dark mode.** No requirement yet; add when one exists.
 - **Lint rule banning raw hex/px** (`specs/tech-stack.md`'s testing section, `docs/repo-structure.md`
   tags it P6) — deliberately deferred, not part of this slice.
 
-## Open items carried into later phases
+## Resolved (previously open items)
 
-- **Red's exact role** (`--color-danger`) — the brand kit shows no UI example using it (no
-  alert/badge in the kit). Confirm whether it's system-error-only or also a "sale/clearance" badge
-  color before P2 storefront UI work makes badges visible to customers.
-- **Real logo source files** — needed before any customer-facing page ships; placeholder-free
-  scaffold (`public/images/brand/`) until then.
+- **Real logo source files** — resolved 2026-08-07: `docs/logo.png` committed. `public/images/brand/`
+  scaffold now has a real source to work from.
+- **Red's exact role** (`--color-danger`) — resolved 2026-08-07, confirmed against the mockup's
+  `docs/ui-ref/src/components/ProductCard.tsx`: both system alert/danger **and** the sale/discount
+  badge color. No separate token needed for the sale-badge use — same primitive, same semantic.
 
 ## Implementation
 

@@ -1,6 +1,18 @@
 @import "tailwindcss";
 @import "../design-system/tokens/tokens.css";
 
+/*
+ * The storefront is a light-only design (no dark-mode styles yet). Declaring
+ * `light dark` previously let a dark-mode browser paint a dark canvas, which
+ * made dark brand text on transparent surfaces (e.g. the category cards)
+ * unreadable. Force light and set an explicit white background + brand ink
+ * text (#212121, brand kit "Text / Dark") so contrast holds everywhere.
+ */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
+}
+
+body {
+  background-color: #ffffff;
+  color: #212121;
 }

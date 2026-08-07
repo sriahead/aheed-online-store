@@ -28,20 +28,29 @@ async function main() {
   await seedCatalogue();
 }
 
+type CatalogueProduct = {
+  slug: string;
+  name: string;
+  description: string;
+  basePrice: number;
+  unitLabel: string;
+  quantity: number;
+  origin?: string;
+  originalPrice?: number;
+  isHalal?: boolean;
+  isFresh?: boolean;
+  isOrganic?: boolean;
+};
+
+type CatalogueCategory = {
+  category: { slug: string; name: string };
+  products: CatalogueProduct[];
+};
+
 // P2a — placeholder catalogue data (specs/2026-08-07-p2a-catalogue-browsing/). Real
 // Aheed product data/photography doesn't exist yet; this proves the browsing path
 // (and the real storage round-trip for images) end-to-end until it does.
-const CATALOGUE: Array<{
-  category: { slug: string; name: string };
-  products: Array<{
-    slug: string;
-    name: string;
-    description: string;
-    basePrice: number;
-    unitLabel: string;
-    quantity: number;
-  }>;
-}> = [
+const CATALOGUE: CatalogueCategory[] = [
   {
     category: { slug: "fruit-veg", name: "Fruit & Veg" },
     products: [
@@ -105,12 +114,160 @@ const CATALOGUE: Array<{
       },
     ],
   },
+  // P2.5b1 — visual redesign foundation (specs/2026-08-07-p2-5b1-visual-foundation/).
+  // Fills out the mockup's real department list; existing 3 categories above are
+  // left untouched (already live in production).
+  {
+    category: { slug: "halal-meat", name: "Halal Meat" },
+    products: [
+      {
+        slug: "halal-chicken-breast",
+        name: "Halal Chicken Breast",
+        description: "Fresh halal-certified chicken breast fillets.",
+        basePrice: 599,
+        unitLabel: "£5.99 / kg",
+        quantity: 20,
+        origin: "United Kingdom",
+        isHalal: true,
+        isFresh: true,
+      },
+      {
+        slug: "halal-lamb-mince",
+        name: "Halal Lamb Mince",
+        description: "Halal-certified lamb mince, freshly ground.",
+        basePrice: 799,
+        unitLabel: "£7.99 / kg",
+        quantity: 15,
+        origin: "United Kingdom",
+        isHalal: true,
+        isFresh: true,
+      },
+    ],
+  },
+  {
+    category: { slug: "groceries", name: "Groceries" },
+    products: [
+      {
+        slug: "basmati-rice-5kg",
+        name: "Basmati Rice 5kg",
+        description: "Long-grain aromatic basmati rice.",
+        basePrice: 899,
+        unitLabel: "£8.99 / 5kg",
+        quantity: 35,
+        origin: "India",
+      },
+      {
+        slug: "sunflower-oil-2l",
+        name: "Sunflower Oil 2L",
+        description: "Pure sunflower cooking oil.",
+        basePrice: 449,
+        unitLabel: "£4.49 / 2L",
+        quantity: 40,
+      },
+    ],
+  },
+  {
+    category: { slug: "international", name: "International" },
+    products: [
+      {
+        slug: "coconut-milk",
+        name: "Coconut Milk",
+        description: "Rich, creamy coconut milk, 400ml tin.",
+        basePrice: 129,
+        unitLabel: "£1.29 / tin",
+        quantity: 50,
+        origin: "Thailand",
+      },
+      {
+        slug: "harissa-paste",
+        name: "Harissa Paste",
+        description: "Spicy North African chilli paste.",
+        basePrice: 249,
+        unitLabel: "£2.49 / jar",
+        quantity: 22,
+        origin: "Tunisia",
+      },
+    ],
+  },
+  {
+    category: { slug: "beverages", name: "Beverages" },
+    products: [
+      {
+        slug: "orange-juice-1l",
+        name: "Orange Juice 1L",
+        description: "Freshly squeezed orange juice, no added sugar.",
+        basePrice: 199,
+        unitLabel: "£1.99 / L",
+        quantity: 30,
+        isFresh: true,
+      },
+      {
+        slug: "mint-tea-box",
+        name: "Mint Tea, box of 40",
+        description: "Refreshing mint tea bags.",
+        basePrice: 279,
+        originalPrice: 349,
+        unitLabel: "£2.79 / box",
+        quantity: 45,
+        origin: "Morocco",
+      },
+    ],
+  },
+  {
+    category: { slug: "snacks", name: "Snacks" },
+    products: [
+      {
+        slug: "mixed-nuts-500g",
+        name: "Mixed Nuts 500g",
+        description: "Roasted and salted mixed nuts.",
+        basePrice: 399,
+        unitLabel: "£3.99 / 500g",
+        quantity: 28,
+        isOrganic: true,
+      },
+      {
+        slug: "date-bites",
+        name: "Date Bites, pack of 6",
+        description: "Natural date and nut snack bars.",
+        basePrice: 299,
+        originalPrice: 349,
+        unitLabel: "£2.99 / pack",
+        quantity: 33,
+        origin: "United Arab Emirates",
+        isOrganic: true,
+      },
+    ],
+  },
+  {
+    category: { slug: "household", name: "Household" },
+    products: [
+      {
+        slug: "washing-up-liquid",
+        name: "Washing Up Liquid",
+        description: "Concentrated washing up liquid, 500ml.",
+        basePrice: 179,
+        unitLabel: "£1.79 / 500ml",
+        quantity: 38,
+      },
+      {
+        slug: "kitchen-roll-4pack",
+        name: "Kitchen Roll, pack of 4",
+        description: "Absorbent multi-purpose kitchen roll.",
+        basePrice: 329,
+        unitLabel: "£3.29 / pack",
+        quantity: 26,
+      },
+    ],
+  },
 ];
 
 async function seedCatalogue() {
-  const existing = await prisma.category.count();
-  if (existing > 0) {
-    console.log(`Category already has ${existing} row(s) — skipping catalogue seed`);
+  const existingSlugs = new Set(
+    (await prisma.category.findMany({ select: { slug: true } })).map((c) => c.slug),
+  );
+  const pending = CATALOGUE.filter(({ category }) => !existingSlugs.has(category.slug));
+  if (pending.length === 0) {
+    console.log(`All ${CATALOGUE.length} catalogue categories already exist — skipping`);
     return;
   }
 
@@ -120,19 +277,19 @@ async function seedCatalogue() {
   );
   const storage = getStorage();
 
-  // Upload every image BEFORE writing anything to the DB, and write all rows in one
-  // transaction — a mid-run failure (e.g. storage credentials wrong) must not leave an
-  // orphaned Category with zero Products, which would otherwise poison future runs'
-  // idempotency check above.
-  for (const { products } of CATALOGUE) {
+  // Upload every image BEFORE writing anything to the DB, and write each category's
+  // rows in one transaction — a mid-run failure (e.g. storage credentials wrong) must
+  // not leave an orphaned Category with zero Products, which would otherwise poison
+  // future runs' per-category idempotency check above.
+  for (const { products } of pending) {
     for (const product of products) {
       const storageKey = `products/${product.slug}/main.svg`;
       await storage.putObject(storageKey, placeholderImage, "image/svg+xml");
     }
   }
 
-  await prisma.$transaction(async (tx) => {
-    for (const { category, products } of CATALOGUE) {
+  for (const { category, products } of pending) {
+    await prisma.$transaction(async (tx) => {
       const createdCategory = await tx.category.create({ data: category });
 
       for (const product of products) {
@@ -144,6 +301,11 @@ async function seedCatalogue() {
             categoryId: createdCategory.id,
             basePrice: product.basePrice,
             unitLabel: product.unitLabel,
+            origin: product.origin,
+            originalPrice: product.originalPrice,
+            isHalal: product.isHalal ?? false,
+            isFresh: product.isFresh ?? false,
+            isOrganic: product.isOrganic ?? false,
             images: {
               create: {
                 storageKey: `products/${product.slug}/main.svg`,
@@ -157,10 +319,10 @@ async function seedCatalogue() {
           },
         });
       }
-    }
-  });
+    });
+  }
   console.log(
-    `seeded ${CATALOGUE.length} categories, ${CATALOGUE.flatMap((c) => c.products).length} products`,
+    `seeded ${pending.length} categories, ${pending.flatMap((c) => c.products).length} products`,
   );
 }
 

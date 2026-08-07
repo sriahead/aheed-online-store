@@ -8,7 +8,15 @@ export function ProductFilterForm({
   searchParams,
 }: {
   showQuery?: boolean;
-  searchParams: { q?: string; minPrice?: string; maxPrice?: string; inStock?: string };
+  searchParams: {
+    q?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    inStock?: string;
+    isHalal?: string;
+    isFresh?: string;
+    isOrganic?: string;
+  };
 }) {
   return (
     <form method="GET" className="mb-6 flex flex-wrap items-end gap-3">
@@ -53,6 +61,33 @@ export function ProductFilterForm({
           defaultChecked={searchParams.inStock === "1"}
         />
         <span className="text-sm text-primary">In stock only</span>
+      </label>
+      <label className="flex items-center gap-2 pb-2">
+        <input
+          type="checkbox"
+          name="isHalal"
+          value="1"
+          defaultChecked={searchParams.isHalal === "1"}
+        />
+        <span className="text-sm text-primary">Halal</span>
+      </label>
+      <label className="flex items-center gap-2 pb-2">
+        <input
+          type="checkbox"
+          name="isFresh"
+          value="1"
+          defaultChecked={searchParams.isFresh === "1"}
+        />
+        <span className="text-sm text-primary">Fresh</span>
+      </label>
+      <label className="flex items-center gap-2 pb-2">
+        <input
+          type="checkbox"
+          name="isOrganic"
+          value="1"
+          defaultChecked={searchParams.isOrganic === "1"}
+        />
+        <span className="text-sm text-primary">Organic</span>
       </label>
       <button type="submit" className="rounded-full bg-action px-4 py-2 font-semibold text-white">
         Apply
