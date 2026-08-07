@@ -1,3 +1,16 @@
+---
+id: mission
+title: Mission
+audience: [dev]
+type: doc
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases.
+tags: [mission, scope, mvp]
+---
+
 # Mission
 
 ## Problem

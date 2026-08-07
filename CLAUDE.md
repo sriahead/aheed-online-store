@@ -1,3 +1,16 @@
+---
+id: claude-md
+title: "CLAUDE.md — AI Assistant Guardrails"
+audience: [dev]
+type: doc
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
+tags: [guardrails, ai-assistant, conventions]
+---
+
 # CLAUDE.md — AI assistant guardrails (Aheed Food Centre Online Store)
 
 Read this first, every session. It encodes decisions already made; do not re-derive them from

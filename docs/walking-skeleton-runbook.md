@@ -1,3 +1,16 @@
+---
+id: walking-skeleton-runbook
+title: Walking-Skeleton Runbook (M0)
+audience: [dev]
+type: runbook
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: Step-by-step runbook to stand up the M0 walking skeleton — Cloudflare, R2, Neon, and GitHub environment provisioning through to a green production health check.
+tags: [runbook, m0, infrastructure]
+---
+
 # Walking-Skeleton Runbook (M0)
 
 Follow once. When the health check is green on production, the infrastructure is trusted and P0+

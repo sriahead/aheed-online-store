@@ -7,6 +7,43 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **`docs/onboarding.md` refreshed** — was still framed around M0-only ("Feature work (P0+) starts
+  only after M0 is green"), badly stale now that M0/P0/KMS/design-system have shipped and P1a is
+  in flight. Updated: current phase status (pointing at `specs/roadmap.md`'s change log as the
+  source of truth, not duplicating it), `.env` vs `.dev.vars` distinction, the `npm run preview`
+  vs `npm run dev` DB-touching gotcha surfaced immediately rather than buried in `CLAUDE.md`, the
+  seven-stage SDD workflow + slash commands, and a pointer to the internal docs site. Verified no
+  real duplication with `kms/site-internal/`'s content — that site auto-assembles from `specs/`,
+  `docs/`, and `CLAUDE.md` (confirmed all 20 backfilled docs, including this one, assemble
+  correctly), nothing hand-duplicated there. Its one stale line (`content/dev/index.mdx` said
+  pages were "populated once those docs carry real front-matter" — no longer true post-backfill)
+  fixed to point at the now-real content instead.
+- **SDD — backfill missing `plan.md` files + prevent future drift.** 4 slices had drifted to a
+  two-file (`requirements.md`/`validation.md`) pattern, missing `plan.md` — unintentional; started
+  with the design-system slice and got entrenched when `specs/sdd-workflow.md`'s own `/spec` stage
+  only mentioned the other two. Fixed:
+  - `specs/templates/feature-spec/{plan,requirements,validation}.md` — scaffolded for the first
+    time (`docs/repo-structure.md` documented this directory but it never existed), so future
+    slices copy a real template instead of improvising from "the most recent slice."
+  - `plan.md` backfilled for `design-system`, `kms-backfill`, `kms-gates`, `kms-site` — the
+    narrative (goal, scope, deliberately-excluded, rationale) that front-matter now lives on,
+    moved off `requirements.md` to match the established one-entry-per-slice precedent.
+  - `kms/schema/repo.ts`'s `walk()` now excludes `specs/templates/` — the template's placeholder
+    front-matter (`id: REPLACE-ME-...`) would otherwise hard-fail `kms:validate` once gate-wired.
+  - `specs/sdd-workflow.md` and `.claude/commands/spec.md` now require all three files for every
+    new slice, not just two.
+  - `specs/2026-08-06-p1-auth/plan.md` lands separately, directly on PR #24's branch (doesn't
+    exist on `staging` yet).
+- **KMS — front-matter backfill** (`specs/2026-08-06-kms-backfill/`), closing the last deferred
+  item from the KMS foundation slice (`specs/2026-08-06-kms/requirements.md` R8).
+  `ARTIFACT_INDEX.md` now indexes 19 docs instead of 1: `CLAUDE.md`, all three `docs/*.md`, the 9
+  persistent `specs/` docs (architecture, mission, roadmap, tech-stack, design-system,
+  sdd-workflow, and the 3 ADRs), and one representative file per dated slice folder. Matches the
+  precedent already set by `specs/2026-08-06-kms/plan.md`: one indexed entry per meaningful
+  doc/slice, not every acceptance-criteria file — sibling `requirements.md`/`validation.md` files
+  stay deliberately un-indexed. `specs/2026-08-06-p1-auth/requirements.md` is excluded from this
+  slice (doesn't exist on `staging` yet, only on PR #24) — its front-matter lands with that PR
+  instead.
 - **P1b — Google Sign-In** (`specs/2026-08-06-p1b-google-signin/`), closing out P1's auth line on
   top of P1a below. Unblocked by the human provisioning the Google Cloud Console OAuth client and
   setting `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` as Cloudflare secrets on both `staging` and

@@ -16,7 +16,11 @@ const EXCLUDE_DIRS = new Set([
 // except its hand-authored index.mdx/_meta.json — never a source of truth. Walking it
 // would index the same doc twice (source path + assembled copy) and isn't even
 // deterministic in CI, since the assembled copies don't exist on a fresh checkout.
-const EXCLUDE_PATH_PATTERN = /^kms\/site-[^/]+\/content(\/|$)/;
+//
+// specs/templates/ holds copy-and-fill templates with deliberately invalid placeholder
+// values (id: REPLACE-ME-..., updated: REPLACE-ME-YYYY-MM-DD) — not a real doc, and
+// walking it would hard-fail kms:validate on the template itself once gate-wired.
+const EXCLUDE_PATH_PATTERN = /^(kms\/site-[^/]+\/content|specs\/templates)(\/|$)/;
 
 // Sorted for deterministic output — readdirSync's order isn't guaranteed across
 // platforms/filesystems, and build-index.ts's output needs to be diff-stable.

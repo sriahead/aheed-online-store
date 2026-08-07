@@ -1,3 +1,17 @@
+---
+id: m0-walking-skeleton
+title: "M0 — Walking Skeleton (plan)"
+audience: [dev]
+type: spec
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: Plan for the smallest possible end-to-end app (Next.js on Workers, Neon, CI/CD) proving the Cloudflare + Neon pipeline before any feature work begins.
+tags: [m0, walking-skeleton, infrastructure]
+related: [architecture, adr-001-hosting]
+---
+
 # M0 — Walking Skeleton (plan)
 
 **Goal:** de-risk the whole pivot by shipping the *smallest possible* app end-to-end, on real

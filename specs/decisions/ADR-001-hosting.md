@@ -1,3 +1,17 @@
+---
+id: adr-001-hosting
+title: "ADR-001 — Hosting, Database & Egress"
+audience: [dev]
+type: adr
+status: approved
+version: "2.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin.
+tags: [adr, hosting, cloudflare, neon]
+related: [architecture, adr-002-auth-library, adr-003-storage-abstraction]
+---
+
 # ADR-001 — Hosting, Database & Egress
 
 - **Status:** Accepted (revised). This revision **supersedes** the original GCP-origin design
