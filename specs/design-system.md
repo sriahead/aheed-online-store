@@ -4,7 +4,7 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.1.0"
+version: "1.2.0"
 updated: 2026-08-07
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, and the open items (logo assets, danger-color role) carried into later phases.
@@ -88,6 +88,34 @@ circular icon buttons) — **not pixel-measured**, safe to revise once real UI c
 | `--radius-full` | `9999px` | Pills, circular icon buttons |
 
 Spacing scale and breakpoints are **not brand-derived** — Tailwind v4's defaults are used as-is.
+
+## Storefront components (P2.5b2)
+
+The first real storefront UI built against these tokens, matching the AI Studio mockup
+(`docs/ui-ref/`). The mockup's raw hex/`slate-*` are **translated to semantic tokens**, never
+copied literally:
+
+| Mockup element | Mockup color | Our token / utility |
+|---|---|---|
+| Promo bar, logo mark, cart button, Halal badge | `#1B5E20` | `bg-primary` |
+| Fresh badge | emerald ≈ `#4CAF50` | `bg-action` |
+| Offer badge, "Food Centre" wordmark | `#F57C00` | `text-accent` / `bg-accent` |
+| "Save £X" discount badge | red `#D32F2F` | `bg-danger` |
+| Soft hero / active-nav / category-chip background | light green `#E8F5E9` | `bg-action-tint` |
+| Card / input surfaces, borders | `slate-*` | `bg-surface-muted`, `border-black/10` (stock neutral) |
+| Rating star | amber-400 | stock Tailwind `text-amber-400 fill-amber-400` |
+
+- **The rating star deliberately uses stock Tailwind `amber-400`**, not a brand token — gold is a
+  decorative, non-brand convention, and this file already defers all non-brand color to Tailwind's
+  scale. It's the one "raw" color allowed in a card, and it's a utility class, not a hex literal.
+- **Icons** come from `lucide-react` (see below); `components/product/category-icon.ts` maps a
+  category slug to its icon with a generic-basket **default fallback**, so a category added to the
+  DB later still renders an icon without a schema change.
+- **The header is a Server Component** (`components/layout/Header.tsx`) — it reads the session and
+  renders auth state (account link vs. sign-in) with zero client JS, the same
+  progressive-enhancement stance as the GET-form search/filters.
+- **Cards and the cart button render `Add`/cart controls that are inert** until P3 wires a real
+  cart — visual fidelity without a fake count.
 
 ## What's deliberately not here yet
 

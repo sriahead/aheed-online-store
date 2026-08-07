@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-07T18:27:53.113Z` · commit `94fb60c` · `26` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-07T19:16:47.355Z` · commit `8428d6e` · `27` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -37,15 +37,16 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P1b — Google Sign-In (plan)](specs/2026-08-06-p1b-google-signin/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for adding Google as a Better Auth social provider alongside P1a's email/password flow, now that the human has provisioned the OAuth client and its secrets on Cloudflare. |
 | [P2.5a — Ratings & Reviews Backend (plan)](specs/2026-08-07-p2-5a-ratings-reviews/plan.md) | spec | 1.0.0 | 2026-08-07 | approved | internal | Plan for the first P2.5 slice — a real Review model, auth-gated submission, and denormalized rating aggregation — laying the real data P2.5b's visual redesign will display. |
 | [P2.5b1 — Visual Redesign Foundation (plan)](specs/2026-08-07-p2-5b1-visual-foundation/plan.md) | spec | 1.0.0 | 2026-08-07 | approved | internal | Plan for the foundation half of P2.5b — design tokens ingested from the real brand kit, schema/filter extensions, and expanded seed data — laying real material for P2.5b2's UI work to consume. |
+| [P2.5b2 — Storefront Visual Redesign UI (plan)](specs/2026-08-07-p2-5b2-visual-ui/plan.md) | spec | 1.0.0 | 2026-08-07 | draft | internal | Plan for the UI half of P2.5b — applies P2.5b1's tokens/schema/seed to a real storefront layout, header, hero, redesigned product cards, category sidebar, and speciality filters matching the AI Studio mockup. |
 | [P2a — Catalogue Browsing (plan)](specs/2026-08-07-p2a-catalogue-browsing/plan.md) | spec | 1.0.0 | 2026-08-07 | approved | internal | Plan for the first P2 slice — categories, product pages, images via the storage port, and keyset pagination — split from search & filters, which lands separately as P2b. |
 | [P2b — Catalogue Search & Filters (plan)](specs/2026-08-07-p2b-catalogue-search/plan.md) | spec | 1.0.0 | 2026-08-07 | approved | internal | Plan for the second P2 slice — global search across products plus price/availability filters on both search and category pages — layered on P2a's schema and repositories. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.1.0 | 2026-08-07 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
 | [ADR-003 — Object Storage Abstraction (S3-compatible)](specs/decisions/ADR-003-storage-abstraction.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time. |
-| [Design System](specs/design-system.md) | doc | 1.1.0 | 2026-08-07 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, and the open items (logo assets, danger-color role) carried into later phases. |
+| [Design System](specs/design-system.md) | doc | 1.2.0 | 2026-08-07 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, and the open items (logo assets, danger-color role) carried into later phases. |
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
-| [Roadmap](specs/roadmap.md) | doc | 1.3.0 | 2026-08-07 | approved | internal | Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |
+| [Roadmap](specs/roadmap.md) | doc | 1.4.0 | 2026-08-07 | approved | internal | Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |
 | [SDD Workflow](specs/sdd-workflow.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The seven-stage SDD workflow (Orient, Propose, Spec, Build, Validate, Document, Ship), each also an invokable Claude Code slash command, expanding CLAUDE.md's four gates. |
 | [Tech Stack](specs/tech-stack.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
 

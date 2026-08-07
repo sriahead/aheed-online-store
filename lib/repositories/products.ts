@@ -19,6 +19,8 @@ export interface ProductSummary {
   isHalal: boolean;
   isFresh: boolean;
   isOrganic: boolean;
+  averageRating: number;
+  reviewCount: number;
 }
 
 export interface ProductDetail extends ProductSummary {
@@ -103,6 +105,8 @@ export function getProductRepository(): ProductRepository {
         isHalal: true,
         isFresh: true,
         isOrganic: true,
+        averageRating: true,
+        reviewCount: true,
         images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
       },
     });
@@ -122,6 +126,8 @@ export function getProductRepository(): ProductRepository {
         isHalal: p.isHalal,
         isFresh: p.isFresh,
         isOrganic: p.isOrganic,
+        averageRating: p.averageRating,
+        reviewCount: p.reviewCount,
         primaryImage: p.images[0] ?? null,
       })),
       nextCursor: hasMore ? page[page.length - 1].id : null,
@@ -168,6 +174,8 @@ export function getProductRepository(): ProductRepository {
           isHalal: true,
           isFresh: true,
           isOrganic: true,
+          averageRating: true,
+          reviewCount: true,
           images: { orderBy: { sortOrder: "asc" }, select: productImageSelect },
           inventory: { select: { quantity: true } },
         },

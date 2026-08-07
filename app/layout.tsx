@@ -9,14 +9,18 @@ const poppins = Poppins({
 });
 
 export const metadata = {
-  title: "Aheed Food Centre — Walking Skeleton",
-  description: "End-to-end smoke test: Cloudflare Workers + Neon + Prisma.",
+  title: "Aheed Food Centre — Leicester Cultural Groceries",
+  description:
+    "Halal meat, fresh produce, and cultural groceries in Leicester, with local delivery.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  // No width/padding constraint here — the storefront layout owns the header and
+  // each page owns its own width container. (This body used to force max-w-2xl,
+  // which silently constrained every page since P2a.)
   return (
     <html lang="en" className={poppins.variable}>
-      <body className="mx-auto max-w-2xl p-8 leading-relaxed">{children}</body>
+      <body className="leading-relaxed">{children}</body>
     </html>
   );
 }
