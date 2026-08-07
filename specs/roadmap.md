@@ -4,8 +4,8 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-08-06
+version: "1.1.0"
+updated: 2026-08-07
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P8) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures.
 tags: [roadmap, phases, backlog]
@@ -55,3 +55,6 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
 | 2026-08-05 | Architecture pivot to Cloudflare Workers + Neon + S3-compatible storage | PostgreSQL-first, vendor-agnostic, cost-effective mandate (supersedes GCP-origin ADR-001) |
 | 2026-08-05 | Added **Milestone 0 — Walking Skeleton** before P0 | De-risk infra end-to-end before feature work |
 | 2026-08-06 | **Milestone 0 closed.** `/api/health` returns `db.ok: true` on both staging and production; `gates`/`deploy-staging`/`deploy-production` all green. Infra learnings (Prisma driver-adapter config, Workers `fs` polyfill gaps, Next 16/Turbopack, CI secrets/environments) captured in `CLAUDE.md` and `CHANGELOG.md` rather than a separate retro. Known gap: no enforced required-reviewer gate on `production` (needs a paid GitHub plan). | Exit criteria met; proceeding to P0 |
+| 2026-08-06 | **P0 closed** (backfilled retroactively — never logged here at the time). Foundation & scaffolding: SDD git hooks, Prettier, base app shell, `lib/config`/`lib/db`/`lib/storage` finalized, design-system tokens (Tailwind v4 + Aheed brand kit), `public/` SEO/PWA surface. | Exit criteria met; proceeding to P1 |
+| 2026-08-07 | **P1 closed** (backfilled retroactively). Better Auth email/password + Google Sign-In, RBAC (Customer/Staff/Admin), account shell, guest browsing — split into P1a/P1b since Google Sign-In needed an OAuth client only the human could provision. | Exit criteria met; proceeding to P2 |
+| 2026-08-07 | **P2 closed.** Categories, product pages, images via the S3-compatible storage port + CDN, keyset pagination, global search, price/availability filters — split into P2a/P2b so search/filters could be validated separately from core browsing. Real bugs caught and fixed while shipping: `next build` static-optimizing a Prisma-backed page (same root cause as P1b's `/login`/`/register` fix, now hit a second time — worth remembering as a pattern, not a one-off), a Cloudflare Security Level setting blocking CDN image serving on both staging and production zones, and a seed-script idempotency bug from a partial mid-run failure. Trigram/fuzzy search and a dedicated search service remain explicitly deferred until the catalogue actually grows past its current placeholder data. | Exit criteria met; proceeding to P3 |
