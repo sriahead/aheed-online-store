@@ -127,6 +127,15 @@ model Product {
   reviews       Review[]
   averageRating Float          @default(0) // denormalized, recomputed on every review write
   reviewCount   Int            @default(0)
+  // P2.5b1 — visual redesign foundation (specs/2026-08-07-p2-5b1-visual-foundation/).
+  // originalPrice, when set, is basePrice's pre-discount price — a discount badge is
+  // derived from the difference at render time, not a separate boolean flag that could
+  // drift out of sync with the actual prices.
+  origin        String?
+  originalPrice Int? // pence, pre-discount price
+  isHalal       Boolean        @default(false)
+  isFresh       Boolean        @default(false)
+  isOrganic     Boolean        @default(false)
 
   @@index([categoryId, isActive])
   @@index([isActive, basePrice]) // catalogue filter + sort

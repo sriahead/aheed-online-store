@@ -24,5 +24,12 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".open-next", ".next", "kms/site-internal", "kms/site-public"]
+  "exclude": [
+    "node_modules",
+    ".open-next",
+    ".next",
+    "kms/site-internal",
+    "kms/site-public",
+    "docs/ui-ref"
+  ]
 }

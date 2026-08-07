@@ -23,6 +23,16 @@
   --color-action-hover: #419544;
   --color-accent-hover: #d06900;
 
+  /* tint primitives — exact brand-kit hex, light backgrounds for badges/banners */
+  --color-brand-green-tint: #e8f5e9;
+  --color-brand-orange-tint: #fff3e0;
+  --color-brand-red-tint: #ffebee;
+
+  /* semantic tints — named relative to their base color, matching the hover/active pattern above */
+  --color-action-tint: var(--color-brand-green-tint);
+  --color-accent-tint: var(--color-brand-orange-tint);
+  --color-danger-tint: var(--color-brand-red-tint);
+
   --radius-sm: 0.5rem;
   --radius-md: 1rem;
   --radius-full: 9999px;

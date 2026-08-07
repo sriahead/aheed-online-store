@@ -14,6 +14,11 @@ export interface ProductSummary {
   basePrice: number;
   unitLabel: string;
   primaryImage: ProductImageSummary | null;
+  origin: string | null;
+  originalPrice: number | null;
+  isHalal: boolean;
+  isFresh: boolean;
+  isOrganic: boolean;
 }
 
 export interface ProductDetail extends ProductSummary {
@@ -32,6 +37,9 @@ export interface ProductFilters {
   minPricePence?: number;
   maxPricePence?: number;
   inStockOnly?: boolean;
+  isHalal?: boolean;
+  isFresh?: boolean;
+  isOrganic?: boolean;
 }
 
 export interface ProductRepository {
@@ -59,6 +67,9 @@ function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereInput {
   if (filters.inStockOnly) {
     where.inventory = { quantity: { gt: 0 } };
   }
+  if (filters.isHalal) where.isHalal = true;
+  if (filters.isFresh) where.isFresh = true;
+  if (filters.isOrganic) where.isOrganic = true;
   return where;
 }
 
@@ -87,6 +98,11 @@ export function getProductRepository(): ProductRepository {
         name: true,
         basePrice: true,
         unitLabel: true,
+        origin: true,
+        originalPrice: true,
+        isHalal: true,
+        isFresh: true,
+        isOrganic: true,
         images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
       },
     });
@@ -101,6 +117,11 @@ export function getProductRepository(): ProductRepository {
         name: p.name,
         basePrice: p.basePrice,
         unitLabel: p.unitLabel,
+        origin: p.origin,
+        originalPrice: p.originalPrice,
+        isHalal: p.isHalal,
+        isFresh: p.isFresh,
+        isOrganic: p.isOrganic,
         primaryImage: p.images[0] ?? null,
       })),
       nextCursor: hasMore ? page[page.length - 1].id : null,
@@ -142,6 +163,11 @@ export function getProductRepository(): ProductRepository {
           description: true,
           basePrice: true,
           unitLabel: true,
+          origin: true,
+          originalPrice: true,
+          isHalal: true,
+          isFresh: true,
+          isOrganic: true,
           images: { orderBy: { sortOrder: "asc" }, select: productImageSelect },
           inventory: { select: { quantity: true } },
         },
