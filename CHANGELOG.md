@@ -6,6 +6,16 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **KMS — internal docs site build broken by `CLAUDE.md`'s HTML comments.** PR #26 gave
+  `CLAUDE.md` front-matter for the first time, which made `kms/scripts/assemble.ts` start
+  including it in `deploy-docs-internal`'s build — but its `next dev`-regenerated
+  `<!-- BEGIN/END:nextjs-agent-rules -->` markers are valid Markdown, not valid MDX (Nextra's
+  compiler parses `<` as a JSX tag open and chokes on the following `!`). Can't fix at the source
+  (that exact HTML-comment block is rewritten verbatim by `next dev`, see `CLAUDE.md` itself), so
+  `assemble.ts` now rewrites `<!-- ... -->` to `{/* ... */}` for every doc at assembly time.
+  Verified: `npm run build` in `kms/site-internal` now compiles clean.
+
 ### Added
 - **`docs/onboarding.md` refreshed** — was still framed around M0-only ("Feature work (P0+) starts
   only after M0 is green"), badly stale now that M0/P0/KMS/design-system have shipped and P1a is

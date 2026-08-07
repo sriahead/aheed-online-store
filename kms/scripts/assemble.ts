@@ -26,6 +26,16 @@ const TRACK_TO_DIR: Record<Track, { site: "internal" | "public"; subdir: string 
 
 const RESERVED = new Set(["index.mdx", "_meta.json"]);
 
+/**
+ * Raw HTML comments (`<!-- -->`) are valid Markdown but not valid MDX — Nextra's
+ * compiler tries to parse the `<` as a JSX tag and fails on the `!`. Source docs
+ * can't just avoid them (CLAUDE.md's nextjs-agent-rules block is regenerated
+ * verbatim by `next dev` in that exact syntax), so convert at assembly time.
+ */
+function toMdxSafeComments(content: string): string {
+  return content.replace(/<!--([\s\S]*?)-->/g, (_, inner: string) => `{/*${inner}*/}`);
+}
+
 function parseArgs(): "internal" | "public" {
   const flag = process.argv.find((a) => a.startsWith("--visibility"));
   const value = flag?.includes("=")
@@ -77,7 +87,7 @@ function main() {
 
     const targetDir = join(contentRoot, dest.subdir);
     mkdirSync(targetDir, { recursive: true });
-    writeFileSync(join(targetDir, `${fm.id}.mdx`), raw);
+    writeFileSync(join(targetDir, `${fm.id}.mdx`), toMdxSafeComments(raw));
     copied++;
   }
 
