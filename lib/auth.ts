@@ -1,8 +1,27 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { getPrisma } from "./db";
-import { getEnv } from "./config";
+import { getEnv, type AppEnv } from "./config";
 import { getEmailService } from "./email";
+
+/**
+ * Pure helper, split out of getAuth() so it's unit-testable without a DB
+ * (getAuth() itself has none, since it depends on getPrisma()). Returns
+ * undefined — not `{ google: undefined }` — when either credential is
+ * missing, so Better Auth never sees a half-configured provider (P1b,
+ * issue #28).
+ */
+export function buildSocialProviders(
+  env: Pick<AppEnv, "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET">,
+) {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return undefined;
+  return {
+    google: {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    },
+  };
+}
 
 /**
  * Better Auth server instance (ADR-002). Constructed fresh on every call, NOT
@@ -15,8 +34,7 @@ import { getEmailService } from "./email";
  * `role` is declared via additionalFields with `input: false` so it's part of
  * the session/user object Better Auth returns, but a signup request can never
  * set its own role — it's assigned server-side (Prisma default: CUSTOMER).
- * No Google/OAuth provider here — P1a is email/password only (see issue #23);
- * Google Sign-In is a separate P1b slice once OAuth credentials exist.
+ * Google sign-in gets the same default (no separate role-assignment path).
  */
 export function getAuth() {
   const env = getEnv();
@@ -26,6 +44,7 @@ export function getAuth() {
     database: prismaAdapter(getPrisma(), { provider: "postgresql" }),
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
+    socialProviders: buildSocialProviders(env),
     user: {
       additionalFields: {
         role: { type: "string", defaultValue: "CUSTOMER", input: false },

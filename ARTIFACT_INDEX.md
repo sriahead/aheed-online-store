@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-07T07:04:56.027Z` · commit `90cec43` · `21` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-07T07:11:10.631Z` · commit `79b92e6` · `22` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -34,6 +34,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [KMS — Index Generator, Assembly & Internal Site (plan)](specs/2026-08-06-kms-site/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for the ARTIFACT_INDEX.md generator, the assemble script, and the internal Nextra docs site — the deferred follow-up to the KMS schema/validator foundation slice. |
 | [P0 — Foundation & Scaffolding (plan)](specs/2026-08-06-p0-foundation/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for P0's first slice — SDD git hooks, Prettier, SEO/PWA routes, and test setup — scoped to what M0 didn't already build. |
 | [P1a — Email/Password Auth, RBAC, Account Shell (plan)](specs/2026-08-06-p1-auth/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for the first P1 slice — Better Auth email/password, RBAC, verification/reset emails, and an account shell — split from Google Sign-In, which needs OAuth credentials the human must create first. |
+| [P1b — Google Sign-In (plan)](specs/2026-08-06-p1b-google-signin/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for adding Google as a Better Auth social provider alongside P1a's email/password flow, now that the human has provisioned the OAuth client and its secrets on Cloudflare. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
