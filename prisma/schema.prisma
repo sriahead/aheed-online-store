@@ -48,6 +48,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  reviews       Review[]
 }
 
 model Session {
@@ -111,18 +112,21 @@ model Category {
 }
 
 model Product {
-  id          String         @id @default(uuid())
-  slug        String         @unique
-  name        String
-  description String
-  categoryId  String
-  category    Category       @relation(fields: [categoryId], references: [id])
-  basePrice   Int // pence
-  unitLabel   String // "£2.40 / kg"
-  isActive    Boolean        @default(true)
-  createdAt   DateTime       @default(now())
-  images      ProductImage[]
-  inventory   Inventory?
+  id            String         @id @default(uuid())
+  slug          String         @unique
+  name          String
+  description   String
+  categoryId    String
+  category      Category       @relation(fields: [categoryId], references: [id])
+  basePrice     Int // pence
+  unitLabel     String // "£2.40 / kg"
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  images        ProductImage[]
+  inventory     Inventory?
+  reviews       Review[]
+  averageRating Float          @default(0) // denormalized, recomputed on every review write
+  reviewCount   Int            @default(0)
 
   @@index([categoryId, isActive])
   @@index([isActive, basePrice]) // catalogue filter + sort
@@ -147,4 +151,22 @@ model Inventory {
   quantity          Int      @default(0)
   lowStockThreshold Int      @default(3)
   updatedAt         DateTime @updatedAt
+}
+
+// P2.5a — ratings & reviews (specs/2026-08-07-p2-5a-ratings-reviews/). One review
+// per user per product; resubmitting updates the existing row. Product's
+// averageRating/reviewCount are denormalized and recomputed on every write.
+model Review {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId])
+  @@index([productId, createdAt])
 }

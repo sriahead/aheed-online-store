@@ -31,6 +31,33 @@ every branch merges.
   Verified: `npm run build` in `kms/site-internal` now compiles clean.
 
 ### Added
+- **P2.5a — Ratings & reviews backend** (`specs/2026-08-07-p2-5a-ratings-reviews/`), first slice
+  of P2.5 — a phase inserted into the roadmap after P2's close (closes #39, see `specs/
+  roadmap.md` v1.2.0 for why: comparing the live site against the project's own AI Studio design
+  mockup surfaced that ratings/reviews were never in the original P0–P8 plan at all).
+  - **Prisma**: `Review` (one per user per product via `@@unique([userId, productId])` —
+    resubmitting updates rather than duplicates; cascade-deletes with the user, matching
+    `Session`/`Account`'s existing pattern). `Product` gains denormalized `averageRating`/
+    `reviewCount`, recomputed from a full aggregate (not incremental, avoids float drift) inside
+    the same transaction as every review write — matches `Inventory.quantity`'s existing
+    denormalized-for-read-performance precedent, needed because ratings render on every
+    paginated product-grid card.
+  - `lib/repositories/reviews.ts` — `upsert`/`delete` (ownership-checked via a single atomic
+    `deleteMany({ id, userId })`, not a read-then-check), `listByProduct`, `getByUserAndProduct`
+    (pre-fills the submission form for a returning reviewer).
+  - `features/reviews/` — **the first real use of `features/` since auth**, and for the same
+    underlying reason: a genuine session-gated write use-case, unlike P2's read-only browsing
+    which correctly stayed in `components/product/`. Two Server Actions
+    (`submit-review.ts`/`delete-review.ts`) behind a plain `<form>` — no client component, same
+    progressive-enhancement pattern as P2's GET forms.
+  - `features/reviews/validate-rating.ts` — pure, unit-tested `parseRating()`, same pattern as
+    `parse-price-input.ts`.
+  - `app/(storefront)/products/[slug]` extended with a review list, the submission form for
+    logged-in visitors, and a login prompt (not a redirect) for guests — browsing stays
+    guest-accessible, no regression.
+  - **Deliberately excluded**: review moderation (fits P6's admin panel better), verified-purchase
+    gating (impossible before P3/cart exists), review-list pagination (bounded to the most recent
+    20 for now), any visual/component redesign — all P2.5b (#40), once this lands.
 - **P2b — Catalogue search & filters** (`specs/2026-08-07-p2b-catalogue-search/`), second and
   final P2 slice, closing out P2 (closes #34).
   - `lib/repositories/products.ts` gains `search()` (global, across all categories, same keyset
