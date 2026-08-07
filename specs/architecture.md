@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-08-06
+version: "1.1.0"
+updated: 2026-08-07
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic by design.
 tags: [architecture, cloudflare, neon, clean-architecture]
@@ -247,7 +247,14 @@ database rather than the app.
 
 **Caching (layered, portable-first).**
 - CDN caches images and static assets (swappable).
-- Next.js **Data Cache / ISR** for catalogue and product pages — framework-native, moves with the app.
+- ~~Next.js Data Cache / ISR for catalogue and product pages~~ — **doesn't hold as written**: Next's
+  own SSG-based ISR requires prerendering in plain Node (`next build` or on-demand), but Prisma on
+  this stack loads via `@prisma/client/wasm`, which only works in the Workers runtime — attempting
+  it hard-fails the build (`Unknown file extension ".wasm"`, found shipping P2a,
+  `specs/2026-08-07-p2a-catalogue-browsing/`). Catalogue/product pages are `force-dynamic`
+  (server-rendered per request, same as the auth pages) until a caching layer that doesn't require
+  Node-side Prisma execution is added — the edge KV option below, or Cloudflare's own edge cache in
+  front of the Worker.
 - Optional **edge KV** for hot reads (categories, homepage rails) behind a `CacheService` port; if
   absent it falls through to the DB. KV ↔ Redis is a one-file swap.
 - The **database is always the source of truth**; caches are accelerators with explicit TTLs and
@@ -328,8 +335,9 @@ The clean seams mean growth is handled by swapping or adding infrastructure, not
   (KV/Redis) for catalogue reads; introduce **Cloudflare Hyperdrive** (or a managed pooler) for
   connection efficiency; move long-running work (emails, report rollups) to a queue behind a
   `JobQueue` port.
-- **Scale-out reads.** Route read-heavy catalogue traffic to replicas; keep writes on primary. ISR +
-  CDN absorb most anonymous browsing before it reaches the DB.
+- **Scale-out reads.** Route read-heavy catalogue traffic to replicas; keep writes on primary. Edge
+  KV/CDN (not Next's own ISR — see the Caching section above) absorb most anonymous browsing before
+  it reaches the DB.
 - **Enterprise / off-Cloudflare.** Migrate DB to RDS/Cloud SQL with replicas (§4.1) and storage to
   S3/GCS (§4.2) — both are config-level. If the edge runtime is ever a constraint, the same Next.js
   app runs on Node/containers unchanged because the API is standard route handlers.

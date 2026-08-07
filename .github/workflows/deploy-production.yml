@@ -20,7 +20,9 @@ jobs:
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
 
       - name: Build (OpenNext) & deploy to Workers
-        run: npx opennextjs-cloudflare build && npx wrangler deploy --env production
+        run: |
+          npx opennextjs-cloudflare build
+          npx wrangler deploy --env production --var "GIT_COMMIT_SHA:$(git rev-parse --short HEAD)"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -2,7 +2,7 @@
 // Real relational model (Users, Products, Orders, …) arrives in P1+ per specs/architecture.md.
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   // Prisma 6+: driver adapters are GA (no preview flag needed).
   // Prisma 5:  previewFeatures = ["driverAdapters"]
   // engineType = "client" (WASM query compiler, imported directly rather than
@@ -14,8 +14,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")   // pooled (runtime)
-  directUrl = env("DIRECT_URL")     // direct (migrations)
+  url       = env("DATABASE_URL") // pooled (runtime)
+  directUrl = env("DIRECT_URL") // direct (migrations)
 }
 
 model HealthCheck {
@@ -92,4 +92,59 @@ model Verification {
   updatedAt  DateTime? @updatedAt
 
   @@index([identifier])
+}
+
+// P2a — catalogue browsing (specs/2026-08-07-p2a-catalogue-browsing/). Matches the
+// representative schema already designed in specs/architecture.md §3.2.
+model Category {
+  id        String     @id @default(uuid())
+  slug      String     @unique
+  name      String
+  parentId  String?
+  parent    Category?  @relation("Sub", fields: [parentId], references: [id])
+  children  Category[] @relation("Sub")
+  sortOrder Int        @default(0)
+  isActive  Boolean    @default(true)
+  products  Product[]
+
+  @@index([parentId, isActive])
+}
+
+model Product {
+  id          String         @id @default(uuid())
+  slug        String         @unique
+  name        String
+  description String
+  categoryId  String
+  category    Category       @relation(fields: [categoryId], references: [id])
+  basePrice   Int // pence
+  unitLabel   String // "£2.40 / kg"
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  images      ProductImage[]
+  inventory   Inventory?
+
+  @@index([categoryId, isActive])
+  @@index([isActive, basePrice]) // catalogue filter + sort
+}
+
+model ProductImage {
+  id         String  @id @default(uuid())
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  storageKey String // RELATIVE key only — never a URL
+  alt        String
+  sortOrder  Int     @default(0)
+  isPrimary  Boolean @default(false)
+
+  @@index([productId, sortOrder])
+}
+
+model Inventory {
+  id                String   @id @default(uuid())
+  productId         String   @unique
+  product           Product  @relation(fields: [productId], references: [id])
+  quantity          Int      @default(0)
+  lowStockThreshold Int      @default(3)
+  updatedAt         DateTime @updatedAt
 }
