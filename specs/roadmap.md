@@ -4,7 +4,7 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.2.0"
+version: "1.3.0"
 updated: 2026-08-07
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures.
@@ -69,3 +69,4 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
 | 2026-08-07 | **P1 closed** (backfilled retroactively). Better Auth email/password + Google Sign-In, RBAC (Customer/Staff/Admin), account shell, guest browsing — split into P1a/P1b since Google Sign-In needed an OAuth client only the human could provision. | Exit criteria met; proceeding to P2 |
 | 2026-08-07 | **P2 closed.** Categories, product pages, images via the S3-compatible storage port + CDN, keyset pagination, global search, price/availability filters — split into P2a/P2b so search/filters could be validated separately from core browsing. Real bugs caught and fixed while shipping: `next build` static-optimizing a Prisma-backed page (same root cause as P1b's `/login`/`/register` fix, now hit a second time — worth remembering as a pattern, not a one-off), a Cloudflare Security Level setting blocking CDN image serving on both staging and production zones, and a seed-script idempotency bug from a partial mid-run failure. Trigram/fuzzy search and a dedicated search service remain explicitly deferred until the catalogue actually grows past its current placeholder data. | Exit criteria met; proceeding to P2.5 |
 | 2026-08-07 | **Added P2.5 — Ratings, reviews & storefront visual design**, inserted between P2 and P3. Not part of the original plan — the human's AI Studio design mockup (`aheedfoodcentre.ai.studio`) surfaced two gaps: storefront visual polish deferred in favour of infra-first delivery, and product ratings/reviews, never in the original P0–P8 scope at all. Two slices, reviews backend before the visual pass (real data before display). Explicitly excludes cart/"Add to Cart" wiring, unchanged as P3's scope. | Confirmed with the human; proceeding to P2.5a |
+| 2026-08-07 | Identified a **new, unscheduled future item**: a "Developer Control Toolbar" (role/view switching, infra introspection), surfaced by the mockup's real exported source. Confirmed as intended real scope, not just demo navigation — tracked as issue #41, deliberately not placed in the phase sequence yet (needs its own `/propose`; its "Dev KMS" concept as shown conflicts with `CLAUDE.md`'s secrets posture if taken literally). | Tracked, unscheduled — not blocking P2.5b |
