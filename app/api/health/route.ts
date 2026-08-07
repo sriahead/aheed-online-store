@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/db";
-import { getEnv } from "@/lib/config";
+import { getEnv, readEnv } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +9,9 @@ export async function GET() {
     service: "aheed-online-store",
     status: "ok",
     time: new Date().toISOString(),
+    // Set via `wrangler deploy --var GIT_COMMIT_SHA:...` in deploy-staging/production.yml;
+    // unset locally (npm run preview/dev) and on any environment deployed manually.
+    commit: readEnv("GIT_COMMIT_SHA") ?? null,
   };
 
   // 1) Real DB round-trip through Prisma -> Neon (the end-to-end proof).

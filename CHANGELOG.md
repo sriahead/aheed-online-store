@@ -7,13 +7,18 @@ every branch merges.
 ## [Unreleased]
 
 ### Changed
-- **`deploy-staging`/`deploy-production` now tag each Worker Version with its git commit.**
-  `wrangler deploy` was invoked bare, so every deployment showed as generic "Manually deployed" in
-  the Cloudflare dashboard's Version History, with no way to trace a live Version ID back to the
-  GitHub commit that produced it short of correlating deploy timestamps against `gh run list`
-  output. Added `--tag "$(git rev-parse --short HEAD)"` and `--message "$(git log -1 --pretty=%s)"`
-  to both workflows' `wrangler deploy` calls — future versions self-label with their commit
-  directly in the dashboard.
+- **`/api/health` now reports the deployed commit** (`commit: "<short-sha>"`, `null` locally),
+  giving a reliable way to trace a live environment back to its GitHub commit. Originally attempted
+  via `wrangler deploy --tag/--message` (self-labeling the Cloudflare dashboard's Version History)
+  — reverted after the first real `deploy-staging` run failed with `Unknown argument: request`.
+  Root cause: an upstream Cloudflare limitation, not a quoting bug — `--tag`/`--message` are
+  documented on `wrangler deploy` but broken for Static Assets deployments (which this Worker is,
+  via OpenNext's `ASSETS` binding); see
+  [workers-sdk#9611](https://github.com/cloudflare/workers-sdk/issues/9611) and
+  [#10933](https://github.com/cloudflare/workers-sdk/issues/10933). `--dry-run` doesn't hit the
+  broken path, so it looked fine locally before the real deploy caught it. Replaced with
+  `--var GIT_COMMIT_SHA:$(git rev-parse --short HEAD)` (a stable, well-supported flag) read back via
+  `lib/config.ts`'s newly-exported `readEnv()`.
 
 ### Fixed
 - **KMS — internal docs site build broken by `CLAUDE.md`'s HTML comments.** PR #26 gave
@@ -26,6 +31,61 @@ every branch merges.
   Verified: `npm run build` in `kms/site-internal` now compiles clean.
 
 ### Added
+- **P2a — Catalogue browsing** (`specs/2026-08-07-p2a-catalogue-browsing/`), first slice of P2.
+  Split from the full roadmap line — search & filters follow separately as P2b (issue #34), same
+  split pattern as P1a/P1b.
+  - **Prisma**: `Category` (self-referential, slug/name/sortOrder/isActive), `Product`
+    (slug/name/description/categoryId/basePrice pence/unitLabel/isActive), `ProductImage`
+    (relative `storageKey` only, never a URL), `Inventory` (quantity/lowStockThreshold) — matches
+    the representative schema already designed in `specs/architecture.md` §3.2. Migration applied
+    directly to Neon staging (same pattern P1a used).
+  - `lib/repositories/categories.ts` / `products.ts` — `CategoryRepository`/`ProductRepository`
+    ports + Prisma implementations, constructed fresh per call (never cached across requests, same
+    contract as `lib/db.ts`'s `getPrisma()`). Flat files, not a directory per domain — follows the
+    flat-file precedent P1a set (`lib/auth.ts`) over `docs/repo-structure.md`'s stale sketch.
+  - Keyset (cursor) pagination on product listings — cursor `(createdAt, id)`, never `OFFSET`, per
+    `specs/architecture.md`'s pagination strategy.
+  - `app/(storefront)/categories`, `/categories/[slug]`, `/products/[slug]` — category index,
+    paginated product grid, product detail page. All publicly reachable, no auth regression.
+  - **Bug caught by `npm run build`, not local `next dev`**: `/categories` (no dynamic segment) was
+    getting statically optimized at build time — Next.js tried to prerender it in plain Node, but
+    `lib/db.ts` loads Prisma via `@prisma/client/wasm`, which only works in the Workers runtime,
+    so the build hard-failed (`Unknown file extension ".wasm"`). Same root cause as P1b's
+    `/login`/`/register` fix; same fix here — `export const dynamic = "force-dynamic"` on all three
+    new routes. Also means `specs/architecture.md`'s "Data Cache/ISR for catalogue pages" can't be
+    Next's own SSG-based ISR while Prisma requires the Workers runtime — any caching for these
+    pages needs to happen at Cloudflare's edge-cache layer instead, not attempted in this slice.
+  - `components/product/` — `ProductCard`, `ProductImageGallery`, and a pure, unit-tested
+    `formatPrice(pence)` helper (`450` → `"£4.50"`) — same pure-helper-alongside-I/O-code pattern
+    as `lib/storage.ts`'s `composePublicUrl`.
+  - Product images resolved via the existing `composePublicUrl(CDN_BASE_URL, storageKey)` — no raw
+    R2/S3 URL ever rendered or stored.
+  - `prisma/seed.ts` extended: seeds placeholder categories/products (real Aheed product data
+    doesn't exist yet) and actually uploads a placeholder SVG through `lib/storage.ts`'s
+    `putObject()` for each product image, proving the real storage round-trip. Uploads all images
+    before writing any DB rows, and writes all rows in a single `prisma.$transaction` — found while
+    validating locally: a mid-run failure (wrong/missing storage credentials) otherwise left an
+    orphaned `Category` with zero `Product`s, which then silently broke the seed script's own
+    idempotency check (`Category` count `> 0` → skip) on every subsequent run.
+  - **Infra fix, found validating images against the real staging CDN domain**: R2's custom
+    domain (`images.staging.aheedfoodcentre.nocaped.com`) was returning a Cloudflare
+    `Cf-Mitigated: challenge` 403 on every request — confirmed via both a cookie-less `curl` and,
+    once the browser extension was available, a real Chrome `<img>` tag load (broken-image icon),
+    ruling out "just a bot-detection false positive." Turning off Bot Fight Mode alone didn't fix
+    it; the actual cause was the zone's **Security Level** (Security → Settings), which issues a JS
+    challenge independently of Bot Fight Mode. Lowered for this zone; re-verified 200 via both
+    `curl` and a real browser afterward. Worth checking Security Level on **production**'s zone
+    too before promoting, not just staging's.
+  - **Still needed from the human before this is live end-to-end on production**: the same
+    `S3_*`/`CDN_BASE_URL` Worker secrets confirmed on staging still need setting on production, and
+    the Security Level check above repeated for production's zone.
+  - Two persistent docs corrected against what this slice actually found, not just noted in this
+    changelog entry: `specs/architecture.md`'s Caching section (the Data Cache/ISR claim above,
+    v1.1.0) and `docs/repo-structure.md`'s `lib/` tree (flat files for single-adapter concerns —
+    `db.ts`, `storage.ts`, `auth.ts`, `email.ts`, `config.ts` — vs. a real directory only for
+    `lib/repositories/`, which genuinely holds multiple per-domain files; v1.1.0). The latter had
+    already been contradicted once by P1a's `lib/auth.ts` without the doc being fixed — fixed now
+    instead of deferring a third time.
 - **`docs/onboarding.md` refreshed** — was still framed around M0-only ("Feature work (P0+) starts
   only after M0 is green"), badly stale now that M0/P0/KMS/design-system have shipped and P1a is
   in flight. Updated: current phase status (pointing at `specs/roadmap.md`'s change log as the
