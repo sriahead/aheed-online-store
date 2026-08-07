@@ -4,7 +4,7 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.2.0"
+version: "1.3.0"
 updated: 2026-08-07
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, and the open items (logo assets, danger-color role) carried into later phases.
@@ -116,6 +116,23 @@ copied literally:
   progressive-enhancement stance as the GET-form search/filters.
 - **Cards and the cart button render `Add`/cart controls that are inert** until P3 wires a real
   cart — visual fidelity without a fake count.
+
+### Browse-page layout (post-review revision)
+
+- **Departments** render as a **horizontal, icon-led strip** across the top of the home, category,
+  and search pages — `components/layout/DepartmentScroller.tsx`. It scrolls via ‹ / › arrow buttons
+  with the scrollbar hidden (`.no-scrollbar` in `app/globals.css`). This is the **one client
+  component** in the storefront chrome (`"use client"`): the arrows drive `scrollBy`, and it
+  degrades to native touch/trackpad scrolling without JS, so no behaviour is lost. Data still comes
+  from the server as props (like `ProductCard`), not fetched in the component. It replaced the
+  earlier vertical `CategorySidebar` (removed).
+- **Search + filters** sit in a **vertical left sidebar** on the category/search pages —
+  `components/product/ProductFilterForm.tsx`, a stacked panel (search, price range, speciality
+  checkboxes, Apply), still a plain `<form method="GET">` (zero-JS, real navigation resets
+  pagination).
+- **Logo**: `public/images/brand/logo.png` is `docs/logo.png` with whitespace trimmed and flattened
+  to white; shown `h-11` on mobile, `h-16` on desktop. The mobile header adds a dedicated
+  full-width search row (the inline search is hidden below `sm`).
 
 ## What's deliberately not here yet
 
