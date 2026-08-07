@@ -31,6 +31,39 @@ every branch merges.
   Verified: `npm run build` in `kms/site-internal` now compiles clean.
 
 ### Added
+- **P2b — Catalogue search & filters** (`specs/2026-08-07-p2b-catalogue-search/`), second and
+  final P2 slice, closing out P2 (closes #34).
+  - `lib/repositories/products.ts` gains `search()` (global, across all categories, same keyset
+    cursor pagination as `listByCategory()`) and a shared `ProductFilters` shape
+    (`minPricePence`/`maxPricePence`/`inStockOnly`) used by *both* `search()` and
+    `listByCategory()` — one filter definition, not two parallel ones. Search matching is plain
+    Postgres case-insensitive `contains` on `name`/`description` — `specs/architecture.md`
+    explicitly defers a trigram index or a dedicated search service until the catalogue actually
+    grows; this slice fulfills what was already decided there, doesn't reopen it. An
+    empty/whitespace query returns no results, not the whole catalogue.
+  - `app/(storefront)/search` — new route. `app/(storefront)/categories/[slug]` extended (not
+    replaced) to accept the same price/availability filters.
+  - `components/product/ProductFilterForm.tsx` — one shared component for both routes, a plain
+    `<form method="GET">` with no client-side JS, matching P2a's zero-client-JS precedent
+    (`<Link>`-based pagination). No hidden cursor field, so a filter change naturally restarts
+    pagination at page 1.
+  - `components/product/parse-price-input.ts` — pure, unit-tested counterpart to P2a's
+    `formatPrice()`: parses a user-typed pounds string into integer pence for the repository
+    layer, `undefined` (not `0`) for blank/invalid/negative input.
+  - **Corrected assumption from `/propose`**: expected this slice would finally give
+    `features/catalogue/` real content (client-side search interactivity). Didn't hold up — a
+    plain GET form matches P2a's established pattern better than debounced client search, so
+    `features/catalogue/` is still just `.gitkeep` after P2 in full.
+  - **Deferred, not implemented**: typo-tolerant/fuzzy search. Real fuzzy matching needs
+    `pg_trgm` and Prisma has no native wrapper for its `similarity()`/`%` operator, so it would
+    mean both a new Postgres extension and `$queryRaw` (against `CLAUDE.md`'s no-raw-SQL rule) —
+    and it's exactly the trigram work `specs/architecture.md` already defers until the catalogue
+    grows past its current 6 placeholder products. Not a quick add; left flagged for whenever
+    that condition is actually met.
+  - `specs/roadmap.md`'s change log gains the **P2 closure entry**, and — noticed while adding
+    it — **P0 and P1 never got their own closure entries either**, despite both being long done;
+    backfilled retroactively (v1.1.0) so the log reads as a coherent history instead of jumping
+    from M0 straight to P2.
 - **P2a — Catalogue browsing** (`specs/2026-08-07-p2a-catalogue-browsing/`), first slice of P2.
   Split from the full roadmap line — search & filters follow separately as P2b (issue #34), same
   split pattern as P1a/P1b.
