@@ -7,13 +7,18 @@ every branch merges.
 ## [Unreleased]
 
 ### Changed
-- **`deploy-staging`/`deploy-production` now tag each Worker Version with its git commit.**
-  `wrangler deploy` was invoked bare, so every deployment showed as generic "Manually deployed" in
-  the Cloudflare dashboard's Version History, with no way to trace a live Version ID back to the
-  GitHub commit that produced it short of correlating deploy timestamps against `gh run list`
-  output. Added `--tag "$(git rev-parse --short HEAD)"` and `--message "$(git log -1 --pretty=%s)"`
-  to both workflows' `wrangler deploy` calls — future versions self-label with their commit
-  directly in the dashboard.
+- **`/api/health` now reports the deployed commit** (`commit: "<short-sha>"`, `null` locally),
+  giving a reliable way to trace a live environment back to its GitHub commit. Originally attempted
+  via `wrangler deploy --tag/--message` (self-labeling the Cloudflare dashboard's Version History)
+  — reverted after the first real `deploy-staging` run failed with `Unknown argument: request`.
+  Root cause: an upstream Cloudflare limitation, not a quoting bug — `--tag`/`--message` are
+  documented on `wrangler deploy` but broken for Static Assets deployments (which this Worker is,
+  via OpenNext's `ASSETS` binding); see
+  [workers-sdk#9611](https://github.com/cloudflare/workers-sdk/issues/9611) and
+  [#10933](https://github.com/cloudflare/workers-sdk/issues/10933). `--dry-run` doesn't hit the
+  broken path, so it looked fine locally before the real deploy caught it. Replaced with
+  `--var GIT_COMMIT_SHA:$(git rev-parse --short HEAD)` (a stable, well-supported flag) read back via
+  `lib/config.ts`'s newly-exported `readEnv()`.
 
 ### Fixed
 - **KMS — internal docs site build broken by `CLAUDE.md`'s HTML comments.** PR #26 gave

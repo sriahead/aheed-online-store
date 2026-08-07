@@ -7,7 +7,7 @@ import { z } from "zod";
  *  - Locally (Node / next dev), they come from process.env.
  * Must be called within request scope on Workers (route handlers, server components).
  */
-function readEnv(key: string): string | undefined {
+export function readEnv(key: string): string | undefined {
   try {
     const { env } = getCloudflareContext();
     const v = (env as Record<string, unknown>)[key];
