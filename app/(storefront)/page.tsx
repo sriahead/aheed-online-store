@@ -61,27 +61,30 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <MapPin className="h-4 w-4" aria-hidden />
             {deliverable
               ? `Great news — we deliver to ${trimmedPostcode.toUpperCase()}.`
-              : `Sorry, we don't deliver to ${trimmedPostcode.toUpperCase()} yet (Milton Keynes MK1–MK19 only).`}
+              : `Sorry, we don't deliver to ${trimmedPostcode.toUpperCase()} yet (Milton Keynes MK postcodes only).`}
           </p>
         )}
       </section>
 
-      {/* Category navigation — data-driven, renders whatever N the DB returns. */}
+      {/* Department nav — horizontal, icon-led, scrollable (Uber-Eats style).
+          Data-driven: renders whatever N the DB returns; scrolls on overflow. */}
       <section className="mt-10">
         <h2 className="mb-4 text-2xl font-semibold text-primary">Shop by department</h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
           {categories.map((category) => {
             const Icon = categoryIcon(category.slug);
             return (
               <Link
                 key={category.id}
                 href={`/categories/${category.slug}`}
-                className="flex items-center gap-3 rounded-md border border-black/10 p-4 font-semibold text-primary hover:border-black/20"
+                className="group flex w-20 shrink-0 snap-start flex-col items-center gap-2 text-center"
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-action-tint">
-                  <Icon className="h-5 w-5 text-primary" aria-hidden />
+                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-action-tint transition group-hover:ring-2 group-hover:ring-action/40">
+                  <Icon className="h-7 w-7 text-primary" aria-hidden />
                 </span>
-                {category.name}
+                <span className="line-clamp-2 text-xs font-medium leading-tight text-primary">
+                  {category.name}
+                </span>
               </Link>
             );
           })}

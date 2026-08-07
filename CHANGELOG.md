@@ -7,6 +7,16 @@ every branch merges.
 ## [Unreleased]
 
 ### Changed
+- **Storefront polish (from live review).** Delivery check broadened from Milton Keynes MK1–MK19 to
+  **any MK postcode district** (MK1–MK99, e.g. MK24 — previously wrongly rejected); `lib/delivery.ts`
+  regex + test + copy updated, and the precise per-vendor footprint is flagged as future DB config
+  (ADR-004 / #49). The header **logo is cropped (whitespace trimmed) and enlarged** (`docs/logo.png`
+  re-exported to `public/images/brand/logo.png`, 298×160, displayed `h-11` mobile / `h-16` desktop).
+  **Mobile UI reworked to best practices**: the search bar (previously hidden below `sm`) now gets a
+  dedicated full-width row on mobile; the header compacts (icon-only account/cart) instead of
+  overflowing; the homepage departments became a **horizontal, icon-led, scrollable row**
+  (Uber-Eats style) instead of a grid; and the category sidebar scrolls horizontally on mobile
+  rather than burying products under a tall vertical list.
 - **`/api/health` now reports the deployed commit** (`commit: "<short-sha>"`, `null` locally),
   giving a reliable way to trace a live environment back to its GitHub commit. Originally attempted
   via `wrangler deploy --tag/--message` (self-labeling the Cloudflare dashboard's Version History)
