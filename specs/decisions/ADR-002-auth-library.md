@@ -1,3 +1,17 @@
+---
+id: adr-002-auth-library
+title: "ADR-002 — Authentication Library"
+audience: [dev]
+type: adr
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP.
+tags: [adr, auth, better-auth, rbac]
+related: [architecture, adr-001-hosting]
+---
+
 # ADR-002 — Authentication Library
 
 - **Status:** Accepted (unchanged by the Cloudflare/Neon pivot).

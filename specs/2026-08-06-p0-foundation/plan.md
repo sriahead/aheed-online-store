@@ -1,3 +1,17 @@
+---
+id: p0-foundation
+title: "P0 — Foundation & Scaffolding (plan)"
+audience: [dev]
+type: spec
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: Plan for P0's first slice — SDD git hooks, Prettier, SEO/PWA routes, and test setup — scoped to what M0 didn't already build.
+tags: [p0, foundation, scaffolding]
+related: [roadmap]
+---
+
 # P0 — Foundation & Scaffolding (plan)
 
 Per `specs/roadmap.md`, P0 hardens what M0 proved. Most of P0's originally-listed scope

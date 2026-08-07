@@ -7,6 +7,7 @@ const config = [
     ignores: [
       ".next/**",
       ".open-next/**",
+      ".wrangler/**",
       "node_modules/**",
       "prisma/generated/**",
       "kms/site-internal/**",

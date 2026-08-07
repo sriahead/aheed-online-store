@@ -1,3 +1,17 @@
+---
+id: architecture
+title: System Architecture — Aheed Online Store
+audience: [dev]
+type: doc
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic by design.
+tags: [architecture, cloudflare, neon, clean-architecture]
+related: [adr-001-hosting, adr-002-auth-library, adr-003-storage-abstraction]
+---
+
 # System Architecture — Aheed Online Store
 
 **Status:** Approved architecture baseline. Supersedes the GCP-origin design in the original

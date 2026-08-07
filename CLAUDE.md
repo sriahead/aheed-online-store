@@ -1,3 +1,16 @@
+---
+id: claude-md
+title: "CLAUDE.md — AI Assistant Guardrails"
+audience: [dev]
+type: doc
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
+tags: [guardrails, ai-assistant, conventions]
+---
+
 # CLAUDE.md — AI assistant guardrails (Aheed Food Centre Online Store)
 
 Read this first, every session. It encodes decisions already made; do not re-derive them from
@@ -29,7 +42,18 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   `@prisma/adapter-neon@6.19.3` builds its own `Pool` internally — construct as
   `new PrismaNeon({ connectionString })`, a `neon.PoolConfig`, **not** a `Pool` instance (passing a
   `Pool` fails with `Type 'Pool' has no properties in common with type 'PoolConfig'`).
-  Instantiate Prisma via `lib/db` (lazy singleton), never a long-lived global connection.
+  Instantiate Prisma via `lib/db`'s `getPrisma()` — **construct fresh on every call, never cache
+  across requests.** A cached cross-request singleton was the original pattern here and shipped in
+  M0; it throws `"Cannot perform I/O on behalf of a different request"` on Cloudflare Workers
+  (I/O objects can't cross request boundaries) on roughly 1-in-3 rapid sequential requests — caught
+  in P1 once something actually stress-tested it, not before. Any function wrapping `getPrisma()`
+  (e.g. `lib/auth.ts`'s `getAuth()`) must also construct fresh per call — caching the wrapper still
+  pins the first request's Prisma client inside it.
+- **Validate DB-touching code with `npm run preview` (OpenNext + local Workers/Miniflare), never
+  `npm run dev`.** Plain `next dev` runs in real Node, which cannot load `@prisma/client/wasm`'s
+  WASM query engine — any DB-touching route silently renders an error state, with no crash and no
+  obvious signal. The M0 homepage did exactly this, unnoticed, until P1 checked. `next dev` is
+  fine for UI-only iteration; anything touching Prisma needs `npm run preview`.
 - `generator client` in `prisma/schema.prisma` **must** set `engineType = "client"`. The default
   `"library"` engine locates its native binary via `fs.readdir` at runtime — workerd's
   `nodejs_compat` `fs` polyfill doesn't implement it, so every query fails with

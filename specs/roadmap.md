@@ -1,3 +1,16 @@
+---
+id: roadmap
+title: Roadmap
+audience: [dev]
+type: doc
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: Master backlog and phase sequencing (M0, P0-P8) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures.
+tags: [roadmap, phases, backlog]
+---
+
 # Roadmap
 
 Master backlog for the Aheed Online Store (SDD Solo Mode). Phases deliver working software early

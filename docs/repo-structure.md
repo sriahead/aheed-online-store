@@ -1,3 +1,16 @@
+---
+id: repo-structure
+title: Repository Structure
+audience: [dev]
+type: doc
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: The agreed target folder layout for the Next.js + Prisma + Cloudflare app, Clean Architecture layering, and which phase scaffolds each folder.
+tags: [architecture, folder-structure, conventions]
+---
+
 # Repository Structure
 
 The recommended folder layout for the Aheed Food Centre online store — a **Next.js (App Router) +

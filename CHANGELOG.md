@@ -6,7 +6,127 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **KMS — internal docs site build broken by `CLAUDE.md`'s HTML comments.** PR #26 gave
+  `CLAUDE.md` front-matter for the first time, which made `kms/scripts/assemble.ts` start
+  including it in `deploy-docs-internal`'s build — but its `next dev`-regenerated
+  `<!-- BEGIN/END:nextjs-agent-rules -->` markers are valid Markdown, not valid MDX (Nextra's
+  compiler parses `<` as a JSX tag open and chokes on the following `!`). Can't fix at the source
+  (that exact HTML-comment block is rewritten verbatim by `next dev`, see `CLAUDE.md` itself), so
+  `assemble.ts` now rewrites `<!-- ... -->` to `{/* ... */}` for every doc at assembly time.
+  Verified: `npm run build` in `kms/site-internal` now compiles clean.
+
 ### Added
+- **`docs/onboarding.md` refreshed** — was still framed around M0-only ("Feature work (P0+) starts
+  only after M0 is green"), badly stale now that M0/P0/KMS/design-system have shipped and P1a is
+  in flight. Updated: current phase status (pointing at `specs/roadmap.md`'s change log as the
+  source of truth, not duplicating it), `.env` vs `.dev.vars` distinction, the `npm run preview`
+  vs `npm run dev` DB-touching gotcha surfaced immediately rather than buried in `CLAUDE.md`, the
+  seven-stage SDD workflow + slash commands, and a pointer to the internal docs site. Verified no
+  real duplication with `kms/site-internal/`'s content — that site auto-assembles from `specs/`,
+  `docs/`, and `CLAUDE.md` (confirmed all 20 backfilled docs, including this one, assemble
+  correctly), nothing hand-duplicated there. Its one stale line (`content/dev/index.mdx` said
+  pages were "populated once those docs carry real front-matter" — no longer true post-backfill)
+  fixed to point at the now-real content instead.
+- **SDD — backfill missing `plan.md` files + prevent future drift.** 4 slices had drifted to a
+  two-file (`requirements.md`/`validation.md`) pattern, missing `plan.md` — unintentional; started
+  with the design-system slice and got entrenched when `specs/sdd-workflow.md`'s own `/spec` stage
+  only mentioned the other two. Fixed:
+  - `specs/templates/feature-spec/{plan,requirements,validation}.md` — scaffolded for the first
+    time (`docs/repo-structure.md` documented this directory but it never existed), so future
+    slices copy a real template instead of improvising from "the most recent slice."
+  - `plan.md` backfilled for `design-system`, `kms-backfill`, `kms-gates`, `kms-site` — the
+    narrative (goal, scope, deliberately-excluded, rationale) that front-matter now lives on,
+    moved off `requirements.md` to match the established one-entry-per-slice precedent.
+  - `kms/schema/repo.ts`'s `walk()` now excludes `specs/templates/` — the template's placeholder
+    front-matter (`id: REPLACE-ME-...`) would otherwise hard-fail `kms:validate` once gate-wired.
+  - `specs/sdd-workflow.md` and `.claude/commands/spec.md` now require all three files for every
+    new slice, not just two.
+  - `specs/2026-08-06-p1-auth/plan.md` lands separately, directly on PR #24's branch (doesn't
+    exist on `staging` yet).
+- **KMS — front-matter backfill** (`specs/2026-08-06-kms-backfill/`), closing the last deferred
+  item from the KMS foundation slice (`specs/2026-08-06-kms/requirements.md` R8).
+  `ARTIFACT_INDEX.md` now indexes 19 docs instead of 1: `CLAUDE.md`, all three `docs/*.md`, the 9
+  persistent `specs/` docs (architecture, mission, roadmap, tech-stack, design-system,
+  sdd-workflow, and the 3 ADRs), and one representative file per dated slice folder. Matches the
+  precedent already set by `specs/2026-08-06-kms/plan.md`: one indexed entry per meaningful
+  doc/slice, not every acceptance-criteria file — sibling `requirements.md`/`validation.md` files
+  stay deliberately un-indexed. `specs/2026-08-06-p1-auth/requirements.md` is excluded from this
+  slice (doesn't exist on `staging` yet, only on PR #24) — its front-matter lands with that PR
+  instead.
+- **P1b — Google Sign-In** (`specs/2026-08-06-p1b-google-signin/`), closing out P1's auth line on
+  top of P1a below. Unblocked by the human provisioning the Google Cloud Console OAuth client and
+  setting `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` as Cloudflare secrets on both `staging` and
+  `production` (issue #28) — the one credential P1a's proposal had deferred as P1b.
+  - `lib/auth.ts` — new exported pure `buildSocialProviders(env)`: returns a
+    `socialProviders.google` block only when both credentials are present, `undefined` otherwise
+    (never a half-configured provider). Split out specifically so it's unit-testable —
+    `getAuth()` itself has no tests, since it depends on `getPrisma()`. `emailAndPassword`
+    unchanged. No new Prisma migration — Google sign-ins land in the `Account` table P1a already
+    created, and get `role: CUSTOMER` via the same Prisma default as email/password sign-up.
+  - `lib/config.ts` gains `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, both optional (same
+    degrade-not-crash pattern as `RESEND_API_KEY`) — documented in `.env.example` and
+    `.dev.vars.example`.
+  - `features/auth/components/GoogleSignInButton.tsx` — one shared "Continue with Google" control
+    for both `/login` and `/register` (Better Auth's social sign-in creates an account on first
+    use, so login and register need the same control, not two).
+  - **Bug caught by `npm run build`'s route table, not local `next dev`**: `/login`/`/register`
+    were being statically prerendered, which would have baked the Google-button visibility check
+    in at *build* time — but `wrangler secret put` values only exist at Worker *request* time, so
+    the button would have silently never rendered in production regardless of the secrets being
+    set. Fixed with `export const dynamic = "force-dynamic"` on both pages (same pattern
+    `/account` already uses).
+  - **Deliberately incomplete**: the actual Google consent-screen flow can't be exercised against
+    `npm run preview` locally — the OAuth client's redirect URIs are only registered for
+    `staging`/`production`, not `localhost`. Verified as far as possible locally (the button
+    renders/hides correctly, and `POST /api/auth/sign-in/social` returns a correctly-built Google
+    authorization URL with the right `client_id`/scopes/PKCE challenge/redirect URI); the actual
+    consent screen + callback need a real sign-in against a deployed environment before this is
+    fully confirmed end-to-end.
+- **P1a — `plan.md`** added (`specs/2026-08-06-p1-auth/plan.md`) — part of backfilling the
+  `plan.md` file every slice is now required to have (issue #27); this one lands directly on this
+  branch since the spec folder doesn't exist on `staging` yet.
+- **P1a — Email/password auth, RBAC, account shell** (`specs/2026-08-06-p1-auth/`), split from the
+  full P1 roadmap line since Google Sign-In needs a Google Cloud Console OAuth client only the
+  human can create (tracked as P1b, issue #23):
+  - **Prisma**: `User` (`role` enum — `CUSTOMER`/`STAFF`/`ADMIN`, default `CUSTOMER`), `Session`,
+    `Account`, `Verification` — Better Auth's standard relational shape, no `Json` columns,
+    explicit FKs. Migration applied directly to Neon staging (`prisma migrate dev` — confirmed
+    with the user, no separate local Postgres exists); CI's `prisma migrate deploy` no-ops on it.
+  - `lib/auth.ts` — Better Auth server instance (Prisma adapter, email/password, required email
+    verification, password reset). `role` added via `additionalFields` with `input: false` so a
+    signup request can never set its own role. No Google/OAuth provider — P1a is email/password
+    only. `lib/auth-rbac.ts` — `requireRole()` gates a route/action to one or more roles, returning
+    401/403 (never a silent pass-through) rather than throwing.
+  - `lib/email.ts` — new `EmailService` port + Resend adapter via plain `fetch` (no SDK, same
+    Workers-bundle-size reasoning as `lib/storage.ts`'s `aws4fetch` choice). Degrades to a logged
+    no-op, not a crash, when `RESEND_API_KEY` is unset.
+  - `app/api/auth/[...all]/route.ts`, and UI under a new `app/(storefront)/` route group:
+    `/login`, `/register`, `/forgot-password`, `/reset-password`, a protected `/account` shell.
+  - **Prerequisite fix, found stress-testing this slice against the real Workers runtime**
+    (`npm run preview`, not `next dev` — see below): `lib/db.ts`'s `getPrisma()` cached a Prisma/
+    Neon client across requests, which Cloudflare Workers forbids (I/O objects can't cross request
+    boundaries) — rapid sequential requests failed ~1-in-3 times with `"Cannot perform I/O on
+    behalf of a different request."` Pre-existing since M0 (affects `/api/health` too, just never
+    caught — validation never hammered it with back-to-back requests). Fixed: `getPrisma()` and
+    `getAuth()` now construct fresh per call rather than caching across requests, matching Neon's
+    own recommended pattern for serverless/edge. Stress-tested clean afterwards.
+  - `eslint.config.mjs` now excludes `.wrangler/**` (missed alongside `.next/**`/`.open-next/**` —
+    running `npm run preview` locally left bundled worker output that `npm run lint` was linting
+    as source, producing dozens of bogus errors from third-party code).
+  - **Gate 3 fix, found validating locally against the `gates` CI job's actual env**: `lib/email.ts`'s
+    `getEmailService()` called the shared `getEnv()`, which requires `DATABASE_URL`/
+    `BETTER_AUTH_SECRET` — unrelated to email — so `tests/email.test.ts` failed in any environment
+    without those two set (including CI, which never provides them for the test step). Split a
+    narrow `getEmailEnv()`/`emailSchema` out of `lib/config.ts` covering only
+    `RESEND_API_KEY`/`RESEND_FROM_EMAIL`; `getEmailService()` now depends on that instead.
+  - **Still needed from the human before this is live end-to-end**: `RESEND_API_KEY` (a Resend
+    account/key — verification and password-reset emails currently log-and-skip, don't send) and
+    `BETTER_AUTH_SECRET`/`RESEND_API_KEY` set via `wrangler secret put` on staging/production.
+  - **Discovered while validating, not fixed (documented for awareness)**: `@prisma/client/wasm`
+    cannot load under plain `next dev` (Node.js runtime, not workerd) — any DB-touching route
+    silently shows an error state under `npm run dev`. Always use `npm run preview` (OpenNext +
+    local Workers runtime) to validate DB-touching code; `next dev` is UI-only from now on.
 - **KMS — gate wiring** (`specs/2026-08-06-kms-gates/`), closing the last deferred item from the
   KMS design (`specs/2026-08-06-kms/plan.md` §2, `requirements.md` R8). `gates.yml` now runs
   `kms:validate` and an `ARTIFACT_INDEX.md` staleness check (regenerated and diffed with the

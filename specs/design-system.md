@@ -1,3 +1,16 @@
+---
+id: design-system
+title: Design System
+audience: [dev]
+type: doc
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, and the open items (logo assets, danger-color role) carried into later phases.
+tags: [design-system, tokens, brand]
+---
+
 # Design System
 
 The authored decision doc for Aheed's visual language — colors, typography, shape. Where this and

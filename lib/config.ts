@@ -26,6 +26,16 @@ const schema = z.object({
   S3_SECRET_KEY: z.string().optional(),
   S3_REGION: z.string().optional(),
   CDN_BASE_URL: z.string().optional(),
+  // ADR-002 — Better Auth. Secret is required (session/cookie signing); URL is
+  // optional (Better Auth can infer it from the request when unset, but an
+  // explicit per-environment value avoids cookie/redirect surprises in prod).
+  BETTER_AUTH_SECRET: z.string().min(1, "BETTER_AUTH_SECRET is required"),
+  BETTER_AUTH_URL: z.string().optional(),
+  // P1b — Google Sign-In (issue #28). Optional: unset means lib/auth.ts's
+  // buildSocialProviders() omits the Google provider and Better Auth runs
+  // email/password-only, same as before this slice.
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
 });
 
 export type AppEnv = z.infer<typeof schema>;
@@ -40,5 +50,29 @@ export function getEnv(): AppEnv {
     S3_SECRET_KEY: readEnv("S3_SECRET_KEY"),
     S3_REGION: readEnv("S3_REGION"),
     CDN_BASE_URL: readEnv("CDN_BASE_URL"),
+    BETTER_AUTH_SECRET: readEnv("BETTER_AUTH_SECRET"),
+    BETTER_AUTH_URL: readEnv("BETTER_AUTH_URL"),
+    GOOGLE_CLIENT_ID: readEnv("GOOGLE_CLIENT_ID"),
+    GOOGLE_CLIENT_SECRET: readEnv("GOOGLE_CLIENT_SECRET"),
+  });
+}
+
+// lib/email — Resend adapter. Kept out of `schema`/`getEnv()` above: email
+// sending has no dependency on DATABASE_URL/BETTER_AUTH_SECRET, and coupling
+// it to that schema meant getEmailService() failed anywhere those unrelated
+// vars weren't set (e.g. CI's `gates` job, which never provides them).
+const emailSchema = z.object({
+  // Optional: no key means email sending degrades (logs, doesn't crash the
+  // request) until the human provisions one.
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().optional(),
+});
+
+export type EmailEnv = z.infer<typeof emailSchema>;
+
+export function getEmailEnv(): EmailEnv {
+  return emailSchema.parse({
+    RESEND_API_KEY: readEnv("RESEND_API_KEY"),
+    RESEND_FROM_EMAIL: readEnv("RESEND_FROM_EMAIL"),
   });
 }

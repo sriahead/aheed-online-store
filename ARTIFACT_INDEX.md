@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-06T15:17:50.470Z` · commit `04303cf` · `1` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-07T07:11:10.631Z` · commit `79b92e6` · `22` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -22,7 +22,28 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
+| [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow. |
+| [Onboarding](docs/onboarding.md) | doc | 1.1.0 | 2026-08-06 | approved | internal | 5-minute start-here guide — where the project actually is, prerequisites, local setup, and how to get a new developer running, tested, and branching independently. |
+| [Repository Structure](docs/repo-structure.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The agreed target folder layout for the Next.js + Prisma + Cloudflare app, Clean Architecture layering, and which phase scaffolds each folder. |
+| [Walking-Skeleton Runbook (M0)](docs/walking-skeleton-runbook.md) | runbook | 1.0.0 | 2026-08-06 | approved | internal | Step-by-step runbook to stand up the M0 walking skeleton — Cloudflare, R2, Neon, and GitHub environment provisioning through to a green production health check. |
+| [M0 — Walking Skeleton (plan)](specs/2026-08-05-m0-walking-skeleton/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for the smallest possible end-to-end app (Next.js on Workers, Neon, CI/CD) proving the Cloudflare + Neon pipeline before any feature work begins. |
+| [P0 — Design-System Tokens (plan)](specs/2026-08-06-design-system/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for installing Tailwind CSS v4 and encoding the Aheed brand kit as design tokens, closing the last item deferred from P0's first slice. |
 | [Aheed KMS — Design (structure, deployment, schema)](specs/2026-08-06-kms/plan.md) | spec | 0.1.0 | 2026-08-06 | draft | internal | Folder structure, deployment plan, and front-matter schema for the Aheed knowledge system — phased to M0 reality, with a generated index and an internal/public publication split. |
+| [KMS — Front-Matter Backfill (plan)](specs/2026-08-06-kms-backfill/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for backfilling front-matter onto the docs that predate the KMS schema, closing the last deferred item from the KMS foundation slice. |
+| [KMS — Gate Wiring (plan)](specs/2026-08-06-kms-gates/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for wiring kms:validate and an ARTIFACT_INDEX.md staleness check into gates.yml, closing the last deferred item from the KMS design's Gate-wiring section. |
+| [KMS — Index Generator, Assembly & Internal Site (plan)](specs/2026-08-06-kms-site/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for the ARTIFACT_INDEX.md generator, the assemble script, and the internal Nextra docs site — the deferred follow-up to the KMS schema/validator foundation slice. |
+| [P0 — Foundation & Scaffolding (plan)](specs/2026-08-06-p0-foundation/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for P0's first slice — SDD git hooks, Prettier, SEO/PWA routes, and test setup — scoped to what M0 didn't already build. |
+| [P1a — Email/Password Auth, RBAC, Account Shell (plan)](specs/2026-08-06-p1-auth/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for the first P1 slice — Better Auth email/password, RBAC, verification/reset emails, and an account shell — split from Google Sign-In, which needs OAuth credentials the human must create first. |
+| [P1b — Google Sign-In (plan)](specs/2026-08-06-p1b-google-signin/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for adding Google as a Better Auth social provider alongside P1a's email/password flow, now that the human has provisioned the OAuth client and its secrets on Cloudflare. |
+| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic by design. |
+| [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
+| [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
+| [ADR-003 — Object Storage Abstraction (S3-compatible)](specs/decisions/ADR-003-storage-abstraction.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time. |
+| [Design System](specs/design-system.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, and the open items (logo assets, danger-color role) carried into later phases. |
+| [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
+| [Roadmap](specs/roadmap.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | Master backlog and phase sequencing (M0, P0-P8) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |
+| [SDD Workflow](specs/sdd-workflow.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The seven-stage SDD workflow (Orient, Propose, Spec, Build, Validate, Document, Ship), each also an invokable Claude Code slash command, expanding CLAUDE.md's four gates. |
+| [Tech Stack](specs/tech-stack.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
 
 ## Track 2 — Staff / Operations (`staff-ops`)  ·  audience: staff
 

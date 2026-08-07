@@ -1,3 +1,17 @@
+---
+id: adr-003-storage-abstraction
+title: "ADR-003 — Object Storage Abstraction (S3-compatible)"
+audience: [dev]
+type: adr
+status: approved
+version: "1.0.0"
+updated: 2026-08-06
+visibility: internal
+summary: Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time.
+tags: [adr, storage, r2, s3, portability]
+related: [architecture, adr-001-hosting]
+---
+
 # ADR-003 — Object Storage Abstraction (S3-compatible)
 
 - **Status:** Accepted.
