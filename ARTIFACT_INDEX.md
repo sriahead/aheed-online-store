@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-07T22:14:04.823Z` · commit `d36e6e4` · `27` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-07T22:30:38.993Z` · commit `b757585` · `29` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -23,6 +23,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
 | [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow. |
+| [Environment Setup — Secrets & Config (staging / production)](docs/env-setup.md) | doc | 1.0.0 | 2026-08-07 | approved | internal | How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values. |
 | [Onboarding](docs/onboarding.md) | doc | 1.1.0 | 2026-08-06 | approved | internal | 5-minute start-here guide — where the project actually is, prerequisites, local setup, and how to get a new developer running, tested, and branching independently. |
 | [Repository Structure](docs/repo-structure.md) | doc | 1.1.0 | 2026-08-07 | approved | internal | The agreed target folder layout for the Next.js + Prisma + Cloudflare app, Clean Architecture layering, and which phase scaffolds each folder. |
 | [Walking-Skeleton Runbook (M0)](docs/walking-skeleton-runbook.md) | runbook | 1.0.0 | 2026-08-06 | approved | internal | Step-by-step runbook to stand up the M0 walking skeleton — Cloudflare, R2, Neon, and GitHub environment provisioning through to a green production health check. |
@@ -44,6 +45,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
 | [ADR-003 — Object Storage Abstraction (S3-compatible)](specs/decisions/ADR-003-storage-abstraction.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time. |
+| [ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)](specs/decisions/ADR-004-multi-tenancy.md) | adr | 0.1.0 | 2026-08-07 | draft | internal | Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. |
 | [Design System](specs/design-system.md) | doc | 1.3.0 | 2026-08-07 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, and the open items (logo assets, danger-color role) carried into later phases. |
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
 | [Roadmap](specs/roadmap.md) | doc | 1.5.0 | 2026-08-07 | approved | internal | Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |

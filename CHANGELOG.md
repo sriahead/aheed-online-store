@@ -48,6 +48,22 @@ every branch merges.
   Verified: `npm run build` in `kms/site-internal` now compiles clean.
 
 ### Added
+- **Env-config CLI + multi-tenancy ADR (platform foundation)** — tooling and decision docs, no
+  runtime change.
+  - `scripts/configure-env.mjs` (`npm run configure-env -- <staging|production>`) configures every
+    required secret for an environment in one command, routing each to the correct store —
+    **GitHub environment secrets** (`CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN`/`DIRECT_URL`, for
+    CI) vs. **Cloudflare Worker secrets** (everything the app reads at runtime). Reads a gitignored
+    `secrets/<env>.vars` (template: `secrets/example.vars`), validates all values are present, and
+    pipes them via stdin so **no value ever appears in argv or logs**. `--dry-run` validates +
+    shows routing without setting anything. Adds two required vars the original list omitted:
+    `BETTER_AUTH_URL` (per-env origin) and `S3_REGION` (ADR-003). Documented in `docs/env-setup.md`
+    (surfaced in the internal KMS).
+  - **ADR-004 (draft)** — `specs/decisions/ADR-004-multi-tenancy.md`: the direction for a
+    DB-driven multi-vendor platform (vendors/regions/branding as data, per-vendor theming over one
+    business-logic/data layer), with open questions (tenant resolution, isolation model) to resolve
+    before it's Accepted. Tracked by #49; also flags that **staging and production currently share
+    one Neon database**.
 - **P2.5b2 — Storefront visual redesign UI** (`specs/2026-08-07-p2-5b2-visual-ui/`), the UI half
   of P2.5b and the slice that closes the "live site is nowhere near the mockup" gap that opened
   P2.5 (closes #43). Applies P2.5b1's tokens/schema/seed to a real storefront matching the AI
