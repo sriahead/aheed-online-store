@@ -6,6 +6,15 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+- **`deploy-staging`/`deploy-production` now tag each Worker Version with its git commit.**
+  `wrangler deploy` was invoked bare, so every deployment showed as generic "Manually deployed" in
+  the Cloudflare dashboard's Version History, with no way to trace a live Version ID back to the
+  GitHub commit that produced it short of correlating deploy timestamps against `gh run list`
+  output. Added `--tag "$(git rev-parse --short HEAD)"` and `--message "$(git log -1 --pretty=%s)"`
+  to both workflows' `wrangler deploy` calls — future versions self-label with their commit
+  directly in the dashboard.
+
 ### Fixed
 - **KMS — internal docs site build broken by `CLAUDE.md`'s HTML comments.** PR #26 gave
   `CLAUDE.md` front-matter for the first time, which made `kms/scripts/assemble.ts` start
