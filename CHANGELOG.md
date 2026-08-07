@@ -60,6 +60,10 @@ every branch merges.
     and it's exactly the trigram work `specs/architecture.md` already defers until the catalogue
     grows past its current 6 placeholder products. Not a quick add; left flagged for whenever
     that condition is actually met.
+  - `specs/roadmap.md`'s change log gains the **P2 closure entry**, and — noticed while adding
+    it — **P0 and P1 never got their own closure entries either**, despite both being long done;
+    backfilled retroactively (v1.1.0) so the log reads as a coherent history instead of jumping
+    from M0 straight to P2.
 - **P2a — Catalogue browsing** (`specs/2026-08-07-p2a-catalogue-browsing/`), first slice of P2.
   Split from the full roadmap line — search & filters follow separately as P2b (issue #34), same
   split pattern as P1a/P1b.
