@@ -31,6 +31,47 @@ every branch merges.
   Verified: `npm run build` in `kms/site-internal` now compiles clean.
 
 ### Added
+- **P2.5b1 — Visual redesign foundation** (`specs/2026-08-07-p2-5b1-visual-foundation/`), first of
+  two P2.5b slices (issue #40), split from a single oversized slice so tokens/schema/seed could be
+  validated before P2.5b2's UI work (issue #43) consumes them.
+  - **Design tokens**: `design-system/tokens/tokens.css` gains three tint primitives
+    (`#E8F5E9`/`#FFF3E0`/`#FFEBEE`, confirmed against both the brand kit and the mockup's own
+    `index.css`) as `--color-action-tint`/`--color-accent-tint`/`--color-danger-tint` — named
+    relative to their base color, matching the existing hover/active-shade convention rather than
+    inventing generic "success/warning" status vocabulary. `specs/design-system.md` (v1.1.0) also
+    documents the brand kit's type scale as Tailwind utility mappings and resolves its two
+    long-open items: real logo source (`docs/logo.png`, now committed) and red's dual role
+    (alert/danger **and** sale-badge color, confirmed via the mockup's `ProductCard.tsx`).
+  - `lucide-react` added — the mockup's actual icon library, not a guessed choice.
+  - **Prisma**: `Product` gains `origin` (String?), `originalPrice` (Int? pence — a discount badge
+    is derived from the gap to `basePrice` at render time, not a separate boolean that could drift),
+    and `isHalal`/`isFresh`/`isOrganic` (Boolean, default false). `lib/repositories/products.ts`'s
+    `ProductFilters`/`ProductSummary`/`ProductDetail` extended to match; `search()` and
+    `listByCategory()` both route through the same `buildFilterWhere()`, so the three new filters
+    behave identically from either entry point — no divergent behavior to maintain.
+  - **Seed**: adds 6 categories (halal-meat, groceries, international, beverages, snacks,
+    household) and 12 products, bringing the catalogue to 9 categories / 18 products — covers the
+    mockup's 8 real departments plus the existing `bakery` (which the mockup doesn't have and isn't
+    being removed; content parity matters more than exact slug parity with already-live URLs).
+    **Bug caught mid-build**: the original seed script's idempotency check was a single
+    `category.count() > 0` gate — since the existing 3 categories already exist in every
+    environment, it would have silently skipped all 6 new categories forever. Rewritten to check
+    per-category by slug, so partial catalogues extend correctly instead of getting stuck. New
+    product images go through the same real `putObject()` storage round-trip as P2a's seed, never
+    an external URL.
+  - `lib/delivery.ts` — pure `isDeliverable()`, checks a postcode's LE1–LE5 (Leicester) prefix,
+    case/whitespace-tolerant. No persistence; P3's checkout decides what to do with the result.
+  - **Fixed while validating**: `docs/ui-ref/` (the mockup's committed reference source, its own
+    separate Vite/React project) was never excluded from this repo's root `eslint.config.mjs`/
+    `tsconfig.json`, so both `lint` and `tsc --noEmit` failed on code that isn't part of this app at
+    all. Excluded, matching the existing pattern for `kms/site-internal`/`kms/site-public`.
+  - **Corrected during build**: `requirements.md`/`plan.md` originally said "5 new categories...
+    8 total" while separately listing 6 category names — an arithmetic slip, not a scope change.
+    Fixed to 6 new / 9 total (12 new products / 18 total) before implementing, matching the
+    enumerated list and the "add every mockup category we're missing" rationale that was always
+    the actual intent.
+  - **Deliberately excluded**: any layout/component/visual application of these tokens — P2.5b2
+    (issue #43). Real product photography remains deferred per P2a's original note.
 - **P2.5a — Ratings & reviews backend** (`specs/2026-08-07-p2-5a-ratings-reviews/`), first slice
   of P2.5 — a phase inserted into the roadmap after P2's close (closes #39, see `specs/
   roadmap.md` v1.2.0 for why: comparing the live site against the project's own AI Studio design

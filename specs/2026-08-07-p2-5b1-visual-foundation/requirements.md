@@ -25,8 +25,8 @@ R4. `lib/repositories/products.ts`'s `ProductFilters` gains `isHalal`/`isFresh`/
     `originalPrice`, `isHalal`, `isFresh`, `isOrganic` in their select clauses and return shapes.
 R5. `lib/repositories/products.ts`'s `search()` and `listByCategory()` both accept and apply the
     three new filters identically — no divergent behavior between the two entry points.
-R6. `prisma/seed.ts` adds 5 new categories (halal-meat, groceries, international, beverages,
-    snacks, household) with 2 placeholder products each (10 new products total), each with
+R6. `prisma/seed.ts` adds 6 new categories (halal-meat, groceries, international, beverages,
+    snacks, household) with 2 placeholder products each (12 new products total), each with
     `origin` set and `isHalal`/`isFresh`/`isOrganic` populated where semantically appropriate
     (e.g. halal-meat category's products get `isHalal: true`). Each product's image is uploaded
     through `lib/storage.ts`'s `putObject()` (same placeholder SVG, real storage round-trip —

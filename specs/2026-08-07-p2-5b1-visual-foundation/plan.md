@@ -52,9 +52,11 @@ slice, renumbered) and #43 (P2.5b2, UI).
 - **Repository/filters**: `ProductFilters` (from P2b) gains `isHalal`/`isFresh`/`isOrganic`
   alongside the existing price/in-stock filters — one shared filter shape, not a second parallel
   one. `ProductSummary`/`ProductDetail` gain the new fields for P2.5b2 to render.
-- **Seed expansion**: adds 5 new categories (halal-meat, groceries, international, beverages,
-  snacks, household) with 2 placeholder products each, bringing the total to 8 categories — the
-  mockup's real department count. **Existing categories (`fruit-veg`, `bakery`, `dairy-eggs`) are
+- **Seed expansion**: adds 6 new categories (halal-meat, groceries, international, beverages,
+  snacks, household) with 2 placeholder products each, bringing the total to 9 categories — the
+  mockup's 8 real departments (`fresh-produce`→our `fruit-veg`, `dairy-eggs` already present, plus
+  the 6 listed here) plus our existing `bakery`, which the mockup doesn't have and isn't being
+  removed (see below). **Existing categories (`fruit-veg`, `bakery`, `dairy-eggs`) are
   left untouched** — they're already live in production with real URLs; renaming/removing them to
   exactly match the mockup's slugs (`fresh-produce` instead of `fruit-veg`, no `bakery` at all)
   would be a real breaking change to already-shipped functionality, not worth it for placeholder
