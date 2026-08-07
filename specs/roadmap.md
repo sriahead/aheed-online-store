@@ -4,7 +4,7 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.4.0"
+version: "1.5.0"
 updated: 2026-08-07
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures.
@@ -45,8 +45,10 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
   cards/detail) matching the mockup's look, plus small schema additions (`origin`, discount
   pricing) the mockup's cards need. Explicitly excludes cart/"Add to Cart" wiring — that's P3,
   unchanged by this insertion.
-- **P3 — Cart & checkout.** Cart, guest + account checkout, Stripe payment, atomic order creation
-  with stock decrement, on-screen + emailed confirmation.
+- **P3 — Cart & checkout.** Cart (making the currently-inert "Add to Cart" real), guest + account
+  checkout, Stripe payment, atomic order creation with stock decrement, on-screen + emailed
+  confirmation. Also includes **"Shop your list"** (paste/build a list → match to catalogue → add
+  to cart) — folded in here rather than a separate feature, since it's a cart-entry path.
 - **P4 — Orders & delivery status.** Order history, three-step status with audit trail, staff
   updates, confirmation/delivery emails.
 - **P5 — Loyalty & discounts.** Points earn/redeem; discounts engine; admin configuration.
@@ -71,3 +73,5 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
 | 2026-08-07 | **Added P2.5 — Ratings, reviews & storefront visual design**, inserted between P2 and P3. Not part of the original plan — the human's AI Studio design mockup (`aheedfoodcentre.ai.studio`) surfaced two gaps: storefront visual polish deferred in favour of infra-first delivery, and product ratings/reviews, never in the original P0–P8 scope at all. Two slices, reviews backend before the visual pass (real data before display). Explicitly excludes cart/"Add to Cart" wiring, unchanged as P3's scope. | Confirmed with the human; proceeding to P2.5a |
 | 2026-08-07 | Identified a **new, unscheduled future item**: a "Developer Control Toolbar" (role/view switching, infra introspection), surfaced by the mockup's real exported source. Confirmed as intended real scope, not just demo navigation — tracked as issue #41, deliberately not placed in the phase sequence yet (needs its own `/propose`; its "Dev KMS" concept as shown conflicts with `CLAUDE.md`'s secrets posture if taken literally). | Tracked, unscheduled — not blocking P2.5b |
 | 2026-08-07 | **P2.5 closed.** Ratings & reviews (auth-gated submission + denormalized aggregates) and the storefront visual redesign matching the AI Studio mockup — real header/hero/category-sidebar/redesigned cards, speciality (Halal/Fresh/Organic) filters, a postcode deliverability checker, and a two-layer token/schema/seed foundation underneath. Split into three slices (P2.5a reviews backend, P2.5b1 visual foundation, P2.5b2 UI) so each stayed independently validatable — the split kept catching real bugs (a seed idempotency gate that would have skipped every new category; rating fields P2.5a denormalized *for the cards* but no read path ever exposed until P2.5b2; `docs/ui-ref/` never excluded from lint/prettier/tsc). Cart/"Add to Cart" wiring stays inert by design — P3, unchanged. Deferred to their own issues: a homepage featured-products rail (#45, no backing data yet), `next/image` adoption (#46), and the Dev Control Toolbar (#41). | Exit criteria met; proceeding to P3 |
+| 2026-08-07 | **Post-P2.5 storefront polish** shipped as fixes from live review (not a phase): Milton Keynes delivery area broadened to any MK district, real cropped logo, mobile-UI rework, and a browse-page layout flip — departments to a horizontal arrow-scrolled strip, search/filters to a vertical left sidebar (`DepartmentScroller` is the first storefront client component). **Multi-tenancy** flagged as a pre-P3 foundation (ADR-004 draft, #49) with an env-config CLI + `docs/env-setup.md` alongside. | Live-review feedback; not a roadmap phase |
+| 2026-08-07 | **P3 scope confirmed/expanded:** the cart becomes real in P3 (the inert "Add to Cart" gets wired), and **"Shop your list"** is folded into P3 as a cart-entry path rather than a standalone feature — keeping the shopping flow in one phase. The **Developer Control Toolbar / dev view (#41)** is being pulled forward next as its own propose→spec→build. | Confirmed with the human |
