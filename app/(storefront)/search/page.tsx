@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { getProductRepository } from "@/lib/repositories/products";
+import { getCategoryRepository } from "@/lib/repositories/categories";
 import { getEnv } from "@/lib/config";
 import { ProductCard } from "@/components/product/ProductCard";
 import { ProductFilterForm } from "@/components/product/ProductFilterForm";
+import { CategorySidebar } from "@/components/layout/CategorySidebar";
 import { parsePriceInput } from "@/components/product/parse-price-input";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
@@ -18,6 +20,9 @@ type SearchParams = {
   minPrice?: string;
   maxPrice?: string;
   inStock?: string;
+  isHalal?: string;
+  isFresh?: string;
+  isOrganic?: string;
   cursor?: string;
 };
 
@@ -27,6 +32,9 @@ function nextPageHref(params: SearchParams, cursor: string): string {
   if (params.minPrice) qs.set("minPrice", params.minPrice);
   if (params.maxPrice) qs.set("maxPrice", params.maxPrice);
   if (params.inStock) qs.set("inStock", params.inStock);
+  if (params.isHalal) qs.set("isHalal", params.isHalal);
+  if (params.isFresh) qs.set("isFresh", params.isFresh);
+  if (params.isOrganic) qs.set("isOrganic", params.isOrganic);
   qs.set("cursor", cursor);
   return `/search?${qs.toString()}`;
 }
@@ -39,6 +47,8 @@ export default async function SearchPage({
   const params = await searchParams;
   const query = params.q?.trim() ?? "";
 
+  const allCategories = await getCategoryRepository().listTopLevel();
+
   let items: Awaited<ReturnType<ReturnType<typeof getProductRepository>["search"]>>["items"] = [];
   let nextCursor: string | null = null;
 
@@ -49,6 +59,9 @@ export default async function SearchPage({
       minPricePence: parsePriceInput(params.minPrice ?? ""),
       maxPricePence: parsePriceInput(params.maxPrice ?? ""),
       inStockOnly: params.inStock === "1",
+      isHalal: params.isHalal === "1",
+      isFresh: params.isFresh === "1",
+      isOrganic: params.isOrganic === "1",
     });
     items = result.items;
     nextCursor = result.nextCursor;
@@ -57,24 +70,27 @@ export default async function SearchPage({
   const { CDN_BASE_URL } = getEnv();
 
   return (
-    <main className="mx-auto max-w-5xl">
-      <h1 className="mb-6 text-2xl font-semibold text-primary">Search</h1>
-      <ProductFilterForm showQuery searchParams={params} />
-      {query && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {items.map((product) => (
-            <ProductCard key={product.id} product={product} cdnBaseUrl={CDN_BASE_URL ?? ""} />
-          ))}
-        </div>
-      )}
-      {nextCursor && (
-        <Link
-          href={nextPageHref(params, nextCursor)}
-          className="mt-6 inline-block rounded-full bg-action px-4 py-2 font-semibold text-white"
-        >
-          Next page
-        </Link>
-      )}
+    <main className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 md:flex-row">
+      <CategorySidebar categories={allCategories} activeSlug={null} />
+      <div className="flex-1">
+        <h1 className="mb-6 text-2xl font-semibold text-primary">Search</h1>
+        <ProductFilterForm showQuery searchParams={params} />
+        {query && (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {items.map((product) => (
+              <ProductCard key={product.id} product={product} cdnBaseUrl={CDN_BASE_URL ?? ""} />
+            ))}
+          </div>
+        )}
+        {nextCursor && (
+          <Link
+            href={nextPageHref(params, nextCursor)}
+            className="mt-6 inline-block rounded-full bg-action px-4 py-2 font-semibold text-white"
+          >
+            Next page
+          </Link>
+        )}
+      </div>
     </main>
   );
 }

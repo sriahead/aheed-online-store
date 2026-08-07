@@ -31,6 +31,51 @@ every branch merges.
   Verified: `npm run build` in `kms/site-internal` now compiles clean.
 
 ### Added
+- **P2.5b2 — Storefront visual redesign UI** (`specs/2026-08-07-p2-5b2-visual-ui/`), the UI half
+  of P2.5b and the slice that closes the "live site is nowhere near the mockup" gap that opened
+  P2.5 (closes #43). Applies P2.5b1's tokens/schema/seed to a real storefront matching the AI
+  Studio mockup (`docs/ui-ref/`).
+  - **Layout + header**: root `app/layout.tsx` drops the `max-w-2xl` body constraint that had
+    silently narrowed every page since P2a; a new `app/(storefront)/layout.tsx` (`force-dynamic`,
+    since it reads the session) hosts `components/layout/Header.tsx` — a **Server Component** (no
+    client JS) with a promo bar, logo, GET search form, an auth-aware account control
+    (`getSession()` → account link vs. "Sign in"), and an inert cart button (no count; no cart
+    until P3). The layout adds no second `<main>` — pages keep their own.
+  - **Hero homepage**: the M0 walking-skeleton `app/page.tsx` is removed and `/` is now served by
+    `app/(storefront)/page.tsx` — a hero band, a data-driven department grid, and a postcode
+    deliverability checker wired to P2.5b1's `isDeliverable()`. (`/api/health` is unchanged and
+    remains the machine-readable health surface.) The checker lives on the hero, not the sticky
+    header, because Next App Router layouts don't receive `searchParams` — only pages do.
+  - **Redesigned `ProductCard`**: Halal/Fresh badges, a discount "Offer" badge + "Save £X" +
+    strikethrough original price (derived from `originalPrice`), a star rating, `origin`, and an
+    inert Add-to-Cart control. All brand colors come from semantic tokens (no raw hex); the gold
+    rating star uses stock Tailwind `amber-400`, the one non-brand decorative color the design
+    system already defers to Tailwind for.
+  - **Category sidebar + speciality filters**: `components/layout/CategorySidebar.tsx`
+    (presentational, receives categories as props) renders on the category and search pages;
+    `ProductFilterForm` gains Halal/Fresh/Organic checkboxes wired to P2.5b1's real filter fields,
+    with both pages parsing the params, passing them to the repository, and carrying them through
+    pagination.
+  - **Two data-layer additions surfaced during Orient** (not pure UI, so called out): (1)
+    `ProductSummary`/`ProductDetail` now expose `averageRating`/`reviewCount` — P2.5a denormalized
+    these *for the cards* but no read path ever selected them; (2)
+    `components/product/category-icon.ts` maps a category slug to a lucide icon with a **generic
+    default fallback**, so a category added to the DB later still renders an icon without a schema
+    `iconName` field (honors the "auto-size to more categories" requirement).
+  - **Dynamic-sizing / performance / auth** (explicit human requirements on #43): every grid and
+    sidebar renders straight from `.map()` over DB results — no hardcoded 8-category/16-product
+    counts; loading stays Server-Component + keyset-paginated (P2b's cursor pattern, reused); the
+    header reflects real auth state, no mock.
+  - **Deliberately excluded**: cart/Add-to-Cart wiring (P3), the Dev Control Toolbar (#41),
+    `next/image`, a `Category.iconName` field, real photography, and a homepage "featured products"
+    rail (no backing data — no featured field or list-all method exists yet).
+  - **Post-preview adjustments** (from reviewing the running preview): the delivery area moved from
+    Leicester (LE1–LE5) to **Milton Keynes (MK1–MK19)** — `isDeliverable()`, its test, and all
+    locality copy (header/hero/metadata); the header now uses the **real logo** (`docs/logo.png`
+    resized to `public/images/brand/logo.png`) in place of the "A" placeholder; and `globals.css`
+    now forces `color-scheme: light` with an explicit white background + brand-ink text — a
+    dark-mode browser was painting a dark canvas, making dark text on the transparent category
+    cards unreadable.
 - **P2.5b1 — Visual redesign foundation** (`specs/2026-08-07-p2-5b1-visual-foundation/`), first of
   two P2.5b slices (issue #40), split from a single oversized slice so tokens/schema/seed could be
   validated before P2.5b2's UI work (issue #43) consumes them.
