@@ -31,6 +31,11 @@ const schema = z.object({
   // explicit per-environment value avoids cookie/redirect surprises in prod).
   BETTER_AUTH_SECRET: z.string().min(1, "BETTER_AUTH_SECRET is required"),
   BETTER_AUTH_URL: z.string().optional(),
+  // P1b — Google Sign-In (issue #28). Optional: unset means lib/auth.ts's
+  // buildSocialProviders() omits the Google provider and Better Auth runs
+  // email/password-only, same as before this slice.
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
 });
 
 export type AppEnv = z.infer<typeof schema>;
@@ -47,6 +52,8 @@ export function getEnv(): AppEnv {
     CDN_BASE_URL: readEnv("CDN_BASE_URL"),
     BETTER_AUTH_SECRET: readEnv("BETTER_AUTH_SECRET"),
     BETTER_AUTH_URL: readEnv("BETTER_AUTH_URL"),
+    GOOGLE_CLIENT_ID: readEnv("GOOGLE_CLIENT_ID"),
+    GOOGLE_CLIENT_SECRET: readEnv("GOOGLE_CLIENT_SECRET"),
   });
 }
 
