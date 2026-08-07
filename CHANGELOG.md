@@ -69,6 +69,13 @@ every branch merges.
   - **Deliberately excluded**: cart/Add-to-Cart wiring (P3), the Dev Control Toolbar (#41),
     `next/image`, a `Category.iconName` field, real photography, and a homepage "featured products"
     rail (no backing data — no featured field or list-all method exists yet).
+  - **Post-preview adjustments** (from reviewing the running preview): the delivery area moved from
+    Leicester (LE1–LE5) to **Milton Keynes (MK1–MK19)** — `isDeliverable()`, its test, and all
+    locality copy (header/hero/metadata); the header now uses the **real logo** (`docs/logo.png`
+    resized to `public/images/brand/logo.png`) in place of the "A" placeholder; and `globals.css`
+    now forces `color-scheme: light` with an explicit white background + brand-ink text — a
+    dark-mode browser was painting a dark canvas, making dark text on the transparent category
+    cards unreadable.
 - **P2.5b1 — Visual redesign foundation** (`specs/2026-08-07-p2-5b1-visual-foundation/`), first of
   two P2.5b slices (issue #40), split from a single oversized slice so tokens/schema/seed could be
   validated before P2.5b2's UI work (issue #43) consumes them.

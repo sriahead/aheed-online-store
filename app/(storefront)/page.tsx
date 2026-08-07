@@ -8,7 +8,7 @@ import { isDeliverable } from "@/lib/delivery";
 // load during next build's Node-based static prerendering.
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Aheed Food Centre — Leicester Cultural Groceries" };
+export const metadata = { title: "Aheed Food Centre — Milton Keynes Cultural Groceries" };
 
 type SearchParams = { postcode?: string };
 
@@ -24,11 +24,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       {/* Hero */}
       <section className="rounded-lg bg-action-tint px-6 py-12 sm:px-12">
         <h1 className="max-w-2xl text-3xl font-bold text-primary md:text-4xl">
-          Fresh halal meat, produce &amp; cultural groceries — delivered across Leicester
+          Fresh halal meat, produce &amp; cultural groceries — delivered across Milton Keynes
         </h1>
         <p className="mt-3 max-w-xl text-primary/80">
           100% certified HMC halal meat cut daily, alongside the staples, spices, and specialities
-          Leicester shops for.
+          Milton Keynes shops for.
         </p>
 
         {/* Postcode deliverability checker — a plain GET form; the result renders
@@ -40,7 +40,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               type="text"
               name="postcode"
               defaultValue={trimmedPostcode}
-              placeholder="e.g. LE1 1AA"
+              placeholder="e.g. MK9 1AA"
               aria-label="Your postcode"
               className="w-40 rounded-full border border-black/15 bg-white px-4 py-2"
             />
@@ -61,7 +61,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <MapPin className="h-4 w-4" aria-hidden />
             {deliverable
               ? `Great news — we deliver to ${trimmedPostcode.toUpperCase()}.`
-              : `Sorry, we don't deliver to ${trimmedPostcode.toUpperCase()} yet (Leicester LE1–LE5 only).`}
+              : `Sorry, we don't deliver to ${trimmedPostcode.toUpperCase()} yet (Milton Keynes MK1–MK19 only).`}
           </p>
         )}
       </section>

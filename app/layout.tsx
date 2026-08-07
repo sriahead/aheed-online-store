@@ -9,9 +9,9 @@ const poppins = Poppins({
 });
 
 export const metadata = {
-  title: "Aheed Food Centre — Leicester Cultural Groceries",
+  title: "Aheed Food Centre — Milton Keynes Cultural Groceries",
   description:
-    "Halal meat, fresh produce, and cultural groceries in Leicester, with local delivery.",
+    "Halal meat, fresh produce, and cultural groceries in Milton Keynes, with local delivery.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

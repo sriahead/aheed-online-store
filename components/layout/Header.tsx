@@ -20,28 +20,25 @@ export async function Header() {
       <div className="bg-primary text-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-1.5 text-xs">
           <span className="font-medium">
-            Aheed Food Centre — Leicester Local Grocery &amp; Self-Delivery
+            Aheed Food Centre — Milton Keynes Local Grocery &amp; Self-Delivery
           </span>
           <span className="inline-flex items-center gap-1">
             <MapPin className="h-3.5 w-3.5 text-accent" aria-hidden />
-            Local delivery across Leicester LE1–LE5
+            Local delivery across Milton Keynes MK1–MK19
           </span>
         </div>
       </div>
 
       {/* Main nav */}
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-xl font-bold text-white">
-            A
-          </span>
-          <span className="flex items-baseline gap-1">
-            <span className="text-xl font-bold tracking-tight text-primary">Aheed</span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-accent">
-              Food Centre
-            </span>
-          </span>
+        {/* Logo — docs/logo.png, resized to a header-height web asset (public/images/brand/logo.png). */}
+        <Link href="/" className="flex items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element -- storefront uses plain <img>; next/image loader is tracked in #46 */}
+          <img
+            src="/images/brand/logo.png"
+            alt="Aheed Food Centre — Your Local Grocery Store"
+            className="h-12 w-auto"
+          />
         </Link>
 
         {/* Global search */}
