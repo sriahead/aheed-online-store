@@ -12,6 +12,10 @@ build/
 .dev.vars
 !.dev.vars.example
 
+# per-environment secret inputs for scripts/configure-env.mjs — never commit
+secrets/*.vars
+!secrets/example.vars
+
 # prisma generated client (regenerated in CI)
 # (keep migrations tracked)
 *.log

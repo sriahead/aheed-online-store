@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "configure-env": "node scripts/configure-env.mjs",
     "kms:validate": "tsx kms/schema/validate.ts",
     "kms:build-index": "tsx kms/scripts/build-index.ts",
     "kms:assemble:internal": "tsx kms/scripts/assemble.ts --visibility internal",
