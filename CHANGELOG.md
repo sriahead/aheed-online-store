@@ -7,6 +7,13 @@ every branch merges.
 ## [Unreleased]
 
 ### Changed
+- **Browse-page layout flipped (from live review).** Departments and filters swapped places:
+  departments are now a **horizontal, icon-led strip across the top**, scrolled by ‹ › arrow
+  buttons with the scrollbar hidden (`.no-scrollbar`) — a small `DepartmentScroller` client
+  component (the arrows drive `scrollBy`; it degrades to native touch/trackpad scroll without JS).
+  Search + filters moved into a **vertical left sidebar** (`ProductFilterForm` restyled to a stacked
+  panel). Applies to the homepage, category, and search pages; the old vertical `CategorySidebar`
+  is removed.
 - **Storefront polish (from live review).** Delivery check broadened from Milton Keynes MK1–MK19 to
   **any MK postcode district** (MK1–MK99, e.g. MK24 — previously wrongly rejected); `lib/delivery.ts`
   regex + test + copy updated, and the precise per-vendor footprint is flagged as future DB config

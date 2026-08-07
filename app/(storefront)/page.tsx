@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { getCategoryRepository } from "@/lib/repositories/categories";
-import { categoryIcon } from "@/components/product/category-icon";
+import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { isDeliverable } from "@/lib/delivery";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm can't
@@ -66,29 +65,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         )}
       </section>
 
-      {/* Department nav — horizontal, icon-led, scrollable (Uber-Eats style).
-          Data-driven: renders whatever N the DB returns; scrolls on overflow. */}
+      {/* Department nav — horizontal, icon-led, arrow-scrolled (no scrollbar). */}
       <section className="mt-10">
         <h2 className="mb-4 text-2xl font-semibold text-primary">Shop by department</h2>
-        <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
-          {categories.map((category) => {
-            const Icon = categoryIcon(category.slug);
-            return (
-              <Link
-                key={category.id}
-                href={`/categories/${category.slug}`}
-                className="group flex w-20 shrink-0 snap-start flex-col items-center gap-2 text-center"
-              >
-                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-action-tint transition group-hover:ring-2 group-hover:ring-action/40">
-                  <Icon className="h-7 w-7 text-primary" aria-hidden />
-                </span>
-                <span className="line-clamp-2 text-xs font-medium leading-tight text-primary">
-                  {category.name}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+        <DepartmentScroller categories={categories} />
       </section>
     </main>
   );
