@@ -4,8 +4,8 @@ title: Repository Structure
 audience: [dev]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-08-06
+version: "1.1.0"
+updated: 2026-08-07
 visibility: internal
 summary: The agreed target folder layout for the Next.js + Prisma + Cloudflare app, Clean Architecture layering, and which phase scaffolds each folder.
 tags: [architecture, folder-structure, conventions]
@@ -108,17 +108,22 @@ aheed-online-store/
 │   │   #   each slice: components/ · hooks/ · api-client · types · use-cases (services)
 │
 ├── lib/                        # ── CROSS-CUTTING: DOMAIN PORTS + INFRA ADAPTERS ──
-│   ├── db/                      #   Prisma client singleton + Neon driver adapter (DB swap point)
-│   ├── repositories/            #   Repository implementations (ports live with the domain/services)
-│   ├── storage/                 #   StorageService port + S3-compatible adapter (ADR-003)
-│   ├── payments/                #   PaymentService port + Stripe adapter
-│   ├── email/                   #   EmailService port + Resend adapter
-│   ├── cache/                   #   CacheService port (Next cache / KV / Redis)
-│   ├── auth/                    #   Better Auth server config, RBAC helpers
-│   ├── validation/              #   zod schemas (shared client/server)
-│   ├── hooks/                   #   REACT custom hooks (NOT the SDD hooks/)
-│   ├── utils/
-│   └── config/                  #   typed, validated env parsing (single source for all *_URL/*_KEY)
+│   │   #   Single-adapter concerns land as a FLAT FILE (lib/db.ts), not a directory — confirmed
+│   │   #   precedent across P1a (auth) and P2a (db/storage), overriding the sketch below for
+│   │   #   those entries. Only lib/repositories/ is a real directory, since it genuinely holds
+│   │   #   multiple per-domain files (categories.ts, products.ts, ...) — reassess payments/cache/
+│   │   #   validation the same way once they're actually built, don't assume the directory shape.
+│   ├── db.ts                    #   Prisma client + Neon driver adapter (DB swap point)
+│   ├── repositories/            #   categories.ts, products.ts, ... — one flat file per domain
+│   ├── storage.ts               #   StorageService port + S3-compatible adapter (ADR-003)
+│   ├── payments/                #   PaymentService port + Stripe adapter — not built yet
+│   ├── email.ts                 #   EmailService port + Resend adapter
+│   ├── cache/                   #   CacheService port (Next cache / KV / Redis) — not built yet
+│   ├── auth.ts, auth-rbac.ts    #   Better Auth server config, RBAC helpers
+│   ├── validation/              #   zod schemas (shared client/server) — not built yet
+│   ├── hooks/                   #   REACT custom hooks (NOT the SDD hooks/) — not built yet
+│   ├── utils/                   #   not built yet
+│   └── config.ts                #   typed, validated env parsing (single source for all *_URL/*_KEY)
 │
 ├── database/
 │   ├── seed/                    #   seed scripts + seed JSON (seed data only, not domain storage)
@@ -144,11 +149,11 @@ aheed-online-store/
 
 | Folder | Why it exists |
 |--------|---------------|
-| `lib/db/` | Prisma client + **Neon serverless driver adapter**. The isolated **database swap point** (Neon → RDS/Cloud SQL/self-hosted) per `architecture.md` §4.1. |
-| `lib/storage/` | **`StorageService` port + S3-compatible adapter (ADR-003).** Only place that imports the S3 client. The **storage swap point** (R2 → S3/GCS) per `architecture.md` §4.2. |
-| `lib/repositories/` | Repository implementations behind domain-defined ports — the seam that keeps services free of Prisma. |
-| `lib/payments/` · `lib/email/` · `lib/cache/` | Ports + adapters for Stripe, Resend, and caching. Domain depends on the interface, not the vendor. |
-| `lib/config/` | Typed, zod-validated env parsing. **The only place** `DATABASE_URL`, `DIRECT_URL`, `S3_*`, `CDN_BASE_URL`, `STRIPE_*` are read. |
+| `lib/db.ts` | Prisma client + **Neon serverless driver adapter**. The isolated **database swap point** (Neon → RDS/Cloud SQL/self-hosted) per `architecture.md` §4.1. Flat file, not a directory — see the note above `lib/` in the tree. |
+| `lib/storage.ts` | **`StorageService` port + S3-compatible adapter (ADR-003).** Only place that imports the S3 client. The **storage swap point** (R2 → S3/GCS) per `architecture.md` §4.2. |
+| `lib/repositories/` | Repository implementations behind domain-defined ports — the seam that keeps services free of Prisma. One flat file per domain (`categories.ts`, `products.ts`, ...), not a subdirectory per domain. |
+| `lib/payments/` · `lib/email.ts` · `lib/cache/` | Ports + adapters for Stripe, Resend, and caching. Domain depends on the interface, not the vendor. `payments/`/`cache/` not built yet — confirm flat-file-vs-directory against actual need when they land, per the note above `lib/` in the tree. |
+| `lib/config.ts` | Typed, zod-validated env parsing. **The only place** `DATABASE_URL`, `DIRECT_URL`, `S3_*`, `CDN_BASE_URL`, `STRIPE_*` are read. |
 | `open-next.config.ts` · `wrangler.toml` | Cloudflare (Workers/Pages) deploy config and bindings. Replaces the previous GCP/Cloud Run deploy surface. |
 | `public/` | Static brand/UI/placeholder imagery only. **Product imagery lives in object storage and is served via CDN using relative keys** — never committed, never stored as a URL in the DB. |
 

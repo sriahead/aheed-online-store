@@ -3,7 +3,7 @@ id: p2a-catalogue-browsing
 title: "P2a — Catalogue Browsing (plan)"
 audience: [dev]
 type: spec
-status: draft
+status: approved
 version: "1.0.0"
 updated: 2026-08-07
 visibility: internal
