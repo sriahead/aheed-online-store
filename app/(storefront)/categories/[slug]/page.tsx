@@ -5,7 +5,7 @@ import { getProductRepository } from "@/lib/repositories/products";
 import { getEnv } from "@/lib/config";
 import { ProductCard } from "@/components/product/ProductCard";
 import { ProductFilterForm } from "@/components/product/ProductFilterForm";
-import { CategorySidebar } from "@/components/layout/CategorySidebar";
+import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
@@ -68,24 +68,35 @@ export default async function CategoryPage({
   const { CDN_BASE_URL } = getEnv();
 
   return (
-    <main className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 md:flex-row">
-      <CategorySidebar categories={allCategories} activeSlug={slug} />
-      <div className="flex-1">
-        <h1 className="mb-6 text-2xl font-semibold text-primary">{category.name}</h1>
-        <ProductFilterForm searchParams={query} />
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {items.map((product) => (
-            <ProductCard key={product.id} product={product} cdnBaseUrl={CDN_BASE_URL ?? ""} />
-          ))}
+    <main className="mx-auto max-w-7xl px-4 py-6">
+      {/* Departments: horizontal strip on top (arrow-scrolled). */}
+      <DepartmentScroller categories={allCategories} activeSlug={slug} />
+
+      <div className="mt-6 flex flex-col gap-6 md:flex-row">
+        {/* Search & filters: vertical sidebar on the left. */}
+        <aside className="shrink-0 md:w-60">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary/60">
+            Filters
+          </h2>
+          <ProductFilterForm searchParams={query} />
+        </aside>
+
+        <div className="flex-1">
+          <h1 className="mb-6 text-2xl font-semibold text-primary">{category.name}</h1>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {items.map((product) => (
+              <ProductCard key={product.id} product={product} cdnBaseUrl={CDN_BASE_URL ?? ""} />
+            ))}
+          </div>
+          {nextCursor && (
+            <Link
+              href={nextPageHref(slug, query, nextCursor)}
+              className="mt-6 inline-block rounded-full bg-action px-4 py-2 font-semibold text-white"
+            >
+              Next page
+            </Link>
+          )}
         </div>
-        {nextCursor && (
-          <Link
-            href={nextPageHref(slug, query, nextCursor)}
-            className="mt-6 inline-block rounded-full bg-action px-4 py-2 font-semibold text-white"
-          >
-            Next page
-          </Link>
-        )}
       </div>
     </main>
   );

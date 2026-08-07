@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { getCategoryRepository } from "@/lib/repositories/categories";
-import { categoryIcon } from "@/components/product/category-icon";
+import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { isDeliverable } from "@/lib/delivery";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm can't
@@ -61,31 +60,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <MapPin className="h-4 w-4" aria-hidden />
             {deliverable
               ? `Great news — we deliver to ${trimmedPostcode.toUpperCase()}.`
-              : `Sorry, we don't deliver to ${trimmedPostcode.toUpperCase()} yet (Milton Keynes MK1–MK19 only).`}
+              : `Sorry, we don't deliver to ${trimmedPostcode.toUpperCase()} yet (Milton Keynes MK postcodes only).`}
           </p>
         )}
       </section>
 
-      {/* Category navigation — data-driven, renders whatever N the DB returns. */}
+      {/* Department nav — horizontal, icon-led, arrow-scrolled (no scrollbar). */}
       <section className="mt-10">
         <h2 className="mb-4 text-2xl font-semibold text-primary">Shop by department</h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {categories.map((category) => {
-            const Icon = categoryIcon(category.slug);
-            return (
-              <Link
-                key={category.id}
-                href={`/categories/${category.slug}`}
-                className="flex items-center gap-3 rounded-md border border-black/10 p-4 font-semibold text-primary hover:border-black/20"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-action-tint">
-                  <Icon className="h-5 w-5 text-primary" aria-hidden />
-                </span>
-                {category.name}
-              </Link>
-            );
-          })}
-        </div>
+        <DepartmentScroller categories={categories} />
       </section>
     </main>
   );

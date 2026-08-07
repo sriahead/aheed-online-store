@@ -16,3 +16,13 @@ body {
   background-color: #ffffff;
   color: #212121;
 }
+
+/* Hide the scrollbar on horizontal scroll strips (e.g. the department scroller,
+   which is driven by ‹ › arrow buttons instead). Content still scrolls. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
