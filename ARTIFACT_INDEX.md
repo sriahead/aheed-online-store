@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-07T14:02:00.103Z` · commit `3fdbe72` · `24` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-07T15:12:27.519Z` · commit `3d46a93` · `24` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -43,7 +43,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [ADR-003 — Object Storage Abstraction (S3-compatible)](specs/decisions/ADR-003-storage-abstraction.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time. |
 | [Design System](specs/design-system.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, and the open items (logo assets, danger-color role) carried into later phases. |
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
-| [Roadmap](specs/roadmap.md) | doc | 1.1.0 | 2026-08-07 | approved | internal | Master backlog and phase sequencing (M0, P0-P8) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |
+| [Roadmap](specs/roadmap.md) | doc | 1.2.0 | 2026-08-07 | approved | internal | Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |
 | [SDD Workflow](specs/sdd-workflow.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The seven-stage SDD workflow (Orient, Propose, Spec, Build, Validate, Document, Ship), each also an invokable Claude Code slash command, expanding CLAUDE.md's four gates. |
 | [Tech Stack](specs/tech-stack.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
 
