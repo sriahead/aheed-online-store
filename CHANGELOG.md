@@ -7,6 +7,15 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Multi-tenancy — per-vendor authorization (`VendorMembership`)**
+  (`specs/2026-08-08-multitenancy-slice3a-vendor-membership/`, #68; ADR-004 slice 3a). Authorization
+  is now two-tier: `User.role` is the **platform** role (platform `ADMIN` transcends vendors; `/dev`
+  still gates on it), and a new **`VendorMembership(userId, vendorId, role)`** carries **per-vendor**
+  staff/admin (`VendorRole` = STAFF|ADMIN). A new `requireVendorRole()` gate allows platform admins
+  or matching members of the current vendor. The demo-accounts tool now provisions memberships
+  (`demo-admin` → Aheed ADMIN, `demo-staff` → Aheed STAFF; `demo-staff`'s platform role corrected to
+  CUSTOMER). Additive migration (new table, no backfill). No infra; testable at one vendor. Host
+  resolution (3b) and auth cookie scoping (3c) follow.
 - **Multi-tenancy — repository-layer `vendorId` enforcement**
   (`specs/2026-08-08-multitenancy-slice2-vendor-enforcement/`, closes #66; ADR-004 slice 2). Adds a
   `lib/tenant.ts` `getCurrentVendorId()` tenant seam (interim: the single ACTIVE vendor; slice 3

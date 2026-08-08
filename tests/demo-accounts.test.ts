@@ -10,23 +10,35 @@ import {
   type SignUp,
 } from "@/scripts/demo-accounts";
 
-type FakeUser = { email: string; role?: string; emailVerified?: boolean; name?: string };
+type FakeUser = {
+  id: string;
+  email: string;
+  role?: string;
+  emailVerified?: boolean;
+  name?: string;
+};
+type FakeMembership = { userId: string; vendorId: string; role: string };
 
-/** In-memory stand-in for the Prisma surface addDemoAccounts/removeDemoAccounts use. */
+/** In-memory stand-in for the Prisma surface the tool uses. */
 function makeFakePrisma(seedEmails: string[] = []) {
   const users = new Map<string, FakeUser>();
-  for (const email of seedEmails) users.set(email, { email });
-  const prisma: DemoPrisma & { users: Map<string, FakeUser> } = {
+  const memberships: FakeMembership[] = [];
+  let idSeq = 0;
+  for (const email of seedEmails) users.set(email, { id: `u${++idSeq}`, email });
+
+  const prisma: DemoPrisma & { users: Map<string, FakeUser>; memberships: FakeMembership[] } = {
     users,
+    memberships,
     user: {
       async findUnique({ where }) {
-        return users.get(where.email) ?? null;
+        const u = users.get(where.email);
+        return u ? { id: u.id } : null;
       },
       async update({ where, data }) {
-        const u = users.get(where.email) ?? { email: where.email };
+        const u = users.get(where.email) ?? { id: `u${++idSeq}`, email: where.email };
         Object.assign(u, data);
         users.set(where.email, u);
-        return u;
+        return { id: u.id };
       },
       async deleteMany({ where }) {
         let count = 0;
@@ -34,27 +46,55 @@ function makeFakePrisma(seedEmails: string[] = []) {
         return { count };
       },
     },
+    vendor: {
+      async findFirstOrThrow() {
+        return { id: "vendor-aheed" };
+      },
+    },
+    vendorMembership: {
+      async upsert({ where, create, update }) {
+        const { userId, vendorId } = where.userId_vendorId;
+        const existing = memberships.find((m) => m.userId === userId && m.vendorId === vendorId);
+        if (existing) {
+          existing.role = update.role;
+          return existing;
+        }
+        const row = { userId: create.userId, vendorId: create.vendorId, role: create.role };
+        memberships.push(row);
+        return row;
+      },
+    },
   };
   return prisma;
 }
 
 describe("DEMO_ACCOUNTS roster", () => {
-  it("has one account per RBAC role with the expected emails", () => {
-    expect(DEMO_ACCOUNTS.map((a) => [a.email, a.role])).toEqual([
-      ["demo-admin@example.com", "ADMIN"],
-      ["demo-staff@example.com", "STAFF"],
-      ["demo-customer@example.com", "CUSTOMER"],
+  it("splits platform role from vendor membership", () => {
+    expect(DEMO_ACCOUNTS).toEqual([
+      {
+        email: "demo-admin@example.com",
+        name: "Demo Admin",
+        platformRole: "ADMIN",
+        vendorRole: "ADMIN",
+      },
+      {
+        email: "demo-staff@example.com",
+        name: "Demo Staff",
+        platformRole: "CUSTOMER",
+        vendorRole: "STAFF",
+      },
+      { email: "demo-customer@example.com", name: "Demo Customer", platformRole: "CUSTOMER" },
     ]);
   });
 });
 
 describe("addDemoAccounts", () => {
-  it("signs up every account on an empty DB and sets role + emailVerified", async () => {
+  it("signs up all, sets platform role, and attaches vendor memberships", async () => {
     const prisma = makeFakePrisma();
     const signedUp: DemoAccount[] = [];
     const signUp: SignUp = async (account) => {
       signedUp.push(account);
-      prisma.users.set(account.email, { email: account.email });
+      prisma.users.set(account.email, { id: `new-${account.email}`, email: account.email });
     };
 
     await addDemoAccounts(prisma, signUp, "demo-pass-123");
@@ -63,29 +103,25 @@ describe("addDemoAccounts", () => {
     expect(prisma.users.get("demo-admin@example.com")).toMatchObject({
       role: "ADMIN",
       emailVerified: true,
-      name: "Demo Admin",
     });
-    expect(prisma.users.get("demo-customer@example.com")).toMatchObject({
-      role: "CUSTOMER",
-      emailVerified: true,
-    });
+    expect(prisma.users.get("demo-customer@example.com")).toMatchObject({ role: "CUSTOMER" });
+    // Memberships only for accounts with a vendorRole (admin + staff, not customer).
+    expect(prisma.memberships.map((m) => m.role).sort()).toEqual(["ADMIN", "STAFF"]);
+    expect(prisma.memberships.every((m) => m.vendorId === "vendor-aheed")).toBe(true);
   });
 
-  it("is idempotent: a second run signs up nobody but still reconciles roles", async () => {
-    const prisma = makeFakePrisma(DEMO_ACCOUNTS.map((a) => a.email)); // all already present
+  it("is idempotent: a second run signs up nobody and creates no duplicate memberships", async () => {
+    const prisma = makeFakePrisma(DEMO_ACCOUNTS.map((a) => a.email));
     const signedUp: DemoAccount[] = [];
     const signUp: SignUp = async (account) => {
       signedUp.push(account);
     };
 
     await addDemoAccounts(prisma, signUp, "demo-pass-123");
+    await addDemoAccounts(prisma, signUp, "demo-pass-123");
 
-    expect(signedUp).toEqual([]); // nobody signed up again
-    expect(prisma.users.size).toBe(3); // no duplicates
-    expect(prisma.users.get("demo-staff@example.com")).toMatchObject({
-      role: "STAFF",
-      emailVerified: true,
-    });
+    expect(signedUp).toEqual([]);
+    expect(prisma.memberships).toHaveLength(2); // admin + staff, no dupes
   });
 });
 
@@ -104,11 +140,9 @@ describe("removeDemoAccounts", () => {
   });
 });
 
-describe("demoAuthOptions (no-email guarantee, spec R7)", () => {
+describe("demoAuthOptions (no-email guarantee)", () => {
   it("configures email/password with no email hooks", () => {
     const opts = demoAuthOptions({} as unknown as PrismaClient);
-    // No verification-email or reset-password hook exists anywhere, so `add` can never
-    // trigger an email as a side effect.
     expect(opts).not.toHaveProperty("emailVerification");
     expect(opts.emailAndPassword).toEqual({ enabled: true });
     expect(opts.emailAndPassword).not.toHaveProperty("sendResetPassword");

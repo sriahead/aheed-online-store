@@ -20,19 +20,34 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
  * accounts (hashed passwords) — so `add` never sends a verification email (spec R7).
  */
 
-export type DemoRole = "ADMIN" | "STAFF" | "CUSTOMER";
+// Platform role = User.role (platform ADMIN transcends vendors); vendor role = a
+// VendorMembership at the current vendor (ADR-004 slice 3a). A demo account can be both.
+export type PlatformRole = "ADMIN" | "CUSTOMER";
+export type VendorRole = "STAFF" | "ADMIN";
 
 export interface DemoAccount {
   email: string;
   name: string;
-  role: DemoRole;
+  platformRole: PlatformRole;
+  vendorRole?: VendorRole;
 }
 
-/** Fixed, code-defined roster — one account per RBAC role. */
+/** Fixed, code-defined roster. demo-admin is a platform admin; demo-staff is a normal user
+ *  with a vendor STAFF membership (not a platform staffer); demo-customer is a plain shopper. */
 export const DEMO_ACCOUNTS: DemoAccount[] = [
-  { email: "demo-admin@example.com", name: "Demo Admin", role: "ADMIN" },
-  { email: "demo-staff@example.com", name: "Demo Staff", role: "STAFF" },
-  { email: "demo-customer@example.com", name: "Demo Customer", role: "CUSTOMER" },
+  {
+    email: "demo-admin@example.com",
+    name: "Demo Admin",
+    platformRole: "ADMIN",
+    vendorRole: "ADMIN",
+  },
+  {
+    email: "demo-staff@example.com",
+    name: "Demo Staff",
+    platformRole: "CUSTOMER",
+    vendorRole: "STAFF",
+  },
+  { email: "demo-customer@example.com", name: "Demo Customer", platformRole: "CUSTOMER" },
 ];
 
 /**
@@ -63,12 +78,26 @@ function buildDemoAuth(prisma: PrismaClient) {
 /** Minimal Prisma surface the add/remove logic needs — lets tests inject a fake. */
 export interface DemoPrisma {
   user: {
-    findUnique(args: { where: { email: string } }): Promise<{ email: string } | null>;
+    findUnique(args: { where: { email: string } }): Promise<{ id: string } | null>;
     update(args: {
       where: { email: string };
-      data: { role: DemoRole; emailVerified: boolean; name: string };
-    }): Promise<unknown>;
+      data: { role: PlatformRole; emailVerified: boolean; name: string };
+    }): Promise<{ id: string }>;
     deleteMany(args: { where: { email: { in: string[] } } }): Promise<{ count: number }>;
+  };
+  vendor: {
+    findFirstOrThrow(args: {
+      where: { status: "ACTIVE" };
+      orderBy: { createdAt: "asc" };
+      select: { id: true };
+    }): Promise<{ id: string }>;
+  };
+  vendorMembership: {
+    upsert(args: {
+      where: { userId_vendorId: { userId: string; vendorId: string } };
+      create: { userId: string; vendorId: string; role: VendorRole };
+      update: { role: VendorRole };
+    }): Promise<unknown>;
   };
 }
 
@@ -87,16 +116,33 @@ export async function addDemoAccounts(
   signUp: SignUp,
   password: string,
 ): Promise<void> {
+  // The single active vendor (Aheed) for now; memberships attach here.
+  const vendor = await prisma.vendor.findFirstOrThrow({
+    where: { status: "ACTIVE" },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+
   for (const account of DEMO_ACCOUNTS) {
     const existing = await prisma.user.findUnique({ where: { email: account.email } });
     if (!existing) {
       await signUp(account, password);
     }
-    await prisma.user.update({
+    const { id: userId } = await prisma.user.update({
       where: { email: account.email },
-      data: { role: account.role, emailVerified: true, name: account.name },
+      data: { role: account.platformRole, emailVerified: true, name: account.name },
     });
-    console.log(`+ ${account.email} (${account.role})${existing ? " [reconciled]" : ""}`);
+    if (account.vendorRole) {
+      await prisma.vendorMembership.upsert({
+        where: { userId_vendorId: { userId, vendorId: vendor.id } },
+        create: { userId, vendorId: vendor.id, role: account.vendorRole },
+        update: { role: account.vendorRole },
+      });
+    }
+    const vendorNote = account.vendorRole ? `, vendor ${account.vendorRole}` : "";
+    console.log(
+      `+ ${account.email} (platform ${account.platformRole}${vendorNote})${existing ? " [reconciled]" : ""}`,
+    );
   }
 }
 

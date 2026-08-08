@@ -8,6 +8,11 @@ vi.mock("next/headers", () => ({
 vi.mock("@/lib/auth", () => ({
   getAuth: () => ({ api: { getSession } }),
 }));
+// lib/auth-rbac now imports lib/db + lib/tenant at module load (for requireVendorRole);
+// mock them so importing the module doesn't pull in @prisma/client/wasm. requireRole itself
+// uses neither.
+vi.mock("@/lib/tenant", () => ({ getCurrentVendorId: vi.fn(async () => "vendor-1") }));
+vi.mock("@/lib/db", () => ({ getPrisma: () => ({ vendorMembership: { findUnique: vi.fn() } }) }));
 
 // Proves requireRole() never silently passes: no session -> 401, wrong role -> 403.
 describe("requireRole", () => {
