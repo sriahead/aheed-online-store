@@ -34,9 +34,19 @@ export function getReviewRepository(): ReviewRepository {
       // drift, matches Inventory.quantity's denormalized-and-recomputed
       // precedent. Both writes share one transaction.
       await prisma.$transaction(async (tx) => {
+        // A review inherits its product's vendor (ADR-004 slice 1). Resolved here from the
+        // product rather than passed in; slice 3's tenant resolver doesn't exist yet.
+        const product = await tx.product.findUnique({
+          where: { id: productId },
+          select: { vendorId: true },
+        });
+        if (!product) throw new Error("Product not found");
+
         await tx.review.upsert({
-          where: { userId_productId: { userId, productId } },
-          create: { userId, productId, rating, comment },
+          where: {
+            vendorId_userId_productId: { vendorId: product.vendorId, userId, productId },
+          },
+          create: { vendorId: product.vendorId, userId, productId, rating, comment },
           update: { rating, comment },
         });
 
@@ -104,8 +114,11 @@ export function getReviewRepository(): ReviewRepository {
     },
 
     async getByUserAndProduct(userId, productId) {
-      const review = await prisma.review.findUnique({
-        where: { userId_productId: { userId, productId } },
+      // (userId, productId) is still effectively unique — a product belongs to exactly one
+      // vendor, so vendorId is functionally determined — so findFirst returns the one row
+      // without needing to resolve vendorId for the composite key.
+      const review = await prisma.review.findFirst({
+        where: { userId, productId },
         select: { rating: true, comment: true },
       });
       return review;

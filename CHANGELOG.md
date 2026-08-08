@@ -6,6 +6,18 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+- **Multi-tenancy foundation — Vendor aggregate + `vendorId` migration**
+  (`specs/2026-08-08-multitenancy-slice1-vendor-schema/`, closes #62; ADR-004 slice 1). Introduces a
+  `Vendor` tenancy root plus `VendorBranding`/`VendorConfig`/`VendorDeliveryArea` satellite tables
+  (empty until slice 4), and a required `vendorId` FK on `Category`/`Product`/`Inventory`/`Review`.
+  Global slug uniques become per-vendor composites (`@@unique([vendorId, slug])`,
+  `@@unique([vendorId, userId, productId])`); read indexes lead with `vendorId`. A hand-authored
+  migration backfills all existing rows to a single "Aheed Food Centre" vendor (fixed UUID, identical
+  across environments). `seed.ts` and the review upsert supply `vendorId`. **Runtime behavior is
+  unchanged** — read-side `vendorId` filtering / repository enforcement is slice 2. `User` and auth
+  tables stay global (identity is platform-wide).
+
 ### Changed
 - **KMS internal docs site is now live** at `https://docs.internal.aheedfoodcentre.nocaped.com`,
   gated by a Cloudflare Access self-hosted application (One-time PIN, email allow-list) — the site
