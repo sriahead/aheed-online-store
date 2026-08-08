@@ -4,12 +4,12 @@ title: "Environment Setup — Secrets & Config (staging / production)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-08-07
+version: "1.1.0"
+updated: 2026-08-08
 visibility: internal
-summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values.
+summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus the demo-accounts tool.
 tags: [runbook, secrets, config, cloudflare, github, ops]
-related: [architecture, adr-003-storage-abstraction]
+related: [architecture, adr-003-storage-abstraction, demo-accounts-tool]
 ---
 
 # Environment Setup — Secrets & Config
@@ -75,6 +75,30 @@ they never appear in argv, shell history, or logs.
 - Rotating a secret = edit `secrets/<env>.vars`, re-run the command; it overwrites in place.
 - After a deploy that changed Worker secrets, the new values take effect on the next request; CI
   (GitHub) secrets take effect on the next workflow run.
+
+## Demo accounts (`npm run demo:accounts`)
+
+Standalone tool (`scripts/demo-accounts.ts`, spec `demo-accounts-tool`) to **add or remove** the
+platform's demo login accounts on demand — deliberately separate from `prisma/seed.ts`. Per the
+standing directive, keep these present in **both production and staging until all phases are
+complete**, and re-run `add` after any DB reset (e.g. the staging Neon-project move, or the ADR-004
+`vendorId` migration) so they aren't lost.
+
+It manages three accounts, one per RBAC role: `demo-admin@example.com` (ADMIN),
+`demo-staff@example.com` (STAFF), `demo-customer@example.com` (CUSTOMER). They are created **through
+Better Auth** (hashed password, real sign-in) with `emailVerified` forced true and **no** verification
+email sent.
+
+```bash
+# targets whichever environment's DIRECT_URL you provide (like db:seed); password never committed
+DIRECT_URL=<env-direct-url> DEMO_ACCOUNT_PASSWORD=<min-8-chars> npm run demo:accounts -- add
+DIRECT_URL=<env-direct-url> npm run demo:accounts -- remove
+```
+
+- `add` is idempotent — re-running reconciles roles/verification without creating duplicates.
+- `<env-direct-url>` is the target environment's **direct** (non-pooled) Neon URL, from
+  `secrets/<env>.vars`. Run against **both** staging and production to satisfy the directive.
+- `remove` exists for later cleanup; do **not** run it until all phases are complete.
 
 ## Troubleshooting
 

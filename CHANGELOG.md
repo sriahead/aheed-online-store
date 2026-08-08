@@ -7,6 +7,16 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Demo-accounts tool** (`specs/2026-08-08-demo-accounts-tool/`, closes #57). A standalone
+  `scripts/demo-accounts.ts` (`npm run demo:accounts -- add|remove`) that adds/removes the demo login
+  accounts (`demo-admin`/`demo-staff`/`demo-customer`, one per RBAC role) on demand against any
+  environment via its `DIRECT_URL` — deliberately separate from `prisma/seed.ts` so demo accounts
+  survive DB resets and stay in prod + staging until all phases complete.
+  - Created **through Better Auth** (hashed, real sign-in) via a minimal **email-free** auth instance,
+    with `role` set via a post-signup Prisma update (`role` is `input:false`) and `emailVerified`
+    forced true — **no** verification email is ever sent. `add` is idempotent; `remove` cascades.
+  - Password comes from `DEMO_ACCOUNT_PASSWORD` (never committed); `docs/env-setup.md` documents usage.
+  - Groundwork for ADR-004 slice 0 (#56): restores demo accounts on the fresh staging Neon project.
 - **Dev view — admin diagnostics page** (`specs/2026-08-07-dev-view/`, closes #41). A minimal
   ADMIN-gated `/dev` page — the safe core of the mockup's "Developer Control Toolbar", without the
   parts that would either expose secrets or switch to views that don't exist yet.
