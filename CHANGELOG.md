@@ -7,6 +7,15 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Multi-tenancy — repository-layer `vendorId` enforcement**
+  (`specs/2026-08-08-multitenancy-slice2-vendor-enforcement/`, closes #66; ADR-004 slice 2). Adds a
+  `lib/tenant.ts` `getCurrentVendorId()` tenant seam (interim: the single ACTIVE vendor; slice 3
+  swaps in host→tenant resolution) and injects `where: { vendorId }` across `lib/repositories/*`
+  (products/categories/reviews), resolved once per request-scoped repository instance — method
+  signatures unchanged, so pages/features are untouched. An ESLint guard now makes importing
+  `@/lib/db` (`getPrisma`) or `@prisma/client` an error in `app/`/`features/`/`components/` (the
+  `/api/health` infra probe is allowlisted), keeping domain queries inside the repository layer.
+  Runtime output is unchanged at one vendor. Also records the deferred slice-0/1 roadmap closure (#65).
 - **Multi-tenancy foundation — Vendor aggregate + `vendorId` migration**
   (`specs/2026-08-08-multitenancy-slice1-vendor-schema/`, closes #62; ADR-004 slice 1). Introduces a
   `Vendor` tenancy root plus `VendorBranding`/`VendorConfig`/`VendorDeliveryArea` satellite tables

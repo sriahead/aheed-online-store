@@ -1,4 +1,5 @@
 import { getPrisma } from "@/lib/db";
+import { getCurrentVendorId } from "@/lib/tenant";
 
 export interface ReviewSummary {
   id: string;
@@ -27,6 +28,10 @@ export interface ReviewRepository {
  */
 export function getReviewRepository(): ReviewRepository {
   const prisma = getPrisma();
+  // Resolve the current vendor once per repository instance (request-scoped);
+  // never cached across requests. Read methods are scoped to it (ADR-004 slice 2).
+  let vendorIdPromise: Promise<string> | undefined;
+  const vendorId = () => (vendorIdPromise ??= getCurrentVendorId());
 
   return {
     async upsert(userId, productId, rating, comment) {
@@ -90,7 +95,7 @@ export function getReviewRepository(): ReviewRepository {
 
     async listByProduct(productId, take) {
       const rows = await prisma.review.findMany({
-        where: { productId },
+        where: { vendorId: await vendorId(), productId },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take,
         select: {
@@ -118,7 +123,7 @@ export function getReviewRepository(): ReviewRepository {
       // vendor, so vendorId is functionally determined — so findFirst returns the one row
       // without needing to resolve vendorId for the composite key.
       const review = await prisma.review.findFirst({
-        where: { userId, productId },
+        where: { vendorId: await vendorId(), userId, productId },
         select: { rating: true, comment: true },
       });
       return review;

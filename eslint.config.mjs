@@ -18,6 +18,40 @@ const config = [
     ],
   },
   ...nextCoreWebVitals,
+
+  // ADR-004 slice 2 — keep domain data access inside the repository layer. The app/UI/
+  // feature layers must go through lib/repositories/* (which enforce vendorId scoping),
+  // never touch Prisma directly. Type imports are blocked too: the app layer programs to
+  // the repositories' own interfaces, not Prisma's types (Clean Architecture).
+  {
+    files: ["app/**/*.{ts,tsx}", "features/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/lib/db",
+              message:
+                "Don't use getPrisma() in the app/UI/feature layer — query through a repository in lib/repositories/* (it enforces vendorId scoping, ADR-004 slice 2).",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@prisma/client", "@prisma/client/*"],
+              message:
+                "Don't import Prisma in the app/UI/feature layer — use a repository from lib/repositories/* (ADR-004 slice 2).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Infra probe: /api/health reads the non-tenant HealthCheck table directly (not domain data).
+  {
+    files: ["app/api/health/**/*.{ts,tsx}"],
+    rules: { "no-restricted-imports": "off" },
+  },
 ];
 
 export default config;
