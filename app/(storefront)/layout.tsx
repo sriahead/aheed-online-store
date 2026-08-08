@@ -26,7 +26,17 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
   }
 
   const p = profile.primitives;
+  // Override BOTH layers on the wrapper. Overriding only the eight primitives is
+  // not enough: Tailwind v4 emits the SEMANTIC tokens at :root as
+  // `--color-primary: var(--color-brand-green-dark)`, and the browser resolves
+  // that inner var() at :root — so the semantic value is frozen to the default
+  // palette and never re-flows when a descendant overrides a primitive. So we also
+  // re-declare the semantic tokens here (same primitive→semantic mapping as
+  // design-system/tokens/tokens.css), which forces them to resolve against this
+  // vendor's palette. Hover shades — hardcoded ~15%-darker hex in tokens.css — are
+  // derived per vendor via color-mix so they track the vendor colour too.
   const brandVars = {
+    // primitives (for any brand-* utility used directly)
     "--color-brand-green-dark": p["green-dark"],
     "--color-brand-green": p.green,
     "--color-brand-orange": p.orange,
@@ -35,6 +45,18 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
     "--color-brand-green-tint": p["green-tint"],
     "--color-brand-orange-tint": p["orange-tint"],
     "--color-brand-red-tint": p["red-tint"],
+    // semantic (what components actually use)
+    "--color-primary": p["green-dark"],
+    "--color-action": p.green,
+    "--color-accent": p.orange,
+    "--color-danger": p.red,
+    "--color-surface-muted": p.cream,
+    "--color-action-tint": p["green-tint"],
+    "--color-accent-tint": p["orange-tint"],
+    "--color-danger-tint": p["red-tint"],
+    // derived hover shades (~15% darker), per vendor
+    "--color-action-hover": `color-mix(in srgb, ${p.green} 85%, black)`,
+    "--color-accent-hover": `color-mix(in srgb, ${p.orange} 85%, black)`,
   } as CSSProperties;
 
   return (
