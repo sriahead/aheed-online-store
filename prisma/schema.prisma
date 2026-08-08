@@ -31,8 +31,17 @@ model HealthCheck {
 // RBAC addition (Customer/Staff/Admin, mission.md); Better Auth passes unknown-to-it
 // fields through untouched. No @default(uuid()) on these ids — Better Auth's adapter
 // generates and supplies them itself on create.
+// Platform-level role (ADR-004 slice 3a). Platform ADMIN is the operator and transcends
+// all vendors; most users are CUSTOMER. Per-vendor staff/admin is VendorMembership, not this.
 enum Role {
   CUSTOMER
+  STAFF
+  ADMIN
+}
+
+// Per-vendor role (ADR-004 slice 3a). A VendorMembership grants staff/admin at ONE vendor;
+// there is no CUSTOMER here (a membership IS a staff/admin grant).
+enum VendorRole {
   STAFF
   ADMIN
 }
@@ -49,6 +58,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   reviews       Review[]
+  memberships   VendorMembership[]
 }
 
 model Session {
@@ -119,6 +129,23 @@ model Vendor {
   products      Product[]
   inventory     Inventory[]
   reviews       Review[]
+  memberships   VendorMembership[]
+}
+
+// Per-vendor staff/admin grant (ADR-004 slice 3a). Identity stays global (User); this
+// scopes authorization to a single vendor. One row per (user, vendor).
+model VendorMembership {
+  id        String     @id @default(uuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vendorId  String
+  vendor    Vendor     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  role      VendorRole
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([userId, vendorId])
+  @@index([vendorId])
 }
 
 // Satellite config/branding tables ship EMPTY in slice 1 — their values (and the code that
