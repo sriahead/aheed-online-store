@@ -38,6 +38,7 @@ async function main() {
   });
 
   await seedCatalogue(AHEED_VENDOR_ID, CATALOGUE);
+  await refreshProductImages(CATALOGUE);
   await upsertVendorSatellites(AHEED_VENDOR_ID, AHEED_SATELLITES);
 
   // ADR-004 slice 3b — host→tenant mapping. Hosts are per-environment (staging & prod are
@@ -62,6 +63,7 @@ async function main() {
       update: {},
     });
     await seedCatalogue(SRIMART_VENDOR_ID, SRIMART_CATALOGUE);
+    await refreshProductImages(SRIMART_CATALOGUE);
     await upsertVendorSatellites(SRIMART_VENDOR_ID, SRIMART_SATELLITES);
     await upsertVendorDomain(SRIMART_VENDOR_ID, srimartHost);
   } else if (srimartHost && !aheedHost) {
@@ -384,6 +386,23 @@ const CATALOGUE: CatalogueCategory[] = [
     ],
   },
 ];
+
+// Re-upload the (brand-neutral) product placeholder to every catalogue product's key.
+// seedCatalogue skips categories that already exist, so its own upload never refreshes
+// existing products' images — this runs unconditionally so a changed placeholder asset
+// actually reaches already-seeded products.
+async function refreshProductImages(catalogue: CatalogueCategory[]) {
+  const placeholderImage = readFileSync(
+    join(import.meta.dirname, "seed-assets", "placeholder-product.svg"),
+    "utf8",
+  );
+  const storage = getStorage();
+  const products = catalogue.flatMap((c) => c.products);
+  for (const product of products) {
+    await storage.putObject(`products/${product.slug}/main.svg`, placeholderImage, "image/svg+xml");
+  }
+  console.log(`refreshed ${products.length} placeholder product image(s)`);
+}
 
 async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
   // Idempotency is PER-VENDOR now (slugs are per-vendor unique, ADR-004): only skip a

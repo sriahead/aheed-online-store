@@ -45,6 +45,13 @@ export interface ProductFilters {
   isOrganic?: boolean;
 }
 
+/** Which speciality attributes the current vendor actually uses (≥1 active product). */
+export interface AvailableSpecialities {
+  halal: boolean;
+  fresh: boolean;
+  organic: boolean;
+}
+
 export interface ProductRepository {
   listByCategory(
     categoryId: string,
@@ -55,6 +62,8 @@ export interface ProductRepository {
     opts: { take: number; cursor?: string } & ProductFilters,
   ): Promise<ProductPage>;
   getBySlug(slug: string): Promise<ProductDetail | null>;
+  /** Drives per-vendor filter visibility — a food vendor shows Halal/Fresh/Organic; a tech one shows none. */
+  availableSpecialities(): Promise<AvailableSpecialities>;
 }
 
 const productImageSelect = { storageKey: true, alt: true, isPrimary: true } as const;
@@ -195,6 +204,16 @@ export function getProductRepository(): ProductRepository {
         primaryImage: images.find((i) => i.isPrimary) ?? images[0] ?? null,
         inStock: (inventory?.quantity ?? 0) > 0,
       };
+    },
+
+    async availableSpecialities() {
+      const base = { vendorId: await vendorId(), isActive: true };
+      const [halal, fresh, organic] = await Promise.all([
+        prisma.product.findFirst({ where: { ...base, isHalal: true }, select: { id: true } }),
+        prisma.product.findFirst({ where: { ...base, isFresh: true }, select: { id: true } }),
+        prisma.product.findFirst({ where: { ...base, isOrganic: true }, select: { id: true } }),
+      ]);
+      return { halal: halal !== null, fresh: fresh !== null, organic: organic !== null };
     },
   };
 }

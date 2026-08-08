@@ -52,8 +52,9 @@ export default async function SearchPage({
   let items: Awaited<ReturnType<ReturnType<typeof getProductRepository>["search"]>>["items"] = [];
   let nextCursor: string | null = null;
 
+  const products = getProductRepository();
   if (query) {
-    const result = await getProductRepository().search(query, {
+    const result = await products.search(query, {
       take: PAGE_SIZE,
       cursor: params.cursor,
       minPricePence: parsePriceInput(params.minPrice ?? ""),
@@ -66,6 +67,7 @@ export default async function SearchPage({
     items = result.items;
     nextCursor = result.nextCursor;
   }
+  const specialities = await products.availableSpecialities();
 
   const { CDN_BASE_URL } = getEnv();
 
@@ -80,7 +82,7 @@ export default async function SearchPage({
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary/60">
             Search &amp; filters
           </h2>
-          <ProductFilterForm showQuery searchParams={params} />
+          <ProductFilterForm showQuery searchParams={params} specialities={specialities} />
         </aside>
 
         <div className="flex-1">

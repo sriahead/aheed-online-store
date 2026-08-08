@@ -14,6 +14,14 @@ every branch merges.
   keeps its copy, SriMart gets "Search chargers, earbuds, lamps…"). Re-seed each environment to apply.
 
 ### Fixed
+- **Multi-vendor browse/product polish (ADR-004 slice 4 follow-up, #79).** Three Aheed-hardcoded
+  surfaces that looked wrong on a 2nd vendor (SriMart): (1) the **speciality filters**
+  (Halal/Fresh/Organic) are now **data-driven** — `ProductRepository.availableSpecialities()` shows
+  each only if the vendor has ≥1 active product with that attribute (a tech vendor shows none); (2)
+  the shared product-image placeholder no longer reads "Aheed placeholder" — `placeholder-product.svg`
+  is now brand-neutral ("No image", grey), re-uploaded to existing products by a new seed
+  `refreshProductImages` step; (3) `app/manifest.ts` is **vendor-aware** (name/short_name/theme_color
+  from the resolved vendor, neutral fallback). Re-seed to refresh the placeholder image.
 - **Per-vendor theming now recolours the storefront (ADR-004 slice 4 follow-up).** The slice-4
   injection set only the eight `--color-brand-*` primitives on the storefront wrapper, but Tailwind v4
   emits the semantic tokens at `:root` as `var(--color-brand-*)` and the browser resolves that inner
