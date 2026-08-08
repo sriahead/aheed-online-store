@@ -55,7 +55,8 @@ export default async function CategoryPage({
     notFound();
   }
 
-  const { items, nextCursor } = await getProductRepository().listByCategory(category.id, {
+  const products = getProductRepository();
+  const { items, nextCursor } = await products.listByCategory(category.id, {
     take: PAGE_SIZE,
     cursor: query.cursor,
     minPricePence: parsePriceInput(query.minPrice ?? ""),
@@ -65,6 +66,7 @@ export default async function CategoryPage({
     isFresh: query.isFresh === "1",
     isOrganic: query.isOrganic === "1",
   });
+  const specialities = await products.availableSpecialities();
   const { CDN_BASE_URL } = getEnv();
 
   return (
@@ -78,7 +80,7 @@ export default async function CategoryPage({
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary/60">
             Filters
           </h2>
-          <ProductFilterForm searchParams={query} />
+          <ProductFilterForm searchParams={query} specialities={specialities} />
         </aside>
 
         <div className="flex-1">
