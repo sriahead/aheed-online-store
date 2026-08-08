@@ -7,6 +7,17 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Multi-tenancy — host→tenant resolution + 2nd vendor (SriMart)**
+  (`specs/2026-08-08-multitenancy-slice3b-host-resolver/`, #70; ADR-004 slice 3b). The app now serves
+  the right vendor's data based on the **request host**: a `VendorDomain(host)` table maps hosts to
+  vendors, and `lib/tenant.ts`'s resolver looks it up (falling back to the sole vendor while only one
+  exists; unmatched hosts with 2+ vendors → a `/coming-soon` page linking to the default store).
+  `getCurrentVendorId()` keeps its non-null contract, so repositories/`requireVendorRole` are
+  unchanged. **No Next middleware** (edge runtime is forbidden) — the storefront layout gates the
+  tenant. Adds **SriMart** as a real 2nd vendor with a distinct dummy catalogue, seeded (with its
+  `VendorDomain`) only when both `SEED_AHEED_HOST`/`SEED_SRIMART_HOST` are set. `wrangler.toml`
+  declares the `srimart.nocaped.com` / `srimart-staging.nocaped.com` custom domains. Additive
+  migration (`VendorDomain` table).
 - **Multi-tenancy — per-vendor authorization (`VendorMembership`)**
   (`specs/2026-08-08-multitenancy-slice3a-vendor-membership/`, #68; ADR-004 slice 3a). Authorization
   is now two-tier: `User.role` is the **platform** role (platform `ADMIN` transcends vendors; `/dev`

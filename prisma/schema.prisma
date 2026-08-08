@@ -130,6 +130,21 @@ model Vendor {
   inventory     Inventory[]
   reviews       Review[]
   memberships   VendorMembership[]
+  domains       VendorDomain[]
+}
+
+// Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
+// (exact match); staging and prod are separate DBs, so each holds its own env's hosts.
+// Supersedes the unused Vendor.customDomain (kept for now; dropped in a later cleanup).
+model VendorDomain {
+  id          String   @id @default(uuid())
+  vendorId    String
+  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  host        String   @unique // exact request host, e.g. "srimart.nocaped.com"
+  isCanonical Boolean  @default(true) // the vendor's primary host (for links / future redirects)
+  createdAt   DateTime @default(now())
+
+  @@index([vendorId])
 }
 
 // Per-vendor staff/admin grant (ADR-004 slice 3a). Identity stays global (User); this
