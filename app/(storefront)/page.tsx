@@ -50,7 +50,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               type="text"
               name="postcode"
               defaultValue={trimmedPostcode}
-              placeholder="e.g. MK9 1AA"
+              placeholder={prefixes.length ? `e.g. ${prefixes[0]}1 1AA` : "e.g. your postcode"}
               aria-label="Your postcode"
               className="w-40 rounded-full border border-black/15 bg-white px-4 py-2"
             />
