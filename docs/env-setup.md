@@ -4,10 +4,10 @@ title: "Environment Setup — Secrets & Config (staging / production)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.3.0"
+version: "1.4.0"
 updated: 2026-08-08
 visibility: internal
-summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, the demo-accounts tool, and per-vendor host mapping.
+summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, the demo-accounts tool, per-vendor host mapping, and per-vendor branding/logo seeding.
 tags: [runbook, secrets, config, cloudflare, github, ops]
 related: [architecture, adr-003-storage-abstraction, adr-004-multi-tenancy, neon-db-separation, demo-accounts-tool, multitenancy-slice3b-host-resolver]
 ---
@@ -76,6 +76,27 @@ DIRECT_URL="<prod-direct>" npm run db:seed
   single vendor, an unmatched host falls back to it (transition safety).
 - The SriMart Worker custom domains (`srimart.nocaped.com`, `srimart-staging.nocaped.com`) are
   declared in `wrangler.toml` so `wrangler deploy` doesn't tear them down.
+
+### Per-vendor branding/config/delivery (ADR-004 slice 4)
+
+`npm run db:seed` also fills each vendor's `VendorBranding` / `VendorConfig` / `VendorDeliveryArea`
+(colours, name, tagline, locality, delivery prefixes, email sender). **No new env vars** — these are
+seed data, read per request via `lib/repositories/vendor.ts` and injected as CSS custom properties.
+
+**One-time logo upload (Aheed).** The header renders the logo from `VendorBranding.logoStorageKey`
+via `${CDN_BASE_URL}/${key}`, else a text wordmark. Aheed's key is seeded as
+`vendors/<aheed-vendor-id>/logo.png`; upload the asset once per environment's object storage
+(e.g. the existing `public/images/brand/logo.png`) so the CDN serves it:
+
+```bash
+# example — use your S3-compatible client against the env's bucket
+aws s3 cp public/images/brand/logo.png "s3://<bucket>/vendors/<aheed-vendor-id>/logo.png" \
+  --content-type image/png
+```
+
+Until the object exists (or where `CDN_BASE_URL` is unset, e.g. local `preview`), the header falls
+back to the Aheed wordmark — never a broken image. SriMart has no logo yet (`logoStorageKey` null →
+wordmark); setting a real one later is data-only, no deploy.
 
 ## Prerequisites (one-time)
 

@@ -2,6 +2,9 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { MapPin, Search, ShoppingBag, User, LogIn } from "lucide-react";
 import { getAuth } from "@/lib/auth";
+import { getEnv } from "@/lib/config";
+import { composePublicUrl } from "@/lib/storage";
+import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
 
 /**
  * Storefront header — a Server Component (no "use client"), so it reads the
@@ -35,31 +38,43 @@ export async function Header() {
   const user = session?.user as { name: string } | undefined;
   const firstName = user?.name?.split(" ")[0];
 
+  // Vendor branding/locality (ADR-004 slice 4). The storefront layout already
+  // gated the tenant, so a profile always resolves here.
+  const profile = await getCurrentVendorProfile();
+  const name = profile?.name ?? "";
+  const localityName = profile?.localityName ?? "";
+  const { CDN_BASE_URL } = getEnv();
+  const logoUrl =
+    profile?.logoStorageKey && CDN_BASE_URL
+      ? composePublicUrl(CDN_BASE_URL, profile.logoStorageKey)
+      : null;
+
   return (
     <header className="sticky top-0 z-40 border-b border-black/10 bg-white">
       {/* Promo / trust bar */}
       <div className="bg-primary text-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 py-1.5 text-center text-[11px] sm:justify-between sm:text-xs">
           <span className="font-medium">
-            Aheed Food Centre — Milton Keynes Grocery &amp; Delivery
+            {name} — {localityName} Grocery &amp; Delivery
           </span>
           <span className="inline-flex items-center gap-1">
             <MapPin className="h-3.5 w-3.5 text-accent" aria-hidden />
-            Local delivery across the Milton Keynes (MK) area
+            Local delivery across the {localityName} area
           </span>
         </div>
       </div>
 
       {/* Main nav */}
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5 sm:gap-4 sm:py-3">
-        {/* Logo — docs/logo.png, cropped + resized to a header asset (public/images/brand/logo.png). */}
+        {/* Logo — from VendorBranding.logoStorageKey via the CDN when set, else a
+            text wordmark from the vendor name (ADR-004 slice 4). */}
         <Link href="/" className="flex shrink-0 items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element -- storefront uses plain <img>; next/image loader is tracked in #46 */}
-          <img
-            src="/images/brand/logo.png"
-            alt="Aheed Food Centre — Your Local Grocery Store"
-            className="h-11 w-auto sm:h-16"
-          />
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- storefront uses plain <img>; next/image loader is tracked in #46
+            <img src={logoUrl} alt={`${name} — Your Local Store`} className="h-11 w-auto sm:h-16" />
+          ) : (
+            <span className="text-xl font-bold text-primary sm:text-2xl">{name}</span>
+          )}
         </Link>
 
         {/* Inline search (desktop/tablet only; mobile gets its own row below) */}

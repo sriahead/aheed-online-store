@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Poppins } from "next/font/google";
+import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -8,11 +9,27 @@ const poppins = Poppins({
   variable: "--font-poppins",
 });
 
-export const metadata = {
-  title: "Aheed Food Centre — Milton Keynes Cultural Groceries",
-  description:
-    "Halal meat, fresh produce, and cultural groceries in Milton Keynes, with local delivery.",
-};
+// Vendor-aware metadata (ADR-004 slice 4). This layout also wraps /coming-soon,
+// where no vendor resolves — fall back to a neutral platform default. Guarded so
+// a DB hiccup degrades the title rather than breaking every page's <head>.
+export async function generateMetadata() {
+  try {
+    const profile = await getCurrentVendorProfile();
+    if (profile) {
+      const description = profile.tagline ?? `Local delivery across ${profile.localityName}.`;
+      return {
+        title: profile.tagline ? `${profile.name} — ${profile.tagline}` : profile.name,
+        description,
+      };
+    }
+  } catch {
+    /* fall through to the platform default */
+  }
+  return {
+    title: "Aheed Online Store",
+    description: "A multi-vendor grocery platform with local delivery.",
+  };
+}
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   // No width/padding constraint here — the storefront layout owns the header and
