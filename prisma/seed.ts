@@ -38,6 +38,7 @@ async function main() {
   });
 
   await seedCatalogue(AHEED_VENDOR_ID, CATALOGUE);
+  await upsertVendorSatellites(AHEED_VENDOR_ID, AHEED_SATELLITES);
 
   // ADR-004 slice 3b — host→tenant mapping. Hosts are per-environment (staging & prod are
   // separate DBs), sourced from env vars. SriMart (a 2nd vendor) is only seeded when BOTH
@@ -61,6 +62,7 @@ async function main() {
       update: {},
     });
     await seedCatalogue(SRIMART_VENDOR_ID, SRIMART_CATALOGUE);
+    await upsertVendorSatellites(SRIMART_VENDOR_ID, SRIMART_SATELLITES);
     await upsertVendorDomain(SRIMART_VENDOR_ID, srimartHost);
   } else if (srimartHost && !aheedHost) {
     console.log("SEED_SRIMART_HOST set but SEED_AHEED_HOST is not — skipping SriMart to stay safe");
@@ -76,6 +78,73 @@ async function upsertVendorDomain(vendorId: string, host: string) {
   });
   console.log(`mapped host ${normalized} -> ${vendorId}`);
 }
+
+// ADR-004 slice 4 — per-vendor branding/config/delivery satellites (slice 1 shipped
+// them empty). Brand primitives mirror the eight --color-brand-* tokens in
+// design-system/tokens/tokens.css; injected as CSS custom properties per request.
+type VendorSatellites = {
+  branding: {
+    name: string;
+    tagline: string;
+    logoStorageKey: string | null;
+    brandGreenDark: string;
+    brandGreen: string;
+    brandOrange: string;
+    brandRed: string;
+    brandCream: string;
+    brandGreenTint: string;
+    brandOrangeTint: string;
+    brandRedTint: string;
+  };
+  config: { localityName: string; senderName: string; senderEmail: string };
+  deliveryPrefixes: string[];
+};
+
+async function upsertVendorSatellites(vendorId: string, s: VendorSatellites) {
+  await prisma.vendorBranding.upsert({
+    where: { vendorId },
+    create: { vendorId, ...s.branding },
+    update: { ...s.branding },
+  });
+  await prisma.vendorConfig.upsert({
+    where: { vendorId },
+    create: { vendorId, ...s.config },
+    update: { ...s.config },
+  });
+  for (const prefix of s.deliveryPrefixes) {
+    await prisma.vendorDeliveryArea.upsert({
+      where: { vendorId_prefix: { vendorId, prefix } },
+      create: { vendorId, prefix },
+      update: {},
+    });
+  }
+  console.log(`seeded branding/config/delivery for ${vendorId}`);
+}
+
+// Aheed's primitives are the exact current tokens.css hex; tagline preserves the
+// storefront hero headline. Logo lives in object storage (uploaded out-of-band —
+// see docs/env-setup.md); until then the header falls back to a wordmark.
+const AHEED_SATELLITES: VendorSatellites = {
+  branding: {
+    name: "Aheed Food Centre",
+    tagline: "Fresh halal meat, produce & cultural groceries — delivered across Milton Keynes",
+    logoStorageKey: `vendors/${AHEED_VENDOR_ID}/logo.png`,
+    brandGreenDark: "#1b5e20",
+    brandGreen: "#4caf50",
+    brandOrange: "#f57c00",
+    brandRed: "#d32f2f",
+    brandCream: "#f5f5f0",
+    brandGreenTint: "#e8f5e9",
+    brandOrangeTint: "#fff3e0",
+    brandRedTint: "#ffebee",
+  },
+  config: {
+    localityName: "Milton Keynes",
+    senderName: "Aheed Food Centre",
+    senderEmail: "orders@aheedfoodcentre.nocaped.com",
+  },
+  deliveryPrefixes: ["MK"],
+};
 
 type CatalogueProduct = {
   slug: string;
@@ -390,6 +459,32 @@ async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
 // (distinct slugs, so image keys don't collide with Aheed's), used to prove host→tenant
 // isolation. Only seeded when both SEED_*_HOST vars are set (see main()).
 const SRIMART_VENDOR_ID = "5217a4a7-0000-4000-a000-000000000002";
+
+// Deliberately distinct from Aheed — a blue/tech palette, a different locality
+// (Reading / RG), no logo yet (renders a wordmark) — so the two hosts are
+// visibly different vendors, proving branding is data-driven (ADR-004 slice 4).
+const SRIMART_SATELLITES: VendorSatellites = {
+  branding: {
+    name: "SriMart",
+    tagline: "Everyday tech & home essentials — delivered across Reading",
+    logoStorageKey: null,
+    brandGreenDark: "#0d47a1", // maps to --color-primary
+    brandGreen: "#1e88e5", // --color-action
+    brandOrange: "#8e24aa", // --color-accent
+    brandRed: "#c62828", // --color-danger
+    brandCream: "#eef2f8", // --color-surface-muted
+    brandGreenTint: "#e3f2fd",
+    brandOrangeTint: "#f3e5f5",
+    brandRedTint: "#ffebee",
+  },
+  config: {
+    localityName: "Reading",
+    senderName: "SriMart",
+    senderEmail: "orders@srimart.nocaped.com",
+  },
+  deliveryPrefixes: ["RG"],
+};
+
 const SRIMART_CATALOGUE: CatalogueCategory[] = [
   {
     category: { slug: "sri-electronics", name: "Electronics" },

@@ -4,11 +4,11 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.3.0"
-updated: 2026-08-07
+version: "1.4.0"
+updated: 2026-08-08
 visibility: internal
-summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, and the open items (logo assets, danger-color role) carried into later phases.
-tags: [design-system, tokens, brand]
+summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming, and the open items (logo assets, danger-color role) carried into later phases.
+tags: [design-system, tokens, brand, multi-tenancy]
 ---
 
 # Design System
@@ -22,6 +22,14 @@ to match, never the reverse. Source: Aheed-supplied brand kit (colors, typeface,
 Two-layer tokens: **primitive** (exact brand-kit hex, never referenced directly by components) →
 **semantic** (what components actually use — `bg-action`, `text-primary`, etc.), so a future
 palette revision only touches the primitive → semantic mapping, not every component.
+
+> **Primitives are overridable per vendor at runtime (ADR-004 slice 4).** The eight `--color-brand-*`
+> values in `tokens.css` are the **default (Aheed) vendor's** palette; they mirror
+> `VendorBranding`'s eight hex columns. The storefront layout injects the resolved vendor's
+> primitives as inline CSS custom properties on a wrapper element per request — because the semantic
+> layer references the primitives via `var()`, this recolours the whole storefront with **no token or
+> component change**. The derived hover shades and the semantic mapping are unchanged and stay
+> Aheed-tuned (no `VendorBranding` column). A named theme *catalogue* is deferred (#75).
 
 | Primitive | Hex | Semantic | Role |
 |---|---|---|---|
