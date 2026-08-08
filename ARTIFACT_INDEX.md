@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-07T22:30:38.993Z` · commit `b757585` · `29` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-07T23:06:40.294Z` · commit `7b9892f` · `30` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -36,6 +36,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P0 — Foundation & Scaffolding (plan)](specs/2026-08-06-p0-foundation/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for P0's first slice — SDD git hooks, Prettier, SEO/PWA routes, and test setup — scoped to what M0 didn't already build. |
 | [P1a — Email/Password Auth, RBAC, Account Shell (plan)](specs/2026-08-06-p1-auth/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for the first P1 slice — Better Auth email/password, RBAC, verification/reset emails, and an account shell — split from Google Sign-In, which needs OAuth credentials the human must create first. |
 | [P1b — Google Sign-In (plan)](specs/2026-08-06-p1b-google-signin/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for adding Google as a Better Auth social provider alongside P1a's email/password flow, now that the human has provisioned the OAuth client and its secrets on Cloudflare. |
+| [Dev View — Admin diagnostics page (plan)](specs/2026-08-07-dev-view/plan.md) | spec | 1.0.0 | 2026-08-07 | draft | internal | A minimal ADMIN-gated /dev page showing non-secret environment diagnostics (deployed commit, environment, integration on/off flags, session) and a link to the KMS internal docs. |
 | [P2.5a — Ratings & Reviews Backend (plan)](specs/2026-08-07-p2-5a-ratings-reviews/plan.md) | spec | 1.0.0 | 2026-08-07 | approved | internal | Plan for the first P2.5 slice — a real Review model, auth-gated submission, and denormalized rating aggregation — laying the real data P2.5b's visual redesign will display. |
 | [P2.5b1 — Visual Redesign Foundation (plan)](specs/2026-08-07-p2-5b1-visual-foundation/plan.md) | spec | 1.0.0 | 2026-08-07 | approved | internal | Plan for the foundation half of P2.5b — design tokens ingested from the real brand kit, schema/filter extensions, and expanded seed data — laying real material for P2.5b2's UI work to consume. |
 | [P2.5b2 — Storefront Visual Redesign UI (plan)](specs/2026-08-07-p2-5b2-visual-ui/plan.md) | spec | 1.0.0 | 2026-08-07 | draft | internal | Plan for the UI half of P2.5b — applies P2.5b1's tokens/schema/seed to a real storefront layout, header, hero, redesigned product cards, category sidebar, and speciality filters matching the AI Studio mockup. |
