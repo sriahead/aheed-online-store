@@ -4,7 +4,7 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.3.0"
+version: "1.4.0"
 updated: 2026-08-08
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
@@ -122,8 +122,11 @@ No layer skips inward; components never touch Prisma or the S3 client directly.
 > operator, transcends vendors; `/dev` gates on it), while `VendorMembership(userId, vendorId, role)`
 > carries *per-vendor* staff/admin — `requireVendorRole()` allows platform admins or matching members
 > of the current vendor. Read-side `vendorId` filtering is enforced centrally in the repository layer
-> (slice 2). The excerpt below predates tenancy and is kept as a shape reference — see
-> `prisma/schema.prisma` for the authoritative, vendor-scoped models.
+> (slice 2). **Host→tenant resolution (slice 3b):** the request host maps to a vendor via a
+> `VendorDomain(host)` table (`lib/tenant.ts`); an unresolved host redirects to `/coming-soon`. No
+> Next middleware is used (edge runtime is forbidden) — the storefront layout gates the tenant. The
+> excerpt below predates tenancy and is kept as a shape reference — see `prisma/schema.prisma` for the
+> authoritative, vendor-scoped models.
 
 ```prisma
 enum Role            { CUSTOMER STAFF ADMIN }

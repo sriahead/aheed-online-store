@@ -4,12 +4,12 @@ title: "Environment Setup — Secrets & Config (staging / production)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.2.0"
+version: "1.3.0"
 updated: 2026-08-08
 visibility: internal
-summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation and the demo-accounts tool.
+summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, the demo-accounts tool, and per-vendor host mapping.
 tags: [runbook, secrets, config, cloudflare, github, ops]
-related: [architecture, adr-003-storage-abstraction, adr-004-multi-tenancy, neon-db-separation, demo-accounts-tool]
+related: [architecture, adr-003-storage-abstraction, adr-004-multi-tenancy, neon-db-separation, demo-accounts-tool, multitenancy-slice3b-host-resolver]
 ---
 
 # Environment Setup — Secrets & Config
@@ -50,6 +50,32 @@ DIRECT_URL="<env-direct-url>" DEMO_ACCOUNT_PASSWORD="<min-8>" npm run demo:accou
 
 Never point staging at production's project (or vice versa) to "save setup" — that reintroduces the
 exact shared-database problem this split removed.
+
+### Per-vendor host mapping (ADR-004 slice 3b)
+
+Multi-tenancy resolves the vendor from the **request host** via the `VendorDomain` table. Because
+staging and production are separate DBs, each environment's host rows are seeded from **per-run env
+vars** when you run `npm run db:seed` against that env's `DIRECT_URL`:
+
+```bash
+# staging
+SEED_AHEED_HOST="staging.aheedfoodcentre.nocaped.com" \
+SEED_SRIMART_HOST="srimart-staging.nocaped.com" \
+DIRECT_URL="<staging-direct>" npm run db:seed
+
+# production
+SEED_AHEED_HOST="aheedfoodcentre.nocaped.com" \
+SEED_SRIMART_HOST="srimart.nocaped.com" \
+DIRECT_URL="<prod-direct>" npm run db:seed
+```
+
+- The SriMart demo vendor + its catalogue + its `VendorDomain` are seeded **only when both** vars are
+  set — otherwise the DB could end up with 2 vendors but a missing host, which would send Aheed's own
+  host to `/coming-soon`.
+- A request host with no `VendorDomain` (and 2+ vendors) renders the `/coming-soon` page. With a
+  single vendor, an unmatched host falls back to it (transition safety).
+- The SriMart Worker custom domains (`srimart.nocaped.com`, `srimart-staging.nocaped.com`) are
+  declared in `wrangler.toml` so `wrangler deploy` doesn't tear them down.
 
 ## Prerequisites (one-time)
 
