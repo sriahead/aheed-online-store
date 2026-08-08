@@ -6,6 +6,22 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+- **Dev view — admin diagnostics page** (`specs/2026-08-07-dev-view/`, closes #41). A minimal
+  ADMIN-gated `/dev` page — the safe core of the mockup's "Developer Control Toolbar", without the
+  parts that would either expose secrets or switch to views that don't exist yet.
+  - `app/(storefront)/dev/page.tsx` — gated with `requireRole("ADMIN")` (401 → `/login`; 403 →
+    "administrators only", not the diagnostics). Real RBAC, not a client toggle.
+  - `lib/dev-diagnostics.ts` — `getDevDiagnostics()` returns **non-secret** values only: the
+    deployed commit and **configured-or-not booleans** per integration (Google/storage/email/CDN/
+    `BETTER_AUTH_URL`), never a key value. Unit-tested, including an assertion that a sentinel
+    secret never appears in the serialized output.
+  - The page shows environment (derived from host), commit, integration ✓/✗ rows, the admin's own
+    session, and a link to the KMS internal docs — or a "pending setup" note until `KMS_INTERNAL_URL`
+    is set (the KMS internal site still needs DNS + a Cloudflare Access gate, a human task).
+  - **Deliberately excluded**: any secret/API-key/webhook value, and view/role switching (deferred
+    to P6, when the Staff/Admin panels it would switch to actually exist).
+
 ### Changed
 - **Browse-page layout flipped (from live review).** Departments and filters swapped places:
   departments are now a **horizontal, icon-led strip across the top**, scrolled by ‹ › arrow
