@@ -4,10 +4,10 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.4.0"
+version: "1.4.1"
 updated: 2026-08-08
 visibility: internal
-summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming, and the open items (logo assets, danger-color role) carried into later phases.
+summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
 ---
 
@@ -23,13 +23,17 @@ Two-layer tokens: **primitive** (exact brand-kit hex, never referenced directly 
 **semantic** (what components actually use — `bg-action`, `text-primary`, etc.), so a future
 palette revision only touches the primitive → semantic mapping, not every component.
 
-> **Primitives are overridable per vendor at runtime (ADR-004 slice 4).** The eight `--color-brand-*`
-> values in `tokens.css` are the **default (Aheed) vendor's** palette; they mirror
-> `VendorBranding`'s eight hex columns. The storefront layout injects the resolved vendor's
-> primitives as inline CSS custom properties on a wrapper element per request — because the semantic
-> layer references the primitives via `var()`, this recolours the whole storefront with **no token or
-> component change**. The derived hover shades and the semantic mapping are unchanged and stay
-> Aheed-tuned (no `VendorBranding` column). A named theme *catalogue* is deferred (#75).
+> **Tokens are overridable per vendor at runtime (ADR-004 slice 4).** The `tokens.css` values are the
+> **default (Aheed) vendor's** palette. The storefront layout injects the resolved vendor's colours as
+> inline CSS custom properties on a wrapper element per request, recolouring the whole storefront with
+> **no token or component change**. It must override **both layers**: the eight `--color-brand-*`
+> primitives **and** the semantic tokens (`--color-primary`, `--color-action`, …) — because Tailwind v4
+> emits the semantic tokens at `:root` as `var(--color-brand-*)` and the browser resolves that inner
+> `var()` *at `:root`*, freezing the semantic value to the default palette; overriding only a primitive
+> on a descendant never re-flows into it. The wrapper re-declares the semantic tokens with the same
+> primitive→semantic mapping this file defines, so they resolve against the vendor's palette. The
+> ~15%-darker hover shades are derived per vendor via `color-mix()` (no `VendorBranding` column needed).
+> A named theme *catalogue* is deferred (#75).
 
 | Primitive | Hex | Semantic | Role |
 |---|---|---|---|

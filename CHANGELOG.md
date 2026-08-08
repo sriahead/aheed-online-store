@@ -6,6 +6,16 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **Per-vendor theming now recolours the storefront (ADR-004 slice 4 follow-up).** The slice-4
+  injection set only the eight `--color-brand-*` primitives on the storefront wrapper, but Tailwind v4
+  emits the semantic tokens at `:root` as `var(--color-brand-*)` and the browser resolves that inner
+  `var()` **at `:root`** — freezing e.g. `--color-primary` to the default palette, so a 2nd vendor's
+  colours never applied (caught on staging: SriMart seeded blue but still rendered green). The wrapper
+  now also re-declares the **semantic** tokens (same primitive→semantic mapping as `tokens.css`) and
+  derives the hover shades per vendor via `color-mix()`. Data/seed were correct; only the injected
+  layer changed (`app/(storefront)/layout.tsx`). No schema/seed change.
+
 ### Added
 - **Multi-tenancy — branding-as-CSS-vars + config split (ADR-004 slice 4)**
   (`specs/2026-08-08-multitenancy-slice4-branding-config/`, #73). Fills the empty
