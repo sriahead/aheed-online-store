@@ -13,7 +13,7 @@ import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
  * (visual only) until P3 wires a real cart.
  */
 
-function SearchForm({ className = "" }: { className?: string }) {
+function SearchForm({ className = "", placeholder }: { className?: string; placeholder: string }) {
   return (
     <form method="GET" action="/search" className={className}>
       <div className="relative">
@@ -24,7 +24,7 @@ function SearchForm({ className = "" }: { className?: string }) {
         <input
           type="text"
           name="q"
-          placeholder="Search halal lamb, basmati, lentils…"
+          placeholder={placeholder}
           aria-label="Search products"
           className="w-full rounded-full border border-black/15 bg-surface-muted py-2 pl-10 pr-4 text-sm focus:border-primary focus:bg-white focus:outline-none"
         />
@@ -43,6 +43,7 @@ export async function Header() {
   const profile = await getCurrentVendorProfile();
   const name = profile?.name ?? "";
   const localityName = profile?.localityName ?? "";
+  const searchPlaceholder = profile?.searchPlaceholder ?? "Search products…";
   const { CDN_BASE_URL } = getEnv();
   const logoUrl =
     profile?.logoStorageKey && CDN_BASE_URL
@@ -78,7 +79,7 @@ export async function Header() {
         </Link>
 
         {/* Inline search (desktop/tablet only; mobile gets its own row below) */}
-        <SearchForm className="hidden max-w-md flex-1 sm:block" />
+        <SearchForm className="hidden max-w-md flex-1 sm:block" placeholder={searchPlaceholder} />
 
         {/* Account + cart */}
         <div className="flex shrink-0 items-center gap-2">
@@ -116,7 +117,7 @@ export async function Header() {
 
       {/* Mobile search row — the inline search is hidden below sm, so surface it here. */}
       <div className="px-4 pb-2.5 sm:hidden">
-        <SearchForm />
+        <SearchForm placeholder={searchPlaceholder} />
       </div>
     </header>
   );

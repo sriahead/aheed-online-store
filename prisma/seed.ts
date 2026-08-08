@@ -96,7 +96,12 @@ type VendorSatellites = {
     brandOrangeTint: string;
     brandRedTint: string;
   };
-  config: { localityName: string; senderName: string; senderEmail: string };
+  config: {
+    localityName: string;
+    senderName: string;
+    senderEmail: string;
+    searchPlaceholder: string;
+  };
   deliveryPrefixes: string[];
 };
 
@@ -142,6 +147,7 @@ const AHEED_SATELLITES: VendorSatellites = {
     localityName: "Milton Keynes",
     senderName: "Aheed Food Centre",
     senderEmail: "orders@aheedfoodcentre.nocaped.com",
+    searchPlaceholder: "Search halal lamb, basmati, lentils…",
   },
   deliveryPrefixes: ["MK"],
 };
@@ -481,6 +487,7 @@ const SRIMART_SATELLITES: VendorSatellites = {
     localityName: "Reading",
     senderName: "SriMart",
     senderEmail: "orders@srimart.nocaped.com",
+    searchPlaceholder: "Search chargers, earbuds, lamps…",
   },
   deliveryPrefixes: ["RG"],
 };

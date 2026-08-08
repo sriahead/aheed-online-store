@@ -29,6 +29,7 @@ describe("fetchVendorProfile", () => {
         localityName: "Reading",
         senderName: "SriMart",
         senderEmail: "orders@srimart.test",
+        searchPlaceholder: "Search chargers, earbuds, lamps…",
       },
       deliveryAreas: [{ prefix: "RG" }],
     });
@@ -42,6 +43,7 @@ describe("fetchVendorProfile", () => {
     expect(p.primitives["orange-tint"]).toBe("#f3e5f5");
     expect(p.localityName).toBe("Reading");
     expect(p.senderName).toBe("SriMart");
+    expect(p.searchPlaceholder).toBe("Search chargers, earbuds, lamps…");
     expect(p.deliveryPrefixes).toEqual(["RG"]);
   });
 
@@ -52,14 +54,19 @@ describe("fetchVendorProfile", () => {
       config: null,
       deliveryAreas: [],
     });
-    const { fetchVendorProfile, DEFAULT_BRAND_PRIMITIVES, DEFAULT_SENDER_NAME } =
-      await import("@/lib/repositories/vendor");
+    const {
+      fetchVendorProfile,
+      DEFAULT_BRAND_PRIMITIVES,
+      DEFAULT_SENDER_NAME,
+      DEFAULT_SEARCH_PLACEHOLDER,
+    } = await import("@/lib/repositories/vendor");
 
     const p = await fetchVendorProfile("v-new");
     expect(p.name).toBe("New Vendor"); // vendor.name when no branding row
     expect(p.tagline).toBeNull();
     expect(p.primitives).toEqual(DEFAULT_BRAND_PRIMITIVES);
     expect(p.senderName).toBe(DEFAULT_SENDER_NAME);
+    expect(p.searchPlaceholder).toBe(DEFAULT_SEARCH_PLACEHOLDER);
     expect(p.deliveryPrefixes).toEqual([]);
   });
 });

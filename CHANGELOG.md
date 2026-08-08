@@ -6,6 +6,13 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+- **Per-vendor search-box placeholder (ADR-004 slice 4 follow-up).** The header search placeholder was
+  hardcoded Aheed grocery copy ("Search halal lamb, basmati, lentils…") shown on every vendor. Adds a
+  nullable `VendorConfig.searchPlaceholder` column (additive migration), read via
+  `lib/repositories/vendor.ts` with a generic `"Search products…"` fallback; seeded per vendor (Aheed
+  keeps its copy, SriMart gets "Search chargers, earbuds, lamps…"). Re-seed each environment to apply.
+
 ### Fixed
 - **Per-vendor theming now recolours the storefront (ADR-004 slice 4 follow-up).** The slice-4
   injection set only the eight `--color-brand-*` primitives on the storefront wrapper, but Tailwind v4

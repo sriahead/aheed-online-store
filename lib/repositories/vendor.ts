@@ -25,6 +25,7 @@ export interface VendorProfile {
   localityName: string;
   senderName: string;
   senderEmail: string;
+  searchPlaceholder: string;
   deliveryPrefixes: string[];
 }
 
@@ -42,6 +43,7 @@ export const DEFAULT_BRAND_PRIMITIVES: BrandPrimitives = {
   "red-tint": "#ffebee",
 };
 export const DEFAULT_SENDER_NAME = "Aheed Food Centre";
+export const DEFAULT_SEARCH_PLACEHOLDER = "Search products…";
 
 /** Core fetch (not memoized) — safe to call outside a React render, and unit-testable. */
 export async function fetchVendorProfile(vendorId: string): Promise<VendorProfile> {
@@ -65,7 +67,14 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
           brandRedTint: true,
         },
       },
-      config: { select: { localityName: true, senderName: true, senderEmail: true } },
+      config: {
+        select: {
+          localityName: true,
+          senderName: true,
+          senderEmail: true,
+          searchPlaceholder: true,
+        },
+      },
       deliveryAreas: { select: { prefix: true } },
     },
   });
@@ -90,6 +99,7 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
     localityName: vendor?.config?.localityName ?? "",
     senderName: vendor?.config?.senderName ?? DEFAULT_SENDER_NAME,
     senderEmail: vendor?.config?.senderEmail ?? "",
+    searchPlaceholder: vendor?.config?.searchPlaceholder ?? DEFAULT_SEARCH_PLACEHOLDER,
     deliveryPrefixes: (vendor?.deliveryAreas ?? []).map((a) => a.prefix),
   };
 }
