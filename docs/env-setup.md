@@ -4,12 +4,12 @@ title: "Environment Setup — Secrets & Config (staging / production)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.1.0"
+version: "1.2.0"
 updated: 2026-08-08
 visibility: internal
-summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus the demo-accounts tool.
+summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation and the demo-accounts tool.
 tags: [runbook, secrets, config, cloudflare, github, ops]
-related: [architecture, adr-003-storage-abstraction, demo-accounts-tool]
+related: [architecture, adr-003-storage-abstraction, adr-004-multi-tenancy, neon-db-separation, demo-accounts-tool]
 ---
 
 # Environment Setup — Secrets & Config
@@ -29,6 +29,27 @@ Two variables are required beyond the original list: **`BETTER_AUTH_URL`** (per-
 OAuth/session break without it) and **`S3_REGION`** (required by ADR-003's storage contract).
 `DIRECT_URL` (direct, non-pooled) is a **GitHub** secret for CI migrations; `DATABASE_URL` (pooled)
 is a **Worker** secret for runtime — never the reverse (see `CLAUDE.md`).
+
+## One Neon project per environment (isolation)
+
+Staging and production each have their **own, separate Neon project** — they no longer share one
+database (ADR-004 slice 0, `neon-db-separation`, #56). This keeps **environment** isolation from
+being conflated with **tenant** isolation: a staging test can never read or mutate live production
+rows. Each environment's `DIRECT_URL`/`DATABASE_URL` (in `secrets/<env>.vars`) point at its own
+project's direct/pooled endpoints; production stays on the original project, staging on its own.
+
+**Bootstrapping a fresh environment database** (e.g. a brand-new staging project, or after any
+reset): the CI deploy runs `prisma migrate deploy` against that environment's `DIRECT_URL`
+automatically, then seed and demo accounts are a one-time manual step against the same direct URL:
+
+```bash
+# schema is applied by CI on deploy; then, once, against the fresh project's DIRECT_URL:
+DIRECT_URL="<env-direct-url>" npm run db:seed                                   # catalogue data
+DIRECT_URL="<env-direct-url>" DEMO_ACCOUNT_PASSWORD="<min-8>" npm run demo:accounts -- add
+```
+
+Never point staging at production's project (or vice versa) to "save setup" — that reintroduces the
+exact shared-database problem this split removed.
 
 ## Prerequisites (one-time)
 
