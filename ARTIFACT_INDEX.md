@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-08T11:51:31.474Z` · commit `fd892d5` · `32` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-08T13:43:12.242Z` · commit `91cbda9` · `33` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -43,8 +43,9 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P2a — Catalogue Browsing (plan)](specs/2026-08-07-p2a-catalogue-browsing/plan.md) | spec | 1.0.0 | 2026-08-07 | approved | internal | Plan for the first P2 slice — categories, product pages, images via the storage port, and keyset pagination — split from search & filters, which lands separately as P2b. |
 | [P2b — Catalogue Search & Filters (plan)](specs/2026-08-07-p2b-catalogue-search/plan.md) | spec | 1.0.0 | 2026-08-07 | approved | internal | Plan for the second P2 slice — global search across products plus price/availability filters on both search and category pages — layered on P2a's schema and repositories. |
 | [Demo-accounts add/remove tool (plan)](specs/2026-08-08-demo-accounts-tool/plan.md) | spec | 1.0.0 | 2026-08-08 | draft | internal | A standalone, reusable script to add or remove the platform's demo login accounts on demand against any environment, separate from prisma/seed.ts, so demo accounts survive DB resets and can be managed independently. |
+| [ADR-004 slice 1 — Vendor aggregate + vendorId migration (plan)](specs/2026-08-08-multitenancy-slice1-vendor-schema/plan.md) | spec | 1.0.0 | 2026-08-08 | draft | internal | Introduce the Vendor tenancy root and its config/branding satellite tables, add a mandatory vendorId to every domain table, and backfill all existing rows to a single Aheed Food Centre vendor — the schema foundation of multi-tenancy, before repository-layer enforcement. |
 | [ADR-004 slice 0 — Separate staging/production Neon databases (plan)](specs/2026-08-08-neon-db-separation/plan.md) | spec | 1.0.0 | 2026-08-08 | draft | internal | Split the shared staging/production Neon database into two isolated Neon projects — prod stays on the existing project untouched, staging moves to a fresh project — the environment-isolation prerequisite before any vendorId work. |
-| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.1.0 | 2026-08-07 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic by design. |
+| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.2.0 | 2026-08-08 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
 | [ADR-003 — Object Storage Abstraction (S3-compatible)](specs/decisions/ADR-003-storage-abstraction.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time. |

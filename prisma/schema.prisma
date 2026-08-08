@@ -95,11 +95,82 @@ model Verification {
   @@index([identifier])
 }
 
+// ADR-004 slice 1 — multi-tenancy (specs/2026-08-08-multitenancy-slice1-vendor-schema/).
+// Vendor is the tenancy root; every domain row carries a required vendorId. Read-side
+// vendorId filtering is enforced centrally in slice 2 (lib/repositories/*). All existing
+// data is backfilled to a single "Aheed Food Centre" vendor.
+enum VendorStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model Vendor {
+  id            String               @id @default(uuid())
+  slug          String               @unique
+  name          String
+  status        VendorStatus         @default(ACTIVE)
+  customDomain  String?              @unique // used in slice 3 (host→tenant resolution)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  branding      VendorBranding?
+  config        VendorConfig?
+  deliveryAreas VendorDeliveryArea[]
+  categories    Category[]
+  products      Product[]
+  inventory     Inventory[]
+  reviews       Review[]
+}
+
+// Satellite config/branding tables ship EMPTY in slice 1 — their values (and the code that
+// reads them) arrive in slice 4. Explicit columns only, never a Json column (CLAUDE.md).
+model VendorBranding {
+  id             String   @id @default(uuid())
+  vendorId       String   @unique
+  vendor         Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  name           String
+  tagline        String?
+  logoStorageKey String? // RELATIVE key only (ADR-003) — never a URL
+  // Brand color PRIMITIVES (mirror design-system/tokens/tokens.css --color-brand-*),
+  // injected per vendor as CSS custom properties in slice 4. Hex strings.
+  brandGreenDark  String
+  brandGreen      String
+  brandOrange     String
+  brandRed        String
+  brandCream      String
+  brandGreenTint  String
+  brandOrangeTint String
+  brandRedTint    String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model VendorConfig {
+  id           String   @id @default(uuid())
+  vendorId     String   @unique
+  vendor       Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  localityName String // e.g. "Milton Keynes"
+  senderName   String // transactional email sender identity
+  senderEmail  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model VendorDeliveryArea {
+  id       String @id @default(uuid())
+  vendorId String
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  prefix   String // postcode district prefix, e.g. "MK"
+
+  @@unique([vendorId, prefix])
+}
+
 // P2a — catalogue browsing (specs/2026-08-07-p2a-catalogue-browsing/). Matches the
 // representative schema already designed in specs/architecture.md §3.2.
 model Category {
   id        String     @id @default(uuid())
-  slug      String     @unique
+  vendorId  String
+  vendor    Vendor     @relation(fields: [vendorId], references: [id])
+  slug      String
   name      String
   parentId  String?
   parent    Category?  @relation("Sub", fields: [parentId], references: [id])
@@ -108,12 +179,15 @@ model Category {
   isActive  Boolean    @default(true)
   products  Product[]
 
-  @@index([parentId, isActive])
+  @@unique([vendorId, slug])
+  @@index([vendorId, parentId, isActive])
 }
 
 model Product {
   id            String         @id @default(uuid())
-  slug          String         @unique
+  vendorId      String
+  vendor        Vendor         @relation(fields: [vendorId], references: [id])
+  slug          String
   name          String
   description   String
   categoryId    String
@@ -137,8 +211,9 @@ model Product {
   isFresh       Boolean        @default(false)
   isOrganic     Boolean        @default(false)
 
-  @@index([categoryId, isActive])
-  @@index([isActive, basePrice]) // catalogue filter + sort
+  @@unique([vendorId, slug])
+  @@index([vendorId, categoryId, isActive])
+  @@index([vendorId, isActive, basePrice]) // catalogue filter + sort
 }
 
 model ProductImage {
@@ -155,11 +230,15 @@ model ProductImage {
 
 model Inventory {
   id                String   @id @default(uuid())
+  vendorId          String
+  vendor            Vendor   @relation(fields: [vendorId], references: [id])
   productId         String   @unique
   product           Product  @relation(fields: [productId], references: [id])
   quantity          Int      @default(0)
   lowStockThreshold Int      @default(3)
   updatedAt         DateTime @updatedAt
+
+  @@index([vendorId])
 }
 
 // P2.5a — ratings & reviews (specs/2026-08-07-p2-5a-ratings-reviews/). One review
@@ -167,6 +246,8 @@ model Inventory {
 // averageRating/reviewCount are denormalized and recomputed on every write.
 model Review {
   id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
   productId String
   product   Product  @relation(fields: [productId], references: [id])
   userId    String
@@ -176,6 +257,6 @@ model Review {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([userId, productId])
-  @@index([productId, createdAt])
+  @@unique([vendorId, userId, productId])
+  @@index([vendorId, productId, createdAt])
 }

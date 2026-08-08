@@ -16,6 +16,10 @@ console.log("seed connecting to:", connectionString.replace(/:[^:@/]+@/, ":****@
 
 const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString }) });
 
+// ADR-004 slice 1 — single tenant for now. Fixed UUID matches the migration's backfill so
+// a fresh `migrate deploy` + `db:seed` produces the same vendor as the backfilled envs.
+const AHEED_VENDOR_ID = "a4ed0000-0000-4000-a000-000000000001";
+
 async function main() {
   const count = await prisma.healthCheck.count();
   if (count === 0) {
@@ -24,6 +28,14 @@ async function main() {
   } else {
     console.log(`HealthCheck already has ${count} row(s) — skipping`);
   }
+
+  // The migration already creates the Aheed vendor; upsert keeps a from-scratch seed
+  // (e.g. after `migrate reset`) idempotent and self-sufficient.
+  await prisma.vendor.upsert({
+    where: { id: AHEED_VENDOR_ID },
+    create: { id: AHEED_VENDOR_ID, slug: "aheed-food-centre", name: "Aheed Food Centre" },
+    update: {},
+  });
 
   await seedCatalogue();
 }
@@ -290,11 +302,14 @@ async function seedCatalogue() {
 
   for (const { category, products } of pending) {
     await prisma.$transaction(async (tx) => {
-      const createdCategory = await tx.category.create({ data: category });
+      const createdCategory = await tx.category.create({
+        data: { ...category, vendorId: AHEED_VENDOR_ID },
+      });
 
       for (const product of products) {
         await tx.product.create({
           data: {
+            vendorId: AHEED_VENDOR_ID,
             slug: product.slug,
             name: product.name,
             description: product.description,
@@ -314,7 +329,7 @@ async function seedCatalogue() {
               },
             },
             inventory: {
-              create: { quantity: product.quantity },
+              create: { vendorId: AHEED_VENDOR_ID, quantity: product.quantity },
             },
           },
         });
