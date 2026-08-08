@@ -37,7 +37,44 @@ async function main() {
     update: {},
   });
 
-  await seedCatalogue();
+  await seedCatalogue(AHEED_VENDOR_ID, CATALOGUE);
+
+  // ADR-004 slice 3b — host→tenant mapping. Hosts are per-environment (staging & prod are
+  // separate DBs), sourced from env vars. SriMart (a 2nd vendor) is only seeded when BOTH
+  // hosts are present, so the DB is never left as "2 vendors but a vendor has no domain"
+  // (which would send Aheed's own host to /coming-soon).
+  const aheedHost = process.env.SEED_AHEED_HOST?.trim();
+  const srimartHost = process.env.SEED_SRIMART_HOST?.trim();
+
+  if (aheedHost) {
+    await upsertVendorDomain(AHEED_VENDOR_ID, aheedHost);
+  } else {
+    console.log(
+      "SEED_AHEED_HOST unset — skipping VendorDomain (single-vendor host fallback stays)",
+    );
+  }
+
+  if (aheedHost && srimartHost) {
+    await prisma.vendor.upsert({
+      where: { id: SRIMART_VENDOR_ID },
+      create: { id: SRIMART_VENDOR_ID, slug: "srimart", name: "SriMart" },
+      update: {},
+    });
+    await seedCatalogue(SRIMART_VENDOR_ID, SRIMART_CATALOGUE);
+    await upsertVendorDomain(SRIMART_VENDOR_ID, srimartHost);
+  } else if (srimartHost && !aheedHost) {
+    console.log("SEED_SRIMART_HOST set but SEED_AHEED_HOST is not — skipping SriMart to stay safe");
+  }
+}
+
+async function upsertVendorDomain(vendorId: string, host: string) {
+  const normalized = host.toLowerCase();
+  await prisma.vendorDomain.upsert({
+    where: { host: normalized },
+    create: { vendorId, host: normalized, isCanonical: true },
+    update: { vendorId, isCanonical: true },
+  });
+  console.log(`mapped host ${normalized} -> ${vendorId}`);
 }
 
 type CatalogueProduct = {
@@ -273,13 +310,19 @@ const CATALOGUE: CatalogueCategory[] = [
   },
 ];
 
-async function seedCatalogue() {
+async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
+  // Idempotency is PER-VENDOR now (slugs are per-vendor unique, ADR-004): only skip a
+  // category already present for THIS vendor.
   const existingSlugs = new Set(
-    (await prisma.category.findMany({ select: { slug: true } })).map((c) => c.slug),
+    (await prisma.category.findMany({ where: { vendorId }, select: { slug: true } })).map(
+      (c) => c.slug,
+    ),
   );
-  const pending = CATALOGUE.filter(({ category }) => !existingSlugs.has(category.slug));
+  const pending = catalogue.filter(({ category }) => !existingSlugs.has(category.slug));
   if (pending.length === 0) {
-    console.log(`All ${CATALOGUE.length} catalogue categories already exist — skipping`);
+    console.log(
+      `All ${catalogue.length} catalogue categories already exist for ${vendorId} — skipping`,
+    );
     return;
   }
 
@@ -292,7 +335,9 @@ async function seedCatalogue() {
   // Upload every image BEFORE writing anything to the DB, and write each category's
   // rows in one transaction — a mid-run failure (e.g. storage credentials wrong) must
   // not leave an orphaned Category with zero Products, which would otherwise poison
-  // future runs' per-category idempotency check above.
+  // future runs' per-category idempotency check above. (Per-vendor storage-key
+  // namespacing — vendors/{vendorId}/... — is ADR-004 slice 4; here slugs are distinct
+  // across vendors so keys don't collide.)
   for (const { products } of pending) {
     for (const product of products) {
       const storageKey = `products/${product.slug}/main.svg`;
@@ -303,13 +348,13 @@ async function seedCatalogue() {
   for (const { category, products } of pending) {
     await prisma.$transaction(async (tx) => {
       const createdCategory = await tx.category.create({
-        data: { ...category, vendorId: AHEED_VENDOR_ID },
+        data: { ...category, vendorId },
       });
 
       for (const product of products) {
         await tx.product.create({
           data: {
-            vendorId: AHEED_VENDOR_ID,
+            vendorId,
             slug: product.slug,
             name: product.name,
             description: product.description,
@@ -329,7 +374,7 @@ async function seedCatalogue() {
               },
             },
             inventory: {
-              create: { vendorId: AHEED_VENDOR_ID, quantity: product.quantity },
+              create: { vendorId, quantity: product.quantity },
             },
           },
         });
@@ -337,9 +382,50 @@ async function seedCatalogue() {
     });
   }
   console.log(
-    `seeded ${pending.length} categories, ${pending.flatMap((c) => c.products).length} products`,
+    `seeded ${pending.length} categories, ${pending.flatMap((c) => c.products).length} products for ${vendorId}`,
   );
 }
+
+// ADR-004 slice 3b — SriMart, a real 2nd vendor with a deliberately DIFFERENT catalogue
+// (distinct slugs, so image keys don't collide with Aheed's), used to prove host→tenant
+// isolation. Only seeded when both SEED_*_HOST vars are set (see main()).
+const SRIMART_VENDOR_ID = "5217a4a7-0000-4000-a000-000000000002";
+const SRIMART_CATALOGUE: CatalogueCategory[] = [
+  {
+    category: { slug: "sri-electronics", name: "Electronics" },
+    products: [
+      {
+        slug: "sri-phone-charger",
+        name: "Fast Phone Charger",
+        description: "20W USB-C fast charger.",
+        basePrice: 1299,
+        unitLabel: "£12.99 each",
+        quantity: 25,
+      },
+      {
+        slug: "sri-earbuds",
+        name: "Wireless Earbuds",
+        description: "Bluetooth earbuds with charging case.",
+        basePrice: 2499,
+        unitLabel: "£24.99 / pair",
+        quantity: 15,
+      },
+    ],
+  },
+  {
+    category: { slug: "sri-home", name: "Home & Living" },
+    products: [
+      {
+        slug: "sri-desk-lamp",
+        name: "LED Desk Lamp",
+        description: "Dimmable LED desk lamp with USB port.",
+        basePrice: 1899,
+        unitLabel: "£18.99 each",
+        quantity: 20,
+      },
+    ],
+  },
+];
 
 main()
   .catch((e) => {

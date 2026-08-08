@@ -4,8 +4,8 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.5.0"
-updated: 2026-08-07
+version: "1.6.0"
+updated: 2026-08-08
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures.
 tags: [roadmap, phases, backlog]
@@ -76,3 +76,5 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
 | 2026-08-07 | **Post-P2.5 storefront polish** shipped as fixes from live review (not a phase): Milton Keynes delivery area broadened to any MK district, real cropped logo, mobile-UI rework, and a browse-page layout flip — departments to a horizontal arrow-scrolled strip, search/filters to a vertical left sidebar (`DepartmentScroller` is the first storefront client component). **Multi-tenancy** flagged as a pre-P3 foundation (ADR-004 draft, #49) with an env-config CLI + `docs/env-setup.md` alongside. | Live-review feedback; not a roadmap phase |
 | 2026-08-07 | **P3 scope confirmed/expanded:** the cart becomes real in P3 (the inert "Add to Cart" gets wired), and **"Shop your list"** is folded into P3 as a cart-entry path rather than a standalone feature — keeping the shopping flow in one phase. The **Developer Control Toolbar / dev view (#41)** is being pulled forward next as its own propose→spec→build. | Confirmed with the human |
 | 2026-08-08 | **ADR-004 (multi-tenancy) Accepted** (`specs/decisions/ADR-004-multi-tenancy.md`, issue #49, v1.0.0). Four decisions locked: subdomain resolution + optional custom-domain override; row-level `vendorId` enforced in the repository layer; global identity with family-scoped SSO / isolated session per custom domain (authz via `VendorMembership`); separate the shared staging/prod Neon DB into two projects **first**. Sequenced as slices 0–4 to land **before P3**, since orders/carts/payments would otherwise bake in single-vendor assumptions across every repository query. Dev view (#41) is now implemented. | Decisions signed off with the human |
+| 2026-08-08 | **ADR-004 slices 0–1 shipped to production.** Slice 0 (#56): staging/prod split into **separate Neon projects** (env isolation before tenant work). Slice 1 (#62): `Vendor` aggregate + empty `VendorBranding`/`VendorConfig`/`VendorDeliveryArea` satellites, required `vendorId` on Category/Product/Inventory/Review with per-vendor composite uniques and vendorId-leading indexes; a hand-authored migration backfilled all existing rows to a single Aheed vendor (applied cleanly on real prod data). Also shipped alongside: the standalone demo-accounts tool (#57) and the KMS internal docs site going live behind Cloudflare Access (#61). Deferred follow-ups tracked in #65 (roadmap note done here; migration-drift check pending). | Foundation landing before P3 |
+| 2026-08-08 | **ADR-004 slice 2** (#66): repository-layer `vendorId` enforcement — a `getCurrentVendorId()` tenant seam (interim single-vendor; slice 3 swaps in host resolution) with `where: { vendorId }` injected across `lib/repositories/*`, plus an ESLint guard forbidding direct Prisma access in the app/UI/feature layers. Runtime output unchanged at one vendor. Slice 3 (host→tenant resolver + auth) and slice 4 (branding/delivery/config wiring) remain. | Proceeding through the ADR-004 slice sequence |

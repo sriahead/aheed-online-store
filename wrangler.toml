@@ -17,6 +17,12 @@ name = "aheed-store-staging"
 pattern = "staging.aheedfoodcentre.nocaped.com"
 custom_domain = true
 
+# ADR-004 slice 3b — SriMart, a 2nd vendor resolved by host (VendorDomain). This staging
+# host must be declared here so `wrangler deploy` doesn't tear down the custom domain.
+[[env.staging.routes]]
+pattern = "srimart-staging.nocaped.com"
+custom_domain = true
+
 [[env.staging.r2_buckets]]
 binding = "IMAGES"
 bucket_name = "aheed-images-staging"
@@ -27,6 +33,11 @@ name = "aheed-store-production"
 
 [[env.production.routes]]
 pattern = "aheedfoodcentre.nocaped.com"
+custom_domain = true
+
+# ADR-004 slice 3b — SriMart (2nd vendor) production host, resolved by host (VendorDomain).
+[[env.production.routes]]
+pattern = "srimart.nocaped.com"
 custom_domain = true
 
 [[env.production.r2_buckets]]

@@ -7,6 +7,35 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Multi-tenancy — host→tenant resolution + 2nd vendor (SriMart)**
+  (`specs/2026-08-08-multitenancy-slice3b-host-resolver/`, #70; ADR-004 slice 3b). The app now serves
+  the right vendor's data based on the **request host**: a `VendorDomain(host)` table maps hosts to
+  vendors, and `lib/tenant.ts`'s resolver looks it up (falling back to the sole vendor while only one
+  exists; unmatched hosts with 2+ vendors → a `/coming-soon` page linking to the default store).
+  `getCurrentVendorId()` keeps its non-null contract, so repositories/`requireVendorRole` are
+  unchanged. **No Next middleware** (edge runtime is forbidden) — the storefront layout gates the
+  tenant. Adds **SriMart** as a real 2nd vendor with a distinct dummy catalogue, seeded (with its
+  `VendorDomain`) only when both `SEED_AHEED_HOST`/`SEED_SRIMART_HOST` are set. `wrangler.toml`
+  declares the `srimart.nocaped.com` / `srimart-staging.nocaped.com` custom domains. Additive
+  migration (`VendorDomain` table).
+- **Multi-tenancy — per-vendor authorization (`VendorMembership`)**
+  (`specs/2026-08-08-multitenancy-slice3a-vendor-membership/`, #68; ADR-004 slice 3a). Authorization
+  is now two-tier: `User.role` is the **platform** role (platform `ADMIN` transcends vendors; `/dev`
+  still gates on it), and a new **`VendorMembership(userId, vendorId, role)`** carries **per-vendor**
+  staff/admin (`VendorRole` = STAFF|ADMIN). A new `requireVendorRole()` gate allows platform admins
+  or matching members of the current vendor. The demo-accounts tool now provisions memberships
+  (`demo-admin` → Aheed ADMIN, `demo-staff` → Aheed STAFF; `demo-staff`'s platform role corrected to
+  CUSTOMER). Additive migration (new table, no backfill). No infra; testable at one vendor. Host
+  resolution (3b) and auth cookie scoping (3c) follow.
+- **Multi-tenancy — repository-layer `vendorId` enforcement**
+  (`specs/2026-08-08-multitenancy-slice2-vendor-enforcement/`, closes #66; ADR-004 slice 2). Adds a
+  `lib/tenant.ts` `getCurrentVendorId()` tenant seam (interim: the single ACTIVE vendor; slice 3
+  swaps in host→tenant resolution) and injects `where: { vendorId }` across `lib/repositories/*`
+  (products/categories/reviews), resolved once per request-scoped repository instance — method
+  signatures unchanged, so pages/features are untouched. An ESLint guard now makes importing
+  `@/lib/db` (`getPrisma`) or `@prisma/client` an error in `app/`/`features/`/`components/` (the
+  `/api/health` infra probe is allowlisted), keeping domain queries inside the repository layer.
+  Runtime output is unchanged at one vendor. Also records the deferred slice-0/1 roadmap closure (#65).
 - **Multi-tenancy foundation — Vendor aggregate + `vendorId` migration**
   (`specs/2026-08-08-multitenancy-slice1-vendor-schema/`, closes #62; ADR-004 slice 1). Introduces a
   `Vendor` tenancy root plus `VendorBranding`/`VendorConfig`/`VendorDeliveryArea` satellite tables

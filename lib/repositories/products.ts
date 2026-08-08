@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/db";
+import { getCurrentVendorId } from "@/lib/tenant";
 
 export interface ProductImageSummary {
   storageKey: string;
@@ -81,6 +82,10 @@ function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereInput {
  */
 export function getProductRepository(): ProductRepository {
   const prisma = getPrisma();
+  // Resolve the current vendor once per repository instance (request-scoped);
+  // never cached across requests. Every query below is scoped to it (ADR-004 slice 2).
+  let vendorIdPromise: Promise<string> | undefined;
+  const vendorId = () => (vendorIdPromise ??= getCurrentVendorId());
 
   async function findPage(
     where: Prisma.ProductWhereInput,
@@ -137,7 +142,7 @@ export function getProductRepository(): ProductRepository {
   return {
     async listByCategory(categoryId, { take, cursor, ...filters }) {
       return findPage(
-        { categoryId, isActive: true, ...buildFilterWhere(filters) },
+        { vendorId: await vendorId(), categoryId, isActive: true, ...buildFilterWhere(filters) },
         { take, cursor },
       );
     },
@@ -148,6 +153,7 @@ export function getProductRepository(): ProductRepository {
 
       return findPage(
         {
+          vendorId: await vendorId(),
           isActive: true,
           ...buildFilterWhere(filters),
           OR: [
@@ -161,7 +167,7 @@ export function getProductRepository(): ProductRepository {
 
     async getBySlug(slug) {
       const product = await prisma.product.findFirst({
-        where: { slug, isActive: true },
+        where: { vendorId: await vendorId(), slug, isActive: true },
         select: {
           id: true,
           slug: true,
