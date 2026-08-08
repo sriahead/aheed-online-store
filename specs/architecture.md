@@ -4,12 +4,12 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.1.0"
-updated: 2026-08-07
+version: "1.2.0"
+updated: 2026-08-08
 visibility: internal
-summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic by design.
-tags: [architecture, cloudflare, neon, clean-architecture]
-related: [adr-001-hosting, adr-002-auth-library, adr-003-storage-abstraction]
+summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
+tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
+related: [adr-001-hosting, adr-002-auth-library, adr-003-storage-abstraction, adr-004-multi-tenancy, multitenancy-slice1-vendor-schema]
 ---
 
 # System Architecture — Aheed Online Store
@@ -111,6 +111,16 @@ No layer skips inward; components never touch Prisma or the S3 client directly.
   a recorded fact, not a normalization breach.
 
 ### 3.2 Core schema (representative Prisma excerpt)
+
+> **Multi-tenancy (ADR-004, slice 1 — `specs/2026-08-08-multitenancy-slice1-vendor-schema/`).**
+> The live schema is **vendor-scoped**: a `Vendor` aggregate (with `VendorBranding`/`VendorConfig`/
+> `VendorDeliveryArea`) is the tenancy root, and every domain table (`Category`, `Product`,
+> `Inventory`, `Review`, and future `Order`/`Cart`) carries a required `vendorId` FK. Global slug
+> uniques are now **per-vendor composites** (`@@unique([vendorId, slug])`), and read indexes lead
+> with `vendorId`. `User` and the other auth tables stay **global** (identity is platform-wide;
+> authorization becomes per-vendor via `VendorMembership` in slice 3). Read-side `vendorId` filtering
+> is enforced centrally in the repository layer (slice 2). The excerpt below predates tenancy and is
+> kept as a shape reference — see `prisma/schema.prisma` for the authoritative, vendor-scoped models.
 
 ```prisma
 enum Role            { CUSTOMER STAFF ADMIN }
@@ -231,9 +241,10 @@ change, not a data migration of DB rows (see §4.2).
 
 ### 3.4 Performance strategy (target: ~1,000 orders/day, mobile-first)
 
-**Indexing.** Composite indexes aligned to real access paths: `Product(categoryId, isActive)` and
-`Product(isActive, basePrice)` for browse+filter+sort; `Order(userId, createdAt)` for history;
-`Order(status, createdAt)` for the staff dashboard; unique indexes on `slug`, `orderNumber`,
+**Indexing.** Composite indexes aligned to real access paths and **lead with `vendorId`** (ADR-004):
+`Product(vendorId, categoryId, isActive)` and `Product(vendorId, isActive, basePrice)` for
+browse+filter+sort; `Order(userId, createdAt)` for history; `Order(status, createdAt)` for the staff
+dashboard; per-vendor unique indexes on `slug` (`@@unique([vendorId, slug])`), plus `orderNumber` and
 `Inventory.productId`. Add a partial/trigram index for name search only when the catalogue grows.
 
 **Pagination.** **Keyset (cursor) pagination** on `(createdAt, id)` everywhere lists can grow

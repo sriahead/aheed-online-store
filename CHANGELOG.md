@@ -7,6 +7,43 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Multi-tenancy foundation — Vendor aggregate + `vendorId` migration**
+  (`specs/2026-08-08-multitenancy-slice1-vendor-schema/`, closes #62; ADR-004 slice 1). Introduces a
+  `Vendor` tenancy root plus `VendorBranding`/`VendorConfig`/`VendorDeliveryArea` satellite tables
+  (empty until slice 4), and a required `vendorId` FK on `Category`/`Product`/`Inventory`/`Review`.
+  Global slug uniques become per-vendor composites (`@@unique([vendorId, slug])`,
+  `@@unique([vendorId, userId, productId])`); read indexes lead with `vendorId`. A hand-authored
+  migration backfills all existing rows to a single "Aheed Food Centre" vendor (fixed UUID, identical
+  across environments). `seed.ts` and the review upsert supply `vendorId`. **Runtime behavior is
+  unchanged** — read-side `vendorId` filtering / repository enforcement is slice 2. `User` and auth
+  tables stay global (identity is platform-wide).
+
+### Changed
+- **KMS internal docs site is now live** at `https://docs.internal.aheedfoodcentre.nocaped.com`,
+  gated by a Cloudflare Access self-hosted application (One-time PIN, email allow-list) — the site
+  has no auth of its own; Access is the auth. Uncommented the custom-domain route in
+  `kms/site-internal/wrangler.toml` (the Access app was created first, so the hostname was gated
+  before it ever resolved). `workers_dev` stays `false`. Linking it from the `ADMIN`-gated `/dev`
+  page (`KMS_INTERNAL_URL`) is deferred to the dev-role view work (#60).
+- **Separated the staging and production Neon databases** (`specs/2026-08-08-neon-db-separation/`,
+  closes #56; ADR-004 slice 0). Staging and production no longer share one Neon project — each has
+  its own, so a staging test can never read or mutate live production rows (environment isolation vs
+  tenant isolation). Production stays on the original project untouched; staging moves to a fresh
+  project (migrated by CI, seeded + demo accounts restored via `npm run demo:accounts -- add`).
+  `docs/env-setup.md` documents the one-project-per-environment topology and fresh-DB bootstrap. This
+  is the prerequisite before the `vendorId` multi-tenancy migration (slice 1).
+
+### Added
+- **Demo-accounts tool** (`specs/2026-08-08-demo-accounts-tool/`, closes #57). A standalone
+  `scripts/demo-accounts.ts` (`npm run demo:accounts -- add|remove`) that adds/removes the demo login
+  accounts (`demo-admin`/`demo-staff`/`demo-customer`, one per RBAC role) on demand against any
+  environment via its `DIRECT_URL` — deliberately separate from `prisma/seed.ts` so demo accounts
+  survive DB resets and stay in prod + staging until all phases complete.
+  - Created **through Better Auth** (hashed, real sign-in) via a minimal **email-free** auth instance,
+    with `role` set via a post-signup Prisma update (`role` is `input:false`) and `emailVerified`
+    forced true — **no** verification email is ever sent. `add` is idempotent; `remove` cascades.
+  - Password comes from `DEMO_ACCOUNT_PASSWORD` (never committed); `docs/env-setup.md` documents usage.
+  - Groundwork for ADR-004 slice 0 (#56): restores demo accounts on the fresh staging Neon project.
 - **Dev view — admin diagnostics page** (`specs/2026-08-07-dev-view/`, closes #41). A minimal
   ADMIN-gated `/dev` page — the safe core of the mockup's "Developer Control Toolbar", without the
   parts that would either expose secrets or switch to views that don't exist yet.

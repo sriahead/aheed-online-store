@@ -4,12 +4,12 @@ title: "Environment Setup — Secrets & Config (staging / production)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-08-07
+version: "1.2.0"
+updated: 2026-08-08
 visibility: internal
-summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values.
+summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation and the demo-accounts tool.
 tags: [runbook, secrets, config, cloudflare, github, ops]
-related: [architecture, adr-003-storage-abstraction]
+related: [architecture, adr-003-storage-abstraction, adr-004-multi-tenancy, neon-db-separation, demo-accounts-tool]
 ---
 
 # Environment Setup — Secrets & Config
@@ -29,6 +29,27 @@ Two variables are required beyond the original list: **`BETTER_AUTH_URL`** (per-
 OAuth/session break without it) and **`S3_REGION`** (required by ADR-003's storage contract).
 `DIRECT_URL` (direct, non-pooled) is a **GitHub** secret for CI migrations; `DATABASE_URL` (pooled)
 is a **Worker** secret for runtime — never the reverse (see `CLAUDE.md`).
+
+## One Neon project per environment (isolation)
+
+Staging and production each have their **own, separate Neon project** — they no longer share one
+database (ADR-004 slice 0, `neon-db-separation`, #56). This keeps **environment** isolation from
+being conflated with **tenant** isolation: a staging test can never read or mutate live production
+rows. Each environment's `DIRECT_URL`/`DATABASE_URL` (in `secrets/<env>.vars`) point at its own
+project's direct/pooled endpoints; production stays on the original project, staging on its own.
+
+**Bootstrapping a fresh environment database** (e.g. a brand-new staging project, or after any
+reset): the CI deploy runs `prisma migrate deploy` against that environment's `DIRECT_URL`
+automatically, then seed and demo accounts are a one-time manual step against the same direct URL:
+
+```bash
+# schema is applied by CI on deploy; then, once, against the fresh project's DIRECT_URL:
+DIRECT_URL="<env-direct-url>" npm run db:seed                                   # catalogue data
+DIRECT_URL="<env-direct-url>" DEMO_ACCOUNT_PASSWORD="<min-8>" npm run demo:accounts -- add
+```
+
+Never point staging at production's project (or vice versa) to "save setup" — that reintroduces the
+exact shared-database problem this split removed.
 
 ## Prerequisites (one-time)
 
@@ -75,6 +96,30 @@ they never appear in argv, shell history, or logs.
 - Rotating a secret = edit `secrets/<env>.vars`, re-run the command; it overwrites in place.
 - After a deploy that changed Worker secrets, the new values take effect on the next request; CI
   (GitHub) secrets take effect on the next workflow run.
+
+## Demo accounts (`npm run demo:accounts`)
+
+Standalone tool (`scripts/demo-accounts.ts`, spec `demo-accounts-tool`) to **add or remove** the
+platform's demo login accounts on demand — deliberately separate from `prisma/seed.ts`. Per the
+standing directive, keep these present in **both production and staging until all phases are
+complete**, and re-run `add` after any DB reset (e.g. the staging Neon-project move, or the ADR-004
+`vendorId` migration) so they aren't lost.
+
+It manages three accounts, one per RBAC role: `demo-admin@example.com` (ADMIN),
+`demo-staff@example.com` (STAFF), `demo-customer@example.com` (CUSTOMER). They are created **through
+Better Auth** (hashed password, real sign-in) with `emailVerified` forced true and **no** verification
+email sent.
+
+```bash
+# targets whichever environment's DIRECT_URL you provide (like db:seed); password never committed
+DIRECT_URL=<env-direct-url> DEMO_ACCOUNT_PASSWORD=<min-8-chars> npm run demo:accounts -- add
+DIRECT_URL=<env-direct-url> npm run demo:accounts -- remove
+```
+
+- `add` is idempotent — re-running reconciles roles/verification without creating duplicates.
+- `<env-direct-url>` is the target environment's **direct** (non-pooled) Neon URL, from
+  `secrets/<env>.vars`. Run against **both** staging and production to satisfy the directive.
+- `remove` exists for later cleanup; do **not** run it until all phases are complete.
 
 ## Troubleshooting
 
