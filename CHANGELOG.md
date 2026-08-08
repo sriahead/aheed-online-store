@@ -6,6 +6,15 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+- **Separated the staging and production Neon databases** (`specs/2026-08-08-neon-db-separation/`,
+  closes #56; ADR-004 slice 0). Staging and production no longer share one Neon project — each has
+  its own, so a staging test can never read or mutate live production rows (environment isolation vs
+  tenant isolation). Production stays on the original project untouched; staging moves to a fresh
+  project (migrated by CI, seeded + demo accounts restored via `npm run demo:accounts -- add`).
+  `docs/env-setup.md` documents the one-project-per-environment topology and fresh-DB bootstrap. This
+  is the prerequisite before the `vendorId` multi-tenancy migration (slice 1).
+
 ### Added
 - **Demo-accounts tool** (`specs/2026-08-08-demo-accounts-tool/`, closes #57). A standalone
   `scripts/demo-accounts.ts` (`npm run demo:accounts -- add|remove`) that adds/removes the demo login
