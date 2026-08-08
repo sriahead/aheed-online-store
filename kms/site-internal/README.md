@@ -19,15 +19,19 @@ tracked in git; the assemble script never touches them.
 
 ## Deploying
 
-**Not live yet.** `wrangler.toml`'s custom-domain route is commented out and `workers_dev = false`
-— both deliberately, until the Cloudflare-side prerequisites exist:
+**Live** at `https://docs.internal.aheedfoodcentre.nocaped.com` (since 2026-08-08), gated by a
+Cloudflare Access self-hosted application (One-time PIN, email allow-list). The site has no
+application-level auth of its own — **Access is the auth** — so the ordering matters: the Access
+application was created **before** the custom-domain route was deployed, so the hostname was gated
+from the moment it resolved.
 
-1. DNS/custom-domain for `docs.internal.aheedfoodcentre.nocaped.com` on the zone.
-2. A Cloudflare Access application gating that route (zero-trust, email/SSO) — this site has no
-   application-level auth of its own; Access **is** the auth.
+`wrangler.toml`'s custom-domain route is now uncommented; `workers_dev` stays `false` (never flip it
+— that would publish an ungated `*.workers.dev` URL). `.github/workflows/deploy-docs-internal.yml`
+deploys on every push to `staging`/`main`, same pattern as the main app's `deploy-staging.yml`.
 
-Once both exist, uncomment the route in `wrangler.toml` and `.github/workflows/deploy-docs-internal.yml`
-will deploy on push, same pattern as the main app's `deploy-staging.yml`.
+**If you ever remove the Access application, re-comment the route in the same change** — an
+uncommented route with no Access policy would serve the internal docs (ADRs, CLAUDE.md) to the public
+internet.
 
 ## Known gotcha: `zod` is pinned via `overrides`
 

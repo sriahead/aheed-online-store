@@ -18,8 +18,11 @@ binding = "ASSETS"
 #   1. Custom domain/DNS for docs.internal.aheedfoodcentre.nocaped.com on the zone.
 #   2. A Cloudflare Access application gating this route (zero-trust, email/SSO) —
 #      this site has no application-level auth of its own; Access IS the auth.
-# Until both exist, leave the route commented out — an uncommented route with no
-# Access policy would serve internal docs (ADRs, CLAUDE.md) to the public internet.
-# [[routes]]
-# pattern = "docs.internal.aheedfoodcentre.nocaped.com"
-# custom_domain = true
+# LIVE (2026-08-08): gated by a Cloudflare Access self-hosted application (One-time PIN,
+# allow-list) created BEFORE this route was deployed — Access is the only auth this site
+# has. If you ever remove the Access application, re-comment this route in the same change;
+# an uncommented route with no Access policy would serve internal docs (ADRs, CLAUDE.md) to
+# the public internet. Never set workers_dev = true.
+[[routes]]
+pattern = "docs.internal.aheedfoodcentre.nocaped.com"
+custom_domain = true

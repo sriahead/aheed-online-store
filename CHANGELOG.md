@@ -7,6 +7,12 @@ every branch merges.
 ## [Unreleased]
 
 ### Changed
+- **KMS internal docs site is now live** at `https://docs.internal.aheedfoodcentre.nocaped.com`,
+  gated by a Cloudflare Access self-hosted application (One-time PIN, email allow-list) — the site
+  has no auth of its own; Access is the auth. Uncommented the custom-domain route in
+  `kms/site-internal/wrangler.toml` (the Access app was created first, so the hostname was gated
+  before it ever resolved). `workers_dev` stays `false`. Linking it from the `ADMIN`-gated `/dev`
+  page (`KMS_INTERNAL_URL`) is deferred to the dev-role view work (#60).
 - **Separated the staging and production Neon databases** (`specs/2026-08-08-neon-db-separation/`,
   closes #56; ADR-004 slice 0). Staging and production no longer share one Neon project — each has
   its own, so a staging test can never read or mutate live production rows (environment isolation vs
