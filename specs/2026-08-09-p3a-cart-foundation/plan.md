@@ -140,5 +140,9 @@ would churn P2.5b2's just-shipped visual work for no user-visible gain.
   on browsing; the saved cart stays active and the guest cookie survives. **P3b's checkout must force
   resolution before an order is created**, so an order can never be placed against a cart the shopper
   never confirmed. Called out here so P3b's spec inherits it explicitly rather than rediscovering it.
-- Abandoned guest-cart retention/cleanup policy → follow-up issue; likely P7 (hardening) alongside
-  the GDPR retention review, since a guest cart is weakly personal data.
+- Abandoned guest-cart retention/cleanup policy → **#94**; likely P7 (hardening) alongside the GDPR
+  retention review, since a guest cart is weakly personal data.
+- **Cookie clearing is deferred to the next mutation in the automatic-resolution case.** Next forbids
+  writing cookies during a Server Component render, so the read path can only reconcile the database.
+  Once the guest cart row is gone the cookie is inert (it resolves to nothing), and the mutation layer
+  drops it on the next write. Discovered during build, not at spec time.

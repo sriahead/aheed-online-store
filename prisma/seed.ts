@@ -103,6 +103,11 @@ type VendorSatellites = {
     senderName: string;
     senderEmail: string;
     searchPlaceholder: string;
+    // P3a — delivery rules are vendor data, not constants. Deliberately
+    // different per vendor so the cart proves it reads them from the DB.
+    deliveryFeePence: number;
+    freeDeliveryThresholdPence: number | null;
+    minimumOrderPence: number;
   };
   deliveryPrefixes: string[];
 };
@@ -150,6 +155,9 @@ const AHEED_SATELLITES: VendorSatellites = {
     senderName: "Aheed Food Centre",
     senderEmail: "orders@aheedfoodcentre.nocaped.com",
     searchPlaceholder: "Search halal lamb, basmati, lentils…",
+    deliveryFeePence: 349,
+    freeDeliveryThresholdPence: 3000,
+    minimumOrderPence: 1500,
   },
   deliveryPrefixes: ["MK"],
 };
@@ -507,6 +515,9 @@ const SRIMART_SATELLITES: VendorSatellites = {
     senderName: "SriMart",
     senderEmail: "orders@srimart.nocaped.com",
     searchPlaceholder: "Search chargers, earbuds, lamps…",
+    deliveryFeePence: 299,
+    freeDeliveryThresholdPence: 5000,
+    minimumOrderPence: 1000,
   },
   deliveryPrefixes: ["RG"],
 };

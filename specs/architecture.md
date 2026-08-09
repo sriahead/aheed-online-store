@@ -4,7 +4,7 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.6.1"
+version: "1.7.0"
 updated: 2026-08-09
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
@@ -134,7 +134,14 @@ No layer skips inward; components never touch Prisma or the S3 client directly.
 > only that vendor's own origin** (a sibling vendor's origin is rejected exactly like an unknown
 > origin — reopening cross-vendor trust would undermine isolation, #83); the parent-domain
 > family-cookie (SSO) path is config-gated behind an optional `AUTH_COOKIE_FAMILY_DOMAIN`, unset today
-> (no subdomain family exists). The excerpt below predates
+> (no subdomain family exists). **The cart is vendor-scoped (P3a):** `Cart`/`CartItem` carry
+> `vendorId`, so one shopper has an independent cart per vendor. Cart identity is **exactly one of**
+> `userId` or an opaque `guestToken` in a host-only `aheed_cart` cookie, and carts are created lazily
+> (first add only — crawling this public storefront writes nothing). A guest cart meeting a saved cart
+> is **never silently merged**: the shopper picks combine / keep-saved / keep-new, and the cookie is
+> cleared only once a resolution is applied. The cart stores **no prices** — unit price is read from
+> `Product` at render and snapshotted into `OrderItem` only at order creation (P3b) — and stock is
+> advisory in the cart but authoritative at that decrement. The excerpt below predates
 > tenancy and is kept as a shape reference — see `prisma/schema.prisma` for the authoritative,
 > vendor-scoped models.
 

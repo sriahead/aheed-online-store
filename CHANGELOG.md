@@ -7,6 +7,36 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Cart foundation (P3a, #93)** — the storefront's inert "Add to Cart" is now real
+  (`specs/2026-08-09-p3a-cart-foundation/`). Vendor-scoped `Cart`/`CartItem` behind a new
+  `lib/repositories/cart.ts`, so one shopper has an **independent cart per vendor**. Identity is
+  **exactly one of** `userId` or an opaque `guestToken` in a **host-only** `aheed_cart` cookie
+  (mirroring slice 3c's isolation), and carts are created **lazily** — no row and no cookie until a
+  first add, so crawling this public, indexed storefront writes nothing. UI follows
+  `docs/ui-ref/CartDrawer.tsx`: a slide-out drawer whose **contents are server-rendered** (quantity
+  and remove are plain `<form>` posts to server actions) with only open/close as a client island,
+  plus a `/cart` route as the canonical URL. `AddToCartButton` is the one other island — it exists
+  because `ProductCard`'s body is a `<Link>` and the click must not navigate.
+  - **Two carts are never silently merged.** Signing in with both a guest and a saved cart prompts
+    the shopper — combine (sum, capped at stock) / keep saved / keep new — and nothing is destroyed
+    until they choose. No prompt when there's nothing to decide (empty saved cart is simply adopted).
+    This is also what makes the shared-device case safe: a second person signing in on a borrowed
+    browser is *asked* about the stranger's basket rather than inheriting it.
+  - **The cart stores no prices** — unit price is read from `Product` at render and is snapshotted
+    into `OrderItem` only at order creation (P3b); a cart that cached prices would serve stale money.
+    Stock is advisory here and authoritative at the P3b decrement (a cart is not a reservation).
+  - **Delivery rules became vendor data**: `VendorConfig` gains `deliveryFeePence` (default 349),
+    `freeDeliveryThresholdPence` (null = never free) and `minimumOrderPence` (default 0), seeded
+    differently for Aheed and SriMart. The reference mockup's hardcoded `£30` threshold and
+    `#1B5E20` greens are **translated, not copied** — thresholds come from the DB and colours through
+    `design-system.md`'s token table, so per-vendor theming can't regress the way #77 did. Applying
+    fee/minimum to a payable total stays P3b.
+  - Edge cases closed during spec review: a product with **no `Inventory` row** counts as out of
+    stock (never unlimited), and a product that goes inactive **while sitting in a cart** renders as
+    unavailable and is excluded from the subtotal instead of quietly adding money.
+  - Additive migration (two tables + three defaulted/nullable columns). `ProductSummary` gains
+    `inStock` so cards can show the out-of-stock state. Deferred: abandoned guest-cart cleanup
+    (**#94**, likely P7 with the GDPR retention review).
 - **GitHub Project delivery tracking (`scripts/provision-project.sh`).** Adds the idempotent
   provisioning script for the *Aheed Online Store — Delivery* Project (Projects V2), plus the
   `specs/roadmap.md` note establishing the rule: **the Project is a generated view of the roadmap,

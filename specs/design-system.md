@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.4.1"
-updated: 2026-08-08
+version: "1.5.0"
+updated: 2026-08-09
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -126,8 +126,18 @@ copied literally:
 - **The header is a Server Component** (`components/layout/Header.tsx`) — it reads the session and
   renders auth state (account link vs. sign-in) with zero client JS, the same
   progressive-enhancement stance as the GET-form search/filters.
-- **Cards and the cart button render `Add`/cart controls that are inert** until P3 wires a real
-  cart — visual fidelity without a fake count.
+- **The cart is real as of P3a** (`components/cart/`). The cart drawer follows
+  `docs/ui-ref/src/components/CartDrawer.tsx`'s structure — right-side slide-out, `max-w-md`,
+  backdrop dismiss, header count, delivery-incentive banner — with its colours translated through
+  the table above (`#1B5E20` → `bg-primary`, the incentive band's `emerald-50` → `bg-action-tint`,
+  the remove control's hover red → `text-danger`). The mockup's `freeDeliveryThreshold = 30` is
+  **vendor data** (`VendorConfig.freeDeliveryThresholdPence`), never a constant, and the banner is
+  omitted entirely when a vendor sets no threshold.
+- **Only the drawer's open/close is client-side.** Its contents are server-rendered and passed in as
+  children, and the quantity/remove controls are plain `<form>` posts to server actions — so the cart
+  works without client JS, keeping the progressive-enhancement stance above. The one other island is
+  `AddToCartButton`, which exists solely because `ProductCard`'s body is a `<Link>` and the click
+  must not navigate.
 
 ### Browse-page layout (post-review revision)
 
