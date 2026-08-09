@@ -34,7 +34,7 @@ function SearchForm({ className = "", placeholder }: { className?: string; place
 }
 
 export async function Header() {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const user = session?.user as { name: string } | undefined;
   const firstName = user?.name?.split(" ")[0];
 

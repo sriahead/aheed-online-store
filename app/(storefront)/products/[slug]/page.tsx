@@ -24,7 +24,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   }
 
   const { CDN_BASE_URL } = getEnv();
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const reviewRepo = getReviewRepository();
 
   const [reviews, existingReview] = await Promise.all([

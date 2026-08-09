@@ -11,7 +11,7 @@ export const metadata = { title: "Your account — Aheed Food Centre" };
 // own account. Not role-gated — see lib/auth-rbac.ts's requireRole() for
 // routes that need a *specific* role, which this isn't.
 export default async function AccountPage() {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   if (!session?.user) {
     redirect("/login");
   }

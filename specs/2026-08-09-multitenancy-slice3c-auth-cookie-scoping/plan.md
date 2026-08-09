@@ -7,7 +7,7 @@ status: draft
 version: "1.0.0"
 updated: 2026-08-09
 visibility: internal
-summary: Make Better Auth's baseURL, trustedOrigins and cookie domain data-driven per request from the resolved host + VendorDomain table. Isolated (host-only) sessions by default for every vendor; a config-gated AUTH_COOKIE_FAMILY_DOMAIN arms the parent-domain family-cookie mechanism for future subdomain vendors, off today.
+summary: Make Better Auth's baseURL, trustedOrigins and cookie domain data-driven per request from the resolved host + VendorDomain table. Isolated (host-only) sessions by default; a config-gated AUTH_COOKIE_FAMILY_DOMAIN arms future subdomain-family SSO, off today.
 tags: [multi-tenancy, vendor, auth, cookies, sso]
 related: [adr-004-multi-tenancy, multitenancy-slice3b-host-resolver, multitenancy-slice3a-vendor-membership, adr-002-auth-library, architecture]
 ---
