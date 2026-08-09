@@ -1,4 +1,4 @@
-import { resolveMergeAction } from "@/features/cart/actions";
+import { resolveMergeAction } from "@/features/cart/resolve-merge";
 
 /**
  * Shown when signing in brings a guest cart and a saved cart together and BOTH

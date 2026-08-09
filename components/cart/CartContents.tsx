@@ -4,7 +4,8 @@ import { formatPrice } from "@/components/product/format-price";
 import { composePublicUrl } from "@/lib/storage";
 import { deliveryProgress } from "@/lib/cart-rules";
 import type { CartSummary } from "@/lib/repositories/cart";
-import { removeFromCart, updateQuantity } from "@/features/cart/actions";
+import { removeFromCart } from "@/features/cart/remove-item";
+import { updateQuantity } from "@/features/cart/update-quantity";
 
 /**
  * Server-rendered cart body (P3a, #93) — shared by the drawer and /cart so both

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Plus, Check, Loader2 } from "lucide-react";
-import { addToCart } from "@/features/cart/actions";
+import { addToCart } from "@/features/cart/add-to-cart";
 
 /**
  * The one client island on the product grid (P3a, #93).
