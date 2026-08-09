@@ -9,18 +9,19 @@ every branch merges.
 ### Added
 - **Data-driven auth cookie scoping (ADR-004 slice 3c, #74)** — the last multi-tenancy gate before P3
   (`specs/2026-08-09-multitenancy-slice3c-auth-cookie-scoping/`). Better Auth's `baseURL`,
-  `trustedOrigins` and cookie domain are now resolved **per request** from the host + `VendorDomain`
+  `trustedOrigins` and cookie domain are now resolved **per request** from the host
   (`lib/auth-origin.ts`: pure `buildAuthOrigin` + async `resolveAuthOrigin`; `getAuth()` is now
   `async`), replacing the single hardcoded `BETTER_AUTH_URL`. Every vendor host gets a **host-only
-  (isolated) session by default** — no shared subdomain family exists (Aheed and SriMart sit on
-  distinct hosts), so isolated-by-default is the correct posture. A new **optional** platform env
-  `AUTH_COOKIE_FAMILY_DOMAIN` (unset in every environment today) arms the parent-domain family-SSO
-  cookie for a future `{slug}.<family>` subdomain family with no code change; a custom-domain vendor
-  never matches it and stays isolated. No schema/migration change. **Onboarding caveat:** because
-  `baseURL` is per host, each vendor host must be registered in the Google OAuth client's redirect
-  URIs (Aheed + SriMart done). ADR-004 (v1.1.0) carries a breadcrumb reconciling decision 4's assumed
-  subdomain family with the deployed topology; `specs/roadmap.md` change-log back-fills slices
-  3a/3b/4 + the #81 promotion. **ADR-004 slice sequence complete — P3 unblocked.**
+  session, trusting only its own origin, by default** — no shared subdomain family exists (Aheed and
+  SriMart sit on distinct hosts), so isolated-by-default is the correct posture. A new **optional**
+  platform env `AUTH_COOKIE_FAMILY_DOMAIN` (unset in every environment today) arms the parent-domain
+  family-SSO cookie for a future `{slug}.<family>` subdomain family with no code change; a
+  custom-domain vendor never matches it and stays isolated. No schema/migration change. **Onboarding
+  caveat:** because `baseURL` is per host, each vendor host must be registered in the Google OAuth
+  client's redirect URIs (Aheed + SriMart done). ADR-004 carries a breadcrumb reconciling decision 4's
+  assumed subdomain family with the deployed topology; `specs/roadmap.md` change-log back-fills slices
+  3a/3b/4 + the #81 promotion. **ADR-004 slice sequence complete — P3 unblocked.** See the `trustedOrigins`
+  correction below (#83), caught during this slice's own staging verification.
 - **Per-vendor search-box placeholder (ADR-004 slice 4 follow-up).** The header search placeholder was
   hardcoded Aheed grocery copy ("Search halal lamb, basmati, lentils…") shown on every vendor. Adds a
   nullable `VendorConfig.searchPlaceholder` column (additive migration), read via
@@ -28,6 +29,15 @@ every branch merges.
   keeps its copy, SriMart gets "Search chargers, earbuds, lamps…"). Re-seed each environment to apply.
 
 ### Fixed
+- **Auth `trustedOrigins` narrowed to same-vendor-only (#83, ADR-004 slice 3c correction).** Live
+  staging verification of #74, right after merge, showed the original design — `trustedOrigins`
+  populated from every `VendorDomain` host — would let one vendor's origin pass Better Auth's
+  origin/CSRF check on **another** vendor's auth endpoints (e.g. SriMart's origin trusted by Aheed's
+  `/api/auth/*`), reopening a cross-tenant surface that isolated-by-default exists to close.
+  `trustedOrigins` now contains only the current request's own origin (+ the family wildcard when
+  `AUTH_COOKIE_FAMILY_DOMAIN` is armed) — confirmed with the human. `lib/auth-origin.ts` no longer
+  needs a DB call at all. `requirements.md`/`validation.md`/ADR-004/`architecture.md`/`env-setup.md`
+  corrected to match.
 - **Multi-vendor browse/product polish (ADR-004 slice 4 follow-up, #79).** Three Aheed-hardcoded
   surfaces that looked wrong on a 2nd vendor (SriMart): (1) the **speciality filters**
   (Halal/Fresh/Organic) are now **data-driven** — `ProductRepository.availableSpecialities()` shows

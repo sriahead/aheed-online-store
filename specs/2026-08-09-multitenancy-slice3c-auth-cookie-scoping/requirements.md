@@ -1,21 +1,28 @@
 # ADR-004 slice 3c — data-driven auth cookie scoping (requirements)
 
 Make Better Auth's `baseURL`, `trustedOrigins` and cookie domain per-request from the resolved host
-+ `VendorDomain` (issue #74; ADR-004 slice 3, sibling of 3a/3b). Isolated (host-only) cookies by
+(issue #74; ADR-004 slice 3, sibling of 3a/3b). Isolated (host-only, same-vendor-only trust) by
 default; a config-gated `AUTH_COOKIE_FAMILY_DOMAIN` arms the parent-domain family cookie, off today.
-Builds on slice 3b's `lib/tenant.ts` host resolver; ADR-002 Better Auth otherwise unchanged.
+ADR-002 Better Auth otherwise unchanged.
+
+> **Correction (#83, discovered during this slice's own `/ship` staging verification):** R2/R3/R6/R7/R9
+> originally specified `trustedOrigins` as every `VendorDomain.host` (DB-driven, cross-vendor).
+> Confirmed with the human that trusting every vendor's origin on every other vendor's auth endpoints
+> reopens a cross-tenant CSRF-adjacent surface that isolated-by-default exists to close — no DB call is
+> needed at all; `trustedOrigins` is **same-vendor-only** (current origin + family wildcard when armed).
+> Requirements below reflect the corrected design.
 
 R1. `lib/config.ts` adds `AUTH_COOKIE_FAMILY_DOMAIN: z.string().optional()` to the schema and
     `getEnv()` reads it via `readEnv("AUTH_COOKIE_FAMILY_DOMAIN")`. Unset is valid (the default in
     every environment today). `npx tsc --noEmit` passes.
 
 R2. `lib/auth-origin.ts` exports a **pure** `buildAuthOrigin(input: { host: string; proto: string;
-    vendorHosts: string[]; familyDomain?: string }): { baseURL: string; trustedOrigins: string[];
-    crossSubDomainCookies?: { enabled: true; domain: string } }` that performs **no** I/O (no
-    `headers()`, no DB, no `getEnv()`), such that:
+    familyDomain?: string }): { baseURL: string; trustedOrigins: string[]; crossSubDomainCookies?:
+    { enabled: true; domain: string } }` that performs **no** I/O (no `headers()`, no DB, no
+    `getEnv()`), such that:
     - `baseURL === \`${proto}://${host}\``.
-    - `trustedOrigins` contains `\`${proto}://${host}\`` (current origin) and `\`https://${h}\`` for
-      every `h` in `vendorHosts`, de-duplicated.
+    - `trustedOrigins` contains **only** `\`${proto}://${host}\`` (the current origin) — no other
+      vendor's host is ever included.
     - When `familyDomain` is a non-empty string **and** `host` equals it or ends with `\`.${familyDomain}\``
       (dot boundary — a bare suffix substring does **not** match): the result includes
       `crossSubDomainCookies: { enabled: true, domain: familyDomain }` and `trustedOrigins` also
@@ -25,9 +32,9 @@ R2. `lib/auth-origin.ts` exports a **pure** `buildAuthOrigin(input: { host: stri
 
 R3. `lib/auth-origin.ts` exports an async `resolveAuthOrigin()` that reads the request host and
     protocol from `await headers()` (`host` lowercased/port-stripped; `proto` from
-    `x-forwarded-proto`, defaulting to `"https"`), reads every `VendorDomain.host` via `getPrisma()`,
-    reads `AUTH_COOKIE_FAMILY_DOMAIN` via `getEnv()`, and returns `buildAuthOrigin(...)`. It is
-    constructed fresh per call and never cached across requests (Workers I/O rule).
+    `x-forwarded-proto`, defaulting to `"https"`), reads `AUTH_COOKIE_FAMILY_DOMAIN` via `getEnv()`,
+    and returns `buildAuthOrigin(...)`. **No DB access** — `lib/auth-origin.ts` does not import
+    `lib/db`. Constructed fresh per call and never cached across requests (Workers I/O rule).
 
 R4. `getAuth()` in `lib/auth.ts` is `async` and sets, from `await resolveAuthOrigin()`: Better Auth's
     `baseURL`, `trustedOrigins`, and `advanced.crossSubDomainCookies` (the latter only when the
@@ -44,12 +51,17 @@ R5. Every `getAuth()` call site is updated to `await getAuth()` and still type-c
 
 R6. Default (no `AUTH_COOKIE_FAMILY_DOMAIN`): for any vendor host, `resolveAuthOrigin()` returns no
     `crossSubDomainCookies`, so Better Auth issues a **host-only** session cookie (no `Domain=`
-    attribute) — an isolated session per vendor host. Covered by R9's unit tests and verified on
-    preview via the `Set-Cookie` header (R6 row in validation).
+    attribute) — an isolated session per vendor host. Covered by R9's unit tests. Live `Set-Cookie`
+    confirmation needs a successful sign-in on a real environment (credentials-gated; see
+    `validation.md`).
 
-R7. `trustedOrigins` at runtime equals the current request origin plus every `VendorDomain.host` as an
-    `https://` origin. A sign-in/sign-up POST whose `Origin` is a live vendor host is accepted; a POST
-    from an origin absent from that set is rejected by Better Auth's origin check.
+R7. `trustedOrigins` at runtime equals **only** the current request origin (+ the family wildcard when
+    `AUTH_COOKIE_FAMILY_DOMAIN` is armed and the host is under it). A sign-in/sign-up POST whose
+    `Origin` matches the current host is accepted; a POST whose `Origin` is **any other host —
+    including another live vendor's** — is rejected by Better Auth's origin check, same as a wholly
+    unknown origin. Verified live on staging (#83): same-origin → 401 (wrong-password, origin
+    accepted); cross-vendor origin (a real, seeded `VendorDomain` host) → 403 `INVALID_ORIGIN`,
+    identical to an unknown origin.
 
 R8. Family path (unit-level, config armed): with `familyDomain` set, `buildAuthOrigin` enables
     `crossSubDomainCookies` with `domain === familyDomain` **only** for a host under that suffix, and
@@ -57,11 +69,11 @@ R8. Family path (unit-level, config armed): with `familyDomain` set, `buildAuthO
     isolated even when the family config is on.
 
 R9. `tests/auth-origin.test.ts` unit-tests `buildAuthOrigin` and passes (`npx vitest run
-    tests/auth-origin.test.ts`), covering: config unset → host-only for a family-shaped host and for a
-    custom host; config set → family host enables `crossSubDomainCookies` (correct `domain`) + wildcard
-    trusted origin; config set → custom host stays host-only; `trustedOrigins` includes all vendor
-    hosts + current origin (de-duplicated); dot-boundary matching (a bare-suffix non-subdomain does not
-    match); `baseURL`/proto derivation.
+    tests/auth-origin.test.ts`), covering: config unset → `trustedOrigins` contains only the current
+    origin for a family-shaped host and for a custom host (no other vendor's host is ever included);
+    config set → family host enables `crossSubDomainCookies` (correct `domain`) + wildcard trusted
+    origin; config set → custom host stays host-only; dot-boundary matching (a bare-suffix
+    non-subdomain does not match); `baseURL`/proto derivation.
 
 R10. **Docs (standing decisions):** ADR-004 gains a slice-3c breadcrumb noting the deployed topology
      has no subdomain family and that isolated-by-default is the implemented posture (family SSO

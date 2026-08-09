@@ -4,7 +4,7 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.6.0"
+version: "1.6.1"
 updated: 2026-08-09
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
@@ -128,11 +128,13 @@ No layer skips inward; components never touch Prisma or the S3 client directly.
 > **Branding & config are data-driven (slice 4):** a vendor's colours, name, logo, locality, delivery
 > area, metadata and email sender come from `VendorBranding`/`VendorConfig`/`VendorDeliveryArea` via
 > `lib/repositories/vendor.ts` (per-request `cache()`); the eight brand primitives are injected as CSS
-> custom properties so components are unchanged. **Auth cookie scoping is data-driven (slice 3c):**
-> `getAuth()`'s `baseURL`, `trustedOrigins` and cookie domain are resolved per request from the host +
-> `VendorDomain` (`lib/auth-origin.ts`) — **host-only (isolated) sessions by default**, so each vendor
-> is a separate login; the parent-domain family-cookie (SSO) path is config-gated behind an optional
-> `AUTH_COOKIE_FAMILY_DOMAIN`, unset today (no subdomain family exists). The excerpt below predates
+> custom properties so components are unchanged. **Auth cookie scoping is per-request, same-vendor-only
+> (slice 3c):** `getAuth()`'s `baseURL`, `trustedOrigins` and cookie domain are resolved per request
+> from the host alone (`lib/auth-origin.ts`, no DB call) — **host-only sessions by default, trusting
+> only that vendor's own origin** (a sibling vendor's origin is rejected exactly like an unknown
+> origin — reopening cross-vendor trust would undermine isolation, #83); the parent-domain
+> family-cookie (SSO) path is config-gated behind an optional `AUTH_COOKIE_FAMILY_DOMAIN`, unset today
+> (no subdomain family exists). The excerpt below predates
 > tenancy and is kept as a shape reference — see `prisma/schema.prisma` for the authoritative,
 > vendor-scoped models.
 

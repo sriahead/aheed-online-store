@@ -4,7 +4,7 @@ title: "Environment Setup — Secrets & Config (staging / production)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.5.0"
+version: "1.5.1"
 updated: 2026-08-09
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, the demo-accounts tool, per-vendor host mapping, per-vendor branding/logo seeding, and auth cookie scoping.
@@ -102,8 +102,11 @@ wordmark); setting a real one later is data-only, no deploy.
 
 ### Auth cookie scoping (ADR-004 slice 3c)
 
-`getAuth()` derives `baseURL` / `trustedOrigins` / cookie domain **per request** from the host +
-`VendorDomain` — so each vendor host gets a **host-only (isolated) session** with no configuration.
+`getAuth()` derives `baseURL` / `trustedOrigins` / cookie domain **per request** from the host alone
+(no DB call) — so each vendor host gets a **host-only session that trusts only its own origin**, with
+no configuration. A sibling vendor's origin is rejected by Better Auth's origin/CSRF check exactly
+like an unknown origin — trusting every vendor's origin on every other vendor's auth endpoints was
+considered and rejected as reopening cross-tenant CSRF surface (#83).
 
 - **`AUTH_COOKIE_FAMILY_DOMAIN`** — *optional*, **leave unset** in staging and production today
   (there is no shared subdomain family: Aheed and SriMart are on distinct hosts). It exists only to
