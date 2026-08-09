@@ -22,12 +22,13 @@ export interface ProductSummary {
   isOrganic: boolean;
   averageRating: number;
   reviewCount: number;
+  /** P3a — cards need this to render the add-to-cart out-of-stock state. */
+  inStock: boolean;
 }
 
 export interface ProductDetail extends ProductSummary {
   description: string;
   images: ProductImageSummary[];
-  inStock: boolean;
 }
 
 export interface ProductPage {
@@ -122,6 +123,7 @@ export function getProductRepository(): ProductRepository {
         averageRating: true,
         reviewCount: true,
         images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
+        inventory: { select: { quantity: true } },
       },
     });
 
@@ -143,6 +145,7 @@ export function getProductRepository(): ProductRepository {
         averageRating: p.averageRating,
         reviewCount: p.reviewCount,
         primaryImage: p.images[0] ?? null,
+        inStock: (p.inventory?.quantity ?? 0) > 0,
       })),
       nextCursor: hasMore ? page[page.length - 1].id : null,
     };

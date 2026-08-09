@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Star, Plus } from "lucide-react";
+import { Star } from "lucide-react";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { composePublicUrl } from "@/lib/storage";
 import { formatPrice } from "./format-price";
 import type { ProductSummary } from "@/lib/repositories/products";
@@ -90,12 +91,13 @@ export function ProductCard({
               </span>
             )}
           </span>
-          <span
-            aria-hidden
-            className="flex items-center justify-center rounded-full bg-primary p-2 text-white"
-          >
-            <Plus className="h-4 w-4" />
-          </span>
+          {/* Real add-to-cart (P3a). The card body is a <Link>, so the button
+              stops the click from navigating — see AddToCartButton. */}
+          <AddToCartButton
+            productId={product.id}
+            disabled={!product.inStock}
+            label={`Add ${product.name} to cart`}
+          />
         </div>
       </div>
     </Link>

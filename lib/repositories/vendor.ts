@@ -27,6 +27,11 @@ export interface VendorProfile {
   senderEmail: string;
   searchPlaceholder: string;
   deliveryPrefixes: string[];
+  // P3a — delivery rules as vendor data. P3a reads only the threshold (cart
+  // banner); applying fee/minimum to a payable total is P3b.
+  deliveryFeePence: number;
+  freeDeliveryThresholdPence: number | null;
+  minimumOrderPence: number;
 }
 
 // Fallbacks = the Aheed defaults already in design-system/tokens/tokens.css, so a
@@ -73,6 +78,9 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
           senderName: true,
           senderEmail: true,
           searchPlaceholder: true,
+          deliveryFeePence: true,
+          freeDeliveryThresholdPence: true,
+          minimumOrderPence: true,
         },
       },
       deliveryAreas: { select: { prefix: true } },
@@ -101,6 +109,11 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
     senderEmail: vendor?.config?.senderEmail ?? "",
     searchPlaceholder: vendor?.config?.searchPlaceholder ?? DEFAULT_SEARCH_PLACEHOLDER,
     deliveryPrefixes: (vendor?.deliveryAreas ?? []).map((a) => a.prefix),
+    // Fall back to the schema defaults when the config satellite is unseeded,
+    // matching the deploy-before-seed safety the rest of this file uses.
+    deliveryFeePence: vendor?.config?.deliveryFeePence ?? 349,
+    freeDeliveryThresholdPence: vendor?.config?.freeDeliveryThresholdPence ?? null,
+    minimumOrderPence: vendor?.config?.minimumOrderPence ?? 0,
   };
 }
 
