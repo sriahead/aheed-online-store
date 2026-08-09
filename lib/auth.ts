@@ -4,6 +4,7 @@ import { getPrisma } from "./db";
 import { getEnv, type AppEnv } from "./config";
 import { getEmailService } from "./email";
 import { getCurrentVendorSenderName } from "./repositories/vendor";
+import { resolveAuthOrigin } from "./auth-origin";
 
 /**
  * Pure helper, split out of getAuth() so it's unit-testable without a DB
@@ -36,15 +37,27 @@ export function buildSocialProviders(
  * the session/user object Better Auth returns, but a signup request can never
  * set its own role — it's assigned server-side (Prisma default: CUSTOMER).
  * Google sign-in gets the same default (no separate role-assignment path).
+ *
+ * `async` (ADR-004 slice 3c, #74): baseURL / trustedOrigins / cookie domain are
+ * resolved per request from the host + VendorDomain via resolveAuthOrigin(), so
+ * every vendor host gets a correct, isolated (host-only) session by default. Still
+ * constructed fresh on every call — async does not cache, matching lib/db.ts.
  */
-export function getAuth() {
+export async function getAuth() {
   const env = getEnv();
   const email = getEmailService();
+  const origin = await resolveAuthOrigin();
 
   return betterAuth({
     database: prismaAdapter(getPrisma(), { provider: "postgresql" }),
     secret: env.BETTER_AUTH_SECRET,
-    baseURL: env.BETTER_AUTH_URL,
+    // Derived per request from the host; BETTER_AUTH_URL is only a fallback when
+    // no host header is present (resolveAuthOrigin yields an empty host → "https://").
+    baseURL: origin.baseURL === "https://" ? env.BETTER_AUTH_URL : origin.baseURL,
+    trustedOrigins: origin.trustedOrigins,
+    ...(origin.crossSubDomainCookies
+      ? { advanced: { crossSubDomainCookies: origin.crossSubDomainCookies } }
+      : {}),
     socialProviders: buildSocialProviders(env),
     user: {
       additionalFields: {
