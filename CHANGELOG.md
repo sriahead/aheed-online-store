@@ -38,6 +38,9 @@ every branch merges.
   `AUTH_COOKIE_FAMILY_DOMAIN` is armed) — confirmed with the human. `lib/auth-origin.ts` no longer
   needs a DB call at all. `requirements.md`/`validation.md`/ADR-004/`architecture.md`/`env-setup.md`
   corrected to match.
+- **Roadmap's slice 3c change-log entry corrected (#83 follow-up).** Missed when #83 fixed the other
+  standing docs — `specs/roadmap.md` still described `trustedOrigins` as resolved "from the host +
+  `VendorDomain`". Now matches the same-vendor-only design.
 - **Multi-vendor browse/product polish (ADR-004 slice 4 follow-up, #79).** Three Aheed-hardcoded
   surfaces that looked wrong on a 2nd vendor (SriMart): (1) the **speciality filters**
   (Halal/Fresh/Organic) are now **data-driven** — `ProductRepository.availableSpecialities()` shows
