@@ -4,7 +4,7 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.7.1"
+version: "1.8.0"
 updated: 2026-08-09
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures.
@@ -16,6 +16,12 @@ tags: [roadmap, phases, backlog]
 Master backlog for the Aheed Online Store (SDD Solo Mode). Phases deliver working software early
 and minimise risk. The pivot to Cloudflare Workers + Neon adds a **Milestone 0** before P0:
 prove the infrastructure end-to-end with a walking skeleton, *then* build features.
+
+> **Delivery tracking.** The GitHub Project *Aheed Online Store — Delivery* is a generated **view** of
+> this roadmap, never a second plan. It holds only the **status layer** — what is in progress, in
+> review, or blocked right now. Phases, scope and acceptance criteria live here and in
+> `specs/<slice>/`; if something belongs in a doc, it does not go in the Project.
+> Provisioned by `scripts/provision-project.sh` (idempotent).
 
 ## Milestone 0 — Walking Skeleton (infrastructure proof) 🩻
 The smallest app that exercises `browser → Worker → Prisma → Neon` on real infra, plus the full

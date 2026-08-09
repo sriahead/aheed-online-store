@@ -7,6 +7,19 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **GitHub Project delivery tracking (`scripts/provision-project.sh`).** Adds the idempotent
+  provisioning script for the *Aheed Online Store — Delivery* Project (Projects V2), plus the
+  `specs/roadmap.md` note establishing the rule: **the Project is a generated view of the roadmap,
+  never a second plan** — it carries only the status layer (in progress / in review / blocked), while
+  scope and acceptance criteria stay in `specs/`. Provisions 6 area labels, 11 milestones 1:1 with the
+  roadmap phases (M0–P2.5 created **and closed**, P3–P8 open), and one epic per unspec'd phase (P3–P8)
+  linking to its criteria rather than copying them. Check-then-create throughout: a re-run creates
+  nothing. Deliberately omitted as duplication: a `feature` label (the repo already uses
+  `enhancement`), `priority:*` labels (Priority is a Project field), and `phase:*` labels (Phase is a
+  Project field). **Two GitHub limits, flagged not papered over:** Projects V2 exposes no public API
+  for built-in workflows or view creation (the script prints the UI steps), and issues here never
+  auto-close on `Closes #NN` because PRs merge to `staging`, not the default branch — so **Done means
+  "promoted to production"** and staging-merged work legitimately sits in In Review.
 - **Data-driven auth cookie scoping (ADR-004 slice 3c, #74)** — the last multi-tenancy gate before P3
   (`specs/2026-08-09-multitenancy-slice3c-auth-cookie-scoping/`). Better Auth's `baseURL`,
   `trustedOrigins` and cookie domain are now resolved **per request** from the host
