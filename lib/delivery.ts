@@ -1,14 +1,20 @@
-// Any Milton Keynes (MK) postcode district — MK1 through MK99 — e.g. MK9, MK19, MK24.
-// Deliberately broad: the precise per-vendor delivery footprint becomes DB-driven config
-// (ADR-004 / #49); until then we accept the whole MK area rather than a hardcoded shortlist.
-const MILTON_KEYNES_DISTRICT = /^MK[1-9][0-9]?(?:\d[A-Z]{0,2})?$/;
+// Vendor delivery footprint is DB-driven (ADR-004 slice 4): a vendor's
+// VendorDeliveryArea rows supply postcode-district prefixes (e.g. "MK", "RG").
+// This function stays PURE — no Prisma/network — so callers fetch the prefixes
+// (via lib/repositories/vendor) and pass them in; keeps it trivially testable.
 
 /**
- * True for any well-formed Milton Keynes (MK) postcode — the currently deliverable area.
- * Pure, no persistence/network — P3's checkout flow decides what to do with the result.
+ * True when `postcode`'s outward area starts with one of the vendor's `prefixes`
+ * followed by a digit — e.g. `isDeliverable("MK9 1AA", ["MK"])`. Tolerant of
+ * case/spacing. Empty postcode or empty prefix list ⇒ not deliverable.
  */
-export function isDeliverable(postcode: string): boolean {
+export function isDeliverable(postcode: string, prefixes: string[]): boolean {
   const normalized = postcode.trim().toUpperCase().replace(/\s+/g, "");
-  if (!normalized) return false;
-  return MILTON_KEYNES_DISTRICT.test(normalized);
+  if (!normalized || prefixes.length === 0) return false;
+  return prefixes.some((prefix) => {
+    const p = prefix.trim().toUpperCase();
+    // Outward area must be the prefix immediately followed by a digit, so a bare
+    // "MK" (no district number) is not deliverable, matching the old MK regex.
+    return p.length > 0 && new RegExp(`^${p}[0-9]`).test(normalized);
+  });
 }

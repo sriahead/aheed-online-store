@@ -187,14 +187,15 @@ model VendorBranding {
 }
 
 model VendorConfig {
-  id           String   @id @default(uuid())
-  vendorId     String   @unique
-  vendor       Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  localityName String // e.g. "Milton Keynes"
-  senderName   String // transactional email sender identity
-  senderEmail  String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                String   @id @default(uuid())
+  vendorId          String   @unique
+  vendor            Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  localityName      String // e.g. "Milton Keynes"
+  senderName        String // transactional email sender identity
+  senderEmail       String
+  searchPlaceholder String? // header search-box copy, e.g. "Search halal lamb, basmati, lentils…"
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model VendorDeliveryArea {

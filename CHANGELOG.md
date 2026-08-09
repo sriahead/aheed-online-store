@@ -7,6 +7,45 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Per-vendor search-box placeholder (ADR-004 slice 4 follow-up).** The header search placeholder was
+  hardcoded Aheed grocery copy ("Search halal lamb, basmati, lentils…") shown on every vendor. Adds a
+  nullable `VendorConfig.searchPlaceholder` column (additive migration), read via
+  `lib/repositories/vendor.ts` with a generic `"Search products…"` fallback; seeded per vendor (Aheed
+  keeps its copy, SriMart gets "Search chargers, earbuds, lamps…"). Re-seed each environment to apply.
+
+### Fixed
+- **Multi-vendor browse/product polish (ADR-004 slice 4 follow-up, #79).** Three Aheed-hardcoded
+  surfaces that looked wrong on a 2nd vendor (SriMart): (1) the **speciality filters**
+  (Halal/Fresh/Organic) are now **data-driven** — `ProductRepository.availableSpecialities()` shows
+  each only if the vendor has ≥1 active product with that attribute (a tech vendor shows none); (2)
+  the shared product-image placeholder no longer reads "Aheed placeholder" — `placeholder-product.svg`
+  is now brand-neutral ("No image", grey), re-uploaded to existing products by a new seed
+  `refreshProductImages` step; (3) `app/manifest.ts` is **vendor-aware** (name/short_name/theme_color
+  from the resolved vendor, neutral fallback). Re-seed to refresh the placeholder image.
+- **Per-vendor theming now recolours the storefront (ADR-004 slice 4 follow-up).** The slice-4
+  injection set only the eight `--color-brand-*` primitives on the storefront wrapper, but Tailwind v4
+  emits the semantic tokens at `:root` as `var(--color-brand-*)` and the browser resolves that inner
+  `var()` **at `:root`** — freezing e.g. `--color-primary` to the default palette, so a 2nd vendor's
+  colours never applied (caught on staging: SriMart seeded blue but still rendered green). The wrapper
+  now also re-declares the **semantic** tokens (same primitive→semantic mapping as `tokens.css`) and
+  derives the hover shades per vendor via `color-mix()`. Data/seed were correct; only the injected
+  layer changed (`app/(storefront)/layout.tsx`). No schema/seed change.
+
+### Added
+- **Multi-tenancy — branding-as-CSS-vars + config split (ADR-004 slice 4)**
+  (`specs/2026-08-08-multitenancy-slice4-branding-config/`, #73). Fills the empty
+  `VendorBranding`/`VendorConfig`/`VendorDeliveryArea` satellites and wires the read paths, so a
+  vendor's **look and locality are data-driven**: the eight `--color-brand-*` primitives are injected
+  as CSS custom properties per request (semantic tokens/components unchanged — the `var()` seam
+  cascades), and header/hero copy, locality, delivery area, logo, page metadata and email sender name
+  come from the DB. New `lib/repositories/vendor.ts` read path (per-request `cache()`, keeps the
+  no-direct-Prisma guard green); `lib/delivery.ts`'s `isDeliverable(postcode, prefixes)` is now pure +
+  vendor-scoped; header logo renders from `logoStorageKey` via the CDN or a **text wordmark** fallback.
+  Seeds **SriMart** with a visibly distinct (blue/tech) palette, Reading/`RG` locality and its own
+  tagline — proving two hosts render as different vendors from data alone. No schema migration (slice-1
+  tables) and no new env vars. Deferred (tracked): the per-page `metadata.title` long tail + async
+  `manifest.ts`, per-vendor email From (Resend domain verification), a named theme catalogue (#75),
+  and dedicated hero-copy columns; auth cookie scoping / family SSO stays slice 3c (#74).
 - **Multi-tenancy — host→tenant resolution + 2nd vendor (SriMart)**
   (`specs/2026-08-08-multitenancy-slice3b-host-resolver/`, #70; ADR-004 slice 3b). The app now serves
   the right vendor's data based on the **request host**: a `VendorDomain(host)` table maps hosts to

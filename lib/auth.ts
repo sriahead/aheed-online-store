@@ -3,6 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { getPrisma } from "./db";
 import { getEnv, type AppEnv } from "./config";
 import { getEmailService } from "./email";
+import { getCurrentVendorSenderName } from "./repositories/vendor";
 
 /**
  * Pure helper, split out of getAuth() so it's unit-testable without a DB
@@ -54,18 +55,22 @@ export function getAuth() {
       enabled: true,
       requireEmailVerification: true,
       sendResetPassword: async ({ user, url }) => {
+        // Sender identity is the resolved vendor's (ADR-004 slice 4); the From
+        // address stays the platform-verified Resend identity.
+        const senderName = await getCurrentVendorSenderName();
         await email.send({
           to: user.email,
-          subject: "Reset your Aheed Food Centre password",
+          subject: `Reset your ${senderName} password`,
           html: `<p>Click <a href="${url}">here</a> to reset your password. If you didn't request this, ignore this email.</p>`,
         });
       },
     },
     emailVerification: {
       sendVerificationEmail: async ({ user, url }) => {
+        const senderName = await getCurrentVendorSenderName();
         await email.send({
           to: user.email,
-          subject: "Verify your Aheed Food Centre email",
+          subject: `Verify your ${senderName} email`,
           html: `<p>Click <a href="${url}">here</a> to verify your email.</p>`,
         });
       },

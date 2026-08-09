@@ -9,6 +9,7 @@
 export function ProductFilterForm({
   showQuery,
   searchParams,
+  specialities,
 }: {
   showQuery?: boolean;
   searchParams: {
@@ -20,7 +21,11 @@ export function ProductFilterForm({
     isFresh?: string;
     isOrganic?: string;
   };
+  // Per-vendor filter visibility (ADR-004 follow-up): only offer a speciality
+  // filter the vendor's catalogue actually uses. Defaults to none.
+  specialities?: { halal: boolean; fresh: boolean; organic: boolean };
 }) {
+  const spec = specialities ?? { halal: false, fresh: false, organic: false };
   return (
     <form method="GET" className="flex flex-col gap-5">
       {showQuery && (
@@ -73,33 +78,39 @@ export function ProductFilterForm({
           />
           <span className="text-sm text-primary">In stock only</span>
         </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="isHalal"
-            value="1"
-            defaultChecked={searchParams.isHalal === "1"}
-          />
-          <span className="text-sm text-primary">Halal</span>
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="isFresh"
-            value="1"
-            defaultChecked={searchParams.isFresh === "1"}
-          />
-          <span className="text-sm text-primary">Fresh</span>
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="isOrganic"
-            value="1"
-            defaultChecked={searchParams.isOrganic === "1"}
-          />
-          <span className="text-sm text-primary">Organic</span>
-        </label>
+        {spec.halal && (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="isHalal"
+              value="1"
+              defaultChecked={searchParams.isHalal === "1"}
+            />
+            <span className="text-sm text-primary">Halal</span>
+          </label>
+        )}
+        {spec.fresh && (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="isFresh"
+              value="1"
+              defaultChecked={searchParams.isFresh === "1"}
+            />
+            <span className="text-sm text-primary">Fresh</span>
+          </label>
+        )}
+        {spec.organic && (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="isOrganic"
+              value="1"
+              defaultChecked={searchParams.isOrganic === "1"}
+            />
+            <span className="text-sm text-primary">Organic</span>
+          </label>
+        )}
       </fieldset>
 
       <button
