@@ -7,7 +7,7 @@ status: draft
 version: "1.0.0"
 updated: 2026-08-09
 visibility: internal
-summary: Make Better Auth's baseURL, trustedOrigins and cookie domain data-driven per request from the resolved host + VendorDomain table. Isolated (host-only) sessions by default; a config-gated AUTH_COOKIE_FAMILY_DOMAIN arms future subdomain-family SSO, off today.
+summary: Make Better Auth's baseURL, trustedOrigins and cookie domain data-driven per request from the resolved host. Isolated (host-only, same-vendor-only trust) sessions by default; a config-gated AUTH_COOKIE_FAMILY_DOMAIN arms future subdomain-family SSO, off today.
 tags: [multi-tenancy, vendor, auth, cookies, sso]
 related: [adr-004-multi-tenancy, multitenancy-slice3b-host-resolver, multitenancy-slice3a-vendor-membership, adr-002-auth-library, architecture]
 ---
@@ -20,9 +20,16 @@ carts/orders/checkout inherit correct per-vendor sessions instead of baking in a
 host. `requirements.md` holds the checkable criteria.
 
 **Goal:** replace the single hardcoded `BETTER_AUTH_URL` baseURL (and the absent `trustedOrigins`)
-with per-request resolution of `{ baseURL, trustedOrigins, cookieDomain }` from the request host and
-the `VendorDomain` table — **host-only (isolated) cookies by default**, with a config-gated hook for
+with per-request resolution of `{ baseURL, trustedOrigins, cookieDomain }` from the request host —
+**host-only, same-vendor-only-trusted cookies by default**, with a config-gated hook for
 subdomain-family SSO later. Onboarding a vendor stays data-only (no hardcoded origin, no redeploy).
+
+> **Correction (#83):** an earlier version of this slice populated `trustedOrigins` from every
+> `VendorDomain` host (DB-driven, cross-vendor). Live staging verification during `/ship` showed this
+> would let one vendor's origin pass Better Auth's CSRF/origin check on another vendor's auth
+> endpoints — reopening exactly the cross-tenant surface isolated-by-default was meant to close.
+> Corrected (confirmed with the human) to same-vendor-only trust; no DB call needed. See "Key design
+> decisions" and `requirements.md`'s correction note.
 
 ## Topology reality (why isolated-by-default)
 
@@ -38,20 +45,21 @@ family path becomes a config-gated future, not the default).
 ## Key design decisions
 
 - **Pure builder + thin async wrapper**, mirroring `buildSocialProviders()`'s split (P1b). A pure
-  `buildAuthOrigin({ host, proto, vendorHosts, familyDomain })` computes
-  `{ baseURL, trustedOrigins, crossSubDomainCookies? }` with no I/O — unit-testable without a DB.
-  `resolveAuthOrigin()` is the async wrapper reading `headers()` + `VendorDomain` + config and calling
-  the builder.
-- **`getAuth()` becomes `async`.** It must read the request host (`await headers()`) and the vendor
-  host list (DB) before constructing Better Auth. Every call site is already inside an `async`
-  function that awaits the result, so this is a mechanical `getAuth()` → `await getAuth()` change
-  across ~8 files. The **construct-fresh-per-call** rule (CLAUDE.md) is preserved — async does not
-  cache; nothing crosses a request boundary.
-- **`trustedOrigins` from the DB, host-only cookies by default.** `trustedOrigins` = every
-  `VendorDomain.host` as an `https://` origin + the current request origin, so a sign-in POST from any
-  live vendor host passes Better Auth's origin/CSRF check while unknown origins are rejected. No
-  `advanced.crossSubDomainCookies` is set → Better Auth's default **host-only** cookie, i.e. an
-  isolated session per vendor host.
+  `buildAuthOrigin({ host, proto, familyDomain })` computes
+  `{ baseURL, trustedOrigins, crossSubDomainCookies? }` with no I/O — unit-testable, no DB needed.
+  `resolveAuthOrigin()` is the async wrapper reading `headers()` + config and calling the builder.
+- **`getAuth()` becomes `async`.** It must read the request host (`await headers()`) before
+  constructing Better Auth. Every call site is already inside an `async` function that awaits the
+  result, so this is a mechanical `getAuth()` → `await getAuth()` change across ~8 files. The
+  **construct-fresh-per-call** rule (CLAUDE.md) is preserved — async does not cache; nothing crosses a
+  request boundary.
+- **`trustedOrigins` is same-vendor-only, host-only cookies by default.** `trustedOrigins` = only the
+  current request's own origin (+ the family wildcard when `AUTH_COOKIE_FAMILY_DOMAIN` is armed and
+  the host is under it). **No other vendor's host is ever trusted** — Better Auth's origin/CSRF check
+  passes only a same-origin sign-in POST; every other origin, including a live sibling vendor's, is
+  rejected identically to an unknown origin (verified live on staging, #83). No
+  `advanced.crossSubDomainCookies` is set by default → Better Auth's default **host-only** cookie, i.e.
+  an isolated session per vendor host.
 - **`AUTH_COOKIE_FAMILY_DOMAIN` — config-gated family mechanism, off by default.** A new *optional
   platform* env (in `lib/config`). When **set**, a request whose host ends on that suffix (dot
   boundary) gets `crossSubDomainCookies: { enabled: true, domain: <familyDomain> }` (parent-domain

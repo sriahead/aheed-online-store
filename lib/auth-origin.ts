@@ -1,15 +1,19 @@
 import { headers } from "next/headers";
-import { getPrisma } from "./db";
 import { getEnv } from "./config";
 
 /**
- * Per-request auth origin/cookie config for Better Auth (ADR-004 slice 3c, #74).
+ * Per-request auth origin/cookie config for Better Auth (ADR-004 slice 3c, #74;
+ * corrected #83). trustedOrigins is SAME-VENDOR-ONLY by design: trusting every
+ * vendor's origin on every other vendor's auth endpoints would reopen a
+ * cross-tenant CSRF-adjacent surface that isolated-by-default exists to close —
+ * confirmed live on staging and corrected with the human (#83). The
+ * config-gated family suffix is the one deliberate exception, for the future
+ * case where related subdomains are meant to interoperate.
  *
- * `buildAuthOrigin` is PURE — no I/O — so it's unit-testable without a DB (same
- * split as lib/auth.ts's buildSocialProviders()). `resolveAuthOrigin()` is the
- * thin async wrapper that reads the request host + VendorDomain hosts + config
- * and feeds the builder. Constructed fresh per request; never cached across
- * requests (Workers I/O rule, see lib/db.ts).
+ * `buildAuthOrigin` is PURE — no I/O — so it's unit-testable (same split as
+ * lib/auth.ts's buildSocialProviders()). `resolveAuthOrigin()` is the thin
+ * async wrapper reading the request host + config. No DB access needed: unlike
+ * the original design, nothing here depends on VendorDomain.
  */
 
 export type AuthOrigin = {
@@ -23,8 +27,6 @@ export type AuthOrigin = {
 export type BuildAuthOriginInput = {
   host: string;
   proto: string;
-  /** Every known vendor host (from VendorDomain) — trusted as sign-in origins. */
-  vendorHosts: string[];
   /** Optional platform family suffix; when set, a host under it gets an SSO cookie. */
   familyDomain?: string;
 };
@@ -40,22 +42,21 @@ function isUnderFamily(host: string, familyDomain: string): boolean {
 }
 
 export function buildAuthOrigin(input: BuildAuthOriginInput): AuthOrigin {
-  const { host, proto, vendorHosts, familyDomain } = input;
-
-  const trusted = new Set<string>([`${proto}://${host}`]);
-  for (const h of vendorHosts) trusted.add(`https://${h}`);
+  const { host, proto, familyDomain } = input;
+  const currentOrigin = `${proto}://${host}`;
+  const trusted = new Set<string>([currentOrigin]);
 
   const family = familyDomain && familyDomain.trim().length > 0 ? familyDomain : undefined;
   if (family && isUnderFamily(host, family)) {
     trusted.add(`https://*.${family.replace(/^\./, "")}`);
     return {
-      baseURL: `${proto}://${host}`,
+      baseURL: currentOrigin,
       trustedOrigins: [...trusted],
       crossSubDomainCookies: { enabled: true, domain: family },
     };
   }
 
-  return { baseURL: `${proto}://${host}`, trustedOrigins: [...trusted] };
+  return { baseURL: currentOrigin, trustedOrigins: [...trusted] };
 }
 
 export async function resolveAuthOrigin(): Promise<AuthOrigin> {
@@ -63,13 +64,5 @@ export async function resolveAuthOrigin(): Promise<AuthOrigin> {
   const host = (h.get("host") ?? "").toLowerCase().split(":")[0];
   const proto = (h.get("x-forwarded-proto") ?? "https").split(",")[0].trim() || "https";
 
-  const prisma = getPrisma();
-  const domains = await prisma.vendorDomain.findMany({ select: { host: true } });
-
-  return buildAuthOrigin({
-    host,
-    proto,
-    vendorHosts: domains.map((d) => d.host),
-    familyDomain: getEnv().AUTH_COOKIE_FAMILY_DOMAIN,
-  });
+  return buildAuthOrigin({ host, proto, familyDomain: getEnv().AUTH_COOKIE_FAMILY_DOMAIN });
 }
