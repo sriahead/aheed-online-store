@@ -7,6 +7,20 @@ every branch merges.
 ## [Unreleased]
 
 ### Fixed
+- **`configure-env.mjs` now knows about the Stripe secrets.** P3c added `STRIPE_SECRET_KEY` and
+  `STRIPE_WEBHOOK_SECRET` as Worker secrets but never taught the sync tool about them, so the
+  script silently reported them as "unrecognized" and skipped them — which is why production ran
+  without Stripe credentials until they were set by hand. Added as a new **`OPTIONAL_WORKER_SECRETS`**
+  list rather than under `WORKER_SECRETS`, mirroring the app's own contract: `getPaymentService()`
+  falls back to the stub when `STRIPE_SECRET_KEY` is unset, so an environment without Stripe is a
+  supported state, not a misconfiguration. Making them required would block configuring a fresh
+  environment that has no Stripe yet — verified both ways (present → pushed; absent → skipped,
+  exit 0). `STRIPE_PUBLISHABLE_KEY` is deliberately still unrecognized: hosted Checkout runs
+  nothing in the browser, so the app never reads it.
+  - Records the trap that caused the mismatch: **`STRIPE_WEBHOOK_SECRET` is per-endpoint, not
+    per-account.** Staging's value cannot verify deliveries to production's endpoint, so it must
+    never be copied between environments — each `secrets/<env>.vars` carries the secret belonging
+    to that environment's own Stripe endpoint.
 - **Backfilled the missing P3a/P3b/P3c roadmap change-log entries** (`specs/roadmap.md` 1.9.0). All
   three slices shipped without one — the roadmap still ended at ADR-004 slice 3c (2026-08-09) while
   cart, checkout and Stripe payments were live on staging. Records what each slice delivered, the
@@ -17,6 +31,37 @@ every branch merges.
   rebuilds and diffs it (normalizing timestamp and commit) on every PR.
 
 ### Added
+- **P3d — "Shop your list"** (#114, `specs/2026-08-10-p3d-shop-your-list/`): the second way to fill
+  a cart. Paste a list, see what each line matched, then add the confirmed lines in one action. The
+  last P3 slice.
+  - **Matching is token-AND on product `name`**, in a new `ProductRepository.matchListTerms()` that
+    issues **one** query for the whole list (candidate rows, capped at 200) and leaves every
+    per-line decision to pure code in `lib/shopping-list.ts`. Deliberately not
+    `ProductRepository.search()`: that is a single `contains` OR'd across name and description, so
+    `"2x chicken breast"` matches nothing — exactly the input this feature invites. Matching
+    `description` was rejected too, since a term hitting prose yields a confident-looking wrong
+    product.
+  - **A leading bare integer is a quantity only when not glued to a unit** — `2 apples` is two
+    apples, `5kg basmati rice` is one bag of *Basmati Rice 5kg*. Four seeded products carry a size
+    in their name, so this is ordinary input, not an edge case. Explicit `2x` / `x2` forms always
+    win.
+  - **Nothing enters the cart unreviewed.** Every line renders as matched, ambiguous (with a
+    chooser), unmatched, or unavailable; only an explicit action writes. Ambiguity is real here —
+    `milk` matches both *Whole Milk* and *Coconut Milk*.
+  - **The matching pass writes nothing at all** — no `Cart`, no `CartItem`, no guest cookie —
+    preserving P3a's rule that browsing creates no state. The guest token is issued only by
+    `add-list-to-cart`.
+  - New `CartRepository.addItems()` resolves the cart once and writes every line in a single
+    transaction, reusing `effectiveStock()`/`clampQuantity()` rather than re-deriving them.
+    Duplicate lines are summed first (`sumLinesByProduct`), since two upserts of one row inside a
+    transaction would fight. Product ids from the stateless review form are **untrusted**: stock is
+    resolved through the existing vendor-scoped `stockMap`, so an id from another vendor has no row,
+    resolves to 0, and is skipped.
+  - **Typos are explicitly out of scope** (`bannanas` reports unmatched). Handling them means
+    `pg_trgm`, whose `similarity()` needs `$queryRaw` — forbidden in application code — and P2
+    deliberately deferred trigram search. The mandatory review step is what keeps that honest: an
+    unmatched line is visible, not silently dropped.
+  - No schema change, no migration, no saved lists.
 - **Two machine checks behind the SDD loop's honor-system stages** (`scripts/sdd-check.ts`,
   `specs/sdd-workflow.md` 2.1.0). Every existing gate fires before or at merge — `pre-commit`
   (Gate 2), `pre-push`/`gates.yml` (Gate 4), CI (Gate 3) — so nothing had teeth after Ship. That is

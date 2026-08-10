@@ -1,6 +1,8 @@
 import type { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
+import { effectiveStock } from "@/lib/cart-rules";
+import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
 
 export interface ProductImageSummary {
   storageKey: string;
@@ -65,6 +67,14 @@ export interface ProductRepository {
   getBySlug(slug: string): Promise<ProductDetail | null>;
   /** Drives per-vendor filter visibility — a food vendor shows Halal/Fresh/Organic; a tech one shows none. */
   availableSpecialities(): Promise<AvailableSpecialities>;
+  /**
+   * Candidate products for a whole "Shop your list" paste (P3d, #114), in ONE
+   * query for the entire list rather than one per line. Deliberately separate
+   * from search(): it matches `name` only (a term hitting prose in a
+   * description yields a confident-looking wrong product) and leaves the
+   * per-line all-terms decision to lib/shopping-list.ts.
+   */
+  matchListTerms(terms: string[]): Promise<ListCandidate[]>;
 }
 
 const productImageSelect = { storageKey: true, alt: true, isPrimary: true } as const;
@@ -217,6 +227,38 @@ export function getProductRepository(): ProductRepository {
         prisma.product.findFirst({ where: { ...base, isOrganic: true }, select: { id: true } }),
       ]);
       return { halal: halal !== null, fresh: fresh !== null, organic: organic !== null };
+    },
+
+    async matchListTerms(terms) {
+      if (terms.length === 0) return [];
+
+      const rows = await prisma.product.findMany({
+        where: {
+          vendorId: await vendorId(),
+          isActive: true,
+          OR: terms.map((term) => ({
+            name: { contains: term, mode: "insensitive" as const },
+          })),
+        },
+        take: CANDIDATE_QUERY_LIMIT,
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          basePrice: true,
+          unitLabel: true,
+          inventory: { select: { quantity: true } },
+        },
+      });
+
+      return rows.map((row) => ({
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        basePrice: row.basePrice,
+        unitLabel: row.unitLabel,
+        stock: effectiveStock(row.inventory?.quantity),
+      }));
     },
   };
 }
