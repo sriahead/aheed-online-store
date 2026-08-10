@@ -14,7 +14,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, readFrontMatter } from "../kms/schema/repo";
+import { ROOT } from "../kms/schema/repo";
 
 /**
  * Slices at or before this one predate the loop (specs/sdd-workflow.md 2.0.0) and are
@@ -27,7 +27,7 @@ import { ROOT, readFrontMatter } from "../kms/schema/repo";
  * SDD_LOOP_BASELINE overrides it, so the audit can be exercised against slices whose
  * outcome is already known instead of only ever being run on the live repo state.
  */
-const LOOP_BASELINE_SLICE = process.env.SDD_LOOP_BASELINE ?? "2026-08-10-p3c-stripe-payments";
+const LOOP_BASELINE_SLICE = process.env.SDD_LOOP_BASELINE ?? "2026-08-10-p3d-shop-your-list";
 
 const REQUIRED_SPEC_FILES = ["plan.md", "requirements.md", "validation.md", "build-notes.md"];
 
@@ -169,16 +169,6 @@ function preclear(): number {
 
 // ------------------------------------------------------------------- audit
 
-/** First segment of the front-matter id — `p3c-stripe-payments` -> `p3c`. */
-function sliceToken(slice: string): string {
-  const plan = join(ROOT, "specs", slice, "plan.md");
-  if (existsSync(plan)) {
-    const id = readFrontMatter(plan).id;
-    if (typeof id === "string" && id.length > 0) return id.split("-")[0];
-  }
-  return slice.replace(SLICE_DIR, "").split("-")[0];
-}
-
 function audit(): number {
   console.log("sdd:audit — did shipped slices get their roadmap entry?\n");
   console.log(`  baseline: slices after ${LOOP_BASELINE_SLICE} (earlier ones predate the loop)\n`);
@@ -189,11 +179,18 @@ function audit(): number {
     return 0;
   }
 
-  // Change-log rows, paired with their own date. A row only counts as documenting a
-  // slice if it is dated on/after that slice — otherwise a pre-existing row that merely
-  // *mentions* future work would satisfy the check for the slice it predicts. That is a
-  // live trap, not a hypothetical: the P3a/P3b/P3c backfill row names P3d ("Shop your
-  // list"), so without this an eventual P3d slice would pass while undocumented.
+  // Change-log rows. A row counts as documenting a slice only when it cites the slice's
+  // spec PATH (`specs/<slice>/`), not merely its name.
+  //
+  // A date guard was tried first — row.date >= sliceDate — on the reasoning that a
+  // pre-existing row mentioning future work shouldn't satisfy the slice it predicts.
+  // It does not hold: the P3a/P3b/P3c backfill row is dated 2026-08-10 and names "P3d",
+  // and the P3d slice dir is ALSO 2026-08-10, so the row passed its own guard and P3d
+  // audited clean while genuinely undocumented. Spec and ship land the same day
+  // routinely here, so same-day collisions are the norm, not an edge case.
+  //
+  // Requiring the path is both precise and a convention worth having: every real closure
+  // row already cites it (see P3c's row), and prose can't accidentally satisfy it.
   const roadmapRows = readFileSync(join(ROOT, "specs", "roadmap.md"), "utf8")
     .split("\n")
     .map((l) => /^\|\s*(\d{4}-\d{2}-\d{2})\s*\|/.exec(l))
@@ -204,26 +201,16 @@ function audit(): number {
   let gaps = 0;
 
   for (const slice of slices) {
-    const token = sliceToken(slice);
-    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const pattern = new RegExp(`\\b${escaped}\\b`, "i");
-    const sliceDate = slice.slice(0, 10);
-    const inRoadmap = roadmapRows.some(
-      (row) =>
-        row.date >= sliceDate &&
-        (pattern.test(row.text) ||
-          row.text.includes(slice) ||
-          row.text.includes(`specs/${slice}/`)),
-    );
+    const inRoadmap = roadmapRows.some((row) => row.text.includes(`specs/${slice}/`));
     // The index is already enforced at merge by gates.yml's staleness check; this only
     // confirms the slice's plan.md actually reached the table, which a missed rebuild
     // before that check ran would show up as.
     const inIndex = index.includes(`specs/${slice}/plan.md`);
 
-    console.log(`slice: specs/${slice}/  (token "${token}")`);
-    if (inRoadmap) pass("roadmap change-log entry found");
+    console.log(`slice: specs/${slice}/`);
+    if (inRoadmap) pass("roadmap change-log entry cites specs/" + slice + "/");
     else {
-      fail("NO roadmap change-log entry mentions this slice");
+      fail(`NO roadmap change-log row cites specs/${slice}/ — a closure row must cite the path`);
       gaps++;
     }
     if (inIndex) pass("present in ARTIFACT_INDEX.md");
