@@ -42,6 +42,14 @@ every branch merges.
     set the app **falls back to the stub**, so local dev and CI need no Stripe setup. Deliberately no
     `STRIPE_PUBLISHABLE_KEY` — hosted Checkout never runs anything in the browser. Deferred and
     tracked: resume-payment for stuck orders (**#100**), webhook reconciliation sweep (**#101**).
+  - **Live-verified against staging** (2026-08-10) with real Stripe test-mode keys: two real
+    payments confirmed the webhook, idempotency, and status-aware confirmation page against
+    staging's actual database. Uncovered a real infra gap in the process — Resend has no verified
+    sending domain yet, so it rejects delivery to any address outside its own test address
+    (**#104**, owner action). That failure incidentally proved the email-failure-is-non-fatal
+    guarantee live: the order still confirmed and the webhook still returned 200. Remaining gap
+    (payment-provider failure path, **#103**) needs a deliberate window against staging's live
+    secrets rather than being done inline.
 - **Checkout + order core (P3b, #96)** — a cart can now become a real order
   (`specs/2026-08-10-p3b-checkout-order-core/`). Adds vendor-scoped `Address`/`Order`/`OrderItem`/
   `Payment`/`OrderStatusEvent` behind a new `lib/repositories/orders.ts`, a `/checkout` page
