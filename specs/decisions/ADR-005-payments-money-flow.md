@@ -4,7 +4,7 @@ title: "ADR-005 — Payments & multi-vendor money flow"
 audience: [dev]
 type: adr
 status: approved
-version: "1.0.0"
+version: "1.1.0"
 updated: 2026-08-10
 visibility: internal
 summary: Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite.
@@ -72,6 +72,20 @@ but said nothing about routing money between vendors, and the port itself had ne
   production ahead of P3c.
 - **Rule of thumb:** if taking payment for a new vendor requires anything beyond database rows and
   Stripe configuration, the seam has been violated.
+
+## Implementation note (P3c, 2026-08-10, #99)
+
+All four decisions above are **implemented**: `lib/payments.ts` creates hosted Checkout sessions via
+raw `fetch` against the single platform account, carrying `vendorId` through `CreatePaymentInput` as
+the Connect-ready seam; `/api/webhooks/stripe` verifies signatures with WebCrypto and confirms or
+cancels orders idempotently; stock decremented at creation is **released** on payment failure or
+session expiry, closing the gap P3b recorded. The stub adapter is kept as the fallback for
+environments with no Stripe key.
+
+One thing worth recording because it is easy to get wrong: **exactly one webhook endpoint is
+registered per environment, not one per vendor host.** The same Worker serves every host and the
+handler derives the vendor from the order, so per-host endpoints would only produce multiple signing
+secrets that the single `STRIPE_WEBHOOK_SECRET` cannot represent.
 
 ## Deferred upgrade — Stripe Connect
 

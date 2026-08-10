@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import { getOrderRepository } from "@/lib/repositories/orders";
 import { getAuth } from "@/lib/auth";
 import { formatPrice } from "@/components/product/format-price";
@@ -34,15 +34,45 @@ export default async function OrderConfirmationPage({
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
+      {/* Status comes from the DB on every request — never from the fact that the
+          shopper arrived at the provider's success_url. That redirect routinely
+          races the webhook, and a closed tab means it never happens at all. */}
       <div className="mb-6 flex items-center gap-3">
-        <CheckCircle2 className="h-8 w-8 text-action" aria-hidden />
+        {order.status === "CONFIRMED" && (
+          <CheckCircle2 className="h-8 w-8 shrink-0 text-action" aria-hidden />
+        )}
+        {order.status === "PENDING_PAYMENT" && (
+          <Clock className="h-8 w-8 shrink-0 text-accent" aria-hidden />
+        )}
+        {order.status === "CANCELLED" && (
+          <XCircle className="h-8 w-8 shrink-0 text-danger" aria-hidden />
+        )}
         <div>
-          <h1 className="text-xl font-bold text-primary">Thanks — your order is placed</h1>
+          <h1 className="text-xl font-bold text-primary">
+            {order.status === "CONFIRMED" && "Thanks — your order is confirmed"}
+            {order.status === "PENDING_PAYMENT" && "Confirming your payment…"}
+            {order.status === "CANCELLED" && "This order was not completed"}
+            {!["CONFIRMED", "PENDING_PAYMENT", "CANCELLED"].includes(order.status) && "Your order"}
+          </h1>
           <p className="text-sm text-primary/70">
             Order <span className="font-semibold text-primary">{order.orderNumber}</span>
           </p>
         </div>
       </div>
+
+      {order.status === "PENDING_PAYMENT" && (
+        <p className="mb-5 rounded-2xl bg-accent-tint px-4 py-3 text-sm text-primary">
+          We&apos;re waiting for your payment to be confirmed. This page updates once it clears —
+          refresh in a moment if it hasn&apos;t already.
+        </p>
+      )}
+
+      {order.status === "CANCELLED" && (
+        <p className="mb-5 rounded-2xl bg-danger-tint px-4 py-3 text-sm text-danger">
+          Payment wasn&apos;t completed, so this order was cancelled and the items were returned to
+          stock. Nothing has been charged.
+        </p>
+      )}
 
       <section className="mb-5 rounded-2xl border border-black/10 bg-white p-5">
         <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-primary">Your items</h2>
@@ -107,10 +137,10 @@ export default async function OrderConfirmationPage({
       </section>
 
       <Link
-        href="/categories"
+        href={order.status === "CANCELLED" ? "/cart" : "/categories"}
         className="inline-flex rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-white"
       >
-        Continue shopping
+        {order.status === "CANCELLED" ? "Back to your cart" : "Continue shopping"}
       </Link>
     </main>
   );

@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCartRepository } from "@/lib/repositories/cart";
 import { CheckoutError, getOrderRepository } from "@/lib/repositories/orders";
@@ -35,6 +36,14 @@ function required(form: FormData, field: string): string {
   return value;
 }
 
+/** Absolute origin of this request — the provider needs absolute return URLs. */
+async function currentOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("host") ?? "";
+  const proto = (h.get("x-forwarded-proto") ?? "https").split(",")[0].trim() || "https";
+  return `${proto}://${host}`;
+}
+
 function optional(form: FormData, field: string): string | null {
   const value = String(form.get(field) ?? "").trim();
   return value === "" ? null : value;
@@ -60,7 +69,7 @@ export async function placeOrderAction(
   const vendor = await getCurrentVendorProfile();
   if (!vendor) return { error: "This store is unavailable." };
 
-  let orderNumber: string;
+  let destination: string;
   try {
     const postcode = required(form, "postcode");
     if (!isDeliverable(postcode, vendor.deliveryPrefixes)) {
@@ -95,8 +104,11 @@ export async function placeOrderAction(
         minimumOrderPence: vendor.minimumOrderPence,
       },
       vendorSlug: vendor.slug,
+      returnOrigin: await currentOrigin(),
     });
-    orderNumber = placed.orderNumber;
+    // With Stripe configured the shopper goes to hosted Checkout; with the stub
+    // adapter there is nowhere to pay, so they land on the order page directly.
+    destination = placed.redirectUrl ?? `/checkout/${placed.orderNumber}`;
   } catch (error) {
     if (error instanceof MissingFieldError) return { error: error.message };
     if (error instanceof CheckoutError) return { error: error.message };
@@ -105,5 +117,5 @@ export async function placeOrderAction(
 
   // Outside the try: redirect() throws a control-flow signal that must not be
   // caught and reported as a checkout failure.
-  redirect(`/checkout/${orderNumber}`);
+  redirect(destination);
 }
