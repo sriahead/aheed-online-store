@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { LogoutButton } from "@/features/auth/components/LogoutButton";
 
@@ -32,6 +34,14 @@ export default async function AccountPage() {
           <strong>Role:</strong> {role ?? "CUSTOMER"}
         </p>
       </div>
+      <Link
+        href="/account/orders"
+        className="mb-6 flex items-center justify-between rounded-md border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
+      >
+        <span className="font-semibold text-primary">Your orders</span>
+        <ChevronRight className="h-5 w-5 text-primary/50" aria-hidden />
+      </Link>
+
       <LogoutButton />
     </main>
   );

@@ -27,9 +27,18 @@ R4. `buildTimeline` collapses **consecutive** entries with an identical `status`
     `[CONFIRMED@t1, CANCELLED@t2, CONFIRMED@t3]` yields three entries.
 
 R5. **The timeline cannot carry `OrderStatusEvent.note`.** `buildTimeline`'s parameter and return
-    types declare no note/message field, `grep -n "note" lib/order-status.ts` returns nothing, and
-    `getForUser`'s Prisma selection for `statusEvents` selects `status` and `createdAt` only — no
-    `note: true`.
+    types declare no note/message field — `grep -nE "\bnote\s*[:?]" lib/order-status.ts` returns
+    nothing (no property so named) — and `getForUser`'s Prisma selection for `statusEvents` selects
+    `status` and `createdAt` only, with no `note: true`. A unit test proves it at runtime: a
+    `TimelineEntry` built from an event object carrying `note: "INTERNAL-DO-NOT-SHOW"` has exactly
+    the keys `at`/`label`/`status`, and the serialised timeline does not contain that string.
+
+    > **Corrected 2026-08-11, during Build.** This row originally verified with a bare
+    > `grep -n "note" lib/order-status.ts` returning nothing. That check is wrong in a way worth
+    > recording: it matches the module's own *documentation* — the comment explaining why the field
+    > is deliberately absent — so satisfying it would mean deleting the most useful explanation in
+    > the file to please a grep. The check now targets the field syntax and is backed by a runtime
+    > assertion, which is what the row was always trying to prove.
 
 R6. `OrderRepository` (`lib/repositories/orders.ts`) gains
     `listForUser(userId: string, opts: { take: number; cursor?: string }): Promise<OrderListPage>`
@@ -50,9 +59,19 @@ R8. `OrderListItem` exposes exactly `orderNumber`, `status`, `createdAt`, `total
     ascending** — a total order, so the same order always renders the same preview — as
     `{ productName, quantity }`. `OrderListItem` exposes no address and no per-item pricing.
 
-R9. **One page is one query.** Rendering `/account/orders` issues exactly one Prisma query for the
-    order page (items included via a nested `select`, not fetched per order). Ten orders do not
-    produce eleven queries.
+R9. **No N+1.** Rendering `/account/orders` issues a number of Prisma queries that is **constant in
+    the number of orders on the page**: items are included via a nested `select`, so 10 orders cost
+    the same as 1. Ten orders must not produce eleven queries.
+
+    > **Corrected 2026-08-11, during Build, before any live run.** This row originally said
+    > "exactly one Prisma query". That is not what Prisma does and never could have passed: for a
+    > nested relation `select`, Prisma's default read strategy issues a **second** batched query
+    > (`SELECT ... FROM "OrderItem" WHERE "orderId" IN (...)`) rather than a join, unless the
+    > `relationJoins` preview feature is enabled — which `CLAUDE.md`'s Prisma rules do not enable
+    > and this slice is not the place to turn on. Two constant queries is the correct, achievable
+    > property; "exactly one" would have failed validation for a design that is right. The
+    > requirement now states the property that actually matters — no per-order query — which is
+    > what the row was there to protect.
 
 R10. **The list is not filtered by status.** Every order the viewer owns for this vendor appears,
      including `PENDING_PAYMENT` (checkout started, never paid) and `CANCELLED` — each rendered with

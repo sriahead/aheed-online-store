@@ -3,6 +3,7 @@ import { getCurrentVendorId } from "@/lib/tenant";
 import { buildOrderNumber, computeTotals, type DeliveryRules } from "@/lib/order-totals";
 import { getPaymentService } from "@/lib/payments";
 import { effectiveStock } from "@/lib/cart-rules";
+import { buildTimeline, type TimelineEntry } from "@/lib/order-status";
 
 /**
  * Order read/write path (P3b, #96) — the ONLY DB access for orders. Pages,
@@ -340,10 +341,46 @@ export interface OrderSummary {
   };
 }
 
+/** One row of the account-area order history (P4a, #122). No address, no per-item pricing. */
+export interface OrderListItem {
+  orderNumber: string;
+  status: string;
+  createdAt: Date;
+  totalPence: number;
+  /** Sum of EVERY item's quantity — 2 × milk + 1 × rice is 3, not 2. */
+  itemCount: number;
+  /** First 3 items by product name ascending — a total order, so it never varies. */
+  previewItems: { productName: string; quantity: number }[];
+}
+
+export interface OrderListPage {
+  items: OrderListItem[];
+  nextCursor: string | null;
+}
+
+/** An owned order plus its customer-facing timeline (P4a, #122). */
+export interface OrderDetail extends OrderSummary {
+  timeline: TimelineEntry[];
+}
+
+const ORDER_PREVIEW_ITEMS = 3;
+
 export interface OrderRepository {
   createOrder(input: PlaceOrderInput): Promise<PlacedOrder>;
   /** Scoped to the current vendor, so one vendor's number never resolves on another's host. */
   getByOrderNumber(orderNumber: string, viewerUserId: string | null): Promise<OrderSummary | null>;
+  /** The signed-in shopper's own orders for this vendor, newest first (P4a). */
+  listForUser(userId: string, opts: { take: number; cursor?: string }): Promise<OrderListPage>;
+  /**
+   * One order the viewer OWNS. Stricter than getByOrderNumber on purpose: that
+   * method implements P3b's capability-URL rule (a guest order has no owner, so
+   * the unguessable number is the credential), which is right for
+   * /checkout/{n} and wrong for /account/orders/{n} — a page claiming to be
+   * *your* history must not render an order that is not yours because someone
+   * pasted a number. Filtering on userId makes a guest order and another
+   * member's order both resolve to null.
+   */
+  getForUser(orderNumber: string, userId: string): Promise<OrderDetail | null>;
 }
 
 export function getOrderRepository(): OrderRepository {
@@ -396,6 +433,93 @@ export function getOrderRepository(): OrderRepository {
 
       const { userId: _ownerId, ...summary } = order;
       return summary;
+    },
+
+    async listForUser(userId, { take, cursor }) {
+      // Keyset (cursor) pagination on (createdAt, id) — never OFFSET, per
+      // specs/architecture.md's pagination strategy and matching
+      // ProductRepository.findPage. Over-fetch by one to know whether a next
+      // page exists without a separate count query.
+      //
+      // ONE query for the page: items arrive via a nested select, so ten orders
+      // are ten rows of one result, not eleven round trips.
+      //
+      // Deliberately NOT filtered by status. An abandoned PENDING_PAYMENT order
+      // and a CANCELLED one are both visible history — hiding them would leave a
+      // shopper wondering where their attempted order went.
+      const rows = await prisma.order.findMany({
+        where: { vendorId: await vendorId(), userId },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: take + 1,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          createdAt: true,
+          totalPence: true,
+          items: {
+            select: { productName: true, quantity: true },
+            orderBy: { productName: "asc" },
+          },
+        },
+      });
+
+      const hasMore = rows.length > take;
+      const page = hasMore ? rows.slice(0, take) : rows;
+
+      return {
+        items: page.map((order) => ({
+          orderNumber: order.orderNumber,
+          status: order.status,
+          createdAt: order.createdAt,
+          totalPence: order.totalPence,
+          itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+          previewItems: order.items.slice(0, ORDER_PREVIEW_ITEMS),
+        })),
+        nextCursor: hasMore ? page[page.length - 1].id : null,
+      };
+    },
+
+    async getForUser(orderNumber, userId) {
+      const order = await prisma.order.findFirst({
+        // userId is part of the WHERE, not a post-hoc check: a guest order
+        // (userId null) and another member's order both simply do not match.
+        where: { orderNumber, vendorId: await vendorId(), userId },
+        select: {
+          orderNumber: true,
+          status: true,
+          createdAt: true,
+          subtotalPence: true,
+          deliveryFeePence: true,
+          totalPence: true,
+          items: {
+            select: {
+              productName: true,
+              unitPricePence: true,
+              quantity: true,
+              lineTotalPence: true,
+            },
+          },
+          address: {
+            select: {
+              recipientName: true,
+              phone: true,
+              line1: true,
+              line2: true,
+              city: true,
+              postcode: true,
+              notes: true,
+            },
+          },
+          // `note` is deliberately NOT selected — see buildTimeline's contract.
+          statusEvents: { select: { status: true, createdAt: true } },
+        },
+      });
+      if (!order) return null;
+
+      const { statusEvents, ...summary } = order;
+      return { ...summary, timeline: buildTimeline(statusEvents) };
     },
   };
 }
