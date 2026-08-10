@@ -18,6 +18,8 @@ export type BrandPrimitives = Record<
 >;
 
 export interface VendorProfile {
+  /** Vendor slug — used to derive the order-number prefix (P3b). */
+  slug: string;
   name: string;
   tagline: string | null;
   logoStorageKey: string | null;
@@ -56,6 +58,7 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
   const vendor = await prisma.vendor.findUnique({
     where: { id: vendorId },
     select: {
+      slug: true,
       name: true,
       branding: {
         select: {
@@ -89,6 +92,7 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
 
   const b = vendor?.branding;
   return {
+    slug: vendor?.slug ?? "",
     name: b?.name ?? vendor?.name ?? DEFAULT_SENDER_NAME,
     tagline: b?.tagline ?? null,
     logoStorageKey: b?.logoStorageKey ?? null,
