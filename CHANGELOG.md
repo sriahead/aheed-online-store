@@ -6,6 +6,29 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+- **Post-promotion documentation pass for P3 in production** (`specs/roadmap.md`,
+  `docs/env-setup.md` 1.7.0) — rescued from PR #110, which branched before P3d and had gone stale
+  and conflicting; the content below is the part of it that had not landed any other way.
+  - **The roadmap now records the promotion itself** (PR #108) in the existing promotion-entry
+    style: `deploy-production` green, production `/api/health` reporting commit `034a380` with
+    `db.ok: true`, and `/api/webhooks/stripe` live (an unsigned POST is rejected 400, so signature
+    verification is active). It also records that the two P3 migrations were **already applied** to
+    the production database — CI reported "no pending migrations" — because no `main` push occurred
+    between PR #81 and #108, so they reached production out-of-band. No drift resulted (CI
+    confirming zero pending *is* the proof repo and DB agree), but it bypassed `CLAUDE.md`'s
+    migrations-run-in-CI rule, which is worth having on the record rather than discovering twice.
+  - **Corrects two claims in `env-setup.md` that live verification made false**: it said production
+    would use a live Stripe key and that test mode was for "everything except production".
+    Production deliberately runs **test-mode** keys, because it shipped before the storefront opened
+    to customers; installing a live key is a separate decision (#113), not a consequence of
+    promoting code.
+  - **Puts the per-endpoint webhook trap where operators will hit it** — each Stripe endpoint has
+    its own `whsec_…`, so staging's cannot verify production's deliveries, and the failure is
+    *silent*: the handler rejects every delivery, so orders never leave `PENDING_PAYMENT` and their
+    stock is never released. Also records the Cloudflare gotcha that forces deploy-then-secrets
+    ordering: a Worker secret cannot be edited while an undeployed version is pending.
+
 ### Fixed
 - **`sdd:audit` was passing a slice it should have failed** (`scripts/sdd-check.ts`). The check that
   exists specifically to catch "shipped without a roadmap entry" reported P3d as documented while

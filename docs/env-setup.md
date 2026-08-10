@@ -4,7 +4,7 @@ title: "Environment Setup — Secrets & Config (staging / production)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.6.0"
+version: "1.7.0"
 updated: 2026-08-10
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, the demo-accounts tool, per-vendor host mapping, per-vendor branding/logo seeding, and auth cookie scoping.
@@ -124,8 +124,18 @@ considered and rejected as reopening cross-tenant CSRF surface (#83).
 Two Cloudflare **Worker** secrets per environment. Both optional — with neither set the app falls
 back to the stub payment adapter, so local dev and CI work with no Stripe setup at all.
 
-- **`STRIPE_SECRET_KEY`** — server-side API calls (`sk_test_…` in staging, live key only in prod).
-- **`STRIPE_WEBHOOK_SECRET`** — the signing secret for the webhook endpoint (`whsec_…`).
+- **`STRIPE_SECRET_KEY`** — server-side API calls. **Both staging and production run `sk_test_…`
+  today**, deliberately: production shipped before the storefront was opened to customers, so no
+  real money can move. Switching production to a live key is a separate decision, taken when
+  checkout is actually reachable — not a default of promoting the code.
+- **`STRIPE_WEBHOOK_SECRET`** — the signing secret for that environment's webhook endpoint
+  (`whsec_…`).
+
+`scripts/configure-env.mjs` pushes both as **optional** Worker secrets: present and non-empty → set,
+absent → reported as skipped and *not* an error (an environment without Stripe is a supported state,
+since the app falls back to the stub). Until 2026-08-10 the script didn't know these two keys at all
+and silently listed them as "unrecognized", which is why production ran with no Stripe credentials
+until they were set by hand.
 
 There is deliberately **no `STRIPE_PUBLISHABLE_KEY`**: hosted Checkout is a server-created session
 plus a redirect, so nothing Stripe-related runs in the browser.
@@ -143,6 +153,19 @@ produce several signing secrets, and `STRIPE_WEBHOOK_SECRET` holds exactly one.
 Subscribe it to: `checkout.session.completed`, `checkout.session.expired`,
 `checkout.session.async_payment_failed`.
 
+> ⚠️ **`STRIPE_WEBHOOK_SECRET` is per-ENDPOINT, not per-account.** Each endpoint above has its own
+> `whsec_…`, so staging's value cannot verify deliveries to production's endpoint. Copying it across
+> produces a webhook that fails signature verification on **every** delivery — and because the
+> handler returns before doing anything, the symptom is silent: orders simply never leave
+> `PENDING_PAYMENT` and their stock is never released. Each `secrets/<env>.vars` must carry the
+> secret belonging to **that** environment's endpoint. The secret is readable only from the Stripe
+> dashboard; the API does not return it for an already-created endpoint.
+
+**Setting a Worker secret can fail with "the latest version of your Worker isn't currently
+deployed."** Cloudflare refuses a secret edit while an undeployed version is pending. Deploy first
+(for production that means promoting to `main` and letting `deploy-production` run), then set the
+secret — or set it from the Cloudflare dashboard, which is not subject to the same restriction.
+
 **Local testing needs the Stripe CLI** — Stripe cannot reach `localhost`:
 
 ```bash
@@ -151,7 +174,8 @@ stripe listen --forward-to http://localhost:8787/api/webhooks/stripe
 stripe trigger checkout.session.completed
 ```
 
-Use **test mode** (card `4242 4242 4242 4242`) for everything except production.
+Use **test mode** (card `4242 4242 4242 4242`) everywhere — including production, until the
+storefront is opened to real customers and a live key is deliberately installed.
 
 ## Prerequisites (one-time)
 
