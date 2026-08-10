@@ -6,6 +6,35 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+- **SDD workflow restructured from a seven-stage sequence into a delivery loop with two context
+  Clears** (`specs/sdd-workflow.md` 1.0.0 → 2.0.0). The order is now **Orient → Propose → Spec →
+  Build → Document (build notes) → CLEAR → Validate ⇄ Fix → Ship → Document (final) → CLEAR →
+  Orient**, with the model switching to Sonnet 5 for the validation half and back to Opus 5 for the
+  final documentation pass.
+  - **Why the Clear before Validate:** a context that just built something is the worst judge of
+    whether it matches the spec — it remembers the intent and reads that intent into the code. The
+    reset forces Gate 3 to run against `requirements.md` and the artifact on disk, which is the only
+    version of the spec a future maintainer ever gets. This already caught real defects under the
+    old single-context flow (a consolidated `features/cart/actions.ts` that deviated from the
+    spec's one-file-per-action shape; webhook functions resolving `getPrisma()` internally, so they
+    couldn't be proven against real Postgres) — the reset makes that systematic rather than lucky.
+  - **Document split in two.** `/build-notes` (new) is a **write-to-disk** stage before the Clear:
+    build notes, persistent-doc updates, deferred items filed as issues — and **Gate 4's CHANGELOG
+    entry**, which has to be on the branch before it merges, i.e. before Ship, which now precedes
+    the final documentation pass. `/document` is now purely the post-ship durable record (KMS index,
+    roadmap, reconciling docs with what validation actually found) and supersedes the build notes
+    where they disagree.
+  - **`/fix` (new)** formalises the Validate ⇄ Fix cycle: fix the root cause rather than the check,
+    re-run `/validate` from the top rather than just the failed row, and stop when a "fix" is really
+    a redesign — that's a Spec-level change, not something to improvise in a validation mindset.
+  - Existing commands realigned: `/build` now hands off to `/build-notes` instead of `/validate`,
+    `/validate` treats build notes as a claim about the artifact rather than evidence, `/orient`
+    doubles as the post-Clear re-entry point, and `/spec` records that `requirements.md` is the only
+    thing the fresh validation context will have.
+  - **Two rules the assistant cannot enforce on itself** and must therefore ask for, now stated in
+    `CLAUDE.md`: `/clear` is user-invoked, and so is every model switch.
+
 ### Added
 - **Stripe payments, webhooks & confirmation email (P3c, #99)** — money actually moves
   (`specs/2026-08-10-p3c-stripe-payments/`). Replaces P3b's stub with a real hosted **Stripe

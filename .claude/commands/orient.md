@@ -13,7 +13,10 @@ Follow the **Orient** stage of `specs/sdd-workflow.md` (read it if not already i
    prerequisite code/data it depends on, don't assume "next on the roadmap" means "ready."
 3. `git fetch` and check how far `origin/staging`/`origin/main` have actually diverged
    (`git log origin/main..origin/staging --oneline`) before assuming either is in a known state.
-4. Report a short grounding summary: what you found to be true vs. what the docs/roadmap assumed,
+4. Coming out of a Clear, this is also the **re-entry point** — the previous loop's spec, build
+   notes and final documentation are on disk. Read them rather than assuming continuity with a
+   conversation that no longer exists.
+5. Report a short grounding summary: what you found to be true vs. what the docs/roadmap assumed,
    and any discrepancy worth flagging before moving to `/propose`.
 
 Do not start implementing. This is a read-only grounding pass.

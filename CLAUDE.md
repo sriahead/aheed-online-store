@@ -108,11 +108,25 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
 4. **Changelog before merge** — update `CHANGELOG.md` on the branch.
 Every PR references its issue (`Closes #NN`), carries `phase:P_` + `gate:_` labels, touches CHANGELOG.
 
-**Full operational workflow:** `specs/sdd-workflow.md` expands these four gates into seven stages —
-**Orient → Propose → Spec → Build → Validate → Document → Ship** — each also a slash command
-(`/orient`, `/propose`, `/spec`, `/build`, `/validate`, `/document`, `/ship`). Use them; that doc
-carries lessons already paid for (stale-doc traps, CI-vs-local-Windows drift, PR merge races) that
-are easy to relearn the hard way otherwise.
+**Full operational workflow:** `specs/sdd-workflow.md` expands these four gates into a delivery
+**loop** with two deliberate context resets:
+
+**Orient → Propose → Spec → Build → Document (build notes) → CLEAR → Validate ⇄ Fix → Ship →
+Document (final) → CLEAR → Orient**
+
+Most stages are slash commands (`/orient`, `/propose`, `/spec`, `/build`, `/build-notes`,
+`/validate`, `/fix`, `/ship`, `/document`). Use them; that doc carries lessons already paid for
+(stale-doc traps, CI-vs-local-Windows drift, PR merge races) that are easy to relearn the hard way.
+
+Two rules the assistant **cannot** enforce for itself, so it must ask:
+- **`/clear` is user-invoked.** Before either Clear, everything load-bearing must be committed — a
+  Clear destroys anything living only in the conversation. `/build-notes` exists to get it on disk.
+- **Model switches are user-invoked.** Sonnet 5 for the Validate/Fix/Ship half, Opus 5 for the
+  Orient/Propose/Spec/Build/Document half. If a stage is running on the wrong model, say so and ask
+  rather than proceeding quietly.
+
+**Gate 4 lands in `/build-notes`, not the final `/document`** — the CHANGELOG entry must be on the
+branch before it merges, and Ship precedes the final documentation pass.
 
 ## Dependency & version discipline (learned the hard way)
 - **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their
