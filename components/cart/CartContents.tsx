@@ -174,12 +174,18 @@ export function CartContents({
             <span className="text-primary/70">Subtotal</span>
             <span className="font-bold text-primary">{formatPrice(summary.subtotalPence)}</span>
           </div>
-          {/* Delivery fee, minimum order and checkout are P3b — the cart deliberately
-              stops at a subtotal so no total is shown that checkout might contradict. */}
+          {/* The cart deliberately stops at a subtotal — delivery fee and total are
+              computed at checkout (P3b) so the two can never disagree. */}
+          <Link
+            href="/checkout"
+            className="flex w-full items-center justify-center rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white"
+          >
+            Proceed to checkout
+          </Link>
           {showViewCartLink && (
             <Link
               href="/cart"
-              className="flex w-full items-center justify-center rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white"
+              className="flex w-full items-center justify-center rounded-2xl border border-primary/20 px-4 py-2.5 text-sm font-bold text-primary"
             >
               View full cart
             </Link>

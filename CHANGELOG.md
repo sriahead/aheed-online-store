@@ -7,6 +7,39 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Checkout + order core (P3b, #96)** — a cart can now become a real order
+  (`specs/2026-08-10-p3b-checkout-order-core/`). Adds vendor-scoped `Address`/`Order`/`OrderItem`/
+  `Payment`/`OrderStatusEvent` behind a new `lib/repositories/orders.ts`, a `/checkout` page
+  following `docs/ui-ref/CheckoutModal.tsx`, and a `/checkout/{orderNumber}` confirmation served
+  from the persisted order so a refresh shows the same thing.
+  - **Overselling is structurally impossible.** The whole checkout is one interactive transaction —
+    decrement stock → create address/order/items/payment/status-event → clear the cart — and the
+    decrement is a **conditional `updateMany`** (`quantity: { gte: qty }`) whose `count === 0` means
+    someone else took the last one, rolling everything back. No raw SQL (`CLAUDE.md`), no
+    read-then-check gap. Clearing the cart *inside* the transaction also makes a **double submit**
+    safe: the second finds an empty cart instead of creating a duplicate order.
+  - **Stock decrements at order creation**, so an order opens as **`PENDING_PAYMENT`** — an unpaid
+    order must never read as `CONFIRMED` or staff would pick and deliver it. ⚠️ **Gap until P3c:**
+    an abandoned checkout holds its stock, because release on payment-failure/expiry is P3c's
+    webhook. **P3b must not reach production ahead of P3c.**
+  - **Money is recomputed server-side** from the database inside the transaction and never read from
+    the form; prices are then snapshotted onto `OrderItem`. The **delivery address is snapshotted
+    per order** for the same reason — editing a saved address later must not rewrite where a past
+    order went.
+  - Five checkout gates, each its own error: unresolved P3a merge, empty cart, unavailable line,
+    undeliverable postcode (via the existing `isDeliverable`), and below the vendor's minimum order.
+  - **`PaymentService` port created** (`lib/payments.ts`) — named in `tech-stack.md` since the
+    architecture baseline, never previously written. P3b ships a **stub** that charges nothing, so
+    the risky logic was testable before any Stripe credential existed; P3c swaps in Stripe.
+  - **Order numbers** are `{VENDOR}-{YYYYMMDD}-{6 random}` with the prefix derived from the vendor
+    slug — deliberately **not sequential**, since a counter lets anyone who places two orders infer
+    the shop's volume. Collisions retry against the unique index rather than being assumed away.
+  - **ADR-005 — Payments & multi-vendor money flow**: Stripe behind the port, hosted Checkout (it
+    handles UK SCA/3DS, a legal requirement), and a single platform account with a Connect-ready
+    seam. Records the **merchant-of-record** consequence — with one account the platform is the
+    seller for every vendor's sales, which is acceptable only while Aheed is the sole real merchant.
+  - Additive migration (two enums + five tables). `VendorProfile` gains `slug`. `architecture.md`
+    (v1.8.0) and `tech-stack.md` (v1.1.0) updated.
 - **Cart foundation (P3a, #93)** — the storefront's inert "Add to Cart" is now real
   (`specs/2026-08-09-p3a-cart-foundation/`). Vendor-scoped `Cart`/`CartItem` behind a new
   `lib/repositories/cart.ts`, so one shopper has an **independent cart per vendor**. Identity is

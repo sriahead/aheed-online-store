@@ -63,6 +63,10 @@ export interface CartRepository {
   applyMerge(identity: CartIdentity, resolution: MergeResolution): Promise<void>;
   /** True once no guest cart remains for this token — the cookie is then safe to clear. */
   isGuestCartGone(identity: CartIdentity): Promise<boolean>;
+  /** The cart id this identity writes to, or null. Checkout (P3b) needs it to hand
+   *  the cart to the order transaction — resolved here so the feature layer never
+   *  touches Prisma directly. */
+  getCartId(identity: CartIdentity): Promise<string | null>;
 }
 
 type Tx = Parameters<Parameters<ReturnType<typeof getPrisma>["$transaction"]>[0]>[0];
@@ -316,6 +320,12 @@ export function getCartRepository(): CartRepository {
       if (!identity.guestToken) return true;
       const vid = await vendorId();
       return (await findCart(vid, null, identity.guestToken)) === null;
+    },
+
+    async getCartId(identity) {
+      const vid = await vendorId();
+      const cart = await findCart(vid, identity.userId, identity.guestToken);
+      return cart?.id ?? null;
     },
   };
 }
