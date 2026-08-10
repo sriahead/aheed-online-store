@@ -6,6 +6,16 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **Backfilled the missing P3a/P3b/P3c roadmap change-log entries** (`specs/roadmap.md` 1.9.0). All
+  three slices shipped without one — the roadmap still ended at ADR-004 slice 3c (2026-08-09) while
+  cart, checkout and Stripe payments were live on staging. Records what each slice delivered, the
+  live-verification outcome for P3c, and that **P3 remains open pending P3d ("Shop your list")**.
+  This is the gap that motivated the post-Ship documentation audit in `specs/sdd-workflow.md` 2.0.0:
+  every SDD gate fires before or at merge, so the roadmap update — which happens after the PR lands
+  — had nothing enforcing it. The KMS index, by contrast, was never at risk: `gates.yml` already
+  rebuilds and diffs it (normalizing timestamp and commit) on every PR.
+
 ### Changed
 - **SDD workflow restructured from a seven-stage sequence into a delivery loop with two context
   Clears** (`specs/sdd-workflow.md` 1.0.0 → 2.0.0). The order is now **Orient → Propose → Spec →
