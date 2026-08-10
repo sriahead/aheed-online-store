@@ -16,7 +16,14 @@ Follow the **Orient** stage of `specs/sdd-workflow.md` (read it if not already i
 4. Coming out of a Clear, this is also the **re-entry point** — the previous loop's spec, build
    notes and final documentation are on disk. Read them rather than assuming continuity with a
    conversation that no longer exists.
-5. Report a short grounding summary: what you found to be true vs. what the docs/roadmap assumed,
+5. **Run `npm run sdd:audit`.** It reports whether slices shipped under this loop got their roadmap
+   change-log entry and reached `ARTIFACT_INDEX.md`. This is the only check that runs *after* Ship,
+   so a gap is real work, not a warning — fix it on the current branch (post-merge doc changes ride
+   the next slice's branch) rather than noting it and moving on.
+6. Check the delivery board for the status layer
+   (`gh project item-list 2 --owner sriahead --format json`). Scope comes from `specs/` and the
+   filesystem, never the board — if they disagree, the board needs reconciling.
+7. Report a short grounding summary: what you found to be true vs. what the docs/roadmap assumed,
    and any discrepancy worth flagging before moving to `/propose`.
 
 Do not start implementing. This is a read-only grounding pass.

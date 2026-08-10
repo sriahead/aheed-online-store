@@ -19,11 +19,17 @@ should never have merged — say so.
    things no pre-ship writing would have predicted; those become doc corrections and tracked issues
    here, not silent knowledge.
 3. Update `specs/roadmap.md` — progress, plus a closure note in its change log if this closed out a
-   phase/milestone, matching existing entries' style.
-4. Anything still deferred or incomplete is a tracked GitHub issue — never a comment or a memory.
-5. Record anything the loop itself taught (a trap worth encoding in `specs/sdd-workflow.md` or
+   phase/milestone, matching existing entries' style. **This is what `npm run sdd:audit` checks at
+   the next Orient**; run it here and confirm it exits 0 rather than leaving the next loop to open
+   with a reported gap. Three slices (P3a/P3b/P3c) shipped without this entry before the check
+   existed.
+4. **Reconcile the delivery board** (status layer only, never scope): every issue for this slice
+   should be **In Review** if it merged to `staging`, or closed/**Done** if promoted to `main`, and
+   anything newly deferred should be on the board with a **Phase**.
+5. Anything still deferred or incomplete is a tracked GitHub issue — never a comment or a memory.
+6. Record anything the loop itself taught (a trap worth encoding in `specs/sdd-workflow.md` or
    `CLAUDE.md`) while it's still cheap to write down.
-6. Later phases (P7 compliance, P8 handover) need compliance reports / a handover pack per their own
+7. Later phases (P7 compliance, P8 handover) need compliance reports / a handover pack per their own
    specs — call that out explicitly in that phase's `requirements.md` rather than assuming this
    stage covers it by default.
 

@@ -16,6 +16,35 @@ every branch merges.
   — had nothing enforcing it. The KMS index, by contrast, was never at risk: `gates.yml` already
   rebuilds and diffs it (normalizing timestamp and commit) on every PR.
 
+### Added
+- **Two machine checks behind the SDD loop's honor-system stages** (`scripts/sdd-check.ts`,
+  `specs/sdd-workflow.md` 2.1.0). Every existing gate fires before or at merge — `pre-commit`
+  (Gate 2), `pre-push`/`gates.yml` (Gate 4), CI (Gate 3) — so nothing had teeth after Ship. That is
+  how P3a/P3b/P3c all shipped with no roadmap entry.
+  - `npm run sdd:preclear` (end of `/build-notes`) — derives the slice from the branch diff, then
+    requires all four spec files, the build-notes template's four sections, a `CHANGELOG.md` diff
+    against the base, and a clean working tree. The Clear is irreversible, so "everything is
+    persisted" stops being a claim and becomes an exit code.
+  - `npm run sdd:audit` (at `/orient`) — reports slices that shipped without a roadmap change-log
+    entry or never reached `ARTIFACT_INDEX.md`. **Only audits slices after a baseline constant**, so
+    it never retroactively polices work that predates the loop. A roadmap row only counts if it is
+    dated on/after the slice — without that, the backfill row naming P3d would have satisfied the
+    check for an undocumented P3d.
+  - Both copy `hooks/pre-push`'s posture (origin/staging → origin/main → don't block offline) and
+    reuse `readFrontMatter`/`ROOT` from `kms/schema/repo`. Verified against real history: with the
+    baseline set before P3a, the audit reports the exact three gaps that existed pre-backfill.
+- **`specs/templates/feature-spec/build-notes.md`** — build notes stop being free-form. Its four
+  headings are exactly what `sdd:preclear` greps for, making the template the check's contract
+  rather than decoration. `plan.md`/`requirements.md`/`validation.md` were already templated; the
+  one artifact the Clear actually bets on was not.
+- **Delivery-board steps wired into the loop.** Propose adds the issue to GitHub Project #2 with a
+  Phase; Build moves it to In Progress; Ship moves it to **In Review** on staging merge; it closes
+  to **Done** only on promotion to `main` — because `Done` means *in production* and `Closes #NN`
+  never fires on a merge into `staging`. Ten issues (#93–#106) filed after the board was provisioned
+  had never been added to it; `scripts/provision-project.sh` was re-run to adopt them. **Still
+  needed, UI-only:** the Status field keeps GitHub's default `Todo/In Progress/Done`, so `Backlog`
+  and `In Review` don't exist yet.
+
 ### Changed
 - **SDD workflow restructured from a seven-stage sequence into a delivery loop with two context
   Clears** (`specs/sdd-workflow.md` 1.0.0 → 2.0.0). The order is now **Orient → Propose → Spec →

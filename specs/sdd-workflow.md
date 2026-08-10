@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.0.0"
+version: "2.1.0"
 updated: 2026-08-10
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -49,6 +49,59 @@ lucky.
 **The cost.** Everything load-bearing must be on disk *before* a Clear. Anything living only in the
 conversation is gone. That is the discipline the flow is buying, not a side effect of it.
 
+## Two machine checks
+
+Every SDD gate fires *before or at merge* — `pre-commit` (Gate 2), `pre-push` and `gates.yml`
+(Gate 4), CI (Gate 3). Nothing had teeth after Ship, which is exactly how P3a, P3b and P3c all
+shipped with no roadmap change-log entry while cart, checkout and payments went live. Two commands
+turn the loop's two honor-system promises into exit codes:
+
+| Command | Stage | Asks |
+|---|---|---|
+| `npm run sdd:preclear` | end of Document (build notes) | Would this Clear destroy anything? |
+| `npm run sdd:audit` | Orient | Did the last shipped slice actually get documented? |
+
+Both live in `scripts/sdd-check.ts` and copy `hooks/pre-push`'s posture: resolve `origin/staging`,
+else `origin/main`, else don't block. `sdd:audit` only looks at slices *after* the loop baseline
+constant — it deliberately does not police slices that predate this workflow.
+
+Neither is a substitute for judgment. `sdd:preclear` proves files exist and the tree is clean, not
+that the build notes are any good; `sdd:audit` proves a roadmap row *mentions* the slice, not that
+the row is worth reading.
+
+## The delivery board
+
+The GitHub Project **“Aheed Online Store — Delivery”** (`#2`, owner `sriahead`, provisioned by
+`scripts/provision-project.sh`) is a generated **view** of this roadmap — the **status layer only**.
+Scope and acceptance criteria live in `specs/`, never on the board.
+
+Its one non-obvious rule, which the loop has to respect: **`Done` means *in production*, not
+merged.** PRs here merge into `staging`, not the default branch, so `Closes #NN` does **not**
+auto-close on merge — the issue closes when the work is promoted to `main`. Staging-merged work
+therefore sits in **In Review** until promotion. That is the agreed semantics, not a bug, and it is
+why open issues for shipped slices are expected rather than a backlog leak.
+
+| Loop stage | Board action |
+|---|---|
+| Propose | add the new issue to the project, set **Phase**, leave Status **Backlog** |
+| Build | move to **In Progress** |
+| Ship — merged to `staging` | move to **In Review** (*not* Done — it isn't in production yet) |
+| Ship — promoted to `main` | issue closes → **Done** |
+| Document (final) | reconcile the board against reality; it's the status-layer twin of the roadmap update |
+
+> **Prerequisite, currently unmet.** The Status field is still GitHub's default
+> `Todo / In Progress / Done` — **`Backlog` and `In Review` do not exist yet**. Renaming the options
+> and enabling the built-in workflows is UI-only (no Projects V2 API), and is listed in
+> `scripts/provision-project.sh`'s manual steps. Until it's done, use `Todo` for `Backlog` and leave
+> staging-merged work in `In Progress`.
+
+## Scale the loop to the change
+
+The full loop — two Clears, two model switches — is for a **slice**. A one-file correction (a typo,
+a stale doc line, a one-line fix) goes Build → Ship with a CHANGELOG entry and no Clears at all.
+This is stated so the loop gets scaled down deliberately rather than skipped wholesale, which is
+what happens to a process that charges slice-sized ceremony for a one-line fix.
+
 ## Orient
 
 Check the actual repo before proposing or building anything — not what a doc *says* is true.
@@ -65,6 +118,14 @@ Check the actual repo before proposing or building anything — not what a doc *
   this workflow mid-session more than once.
 - Coming out of a Clear, Orient is also the *re-entry* point: the previous loop's docs are on disk,
   so read them rather than assuming continuity with a conversation that no longer exists.
+- **Run `npm run sdd:audit`.** It reports whether slices shipped under this loop got their roadmap
+  change-log entry and reached `ARTIFACT_INDEX.md`. A gap here means the previous loop's Document
+  (final) never landed — fix it on the current branch, per the carry-forward rule, rather than
+  noting it and moving on. This is the only check that runs *after* Ship, so treat a failure as
+  real work, not a warning.
+- Read the delivery board as the status layer (`gh project item-list 2 --owner sriahead`) — but
+  trust `specs/` and the filesystem for scope. A board that disagrees with the repo is a board that
+  needs reconciling, not a source to plan from.
 
 ## Propose
 
@@ -79,6 +140,10 @@ Gate 1. Calibrate the ceremony to the size of the fork.
   brand kit).
 - Open a GitHub issue before the spec, for anything beyond a trivial fix. The issue is what a PR's
   `Closes #NN` and the eventual CHANGELOG entry both anchor to.
+- **Put it on the board**: `gh project item-add 2 --owner sriahead --url <issue-url>`, set its
+  **Phase**, and leave Status at **Backlog**. An issue that never reaches the board is invisible to
+  every later stage — ten issues (#93–#106) were filed after the board was provisioned and none of
+  them were added, until a sync caught it.
 - Wait for explicit approval on non-trivial work before Spec/Build. A prior approval does not carry
   forward to a new, unrelated decision.
 
@@ -114,6 +179,7 @@ not present.
 
 Implement to the approved spec — nothing more.
 
+- Move the issue to **In Progress** on the board when you start.
 - Reuse before create: check for an existing port/adapter/utility before writing a new one.
 - Match existing conventions: semantic design tokens, not raw hex/px, in UI; Clean Architecture
   layering (components never import Prisma or the storage client directly); the project's existing
@@ -130,10 +196,13 @@ Implement to the approved spec — nothing more.
 
 Everything that must survive the Clear. This is a **write-to-disk** stage, not a summary stage.
 
-- Write `specs/<YYYY-MM-DD-feature>/build-notes.md`: what was changed and why, decisions taken
-  during the build that the spec didn't dictate, anything deliberately deviating from the spec (and
-  the justification), and any known-shaky area worth extra scrutiny. No front-matter — like
-  `requirements.md`/`validation.md`, it's slice-local and not a KMS artifact.
+- Write `specs/<YYYY-MM-DD-feature>/build-notes.md` **from
+  `specs/templates/feature-spec/build-notes.md`**, not from a blank file: what was changed and why,
+  decisions taken during the build that the spec didn't dictate, anything deliberately deviating
+  from the spec (and the justification), and any known-shaky area worth extra scrutiny. The
+  template's four headings are exactly what `sdd:preclear` greps for — keep them, and write "None."
+  under one rather than deleting it. No front-matter: like `requirements.md`/`validation.md` it's
+  slice-local, not a KMS artifact.
 - **Gate 4 lands here, not in the final Document stage** — the `[Unreleased]` `CHANGELOG.md` entry
   must be on the branch *before* it merges, and the pre-push hook plus CI both enforce that. Write it
   in the terse style of existing entries (what shipped, why, what's deliberately deferred). Gate 4's
@@ -145,16 +214,26 @@ Everything that must survive the Clear. This is a **write-to-disk** stage, not a
 - Anything deliberately deferred becomes a tracked GitHub issue now, while the reasoning is fresh —
   not a comment, and not something the next context is expected to remember.
 - Commit it all. If it isn't committed, the Clear destroys it.
+- **Then run `npm run sdd:preclear` and get exit 0.** It is the gate on this stage, not a
+  formality: it derives the slice from the branch, requires all four spec files, requires the
+  build-notes template's sections, requires a `CHANGELOG.md` diff against the base, and requires a
+  clean working tree. Don't announce that it's safe to clear on the strength of having *intended*
+  to commit everything.
 
 ## Clear (pre-validation)
 
 A hard context reset. **Manual — the user runs `/clear`; the assistant cannot invoke it.**
 
-Before clearing, confirm on disk and committed:
+`npm run sdd:preclear` must exit 0 first. It checks, mechanically:
 
 - [ ] `specs/<date-feature>/` — `plan.md`, `requirements.md`, `validation.md`, `build-notes.md`
-- [ ] The built artifact (all source changes)
-- [ ] `CHANGELOG.md` `[Unreleased]` entry
+- [ ] `build-notes.md` has its four required sections
+- [ ] `CHANGELOG.md` differs from the base branch (Gate 4)
+- [ ] The working tree is clean — nothing lives only in the editor
+
+Still on you, because no script can judge them:
+
+- [ ] The build notes are actually *informative*, not just present
 - [ ] Persistent-doc updates for any changed standing decision
 - [ ] GitHub issues filed for every deferred item
 
@@ -218,6 +297,9 @@ named gates, but the part of this repo's actual history most prone to drift.
   merge is not blanket permission for the next one.
 - Confirm the deploy workflow (`deploy-staging`/`deploy-production`) actually completed. Don't infer
   success from the merge alone.
+- **Move the issue to `In Review` once it's merged to `staging`** — not `Done`. `Done` means in
+  production, and `Closes #NN` won't fire on a staging merge because staging isn't the default
+  branch. The issue closes (→ `Done`) when the work is promoted to `main`.
 - `staging → main` is its own deliberate promotion PR, mirroring the existing "Promote X to
   production" title convention — staging gets deploy-tested first, the production merge is a second,
   separate confirmation, not a rubber stamp on the first.
@@ -241,7 +323,13 @@ verified reality.
   blocked all real email delivery; a payment-failure path that needed a scheduled window against live
   secrets) — those become tracked issues and doc corrections here.
 - Update `specs/roadmap.md`: progress, and a closure note in its change log if this closed out a
-  phase/milestone, matching existing entries' style.
+  phase/milestone, matching existing entries' style. **This is the step `sdd:audit` checks at the
+  next Orient** — if it doesn't land, the next loop opens with a reported gap. Verify with
+  `npm run sdd:audit` before you consider this stage done, rather than waiting to be caught.
+- **Reconcile the delivery board** — the status-layer twin of the roadmap update. Every issue for
+  this slice should be `In Review` (staging) or closed/`Done` (promoted to `main`), and anything
+  newly deferred should be on the board with a Phase. The board holds status only; nothing that
+  belongs in `specs/` goes there.
 - Record anything the loop itself taught — a trap worth encoding in this file or `CLAUDE.md` — while
   it's still cheap to write down.
 - Later phases (P7 compliance, P8 handover) need compliance reports / a handover pack per their own

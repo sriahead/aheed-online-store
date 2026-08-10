@@ -189,9 +189,16 @@ function audit(): number {
     return 0;
   }
 
+  // Change-log rows, paired with their own date. A row only counts as documenting a
+  // slice if it is dated on/after that slice — otherwise a pre-existing row that merely
+  // *mentions* future work would satisfy the check for the slice it predicts. That is a
+  // live trap, not a hypothetical: the P3a/P3b/P3c backfill row names P3d ("Shop your
+  // list"), so without this an eventual P3d slice would pass while undocumented.
   const roadmapRows = readFileSync(join(ROOT, "specs", "roadmap.md"), "utf8")
     .split("\n")
-    .filter((l) => /^\|\s*\d{4}-\d{2}-\d{2}\s*\|/.test(l));
+    .map((l) => /^\|\s*(\d{4}-\d{2}-\d{2})\s*\|/.exec(l))
+    .filter((m): m is RegExpExecArray => m !== null)
+    .map((m) => ({ date: m[1], text: m.input }));
   const index = readFileSync(join(ROOT, "ARTIFACT_INDEX.md"), "utf8");
 
   let gaps = 0;
@@ -200,8 +207,13 @@ function audit(): number {
     const token = sliceToken(slice);
     const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const pattern = new RegExp(`\\b${escaped}\\b`, "i");
+    const sliceDate = slice.slice(0, 10);
     const inRoadmap = roadmapRows.some(
-      (row) => pattern.test(row) || row.includes(slice) || row.includes(`specs/${slice}/`),
+      (row) =>
+        row.date >= sliceDate &&
+        (pattern.test(row.text) ||
+          row.text.includes(slice) ||
+          row.text.includes(`specs/${slice}/`)),
     );
     // The index is already enforced at merge by gates.yml's staleness check; this only
     // confirms the slice's plan.md actually reached the table, which a missed rebuild

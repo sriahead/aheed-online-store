@@ -8,7 +8,9 @@ Follow the **Document (build notes)** stage of `specs/sdd-workflow.md` (read it 
 context). This is a **write-to-disk** stage, not a summary stage — anything left only in the
 conversation is destroyed by the Clear that follows.
 
-1. Write `specs/<YYYY-MM-DD-feature>/build-notes.md`:
+1. Write `specs/<YYYY-MM-DD-feature>/build-notes.md`, copied from
+   `specs/templates/feature-spec/build-notes.md` — its four headings are exactly what
+   `sdd:preclear` checks for, so keep them and write "None." rather than deleting a section:
    - What changed and why.
    - Decisions taken during the build that the spec didn't dictate.
    - Anything that deliberately deviates from the spec, with the justification.
@@ -23,7 +25,11 @@ conversation is destroyed by the Clear that follows.
    ADR) whose standing decision this slice changed. These are part of the change and belong on the
    same branch — not deferred to the post-ship pass.
 4. File a GitHub issue for every deliberately deferred item, now, while the reasoning is fresh.
-5. **Commit it all**, then tell the user explicitly that it's safe to `/clear` and switch to
+5. **Commit it all**, then run `npm run sdd:preclear` and get **exit 0**. It checks the four spec
+   files exist, the build notes carry their required sections, `CHANGELOG.md` differs from the base
+   branch, and the working tree is clean. If it fails, fix what it names — do not tell the user it's
+   safe to clear on the strength of having intended to commit everything.
+6. Only once it exits 0, tell the user explicitly that it's safe to `/clear` and to switch to
    Sonnet 5 (`/model claude-sonnet-5`) — you cannot do either yourself.
 
 Do not validate here. Validation runs deliberately from a fresh context against the spec.

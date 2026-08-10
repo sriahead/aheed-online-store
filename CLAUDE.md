@@ -128,6 +128,22 @@ Two rules the assistant **cannot** enforce for itself, so it must ask:
 **Gate 4 lands in `/build-notes`, not the final `/document`** — the CHANGELOG entry must be on the
 branch before it merges, and Ship precedes the final documentation pass.
 
+**Two machine checks back the loop's honor-system stages** (`scripts/sdd-check.ts`):
+- `npm run sdd:preclear` — run at the end of `/build-notes`; must exit 0 before saying it's safe to
+  `/clear`. Verifies the four spec files, the build-notes template's sections, a CHANGELOG diff vs
+  base, and a clean tree.
+- `npm run sdd:audit` — run at `/orient`. Reports slices that shipped without a roadmap change-log
+  entry. Every other gate fires before or at merge; this is the only one after Ship, which is how
+  P3a/P3b/P3c all shipped undocumented.
+
+**Delivery board** — GitHub Project #2 "Aheed Online Store — Delivery" (owner `sriahead`), a
+generated *view* of `specs/roadmap.md` holding **status only**; scope lives in `specs/`. Propose adds
+the issue (Phase set, Backlog) → Build moves it to In Progress → Ship moves it to **In Review** on
+staging merge → it closes to **Done** only when promoted to `main`. **`Done` means in production**:
+PRs merge into `staging`, not the default branch, so `Closes #NN` never fires on merge and open
+issues for shipped slices are expected. Note the Status field still has GitHub's default options —
+`Backlog`/`In Review` need a one-time UI rename (`scripts/provision-project.sh` manual steps).
+
 ## Dependency & version discipline (learned the hard way)
 - **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their
   declared semver ranges are looser than real compatibility. Locked today:

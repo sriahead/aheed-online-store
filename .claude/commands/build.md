@@ -7,7 +7,8 @@ Implement the approved spec for: $ARGUMENTS
 Follow the **Build** stage of `specs/sdd-workflow.md` (read it if not already in context):
 
 1. Confirm an approved `specs/<date-feature>/requirements.md` exists for this work before writing
-   any source. If it doesn't, stop and go back to `/spec`.
+   any source. If it doesn't, stop and go back to `/spec`. Move the issue to **In Progress** on the
+   delivery board.
 2. Reuse before create — check for an existing port/adapter/utility/component before writing a new
    one.
 3. Match existing conventions: semantic design tokens (not raw hex/px) in UI code; Clean
