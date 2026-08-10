@@ -7,6 +7,20 @@ every branch merges.
 ## [Unreleased]
 
 ### Fixed
+- **`configure-env.mjs` now knows about the Stripe secrets.** P3c added `STRIPE_SECRET_KEY` and
+  `STRIPE_WEBHOOK_SECRET` as Worker secrets but never taught the sync tool about them, so the
+  script silently reported them as "unrecognized" and skipped them — which is why production ran
+  without Stripe credentials until they were set by hand. Added as a new **`OPTIONAL_WORKER_SECRETS`**
+  list rather than under `WORKER_SECRETS`, mirroring the app's own contract: `getPaymentService()`
+  falls back to the stub when `STRIPE_SECRET_KEY` is unset, so an environment without Stripe is a
+  supported state, not a misconfiguration. Making them required would block configuring a fresh
+  environment that has no Stripe yet — verified both ways (present → pushed; absent → skipped,
+  exit 0). `STRIPE_PUBLISHABLE_KEY` is deliberately still unrecognized: hosted Checkout runs
+  nothing in the browser, so the app never reads it.
+  - Records the trap that caused the mismatch: **`STRIPE_WEBHOOK_SECRET` is per-endpoint, not
+    per-account.** Staging's value cannot verify deliveries to production's endpoint, so it must
+    never be copied between environments — each `secrets/<env>.vars` carries the secret belonging
+    to that environment's own Stripe endpoint.
 - **Backfilled the missing P3a/P3b/P3c roadmap change-log entries** (`specs/roadmap.md` 1.9.0). All
   three slices shipped without one — the roadmap still ended at ADR-004 slice 3c (2026-08-09) while
   cart, checkout and Stripe payments were live on staging. Records what each slice delivered, the

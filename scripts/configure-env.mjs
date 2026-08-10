@@ -44,7 +44,21 @@ const WORKER_SECRETS = [
   "CDN_BASE_URL",
 ];
 
+// Cloudflare Worker runtime secrets that are genuinely OPTIONAL — pushed when present,
+// never required. This mirrors the app's own contract: getPaymentService() falls back to
+// the stub adapter when STRIPE_SECRET_KEY is unset, so an environment without Stripe is
+// a supported state, not a misconfiguration. Listing them under WORKER_SECRETS would make
+// them required and block configuring a fresh environment that has no Stripe yet.
+//
+// ⚠ STRIPE_WEBHOOK_SECRET is PER-ENDPOINT, not per-account. Each Stripe webhook endpoint
+// has its own signing secret, so staging's value cannot verify deliveries to production's
+// endpoint (and vice versa) — copying it between environments produces a webhook that
+// fails signature verification on every delivery. Each secrets/<env>.vars must carry the
+// secret belonging to THAT environment's endpoint.
+const OPTIONAL_WORKER_SECRETS = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"];
+
 const REQUIRED = [...GITHUB_ENV_SECRETS, ...WORKER_SECRETS];
+const KNOWN = [...REQUIRED, ...OPTIONAL_WORKER_SECRETS];
 const VALID_ENVS = ["staging", "production"];
 
 // --- Arg parsing ----------------------------------------------------------
@@ -91,16 +105,29 @@ const missing = REQUIRED.filter((k) => !values[k] || values[k].length === 0);
 if (missing.length) {
   die(`missing/empty required variables in ${file}:\n  - ${missing.join("\n  - ")}`);
 }
-const extra = Object.keys(values).filter((k) => !REQUIRED.includes(k));
+const extra = Object.keys(values).filter((k) => !KNOWN.includes(k));
 if (extra.length) {
   console.warn(`! ignoring ${extra.length} unrecognized key(s): ${extra.join(", ")}`);
 }
+const optionalPresent = OPTIONAL_WORKER_SECRETS.filter((k) => values[k] && values[k].length > 0);
+const optionalAbsent = OPTIONAL_WORKER_SECRETS.filter((k) => !optionalPresent.includes(k));
 console.log(`✓ all ${REQUIRED.length} required variables present for "${env}" (source: ${file})`);
+if (optionalPresent.length) {
+  console.log(`  + ${optionalPresent.length} optional: ${optionalPresent.join(", ")}`);
+}
+if (optionalAbsent.length) {
+  console.log(
+    `  - ${optionalAbsent.length} optional not set (skipped): ${optionalAbsent.join(", ")}`,
+  );
+}
 
 if (dryRun) {
   console.log("\n[dry-run] would set (no values shown):");
   for (const k of GITHUB_ENV_SECRETS) console.log(`  ${k} → github env secret (${env})`);
   for (const k of WORKER_SECRETS) console.log(`  ${k} → cloudflare worker secret (${env})`);
+  for (const k of optionalPresent) {
+    console.log(`  ${k} → cloudflare worker secret (${env}) [optional]`);
+  }
   process.exit(0);
 }
 
@@ -140,7 +167,7 @@ for (const k of GITHUB_ENV_SECRETS) {
 }
 
 console.log(`\nSetting Cloudflare Worker secrets (${env})…`);
-for (const k of WORKER_SECRETS) {
+for (const k of [...WORKER_SECRETS, ...optionalPresent]) {
   const good = setSecret(
     "npx",
     ["wrangler", "secret", "put", k, "--env", env],
