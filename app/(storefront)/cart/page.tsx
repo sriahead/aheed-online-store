@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { ListChecks } from "lucide-react";
 import { getCartRepository } from "@/lib/repositories/cart";
 import { getCartIdentity } from "@/lib/cart-identity";
 import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
@@ -22,7 +24,17 @@ export default async function CartPage() {
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
-      <h1 className="mb-4 text-xl font-bold text-primary">Your cart</h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl font-bold text-primary">Your cart</h1>
+        {/* The other cart-entry path (P3d, #114) — discoverable without knowing the URL. */}
+        <Link
+          href="/shop-your-list"
+          className="flex items-center gap-1.5 rounded-xl border border-primary/20 px-3 py-1.5 text-xs font-bold text-primary"
+        >
+          <ListChecks className="h-4 w-4" aria-hidden />
+          Shop your list
+        </Link>
+      </div>
 
       {summary.mergePending && (
         <MergePrompt

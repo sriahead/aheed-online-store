@@ -6,6 +6,8 @@ import {
   effectiveStock,
   isMergePending,
   resolveMerge,
+  sumLinesByProduct,
+  type MergeLine,
   type MergeResolution,
 } from "@/lib/cart-rules";
 import type { CartIdentity } from "@/lib/cart-identity";
@@ -58,6 +60,12 @@ export const EMPTY_CART: CartSummary = {
 export interface CartRepository {
   getSummary(identity: CartIdentity): Promise<CartSummary>;
   addItem(identity: CartIdentity, productId: string, delta?: number): Promise<void>;
+  /**
+   * Bulk add for "Shop your list" (P3d, #114) — one cart resolution and one
+   * transaction for the whole list, not N sequential addItem() calls.
+   * Quantities ADD to what is already in the cart, like every other add path.
+   */
+  addItems(identity: CartIdentity, lines: MergeLine[]): Promise<void>;
   setQuantity(identity: CartIdentity, productId: string, quantity: number): Promise<void>;
   removeItem(identity: CartIdentity, productId: string): Promise<void>;
   applyMerge(identity: CartIdentity, resolution: MergeResolution): Promise<void>;
@@ -249,6 +257,45 @@ export function getCartRepository(): CartRepository {
           create: { cartId, vendorId: vid, productId, quantity: next },
           update: { quantity: next },
         });
+      });
+    },
+
+    async addItems(identity, lines) {
+      // One entry per product: a pasted list can name the same product twice,
+      // and two upserts of one row inside a transaction would fight.
+      const merged = sumLinesByProduct(lines);
+      if (merged.length === 0) return;
+
+      const vid = await vendorId();
+      // stockMap is scoped to `vendorId: vid`, so a productId belonging to
+      // another vendor (or to nothing) simply has no row and resolves to 0 —
+      // which is why the review form's ids can be untrusted input.
+      const stocks = await stockMap(
+        vid,
+        merged.map((line) => line.productId),
+      );
+      const writable = merged.filter((line) => (stocks.get(line.productId) ?? 0) > 0);
+      if (writable.length === 0) return; // nothing addable — don't create a cart
+
+      const cartId = await ensureCart(vid, identity);
+      await prisma.$transaction(async (tx: Tx) => {
+        for (const line of writable) {
+          const existing = await tx.cartItem.findUnique({
+            where: { cartId_productId: { cartId, productId: line.productId } },
+            select: { quantity: true },
+          });
+          const next = clampQuantity(
+            existing?.quantity ?? 0,
+            line.quantity,
+            stocks.get(line.productId) ?? 0,
+          );
+          if (next <= 0) continue;
+          await tx.cartItem.upsert({
+            where: { cartId_productId: { cartId, productId: line.productId } },
+            create: { cartId, vendorId: vid, productId: line.productId, quantity: next },
+            update: { quantity: next },
+          });
+        }
       });
     },
 

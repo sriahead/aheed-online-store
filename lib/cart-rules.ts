@@ -69,6 +69,21 @@ export function resolveMerge(
 }
 
 /**
+ * Collapse repeated products into one entry, summing quantities and preserving
+ * first-seen order (P3d, #114). A pasted list can name the same product twice
+ * ("apples" and "2x apples"), and two upserts of the same row inside one
+ * transaction would fight each other — so the caller writes one line per
+ * product, not one per typed line.
+ */
+export function sumLinesByProduct(lines: MergeLine[]): MergeLine[] {
+  const totals = new Map<string, number>();
+  for (const line of lines) {
+    totals.set(line.productId, (totals.get(line.productId) ?? 0) + line.quantity);
+  }
+  return [...totals.entries()].map(([productId, quantity]) => ({ productId, quantity }));
+}
+
+/**
  * A merge decision is pending only when BOTH carts hold items — otherwise there
  * is nothing to decide and resolution is automatic (adopt / discard), so the
  * common path stays frictionless.
