@@ -1,16 +1,23 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { MapPin, Search, ShoppingBag, User, LogIn } from "lucide-react";
+import { MapPin, Search, User, LogIn } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
 import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
+import { getCartRepository, EMPTY_CART } from "@/lib/repositories/cart";
+import { getCartIdentity } from "@/lib/cart-identity";
+import { CartDrawerShell } from "@/components/cart/CartDrawerShell";
+import { CartContents } from "@/components/cart/CartContents";
 
 /**
  * Storefront header — a Server Component (no "use client"), so it reads the
  * session and renders auth state with zero client JS, matching the
- * progressive-enhancement pattern used everywhere since P2a. Cart is inert
- * (visual only) until P3 wires a real cart.
+ * progressive-enhancement pattern used everywhere since P2a.
+ *
+ * The cart is real as of P3a (#93): the count and the drawer's contents are
+ * rendered here on the server, and only the drawer's open/close is a client
+ * island. A visitor with no cart identity costs no cart query at all.
  */
 
 function SearchForm({ className = "", placeholder }: { className?: string; placeholder: string }) {
@@ -34,7 +41,7 @@ function SearchForm({ className = "", placeholder }: { className?: string; place
 }
 
 export async function Header() {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const user = session?.user as { name: string } | undefined;
   const firstName = user?.name?.split(" ")[0];
 
@@ -43,6 +50,13 @@ export async function Header() {
   const profile = await getCurrentVendorProfile();
   const name = profile?.name ?? "";
   const localityName = profile?.localityName ?? "";
+
+  // No identity (the common anonymous case) => no cart query at all.
+  const cartIdentity = await getCartIdentity();
+  const cartSummary =
+    cartIdentity.userId || cartIdentity.guestToken
+      ? await getCartRepository().getSummary(cartIdentity)
+      : EMPTY_CART;
   const searchPlaceholder = profile?.searchPlaceholder ?? "Search products…";
   const { CDN_BASE_URL } = getEnv();
   const logoUrl =
@@ -103,15 +117,17 @@ export async function Header() {
             </Link>
           )}
 
-          {/* Inert cart button — no cart exists until P3, so no count is shown. */}
-          <button
-            type="button"
-            aria-label="Cart (available soon)"
-            className="flex items-center gap-2 rounded-full bg-primary px-3 py-2 text-xs font-bold text-white sm:px-3.5"
-          >
-            <ShoppingBag className="h-4 w-4" aria-hidden />
-            <span className="hidden sm:inline">Cart</span>
-          </button>
+          {/* Real cart (P3a). Contents are server-rendered and handed to the
+              client shell as children, so only open/close ships JS. */}
+          <CartDrawerShell itemCount={cartSummary.itemCount}>
+            <CartContents
+              summary={cartSummary}
+              freeDeliveryThresholdPence={profile?.freeDeliveryThresholdPence ?? null}
+              localityName={localityName}
+              cdnBaseUrl={CDN_BASE_URL ?? ""}
+              showViewCartLink
+            />
+          </CartDrawerShell>
         </div>
       </div>
 

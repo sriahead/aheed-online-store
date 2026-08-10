@@ -28,3 +28,12 @@ Follow the **Ship** stage of `specs/sdd-workflow.md` (read it if not already in 
 8. If a PR merges before a fix/follow-up commit lands, don't force-push or rewrite history to
    patch it in — open a tracking issue and land the fix as its own proper follow-up PR (`/propose`
    → `/spec` if non-trivial, otherwise straight to a small `/build` + `/ship`).
+9. Once merged to `staging` and the deploy is confirmed, move the issue to **In Review** on the
+   delivery board — **not `Done`**. `Done` means *in production*: PRs merge into `staging`, which
+   isn't the default branch, so `Closes #NN` doesn't fire and the issue stays open by design. It
+   closes (→ `Done`) only when the work is promoted to `main`.
+10. Then tell the user to switch back to Opus 5 (`/model claude-opus-5`) for the final `/document`
+    pass — you cannot switch your own model.
+
+Ship only what `/validate` actually passed. If validation was skipped, ran in the same context that
+built the artifact, or left rows unverified, say so before opening the PR rather than after.

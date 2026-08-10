@@ -31,11 +31,24 @@ const schema = z.object({
   // explicit per-environment value avoids cookie/redirect surprises in prod).
   BETTER_AUTH_SECRET: z.string().min(1, "BETTER_AUTH_SECRET is required"),
   BETTER_AUTH_URL: z.string().optional(),
+  // ADR-004 slice 3c (#74) — optional platform family suffix for auth cookies.
+  // Unset (the default in every environment today) => host-only cookies, i.e. an
+  // isolated session per vendor host. When set (e.g. `.aheedfoodcentre.nocaped.com`),
+  // a request whose host is under that suffix gets a parent-domain cookie (SSO across
+  // that subdomain family). A custom-domain vendor never matches it → stays isolated.
+  AUTH_COOKIE_FAMILY_DOMAIN: z.string().optional(),
   // P1b — Google Sign-In (issue #28). Optional: unset means lib/auth.ts's
   // buildSocialProviders() omits the Google provider and Better Auth runs
   // email/password-only, same as before this slice.
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+  // P3c (#99) — Stripe. Both optional: an unconfigured environment falls back to
+  // the stub PaymentService rather than crashing, so local dev and CI keep working
+  // with no Stripe setup (same degradation as lib/email.ts).
+  // No STRIPE_PUBLISHABLE_KEY: hosted Checkout is a server-created session plus a
+  // redirect, so no publishable key ever reaches the browser.
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export type AppEnv = z.infer<typeof schema>;
@@ -52,8 +65,11 @@ export function getEnv(): AppEnv {
     CDN_BASE_URL: readEnv("CDN_BASE_URL"),
     BETTER_AUTH_SECRET: readEnv("BETTER_AUTH_SECRET"),
     BETTER_AUTH_URL: readEnv("BETTER_AUTH_URL"),
+    AUTH_COOKIE_FAMILY_DOMAIN: readEnv("AUTH_COOKIE_FAMILY_DOMAIN"),
     GOOGLE_CLIENT_ID: readEnv("GOOGLE_CLIENT_ID"),
     GOOGLE_CLIENT_SECRET: readEnv("GOOGLE_CLIENT_SECRET"),
+    STRIPE_SECRET_KEY: readEnv("STRIPE_SECRET_KEY"),
+    STRIPE_WEBHOOK_SECRET: readEnv("STRIPE_WEBHOOK_SECRET"),
   });
 }
 

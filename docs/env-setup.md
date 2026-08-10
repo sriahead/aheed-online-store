@@ -4,12 +4,12 @@ title: "Environment Setup — Secrets & Config (staging / production)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.4.0"
-updated: 2026-08-08
+version: "1.6.0"
+updated: 2026-08-10
 visibility: internal
-summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, the demo-accounts tool, per-vendor host mapping, and per-vendor branding/logo seeding.
+summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, the demo-accounts tool, per-vendor host mapping, per-vendor branding/logo seeding, and auth cookie scoping.
 tags: [runbook, secrets, config, cloudflare, github, ops]
-related: [architecture, adr-003-storage-abstraction, adr-004-multi-tenancy, neon-db-separation, demo-accounts-tool, multitenancy-slice3b-host-resolver]
+related: [architecture, adr-003-storage-abstraction, adr-004-multi-tenancy, neon-db-separation, demo-accounts-tool, multitenancy-slice3b-host-resolver, multitenancy-slice3c-auth-cookie-scoping]
 ---
 
 # Environment Setup — Secrets & Config
@@ -23,10 +23,12 @@ all values are present, and **never prints secret values**.
 | Store | Set by | Consumed by | Variables |
 |---|---|---|---|
 | **GitHub environment secrets** | `gh secret set … --env <env>` | CI deploy workflows (`.github/workflows/deploy-*.yml`) | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `DIRECT_URL` |
-| **Cloudflare Worker secrets** | `wrangler secret put … --env <env>` | the running app at runtime (`lib/config`) | `DATABASE_URL`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION`, `CDN_BASE_URL` |
+| **Cloudflare Worker secrets** | `wrangler secret put … --env <env>` | the running app at runtime (`lib/config`) | `DATABASE_URL`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION`, `CDN_BASE_URL`, `AUTH_COOKIE_FAMILY_DOMAIN` *(optional — see slice 3c)*, `STRIPE_SECRET_KEY` *(optional)*, `STRIPE_WEBHOOK_SECRET` *(optional)* |
 
-Two variables are required beyond the original list: **`BETTER_AUTH_URL`** (per-environment origin —
-OAuth/session break without it) and **`S3_REGION`** (required by ADR-003's storage contract).
+Beyond the original list: **`S3_REGION`** is required by ADR-003's storage contract, and
+**`BETTER_AUTH_URL`** is now only a **fallback** origin — since ADR-004 slice 3c, `getAuth()` derives
+`baseURL` per request from the host, so a single hardcoded origin no longer pins the app to one vendor
+(keep it set as a safe default; it's used only when a request has no host header).
 `DIRECT_URL` (direct, non-pooled) is a **GitHub** secret for CI migrations; `DATABASE_URL` (pooled)
 is a **Worker** secret for runtime — never the reverse (see `CLAUDE.md`).
 
@@ -97,6 +99,59 @@ aws s3 cp public/images/brand/logo.png "s3://<bucket>/vendors/<aheed-vendor-id>/
 Until the object exists (or where `CDN_BASE_URL` is unset, e.g. local `preview`), the header falls
 back to the Aheed wordmark — never a broken image. SriMart has no logo yet (`logoStorageKey` null →
 wordmark); setting a real one later is data-only, no deploy.
+
+### Auth cookie scoping (ADR-004 slice 3c)
+
+`getAuth()` derives `baseURL` / `trustedOrigins` / cookie domain **per request** from the host alone
+(no DB call) — so each vendor host gets a **host-only session that trusts only its own origin**, with
+no configuration. A sibling vendor's origin is rejected by Better Auth's origin/CSRF check exactly
+like an unknown origin — trusting every vendor's origin on every other vendor's auth endpoints was
+considered and rejected as reopening cross-tenant CSRF surface (#83).
+
+- **`AUTH_COOKIE_FAMILY_DOMAIN`** — *optional*, **leave unset** in staging and production today
+  (there is no shared subdomain family: Aheed and SriMart are on distinct hosts). It exists only to
+  arm parent-domain **family SSO** in the future: set it to a family suffix
+  (e.g. `.aheedfoodcentre.nocaped.com`) once real `{slug}.<family>` subdomain vendors exist, and any
+  host under that suffix shares one session cookie. A custom-domain vendor never matches it and stays
+  isolated. No code change — one Cloudflare Worker secret.
+- **Per-host Google OAuth redirect URIs (onboarding step).** Because `baseURL` is per host, Google
+  sign-in calls back to `https://<vendor-host>/api/auth/callback/google`. Each vendor host must be
+  added to the Google OAuth client's *Authorized redirect URIs*. Aheed and SriMart are registered;
+  do this for every **new** vendor host (email/password needs nothing).
+
+### Stripe payments (P3c)
+
+Two Cloudflare **Worker** secrets per environment. Both optional — with neither set the app falls
+back to the stub payment adapter, so local dev and CI work with no Stripe setup at all.
+
+- **`STRIPE_SECRET_KEY`** — server-side API calls (`sk_test_…` in staging, live key only in prod).
+- **`STRIPE_WEBHOOK_SECRET`** — the signing secret for the webhook endpoint (`whsec_…`).
+
+There is deliberately **no `STRIPE_PUBLISHABLE_KEY`**: hosted Checkout is a server-created session
+plus a redirect, so nothing Stripe-related runs in the browser.
+
+**Register exactly ONE webhook endpoint per environment — not one per vendor host.** The same
+Worker serves every vendor domain and the handler is vendor-agnostic (it finds the order by the
+`orderNumber` in session metadata), so one endpoint is enough. Registering per-host endpoints would
+produce several signing secrets, and `STRIPE_WEBHOOK_SECRET` holds exactly one.
+
+| Environment | Endpoint URL |
+|---|---|
+| staging | `https://staging.aheedfoodcentre.nocaped.com/api/webhooks/stripe` |
+| production | `https://aheedfoodcentre.nocaped.com/api/webhooks/stripe` |
+
+Subscribe it to: `checkout.session.completed`, `checkout.session.expired`,
+`checkout.session.async_payment_failed`.
+
+**Local testing needs the Stripe CLI** — Stripe cannot reach `localhost`:
+
+```bash
+stripe listen --forward-to http://localhost:8787/api/webhooks/stripe
+# use the whsec_… it prints as STRIPE_WEBHOOK_SECRET for that session
+stripe trigger checkout.session.completed
+```
+
+Use **test mode** (card `4242 4242 4242 4242`) for everything except production.
 
 ## Prerequisites (one-time)
 

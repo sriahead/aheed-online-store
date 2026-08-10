@@ -18,7 +18,7 @@ export type RbacResult =
  * (not thrown) so callers decide how to respond.
  */
 export async function requireRole(...allowed: Role[]): Promise<RbacResult> {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   if (!session?.user) {
     return { ok: false, status: 401, reason: "unauthenticated" };
   }
@@ -50,7 +50,7 @@ export type VendorRbacResult =
  * whose role is in `allowed`. Returned as data (not thrown), like requireRole().
  */
 export async function requireVendorRole(...allowed: VendorRole[]): Promise<VendorRbacResult> {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   if (!session?.user) {
     return { ok: false, status: 401, reason: "unauthenticated" };
   }

@@ -7,6 +7,7 @@ import { getAuth } from "@/lib/auth";
 import { getEnv } from "@/lib/config";
 import { formatPrice } from "@/components/product/format-price";
 import { ProductImageGallery } from "@/components/product/ProductImageGallery";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { ReviewForm } from "@/features/reviews/components/ReviewForm";
 import { deleteReview } from "@/features/reviews/delete-review";
 
@@ -24,7 +25,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   }
 
   const { CDN_BASE_URL } = getEnv();
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const reviewRepo = getReviewRepository();
 
   const [reviews, existingReview] = await Promise.all([
@@ -45,6 +46,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <p className={product.inStock ? "text-action" : "text-danger"}>
           {product.inStock ? "In stock" : "Out of stock"}
         </p>
+        {/* Real add-to-cart (P3a) — full-width variant, no wrapping <Link> here. */}
+        <AddToCartButton productId={product.id} disabled={!product.inStock} variant="full" />
       </div>
 
       <section className="col-span-full flex flex-col gap-4">

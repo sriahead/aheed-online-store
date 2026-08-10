@@ -13,7 +13,7 @@ import { parseRating } from "./validate-rating";
  * though the UI already hides the form from logged-out visitors.
  */
 export async function submitReview(formData: FormData): Promise<void> {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   if (!session?.user) {
     throw new Error("Must be signed in to leave a review");
   }

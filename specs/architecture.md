@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.5.0"
-updated: 2026-08-08
+version: "1.8.0"
+updated: 2026-08-10
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -128,12 +128,34 @@ No layer skips inward; components never touch Prisma or the S3 client directly.
 > **Branding & config are data-driven (slice 4):** a vendor's colours, name, logo, locality, delivery
 > area, metadata and email sender come from `VendorBranding`/`VendorConfig`/`VendorDeliveryArea` via
 > `lib/repositories/vendor.ts` (per-request `cache()`); the eight brand primitives are injected as CSS
-> custom properties so components are unchanged. The excerpt below predates tenancy and is kept as a
-> shape reference — see `prisma/schema.prisma` for the authoritative, vendor-scoped models.
+> custom properties so components are unchanged. **Auth cookie scoping is per-request, same-vendor-only
+> (slice 3c):** `getAuth()`'s `baseURL`, `trustedOrigins` and cookie domain are resolved per request
+> from the host alone (`lib/auth-origin.ts`, no DB call) — **host-only sessions by default, trusting
+> only that vendor's own origin** (a sibling vendor's origin is rejected exactly like an unknown
+> origin — reopening cross-vendor trust would undermine isolation, #83); the parent-domain
+> family-cookie (SSO) path is config-gated behind an optional `AUTH_COOKIE_FAMILY_DOMAIN`, unset today
+> (no subdomain family exists). **The cart is vendor-scoped (P3a):** `Cart`/`CartItem` carry
+> `vendorId`, so one shopper has an independent cart per vendor. Cart identity is **exactly one of**
+> `userId` or an opaque `guestToken` in a host-only `aheed_cart` cookie, and carts are created lazily
+> (first add only — crawling this public storefront writes nothing). A guest cart meeting a saved cart
+> is **never silently merged**: the shopper picks combine / keep-saved / keep-new, and the cookie is
+> cleared only once a resolution is applied. The cart stores **no prices** — unit price is read from
+> `Product` at render and snapshotted into `OrderItem` only at order creation (P3b) — and stock is
+> advisory in the cart but authoritative at that decrement. **Orders are vendor-scoped (P3b):**
+> `Address`/`Order`/`OrderItem`/`Payment`/`OrderStatusEvent` all carry `vendorId`, and an order
+> number never resolves on another vendor's host. An order opens as **`PENDING_PAYMENT`** — stock is
+> decremented at creation (a conditional `updateMany` guard inside one transaction, so overselling
+> is structurally impossible), but nothing is paid until P3c's webhook moves it to `CONFIRMED`; an
+> unpaid order must never read as `CONFIRMED` or staff would pick and deliver it. **The delivery
+> address is snapshotted per order** (its own `Address` row, written once), for the same reason
+> `OrderItem` snapshots name and unit price: editing a saved address later must not rewrite where a
+> past order was delivered. The excerpt below predates
+> tenancy and is kept as a shape reference — see `prisma/schema.prisma` for the authoritative,
+> vendor-scoped models.
 
 ```prisma
 enum Role            { CUSTOMER STAFF ADMIN }
-enum OrderStatus     { CONFIRMED OUT_FOR_DELIVERY DELIVERED CANCELLED }
+enum OrderStatus     { PENDING_PAYMENT CONFIRMED OUT_FOR_DELIVERY DELIVERED CANCELLED }
 enum PaymentStatus   { PENDING SUCCEEDED FAILED REFUNDED }
 enum DiscountType    { PERCENTAGE FIXED }
 enum LoyaltyTxnType  { EARN REDEEM }

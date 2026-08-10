@@ -4,10 +4,10 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.0.0"
-updated: 2026-08-08
+version: "1.1.1"
+updated: 2026-08-09
 visibility: internal
-summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution with custom-domain override, family-scoped SSO.
+summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
 related: [architecture, adr-001-hosting, adr-002-auth-library, adr-003-storage-abstraction]
 ---
@@ -144,6 +144,26 @@ Land before P3, as independently-validatable slices:
 - **Rule of thumb (post-ADR):** if onboarding a vendor or changing its branding/locality/delivery
   area/custom domain requires editing anything **outside the database and the UI/config layer**, the
   abstraction has been violated.
+
+## Implementation note — auth cookie scoping (slice 3c, 2026-08-09, #74)
+
+Decision 4 assumed a **subdomain family** (`{slug}.aheedfoodcentre.nocaped.com`) whose members SSO
+via a parent-domain cookie. The **deployed topology has no such family**: the two live vendors sit on
+distinct hosts — Aheed at the apex `aheedfoodcentre.nocaped.com`, SriMart on its own
+`srimart.nocaped.com` (the custom-domain path). So slice 3c implements decision 4 as
+**isolated-by-default**: `baseURL`, `trustedOrigins`, and the cookie domain are resolved **per
+request** from the host alone (`lib/auth-origin.ts` → `getAuth()`, no DB call), and every vendor gets
+a **host-only session cookie whose `trustedOrigins` trusts only that vendor's own origin** — a sibling
+vendor's origin is rejected by Better Auth's origin/CSRF check exactly like an unknown origin
+(confirmed live on staging, #83; an earlier draft of this slice trusted every vendor's origin
+DB-wide, which would have reopened a cross-tenant CSRF-adjacent surface). The parent-domain
+family-cookie mechanism is **built and unit-tested but config-gated** behind an optional platform env
+`AUTH_COOKIE_FAMILY_DOMAIN` (unset in every environment today); when a real `{slug}.family` vendor
+eventually exists, setting that one value arms family SSO (parent-domain cookie + a scoped wildcard
+trusted origin for that family) with no code change. This does **not** change decision 4's intent —
+global identity, per-vendor `VendorMembership` authz, cookie config derived from the request — only
+its default posture, since the family it presupposed does not currently exist. Cross-**custom-domain**
+SSO remains the deferred federation upgrade below.
 
 ## Deferred upgrade — cross-domain SSO (federated auth)
 

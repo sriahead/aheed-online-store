@@ -47,18 +47,21 @@ enum VendorRole {
 }
 
 model User {
-  id            String    @id
+  id            String             @id
   name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
+  email         String             @unique
+  emailVerified Boolean            @default(false)
   image         String?
-  role          Role      @default(CUSTOMER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          Role               @default(CUSTOMER)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
   sessions      Session[]
   accounts      Account[]
   reviews       Review[]
   memberships   VendorMembership[]
+  carts         Cart[]
+  addresses     Address[]
+  orders        Order[]
 }
 
 model Session {
@@ -131,6 +134,13 @@ model Vendor {
   reviews       Review[]
   memberships   VendorMembership[]
   domains       VendorDomain[]
+  carts         Cart[]
+  cartItems     CartItem[]
+  addresses     Address[]
+  orders        Order[]
+  orderItems    OrderItem[]
+  payments      Payment[]
+  orderEvents   OrderStatusEvent[]
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
@@ -166,12 +176,12 @@ model VendorMembership {
 // Satellite config/branding tables ship EMPTY in slice 1 — their values (and the code that
 // reads them) arrive in slice 4. Explicit columns only, never a Json column (CLAUDE.md).
 model VendorBranding {
-  id             String   @id @default(uuid())
-  vendorId       String   @unique
-  vendor         Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  name           String
-  tagline        String?
-  logoStorageKey String? // RELATIVE key only (ADR-003) — never a URL
+  id              String   @id @default(uuid())
+  vendorId        String   @unique
+  vendor          Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  name            String
+  tagline         String?
+  logoStorageKey  String? // RELATIVE key only (ADR-003) — never a URL
   // Brand color PRIMITIVES (mirror design-system/tokens/tokens.css --color-brand-*),
   // injected per vendor as CSS custom properties in slice 4. Hex strings.
   brandGreenDark  String
@@ -187,15 +197,22 @@ model VendorBranding {
 }
 
 model VendorConfig {
-  id                String   @id @default(uuid())
-  vendorId          String   @unique
-  vendor            Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  localityName      String // e.g. "Milton Keynes"
-  senderName        String // transactional email sender identity
-  senderEmail       String
-  searchPlaceholder String? // header search-box copy, e.g. "Search halal lamb, basmati, lentils…"
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                         String   @id @default(uuid())
+  vendorId                   String   @unique
+  vendor                     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  localityName               String // e.g. "Milton Keynes"
+  senderName                 String // transactional email sender identity
+  senderEmail                String
+  searchPlaceholder          String? // header search-box copy, e.g. "Search halal lamb, basmati, lentils…"
+  // P3a — delivery rules are vendor data, never constants (the AI Studio mockup hardcoded a
+  // £30 threshold). Prisma-level defaults mean a newly-inserted vendor is valid without the
+  // seed supplying values. P3a reads only the threshold (cart banner); applying the fee and
+  // the minimum to a payable total is P3b.
+  deliveryFeePence           Int      @default(349)
+  freeDeliveryThresholdPence Int? // null = free delivery never offered
+  minimumOrderPence          Int      @default(0) // 0 = no minimum
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
 }
 
 model VendorDeliveryArea {
@@ -242,6 +259,8 @@ model Product {
   images        ProductImage[]
   inventory     Inventory?
   reviews       Review[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
   averageRating Float          @default(0) // denormalized, recomputed on every review write
   reviewCount   Int            @default(0)
   // P2.5b1 — visual redesign foundation (specs/2026-08-07-p2-5b1-visual-foundation/).
@@ -302,4 +321,162 @@ model Review {
 
   @@unique([vendorId, userId, productId])
   @@index([vendorId, productId, createdAt])
+}
+
+// P3a — cart foundation (specs/2026-08-09-p3a-cart-foundation/, #93).
+// One cart per (vendor, identity): shopping at two vendors gives two independent
+// carts, which falls straight out of ADR-004 row-level tenancy.
+// Identity is EXACTLY ONE of userId / guestToken — a guest cart is keyed by an
+// opaque token in a host-only cookie, and is merged into the account cart only
+// when the shopper explicitly chooses (never silently).
+model Cart {
+  id         String     @id @default(uuid())
+  vendorId   String
+  vendor     Vendor     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestToken String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  items      CartItem[]
+
+  @@unique([vendorId, userId])
+  @@unique([vendorId, guestToken])
+  @@index([vendorId])
+}
+
+// Deliberately stores NO price. Price is read from Product at render time and is
+// snapshotted into OrderItem at order creation (P3b) — a cart that cached prices
+// would silently serve stale money after a price change.
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+}
+
+// P3b — checkout + order core (specs/2026-08-10-p3b-checkout-order-core/, #96).
+// PENDING_PAYMENT is the initial state: stock is decremented at order creation but
+// payment is not yet settled, so an order must NOT read as CONFIRMED (staff would
+// pick and deliver it). P3c's Stripe webhook moves it to CONFIRMED.
+enum OrderStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+// Per-order delivery address SNAPSHOT. Written once and never updated — editing a
+// saved address later must not rewrite where a past order was delivered
+// (architecture.md §3.1: "historical snapshots are intentional"). userId is
+// nullable so a future saved-address book can reuse this table with no migration.
+model Address {
+  id            String   @id @default(uuid())
+  vendorId      String
+  vendor        Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
+  recipientName String
+  phone         String
+  line1         String
+  line2         String?
+  city          String
+  postcode      String
+  notes         String?
+  createdAt     DateTime @default(now())
+  orders        Order[]
+
+  @@index([vendorId])
+}
+
+// Exactly one of userId / guestEmail identifies the buyer (enforced in the
+// repository). Money is integer pence throughout; no discountTotal/loyaltyRedeemed
+// columns — those are P5's to add when they exist.
+model Order {
+  id               String             @id @default(uuid())
+  vendorId         String
+  vendor           Vendor             @relation(fields: [vendorId], references: [id])
+  orderNumber      String             @unique
+  userId           String?
+  user             User?              @relation(fields: [userId], references: [id])
+  guestEmail       String?
+  addressId        String
+  address          Address            @relation(fields: [addressId], references: [id])
+  status           OrderStatus        @default(PENDING_PAYMENT)
+  currency         String             @default("GBP")
+  subtotalPence    Int
+  deliveryFeePence Int
+  totalPence       Int
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  items            OrderItem[]
+  payment          Payment?
+  statusEvents     OrderStatusEvent[]
+
+  @@index([vendorId, createdAt])
+  @@index([vendorId, status, createdAt])
+}
+
+// productName / unitPricePence are SNAPSHOTS at purchase time — a later price or
+// rename must never rewrite what the customer actually bought.
+model OrderItem {
+  id             String  @id @default(uuid())
+  orderId        String
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendorId       String
+  vendor         Vendor  @relation(fields: [vendorId], references: [id])
+  productId      String
+  product        Product @relation(fields: [productId], references: [id])
+  productName    String
+  unitPricePence Int
+  quantity       Int
+  lineTotalPence Int
+
+  @@index([orderId])
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  orderId           String        @unique
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendorId          String
+  vendor            Vendor        @relation(fields: [vendorId], references: [id])
+  status            PaymentStatus @default(PENDING)
+  provider          String
+  providerReference String?
+  amountPence       Int
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([orderId])
+}
+
+model OrderStatusEvent {
+  id        String      @id @default(uuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendorId  String
+  vendor    Vendor      @relation(fields: [vendorId], references: [id])
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
 }

@@ -4,8 +4,8 @@ title: Tech Stack
 audience: [dev]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-08-06
+version: "1.2.0"
+updated: 2026-08-10
 visibility: internal
 summary: Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal.
 tags: [tech-stack, guardrails]
@@ -63,9 +63,23 @@ environment-configured seam.
 
 ## Payments
 
-- **Stripe** for all card processing (Stripe Elements/Checkout), behind a `PaymentService` port.
-  Card data never touches Aheed's servers — PCI scope is minimised to Stripe. Webhooks are
+- **Stripe** for all card processing, behind a `PaymentService` port (`lib/payments.ts`, created in
+  P3b). Card data never touches Aheed's servers — PCI scope is minimised to Stripe. Webhooks are
   signature-verified and idempotent.
+- **Hosted Stripe Checkout**, not embedded Elements — it handles UK **Strong Customer
+  Authentication / 3-D Secure**, a legal requirement rather than a nicety (ADR-005). Elements stays
+  a later swap behind the same port.
+- **Money flow is multi-vendor-aware (ADR-005):** all vendors settle into a **single platform Stripe
+  account** today, with a Connect-ready seam (`vendorId` on the payment input) so per-vendor payouts
+  are additive. Note the consequence: the platform is the **merchant of record** for every vendor's
+  sales — revisit before onboarding a real third-party merchant.
+- **The Stripe adapter is real as of P3c** (`lib/payments.ts`): hosted Checkout sessions created with
+  raw `fetch` (no `stripe` SDK — same Worker-bundle reasoning as aws4fetch/Resend), confirmed by a
+  signature-verified idempotent webhook at `/api/webhooks/stripe`. P3b's **stub is retained as the
+  fallback** whenever `STRIPE_SECRET_KEY` is unset, so local dev and CI need no Stripe setup.
+- **Webhook signatures are verified with WebCrypto** (HMAC-SHA256 over `{timestamp}.{rawBody}`,
+  constant-time compared, 5-minute replay tolerance) — no library, and the *raw* body is used because
+  re-serialising parsed JSON breaks the signature.
 
 ## Email
 

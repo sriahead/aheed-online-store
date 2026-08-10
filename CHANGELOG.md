@@ -6,7 +6,209 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **Backfilled the missing P3a/P3b/P3c roadmap change-log entries** (`specs/roadmap.md` 1.9.0). All
+  three slices shipped without one — the roadmap still ended at ADR-004 slice 3c (2026-08-09) while
+  cart, checkout and Stripe payments were live on staging. Records what each slice delivered, the
+  live-verification outcome for P3c, and that **P3 remains open pending P3d ("Shop your list")**.
+  This is the gap that motivated the post-Ship documentation audit in `specs/sdd-workflow.md` 2.0.0:
+  every SDD gate fires before or at merge, so the roadmap update — which happens after the PR lands
+  — had nothing enforcing it. The KMS index, by contrast, was never at risk: `gates.yml` already
+  rebuilds and diffs it (normalizing timestamp and commit) on every PR.
+
 ### Added
+- **Two machine checks behind the SDD loop's honor-system stages** (`scripts/sdd-check.ts`,
+  `specs/sdd-workflow.md` 2.1.0). Every existing gate fires before or at merge — `pre-commit`
+  (Gate 2), `pre-push`/`gates.yml` (Gate 4), CI (Gate 3) — so nothing had teeth after Ship. That is
+  how P3a/P3b/P3c all shipped with no roadmap entry.
+  - `npm run sdd:preclear` (end of `/build-notes`) — derives the slice from the branch diff, then
+    requires all four spec files, the build-notes template's four sections, a `CHANGELOG.md` diff
+    against the base, and a clean working tree. The Clear is irreversible, so "everything is
+    persisted" stops being a claim and becomes an exit code.
+  - `npm run sdd:audit` (at `/orient`) — reports slices that shipped without a roadmap change-log
+    entry or never reached `ARTIFACT_INDEX.md`. **Only audits slices after a baseline constant**, so
+    it never retroactively polices work that predates the loop. A roadmap row only counts if it is
+    dated on/after the slice — without that, the backfill row naming P3d would have satisfied the
+    check for an undocumented P3d.
+  - Both copy `hooks/pre-push`'s posture (origin/staging → origin/main → don't block offline) and
+    reuse `readFrontMatter`/`ROOT` from `kms/schema/repo`. Verified against real history: with the
+    baseline set before P3a, the audit reports the exact three gaps that existed pre-backfill.
+- **`specs/templates/feature-spec/build-notes.md`** — build notes stop being free-form. Its four
+  headings are exactly what `sdd:preclear` greps for, making the template the check's contract
+  rather than decoration. `plan.md`/`requirements.md`/`validation.md` were already templated; the
+  one artifact the Clear actually bets on was not.
+- **Delivery-board steps wired into the loop.** Propose adds the issue to GitHub Project #2 with a
+  Phase; Build moves it to In Progress; Ship moves it to **In Review** on staging merge; it closes
+  to **Done** only on promotion to `main` — because `Done` means *in production* and `Closes #NN`
+  never fires on a merge into `staging`. Ten issues (#93–#106) filed after the board was provisioned
+  had never been added to it; `scripts/provision-project.sh` was re-run to adopt them. **Still
+  needed, UI-only:** the Status field keeps GitHub's default `Todo/In Progress/Done`, so `Backlog`
+  and `In Review` don't exist yet.
+
+### Changed
+- **SDD workflow restructured from a seven-stage sequence into a delivery loop with two context
+  Clears** (`specs/sdd-workflow.md` 1.0.0 → 2.0.0). The order is now **Orient → Propose → Spec →
+  Build → Document (build notes) → CLEAR → Validate ⇄ Fix → Ship → Document (final) → CLEAR →
+  Orient**, with the model switching to Sonnet 5 for the validation half and back to Opus 5 for the
+  final documentation pass.
+  - **Why the Clear before Validate:** a context that just built something is the worst judge of
+    whether it matches the spec — it remembers the intent and reads that intent into the code. The
+    reset forces Gate 3 to run against `requirements.md` and the artifact on disk, which is the only
+    version of the spec a future maintainer ever gets. This already caught real defects under the
+    old single-context flow (a consolidated `features/cart/actions.ts` that deviated from the
+    spec's one-file-per-action shape; webhook functions resolving `getPrisma()` internally, so they
+    couldn't be proven against real Postgres) — the reset makes that systematic rather than lucky.
+  - **Document split in two.** `/build-notes` (new) is a **write-to-disk** stage before the Clear:
+    build notes, persistent-doc updates, deferred items filed as issues — and **Gate 4's CHANGELOG
+    entry**, which has to be on the branch before it merges, i.e. before Ship, which now precedes
+    the final documentation pass. `/document` is now purely the post-ship durable record (KMS index,
+    roadmap, reconciling docs with what validation actually found) and supersedes the build notes
+    where they disagree.
+  - **`/fix` (new)** formalises the Validate ⇄ Fix cycle: fix the root cause rather than the check,
+    re-run `/validate` from the top rather than just the failed row, and stop when a "fix" is really
+    a redesign — that's a Spec-level change, not something to improvise in a validation mindset.
+  - Existing commands realigned: `/build` now hands off to `/build-notes` instead of `/validate`,
+    `/validate` treats build notes as a claim about the artifact rather than evidence, `/orient`
+    doubles as the post-Clear re-entry point, and `/spec` records that `requirements.md` is the only
+    thing the fresh validation context will have.
+  - **Two rules the assistant cannot enforce on itself** and must therefore ask for, now stated in
+    `CLAUDE.md`: `/clear` is user-invoked, and so is every model switch.
+
+### Added
+- **Stripe payments, webhooks & confirmation email (P3c, #99)** — money actually moves
+  (`specs/2026-08-10-p3c-stripe-payments/`). Replaces P3b's stub with a real hosted **Stripe
+  Checkout** adapter, a signature-verified idempotent webhook at `/api/webhooks/stripe`, and an
+  order confirmation email. **Closes the stock-release gap P3b explicitly recorded**: an order that
+  fails or expires now returns its items to stock instead of holding them forever.
+  - **Fixes a latent defect in P3b**: `createPayment()` was called *inside* `placeOrder`'s Prisma
+    transaction. Harmless with a stub that does no I/O — which is why it passed every check — but a
+    real HTTP call there would hold a Postgres transaction open on a serverless connection against
+    Prisma's 5s timeout, so a slow Stripe response would roll back a good order. The session is now
+    created **after commit**, and if it fails a **compensating transaction** cancels the order and
+    releases its stock, so a shopper is never left with an unpayable order holding inventory.
+  - **Raw `fetch`, no `stripe` SDK** — the same Worker-bundle reasoning that chose `aws4fetch` over
+    the AWS SDK and plain fetch over Resend's. Signatures are verified with **WebCrypto**
+    (HMAC-SHA256 over `{timestamp}.{rawBody}`, constant-time compared, 5-minute replay tolerance),
+    using the **raw** body — re-serialising parsed JSON changes bytes and breaks verification.
+  - **Idempotent by the same conditional-update guard as the stock decrement** (`WHERE status =
+    'PENDING_PAYMENT'`), not a new event-log table. Stripe retries aggressively and can deliver out
+    of order, so a duplicate delivery must change nothing — and must not send a second email or
+    release stock twice.
+  - **The webhook is vendor-agnostic**: it has no tenant context, so it finds the order by the
+    `orderNumber` in session metadata and derives the vendor from the row. **One endpoint per
+    environment, not one per vendor host** — the same Worker serves every host, and per-host
+    endpoints would produce multiple signing secrets the single `STRIPE_WEBHOOK_SECRET` can't hold.
+  - **`checkout.session.completed` alone isn't enough** — it can fire `payment_status: "unpaid"` for
+    asynchronous methods, so confirmation requires `"paid"`.
+  - **The confirmation email fires only from the webhook**, after payment confirms — never at order
+    creation, where a later failure would leave the shopper holding a "confirmed" email for a
+    cancelled order. Email failure never rolls back a confirmed payment.
+  - **`/checkout/{orderNumber}` is now status-aware** rather than assuming the redirect means
+    success: the browser redirect routinely races the webhook and a closed tab means it never
+    happens, so the page renders whatever `order.status` actually is.
+  - Two new **optional** Worker secrets (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`); with neither
+    set the app **falls back to the stub**, so local dev and CI need no Stripe setup. Deliberately no
+    `STRIPE_PUBLISHABLE_KEY` — hosted Checkout never runs anything in the browser. Deferred and
+    tracked: resume-payment for stuck orders (**#100**), webhook reconciliation sweep (**#101**).
+  - **Live-verified against staging** (2026-08-10) with real Stripe test-mode keys: two real
+    payments confirmed the webhook, idempotency, and status-aware confirmation page against
+    staging's actual database. Uncovered a real infra gap in the process — Resend has no verified
+    sending domain yet, so it rejects delivery to any address outside its own test address
+    (**#104**, owner action). That failure incidentally proved the email-failure-is-non-fatal
+    guarantee live: the order still confirmed and the webhook still returned 200. Remaining gap
+    (payment-provider failure path, **#103**) needs a deliberate window against staging's live
+    secrets rather than being done inline.
+- **Checkout + order core (P3b, #96)** — a cart can now become a real order
+  (`specs/2026-08-10-p3b-checkout-order-core/`). Adds vendor-scoped `Address`/`Order`/`OrderItem`/
+  `Payment`/`OrderStatusEvent` behind a new `lib/repositories/orders.ts`, a `/checkout` page
+  following `docs/ui-ref/CheckoutModal.tsx`, and a `/checkout/{orderNumber}` confirmation served
+  from the persisted order so a refresh shows the same thing.
+  - **Overselling is structurally impossible.** The whole checkout is one interactive transaction —
+    decrement stock → create address/order/items/payment/status-event → clear the cart — and the
+    decrement is a **conditional `updateMany`** (`quantity: { gte: qty }`) whose `count === 0` means
+    someone else took the last one, rolling everything back. No raw SQL (`CLAUDE.md`), no
+    read-then-check gap. Clearing the cart *inside* the transaction also makes a **double submit**
+    safe: the second finds an empty cart instead of creating a duplicate order.
+  - **Stock decrements at order creation**, so an order opens as **`PENDING_PAYMENT`** — an unpaid
+    order must never read as `CONFIRMED` or staff would pick and deliver it. ⚠️ **Gap until P3c:**
+    an abandoned checkout holds its stock, because release on payment-failure/expiry is P3c's
+    webhook. **P3b must not reach production ahead of P3c.**
+  - **Money is recomputed server-side** from the database inside the transaction and never read from
+    the form; prices are then snapshotted onto `OrderItem`. The **delivery address is snapshotted
+    per order** for the same reason — editing a saved address later must not rewrite where a past
+    order went.
+  - Five checkout gates, each its own error: unresolved P3a merge, empty cart, unavailable line,
+    undeliverable postcode (via the existing `isDeliverable`), and below the vendor's minimum order.
+  - **`PaymentService` port created** (`lib/payments.ts`) — named in `tech-stack.md` since the
+    architecture baseline, never previously written. P3b ships a **stub** that charges nothing, so
+    the risky logic was testable before any Stripe credential existed; P3c swaps in Stripe.
+  - **Order numbers** are `{VENDOR}-{YYYYMMDD}-{6 random}` with the prefix derived from the vendor
+    slug — deliberately **not sequential**, since a counter lets anyone who places two orders infer
+    the shop's volume. Collisions retry against the unique index rather than being assumed away.
+  - **ADR-005 — Payments & multi-vendor money flow**: Stripe behind the port, hosted Checkout (it
+    handles UK SCA/3DS, a legal requirement), and a single platform account with a Connect-ready
+    seam. Records the **merchant-of-record** consequence — with one account the platform is the
+    seller for every vendor's sales, which is acceptable only while Aheed is the sole real merchant.
+  - Additive migration (two enums + five tables). `VendorProfile` gains `slug`. `architecture.md`
+    (v1.8.0) and `tech-stack.md` (v1.1.0) updated.
+- **Cart foundation (P3a, #93)** — the storefront's inert "Add to Cart" is now real
+  (`specs/2026-08-09-p3a-cart-foundation/`). Vendor-scoped `Cart`/`CartItem` behind a new
+  `lib/repositories/cart.ts`, so one shopper has an **independent cart per vendor**. Identity is
+  **exactly one of** `userId` or an opaque `guestToken` in a **host-only** `aheed_cart` cookie
+  (mirroring slice 3c's isolation), and carts are created **lazily** — no row and no cookie until a
+  first add, so crawling this public, indexed storefront writes nothing. UI follows
+  `docs/ui-ref/CartDrawer.tsx`: a slide-out drawer whose **contents are server-rendered** (quantity
+  and remove are plain `<form>` posts to server actions) with only open/close as a client island,
+  plus a `/cart` route as the canonical URL. `AddToCartButton` is the one other island — it exists
+  because `ProductCard`'s body is a `<Link>` and the click must not navigate.
+  - **Two carts are never silently merged.** Signing in with both a guest and a saved cart prompts
+    the shopper — combine (sum, capped at stock) / keep saved / keep new — and nothing is destroyed
+    until they choose. No prompt when there's nothing to decide (empty saved cart is simply adopted).
+    This is also what makes the shared-device case safe: a second person signing in on a borrowed
+    browser is *asked* about the stranger's basket rather than inheriting it.
+  - **The cart stores no prices** — unit price is read from `Product` at render and is snapshotted
+    into `OrderItem` only at order creation (P3b); a cart that cached prices would serve stale money.
+    Stock is advisory here and authoritative at the P3b decrement (a cart is not a reservation).
+  - **Delivery rules became vendor data**: `VendorConfig` gains `deliveryFeePence` (default 349),
+    `freeDeliveryThresholdPence` (null = never free) and `minimumOrderPence` (default 0), seeded
+    differently for Aheed and SriMart. The reference mockup's hardcoded `£30` threshold and
+    `#1B5E20` greens are **translated, not copied** — thresholds come from the DB and colours through
+    `design-system.md`'s token table, so per-vendor theming can't regress the way #77 did. Applying
+    fee/minimum to a payable total stays P3b.
+  - Edge cases closed during spec review: a product with **no `Inventory` row** counts as out of
+    stock (never unlimited), and a product that goes inactive **while sitting in a cart** renders as
+    unavailable and is excluded from the subtotal instead of quietly adding money.
+  - Additive migration (two tables + three defaulted/nullable columns). `ProductSummary` gains
+    `inStock` so cards can show the out-of-stock state. Deferred: abandoned guest-cart cleanup
+    (**#94**, likely P7 with the GDPR retention review).
+- **GitHub Project delivery tracking (`scripts/provision-project.sh`).** Adds the idempotent
+  provisioning script for the *Aheed Online Store — Delivery* Project (Projects V2), plus the
+  `specs/roadmap.md` note establishing the rule: **the Project is a generated view of the roadmap,
+  never a second plan** — it carries only the status layer (in progress / in review / blocked), while
+  scope and acceptance criteria stay in `specs/`. Provisions 6 area labels, 11 milestones 1:1 with the
+  roadmap phases (M0–P2.5 created **and closed**, P3–P8 open), and one epic per unspec'd phase (P3–P8)
+  linking to its criteria rather than copying them. Check-then-create throughout: a re-run creates
+  nothing. Deliberately omitted as duplication: a `feature` label (the repo already uses
+  `enhancement`), `priority:*` labels (Priority is a Project field), and `phase:*` labels (Phase is a
+  Project field). **Two GitHub limits, flagged not papered over:** Projects V2 exposes no public API
+  for built-in workflows or view creation (the script prints the UI steps), and issues here never
+  auto-close on `Closes #NN` because PRs merge to `staging`, not the default branch — so **Done means
+  "promoted to production"** and staging-merged work legitimately sits in In Review.
+- **Data-driven auth cookie scoping (ADR-004 slice 3c, #74)** — the last multi-tenancy gate before P3
+  (`specs/2026-08-09-multitenancy-slice3c-auth-cookie-scoping/`). Better Auth's `baseURL`,
+  `trustedOrigins` and cookie domain are now resolved **per request** from the host
+  (`lib/auth-origin.ts`: pure `buildAuthOrigin` + async `resolveAuthOrigin`; `getAuth()` is now
+  `async`), replacing the single hardcoded `BETTER_AUTH_URL`. Every vendor host gets a **host-only
+  session, trusting only its own origin, by default** — no shared subdomain family exists (Aheed and
+  SriMart sit on distinct hosts), so isolated-by-default is the correct posture. A new **optional**
+  platform env `AUTH_COOKIE_FAMILY_DOMAIN` (unset in every environment today) arms the parent-domain
+  family-SSO cookie for a future `{slug}.<family>` subdomain family with no code change; a
+  custom-domain vendor never matches it and stays isolated. No schema/migration change. **Onboarding
+  caveat:** because `baseURL` is per host, each vendor host must be registered in the Google OAuth
+  client's redirect URIs (Aheed + SriMart done). ADR-004 carries a breadcrumb reconciling decision 4's
+  assumed subdomain family with the deployed topology; `specs/roadmap.md` change-log back-fills slices
+  3a/3b/4 + the #81 promotion. **ADR-004 slice sequence complete — P3 unblocked.** See the `trustedOrigins`
+  correction below (#83), caught during this slice's own staging verification.
 - **Per-vendor search-box placeholder (ADR-004 slice 4 follow-up).** The header search placeholder was
   hardcoded Aheed grocery copy ("Search halal lamb, basmati, lentils…") shown on every vendor. Adds a
   nullable `VendorConfig.searchPlaceholder` column (additive migration), read via
@@ -14,6 +216,18 @@ every branch merges.
   keeps its copy, SriMart gets "Search chargers, earbuds, lamps…"). Re-seed each environment to apply.
 
 ### Fixed
+- **Auth `trustedOrigins` narrowed to same-vendor-only (#83, ADR-004 slice 3c correction).** Live
+  staging verification of #74, right after merge, showed the original design — `trustedOrigins`
+  populated from every `VendorDomain` host — would let one vendor's origin pass Better Auth's
+  origin/CSRF check on **another** vendor's auth endpoints (e.g. SriMart's origin trusted by Aheed's
+  `/api/auth/*`), reopening a cross-tenant surface that isolated-by-default exists to close.
+  `trustedOrigins` now contains only the current request's own origin (+ the family wildcard when
+  `AUTH_COOKIE_FAMILY_DOMAIN` is armed) — confirmed with the human. `lib/auth-origin.ts` no longer
+  needs a DB call at all. `requirements.md`/`validation.md`/ADR-004/`architecture.md`/`env-setup.md`
+  corrected to match.
+- **Roadmap's slice 3c change-log entry corrected (#83 follow-up).** Missed when #83 fixed the other
+  standing docs — `specs/roadmap.md` still described `trustedOrigins` as resolved "from the host +
+  `VendorDomain`". Now matches the same-vendor-only design.
 - **Multi-vendor browse/product polish (ADR-004 slice 4 follow-up, #79).** Three Aheed-hardcoded
   surfaces that looked wrong on a 2nd vendor (SriMart): (1) the **speciality filters**
   (Halal/Fresh/Organic) are now **data-driven** — `ProductRepository.availableSpecialities()` shows

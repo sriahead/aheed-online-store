@@ -18,6 +18,8 @@ export type BrandPrimitives = Record<
 >;
 
 export interface VendorProfile {
+  /** Vendor slug — used to derive the order-number prefix (P3b). */
+  slug: string;
   name: string;
   tagline: string | null;
   logoStorageKey: string | null;
@@ -27,6 +29,11 @@ export interface VendorProfile {
   senderEmail: string;
   searchPlaceholder: string;
   deliveryPrefixes: string[];
+  // P3a — delivery rules as vendor data. P3a reads only the threshold (cart
+  // banner); applying fee/minimum to a payable total is P3b.
+  deliveryFeePence: number;
+  freeDeliveryThresholdPence: number | null;
+  minimumOrderPence: number;
 }
 
 // Fallbacks = the Aheed defaults already in design-system/tokens/tokens.css, so a
@@ -51,6 +58,7 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
   const vendor = await prisma.vendor.findUnique({
     where: { id: vendorId },
     select: {
+      slug: true,
       name: true,
       branding: {
         select: {
@@ -73,6 +81,9 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
           senderName: true,
           senderEmail: true,
           searchPlaceholder: true,
+          deliveryFeePence: true,
+          freeDeliveryThresholdPence: true,
+          minimumOrderPence: true,
         },
       },
       deliveryAreas: { select: { prefix: true } },
@@ -81,6 +92,7 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
 
   const b = vendor?.branding;
   return {
+    slug: vendor?.slug ?? "",
     name: b?.name ?? vendor?.name ?? DEFAULT_SENDER_NAME,
     tagline: b?.tagline ?? null,
     logoStorageKey: b?.logoStorageKey ?? null,
@@ -101,6 +113,11 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
     senderEmail: vendor?.config?.senderEmail ?? "",
     searchPlaceholder: vendor?.config?.searchPlaceholder ?? DEFAULT_SEARCH_PLACEHOLDER,
     deliveryPrefixes: (vendor?.deliveryAreas ?? []).map((a) => a.prefix),
+    // Fall back to the schema defaults when the config satellite is unseeded,
+    // matching the deploy-before-seed safety the rest of this file uses.
+    deliveryFeePence: vendor?.config?.deliveryFeePence ?? 349,
+    freeDeliveryThresholdPence: vendor?.config?.freeDeliveryThresholdPence ?? null,
+    minimumOrderPence: vendor?.config?.minimumOrderPence ?? 0,
   };
 }
 
