@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.1.0"
+version: "2.2.0"
 updated: 2026-08-10
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -264,6 +264,23 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   marked as passing.
 - UI changes: verify against rendered output (compiled CSS, rendered HTML, browser screenshot), not
   code review alone. DB-touching code: `npm run preview`, never `npm run dev` (see `CLAUDE.md`).
+- **Server actions can be driven headlessly against `npm run preview`** — no browser needed. Next
+  renders every `<form action={serverAction}>` with progressive-enhancement fields, so submitting
+  those fields as `multipart/form-data` invokes the real action, and `Set-Cookie` on the response
+  is how you prove a *negative* (P3d's "matching writes nothing" was verified this way). Three
+  traps, each of which cost a dead end in P3d:
+  - **`fetch`/undici silently drops a caller-set `Host` header.** Under multi-tenancy the vendor is
+    resolved from the host, so every request lands on `/coming-soon` and looks like a broken app.
+    Use `node:http` with `{ setHost: false }` and set `Host` yourself.
+  - **`$ACTION_REF_1` renders with no `value` attribute.** A parser that requires `value="..."`
+    drops it, the action payload is unparseable, and the POST fails as a bare `500` with nothing in
+    the response body. Parse each `<input>` whole, then read `name`/`value` out of it.
+  - **A `<select>` is a form field too.** Serialize `<input>` *and* `<select>` in document order, or
+    any action pairing repeated fields positionally will be tested against the wrong shape.
+- **Check which database the Worker is actually on before trusting a live result.** `npm run preview`
+  reads `.dev.vars`; `prisma migrate`/`db:seed` and any local inspection script read `.env`. When
+  those point at different Neon projects, a live check silently validates against a database the app
+  isn't using. Compare both before starting, not after a confusing result.
 - CI (`gates`) is the real Gate 3 — don't report a slice done until it's actually green on GitHub,
   not "should be green based on local output."
 

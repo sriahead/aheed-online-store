@@ -50,8 +50,18 @@ R9. Line-to-candidate resolution is a **pure** exported function in `lib/shoppin
 R10. Ranking is **total and deterministic** — the same list and candidate set always produce the
      same order. An exact normalised-name equality with the line's joined terms resolves the line
      as `matched` even when other products also contain all terms. Otherwise candidates order by:
-     all-terms matches first, then shorter product name, then name alphabetically. `ambiguous`
-     lines surface at most **5** candidates.
+     shorter product name first, then name alphabetically. `ambiguous` lines surface at most **5**
+     candidates.
+
+     > **Corrected 2026-08-10, after ship.** This row originally opened the ordering with
+     > "all-terms matches first, then shorter product name, then name alphabetically". That tier
+     > can never fire: R9 defines a candidate *as* a product containing every term, so nothing
+     > that is not an all-terms match ever reaches the ranker. `rankCandidates()` shipped the two
+     > reachable tiers and documented the absence rather than writing a branch that provably
+     > cannot execute — recorded as a deviation in `build-notes.md` and confirmed at `/validate`
+     > as a **spec defect, not an implementation shortcut**. The requirement now says what the
+     > code does and what the tests assert; every behaviour this row asserts (exact-match-wins,
+     > determinism under candidate shuffling, the 5-candidate cap) was already covered.
 
 R11. `lib/shopping-list.ts` unit tests prove, against a fixture candidate set drawn from the seeded
      catalogue names, that `chicken breast` → *Halal Chicken Breast* (`matched`), `milk` →
