@@ -24,7 +24,8 @@ export class CheckoutError extends Error {
       | "NOT_DELIVERABLE"
       | "BELOW_MINIMUM"
       | "INSUFFICIENT_STOCK"
-      | "ORDER_NUMBER_COLLISION",
+      | "ORDER_NUMBER_COLLISION"
+      | "PAYMENT_PROVIDER_FAILED",
     message: string,
   ) {
     super(message);
@@ -48,14 +49,23 @@ export interface PlaceOrderInput {
   };
   rules: DeliveryRules & { minimumOrderPence: number };
   vendorSlug: string;
+  /** Absolute origin for the provider's return URLs. Supplied by the checkout
+   *  action so this stays free of request context (P3b R9a). */
+  returnOrigin: string;
 }
 
 export interface PlacedOrder {
   orderNumber: string;
   totalPence: number;
+  /** Where to send the shopper to pay; null when the stub adapter is active. */
+  redirectUrl: string | null;
 }
 
 const ORDER_NUMBER_ATTEMPTS = 5;
+
+/** Written before the provider is contacted; overwritten once a session exists. */
+const PENDING_PROVIDER = "pending";
+const CURRENCY = "GBP";
 
 /**
  * Creates an order from a cart, atomically.
@@ -79,7 +89,7 @@ export async function placeOrder(
 
   const payments = getPaymentService();
 
-  return prisma.$transaction(async (tx) => {
+  const created = await prisma.$transaction(async (tx) => {
     // Re-read the cart inside the transaction — never trust what the page rendered.
     const cart = await tx.cart.findFirst({
       where: { id: input.cartId, vendorId },
@@ -192,19 +202,17 @@ export async function placeOrder(
       })),
     });
 
-    const intent = await payments.createPayment({
-      orderNumber: order.orderNumber,
-      amountPence: totals.totalPence,
-      currency: "GBP",
-      vendorId,
-    });
-
+    // NO external call inside the transaction (P3c R6). An HTTP round-trip to
+    // Stripe here would hold a Postgres transaction open on a serverless
+    // connection against Prisma's 5s interactive-transaction timeout — a slow
+    // provider would roll back a perfectly good order. The provider reference is
+    // filled in after commit.
     await tx.payment.create({
       data: {
         orderId: order.id,
         vendorId,
-        provider: intent.provider,
-        providerReference: intent.providerReference,
+        provider: PENDING_PROVIDER,
+        providerReference: null,
         amountPence: totals.totalPence,
       },
     });
@@ -222,7 +230,89 @@ export async function placeOrder(
     // submit safe (the second finds CART_EMPTY).
     await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
 
-    return { orderNumber: order.orderNumber, totalPence: totals.totalPence };
+    return {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      totalPence: totals.totalPence,
+      currency: CURRENCY,
+    };
+  });
+
+  // ---- After commit: talk to the payment provider ----------------------------
+  // If this fails, the order exists but can never be paid, so it is cancelled and
+  // its stock released immediately (P3c R7) rather than silently holding
+  // inventory until the (never-created) session would have expired.
+  try {
+    const intent = await payments.createPayment({
+      orderNumber: created.orderNumber,
+      amountPence: created.totalPence,
+      currency: created.currency,
+      vendorId,
+      returnOrigin: input.returnOrigin,
+    });
+
+    await prisma.payment.update({
+      where: { orderId: created.orderId },
+      data: { provider: intent.provider, providerReference: intent.providerReference },
+    });
+
+    return {
+      orderNumber: created.orderNumber,
+      totalPence: created.totalPence,
+      redirectUrl: intent.redirectUrl,
+    };
+  } catch (error) {
+    await releaseOrder(
+      prisma,
+      vendorId,
+      created.orderId,
+      "Payment provider unavailable; order cancelled and stock released.",
+    );
+    throw new CheckoutError(
+      "PAYMENT_PROVIDER_FAILED",
+      "We couldn't reach our payment provider. Nothing has been charged — please try again.",
+    );
+  }
+}
+
+/**
+ * Cancels an order and returns its stock, idempotently.
+ *
+ * The status guard (`status: "PENDING_PAYMENT"`) is what makes it safe to call
+ * more than once: Stripe retries webhooks aggressively and can deliver out of
+ * order, and releasing the same stock twice would silently inflate inventory.
+ * `count === 0` means someone already handled it — same technique as the
+ * decrement guard above.
+ */
+async function releaseOrder(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  orderId: string,
+  note: string,
+): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.order.updateMany({
+      where: { id: orderId, vendorId, status: "PENDING_PAYMENT" },
+      data: { status: "CANCELLED" },
+    });
+    if (count === 0) return false; // already confirmed or already cancelled
+
+    const items = await tx.orderItem.findMany({
+      where: { orderId },
+      select: { productId: true, quantity: true },
+    });
+    for (const item of items) {
+      await tx.inventory.updateMany({
+        where: { vendorId, productId: item.productId },
+        data: { quantity: { increment: item.quantity } },
+      });
+    }
+
+    await tx.payment.updateMany({ where: { orderId }, data: { status: "FAILED" } });
+    await tx.orderStatusEvent.create({
+      data: { orderId, vendorId, status: "CANCELLED", note },
+    });
+    return true;
   });
 }
 
@@ -308,4 +398,109 @@ export function getOrderRepository(): OrderRepository {
       return summary;
     },
   };
+}
+
+// ---- Webhook-facing transitions (P3c, #99) ---------------------------------
+//
+// These are deliberately NOT on the request-scoped OrderRepository: a payment
+// webhook arrives from Stripe with no tenant context, so it cannot resolve a
+// vendor from the request host. It looks the order up by its unique, unguessable
+// order number and derives vendorId from the row. This is the single justified
+// un-scoped read in the codebase, and it is confined to this file so the
+// no-direct-Prisma guard still keeps app/ and features/ out of Prisma.
+
+export interface WebhookOrder {
+  id: string;
+  vendorId: string;
+  orderNumber: string;
+  status: string;
+  totalPence: number;
+  subtotalPence: number;
+  deliveryFeePence: number;
+  buyerEmail: string | null;
+  items: {
+    productName: string;
+    unitPricePence: number;
+    quantity: number;
+    lineTotalPence: number;
+  }[];
+}
+
+/** Un-scoped by design — see the note above. Null when no such order exists. */
+export async function findOrderForWebhook(orderNumber: string): Promise<WebhookOrder | null> {
+  const prisma = getPrisma();
+  const order = await prisma.order.findUnique({
+    where: { orderNumber },
+    select: {
+      id: true,
+      vendorId: true,
+      orderNumber: true,
+      status: true,
+      totalPence: true,
+      subtotalPence: true,
+      deliveryFeePence: true,
+      guestEmail: true,
+      user: { select: { email: true } },
+      items: {
+        select: {
+          productName: true,
+          unitPricePence: true,
+          quantity: true,
+          lineTotalPence: true,
+        },
+      },
+    },
+  });
+  if (!order) return null;
+
+  const { guestEmail, user, ...rest } = order;
+  return { ...rest, buyerEmail: guestEmail ?? user?.email ?? null };
+}
+
+/**
+ * PENDING_PAYMENT → CONFIRMED, idempotently.
+ *
+ * Returns true only when THIS call performed the transition — the caller uses
+ * that to decide whether to send the confirmation email, so a duplicate webhook
+ * delivery (Stripe retries aggressively) can't email the shopper twice.
+ */
+export async function confirmPayment(orderNumber: string): Promise<boolean> {
+  const prisma = getPrisma();
+  const order = await findOrderForWebhook(orderNumber);
+  if (!order) return false;
+
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.order.updateMany({
+      where: { id: order.id, status: "PENDING_PAYMENT" },
+      data: { status: "CONFIRMED" },
+    });
+    if (count === 0) return false; // already processed
+
+    await tx.payment.updateMany({
+      where: { orderId: order.id },
+      data: { status: "SUCCEEDED" },
+    });
+    await tx.orderStatusEvent.create({
+      data: {
+        orderId: order.id,
+        vendorId: order.vendorId,
+        status: "CONFIRMED",
+        note: "Payment confirmed.",
+      },
+    });
+    return true;
+  });
+}
+
+/**
+ * PENDING_PAYMENT → CANCELLED with stock released, idempotently.
+ *
+ * This is the gap P3b explicitly left open: until now an abandoned checkout held
+ * its stock forever.
+ */
+export async function failPayment(orderNumber: string, reason: string): Promise<boolean> {
+  const prisma = getPrisma();
+  const order = await findOrderForWebhook(orderNumber);
+  if (!order) return false;
+  return releaseOrder(prisma, order.vendorId, order.id, reason);
 }

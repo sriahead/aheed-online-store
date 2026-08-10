@@ -1,0 +1,149 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+// lib/payments.ts reads lib/config (→ getCloudflareContext); mock it so the
+// selection logic is testable without any Stripe or Worker environment.
+const getEnvMock = vi.fn();
+vi.mock("@/lib/config", () => ({ getEnv: () => getEnvMock() }));
+
+const {
+  createStripePaymentService,
+  createStubPaymentService,
+  getPaymentService,
+  PaymentProviderError,
+  STRIPE_PAYMENT_PROVIDER,
+  STUB_PAYMENT_PROVIDER,
+} = await import("@/lib/payments");
+
+const INPUT = {
+  orderNumber: "AHE-20260810-K4M2XQ",
+  amountPence: 2346,
+  currency: "GBP",
+  vendorId: "v-aheed",
+  returnOrigin: "https://staging.aheedfoodcentre.nocaped.com",
+};
+
+beforeEach(() => getEnvMock.mockReset());
+afterEach(() => vi.unstubAllGlobals());
+
+describe("getPaymentService — adapter selection", () => {
+  it("falls back to the stub when STRIPE_SECRET_KEY is unset", async () => {
+    getEnvMock.mockReturnValue({});
+    const result = await getPaymentService().createPayment(INPUT);
+    expect(result.provider).toBe(STUB_PAYMENT_PROVIDER);
+    expect(result.status).toBe("PENDING");
+  });
+
+  it("uses the Stripe adapter when a key is present", async () => {
+    getEnvMock.mockReturnValue({ STRIPE_SECRET_KEY: "sk_test_123" });
+    const fetchMock = vi.fn(async () =>
+      Response.json({ id: "cs_test_1", url: "https://checkout.stripe.com/x" }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getPaymentService().createPayment(INPUT);
+    expect(result.provider).toBe(STRIPE_PAYMENT_PROVIDER);
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+});
+
+describe("stub adapter", () => {
+  it("never reports success — an order must not look paid when it wasn't", async () => {
+    const result = await createStubPaymentService().createPayment(INPUT);
+    expect(result).toEqual({
+      provider: STUB_PAYMENT_PROVIDER,
+      status: "PENDING",
+      providerReference: null,
+      redirectUrl: null,
+    });
+  });
+});
+
+describe("Stripe adapter — session payload", () => {
+  function mockStripeOk() {
+    const fetchMock = vi.fn(async () =>
+      Response.json({ id: "cs_test_1", url: "https://checkout.stripe.com/pay/cs_test_1" }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  function bodyOf(fetchMock: ReturnType<typeof vi.fn>): URLSearchParams {
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    return new URLSearchParams(init.body as string);
+  }
+
+  it("returns the session id and url from Stripe's response", async () => {
+    mockStripeOk();
+    const result = await createStripePaymentService("sk_test_123").createPayment(INPUT);
+    expect(result.providerReference).toBe("cs_test_1");
+    expect(result.redirectUrl).toBe("https://checkout.stripe.com/pay/cs_test_1");
+    expect(result.status).toBe("PENDING");
+  });
+
+  it("creates a one-off payment session for the order total", async () => {
+    const fetchMock = mockStripeOk();
+    await createStripePaymentService("sk_test_123").createPayment(INPUT);
+    const body = bodyOf(fetchMock);
+    expect(body.get("mode")).toBe("payment");
+    expect(body.get("line_items[0][quantity]")).toBe("1");
+    expect(body.get("line_items[0][price_data][unit_amount]")).toBe("2346");
+  });
+
+  it("takes the currency from the input rather than hardcoding one", async () => {
+    const fetchMock = mockStripeOk();
+    await createStripePaymentService("sk_test_123").createPayment({ ...INPUT, currency: "EUR" });
+    expect(bodyOf(fetchMock).get("line_items[0][price_data][currency]")).toBe("eur");
+  });
+
+  it("carries the order number so the webhook and dashboard can find it", async () => {
+    const fetchMock = mockStripeOk();
+    await createStripePaymentService("sk_test_123").createPayment(INPUT);
+    const body = bodyOf(fetchMock);
+    expect(body.get("metadata[orderNumber]")).toBe(INPUT.orderNumber);
+    expect(body.get("client_reference_id")).toBe(INPUT.orderNumber);
+  });
+
+  it("builds return URLs from the supplied origin, not a hardcoded host", async () => {
+    const fetchMock = mockStripeOk();
+    await createStripePaymentService("sk_test_123").createPayment({
+      ...INPUT,
+      returnOrigin: "https://srimart-staging.nocaped.com",
+    });
+    const body = bodyOf(fetchMock);
+    expect(body.get("success_url")).toBe(
+      `https://srimart-staging.nocaped.com/checkout/${INPUT.orderNumber}`,
+    );
+    expect(body.get("cancel_url")).toBe("https://srimart-staging.nocaped.com/checkout");
+  });
+
+  it("authenticates with the secret key and sends form encoding", async () => {
+    const fetchMock = mockStripeOk();
+    await createStripePaymentService("sk_test_123").createPayment(INPUT);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.stripe.com/v1/checkout/sessions");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer sk_test_123");
+    expect((init.headers as Record<string, string>)["content-type"]).toBe(
+      "application/x-www-form-urlencoded",
+    );
+  });
+
+  it("throws on a non-OK Stripe response so the caller can compensate", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("card_error", { status: 402 })),
+    );
+    await expect(createStripePaymentService("sk_test_123").createPayment(INPUT)).rejects.toThrow(
+      PaymentProviderError,
+    );
+  });
+
+  it("throws when Stripe returns 200 but omits id/url", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({})),
+    );
+    await expect(createStripePaymentService("sk_test_123").createPayment(INPUT)).rejects.toThrow(
+      PaymentProviderError,
+    );
+  });
+});

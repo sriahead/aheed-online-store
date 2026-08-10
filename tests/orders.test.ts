@@ -6,6 +6,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // client and vendorId as explicit arguments.
 vi.mock("@/lib/db", () => ({ getPrisma: vi.fn() }));
 vi.mock("@/lib/tenant", () => ({ getCurrentVendorId: vi.fn() }));
+// Keep the provider out of these tests: they assert what the ORDER TRANSACTION
+// writes. The adapter itself is covered by tests/payments.test.ts.
+vi.mock("@/lib/payments", () => ({
+  getPaymentService: () => ({
+    createPayment: async () => ({
+      provider: "stub",
+      status: "PENDING",
+      providerReference: null,
+      redirectUrl: null,
+    }),
+  }),
+}));
 
 const { placeOrder, CheckoutError } = await import("@/lib/repositories/orders");
 
@@ -73,6 +85,13 @@ function fakePrisma() {
   };
   return {
     $transaction: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx),
+    // placeOrder writes the provider reference after the transaction commits.
+    payment: {
+      update: async ({ data }: { data: unknown }) => {
+        created.paymentUpdate.push(data);
+        return {};
+      },
+    },
   } as never;
 }
 
@@ -96,11 +115,20 @@ const input = (over: Partial<Parameters<typeof placeOrder>[2]> = {}) =>
       minimumOrderPence: 1500,
     },
     vendorSlug: "aheed-food-centre",
+    returnOrigin: "https://staging.aheedfoodcentre.nocaped.com",
     ...over,
   }) as Parameters<typeof placeOrder>[2];
 
 beforeEach(() => {
-  for (const key of ["address", "order", "orderItem", "payment", "statusEvent", "cartCleared"]) {
+  for (const key of [
+    "address",
+    "order",
+    "orderItem",
+    "payment",
+    "statusEvent",
+    "cartCleared",
+    "paymentUpdate",
+  ]) {
     created[key] = [];
   }
   state = {
@@ -228,7 +256,19 @@ describe("placeOrder — what it writes", () => {
 
   it("records a PENDING payment for the order total", async () => {
     await placeOrder(fakePrisma(), VENDOR, input());
-    expect(created.payment[0]).toMatchObject({ amountPence: 2349, provider: "stub" });
+    // Created inside the transaction with no provider reference — the external
+    // call happens after commit (P3c R6), so no HTTP round-trip holds the
+    // transaction open.
+    expect(created.payment[0]).toMatchObject({
+      amountPence: 2349,
+      provider: "pending",
+      providerReference: null,
+    });
+  });
+
+  it("fills in the provider reference only after the transaction commits", async () => {
+    await placeOrder(fakePrisma(), VENDOR, input());
+    expect(created.paymentUpdate).toHaveLength(1);
   });
 
   it("clears the cart last, which is what makes a double submit safe (R13)", async () => {

@@ -4,7 +4,7 @@ title: Tech Stack
 audience: [dev]
 type: doc
 status: approved
-version: "1.1.0"
+version: "1.2.0"
 updated: 2026-08-10
 visibility: internal
 summary: Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal.
@@ -73,8 +73,13 @@ environment-configured seam.
   account** today, with a Connect-ready seam (`vendorId` on the payment input) so per-vendor payouts
   are additive. Note the consequence: the platform is the **merchant of record** for every vendor's
   sales — revisit before onboarding a real third-party merchant.
-- P3b ships a **stub adapter** (returns `PENDING`, charges nothing) so order creation and the stock
-  decrement were testable before any Stripe credential existed; P3c swaps in the real adapter.
+- **The Stripe adapter is real as of P3c** (`lib/payments.ts`): hosted Checkout sessions created with
+  raw `fetch` (no `stripe` SDK — same Worker-bundle reasoning as aws4fetch/Resend), confirmed by a
+  signature-verified idempotent webhook at `/api/webhooks/stripe`. P3b's **stub is retained as the
+  fallback** whenever `STRIPE_SECRET_KEY` is unset, so local dev and CI need no Stripe setup.
+- **Webhook signatures are verified with WebCrypto** (HMAC-SHA256 over `{timestamp}.{rawBody}`,
+  constant-time compared, 5-minute replay tolerance) — no library, and the *raw* body is used because
+  re-serialising parsed JSON breaks the signature.
 
 ## Email
 

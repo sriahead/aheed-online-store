@@ -7,6 +7,41 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Stripe payments, webhooks & confirmation email (P3c, #99)** — money actually moves
+  (`specs/2026-08-10-p3c-stripe-payments/`). Replaces P3b's stub with a real hosted **Stripe
+  Checkout** adapter, a signature-verified idempotent webhook at `/api/webhooks/stripe`, and an
+  order confirmation email. **Closes the stock-release gap P3b explicitly recorded**: an order that
+  fails or expires now returns its items to stock instead of holding them forever.
+  - **Fixes a latent defect in P3b**: `createPayment()` was called *inside* `placeOrder`'s Prisma
+    transaction. Harmless with a stub that does no I/O — which is why it passed every check — but a
+    real HTTP call there would hold a Postgres transaction open on a serverless connection against
+    Prisma's 5s timeout, so a slow Stripe response would roll back a good order. The session is now
+    created **after commit**, and if it fails a **compensating transaction** cancels the order and
+    releases its stock, so a shopper is never left with an unpayable order holding inventory.
+  - **Raw `fetch`, no `stripe` SDK** — the same Worker-bundle reasoning that chose `aws4fetch` over
+    the AWS SDK and plain fetch over Resend's. Signatures are verified with **WebCrypto**
+    (HMAC-SHA256 over `{timestamp}.{rawBody}`, constant-time compared, 5-minute replay tolerance),
+    using the **raw** body — re-serialising parsed JSON changes bytes and breaks verification.
+  - **Idempotent by the same conditional-update guard as the stock decrement** (`WHERE status =
+    'PENDING_PAYMENT'`), not a new event-log table. Stripe retries aggressively and can deliver out
+    of order, so a duplicate delivery must change nothing — and must not send a second email or
+    release stock twice.
+  - **The webhook is vendor-agnostic**: it has no tenant context, so it finds the order by the
+    `orderNumber` in session metadata and derives the vendor from the row. **One endpoint per
+    environment, not one per vendor host** — the same Worker serves every host, and per-host
+    endpoints would produce multiple signing secrets the single `STRIPE_WEBHOOK_SECRET` can't hold.
+  - **`checkout.session.completed` alone isn't enough** — it can fire `payment_status: "unpaid"` for
+    asynchronous methods, so confirmation requires `"paid"`.
+  - **The confirmation email fires only from the webhook**, after payment confirms — never at order
+    creation, where a later failure would leave the shopper holding a "confirmed" email for a
+    cancelled order. Email failure never rolls back a confirmed payment.
+  - **`/checkout/{orderNumber}` is now status-aware** rather than assuming the redirect means
+    success: the browser redirect routinely races the webhook and a closed tab means it never
+    happens, so the page renders whatever `order.status` actually is.
+  - Two new **optional** Worker secrets (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`); with neither
+    set the app **falls back to the stub**, so local dev and CI need no Stripe setup. Deliberately no
+    `STRIPE_PUBLISHABLE_KEY` — hosted Checkout never runs anything in the browser. Deferred and
+    tracked: resume-payment for stuck orders (**#100**), webhook reconciliation sweep (**#101**).
 - **Checkout + order core (P3b, #96)** — a cart can now become a real order
   (`specs/2026-08-10-p3b-checkout-order-core/`). Adds vendor-scoped `Address`/`Order`/`OrderItem`/
   `Payment`/`OrderStatusEvent` behind a new `lib/repositories/orders.ts`, a `/checkout` page

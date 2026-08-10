@@ -42,6 +42,13 @@ const schema = z.object({
   // email/password-only, same as before this slice.
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+  // P3c (#99) — Stripe. Both optional: an unconfigured environment falls back to
+  // the stub PaymentService rather than crashing, so local dev and CI keep working
+  // with no Stripe setup (same degradation as lib/email.ts).
+  // No STRIPE_PUBLISHABLE_KEY: hosted Checkout is a server-created session plus a
+  // redirect, so no publishable key ever reaches the browser.
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export type AppEnv = z.infer<typeof schema>;
@@ -61,6 +68,8 @@ export function getEnv(): AppEnv {
     AUTH_COOKIE_FAMILY_DOMAIN: readEnv("AUTH_COOKIE_FAMILY_DOMAIN"),
     GOOGLE_CLIENT_ID: readEnv("GOOGLE_CLIENT_ID"),
     GOOGLE_CLIENT_SECRET: readEnv("GOOGLE_CLIENT_SECRET"),
+    STRIPE_SECRET_KEY: readEnv("STRIPE_SECRET_KEY"),
+    STRIPE_WEBHOOK_SECRET: readEnv("STRIPE_WEBHOOK_SECRET"),
   });
 }
 

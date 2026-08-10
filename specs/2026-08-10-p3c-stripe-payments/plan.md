@@ -111,9 +111,12 @@ state inside it, so the session would have to be created with a total we haven't
   are an admin action, P6.
 - **Delivery slots** — P4. **"Shop your list"** — P3d.
 - **A retry/"pay now" path for an order stuck in `PENDING_PAYMENT`** — the shopper re-checks out
-  instead. A resume-payment flow is a genuine follow-up, tracked rather than half-built here.
+  instead. Tracked as **#100** rather than half-built: recreating a session for an existing order
+  raises a real double-charge question (Stripe permits multiple live sessions per order) that
+  deserves its own thinking.
 - **Reconciliation for a webhook that never arrives** (Stripe outage, endpoint misconfigured): such an
-  order stays `PENDING_PAYMENT` until its session expires. A scheduled sweep is P7 hardening.
+  order stays `PENDING_PAYMENT` with its stock held. Tracked as **#101** — a scheduled sweep plus a
+  "stuck orders" alert, in P7 hardening.
 
 ## Open items carried forward
 
