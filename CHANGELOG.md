@@ -6,6 +6,74 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **Backfilled the missing P3a/P3b/P3c roadmap change-log entries** (`specs/roadmap.md` 1.9.0). All
+  three slices shipped without one — the roadmap still ended at ADR-004 slice 3c (2026-08-09) while
+  cart, checkout and Stripe payments were live on staging. Records what each slice delivered, the
+  live-verification outcome for P3c, and that **P3 remains open pending P3d ("Shop your list")**.
+  This is the gap that motivated the post-Ship documentation audit in `specs/sdd-workflow.md` 2.0.0:
+  every SDD gate fires before or at merge, so the roadmap update — which happens after the PR lands
+  — had nothing enforcing it. The KMS index, by contrast, was never at risk: `gates.yml` already
+  rebuilds and diffs it (normalizing timestamp and commit) on every PR.
+
+### Added
+- **Two machine checks behind the SDD loop's honor-system stages** (`scripts/sdd-check.ts`,
+  `specs/sdd-workflow.md` 2.1.0). Every existing gate fires before or at merge — `pre-commit`
+  (Gate 2), `pre-push`/`gates.yml` (Gate 4), CI (Gate 3) — so nothing had teeth after Ship. That is
+  how P3a/P3b/P3c all shipped with no roadmap entry.
+  - `npm run sdd:preclear` (end of `/build-notes`) — derives the slice from the branch diff, then
+    requires all four spec files, the build-notes template's four sections, a `CHANGELOG.md` diff
+    against the base, and a clean working tree. The Clear is irreversible, so "everything is
+    persisted" stops being a claim and becomes an exit code.
+  - `npm run sdd:audit` (at `/orient`) — reports slices that shipped without a roadmap change-log
+    entry or never reached `ARTIFACT_INDEX.md`. **Only audits slices after a baseline constant**, so
+    it never retroactively polices work that predates the loop. A roadmap row only counts if it is
+    dated on/after the slice — without that, the backfill row naming P3d would have satisfied the
+    check for an undocumented P3d.
+  - Both copy `hooks/pre-push`'s posture (origin/staging → origin/main → don't block offline) and
+    reuse `readFrontMatter`/`ROOT` from `kms/schema/repo`. Verified against real history: with the
+    baseline set before P3a, the audit reports the exact three gaps that existed pre-backfill.
+- **`specs/templates/feature-spec/build-notes.md`** — build notes stop being free-form. Its four
+  headings are exactly what `sdd:preclear` greps for, making the template the check's contract
+  rather than decoration. `plan.md`/`requirements.md`/`validation.md` were already templated; the
+  one artifact the Clear actually bets on was not.
+- **Delivery-board steps wired into the loop.** Propose adds the issue to GitHub Project #2 with a
+  Phase; Build moves it to In Progress; Ship moves it to **In Review** on staging merge; it closes
+  to **Done** only on promotion to `main` — because `Done` means *in production* and `Closes #NN`
+  never fires on a merge into `staging`. Ten issues (#93–#106) filed after the board was provisioned
+  had never been added to it; `scripts/provision-project.sh` was re-run to adopt them. **Still
+  needed, UI-only:** the Status field keeps GitHub's default `Todo/In Progress/Done`, so `Backlog`
+  and `In Review` don't exist yet.
+
+### Changed
+- **SDD workflow restructured from a seven-stage sequence into a delivery loop with two context
+  Clears** (`specs/sdd-workflow.md` 1.0.0 → 2.0.0). The order is now **Orient → Propose → Spec →
+  Build → Document (build notes) → CLEAR → Validate ⇄ Fix → Ship → Document (final) → CLEAR →
+  Orient**, with the model switching to Sonnet 5 for the validation half and back to Opus 5 for the
+  final documentation pass.
+  - **Why the Clear before Validate:** a context that just built something is the worst judge of
+    whether it matches the spec — it remembers the intent and reads that intent into the code. The
+    reset forces Gate 3 to run against `requirements.md` and the artifact on disk, which is the only
+    version of the spec a future maintainer ever gets. This already caught real defects under the
+    old single-context flow (a consolidated `features/cart/actions.ts` that deviated from the
+    spec's one-file-per-action shape; webhook functions resolving `getPrisma()` internally, so they
+    couldn't be proven against real Postgres) — the reset makes that systematic rather than lucky.
+  - **Document split in two.** `/build-notes` (new) is a **write-to-disk** stage before the Clear:
+    build notes, persistent-doc updates, deferred items filed as issues — and **Gate 4's CHANGELOG
+    entry**, which has to be on the branch before it merges, i.e. before Ship, which now precedes
+    the final documentation pass. `/document` is now purely the post-ship durable record (KMS index,
+    roadmap, reconciling docs with what validation actually found) and supersedes the build notes
+    where they disagree.
+  - **`/fix` (new)** formalises the Validate ⇄ Fix cycle: fix the root cause rather than the check,
+    re-run `/validate` from the top rather than just the failed row, and stop when a "fix" is really
+    a redesign — that's a Spec-level change, not something to improvise in a validation mindset.
+  - Existing commands realigned: `/build` now hands off to `/build-notes` instead of `/validate`,
+    `/validate` treats build notes as a claim about the artifact rather than evidence, `/orient`
+    doubles as the post-Clear re-entry point, and `/spec` records that `requirements.md` is the only
+    thing the fresh validation context will have.
+  - **Two rules the assistant cannot enforce on itself** and must therefore ask for, now stated in
+    `CLAUDE.md`: `/clear` is user-invoked, and so is every model switch.
+
 ### Added
 - **Stripe payments, webhooks & confirmation email (P3c, #99)** — money actually moves
   (`specs/2026-08-10-p3c-stripe-payments/`). Replaces P3b's stub with a real hosted **Stripe

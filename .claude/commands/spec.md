@@ -4,7 +4,12 @@ description: "Gate 2 — write plan.md + requirements.md + validation.md, advers
 
 Write the spec for the approved proposal: $ARGUMENTS
 
-Follow the **Spec** stage of `specs/sdd-workflow.md` (read it if not already in context):
+Follow the **Spec** stage of `specs/sdd-workflow.md` (read it if not already in context).
+
+**The spec carries more weight under this loop than it looks like it should**: validation runs from
+a fresh context after a Clear, so `requirements.md` is the *only* thing that context has to check
+against. An ambiguity a same-context validator would have silently resolved from memory becomes a
+real failure mode here. Write for a reader who was not present.
 
 1. Copy the three files from `specs/templates/feature-spec/` into
    `specs/<YYYY-MM-DD-feature>/` — don't write from a blank file or from memory of "the most
@@ -24,3 +29,6 @@ Follow the **Spec** stage of `specs/sdd-workflow.md` (read it if not already in 
    Check it doesn't contradict an existing ADR or persistent doc.
 4. Present the spec and wait for approval. Once approved, commit the spec files as their own
    commit — before any implementation commit — then proceed to `/build`.
+
+`validation.md` is what the post-Clear context will actually execute. Every row must be a step that
+a reader with no memory of this conversation can run and get an unambiguous pass/fail from.
