@@ -141,8 +141,9 @@ generated *view* of `specs/roadmap.md` holding **status only**; scope lives in `
 the issue (Phase set, Backlog) → Build moves it to In Progress → Ship moves it to **In Review** on
 staging merge → it closes to **Done** only when promoted to `main`. **`Done` means in production**:
 PRs merge into `staging`, not the default branch, so `Closes #NN` never fires on merge and open
-issues for shipped slices are expected. Note the Status field still has GitHub's default options —
-`Backlog`/`In Review` need a one-time UI rename (`scripts/provision-project.sh` manual steps).
+issues for shipped slices are expected. The Status field's one-time UI rename
+(`scripts/provision-project.sh` manual steps) is **done** — all four options `Backlog` /
+`In Progress` / `In Review` / `Done` exist, so no board setup is outstanding.
 
 ## Dependency & version discipline (learned the hard way)
 - **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their

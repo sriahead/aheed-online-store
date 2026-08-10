@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-10T12:48:28.562Z` · commit `49e7b5d` · `42` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-10T18:27:27.068Z` · commit `27eb04f` · `43` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -53,6 +53,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P3a — Cart foundation (plan)](specs/2026-08-09-p3a-cart-foundation/plan.md) | spec | 1.0.0 | 2026-08-09 | draft | internal | Make the inert "Add to Cart" real. Vendor-scoped Cart/CartItem behind a repository, one cart per (vendor, identity), guest carts on an opaque cookie that merge into the account cart on sign-in. No checkout, no orders, no payment. |
 | [P3b — Checkout + order core (plan)](specs/2026-08-10-p3b-checkout-order-core/plan.md) | spec | 1.0.0 | 2026-08-10 | draft | internal | Turn a cart into a real order. Vendor-scoped Address/Order/OrderItem/Payment/OrderStatusEvent, totals from VendorConfig delivery rules, and atomic order creation that decrements stock with a conditional guard so overselling is structurally impossible. Payment is stubbed behind a port; Stripe is P3c. |
 | [P3c — Stripe payments, webhooks & confirmation email (plan)](specs/2026-08-10-p3c-stripe-payments/plan.md) | spec | 1.0.0 | 2026-08-10 | draft | internal | Replace P3b's stub PaymentService with real hosted Stripe Checkout via raw fetch, add a signature-verified idempotent webhook that confirms orders and releases stock on failure or expiry, and send the order confirmation email only once payment is actually confirmed. |
+| [P3d — Shop your list (plan)](specs/2026-08-10-p3d-shop-your-list/plan.md) | spec | 1.0.0 | 2026-08-10 | draft | internal | A shopper pastes a shopping list; each line is parsed for a quantity and matched to the vendor catalogue by token-AND on product name, then a mandatory review step turns confirmed lines into cart items in one transaction. Stateless: no schema change, no saved lists, no fuzzy matching. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.8.0 | 2026-08-10 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
