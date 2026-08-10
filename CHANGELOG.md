@@ -7,6 +7,18 @@ every branch merges.
 ## [Unreleased]
 
 ### Fixed
+- **`sdd:audit` was passing a slice it should have failed** (`scripts/sdd-check.ts`). The check that
+  exists specifically to catch "shipped without a roadmap entry" reported P3d as documented while
+  the roadmap said only that P3d was *still to come*. It matched a bare token (`p3d`) against
+  change-log rows, guarded by `row.date >= sliceDate` on the reasoning that a row predating a slice
+  can't document it. That guard does not hold: the P3a/P3b/P3c backfill row is dated `2026-08-10`
+  and names "P3d", and the P3d slice dir is **also** `2026-08-10`, so the row satisfied its own
+  guard. Spec and ship land the same day routinely here, so same-day collisions are the normal case,
+  not an edge. A row now counts only when it cites the slice's **spec path** (`specs/<slice>/`) —
+  precise, unfakeable by prose, and already the convention every real closure row follows. Verified
+  by watching it fail on the genuine P3d gap, then pass once the real row landed. This is the third
+  time this specific gap has bitten: P3a/P3b/P3c shipped undocumented, the audit was written to stop
+  it, and the audit then let P3d through too.
 - **`configure-env.mjs` now knows about the Stripe secrets.** P3c added `STRIPE_SECRET_KEY` and
   `STRIPE_WEBHOOK_SECRET` as Worker secrets but never taught the sync tool about them, so the
   script silently reported them as "unrecognized" and skipped them — which is why production ran
@@ -91,6 +103,32 @@ every branch merges.
   and `In Review` don't exist yet.
 
 ### Changed
+- **P3 closed** (`specs/roadmap.md` 1.10.0). Cart → checkout → payment → list-based cart entry all
+  shipped to production (P3a #93, P3b #96, P3c #99, P3d #114). Adds the P3d closure row and the
+  phase-closure row, and carries out the two known gaps — both infra, not code: Resend has no
+  verified sending domain so no confirmation email reaches a real inbox in any environment (#104),
+  and the payment-provider failure path still needs a window against staging's live secrets (#103).
+  Neither blocks P4.
+- **P3d's R10 corrected after ship** (`specs/2026-08-10-p3d-shop-your-list/requirements.md`). The
+  row specified ranking as "all-terms matches first, then shorter name, then alphabetical", but R9
+  defines a candidate *as* an all-terms match, so that first tier can never fire. Flagged as a
+  deviation at build and confirmed at `/validate` as a **spec defect rather than an implementation
+  shortcut** — `rankCandidates()` shipped the two reachable tiers instead of a branch that provably
+  cannot execute. The requirement now says what the code does; every behaviour it asserts
+  (exact-match-wins, determinism, the 5-candidate cap) was already tested. Corrected in place with
+  a dated note rather than rewritten silently.
+- **How to validate server actions without a browser** (`specs/sdd-workflow.md` 2.1.0 → 2.2.0,
+  Validate stage). Next renders progressive-enhancement fields on every server-action form, so
+  posting those fields as `multipart/form-data` invokes the real action — and the response's
+  `Set-Cookie` is how you prove a *negative*, which is how P3d's "matching writes nothing" was
+  actually verified rather than inferred. Records the three traps that each cost a dead end:
+  `fetch`/undici **silently drops a caller-set `Host` header** (fatal under multi-tenancy — every
+  request resolves to `/coming-soon` and reads as a broken app; use `node:http` with
+  `setHost: false`), `$ACTION_REF_1` renders with **no `value` attribute** (a parser requiring one
+  drops it and the POST fails as a bare `500` with an empty body), and a `<select>` is a form field
+  that must be serialized in document order alongside `<input>`s. Also adds: confirm which database
+  the Worker is on before trusting a live result, since `preview` reads `.dev.vars` while seeds and
+  inspection scripts read `.env` (#119).
 - **SDD workflow restructured from a seven-stage sequence into a delivery loop with two context
   Clears** (`specs/sdd-workflow.md` 1.0.0 → 2.0.0). The order is now **Orient → Propose → Spec →
   Build → Document (build notes) → CLEAR → Validate ⇄ Fix → Ship → Document (final) → CLEAR →
