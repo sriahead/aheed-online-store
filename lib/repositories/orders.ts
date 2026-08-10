@@ -426,9 +426,18 @@ export interface WebhookOrder {
   }[];
 }
 
-/** Un-scoped by design — see the note above. Null when no such order exists. */
-export async function findOrderForWebhook(orderNumber: string): Promise<WebhookOrder | null> {
-  const prisma = getPrisma();
+/**
+ * Un-scoped by design — see the note above. Null when no such order exists.
+ *
+ * Takes `prisma` explicitly, matching `placeOrder`'s R9a pattern: the webhook
+ * route resolves it once and passes it through, which is also what lets this be
+ * driven from a plain script in tests/validation rather than only through a
+ * live Workers request.
+ */
+export async function findOrderForWebhook(
+  prisma: ReturnType<typeof getPrisma>,
+  orderNumber: string,
+): Promise<WebhookOrder | null> {
   const order = await prisma.order.findUnique({
     where: { orderNumber },
     select: {
@@ -464,9 +473,11 @@ export async function findOrderForWebhook(orderNumber: string): Promise<WebhookO
  * that to decide whether to send the confirmation email, so a duplicate webhook
  * delivery (Stripe retries aggressively) can't email the shopper twice.
  */
-export async function confirmPayment(orderNumber: string): Promise<boolean> {
-  const prisma = getPrisma();
-  const order = await findOrderForWebhook(orderNumber);
+export async function confirmPayment(
+  prisma: ReturnType<typeof getPrisma>,
+  orderNumber: string,
+): Promise<boolean> {
+  const order = await findOrderForWebhook(prisma, orderNumber);
   if (!order) return false;
 
   return prisma.$transaction(async (tx) => {
@@ -498,9 +509,30 @@ export async function confirmPayment(orderNumber: string): Promise<boolean> {
  * This is the gap P3b explicitly left open: until now an abandoned checkout held
  * its stock forever.
  */
-export async function failPayment(orderNumber: string, reason: string): Promise<boolean> {
-  const prisma = getPrisma();
-  const order = await findOrderForWebhook(orderNumber);
+export async function failPayment(
+  prisma: ReturnType<typeof getPrisma>,
+  orderNumber: string,
+  reason: string,
+): Promise<boolean> {
+  const order = await findOrderForWebhook(prisma, orderNumber);
   if (!order) return false;
   return releaseOrder(prisma, order.vendorId, order.id, reason);
+}
+
+/**
+ * Webhook-facing factory, matching `getOrderRepository()`'s shape: resolves its
+ * own client internally, so `app/api/webhooks/stripe/route.ts` never imports
+ * `@/lib/db` itself (the no-direct-Prisma guard covers `app/`, `features/` and
+ * `components/` — there is no webhook-specific carve-out, unlike `/api/health`'s
+ * narrow infra-probe exception). The underlying `findOrderForWebhook` /
+ * `confirmPayment` / `failPayment` still take `prisma` explicitly, so they stay
+ * testable from a plain script against a real database.
+ */
+export function getWebhookOrderService() {
+  const prisma = getPrisma();
+  return {
+    findOrder: (orderNumber: string) => findOrderForWebhook(prisma, orderNumber),
+    confirm: (orderNumber: string) => confirmPayment(prisma, orderNumber),
+    fail: (orderNumber: string, reason: string) => failPayment(prisma, orderNumber, reason),
+  };
 }

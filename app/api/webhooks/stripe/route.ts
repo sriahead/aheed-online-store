@@ -1,6 +1,6 @@
 import { getEnv } from "@/lib/config";
 import { parseCheckoutEvent, verifyStripeSignature } from "@/lib/stripe-webhook";
-import { confirmPayment, failPayment, findOrderForWebhook } from "@/lib/repositories/orders";
+import { getWebhookOrderService } from "@/lib/repositories/orders";
 import { sendOrderConfirmationEmail } from "@/features/checkout/send-confirmation";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +42,8 @@ export async function POST(req: Request) {
   const event = parseCheckoutEvent(payload);
   if (!event) return new Response("ok", { status: 200 });
 
+  const orders = getWebhookOrderService();
+
   // Beyond this point every outcome is a 200 — the signature proved it came from
   // Stripe, so retrying it would not help.
   switch (event.type) {
@@ -51,9 +53,9 @@ export async function POST(req: Request) {
       if (event.paymentStatus !== "paid") break;
       if (!event.orderNumber) break;
 
-      const confirmed = await confirmPayment(event.orderNumber);
+      const confirmed = await orders.confirm(event.orderNumber);
       if (confirmed) {
-        const order = await findOrderForWebhook(event.orderNumber);
+        const order = await orders.findOrder(event.orderNumber);
         // Email only when THIS delivery performed the transition, so Stripe's
         // retries can't email the shopper twice.
         if (order) await sendOrderConfirmationEmail(order);
@@ -64,7 +66,7 @@ export async function POST(req: Request) {
     case "checkout.session.expired":
     case "checkout.session.async_payment_failed": {
       if (!event.orderNumber) break;
-      await failPayment(
+      await orders.fail(
         event.orderNumber,
         event.type === "checkout.session.expired"
           ? "Checkout session expired; stock released."
