@@ -128,3 +128,22 @@ state inside it, so the session would have to be created with a total we haven't
   exist, only the stub path is exercisable.
 - **Local webhook testing needs the Stripe CLI** (`stripe listen --forward-to`), since Stripe cannot
   reach `localhost`. Noted so validation doesn't assume a curl can stand in for a signed delivery.
+- **Live Stripe validation (2026-08-10)**: keys and webhook endpoint now configured on staging. A
+  real test-mode payment was completed end-to-end (order `AHE-20260810-H6HWXL`, £18.97), confirming
+  R4/R12/R13/R20 against staging's real database — a genuine Stripe-delivered webhook, not a
+  scratch-script simulation. R21 relies on the earlier scratch-script proof (no `stripe listen`
+  available here to deliberately delay a live delivery). R7 and R19 need staging's live
+  `STRIPE_SECRET_KEY`/`RESEND_API_KEY` deliberately broken — deferred to **#103** rather than done
+  inline, since it's shared infrastructure. **R15a confirmed**: a validly-signed
+  `checkout.session.completed` delivered via the Stripe CLI with `orderNumber:
+  AHE-UNKNOWN-R15A-999999` returned **200**, created no order, and left the real order
+  (`AHE-20260810-H6HWXL`) untouched.
+  - **R19 confirmed live, incidentally**: a second real payment (order `AHE-20260810-5Q7FU2`) hit a
+    genuine email-send failure — Resend's account has no verified sending domain yet, so it rejects
+    any `to` address outside its own test address with a 422, confirmed via `wrangler tail`. The
+    order still reached `CONFIRMED`/`SUCCEEDED` and the webhook still returned 200, exactly as R19
+    requires — the failure was real, not staged, and the non-fatal guarantee held.
+  - **R18 blocked, not just unchecked**: the same 422 means no confirmation email can reach a real
+    inbox in *any* environment until a sending domain is verified in Resend — an owner action (DNS +
+    Resend dashboard), tracked as **#104**. Not a P3c code defect; the send path, payload, and
+    failure handling are all confirmed correct.
