@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-10T12:48:28.562Z` · commit `49e7b5d` · `42` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-10T17:25:17.802Z` · commit `c9fa322` · `42` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -23,7 +23,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
 | [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow. |
-| [Environment Setup — Secrets & Config (staging / production)](docs/env-setup.md) | doc | 1.6.0 | 2026-08-10 | approved | internal | How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, the demo-accounts tool, per-vendor host mapping, per-vendor branding/logo seeding, and auth cookie scoping. |
+| [Environment Setup — Secrets & Config (staging / production)](docs/env-setup.md) | doc | 1.7.0 | 2026-08-10 | approved | internal | How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, the demo-accounts tool, per-vendor host mapping, per-vendor branding/logo seeding, and auth cookie scoping. |
 | [Onboarding](docs/onboarding.md) | doc | 1.1.0 | 2026-08-06 | approved | internal | 5-minute start-here guide — where the project actually is, prerequisites, local setup, and how to get a new developer running, tested, and branching independently. |
 | [Repository Structure](docs/repo-structure.md) | doc | 1.1.0 | 2026-08-07 | approved | internal | The agreed target folder layout for the Next.js + Prisma + Cloudflare app, Clean Architecture layering, and which phase scaffolds each folder. |
 | [Walking-Skeleton Runbook (M0)](docs/walking-skeleton-runbook.md) | runbook | 1.0.0 | 2026-08-06 | approved | internal | Step-by-step runbook to stand up the M0 walking skeleton — Cloudflare, R2, Neon, and GitHub environment provisioning through to a green production health check. |
@@ -61,7 +61,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [ADR-005 — Payments & multi-vendor money flow](specs/decisions/ADR-005-payments-money-flow.md) | adr | 1.1.0 | 2026-08-10 | approved | internal | Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite. |
 | [Design System](specs/design-system.md) | doc | 1.5.0 | 2026-08-09 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases. |
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
-| [Roadmap](specs/roadmap.md) | doc | 1.9.0 | 2026-08-10 | approved | internal | Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |
+| [Roadmap](specs/roadmap.md) | doc | 1.10.0 | 2026-08-10 | approved | internal | Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |
 | [SDD Workflow](specs/sdd-workflow.md) | doc | 2.1.0 | 2026-08-10 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command. |
 | [Tech Stack](specs/tech-stack.md) | doc | 1.2.0 | 2026-08-10 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
 

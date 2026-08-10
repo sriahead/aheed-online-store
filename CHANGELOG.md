@@ -6,6 +6,27 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+- **Post-promotion documentation pass for P3 in production** (`specs/roadmap.md` 1.10.0,
+  `docs/env-setup.md` 1.7.0). Reconciles the docs with what shipping to production actually proved,
+  rather than what was written before it:
+  - **Roadmap records the promotion** (PR #108) in the existing promotion-entry style, including
+    that `deploy-production` was green with production `/api/health` reporting commit `034a380`,
+    and that `/api/webhooks/stripe` is live (an unsigned POST is rejected 400, so signature
+    verification is active). Notes that the two P3 migrations had already been applied out-of-band
+    — CI reported "no pending migrations" — which produced no drift but bypassed the
+    migrations-run-in-CI rule.
+  - **Corrects two now-false claims in `env-setup.md`**: it said production would use a live Stripe
+    key and that test mode was for "everything except production". Production deliberately runs
+    **test-mode** keys, because it shipped before the storefront opened to customers; a live key is
+    a separate decision.
+  - **Records the per-endpoint webhook trap where operators will hit it**: each Stripe endpoint has
+    its own `whsec_…`, so staging's cannot verify production's deliveries. The failure is silent —
+    the handler rejects every delivery, so orders never leave `PENDING_PAYMENT` and their stock is
+    never released.
+  - Records the Cloudflare gotcha that forced the deploy-then-secrets ordering: a Worker secret
+    cannot be edited while an undeployed version is pending.
+
 ### Fixed
 - **`configure-env.mjs` now knows about the Stripe secrets.** P3c added `STRIPE_SECRET_KEY` and
   `STRIPE_WEBHOOK_SECRET` as Worker secrets but never taught the sync tool about them, so the
