@@ -47,22 +47,24 @@ enum VendorRole {
 }
 
 model User {
-  id            String             @id
-  name          String
-  email         String             @unique
-  emailVerified Boolean            @default(false)
-  image         String?
-  role          Role               @default(CUSTOMER)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  reviews       Review[]
-  memberships   VendorMembership[]
-  carts         Cart[]
-  addresses     Address[]
-  orders        Order[]
-  statusChanges OrderStatusEvent[] @relation("OrderStatusEventActor")
+  id              String               @id
+  name            String
+  email           String               @unique
+  emailVerified   Boolean              @default(false)
+  image           String?
+  role            Role                 @default(CUSTOMER)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  sessions        Session[]
+  accounts        Account[]
+  reviews         Review[]
+  memberships     VendorMembership[]
+  carts           Cart[]
+  addresses       Address[]
+  orders          Order[]
+  statusChanges   OrderStatusEvent[]   @relation("OrderStatusEventActor")
+  loyaltyAccounts LoyaltyAccount[]
+  loyaltyEntries  LoyaltyLedgerEntry[]
 }
 
 model Session {
@@ -119,29 +121,32 @@ enum VendorStatus {
 }
 
 model Vendor {
-  id            String               @id @default(uuid())
-  slug          String               @unique
-  name          String
-  status        VendorStatus         @default(ACTIVE)
-  customDomain  String?              @unique // used in slice 3 (host→tenant resolution)
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  branding      VendorBranding?
-  config        VendorConfig?
-  deliveryAreas VendorDeliveryArea[]
-  categories    Category[]
-  products      Product[]
-  inventory     Inventory[]
-  reviews       Review[]
-  memberships   VendorMembership[]
-  domains       VendorDomain[]
-  carts         Cart[]
-  cartItems     CartItem[]
-  addresses     Address[]
-  orders        Order[]
-  orderItems    OrderItem[]
-  payments      Payment[]
-  orderEvents   OrderStatusEvent[]
+  id              String               @id @default(uuid())
+  slug            String               @unique
+  name            String
+  status          VendorStatus         @default(ACTIVE)
+  customDomain    String?              @unique // used in slice 3 (host→tenant resolution)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  branding        VendorBranding?
+  config          VendorConfig?
+  deliveryAreas   VendorDeliveryArea[]
+  categories      Category[]
+  products        Product[]
+  inventory       Inventory[]
+  reviews         Review[]
+  memberships     VendorMembership[]
+  domains         VendorDomain[]
+  carts           Cart[]
+  cartItems       CartItem[]
+  addresses       Address[]
+  orders          Order[]
+  orderItems      OrderItem[]
+  payments        Payment[]
+  orderEvents     OrderStatusEvent[]
+  loyaltyTiers    VendorLoyaltyTier[]
+  loyaltyAccounts LoyaltyAccount[]
+  loyaltyEntries  LoyaltyLedgerEntry[]
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
@@ -212,8 +217,38 @@ model VendorConfig {
   deliveryFeePence           Int      @default(349)
   freeDeliveryThresholdPence Int? // null = free delivery never offered
   minimumOrderPence          Int      @default(0) // 0 = no minimum
+  // P5a — loyalty settings are vendor data for the same reason the delivery rules
+  // above are (#135). Defaults mean an existing VendorConfig row stays valid with
+  // no backfill, and loyaltyEnabled defaults OFF so the feature ships dark for any
+  // vendor that hasn't opted in.
+  loyaltyEnabled             Boolean  @default(false)
+  pointsPerPoundEarned       Int      @default(1) // points per whole £1 of eligible spend
+  pencePerPointRedeemed      Int      @default(1) // 100 points = £1
+  minRedeemPoints            Int      @default(100) // below this, redemption isn't offered
+  tierWindowDays             Int      @default(30) // rolling window tier qualification looks back over
+  pointsExpiryMonths         Int? // null = points never expire
   createdAt                  DateTime @default(now())
   updatedAt                  DateTime @updatedAt
+}
+
+// P5a — per-vendor loyalty tiers (#135). A shopper's tier is resolved from their
+// qualifying spend over VendorConfig.tierWindowDays; the highest threshold at or
+// below that spend wins. Multipliers are BASIS POINTS (10000 = 1.0x) — integer
+// arithmetic end to end, for the same reason money is pence.
+model VendorLoyaltyTier {
+  id             String   @id @default(uuid())
+  vendorId       String
+  vendor         Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  key            String // stable identifier, e.g. "SILVER"
+  name           String // display name
+  thresholdPence Int // qualifying spend at or above which this tier applies
+  multiplierBps  Int      @default(10000)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([vendorId, key])
+  @@index([vendorId, thresholdPence])
 }
 
 model VendorDeliveryArea {
@@ -411,25 +446,31 @@ model Address {
 // repository). Money is integer pence throughout; no discountTotal/loyaltyRedeemed
 // columns — those are P5's to add when they exist.
 model Order {
-  id               String             @id @default(uuid())
+  id               String               @id @default(uuid())
   vendorId         String
-  vendor           Vendor             @relation(fields: [vendorId], references: [id])
-  orderNumber      String             @unique
+  vendor           Vendor               @relation(fields: [vendorId], references: [id])
+  orderNumber      String               @unique
   userId           String?
-  user             User?              @relation(fields: [userId], references: [id])
+  user             User?                @relation(fields: [userId], references: [id])
   guestEmail       String?
   addressId        String
-  address          Address            @relation(fields: [addressId], references: [id])
-  status           OrderStatus        @default(PENDING_PAYMENT)
-  currency         String             @default("GBP")
+  address          Address              @relation(fields: [addressId], references: [id])
+  status           OrderStatus          @default(PENDING_PAYMENT)
+  currency         String               @default("GBP")
   subtotalPence    Int
+  // P5a (#135) — a GENERIC discount column, not a points-specific one: P5b's
+  // discount codes reduce the same total and must not need a second column and a
+  // second arithmetic rule. The order money identity is
+  // subtotalPence - discountPence + deliveryFeePence = totalPence.
+  discountPence    Int                  @default(0)
   deliveryFeePence Int
   totalPence       Int
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
   items            OrderItem[]
   payment          Payment?
   statusEvents     OrderStatusEvent[]
+  loyaltyEntries   LoyaltyLedgerEntry[]
 
   @@index([vendorId, createdAt])
   @@index([vendorId, status, createdAt])
@@ -485,7 +526,73 @@ model OrderStatusEvent {
   // removing a departed staff member's account must not delete the audit trail
   // of the orders they handled.
   createdByUserId String?
-  createdBy       User?  @relation("OrderStatusEventActor", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdBy       User?   @relation("OrderStatusEventActor", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
+}
+
+// ---- P5a — loyalty points (#135, specs/2026-08-11-p5a-loyalty-points/) --------
+
+enum LoyaltyEntryKind {
+  EARN
+  REDEEM
+  REVERSAL
+}
+
+/// The append-only audit trail of every points movement. `points` is SIGNED:
+/// EARN is positive, REDEEM negative, REVERSAL the exact negation of the REDEEM
+/// it undoes. Nothing here is ever updated or deleted.
+///
+/// @@unique([orderId, kind]) is the structural idempotency guard: a duplicate
+/// Stripe delivery attempting a second EARN, or a double-submitted checkout
+/// attempting a second REDEEM, is refused by the database rather than by a check
+/// someone has to remember to write.
+model LoyaltyLedgerEntry {
+  id       String           @id @default(uuid())
+  vendorId String
+  vendor   Vendor           @relation(fields: [vendorId], references: [id])
+  userId   String
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId  String
+  order    Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  kind     LoyaltyEntryKind
+  points   Int // signed
+
+  // Snapshotted on EARN only. Tier is resolved from a windowed spend query whose
+  // answer changes over time, so an audit trail that cannot explain its own
+  // numbers would not be one. Null on REDEEM/REVERSAL.
+  tierKey       String?
+  multiplierBps Int?
+
+  createdAt DateTime @default(now())
+
+  @@unique([orderId, kind])
+  @@index([vendorId, userId, createdAt])
+}
+
+/// The concurrency anchor for a shopper's balance at one vendor.
+///
+/// NOT a redundant cache of the ledger: a balance derived by SUM() cannot be
+/// compare-and-set, and every other contended resource in this schema is
+/// protected that way. This is the same pairing the stock path already uses —
+/// Inventory.quantity is the guarded counter, OrderItem is the record of what
+/// moved.
+///
+/// `lastActivityAt` is what makes expiry derivable at read time instead of
+/// needing a sweep job: points lapse when it falls further behind than
+/// VendorConfig.pointsExpiryMonths. A lapsed row's balancePoints is stale until
+/// its next EARN, which RESETS rather than increments (see lib/loyalty.ts).
+model LoyaltyAccount {
+  id             String   @id @default(uuid())
+  vendorId       String
+  vendor         Vendor   @relation(fields: [vendorId], references: [id])
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balancePoints  Int      @default(0)
+  lifetimePoints Int      @default(0)
+  lastActivityAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([vendorId, userId])
 }

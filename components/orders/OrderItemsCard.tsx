@@ -18,11 +18,14 @@ export interface OrderItemLine {
 export function OrderItemsCard({
   items,
   subtotalPence,
+  discountPence = 0,
   deliveryFeePence,
   totalPence,
 }: {
   items: OrderItemLine[];
   subtotalPence: number;
+  /** P5a (#135) — rendered only when non-zero, so a pre-P5a order looks unchanged. */
+  discountPence?: number;
   deliveryFeePence: number;
   totalPence: number;
 }) {
@@ -50,6 +53,12 @@ export function OrderItemsCard({
           <dt className="text-primary/70">Subtotal</dt>
           <dd className="font-medium text-primary">{formatPrice(subtotalPence)}</dd>
         </div>
+        {discountPence > 0 && (
+          <div className="flex justify-between">
+            <dt className="text-primary/70">Loyalty points</dt>
+            <dd className="font-medium text-action">−{formatPrice(discountPence)}</dd>
+          </div>
+        )}
         <div className="flex justify-between">
           <dt className="text-primary/70">Delivery</dt>
           <dd className="font-medium text-primary">

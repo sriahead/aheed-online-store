@@ -78,6 +78,7 @@ export default async function OrderConfirmationPage({
       <OrderItemsCard
         items={order.items}
         subtotalPence={order.subtotalPence}
+        discountPence={order.discountPence}
         deliveryFeePence={order.deliveryFeePence}
         totalPence={order.totalPence}
       />

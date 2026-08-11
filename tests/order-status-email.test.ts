@@ -22,8 +22,10 @@ const order = (overrides: Partial<WebhookOrder> = {}): WebhookOrder => ({
   status: "OUT_FOR_DELIVERY",
   totalPence: 1250,
   subtotalPence: 1000,
+  discountPence: 0,
   deliveryFeePence: 250,
   buyerEmail: "shopper@example.com",
+  userId: "u-1",
   items: [{ productName: "Basmati rice", unitPricePence: 500, quantity: 2, lineTotalPence: 1000 }],
   ...overrides,
 });

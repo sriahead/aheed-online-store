@@ -4,8 +4,8 @@ title: "ADR-005 — Payments & multi-vendor money flow"
 audience: [dev]
 type: adr
 status: approved
-version: "1.1.0"
-updated: 2026-08-10
+version: "1.2.0"
+updated: 2026-08-11
 visibility: internal
 summary: Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite.
 tags: [adr, payments, stripe, multi-tenancy, compliance]
@@ -86,6 +86,27 @@ One thing worth recording because it is easy to get wrong: **exactly one webhook
 registered per environment, not one per vendor host.** The same Worker serves every host and the
 handler derives the vendor from the order, so per-host endpoints would only produce multiple signing
 secrets that the single `STRIPE_WEBHOOK_SECRET` cannot represent.
+
+## Implementation note (P5a, 2026-08-11, #135)
+
+Loyalty redemption reduces what the customer pays, so it is worth recording where it sits relative
+to the decisions above: **entirely upstream of them**. The discount is applied inside
+`computeTotals` during the checkout transaction, so `Order.totalPence` is already net of it before
+`createPayment` is called after the commit. The `PaymentService` port, the hosted-Checkout flow and
+the webhook are all unchanged — a redemption is invisible to them, because by the time they see an
+amount it is simply the amount.
+
+**No decision here is reopened.** This is a note about ordering, not a change to any of the four.
+
+One constant this does introduce, and the reason it belongs in this ADR rather than only in the
+slice spec: **`MIN_PAYABLE_PENCE` (30p)** in `lib/loyalty.ts`. Decision 2 committed to hosted Stripe
+Checkout, and Stripe will not create a GBP session below 30p. Without a floor, a large enough
+redemption would produce an order that commits successfully and can then never be paid for —
+`createPayment` would fail and the compensating path would immediately cancel the order the shopper
+just placed. The clamp makes that unreachable rather than rare. A payment provider with a different
+minimum, or a decision to allow fully-points-paid orders (which needs a no-payment path this
+codebase does not have), would both change that number — so it lives next to the redemption rules,
+not in the payment adapter.
 
 ## Deferred upgrade — Stripe Connect
 

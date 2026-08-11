@@ -108,8 +108,24 @@ type VendorSatellites = {
     deliveryFeePence: number;
     freeDeliveryThresholdPence: number | null;
     minimumOrderPence: number;
+    // P5a — loyalty is vendor data too (#135). Aheed runs a scheme; SriMart
+    // deliberately does not, which is what proves the per-vendor switch rather
+    // than assuming it.
+    loyaltyEnabled: boolean;
+    pointsPerPoundEarned: number;
+    pencePerPointRedeemed: number;
+    minRedeemPoints: number;
+    tierWindowDays: number;
+    pointsExpiryMonths: number | null;
   };
   deliveryPrefixes: string[];
+  loyaltyTiers: {
+    key: string;
+    name: string;
+    thresholdPence: number;
+    multiplierBps: number;
+    sortOrder: number;
+  }[];
 };
 
 async function upsertVendorSatellites(vendorId: string, s: VendorSatellites) {
@@ -130,7 +146,23 @@ async function upsertVendorSatellites(vendorId: string, s: VendorSatellites) {
       update: {},
     });
   }
-  console.log(`seeded branding/config/delivery for ${vendorId}`);
+  // Upsert by (vendorId, key) so re-running never duplicates a tier and never
+  // clobbers a threshold an admin has since tuned away from the seed value...
+  // except that it does update, deliberately: the seed is the declared baseline,
+  // and a staging re-seed resetting tiers to it is the intended behaviour.
+  for (const tier of s.loyaltyTiers) {
+    await prisma.vendorLoyaltyTier.upsert({
+      where: { vendorId_key: { vendorId, key: tier.key } },
+      create: { vendorId, ...tier },
+      update: {
+        name: tier.name,
+        thresholdPence: tier.thresholdPence,
+        multiplierBps: tier.multiplierBps,
+        sortOrder: tier.sortOrder,
+      },
+    });
+  }
+  console.log(`seeded branding/config/delivery/loyalty for ${vendorId}`);
 }
 
 // Aheed's primitives are the exact current tokens.css hex; tagline preserves the
@@ -158,8 +190,18 @@ const AHEED_SATELLITES: VendorSatellites = {
     deliveryFeePence: 349,
     freeDeliveryThresholdPence: 3000,
     minimumOrderPence: 1500,
+    loyaltyEnabled: true,
+    pointsPerPoundEarned: 1,
+    pencePerPointRedeemed: 1, // 100 points = £1, matching the mockup's copy
+    minRedeemPoints: 100,
+    tierWindowDays: 30,
+    pointsExpiryMonths: 12,
   },
   deliveryPrefixes: ["MK"],
+  loyaltyTiers: [
+    { key: "SILVER", name: "Silver", thresholdPence: 5000, multiplierBps: 12500, sortOrder: 1 },
+    { key: "GOLD", name: "Gold", thresholdPence: 10000, multiplierBps: 15000, sortOrder: 2 },
+  ],
 };
 
 type CatalogueProduct = {
@@ -518,8 +560,17 @@ const SRIMART_SATELLITES: VendorSatellites = {
     deliveryFeePence: 299,
     freeDeliveryThresholdPence: 5000,
     minimumOrderPence: 1000,
+    // Deliberately OFF — the second vendor is what proves loyalty is per-vendor
+    // data rather than a platform-wide constant.
+    loyaltyEnabled: false,
+    pointsPerPoundEarned: 1,
+    pencePerPointRedeemed: 1,
+    minRedeemPoints: 100,
+    tierWindowDays: 30,
+    pointsExpiryMonths: null,
   },
   deliveryPrefixes: ["RG"],
+  loyaltyTiers: [],
 };
 
 const SRIMART_CATALOGUE: CatalogueCategory[] = [

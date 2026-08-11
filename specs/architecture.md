@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.8.0"
-updated: 2026-08-10
+version: "1.9.0"
+updated: 2026-08-11
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -357,9 +357,23 @@ S3 API rather than an R2-specific SDK.
   `CDN_BASE_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
 - **Storage keys, never URLs, in the DB.** Compose URLs at read time only.
 - **No raw SQL, no `Json` columns** for domain data. If you reach for either, revisit the model.
-- **Money is integer pence + explicit currency.** Never floats.
+- **Money is integer pence + explicit currency.** Never floats. Loyalty points are integers and
+  tier multipliers are basis points, for the same reason.
+- **An order's money identity is `subtotal − discount + delivery = total`** (P5a, #135). The
+  discount column is generic rather than points-specific, so a future discount-code engine reduces
+  the same total by the same arithmetic. Both the free-delivery threshold and the vendor's minimum
+  order are judged on the subtotal **before** the discount — custom already earned is not clawed
+  back by paying with points.
 - **Writes that touch multiple tables run in a transaction.** Order placement decrements stock,
-  writes items, records payment intent, and emits a status event atomically.
+  spends any loyalty points, writes items, records payment intent, and emits a status event
+  atomically; payment confirmation flips status and credits points in one transaction, and
+  cancellation releases stock and returns points in another.
+- **A contended counter is compare-and-set, never read-then-write.** `Inventory.quantity` (stock),
+  `Order.status` (transitions) and `LoyaltyAccount.balancePoints` (points) are all guarded by a
+  conditional `updateMany` whose `WHERE` repeats the value it read, with the append-only companion
+  row (`OrderItem`, `OrderStatusEvent`, `LoyaltyLedgerEntry`) written in the same transaction. A
+  balance derived by `SUM()` cannot be guarded that way, which is why the counter exists alongside
+  its ledger rather than instead of it.
 - **Webhooks are idempotent.** Verify Stripe signatures; key side effects on the event id.
 - **Every list is keyset-paginated; every hot query has an index** shipped in the same migration.
 - **SDD gates still apply.** Spec before code, tests + `validation.md` before done, changelog

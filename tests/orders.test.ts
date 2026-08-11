@@ -34,6 +34,18 @@ type FakeState = {
   }[];
   /** How many rows the guarded decrement claims to have updated. */
   decrementCount: number;
+  // P5a (#135) — the loyalty rows placeOrder now touches.
+  loyaltyConfig: {
+    loyaltyEnabled: boolean;
+    pointsPerPoundEarned: number;
+    pencePerPointRedeemed: number;
+    minRedeemPoints: number;
+    tierWindowDays: number;
+    pointsExpiryMonths: number | null;
+  } | null;
+  loyaltyAccount: { balancePoints: number; lastActivityAt: Date } | null;
+  /** How many rows the guarded points debit claims to have updated. */
+  loyaltyDebitCount: number;
 };
 
 let state: FakeState;
@@ -82,6 +94,20 @@ function fakePrisma() {
         return { count: 1 };
       },
     },
+    vendorConfig: { findUnique: async () => state.loyaltyConfig },
+    loyaltyAccount: {
+      findUnique: async () => state.loyaltyAccount,
+      updateMany: async (args: unknown) => {
+        created.loyaltyDebit.push(args);
+        return { count: state.loyaltyDebitCount };
+      },
+    },
+    loyaltyLedgerEntry: {
+      create: async ({ data }: { data: unknown }) => {
+        created.loyaltyEntry.push(data);
+        return {};
+      },
+    },
   };
   return {
     $transaction: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx),
@@ -128,6 +154,8 @@ beforeEach(() => {
     "statusEvent",
     "cartCleared",
     "paymentUpdate",
+    "loyaltyDebit",
+    "loyaltyEntry",
   ]) {
     created[key] = [];
   }
@@ -137,6 +165,18 @@ beforeEach(() => {
       { id: "p1", name: "Bananas", basePrice: 1000, isActive: true, inventory: { quantity: 10 } },
     ],
     decrementCount: 1,
+    // Loyalty ON by default so the P5a cases below can simply supply an account;
+    // the pre-P5a cases all place guest orders, which return before it matters.
+    loyaltyConfig: {
+      loyaltyEnabled: true,
+      pointsPerPoundEarned: 1,
+      pencePerPointRedeemed: 1,
+      minRedeemPoints: 100,
+      tierWindowDays: 30,
+      pointsExpiryMonths: 12,
+    },
+    loyaltyAccount: null,
+    loyaltyDebitCount: 1,
   };
 });
 
@@ -465,5 +505,115 @@ describe("advanceOrderStatus", () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+});
+
+// ---- P5a — loyalty redemption inside the checkout transaction (#135) --------
+
+/** A signed-in shopper holding `balancePoints`, active today. */
+function withBalance(balancePoints: number) {
+  state.loyaltyAccount = { balancePoints, lastActivityAt: new Date() };
+  return input({ userId: "u1", guestEmail: null });
+}
+
+const orderRow = () => created.order[0] as Record<string, number>;
+const ledgerRow = () => created.loyaltyEntry[0] as Record<string, unknown>;
+
+describe("placeOrder — loyalty redemption (R28-R35)", () => {
+  it("applies a discount recomputed from the DB balance, not the request (R28)", async () => {
+    // Asks for 5000 but holds 200 — the order must reflect what they have.
+    await placeOrder(fakePrisma(), VENDOR, { ...withBalance(200), redeemPoints: 5000 });
+
+    expect(orderRow().discountPence).toBe(200);
+    expect(orderRow().subtotalPence).toBe(2000);
+    expect(orderRow().totalPence).toBe(2000 - 200 + 349);
+  });
+
+  it("keeps the money identity on the persisted row (R15)", async () => {
+    await placeOrder(fakePrisma(), VENDOR, { ...withBalance(500), redeemPoints: 300 });
+    const o = orderRow();
+    expect(o.subtotalPence - o.discountPence + o.deliveryFeePence).toBe(o.totalPence);
+  });
+
+  it("writes exactly one negative REDEEM entry against the new order (R30)", async () => {
+    await placeOrder(fakePrisma(), VENDOR, { ...withBalance(500), redeemPoints: 300 });
+
+    expect(created.loyaltyEntry).toHaveLength(1);
+    expect(ledgerRow()).toMatchObject({
+      kind: "REDEEM",
+      points: -300,
+      orderId: "order-1",
+      userId: "u1",
+      vendorId: VENDOR,
+    });
+  });
+
+  it("debits the balance behind a guarded updateMany carrying vendorId (R29)", async () => {
+    await placeOrder(fakePrisma(), VENDOR, { ...withBalance(500), redeemPoints: 300 });
+
+    const debit = created.loyaltyDebit[0] as { where: Record<string, unknown> };
+    expect(debit.where).toMatchObject({ vendorId: VENDOR, userId: "u1" });
+    expect(debit.where.balancePoints).toEqual({ gte: 300 });
+    // The lapse bound is part of the WHERE, not a separate check a concurrent
+    // write could race past.
+    expect(debit.where.lastActivityAt).toBeDefined();
+  });
+
+  it("places the order with no discount when the debit loses the race (R29, R31)", async () => {
+    // count === 0 is exactly what a concurrent checkout spending the same
+    // points first looks like.
+    const order = withBalance(500);
+    state.loyaltyDebitCount = 0;
+    await placeOrder(fakePrisma(), VENDOR, { ...order, redeemPoints: 300 });
+
+    expect(orderRow().discountPence).toBe(0);
+    expect(orderRow().totalPence).toBe(2000 + 349);
+    expect(created.loyaltyEntry).toHaveLength(0);
+  });
+
+  it("ignores a redemption from a guest (R32)", async () => {
+    state.loyaltyAccount = { balancePoints: 5000, lastActivityAt: new Date() };
+    await placeOrder(fakePrisma(), VENDOR, input({ redeemPoints: 300 }));
+
+    expect(orderRow().discountPence).toBe(0);
+    expect(created.loyaltyEntry).toHaveLength(0);
+  });
+
+  it("ignores a redemption on a lapsed account (R34)", async () => {
+    const lapsed = new Date();
+    lapsed.setUTCMonth(lapsed.getUTCMonth() - 13);
+    state.loyaltyAccount = { balancePoints: 5000, lastActivityAt: lapsed };
+    await placeOrder(fakePrisma(), VENDOR, {
+      ...input({ userId: "u1", guestEmail: null }),
+      redeemPoints: 300,
+    });
+
+    expect(orderRow().discountPence).toBe(0);
+    expect(created.loyaltyEntry).toHaveLength(0);
+    expect(created.loyaltyDebit).toHaveLength(0);
+  });
+
+  it("ignores a redemption when the vendor runs no scheme (R35)", async () => {
+    const order = withBalance(500);
+    state.loyaltyConfig = { ...state.loyaltyConfig!, loyaltyEnabled: false };
+    await placeOrder(fakePrisma(), VENDOR, { ...order, redeemPoints: 300 });
+
+    expect(orderRow().discountPence).toBe(0);
+    expect(created.loyaltyEntry).toHaveLength(0);
+  });
+
+  it("judges the vendor minimum on the subtotal BEFORE the discount (R18)", async () => {
+    // Subtotal 2000 clears the 1500 minimum; redeeming 900 takes the goods
+    // value under it. The order must still be accepted.
+    await placeOrder(fakePrisma(), VENDOR, { ...withBalance(900), redeemPoints: 900 });
+
+    expect(orderRow().discountPence).toBe(900);
+    expect(orderRow().totalPence).toBe(2000 - 900 + 349);
+  });
+
+  it("charges the payment provider the discounted total (R28)", async () => {
+    await placeOrder(fakePrisma(), VENDOR, { ...withBalance(500), redeemPoints: 300 });
+    // Payment.amountPence is what Stripe is eventually asked for.
+    expect((created.payment[0] as Record<string, number>).amountPence).toBe(2000 - 300 + 349);
   });
 });

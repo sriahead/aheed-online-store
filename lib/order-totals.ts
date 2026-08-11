@@ -22,11 +22,30 @@ export interface DeliveryRules {
 
 export interface OrderTotals {
   subtotalPence: number;
+  /** P5a (#135) — loyalty redemption today, discount codes in P5b. Always ≥ 0. */
+  discountPence: number;
   deliveryFeePence: number;
   totalPence: number;
 }
 
-export function computeTotals(lines: TotalsLine[], rules: DeliveryRules): OrderTotals {
+/**
+ * The single place an order's money is decided.
+ *
+ * `discountPence` is applied to the subtotal but is deliberately evaluated
+ * AFTER the free-delivery threshold: a shopper who bought £30 of goods earned
+ * free delivery by buying them, and spending loyalty points shouldn't claw that
+ * back. `placeOrder` applies the same before-discount rule to the vendor's
+ * minimum order for the same reason.
+ *
+ * The caller is responsible for having clamped the discount (see
+ * `clampRedemption` in lib/loyalty.ts); this function only defends the floor at
+ * zero so a bad caller can't invert the total.
+ */
+export function computeTotals(
+  lines: TotalsLine[],
+  rules: DeliveryRules,
+  discountPence = 0,
+): OrderTotals {
   const subtotalPence = lines.reduce(
     (sum, line) => sum + (line.available ? line.unitPricePence * line.quantity : 0),
     0,
@@ -41,7 +60,14 @@ export function computeTotals(lines: TotalsLine[], rules: DeliveryRules): OrderT
   // absurd, and checkout refuses an empty cart before this point anyway.
   const deliveryFeePence = subtotalPence === 0 || qualifiesForFree ? 0 : rules.deliveryFeePence;
 
-  return { subtotalPence, deliveryFeePence, totalPence: subtotalPence + deliveryFeePence };
+  const appliedDiscount = Math.min(Math.max(0, discountPence), subtotalPence);
+
+  return {
+    subtotalPence,
+    discountPence: appliedDiscount,
+    deliveryFeePence,
+    totalPence: subtotalPence - appliedDiscount + deliveryFeePence,
+  };
 }
 
 /**
