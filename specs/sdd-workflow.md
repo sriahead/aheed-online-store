@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.4.0"
+version: "2.5.1"
 updated: 2026-08-11
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -252,6 +252,13 @@ Still on you, because no script can judge them:
       a slice can pass every local gate and still fail its first CI run. P4a remembered by hand;
       P4b didn't and burned a red CI run plus a fix commit (**#132** tracks teaching `sdd:preclear`
       to check this so it stops depending on memory).
+      **Run it LAST — after every front-matter edit, immediately before `git add`.** The index
+      embeds each artifact's `version`/`updated`, so bumping any front-matter *after* the rebuild
+      re-stales it, and "I ran `kms:build-index`" is not the same claim as "the index matches the
+      tree". P5a's closeout burned a red CI run on exactly this: the index was rebuilt first, then
+      `roadmap.md` (1.13.0→1.14.0) and this file (2.4.0→2.5.0) were bumped, and CI's rebuild-and-diff
+      caught two stale version cells. The check normalises away the timestamp and commit footer, so
+      a footer-only difference is *not* what fails it — a version cell is.
 
 Then **switch to Sonnet 5** (`/model claude-sonnet-5`) for the validation half of the loop. The
 assistant cannot switch its own model — if a stage is running on the wrong one, it should say so and
@@ -325,6 +332,19 @@ named gates, but the part of this repo's actual history most prone to drift.
 - Open the PR referencing its issue (`Closes #NN`). Wait for the **actual** CI result before calling
   it ready — poll correctly (multi-line `gh pr checks` output breaks a naive string-equality check;
   match on absence of `pending` instead) rather than assuming a run will pass.
+- **`gh pr checks` is a view, not the truth — cross-check a long "pending" against
+  `gh run view <run-id> --json status,conclusion`.** During P5a's promotion (#140) a `gates` run
+  showed every step green in the Actions UI, including `Complete job`, while the job's own status
+  stayed `in_progress` and `gh pr checks` reported `pending 0` for **56 minutes**; `gh run cancel`
+  on it returned `HTTP 500`. The run had in fact succeeded in ~1 minute. githubstatus.com showed
+  **Actions "Operational"** but a separate active **API Requests / GraphQL** degradation — the
+  status-finalisation write rides that degraded path, so the component badge for Actions stays green
+  while its status reporting is broken. Consequences for this stage: an `until ! gh pr checks | grep
+  pending` loop can spin forever on an already-finished run, and "still pending" is **not** evidence
+  a job is still working. When a run's steps are all green but its status won't settle, read the run
+  API directly, and check **every** status-page component rather than only Actions. See also
+  `CLAUDE.md`'s outage guidance: an incident window is the wrong time to exercise the production
+  gate, but a stuck *reporting* layer is not the same thing as a stuck job.
 - Merging, and any promotion that triggers a deploy, are hard-to-reverse and visible to others:
   always get explicit confirmation before either, even immediately after a related approval — one
   merge is not blanket permission for the next one.
