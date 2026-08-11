@@ -6,7 +6,67 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **`CLAUDE.md` documented `lib/config`'s env precedence backwards, and always had.** It claimed
+  `process.env` wins over the Cloudflare request context, "so local `.env` wins in dev and a stray
+  `.dev.vars` can't shadow it". `readEnv()` does the opposite — it tries `getCloudflareContext()`
+  first and falls through to `process.env` only when there is no Worker request context — and has
+  since the file was written (`e41e8ec`). So under `npm run preview` **`.dev.vars` wins**, which is
+  exactly how a fixture script (reading `.env`) and the app under preview can silently use different
+  Neon projects while every result still looks plausible (**#119**). Found at P4a's Validate, where
+  the two files did point at different projects. Corrected to describe real behaviour; the code is
+  unchanged, since flipping the precedence would be a behaviour change needing its own proposal.
+
 ### Changed
+- **P4a closeout docs**: roadmap change-log row for the slice (`specs/roadmap.md` 1.11.0), and a
+  `specs/sdd-workflow.md` (2.3.0) Spec-stage rule earned twice in one slice — **don't `grep` for the
+  absence of a word in prose or commented code**, because the artifact names what it deliberately
+  excludes, so the check matches its own explanation and "passing" means deleting the rationale
+  (P4a's R5 at Build, R27 at Validate). P4a's `validation.md` R27 row corrected in place.
+
+### Added
+- **P4a — order history & status timeline** (#122, `specs/2026-08-11-p4a-order-history/`), the first
+  P4 slice and the read half of the phase. A signed-in shopper gets `/account/orders` — their own
+  orders for **this vendor**, newest first, ten per page — and `/account/orders/{orderNumber}`,
+  showing the purchased lines, the snapshotted delivery address, and a **status timeline**. P4a
+  builds less than P4's roadmap line implies because P3 left more behind than the line recorded:
+  `OrderStatusEvent` rows were already being written in three places and `Order` already carried
+  `@@index([vendorId, createdAt])`, so this slice is **read-only — no schema change, no migration**.
+  - **`getForUser()` is a second, stricter read next to `getByOrderNumber()`, which is untouched.**
+    The existing method implements P3b's capability-URL rule — a guest order has no owner, so the
+    unguessable order number *is* the credential. That is right for `/checkout/{n}` and wrong for
+    `/account/orders/{n}`: a page claiming to be *your* history must not render someone else's order
+    because a valid number was pasted into the address bar. `userId` is part of the `WHERE`, not a
+    post-hoc check, so a guest order and another member's order both simply fail to match.
+  - **The timeline is built from `status` and can never render `OrderStatusEvent.note`.** Today's
+    notes are system-written and harmless, but P4b hands staff a control that writes that column,
+    and an internal note on a customer's own order page is a live incident rather than a cosmetic
+    bug. `buildTimeline`'s types carry no note field, the repository does not select it, and a unit
+    test asserts a smuggled note cannot reach the output — the leak is unrepresentable, not merely
+    unlikely.
+  - **The list is deliberately unfiltered by status.** An abandoned `PENDING_PAYMENT` order and a
+    `CANCELLED` one both appear. Hiding them would look tidier while concealing the exact order
+    someone is most likely hunting for after a failed payment.
+  - Pure, DB-free logic in `lib/order-status.ts` (12 unit tests), matching the split already used by
+    `lib/cart-rules.ts` and `lib/shopping-list.ts`; `en-GB` dates pinned explicitly, because a
+    Workers isolate has no user locale and an unpinned format renders the US month order.
+  - `components/orders/` extracts the items/totals and address cards out of the P3b confirmation
+    page so both order pages share one implementation instead of two copies of the money breakdown.
+  - Deliberately excluded, each tracked: guest order lookup (**#123**), reorder-from-a-past-order
+    (**#124**, inherited from P3d), and all staff transitions and delivery emails (**#125**, P4b).
+  - Two **spec** rows were corrected during the build rather than worked around, recorded inline in
+    `requirements.md`: R9 demanded "exactly one Prisma query", which a nested relation `select` can
+    never satisfy (Prisma issues a second batched query unless `relationJoins` is enabled) and now
+    states the property that matters — no N+1; and R5 verified "no note field" with a grep that
+    matched the module's own explanatory comment, which would have meant deleting the explanation to
+    please the check.
+
+### Changed
+- **`specs/sdd-workflow.md` 2.2.1** — corrects the delivery-board blockquote, which claimed
+  `Backlog` and `In Review` "do not exist yet" and told the reader to substitute `Todo`. Both are
+  false: Project #2 has all four Status options and `CLAUDE.md` already records the rename as done,
+  so a reader following the workflow doc would have filed status wrongly. Rides P4a's branch per the
+  carry-forward rule.
 - **Post-promotion documentation pass for P3 in production** (`specs/roadmap.md`,
   `docs/env-setup.md` 1.7.0) — rescued from PR #110, which branched before P3d and had gone stale
   and conflicting; the content below is the part of it that had not landed any other way.
