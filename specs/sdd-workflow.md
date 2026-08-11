@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.5.1"
+version: "2.5.2"
 updated: 2026-08-11
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -300,6 +300,13 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
     the response body. Parse each `<input>` whole, then read `name`/`value` out of it.
   - **A `<select>` is a form field too.** Serialize `<input>` *and* `<select>` in document order, or
     any action pairing repeated fields positionally will be tested against the wrong shape.
+  - **An action's id is a stable build-time hash, independent of any session** — you don't need to
+    render an authenticated page to discover it. `.next/server/server-reference-manifest.json` maps
+    every server action's id to its `filename`/`exportedName`; grep the built bundle
+    (`.next/server/app/**/page.js`) for that id string to confirm which `$ACTION_1:0` shape it
+    expects. This is what let P5b's Validate exercise `/staff/discounts`'s admin actions — including
+    the no-`Cookie` and wrong-role refusal cases — **without a valid session to render the form
+    first**, which matters exactly when the row under test is about authorization itself.
 - **Check which database the Worker is actually on before trusting a live result.** `npm run preview`
   reads `.dev.vars`; `prisma migrate`/`db:seed` and any local inspection script read `.env`. When
   those point at different Neon projects, a live check silently validates against a database the app

@@ -48,6 +48,23 @@ every branch merges.
   `features/checkout/send-confirmation.ts` and `components/orders/OrderItemsCard.tsx` (shared by
   `/checkout/{orderNumber}` and `/account/orders/{orderNumber}`); `tests/order-confirmation-email.test.ts`
   updated to assert the new label.
+- **P5b closeout docs.** `specs/roadmap.md` (1.16.0) gains P5b's slice row, written from what live
+  validation actually proved: **every one of build-notes' eight "known-shaky" areas came back
+  clean**, most notably both concurrency guarantees (the global usage-cap race and the per-customer
+  race) actually running under `Promise.all` against real Postgres, and the admin cross-vendor
+  replay proven in **both directions** — closing, for discount codes, the exact gap **#141** recorded
+  for P5a's loyalty config. P5 stays **open**: **#143** (P5a live but dark) must resolve first.
+  `specs/sdd-workflow.md` (2.5.2) gains a fourth Validate trap: a Next.js server action's id is a
+  stable build-time hash in `.next/server/server-reference-manifest.json`, independent of any
+  session — which is what let this slice's admin RBAC rows (no-`Cookie`, wrong-role) be driven live
+  **without** a valid session to render the form first. `specs/2026-08-11-p5b-discount-codes/validation.md`'s
+  C6 fixture corrected in place (matching P4a's R27 precedent): it was described as sharing C1's
+  code string, which directly contradicted R48's own premise that C6 exists on no other vendor —
+  found and fixed at this pass, not carried forward as a live defect. **#144** (P5a's promotion-row
+  backfill) closed — confirmed landed on `staging`. **#141 commented, not closed**: the account
+  blocker it named turns out to be avoidable (a platform `ADMIN` transcends vendor membership, so no
+  dedicated SriMart-admin account is needed), but it names P5a's `/staff/loyalty` action
+  specifically, which this slice's validation didn't re-run.
 - **P5a closeout docs.** `specs/roadmap.md` (1.14.0) gains P5a's slice row, written from what live
   validation actually proved rather than what the build expected. It **supersedes
   `build-notes.md`'s "nothing in this slice has touched a real database"** — honest when written,
