@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { MapPin, ShieldCheck, Sparkles, User } from "lucide-react";
+import { MapPin, ShieldCheck, Sparkles, Tag, User } from "lucide-react";
 import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-order";
 
 /**
@@ -160,6 +160,33 @@ export function CheckoutForm({
           </div>
         </section>
       )}
+
+      {/*
+        P5b (#145) — always offered, unlike the loyalty section above. There is no
+        per-vendor "discounts enabled" flag to consult: a vendor with no codes
+        simply has none that validate, and hiding the field would mean a shopper
+        holding a valid code had nowhere to type it.
+      */}
+      <section className="space-y-3 border-t border-black/5 pt-5">
+        <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
+          <Tag className="h-4 w-4" aria-hidden />
+          {redeemable ? "4" : "3"}. Discount code
+        </h2>
+        <div className="max-w-[16rem]">
+          <label className={labelClass} htmlFor="discountCode">
+            Have a code? (optional)
+          </label>
+          <input
+            id="discountCode"
+            name="discountCode"
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+            className={`${inputClass} uppercase`}
+            placeholder="WELCOME10"
+          />
+        </div>
+      </section>
 
       <button
         type="submit"

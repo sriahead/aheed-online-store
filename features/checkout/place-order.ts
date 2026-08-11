@@ -64,6 +64,19 @@ function redeemPointsIntent(form: FormData): number {
   return parsed;
 }
 
+/**
+ * The discount code the shopper typed (P5b, #145) — an intent, like
+ * `redeemPoints`, not an amount. Empty means "no code", which is not an error.
+ *
+ * Unlike a malformed points value, an unusable code does NOT silently become
+ * nothing: `placeOrder` refuses the checkout with the reason. Charging full price
+ * for an order the shopper believes is discounted is the worse failure.
+ */
+function discountCodeIntent(form: FormData): string | null {
+  const raw = String(form.get("discountCode") ?? "").trim();
+  return raw === "" ? null : raw;
+}
+
 export async function placeOrderAction(
   _prev: CheckoutState,
   form: FormData,
@@ -119,6 +132,7 @@ export async function placeOrderAction(
         minimumOrderPence: vendor.minimumOrderPence,
       },
       redeemPoints: redeemPointsIntent(form),
+      discountCode: discountCodeIntent(form),
       vendorSlug: vendor.slug,
       returnOrigin: await currentOrigin(),
     });

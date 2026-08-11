@@ -126,6 +126,18 @@ type VendorSatellites = {
     multiplierBps: number;
     sortOrder: number;
   }[];
+  // P5b — discount codes are vendor data too (#145). Aheed gets one sample code;
+  // SriMart deliberately gets none, which is what proves codes are per-vendor
+  // rather than a platform-wide list.
+  discountCodes: {
+    code: string;
+    description: string;
+    kind: "PERCENTAGE" | "FIXED_AMOUNT";
+    value: number;
+    minSubtotalPence: number;
+    remainingRedemptions: number | null;
+    maxPerCustomer: number | null;
+  }[];
 };
 
 async function upsertVendorSatellites(vendorId: string, s: VendorSatellites) {
@@ -162,7 +174,19 @@ async function upsertVendorSatellites(vendorId: string, s: VendorSatellites) {
       },
     });
   }
-  console.log(`seeded branding/config/delivery/loyalty for ${vendorId}`);
+  // Unlike the tiers above, `update` is EMPTY on purpose. A tier's threshold is
+  // pure configuration, so resetting it to the declared baseline is the intended
+  // re-seed behaviour; a code's `remainingRedemptions` counts DOWN as shoppers
+  // use it, so rewriting it would silently refill a partly-claimed code and
+  // hand out uses that were already spent.
+  for (const code of s.discountCodes) {
+    await prisma.discountCode.upsert({
+      where: { vendorId_code: { vendorId, code: code.code } },
+      create: { vendorId, ...code },
+      update: {},
+    });
+  }
+  console.log(`seeded branding/config/delivery/loyalty/discounts for ${vendorId}`);
 }
 
 // Aheed's primitives are the exact current tokens.css hex; tagline preserves the
@@ -201,6 +225,20 @@ const AHEED_SATELLITES: VendorSatellites = {
   loyaltyTiers: [
     { key: "SILVER", name: "Silver", thresholdPence: 5000, multiplierBps: 12500, sortOrder: 1 },
     { key: "GOLD", name: "Gold", thresholdPence: 10000, multiplierBps: 15000, sortOrder: 2 },
+  ],
+  discountCodes: [
+    {
+      code: "WELCOME10",
+      description: "10% off your first order over £15",
+      kind: "PERCENTAGE",
+      // Basis points: 1000 = 10%. Same unit as VendorLoyaltyTier.multiplierBps.
+      value: 1000,
+      minSubtotalPence: 1500,
+      remainingRedemptions: null,
+      // Capped per customer, which also means the code requires sign-in — a
+      // guest has no identity to count uses against.
+      maxPerCustomer: 1,
+    },
   ],
 };
 
@@ -571,6 +609,9 @@ const SRIMART_SATELLITES: VendorSatellites = {
   },
   deliveryPrefixes: ["RG"],
   loyaltyTiers: [],
+  // Deliberately empty: SriMart runs no discount scheme, which is what proves
+  // codes are per-vendor data rather than a platform-wide list.
+  discountCodes: [],
 };
 
 const SRIMART_CATALOGUE: CatalogueCategory[] = [

@@ -61,13 +61,13 @@ R50 follows R49). Run them in order.
 | R16 | Unit test: `existingDiscountPence` equal to, and greater than, `subtotalPence` each return `{ pointsSpent: 0, discountPence: 0 }`. |
 | R17 | Read `model DiscountCode` in `prisma/schema.prisma`; list its non-relation fields and compare to R17's list exactly, including which four are nullable. |
 | R18 | `grep -n "@@unique(\[vendorId, code\])" prisma/schema.prisma` matches, and the model declares an `@@index` whose first element is `vendorId`. |
-| R19 | `grep -n "usedCount" prisma/schema.prisma` returns nothing. |
+| R19 | `grep -nE "^\s*usedCount\s+Int" prisma/schema.prisma` returns nothing. Do **not** grep for the bare word `usedCount` — it matches the two doc-comment lines explaining why the column is absent, so that check could only be passed by deleting the rationale. Read those two lines to confirm they are prose, not a field. |
 | R20 | Read `model DiscountRedemption`; confirm the field list and that both `@@unique([orderId])` and `@@unique([codeId, userId, seq])` are present. |
 | R21 | `git diff --name-only origin/staging -- prisma/migrations/` names exactly one new migration directory; `grep -nE "DROP\|ALTER TABLE \"Order\"" <that>/migration.sql` returns nothing. |
 | R22 | `git diff origin/staging -- prisma/schema.prisma` — inside `model Order { … }` the only added line is the `DiscountRedemption` back-relation. No money column added. |
 | R23 | `git diff origin/staging -- prisma/schema.prisma` introduces no `Json`. Read the three money fields and confirm each is `Int`; confirm a schema comment states a `PERCENTAGE` code's `value` is basis points. |
 | R24 | `npx prisma migrate status` reports no failed and no pending migrations. `npm run typecheck` exits 0. |
-| R25 | Read each exported writing function's signature in `lib/repositories/discounts.ts` and confirm `(db\|tx, vendorId, …)`. The fixture script calls them directly under `tsx` with no Workers context — every live row below depends on this, so R25 passing is a precondition, not an isolated check. |
+| R25 | Read the signatures of `claimCode`, `recordCodeRedemption` and `releaseCodeRedemption` in `lib/repositories/discounts.ts` and confirm `(db\|tx, vendorId, …)`. The fixture script calls them directly under `tsx` with no Workers context — every live row below depends on this, so this half is a precondition, not an isolated check. Then confirm the admin wrappers take `vendorId` only and that `grep -n "@/lib/db" features/admin/discount-codes.ts` returns nothing (ADR-004 slice 2's guard, also asserted by R62). |
 | R26 | Read every Prisma query in `lib/repositories/discounts.ts` and confirm each `where` names `vendorId`. Reading, not grepping — a `where` spanning lines defeats a single-line grep. |
 | R27 | Read `claimCode` and confirm the `updateMany` `where` contains `vendorId`, `isActive: true` and the `remainingRedemptions` guard, with `{ decrement: 1 }` in `data`, and that `count === 0` returns a refusal. |
 | R28 | Fixture: place an order using C1 (`remainingRedemptions: null`). Afterwards `SELECT "remainingRedemptions" FROM "DiscountCode" WHERE id=C1;` is still `NULL`. |

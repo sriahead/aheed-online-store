@@ -31,7 +31,8 @@ R4. `normaliseCode(raw)` trims surrounding whitespace and uppercases, verified b
 
 R5. `computeCodeDiscountPence({ kind: "PERCENTAGE", value, subtotalPence })` returns
     `Math.floor(subtotalPence * value / 10000)`, verified by these exact cases: `(1000, 1000) === 100`,
-    `(1999, 1000) === 199`, `(1000, 2500) === 250`, `(999, 3333) === 333`.
+    `(1999, 1000) === 199`, `(1000, 2500) === 250`, `(999, 3333) === 332`. The last case is the one
+    that proves flooring rather than rounding: `999 × 3333 / 10000` is `332.9667`.
 
 R6. `computeCodeDiscountPence({ kind: "FIXED_AMOUNT", value, subtotalPence })` returns `value`
     unchanged before clamping, verified by `(value 500, subtotalPence 10000) === 500` and
@@ -93,8 +94,11 @@ R17. `prisma/schema.prisma` declares `model DiscountCode` with exactly these non
 
 R18. `DiscountCode` carries `@@unique([vendorId, code])` and an index leading with `vendorId`.
 
-R19. `DiscountCode` has **no** `usedCount` or equivalent upward-counting column: the string
-     `usedCount` does not appear in `prisma/schema.prisma`.
+R19. `DiscountCode` has **no** `usedCount` or equivalent upward-counting column — asserted against
+     a *field declaration*, not the bare word: `prisma/schema.prisma` contains no line matching
+     `^\s*usedCount\s+Int`. The word itself appears twice in the model's doc comment, explaining why
+     the column is absent and why the counter runs downward; a check that failed on those would be
+     satisfiable only by deleting the rationale (the `sdd-workflow.md` trap P4a hit twice).
 
 R20. `prisma/schema.prisma` declares `model DiscountRedemption` with non-relation fields `id`,
      `vendorId`, `codeId`, `orderId`, `userId` (nullable), `seq`, `amountPence`, `createdAt`, and
@@ -117,9 +121,15 @@ R24. `npx prisma migrate status` against the staging database reports no failed 
 
 ## Repository — `lib/repositories/discounts.ts`
 
-R25. Every exported function that writes takes the Prisma client (or transaction client) as its
-     first argument and `vendorId` as its second, and reads no request context — verified by reading
-     the file, and demonstrated by the fixture script driving them directly under `tsx`.
+R25. Every exported **transactional** function — `claimCode`, `recordCodeRedemption`,
+     `releaseCodeRedemption` — takes the Prisma client (or transaction client) as its first argument
+     and `vendorId` as its second, and reads no request context; verified by reading the file, and
+     demonstrated by the fixture script driving them directly under `tsx`. The **admin** write
+     wrappers called from `features/admin/` take `vendorId` only and resolve Prisma internally,
+     matching P5a's `saveLoyaltySettings(vendorId, …)`: ADR-004 slice 2's ESLint guard forbids
+     `@/lib/db` in the feature layer, so an action cannot supply a client. The testability this
+     requirement exists for is the concurrency guarantees, which live entirely in the transactional
+     functions; the admin writes have no race to prove and are exercised through the action (R54–R58).
 
 R26. Every Prisma `where` in `lib/repositories/discounts.ts` names `vendorId` — verified by reading
      each query in the file.
