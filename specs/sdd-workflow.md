@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.3.0"
+version: "2.4.0"
 updated: 2026-08-11
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -245,6 +245,13 @@ Still on you, because no script can judge them:
 - [ ] The build notes are actually *informative*, not just present
 - [ ] Persistent-doc updates for any changed standing decision
 - [ ] GitHub issues filed for every deferred item
+- [ ] **`npm run kms:build-index` has been run and the result committed.** Every slice adds a
+      front-mattered `plan.md`, so every slice makes `ARTIFACT_INDEX.md` stale — and CI's `gates`
+      job fails on exactly that. Nothing before CI catches it: `sdd:preclear` doesn't check it, and
+      it isn't in Validate's local pre-flight (`lint`/`format:check`/`typecheck`/`test`/`build`), so
+      a slice can pass every local gate and still fail its first CI run. P4a remembered by hand;
+      P4b didn't and burned a red CI run plus a fix commit (**#132** tracks teaching `sdd:preclear`
+      to check this so it stops depending on memory).
 
 Then **switch to Sonnet 5** (`/model claude-sonnet-5`) for the validation half of the loop. The
 assistant cannot switch its own model — if a stage is running on the wrong one, it should say so and
