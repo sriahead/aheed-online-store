@@ -43,11 +43,14 @@ export async function sendOrderConfirmationEmail(order: WebhookOrder): Promise<v
           ${lines}
           <tr><td>Subtotal</td><td align="right">${formatPrice(order.subtotalPence)}</td></tr>
           ${
-            // P5a (#135). Without this row the three money lines stop adding up
-            // the moment an order carries a discount, and the customer receives
-            // an email whose arithmetic is visibly wrong.
+            // P5a (#135), generic since P5b (#145): discountPence can be a loyalty
+            // redemption, a discount code, or both combined into one line — never
+            // labelled "Loyalty points", which would misname a code-only discount.
+            // Without this row the three money lines stop adding up the moment an
+            // order carries a discount, and the customer receives an email whose
+            // arithmetic is visibly wrong.
             order.discountPence > 0
-              ? `<tr><td>Loyalty points</td><td align="right">−${formatPrice(
+              ? `<tr><td>Discount</td><td align="right">−${formatPrice(
                   order.discountPence,
                 )}</td></tr>`
               : ""

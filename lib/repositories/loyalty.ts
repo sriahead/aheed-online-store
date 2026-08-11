@@ -170,6 +170,8 @@ export async function spendPoints(
     requestedPoints: number;
     subtotalPence: number;
     deliveryFeePence: number;
+    /** Discount already claimed on this order by a P5b code (#145). */
+    existingDiscountPence?: number;
     config: LoyaltyConfig;
     now?: Date;
   },
@@ -196,6 +198,7 @@ export async function spendPoints(
     minRedeemPoints: config.minRedeemPoints,
     subtotalPence,
     deliveryFeePence,
+    existingDiscountPence: input.existingDiscountPence,
   });
   if (clamped.pointsSpent <= 0) return NO_REDEMPTION;
 

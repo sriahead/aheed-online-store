@@ -7,6 +7,64 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P5b — discount codes: engine, checkout application & staff admin** (#145,
+  `specs/2026-08-11-p5b-discount-codes/`): P5's second slice and the discounts half of the phase.
+  Per-vendor `PERCENTAGE`/`FIXED_AMOUNT` codes with a validity window, minimum spend, a global usage
+  cap and a per-customer cap; entered at checkout, created and deactivated at `/staff/discounts` by
+  a vendor ADMIN. **P5a's generic `Order.discountPence` paid off exactly as designed**: `computeTotals`
+  already took a discount parameter, so `lib/payments.ts`, `/api/webhooks/stripe` and `Order` itself
+  are untouched, no ADR-005 decision is reopened, and `eligibleSpendPence` already excluded the whole
+  discount from earning — so a code-discounted order earns fewer points with **no new code**, and
+  codes cannot become a points-farming loophole. **Codes and points stack, code first**: the code is
+  evaluated against the pre-discount subtotal (a percentage must not shrink because points were also
+  spent) and `clampRedemption` gained an optional `existingDiscountPence` (default `0`, so every P5a
+  case passes unmodified) so points fill only the remaining headroom above the 30p payment floor.
+  **The usage counter counts DOWN** — `remainingRedemptions`, nullable for unlimited — because
+  `usedCount < maxRedemptions` is a column-to-column comparison Prisma cannot express in a `where`
+  and raw SQL is forbidden in application code; counting down restores the literal-to-column guard
+  `Inventory.quantity` (P3b) and `balancePoints` (P5a) already use, and `NULL` arithmetic keeps an
+  unlimited code unlimited with no branch. **The per-customer cap is structural, not a
+  count-then-write race**: `DiscountRedemption.seq` under `@@unique([codeId, userId, seq])` means two
+  concurrent claims by one shopper both compute `seq 0` and the database refuses the second. **An
+  abandoned checkout gives the use back** — `releaseOrder` releases the code beside the points
+  reversal, or a 100-use launch code would die without a single paid order; that release **deletes**
+  the redemption row rather than writing a reversal, deliberately unlike the loyalty ledger, because
+  nothing financial happened and deleting frees the shopper's `seq` slot. **An unusable code fails
+  the checkout with its reason**, the opposite of P5a's treatment of an unparseable points value:
+  silently charging full price for an order the shopper believes is discounted is the worse failure.
+  One additive migration (two tables, one enum); no column added to `Order`. Deliberately excluded
+  and tracked: category-scoped codes (#146), auto-applied promotions (#147), multiple codes per
+  order (#148), first-order-only eligibility (#149), naming the applied code on order pages and in
+  the email (#150), and code-use reversal on refund (#151, unreachable today for the same structural
+  reason as #137). P5 does **not** close on this slice's promotion — **#143** must be resolved first,
+  since P5a is live in production but dark.
+
+### Fixed
+- **The order confirmation email and order-detail pages labelled the combined discount line "Loyalty
+  points" unconditionally**, unchanged from P5a — so as of this slice, an order discounted by a code
+  alone (no points touched) rendered a line claiming the shopper's loyalty balance had been spent.
+  The arithmetic was always correct (`subtotal - discount + delivery = total` held either way); only
+  the label was wrong. Found at this slice's Validate. Relabelled to "Discount" in both
+  `features/checkout/send-confirmation.ts` and `components/orders/OrderItemsCard.tsx` (shared by
+  `/checkout/{orderNumber}` and `/account/orders/{orderNumber}`); `tests/order-confirmation-email.test.ts`
+  updated to assert the new label.
+- **P5b closeout docs.** `specs/roadmap.md` (1.16.0) gains P5b's slice row, written from what live
+  validation actually proved: **every one of build-notes' eight "known-shaky" areas came back
+  clean**, most notably both concurrency guarantees (the global usage-cap race and the per-customer
+  race) actually running under `Promise.all` against real Postgres, and the admin cross-vendor
+  replay proven in **both directions** — closing, for discount codes, the exact gap **#141** recorded
+  for P5a's loyalty config. P5 stays **open**: **#143** (P5a live but dark) must resolve first.
+  `specs/sdd-workflow.md` (2.5.2) gains a fourth Validate trap: a Next.js server action's id is a
+  stable build-time hash in `.next/server/server-reference-manifest.json`, independent of any
+  session — which is what let this slice's admin RBAC rows (no-`Cookie`, wrong-role) be driven live
+  **without** a valid session to render the form first. `specs/2026-08-11-p5b-discount-codes/validation.md`'s
+  C6 fixture corrected in place (matching P4a's R27 precedent): it was described as sharing C1's
+  code string, which directly contradicted R48's own premise that C6 exists on no other vendor —
+  found and fixed at this pass, not carried forward as a live defect. **#144** (P5a's promotion-row
+  backfill) closed — confirmed landed on `staging`. **#141 commented, not closed**: the account
+  blocker it named turns out to be avoidable (a platform `ADMIN` transcends vendor membership, so no
+  dedicated SriMart-admin account is needed), but it names P5a's `/staff/loyalty` action
+  specifically, which this slice's validation didn't re-run.
 - **P5a closeout docs.** `specs/roadmap.md` (1.14.0) gains P5a's slice row, written from what live
   validation actually proved rather than what the build expected. It **supersedes
   `build-notes.md`'s "nothing in this slice has touched a real database"** — honest when written,

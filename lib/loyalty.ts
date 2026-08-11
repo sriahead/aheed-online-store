@@ -102,6 +102,16 @@ export interface ClampRedemptionInput {
   minRedeemPoints: number;
   subtotalPence: number;
   deliveryFeePence: number;
+  /**
+   * Discount already claimed on this order by something else — today, a P5b
+   * discount code (#145). Defaults to 0, which is exactly P5a's behaviour.
+   *
+   * Points fill the headroom the code left rather than competing for the same
+   * subtotal: without this, both mechanisms would each believe they own the
+   * whole basket and their sum could exceed the goods or drive the payable total
+   * under MIN_PAYABLE_PENCE.
+   */
+  existingDiscountPence?: number;
 }
 
 export interface ClampedRedemption {
@@ -147,9 +157,12 @@ export function clampRedemption(input: ClampRedemptionInput): ClampedRedemption 
   const affordable = Math.min(requestedPoints, Math.max(0, balancePoints));
   if (affordable <= 0) return NOTHING;
 
-  // Cap 2 and cap 3, in pence.
-  const headroom = subtotalPence + deliveryFeePence - MIN_PAYABLE_PENCE;
-  const maxDiscountPence = Math.max(0, Math.min(subtotalPence, headroom));
+  // Cap 2 and cap 3, in pence — both reduced by any discount already claimed on
+  // this order, so a code and a redemption together obey the same two limits
+  // each obeys alone.
+  const existing = Math.max(0, input.existingDiscountPence ?? 0);
+  const headroom = subtotalPence + deliveryFeePence - existing - MIN_PAYABLE_PENCE;
+  const maxDiscountPence = Math.max(0, Math.min(subtotalPence - existing, headroom));
 
   const cappedPence = Math.min(affordable * pencePerPointRedeemed, maxDiscountPence);
 

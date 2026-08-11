@@ -65,6 +65,7 @@ model User {
   statusChanges   OrderStatusEvent[]   @relation("OrderStatusEventActor")
   loyaltyAccounts LoyaltyAccount[]
   loyaltyEntries  LoyaltyLedgerEntry[]
+  discountUses    DiscountRedemption[]
 }
 
 model Session {
@@ -147,6 +148,8 @@ model Vendor {
   loyaltyTiers    VendorLoyaltyTier[]
   loyaltyAccounts LoyaltyAccount[]
   loyaltyEntries  LoyaltyLedgerEntry[]
+  discountCodes   DiscountCode[]
+  discountUses    DiscountRedemption[]
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
@@ -471,6 +474,7 @@ model Order {
   payment          Payment?
   statusEvents     OrderStatusEvent[]
   loyaltyEntries   LoyaltyLedgerEntry[]
+  discountUse      DiscountRedemption?
 
   @@index([vendorId, createdAt])
   @@index([vendorId, status, createdAt])
@@ -595,4 +599,94 @@ model LoyaltyAccount {
   updatedAt      DateTime @updatedAt
 
   @@unique([vendorId, userId])
+}
+
+// ---- P5b — discount codes (#145, specs/2026-08-11-p5b-discount-codes/) --------
+
+enum DiscountKind {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+/// A vendor's discount code. Codes are per-vendor data for the same reason the
+/// loyalty settings and delivery rules above are — two vendors may run the same
+/// code string on their own terms, which @@unique([vendorId, code]) permits and
+/// a global unique would not.
+///
+/// `remainingRedemptions` COUNTS DOWN and is the concurrency anchor: null means
+/// unlimited, and the claim guard is `remainingRedemptions: { gt: 0 }` with a
+/// decrement. The natural shape — usedCount < maxRedemptions — is a
+/// column-to-column comparison, which Prisma cannot express in a `where` and
+/// which CLAUDE.md forbids solving with raw SQL. Counting down turns it into the
+/// same literal-to-column guard Inventory.quantity (P3b) and
+/// LoyaltyAccount.balancePoints (P5a) already use. Postgres arithmetic on NULL is
+/// NULL, so an unlimited code decrements to unlimited with no special case.
+///
+/// There is deliberately NO usedCount column: a "times used" figure for the admin
+/// list is derived from DiscountRedemption, so there is no second number that can
+/// disagree with the first.
+model DiscountCode {
+  id          String       @id @default(uuid())
+  vendorId    String
+  vendor      Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  /// Normalised by lib/discounts.ts `normaliseCode` (trimmed, uppercased) on both
+  /// the create and the lookup path — the unique index only means anything if both
+  /// sides agree on what "the same code" is.
+  code        String
+  description String?
+  kind        DiscountKind
+  /// BASIS POINTS for PERCENTAGE (1000 = 10%), PENCE for FIXED_AMOUNT. Integer
+  /// arithmetic end to end, for the same reason money is pence.
+  value       Int
+
+  /// Judged on the PRE-discount subtotal, matching VendorConfig.minimumOrderPence
+  /// and the free-delivery threshold.
+  minSubtotalPence     Int       @default(0)
+  startsAt             DateTime  @default(now())
+  endsAt               DateTime?
+  /// null = unlimited. See the counts-down note above.
+  remainingRedemptions Int?
+  /// null = no per-customer cap, which is also what makes a code guest-usable:
+  /// a cap cannot be counted without an identity, and a guest has none.
+  maxPerCustomer       Int?
+  isActive             Boolean   @default(true)
+
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  redemptions DiscountRedemption[]
+
+  @@unique([vendorId, code])
+  @@index([vendorId, isActive])
+}
+
+/// One row per order that used a code. Append-only in normal operation, with a
+/// single deliberate exception: `releaseCodeRedemption` DELETES the row when an
+/// unpaid order is cancelled (see lib/repositories/discounts.ts for why this is a
+/// deletion rather than the reversal row the loyalty ledger writes).
+///
+/// `seq` is the shopper's zero-based use index for this code, and
+/// @@unique([codeId, userId, seq]) is what makes the per-customer cap structural
+/// rather than a count-then-write race: two concurrent claims both compute seq 0
+/// and the database refuses the second. Guests carry a null userId, and repeated
+/// NULLs do not collide in a Postgres unique index — correct, because a code with
+/// a per-customer cap refuses guests outright.
+///
+/// @@unique([orderId]) enforces at most one code per order.
+model DiscountRedemption {
+  id          String       @id @default(uuid())
+  vendorId    String
+  vendor      Vendor       @relation(fields: [vendorId], references: [id])
+  codeId      String
+  code        DiscountCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  orderId     String
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  seq         Int
+  amountPence Int
+  createdAt   DateTime     @default(now())
+
+  @@unique([orderId])
+  @@unique([codeId, userId, seq])
+  @@index([vendorId, codeId])
 }
