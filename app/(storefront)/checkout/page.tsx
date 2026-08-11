@@ -8,6 +8,7 @@ import { getAuth } from "@/lib/auth";
 import { computeTotals } from "@/lib/order-totals";
 import { formatPrice } from "@/components/product/format-price";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
+import { getLoyaltyRepository } from "@/lib/repositories/loyalty";
 
 // Prisma's @prisma/client/wasm can't load during next build's Node-based
 // static prerendering — same reason as the other DB-backed storefront routes.
@@ -25,6 +26,25 @@ export default async function CheckoutPage() {
 
   const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const signedInEmail = (session?.user as { email?: string } | undefined)?.email ?? null;
+  const signedInUserId = (session?.user as { id?: string } | undefined)?.id ?? null;
+
+  // P5a (#135) — offered only to a signed-in shopper at a loyalty-enabled vendor
+  // whose VISIBLE balance (zero once lapsed) clears the vendor's minimum. Guests
+  // have no balance to spend: P3a's guestToken identifies a cart, not a person.
+  const loyalty = getLoyaltyRepository();
+  const loyaltyConfig = await loyalty.config();
+  const balance =
+    loyaltyConfig.loyaltyEnabled && signedInUserId
+      ? await loyalty.balance(signedInUserId, loyaltyConfig)
+      : null;
+  const redeemable =
+    balance && balance.balancePoints >= loyaltyConfig.minRedeemPoints
+      ? {
+          balancePoints: balance.balancePoints,
+          valueLabel: formatPrice(balance.balancePoints * loyaltyConfig.pencePerPointRedeemed),
+          minRedeemPoints: loyaltyConfig.minRedeemPoints,
+        }
+      : null;
 
   const totals = computeTotals(summary.lines, {
     deliveryFeePence: vendor?.deliveryFeePence ?? 0,
@@ -45,7 +65,7 @@ export default async function CheckoutPage() {
 
       <div className="grid gap-6 md:grid-cols-[1fr_18rem]">
         <div className="rounded-2xl border border-black/10 bg-white p-5">
-          <CheckoutForm signedInEmail={signedInEmail} />
+          <CheckoutForm signedInEmail={signedInEmail} redeemable={redeemable} />
         </div>
 
         <aside className="h-fit rounded-2xl border border-black/10 bg-surface-muted p-5">

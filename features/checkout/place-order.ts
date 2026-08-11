@@ -49,6 +49,21 @@ function optional(form: FormData, field: string): string | null {
   return value === "" ? null : value;
 }
 
+/**
+ * The one numeric field this action reads from the form (P5a, #135) — and it is
+ * a points COUNT, not money. Anything unparseable is zero rather than an error:
+ * a malformed redemption must not block a checkout that is otherwise valid. The
+ * real defence is downstream — `placeOrder` recomputes the discount from the
+ * persisted balance, so this number is only ever an upper bound on a request.
+ */
+function redeemPointsIntent(form: FormData): number {
+  const raw = String(form.get("redeemPoints") ?? "").trim();
+  if (raw === "") return 0;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0) return 0;
+  return parsed;
+}
+
 export async function placeOrderAction(
   _prev: CheckoutState,
   form: FormData,
@@ -103,6 +118,7 @@ export async function placeOrderAction(
         freeDeliveryThresholdPence: vendor.freeDeliveryThresholdPence,
         minimumOrderPence: vendor.minimumOrderPence,
       },
+      redeemPoints: redeemPointsIntent(form),
       vendorSlug: vendor.slug,
       returnOrigin: await currentOrigin(),
     });

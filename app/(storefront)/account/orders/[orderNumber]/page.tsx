@@ -63,6 +63,7 @@ export default async function AccountOrderPage({
       <OrderItemsCard
         items={order.items}
         subtotalPence={order.subtotalPence}
+        discountPence={order.discountPence}
         deliveryFeePence={order.deliveryFeePence}
         totalPence={order.totalPence}
       />

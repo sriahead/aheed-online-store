@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { MapPin, ShieldCheck, User } from "lucide-react";
+import { MapPin, ShieldCheck, Sparkles, User } from "lucide-react";
 import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-order";
 
 /**
@@ -23,7 +23,19 @@ const inputClass =
   "w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none";
 const labelClass = "mb-1 block text-xs font-medium text-primary/70";
 
-export function CheckoutForm({ signedInEmail }: { signedInEmail: string | null }) {
+export function CheckoutForm({
+  signedInEmail,
+  redeemable,
+}: {
+  signedInEmail: string | null;
+  /**
+   * P5a (#135) — omitted entirely when the vendor has loyalty off, or the
+   * shopper is a guest, or their balance is below the vendor's minimum. The
+   * server clamps whatever is submitted regardless; this only decides whether to
+   * offer the control.
+   */
+  redeemable: { balancePoints: number; valueLabel: string; minRedeemPoints: number } | null;
+}) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
 
   return (
@@ -118,6 +130,36 @@ export function CheckoutForm({ signedInEmail }: { signedInEmail: string | null }
           </div>
         </div>
       </section>
+
+      {redeemable && (
+        <section className="space-y-3 border-t border-black/5 pt-5">
+          <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
+            <Sparkles className="h-4 w-4" aria-hidden />
+            3. Loyalty points
+          </h2>
+          <p className="text-xs text-primary/70">
+            You have <strong className="text-primary">{redeemable.balancePoints} points</strong>{" "}
+            worth {redeemable.valueLabel}. Spend as many as you like — we&apos;ll cap it at what
+            this order can take.
+          </p>
+          <div className="max-w-[12rem]">
+            <label className={labelClass} htmlFor="redeemPoints">
+              Points to spend
+            </label>
+            <input
+              id="redeemPoints"
+              name="redeemPoints"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1}
+              max={redeemable.balancePoints}
+              defaultValue={0}
+              className={inputClass}
+            />
+          </div>
+        </section>
+      )}
 
       <button
         type="submit"
