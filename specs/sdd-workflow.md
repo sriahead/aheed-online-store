@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.2.1"
+version: "2.3.0"
 updated: 2026-08-11
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -167,6 +167,14 @@ not present.
 - `requirements.md`: numbered `R1..Rn`, each one objectively checkable sentence (a tool exits 0, a
   file exists with property X, a route returns Y) — no "should" language. `validation.md`: a
   `| Req | How to verify |` table, one concrete step per row.
+- **Don't verify the *absence* of a word with `grep` when the artifact is prose or carries an
+  explanatory comment.** Good code and good docs *name the thing they deliberately exclude* — so the
+  grep matches the explanation and the only way to "pass" is to delete the most useful sentence in
+  the file. P4a hit this twice in one slice: R5 (`grep -n "note"` matched the comment explaining why
+  `note` is deliberately absent) caught at Build, and R27 (`grep -n "Todo"` matched the *corrected*
+  blockquote naming the mistake it had just fixed) caught at Validate. Target the syntax that would
+  actually constitute the defect (`\bnote\s*[:?]` for a field), or assert the property in a test, or
+  state the property and read it — but don't let a check reward deleting the rationale.
 - If the slice also changes a **standing decision** (architecture, tech choice, design tokens), also
   write or update the relevant **persistent doc** (`specs/architecture.md`, `tech-stack.md`,
   `design-system.md`, ...) — the dated folder is the one-time slice, the persistent doc is what

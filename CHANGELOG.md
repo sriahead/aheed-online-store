@@ -6,6 +6,24 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **`CLAUDE.md` documented `lib/config`'s env precedence backwards, and always had.** It claimed
+  `process.env` wins over the Cloudflare request context, "so local `.env` wins in dev and a stray
+  `.dev.vars` can't shadow it". `readEnv()` does the opposite — it tries `getCloudflareContext()`
+  first and falls through to `process.env` only when there is no Worker request context — and has
+  since the file was written (`e41e8ec`). So under `npm run preview` **`.dev.vars` wins**, which is
+  exactly how a fixture script (reading `.env`) and the app under preview can silently use different
+  Neon projects while every result still looks plausible (**#119**). Found at P4a's Validate, where
+  the two files did point at different projects. Corrected to describe real behaviour; the code is
+  unchanged, since flipping the precedence would be a behaviour change needing its own proposal.
+
+### Changed
+- **P4a closeout docs**: roadmap change-log row for the slice (`specs/roadmap.md` 1.11.0), and a
+  `specs/sdd-workflow.md` (2.3.0) Spec-stage rule earned twice in one slice — **don't `grep` for the
+  absence of a word in prose or commented code**, because the artifact names what it deliberately
+  excludes, so the check matches its own explanation and "passing" means deleting the rationale
+  (P4a's R5 at Build, R27 at Validate). P4a's `validation.md` R27 row corrected in place.
+
 ### Added
 - **P4a — order history & status timeline** (#122, `specs/2026-08-11-p4a-order-history/`), the first
   P4 slice and the read half of the phase. A signed-in shopper gets `/account/orders` — their own
