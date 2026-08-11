@@ -71,7 +71,7 @@ describe("order confirmation email — money block (R61)", () => {
     const html = sentHtml();
 
     const subtotal = moneyRow(html, "Subtotal");
-    const discount = moneyRow(html, "Loyalty points");
+    const discount = moneyRow(html, "Discount");
     const delivery = moneyRow(html, "Delivery");
     const total = moneyRow(html, "Total");
 
@@ -87,7 +87,7 @@ describe("order confirmation email — money block (R61)", () => {
     await sendOrderConfirmationEmail(order());
     const html = sentHtml();
 
-    expect(moneyRow(html, "Loyalty points")).toBeNull();
+    expect(moneyRow(html, "Discount")).toBeNull();
     expect(moneyRow(html, "Subtotal")! + moneyRow(html, "Delivery")!).toBe(moneyRow(html, "Total"));
   });
 

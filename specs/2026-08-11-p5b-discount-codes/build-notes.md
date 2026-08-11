@@ -135,3 +135,13 @@ Ranked by where I would look first.
    `.prettierrc` does not apply, so Prettier ran at width 80 instead of 100.)
 8. **The confirmation email's discount line (R52) cannot be proven at inbox level** — **#104**,
    inherited, unchanged by this slice.
+
+## Fixed during Validate
+
+- **Discount line mislabelled "Loyalty points".** `features/checkout/send-confirmation.ts` and
+  `components/orders/OrderItemsCard.tsx` both carried P5a's hardcoded label for the combined-discount
+  row unchanged, so a code-only discount (no points touched) rendered as if the shopper's loyalty
+  balance had been spent. R52 as written only requires the arithmetic identity and one combined line —
+  both held — so this passed the letter of R52 while still being a real, user-facing defect. Relabelled
+  to "Discount" in both places; `tests/order-confirmation-email.test.ts` updated to match. See
+  CHANGELOG's `### Fixed` entry for this slice.

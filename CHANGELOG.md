@@ -38,6 +38,16 @@ every branch merges.
   the email (#150), and code-use reversal on refund (#151, unreachable today for the same structural
   reason as #137). P5 does **not** close on this slice's promotion — **#143** must be resolved first,
   since P5a is live in production but dark.
+
+### Fixed
+- **The order confirmation email and order-detail pages labelled the combined discount line "Loyalty
+  points" unconditionally**, unchanged from P5a — so as of this slice, an order discounted by a code
+  alone (no points touched) rendered a line claiming the shopper's loyalty balance had been spent.
+  The arithmetic was always correct (`subtotal - discount + delivery = total` held either way); only
+  the label was wrong. Found at this slice's Validate. Relabelled to "Discount" in both
+  `features/checkout/send-confirmation.ts` and `components/orders/OrderItemsCard.tsx` (shared by
+  `/checkout/{orderNumber}` and `/account/orders/{orderNumber}`); `tests/order-confirmation-email.test.ts`
+  updated to assert the new label.
 - **P5a closeout docs.** `specs/roadmap.md` (1.14.0) gains P5a's slice row, written from what live
   validation actually proved rather than what the build expected. It **supersedes
   `build-notes.md`'s "nothing in this slice has touched a real database"** — honest when written,
