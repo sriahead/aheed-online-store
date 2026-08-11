@@ -320,3 +320,92 @@ describe("resolveTier (R13)", () => {
     expect(resolveTier([], 99999)).toBeNull();
   });
 });
+
+/**
+ * P5b (#145) — points now share the subtotal with a discount code. These cases
+ * are ADDITIONS: every case above runs unchanged and still passes, which is what
+ * proves `existingDiscountPence` defaults to the P5a behaviour (R13).
+ */
+describe("clampRedemption with an existing discount (P5b R13-R16)", () => {
+  const base: ClampRedemptionInput = {
+    requestedPoints: 100000,
+    balancePoints: 100000,
+    pencePerPointRedeemed: 1,
+    minRedeemPoints: 0,
+    subtotalPence: 2000,
+    deliveryFeePence: 0,
+  };
+
+  it("omitting the field reproduces the P5a result exactly (R13)", () => {
+    // The same input the R12 case above asserts, with the new field absent.
+    expect(
+      clampRedemption({
+        requestedPoints: 10000,
+        balancePoints: 10000,
+        pencePerPointRedeemed: 1,
+        minRedeemPoints: 0,
+        subtotalPence: 100,
+        deliveryFeePence: 0,
+      }),
+    ).toEqual({ pointsSpent: 70, discountPence: 70 });
+
+    // And passing an explicit zero is indistinguishable from omitting it.
+    expect(clampRedemption({ ...base, existingDiscountPence: 0 })).toEqual(clampRedemption(base));
+  });
+
+  it("fills only the headroom the code left (R14)", () => {
+    // £20 goods, £5 already discounted by a code, no delivery. Points may take
+    // the remaining £15 minus the 30p payment floor.
+    expect(clampRedemption({ ...base, existingDiscountPence: 500 })).toEqual({
+      pointsSpent: 1470,
+      discountPence: 1470,
+    });
+  });
+
+  it("never exceeds the remaining goods or breaches the floor (R14)", () => {
+    let state = 99;
+    const random = () => {
+      state = (state * 1664525 + 1013904223) % 4294967296;
+      return state / 4294967296;
+    };
+
+    for (let i = 0; i < 250; i++) {
+      const subtotalPence = Math.floor(random() * 10000);
+      const deliveryFeePence = Math.floor(random() * 500);
+      const existingDiscountPence = i % 5 === 0 ? 0 : Math.floor(random() * subtotalPence);
+      const input: ClampRedemptionInput = {
+        requestedPoints: Math.floor(random() * 20000),
+        balancePoints: Math.floor(random() * 20000),
+        pencePerPointRedeemed: 1 + Math.floor(random() * 3),
+        minRedeemPoints: 0,
+        subtotalPence,
+        deliveryFeePence,
+        existingDiscountPence,
+      };
+
+      const { pointsSpent, discountPence } = clampRedemption(input);
+
+      expect(discountPence).toBeLessThanOrEqual(Math.max(0, subtotalPence - existingDiscountPence));
+      const payable = subtotalPence + deliveryFeePence - existingDiscountPence - discountPence;
+      if (subtotalPence + deliveryFeePence - existingDiscountPence >= MIN_PAYABLE_PENCE) {
+        expect(payable).toBeGreaterThanOrEqual(MIN_PAYABLE_PENCE);
+      } else {
+        expect(discountPence).toBe(0);
+      }
+
+      // R15 — points are still derived back FROM the capped pence.
+      expect(discountPence).toBe(pointsSpent * input.pencePerPointRedeemed);
+    }
+  });
+
+  it("spends nothing once the existing discount covers the goods (R16)", () => {
+    expect(clampRedemption({ ...base, existingDiscountPence: 2000 })).toEqual({
+      pointsSpent: 0,
+      discountPence: 0,
+    });
+    expect(clampRedemption({ ...base, existingDiscountPence: 5000 })).toEqual({
+      pointsSpent: 0,
+      discountPence: 0,
+    });
+  });
+});

@@ -18,6 +18,13 @@ import {
   spendPoints,
   windowSpendPence,
 } from "@/lib/repositories/loyalty";
+import {
+  DiscountClaimError,
+  claimCode,
+  recordCodeRedemption,
+  releaseCodeRedemption,
+} from "@/lib/repositories/discounts";
+import { refusalMessage } from "@/lib/discounts";
 
 /**
  * Order read/write path (P3b, #96) — the ONLY DB access for orders. Pages,
@@ -40,7 +47,8 @@ export class CheckoutError extends Error {
       | "BELOW_MINIMUM"
       | "INSUFFICIENT_STOCK"
       | "ORDER_NUMBER_COLLISION"
-      | "PAYMENT_PROVIDER_FAILED",
+      | "PAYMENT_PROVIDER_FAILED"
+      | "DISCOUNT_CODE",
     message: string,
   ) {
     super(message);
@@ -69,6 +77,16 @@ export interface PlaceOrderInput {
    * exactly as the subtotal is recomputed rather than trusted from the form.
    */
   redeemPoints?: number;
+  /**
+   * The discount code the shopper typed (P5b, #145). An INTENT, never an amount:
+   * the discount in pence is recomputed here from the persisted code row, exactly
+   * as the subtotal is recomputed rather than trusted from the form.
+   *
+   * Unlike `redeemPoints`, an unusable value here FAILS the checkout rather than
+   * being treated as zero — silently charging full price for an order the shopper
+   * believes is discounted is worse than refusing it and saying why.
+   */
+  discountCode?: string | null;
   vendorSlug: string;
   /** Absolute origin for the provider's return URLs. Supplied by the checkout
    *  action so this stays free of request context (P3b R9a). */
@@ -185,21 +203,44 @@ export async function placeOrder(
       select: { id: true },
     });
 
+    // The code is claimed FIRST and evaluated against the pre-discount subtotal:
+    // a percentage code must not shrink because the shopper also spent points.
+    // Like the points debit below, the reservation happens before the Order row
+    // exists, so an order can never carry a discount that was not actually
+    // reserved. Its record is written after the insert, once there is an orderId.
+    const claimed =
+      input.discountCode == null || input.discountCode.trim() === ""
+        ? null
+        : await claimCode(tx, vendorId, {
+            code: input.discountCode,
+            userId: input.userId,
+            subtotalPence: preDiscount.subtotalPence,
+            deliveryFeePence: preDiscount.deliveryFeePence,
+          });
+    if (claimed && !claimed.ok) {
+      throw new CheckoutError("DISCOUNT_CODE", refusalMessage(claimed.reason));
+    }
+    const codeDiscountPence = claimed?.ok ? claimed.claim.discountPence : 0;
+
     // Points are debited BEFORE the order is written, so an order can never
     // carry a discount whose points the shopper turned out not to have. The
     // matching ledger row is written below, once there is an orderId to attach
     // it to; both are inside this transaction, so they commit or roll back
     // together. See lib/repositories/loyalty.ts for why this is a pair.
+    //
+    // `existingDiscountPence` is what stops the two mechanisms each claiming the
+    // whole subtotal: points fill only the headroom the code left.
     const loyaltyConfig = await getLoyaltyConfig(tx, vendorId);
     const redemption = await spendPoints(tx, vendorId, {
       userId: input.userId,
       requestedPoints: input.redeemPoints ?? 0,
       subtotalPence: preDiscount.subtotalPence,
       deliveryFeePence: preDiscount.deliveryFeePence,
+      existingDiscountPence: codeDiscountPence,
       config: loyaltyConfig,
     });
 
-    const totals = computeTotals(lines, input.rules, redemption.discountPence);
+    const totals = computeTotals(lines, input.rules, codeDiscountPence + redemption.discountPence);
 
     // Retry against the unique index rather than assuming randomness never collides.
     let order: { id: string; orderNumber: string } | null = null;
@@ -240,6 +281,26 @@ export async function placeOrder(
         orderId: order.id,
         pointsSpent: redemption.pointsSpent,
       });
+    }
+
+    // The record half of the code claim. This is also where the per-customer cap
+    // is actually enforced — the unique index refuses a concurrent second claim
+    // by the same shopper, rolling this whole transaction back.
+    if (claimed?.ok) {
+      try {
+        await recordCodeRedemption(tx, vendorId, {
+          codeId: claimed.claim.codeId,
+          orderId: order.id,
+          userId: input.userId,
+          seq: claimed.claim.seq,
+          amountPence: claimed.claim.discountPence,
+        });
+      } catch (error) {
+        if (error instanceof DiscountClaimError) {
+          throw new CheckoutError("DISCOUNT_CODE", refusalMessage(error.reason));
+        }
+        throw error;
+      }
     }
 
     await tx.orderItem.createMany({
@@ -370,6 +431,10 @@ async function releaseOrder(
     // strictly before confirmPayment writes an EARN, so an earned order cannot
     // reach here (P5a, #135).
     await reverseRedemption(tx, vendorId, orderId);
+
+    // And give back any discount-code use it was holding (P5b, #145). Without
+    // this, every abandoned checkout permanently burns a use of a limited code.
+    await releaseCodeRedemption(tx, vendorId, orderId);
 
     return true;
   });

@@ -24,7 +24,11 @@ export function OrderItemsCard({
 }: {
   items: OrderItemLine[];
   subtotalPence: number;
-  /** P5a (#135) — rendered only when non-zero, so a pre-P5a order looks unchanged. */
+  /**
+   * P5a (#135) — rendered only when non-zero, so a pre-P5a order looks unchanged.
+   * Since P5b (#145) this can be a loyalty redemption, a discount code, or both
+   * combined into one figure — never labelled as loyalty-specific below.
+   */
   discountPence?: number;
   deliveryFeePence: number;
   totalPence: number;
@@ -55,7 +59,7 @@ export function OrderItemsCard({
         </div>
         {discountPence > 0 && (
           <div className="flex justify-between">
-            <dt className="text-primary/70">Loyalty points</dt>
+            <dt className="text-primary/70">Discount</dt>
             <dd className="font-medium text-action">−{formatPrice(discountPence)}</dd>
           </div>
         )}

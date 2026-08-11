@@ -4,7 +4,7 @@ title: "ADR-005 — Payments & multi-vendor money flow"
 audience: [dev]
 type: adr
 status: approved
-version: "1.2.0"
+version: "1.3.0"
 updated: 2026-08-11
 visibility: internal
 summary: Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite.
@@ -107,6 +107,24 @@ just placed. The clamp makes that unreachable rather than rare. A payment provid
 minimum, or a decision to allow fully-points-paid orders (which needs a no-payment path this
 codebase does not have), would both change that number — so it lives next to the redemption rules,
 not in the payment adapter.
+
+## Implementation note (P5b, 2026-08-11, #145)
+
+Discount codes join loyalty redemption in exactly the same position relative to the decisions above:
+**entirely upstream of them.** A code is claimed inside the checkout transaction and its pence figure
+is passed to the same `computeTotals` call, so `Order.totalPence` is already net of it before
+`createPayment` runs after the commit. The `PaymentService` port, the hosted-Checkout flow and the
+webhook are unchanged and did not need reading — by the time they see an amount it is simply the
+amount. `MIN_PAYABLE_PENCE` is reused, not redefined: a code is clamped by the same 30p floor, and
+the combined code-plus-points discount obeys it jointly, so no combination of the two can produce an
+order that commits and can never be paid for.
+
+**No decision here is reopened.** As with P5a, this is a note about ordering.
+
+One consequence worth recording for a future refund path: a *paid* order's code use cannot currently
+be returned, because `releaseOrder` acts only on `PENDING_PAYMENT` orders. That is the same
+structural reason #137 gives for earn reversal, and it is tracked as #151 rather than solved here —
+refunds are this ADR's territory, and the decision belongs with them.
 
 ## Deferred upgrade — Stripe Connect
 
