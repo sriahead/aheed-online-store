@@ -32,7 +32,14 @@ Codes, all on **Aheed** unless stated:
   subject.
 - **C4** — `endsAt` in the past. The `EXPIRED` subject.
 - **C5** — `minSubtotalPence: 5000`. The minimum-spend subject.
-- **C6** — on **SriMart**, code string identical to C1's. Cross-vendor subject and R57's second half.
+- **C6** — on **SriMart**, a code string that exists on no other vendor. R48's cross-vendor subject.
+  (R57's second half is a *separate* live check: it POSTs C1's own code string to the SriMart
+  admin create action and asserts success — it does not reuse C6, and does not require C6 or C1
+  to share a string. A code string identical to C1's *cannot* be C6's fixture: C1 is a live, active
+  Aheed code, so submitting its string on the Aheed host — which is exactly what R48 does — would
+  match C1 and succeed, not refuse as `UNKNOWN`. Corrected at this slice's `/document` pass, found
+  during Validate; matches P4a's precedent of correcting a `validation.md` row in place rather than
+  leaving a spec that only passes by deleting its own rationale.)
 
 Orders: **O1** Aheed / `demo-customer` / C1 only. **O2** Aheed / `demo-customer` / C1 **and** points.
 **O3** Aheed / guest / C1. **O4** Aheed / `demo-customer` / C1 + points, left `PENDING_PAYMENT` for
