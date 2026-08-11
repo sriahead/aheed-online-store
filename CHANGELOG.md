@@ -7,6 +7,46 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P5a closeout docs.** `specs/roadmap.md` (1.14.0) gains P5a's slice row, written from what live
+  validation actually proved rather than what the build expected. It **supersedes
+  `build-notes.md`'s "nothing in this slice has touched a real database"** — honest when written,
+  and exactly what aimed validation at the right places: all 65 rows were then walked against real
+  Postgres and **seven of the notes' eight "known-shaky" areas came back clean**, including the one
+  that mattered most (the double-spend guard survived a genuine `Promise.all` race with one winner,
+  one `REDEEM` and a balance that never went negative — the unit test had only ever simulated a lost
+  race by hand). The eighth stands: **#104** still blocks any inbox-level email proof. P5 stays
+  **open** — P5b (discounts engine) is the remaining slice, so there is no phase-closure row here.
+- **A real environment defect, found by validation and unrelated to the slice.** `.env` *and*
+  `.dev.vars` both pointed at the **production** Neon project while `S3_BUCKET`/`CDN_BASE_URL` in
+  the same files correctly said staging — so nothing looked wrong, the documented "check both"
+  passed cleanly, and P5a's migration reached production ahead of its promotion PR. Additive and
+  verified harmless (row counts unchanged, every `discountPence = 0`, no drift), but the identical
+  slip against a destructive migration would not have been. **`CLAUDE.md` now requires diffing
+  `.env`/`.dev.vars` against `secrets/staging.vars` and `secrets/production.vars`, not merely
+  against each other** — two files agree on the wrong target as easily as they disagree. **#119**
+  updated: its framing described only half the failure mode, and its closing criteria should widen
+  from "make the two files agree" to "make the target unambiguous". Recorded for the upcoming
+  promotion: `deploy-production` will report **no pending migrations**, which is expected, not
+  drift (same situation PR #108 logged for P3).
+- **`specs/sdd-workflow.md` (2.5.0) — `gh pr checks` is a view, not the truth.** During P5a's
+  promotion (#140) a `gates` run showed every step green including `Complete job`, while the job's
+  status stayed `in_progress` and `gh pr checks` reported `pending 0` for **56 minutes**;
+  `gh run cancel` returned `HTTP 500`. The run had actually succeeded in ~1 minute.
+  githubstatus.com showed **Actions "Operational"** alongside a separate active **API Requests /
+  GraphQL** degradation — status finalisation rides that degraded path, so Actions' own badge stays
+  green while its reporting is broken. The Ship stage now says to cross-check a long "pending"
+  against `gh run view --json status,conclusion`, and to read **every** status-page component
+  rather than only Actions: an `until ! gh pr checks | grep pending` loop can spin forever on a
+  finished run, and "still pending" is not evidence a job is still working. The same incident also
+  silently dropped a delivery-board write (#135 reverted from `In Review` to `In Progress` after a
+  verified edit) — board state was re-applied and re-verified.
+- **#141 filed** — P5a's R56 was verified in one direction only. An Aheed admin's tampered
+  `vendorId`/foreign tier key were both ignored (write landed on Aheed, SriMart byte-for-byte
+  unchanged), but the reverse leg `validation.md` asks for — a **SriMart** admin submitting from the
+  SriMart host — was skipped, because `scripts/demo-accounts.ts` seeds memberships against the first
+  ACTIVE vendor only, so no SriMart admin exists. A test-coverage gap, not a known defect; the fix
+  worth making is seeding a per-vendor admin for every active vendor, which several later slices
+  will want anyway.
 - **P5a — loyalty points: earn, redeem, tiers, expiry & admin config** (#135,
   `specs/2026-08-11-p5a-loyalty-points/`), the first P5 slice and the loyalty half of the phase.
   A shopper earns per-vendor points on orders they actually pay for, spends them at checkout, and
