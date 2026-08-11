@@ -62,6 +62,7 @@ model User {
   carts         Cart[]
   addresses     Address[]
   orders        Order[]
+  statusChanges OrderStatusEvent[] @relation("OrderStatusEventActor")
 }
 
 model Session {
@@ -477,6 +478,14 @@ model OrderStatusEvent {
   status    OrderStatus
   note      String?
   createdAt DateTime    @default(now())
+
+  // Who moved it (P4b, #125). Null for system transitions — P3b's order
+  // placement and P3c's payment webhook have no acting user, and nullable is
+  // what lets this column be added with no backfill. SetNull, not Cascade:
+  // removing a departed staff member's account must not delete the audit trail
+  // of the orders they handled.
+  createdByUserId String?
+  createdBy       User?  @relation("OrderStatusEventActor", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
 }
