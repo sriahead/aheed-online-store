@@ -7,6 +7,37 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P5b — discount codes: engine, checkout application & staff admin** (#145,
+  `specs/2026-08-11-p5b-discount-codes/`): P5's second slice and the discounts half of the phase.
+  Per-vendor `PERCENTAGE`/`FIXED_AMOUNT` codes with a validity window, minimum spend, a global usage
+  cap and a per-customer cap; entered at checkout, created and deactivated at `/staff/discounts` by
+  a vendor ADMIN. **P5a's generic `Order.discountPence` paid off exactly as designed**: `computeTotals`
+  already took a discount parameter, so `lib/payments.ts`, `/api/webhooks/stripe` and `Order` itself
+  are untouched, no ADR-005 decision is reopened, and `eligibleSpendPence` already excluded the whole
+  discount from earning — so a code-discounted order earns fewer points with **no new code**, and
+  codes cannot become a points-farming loophole. **Codes and points stack, code first**: the code is
+  evaluated against the pre-discount subtotal (a percentage must not shrink because points were also
+  spent) and `clampRedemption` gained an optional `existingDiscountPence` (default `0`, so every P5a
+  case passes unmodified) so points fill only the remaining headroom above the 30p payment floor.
+  **The usage counter counts DOWN** — `remainingRedemptions`, nullable for unlimited — because
+  `usedCount < maxRedemptions` is a column-to-column comparison Prisma cannot express in a `where`
+  and raw SQL is forbidden in application code; counting down restores the literal-to-column guard
+  `Inventory.quantity` (P3b) and `balancePoints` (P5a) already use, and `NULL` arithmetic keeps an
+  unlimited code unlimited with no branch. **The per-customer cap is structural, not a
+  count-then-write race**: `DiscountRedemption.seq` under `@@unique([codeId, userId, seq])` means two
+  concurrent claims by one shopper both compute `seq 0` and the database refuses the second. **An
+  abandoned checkout gives the use back** — `releaseOrder` releases the code beside the points
+  reversal, or a 100-use launch code would die without a single paid order; that release **deletes**
+  the redemption row rather than writing a reversal, deliberately unlike the loyalty ledger, because
+  nothing financial happened and deleting frees the shopper's `seq` slot. **An unusable code fails
+  the checkout with its reason**, the opposite of P5a's treatment of an unparseable points value:
+  silently charging full price for an order the shopper believes is discounted is the worse failure.
+  One additive migration (two tables, one enum); no column added to `Order`. Deliberately excluded
+  and tracked: category-scoped codes (#146), auto-applied promotions (#147), multiple codes per
+  order (#148), first-order-only eligibility (#149), naming the applied code on order pages and in
+  the email (#150), and code-use reversal on refund (#151, unreachable today for the same structural
+  reason as #137). P5 does **not** close on this slice's promotion — **#143** must be resolved first,
+  since P5a is live in production but dark.
 - **P5a closeout docs.** `specs/roadmap.md` (1.14.0) gains P5a's slice row, written from what live
   validation actually proved rather than what the build expected. It **supersedes
   `build-notes.md`'s "nothing in this slice has touched a real database"** — honest when written,

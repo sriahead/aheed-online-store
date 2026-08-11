@@ -4,7 +4,7 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.9.0"
+version: "1.10.0"
 updated: 2026-08-11
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
@@ -359,19 +359,28 @@ S3 API rather than an R2-specific SDK.
 - **No raw SQL, no `Json` columns** for domain data. If you reach for either, revisit the model.
 - **Money is integer pence + explicit currency.** Never floats. Loyalty points are integers and
   tier multipliers are basis points, for the same reason.
-- **An order's money identity is `subtotal − discount + delivery = total`** (P5a, #135). The
-  discount column is generic rather than points-specific, so a future discount-code engine reduces
-  the same total by the same arithmetic. Both the free-delivery threshold and the vendor's minimum
-  order are judged on the subtotal **before** the discount — custom already earned is not clawed
-  back by paying with points.
+- **An order's money identity is `subtotal − discount + delivery = total`** (P5a, #135; P5b, #145).
+  The discount column is generic rather than points-specific, and as of P5b it has **two
+  contributors** — a discount code and a loyalty redemption — summed into the one column by the one
+  arithmetic. **Precedence is code first, then points:** the code is evaluated against the
+  pre-discount subtotal, so a percentage cannot shrink because points were also spent, and points
+  then fill only the remaining headroom above the payment provider's floor. Both the free-delivery
+  threshold, the vendor's minimum order and a code's own minimum spend are judged on the subtotal
+  **before** any discount — custom already earned is not clawed back by paying with points, and
+  spending points cannot disqualify a code.
 - **Writes that touch multiple tables run in a transaction.** Order placement decrements stock,
-  spends any loyalty points, writes items, records payment intent, and emits a status event
-  atomically; payment confirmation flips status and credits points in one transaction, and
-  cancellation releases stock and returns points in another.
+  claims any discount code, spends any loyalty points, writes items, records payment intent, and
+  emits a status event atomically; payment confirmation flips status and credits points in one
+  transaction, and cancellation releases stock, returns points and gives back the code use in
+  another.
 - **A contended counter is compare-and-set, never read-then-write.** `Inventory.quantity` (stock),
-  `Order.status` (transitions) and `LoyaltyAccount.balancePoints` (points) are all guarded by a
-  conditional `updateMany` whose `WHERE` repeats the value it read, with the append-only companion
-  row (`OrderItem`, `OrderStatusEvent`, `LoyaltyLedgerEntry`) written in the same transaction. A
+  `Order.status` (transitions), `LoyaltyAccount.balancePoints` (points) and
+  `DiscountCode.remainingRedemptions` (code uses) are all guarded by a conditional `updateMany`
+  whose `WHERE` repeats the value it read, with the append-only companion row (`OrderItem`,
+  `OrderStatusEvent`, `LoyaltyLedgerEntry`, `DiscountRedemption`) written in the same transaction.
+  **A guard column therefore counts in whichever direction Prisma can express**: code uses count
+  DOWN because `usedCount < maxRedemptions` compares two columns, which a Prisma `where` cannot do
+  and which raw SQL is not permitted to rescue. A
   balance derived by `SUM()` cannot be guarded that way, which is why the counter exists alongside
   its ledger rather than instead of it.
 - **Webhooks are idempotent.** Verify Stripe signatures; key side effects on the event id.
