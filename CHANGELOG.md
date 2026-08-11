@@ -68,6 +68,27 @@ every branch merges.
   absence of a word in prose or commented code**, because the artifact names what it deliberately
   excludes, so the check matches its own explanation and "passing" means deleting the rationale
   (P4a's R5 at Build, R27 at Validate). P4a's `validation.md` R27 row corrected in place.
+- **P4b closeout docs, and P4 closed.** `specs/roadmap.md` (1.13.0) gains P4b's promotion row and a
+  **P4 closure** row: order history, the three-step ladder with an attributed audit trail, staff
+  updates and delivery emails are all in production, and the one gap carried out of the phase is
+  infra not code — Resend still has no verified sending domain (**#104**), so P4b's emails are
+  correct in every structurally checkable respect and still cannot be confirmed to reach a real
+  inbox anywhere. The promotion row deliberately **supersedes `build-notes.md`'s "nothing in this
+  slice has touched a real database"**: that was true when written and is what aimed validation at
+  the right places, and three of the four "known-shaky" areas it named came back clean under live
+  checking — the compare-and-set held under a genuine concurrent `Promise.all` double-submit, the
+  keyset crossed a real 20/6 page boundary, and the migration applied with no drift and no row
+  touched.
+- **`specs/sdd-workflow.md` (2.4.0) — a third grep-shaped check retired, and a CI trap written
+  down.** P4b's `validation.md` R23 row required `grep` to show **no** `skip:` in the staff list
+  method; `skip: 1` is Prisma's standard keyset idiom for excluding the cursor row, already shipped
+  in P4a's `listForUser` and P2b's `products.ts` and endorsed by `specs/architecture.md`. The check
+  would have failed a correct implementation and passed one that dropped the cursor entirely — the
+  same class as the rule P4a added. Row corrected in place. Separately, the Clear checklist now
+  requires `npm run kms:build-index` to have been run and committed: **every slice adds a
+  front-mattered `plan.md`, so every slice makes `ARTIFACT_INDEX.md` stale**, CI's `gates` job fails
+  on exactly that, and nothing local catches it — not `sdd:preclear`, not Validate's pre-flight. P4a
+  remembered by hand, P4b didn't and burned a red CI run. **#132** tracks making it mechanical.
 
 ### Added
 - **P4a — order history & status timeline** (#122, `specs/2026-08-11-p4a-order-history/`), the first
