@@ -80,8 +80,15 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
 - DB holds relative keys; compose `${CDN_BASE_URL}/${key}` at read time.
 
 ## Config & secrets
-- All config through validated **`lib/config`** (zod). Precedence is **`process.env` first**, then the
-  Cloudflare request context — so local `.env` wins in dev and a stray `.dev.vars` can't shadow it.
+- All config through validated **`lib/config`** (zod). Precedence is the **Cloudflare request context
+  first**, then `process.env` — `readEnv()` tries `getCloudflareContext()` and only falls through to
+  `process.env` when there is no Worker request context. So under `npm run preview` (and on a real
+  Worker) **`.dev.vars` wins**; `.env` wins only where no Cloudflare context exists — `next dev` and
+  plain Node scripts (`prisma/seed.ts`, `scripts/*`, migrations). This line previously claimed the
+  reverse ("`process.env` first … a stray `.dev.vars` can't shadow it"); it was wrong from the day
+  `lib/config.ts` was written and was corrected during P4a's validation, where it mattered — see
+  **#119**, where `.env` and `.dev.vars` point at *different Neon projects*, so a fixture script and
+  the app under `preview` silently read different databases. Check both before trusting a live result.
 - `.env` format: no spaces around `=`, **quote values**, comments on their own line (a trailing
   `# comment` or leading space has silently broken connection strings here).
 - Runtime secrets live in Cloudflare (`wrangler secret put NAME --env <env>`); CI secrets in GitHub
