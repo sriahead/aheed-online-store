@@ -1,8 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
   buildTimeline,
+  canTransition,
   formatOrderDate,
   formatOrderDateTime,
+  isOrderStatus,
+  nextStatus,
   orderStatusLabel,
   type StatusEventInput,
 } from "@/lib/order-status";
@@ -127,5 +130,86 @@ describe("order date formatting", () => {
     const formatted = formatOrderDateTime(at("2026-08-11T09:30:00Z"));
     expect(formatted).toContain("11 August 2026");
     expect(formatted).toMatch(/\d{2}:\d{2}/);
+  });
+});
+
+// ---- Transition legality (P4b, #125) ---------------------------------------
+
+describe("canTransition", () => {
+  it("allows exactly the two rungs of the staff ladder", () => {
+    expect(canTransition("CONFIRMED", "OUT_FOR_DELIVERY")).toBe(true);
+    expect(canTransition("OUT_FOR_DELIVERY", "DELIVERED")).toBe(true);
+  });
+
+  it("allows NOTHING else across the whole 5x5 matrix", () => {
+    const legal: string[] = [];
+    for (const from of ALL_STATUSES) {
+      for (const to of ALL_STATUSES) {
+        if (canTransition(from, to)) legal.push(`${from}->${to}`);
+      }
+    }
+
+    // Asserting the exact set, not just spot-checks: a future added status must
+    // not be able to widen the ladder silently.
+    expect(legal).toEqual(["CONFIRMED->OUT_FOR_DELIVERY", "OUT_FOR_DELIVERY->DELIVERED"]);
+  });
+
+  it("refuses to move an unpaid order at all", () => {
+    for (const to of ALL_STATUSES) {
+      expect(canTransition("PENDING_PAYMENT", to)).toBe(false);
+    }
+  });
+
+  it("treats DELIVERED and CANCELLED as terminal", () => {
+    for (const to of ALL_STATUSES) {
+      expect(canTransition("DELIVERED", to)).toBe(false);
+      expect(canTransition("CANCELLED", to)).toBe(false);
+    }
+  });
+
+  it("never skips a rung or moves backwards", () => {
+    expect(canTransition("CONFIRMED", "DELIVERED")).toBe(false);
+    expect(canTransition("OUT_FOR_DELIVERY", "CONFIRMED")).toBe(false);
+    expect(canTransition("DELIVERED", "OUT_FOR_DELIVERY")).toBe(false);
+  });
+
+  it("permits nothing from or to an unrecognised status, without throwing", () => {
+    expect(canTransition("NOT_A_STATUS", "DELIVERED")).toBe(false);
+    expect(canTransition("CONFIRMED", "NOT_A_STATUS")).toBe(false);
+    expect(canTransition("", "")).toBe(false);
+  });
+});
+
+describe("nextStatus", () => {
+  it("returns the single legal successor, or null at the ends of the ladder", () => {
+    expect(nextStatus("CONFIRMED")).toBe("OUT_FOR_DELIVERY");
+    expect(nextStatus("OUT_FOR_DELIVERY")).toBe("DELIVERED");
+    expect(nextStatus("PENDING_PAYMENT")).toBeNull();
+    expect(nextStatus("DELIVERED")).toBeNull();
+    expect(nextStatus("CANCELLED")).toBeNull();
+    expect(nextStatus("NOT_A_STATUS")).toBeNull();
+  });
+
+  it("cannot disagree with canTransition", () => {
+    for (const from of ALL_STATUSES) {
+      const next = nextStatus(from);
+      if (next === null) {
+        // Nothing legal from here at all.
+        expect(ALL_STATUSES.some((to) => canTransition(from, to))).toBe(false);
+      } else {
+        expect(canTransition(from, next)).toBe(true);
+      }
+    }
+  });
+});
+
+describe("isOrderStatus", () => {
+  it("accepts every real status and rejects anything else", () => {
+    for (const status of ALL_STATUSES) {
+      expect(isOrderStatus(status)).toBe(true);
+    }
+    for (const forged of ["BANANA", "", "confirmed", "DELIVERED "]) {
+      expect(isOrderStatus(forged)).toBe(false);
+    }
   });
 });

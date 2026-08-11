@@ -3,7 +3,12 @@ import { getCurrentVendorId } from "@/lib/tenant";
 import { buildOrderNumber, computeTotals, type DeliveryRules } from "@/lib/order-totals";
 import { getPaymentService } from "@/lib/payments";
 import { effectiveStock } from "@/lib/cart-rules";
-import { buildTimeline, type TimelineEntry } from "@/lib/order-status";
+import {
+  buildTimeline,
+  canTransition,
+  isOrderStatus,
+  type TimelineEntry,
+} from "@/lib/order-status";
 
 /**
  * Order read/write path (P3b, #96) — the ONLY DB access for orders. Pages,
@@ -358,12 +363,72 @@ export interface OrderListPage {
   nextCursor: string | null;
 }
 
+/**
+ * The statuses a staff member can actually act on (P4b, #125).
+ *
+ * Deliberately the inverse of P4a's customer list, which is unfiltered: a
+ * shopper hunting a failed payment most needs the PENDING_PAYMENT row nobody
+ * wants to show them, whereas a staff QUEUE is a worklist. PENDING_PAYMENT is
+ * Stripe's to resolve and no staff action can touch it; DELIVERED and CANCELLED
+ * are finished. Showing them would pad the page with rows whose only control is
+ * disabled. Full history for staff is P6's dashboard.
+ */
+export const STAFF_QUEUE_STATUSES = ["CONFIRMED", "OUT_FOR_DELIVERY"] as const;
+
 /** An owned order plus its customer-facing timeline (P4a, #122). */
 export interface OrderDetail extends OrderSummary {
   timeline: TimelineEntry[];
 }
 
 const ORDER_PREVIEW_ITEMS = 3;
+
+/**
+ * The columns both order lists need. Shared so the customer history (P4a) and
+ * the staff queue (P4b) cannot drift into selecting different shapes for the
+ * same `OrderListItem` — the extraction P4a did for the items/address cards,
+ * applied one layer down.
+ */
+const ORDER_LIST_SELECT = {
+  id: true,
+  orderNumber: true,
+  status: true,
+  createdAt: true,
+  totalPence: true,
+  items: {
+    select: { productName: true, quantity: true },
+    orderBy: { productName: "asc" },
+  },
+} as const;
+
+type OrderListRow = {
+  id: string;
+  orderNumber: string;
+  status: string;
+  createdAt: Date;
+  totalPence: number;
+  items: { productName: string; quantity: number }[];
+};
+
+/**
+ * Turn an over-fetched row set (take + 1) into a page plus its next cursor,
+ * without a separate count query.
+ */
+function toOrderListPage(rows: OrderListRow[], take: number): OrderListPage {
+  const hasMore = rows.length > take;
+  const page = hasMore ? rows.slice(0, take) : rows;
+
+  return {
+    items: page.map((order) => ({
+      orderNumber: order.orderNumber,
+      status: order.status,
+      createdAt: order.createdAt,
+      totalPence: order.totalPence,
+      itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+      previewItems: order.items.slice(0, ORDER_PREVIEW_ITEMS),
+    })),
+    nextCursor: hasMore ? page[page.length - 1].id : null,
+  };
+}
 
 export interface OrderRepository {
   createOrder(input: PlaceOrderInput): Promise<PlacedOrder>;
@@ -381,6 +446,19 @@ export interface OrderRepository {
    * member's order both resolve to null.
    */
   getForUser(orderNumber: string, userId: string): Promise<OrderDetail | null>;
+  /**
+   * This vendor's actionable orders, newest first (P4b). Same keyset shape as
+   * listForUser — never OFFSET — because a worklist that silently stops at row
+   * N hides the order nobody packs.
+   */
+  listForStaff(opts: { take: number; cursor?: string }): Promise<OrderListPage>;
+  /**
+   * Request-scoped wrapper over `advanceOrderStatus` (P4b), resolving prisma and
+   * the current vendor here so the feature layer never touches lib/db — the
+   * same two-layer shape `createOrder`/`placeOrder` already uses, and what the
+   * no-direct-Prisma guard (ADR-004 slice 2) requires.
+   */
+  advance(orderNumber: string, toStatus: string, actor: StatusActor): Promise<AdvanceResult>;
 }
 
 export function getOrderRepository(): OrderRepository {
@@ -452,33 +530,10 @@ export function getOrderRepository(): OrderRepository {
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: take + 1,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        select: {
-          id: true,
-          orderNumber: true,
-          status: true,
-          createdAt: true,
-          totalPence: true,
-          items: {
-            select: { productName: true, quantity: true },
-            orderBy: { productName: "asc" },
-          },
-        },
+        select: ORDER_LIST_SELECT,
       });
 
-      const hasMore = rows.length > take;
-      const page = hasMore ? rows.slice(0, take) : rows;
-
-      return {
-        items: page.map((order) => ({
-          orderNumber: order.orderNumber,
-          status: order.status,
-          createdAt: order.createdAt,
-          totalPence: order.totalPence,
-          itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
-          previewItems: order.items.slice(0, ORDER_PREVIEW_ITEMS),
-        })),
-        nextCursor: hasMore ? page[page.length - 1].id : null,
-      };
+      return toOrderListPage(rows, take);
     },
 
     async getForUser(orderNumber, userId) {
@@ -521,7 +576,118 @@ export function getOrderRepository(): OrderRepository {
       const { statusEvents, ...summary } = order;
       return { ...summary, timeline: buildTimeline(statusEvents) };
     },
+
+    async listForStaff({ take, cursor }) {
+      // Same keyset shape as listForUser, but scoped by status instead of by
+      // owner — and served by Order's existing @@index([vendorId, status,
+      // createdAt]) from P3b, so no index work was needed for this slice.
+      const rows = await prisma.order.findMany({
+        where: { vendorId: await vendorId(), status: { in: [...STAFF_QUEUE_STATUSES] } },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: take + 1,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        select: ORDER_LIST_SELECT,
+      });
+
+      return toOrderListPage(rows, take);
+    },
+
+    async advance(orderNumber, toStatus, actor) {
+      return advanceOrderStatus(prisma, await vendorId(), orderNumber, toStatus, actor);
+    },
   };
+}
+
+// ---- Staff transitions (P4b, #125) ----------------------------------------
+
+/** Who moved the order. Only the id is persisted; the rest is for logging. */
+export interface StatusActor {
+  userId: string;
+}
+
+export type AdvanceResult =
+  { ok: true; order: WebhookOrder } | { ok: false; reason: "not-found" | "illegal-transition" };
+
+/** System-written, per target status. P4b ships no staff free-text note field. */
+const TRANSITION_NOTES: Record<string, string> = {
+  OUT_FOR_DELIVERY: "Marked out for delivery by staff.",
+  DELIVERED: "Marked delivered by staff.",
+};
+
+/**
+ * Advance one order along the staff ladder, atomically and attributably.
+ *
+ * Takes `prisma` and `vendorId` as EXPLICIT arguments for the same reason
+ * `placeOrder` does: the concurrency guarantee below is this slice's most
+ * important property, and a function that resolves its dependencies from
+ * request context cannot be exercised from a plain script to prove it. Both
+ * `placeOrder` and `getWebhookOrderService()` had to be refactored into this
+ * shape at validation time — this one starts there.
+ *
+ * Two properties are structural rather than checked-and-hoped:
+ *
+ *  - Legality is evaluated against the PERSISTED status, never a caller-supplied
+ *    "from", and the write is a conditional updateMany whose `where` repeats that
+ *    status. A second submit (double click, stale tab, two staff at once) that
+ *    lands after the first commit matches zero rows and returns
+ *    illegal-transition having written nothing. Same compare-and-set P3b used
+ *    for the stock decrement, applied to a different race.
+ *  - `vendorId` is in the WHERE, not a post-hoc comparison, so another vendor's
+ *    order number is indistinguishable from one that does not exist.
+ *
+ * Returned as data, never thrown, matching lib/auth-rbac.ts's posture. The email
+ * is the CALLER's job and happens after this commits — an HTTP call inside a
+ * Prisma transaction holds a Postgres transaction open against a 5s timeout,
+ * which is exactly the defect P3c had to fix in `createPayment`.
+ */
+export async function advanceOrderStatus(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  orderNumber: string,
+  toStatus: string,
+  actor: StatusActor,
+): Promise<AdvanceResult> {
+  const existing = await prisma.order.findFirst({
+    where: { orderNumber, vendorId },
+    select: { id: true, status: true },
+  });
+  if (!existing) return { ok: false, reason: "not-found" };
+
+  // isOrderStatus first, so a forged value ("BANANA") is rejected identically to
+  // a merely illegal one — and narrows `toStatus` for the writes below.
+  if (!isOrderStatus(toStatus) || !canTransition(existing.status, toStatus)) {
+    return { ok: false, reason: "illegal-transition" };
+  }
+
+  const moved = await prisma.$transaction(async (tx) => {
+    const { count } = await tx.order.updateMany({
+      // `status` in the WHERE is the compare-and-set: if anything moved this
+      // order between the read above and here, this matches nothing.
+      where: { id: existing.id, vendorId, status: existing.status },
+      data: { status: toStatus },
+    });
+    if (count === 0) return false;
+
+    await tx.orderStatusEvent.create({
+      data: {
+        orderId: existing.id,
+        vendorId,
+        status: toStatus,
+        note: TRANSITION_NOTES[toStatus] ?? null,
+        createdByUserId: actor.userId,
+      },
+    });
+    return true;
+  });
+
+  if (!moved) return { ok: false, reason: "illegal-transition" };
+
+  // Re-read AFTER the commit, for the caller's email. findOrderForWebhook
+  // already resolves buyerEmail (guestEmail ?? user.email) and carries the
+  // items and money — no parallel type for the same payload.
+  const order = await findOrderForWebhook(prisma, orderNumber);
+  if (!order) return { ok: false, reason: "not-found" };
+  return { ok: true, order };
 }
 
 // ---- Webhook-facing transitions (P3c, #99) ---------------------------------

@@ -81,6 +81,71 @@ export function formatOrderDate(date: Date): string {
   }).format(date);
 }
 
+// ---- Transition legality (P4b, #125) ---------------------------------------
+
+/**
+ * The five OrderStatus values, as a plain literal union.
+ *
+ * Deliberately declared here rather than imported from @prisma/client: this
+ * module's defining property is that it does no I/O and pulls in no client, so
+ * its rules stay unit-testable with no database. The union is structurally
+ * identical to Prisma's generated enum type, so a value narrowed by
+ * `isOrderStatus` is assignable to a Prisma `status` field with no cast.
+ */
+export const ORDER_STATUSES = [
+  "PENDING_PAYMENT",
+  "CONFIRMED",
+  "OUT_FOR_DELIVERY",
+  "DELIVERED",
+  "CANCELLED",
+] as const;
+
+export type OrderStatusValue = (typeof ORDER_STATUSES)[number];
+
+/** Narrows untrusted input (a form field, a URL) to a real status. */
+export function isOrderStatus(value: string): value is OrderStatusValue {
+  return (ORDER_STATUSES as readonly string[]).includes(value);
+}
+
+/**
+ * The staff-advanceable ladder. Strictly forward, strictly one rung at a time.
+ *
+ * `PENDING_PAYMENT` is deliberately absent as a source: only Stripe's webhook
+ * confirms or cancels an unpaid order (P3c), so no staff action can move it and
+ * an unpaid order can never jump to delivered. `DELIVERED` and `CANCELLED` are
+ * terminal. Staff cannot cancel — that is refund-adjacent (ADR-005) and a
+ * decision of its own, not a fifth button.
+ *
+ * A map rather than a chain of `if`s so the whole rule surface is one readable
+ * object, and so `nextStatus` and `canTransition` cannot drift apart.
+ */
+const LEGAL_TRANSITIONS: Record<string, readonly string[]> = {
+  PENDING_PAYMENT: [],
+  CONFIRMED: ["OUT_FOR_DELIVERY"],
+  OUT_FOR_DELIVERY: ["DELIVERED"],
+  DELIVERED: [],
+  CANCELLED: [],
+};
+
+/**
+ * Is `from -> to` a transition staff are allowed to make?
+ *
+ * An unrecognised `from` permits nothing: an unknown status is not a licence to
+ * move an order, and the safe default for an authorization-shaped question is
+ * always "no".
+ */
+export function canTransition(from: string, to: string): boolean {
+  return (LEGAL_TRANSITIONS[from] ?? []).includes(to);
+}
+
+/**
+ * The single legal next rung, or null where there is none. Drives the queue's
+ * one button, so the UI cannot offer a move the service would then reject.
+ */
+export function nextStatus(from: string): string | null {
+  return LEGAL_TRANSITIONS[from]?.[0] ?? null;
+}
+
 /** Same, with the time — the timeline needs to distinguish same-day steps. */
 export function formatOrderDateTime(date: Date): string {
   return new Intl.DateTimeFormat("en-GB", {

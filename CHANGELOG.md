@@ -6,6 +6,51 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+- **P4b — staff order status transitions & delivery emails** (#125,
+  `specs/2026-08-11-p4b-order-status-transitions/`), the write half of P4 and the slice that closes
+  the phase. `OUT_FOR_DELIVERY` and `DELIVERED` have been in the `OrderStatus` enum since P3b's
+  initial migration with **nothing in the codebase able to reach them** — an order landed on
+  `CONFIRMED` when Stripe's webhook fired and stayed there forever. P4a made status visible; this
+  makes it move, under a real person's hand, with that person on the record.
+  - **A vendor-role-gated staff queue at `/staff/orders`** — `requireVendorRole("STAFF","ADMIN")`,
+    the **first real consumer of ADR-004 slice 3a's `VendorMembership`**, which until now had no
+    caller exercising it. A new `/staff` segment parallel to `/dev`, so P6's admin panel has a
+    namespace to grow into rather than needing a URL migration.
+  - **A double-advance is structurally impossible, not merely unlikely.** Legality is evaluated
+    against the *persisted* status and the write is a conditional `updateMany` whose `where` repeats
+    that status — the same compare-and-set P3b used to make overselling impossible, aimed at a
+    different race. A stale tab or a double click matches zero rows and writes nothing. `vendorId`
+    sits in the `where` too, so another vendor's order number is indistinguishable from one that
+    does not exist.
+  - **`OrderStatusEvent.createdByUserId`**, nullable, `ON DELETE SET NULL` — the slice's one
+    additive migration. This **corrected issue #125's own "no schema change" line**, which was an
+    Orient-time observation rather than a decision and could not survive contact with "the acting
+    user recorded". P4's roadmap line promises an audit trail, and attribution not captured now is
+    unbackfillable. Nullable means P3-era rows need no backfill and system transitions keep leaving
+    it null; `SetNull` because removing a departed staff member's account must not delete the audit
+    trail of the orders they handled.
+  - **The transition rules are pure** (`canTransition`/`nextStatus` over a `LEGAL_TRANSITIONS` map
+    in `lib/order-status.ts`, unit-tested across the full 5×5 matrix by asserting the exact legal
+    set, so a future added status cannot widen the ladder silently). `PENDING_PAYMENT` is absent as
+    a *source*: only Stripe's webhook moves an unpaid order. Staff cannot cancel — that is
+    refund-adjacent (ADR-005) and a decision of its own.
+  - **The server action re-runs its own RBAC check.** A server action is a public endpoint exposed
+    at a stable action id; a gate on the page is a gate on the page and nothing more.
+  - **Emails on the two staff transitions only**, sent after the transaction commits and never
+    throwing — a delivery that physically happened must not be undone because a provider was
+    unreachable. No `CONFIRMED` branch exists, so P3c's confirmation email stays the only one for
+    that event.
+  - **`note` stays system-written.** P4b ships no input through which staff can type into that
+    column, so P4a's structurally-unrenderable-note guard is honoured by not opening the door. A
+    staff-authored note needs a customer-visible/internal distinction and belongs with P6.
+  - The queue is **keyset-paginated** like P4a rather than a fixed `take`: a worklist that silently
+    stops at row *N* hides the order nobody packs. It shows only actionable statuses, deliberately
+    inverting P4a's unfiltered customer list — a shopper is hunting one order, a packer is working a
+    queue.
+  - Deliberately excluded, tracked: a staff order **detail** view, filters, search and bulk actions
+    (**#129**, P6's panel supersedes this queue wholesale).
+
 ### Fixed
 - **`CLAUDE.md` documented `lib/config`'s env precedence backwards, and always had.** It claimed
   `process.env` wins over the Cloudflare request context, "so local `.env` wins in dev and a stray
