@@ -7,6 +7,51 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P5a — loyalty points: earn, redeem, tiers, expiry & admin config** (#135,
+  `specs/2026-08-11-p5a-loyalty-points/`), the first P5 slice and the loyalty half of the phase.
+  A shopper earns per-vendor points on orders they actually pay for, spends them at checkout, and
+  loses them to inactivity. The discounts engine stays P5b.
+  - **One money seam, so the payment path needed no change at all.** `computeTotals` gained a
+    discount and the identity `subtotal − discount + delivery = total`; everything downstream —
+    the `Order` row, `Payment.amountPence`, the Stripe session amount — derives from it, so
+    `lib/payments.ts` and the webhook are untouched and **ADR-005's decisions are unaltered**
+    (it gains an additive implementation note only). Free delivery and the vendor's minimum order
+    are judged on the subtotal **before** the discount: custom already earned isn't clawed back by
+    paying with points.
+  - **A double-spend is structurally impossible.** `LoyaltyAccount.balancePoints` is a
+    compare-and-set counter guarded by a conditional `updateMany` carrying `vendorId`, `userId`,
+    `balancePoints: { gte: n }` and the lapse bound — the same technique P3b used against
+    overselling and P4b against double-advancing, aimed at a third race. The append-only
+    `LoyaltyLedgerEntry` beside it is the audit trail, exactly as `OrderItem` sits beside
+    `Inventory.quantity`; a `SUM()` balance cannot be guarded, which is why both exist.
+  - **The debit runs before the order is written**, so an order can never carry a discount whose
+    points the shopper turned out not to have. `@@unique([orderId, kind])` makes a second `EARN`
+    (duplicate Stripe delivery) or a second `REDEEM` (double submit) a database error rather than a
+    check someone has to remember.
+  - **Points are credited on payment confirmation**, inside the transaction that sets `CONFIRMED`,
+    and **only a `REDEEM` is ever reversed** — `releaseOrder` acts on `PENDING_PAYMENT` orders,
+    strictly before an earn exists, so no current path can cancel an earned order. Earn reversal
+    arrives with refunds (ADR-005 territory).
+  - **Expiry is derived at read time, adding no infrastructure.** `wrangler.toml` still declares no
+    cron triggers; a lapsed balance reads as zero, is refused by the redemption guard, and is reset
+    rather than incremented by the next earn.
+  - Earning excludes both delivery and the discounted portion, so redeemed points cannot re-earn
+    points. Tier multipliers are basis points and are **snapshotted onto the earn**, keeping a
+    historical earn explainable after the tier table changes. Redemption is clamped so
+    `discountPence` is always exactly `pointsSpent × pencePerPoint` and the payable total never
+    falls below `MIN_PAYABLE_PENCE` (30p) — below Stripe's GBP floor an order would exist that
+    could never be paid for.
+  - Surfaces: `/account/loyalty` (balance, cash value, lifetime, tier, ledger) and an ADMIN-only
+    `/staff/loyalty` on P4b's `/staff` segment. `STAFF` is deliberately excluded there — advancing
+    an order is a packing-floor action, changing the earn rate is an owner decision.
+  - One additive migration: three tables, one enum, `Order.discountPence` and six `VendorConfig`
+    columns, all defaulted. Seed turns loyalty **on** for Aheed with two tiers and deliberately
+    **off** for SriMart, which is what proves it is per-vendor data.
+  - Also corrected here: the order confirmation email gains a discount line — without it the three
+    money lines stop reconciling the moment an order carries a discount. No new email is sent.
+  - Deliberately excluded: the discounts engine (P5b), tier create/delete from the admin UI, guest
+    loyalty, and cross-vendor balances.
+
 - **P4b — staff order status transitions & delivery emails** (#125,
   `specs/2026-08-11-p4b-order-status-transitions/`), the write half of P4 and the slice that closes
   the phase. `OUT_FOR_DELIVERY` and `DELIVERED` have been in the `OrderStatus` enum since P3b's

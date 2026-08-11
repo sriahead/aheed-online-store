@@ -4,7 +4,7 @@ title: "P5a — Loyalty points: earn, redeem, tiers, expiry & admin config (plan
 audience: [dev]
 type: spec
 status: draft
-version: "1.0.0"
+version: "1.1.0"
 updated: 2026-08-11
 visibility: internal
 summary: The loyalty half of P5 — a per-vendor points ledger earned on payment confirmation, redeemable at checkout through computeTotals, with tier multipliers, inactivity expiry derived at read time, a customer balance page and an admin config surface.
@@ -166,16 +166,19 @@ that cannot explain its own numbers is not an audit trail.
 
 ## Deliberately excluded
 
-- **The discounts engine** (codes, percentage/fixed-amount promotions) — P5b. `Order.discountPence`
-  is shaped so P5b is additive.
+- **The discounts engine** (codes, percentage/fixed-amount promotions) — P5b, under phase issue
+  **#88**. `Order.discountPence` is shaped so P5b is additive.
 - **Reversing an `EARN`.** Worth stating precisely because it looks like an omission: `releaseOrder`
   only cancels orders in `PENDING_PAYMENT`, which is strictly *before* `confirmPayment` writes an
   earn, so **no code path in this codebase can currently cancel an order that has earned points**.
   The reachable reversal is of a `REDEEM` — points held by a checkout that Stripe then failed or
-  expired — and that is what this slice implements. Earn reversal becomes reachable when staff
+  expired — and that is what this slice implements. Tracked as **#137**, which also records that
+  the `@@unique([orderId, kind])` index is the real design question there, not the arithmetic.
+  Earn reversal becomes reachable when staff
   cancellation and refunds land, which is ADR-005 territory and out of scope here.
-- **Creating and deleting tier rows** from the admin UI. Tier definitions are seeded; their numbers
-  are editable. Full tier CRUD is deferred rather than half-built.
+- **Creating and deleting tier rows** from the admin UI (**#136**). Tier definitions are seeded;
+  their numbers are editable. Full tier CRUD is deferred rather than half-built, and P6's admin
+  panel may supersede it wholesale.
 - **Guest loyalty.** A balance needs an identity, and P3a's `guestToken` deliberately identifies a
   cart, not a person. A guest checkout ignores any redemption input.
 - **Cross-vendor balances.** Decided at `/propose`: points carry `vendorId` like every other row,
@@ -184,8 +187,10 @@ that cannot explain its own numbers is not an audit trail.
 - **Any new email.** No loyalty email is added and P4b's transition emails are untouched; the
   confirmation email's discount line above is a consistency fix to an existing message, not a new
   one.
-- **Points on the order confirmation and history pages.** P4a's pages render the money breakdown
-  and will show the discount line, but "you earned N points" messaging is not in this slice.
+- **Points-earned messaging on the order confirmation and history pages** (**#138**). Those pages
+  render the money breakdown and the new discount line, but not "you earned N points" — the earn is
+  written by the webhook after the confirmation page first renders, so which tense is true depends
+  on a product decision.
 
 ## Open items carried forward
 
