@@ -54,6 +54,16 @@ every branch merges.
   race) actually running under `Promise.all` against real Postgres, and the admin cross-vendor
   replay proven in **both directions** — closing, for discount codes, the exact gap **#141** recorded
   for P5a's loyalty config. P5 stays **open**: **#143** (P5a live but dark) must resolve first.
+- **P5 closeout.** P5b promoted to production (PR #155, merge `1b66bdf`); unlike P5a's promotion,
+  `deploy-production` applied a genuinely pending migration (`20260811175844_p5b_discount_codes`),
+  confirmed from the deploy log rather than inferred from a green merge. **#143 resolved**: production
+  re-seeded for Aheed only (`SEED_SRIMART_HOST` deliberately unset, so SriMart's block never ran) —
+  `loyaltyEnabled: true`, Silver/Gold tiers, and `WELCOME10` all confirmed live by direct read, not
+  assumed from the seed's exit code. **P5 (#88) closes here**: loyalty and discounts are now both live
+  *and reachable*, which neither promotion alone achieved. Two new gitignored-file defects found and
+  filed, not fixed in this diff: **#154** (`secrets/production.vars`' `CDN_BASE_URL` held staging's
+  host — fixed by the owner before the re-seed ran) and **#156** (`RESEND_API_KEY`'s malformed `=`
+  spacing broke plain-bash `source`, briefly printing the key to a terminal).
   `specs/sdd-workflow.md` (2.5.2) gains a fourth Validate trap: a Next.js server action's id is a
   stable build-time hash in `.next/server/server-reference-manifest.json`, independent of any
   session — which is what let this slice's admin RBAC rows (no-`Cookie`, wrong-role) be driven live
