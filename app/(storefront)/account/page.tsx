@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { LogoutButton } from "@/features/auth/components/LogoutButton";
+import { getLoyaltyRepository } from "@/lib/repositories/loyalty";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,8 @@ export default async function AccountPage() {
   }
 
   const { name, email, role } = session.user as { name: string; email: string; role?: string };
+
+  const { loyaltyEnabled } = await getLoyaltyRepository().config();
 
   return (
     <main className="mx-auto max-w-sm">
@@ -36,11 +39,22 @@ export default async function AccountPage() {
       </div>
       <Link
         href="/account/orders"
-        className="mb-6 flex items-center justify-between rounded-md border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
+        className="mb-3 flex items-center justify-between rounded-md border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
       >
         <span className="font-semibold text-primary">Your orders</span>
         <ChevronRight className="h-5 w-5 text-primary/50" aria-hidden />
       </Link>
+      {/* Only where this vendor actually runs a scheme — /account/loyalty 404s
+          otherwise, and a link to a 404 is worse than no link (P5a, #135). */}
+      {loyaltyEnabled && (
+        <Link
+          href="/account/loyalty"
+          className="mb-6 flex items-center justify-between rounded-md border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
+        >
+          <span className="font-semibold text-primary">Loyalty points</span>
+          <ChevronRight className="h-5 w-5 text-primary/50" aria-hidden />
+        </Link>
+      )}
 
       <LogoutButton />
     </main>

@@ -42,6 +42,16 @@ export async function sendOrderConfirmationEmail(order: WebhookOrder): Promise<v
         <table cellpadding="4">
           ${lines}
           <tr><td>Subtotal</td><td align="right">${formatPrice(order.subtotalPence)}</td></tr>
+          ${
+            // P5a (#135). Without this row the three money lines stop adding up
+            // the moment an order carries a discount, and the customer receives
+            // an email whose arithmetic is visibly wrong.
+            order.discountPence > 0
+              ? `<tr><td>Loyalty points</td><td align="right">−${formatPrice(
+                  order.discountPence,
+                )}</td></tr>`
+              : ""
+          }
           <tr><td>Delivery</td><td align="right">${
             order.deliveryFeePence === 0 ? "FREE" : formatPrice(order.deliveryFeePence)
           }</td></tr>

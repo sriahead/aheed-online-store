@@ -3,6 +3,7 @@ import {
   buildOrderNumber,
   computeTotals,
   vendorOrderPrefix,
+  type DeliveryRules,
   type TotalsLine,
 } from "@/lib/order-totals";
 
@@ -104,5 +105,61 @@ describe("buildOrderNumber", () => {
   it("avoids ambiguous characters so a number can be read aloud or transcribed", () => {
     const code = buildOrderNumber("aheed-food-centre", at, () => 0.5).split("-")[2];
     expect(code).not.toMatch(/[IO01]/);
+  });
+});
+
+// ---- P5a — discount (#135) --------------------------------------------------
+// Appended, not edited: R17 requires every pre-existing case above to keep
+// passing unmodified, which is what proves a zero discount changed nothing.
+
+describe("computeTotals — discount (P5a)", () => {
+  it("returns the applied discount alongside the other money (R14)", () => {
+    const totals = computeTotals([line(1000, 1)], AHEED, 250);
+    expect(totals.discountPence).toBe(250);
+    expect(totals.totalPence).toBe(1000 - 250 + 349);
+  });
+
+  it("defaults to no discount when the argument is omitted (R17)", () => {
+    expect(computeTotals([line(1000, 1)], AHEED).discountPence).toBe(0);
+  });
+
+  it("keeps subtotal - discount + delivery = total for every shape (R15)", () => {
+    const cases: { lines: TotalsLine[]; rules: DeliveryRules; discount: number }[] = [
+      { lines: [line(1000, 1)], rules: AHEED, discount: 0 },
+      { lines: [line(1000, 1)], rules: AHEED, discount: 250 },
+      { lines: [line(3000, 1)], rules: AHEED, discount: 500 },
+      { lines: [line(3000, 1)], rules: AHEED, discount: 3000 },
+      { lines: [line(899, 3)], rules: NO_FREE, discount: 100 },
+      { lines: [line(899, 3)], rules: NO_FREE, discount: 99999 },
+      { lines: [], rules: AHEED, discount: 500 },
+      { lines: [line(500, 1, false)], rules: NO_FREE, discount: 250 },
+    ];
+    for (const c of cases) {
+      const t = computeTotals(c.lines, c.rules, c.discount);
+      expect(t.subtotalPence - t.discountPence + t.deliveryFeePence).toBe(t.totalPence);
+    }
+  });
+
+  it("never discounts more than the goods are worth (R15)", () => {
+    const totals = computeTotals([line(1000, 1)], NO_FREE, 99999);
+    expect(totals.discountPence).toBe(1000);
+    expect(totals.totalPence).toBe(299);
+  });
+
+  it("treats a negative discount as none", () => {
+    expect(computeTotals([line(1000, 1)], NO_FREE, -500).discountPence).toBe(0);
+  });
+
+  it("judges free delivery on the subtotal BEFORE the discount (R16)", () => {
+    // £30 of goods earns free delivery; spending points must not claw it back.
+    const totals = computeTotals([line(3000, 1)], AHEED, 500);
+    expect(totals.deliveryFeePence).toBe(0);
+    expect(totals.totalPence).toBe(2500);
+  });
+
+  it("still charges delivery below the threshold with no discount (R16)", () => {
+    // The paired case: proves the row above tests the ordering, not just that
+    // free delivery works at all.
+    expect(computeTotals([line(2900, 1)], AHEED, 0).deliveryFeePence).toBe(349);
   });
 });

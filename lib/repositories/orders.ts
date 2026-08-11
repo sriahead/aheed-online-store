@@ -9,6 +9,15 @@ import {
   isOrderStatus,
   type TimelineEntry,
 } from "@/lib/order-status";
+import {
+  earnPoints,
+  getLoyaltyConfig,
+  getTiers,
+  recordRedemption,
+  reverseRedemption,
+  spendPoints,
+  windowSpendPence,
+} from "@/lib/repositories/loyalty";
 
 /**
  * Order read/write path (P3b, #96) — the ONLY DB access for orders. Pages,
@@ -54,6 +63,12 @@ export interface PlaceOrderInput {
     notes: string | null;
   };
   rules: DeliveryRules & { minimumOrderPence: number };
+  /**
+   * Loyalty points the shopper asked to spend (P5a, #135). An INTENT, never an
+   * amount: the discount in pence is recomputed here from the persisted balance,
+   * exactly as the subtotal is recomputed rather than trusted from the form.
+   */
+  redeemPoints?: number;
   vendorSlug: string;
   /** Absolute origin for the provider's return URLs. Supplied by the checkout
    *  action so this stays free of request context (P3b R9a). */
@@ -139,8 +154,13 @@ export async function placeOrder(
       };
     });
 
-    const totals = computeTotals(lines, input.rules);
-    if (totals.subtotalPence < input.rules.minimumOrderPence) {
+    // Computed BEFORE any discount: both the vendor's minimum and (inside
+    // computeTotals) the free-delivery threshold are judged on what the shopper
+    // bought, not on what they paid after spending points. Redeeming must not
+    // push an otherwise-valid order under the minimum, nor claw back free
+    // delivery already earned.
+    const preDiscount = computeTotals(lines, input.rules);
+    if (preDiscount.subtotalPence < input.rules.minimumOrderPence) {
       throw new CheckoutError("BELOW_MINIMUM", "Your order is below this store's minimum.");
     }
 
@@ -165,6 +185,22 @@ export async function placeOrder(
       select: { id: true },
     });
 
+    // Points are debited BEFORE the order is written, so an order can never
+    // carry a discount whose points the shopper turned out not to have. The
+    // matching ledger row is written below, once there is an orderId to attach
+    // it to; both are inside this transaction, so they commit or roll back
+    // together. See lib/repositories/loyalty.ts for why this is a pair.
+    const loyaltyConfig = await getLoyaltyConfig(tx, vendorId);
+    const redemption = await spendPoints(tx, vendorId, {
+      userId: input.userId,
+      requestedPoints: input.redeemPoints ?? 0,
+      subtotalPence: preDiscount.subtotalPence,
+      deliveryFeePence: preDiscount.deliveryFeePence,
+      config: loyaltyConfig,
+    });
+
+    const totals = computeTotals(lines, input.rules, redemption.discountPence);
+
     // Retry against the unique index rather than assuming randomness never collides.
     let order: { id: string; orderNumber: string } | null = null;
     for (let attempt = 0; attempt < ORDER_NUMBER_ATTEMPTS; attempt++) {
@@ -182,6 +218,7 @@ export async function placeOrder(
           guestEmail: input.guestEmail,
           addressId: address.id,
           subtotalPence: totals.subtotalPence,
+          discountPence: totals.discountPence,
           deliveryFeePence: totals.deliveryFeePence,
           totalPence: totals.totalPence,
         },
@@ -194,6 +231,15 @@ export async function placeOrder(
         "ORDER_NUMBER_COLLISION",
         "Could not allocate an order number — please try again.",
       );
+    }
+
+    // The audit half of the redemption above, now that the order has an id.
+    if (redemption.pointsSpent > 0 && input.userId) {
+      await recordRedemption(tx, vendorId, {
+        userId: input.userId,
+        orderId: order.id,
+        pointsSpent: redemption.pointsSpent,
+      });
     }
 
     await tx.orderItem.createMany({
@@ -318,6 +364,13 @@ async function releaseOrder(
     await tx.orderStatusEvent.create({
       data: { orderId, vendorId, status: "CANCELLED", note },
     });
+
+    // Give back any points this checkout was holding. Only a REDEEM is ever
+    // reversed — this path acts solely on PENDING_PAYMENT orders, which is
+    // strictly before confirmPayment writes an EARN, so an earned order cannot
+    // reach here (P5a, #135).
+    await reverseRedemption(tx, vendorId, orderId);
+
     return true;
   });
 }
@@ -327,6 +380,8 @@ export interface OrderSummary {
   status: string;
   createdAt: Date;
   subtotalPence: number;
+  /** P5a (#135). Zero for every pre-P5a order and for any order with no discount. */
+  discountPence: number;
   deliveryFeePence: number;
   totalPence: number;
   items: {
@@ -479,6 +534,7 @@ export function getOrderRepository(): OrderRepository {
           status: true,
           createdAt: true,
           subtotalPence: true,
+          discountPence: true,
           deliveryFeePence: true,
           totalPence: true,
           userId: true,
@@ -546,6 +602,7 @@ export function getOrderRepository(): OrderRepository {
           status: true,
           createdAt: true,
           subtotalPence: true,
+          discountPence: true,
           deliveryFeePence: true,
           totalPence: true,
           items: {
@@ -706,8 +763,11 @@ export interface WebhookOrder {
   status: string;
   totalPence: number;
   subtotalPence: number;
+  discountPence: number;
   deliveryFeePence: number;
   buyerEmail: string | null;
+  /** Null for a guest order — P5a needs it to decide whether points can be earned. */
+  userId: string | null;
   items: {
     productName: string;
     unitPricePence: number;
@@ -737,8 +797,10 @@ export async function findOrderForWebhook(
       status: true,
       totalPence: true,
       subtotalPence: true,
+      discountPence: true,
       deliveryFeePence: true,
       guestEmail: true,
+      userId: true,
       user: { select: { email: true } },
       items: {
         select: {
@@ -770,6 +832,18 @@ export async function confirmPayment(
   const order = await findOrderForWebhook(prisma, orderNumber);
   if (!order) return false;
 
+  // Tier depends on a windowed spend query, so it is resolved before the
+  // transaction opens rather than holding one open across extra reads. The
+  // multiplier it produces is snapshotted onto the EARN row, which is what keeps
+  // a historical earn explainable after the tier table changes underneath it.
+  const loyaltyConfig = await getLoyaltyConfig(prisma, order.vendorId);
+  const tiers =
+    loyaltyConfig.loyaltyEnabled && order.userId ? await getTiers(prisma, order.vendorId) : [];
+  const windowSpend =
+    loyaltyConfig.loyaltyEnabled && order.userId
+      ? await windowSpendPence(prisma, order.vendorId, order.userId, loyaltyConfig.tierWindowDays)
+      : 0;
+
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.order.updateMany({
       where: { id: order.id, status: "PENDING_PAYMENT" },
@@ -789,6 +863,22 @@ export async function confirmPayment(
         note: "Payment confirmed.",
       },
     });
+
+    // Points are credited here, not at order creation: the money is only real
+    // once Stripe confirms it. Inside this transaction, so points and CONFIRMED
+    // commit together — and behind the count===0 guard above, so a duplicate
+    // webhook delivery never reaches it. The unique index on (orderId, kind) is
+    // the second line of defence (P5a, #135).
+    await earnPoints(tx, order.vendorId, {
+      userId: order.userId,
+      orderId: order.id,
+      subtotalPence: order.subtotalPence,
+      discountPence: order.discountPence,
+      config: loyaltyConfig,
+      tiers,
+      windowSpendPence: windowSpend,
+    });
+
     return true;
   });
 }

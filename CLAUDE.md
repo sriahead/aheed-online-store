@@ -89,6 +89,16 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   `lib/config.ts` was written and was corrected during P4a's validation, where it mattered — see
   **#119**, where `.env` and `.dev.vars` point at *different Neon projects*, so a fixture script and
   the app under `preview` silently read different databases. Check both before trusting a live result.
+- **Checking `.env` against `.dev.vars` is necessary but NOT sufficient — diff both against
+  `secrets/staging.vars` and `secrets/production.vars` before any live-DB work.** Two files drift
+  into agreement on the *wrong* target as easily as they drift apart from each other. At P5a's
+  validation they agreed perfectly and both pointed at **production** (`ep-young-glitter-…`), while
+  the surrounding config in the same file (`S3_BUCKET`, `CDN_BASE_URL`) correctly said *staging* —
+  so nothing about the file looked wrong, and P5a's migration reached the production database ahead
+  of its promotion PR. It was additive and provably harmless (row counts unchanged, no drift), but
+  the same mistake against a destructive migration would not have been. **A "staging-sounding" file
+  is not evidence the DB host is staging; only the host is.** `secrets/*.vars` are gitignored but
+  present in a working checkout, which is what makes this a two-second check.
 - `.env` format: no spaces around `=`, **quote values**, comments on their own line (a trailing
   `# comment` or leading space has silently broken connection strings here).
 - Runtime secrets live in Cloudflare (`wrangler secret put NAME --env <env>`); CI secrets in GitHub
