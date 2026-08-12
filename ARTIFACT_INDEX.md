@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-12T01:19:19.322Z` · commit `075d7eb` · `48` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-12T09:21:55.487Z` · commit `2a5f746` · `49` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -59,7 +59,8 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P5a — Loyalty points: earn, redeem, tiers, expiry & admin config (plan)](specs/2026-08-11-p5a-loyalty-points/plan.md) | spec | 1.1.0 | 2026-08-11 | draft | internal | The loyalty half of P5 — a per-vendor points ledger earned on payment confirmation, redeemable at checkout through computeTotals, with tier multipliers, inactivity expiry derived at read time, a customer balance page and an admin config surface. |
 | [P5b — Discount codes: engine, checkout application & staff admin (plan)](specs/2026-08-11-p5b-discount-codes/plan.md) | spec | 1.0.0 | 2026-08-11 | draft | internal | The discounts half of P5 — per-vendor percentage or fixed-amount codes with validity windows, minimum spend and usage caps, claimed inside the checkout transaction, stacking with loyalty points into the one generic discount column, plus a vendor-admin create/deactivate surface. |
 | [P6a — Admin panel shell & order dashboard (plan)](specs/2026-08-12-p6a-admin-shell-orders/plan.md) | spec | 1.0.0 | 2026-08-12 | draft | internal | Turns three orphan /staff pages into a real admin panel — a new (admin) route group with its own layout and tenant gate — and replaces P4b's stopgap order queue with a filterable, searchable dashboard plus the first order detail view staff have ever had. |
-| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.11.0 | 2026-08-12 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
+| [P6b1 — Catalogue management: product, category & inventory writes (plan)](specs/2026-08-12-p6b1-catalogue-writes/plan.md) | spec | 1.0.0 | 2026-08-12 | draft | internal | The first admin write path to the catalogue — product, category and inventory create/edit inside P6a's panel, turning two read-only repositories into read/write ones so the owner can run the shop without a developer and a re-seed. |
+| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.12.0 | 2026-08-12 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
 | [ADR-003 — Object Storage Abstraction (S3-compatible)](specs/decisions/ADR-003-storage-abstraction.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time. |

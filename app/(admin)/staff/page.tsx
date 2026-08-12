@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ClipboardList, Sparkles, TicketPercent } from "lucide-react";
+import { ClipboardList, FolderTree, Package, Sparkles, TicketPercent } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/repositories/orders";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
@@ -61,6 +61,28 @@ export default async function StaffHomePage() {
 
         {isAdmin && (
           <>
+            <Link
+              href="/staff/products"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Package className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Products</p>
+              <p className="mt-1 text-sm text-primary/70">
+                Add products, correct prices, and set what&apos;s in stock.
+              </p>
+            </Link>
+
+            <Link
+              href="/staff/categories"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <FolderTree className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Categories</p>
+              <p className="mt-1 text-sm text-primary/70">
+                The departments shoppers browse by, and how they&apos;re ordered.
+              </p>
+            </Link>
+
             <Link
               href="/staff/loyalty"
               className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"

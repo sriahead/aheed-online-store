@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, LayoutDashboard, Sparkles, TicketPercent } from "lucide-react";
+import { ClipboardList, LayoutDashboard, Package, Sparkles, TicketPercent } from "lucide-react";
 
 /**
  * The admin panel's navigation (P6a, #158).
@@ -36,6 +36,10 @@ export function PanelNav({ canSeeOrders, canSeeAdmin }: PanelNavProps) {
         </Link>
         {canSeeAdmin && (
           <>
+            <Link href="/staff/products" className={LINK_CLASS}>
+              <Package className="h-4 w-4" aria-hidden />
+              Catalogue
+            </Link>
             <Link href="/staff/loyalty" className={LINK_CLASS}>
               <Sparkles className="h-4 w-4" aria-hidden />
               Loyalty

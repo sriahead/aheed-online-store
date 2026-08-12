@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
+import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import { effectiveStock } from "@/lib/cart-rules";
 import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
 
@@ -261,4 +262,292 @@ export function getProductRepository(): ProductRepository {
       }));
     },
   };
+}
+
+/* ------------------------------------------------------------------------- *
+ * Admin catalogue path (P6b1, #159)
+ *
+ * The first WRITES on this repository — everything above is a query. Three
+ * properties hold across all of it:
+ *
+ *  1. `vendorId` is an explicit ARGUMENT, never resolved from a form and never
+ *     read from request context inside these functions. That is what lets a
+ *     plain script exercise them (the `placeOrder(prisma, vendorId, input)`
+ *     shape), and it is why no submitted field can redirect a write at another
+ *     vendor's rows.
+ *  2. No admin read filters `isActive`. The storefront reads above deliberately
+ *     do, which is exactly why they cannot serve this surface: an owner has to
+ *     be able to find and re-activate the product they just switched off.
+ *  3. Errors a human can cause — a duplicate slug, a category that isn't
+ *     theirs — come back as data. Only genuine faults throw.
+ * ------------------------------------------------------------------------- */
+
+/** Same shape lib/repositories/discounts.ts and loyalty.ts use, so a write can run inside a caller's transaction. */
+type Db = ReturnType<typeof getPrisma>;
+type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
+type AnyDb = Db | Tx;
+
+export interface AdminProductRow {
+  id: string;
+  slug: string;
+  name: string;
+  basePrice: number;
+  isActive: boolean;
+  categoryName: string;
+  quantity: number;
+}
+
+export interface AdminProductPage {
+  items: AdminProductRow[];
+  nextCursor: string | null;
+}
+
+export interface AdminProductDetail {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  categoryId: string;
+  basePrice: number;
+  originalPrice: number | null;
+  unitLabel: string;
+  origin: string | null;
+  isHalal: boolean;
+  isFresh: boolean;
+  isOrganic: boolean;
+  isActive: boolean;
+  quantity: number;
+  lowStockThreshold: number;
+  /** Read-only here: upload/replace is #167 (P6b2). */
+  images: ProductImageSummary[];
+}
+
+/** Everything a product write needs, already validated by lib/catalogue-form.ts. */
+export interface ProductWriteInput {
+  name: string;
+  slug: string;
+  description: string;
+  categoryId: string;
+  basePrice: number;
+  originalPrice: number | null;
+  unitLabel: string;
+  origin: string | null;
+  isHalal: boolean;
+  isFresh: boolean;
+  isOrganic: boolean;
+  isActive: boolean;
+  quantity: number;
+  lowStockThreshold: number;
+}
+
+export type CatalogueWriteResult =
+  { ok: true; id: string } | { ok: false; error: string; field?: string };
+
+/** Keyset-paginated on (createdAt, id) like findPage() above — never OFFSET. */
+export async function listProductsForAdmin(
+  vendorId: string,
+  { take, cursor }: { take: number; cursor?: string },
+): Promise<AdminProductPage> {
+  const prisma = getPrisma();
+  const rows = await prisma.product.findMany({
+    where: { vendorId },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: take + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      basePrice: true,
+      isActive: true,
+      category: { select: { name: true } },
+      inventory: { select: { quantity: true } },
+    },
+  });
+
+  const hasMore = rows.length > take;
+  const page = hasMore ? rows.slice(0, take) : rows;
+
+  return {
+    items: page.map((row) => ({
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      basePrice: row.basePrice,
+      isActive: row.isActive,
+      categoryName: row.category.name,
+      quantity: row.inventory?.quantity ?? 0,
+    })),
+    nextCursor: hasMore ? page[page.length - 1].id : null,
+  };
+}
+
+export async function getProductForAdmin(
+  vendorId: string,
+  id: string,
+): Promise<AdminProductDetail | null> {
+  const prisma = getPrisma();
+  // findFirst, not findUnique: `id` alone is unique, but a vendor-less read has
+  // no place in this layer (ADR-004 slice 2).
+  const row = await prisma.product.findFirst({
+    where: { id, vendorId },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      description: true,
+      categoryId: true,
+      basePrice: true,
+      originalPrice: true,
+      unitLabel: true,
+      origin: true,
+      isHalal: true,
+      isFresh: true,
+      isOrganic: true,
+      isActive: true,
+      inventory: { select: { quantity: true, lowStockThreshold: true } },
+      images: { orderBy: { sortOrder: "asc" }, select: productImageSelect },
+    },
+  });
+  if (!row) return null;
+
+  const { inventory, ...product } = row;
+  return {
+    ...product,
+    // A product seeded before P6b1 may have no Inventory row at all; the form
+    // shows zeroes and the first save creates it (see updateProductForVendor).
+    quantity: inventory?.quantity ?? 0,
+    lowStockThreshold: inventory?.lowStockThreshold ?? 3,
+  };
+}
+
+/**
+ * The category is resolved SCOPED TO THE VENDOR, and its absence is the refusal.
+ * `Product.categoryId`'s foreign key carries no vendor, so nothing in the schema
+ * stops a form submitting another vendor's category id — this lookup is the only
+ * thing that does. Same defence P3d used for its untrusted review-form ids.
+ */
+async function assertOwnCategory(
+  db: AnyDb,
+  vendorId: string,
+  categoryId: string,
+): Promise<boolean> {
+  const category = await db.category.findFirst({
+    where: { id: categoryId, vendorId },
+    select: { id: true },
+  });
+  return category !== null;
+}
+
+const WRONG_CATEGORY = {
+  ok: false as const,
+  error: "Choose a category that belongs to this store.",
+  field: "categoryId",
+};
+
+const DUPLICATE_SLUG = {
+  ok: false as const,
+  error: "Another product in this store already uses that web address.",
+  field: "slug",
+};
+
+export async function createProductForVendor(
+  vendorId: string,
+  input: ProductWriteInput,
+): Promise<CatalogueWriteResult> {
+  const prisma = getPrisma();
+  try {
+    if (!(await assertOwnCategory(prisma, vendorId, input.categoryId))) return WRONG_CATEGORY;
+
+    // The Inventory row is a NESTED create, so it commits in the same implicit
+    // transaction as the Product. Two sequential calls could leave a product
+    // with no stock row — which every reader then papers over with `?? 0`,
+    // making "out of stock" and "never given stock" indistinguishable.
+    const created = await prisma.product.create({
+      data: {
+        vendorId,
+        name: input.name,
+        slug: input.slug,
+        description: input.description,
+        categoryId: input.categoryId,
+        basePrice: input.basePrice,
+        originalPrice: input.originalPrice,
+        unitLabel: input.unitLabel,
+        origin: input.origin,
+        isHalal: input.isHalal,
+        isFresh: input.isFresh,
+        isOrganic: input.isOrganic,
+        isActive: input.isActive,
+        inventory: {
+          create: {
+            vendorId,
+            quantity: input.quantity,
+            lowStockThreshold: input.lowStockThreshold,
+          },
+        },
+      },
+      select: { id: true },
+    });
+    return { ok: true, id: created.id };
+  } catch (error) {
+    if (isUniqueViolation(error)) return DUPLICATE_SLUG;
+    throw error;
+  }
+}
+
+export async function updateProductForVendor(
+  vendorId: string,
+  id: string,
+  input: ProductWriteInput,
+): Promise<CatalogueWriteResult> {
+  const prisma = getPrisma();
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const existing = await tx.product.findFirst({
+        where: { id, vendorId },
+        select: { id: true },
+      });
+      // Another vendor's product is indistinguishable from one that never existed.
+      if (!existing) return { ok: false as const, error: "That product no longer exists." };
+
+      if (!(await assertOwnCategory(tx, vendorId, input.categoryId))) return WRONG_CATEGORY;
+
+      await tx.product.update({
+        where: { id, vendorId },
+        data: {
+          name: input.name,
+          slug: input.slug,
+          description: input.description,
+          categoryId: input.categoryId,
+          basePrice: input.basePrice,
+          originalPrice: input.originalPrice,
+          unitLabel: input.unitLabel,
+          origin: input.origin,
+          isHalal: input.isHalal,
+          isFresh: input.isFresh,
+          isOrganic: input.isOrganic,
+          isActive: input.isActive,
+        },
+      });
+
+      // upsert, not update: a product created before this slice may have no
+      // Inventory row, and the owner's first save is where it should appear
+      // rather than failing on a missing record.
+      await tx.inventory.upsert({
+        where: { productId: id, vendorId },
+        create: {
+          vendorId,
+          productId: id,
+          quantity: input.quantity,
+          lowStockThreshold: input.lowStockThreshold,
+        },
+        update: { quantity: input.quantity, lowStockThreshold: input.lowStockThreshold },
+      });
+
+      return { ok: true as const, id };
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) return DUPLICATE_SLUG;
+    throw error;
+  }
 }

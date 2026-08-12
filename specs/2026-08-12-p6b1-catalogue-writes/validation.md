@@ -45,7 +45,7 @@ retrying a failure.
 | R30 | Live: create a category with a distinct non-default value for `name`, `slug`, `parentId`, `sortOrder`, `isActive`, read the row back and compare all five. |
 | R31 | Live: `/staff/products/{id}` for a seeded product renders its existing image, and the page source contains no `<input type="file">`. `git diff --stat origin/staging -- lib/storage.ts` shows no change. |
 | R32 | `git diff --stat origin/staging -- prisma/` is empty. |
-| R33 | `git diff origin/staging` contains no added line matching `\.delete(` or `\.deleteMany(` against `product`, `category`, `inventory` or `productImage`. |
+| R33 | Scope the diff to source — `git diff origin/staging -- lib/ features/ app/ components/ \| grep -E '^\+.*\.(delete\|deleteMany)\('` returns no line naming `product`, `category`, `inventory` or `productImage`. **Do not run this over the whole diff:** these spec files describe the check in prose, so `specs/` matches itself and the only way to "pass" would be to delete the requirement. (Same trap as P4a's R5 and R27.) |
 | R34 | `git diff origin/staging -- specs/architecture.md` is non-empty, and reading the `Category` model excerpt in context states the two-level cap and that a category's parent must itself be top-level. `npm run kms:validate` exits 0 (front-matter still valid after the version bump). |
 | R35 | `git diff origin/staging -- CHANGELOG.md` is non-empty and describes this slice under `[Unreleased]`. |
 | R36 | `npm run lint`, `npm run typecheck`, `npm test`, `npm run format:check` each exit 0 — and the `gates` job is green on the PR, which is the real Gate 3, not the local run. |
