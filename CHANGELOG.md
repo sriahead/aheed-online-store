@@ -179,6 +179,23 @@ every branch merges.
   recording the trap so it isn't rediscovered. **P6b1 promoted** (PR #171, merge `a577697`),
   carrying P6a's still-unpromoted Document-final closeout (#166) along with it — no migration. P6
   stays **open**: P6b2 (#167, product image upload) is next.
+- **P6b2 closeout docs — P6 closed.** `specs/roadmap.md` (1.20.0) gains P6b2's slice row, its
+  promotion row and a phase-closure row: all three P6 slices (P6a #158, P6b1 #159, P6b2 #167) are now
+  live in production. All 32 `validation.md` rows pass, including a full real-browser end-to-end run
+  (EXIF-upright confirmation, exact 1200×900 downscale, zero CORS/console errors, CDN fetch of the
+  resulting key). Two real defects found and handled during this slice's Validate: `validation.md`'s
+  own R26 fixture script named the wrong vendor slug and built a `PrismaClient` with no driver
+  adapter (both would have made the script throw as originally written — fixed in `ddaf30a`,
+  **before** `staging`), and a pre-existing, unrelated bug in `lib/auth-origin.ts` that 403s
+  real-browser sign-in against `npm run preview` on any non-default port — filed as **#176**, not
+  fixed here (staging/production are unaffected; default port, Cloudflare sets `x-forwarded-proto`
+  correctly there). `specs/sdd-workflow.md` (2.7.0) records #176 in the Validate stage so it isn't
+  rediscovered. `CLAUDE.md` (1.2.0) records the Windows `npm run preview` orphaned-process trap
+  (`workerd.exe`/`wrangler dev`'s children survive the parent's termination, causing `EBUSY` on the
+  next build) hit twice during this slice's live-browser Validate. **P6b2 promoted** (PR #178, merge
+  `2f8ae5b`) — no migration. **One prerequisite the promotion does not carry**: production's
+  `aheed-images-production` bucket CORS is deliberately not applied yet (owner action, tracked in
+  `plan.md`'s Prerequisites), so uploads will 403 in production until it's set.
 - **The order confirmation email and order-detail pages labelled the combined discount line "Loyalty
   points" unconditionally**, unchanged from P5a — so as of this slice, an order discounted by a code
   alone (no points touched) rendered a line claiming the shopper's loyalty balance had been spent.

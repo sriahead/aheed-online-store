@@ -4,7 +4,7 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.1.0"
+version: "1.2.0"
 updated: 2026-08-12
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
@@ -190,6 +190,18 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `SEED_`, and prefer printing keys over lines.
 - `gh` args containing double quotes break native argument parsing in PS 5.1 (`accepts 1 arg(s),
   received 8`). Write the body to a file and use `--body-file`.
+- **Stopping `npm run preview` does not stop `npm run preview`.** The task-runner kill only ends the
+  top-level `npm` process; `opennextjs-cloudflare preview` chains into `wrangler dev`, which spawns
+  its own `wrangler.js` and `workerd.exe` children that survive the parent's termination on Windows.
+  The next `npm run preview` then fails the build with `EBUSY: resource busy or locked, rmdir
+  '.open-next\assets'` — the orphaned `workerd.exe` still has the directory open. Killing just
+  `workerd.exe` is not enough either; the whole chain (`npm run-cli.js run preview` →
+  `opennextjs-cloudflare … preview` → `npm … exec wrangler dev` → `wrangler.js dev` →
+  `wrangler-dist\cli.js dev` → `workerd.exe` ×2) must go. Find it with
+  `Get-CimInstance Win32_Process -Filter "Name='node.exe' or Name='workerd.exe'" | Select
+  ProcessId,CommandLine` (match on the repo path and `wrangler dev` in the command line, not just
+  the image name — other unrelated `node.exe`/`workerd.exe` processes are common) and
+  `taskkill /F /PID <every id>` before retrying the build.
 
 ## Dependency & version discipline (learned the hard way)
 - **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their
