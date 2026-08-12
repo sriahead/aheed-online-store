@@ -318,7 +318,7 @@ export interface AdminProductDetail {
   isActive: boolean;
   quantity: number;
   lowStockThreshold: number;
-  /** Read-only here: upload/replace is #167 (P6b2). */
+  /** Read here; written by setPrimaryProductImage (P6b2, #167). */
   images: ProductImageSummary[];
 }
 
@@ -550,4 +550,57 @@ export async function updateProductForVendor(
     if (isUniqueViolation(error)) return DUPLICATE_SLUG;
     throw error;
   }
+}
+
+/**
+ * Point a product's PRIMARY image at a newly uploaded key (P6b2, #167).
+ *
+ * Repoint, never replace: the existing primary row is updated in place so its id
+ * survives, and a product that has never had an image gets exactly one row. The
+ * superseded object stays in storage — immutable keys are the whole reason no
+ * CDN purge is needed, and cleaning them up is #174.
+ *
+ * Non-primary rows are left alone rather than cleared. None exist today (the
+ * seed writes one image per product), but multi-image management is #173 and
+ * this must not quietly destroy its data when it arrives.
+ *
+ * `alt` falls back to the product's own name, which is why the name is selected
+ * here: ProductImage.alt is non-null, and an empty alt on a storefront image is
+ * an accessibility defect rather than a tidy default.
+ */
+export async function setPrimaryProductImage(
+  vendorId: string,
+  productId: string,
+  storageKey: string,
+  alt: string,
+): Promise<CatalogueWriteResult> {
+  const prisma = getPrisma();
+  return await prisma.$transaction(async (tx) => {
+    // Vendor-scoped: another vendor's product is indistinguishable from one that
+    // never existed, exactly as updateProductForVendor treats it.
+    const product = await tx.product.findFirst({
+      where: { id: productId, vendorId },
+      select: { id: true, name: true },
+    });
+    if (!product) return { ok: false as const, error: "That product no longer exists." };
+
+    const altText = alt.trim() === "" ? product.name : alt.trim();
+    const existing = await tx.productImage.findFirst({
+      where: { productId, isPrimary: true },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await tx.productImage.update({
+        where: { id: existing.id },
+        data: { storageKey, alt: altText },
+      });
+    } else {
+      await tx.productImage.create({
+        data: { productId, storageKey, alt: altText, isPrimary: true, sortOrder: 0 },
+      });
+    }
+
+    return { ok: true as const, id: productId };
+  });
 }

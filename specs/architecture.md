@@ -4,7 +4,7 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.12.0"
+version: "1.13.0"
 updated: 2026-08-12
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
@@ -106,7 +106,7 @@ No layer skips inward; components never touch Prisma or the S3 client directly.
 - **Money as integer minor units (pence).** Currency stored explicitly (`GBP` default). Avoids
   float drift and locale-bound types.
 - **Images/large files never in the DB.** Only a **relative storage key** (e.g.
-  `products/{sku}/main.webp`). Full URL is composed at read time from `CDN_BASE_URL`.
+  `products/{productId}/{uuid}.webp`). Full URL is composed at read time from `CDN_BASE_URL`.
 - **Historical snapshots are intentional.** `OrderItem` stores name + unit price at purchase time —
   a recorded fact, not a normalization breach.
 
@@ -273,12 +273,29 @@ model OrderItem {
 
 ### 3.3 Object-storage integration
 
-1. **Upload** (admin): `StorageService.put(key, bytes, contentType)` via the S3 API → returns the
-   **relative key**. Only the key is persisted (`ProductImage.storageKey`).
-2. **Read**: the presentation layer composes `${CDN_BASE_URL}/${storageKey}`. The DB has no
+The port (`lib/storage.ts`) exposes exactly four operations: `putObject`, `publicUrl`, `presignPut`
+and `headObject`. All are standard S3 (`PutObject`, `HeadObject`, SigV4 query signing) — nothing
+R2-specific, per ADR-003.
+
+1. **Upload (admin, browser-direct — P6b2/#167).** The Worker signs a short-lived `PUT` with
+   `presignPut` and the browser uploads **straight to storage**; no image byte transits the Worker,
+   so its request-size and CPU limits are not in the path. The Worker then confirms what landed
+   with `headObject` before persisting the key — a presigned PUT cannot police a body it never sees.
+   **Requires bucket CORS** allowing `PUT` from the vendor origins, per bucket and per environment.
+2. **Upload (server-side).** `putObject(key, bytes, contentType)` for bytes the server already
+   holds — `prisma/seed.ts`'s placeholder images are the only current caller.
+3. **Read**: the presentation layer composes `${CDN_BASE_URL}/${storageKey}`. The DB has no
    knowledge of which CDN or bucket is live.
-3. **Delete / signed uploads**: also through the port, using only standard S3 operations
-   (`PutObject`, `GetObject`, `DeleteObject`, presigned URLs).
+
+**Product image keys are `products/{productId}/{uuid}.webp` and are immutable.** Replacing an image
+writes a **new** object and repoints `ProductImage.storageKey`; nothing is ever overwritten, so a
+CDN cache purge is never part of the flow — which is what keeps a provider-specific purge call (and
+a purge-scoped API token) out of a deliberately vendor-agnostic port. Keying on the product id
+rather than the slug survives a slug edit, which P6b1 made possible.
+
+**There is no delete operation on the port.** Superseded objects therefore accumulate; cleanup is
+**#174**, which must first choose between an inline delete and a scheduled sweep (the latter would
+be the first cron trigger in `wrangler.toml`).
 
 Because the key is relative and the base URL is env-resolved, moving buckets or CDNs is a config
 change, not a data migration of DB rows (see §4.2).

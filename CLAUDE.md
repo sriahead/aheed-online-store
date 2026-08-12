@@ -72,7 +72,10 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
 - Strict relational / 3NF, explicit foreign keys, provider-neutral Postgres types only.
 - **No `Json` columns / document storage** for domain data. **No raw SQL** in application code.
 - Money = **integer pence** + explicit currency. No floats, no `money` type.
-- Images: store a **relative key** (e.g. `products/{sku}/main.webp`), **never a URL**.
+- Images: store a **relative key** (e.g. `products/{productId}/{uuid}.webp`), **never a URL**.
+  Keys are **immutable** — replacing an image writes a new key and repoints the row, so a CDN purge
+  is never needed. (This line said `products/{sku}/main.webp` until P6b2; `Product` has no `sku`
+  field and the seed writes `products/{slug}/main.svg`, so the example matched nothing in the repo.)
 
 ## Storage (ADR-003)
 - Object storage via the **S3-compatible API only**, behind `lib/storage` (`StorageService` port).
@@ -164,6 +167,29 @@ PRs merge into `staging`, not the default branch, so `Closes #NN` never fires on
 issues for shipped slices are expected. The Status field's one-time UI rename
 (`scripts/provision-project.sh` manual steps) is **done** — all four options `Backlog` /
 `In Progress` / `In Review` / `Done` exist, so no board setup is outstanding.
+
+## Windows shell & file encoding (learned the hard way)
+- **Never rewrite a repo file through `Get-Content` / `Set-Content` on Windows PowerShell 5.1.**
+  `Get-Content -Raw` reads with the system ANSI codepage unless `-Encoding utf8` is passed, so every
+  non-ASCII character in a UTF-8 file (this repo's docs are full of em-dashes and arrows) is decoded
+  as mojibake and then written back **double-encoded** — `—` becomes `â€”` throughout. It also
+  rewrites line endings, so a two-line version bump lands as a 147-line diff. Hit in P6b2 bumping
+  front-matter on `architecture.md`, `tech-stack.md` and ADR-003; caught only because the diff
+  size was implausible, and fixed by `git checkout --` on all three and redoing the edits with the
+  Edit tool. **Use the Edit/Write tools for file content; keep PowerShell for git, npm and gh.**
+- **Check `git diff --numstat` after any scripted file rewrite.** A line count far larger than the
+  edit is the cheapest possible signal that an encoding or line-ending rewrite happened.
+- **`format:check` failing on dozens of untouched files is the `core.autocrlf` artifact, not drift.**
+  Confirm it the documented way — write a file's committed blob (`git show HEAD:<file>`) out with LF
+  endings and run `prettier --config .prettierrc.json --check` on it. **Do that in a directory
+  prettier can still resolve the config from, or pass `--config` explicitly**: checking a copy in a
+  temp directory silently falls back to prettier's *defaults* and reports failures that mean
+  nothing. CI on Linux is the authority.
+- **Anchor patterns when grepping an env file.** `DATABASE_URL` ends in `BASE_URL`, so a filter for
+  `BASE_URL` prints the Neon connection string, password included (#175). Prefer `^SEED_` over
+  `SEED_`, and prefer printing keys over lines.
+- `gh` args containing double quotes break native argument parsing in PS 5.1 (`accepts 1 arg(s),
+  received 8`). Write the body to a file and use `--body-file`.
 
 ## Dependency & version discipline (learned the hard way)
 - **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their

@@ -119,29 +119,51 @@ broken product page; this order risks orphaned bytes, which are invisible and al
 ## Prerequisites
 
 **Bucket CORS — required before any browser upload can work, in any environment.** Confirmed absent
-at Orient: `wrangler r2 bucket cors list` returns `The CORS configuration does not exist
-[code: 10059]` for both `aheed-images-staging` and `aheed-images-production`. Apply with
-`wrangler r2 bucket cors set <bucket> --file <file>`:
+at Orient: `wrangler r2 bucket cors list` returned `The CORS configuration does not exist
+[code: 10059]` for both `aheed-images-staging` and `aheed-images-production`.
+
+**Staging: applied 2026-08-12, during this slice's Spec stage.** Production is deliberately **not**
+applied yet — it is a live-site infra change with nothing to serve until this slice promotes, so it
+belongs to the promotion, not the build.
+
+Apply with `wrangler r2 bucket cors set <bucket> --file <file> --force`. Note the file takes the
+**R2 API shape** (a `rules` array with a nested `allowed` object), *not* the S3 XML-equivalent
+`AllowedOrigins`/`AllowedMethods` JSON — wrangler rejects the latter outright with *"The CORS
+configuration file must contain a 'rules' array as expected by the R2 API"*. This plan carried the
+wrong shape until it was actually run:
 
 ```json
-[
-  {
-    "AllowedOrigins": [
-      "https://staging.aheedfoodcentre.nocaped.com",
-      "https://srimart-staging.nocaped.com",
-      "http://localhost:8787"
-    ],
-    "AllowedMethods": ["PUT"],
-    "AllowedHeaders": ["content-type"],
-    "ExposeHeaders": ["etag"],
-    "MaxAgeSeconds": 3600
-  }
-]
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": [
+          "https://staging.aheedfoodcentre.nocaped.com",
+          "https://srimart-staging.nocaped.com",
+          "http://localhost:8787"
+        ],
+        "methods": ["PUT"],
+        "headers": ["content-type"]
+      },
+      "exposeHeaders": ["etag"],
+      "maxAgeSeconds": 3600
+    }
+  ]
+}
 ```
 
 `aheed-images-production` takes the same rule with origins `https://aheedfoodcentre.nocaped.com`
 and `https://srimart.nocaped.com`, and **no localhost entry**. The `http://localhost:8787` entry on
-staging exists so R24 can be validated against `npm run preview` with a real browser.
+staging exists so R26 can be validated against `npm run preview` with a real browser.
+
+`PUT` is the only method needed: public reads are served by the CDN custom domain
+(`images.staging.aheedfoodcentre.nocaped.com`), not by cross-origin requests to the S3 endpoint.
+
+**R25 already passes against the applied staging policy** (checked at Spec, before any code
+existed): an `OPTIONS` preflight returns `204` with `Access-Control-Allow-Origin` echoing
+`https://staging.aheedfoodcentre.nocaped.com` and again for `http://localhost:8787`, while
+`https://example.invalid` returns `403` with no such header. Re-run it at Validate rather than
+trusting this line.
 
 The Worker runtime secrets this needs — `S3_ACCESS_KEY` and `S3_SECRET_KEY` — were **verified
 present on both `aheed-store-staging` and `aheed-store-production`** at Orient, so #167's second

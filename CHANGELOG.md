@@ -7,6 +7,40 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P6b2 — product image upload via presigned PUT** (#167,
+  `specs/2026-08-12-p6b2-image-upload/`): P6's last slice, and the first time an admin can put a
+  real photograph on a product. P6b1 made every *field* editable and left images read-only, so the
+  only way to change one was a developer re-running `prisma/seed.ts`. Three capabilities the
+  project has never had land together: the **first write through `lib/storage`** at runtime, the
+  **first request the Worker has ever signed**, and the **first browser-direct upload**. The Worker
+  signs a short-lived `PUT` (`presignPut`, SigV4 query signing via aws4fetch — still plain S3, no
+  R2 feature) and the browser uploads **straight to storage**, so no image byte transits the Worker
+  and its request-size and CPU limits are not in the upload path. **Keys are immutable —
+  `products/{productId}/{uuid}.webp`** — so replacing an image writes a *new* object and repoints
+  the row rather than overwriting: that keeps a Cloudflare cache purge out of the design entirely,
+  which would otherwise have meant a purge-scoped API token as a new Worker secret and a
+  provider-specific call inside a deliberately vendor-agnostic port. Keying on the product id
+  rather than the slug survives the slug edits P6b1 made possible. **The server never accepts a
+  key**: `requestImageUpload` takes a product id and a byte length and nothing else, because a
+  signature proves *who is asking*, never *what they may ask for* — a client-named key would let
+  one vendor's admin obtain a valid signature for a PUT over another vendor's object. **The row is
+  written only after the object is verified**: `attachProductImage` re-runs the ADMIN check and the
+  vendor-scoped product lookup, re-checks the key shape against that product, then issues a
+  server-side `headObject` (must exist, be `image/webp`, be within 2 MiB) before anything changes,
+  since a presigned PUT cannot police a body it never sees. Bytes are written before the row
+  deliberately — the reverse order risks a row pointing at an object that was never uploaded, a
+  visibly broken product page, where this order risks orphaned bytes, which are invisible. The
+  browser converts to **WebP on a canvas** (1200px longest edge, quality 0.82, EXIF orientation
+  honoured) because the Worker never sees the bytes and so cannot; the `.webp` convention now holds
+  literally rather than by hope. **No schema change, no migration** — `ProductImage` has carried
+  `storageKey`/`alt`/`sortOrder`/`isPrimary` since P2. Scope is the **primary image only**:
+  add/remove/reorder is #173, and **nothing is ever deleted**, so superseded objects accumulate by
+  design (#174). Corrects four docs that all gave the example key as `products/{sku}/main.webp` —
+  `Product` has no `sku` field and never has, and the seed actually writes
+  `products/{slug}/main.svg`; ADR-003 gains an additive implementation note recording the port's
+  real methods, the aws4fetch-vs-AWS-SDK substitution and the immutability rule, reopening no
+  decision. Staging bucket CORS applied and verified during the slice; **production CORS is
+  deliberately deferred to the promotion**.
 - **P6b1 — catalogue management: product, category & inventory writes** (#159,
   `specs/2026-08-12-p6b1-catalogue-writes/`): the first admin **write** path to the catalogue.
   `lib/repositories/products.ts` and `categories.ts` were read-only — every exported method a query
