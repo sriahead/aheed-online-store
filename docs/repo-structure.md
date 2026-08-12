@@ -4,8 +4,8 @@ title: Repository Structure
 audience: [dev]
 type: doc
 status: approved
-version: "1.1.0"
-updated: 2026-08-07
+version: "1.2.0"
+updated: 2026-08-12
 visibility: internal
 summary: The agreed target folder layout for the Next.js + Prisma + Cloudflare app, Clean Architecture layering, and which phase scaffolds each folder.
 tags: [architecture, folder-structure, conventions]
@@ -92,7 +92,9 @@ aheed-online-store/
 │   ├── layout.tsx
 │   ├── globals.css              #   imports design-system tokens
 │   ├── (storefront)/            #   home · category · product · basket · checkout · account · orders
-│   ├── (admin)/admin/           #   products · categories · orders · customers · discounts · loyalty · reports (RBAC-gated)
+│   ├── (admin)/staff/           #   P6a: overview · orders (+ detail) · loyalty · discounts
+│   │                            #   own layout: tenant gate + brand tokens, no shop header
+│   │                            #   NOT /admin — the segment is /staff (see specs/roadmap.md)
 │   ├── api/                     #   HEADLESS REST API (web now, mobile later)
 │   │   ├── auth/[...all]/       #     Better Auth handler
 │   │   ├── products/  categories/  cart/  orders/

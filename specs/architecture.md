@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.10.0"
-updated: 2026-08-11
+version: "1.11.0"
+updated: 2026-08-12
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -124,7 +124,11 @@ No layer skips inward; components never touch Prisma or the S3 client directly.
 > of the current vendor. Read-side `vendorId` filtering is enforced centrally in the repository layer
 > (slice 2). **Host→tenant resolution (slice 3b):** the request host maps to a vendor via a
 > `VendorDomain(host)` table (`lib/tenant.ts`); an unresolved host redirects to `/coming-soon`. No
-> Next middleware is used (edge runtime is forbidden) — the storefront layout gates the tenant.
+> Next middleware is used (edge runtime is forbidden) — **each top-level layout gates the tenant**:
+> `app/(storefront)/layout.tsx` and, since P6a, `app/(admin)/layout.tsx`. This is a per-layout
+> obligation, not a property of one file: `getCurrentVendorId()` *throws* on an unresolvable host,
+> so a new route group whose layout omits the redirect turns an unknown host into a 500 instead of
+> `/coming-soon`. Both layouts also share the brand-token injection via `lib/vendor-theme.ts`.
 > **Branding & config are data-driven (slice 4):** a vendor's colours, name, logo, locality, delivery
 > area, metadata and email sender come from `VendorBranding`/`VendorConfig`/`VendorDeliveryArea` via
 > `lib/repositories/vendor.ts` (per-request `cache()`); the eight brand primitives are injected as CSS

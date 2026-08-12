@@ -4,9 +4,13 @@ import { buildOrderNumber, computeTotals, type DeliveryRules } from "@/lib/order
 import { getPaymentService } from "@/lib/payments";
 import { effectiveStock } from "@/lib/cart-rules";
 import {
+  buildStaffTimeline,
   buildTimeline,
   canTransition,
   isOrderStatus,
+  STAFF_QUEUE_STATUSES,
+  type OrderStatusValue,
+  type StaffTimelineEntry,
   type TimelineEntry,
 } from "@/lib/order-status";
 import {
@@ -483,21 +487,31 @@ export interface OrderListPage {
   nextCursor: string | null;
 }
 
-/**
- * The statuses a staff member can actually act on (P4b, #125).
- *
- * Deliberately the inverse of P4a's customer list, which is unfiltered: a
- * shopper hunting a failed payment most needs the PENDING_PAYMENT row nobody
- * wants to show them, whereas a staff QUEUE is a worklist. PENDING_PAYMENT is
- * Stripe's to resolve and no staff action can touch it; DELIVERED and CANCELLED
- * are finished. Showing them would pad the page with rows whose only control is
- * disabled. Full history for staff is P6's dashboard.
- */
-export const STAFF_QUEUE_STATUSES = ["CONFIRMED", "OUT_FOR_DELIVERY"] as const;
-
 /** An owned order plus its customer-facing timeline (P4a, #122). */
 export interface OrderDetail extends OrderSummary {
   timeline: TimelineEntry[];
+}
+
+/**
+ * One order as STAFF see it (P6a, #158): the same money/items/address as
+ * `OrderDetail`, plus the buyer's email and a timeline carrying each event's
+ * note and acting user.
+ *
+ * A distinct type from `OrderDetail`, not a superset flag on it — see
+ * `buildStaffTimeline`'s contract. The customer path must stay unable to
+ * express a note.
+ */
+export interface StaffOrderDetail extends OrderSummary {
+  buyerEmail: string | null;
+  timeline: StaffTimelineEntry[];
+}
+
+/** Filter for the staff dashboard's list (P6a, #158). */
+export interface StaffOrderFilter {
+  /** Statuses to include — from `parseStaffOrdersQuery`, never raw user input. */
+  statuses: readonly OrderStatusValue[];
+  /** Case-insensitive substring over order number and buyer email; null = no search. */
+  search: string | null;
 }
 
 const ORDER_PREVIEW_ITEMS = 3;
@@ -550,6 +564,34 @@ function toOrderListPage(rows: OrderListRow[], take: number): OrderListPage {
   };
 }
 
+/**
+ * The staff dashboard's `where` (P6a, #158) — status filter AND search.
+ *
+ * `vendorId` leads, so the existing @@index([vendorId, status, createdAt]) from
+ * P3b still serves the list. The search is a deliberate unindexed scan across
+ * this vendor's rows: order number, guest email, and the member's email through
+ * the relation. A trigram index would need `pg_trgm` and `$queryRaw`, which
+ * CLAUDE.md forbids in application code — the same wall P2's product search and
+ * P3d's list matching hit, resolved the same way (ship the honest version; let
+ * real volume justify the index work). Tracked for when it matters.
+ */
+function staffOrderWhere(vendorId: string, filter: StaffOrderFilter) {
+  const search = filter.search;
+  return {
+    vendorId,
+    status: { in: [...filter.statuses] },
+    ...(search
+      ? {
+          OR: [
+            { orderNumber: { contains: search, mode: "insensitive" as const } },
+            { guestEmail: { contains: search, mode: "insensitive" as const } },
+            { user: { email: { contains: search, mode: "insensitive" as const } } },
+          ],
+        }
+      : {}),
+  };
+}
+
 export interface OrderRepository {
   createOrder(input: PlaceOrderInput): Promise<PlacedOrder>;
   /** Scoped to the current vendor, so one vendor's number never resolves on another's host. */
@@ -567,11 +609,26 @@ export interface OrderRepository {
    */
   getForUser(orderNumber: string, userId: string): Promise<OrderDetail | null>;
   /**
-   * This vendor's actionable orders, newest first (P4b). Same keyset shape as
-   * listForUser — never OFFSET — because a worklist that silently stops at row
-   * N hides the order nobody packs.
+   * This vendor's orders matching `filter`, newest first (P4b; filter/search
+   * added in P6a). Same keyset shape as listForUser — never OFFSET — because a
+   * worklist that silently stops at row N hides the order nobody packs.
    */
-  listForStaff(opts: { take: number; cursor?: string }): Promise<OrderListPage>;
+  listForStaff(opts: {
+    take: number;
+    cursor?: string;
+    filter: StaffOrderFilter;
+  }): Promise<OrderListPage>;
+  /** How many orders are awaiting staff action — the /staff landing figure (P6a). */
+  countForStaff(): Promise<number>;
+  /**
+   * One order for this vendor's staff (P6a, #158). A THIRD read beside
+   * getByOrderNumber and getForUser, and deliberately neither of their rules:
+   * scoped by `vendorId` and NOT by owner, because staff authority comes from
+   * requireVendorRole plus the vendor in the WHERE — so a guest order (no owner
+   * at all) and another member's order are both legitimately visible to the
+   * staff of the vendor that must pack them.
+   */
+  getForStaff(orderNumber: string): Promise<StaffOrderDetail | null>;
   /**
    * Request-scoped wrapper over `advanceOrderStatus` (P4b), resolving prisma and
    * the current vendor here so the feature layer never touches lib/db — the
@@ -699,12 +756,12 @@ export function getOrderRepository(): OrderRepository {
       return { ...summary, timeline: buildTimeline(statusEvents) };
     },
 
-    async listForStaff({ take, cursor }) {
+    async listForStaff({ take, cursor, filter }) {
       // Same keyset shape as listForUser, but scoped by status instead of by
       // owner — and served by Order's existing @@index([vendorId, status,
       // createdAt]) from P3b, so no index work was needed for this slice.
       const rows = await prisma.order.findMany({
-        where: { vendorId: await vendorId(), status: { in: [...STAFF_QUEUE_STATUSES] } },
+        where: staffOrderWhere(await vendorId(), filter),
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: take + 1,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -712,6 +769,76 @@ export function getOrderRepository(): OrderRepository {
       });
 
       return toOrderListPage(rows, take);
+    },
+
+    async countForStaff() {
+      return prisma.order.count({
+        where: { vendorId: await vendorId(), status: { in: [...STAFF_QUEUE_STATUSES] } },
+      });
+    },
+
+    async getForStaff(orderNumber) {
+      const order = await prisma.order.findFirst({
+        // vendorId only. No userId — see the interface note: a guest order has
+        // no owner and still has to be packed by this vendor's staff.
+        where: { orderNumber, vendorId: await vendorId() },
+        select: {
+          orderNumber: true,
+          status: true,
+          createdAt: true,
+          subtotalPence: true,
+          discountPence: true,
+          deliveryFeePence: true,
+          totalPence: true,
+          guestEmail: true,
+          user: { select: { email: true } },
+          items: {
+            select: {
+              productName: true,
+              unitPricePence: true,
+              quantity: true,
+              lineTotalPence: true,
+            },
+          },
+          address: {
+            select: {
+              recipientName: true,
+              phone: true,
+              line1: true,
+              line2: true,
+              city: true,
+              postcode: true,
+              notes: true,
+            },
+          },
+          // `note` and the actor ARE selected here — the inverse of getForUser,
+          // and the whole point of the staff view. P4b has been writing
+          // createdByUserId since #125 with nothing able to read it.
+          statusEvents: {
+            select: {
+              status: true,
+              createdAt: true,
+              note: true,
+              createdBy: { select: { name: true } },
+            },
+          },
+        },
+      });
+      if (!order) return null;
+
+      const { statusEvents, guestEmail, user, ...summary } = order;
+      return {
+        ...summary,
+        buyerEmail: guestEmail ?? user?.email ?? null,
+        timeline: buildStaffTimeline(
+          statusEvents.map((event) => ({
+            status: event.status,
+            createdAt: event.createdAt,
+            note: event.note,
+            actorName: event.createdBy?.name ?? null,
+          })),
+        ),
+      };
     },
 
     async advance(orderNumber, toStatus, actor) {
