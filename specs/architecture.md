@@ -4,7 +4,7 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.11.0"
+version: "1.12.0"
 updated: 2026-08-12
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
@@ -188,6 +188,15 @@ model Category {
   products  Product[]
   @@index([parentId, isActive])
 }
+// THE CATEGORY TREE IS TWO LEVELS DEEP. `parent`/`children` is a self-relation
+// with no depth limit in the schema, but a category's parent must itself be
+// top-level — enforced in lib/repositories/categories.ts (P6b1, #159), not by a
+// constraint. Two reasons it is a rule rather than a preference: the storefront
+// can only render two levels (listTopLevel() plus getBySlug()'s single children
+// fetch), so a grandchild would be invisible rather than nested; and capping the
+// depth makes a cycle — a category reachable from itself — unrepresentable,
+// with no recursive walk to get wrong. Anything that writes a Category must
+// preserve this.
 
 model Product {
   id          String         @id @default(uuid())
