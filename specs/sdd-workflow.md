@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.6.0"
+version: "2.7.0"
 updated: 2026-08-12
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -320,6 +320,19 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   reads `.dev.vars`; `prisma migrate`/`db:seed` and any local inspection script read `.env`. When
   those point at different Neon projects, a live check silently validates against a database the app
   isn't using. Compare both before starting, not after a confusing result.
+- **A real browser signing in against `npm run preview` currently 403s with `Invalid origin`** —
+  `lib/auth-origin.ts` drops the request port and mis-resolves the scheme when building Better
+  Auth's trusted origin, which only matters on a non-default port (preview is always `8787`). This
+  is a **pre-existing, unrelated, local-preview-only defect** (#176, filed at P6b2), not evidence the
+  slice under test is broken — staging/production are unaffected (default port, Cloudflare always
+  sets `x-forwarded-proto` correctly there). Confirm with a direct request before assuming the
+  artifact is at fault: `Origin: http://localhost:8787` on `/api/auth/sign-in/email` gets `403`;
+  the same request with `Origin: http://localhost` (no port) gets `200`. Until #176 lands, driving
+  an interactive browser sign-in against local preview needs a temporary, **uncommitted** local
+  patch to `lib/auth-origin.ts` (keep the port; don't trust `x-forwarded-proto` locally), reverted
+  before the branch is touched again — headless `node:http` calls with a manually-obtained session
+  cookie sidestep the bug entirely and remain the right tool for every row that doesn't specifically
+  need a real browser (CORS, canvas/EXIF, on-screen rendering).
 - CI (`gates`) is the real Gate 3 — don't report a slice done until it's actually green on GitHub,
   not "should be green based on local output."
 
