@@ -1,5 +1,6 @@
 import { getPrisma } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
+import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import {
   evaluateCode,
   normaliseCode,
@@ -175,11 +176,6 @@ export async function recordCodeRedemption(
     if (isUniqueViolation(error)) throw new DiscountClaimError("CUSTOMER_LIMIT_REACHED");
     throw error;
   }
-}
-
-/** Prisma's unique-constraint failure, without importing the client's error classes. */
-function isUniqueViolation(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "P2002";
 }
 
 /**

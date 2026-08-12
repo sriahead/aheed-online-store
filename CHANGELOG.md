@@ -7,6 +7,41 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P6b1 — catalogue management: product, category & inventory writes** (#159,
+  `specs/2026-08-12-p6b1-catalogue-writes/`): the first admin **write** path to the catalogue.
+  `lib/repositories/products.ts` and `categories.ts` were read-only — every exported method a query
+  — so products, categories and inventory existed only because `prisma/seed.ts` created them, and
+  the owner could not add a product, correct a price or mark something out of stock without a
+  developer and a re-seed. Product and category **create + edit** plus inventory editing now live
+  inside P6a's `(admin)` panel at `/staff/products` and `/staff/categories`, ADMIN-only, matching
+  `/staff/loyalty` and `/staff/discounts`. **No schema change and no migration** — every field
+  written already existed; what was missing was never the columns. Admin routes key on **`id`, not
+  `slug`**, because this slice makes a slug editable for the first time and an admin URL that
+  changes when you rename the thing it points at breaks every bookmark. **Admin reads are separate
+  functions, not a flag on the storefront's** — every storefront read filters `isActive: true`,
+  which is right there and fatal here, since the owner's first need after hiding a product is to
+  find it again; an `includeInactive` boolean in the storefront hot path would leak hidden products
+  to shoppers on one wrong call. **`categoryId` is untrusted**: `Product.categoryId`'s foreign key
+  carries no vendor, so a write resolves the category *scoped to the acting vendor* and refuses
+  otherwise — the same defence P3d used for its review-form product ids. Every field rule is pure
+  and DB-free in `lib/catalogue-form.ts` (28 unit tests), including slug derivation from the name
+  and the rule that a "was" price must be strictly above the price it advertises a saving against.
+  **Nothing is deletable** — `isActive` is the only removal, for both models: `Product` is
+  referenced by `OrderItem`, `CartItem` and `Review`, so a hard delete would either fail on the
+  foreign key or destroy order history (same posture P5b took for discount codes). **Deactivating a
+  category with active products or sub-categories is refused, naming the blockers**, rather than
+  cascading — one click quietly rewriting rows the owner never saw is the wrong default with no
+  undo. **A category's parent must itself be top-level**, capping the tree at the two levels the
+  storefront can actually render and making a cycle unrepresentable; recorded in
+  `specs/architecture.md` (1.12.0) beside the model, since the schema's self-relation is unbounded.
+  Creating a product creates its `Inventory` row in the same transaction, and updates upsert it, so
+  "out of stock" and "never given stock" stop being indistinguishable. `isUniqueViolation` extracted
+  to `lib/repositories/prisma-errors.ts` and shared with `discounts.ts` — slug collisions become a
+  routine human error once a person types slugs. Product image upload is deliberately **not** here:
+  it is #167 (P6b2), the only part of P6b that is new infrastructure and the only part blocked on
+  owner-provisioned bucket CORS and Worker `S3_*` secrets; the form shows existing images read-only
+  and `lib/storage.ts` is untouched. Also deferred with issues filed: a STAFF-visible stock-only
+  surface (**#168**) and search on the admin product list (**#169**).
 - **P6a — admin panel shell & order dashboard** (#158, `specs/2026-08-12-p6a-admin-shell-orders/`):
   the first P6 slice. Before this, `/staff/orders`, `/staff/loyalty` and `/staff/discounts` were
   three orphan pages with no index, no navigation between them, and the *shopper's* header rendered
