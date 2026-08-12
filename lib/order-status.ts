@@ -146,6 +146,70 @@ export function nextStatus(from: string): string | null {
   return LEGAL_TRANSITIONS[from]?.[0] ?? null;
 }
 
+/**
+ * The statuses a staff member can actually act on — the default worklist.
+ *
+ * Moved here from lib/repositories/orders.ts in P6a (#158) so the pure
+ * query parser (lib/staff-orders-query.ts) can reach it without importing a
+ * repository. It was always a status rule, not a data-access concern.
+ *
+ * Deliberately the inverse of P4a's customer list, which is unfiltered: a
+ * shopper hunting a failed payment most needs the PENDING_PAYMENT row nobody
+ * wants to show them, whereas a staff QUEUE is a worklist. PENDING_PAYMENT is
+ * Stripe's to resolve and no staff action can touch it; DELIVERED and CANCELLED
+ * are finished. P6a keeps this as the DEFAULT rather than widening it — an
+ * explicit ?status= is what reaches the rest.
+ */
+export const STAFF_QUEUE_STATUSES = ["CONFIRMED", "OUT_FOR_DELIVERY"] as const;
+
+// ---- Staff-facing timeline (P6a, #158) -------------------------------------
+
+/**
+ * One status change as staff see it — WITH the note and the acting user.
+ *
+ * A separate type from `StatusEventInput` on purpose. P4a's guarantee is that an
+ * internal note cannot reach a customer's order page *structurally*: the
+ * customer-facing `StatusEventInput` and `TimelineEntry` have no `note` field at
+ * all, and `getForUser` does not select the column. Widening those to serve this
+ * page would have replaced a structural impossibility with a filtering
+ * convention someone must remember. Two types, two builders, one guarantee
+ * intact.
+ */
+export interface StaffStatusEventInput extends StatusEventInput {
+  note: string | null;
+  /** Display name of whoever caused the transition; null for system events. */
+  actorName: string | null;
+}
+
+export interface StaffTimelineEntry extends TimelineEntry {
+  note: string | null;
+  actorName: string | null;
+}
+
+/**
+ * The staff view of an order's history: every event, oldest first, carrying the
+ * note and the actor.
+ *
+ * Deliberately does NOT collapse consecutive identical statuses the way
+ * `buildTimeline` does. That collapse exists to spare a shopper the noise of a
+ * webhook retry writing CONFIRMED twice; for staff, two rows written for the
+ * same status IS the diagnostic information — hiding it would make an audit
+ * trail lie by omission. This is the first read of P4b's
+ * `OrderStatusEvent.createdByUserId`, which shipped with nothing able to
+ * display it.
+ */
+export function buildStaffTimeline(events: StaffStatusEventInput[]): StaffTimelineEntry[] {
+  return [...events]
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    .map((event) => ({
+      status: event.status,
+      label: orderStatusLabel(event.status),
+      at: event.createdAt,
+      note: event.note,
+      actorName: event.actorName,
+    }));
+}
+
 /** Same, with the time — the timeline needs to distinguish same-day steps. */
 export function formatOrderDateTime(date: Date): string {
   return new Intl.DateTimeFormat("en-GB", {

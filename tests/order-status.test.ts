@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  buildStaffTimeline,
   buildTimeline,
   canTransition,
   formatOrderDate,
@@ -7,6 +8,7 @@ import {
   isOrderStatus,
   nextStatus,
   orderStatusLabel,
+  type StaffStatusEventInput,
   type StatusEventInput,
 } from "@/lib/order-status";
 
@@ -211,5 +213,57 @@ describe("isOrderStatus", () => {
     for (const forged of ["BANANA", "", "confirmed", "DELIVERED "]) {
       expect(isOrderStatus(forged)).toBe(false);
     }
+  });
+});
+
+// ---- Staff timeline (P6a, #158) --------------------------------------------
+
+describe("buildStaffTimeline", () => {
+  const staffEvent = (
+    status: string,
+    iso: string,
+    note: string | null = null,
+    actorName: string | null = null,
+  ): StaffStatusEventInput => ({ status, createdAt: at(iso), note, actorName });
+
+  it("orders events oldest first regardless of input order", () => {
+    const timeline = buildStaffTimeline([
+      staffEvent("DELIVERED", "2026-08-03T10:00:00Z"),
+      staffEvent("CONFIRMED", "2026-08-01T10:00:00Z"),
+      staffEvent("OUT_FOR_DELIVERY", "2026-08-02T10:00:00Z"),
+    ]);
+    expect(timeline.map((e) => e.status)).toEqual(["CONFIRMED", "OUT_FOR_DELIVERY", "DELIVERED"]);
+  });
+
+  it("carries the note and the acting user through to the entry", () => {
+    const [entry] = buildStaffTimeline([
+      staffEvent("OUT_FOR_DELIVERY", "2026-08-02T10:00:00Z", "Left with neighbour.", "Sam Staff"),
+    ]);
+    expect(entry.note).toBe("Left with neighbour.");
+    expect(entry.actorName).toBe("Sam Staff");
+    expect(entry.label).toBe("Out for delivery");
+  });
+
+  it("keeps system events, which carry no actor", () => {
+    const [entry] = buildStaffTimeline([
+      staffEvent("CONFIRMED", "2026-08-01T10:00:00Z", "Payment confirmed.", null),
+    ]);
+    expect(entry.actorName).toBeNull();
+    expect(entry.note).toBe("Payment confirmed.");
+  });
+
+  it("does NOT collapse consecutive identical statuses, unlike the customer timeline", () => {
+    const events = [
+      staffEvent("CONFIRMED", "2026-08-01T10:00:00Z", "Payment confirmed."),
+      staffEvent("CONFIRMED", "2026-08-01T10:00:05Z", "Duplicate webhook delivery."),
+    ];
+    // The shopper is spared the retry noise...
+    expect(buildTimeline(events)).toHaveLength(1);
+    // ...but for staff the repeat IS the diagnostic information.
+    expect(buildStaffTimeline(events)).toHaveLength(2);
+  });
+
+  it("returns an empty timeline for no events", () => {
+    expect(buildStaffTimeline([])).toEqual([]);
   });
 });
