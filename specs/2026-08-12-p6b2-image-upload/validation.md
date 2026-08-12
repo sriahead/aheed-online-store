@@ -16,7 +16,7 @@
    `http://localhost:8787` resolves host `localhost`, which matches no `VendorDomain`; the
    single-vendor fallback does not fire because staging has two active vendors. Add the row:
    ```
-   npx tsx -e "import {PrismaClient} from '@prisma/client'; import 'dotenv/config'; const p=new PrismaClient(); const v=await p.vendor.findFirst({where:{slug:'aheed'},select:{id:true}}); await p.vendorDomain.upsert({where:{host:'localhost'},create:{vendorId:v.id,host:'localhost',isCanonical:false},update:{}}); console.log('localhost ->', v.id); await p.$disconnect();"
+   npx tsx -e "import {PrismaClient} from '@prisma/client'; import {PrismaNeon} from '@prisma/adapter-neon'; import 'dotenv/config'; const p=new PrismaClient({adapter:new PrismaNeon({connectionString:process.env.DATABASE_URL})}); const v=await p.vendor.findFirst({where:{slug:'aheed-food-centre'},select:{id:true}}); await p.vendorDomain.upsert({where:{host:'localhost'},create:{vendorId:v.id,host:'localhost',isCanonical:false},update:{}}); console.log('localhost ->', v.id); await p.$disconnect();"
    ```
    Safe and reversible: the staging Worker is reachable only through its custom domains, so no
    external request can arrive with `Host: localhost`. Remove it afterwards with
