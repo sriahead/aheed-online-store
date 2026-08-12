@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-08-06
+version: "1.1.0"
+updated: 2026-08-12
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -72,7 +72,10 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
 - Strict relational / 3NF, explicit foreign keys, provider-neutral Postgres types only.
 - **No `Json` columns / document storage** for domain data. **No raw SQL** in application code.
 - Money = **integer pence** + explicit currency. No floats, no `money` type.
-- Images: store a **relative key** (e.g. `products/{sku}/main.webp`), **never a URL**.
+- Images: store a **relative key** (e.g. `products/{productId}/{uuid}.webp`), **never a URL**.
+  Keys are **immutable** — replacing an image writes a new key and repoints the row, so a CDN purge
+  is never needed. (This line said `products/{sku}/main.webp` until P6b2; `Product` has no `sku`
+  field and the seed writes `products/{slug}/main.svg`, so the example matched nothing in the repo.)
 
 ## Storage (ADR-003)
 - Object storage via the **S3-compatible API only**, behind `lib/storage` (`StorageService` port).
@@ -165,6 +168,29 @@ issues for shipped slices are expected. The Status field's one-time UI rename
 (`scripts/provision-project.sh` manual steps) is **done** — all four options `Backlog` /
 `In Progress` / `In Review` / `Done` exist, so no board setup is outstanding.
 
+## Windows shell & file encoding (learned the hard way)
+- **Never rewrite a repo file through `Get-Content` / `Set-Content` on Windows PowerShell 5.1.**
+  `Get-Content -Raw` reads with the system ANSI codepage unless `-Encoding utf8` is passed, so every
+  non-ASCII character in a UTF-8 file (this repo's docs are full of em-dashes and arrows) is decoded
+  as mojibake and then written back **double-encoded** — `—` becomes `â€”` throughout. It also
+  rewrites line endings, so a two-line version bump lands as a 147-line diff. Hit in P6b2 bumping
+  front-matter on `architecture.md`, `tech-stack.md` and ADR-003; caught only because the diff
+  size was implausible, and fixed by `git checkout --` on all three and redoing the edits with the
+  Edit tool. **Use the Edit/Write tools for file content; keep PowerShell for git, npm and gh.**
+- **Check `git diff --numstat` after any scripted file rewrite.** A line count far larger than the
+  edit is the cheapest possible signal that an encoding or line-ending rewrite happened.
+- **`format:check` failing on dozens of untouched files is the `core.autocrlf` artifact, not drift.**
+  Confirm it the documented way — write a file's committed blob (`git show HEAD:<file>`) out with LF
+  endings and run `prettier --config .prettierrc.json --check` on it. **Do that in a directory
+  prettier can still resolve the config from, or pass `--config` explicitly**: checking a copy in a
+  temp directory silently falls back to prettier's *defaults* and reports failures that mean
+  nothing. CI on Linux is the authority.
+- **Anchor patterns when grepping an env file.** `DATABASE_URL` ends in `BASE_URL`, so a filter for
+  `BASE_URL` prints the Neon connection string, password included (#175). Prefer `^SEED_` over
+  `SEED_`, and prefer printing keys over lines.
+- `gh` args containing double quotes break native argument parsing in PS 5.1 (`accepts 1 arg(s),
+  received 8`). Write the body to a file and use `--body-file`.
+
 ## Dependency & version discipline (learned the hard way)
 - **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their
   declared semver ranges are looser than real compatibility. Locked today:
@@ -189,6 +215,21 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   (Next 16 removed that command).
 - `vitest.config.ts` must be `.mts` (or set `"type": "module"` in package.json) — vitest 4's native
   config loader warns/will error on ESM syntax in a file it loads as CommonJS.
+
+## Server Actions (`"use server"` files) — learned the hard way
+- **A `"use server"` file may export ONLY async functions — nothing else, not even a plain constant
+  used purely to seed `useActionState`.** The restriction is enforced at *runtime*, not build time:
+  `next build`, `tsc --noEmit`, and `npm test` all stay green with a violating file, because none of
+  them load the module through the flight-loader's action-dispatch path. The compiled bundle calls
+  `ensureServerEntryExports([...allExportsOfTheFile])` unconditionally the moment *any* action from
+  that file is dispatched — so a same-file value export (e.g. `export const initialFormState = {...}`
+  living next to the real actions "for convenience") makes **every** action in that file 500 for
+  **every** caller, real browser included, with `Error: A "use server" file can only export async
+  functions, found object`. First hit in P6b1 (#159) — `features/admin/catalogue.ts` exported
+  `initialCatalogueState` alongside `saveProduct`/`saveCategory`; nothing caught it until
+  `npm run preview`'s live write rows at Validate. Keep any such state constant in a plain module
+  (e.g. `lib/<feature>-form.ts`) and import it from the client component directly — never from the
+  `"use server"` file itself.
 
 ## Hard stops
 - Never invent infrastructure or credentials. If a resource/secret is missing, STOP and list what
