@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.5.2"
-updated: 2026-08-11
+version: "2.6.0"
+updated: 2026-08-12
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -30,12 +30,21 @@ ORIENT → PROPOSE → SPEC → BUILD → DOCUMENT (build notes)
                                         ↓
                                    VALIDATE ⇄ FIX
                                         ↓ (passes)
-                                      SHIP   → switch to Opus 5
+                                      SHIP
                                         ↓
                               DOCUMENT (final, incl. KMS)
                                         ↓
-                                     CLEAR → back to ORIENT
+                                     CLEAR  ← switch to Opus 5 → back to ORIENT
 ```
+
+**Why the switch sits after Document, not before.** Document (final) is reconciliation work —
+roadmap row, KMS rebuild, board sync — against a branch the current Sonnet 5 session already has
+full context on from Ship; it needs none of Opus's extra reasoning. Switching model *before* it, as
+this diagram previously showed, means the newly-switched Opus 5 session spends tokens re-orienting
+to that same context just to do reconciliation, then sits idle for the switch that actually matters:
+Opus is what the *next* loop's Orient/Propose/Spec/Build needs. Corrected 2026-08-12: the switch now
+sits at the second Clear, right before Orient, so Document runs on the model that's already warm and
+the next loop starts already on Opus 5 — one switch, spent where it's used.
 
 **Why the two Clears.** A context that just built something is the worst possible judge of whether
 it matches the spec — it remembers the intent, so it reads the intent into the code. Clearing before
@@ -366,13 +375,15 @@ named gates, but the part of this repo's actual history most prone to drift.
 - If a PR merges before a fix/follow-up commit lands, don't force-push or rewrite history to patch it
   in retroactively — open a tracking issue and land the fix as its own proper follow-up PR.
 
-Then **switch back to Opus 5** (`/model claude-opus-5`) for the final documentation pass.
+Then go straight to **Document (final)** — no model switch here. It runs on the same Sonnet 5
+session that just shipped.
 
 ## Document (final)
 
 The durable record of what actually shipped and what validation actually proved. Supersedes
 `build-notes.md` where they disagree — the notes describe intent at build time, this describes
-verified reality.
+verified reality. **Runs on the same model as Ship (Sonnet 5), not a freshly-switched Opus 5** — see
+"Why the switch sits after Document, not before" above.
 
 - Rebuild the KMS index (`npm run kms:build-index`) and re-validate front-matter
   (`npm run kms:validate`). **The index footer records the commit it was built from, so a post-ship
@@ -401,9 +412,14 @@ branch, not a PR of their own. Gate 4 requires a CHANGELOG diff on every branch,
 needs its own CHANGELOG entry to be pushable at all — worth it for a real correction, wasteful for
 an index footer.
 
+When this stage is done, tell the user to **switch to Opus 5** (`/model claude-opus-5`) and *then*
+run `/clear` — the assistant can do neither itself. Switching here, not right after Ship, means the
+model that does the reconciliation work is the one already holding the context, and the model that
+starts the next loop's Orient/Propose/Spec/Build is warm rather than freshly switched and idle.
+
 ## Clear (post-documentation)
 
-Second hard reset, closing the loop. **Manual — the user runs `/clear`.**
+Second hard reset, closing the loop. **Manual — the user switches to Opus 5, then runs `/clear`.**
 
 Before clearing, confirm committed (or deliberately carried forward as uncommitted working-tree
 changes, noted for the next branch):
@@ -412,5 +428,5 @@ changes, noted for the next branch):
 - [ ] Roadmap updated
 - [ ] Every deferred item is a tracked issue, not a memory
 
-Then return to **Orient** for the next slice — which, coming out of a Clear, means reading the repo
-rather than resuming a conversation.
+Then return to **Orient** for the next slice, already on Opus 5 — which, coming out of a Clear,
+means reading the repo rather than resuming a conversation.

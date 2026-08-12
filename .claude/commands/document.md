@@ -5,8 +5,9 @@ description: "Final durable documentation for the shipped, validated artifact �
 Write the durable documentation for the artifact that just shipped.
 
 Follow the **Document (final)** stage of `specs/sdd-workflow.md` (read it if not already in
-context). This runs **after** `/ship`, on Opus 5. It supersedes `build-notes.md` where they
-disagree — the notes describe intent at build time, this describes verified reality.
+context). This runs **after** `/ship`, on the **same Sonnet 5 session** — no model switch to start
+it. It supersedes `build-notes.md` where they disagree — the notes describe intent at build time,
+this describes verified reality.
 
 **Gate 4 is not here.** The `CHANGELOG.md` entry belongs to `/build-notes`, because it must be on
 the branch before it merges. If you reach this stage and the CHANGELOG entry is missing, the branch
@@ -38,5 +39,8 @@ branch, not a PR of their own. Gate 4 requires a CHANGELOG diff on every branch,
 needs its own CHANGELOG entry to be pushable at all — worth it for a real correction, wasteful for
 an index footer.
 
-When done, tell the user it's safe to `/clear` and return to `/orient` — you cannot clear context
-yourself.
+When done, tell the user to **switch to Opus 5** (`/model claude-opus-5`) and *then* `/clear` and
+return to `/orient` — you cannot switch model or clear context yourself. The switch belongs here,
+not right after `/ship`: this stage's reconciliation work needs the context this session already
+has, not Opus's extra reasoning, so switching earlier would just spend orientation tokens on a
+model that then sits idle through this stage.
