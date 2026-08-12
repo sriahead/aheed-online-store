@@ -4,8 +4,8 @@ title: Tech Stack
 audience: [dev]
 type: doc
 status: approved
-version: "1.2.0"
-updated: 2026-08-10
+version: "1.3.0"
+updated: 2026-08-12
 visibility: internal
 summary: Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal.
 tags: [tech-stack, guardrails]
@@ -52,11 +52,14 @@ environment-configured seam.
 
 ## Object storage (ADR-003 — S3-compatible abstraction)
 
-- **Cloudflare R2**, accessed **only through the standard S3-compatible API** (AWS SDK v3 S3
-  client). **No R2-specific SDK or feature.**
+- **Cloudflare R2**, accessed **only through the standard S3-compatible API** — signed with
+  `aws4fetch`, not the AWS SDK v3 S3 client, for Worker bundle size. **No R2-specific SDK or
+  feature.**
 - All images and large files live in object storage behind an **abstracted `StorageService`**
-  (port/adapter). The database stores **relative keys only** (e.g. `products/{sku}/main.webp`),
-  **never full URLs**; the CDN base is resolved at runtime from `CDN_BASE_URL`.
+  (port/adapter). The database stores **relative keys only** (e.g.
+  `products/{productId}/{uuid}.webp`), **never full URLs**; the CDN base is resolved at runtime from
+  `CDN_BASE_URL`. **Product image keys are immutable** — a replacement writes a new key rather than
+  overwriting, so no CDN purge is ever needed (P6b2).
 - Switching to AWS S3, GCP Cloud Storage, MinIO, or any S3-compatible provider requires **only env
   changes** (`S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION`,
   `CDN_BASE_URL`) plus an object copy — no code or DB-row changes.
