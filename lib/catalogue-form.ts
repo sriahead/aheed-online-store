@@ -50,6 +50,29 @@ export interface CategoryFormValues {
   isActive: boolean;
 }
 
+export interface CatalogueFormState {
+  error: string | null;
+  /** The control to point at, matching the input's `name`. Null for whole-form errors. */
+  field: string | null;
+  saved: boolean;
+}
+
+/**
+ * The initial `useActionState` value for both catalogue forms.
+ *
+ * Lives here, not in features/admin/catalogue.ts, because that file is
+ * `"use server"` — every export of such a file must be an async function
+ * (Next throws `ensureServerEntryExports`'s "found object" error the moment
+ * ANY action in the file is dispatched otherwise, since the whole module's
+ * export set is validated together, not just the one being called). A plain
+ * state constant has no business there regardless of that constraint.
+ */
+export const initialCatalogueState: CatalogueFormState = {
+  error: null,
+  field: null,
+  saved: false,
+};
+
 /** First and last code point of Unicode's Combining Diacritical Marks block. */
 const COMBINING_MARK_FIRST = 0x300;
 const COMBINING_MARK_LAST = 0x36f;

@@ -146,3 +146,32 @@ Ranked by where I'd look first. **Everything here is unexercised against a real 
    never touched — the known CRLF false positive. I verified my own files by normalising line
    endings and fixed the four with genuine issues. **CI on Linux is the authority**; if it disagrees
    with this, believe CI.
+
+## Fix — the write path was completely broken (found at Validate, item 1 above was right to flag it)
+
+`npm run preview` proved every single `saveProduct`/`saveCategory` submission — real form or
+otherwise — returned HTTP 500. Root cause: `features/admin/catalogue.ts` is `"use server"`, and
+besides the two actions it also exported `initialCatalogueState`, a plain object. Next requires
+every export of a `"use server"` file to be an async function; the compiled bundle calls
+`ensureServerEntryExports([saveProduct, saveCategory, initialCatalogueState])` unconditionally at
+module load (`node_modules/next/dist/build/webpack/loaders/next-flight-loader/action-validate.js`),
+so loading the module for *either* action always threw, independent of transport or request
+shape — confirmed by reading the compiled Worker chunk directly, not inferred from one failing
+request.
+
+**Fix:** moved `CatalogueFormState` and `initialCatalogueState` out of `features/admin/catalogue.ts`
+into `lib/catalogue-form.ts` — the pure, DB-free module they conceptually belong in anyway, matching
+R1's posture. The `"use server"` file now exports only `saveProduct` and `saveCategory`.
+`components/staff/ProductForm.tsx` and `CategoryForm.tsx` import `initialCatalogueState` from
+`lib/catalogue-form` instead of `features/admin/catalogue`; `saveProduct`/`saveCategory` are
+unchanged imports. No behavioural change to either action's logic.
+
+**Re-verified live**, not just by re-reading code: rebuilt, re-signed-in as `demo-admin`, resubmitted
+the exact product-create request that previously 500'd — it now 303-redirects to the new product's
+edit page, and the created row reads back with the correct name and the correctly-derived slug
+(`validation-rice-r3`). Test row deleted afterward.
+
+This was invisible to `npm run build`, `npx tsc --noEmit`, and `npm test` — none of them load the
+action module through the flight-loader's runtime path, so the whole pre-flight suite stayed green
+throughout. Only exercising the actual write caught it. Worth remembering next time a `"use server"`
+file grows a same-file constant "for convenience."

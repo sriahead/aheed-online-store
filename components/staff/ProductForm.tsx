@@ -3,7 +3,8 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { Save } from "lucide-react";
-import { saveProduct, initialCatalogueState } from "@/features/admin/catalogue";
+import { saveProduct } from "@/features/admin/catalogue";
+import { initialCatalogueState } from "@/lib/catalogue-form";
 import type { AdminProductDetail } from "@/lib/repositories/products";
 import type { AdminCategoryRow } from "@/lib/repositories/categories";
 

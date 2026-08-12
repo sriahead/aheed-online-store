@@ -9,6 +9,7 @@ import {
   parseCategoryForm,
   parseProductForm,
   readForm,
+  type CatalogueFormState,
 } from "@/lib/catalogue-form";
 import {
   createProductForVendor,
@@ -38,19 +39,6 @@ import { createCategoryForVendor, updateCategoryForVendor } from "@/lib/reposito
  * FormData, Prisma or sessions; these functions are the wiring between it and
  * the repositories, and deliberately hold no rules of their own.
  */
-
-export interface CatalogueFormState {
-  error: string | null;
-  /** The control to point at, matching the input's `name`. Null for whole-form errors. */
-  field: string | null;
-  saved: boolean;
-}
-
-export const initialCatalogueState: CatalogueFormState = {
-  error: null,
-  field: null,
-  saved: false,
-};
 
 function refusal(status: number, subject: string): CatalogueFormState {
   return {
