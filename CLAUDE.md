@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-08-06
+version: "1.1.0"
+updated: 2026-08-12
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -189,6 +189,21 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   (Next 16 removed that command).
 - `vitest.config.ts` must be `.mts` (or set `"type": "module"` in package.json) — vitest 4's native
   config loader warns/will error on ESM syntax in a file it loads as CommonJS.
+
+## Server Actions (`"use server"` files) — learned the hard way
+- **A `"use server"` file may export ONLY async functions — nothing else, not even a plain constant
+  used purely to seed `useActionState`.** The restriction is enforced at *runtime*, not build time:
+  `next build`, `tsc --noEmit`, and `npm test` all stay green with a violating file, because none of
+  them load the module through the flight-loader's action-dispatch path. The compiled bundle calls
+  `ensureServerEntryExports([...allExportsOfTheFile])` unconditionally the moment *any* action from
+  that file is dispatched — so a same-file value export (e.g. `export const initialFormState = {...}`
+  living next to the real actions "for convenience") makes **every** action in that file 500 for
+  **every** caller, real browser included, with `Error: A "use server" file can only export async
+  functions, found object`. First hit in P6b1 (#159) — `features/admin/catalogue.ts` exported
+  `initialCatalogueState` alongside `saveProduct`/`saveCategory`; nothing caught it until
+  `npm run preview`'s live write rows at Validate. Keep any such state constant in a plain module
+  (e.g. `lib/<feature>-form.ts`) and import it from the client component directly — never from the
+  `"use server"` file itself.
 
 ## Hard stops
 - Never invent infrastructure or credentials. If a resource/secret is missing, STOP and list what

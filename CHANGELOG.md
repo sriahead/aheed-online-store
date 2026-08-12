@@ -132,6 +132,19 @@ every branch merges.
   sits at the *end* of Document (final), immediately before the second `/clear`, so Document runs on
   the already-warm model and the next loop's Orient starts already on Opus 5. `CLAUDE.md` and the
   `/ship`/`/document` command files updated to match.
+- **P6b1 closeout docs.** `specs/roadmap.md` (1.19.0) gains P6b1's slice row and its promotion row.
+  A real defect was found and fixed **before** the slice ever reached `staging`: the write path's
+  `"use server"` file (`features/admin/catalogue.ts`) also exported a plain object
+  (`initialCatalogueState`) alongside its two actions, and Next validates a `"use server"` file's
+  *entire* export set together whenever any one action dispatches — so every product/category write
+  500'd, for any caller, with `next build`/`tsc`/`npm test` all staying green throughout (none of
+  them load the module through the flight-loader's runtime dispatch path). Only `npm run preview`'s
+  live write rows caught it. Fixed by moving the constant into `lib/catalogue-form.ts`; re-validated
+  live in full afterward, with every write-path requirement re-proven against real Postgres on
+  staging rather than just re-read. `CLAUDE.md` (1.1.0) gains a new "Server Actions" section
+  recording the trap so it isn't rediscovered. **P6b1 promoted** (PR #171, merge `a577697`),
+  carrying P6a's still-unpromoted Document-final closeout (#166) along with it — no migration. P6
+  stays **open**: P6b2 (#167, product image upload) is next.
 - **The order confirmation email and order-detail pages labelled the combined discount line "Loyalty
   points" unconditionally**, unchanged from P5a — so as of this slice, an order discounted by a code
   alone (no points touched) rendered a line claiming the shopper's loyalty balance had been spent.
