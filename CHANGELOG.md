@@ -7,6 +7,45 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P6a — admin panel shell & order dashboard** (#158, `specs/2026-08-12-p6a-admin-shell-orders/`):
+  the first P6 slice. Before this, `/staff/orders`, `/staff/loyalty` and `/staff/discounts` were
+  three orphan pages with no index, no navigation between them, and the *shopper's* header rendered
+  above each — reachable only by typing the URL. A new **`app/(admin)/` route group** with its own
+  layout makes them one navigable panel; route groups are URL-invisible, so **every path is
+  unchanged**. The new layout re-carries the two things the storefront layout had been silently
+  providing: the **ADR-004 slice 3b tenant gate** (`getCurrentVendorId()` *throws* on an
+  unresolvable host, so a layout without the `/coming-soon` redirect turns an unknown host into a
+  500 — `specs/architecture.md` now records the gate as a per-layout obligation, not a property of
+  one file) and the **slice 4 brand tokens**, extracted to `lib/vendor-theme.ts` so two layouts
+  cannot drift apart on the same palette. The layout's role lookup drives **navigation only** — a
+  layout is not an authorization boundary in the App Router, so every page still calls
+  `requireVendorRole` with its own roles and every action re-checks independently. Adds a `/staff`
+  landing page. **The order dashboard supersedes P4b's deliberate stopgap** (#129): with no query
+  string it is still *exactly* P4b's actionable queue — the packing floor's default does not move —
+  while `?status=` (including `?status=all`) and `?q=` reach the rest, so a delivered order from
+  last week is findable at all. An absent **or unrecognised** status both fall back to the queue
+  rather than widening it, and the pagination link carries the **normalised** value, never the raw
+  input, so a typo cannot propagate through paging; all of it lives in a pure, DB-free
+  `lib/staff-orders-query.ts`. Search spans order number, guest email and a member's email.
+  **A per-order detail view at `/staff/orders/{orderNumber}`** — the first staff have ever had —
+  served by `getForStaff()`, a **third** order read beside `getByOrderNumber` (P3b's capability-URL
+  rule) and `getForUser` (P4a's owner-only rule) and deliberately neither: vendor-scoped, *not*
+  owner-scoped, so a guest order with no owner is visible to the staff who must pack it while
+  another vendor's number resolves to nothing. It is the **first reader of
+  `OrderStatusEvent.createdByUserId`**, which P4b shipped with nothing able to display it.
+  **P4a's no-note guarantee is preserved structurally rather than by filtering**: `buildTimeline`
+  and `StatusEventInput` still have no `note` field at all, and the staff view gets its own builder,
+  its own entry type and its own repository select — so a note reaching a shopper's order page would
+  require changing three things, not forgetting one. Unlike the customer timeline it does **not**
+  collapse consecutive identical statuses, because for staff that repeat is the diagnostic
+  information. `STAFF_QUEUE_STATUSES` moved to `lib/order-status.ts` (it was always a status rule,
+  not a data-access concern) so the pure parser can reach it without importing a repository.
+  **No schema change and no migration** — `Order`'s `@@index([vendorId, status, createdAt])` from
+  P3b already serves every list here. Deliberately excluded and tracked: catalogue management
+  (#159, P6b), bulk order actions (#162), and search indexing for real volume (#163); staff
+  cancellation and refunds remain ADR-005 territory. `docs/repo-structure.md`'s app-tree sketch,
+  which showed an `(admin)/admin/` group that was never built, corrected to the `(admin)/staff/`
+  group that now exists.
 - **P5b — discount codes: engine, checkout application & staff admin** (#145,
   `specs/2026-08-11-p5b-discount-codes/`): P5's second slice and the discounts half of the phase.
   Per-vendor `PERCENTAGE`/`FIXED_AMOUNT` codes with a validity window, minimum spend, a global usage
