@@ -32,8 +32,9 @@ Follow the **Ship** stage of `specs/sdd-workflow.md` (read it if not already in 
    delivery board — **not `Done`**. `Done` means *in production*: PRs merge into `staging`, which
    isn't the default branch, so `Closes #NN` doesn't fire and the issue stays open by design. It
    closes (→ `Done`) only when the work is promoted to `main`.
-10. Then tell the user to switch back to Opus 5 (`/model claude-opus-5`) for the final `/document`
-    pass — you cannot switch your own model.
+10. Then go straight to `/document` — **no model switch here.** `/document` runs on this same
+    Sonnet 5 session; the switch to Opus 5 happens at the end of *that* stage, immediately before
+    `/clear`, not now.
 
 Ship only what `/validate` actually passed. If validation was skipped, ran in the same context that
 built the artifact, or left rows unverified, say so before opening the PR rather than after.

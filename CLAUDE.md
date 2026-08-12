@@ -138,9 +138,12 @@ Most stages are slash commands (`/orient`, `/propose`, `/spec`, `/build`, `/buil
 Two rules the assistant **cannot** enforce for itself, so it must ask:
 - **`/clear` is user-invoked.** Before either Clear, everything load-bearing must be committed — a
   Clear destroys anything living only in the conversation. `/build-notes` exists to get it on disk.
-- **Model switches are user-invoked.** Sonnet 5 for the Validate/Fix/Ship half, Opus 5 for the
-  Orient/Propose/Spec/Build/Document half. If a stage is running on the wrong model, say so and ask
-  rather than proceeding quietly.
+- **Model switches are user-invoked.** Sonnet 5 for the Validate/Fix/Ship/Document (final) half,
+  Opus 5 for the Orient/Propose/Spec/Build half. The switch to Opus 5 happens at the *end* of
+  Document (final), immediately before the second `/clear` — not right after Ship — so Document
+  runs on the model that already has context from Ship rather than a freshly-switched one spending
+  tokens re-orienting to do reconciliation work. If a stage is running on the wrong model, say so
+  and ask rather than proceeding quietly.
 
 **Gate 4 lands in `/build-notes`, not the final `/document`** — the CHANGELOG entry must be on the
 branch before it merges, and Ship precedes the final documentation pass.

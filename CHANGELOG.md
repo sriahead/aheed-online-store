@@ -79,6 +79,24 @@ every branch merges.
   since P5a is live in production but dark.
 
 ### Fixed
+- **P6a closeout docs.** `specs/roadmap.md` (1.18.0) gains P6a's slice row and its promotion row,
+  written from what live validation actually proved: **every one of build-notes' "known-shaky"
+  areas came back clean**, most notably the search `where`'s `user.email` relation-filter leg
+  (17 real matches through the relation, not the scalar legs) and `mode: "insensitive"` both proven
+  against the real Neon driver adapter for the first time, and the advance-status Server Action
+  driven end-to-end through a genuine rendered `multipart/form-data` form. No defect found in the
+  artifact; two apparent test failures during validation traced back to the validation harness
+  itself (an `Origin`-header mismatch on a hand-built Server Actions POST; a literal-string check
+  that missed a React hydration comment). **P6a promoted** (PR #165, merge `035fa69`), carrying
+  P5's still-unpromoted closeout (#157) along with it — no migration, the simplest promotion of the
+  phase so far. P6 stays **open**: P6b (#159, catalogue management) is next.
+  `specs/sdd-workflow.md` (2.6.0) **corrects the model-switch point**: the loop had the switch to
+  Opus 5 landing right after Ship, so Document (final) — reconciliation work against a branch the
+  current session already has full context on — ran on a freshly-switched, cold Opus 5 session that
+  then spent tokens re-orienting to do work that didn't need Opus's extra reasoning. The switch now
+  sits at the *end* of Document (final), immediately before the second `/clear`, so Document runs on
+  the already-warm model and the next loop's Orient starts already on Opus 5. `CLAUDE.md` and the
+  `/ship`/`/document` command files updated to match.
 - **The order confirmation email and order-detail pages labelled the combined discount line "Loyalty
   points" unconditionally**, unchanged from P5a — so as of this slice, an order discounted by a code
   alone (no points touched) rendered a line claiming the shopper's loyalty balance had been spent.
