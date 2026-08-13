@@ -31,6 +31,7 @@ export default async function StaffProductsPage({
 }: {
   searchParams: Promise<{ cursor?: string }>;
 }) {
+  const { cursor } = await searchParams;
   const auth = await requireVendorRole("ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
@@ -42,7 +43,6 @@ export default async function StaffProductsPage({
     );
   }
 
-  const { cursor } = await searchParams;
   const { items, nextCursor } = await listProductsForAdmin(auth.vendorId, {
     take: PAGE_SIZE,
     cursor,

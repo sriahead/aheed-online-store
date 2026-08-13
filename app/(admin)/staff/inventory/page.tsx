@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getProductRepository } from "@/lib/repositories/products";
@@ -34,7 +35,9 @@ export default async function InventoryPage(props: { searchParams?: Promise<{ q?
         <h1 className="text-2xl font-bold text-primary">Live Inventory & Availability</h1>
       </div>
 
-      <InventoryTable initialItems={page.items} cdnBaseUrl={env.CDN_BASE_URL ?? ""} />
+      <Suspense fallback={<div>Loading inventory...</div>}>
+        <InventoryTable initialItems={page.items} cdnBaseUrl={env.CDN_BASE_URL ?? ""} />
+      </Suspense>
     </main>
   );
 }

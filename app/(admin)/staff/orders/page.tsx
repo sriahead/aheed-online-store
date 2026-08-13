@@ -38,6 +38,7 @@ export default async function StaffOrdersPage({
 }: {
   searchParams: Promise<{ cursor?: string; status?: string; q?: string }>;
 }) {
+  const { cursor, status, q } = await searchParams;
   const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
@@ -50,7 +51,6 @@ export default async function StaffOrdersPage({
     );
   }
 
-  const { cursor, status, q } = await searchParams;
   const query = parseStaffOrdersQuery({ status, q });
   const { items, nextCursor } = await getOrderRepository().listForStaff({
     take: PAGE_SIZE,

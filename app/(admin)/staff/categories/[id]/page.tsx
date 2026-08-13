@@ -20,6 +20,7 @@ export const metadata: Metadata = { title: "Edit category" };
  * indistinguishable from one that doesn't exist.
  */
 export default async function EditCategoryPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const auth = await requireVendorRole("ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
@@ -31,7 +32,6 @@ export default async function EditCategoryPage({ params }: { params: Promise<{ i
     );
   }
 
-  const { id } = await params;
   const [category, categories] = await Promise.all([
     getCategoryForAdmin(auth.vendorId, id),
     listCategoriesForAdmin(auth.vendorId),

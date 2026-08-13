@@ -29,6 +29,7 @@ export const metadata: Metadata = { title: "Edit product" };
  * importing it would drag the signer into the browser bundle.
  */
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const auth = await requireVendorRole("ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
@@ -40,7 +41,6 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     );
   }
 
-  const { id } = await params;
   const [product, categories] = await Promise.all([
     getProductForAdmin(auth.vendorId, id),
     listCategoriesForAdmin(auth.vendorId),

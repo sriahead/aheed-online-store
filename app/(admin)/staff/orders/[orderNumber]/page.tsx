@@ -32,6 +32,7 @@ export default async function StaffOrderDetailPage({
 }: {
   params: Promise<{ orderNumber: string }>;
 }) {
+  const { orderNumber } = await params;
   const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
@@ -43,7 +44,6 @@ export default async function StaffOrderDetailPage({
     );
   }
 
-  const { orderNumber } = await params;
   const order = await getOrderRepository().getForStaff(orderNumber);
   if (!order) notFound();
 
