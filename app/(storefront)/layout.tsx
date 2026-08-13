@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/Header";
+import { CookieBanner } from "@/components/consent/CookieBanner";
 import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
 import { brandStyle } from "@/lib/vendor-theme";
 
@@ -9,17 +11,6 @@ import { brandStyle } from "@/lib/vendor-theme";
 // load @prisma/client/wasm. Same guard as every DB-touching route here.
 export const dynamic = "force-dynamic";
 
-// Renders the shared Header above every storefront page. Deliberately does NOT
-// wrap children in its own <main> — each page renders its own, and nesting
-// <main> is invalid.
-//
-// ADR-004 slice 3b: gate the tenant here. A request host with no resolvable vendor
-// is redirected to /coming-soon before any storefront page renders or queries.
-// `app/(admin)/layout.tsx` carries the SAME gate for the admin panel — the gate
-// belongs to each top-level layout, not to this file (P6a, #158).
-// ADR-004 slice 4: the resolved vendor's brand tokens come from lib/vendor-theme's
-// brandStyle(), shared with the admin layout. Plain wrapper div: full-width,
-// non-positioned — transparent to layout and the sticky header.
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
   const profile = await getCurrentVendorProfile();
   if (!profile) {
@@ -27,9 +18,23 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
   }
 
   return (
-    <div style={brandStyle(profile.primitives)}>
+    <div style={brandStyle(profile.primitives)} className="flex min-h-screen flex-col">
       <Header />
-      {children}
+      <div className="flex-1">{children}</div>
+      <footer className="border-t border-black/10 bg-white py-6 text-xs text-primary/70">
+        <div className="mx-auto flex max-w-5xl flex-col sm:flex-row items-center justify-between gap-4 px-4">
+          <p>© {new Date().getFullYear()} {profile.name}. All rights reserved.</p>
+          <div className="flex items-center gap-4 font-medium">
+            <Link href="/terms" className="hover:underline">
+              Terms of Service
+            </Link>
+            <Link href="/privacy" className="hover:underline">
+              Privacy Policy
+            </Link>
+          </div>
+        </div>
+      </footer>
+      <CookieBanner />
     </div>
   );
 }

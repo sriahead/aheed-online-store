@@ -7,6 +7,13 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P7a — UK compliance, operational gap closure, and UX hardening** (`specs/2026-08-13-p7a-compliance-hardening/`):
+  Delivers UK GDPR/PECR compliance, OWASP edge security headers, guest order tracking, slide-over cart drawer, staff bulk order transitions, and one-click reordering.
+  - **UK GDPR & PECR Cookie Consent**: `CookieBanner.tsx` component managing essential/optional cookies with host-scoped `aheed_cookie_consent` cookie. Legal Terms of Service (`/terms`) and Privacy Policy (`/privacy`) pages.
+  - **OWASP Security Headers**: Injection of HSTS, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, and `X-XSS-Protection` in `next.config.mjs`.
+  - **Guest Order Lookup**: `/orders/lookup` page allowing unauthenticated guest shoppers to track orders via Order Number + Email.
+  - **Slide-Over Cart Drawer**: `components/cart/CartDrawer.tsx` matching `docs/ui-ref` design mockup visual look and feel.
+  - **One-Click Reorder**: Reorder items Server Action on `/account/orders/[orderNumber]` page.
 - **P6b2 — product image upload via presigned PUT** (#167,
   `specs/2026-08-12-p6b2-image-upload/`): P6's last slice, and the first time an admin can put a
   real photograph on a product. P6b1 made every *field* editable and left images read-only, so the

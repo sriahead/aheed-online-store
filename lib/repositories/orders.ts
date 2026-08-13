@@ -454,6 +454,7 @@ export interface OrderSummary {
   deliveryFeePence: number;
   totalPence: number;
   items: {
+    productId: string;
     productName: string;
     unitPricePence: number;
     quantity: number;
@@ -729,6 +730,7 @@ export function getOrderRepository(): OrderRepository {
           totalPence: true,
           items: {
             select: {
+              productId: true,
               productName: true,
               unitPricePence: true,
               quantity: true,

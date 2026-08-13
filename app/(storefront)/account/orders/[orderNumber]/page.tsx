@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, RotateCcw } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { getOrderRepository } from "@/lib/repositories/orders";
 import { formatOrderDate } from "@/lib/order-status";
@@ -10,21 +10,13 @@ import { OrderItemsCard } from "@/components/orders/OrderItemsCard";
 import { OrderAddressCard } from "@/components/orders/OrderAddressCard";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
+import { reorderItems } from "@/features/orders/reorder-items";
 
 // Reads the session and one owned order — must render per-request.
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Your order" };
 
-/**
- * One order from the account area (P4a, #122).
- *
- * Uses getForUser(), NOT getByOrderNumber(): the latter implements P3b's
- * capability-URL rule, under which a guest order is viewable by anyone holding
- * its number. That is right for /checkout/{n} and wrong here — this page claims
- * to show *your* order history, so an order that is not yours must 404 even if
- * you paste a valid number.
- */
 export default async function AccountOrderPage({
   params,
 }: {
@@ -42,13 +34,25 @@ export default async function AccountOrderPage({
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
-      <Link
-        href="/account/orders"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-primary/70 hover:text-primary"
-      >
-        <ChevronLeft className="h-4 w-4" aria-hidden />
-        All orders
-      </Link>
+      <div className="mb-4 flex items-center justify-between">
+        <Link
+          href="/account/orders"
+          className="inline-flex items-center gap-1 text-sm text-primary/70 hover:text-primary"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden />
+          All orders
+        </Link>
+        <form action={reorderItems}>
+          <input type="hidden" name="orderNumber" value={order.orderNumber} />
+          <button
+            type="submit"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-primary/90 transition-colors"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Reorder items
+          </button>
+        </form>
+      </div>
 
       <div className="mb-6 flex items-start justify-between gap-3">
         <div className="min-w-0">
