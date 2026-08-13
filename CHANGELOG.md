@@ -7,6 +7,12 @@ every branch merges.
 ## [Unreleased]
 
 ### Fixed
+- **Storefront Accessibility & Contrast Audit**:
+  - Restored WCAG 4.5:1 text color contrast on product unit labels (`text-black/60`), original prices (`text-black/60`), and the 'Filters' side navigation title (`text-primary`).
+  - Swapped the 'Apply' button background on the filtering form from `#4CAF50` (which failed contrast ratios against white text) to `#2E7D32`.
+  - Added a visually hidden `<h2>Products</h2>` inside the product grid to establish a semantic heading sequence for the category pages (`H1` -> `H2` -> `H3`), preventing skipped heading levels.
+  - Added explicit `aria-label`s to the quantity increment/decrement buttons in `AddToCartButton.tsx`.
+- **Navigation RSC 404 Pre-fetch Error**: The 'Help Guide' link in the top navigation bar was pre-fetching `/help` in the background, which does not exist, triggering a fatal `404 (Not Found)` RSC error that halted client-side navigation. Re-pointed the link to `#` until the help page is implemented.
 - **Next.js 15 Client Transition 500 Errors (#184)**: Resolved `ERROR 2745569299` hard crashes in the Admin/Staff portal when toggling tiers or navigating client-side. Next.js 15 enforces strict rules that were previously warnings:
   - Missing `<Suspense>` bounds around `useSearchParams()` now throw fatal server errors on RSC fetches. Wrapped `InventoryTable` at `/staff/inventory` in `<Suspense>`.
   - `params` and `searchParams` are now asynchronous Promises. Components returning early (e.g. `requireVendorRole` failing and returning `<PanelRefusal>`) without awaiting these promises triggered unhandled serialization errors. Systematically moved `await params` and `await searchParams` to the top of all `app/(admin)/staff/...` pages.
