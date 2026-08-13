@@ -11,6 +11,12 @@ every branch merges.
 - **Transactional Email Strategy (GAP-005)**: Flagged migration to native Cloudflare Email Sending (outbound) and Email Routing (inbound) under Workers Paid ($5/mo) for Phase 8, replacing Resend and expanding CPU execution headroom.
 
 ### Added
+- **P6.6 — P0 Core Shopping UI Overhaul** (`specs/2026-08-13-p6.6-p0-ui-overhaul/`):
+  Full UI redesign mapping to the `docs/ui-ref` prototype while maintaining the `VendorConfig` multi-tenancy constraints.
+  - **Header & Cart Drawer**: Added delivery promise strip, global search UI, dynamic brand logo rendering, and a styled cart drawer button displaying the total price.
+  - **Hero & Trust Strip**: New storefront landing page (`page.tsx`) with a dynamic gradient Hero banner, real postcode checking, and Trust Values row.
+  - **Product Discovery**: Converted static placeholder text into live, data-driven "New Arrivals" and "Featured Halal Deals" merchandising rows.
+  - **Product Card Flow**: Overhauled visual card styling (badges, discount display, layout) and added an inline quantity selector directly into `AddToCartButton` to satisfy the requested Image → Title → Pack Size → Price → Offer → Qty Selector → Add to Cart UX flow without introducing complex client state.
 - **P7a — UK compliance, operational gap closure, and UX hardening** (`specs/2026-08-13-p7a-compliance-hardening/`):
   Delivers UK GDPR/PECR compliance, OWASP edge security headers, guest order tracking, slide-over cart drawer, staff bulk order transitions, and one-click reordering.
   - **UK GDPR & PECR Cookie Consent**: `CookieBanner.tsx` component managing essential/optional cookies with host-scoped `aheed_cookie_consent` cookie. Legal Terms of Service (`/terms`) and Privacy Policy (`/privacy`) pages.
