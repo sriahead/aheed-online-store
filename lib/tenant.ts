@@ -18,6 +18,16 @@ export async function getCurrentVendorIdOrNull(): Promise<string | null> {
   const prisma = getPrisma();
 
   if (host) {
+    // Local development/preview exception
+    if (host === "localhost" || host === "127.0.0.1") {
+      const defaultVendor = await prisma.vendor.findFirst({
+        where: { status: "ACTIVE" },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      });
+      if (defaultVendor) return defaultVendor.id;
+    }
+
     const domain = await prisma.vendorDomain.findUnique({
       where: { host },
       select: { vendorId: true },
