@@ -31,14 +31,14 @@ tags: [gap-register, audit, orient, pre-phase-7]
 
 ## Detailed Gap Descriptions
 
-### GAP-005 — Resend Unverified Custom Domain (#104)
+### GAP-005 — Transactional Email Service & Outbound Domain (#104)
 - **Category:** Operations / Transactional Email
 - **Severity:** **P1**
-- **Description:** `EmailService` logs and dispatches transactional emails via Resend API, but no custom sending domain (e.g. `orders@aheedfoodcentre.co.uk`) is verified in the Resend portal. Transactional confirmation and delivery emails attempt delivery but cannot reach real recipient inboxes in staging or production.
-- **Evidence:** `lib/email.ts` line 45; issue `#104`.
-- **Root Cause:** Operational prerequisite requiring owner DNS verification.
-- **Recommended Fix:** Owner provisions DNS TXT/MX records for Resend sending domain.
-- **Dependencies:** Owner DNS access.
+- **Description:** `EmailService` logs and dispatches transactional emails via Resend API. To eliminate external service costs and resolve Cloudflare Workers Error 1102 (10ms CPU timeout limit), the platform is flagged to migrate to Cloudflare Email Sending (outbound) and Cloudflare Email Routing (inbound) under Cloudflare Workers Paid ($5/month).
+- **Evidence:** `lib/email.ts` line 45; issue `#104`; Cloudflare Dashboard Email Service.
+- **Root Cause:** Transition from developer sandbox email to production edge-native email & CPU headroom expansion.
+- **Recommended Fix (Flagged for Phase 8):** Upgrade Cloudflare account to Workers Paid ($5/mo) to unlock Cloudflare Email Sending (outbound) + Email Routing (inbound) and 50ms CPU time limit.
+- **Dependencies:** Cloudflare Workers Paid subscription ($5/mo) and domain DNS binding.
 
 ### GAP-006 — Stripe Production Live Keys (#113)
 - **Category:** Operations / Payments
