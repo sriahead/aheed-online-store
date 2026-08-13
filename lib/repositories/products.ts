@@ -343,6 +343,75 @@ export interface ProductWriteInput {
 export type CatalogueWriteResult =
   { ok: true; id: string } | { ok: false; error: string; field?: string };
 
+export interface StaffInventoryRow {
+  id: string;
+  slug: string;
+  name: string;
+  unitLabel: string;
+  basePrice: number;
+  isActive: boolean;
+  categoryName: string;
+  quantity: number;
+  primaryImage: ProductImageSummary | null;
+}
+
+export interface StaffInventoryPage {
+  items: StaffInventoryRow[];
+  nextCursor: string | null;
+}
+
+export async function listInventoryForStaff(
+  vendorId: string,
+  { take, cursor, query }: { take: number; cursor?: string; query?: string },
+): Promise<StaffInventoryPage> {
+  const prisma = getPrisma();
+  const trimmed = query?.trim() ?? "";
+  
+  const whereClause: Prisma.ProductWhereInput = { vendorId };
+  if (trimmed) {
+    whereClause.OR = [
+      { name: { contains: trimmed, mode: "insensitive" } },
+      { description: { contains: trimmed, mode: "insensitive" } },
+    ];
+  }
+
+  const rows = await prisma.product.findMany({
+    where: whereClause,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: take + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      unitLabel: true,
+      basePrice: true,
+      isActive: true,
+      category: { select: { name: true } },
+      inventory: { select: { quantity: true } },
+      images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
+    },
+  });
+
+  const hasMore = rows.length > take;
+  const page = hasMore ? rows.slice(0, take) : rows;
+
+  return {
+    items: page.map((row) => ({
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      unitLabel: row.unitLabel,
+      basePrice: row.basePrice,
+      isActive: row.isActive,
+      categoryName: row.category.name,
+      quantity: row.inventory?.quantity ?? 0,
+      primaryImage: row.images[0] ?? null,
+    })),
+    nextCursor: hasMore ? page[page.length - 1].id : null,
+  };
+}
+
 /** Keyset-paginated on (createdAt, id) like findPage() above — never OFFSET. */
 export async function listProductsForAdmin(
   vendorId: string,
@@ -603,4 +672,49 @@ export async function setPrimaryProductImage(
 
     return { ok: true as const, id: productId };
   });
+}
+
+/**
+ * Fast-path for shop-floor staff to increment/decrement stock and toggle availability
+ * without needing the full product edit payload (P6, #168).
+ */
+export async function quickUpdateInventory(
+  vendorId: string,
+  productId: string,
+  data: { quantity?: number; isActive?: boolean }
+): Promise<CatalogueWriteResult> {
+  const prisma = getPrisma();
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const existing = await tx.product.findFirst({
+        where: { id: productId, vendorId },
+        select: { id: true, inventory: { select: { quantity: true, lowStockThreshold: true } } },
+      });
+      if (!existing) return { ok: false as const, error: "That product no longer exists." };
+
+      if (data.isActive !== undefined) {
+        await tx.product.update({
+          where: { id: productId },
+          data: { isActive: data.isActive },
+        });
+      }
+
+      if (data.quantity !== undefined) {
+        await tx.inventory.upsert({
+          where: { productId, vendorId },
+          create: {
+            vendorId,
+            productId,
+            quantity: data.quantity,
+            lowStockThreshold: 3,
+          },
+          update: { quantity: data.quantity },
+        });
+      }
+
+      return { ok: true as const, id: productId };
+    });
+  } catch (error) {
+    throw error;
+  }
 }
