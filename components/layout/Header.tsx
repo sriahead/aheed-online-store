@@ -146,7 +146,7 @@ export async function Header() {
         </div>
 
         {/* Action Controls & Navigation */}
-        <div className="flex shrink-0 items-center gap-2">
+        <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-2">
           {/* Account / Sign In & Sign Out Controls */}
           {user ? (
             <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-xl border border-black/10">
@@ -194,7 +194,7 @@ export async function Header() {
               showViewCartLink
             />
           </CartDrawerShell>
-        </div>
+        </nav>
       </div>
 
       {/* Mobile search row */}

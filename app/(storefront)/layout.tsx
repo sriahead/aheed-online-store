@@ -21,7 +21,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
     <div style={brandStyle(profile.primitives)} className="flex min-h-screen flex-col">
       <Header />
       <div className="flex-1">{children}</div>
-      <footer className="border-t border-black/10 bg-white py-6 text-xs text-primary/70">
+      <footer className="border-t border-black/10 bg-white py-6 text-xs text-primary">
         <div className="mx-auto flex max-w-5xl flex-col sm:flex-row items-center justify-between gap-4 px-4">
           <p>
             © {new Date().getFullYear()} {profile.name}. All rights reserved.

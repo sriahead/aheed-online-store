@@ -7,11 +7,14 @@ every branch merges.
 ## [Unreleased]
 
 ### Fixed
-- **Storefront Accessibility & Contrast Audit**:
+- **Storefront & Admin Accessibility / Contrast Audit**:
   - Restored WCAG 4.5:1 text color contrast on product unit labels (`text-black/60`), original prices (`text-black/60`), and the 'Filters' side navigation title (`text-primary`).
+  - Darkened dashboard notification text and card descriptions in the staff portal (`app/(admin)/staff/page.tsx`) from `/60` and `/70` to `/80` opacity.
+  - Increased footer contrast on all storefront pages by removing `/70` opacity on the footer element.
   - Swapped the 'Apply' button background on the filtering form from `#4CAF50` (which failed contrast ratios against white text) to `#2E7D32`.
   - Added a visually hidden `<h2>Products</h2>` inside the product grid to establish a semantic heading sequence for the category pages (`H1` -> `H2` -> `H3`), preventing skipped heading levels.
   - Added explicit `aria-label`s to the quantity increment/decrement buttons in `AddToCartButton.tsx`.
+  - Wrapped main action controls and navigational links in the `<Header>` component inside a `<nav aria-label="Main Navigation">` landmark.
 - **Navigation RSC 404 Pre-fetch Error**: The 'Help Guide' link in the top navigation bar was pre-fetching `/help` in the background, which does not exist, triggering a fatal `404 (Not Found)` RSC error that halted client-side navigation. Re-pointed the link to `#` until the help page is implemented.
 - **Next.js 15 Client Transition 500 Errors (#184)**: Resolved `ERROR 2745569299` hard crashes in the Admin/Staff portal when toggling tiers or navigating client-side. Next.js 15 enforces strict rules that were previously warnings:
   - Missing `<Suspense>` bounds around `useSearchParams()` now throw fatal server errors on RSC fetches. Wrapped `InventoryTable` at `/staff/inventory` in `<Suspense>`.

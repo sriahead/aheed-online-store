@@ -50,7 +50,7 @@ export default async function StaffHomePage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Store admin</h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary/80">
         {awaitingAction === 0
           ? "No orders are awaiting action."
           : `${awaitingAction} ${awaitingAction === 1 ? "order is" : "orders are"} awaiting action.`}
@@ -63,7 +63,7 @@ export default async function StaffHomePage() {
         >
           <Layers className="mb-3 h-6 w-6 text-action" aria-hidden />
           <p className="font-semibold text-primary">Live Inventory & Availability</p>
-          <p className="mt-1 text-sm text-primary/70">
+          <p className="mt-1 text-sm text-primary/80">
             Quickly adjust stock levels and toggle product availability.
           </p>
         </Link>
@@ -74,7 +74,7 @@ export default async function StaffHomePage() {
         >
           <ClipboardList className="mb-3 h-6 w-6 text-action" aria-hidden />
           <p className="font-semibold text-primary">Orders</p>
-          <p className="mt-1 text-sm text-primary/70">
+          <p className="mt-1 text-sm text-primary/80">
             Work the queue, search past orders, and open one for its full history.
           </p>
         </Link>
@@ -85,7 +85,7 @@ export default async function StaffHomePage() {
         >
           <BookOpen className="mb-3 h-6 w-6 text-action" aria-hidden />
           <p className="font-semibold text-primary">Internal Operational Runbook</p>
-          <p className="mt-1 text-sm text-primary/70">
+          <p className="mt-1 text-sm text-primary/80">
             Zero-trust guide to store operations and procedures.
           </p>
         </Link>
@@ -98,7 +98,7 @@ export default async function StaffHomePage() {
             >
               <Package className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Products</p>
-              <p className="mt-1 text-sm text-primary/70">
+              <p className="mt-1 text-sm text-primary/80">
                 Add products, correct prices, and set what&apos;s in stock.
               </p>
             </Link>
@@ -109,7 +109,7 @@ export default async function StaffHomePage() {
             >
               <FolderTree className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Categories</p>
-              <p className="mt-1 text-sm text-primary/70">
+              <p className="mt-1 text-sm text-primary/80">
                 The departments shoppers browse by, and how they&apos;re ordered.
               </p>
             </Link>
@@ -120,7 +120,7 @@ export default async function StaffHomePage() {
             >
               <Sparkles className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Loyalty</p>
-              <p className="mt-1 text-sm text-primary/70">
+              <p className="mt-1 text-sm text-primary/80">
                 Earn and redemption rates, tier thresholds and multipliers.
               </p>
             </Link>
@@ -131,7 +131,7 @@ export default async function StaffHomePage() {
             >
               <TicketPercent className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Discount codes</p>
-              <p className="mt-1 text-sm text-primary/70">
+              <p className="mt-1 text-sm text-primary/80">
                 Create, review and deactivate this store&apos;s codes.
               </p>
             </Link>
@@ -142,7 +142,7 @@ export default async function StaffHomePage() {
             >
               <TrendingUp className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Reports</p>
-              <p className="mt-1 text-sm text-primary/70">
+              <p className="mt-1 text-sm text-primary/80">
                 Sales, total orders, and average basket value financials.
               </p>
             </Link>
