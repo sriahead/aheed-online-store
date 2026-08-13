@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-13T16:48:32.470Z` · commit `33fdbf7` · `60` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-13T17:01:35.288Z` · commit `3aab782` · `61` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -63,6 +63,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P6b2 — Product image upload via presigned PUT (plan)](specs/2026-08-12-p6b2-image-upload/plan.md) | spec | 1.0.0 | 2026-08-12 | draft | internal | The catalogue's image write path — an admin uploads a product photo from the browser straight to object storage through a Worker-signed PUT, and the ProductImage row repoints to an immutable key. P6's last slice. |
 | [P6 Missing Gap: Staff-Visible Stock-Only Surface](specs/2026-08-13-p6-missing-gap-inventory/plan.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Implements the deferred P6 requirement for a staff-visible stock-only surface (Issue |
 | [Phase 6.6 — P0 Core Shopping UI Overhaul (plan)](specs/2026-08-13-p6.6-p0-ui-overhaul/plan.md) | spec | 1.0.0 | 2026-08-13 | draft | internal | Overhaul the core shopping UI components (Header, Hero, Product Cards, Categories) to match the AI Studio prototype while preserving multi-tenancy. |
+| [P6.6c: Operations Views Completion (Staff/Admin)](specs/2026-08-13-p6.6c-operations-completion/plan.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Align the Staff/Admin operations portal with the docs/ui-ref mockup. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.13.0 | 2026-08-12 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
