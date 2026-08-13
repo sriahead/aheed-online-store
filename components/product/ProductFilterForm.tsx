@@ -115,7 +115,7 @@ export function ProductFilterForm({
 
       <button
         type="submit"
-        className="w-full rounded-full bg-action px-4 py-2 font-semibold text-white"
+        className="w-full rounded-full bg-[#2E7D32] hover:bg-[#1b5e20] transition-colors px-4 py-2 font-semibold text-white"
       >
         Apply
       </button>

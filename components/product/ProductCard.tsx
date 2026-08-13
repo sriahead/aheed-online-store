@@ -63,7 +63,7 @@ export function ProductCard({
       <div className="p-3.5 flex flex-col flex-1 justify-between">
         <div>
           {/* Rating & Origin */}
-          <div className="flex items-center justify-between text-xs text-black/50 mb-1">
+          <div className="flex items-center justify-between text-xs text-black/60 mb-1">
             <div className="flex items-center gap-1">
               <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" aria-hidden />
               <span className="font-medium text-black/70">{product.averageRating.toFixed(1)}</span>
@@ -81,7 +81,7 @@ export function ProductCard({
             {product.name}
           </h3>
 
-          <p className="text-xs text-black/50 mt-0.5">{product.unitLabel}</p>
+          <p className="text-xs text-black/60 mt-0.5">{product.unitLabel}</p>
         </div>
 
         {/* Price & Add Button */}
@@ -91,7 +91,7 @@ export function ProductCard({
               {formatPrice(product.basePrice)}
             </span>
             {hasDiscount && (
-              <span className="text-xs text-black/40 line-through">
+              <span className="text-xs text-black/60 line-through">
                 {formatPrice(product.originalPrice!)}
               </span>
             )}

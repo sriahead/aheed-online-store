@@ -64,17 +64,19 @@ export function AddToCartButton({
           <button
             type="button"
             onClick={onClickMinus}
-            className="px-2 h-full flex items-center justify-center text-black/60 hover:bg-black/5 hover:text-black transition-colors"
+            aria-label="Decrease quantity"
+            className="px-2 h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
           >
-            <Minus className="w-3 h-3" />
+            <Minus className="w-3 h-3" aria-hidden="true" />
           </button>
           <span className="text-xs font-semibold text-primary w-4 text-center">{qty}</span>
           <button
             type="button"
             onClick={onClickPlus}
-            className="px-2 h-full flex items-center justify-center text-black/60 hover:bg-black/5 hover:text-black transition-colors"
+            aria-label="Increase quantity"
+            className="px-2 h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
           >
-            <Plus className="w-3 h-3" />
+            <Plus className="w-3 h-3" aria-hidden="true" />
           </button>
         </div>
         <button
