@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.7.0"
+version: "2.8.0"
 updated: 2026-08-12
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -154,6 +154,7 @@ Gate 1. Calibrate the ceremony to the size of the fork.
   **Phase**, and leave Status at **Backlog**. An issue that never reaches the board is invisible to
   every later stage — ten issues (#93–#106) were filed after the board was provisioned and none of
   them were added, until a sync caught it.
+- **Assign a milestone**: Every issue must be explicitly associated with its relevant roadmap milestone (e.g., `gh issue edit <number> -m "P6 — Admin & staff panel"`). This ensures the GitHub issue matches the project board's phase.
 - Wait for explicit approval on non-trivial work before Spec/Build. A prior approval does not carry
   forward to a new, unrelated decision.
 
