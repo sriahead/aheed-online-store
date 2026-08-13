@@ -7,6 +7,10 @@ every branch merges.
 ## [Unreleased]
 
 ### Fixed
+- **Next.js 15 Client Transition 500 Errors (#184)**: Resolved `ERROR 2745569299` hard crashes in the Admin/Staff portal when toggling tiers or navigating client-side. Next.js 15 enforces strict rules that were previously warnings:
+  - Missing `<Suspense>` bounds around `useSearchParams()` now throw fatal server errors on RSC fetches. Wrapped `InventoryTable` at `/staff/inventory` in `<Suspense>`.
+  - `params` and `searchParams` are now asynchronous Promises. Components returning early (e.g. `requireVendorRole` failing and returning `<PanelRefusal>`) without awaiting these promises triggered unhandled serialization errors. Systematically moved `await params` and `await searchParams` to the top of all `app/(admin)/staff/...` pages.
+  - Implemented systematic null-safety across `lib/repositories/products.ts` resolving intermittent 500 errors.
 - **Cloudflare Worker CPU Execution Limit**: Set `[limits] cpu_ms = 50` in `wrangler.toml` to prevent Error 1102 ("Worker exceeded resource limits") during Next.js RSC cold starts on category pages.
 - **Transactional Email Strategy (GAP-005)**: Flagged migration to native Cloudflare Email Sending (outbound) and Email Routing (inbound) under Workers Paid ($5/mo) for Phase 8, replacing Resend and expanding CPU execution headroom.
 
