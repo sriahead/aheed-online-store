@@ -366,7 +366,7 @@ export async function listInventoryForStaff(
 ): Promise<StaffInventoryPage> {
   const prisma = getPrisma();
   const trimmed = query?.trim() ?? "";
-  
+
   const whereClause: Prisma.ProductWhereInput = { vendorId };
   if (trimmed) {
     whereClause.OR = [
@@ -681,7 +681,7 @@ export async function setPrimaryProductImage(
 export async function quickUpdateInventory(
   vendorId: string,
   productId: string,
-  data: { quantity?: number; isActive?: boolean }
+  data: { quantity?: number; isActive?: boolean },
 ): Promise<CatalogueWriteResult> {
   const prisma = getPrisma();
   try {

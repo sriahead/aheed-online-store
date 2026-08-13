@@ -1,7 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ClipboardList, FolderTree, Package, Sparkles, TicketPercent, Layers, BookOpen, TrendingUp } from "lucide-react";
+import {
+  ClipboardList,
+  FolderTree,
+  Package,
+  Sparkles,
+  TicketPercent,
+  Layers,
+  BookOpen,
+  TrendingUp,
+} from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/repositories/orders";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";

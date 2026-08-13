@@ -34,13 +34,13 @@ export function AddToCartButton({
   function onClickMinus(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (qty > 1) setQty(q => q - 1);
+    if (qty > 1) setQty((q) => q - 1);
   }
 
   function onClickPlus(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (qty < 99) setQty(q => q + 1);
+    if (qty < 99) setQty((q) => q + 1);
   }
 
   const Icon = pending ? Loader2 : added ? Check : Plus;
@@ -61,17 +61,17 @@ export function AddToCartButton({
     return (
       <div className="flex items-center justify-between gap-2 mt-1">
         <div className="flex items-center rounded-xl border border-black/10 bg-surface-muted overflow-hidden h-8">
-          <button 
-            type="button" 
-            onClick={onClickMinus} 
+          <button
+            type="button"
+            onClick={onClickMinus}
             className="px-2 h-full flex items-center justify-center text-black/60 hover:bg-black/5 hover:text-black transition-colors"
           >
             <Minus className="w-3 h-3" />
           </button>
           <span className="text-xs font-semibold text-primary w-4 text-center">{qty}</span>
-          <button 
-            type="button" 
-            onClick={onClickPlus} 
+          <button
+            type="button"
+            onClick={onClickPlus}
             className="px-2 h-full flex items-center justify-center text-black/60 hover:bg-black/5 hover:text-black transition-colors"
           >
             <Plus className="w-3 h-3" />

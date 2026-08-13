@@ -9,22 +9,15 @@ import { getEnv } from "@/lib/config";
 export const metadata: Metadata = { title: "Live Inventory & Availability" };
 export const dynamic = "force-dynamic";
 
-export default async function InventoryPage(props: {
-  searchParams?: Promise<{ q?: string }>;
-}) {
+export default async function InventoryPage(props: { searchParams?: Promise<{ q?: string }> }) {
   const searchParams = await props.searchParams;
   const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
-    return (
-      <PanelRefusal
-        title="Staff only"
-        message="This area is restricted to store staff."
-      />
-    );
+    return <PanelRefusal title="Staff only" message="This area is restricted to store staff." />;
   }
 
   const query = searchParams?.q ?? "";
-  
+
   // For the shop-floor view, we load a generous first page.
   // In a complete implementation we'd add pagination to the table,
   // but this satisfies the P6 gap for quick stock adjustments.
@@ -40,7 +33,7 @@ export default async function InventoryPage(props: {
       <div className="mb-2">
         <h1 className="text-2xl font-bold text-primary">Live Inventory & Availability</h1>
       </div>
-      
+
       <InventoryTable initialItems={page.items} cdnBaseUrl={env.CDN_BASE_URL ?? ""} />
     </main>
   );

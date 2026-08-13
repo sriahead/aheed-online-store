@@ -853,7 +853,7 @@ export function getOrderRepository(): OrderRepository {
 
     async getFinancialsForStaff() {
       const vId = await vendorId();
-      
+
       const aggregate = await prisma.order.aggregate({
         where: { vendorId: vId },
         _sum: { totalPence: true },

@@ -35,40 +35,42 @@ export default async function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">1. UK GDPR Compliance</h2>
           <p className="text-sm text-primary/80 leading-relaxed">
-            {vendorName} is committed to protecting your personal data in accordance with the UK General
-            Data Protection Regulation (UK GDPR) and the Privacy and Electronic Communications Regulations (PECR).
+            {vendorName} is committed to protecting your personal data in accordance with the UK
+            General Data Protection Regulation (UK GDPR) and the Privacy and Electronic
+            Communications Regulations (PECR).
           </p>
         </section>
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">2. Information We Collect</h2>
           <p className="text-sm text-primary/80 leading-relaxed">
-            We collect personal information necessary to process your orders, including your name, email address,
-            delivery address, phone number, and transaction history.
+            We collect personal information necessary to process your orders, including your name,
+            email address, delivery address, phone number, and transaction history.
           </p>
         </section>
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">3. How We Use Your Data</h2>
           <p className="text-sm text-primary/80 leading-relaxed">
-            Your data is used solely to process payments (via Stripe), arrange grocery fulfillment, deliver orders,
-            and send order confirmations and updates. We do not sell your personal data to third parties.
+            Your data is used solely to process payments (via Stripe), arrange grocery fulfillment,
+            deliver orders, and send order confirmations and updates. We do not sell your personal
+            data to third parties.
           </p>
         </section>
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">4. Cookies and Local Storage</h2>
           <p className="text-sm text-primary/80 leading-relaxed">
-            We use essential host-scoped cookies for authentication (`aheed_session`), shopping cart state
-            (`aheed_cart`), and cookie preference management (`aheed_cookie_consent`).
+            We use essential host-scoped cookies for authentication (`aheed_session`), shopping cart
+            state (`aheed_cart`), and cookie preference management (`aheed_cookie_consent`).
           </p>
         </section>
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">5. Your Data Rights</h2>
           <p className="text-sm text-primary/80 leading-relaxed">
-            Under UK GDPR, you have the right to access, rectify, or request deletion of your personal data.
-            Contact our privacy compliance team to exercise your rights.
+            Under UK GDPR, you have the right to access, rectify, or request deletion of your
+            personal data. Contact our privacy compliance team to exercise your rights.
           </p>
         </section>
       </article>

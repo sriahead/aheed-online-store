@@ -36,7 +36,8 @@ const INTERNAL_DOCS: DocArticle[] = [
     title: "Admin Track: Product Pricing & Integer Pence Convention",
     audience: "staff",
     category: "Admin & Finance",
-    summary: "Mandatory standard: prices are stored as integer pence to prevent floating point currency bugs.",
+    summary:
+      "Mandatory standard: prices are stored as integer pence to prevent floating point currency bugs.",
     lastUpdated: "2026-08-02",
   },
   {
@@ -52,7 +53,8 @@ const INTERNAL_DOCS: DocArticle[] = [
     title: "ADR-002: Better Auth Authentication & Impersonation Audit Controls",
     audience: "dev",
     category: "Security & Compliance",
-    summary: "Better Auth integration details, session JWTs, and strict zero-trust impersonation audit logs.",
+    summary:
+      "Better Auth integration details, session JWTs, and strict zero-trust impersonation audit logs.",
     lastUpdated: "2026-08-03",
   },
 ];
@@ -74,13 +76,17 @@ export default async function RunbookPage() {
           </span>
           <h1 className="text-xl font-bold mt-2">Store Admin & Shop-Floor Operational Runbook</h1>
           <p className="text-xs text-slate-400 mt-1">
-            Split into Staff track (shop-floor procedures) and Admin track (pricing pence, inventory, escalation).
+            Split into Staff track (shop-floor procedures) and Admin track (pricing pence,
+            inventory, escalation).
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {INTERNAL_DOCS.map((doc) => (
-            <div key={doc.id} className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-2">
+            <div
+              key={doc.id}
+              className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-2"
+            >
               <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
                 Audience: {doc.audience}
               </span>

@@ -44,7 +44,11 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
 
   const steps = [
     { status: "CONFIRMED", label: "Order Confirmed", desc: "Store staff preparing items" },
-    { status: "OUT_FOR_DELIVERY", label: "Out for Delivery", desc: "En route with local delivery team" },
+    {
+      status: "OUT_FOR_DELIVERY",
+      label: "Out for Delivery",
+      desc: "En route with local delivery team",
+    },
     { status: "DELIVERED", label: "Delivered", desc: "Handed safely to customer" },
   ];
 
@@ -163,7 +167,11 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                     <div className="pl-2">
                       <h4
                         className={`font-bold text-sm leading-tight ${
-                          isCurrent ? "text-primary" : isCompleted ? "text-slate-800" : "text-slate-400"
+                          isCurrent
+                            ? "text-primary"
+                            : isCompleted
+                              ? "text-slate-800"
+                              : "text-slate-400"
                         }`}
                       >
                         {step.label}
@@ -180,11 +188,16 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
               <h3 className="text-xs font-bold text-slate-900">Items Ordered</h3>
               <div className="space-y-2">
                 {orderResult.items.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs text-slate-700">
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between text-xs text-slate-700"
+                  >
                     <span>
                       {item.quantity} × {item.productName}
                     </span>
-                    <span className="font-semibold text-slate-900">{formatPrice(item.lineTotalPence)}</span>
+                    <span className="font-semibold text-slate-900">
+                      {formatPrice(item.lineTotalPence)}
+                    </span>
                   </div>
                 ))}
               </div>

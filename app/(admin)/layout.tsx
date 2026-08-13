@@ -44,7 +44,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         canSeeAdmin={canSeeAdmin}
         currentTier={currentTier}
       />
-      
+
       <PanelNav canSeeOrders={canSeeOrders} currentTier={currentTier} />
 
       {children}

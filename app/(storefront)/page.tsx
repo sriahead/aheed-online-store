@@ -38,7 +38,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <section className="relative rounded-3xl bg-primary text-white p-6 md:p-10 overflow-hidden shadow-xl border border-black/10">
         {/* Background glow placeholder */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-        
+
         <div className="relative z-10 max-w-2xl space-y-4">
           <div className="inline-flex items-center gap-1.5 bg-black/20 border border-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
@@ -76,12 +76,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                   placeholder={prefixes.length ? `e.g. ${prefixes[0]}1 1AA` : "Enter postcode"}
                   className="w-48 pl-9 pr-4 py-2.5 rounded-l-xl text-black font-semibold text-sm focus:outline-none"
                 />
-                <button type="submit" className="bg-accent text-white px-5 py-2.5 font-bold text-sm rounded-r-xl transition-colors hover:opacity-90">
+                <button
+                  type="submit"
+                  className="bg-accent text-white px-5 py-2.5 font-bold text-sm rounded-r-xl transition-colors hover:opacity-90"
+                >
                   Check Area
                 </button>
               </div>
               {deliverable !== null && (
-                <p className={`text-sm font-semibold px-2 py-1 rounded ${deliverable ? "bg-action text-white" : "bg-danger text-white"}`}>
+                <p
+                  className={`text-sm font-semibold px-2 py-1 rounded ${deliverable ? "bg-action text-white" : "bg-danger text-white"}`}
+                >
                   {deliverable
                     ? `✓ We deliver to ${trimmedPostcode.toUpperCase()}`
                     : `✗ Sorry, ${localityName} ${prefixes.join("/")} only`}
@@ -118,7 +123,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <ShieldCheck className="w-5 h-5 text-danger" />
           </div>
           <div>
-            <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">Halal Quality</h4>
+            <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
+              Halal Quality
+            </h4>
             <p className="text-[11px] text-black/50 leading-tight">Certified fresh meats</p>
           </div>
         </div>
@@ -128,7 +135,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <HeartHandshake className="w-5 h-5 text-accent" />
           </div>
           <div>
-            <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">Community Trust</h4>
+            <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
+              Community Trust
+            </h4>
             <p className="text-[11px] text-black/50 leading-tight">Serving local families</p>
           </div>
         </div>
@@ -138,7 +147,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <Truck className="w-5 h-5 text-blue-700" />
           </div>
           <div>
-            <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">Local Delivery</h4>
+            <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
+              Local Delivery
+            </h4>
             <p className="text-[11px] text-black/50 leading-tight">Self-delivered with care</p>
           </div>
         </div>
@@ -149,17 +160,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <h2 className="mb-4 text-xl font-bold text-primary">Shop by department</h2>
         <DepartmentScroller categories={categories} />
       </section>
-      
+
       {/* Product Discovery Rows */}
-      <ProductRow 
-        title="New Arrivals" 
-        products={newArrivalsPage.items} 
+      <ProductRow
+        title="New Arrivals"
+        products={newArrivalsPage.items}
         cdnBaseUrl={CDN_BASE_URL ?? ""}
         viewAllLink="/search"
       />
-      <ProductRow 
-        title="Featured Halal Deals" 
-        products={dealsPage.items} 
+      <ProductRow
+        title="Featured Halal Deals"
+        products={dealsPage.items}
         cdnBaseUrl={CDN_BASE_URL ?? ""}
         viewAllLink="/search?isHalal=true"
       />

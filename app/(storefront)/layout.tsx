@@ -23,7 +23,9 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
       <div className="flex-1">{children}</div>
       <footer className="border-t border-black/10 bg-white py-6 text-xs text-primary/70">
         <div className="mx-auto flex max-w-5xl flex-col sm:flex-row items-center justify-between gap-4 px-4">
-          <p>© {new Date().getFullYear()} {profile.name}. All rights reserved.</p>
+          <p>
+            © {new Date().getFullYear()} {profile.name}. All rights reserved.
+          </p>
           <div className="flex items-center gap-4 font-medium">
             <Link href="/terms" className="hover:underline">
               Terms of Service

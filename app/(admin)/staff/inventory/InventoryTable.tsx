@@ -48,7 +48,9 @@ export function InventoryTable({
 
       <div className="flex items-center justify-between px-6 py-3 bg-surface-muted/30 border-b border-black/10">
         <p className="text-sm font-semibold text-black/80">Showing {initialItems.length} Items</p>
-        <p className="text-sm font-bold italic text-primary/80">Shop-Floor Staff: Toggle live product availability honestly when sold out.</p>
+        <p className="text-sm font-bold italic text-primary/80">
+          Shop-Floor Staff: Toggle live product availability honestly when sold out.
+        </p>
       </div>
 
       <div className="overflow-x-auto">

@@ -20,7 +20,10 @@ export function TierToggle({
     setTier(newTier);
     document.cookie = `admin-tier=${newTier}; path=/; max-age=31536000`;
     startTransition(() => {
-      if (newTier === "staff" && window.location.pathname.match(/^\/staff\/(products|categories|loyalty|discounts)/)) {
+      if (
+        newTier === "staff" &&
+        window.location.pathname.match(/^\/staff\/(products|categories|loyalty|discounts)/)
+      ) {
         router.push("/staff");
       } else {
         router.refresh();

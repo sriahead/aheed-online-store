@@ -54,22 +54,25 @@ export default async function TermsPage() {
           <h2 className="text-lg font-semibold text-primary">3. Delivery Terms</h2>
           <p className="text-sm text-primary/80 leading-relaxed">
             Deliveries are made to supported postcode areas. Minimum order values and delivery fees
-            apply as stated at checkout. You must ensure someone is available at the delivery address to receive your order.
+            apply as stated at checkout. You must ensure someone is available at the delivery
+            address to receive your order.
           </p>
         </section>
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">4. Order Cancellations & Refunds</h2>
           <p className="text-sm text-primary/80 leading-relaxed">
-            Orders can be cancelled before picking commences by contacting customer support. For fresh
-            or perishable grocery items, cancellations after processing are subject to verification under UK Consumer Rights Law.
+            Orders can be cancelled before picking commences by contacting customer support. For
+            fresh or perishable grocery items, cancellations after processing are subject to
+            verification under UK Consumer Rights Law.
           </p>
         </section>
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">5. Governing Law</h2>
           <p className="text-sm text-primary/80 leading-relaxed">
-            These terms are governed by and construed in accordance with the laws of England and Wales.
+            These terms are governed by and construed in accordance with the laws of England and
+            Wales.
           </p>
         </section>
       </article>

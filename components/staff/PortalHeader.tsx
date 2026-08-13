@@ -22,7 +22,10 @@ export function PortalHeader({
           </div>
           <div>
             <div className="flex items-center gap-3">
-              <Link href="/staff" className="text-xl font-bold hover:text-white/80 transition-colors">
+              <Link
+                href="/staff"
+                className="text-xl font-bold hover:text-white/80 transition-colors"
+              >
                 {profileName} Operations Portal
               </Link>
               {currentTier === "staff" && (
@@ -32,15 +35,19 @@ export function PortalHeader({
               )}
             </div>
             <p className="mt-0.5 text-sm text-white/60">
-              One surface, role-gated capabilities for {localityName} shop-floor and inventory management.
+              One surface, role-gated capabilities for {localityName} shop-floor and inventory
+              management.
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <TierToggle initialTier={currentTier} canSeeAdmin={canSeeAdmin} />
           {!canSeeAdmin && (
-            <Link href="/" className="text-sm font-semibold text-white/70 hover:text-white transition-colors">
+            <Link
+              href="/"
+              className="text-sm font-semibold text-white/70 hover:text-white transition-colors"
+            >
               View store
             </Link>
           )}

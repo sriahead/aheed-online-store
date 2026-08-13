@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, LayoutDashboard, Package, Sparkles, TicketPercent, Layers, BookOpen, TrendingUp } from "lucide-react";
+import {
+  ClipboardList,
+  LayoutDashboard,
+  Package,
+  Sparkles,
+  TicketPercent,
+  Layers,
+  BookOpen,
+  TrendingUp,
+} from "lucide-react";
 
 export interface PanelNavProps {
   canSeeOrders: boolean;
@@ -13,7 +22,7 @@ function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: 
   const pathname = usePathname();
   // Exact match for overview, prefix match for everything else so /staff/orders/123 stays active
   const isActive = href === "/staff" ? pathname === href : pathname.startsWith(href);
-  
+
   return (
     <Link
       href={href}
@@ -33,7 +42,10 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
   if (!canSeeOrders) return null;
 
   return (
-    <nav aria-label="Store admin" className="bg-white border-b border-black/10 shadow-sm w-full overflow-x-auto">
+    <nav
+      aria-label="Store admin"
+      className="bg-white border-b border-black/10 shadow-sm w-full overflow-x-auto"
+    >
       <div className="mx-auto flex w-full max-w-5xl items-center gap-6 px-4">
         {currentTier === "staff" ? (
           <>

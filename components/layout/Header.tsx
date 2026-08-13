@@ -1,6 +1,17 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { MapPin, Search, User, LogIn, Sparkles, HelpCircle, UserCheck, LogOut, ShoppingBag, Clock } from "lucide-react";
+import {
+  MapPin,
+  Search,
+  User,
+  LogIn,
+  Sparkles,
+  HelpCircle,
+  UserCheck,
+  LogOut,
+  ShoppingBag,
+  Clock,
+} from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getEnv } from "@/lib/config";
@@ -41,7 +52,7 @@ export async function Header() {
   const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const user = session?.user as { name: string } | undefined;
   const firstName = user?.name?.split(" ")[0];
-  
+
   let isStaffOrAdmin = false;
   if (user) {
     const staffCheck = await requireVendorRole("STAFF", "ADMIN");
@@ -57,7 +68,8 @@ export async function Header() {
     cartIdentity.userId || cartIdentity.guestToken
       ? await getCartRepository().getSummary(cartIdentity)
       : EMPTY_CART;
-  const searchPlaceholder = profile?.searchPlaceholder ?? "Search vine tomatoes, halal lamb chops, basmati, lentils...";
+  const searchPlaceholder =
+    profile?.searchPlaceholder ?? "Search vine tomatoes, halal lamb chops, basmati, lentils...";
   const { CDN_BASE_URL } = getEnv();
   const logoUrl =
     profile?.logoStorageKey && CDN_BASE_URL
@@ -100,7 +112,11 @@ export async function Header() {
           <Link href="/" className="flex items-center gap-2.5 group text-left">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt={`${name} — Your Local Store`} className="h-10 w-auto rounded-xl shadow-sm group-hover:opacity-90 transition-opacity" />
+              <img
+                src={logoUrl}
+                alt={`${name} — Your Local Store`}
+                className="h-10 w-auto rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"
+              />
             ) : (
               <>
                 <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-xl shadow-md group-hover:bg-primary/90 transition-colors">
@@ -166,7 +182,7 @@ export async function Header() {
           )}
 
           {/* Cart Trigger */}
-          <CartDrawerShell 
+          <CartDrawerShell
             itemCount={cartSummary.itemCount}
             subtotalPence={cartSummary.subtotalPence}
           >

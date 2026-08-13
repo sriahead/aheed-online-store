@@ -6,7 +6,7 @@ import { quickUpdateInventory } from "@/lib/repositories/products";
 
 export async function updateInventoryAction(
   productId: string,
-  data: { quantity?: number; isActive?: boolean }
+  data: { quantity?: number; isActive?: boolean },
 ) {
   // Both STAFF and ADMIN can do this!
   const auth = await requireVendorRole("STAFF", "ADMIN");

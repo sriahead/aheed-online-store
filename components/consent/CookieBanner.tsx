@@ -11,9 +11,7 @@ export function CookieBanner() {
 
   useEffect(() => {
     // Check if consent cookie exists
-    const hasConsent = document.cookie
-      .split("; ")
-      .some((row) => row.startsWith(`${COOKIE_NAME}=`));
+    const hasConsent = document.cookie.split("; ").some((row) => row.startsWith(`${COOKIE_NAME}=`));
     if (!hasConsent) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsVisible(true);

@@ -26,7 +26,7 @@ export default async function ReportsPage() {
   }
 
   const { totalRevenuePence, totalOrders } = await getOrderRepository().getFinancialsForStaff();
-  
+
   const avgBasketPence = totalOrders > 0 ? Math.round(totalRevenuePence / totalOrders) : 0;
 
   return (

@@ -48,7 +48,8 @@ export function CartDrawer({
   const qualifiesForFreeDelivery =
     freeDeliveryThresholdPence !== null && subtotalPence >= freeDeliveryThresholdPence;
 
-  const effectiveDeliveryFeePence = qualifiesForFreeDelivery || subtotalPence === 0 ? 0 : deliveryFeePence;
+  const effectiveDeliveryFeePence =
+    qualifiesForFreeDelivery || subtotalPence === 0 ? 0 : deliveryFeePence;
   const totalPence = subtotalPence + effectiveDeliveryFeePence;
 
   return (
@@ -78,7 +79,8 @@ export function CartDrawer({
               {!qualifiesForFreeDelivery ? (
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1 font-medium">
-                    <Truck className="w-4 h-4 text-primary" /> Add {formatPrice(amountToFreeDeliveryPence)} for FREE Delivery
+                    <Truck className="w-4 h-4 text-primary" /> Add{" "}
+                    {formatPrice(amountToFreeDeliveryPence)} for FREE Delivery
                   </span>
                   <div className="w-16 h-1.5 bg-emerald-200 rounded-full overflow-hidden">
                     <div
@@ -91,7 +93,8 @@ export function CartDrawer({
                 </div>
               ) : (
                 <div className="flex items-center gap-1 font-bold text-primary">
-                  <Sparkles className="w-4 h-4 text-amber-500" /> You unlocked FREE Delivery to {postcode}!
+                  <Sparkles className="w-4 h-4 text-amber-500" /> You unlocked FREE Delivery to{" "}
+                  {postcode}!
                 </div>
               )}
             </div>
@@ -122,7 +125,11 @@ export function CartDrawer({
                 >
                   <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-50 shrink-0 border border-slate-100 flex items-center justify-center">
                     {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <ShoppingBag className="w-6 h-6 text-slate-300" />
                     )}
@@ -145,7 +152,9 @@ export function CartDrawer({
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="px-2 text-xs font-bold text-slate-900">{item.quantity}</span>
+                        <span className="px-2 text-xs font-bold text-slate-900">
+                          {item.quantity}
+                        </span>
                         <button
                           type="button"
                           disabled={isUpdating}
