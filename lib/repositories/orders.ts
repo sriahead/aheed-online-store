@@ -637,6 +637,8 @@ export interface OrderRepository {
    * no-direct-Prisma guard (ADR-004 slice 2) requires.
    */
   advance(orderNumber: string, toStatus: string, actor: StatusActor): Promise<AdvanceResult>;
+  /** High-level financial reporting (P6.6c). */
+  getFinancialsForStaff(): Promise<{ totalRevenuePence: number; totalOrders: number }>;
 }
 
 export function getOrderRepository(): OrderRepository {
@@ -847,6 +849,21 @@ export function getOrderRepository(): OrderRepository {
 
     async advance(orderNumber, toStatus, actor) {
       return advanceOrderStatus(prisma, await vendorId(), orderNumber, toStatus, actor);
+    },
+
+    async getFinancialsForStaff() {
+      const vId = await vendorId();
+      
+      const aggregate = await prisma.order.aggregate({
+        where: { vendorId: vId },
+        _sum: { totalPence: true },
+        _count: { id: true },
+      });
+
+      return {
+        totalRevenuePence: aggregate._sum.totalPence ?? 0,
+        totalOrders: aggregate._count.id,
+      };
     },
   };
 }

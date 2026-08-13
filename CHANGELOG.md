@@ -11,6 +11,11 @@ every branch merges.
 - **Transactional Email Strategy (GAP-005)**: Flagged migration to native Cloudflare Email Sending (outbound) and Email Routing (inbound) under Workers Paid ($5/mo) for Phase 8, replacing Resend and expanding CPU execution headroom.
 
 ### Added
+- **P6.6c — Staff/Admin Operations Views Completion**:
+  - Refactored `PanelNav` to include all missing tabs (Reports, Inventory, Categories, Discounts, etc.) and enabled horizontal scrolling for mobile devices.
+  - Injected missing dashboard portal cards for "Live Inventory", "Runbook", and "Reports" (Admin only) on the main Operations dashboard.
+  - Built a zero-trust, static Operations Runbook (`/staff/runbook`) based on the UI-ref spec.
+  - Built an Admin-only financial Reports dashboard (`/staff/reports`) computing live metrics (Total Revenue, Total Orders, Average Basket Value) via a new Prisma aggregate query in `OrderRepository`.
 - **P6 Missing Gap (Issue #168)**: Shipped a dedicated "Live Inventory & Availability" view tailored for shop-floor staff. This includes dynamic tier toggling between Staff and Admin views, tabbed navigation, client-side filtering, and optimistic mutations for quick stock adjustments and availability toggles. Resolves a previously deferred P6 requirement and aligns perfectly with the AI Studio mockup.
 - **P6.6 — P0 Core Shopping UI Overhaul** (`specs/2026-08-13-p6.6-p0-ui-overhaul/`):
   Full UI redesign mapping to the `docs/ui-ref` prototype while maintaining the `VendorConfig` multi-tenancy constraints.
