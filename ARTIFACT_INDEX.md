@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-13T12:18:36.176Z` · commit `ec747cf` · `50` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-13T12:40:55.879Z` · commit `a978d13` · `54` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -77,7 +77,10 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
-| _`<no artifacts yet>`_ | | | | | | |
+| [Phase 6.5 Gap Register](docs/sdd/self-review/GAP-REGISTER.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Master tracking register for all identified, fixed, deferred, or blocked gaps during Phase 6.5 audit loop. |
+| [Phase 6.5 Autonomous Self-Review Report](docs/sdd/self-review/SELF-REVIEW.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Executive summary and status breakdown of Phase 6.5 audit loop across architecture, schema, security, payments, and deployment. |
+| [Phase 6.5 Validation & Test Results](docs/sdd/self-review/VALIDATION-RESULTS.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Verification log of test runs, build checks, and validation evidence for Phase 6.5 audit loop. |
+| [Phase 6.5 — Autonomous Application Self-Review, Gap Detection & Hardening Requirements](specs/2026-08-13-p6.5-self-review-hardening/requirements.md) | spec | 1.0.0 | 2026-08-13 | approved | internal | Requirements and exit criteria for Phase 6.5 autonomous self-review and hardening audit loop prior to Phase 7. |
 
 ## Track 3 — Customer / Help Centre (`customer-help`)  ·  audience: customer
 
