@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getWebhookOrderService } from "@/lib/repositories/orders";
-import { formatPence } from "@/lib/order-totals";
+import { formatPrice } from "@/components/product/format-price";
 import { Package, Truck, CheckCircle2, Search, MapPin, AlertCircle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -184,13 +184,13 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                     <span>
                       {item.quantity} × {item.productName}
                     </span>
-                    <span className="font-semibold text-slate-900">{formatPence(item.lineTotalPence)}</span>
+                    <span className="font-semibold text-slate-900">{formatPrice(item.lineTotalPence)}</span>
                   </div>
                 ))}
               </div>
               <div className="pt-2 border-t border-slate-200 flex justify-between font-bold text-sm text-slate-900">
                 <span>Total Amount:</span>
-                <span className="text-primary">{formatPence(orderResult.totalPence)}</span>
+                <span className="text-primary">{formatPrice(orderResult.totalPence)}</span>
               </div>
             </div>
           </div>

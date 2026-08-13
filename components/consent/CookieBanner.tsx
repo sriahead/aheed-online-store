@@ -15,6 +15,7 @@ export function CookieBanner() {
       .split("; ")
       .some((row) => row.startsWith(`${COOKIE_NAME}=`));
     if (!hasConsent) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsVisible(true);
     }
   }, []);

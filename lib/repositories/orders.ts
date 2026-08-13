@@ -663,6 +663,7 @@ export function getOrderRepository(): OrderRepository {
           userId: true,
           items: {
             select: {
+              productId: true,
               productName: true,
               unitPricePence: true,
               quantity: true,
@@ -796,6 +797,7 @@ export function getOrderRepository(): OrderRepository {
           user: { select: { email: true } },
           items: {
             select: {
+              productId: true,
               productName: true,
               unitPricePence: true,
               quantity: true,

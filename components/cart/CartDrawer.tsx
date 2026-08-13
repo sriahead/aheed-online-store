@@ -2,7 +2,7 @@
 
 import { ShoppingBag, X, Plus, Minus, Trash2, ArrowRight, Truck, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { formatPence } from "@/lib/order-totals";
+import { formatPrice } from "@/components/product/format-price";
 
 export interface CartDrawerItem {
   productId: string;
@@ -78,7 +78,7 @@ export function CartDrawer({
               {!qualifiesForFreeDelivery ? (
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1 font-medium">
-                    <Truck className="w-4 h-4 text-primary" /> Add {formatPence(amountToFreeDeliveryPence)} for FREE Delivery
+                    <Truck className="w-4 h-4 text-primary" /> Add {formatPrice(amountToFreeDeliveryPence)} for FREE Delivery
                   </span>
                   <div className="w-16 h-1.5 bg-emerald-200 rounded-full overflow-hidden">
                     <div
@@ -131,7 +131,7 @@ export function CartDrawer({
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-xs text-slate-900 truncate">{item.name}</h4>
                     <p className="text-[11px] text-slate-500 mt-0.5">
-                      {formatPence(item.unitPricePence)} / {item.unitLabel}
+                      {formatPrice(item.unitPricePence)} / {item.unitLabel}
                     </p>
 
                     {/* Quantity Selector */}
@@ -170,7 +170,7 @@ export function CartDrawer({
 
                   <div className="text-right">
                     <span className="font-extrabold text-sm text-primary">
-                      {formatPence(item.unitPricePence * item.quantity)}
+                      {formatPrice(item.unitPricePence * item.quantity)}
                     </span>
                   </div>
                 </div>
@@ -184,7 +184,7 @@ export function CartDrawer({
               <div className="space-y-1.5 text-xs text-slate-600">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span className="font-medium text-slate-900">{formatPence(subtotalPence)}</span>
+                  <span className="font-medium text-slate-900">{formatPrice(subtotalPence)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Delivery ({postcode}):</span>
@@ -192,13 +192,13 @@ export function CartDrawer({
                     {effectiveDeliveryFeePence === 0 ? (
                       <span className="text-primary font-bold">FREE</span>
                     ) : (
-                      formatPence(effectiveDeliveryFeePence)
+                      formatPrice(effectiveDeliveryFeePence)
                     )}
                   </span>
                 </div>
                 <div className="flex justify-between pt-2 border-t font-bold text-base text-slate-900">
                   <span>Total Amount:</span>
-                  <span className="text-primary">{formatPence(totalPence)}</span>
+                  <span className="text-primary">{formatPrice(totalPence)}</span>
                 </div>
               </div>
 

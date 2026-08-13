@@ -4,7 +4,7 @@ import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata(): Metadata {
+export async function generateMetadata(): Promise<Metadata> {
   const profile = await getCurrentVendorProfile();
   const vendorName = profile?.name ?? "Aheed Food Centre";
   return {

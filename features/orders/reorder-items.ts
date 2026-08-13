@@ -24,12 +24,16 @@ export async function reorderItems(formData: FormData): Promise<void> {
   }
 
   const cartRepo = getCartRepository();
-  const cart = await cartRepo.getOrCreate({ userId, guestToken: null });
+  const identity = { userId, guestToken: null };
+  const lines = order.items
+    .filter((item) => item.productId !== null)
+    .map((item) => ({
+      productId: item.productId as string,
+      quantity: item.quantity,
+    }));
 
-  for (const item of order.items) {
-    if (item.productId) {
-      await cartRepo.addItem(cart.id, item.productId, item.quantity);
-    }
+  if (lines.length > 0) {
+    await cartRepo.addItems(identity, lines);
   }
 
   redirect("/cart");
