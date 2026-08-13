@@ -95,7 +95,7 @@ export async function Header() {
 
           <div className="flex items-center gap-3 text-xs">
             <Link
-              href="/help"
+              href="#"
               className="flex items-center gap-1 text-white/80 hover:text-white px-2 py-0.5 rounded font-medium text-[11px]"
             >
               <HelpCircle className="w-3 h-3 text-action-tint" />
