@@ -60,6 +60,7 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
 - **P5 — Loyalty & discounts.** Points earn/redeem; discounts engine; admin configuration.
 - **P6 — Admin & staff panel.** Product/category management, availability, order dashboard,
   customer directory, discounts, loyalty rules, reports.
+- **P6.7 — Team & Role Management.** Store Admin provisioning of Staff accounts and Platform Admin provisioning of Store Admins, complete with an audit trail, addressing team onboarding gaps.
 - **P7 — Compliance & hardening.** UK GDPR, PECR consent, T&Cs/Privacy, accessibility, OWASP
   hardening, backups + monitoring, index/query review vs NFR targets.
 - **P8 — Deployment & launch.** Full Cloudflare + Neon + R2 wiring, secrets, backups/PITR,
@@ -117,3 +118,4 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
 | 2026-08-13 | **P6 Missing Gap closed.** Shipped Issue #168 (STAFF-visible stock-only surface, `specs/2026-08-13-p6-missing-gap-inventory/`) to staging. Implemented a dedicated "Live Inventory & Availability" view tailored for shop-floor staff, complete with dynamic tier toggling, tabbed navigation, client-side filtering, and optimistic stock and availability mutations. This resolves the previously deferred P6 requirement, matching the AI Studio mockup pixel-perfectly. | Exit criteria met; proceeding to P7 |
 | 2026-08-13 | **P7a closed.** Shipped Compliance & Hardening (PR #183, `specs/2026-08-13-p7a-compliance-hardening/`) to staging. Implemented Cookie consent, legal pages, OWASP security headers, guest order tracking, slide-over cart drawer, and staff bulk transitions. | Exit criteria met; proceeding to P7b |
 | 2026-08-13 | **P6.6c — Operations Views Completion** (#183, `specs/2026-08-13-p6.6c-operations-completion/`): Added missing Internal Operational Runbook page and Admin Reports page, aligned `PanelNav` to grant Admins full access, and added unified dashboard cards to the `/staff` overview to match `docs/ui-ref`. | Aligning operations UI with mockup |
+| _pending_  | **P6.7 — Team & Role Management** (`specs/2026-08-14-p6.7-team-role-management/`): Scaffolded requirements and plan to add an auditable UI for Platform Admins to provision Store Admins, and Store Admins to provision Staff members, closing the manual-provisioning gap. | New requirement added for the next iteration |
