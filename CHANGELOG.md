@@ -6,6 +6,18 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+- **P6.7 — Staff Team & Role Management**:
+  - Built a new `/staff/team` interface for managing staff members within a vendor organization.
+  - Added a backend integration allowing STORE_ADMIN users to assign `STAFF` and `STORE_ADMIN` roles to existing users.
+  - Created `VendorRoleAuditLog` to persistently track all role elevation actions with attribution (`grantedBy`).
+  - Implemented `lib/repositories/roles.ts` to enforce RBAC and safe role updates.
+
+### Fixed
+- **Cloudflare Staging React Error #441**:
+  - Fixed `addToCart` Server Action crashing during OpenNext revalidation phase.
+  - Replaced `revalidateTag("cart")` with `revalidatePath("/", "layout")` in `features/cart/shared.ts` to bypass OpenNext tag cache missing binding issues on Cloudflare Workers.
+
 ### Fixed
 - **Storefront & Admin Accessibility / Contrast Audit**:
   - Restored WCAG 4.5:1 text color contrast on product unit labels (`text-black/60`), original prices (`text-black/60`), and the 'Filters' side navigation title (`text-primary`).
@@ -1436,3 +1448,5 @@ every branch merges.
 ### Notes
 - No feature code beyond the skeleton. Auth, catalogue, cart, checkout, and the design system
   arrive in P1+ behind their specs and gates.
+ 
+ 

@@ -10,6 +10,7 @@ import {
   Layers,
   BookOpen,
   TrendingUp,
+  Users,
 } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/repositories/orders";
@@ -144,6 +145,17 @@ export default async function StaffHomePage() {
               <p className="font-semibold text-primary">Reports</p>
               <p className="mt-1 text-sm text-primary/80">
                 Sales, total orders, and average basket value financials.
+              </p>
+            </Link>
+
+            <Link
+              href="/staff/team"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Users className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Team & Access</p>
+              <p className="mt-1 text-sm text-primary/80">
+                Manage staff access, roles, and administrative privileges.
               </p>
             </Link>
           </>

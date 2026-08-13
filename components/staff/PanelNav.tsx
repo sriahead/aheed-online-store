@@ -11,6 +11,7 @@ import {
   Layers,
   BookOpen,
   TrendingUp,
+  Users,
 } from "lucide-react";
 
 export interface PanelNavProps {
@@ -64,6 +65,7 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
             <NavLink href="/staff/loyalty" icon={Sparkles} label="Loyalty" />
             <NavLink href="/staff/discounts" icon={TicketPercent} label="Discounts" />
             <NavLink href="/staff/reports" icon={TrendingUp} label="Reports" />
+            <NavLink href="/staff/team" icon={Users} label="Team" />
             <NavLink href="/staff/runbook" icon={BookOpen} label="Runbook" />
           </>
         )}
