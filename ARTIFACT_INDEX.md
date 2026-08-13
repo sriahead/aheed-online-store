@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-13T13:32:28.739Z` · commit `dd41c0f` · `58` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-13T14:26:43.442Z` · commit `21639a2` · `58` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -81,7 +81,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Phase 6.5 Gap Register](docs/sdd/self-review/GAP-REGISTER.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Master tracking register for all identified, fixed, deferred, or blocked gaps during Phase 6.5 audit loop. |
 | [Phase 6.5 Autonomous Self-Review Report](docs/sdd/self-review/SELF-REVIEW.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Executive summary and status breakdown of Phase 6.5 audit loop across architecture, schema, security, payments, and deployment. |
 | [Phase 6.5 Validation & Test Results](docs/sdd/self-review/VALIDATION-RESULTS.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Verification log of test runs, build checks, and validation evidence for Phase 6.5 audit loop. |
-| [Phase 6.5 — Autonomous Application Self-Review, Gap Detection & Hardening Requirements](specs/2026-08-13-p6.5-self-review-hardening/requirements.md) | spec | 1.0.0 | 2026-08-13 | approved | internal | Requirements and exit criteria for Phase 6.5 autonomous self-review and hardening audit loop prior to Phase 7. |
+| [Phase 6.5 — Autonomous Application Self-Review, Gap Detection & Hardening Plan](specs/2026-08-13-p6.5-self-review-hardening/plan.md) | spec | 1.0.0 | 2026-08-13 | approved | internal | Plan for Phase 6.5 autonomous self-review and hardening audit loop prior to Phase 7. |
 | [Phase 7a Implementation & Execution Plan](specs/2026-08-13-p7a-compliance-hardening/plan.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Step-by-step implementation plan for Phase 7a operational closure, UK compliance, security headers, and user-experience gaps. |
 | [Phase 7a — Compliance, Operational Closure & Application Hardening Requirements](specs/2026-08-13-p7a-compliance-hardening/requirements.md) | spec | 1.1.0 | 2026-08-13 | approved | internal | Spec and requirements for closing Phase 6 gaps, completing UK GDPR/PECR compliance, matching UI reference look-and-feel (docs/ui-ref), and de-risking operational launch prerequisites before Phase 8. |
 | [Phase 7a Validation & Acceptance Plan](specs/2026-08-13-p7a-compliance-hardening/validation.md) | spec | 1.1.0 | 2026-08-13 | approved | internal | Validation steps, test cases, visual parity checks vs docs/ui-ref, and empirical criteria for Phase 7a compliance, operational closure, and UX hardening. |

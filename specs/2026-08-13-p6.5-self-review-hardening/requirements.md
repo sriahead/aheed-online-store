@@ -1,15 +1,3 @@
----
-id: p6-5-self-review-hardening-requirements
-title: Phase 6.5 — Autonomous Application Self-Review, Gap Detection & Hardening Requirements
-audience: [dev, staff]
-type: spec
-status: approved
-version: "1.0.0"
-updated: 2026-08-13
-visibility: internal
-summary: Requirements and exit criteria for Phase 6.5 autonomous self-review and hardening audit loop prior to Phase 7.
-tags: [p6-5, self-review, hardening, audit, sdd]
----
 
 # Phase 6.5 — Autonomous Application Self-Review, Gap Detection & Hardening
 
