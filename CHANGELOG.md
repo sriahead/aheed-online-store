@@ -6,6 +6,9 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **Cloudflare Worker CPU Execution Limit**: Set `[limits] cpu_ms = 50` in `wrangler.toml` to prevent Error 1102 ("Worker exceeded resource limits") during Next.js RSC cold starts on category pages.
+
 ### Added
 - **P7a — UK compliance, operational gap closure, and UX hardening** (`specs/2026-08-13-p7a-compliance-hardening/`):
   Delivers UK GDPR/PECR compliance, OWASP edge security headers, guest order tracking, slide-over cart drawer, staff bulk order transitions, and one-click reordering.
