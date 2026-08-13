@@ -148,6 +148,30 @@ every branch merges.
   since P5a is live in production but dark.
 
 ### Fixed
+- **Local-preview sign-in no longer 403s on the auth origin check** (#176, `lib/auth-origin.ts`):
+  `resolveAuthOrigin()` built Better Auth's trusted origin from a **portless** host
+  (`.split(":")[0]`) and took the scheme from `x-forwarded-proto`. Against `npm run preview` on
+  `:8787` both halves miss: the browser sends `Origin: http://localhost:8787` while the check
+  compared it against `https://localhost`, so **every real-browser sign-in was refused** with
+  `Invalid origin`. Staging and production were never affected — the port is the scheme default
+  there and Cloudflare's forwarded proto is truthful — so the defect was invisible on exactly the
+  environments that get exercised most, and surfaced only when a browser was first driven at
+  preview during P6b2's Validate. The origin now **keeps a non-default port and strips a default
+  one** (`:443` under https, `:80` under http), matching how a browser composes `Origin`, and
+  **a loopback host is always `http`, overriding `x-forwarded-proto`**. That override is the part
+  that actually mattered and is *not* what the issue assumed: the header is **not absent** under
+  preview — `wrangler dev` sets it to `https` on a connection it serves over plain HTTP, so a
+  fallback-only fix (`https` unless the header is missing) still produced `https://localhost:8787`
+  and still refused every sign-in. Established by reading the header the Worker actually receives
+  through a throwaway diagnostic route, after a fallback-only fix was built, shipped into a real
+  Worker and observed to fail. Nothing off a developer machine reaches the branch: a loopback host
+  cannot be routed to on Cloudflare, and a spoofed `Host` already determines the trusted origin by
+  design (ADR-004 slice 3c), so no new exposure. Both halves live in pure, exported helpers
+  (`splitHostPort`, `inferProto`) under 22 new unit tests, because the untested async wrapper is
+  precisely where this hid; family-domain matching now runs against the portless hostname, so a
+  port cannot affect which domain family a host belongs to. **Trust is not widened:** a foreign
+  origin, and the right host on the wrong port, are both still refused. Unblocks browser-based
+  validation for every future slice — P7's accessibility work cannot be validated without it.
 - **P6a closeout docs.** `specs/roadmap.md` (1.18.0) gains P6a's slice row and its promotion row,
   written from what live validation actually proved: **every one of build-notes' "known-shaky"
   areas came back clean**, most notably the search `where`'s `user.email` relation-filter leg
