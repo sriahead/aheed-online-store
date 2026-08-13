@@ -1,5 +1,5 @@
 ---
-id: 2026-08-13-p6.6-p0-ui-overhaul
+id: 2026-08-13-p6-6-p0-ui-overhaul
 title: "Phase 6.6 — P0 Core Shopping UI Overhaul (plan)"
 audience: [dev]
 type: spec
