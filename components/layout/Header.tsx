@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { MapPin, Search, User, LogIn } from "lucide-react";
+import { MapPin, Search, User, LogIn, Sparkles, HelpCircle, UserCheck, LogOut, ShoppingBag, Clock } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
@@ -14,10 +14,6 @@ import { CartContents } from "@/components/cart/CartContents";
  * Storefront header — a Server Component (no "use client"), so it reads the
  * session and renders auth state with zero client JS, matching the
  * progressive-enhancement pattern used everywhere since P2a.
- *
- * The cart is real as of P3a (#93): the count and the drawer's contents are
- * rendered here on the server, and only the drawer's open/close is a client
- * island. A visitor with no cart identity costs no cart query at all.
  */
 
 function SearchForm({ className = "", placeholder }: { className?: string; placeholder: string }) {
@@ -25,7 +21,7 @@ function SearchForm({ className = "", placeholder }: { className?: string; place
     <form method="GET" action="/search" className={className}>
       <div className="relative">
         <Search
-          className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary/40"
+          className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40"
           aria-hidden
         />
         <input
@@ -33,7 +29,7 @@ function SearchForm({ className = "", placeholder }: { className?: string; place
           name="q"
           placeholder={placeholder}
           aria-label="Search products"
-          className="w-full rounded-full border border-black/15 bg-surface-muted py-2 pl-10 pr-4 text-sm focus:border-primary focus:bg-white focus:outline-none"
+          className="w-full bg-surface-muted hover:bg-black/5 focus:bg-white pl-10 pr-4 py-2 rounded-xl text-sm border border-black/10 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
         />
       </div>
     </form>
@@ -45,19 +41,16 @@ export async function Header() {
   const user = session?.user as { name: string } | undefined;
   const firstName = user?.name?.split(" ")[0];
 
-  // Vendor branding/locality (ADR-004 slice 4). The storefront layout already
-  // gated the tenant, so a profile always resolves here.
   const profile = await getCurrentVendorProfile();
   const name = profile?.name ?? "";
   const localityName = profile?.localityName ?? "";
 
-  // No identity (the common anonymous case) => no cart query at all.
   const cartIdentity = await getCartIdentity();
   const cartSummary =
     cartIdentity.userId || cartIdentity.guestToken
       ? await getCartRepository().getSummary(cartIdentity)
       : EMPTY_CART;
-  const searchPlaceholder = profile?.searchPlaceholder ?? "Search products…";
+  const searchPlaceholder = profile?.searchPlaceholder ?? "Search vine tomatoes, halal lamb chops, basmati, lentils...";
   const { CDN_BASE_URL } = getEnv();
   const logoUrl =
     profile?.logoStorageKey && CDN_BASE_URL
@@ -65,61 +58,100 @@ export async function Header() {
       : null;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-black/10 bg-white">
-      {/* Promo / trust bar */}
-      <div className="bg-primary text-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 py-1.5 text-center text-[11px] sm:justify-between sm:text-xs">
-          <span className="font-medium">
-            {name} — {localityName} Grocery &amp; Delivery
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <MapPin className="h-3.5 w-3.5 text-accent" aria-hidden />
-            Local delivery across the {localityName} area
-          </span>
+    <header className="sticky top-0 z-40 bg-white border-b border-black/10 shadow-sm">
+      {/* Top Banner - Delivery Promise & Trust bar */}
+      <div className="bg-primary text-white text-xs py-1.5 px-4">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-4 text-white/90">
+            <span className="flex items-center gap-1 font-medium text-white">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              {name} — {localityName} Local Grocery &amp; Self-Delivery
+            </span>
+            <span className="hidden md:inline text-white/50">|</span>
+            <span className="hidden md:inline-flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 text-action-tint" />
+              100% Certified HMC Halal Fresh Meat Cut Daily
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs">
+            <Link
+              href="/help"
+              className="flex items-center gap-1 text-white/80 hover:text-white px-2 py-0.5 rounded font-medium text-[11px]"
+            >
+              <HelpCircle className="w-3 h-3 text-action-tint" />
+              <span>Help Guide</span>
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* Main nav */}
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5 sm:gap-4 sm:py-3">
-        {/* Logo — from VendorBranding.logoStorageKey via the CDN when set, else a
-            text wordmark from the vendor name (ADR-004 slice 4). */}
-        <Link href="/" className="flex shrink-0 items-center">
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- storefront uses plain <img>; next/image loader is tracked in #46
-            <img src={logoUrl} alt={`${name} — Your Local Store`} className="h-11 w-auto sm:h-16" />
-          ) : (
-            <span className="text-xl font-bold text-primary sm:text-2xl">{name}</span>
-          )}
-        </Link>
+      {/* Main Nav Header */}
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        {/* Brand Logo */}
+        <div className="flex items-center gap-3 shrink-0">
+          <Link href="/" className="flex items-center gap-2.5 group text-left">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt={`${name} — Your Local Store`} className="h-10 w-auto rounded-xl shadow-sm group-hover:opacity-90 transition-opacity" />
+            ) : (
+              <>
+                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-xl shadow-md group-hover:bg-primary/90 transition-colors">
+                  {name.charAt(0)}
+                </div>
+                <div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="font-bold text-xl text-primary tracking-tight group-hover:text-primary/80 transition-colors">
+                      {name.split(" ")[0]}
+                    </span>
+                    <span className="font-semibold text-xs text-accent uppercase tracking-wider">
+                      {name.split(" ").slice(1).join(" ")}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-black/50 font-medium tracking-wide uppercase">
+                    {localityName} Groceries
+                  </p>
+                </div>
+              </>
+            )}
+          </Link>
+        </div>
 
-        {/* Inline search (desktop/tablet only; mobile gets its own row below) */}
-        <SearchForm className="hidden max-w-md flex-1 sm:block" placeholder={searchPlaceholder} />
+        {/* Global Search Bar */}
+        <div className="flex-1 max-w-md hidden sm:block">
+          <SearchForm placeholder={searchPlaceholder} />
+        </div>
 
-        {/* Account + cart */}
+        {/* Action Controls & Navigation */}
         <div className="flex shrink-0 items-center gap-2">
+          {/* Account / Sign In & Sign Out Controls */}
           {user ? (
-            <Link
-              href="/account"
-              className="flex items-center gap-1.5 rounded-full border border-black/10 bg-surface-muted px-2.5 py-2 text-xs font-bold text-primary sm:px-3"
-            >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
-                {firstName?.charAt(0) ?? <User className="h-3.5 w-3.5" aria-hidden />}
-              </span>
-              <span className="hidden sm:inline">{firstName}</span>
-            </Link>
+            <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-xl border border-black/10">
+              <Link
+                href="/account"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-black/80 hover:text-primary transition-colors"
+              >
+                <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
+                  {firstName?.charAt(0) ?? <User className="h-3.5 w-3.5" />}
+                </div>
+                <span className="hidden sm:inline">{firstName}</span>
+              </Link>
+            </div>
           ) : (
             <Link
               href="/login"
-              className="flex items-center gap-1.5 rounded-full border border-black/10 bg-surface-muted px-2.5 py-2 text-xs font-bold text-primary sm:px-3"
+              className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition-all border border-black/10"
             >
-              <LogIn className="h-4 w-4" aria-hidden />
-              <span className="hidden sm:inline">Sign in</span>
+              <LogIn className="w-4 h-4 text-primary" />
+              <span className="hidden sm:inline">Sign In</span>
             </Link>
           )}
 
-          {/* Real cart (P3a). Contents are server-rendered and handed to the
-              client shell as children, so only open/close ships JS. */}
-          <CartDrawerShell itemCount={cartSummary.itemCount}>
+          {/* Cart Trigger */}
+          <CartDrawerShell 
+            itemCount={cartSummary.itemCount}
+            subtotalPence={cartSummary.subtotalPence}
+          >
             <CartContents
               summary={cartSummary}
               freeDeliveryThresholdPence={profile?.freeDeliveryThresholdPence ?? null}
@@ -131,7 +163,7 @@ export async function Header() {
         </div>
       </div>
 
-      {/* Mobile search row — the inline search is hidden below sm, so surface it here. */}
+      {/* Mobile search row */}
       <div className="px-4 pb-2.5 sm:hidden">
         <SearchForm placeholder={searchPlaceholder} />
       </div>
