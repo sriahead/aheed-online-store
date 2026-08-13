@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { MapPin, Search, User, LogIn, Sparkles, HelpCircle, UserCheck, LogOut, ShoppingBag, Clock } from "lucide-react";
 import { getAuth } from "@/lib/auth";
+import { requireVendorRole } from "@/lib/auth-rbac";
 import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
 import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
@@ -40,6 +41,12 @@ export async function Header() {
   const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const user = session?.user as { name: string } | undefined;
   const firstName = user?.name?.split(" ")[0];
+  
+  let isStaffOrAdmin = false;
+  if (user) {
+    const staffCheck = await requireVendorRole("STAFF", "ADMIN");
+    isStaffOrAdmin = staffCheck.ok;
+  }
 
   const profile = await getCurrentVendorProfile();
   const name = profile?.name ?? "";
@@ -136,6 +143,17 @@ export async function Header() {
                 </div>
                 <span className="hidden sm:inline">{firstName}</span>
               </Link>
+              {isStaffOrAdmin && (
+                <>
+                  <div className="w-px h-4 bg-black/10 mx-1 hidden sm:block"></div>
+                  <Link
+                    href="/staff"
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+                  >
+                    Staff Panel
+                  </Link>
+                </>
+              )}
             </div>
           ) : (
             <Link
