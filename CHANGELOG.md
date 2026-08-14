@@ -7,6 +7,7 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Promo Slider & UI Animations**: Added a new `PromoSlider` component to the homepage to showcase the latest offers. Enhanced the overall visual impact with subtle animations (hover translations, shadows, and scaling) across the `ProductCard`, `DepartmentScroller`, and homepage trust sections.
 - **Validation Guidelines**: Added `specs/Validation.md` to track test cases for critical system logic including the hybrid Prisma driver architecture and cart persistence, preventing regressions.
 - **P6.7 — Staff Team & Role Management**:
   - Built a new `/staff/team` interface for managing staff members within a vendor organization.
