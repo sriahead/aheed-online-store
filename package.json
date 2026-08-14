@@ -28,9 +28,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@neondatabase/serverless": "0.10.4",
+    "@neondatabase/serverless": "^1.1.0",
     "@opennextjs/cloudflare": "^1.20.2",
-    "@prisma/adapter-neon": "^6.19.3",
+    "@prisma/adapter-neon": "^7.9.1",
     "@prisma/client": "^6.19.3",
     "aws4fetch": "^1.0.20",
     "better-auth": "^1.6.26",

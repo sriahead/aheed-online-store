@@ -39,9 +39,8 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
 - **Migrations run in CI on a Node runner using `DIRECT_URL` only.** Never on the Worker, never at
   request time, never against the pooled URL.
 - Prisma 6: driver adapters are **GA** — do NOT add `driverAdapters` to `previewFeatures`.
-  `@prisma/adapter-neon@6.19.3` builds its own `Pool` internally — construct as
-  `new PrismaNeon({ connectionString })`, a `neon.PoolConfig`, **not** a `Pool` instance (passing a
-  `Pool` fails with `Type 'Pool' has no properties in common with type 'PoolConfig'`).
+  `@prisma/adapter-neon@6.19.3` requires a driver adapter. **Use `PrismaNeonHttp` (fetch-based HTTP), NEVER `PrismaNeon` (WebSocket-based).**
+  Cloudflare isolates have strict connection/subrequest limits per worker. `PrismaNeon` relies on stateful WebSockets, which cause intermittent 500/441 errors (`"This page couldn't load"`) under concurrent load (e.g. at checkout or category pages) because connection pools exhaust rapidly inside V8 isolates. `PrismaNeonHttp` uses stateless `fetch` calls, sidestepping this entirely (proven in Issue #187). Ensure you pass an options object (even if empty) to `PrismaNeonHttp` to avoid type errors.
   Instantiate Prisma via `lib/db`'s `getPrisma()` — **construct fresh on every call, never cache
   across requests.** A cached cross-request singleton was the original pattern here and shipped in
   M0; it throws `"Cannot perform I/O on behalf of a different request"` on Cloudflare Workers

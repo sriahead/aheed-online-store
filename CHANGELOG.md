@@ -14,8 +14,8 @@ every branch merges.
   - Implemented `lib/repositories/roles.ts` to enforce RBAC and safe role updates.
 
 ### Fixed
-- **Cloudflare Staging React Error #441 (Connection Exhaustion)**:
-  - Memoized `getPrisma()` using React's `cache()` to create a per-request singleton. This fixes the `#441` crash caused by instantiating a new `PrismaNeon` driver (and opening a new WebSocket) on every single repository call, which was exhausting Cloudflare's concurrent connection limits during layout revalidations.
+- **Cloudflare Staging React Error #441 / Intermittent 500s (Connection Exhaustion)**:
+  - Replaced the WebSocket-based `PrismaNeon` adapter with the fetch-based `PrismaNeonHttp` adapter in `lib/db.ts`. The previous attempt to fix connection limits using React's `cache()` still resulted in connection exhaustion (Error 441 / "This page couldn't load") under concurrent load because each isolate's pool filled up with stateful WebSockets. Switching to HTTP `fetch` completely resolves the issue (tracked via #187).
 - **Cloudflare Staging React Error #441 (Tag Cache)**:
   - Fixed `addToCart` Server Action crashing during OpenNext revalidation phase.
   - Replaced `revalidateTag("cart")` with `revalidatePath("/", "layout")` in `features/cart/shared.ts` to bypass OpenNext tag cache missing binding issues on Cloudflare Workers.
