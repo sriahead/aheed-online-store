@@ -1,4 +1,4 @@
-import { getPrisma } from "@/lib/db";
+import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import { requireVendorRole } from "@/lib/auth-rbac";
 
@@ -74,7 +74,7 @@ export async function setVendorRole(targetEmail: string, newRole: VendorRoleActi
     throw new Error("Forbidden: Cannot modify a platform-admin's privileges.");
   }
 
-  await prisma.$transaction(async (tx) => {
+  await getPrismaWs().$transaction(async (tx) => {
     if (newRole) {
       await tx.vendorMembership.upsert({
         where: { userId_vendorId: { userId: targetUser.id, vendorId } },

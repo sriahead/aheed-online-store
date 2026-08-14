@@ -1,24 +1,25 @@
 import { PrismaClient } from "@prisma/client/wasm";
-import { PrismaNeonHttp } from "@prisma/adapter-neon";
+import { PrismaNeon, PrismaNeonHttp } from "@prisma/adapter-neon";
 import { cache } from "react";
 import { getEnv } from "./config";
 
 /**
- * Neon serverless driver over HTTP + Prisma driver adapter — the ONLY DB path that works
- * reliably on V8 isolates under high concurrent load.
- *
- * Using `PrismaNeonHttp` uses `fetch` under the hood, completely bypassing Cloudflare's
- * WebSocket limits and the "Cannot perform I/O on behalf of a different request" error
- * which causes random 500 errors / Error 441s when web sockets are exhausted.
- *
- * Wrapped in React's `cache()` to create a PER-REQUEST singleton.
+ * HTTP driver (fetch) for 99% of reads — prevents WebSocket exhaustion.
+ * Does not support interactive transactions.
  */
 export const getPrisma = cache(() => {
   const { DATABASE_URL } = getEnv();
-  // We use PrismaNeonHttp which automatically uses fetch.
-  // This bypasses the WebSocket Pool connection limits per Cloudflare isolate.
-  const adapter = new PrismaNeonHttp(DATABASE_URL, {
-    // Optional Neon HTTP settings, pass empty object as second param is required
-  });
+  const adapter = new PrismaNeonHttp(DATABASE_URL, {});
+  return new PrismaClient({ adapter });
+});
+
+/**
+ * WebSocket driver strictly for interactive transactions (e.g. addToCart, checkout).
+ * Kept separate so we only open a WebSocket when a transaction actually runs, 
+ * keeping concurrent connection counts well below Cloudflare's limits.
+ */
+export const getPrismaWs = cache(() => {
+  const { DATABASE_URL } = getEnv();
+  const adapter = new PrismaNeon({ connectionString: DATABASE_URL });
   return new PrismaClient({ adapter });
 });

@@ -1,4 +1,4 @@
-import { getPrisma } from "@/lib/db";
+import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import {
   DEFAULT_MULTIPLIER_BPS,
@@ -436,7 +436,7 @@ export async function saveLoyaltySettings(
   const prisma = getPrisma();
   const { tiers, ...config } = settings;
 
-  await prisma.$transaction(async (tx) => {
+  await getPrismaWs().$transaction(async (tx) => {
     await tx.vendorConfig.update({ where: { vendorId }, data: config });
     for (const tier of tiers) {
       await tx.vendorLoyaltyTier.updateMany({

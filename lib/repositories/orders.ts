@@ -1,4 +1,4 @@
-import { getPrisma } from "@/lib/db";
+import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import { buildOrderNumber, computeTotals, type DeliveryRules } from "@/lib/order-totals";
 import { getPaymentService } from "@/lib/payments";
@@ -648,7 +648,7 @@ export function getOrderRepository(): OrderRepository {
 
   return {
     async createOrder(input) {
-      return placeOrder(prisma, await vendorId(), input);
+      return placeOrder(getPrismaWs(), await vendorId(), input);
     },
 
     async getByOrderNumber(orderNumber, viewerUserId) {
@@ -848,7 +848,7 @@ export function getOrderRepository(): OrderRepository {
     },
 
     async advance(orderNumber, toStatus, actor) {
-      return advanceOrderStatus(prisma, await vendorId(), orderNumber, toStatus, actor);
+      return advanceOrderStatus(getPrismaWs(), await vendorId(), orderNumber, toStatus, actor);
     },
 
     async getFinancialsForStaff() {
@@ -1122,7 +1122,7 @@ export async function failPayment(
  * testable from a plain script against a real database.
  */
 export function getWebhookOrderService() {
-  const prisma = getPrisma();
+  const prisma = getPrismaWs();
   return {
     findOrder: (orderNumber: string) => findOrderForWebhook(prisma, orderNumber),
     confirm: (orderNumber: string) => confirmPayment(prisma, orderNumber),

@@ -14,8 +14,10 @@ every branch merges.
   - Implemented `lib/repositories/roles.ts` to enforce RBAC and safe role updates.
 
 ### Fixed
-- **Cloudflare Staging React Error #441 / Intermittent 500s (Connection Exhaustion)**:
-  - Replaced the WebSocket-based `PrismaNeon` adapter with the fetch-based `PrismaNeonHttp` adapter in `lib/db.ts`. The previous attempt to fix connection limits using React's `cache()` still resulted in connection exhaustion (Error 441 / "This page couldn't load") under concurrent load because each isolate's pool filled up with stateful WebSockets. Switching to HTTP `fetch` completely resolves the issue (tracked via #187).
+- **Cloudflare Staging React Error #441 / Intermittent 500s (Connection Exhaustion / HTTP Transaction Error)**:
+  - Deployed a hybrid Prisma driver strategy in `lib/db.ts` to solve both WebSocket connection exhaustion on Cloudflare isolates AND the "Transactions are not supported in HTTP mode" error.
+  - `getPrisma()` now uses the fetch-based `PrismaNeonHttp` adapter for 99% of read operations, bypassing Cloudflare's WebSocket limit.
+  - `getPrismaWs()` uses the WebSocket-based `PrismaNeon` adapter strictly for operations requiring `$transaction` (e.g. checkout, add to cart). This ensures we only open a WebSocket exactly when an interactive transaction is required, keeping the concurrent socket count well below Cloudflare's strict 50-per-isolate limit.
 - **Cloudflare Staging React Error #441 (Tag Cache)**:
   - Fixed `addToCart` Server Action crashing during OpenNext revalidation phase.
   - Replaced `revalidateTag("cart")` with `revalidatePath("/", "layout")` in `features/cart/shared.ts` to bypass OpenNext tag cache missing binding issues on Cloudflare Workers.

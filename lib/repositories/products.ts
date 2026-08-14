@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { getPrisma } from "@/lib/db";
+import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import { effectiveStock } from "@/lib/cart-rules";
@@ -571,7 +571,7 @@ export async function updateProductForVendor(
 ): Promise<CatalogueWriteResult> {
   const prisma = getPrisma();
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await getPrismaWs().$transaction(async (tx) => {
       const existing = await tx.product.findFirst({
         where: { id, vendorId },
         select: { id: true },
@@ -644,7 +644,7 @@ export async function setPrimaryProductImage(
   alt: string,
 ): Promise<CatalogueWriteResult> {
   const prisma = getPrisma();
-  return await prisma.$transaction(async (tx) => {
+  return await getPrismaWs().$transaction(async (tx) => {
     // Vendor-scoped: another vendor's product is indistinguishable from one that
     // never existed, exactly as updateProductForVendor treats it.
     const product = await tx.product.findFirst({
@@ -685,7 +685,7 @@ export async function quickUpdateInventory(
 ): Promise<CatalogueWriteResult> {
   const prisma = getPrisma();
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await getPrismaWs().$transaction(async (tx) => {
       const existing = await tx.product.findFirst({
         where: { id: productId, vendorId },
         select: { id: true, inventory: { select: { quantity: true, lowStockThreshold: true } } },

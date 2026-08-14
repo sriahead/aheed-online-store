@@ -1,4 +1,4 @@
-import { getPrisma } from "@/lib/db";
+import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 
 export interface ReviewSummary {
@@ -38,7 +38,7 @@ export function getReviewRepository(): ReviewRepository {
       // Full aggregate recompute, not incremental — avoids floating-point
       // drift, matches Inventory.quantity's denormalized-and-recomputed
       // precedent. Both writes share one transaction.
-      await prisma.$transaction(async (tx) => {
+      await getPrismaWs().$transaction(async (tx) => {
         // A review inherits its product's vendor (ADR-004 slice 1). Resolved here from the
         // product rather than passed in; slice 3's tenant resolver doesn't exist yet.
         const product = await tx.product.findUnique({
@@ -68,7 +68,7 @@ export function getReviewRepository(): ReviewRepository {
     },
 
     async delete(reviewId, userId) {
-      await prisma.$transaction(async (tx) => {
+      await getPrismaWs().$transaction(async (tx) => {
         const review = await tx.review.findUnique({
           where: { id: reviewId },
           select: { productId: true },
