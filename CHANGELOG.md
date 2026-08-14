@@ -7,6 +7,7 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Validation Guidelines**: Added `specs/Validation.md` to track test cases for critical system logic including the hybrid Prisma driver architecture and cart persistence, preventing regressions.
 - **P6.7 — Staff Team & Role Management**:
   - Built a new `/staff/team` interface for managing staff members within a vendor organization.
   - Added a backend integration allowing STORE_ADMIN users to assign `STAFF` and `STORE_ADMIN` roles to existing users.
