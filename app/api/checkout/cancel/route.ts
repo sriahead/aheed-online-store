@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getOrderRepository } from "@/lib/repositories/orders";
+import { getOrderRepository, getWebhookOrderService } from "@/lib/repositories/orders";
 import { getCartRepository } from "@/lib/repositories/cart";
 import { getCartIdentity } from "@/lib/cart-identity";
 import { scopedToUser } from "@/features/cart/shared";
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   
   if (order && order.status === "PENDING_PAYMENT") {
     // 1. Cancel the order (releases inventory)
-    await orderRepo.getWebhookOrderService().failOrder(orderNumber, "Shopper cancelled payment at checkout");
+    await getWebhookOrderService().fail(orderNumber, "Shopper cancelled payment at checkout");
     
     // 2. Restore items to cart
     if (order.items.length > 0) {
