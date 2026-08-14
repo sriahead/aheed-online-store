@@ -3,6 +3,7 @@ import { getCategoryRepository } from "@/lib/repositories/categories";
 import { getProductRepository } from "@/lib/repositories/products";
 import { getEnv } from "@/lib/config";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
+import { PromoSlider } from "@/components/layout/PromoSlider";
 import { ProductRow } from "@/components/product/ProductRow";
 import { isDeliverable } from "@/lib/delivery";
 import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
@@ -97,7 +98,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </div>
 
         {/* Hero Banner Accent Image */}
-        <div className="hidden lg:block absolute right-8 top-1/2 -translate-y-1/2 w-[350px] h-[280px] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 rotate-2 hover:rotate-0 transition-transform duration-500">
+        <div className="hidden lg:block absolute right-8 top-1/2 -translate-y-1/2 w-[350px] h-[280px] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 rotate-2 hover:rotate-0 hover:scale-105 transition-all duration-700 ease-out">
           <img
             src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80"
             alt="Fresh Produce"
@@ -108,8 +109,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
       {/* Trust Values Strip */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-action-tint text-primary flex items-center justify-center font-bold shrink-0">
+        <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-10 h-10 rounded-xl bg-action-tint text-primary flex items-center justify-center font-bold shrink-0 group-hover:scale-110 transition-transform">
             <Sparkles className="w-5 h-5 text-primary" />
           </div>
           <div>
@@ -118,8 +119,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-danger-tint text-danger flex items-center justify-center font-bold shrink-0">
+        <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-10 h-10 rounded-xl bg-danger-tint text-danger flex items-center justify-center font-bold shrink-0 group-hover:scale-110 transition-transform">
             <ShieldCheck className="w-5 h-5 text-danger" />
           </div>
           <div>
@@ -130,8 +131,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-accent-tint text-accent flex items-center justify-center font-bold shrink-0">
+        <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-10 h-10 rounded-xl bg-accent-tint text-accent flex items-center justify-center font-bold shrink-0 group-hover:scale-110 transition-transform">
             <HeartHandshake className="w-5 h-5 text-accent" />
           </div>
           <div>
@@ -142,8 +143,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold shrink-0">
+        <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold shrink-0 group-hover:scale-110 transition-transform">
             <Truck className="w-5 h-5 text-blue-700" />
           </div>
           <div>
@@ -154,6 +155,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </div>
         </div>
       </section>
+
+      {/* Promo Slider Section */}
+      <PromoSlider />
 
       {/* Store Categories Nav */}
       <section className="bg-white rounded-2xl border border-black/10 p-5 shadow-sm">
