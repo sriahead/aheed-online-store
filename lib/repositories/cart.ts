@@ -109,7 +109,7 @@ export function getCartRepository(): CartRepository {
     const existing = await findCart(vid, userId, guestToken);
     if (existing) return existing.id;
 
-    const created = await prisma.cart.create({
+    const created = await getPrismaWs().cart.create({
       data: { vendorId: vid, userId: userId ?? null, guestToken: guestToken ?? null },
       select: { id: true },
     });
@@ -307,9 +307,11 @@ export function getCartRepository(): CartRepository {
       // Clamp against stock; never lands on 0 (removal is the explicit path).
       const next = clampQuantity(0, quantity, stock);
       if (next <= 0) return;
-      await prisma.cartItem.updateMany({
-        where: { cartId: cart.id, productId },
-        data: { quantity: next },
+      await getPrismaWs().$transaction(async (tx: Tx) => {
+        await tx.cartItem.updateMany({
+          where: { cartId: cart.id, productId },
+          data: { quantity: next },
+        });
       });
     },
 
@@ -317,7 +319,9 @@ export function getCartRepository(): CartRepository {
       const vid = await vendorId();
       const cart = await findCart(vid, identity.userId, identity.guestToken);
       if (!cart) return;
-      await prisma.cartItem.deleteMany({ where: { cartId: cart.id, productId } });
+      await getPrismaWs().$transaction(async (tx: Tx) => {
+        await tx.cartItem.deleteMany({ where: { cartId: cart.id, productId } });
+      });
     },
 
     async applyMerge(identity, resolution) {
