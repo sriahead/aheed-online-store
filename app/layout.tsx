@@ -36,8 +36,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   // each page owns its own width container. (This body used to force max-w-2xl,
   // which silently constrained every page since P2a.)
   return (
-    <html lang="en" className={poppins.variable}>
-      <body className="leading-relaxed">{children}</body>
+    <html lang="en" className={poppins.variable} suppressHydrationWarning>
+      <body className="leading-relaxed" suppressHydrationWarning>{children}</body>
     </html>
   );
 }
