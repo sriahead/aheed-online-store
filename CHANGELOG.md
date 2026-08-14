@@ -15,6 +15,9 @@ every branch merges.
   - Implemented `lib/repositories/roles.ts` to enforce RBAC and safe role updates.
 
 ### Fixed
+- **Checkout Form Persistence**: Contact details on the checkout form now persist using local storage to survive the navigation flow when returning from payment.
+
+### Fixed
 - **Cloudflare Staging React Error #441 / Intermittent 500s (Connection Exhaustion / HTTP Transaction Error)**:
   - Deployed a hybrid Prisma driver strategy in `lib/db.ts` to solve both WebSocket connection exhaustion on Cloudflare isolates AND the "Transactions are not supported in HTTP mode" error.
   - `getPrisma()` now uses the fetch-based `PrismaNeonHttp` adapter for 99% of read operations, bypassing Cloudflare's WebSocket limit.
