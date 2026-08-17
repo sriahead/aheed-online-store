@@ -6,6 +6,27 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **P7a compliance/hardening: three defects found and fixed at its first-ever `/validate` pass**
+  (specs/2026-08-13-p7a-compliance-hardening/). P7a shipped ungated (direct push, no PR, no
+  `gates`) on 2026-08-13; this is the first time it was checked against its own spec. Missing
+  `Content-Security-Policy` header added to `next.config.mjs`, scoped to the app's actual external
+  hosts (per-vendor CDN, R2's presigned-upload endpoint) so image upload wasn't silently broken.
+  Staff bulk order transitions (`requirements.md` §4.3/GAP-010, issue #162) were never built
+  despite the roadmap claiming otherwise — added `advanceOrderStatusBulk` (one `$transaction` per
+  batch, legality re-checked per order against its own persisted status) and wired multi-select
+  checkboxes into `/staff/orders` via HTML5's `form=` attribute rather than nested `<form>`s. Guest
+  order lookup (`/orders/lookup`) reused `findOrderForWebhook` — documented in its own file as the
+  one deliberately un-scoped read in the codebase, meant for Stripe's server calls only — with an
+  optional email field, so an order number alone disclosed any order's contents, any vendor, no
+  auth, no throttle; this is exactly the gap issue #123 deferred pending a real credential-pair/
+  rate-limiting decision, which P7a's own `requirements.md` §4.1 had already settled (Order Number
+  + Email) without the implementation enforcing it. Fixed with a vendor-scoped, email-matched query
+  (`findOrderForGuestLookup`) and a new Postgres-backed 5/minute rate limiter
+  (`OrderLookupAttempt`, additive migration `20260817120702_p7a_order_lookup_rate_limit`) — no
+  Cloudflare rate-limiting binding is provisioned, so this reuses existing Neon/Prisma rather than
+  inventing infrastructure. All three verified live against real Postgres on staging.
+
 ### Docs
 - **Backfilled `specs/roadmap.md`'s missing PR #200 promotion row.** `sdd:audit` only checks that a
   roadmap entry cites a `specs/<slice>/` path, so a missing *promotion* row (as opposed to a missing
