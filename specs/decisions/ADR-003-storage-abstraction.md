@@ -4,8 +4,8 @@ title: "ADR-003 — Object Storage Abstraction (S3-compatible)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.1.0"
-updated: 2026-08-12
+version: "1.2.0"
+updated: 2026-08-17
 visibility: internal
 summary: Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time.
 tags: [adr, storage, r2, s3, portability]
@@ -78,3 +78,14 @@ gained its first write-side capability and the key convention became concrete.
   uploads to storage directly, so no image byte transits the Worker. This requires **bucket CORS**
   allowing `PUT` from the vendor origins — a per-bucket, per-environment prerequisite invisible to
   the repo, so it is documented in each slice that depends on it rather than assumed.
+
+## Implementation note (2026-08-17, catalogue debt bucket / #211)
+
+Additive only. **#174 was decided, partially:** the port gains a `deleteObject(key)` method (same
+`aws4fetch` client, standard S3 `DeleteObject`), called synchronously wherever an image is removed
+or replaced. This closes the "delete method stays absent" line above — but only for the
+superseded/removed-object half of #174. The abandoned-upload half (an object with no `ProductImage`
+row ever written, because the browser tab closed between the presigned `PUT` and the row write)
+still has no cleanup path; a scheduled sweep (`wrangler.toml`'s first cron trigger) was considered
+and deliberately deferred as bigger infrastructure than this slice's scope, so #174 stays open for
+that narrower remainder.
