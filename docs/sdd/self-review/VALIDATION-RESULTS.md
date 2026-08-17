@@ -4,8 +4,8 @@ title: Phase 6.5 Validation & Test Results
 audience: [dev, staff]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-08-13
+version: "1.1.0"
+updated: 2026-08-17
 visibility: internal
 summary: Verification log of test runs, build checks, and validation evidence for Phase 6.5 audit loop.
 tags: [self-review, validation, tests]
@@ -33,6 +33,12 @@ tags: [self-review, validation, tests]
 - **Problem:** Local preview sign-ins (`http://localhost:8787`) failed with 403 CSRF origin mismatch because port was stripped and `wrangler dev` default `x-forwarded-proto` was trusted over loopback HTTP.
 - **Fix:** Exported `splitHostPort` and `inferProto` in `lib/auth-origin.ts`, preserving non-default ports and inferring loopback `http`.
 - **Validation:** 26 dedicated unit tests added and passing in `tests/auth-origin.test.ts`.
+- **Live validation (added 2026-08-17, #192):** the unit tests above were the *only* evidence
+  recorded here, and they exercise the helpers rather than the reported failure. The symptom itself
+  was re-fired on 2026-08-17 against `npm run preview`: headless, `Origin: http://localhost:8787`
+  returns `401 INVALID_EMAIL_OR_PASSWORD` (origin accepted) while `Origin: http://localhost` returns
+  `403 INVALID_ORIGIN` (correctly refused); from Chrome, the real login form's
+  `POST /api/auth/sign-in/email` returned `401`. Issue #176 closed on that evidence.
 
 ### 3. GAP-003 (Medium - Frontend / UI Missing 404 Page)
 - **Problem:** Missing custom 404 error page.

@@ -4,8 +4,8 @@ title: Phase 6.5 Autonomous Self-Review Report
 audience: [dev, staff]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-08-13
+version: "1.1.0"
+updated: 2026-08-17
 visibility: internal
 summary: Executive summary and status breakdown of Phase 6.5 audit loop across architecture, schema, security, payments, and deployment.
 tags: [self-review, report, audit, hardening]
@@ -47,7 +47,14 @@ Four gaps (2 High, 1 Medium, 1 Low) were identified, auto-fixed, tested, and val
 2. **GAP-002 (High - Security & Auth / Local Preview Origin Mismatch):**
    - **Finding:** Local preview auth requests (`http://localhost:8787`) 403 on sign-in due to port stripping & `wrangler dev` default `x-forwarded-proto` (`#176`).
    - **Fix:** Implemented `splitHostPort` and `inferProto` in `lib/auth-origin.ts` with unit tests.
-   - **Status:** **Fixed**
+   - **Status:** **Fixed** — but note the qualifier below.
+   - **Evidence caveat (added 2026-08-17, #192):** at the time this report was written the only
+     evidence for this row was 26 unit tests. The reported symptom — a real browser sign-in against
+     `npm run preview` — had never been re-fired, so #176 remained open for four days while this
+     report said `Fixed`. Live-verified on 2026-08-17: `POST /api/auth/sign-in/email` from Chrome at
+     `http://localhost:8787` returns `401` on a wrong password rather than `403 INVALID_ORIGIN`.
+     #176 is now closed. A unit test proving a helper function is not the same claim as the
+     defect being gone.
 
 3. **GAP-003 (Medium - Frontend / UI Missing 404 Page):**
    - **Finding:** Absence of branded `app/not-found.tsx`.
