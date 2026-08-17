@@ -6,6 +6,21 @@ every branch merges.
 
 ## [Unreleased]
 
+### Docs
+- **`/document` pass reconciling both promotions to production (PR #214) and a real
+  closing-keyword incident.** `specs/roadmap.md` now records the catalogue-debt-bucket slice's
+  actual staging outcome (both R2/R15 blockers found and resolved before Ship — one was a test-
+  harness bug, the other a local-only R2 CORS limitation, not app defects) and the combined
+  production promotion. **Issue #174 was closed by accident during that promotion** — a `/fix`
+  commit message quoting the exact wrong text it was correcting (`"closes #174"`, inside a sentence
+  saying the opposite) still matched GitHub's closing-keyword scanner, which reads every commit in
+  the merged set, not just the PR body. Caught within minutes via the routine post-promotion
+  issue-state check, reopened with an explanatory comment, board status corrected. Recorded a
+  sharper version of this trap in `specs/sdd-workflow.md`'s Ship section: `closingIssuesReferences`
+  doesn't see every commit message, so it isn't sufficient on its own — the literal string
+  `closes #NNN` (or any closing-keyword variant) must never appear anywhere near an issue number
+  that must stay open, including inside a quotation.
+
 ### Fixed
 - **The homepage's "New Arrivals" and "Featured Halal Deals" rows rendered nothing at all**
   (issue #211, closes #208's remainder). Both fetched products via
