@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.13.0"
-updated: 2026-08-12
+version: "1.14.0"
+updated: 2026-08-17
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -273,8 +273,9 @@ model OrderItem {
 
 ### 3.3 Object-storage integration
 
-The port (`lib/storage.ts`) exposes exactly four operations: `putObject`, `publicUrl`, `presignPut`
-and `headObject`. All are standard S3 (`PutObject`, `HeadObject`, SigV4 query signing) — nothing
+The port (`lib/storage.ts`) exposes five operations: `putObject`, `publicUrl`, `presignPut`,
+`headObject` and `deleteObject` (added 2026-08-17, #211 — see ADR-003's implementation note). All
+are standard S3 (`PutObject`, `HeadObject`, `DeleteObject`, SigV4 query signing) — nothing
 R2-specific, per ADR-003.
 
 1. **Upload (admin, browser-direct — P6b2/#167).** The Worker signs a short-lived `PUT` with

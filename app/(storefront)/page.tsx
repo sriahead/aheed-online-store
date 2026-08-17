@@ -21,11 +21,11 @@ type SearchParams = { postcode?: string };
 export default async function HomePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const { postcode } = await searchParams;
   const productsRepo = getProductRepository();
-  const [categories, profile, newArrivalsPage, dealsPage] = await Promise.all([
+  const [categories, profile, newArrivalsPage, featuredPage] = await Promise.all([
     getCategoryRepository().listTopLevel(),
     getCurrentVendorProfile(),
-    productsRepo.search("", { take: 4 }), // recent products
-    productsRepo.search("", { take: 4, isHalal: true }), // simulated deals / halal featured
+    productsRepo.list({ take: 4 }), // recent products
+    productsRepo.list({ take: 4, isFeatured: true }), // vendor-curated featured products
   ]);
   const { CDN_BASE_URL } = getEnv();
   const localityName = profile?.localityName ?? "";
@@ -173,10 +173,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         viewAllLink="/search"
       />
       <ProductRow
-        title="Featured Halal Deals"
-        products={dealsPage.items}
+        title="Featured Products"
+        products={featuredPage.items}
         cdnBaseUrl={CDN_BASE_URL ?? ""}
-        viewAllLink="/search?isHalal=true"
       />
     </main>
   );

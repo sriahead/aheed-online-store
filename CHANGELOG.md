@@ -6,7 +6,82 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **The homepage's "New Arrivals" and "Featured Halal Deals" rows rendered nothing at all**
+  (issue #211, closes #208's remainder). Both fetched products via
+  `productsRepo.search("", {...})`; `search()`'s empty-query guard — correct for its real caller,
+  the `/search` page — unconditionally returns zero results, and `ProductRow` renders `null` for
+  zero products. Neither row's title appeared anywhere in `npm run preview`'s rendered homepage
+  before this fix. Added `ProductRepository.list()` for filtered listing without search text;
+  `search()` itself is unchanged.
+
+### Added
+- **Real `Product.isFeatured` flag** (additive migration), replacing the `isHalal` proxy the
+  homepage's featured rail ran on (GAP-013, #208). Admin checkbox in `ProductForm`, rail retitled
+  "Featured Products". Deliberately independent of `originalPrice`'s existing discount-badge
+  derivation — featured and "on offer" stay two separate concepts.
+- **Multi-image admin management** (GAP-014, #173): add a second (or third...) image, set which one
+  is primary, remove one, reorder them — `lib/repositories/products.ts`'s `addProductImage`/
+  `promoteProductImage`/`removeProductImage`/`reorderProductImages`, four new server actions, and
+  `components/staff/ProductImageManager.tsx`. The real gap was bigger than "remove and reorder are
+  missing": no code path had ever created a second `ProductImage` row — `attachProductImage` only
+  ever repointed the single primary, unchanged by this slice.
+- **`StorageService.deleteObject`** (GAP-015, #174 partial): removing or replacing a product image
+  now deletes the superseded object from storage. Decided inline delete over a scheduled sweep — no
+  new infrastructure, `wrangler.toml` still has no cron triggers. Doesn't cover an abandoned upload
+  (object written, `ProductImage` row never created) — #174 stays open for that narrower remainder.
+  `specs/architecture.md` and ADR-003 updated; both previously documented delete as "deliberately
+  absent".
+
 ### Docs
+- **`/document` pass for the P6.5 residual-validation `/validate` + `/fix` + `/ship` cycle
+  (PR #209).** Added the roadmap row recording the actual merge (`74b6d02`) and the `/fix` pass
+  that preceded it — the Build-time row predicted the outcome before Ship ran, matching the pattern
+  already seen for PR #205/#206. Rebuilt `ARTIFACT_INDEX.md`. Confirmed issue #192's board item is
+  `In Review` (not `Done` — merged to `staging` only) and that #208/#176 are correctly placed.
+  Recorded a lesson in `specs/sdd-workflow.md`'s Ship section: a PR body referencing an issue that
+  must stay open is a closing-keyword trap even in prose that isn't the canonical `Closes #NN`
+  form — verify with `gh pr view <N> --json closingIssuesReferences` before merging.
+
+### Fixed
+- **Gap-register reconciliation: the registers were wrong on seven of fifteen rows**
+  (specs/2026-08-17-p6.5-residual-validation/, issue #192). Two `status: approved` registers were
+  sharing one GAP-ID space with no cross-reference — `docs/sdd/self-review/GAP-REGISTER.md` held
+  GAP-001..004, `docs/gap-register.md` held GAP-005..015. Consolidated into `docs/gap-register.md`
+  as the single master; the P6.5 file keeps its narrative and points there. Every row was then
+  re-derived from the code rather than from what the row claimed about itself: GAP-007 cited the
+  closed P6b2 upload issue (#167) instead of the open CORS prerequisite (#180); GAP-008, GAP-009,
+  GAP-010, GAP-012 and GAP-013 all still read `Deferred` after the work had shipped. **GAP-012 was
+  fully built and nobody knew** — `features/orders/reorder-items.ts` is a complete server action
+  wired into the order detail page while both the register and issue #124 reported it outstanding.
+  GAP-013's rail ships but is populated by an `isHalal` proxy rather than a real featured flag
+  (**#208** filed). GAP-014's wording understated what exists (add and set-primary are built;
+  remove and reorder are not). The register's "0 P0 (Critical Code/Security) gaps" and "100%
+  functionally complete, fully tested, and verified" claims are removed — both were false on the
+  day they were written, given P7a's unlisted unauthenticated cross-vendor order-disclosure hole.
+- **P6.5's exit gate certified a document instead of the code.** Its `validation.md` R1/R2 asked
+  only that the gap register exist and *claim* zero unresolved Critical/High gaps, and its six rows
+  were labelled `R1..R6` against a `requirements.md` that had no numbered requirements at all.
+  That is the mechanism that let GAP-010 sit as an accounted-for `Deferred` row while staff bulk
+  transitions had never been built. Both files rewritten: numbered `R1..R11`, every row now naming
+  a command, a file property, or a behaviour to exercise against the artifact.
+- **#176 verified fixed and closed**, and `specs/sdd-workflow.md`'s Validate-stage guidance for it
+  corrected. The fix had landed as GAP-002 of P6.5, but its only evidence was 26 unit tests — the
+  reported symptom was never re-fired, so the issue stayed open and the workflow doc kept telling
+  future sessions that local-preview browser sign-in 403s and needed a temporary **uncommitted**
+  patch to `lib/auth-origin.ts`. Live-verified against `npm run preview`: `Origin:
+  http://localhost:8787` reaches credential checking (`401` on a wrong password) while `Origin:
+  http://localhost` correctly returns `403 INVALID_ORIGIN` — **the inverse of what the doc
+  documented**, so a validator following it would have called a working app broken. Confirmed from
+  a real Chrome session as well (`POST /api/auth/sign-in/email` → `401`). Because the origin check
+  runs before credential validation, a deliberately wrong password proves this with no real
+  credential involved.
+
+### Docs
+- **Backfilled the PR #206 promotion row in `specs/roadmap.md`** (`staging → main`, merge
+  `081f618`) — the fifth consecutive promotion to reach production without a change-log row.
+  `sdd:audit` checks for a missing *slice* row and structurally cannot see a missing *promotion*
+  row; rather than record that observation for a fifth time, it is now tracked as **#207**.
 - **`/document` pass for the P7a `/validate`+`/fix`+`/ship` cycle (PR #204).** Backfilled two
   missing promotion rows in `specs/roadmap.md`'s change log — PR #203 (`staging → main`, closing
   P8 operational-debt issues #98/#156/#197) and today's P7a fix (PR #204, merged to `staging`) —

@@ -11,7 +11,14 @@ import {
   type ImageActionResult,
   type UploadTicket,
 } from "@/lib/product-image";
-import { getProductForAdmin, setPrimaryProductImage } from "@/lib/repositories/products";
+import {
+  addProductImage as addProductImageRow,
+  getProductForAdmin,
+  promoteProductImage as promoteProductImageRow,
+  removeProductImage as removeProductImageRow,
+  reorderProductImages as reorderProductImagesRow,
+  setPrimaryProductImage,
+} from "@/lib/repositories/products";
 
 /**
  * Product image upload actions (P6b2, #167) — the image half of the catalogue
@@ -143,4 +150,110 @@ export async function attachProductImage(
   // The public URL is composed HERE. lib/storage carries the aws4fetch signer,
   // so the browser uploader must never import it to build this itself.
   return { ok: true, value: { url: getStorage().publicUrl(storageKey) } };
+}
+
+function revalidateProductSurfaces(productId: string, slug: string): void {
+  revalidatePath(`/staff/products/${productId}`);
+  revalidatePath("/staff/products");
+  revalidatePath(`/products/${slug}`);
+  revalidatePath("/categories", "layout");
+}
+
+/**
+ * Add a second (or third, ...) image — #211's actual gap: attachProductImage
+ * above only ever repoints the primary. Same upload precondition as
+ * attachProductImage (a presigned PUT cannot police a body the Worker never
+ * sees, so this asks storage what actually landed before any row changes).
+ */
+export async function addProductImage(
+  productId: string,
+  storageKey: string,
+  alt: string,
+): Promise<ImageActionResult<{ url: string }>> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  const product = await getProductForAdmin(auth.vendorId, productId);
+  if (!product) return { ok: false, error: NOT_FOUND };
+
+  if (!isProductImageKey(storageKey, product.id)) {
+    return { ok: false, error: "That upload doesn't belong to this product." };
+  }
+
+  const head = await getStorage().headObject(storageKey);
+  if (!head) {
+    return { ok: false, error: "That upload didn't arrive — please try again." };
+  }
+  if (head.contentType !== IMAGE_CONTENT_TYPE) {
+    return { ok: false, error: "That upload isn't a WebP image." };
+  }
+  if (head.contentLength !== null && head.contentLength > MAX_IMAGE_BYTES) {
+    return {
+      ok: false,
+      error: `Images must be under ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))} MB.`,
+    };
+  }
+
+  const result = await addProductImageRow(auth.vendorId, product.id, storageKey, alt);
+  if (!result.ok) return { ok: false, error: result.error };
+
+  revalidateProductSurfaces(product.id, product.slug);
+  return { ok: true, value: { url: getStorage().publicUrl(storageKey) } };
+}
+
+/** Promote an existing image to primary — moves isPrimary, never touches storageKey. */
+export async function promoteProductImage(
+  productId: string,
+  imageId: string,
+): Promise<ImageActionResult<null>> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  const result = await promoteProductImageRow(auth.vendorId, productId, imageId);
+  if (!result.ok) return { ok: false, error: result.error };
+
+  const product = await getProductForAdmin(auth.vendorId, productId);
+  if (product) revalidateProductSurfaces(product.id, product.slug);
+  return { ok: true, value: null };
+}
+
+/**
+ * Remove an image: deletes its row, then its storage object. The repository
+ * call is DB-only (Presentation -> Service -> Repository -> Prisma,
+ * specs/architecture.md) — this Service-layer action is what's allowed to
+ * know both ProductRepository and StorageService exist, matching how
+ * attachProductImage above calls headObject itself rather than teaching the
+ * repository about storage.
+ */
+export async function removeProductImage(
+  productId: string,
+  imageId: string,
+): Promise<ImageActionResult<null>> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  const result = await removeProductImageRow(auth.vendorId, productId, imageId);
+  if (!result.ok) return { ok: false, error: result.error };
+
+  await getStorage().deleteObject(result.storageKey);
+
+  const product = await getProductForAdmin(auth.vendorId, productId);
+  if (product) revalidateProductSurfaces(product.id, product.slug);
+  return { ok: true, value: null };
+}
+
+/** Reorder a product's images to the given id order. */
+export async function reorderProductImages(
+  productId: string,
+  orderedImageIds: string[],
+): Promise<ImageActionResult<null>> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  const result = await reorderProductImagesRow(auth.vendorId, productId, orderedImageIds);
+  if (!result.ok) return { ok: false, error: result.error };
+
+  const product = await getProductForAdmin(auth.vendorId, productId);
+  if (product) revalidateProductSurfaces(product.id, product.slug);
+  return { ok: true, value: null };
 }

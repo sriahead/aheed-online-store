@@ -315,10 +315,15 @@ model Product {
   isHalal       Boolean        @default(false)
   isFresh       Boolean        @default(false)
   isOrganic     Boolean        @default(false)
+  // #211 — vendor curation flag driving the homepage "Featured Products" rail.
+  // Independent of originalPrice's discount-badge derivation: featured and
+  // "on offer" are two separate concepts.
+  isFeatured    Boolean        @default(false)
 
   @@unique([vendorId, slug])
   @@index([vendorId, categoryId, isActive])
   @@index([vendorId, isActive, basePrice]) // catalogue filter + sort
+  @@index([vendorId, isActive, isFeatured]) // homepage featured rail
 }
 
 model ProductImage {

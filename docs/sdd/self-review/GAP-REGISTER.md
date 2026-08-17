@@ -1,21 +1,39 @@
 ---
 id: gap-register
-title: Phase 6.5 Gap Register
+title: Phase 6.5 Gap Register (superseded by the master register)
 audience: [dev, staff]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-08-13
+version: "2.0.0"
+updated: 2026-08-17
 visibility: internal
-summary: Master tracking register for all identified, fixed, deferred, or blocked gaps during Phase 6.5 audit loop.
-tags: [gap-register, self-review, audit, hardening]
+summary: The Phase 6.5 audit's gap register, now a pointer — its four findings (GAP-001..004) were folded into the single master register at docs/gap-register.md on 2026-08-17.
+tags: [gap-register, self-review, audit, hardening, superseded]
+related: [gap-register-audit, self-review-report, p6-5-residual-validation-plan]
 ---
 
-# Phase 6.5 — Master Gap Register
+# Phase 6.5 — Gap Register
 
-| ID | Area | Severity | Finding | Evidence | Recommendation | Auto-fix? | Status |
-|---|---|---|---|---|---|---|---|
-| GAP-001 | Security / Tenancy | High | `getCurrentVendorIdOrNull()` truncates IPv6 loopback hosts (`[::1]:8787` -> `[`) | `lib/tenant.ts` line 15 `.split(":")[0]` | Parse hostname using `splitHostPort(host).hostname` | Yes | Fixed |
-| GAP-002 | Security / Auth | High | Local preview auth requests (`http://localhost:8787`) 403 on sign-in due to port stripping & wrangler dev x-forwarded-proto default (#176) | `lib/auth-origin.ts` line 64 and issue #176 | Implement `splitHostPort` and `inferProto` in `lib/auth-origin.ts` with unit tests | Yes | Fixed |
-| GAP-003 | Frontend / UI | Medium | Unstyled fallback 404 page rendered for missing routes | Absence of `app/not-found.tsx` | Add vendor-branded `app/not-found.tsx` component | Yes | Fixed |
-| GAP-004 | KMS Docs | Low | `ARTIFACT_INDEX.md` front-matter timestamp needs refresh | `npm run kms:build-index` | Rebuild KMS index and reassemble docs | Yes | Fixed |
+> **This file no longer holds a gap table.** The Phase 6.5 findings — **GAP-001** (IPv6 loopback
+> host truncation), **GAP-002** (local preview sign-in origin mismatch, #176), **GAP-003** (unstyled
+> fallback 404) and **GAP-004** (`ARTIFACT_INDEX.md` staleness) — now live in the single master
+> register:
+>
+> **[`../../gap-register.md`](../../gap-register.md)**
+
+## Why it moved
+
+Until 2026-08-17 there were **two** approved gap registers sharing one GAP-ID space: this file held
+GAP-001..004 and `docs/gap-register.md` held GAP-005..015. Neither referenced the other, so a reader
+who found one had no way to know the other existed, and no single place answered "what is the state
+of this application's known gaps?"
+
+They were consolidated by `specs/2026-08-17-p6.5-residual-validation/` (issue #192), which also
+re-derived every row's status from the code. Five rows turned out to be wrong, and this file's own
+GAP-002 row was one of the misleading ones — recorded `Fixed` on unit-test evidence alone while
+issue #176 stayed open against a symptom nobody had re-fired.
+
+The Phase 6.5 narrative and results remain here alongside this pointer:
+
+- [`SELF-REVIEW.md`](SELF-REVIEW.md) — the Phase 6 exit-gate report.
+- [`VALIDATION-RESULTS.md`](VALIDATION-RESULTS.md) — the audit-step and fix log.

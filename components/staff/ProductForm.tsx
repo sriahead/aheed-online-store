@@ -6,6 +6,7 @@ import { Save } from "lucide-react";
 import { saveProduct } from "@/features/admin/catalogue";
 import { initialCatalogueState } from "@/lib/catalogue-form";
 import { ProductImageUploader } from "@/components/staff/ProductImageUploader";
+import { ProductImageManager } from "@/components/staff/ProductImageManager";
 import type { AdminProductDetail } from "@/lib/repositories/products";
 import type { AdminCategoryRow } from "@/lib/repositories/categories";
 
@@ -44,7 +45,7 @@ export interface ProductFormProps {
    * bundle. The storefront's ProductCard can import it because it is a server
    * component; this one cannot.
    */
-  imageUrls: { url: string; alt: string }[];
+  imageUrls: { id: string; url: string; alt: string; isPrimary: boolean }[];
 }
 
 export function ProductForm({ product, categories, imageUrls }: ProductFormProps) {
@@ -253,6 +254,11 @@ export function ProductForm({ product, categories, imageUrls }: ProductFormProps
               defaultChecked={product?.isOrganic ?? false}
             />
             <Checkbox
+              name="isFeatured"
+              label="Featured on homepage"
+              defaultChecked={product?.isFeatured ?? false}
+            />
+            <Checkbox
               name="isActive"
               label="Visible in the shop"
               defaultChecked={product?.isActive ?? true}
@@ -287,27 +293,19 @@ export function ProductForm({ product, categories, imageUrls }: ProductFormProps
         its id, so there is nothing to show while creating one.
       */}
       {product && (
-        <section className="space-y-3 rounded-2xl border border-black/10 bg-white p-5">
+        <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
           <h2 className="text-sm font-bold text-primary">Images</h2>
-          {imageUrls.length === 0 ? (
-            <p className="text-sm text-primary/60">No image yet.</p>
-          ) : (
-            <ul className="flex flex-wrap gap-3">
-              {imageUrls.map((image) => (
-                <li key={image.url}>
-                  {/* Plain <img>, unsuppressed, exactly as ProductCard and
-                      ProductImageGallery do it — next/image adoption is #46 and
-                      is a storefront-wide decision, not one to pre-empt here. */}
-                  <img
-                    src={image.url}
-                    alt={image.alt}
-                    className="h-24 w-24 rounded-xl border border-black/10 object-cover"
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-          <ProductImageUploader productId={product.id} productName={product.name} />
+          <ProductImageManager
+            productId={product.id}
+            productName={product.name}
+            images={imageUrls}
+          />
+          <div className="border-t border-black/10 pt-4">
+            <p className="mb-1 text-xs font-medium text-primary/70">
+              Replace the primary image (uploads directly over it, keeping its position)
+            </p>
+            <ProductImageUploader productId={product.id} productName={product.name} />
+          </div>
         </section>
       )}
     </>
