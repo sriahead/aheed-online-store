@@ -84,7 +84,25 @@ describe("DEMO_ACCOUNTS roster", () => {
         vendorRole: "STAFF",
       },
       { email: "demo-customer@example.com", name: "Demo Customer", platformRole: "CUSTOMER" },
+      {
+        email: "demo-store-admin@example.com",
+        name: "Demo Store Admin",
+        platformRole: "CUSTOMER",
+        vendorRole: "ADMIN",
+      },
     ]);
+  });
+
+  it("includes a store admin that is not also a platform admin", () => {
+    // requireVendorRole() short-circuits to via:"platform-admin" for any User.role ADMIN
+    // (lib/auth-rbac.ts), so demo-admin's vendorRole is never read and it cannot exercise
+    // the store-admin guards in lib/repositories/roles.ts. This account is the only one in
+    // the roster that resolves as via:"ADMIN" (#190).
+    const storeAdmins = DEMO_ACCOUNTS.filter(
+      (a) => a.vendorRole === "ADMIN" && a.platformRole !== "ADMIN",
+    );
+    expect(storeAdmins).toHaveLength(1);
+    expect(storeAdmins[0].email).toBe("demo-store-admin@example.com");
   });
 });
 
@@ -105,8 +123,10 @@ describe("addDemoAccounts", () => {
       emailVerified: true,
     });
     expect(prisma.users.get("demo-customer@example.com")).toMatchObject({ role: "CUSTOMER" });
-    // Memberships only for accounts with a vendorRole (admin + staff, not customer).
-    expect(prisma.memberships.map((m) => m.role).sort()).toEqual(["ADMIN", "STAFF"]);
+    // Memberships only for accounts carrying a vendorRole — not the plain customer.
+    // Derived from the roster so adding an account doesn't silently break this.
+    const expectedRoles = DEMO_ACCOUNTS.flatMap((a) => (a.vendorRole ? [a.vendorRole] : [])).sort();
+    expect(prisma.memberships.map((m) => m.role).sort()).toEqual(expectedRoles);
     expect(prisma.memberships.every((m) => m.vendorId === "vendor-aheed")).toBe(true);
   });
 
@@ -121,7 +141,8 @@ describe("addDemoAccounts", () => {
     await addDemoAccounts(prisma, signUp, "demo-pass-123");
 
     expect(signedUp).toEqual([]);
-    expect(prisma.memberships).toHaveLength(2); // admin + staff, no dupes
+    // One membership per account with a vendorRole, no dupes across the two runs.
+    expect(prisma.memberships).toHaveLength(DEMO_ACCOUNTS.filter((a) => a.vendorRole).length);
   });
 });
 
@@ -134,7 +155,7 @@ describe("removeDemoAccounts", () => {
 
     const count = await removeDemoAccounts(prisma);
 
-    expect(count).toBe(3);
+    expect(count).toBe(DEMO_ACCOUNTS.length);
     expect(prisma.users.has("demo-admin@example.com")).toBe(false);
     expect(prisma.users.has("real-customer@example.com")).toBe(true);
   });
