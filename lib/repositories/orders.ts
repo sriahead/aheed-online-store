@@ -637,6 +637,18 @@ export interface OrderRepository {
    * no-direct-Prisma guard (ADR-004 slice 2) requires.
    */
   advance(orderNumber: string, toStatus: string, actor: StatusActor): Promise<AdvanceResult>;
+  /**
+   * Same compare-and-set as `advance`, for a whole selection at once (P7a fix,
+   * #162): every order's read-check-write runs inside ONE `$transaction`, so a
+   * bulk submit is atomic as a batch rather than N independent round trips. An
+   * individual order that's illegal (already moved under the staff member's feet)
+   * is reported per-order, not failed as a whole batch — the same "matches zero
+   * rows, not an error" posture `advance` already takes with a single order.
+   */
+  advanceBulk(
+    items: { orderNumber: string; toStatus: string }[],
+    actor: StatusActor,
+  ): Promise<AdvanceBulkResult>;
   /** High-level financial reporting (P6.6c). */
   getFinancialsForStaff(): Promise<{ totalRevenuePence: number; totalOrders: number }>;
 }
@@ -851,6 +863,10 @@ export function getOrderRepository(): OrderRepository {
       return advanceOrderStatus(getPrismaWs(), await vendorId(), orderNumber, toStatus, actor);
     },
 
+    async advanceBulk(items, actor) {
+      return advanceOrderStatusBulk(getPrismaWs(), await vendorId(), items, actor);
+    },
+
     async getFinancialsForStaff() {
       const vId = await vendorId();
 
@@ -958,6 +974,84 @@ export async function advanceOrderStatus(
   const order = await findOrderForWebhook(prisma, orderNumber);
   if (!order) return { ok: false, reason: "not-found" };
   return { ok: true, order };
+}
+
+export type AdvanceBulkResult = {
+  moved: { order: WebhookOrder; toStatus: string }[];
+  skipped: { orderNumber: string; reason: "not-found" | "illegal-transition" }[];
+};
+
+/**
+ * The bulk sibling of `advanceOrderStatus` (P7a fix, #162): staff select a set
+ * of rows on `/staff/orders` and advance each to ITS OWN next rung in one
+ * submit — the queue mixes orders at different stages, so there is no single
+ * shared `toStatus`, unlike a single-row form.
+ *
+ * All reads and writes run inside ONE `$transaction`, satisfying "moves
+ * multiple orders simultaneously in one transaction" literally, not just as a
+ * loop of independent calls. Legality is still evaluated per order against its
+ * OWN persisted status — a stale or forged pairing for one row skips only that
+ * row (same "compare-and-set, not an error" posture as the single-order path)
+ * rather than aborting every other row's legitimate transition.
+ */
+export async function advanceOrderStatusBulk(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  items: { orderNumber: string; toStatus: string }[],
+  actor: StatusActor,
+): Promise<AdvanceBulkResult> {
+  const movedNumbers: { orderNumber: string; toStatus: string }[] = [];
+  const skipped: AdvanceBulkResult["skipped"] = [];
+
+  await prisma.$transaction(async (tx) => {
+    for (const { orderNumber, toStatus } of items) {
+      const existing = await tx.order.findFirst({
+        where: { orderNumber, vendorId },
+        select: { id: true, status: true },
+      });
+      if (!existing) {
+        skipped.push({ orderNumber, reason: "not-found" });
+        continue;
+      }
+
+      if (!isOrderStatus(toStatus) || !canTransition(existing.status, toStatus)) {
+        skipped.push({ orderNumber, reason: "illegal-transition" });
+        continue;
+      }
+
+      const { count } = await tx.order.updateMany({
+        where: { id: existing.id, vendorId, status: existing.status },
+        data: { status: toStatus },
+      });
+      if (count === 0) {
+        skipped.push({ orderNumber, reason: "illegal-transition" });
+        continue;
+      }
+
+      await tx.orderStatusEvent.create({
+        data: {
+          orderId: existing.id,
+          vendorId,
+          status: toStatus,
+          note: TRANSITION_NOTES[toStatus] ?? null,
+          createdByUserId: actor.userId,
+        },
+      });
+      movedNumbers.push({ orderNumber, toStatus });
+    }
+  });
+
+  // Re-read AFTER the commit, same reason advanceOrderStatus does: an order
+  // object built from mid-transaction state could be re-read by a caller that
+  // outlives the transaction, and findOrderForWebhook is the one place that
+  // already resolves buyerEmail (guestEmail ?? user.email) and carries items.
+  const moved: AdvanceBulkResult["moved"] = [];
+  for (const { orderNumber, toStatus } of movedNumbers) {
+    const order = await findOrderForWebhook(prisma, orderNumber);
+    if (order) moved.push({ order, toStatus });
+  }
+
+  return { moved, skipped };
 }
 
 // ---- Webhook-facing transitions (P3c, #99) ---------------------------------
@@ -1127,5 +1221,67 @@ export function getWebhookOrderService() {
     findOrder: (orderNumber: string) => findOrderForWebhook(prisma, orderNumber),
     confirm: (orderNumber: string) => confirmPayment(prisma, orderNumber),
     fail: (orderNumber: string, reason: string) => failPayment(prisma, orderNumber, reason),
+  };
+}
+
+// ---- Guest order lookup (P7a fix, #123/#192) -------------------------------
+//
+// #123 named the open question exactly: "order number alone, order number +
+// email, or order number + postcode... plus rate limiting... a deliberate
+// answer on enumeration." requirements.md §4.1 (P7a) already settled the
+// credential pair as Order Number + Email — the defect was that the shipped
+// page made email optional and reused `findOrderForWebhook`, the ONE function
+// this file's own comment above marks as deliberately un-scoped for Stripe's
+// server-to-server calls. A public page is exactly the caller that exemption
+// does not cover.
+
+export interface GuestLookupOrder {
+  orderNumber: string;
+  status: string;
+  totalPence: number;
+  items: { productName: string; quantity: number; lineTotalPence: number }[];
+}
+
+/**
+ * Vendor-scoped AND email-matched at the query level — never fetched, then
+ * compared in application code, which is what let the previous implementation
+ * return a full match with no email supplied at all. A wrong order number or a
+ * mismatched email both simply find nothing; the caller cannot tell which.
+ */
+export async function findOrderForGuestLookup(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  orderNumber: string,
+  email: string,
+): Promise<GuestLookupOrder | null> {
+  return prisma.order.findFirst({
+    where: {
+      orderNumber,
+      vendorId,
+      OR: [
+        { guestEmail: { equals: email, mode: "insensitive" } },
+        { user: { email: { equals: email, mode: "insensitive" } } },
+      ],
+    },
+    select: {
+      orderNumber: true,
+      status: true,
+      totalPence: true,
+      items: { select: { productName: true, quantity: true, lineTotalPence: true } },
+    },
+  });
+}
+
+/**
+ * Request-scoped factory, matching `getWebhookOrderService()`'s shape: resolves
+ * its own client and the current vendor here so `app/(storefront)/orders/lookup`
+ * never imports `@/lib/db` itself (the no-direct-Prisma guard covers app/,
+ * features/ and components/ with no carve-out for this page).
+ */
+export function getGuestOrderLookupService() {
+  const prisma = getPrisma();
+  return {
+    find: async (orderNumber: string, email: string) =>
+      findOrderForGuestLookup(prisma, await getCurrentVendorId(), orderNumber, email),
   };
 }

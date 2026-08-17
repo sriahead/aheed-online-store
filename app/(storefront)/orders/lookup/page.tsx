@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getWebhookOrderService } from "@/lib/repositories/orders";
+import { headers } from "next/headers";
+import { getCurrentVendorId } from "@/lib/tenant";
+import { getGuestOrderLookupService, type GuestLookupOrder } from "@/lib/repositories/orders";
+import { checkOrderLookupRateLimit } from "@/lib/repositories/order-lookup-rate-limit";
 import { formatPrice } from "@/components/product/format-price";
 import { Package, Truck, CheckCircle2, Search, MapPin, AlertCircle } from "lucide-react";
 
@@ -18,27 +21,42 @@ interface LookupPageProps {
   }>;
 }
 
+/**
+ * Cloudflare always sets CF-Connecting-IP on a real request (staging/production
+ * are never plain HTTP behind a proxy that would strip it — same reasoning
+ * lib/auth-origin.ts's docstring gives for x-forwarded-proto). x-forwarded-for
+ * is the fallback for `next dev`/local tooling, where lookups aren't internet-
+ * facing and coarse-grained throttling is acceptable.
+ */
+async function resolveClientIp(): Promise<string> {
+  const h = await headers();
+  return h.get("cf-connecting-ip") ?? h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
+
 export default async function OrderLookupPage({ searchParams }: LookupPageProps) {
   const { orderNumber = "", email = "" } = await searchParams;
 
-  let orderResult = null;
-  let lookupAttempted = false;
+  let orderResult: GuestLookupOrder | null = null;
   let errorMsg = null;
+  let rateLimited = false;
 
   if (orderNumber.trim()) {
-    lookupAttempted = true;
-    const service = getWebhookOrderService();
-    const found = await service.findOrder(orderNumber.trim());
+    const vendorId = await getCurrentVendorId();
 
-    if (found) {
-      // Validate guest or customer email matches
-      if (email.trim() && found.buyerEmail?.toLowerCase() !== email.trim().toLowerCase()) {
-        errorMsg = "Order number and email combination did not match our records.";
-      } else {
-        orderResult = found;
-      }
+    const { allowed } = await checkOrderLookupRateLimit(vendorId, await resolveClientIp());
+    if (!allowed) {
+      rateLimited = true;
+    } else if (!email.trim()) {
+      // requirements.md §4.1: Order Number + Email is the credential pair —
+      // email is not an optional refinement, it IS half the credential.
+      errorMsg = "Enter both your order number and the email used to place the order.";
     } else {
-      errorMsg = "No order found matching that order number.";
+      const found = await getGuestOrderLookupService().find(orderNumber.trim(), email.trim());
+      if (found) {
+        orderResult = found;
+      } else {
+        errorMsg = "Order number and email combination did not match our records.";
+      }
     }
   }
 
@@ -98,7 +116,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
             </div>
             <div>
               <label htmlFor="email" className="block text-xs font-bold text-slate-700 mb-1">
-                Email Address (Optional)
+                Email Address
               </label>
               <input
                 type="email"
@@ -106,6 +124,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                 name="email"
                 defaultValue={email}
                 placeholder="shopper@example.com"
+                required
                 className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -118,6 +137,19 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
             <span>Track Order</span>
           </button>
         </form>
+
+        {/* Rate-Limited State */}
+        {rateLimited && (
+          <div className="p-6 bg-red-50 text-red-900 flex items-start gap-3 border-b border-red-100">
+            <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <p className="font-bold">Too many attempts</p>
+              <p className="mt-0.5 text-red-700">
+                Too many lookup attempts. Please wait a minute and try again.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Error State */}
         {errorMsg && (

@@ -153,6 +153,7 @@ model Vendor {
   discountCodes   DiscountCode[]
   discountUses    DiscountRedemption[]
   roleAuditLogs   VendorRoleAuditLog[]
+  lookupAttempts  OrderLookupAttempt[]
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
@@ -697,6 +698,26 @@ model DiscountRedemption {
 // ---- P6.7 — Team & Role Management (#P6.7) ----------------------------------
 
 /// Audit trail of role assignments within a vendor.
+// Guest order lookup rate limiting (P7a fix, #123/#192). #123's proposal asked
+// for "rate limiting / lockout... nothing in this codebase does this yet — it
+// would be the first" — true, and no Cloudflare KV/rate-limiting binding is
+// provisioned (checked wrangler.toml), so this reuses the existing Neon/Prisma
+// path rather than inventing new infra for a Fix-stage correction. One row per
+// attempt, pruned by age at query time (a count over a 60s window), not on a
+// schedule — the table stays small because lookup traffic is inherently low
+// volume, and Order-scale retention machinery would be over-building this.
+model OrderLookupAttempt {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
+  // SHA-256 of the caller's IP, not the IP itself — this table exists purely as
+  // a counter, so there is no reason to persist raw IPs at rest.
+  ipHash    String
+  createdAt DateTime @default(now())
+
+  @@index([vendorId, ipHash, createdAt])
+}
+
 model VendorRoleAuditLog {
   id        String   @id @default(uuid())
   vendorId  String
