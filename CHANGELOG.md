@@ -6,6 +6,31 @@ every branch merges.
 
 ## [Unreleased]
 
+### Docs
+- **Backfilled `specs/roadmap.md`'s missing PR #200 promotion row.** `sdd:audit` only checks that a
+  roadmap entry cites a `specs/<slice>/` path, so a missing *promotion* row (as opposed to a missing
+  *slice* row) goes uncaught — the same class of gap **#144** recorded for P5a. PR #200 (`staging →
+  main`, merge `399ecef`) carried PR #195's doc reconciliation plus buckets A/C and the demo-accounts
+  fix (#199) to production with no migration; production `/api/health` reconfirmed at `399ecef`.
+
+### Fixed
+- **SriMart's `VendorConfig` delivery values re-seeded on staging** (#98): `npm run db:seed` had
+  never run with both `SEED_AHEED_HOST` and `SEED_SRIMART_HOST` set against staging, so SriMart's
+  delivery fee/threshold/minimum sat on `VendorConfig`'s schema defaults (£3.49) instead of the
+  vendor-specific values already written in `prisma/seed.ts` (£2.99, free over £50, £10 minimum).
+  Re-ran the seed with both host vars set; verified live against staging Postgres —
+  `deliveryFeePence: 299, freeDeliveryThresholdPence: 5000, minimumOrderPence: 1000` — confirming
+  SriMart's checkout now renders its own values, not Aheed's/the schema default's. No code change;
+  a live data operation, recorded here per Gate 4.
+
+### Docs
+- **ADR-004 schema-drift check closed** (#197, split from #65): `prisma migrate diff
+  --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma` run against a
+  throwaway local Postgres shadow database (Docker, discarded after) reported "No difference
+  detected" — the hand-authored `20260808130000_multitenancy_vendor_scope` migration exactly
+  matches `schema.prisma`. No reconciling migration needed. Recorded in ADR-004's implementation
+  breadcrumb.
+
 ### Added
 - **`demo-srimart-admin@example.com` in the demo-accounts roster** (#141): a store admin on the
   platform's second vendor (SriMart), needed to close P5a's R56 gap — every other vendor-role demo
