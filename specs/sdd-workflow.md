@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.9.0"
+version: "2.11.0"
 updated: 2026-08-17
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -276,6 +276,16 @@ Still on you, because no script can judge them:
       `roadmap.md` (1.13.0→1.14.0) and this file (2.4.0→2.5.0) were bumped, and CI's rebuild-and-diff
       caught two stale version cells. The check normalises away the timestamp and commit footer, so
       a footer-only difference is *not* what fails it — a version cell is.
+      **If a slice's own `validation.md` writes this check as a raw `git diff --exit-code
+      ARTIFACT_INDEX.md`, it will spuriously fail on every re-run once the index has been committed
+      once.** The footer embeds `git rev-parse HEAD` at generation time, so a committed index can only
+      ever cite its own parent commit — regenerating it again post-commit always shows a one-commit
+      footer diff, forever, by construction. `gates.yml`'s check (above) strips exactly that footer
+      with `sed` before comparing; a slice's `validation.md` row for this check should mirror that
+      normalisation (or just trust CI's result) rather than a bare `git diff --exit-code`. P6.7's
+      closeout slice wrote the bare version, `/validate` reported it failing, and `/fix` spent a
+      commit chasing it — harmless (freshening the index is never wrong) but unnecessary, since CI
+      would have passed either way.
 
 Then **switch to Sonnet 5** (`/model claude-sonnet-5`) for the validation half of the loop. The
 assistant cannot switch its own model — if a stage is running on the wrong one, it should say so and
@@ -393,6 +403,12 @@ named gates, but the part of this repo's actual history most prone to drift.
 - `staging → main` is its own deliberate promotion PR, mirroring the existing "Promote X to
   production" title convention — staging gets deploy-tested first, the production merge is a second,
   separate confirmation, not a rubber stamp on the first.
+- **A promotion PR closing several issues needs the keyword repeated per issue** —
+  `closes #93, closes #96, closes #99`, not `Closes #93, #96, #99`. GitHub only honours the closing
+  keyword for the *first* issue in a comma-separated list; the rest stay open on merge with no error
+  or warning (#112, found on PR #108). This bites specifically here because slice PRs merge into
+  `staging`, never the default branch, so every issue closure is deferred to a promotion PR — which
+  is exactly where several `Closes` references pile up at once.
 - If a PR merges before a fix/follow-up commit lands, don't force-push or rewrite history to patch it
   in retroactively — open a tracking issue and land the fix as its own proper follow-up PR.
 

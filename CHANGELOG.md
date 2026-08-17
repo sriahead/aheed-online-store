@@ -7,6 +7,50 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **`demo-srimart-admin@example.com` in the demo-accounts roster** (#141): a store admin on the
+  platform's second vendor (SriMart), needed to close P5a's R56 gap — every other vendor-role demo
+  account attaches to the same (first ACTIVE) vendor, so a cross-vendor write could only ever be
+  tested in one direction. `DemoAccount` gains an optional `vendorSlug` field (omitted = existing
+  "first ACTIVE vendor" default) so an account can target a specific second vendor.
+  R56's reverse leg verified live against staging with a repository-level check
+  (`vendorConfig.update({ where: { vendorId: <srimart-id> }, ... })` leaves Aheed's row's
+  `updatedAt` untouched) rather than an interactive browser sign-in, which isn't something the
+  assistant can do itself even for a non-sensitive demo account — see
+  `specs/2026-08-11-p5a-loyalty-points/validation.md`'s R56 row.
+
+### Added
+- **`sdd:preclear` now checks `ARTIFACT_INDEX.md` staleness** (#132), mirroring `gates.yml`'s own
+  check so it can't surface for the first time on an open PR — P4b lost a CI run and a fix commit to
+  exactly that. Rebuilds the index into memory, diffs it against what's on disk with the generated
+  timestamp/commit footer normalised out, and restores the original bytes when the only difference
+  is that footer, so a footer-only rebuild doesn't masquerade as real uncommitted work for the
+  clean-tree check. Found and fixed a bug in its own first version while testing on Windows: a
+  `core.autocrlf` checkout holds `\r\n` on disk while `kms:build-index` always writes `\n`, so the
+  raw byte compare needs line endings normalised too, not just the footer text.
+
+### Docs
+- **The multi-issue `Closes #a, #b, #c` GitHub limitation** (#112): GitHub only honours the closing
+  keyword for the first issue in a comma-separated list, silently leaving the rest open on merge.
+  Documented in `specs/sdd-workflow.md`'s Ship section and `.claude/commands/ship.md` — promotion
+  PRs are exactly where this bites, since slice PRs merge into `staging` (never the default branch),
+  deferring every issue closure to the promotion PR.
+
+### Removed
+- **Eleven orphaned debug scripts** (#191): five ad-hoc Puppeteer scripts at the repo root
+  (`parse-logs.js`, `test-action.js`, `test-checkout.js`, `test-local.js`, `test-staging.js`) and six
+  more under `tests/regression/`, none referenced by any workflow, `package.json` script, test
+  config, or source import. The two regression scenarios they exercised (rapid cart mutation,
+  checkout-cancel cart restoration) are already covered as a manual register in
+  `docs/regression-tests.md`, verified live on staging during P6.7's closeout. `puppeteer` removed
+  from `package.json` — these scripts were its only consumer in the repo.
+
+### Docs
+- **ADR-004**: added an implementation-status breadcrumb for slices 0–1 (Neon environment isolation,
+  the `Vendor` aggregate + `vendorId` migration), both shipped to production 2026-08-08. One
+  follow-up item from #65 remains open and un-narrowed to just that: independently verifying the
+  hand-authored migration has no Prisma schema drift.
+
+### Added
 - **`demo-store-admin@example.com` in the demo-accounts roster** (#190): a store admin — vendor
   `ADMIN`, platform `CUSTOMER`. This role was previously impossible to represent:
   `requireVendorRole()` short-circuits to `via: "platform-admin"` for any platform `ADMIN`
@@ -35,6 +79,22 @@ every branch merges.
   (its fix was never promoted, so it was not in production); #176 → Backlog; added a draft item for
   P6.6, which shipped via PR #182 with no issue and no board presence.
 - Filed **#191** — eleven orphaned debug scripts still tracked from the ungated period.
+
+### Docs
+- **P6.7 closeout — Document (final)**: corrected `specs/roadmap.md`'s 2026-08-17 closeout row,
+  which had recorded promotion to production as already done — it was written during Build, before
+  the promotion PR existed. Added the real promotion row: **PR #194**, merge `7c9409c`, 56 commits
+  (not the 51 `plan.md` estimated pre-Ship), `deploy-production` green, production `/api/health`
+  confirmed `db.ok: true`. Board reconciled to match: #183/#184/#185/#187 and the P6.6 (PR #182)
+  draft item moved to **Done** — all four fixes were confirmed inside the promoted commit range, so
+  "In Review" (PR #193's placeholder, written before promotion) was no longer accurate. #186/#190
+  closed on the `main` merge. **Process lesson recorded in `specs/sdd-workflow.md`**: a slice's own
+  `validation.md` should never check `ARTIFACT_INDEX.md` staleness with a bare
+  `git diff --exit-code` — the footer embeds `git rev-parse HEAD` at generation time, so a committed
+  index can only ever cite its own parent commit, and a bare diff will show that one-commit gap
+  forever, by construction. CI's `gates.yml` normalizes the footer away before comparing; P6.7's
+  `validation.md` didn't, so `/validate` reported a false failure and `/fix` spent a harmless-but-
+  unnecessary commit chasing it.
 
 ### Docs
 - **P6.7 Document (final)**: rebuilt `ARTIFACT_INDEX.md` (P6.7's `plan.md` was missing KMS

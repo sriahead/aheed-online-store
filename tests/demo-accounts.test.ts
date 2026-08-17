@@ -50,6 +50,9 @@ function makeFakePrisma(seedEmails: string[] = []) {
       async findFirstOrThrow() {
         return { id: "vendor-aheed" };
       },
+      async findUniqueOrThrow({ where }) {
+        return { id: `vendor-${where.slug}` };
+      },
     },
     vendorMembership: {
       async upsert({ where, create, update }) {
@@ -90,19 +93,41 @@ describe("DEMO_ACCOUNTS roster", () => {
         platformRole: "CUSTOMER",
         vendorRole: "ADMIN",
       },
+      {
+        email: "demo-srimart-admin@example.com",
+        name: "Demo SriMart Admin",
+        platformRole: "CUSTOMER",
+        vendorRole: "ADMIN",
+        vendorSlug: "srimart",
+      },
     ]);
   });
 
   it("includes a store admin that is not also a platform admin", () => {
     // requireVendorRole() short-circuits to via:"platform-admin" for any User.role ADMIN
     // (lib/auth-rbac.ts), so demo-admin's vendorRole is never read and it cannot exercise
-    // the store-admin guards in lib/repositories/roles.ts. This account is the only one in
-    // the roster that resolves as via:"ADMIN" (#190).
+    // the store-admin guards in lib/repositories/roles.ts. Both accounts below resolve as
+    // via:"ADMIN" (#190); demo-srimart-admin is the second-vendor counterpart needed to
+    // test a cross-vendor write refusal in the reverse direction too (#141).
     const storeAdmins = DEMO_ACCOUNTS.filter(
       (a) => a.vendorRole === "ADMIN" && a.platformRole !== "ADMIN",
     );
-    expect(storeAdmins).toHaveLength(1);
-    expect(storeAdmins[0].email).toBe("demo-store-admin@example.com");
+    expect(storeAdmins.map((a) => a.email).sort()).toEqual([
+      "demo-srimart-admin@example.com",
+      "demo-store-admin@example.com",
+    ]);
+  });
+
+  it("attaches exactly one vendor-role account to a non-default vendor via vendorSlug", () => {
+    // Every other vendor-role account relies on the implicit "first ACTIVE vendor"
+    // default; only demo-srimart-admin should override it, otherwise the reverse-
+    // direction cross-vendor test this account exists for isn't actually reverse.
+    const slugged = DEMO_ACCOUNTS.filter((a) => a.vendorSlug);
+    expect(slugged).toHaveLength(1);
+    expect(slugged[0]).toMatchObject({
+      email: "demo-srimart-admin@example.com",
+      vendorSlug: "srimart",
+    });
   });
 });
 
@@ -127,7 +152,16 @@ describe("addDemoAccounts", () => {
     // Derived from the roster so adding an account doesn't silently break this.
     const expectedRoles = DEMO_ACCOUNTS.flatMap((a) => (a.vendorRole ? [a.vendorRole] : [])).sort();
     expect(prisma.memberships.map((m) => m.role).sort()).toEqual(expectedRoles);
-    expect(prisma.memberships.every((m) => m.vendorId === "vendor-aheed")).toBe(true);
+    // Accounts without a vendorSlug land on the default (first-active) vendor; the one
+    // account that names a vendorSlug lands on its own, distinct vendor.
+    const defaultCount = DEMO_ACCOUNTS.filter((a) => a.vendorRole && !a.vendorSlug).length;
+    expect(prisma.memberships.filter((m) => m.vendorId === "vendor-aheed")).toHaveLength(
+      defaultCount,
+    );
+    expect(prisma.memberships.find((m) => m.vendorId !== "vendor-aheed")).toMatchObject({
+      vendorId: "vendor-srimart",
+      role: "ADMIN",
+    });
   });
 
   it("is idempotent: a second run signs up nobody and creates no duplicate memberships", async () => {

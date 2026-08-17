@@ -30,11 +30,17 @@ export interface DemoAccount {
   name: string;
   platformRole: PlatformRole;
   vendorRole?: VendorRole;
+  /** Which vendor `vendorRole` attaches to. Omitted = the first ACTIVE vendor (existing
+   *  default). Set this to reach a vendor other than the platform's first one — e.g. a
+   *  second vendor's admin, needed to prove a cross-vendor write is actually refused
+   *  rather than merely untested in the reverse direction (#141). */
+  vendorSlug?: string;
 }
 
 /** Fixed, code-defined roster. demo-admin is a platform admin; demo-store-admin is a store
  *  admin (vendor ADMIN only); demo-staff is a normal user with a vendor STAFF membership
- *  (not a platform staffer); demo-customer is a plain shopper.
+ *  (not a platform staffer); demo-customer is a plain shopper; demo-srimart-admin is a
+ *  store admin on the platform's SECOND vendor (SriMart, not the default first-active one).
  *
  *  demo-store-admin exists because a platform admin CANNOT stand in for a store admin:
  *  requireVendorRole() returns early with `via: "platform-admin"` for anyone whose
@@ -42,7 +48,12 @@ export interface DemoAccount {
  *  read. The role-hierarchy guards in lib/repositories/roles.ts — only a platform admin
  *  may grant ADMIN, a store admin may not touch a platform admin's privileges, and the
  *  self-lockout check — all fire only when `via === "ADMIN"`, which no other account in
- *  this roster can produce. Added for P6.7's validation walk (#190). */
+ *  this roster can produce. Added for P6.7's validation walk (#190).
+ *
+ *  demo-srimart-admin exists because every other vendor-role account attaches to the
+ *  same (first ACTIVE) vendor, so no cross-vendor write attempt could ever be tested in
+ *  both directions — only "vendor A admin tries to redirect a write to vendor B" was
+ *  reachable, never the reverse. Added for P5a's R56 reverse-direction gap (#141). */
 export const DEMO_ACCOUNTS: DemoAccount[] = [
   {
     email: "demo-admin@example.com",
@@ -62,6 +73,13 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     name: "Demo Store Admin",
     platformRole: "CUSTOMER",
     vendorRole: "ADMIN",
+  },
+  {
+    email: "demo-srimart-admin@example.com",
+    name: "Demo SriMart Admin",
+    platformRole: "CUSTOMER",
+    vendorRole: "ADMIN",
+    vendorSlug: "srimart",
   },
 ];
 
@@ -106,6 +124,10 @@ export interface DemoPrisma {
       orderBy: { createdAt: "asc" };
       select: { id: true };
     }): Promise<{ id: string }>;
+    findUniqueOrThrow(args: {
+      where: { slug: string };
+      select: { id: true };
+    }): Promise<{ id: string }>;
   };
   vendorMembership: {
     upsert(args: {
@@ -131,12 +153,24 @@ export async function addDemoAccounts(
   signUp: SignUp,
   password: string,
 ): Promise<void> {
-  // The single active vendor (Aheed) for now; memberships attach here.
-  const vendor = await prisma.vendor.findFirstOrThrow({
+  // The default target — the first ACTIVE vendor (Aheed) — resolved once and reused by
+  // every account that doesn't name a vendorSlug. Slug-targeted vendors (e.g. SriMart)
+  // are resolved lazily per distinct slug and cached, so a roster with several accounts
+  // on the same second vendor still issues one lookup per vendor, not one per account.
+  const defaultVendor = await prisma.vendor.findFirstOrThrow({
     where: { status: "ACTIVE" },
     orderBy: { createdAt: "asc" },
     select: { id: true },
   });
+  const vendorBySlug = new Map<string, { id: string }>();
+  async function resolveVendor(slug: string | undefined): Promise<{ id: string }> {
+    if (!slug) return defaultVendor;
+    const cached = vendorBySlug.get(slug);
+    if (cached) return cached;
+    const vendor = await prisma.vendor.findUniqueOrThrow({ where: { slug }, select: { id: true } });
+    vendorBySlug.set(slug, vendor);
+    return vendor;
+  }
 
   for (const account of DEMO_ACCOUNTS) {
     const existing = await prisma.user.findUnique({ where: { email: account.email } });
@@ -148,6 +182,7 @@ export async function addDemoAccounts(
       data: { role: account.platformRole, emailVerified: true, name: account.name },
     });
     if (account.vendorRole) {
+      const vendor = await resolveVendor(account.vendorSlug);
       await prisma.vendorMembership.upsert({
         where: { userId_vendorId: { userId, vendorId: vendor.id } },
         create: { userId, vendorId: vendor.id, role: account.vendorRole },
