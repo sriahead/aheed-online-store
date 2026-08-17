@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { getPrisma } from "@/lib/db";
+import { splitHostPort } from "@/lib/auth-origin";
 
 /**
  * Resolve the current request's vendor id from the request host (ADR-004 slice 3b).
@@ -12,10 +13,21 @@ import { getPrisma } from "@/lib/db";
  * before its `VendorDomain` rows are seeded). With 0 or 2+ vendors and no match → null.
  */
 export async function getCurrentVendorIdOrNull(): Promise<string | null> {
-  const host = ((await headers()).get("host") ?? "").toLowerCase().split(":")[0];
+  const rawHost = (await headers()).get("host") ?? "";
+  const host = splitHostPort(rawHost).hostname;
   const prisma = getPrisma();
 
   if (host) {
+    // Local development/preview exception
+    if (host === "localhost" || host === "127.0.0.1") {
+      const defaultVendor = await prisma.vendor.findFirst({
+        where: { status: "ACTIVE" },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      });
+      if (defaultVendor) return defaultVendor.id;
+    }
+
     const domain = await prisma.vendorDomain.findUnique({
       where: { host },
       select: { vendorId: true },

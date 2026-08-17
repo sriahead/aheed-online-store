@@ -4,7 +4,7 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.5.0"
+version: "1.6.0"
 updated: 2026-08-09
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
@@ -100,6 +100,16 @@ circular icon buttons) — **not pixel-measured**, safe to revise once real UI c
 | `--radius-full` | `9999px` | Pills, circular icon buttons |
 
 Spacing scale and breakpoints are **not brand-derived** — Tailwind v4's defaults are used as-is.
+
+## Accessibility & Compliance
+
+To ensure compliance with WCAG AA standards (minimum 4.5:1 contrast ratio for text) and robust screen reader support across all multi-tenant brands, the following design constraints are strictly enforced:
+
+- **Opacity Minimums:** Never use opacity layers below `80%` (e.g. `text-primary/70` or `text-black/50`) for functional text or links against light backgrounds (white or `--color-surface-muted`), as they mathematically fall below the 4.5:1 contrast threshold. 
+- **Button Contrast:** Primary and action buttons must use highly contrasting text colors (e.g., solid `bg-primary` or darker action variants) rather than standard brand greens, which often fail contrast requirements against white text.
+- **Semantic Landmarks:** All top-level navigation groups must be wrapped in a `<nav aria-label="...">` landmark.
+- **Heading Hierarchy:** Component heading levels (`h1`, `h2`, `h3`) must not skip ranks in the document flow. Where a visual heading is absent but semantically required (e.g., a "Products" wrapper for `h3` product cards following a category `h1`), inject a visually hidden `<h2 className="sr-only">` to satisfy the hierarchy.
+- **Interactive Elements:** Icon-only buttons (such as quantity increment/decrement controls) must carry explicit `aria-label`s, with inner icons marked `aria-hidden="true"`.
 
 ## Storefront components (P2.5b2)
 

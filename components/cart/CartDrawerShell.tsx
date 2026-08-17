@@ -12,16 +12,14 @@ import { ShoppingBag, X } from "lucide-react";
  * as server-rendered children, so cart data is still fetched on the server and
  * the quantity/remove controls stay progressively-enhanced <form> posts. That
  * keeps the storefront's near-zero-client-JS posture from P2.5b2.
- *
- * Colours are semantic tokens (bg-primary, …) per specs/design-system.md's
- * mockup→token table — never the reference's #1B5E20 literals, which would
- * freeze every vendor to Aheed's green and undo per-vendor theming.
  */
 export function CartDrawerShell({
   itemCount,
+  subtotalPence,
   children,
 }: {
   itemCount: number;
+  subtotalPence?: number;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -34,13 +32,18 @@ export function CartDrawerShell({
         aria-label={itemCount > 0 ? `Cart, ${itemCount} items` : "Cart, empty"}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="relative flex items-center gap-2 rounded-full bg-primary px-3 py-2 text-xs font-bold text-white sm:px-3.5"
+        className="relative flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-white sm:px-3.5 transition-all hover:opacity-90 shadow-sm"
       >
         <ShoppingBag className="h-4 w-4" aria-hidden />
         <span className="hidden sm:inline">Cart</span>
         {itemCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white">
+          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-white">
             {itemCount}
+          </span>
+        )}
+        {(subtotalPence ?? 0) > 0 && (
+          <span className="hidden md:inline font-bold border-l border-white/30 pl-2">
+            £{(subtotalPence! / 100).toFixed(2)}
           </span>
         )}
       </button>

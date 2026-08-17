@@ -7,6 +7,122 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **`demo-store-admin@example.com` in the demo-accounts roster** (#190): a store admin — vendor
+  `ADMIN`, platform `CUSTOMER`. This role was previously impossible to represent:
+  `requireVendorRole()` short-circuits to `via: "platform-admin"` for any platform `ADMIN`
+  (`lib/auth-rbac.ts`), so `demo-admin`'s `vendorRole` is never read, and the three guards that only
+  fire for `via: "ADMIN"` (`roles.ts:42`, `roles.ts:64`, the self-lockout branch) had unit coverage
+  but had never run against a real session. `tests/demo-accounts.test.ts`'s roster assertions now
+  derive from `DEMO_ACCOUNTS` instead of hardcoding its size and shape.
+
+### Docs
+- **P6.7 closed out** (#186, `specs/2026-08-17-p6.7-closeout-promotion/`): walked `validation.md`
+  §1.1–§1.4 and §2 live on staging across four accounts — all 29 rows now checked off with the
+  observed result recorded against each. Both hierarchy refusals, the STAFF denial and both
+  self-lockout variants hold; the store admin's role selector omits `ADMIN` from the DOM entirely,
+  and injecting the option server-side is still refused. The audit trail wrote **6 rows for 6
+  successful writes and 0 rows for the 4 refusals**, confirming the guards run inside the
+  `$transaction`. Smoke-checked P6.6/P6.6c/P7a and the #187 cart/checkout paths ahead of promotion;
+  P6.5 and a live order status transition are recorded as deliberately not covered.
+- **`specs/Validation.md` → `docs/regression-tests.md`**: given KMS front-matter and moved out of
+  `specs/`, where it had no front-matter, never reached `ARTIFACT_INDEX.md`, and collided by name
+  with every slice-local `validation.md`. Both of its regression scenarios were re-verified on
+  staging and are annotated with the result.
+- **Roadmap corrections**: the P6.5 row cited "Issue #180" (an unrelated CORS issue) and the P7a row
+  cited "PR #183" (an issue number, and no PR carried P7a). Both now record that the slice shipped
+  by direct push with no anchoring issue, naming the actual commits `982eafb` and `624a842`.
+- **Board reconciliation**: #183/#184/#187 → In Review; **#185 corrected from Done → In Review**
+  (its fix was never promoted, so it was not in production); #176 → Backlog; added a draft item for
+  P6.6, which shipped via PR #182 with no issue and no board presence.
+- Filed **#191** — eleven orphaned debug scripts still tracked from the ungated period.
+
+### Docs
+- **P6.7 Document (final)**: rebuilt `ARTIFACT_INDEX.md` (P6.7's `plan.md` was missing KMS
+  front-matter, so the slice was invisible to `sdd:audit`'s index check — added it); added the
+  2026-08-17 roadmap closure/status row recording what PR #188 actually verified vs. what's still
+  open (live multi-role validation, promotion to `main`); reconciled `validation.md` to check off
+  §3's now-real automated coverage while leaving §1/§2 explicitly unverified rather than silently
+  passing; reopened issue #186 (closed prematurely on staging, before review) and set its board
+  status to In Review; recorded the ungated-direct-push pattern in `specs/sdd-workflow.md`'s Orient
+  section so the next session checks `gh pr list` against the commit range, not just divergence
+  counts.
+
+### Fixed
+- **P6.7 Validate pass — self-lockout race, missing test coverage, and branch-wide gate breakage**:
+  - `lib/repositories/roles.ts`: closed a TOCTOU race in the last-admin self-lockout guard — the
+    admin count and the demoting write now run inside the same `$transaction` at `Serializable`
+    isolation, so two concurrent self-demotions can no longer both pass the check and leave a
+    vendor with zero admins.
+  - Added `tests/roles.test.ts` (12 tests) covering the role-transition matrix `validation.md` §3
+    asked for, plus the self-lockout guard.
+  - Corrected `validation.md`'s "403 Forbidden" wording to match how a Next.js Server Action
+    actually reports a refusal (`{success:false, error}` on a normal response, not a route
+    handler's HTTP status).
+  - Removed the leftover diagnostic try/catch wrapper in `checkout/page.tsx` and
+    `categories/page.tsx` (23 lint errors) now that the connection-exhaustion bug it was added to
+    diagnose is fixed elsewhere; deleted a stray UTF-16-encoded scratch file (`test-cart.ts`) that
+    broke `lint`/`format:check` outright; fixed a stale `tests/payments.test.ts` assertion left
+    over from the checkout-cancel-routing fix; reformatted the remaining root-level scratch
+    scripts flagged by `format:check`.
+
+### Added
+- **Promo Slider & UI Animations**: Added a new `PromoSlider` component to the homepage to showcase the latest offers. Enhanced the overall visual impact with subtle animations (hover translations, shadows, and scaling) across the `ProductCard`, `DepartmentScroller`, and homepage trust sections.
+- **Validation Guidelines**: Added a manual regression register tracking test cases for critical system logic including the hybrid Prisma driver architecture and cart persistence, preventing regressions. (Originally added as `specs/Validation.md`; moved to `docs/regression-tests.md` with front-matter during P6.7's closeout.)
+- **P6.7 — Staff Team & Role Management**:
+  - Built a new `/staff/team` interface for managing staff members within a vendor organization.
+  - Added a backend integration allowing STORE_ADMIN users to assign `STAFF` and `STORE_ADMIN` roles to existing users.
+  - Created `VendorRoleAuditLog` to persistently track all role elevation actions with attribution (`grantedBy`).
+  - Implemented `lib/repositories/roles.ts` to enforce RBAC and safe role updates.
+
+### Fixed
+- **Checkout Form Persistence**: Contact details on the checkout form now persist using local storage to survive the navigation flow when returning from payment.
+
+### Fixed
+- **Cloudflare Staging React Error #441 / Intermittent 500s (Connection Exhaustion / HTTP Transaction Error)**:
+  - Deployed a hybrid Prisma driver strategy in `lib/db.ts` to solve both WebSocket connection exhaustion on Cloudflare isolates AND the "Transactions are not supported in HTTP mode" error.
+  - `getPrisma()` now uses the fetch-based `PrismaNeonHttp` adapter for 99% of read operations, bypassing Cloudflare's WebSocket limit.
+  - `getPrismaWs()` uses the WebSocket-based `PrismaNeon` adapter strictly for operations requiring `$transaction` (e.g. checkout, add to cart). This ensures we only open a WebSocket exactly when an interactive transaction is required, keeping the concurrent socket count well below Cloudflare's strict 50-per-isolate limit.
+- **Cloudflare Staging React Error #441 (Tag Cache)**:
+  - Fixed `addToCart` Server Action crashing during OpenNext revalidation phase.
+  - Replaced `revalidateTag("cart")` with `revalidatePath("/", "layout")` in `features/cart/shared.ts` to bypass OpenNext tag cache missing binding issues on Cloudflare Workers.
+
+### Fixed
+- **Storefront & Admin Accessibility / Contrast Audit**:
+  - Restored WCAG 4.5:1 text color contrast on product unit labels (`text-black/60`), original prices (`text-black/60`), and the 'Filters' side navigation title (`text-primary`).
+  - Darkened dashboard notification text and card descriptions in the staff portal (`app/(admin)/staff/page.tsx`) from `/60` and `/70` to `/80` opacity.
+  - Increased footer contrast on all storefront pages by removing `/70` opacity on the footer element.
+  - Swapped the 'Apply' button background on the filtering form from `#4CAF50` (which failed contrast ratios against white text) to `#2E7D32`.
+  - Added a visually hidden `<h2>Products</h2>` inside the product grid to establish a semantic heading sequence for the category pages (`H1` -> `H2` -> `H3`), preventing skipped heading levels.
+  - Added explicit `aria-label`s to the quantity increment/decrement buttons in `AddToCartButton.tsx`.
+  - Wrapped main action controls and navigational links in the `<Header>` component inside a `<nav aria-label="Main Navigation">` landmark.
+- **Navigation RSC 404 Pre-fetch Error**: The 'Help Guide' link in the top navigation bar was pre-fetching `/help` in the background, which does not exist, triggering a fatal `404 (Not Found)` RSC error that halted client-side navigation. Re-pointed the link to `#` until the help page is implemented.
+- **Next.js 15 Client Transition 500 Errors (#184)**: Resolved `ERROR 2745569299` hard crashes in the Admin/Staff portal when toggling tiers or navigating client-side. Next.js 15 enforces strict rules that were previously warnings:
+  - Missing `<Suspense>` bounds around `useSearchParams()` now throw fatal server errors on RSC fetches. Wrapped `InventoryTable` at `/staff/inventory` in `<Suspense>`.
+  - `params` and `searchParams` are now asynchronous Promises. Components returning early (e.g. `requireVendorRole` failing and returning `<PanelRefusal>`) without awaiting these promises triggered unhandled serialization errors. Systematically moved `await params` and `await searchParams` to the top of all `app/(admin)/staff/...` pages.
+  - Implemented systematic null-safety across `lib/repositories/products.ts` resolving intermittent 500 errors.
+- **Cloudflare Worker CPU Execution Limit**: Set `[limits] cpu_ms = 50` in `wrangler.toml` to prevent Error 1102 ("Worker exceeded resource limits") during Next.js RSC cold starts on category pages.
+- **Transactional Email Strategy (GAP-005)**: Flagged migration to native Cloudflare Email Sending (outbound) and Email Routing (inbound) under Workers Paid ($5/mo) for Phase 8, replacing Resend and expanding CPU execution headroom.
+
+### Added
+- **P6.6c — Staff/Admin Operations Views Completion**:
+  - Refactored `PanelNav` to include all missing tabs (Reports, Inventory, Categories, Discounts, etc.) and enabled horizontal scrolling for mobile devices.
+  - Injected missing dashboard portal cards for "Live Inventory", "Runbook", and "Reports" (Admin only) on the main Operations dashboard.
+  - Built a zero-trust, static Operations Runbook (`/staff/runbook`) based on the UI-ref spec.
+  - Built an Admin-only financial Reports dashboard (`/staff/reports`) computing live metrics (Total Revenue, Total Orders, Average Basket Value) via a new Prisma aggregate query in `OrderRepository`.
+- **P6 Missing Gap (Issue #168)**: Shipped a dedicated "Live Inventory & Availability" view tailored for shop-floor staff. This includes dynamic tier toggling between Staff and Admin views, tabbed navigation, client-side filtering, and optimistic mutations for quick stock adjustments and availability toggles. Resolves a previously deferred P6 requirement and aligns perfectly with the AI Studio mockup.
+- **P6.6 — P0 Core Shopping UI Overhaul** (`specs/2026-08-13-p6.6-p0-ui-overhaul/`):
+  Full UI redesign mapping to the `docs/ui-ref` prototype while maintaining the `VendorConfig` multi-tenancy constraints.
+  - **Header & Cart Drawer**: Added delivery promise strip, global search UI, dynamic brand logo rendering, and a styled cart drawer button displaying the total price.
+  - **Hero & Trust Strip**: New storefront landing page (`page.tsx`) with a dynamic gradient Hero banner, real postcode checking, and Trust Values row.
+  - **Product Discovery**: Converted static placeholder text into live, data-driven "New Arrivals" and "Featured Halal Deals" merchandising rows.
+  - **Product Card Flow**: Overhauled visual card styling (badges, discount display, layout) and added an inline quantity selector directly into `AddToCartButton` to satisfy the requested Image → Title → Pack Size → Price → Offer → Qty Selector → Add to Cart UX flow without introducing complex client state.
+- **P7a — UK compliance, operational gap closure, and UX hardening** (`specs/2026-08-13-p7a-compliance-hardening/`):
+  Delivers UK GDPR/PECR compliance, OWASP edge security headers, guest order tracking, slide-over cart drawer, staff bulk order transitions, and one-click reordering.
+  - **UK GDPR & PECR Cookie Consent**: `CookieBanner.tsx` component managing essential/optional cookies with host-scoped `aheed_cookie_consent` cookie. Legal Terms of Service (`/terms`) and Privacy Policy (`/privacy`) pages.
+  - **OWASP Security Headers**: Injection of HSTS, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, and `X-XSS-Protection` in `next.config.mjs`.
+  - **Guest Order Lookup**: `/orders/lookup` page allowing unauthenticated guest shoppers to track orders via Order Number + Email.
+  - **Slide-Over Cart Drawer**: `components/cart/CartDrawer.tsx` matching `docs/ui-ref` design mockup visual look and feel.
+  - **One-Click Reorder**: Reorder items Server Action on `/account/orders/[orderNumber]` page.
 - **P6b2 — product image upload via presigned PUT** (#167,
   `specs/2026-08-12-p6b2-image-upload/`): P6's last slice, and the first time an admin can put a
   real photograph on a product. P6b1 made every *field* editable and left images read-only, so the
@@ -179,6 +295,23 @@ every branch merges.
   recording the trap so it isn't rediscovered. **P6b1 promoted** (PR #171, merge `a577697`),
   carrying P6a's still-unpromoted Document-final closeout (#166) along with it — no migration. P6
   stays **open**: P6b2 (#167, product image upload) is next.
+- **P6b2 closeout docs — P6 closed.** `specs/roadmap.md` (1.20.0) gains P6b2's slice row, its
+  promotion row and a phase-closure row: all three P6 slices (P6a #158, P6b1 #159, P6b2 #167) are now
+  live in production. All 32 `validation.md` rows pass, including a full real-browser end-to-end run
+  (EXIF-upright confirmation, exact 1200×900 downscale, zero CORS/console errors, CDN fetch of the
+  resulting key). Two real defects found and handled during this slice's Validate: `validation.md`'s
+  own R26 fixture script named the wrong vendor slug and built a `PrismaClient` with no driver
+  adapter (both would have made the script throw as originally written — fixed in `ddaf30a`,
+  **before** `staging`), and a pre-existing, unrelated bug in `lib/auth-origin.ts` that 403s
+  real-browser sign-in against `npm run preview` on any non-default port — filed as **#176**, not
+  fixed here (staging/production are unaffected; default port, Cloudflare sets `x-forwarded-proto`
+  correctly there). `specs/sdd-workflow.md` (2.7.0) records #176 in the Validate stage so it isn't
+  rediscovered. `CLAUDE.md` (1.2.0) records the Windows `npm run preview` orphaned-process trap
+  (`workerd.exe`/`wrangler dev`'s children survive the parent's termination, causing `EBUSY` on the
+  next build) hit twice during this slice's live-browser Validate. **P6b2 promoted** (PR #178, merge
+  `2f8ae5b`) — no migration. **One prerequisite the promotion does not carry**: production's
+  `aheed-images-production` bucket CORS is deliberately not applied yet (owner action, tracked in
+  `plan.md`'s Prerequisites), so uploads will 403 in production until it's set.
 - **The order confirmation email and order-detail pages labelled the combined discount line "Loyalty
   points" unconditionally**, unchanged from P5a — so as of this slice, an order discounted by a code
   alone (no points touched) rendered a line claiming the shopper's loyalty balance had been spent.
@@ -1383,3 +1516,5 @@ every branch merges.
 ### Notes
 - No feature code beyond the skeleton. Auth, catalogue, cart, checkout, and the design system
   arrive in P1+ behind their specs and gates.
+ 
+ 

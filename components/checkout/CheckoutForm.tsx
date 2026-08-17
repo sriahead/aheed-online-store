@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { MapPin, ShieldCheck, Sparkles, Tag, User } from "lucide-react";
 import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-order";
 
@@ -38,8 +38,35 @@ export function CheckoutForm({
 }) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
 
+  useEffect(() => {
+    const saved = localStorage.getItem("aheed_checkout_details");
+    if (saved) {
+      try {
+        const details = JSON.parse(saved);
+        const form = document.querySelector("form");
+        if (form) {
+          Object.entries(details).forEach(([key, value]) => {
+            const el = form.elements.namedItem(key) as HTMLInputElement;
+            // Only prefill if the field is empty, to not clobber user input if they navigated back-forward
+            if (el && !el.value && value) {
+              el.value = value as string;
+            }
+          });
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleFormChange = (e: React.FormEvent<HTMLFormElement>) => {
+    const fd = new FormData(e.currentTarget);
+    const details = Object.fromEntries(fd.entries());
+    delete details.redeemPoints;
+    delete details.discountCode;
+    localStorage.setItem("aheed_checkout_details", JSON.stringify(details));
+  };
+
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} onChange={handleFormChange} className="space-y-6">
       {state.error && (
         <p
           role="alert"

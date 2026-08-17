@@ -4,6 +4,10 @@ main = ".open-next/worker.js"
 compatibility_date = "2025-03-25"
 compatibility_flags = ["nodejs_compat"]
 
+# Worker CPU execution limits (raise from default 10ms to prevent Error 1102 on SSR cold starts)
+[limits]
+cpu_ms = 50
+
 # Static assets produced by the OpenNext build.
 [assets]
 directory = ".open-next/assets"

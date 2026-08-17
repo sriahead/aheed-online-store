@@ -1,4 +1,4 @@
-import { getPrisma } from "@/lib/db";
+import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import { buildOrderNumber, computeTotals, type DeliveryRules } from "@/lib/order-totals";
 import { getPaymentService } from "@/lib/payments";
@@ -454,6 +454,7 @@ export interface OrderSummary {
   deliveryFeePence: number;
   totalPence: number;
   items: {
+    productId: string;
     productName: string;
     unitPricePence: number;
     quantity: number;
@@ -636,6 +637,8 @@ export interface OrderRepository {
    * no-direct-Prisma guard (ADR-004 slice 2) requires.
    */
   advance(orderNumber: string, toStatus: string, actor: StatusActor): Promise<AdvanceResult>;
+  /** High-level financial reporting (P6.6c). */
+  getFinancialsForStaff(): Promise<{ totalRevenuePence: number; totalOrders: number }>;
 }
 
 export function getOrderRepository(): OrderRepository {
@@ -645,7 +648,7 @@ export function getOrderRepository(): OrderRepository {
 
   return {
     async createOrder(input) {
-      return placeOrder(prisma, await vendorId(), input);
+      return placeOrder(getPrismaWs(), await vendorId(), input);
     },
 
     async getByOrderNumber(orderNumber, viewerUserId) {
@@ -662,6 +665,7 @@ export function getOrderRepository(): OrderRepository {
           userId: true,
           items: {
             select: {
+              productId: true,
               productName: true,
               unitPricePence: true,
               quantity: true,
@@ -729,6 +733,7 @@ export function getOrderRepository(): OrderRepository {
           totalPence: true,
           items: {
             select: {
+              productId: true,
               productName: true,
               unitPricePence: true,
               quantity: true,
@@ -794,6 +799,7 @@ export function getOrderRepository(): OrderRepository {
           user: { select: { email: true } },
           items: {
             select: {
+              productId: true,
               productName: true,
               unitPricePence: true,
               quantity: true,
@@ -842,7 +848,22 @@ export function getOrderRepository(): OrderRepository {
     },
 
     async advance(orderNumber, toStatus, actor) {
-      return advanceOrderStatus(prisma, await vendorId(), orderNumber, toStatus, actor);
+      return advanceOrderStatus(getPrismaWs(), await vendorId(), orderNumber, toStatus, actor);
+    },
+
+    async getFinancialsForStaff() {
+      const vId = await vendorId();
+
+      const aggregate = await prisma.order.aggregate({
+        where: { vendorId: vId },
+        _sum: { totalPence: true },
+        _count: { id: true },
+      });
+
+      return {
+        totalRevenuePence: aggregate._sum.totalPence ?? 0,
+        totalOrders: aggregate._count.id,
+      };
     },
   };
 }
@@ -1101,7 +1122,7 @@ export async function failPayment(
  * testable from a plain script against a real database.
  */
 export function getWebhookOrderService() {
-  const prisma = getPrisma();
+  const prisma = getPrismaWs();
   return {
     findOrder: (orderNumber: string) => findOrderForWebhook(prisma, orderNumber),
     confirm: (orderNumber: string) => confirmPayment(prisma, orderNumber),

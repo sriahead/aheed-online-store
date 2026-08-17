@@ -1,4 +1,4 @@
-import { getPrisma } from "@/lib/db";
+import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import {
   assertSingleIdentity,
@@ -109,7 +109,7 @@ export function getCartRepository(): CartRepository {
     const existing = await findCart(vid, userId, guestToken);
     if (existing) return existing.id;
 
-    const created = await prisma.cart.create({
+    const created = await getPrismaWs().cart.create({
       data: { vendorId: vid, userId: userId ?? null, guestToken: guestToken ?? null },
       select: { id: true },
     });
@@ -245,7 +245,7 @@ export function getCartRepository(): CartRepository {
       if (stock <= 0) return; // out of stock (or no Inventory row) — refuse
 
       const cartId = await ensureCart(vid, identity);
-      await prisma.$transaction(async (tx: Tx) => {
+      await getPrismaWs().$transaction(async (tx: Tx) => {
         const existing = await tx.cartItem.findUnique({
           where: { cartId_productId: { cartId, productId } },
           select: { quantity: true },
@@ -278,7 +278,7 @@ export function getCartRepository(): CartRepository {
       if (writable.length === 0) return; // nothing addable — don't create a cart
 
       const cartId = await ensureCart(vid, identity);
-      await prisma.$transaction(async (tx: Tx) => {
+      await getPrismaWs().$transaction(async (tx: Tx) => {
         for (const line of writable) {
           const existing = await tx.cartItem.findUnique({
             where: { cartId_productId: { cartId, productId: line.productId } },
@@ -307,9 +307,11 @@ export function getCartRepository(): CartRepository {
       // Clamp against stock; never lands on 0 (removal is the explicit path).
       const next = clampQuantity(0, quantity, stock);
       if (next <= 0) return;
-      await prisma.cartItem.updateMany({
-        where: { cartId: cart.id, productId },
-        data: { quantity: next },
+      await getPrismaWs().$transaction(async (tx: Tx) => {
+        await tx.cartItem.updateMany({
+          where: { cartId: cart.id, productId },
+          data: { quantity: next },
+        });
       });
     },
 
@@ -317,7 +319,9 @@ export function getCartRepository(): CartRepository {
       const vid = await vendorId();
       const cart = await findCart(vid, identity.userId, identity.guestToken);
       if (!cart) return;
-      await prisma.cartItem.deleteMany({ where: { cartId: cart.id, productId } });
+      await getPrismaWs().$transaction(async (tx: Tx) => {
+        await tx.cartItem.deleteMany({ where: { cartId: cart.id, productId } });
+      });
     },
 
     async applyMerge(identity, resolution) {
@@ -337,7 +341,7 @@ export function getCartRepository(): CartRepository {
       ]);
       const result = resolveMerge(resolution, savedLines, guest.items, (id) => stocks.get(id) ?? 0);
 
-      await prisma.$transaction(async (tx: Tx) => {
+      await getPrismaWs().$transaction(async (tx: Tx) => {
         // The user's cart becomes the single surviving cart, carrying `result`.
         const targetId =
           saved?.id ??

@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.6.0"
-updated: 2026-08-12
+version: "2.9.0"
+updated: 2026-08-17
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -126,6 +126,13 @@ Check the actual repo before proposing or building anything — not what a doc *
 - Check current branch and how far `staging`/`main` have actually diverged (`git fetch` + `git log
   origin/main..origin/staging`) before assuming either is in a known state — both moved underneath
   this workflow mid-session more than once.
+- **Divergence alone doesn't prove the commits were gated.** Cross-check `gh pr list --state all
+  --limit 15` against that commit range — if recent `staging` commits don't line up with merged PRs,
+  they were pushed directly, which means `gates` never ran on them. Caught at a P6.7 Orient (2026-08-17):
+  six slices' worth of commits after PR #182 turned out to be direct pushes, and the one PR that *did*
+  run `gates` in that window had failed and been merged anyway — `staging` had been quietly red on
+  `lint`/`format:check`/`vitest` the whole time. `git log`'s divergence count doesn't distinguish a
+  reviewed merge commit from a direct push; only the PR list does.
 - Coming out of a Clear, Orient is also the *re-entry* point: the previous loop's docs are on disk,
   so read them rather than assuming continuity with a conversation that no longer exists.
 - **Run `npm run sdd:audit`.** It reports whether slices shipped under this loop got their roadmap
@@ -154,6 +161,7 @@ Gate 1. Calibrate the ceremony to the size of the fork.
   **Phase**, and leave Status at **Backlog**. An issue that never reaches the board is invisible to
   every later stage — ten issues (#93–#106) were filed after the board was provisioned and none of
   them were added, until a sync caught it.
+- **Assign a milestone**: Every issue must be explicitly associated with its relevant roadmap milestone (e.g., `gh issue edit <number> -m "P6 — Admin & staff panel"`). This ensures the GitHub issue matches the project board's phase.
 - Wait for explicit approval on non-trivial work before Spec/Build. A prior approval does not carry
   forward to a new, unrelated decision.
 
@@ -320,6 +328,19 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   reads `.dev.vars`; `prisma migrate`/`db:seed` and any local inspection script read `.env`. When
   those point at different Neon projects, a live check silently validates against a database the app
   isn't using. Compare both before starting, not after a confusing result.
+- **A real browser signing in against `npm run preview` currently 403s with `Invalid origin`** —
+  `lib/auth-origin.ts` drops the request port and mis-resolves the scheme when building Better
+  Auth's trusted origin, which only matters on a non-default port (preview is always `8787`). This
+  is a **pre-existing, unrelated, local-preview-only defect** (#176, filed at P6b2), not evidence the
+  slice under test is broken — staging/production are unaffected (default port, Cloudflare always
+  sets `x-forwarded-proto` correctly there). Confirm with a direct request before assuming the
+  artifact is at fault: `Origin: http://localhost:8787` on `/api/auth/sign-in/email` gets `403`;
+  the same request with `Origin: http://localhost` (no port) gets `200`. Until #176 lands, driving
+  an interactive browser sign-in against local preview needs a temporary, **uncommitted** local
+  patch to `lib/auth-origin.ts` (keep the port; don't trust `x-forwarded-proto` locally), reverted
+  before the branch is touched again — headless `node:http` calls with a manually-obtained session
+  cookie sidestep the bug entirely and remain the right tool for every row that doesn't specifically
+  need a real browser (CORS, canvas/EXIF, on-screen rendering).
 - CI (`gates`) is the real Gate 3 — don't report a slice done until it's actually green on GitHub,
   not "should be green based on local output."
 

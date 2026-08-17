@@ -113,7 +113,9 @@ describe("Stripe adapter — session payload", () => {
     expect(body.get("success_url")).toBe(
       `https://srimart-staging.nocaped.com/checkout/${INPUT.orderNumber}`,
     );
-    expect(body.get("cancel_url")).toBe("https://srimart-staging.nocaped.com/checkout");
+    expect(body.get("cancel_url")).toBe(
+      `https://srimart-staging.nocaped.com/api/checkout/cancel?orderNumber=${INPUT.orderNumber}`,
+    );
   });
 
   it("authenticates with the secret key and sends form encoding", async () => {

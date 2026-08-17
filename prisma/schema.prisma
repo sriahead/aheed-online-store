@@ -47,25 +47,27 @@ enum VendorRole {
 }
 
 model User {
-  id              String               @id
-  name            String
-  email           String               @unique
-  emailVerified   Boolean              @default(false)
-  image           String?
-  role            Role                 @default(CUSTOMER)
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  sessions        Session[]
-  accounts        Account[]
-  reviews         Review[]
-  memberships     VendorMembership[]
-  carts           Cart[]
-  addresses       Address[]
-  orders          Order[]
-  statusChanges   OrderStatusEvent[]   @relation("OrderStatusEventActor")
-  loyaltyAccounts LoyaltyAccount[]
-  loyaltyEntries  LoyaltyLedgerEntry[]
-  discountUses    DiscountRedemption[]
+  id                  String               @id
+  name                String
+  email               String               @unique
+  emailVerified       Boolean              @default(false)
+  image               String?
+  role                Role                 @default(CUSTOMER)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  sessions            Session[]
+  accounts            Account[]
+  reviews             Review[]
+  memberships         VendorMembership[]
+  carts               Cart[]
+  addresses           Address[]
+  orders              Order[]
+  statusChanges       OrderStatusEvent[]   @relation("OrderStatusEventActor")
+  loyaltyAccounts     LoyaltyAccount[]
+  loyaltyEntries      LoyaltyLedgerEntry[]
+  discountUses        DiscountRedemption[]
+  roleChangesTargeted VendorRoleAuditLog[] @relation("TargetUser")
+  roleChangesActedOn  VendorRoleAuditLog[] @relation("ActorUser")
 }
 
 model Session {
@@ -150,6 +152,7 @@ model Vendor {
   loyaltyEntries  LoyaltyLedgerEntry[]
   discountCodes   DiscountCode[]
   discountUses    DiscountRedemption[]
+  roleAuditLogs   VendorRoleAuditLog[]
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
@@ -689,4 +692,22 @@ model DiscountRedemption {
   @@unique([orderId])
   @@unique([codeId, userId, seq])
   @@index([vendorId, codeId])
+}
+
+// ---- P6.7 — Team & Role Management (#P6.7) ----------------------------------
+
+/// Audit trail of role assignments within a vendor.
+model VendorRoleAuditLog {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
+  userId    String
+  user      User     @relation("TargetUser", fields: [userId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     User?    @relation("ActorUser", fields: [actorId], references: [id], onDelete: SetNull)
+  oldRole   String?
+  newRole   String?
+  createdAt DateTime @default(now())
+
+  @@index([vendorId, createdAt])
 }

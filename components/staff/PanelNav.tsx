@@ -1,53 +1,72 @@
-import Link from "next/link";
-import { ClipboardList, LayoutDashboard, Package, Sparkles, TicketPercent } from "lucide-react";
+"use client";
 
-/**
- * The admin panel's navigation (P6a, #158).
- *
- * NOT an authorization boundary. It decides which links to *draw*; every page
- * behind it re-runs its own `requireVendorRole`, and the server actions behind
- * those pages re-check again (a server action is a public endpoint at a stable
- * id). Hiding a link a viewer cannot use is a courtesy to the packing floor, not
- * a gate — see `app/(admin)/layout.tsx`.
- */
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  ClipboardList,
+  LayoutDashboard,
+  Package,
+  Sparkles,
+  TicketPercent,
+  Layers,
+  BookOpen,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+
 export interface PanelNavProps {
-  /** False for a viewer with no vendor staff/admin role: renders no links at all. */
   canSeeOrders: boolean;
-  /** True only for a vendor ADMIN or a platform admin — the money-touching pages. */
-  canSeeAdmin: boolean;
+  currentTier: "staff" | "admin";
 }
 
-const LINK_CLASS =
-  "inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-primary/70 hover:bg-surface-muted hover:text-primary";
+function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: string }) {
+  const pathname = usePathname();
+  // Exact match for overview, prefix match for everything else so /staff/orders/123 stays active
+  const isActive = href === "/staff" ? pathname === href : pathname.startsWith(href);
 
-export function PanelNav({ canSeeOrders, canSeeAdmin }: PanelNavProps) {
+  return (
+    <Link
+      href={href}
+      className={`inline-flex items-center gap-2 border-b-2 px-1 pb-3 pt-4 text-sm font-bold transition-colors whitespace-nowrap ${
+        isActive
+          ? "border-[#2e7d32] text-[#2e7d32]"
+          : "border-transparent text-black/60 hover:border-black/20 hover:text-black/80"
+      }`}
+    >
+      <Icon className="h-4 w-4" aria-hidden />
+      {label}
+    </Link>
+  );
+}
+
+export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
   if (!canSeeOrders) return null;
 
   return (
-    <nav aria-label="Store admin" className="border-b border-black/10 bg-white">
-      <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-1 px-4 py-2">
-        <Link href="/staff" className={LINK_CLASS}>
-          <LayoutDashboard className="h-4 w-4" aria-hidden />
-          Overview
-        </Link>
-        <Link href="/staff/orders" className={LINK_CLASS}>
-          <ClipboardList className="h-4 w-4" aria-hidden />
-          Orders
-        </Link>
-        {canSeeAdmin && (
+    <nav
+      aria-label="Store admin"
+      className="bg-white border-b border-black/10 shadow-sm w-full overflow-x-auto"
+    >
+      <div className="mx-auto flex w-full max-w-5xl items-center gap-6 px-4">
+        {currentTier === "staff" ? (
           <>
-            <Link href="/staff/products" className={LINK_CLASS}>
-              <Package className="h-4 w-4" aria-hidden />
-              Catalogue
-            </Link>
-            <Link href="/staff/loyalty" className={LINK_CLASS}>
-              <Sparkles className="h-4 w-4" aria-hidden />
-              Loyalty
-            </Link>
-            <Link href="/staff/discounts" className={LINK_CLASS}>
-              <TicketPercent className="h-4 w-4" aria-hidden />
-              Discounts
-            </Link>
+            <NavLink href="/staff" icon={LayoutDashboard} label="Overview" />
+            <NavLink href="/staff/inventory" icon={Layers} label="Live Inventory & Availability" />
+            <NavLink href="/staff/orders" icon={ClipboardList} label="Fulfillment & Orders" />
+            <NavLink href="/staff/runbook" icon={BookOpen} label="Internal Operational Runbook" />
+          </>
+        ) : (
+          <>
+            <NavLink href="/staff" icon={LayoutDashboard} label="Overview" />
+            <NavLink href="/staff/inventory" icon={Layers} label="Live Inventory & Availability" />
+            <NavLink href="/staff/orders" icon={ClipboardList} label="Orders" />
+            <NavLink href="/staff/products" icon={Package} label="Catalogue" />
+            <NavLink href="/staff/categories" icon={LayoutDashboard} label="Categories" />
+            <NavLink href="/staff/loyalty" icon={Sparkles} label="Loyalty" />
+            <NavLink href="/staff/discounts" icon={TicketPercent} label="Discounts" />
+            <NavLink href="/staff/reports" icon={TrendingUp} label="Reports" />
+            <NavLink href="/staff/team" icon={Users} label="Team" />
+            <NavLink href="/staff/runbook" icon={BookOpen} label="Runbook" />
           </>
         )}
       </div>

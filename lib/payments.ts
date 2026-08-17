@@ -85,7 +85,7 @@ export function createStripePaymentService(secretKey: string): PaymentService {
         // The shopper returns here; the page reads the order's real status from
         // the DB rather than trusting the redirect (P3c R21).
         success_url: `${input.returnOrigin}/checkout/${input.orderNumber}`,
-        cancel_url: `${input.returnOrigin}/checkout`,
+        cancel_url: `${input.returnOrigin}/api/checkout/cancel?orderNumber=${input.orderNumber}`,
         // Traceable from the Stripe dashboard back to an order without a query.
         client_reference_id: input.orderNumber,
         "metadata[orderNumber]": input.orderNumber,

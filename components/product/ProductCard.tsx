@@ -18,85 +18,90 @@ export function ProductCard({
   return (
     <Link
       href={`/products/${product.slug}`}
-      className="group relative flex flex-col overflow-hidden rounded-md border border-black/10 transition hover:border-black/20 hover:shadow-lg"
+      className="group relative bg-white rounded-2xl border border-black/10 hover:border-action/50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden cursor-pointer h-full"
     >
-      {/* Badges */}
-      <div className="absolute left-2.5 top-2.5 z-10 flex flex-wrap gap-1">
+      {/* Top badges */}
+      <div className="absolute top-2.5 left-2.5 z-10 flex flex-wrap gap-1">
         {product.isHalal && (
-          <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-white">
+          <span className="bg-primary text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-action-tint"></span>
             Halal
           </span>
         )}
         {product.isFresh && (
-          <span className="rounded-full bg-action px-2 py-0.5 text-[10px] font-semibold text-white">
+          <span className="bg-action text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
             Fresh
           </span>
         )}
         {hasDiscount && (
-          <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-white">
+          <span className="bg-accent text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
             Offer
           </span>
         )}
       </div>
 
-      {/* Image */}
-      <div className="relative aspect-square w-full bg-surface-muted">
+      {/* Image container */}
+      <div className="relative aspect-4/3 w-full bg-surface-muted overflow-hidden shrink-0">
         {product.primaryImage ? (
           <img
             src={composePublicUrl(cdnBaseUrl, product.primaryImage.storageKey)}
             alt={product.primaryImage.alt}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
           />
         ) : (
           <div className="h-full w-full bg-surface-muted" />
         )}
         {hasDiscount && (
-          <span className="absolute bottom-2 right-2 rounded-sm bg-danger px-1.5 py-0.5 text-[11px] font-bold text-white">
+          <div className="absolute bottom-2 right-2 bg-danger text-white text-[11px] font-bold px-1.5 py-0.5 rounded">
             Save {formatPrice(saving)}
-          </span>
+          </div>
         )}
       </div>
 
       {/* Content */}
-      <div className="flex flex-1 flex-col gap-1 p-3">
-        {/* Rating + origin */}
-        <div className="flex items-center justify-between text-xs text-primary/60">
-          <span className="flex items-center gap-1">
-            {/* Gold star: a decorative, non-brand color — stock Tailwind amber,
-                per specs/design-system.md's "everything else uses Tailwind". */}
-            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden />
-            <span className="font-medium text-primary/80">{product.averageRating.toFixed(1)}</span>
-            <span>({product.reviewCount})</span>
-          </span>
-          {product.origin && (
-            <span className="max-w-[45%] truncate" title={product.origin}>
-              {product.origin}
-            </span>
-          )}
+      <div className="p-3.5 flex flex-col flex-1 justify-between">
+        <div>
+          {/* Rating & Origin */}
+          <div className="flex items-center justify-between text-xs text-black/60 mb-1">
+            <div className="flex items-center gap-1">
+              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" aria-hidden />
+              <span className="font-medium text-black/70">{product.averageRating.toFixed(1)}</span>
+              <span>({product.reviewCount})</span>
+            </div>
+            {product.origin && (
+              <span className="text-[11px] truncate max-w-[100px]" title={product.origin}>
+                {product.origin}
+              </span>
+            )}
+          </div>
+
+          {/* Title */}
+          <h3 className="font-semibold text-black/90 text-sm group-hover:text-primary transition-colors line-clamp-2 leading-tight">
+            {product.name}
+          </h3>
+
+          <p className="text-xs text-black/60 mt-0.5">{product.unitLabel}</p>
         </div>
 
-        <span className="font-semibold leading-tight text-primary">{product.name}</span>
-        <span className="text-xs text-primary/60">{product.unitLabel}</span>
-
-        {/* Price + inert add button (P3 wires the cart) */}
-        <div className="mt-2 flex items-center justify-between border-t border-black/5 pt-2">
-          <span className="flex items-baseline gap-1.5">
+        {/* Price & Add Button */}
+        <div className="mt-3 flex flex-col gap-2 pt-2 border-t border-black/5">
+          <div className="flex flex-wrap items-baseline gap-1.5">
             <span className="text-base font-bold text-primary">
               {formatPrice(product.basePrice)}
             </span>
             {hasDiscount && (
-              <span className="text-xs text-primary/40 line-through">
+              <span className="text-xs text-black/60 line-through">
                 {formatPrice(product.originalPrice!)}
               </span>
             )}
-          </span>
-          {/* Real add-to-cart (P3a). The card body is a <Link>, so the button
-              stops the click from navigating — see AddToCartButton. */}
+          </div>
+
           <AddToCartButton
             productId={product.id}
             disabled={!product.inStock}
             label={`Add ${product.name} to cart`}
+            variant="card"
           />
         </div>
       </div>

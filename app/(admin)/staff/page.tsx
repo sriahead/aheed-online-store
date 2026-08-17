@@ -1,7 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ClipboardList, FolderTree, Package, Sparkles, TicketPercent } from "lucide-react";
+import {
+  ClipboardList,
+  FolderTree,
+  Package,
+  Sparkles,
+  TicketPercent,
+  Layers,
+  BookOpen,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/repositories/orders";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
@@ -41,7 +51,7 @@ export default async function StaffHomePage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Store admin</h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary/80">
         {awaitingAction === 0
           ? "No orders are awaiting action."
           : `${awaitingAction} ${awaitingAction === 1 ? "order is" : "orders are"} awaiting action.`}
@@ -49,13 +59,35 @@ export default async function StaffHomePage() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Link
+          href="/staff/inventory"
+          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+        >
+          <Layers className="mb-3 h-6 w-6 text-action" aria-hidden />
+          <p className="font-semibold text-primary">Live Inventory & Availability</p>
+          <p className="mt-1 text-sm text-primary/80">
+            Quickly adjust stock levels and toggle product availability.
+          </p>
+        </Link>
+
+        <Link
           href="/staff/orders"
           className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
         >
           <ClipboardList className="mb-3 h-6 w-6 text-action" aria-hidden />
           <p className="font-semibold text-primary">Orders</p>
-          <p className="mt-1 text-sm text-primary/70">
+          <p className="mt-1 text-sm text-primary/80">
             Work the queue, search past orders, and open one for its full history.
+          </p>
+        </Link>
+
+        <Link
+          href="/staff/runbook"
+          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+        >
+          <BookOpen className="mb-3 h-6 w-6 text-action" aria-hidden />
+          <p className="font-semibold text-primary">Internal Operational Runbook</p>
+          <p className="mt-1 text-sm text-primary/80">
+            Zero-trust guide to store operations and procedures.
           </p>
         </Link>
 
@@ -67,7 +99,7 @@ export default async function StaffHomePage() {
             >
               <Package className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Products</p>
-              <p className="mt-1 text-sm text-primary/70">
+              <p className="mt-1 text-sm text-primary/80">
                 Add products, correct prices, and set what&apos;s in stock.
               </p>
             </Link>
@@ -78,7 +110,7 @@ export default async function StaffHomePage() {
             >
               <FolderTree className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Categories</p>
-              <p className="mt-1 text-sm text-primary/70">
+              <p className="mt-1 text-sm text-primary/80">
                 The departments shoppers browse by, and how they&apos;re ordered.
               </p>
             </Link>
@@ -89,7 +121,7 @@ export default async function StaffHomePage() {
             >
               <Sparkles className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Loyalty</p>
-              <p className="mt-1 text-sm text-primary/70">
+              <p className="mt-1 text-sm text-primary/80">
                 Earn and redemption rates, tier thresholds and multipliers.
               </p>
             </Link>
@@ -100,8 +132,30 @@ export default async function StaffHomePage() {
             >
               <TicketPercent className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Discount codes</p>
-              <p className="mt-1 text-sm text-primary/70">
+              <p className="mt-1 text-sm text-primary/80">
                 Create, review and deactivate this store&apos;s codes.
+              </p>
+            </Link>
+
+            <Link
+              href="/staff/reports"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <TrendingUp className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Reports</p>
+              <p className="mt-1 text-sm text-primary/80">
+                Sales, total orders, and average basket value financials.
+              </p>
+            </Link>
+
+            <Link
+              href="/staff/team"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Users className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Team & Access</p>
+              <p className="mt-1 text-sm text-primary/80">
+                Manage staff access, roles, and administrative privileges.
               </p>
             </Link>
           </>
