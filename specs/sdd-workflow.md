@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.10.0"
+version: "2.11.0"
 updated: 2026-08-17
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -403,6 +403,12 @@ named gates, but the part of this repo's actual history most prone to drift.
 - `staging → main` is its own deliberate promotion PR, mirroring the existing "Promote X to
   production" title convention — staging gets deploy-tested first, the production merge is a second,
   separate confirmation, not a rubber stamp on the first.
+- **A promotion PR closing several issues needs the keyword repeated per issue** —
+  `closes #93, closes #96, closes #99`, not `Closes #93, #96, #99`. GitHub only honours the closing
+  keyword for the *first* issue in a comma-separated list; the rest stay open on merge with no error
+  or warning (#112, found on PR #108). This bites specifically here because slice PRs merge into
+  `staging`, never the default branch, so every issue closure is deferred to a promotion PR — which
+  is exactly where several `Closes` references pile up at once.
 - If a PR merges before a fix/follow-up commit lands, don't force-push or rewrite history to patch it
   in retroactively — open a tracking issue and land the fix as its own proper follow-up PR.
 

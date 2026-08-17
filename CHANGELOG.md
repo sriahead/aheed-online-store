@@ -6,6 +6,23 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+- **`sdd:preclear` now checks `ARTIFACT_INDEX.md` staleness** (#132), mirroring `gates.yml`'s own
+  check so it can't surface for the first time on an open PR — P4b lost a CI run and a fix commit to
+  exactly that. Rebuilds the index into memory, diffs it against what's on disk with the generated
+  timestamp/commit footer normalised out, and restores the original bytes when the only difference
+  is that footer, so a footer-only rebuild doesn't masquerade as real uncommitted work for the
+  clean-tree check. Found and fixed a bug in its own first version while testing on Windows: a
+  `core.autocrlf` checkout holds `\r\n` on disk while `kms:build-index` always writes `\n`, so the
+  raw byte compare needs line endings normalised too, not just the footer text.
+
+### Docs
+- **The multi-issue `Closes #a, #b, #c` GitHub limitation** (#112): GitHub only honours the closing
+  keyword for the first issue in a comma-separated list, silently leaving the rest open on merge.
+  Documented in `specs/sdd-workflow.md`'s Ship section and `.claude/commands/ship.md` — promotion
+  PRs are exactly where this bites, since slice PRs merge into `staging` (never the default branch),
+  deferring every issue closure to the promotion PR.
+
 ### Removed
 - **Eleven orphaned debug scripts** (#191): five ad-hoc Puppeteer scripts at the repo root
   (`parse-logs.js`, `test-action.js`, `test-checkout.js`, `test-local.js`, `test-staging.js`) and six
