@@ -37,16 +37,17 @@ export interface StorageService {
    * asks storage what actually landed before it writes a row.
    */
   headObject(key: string): Promise<StoredObjectHead | null>;
+  /**
+   * `DeleteObject` (#211) — decided as an inline delete over a scheduled sweep:
+   * simpler, no new infra (wrangler.toml still has no cron triggers). Covers
+   * superseded/removed images; does NOT cover an abandoned upload (an object
+   * with no ProductImage row ever written), which stays open under #174. A
+   * missing key is not an error — S3's DeleteObject is idempotent on a
+   * not-found key, and callers here always pass a key they just confirmed
+   * existed, so this is a courtesy rather than a load-bearing check.
+   */
+  deleteObject(key: string): Promise<void>;
 }
-
-/**
- * NOTE: there is deliberately no delete on this port. P6b2 uses immutable keys,
- * so a replaced image's object is superseded rather than overwritten and nothing
- * ever needs removing at write time. Cleaning up superseded and orphaned objects
- * is #174, and it needs its own decision (an inline delete vs a scheduled sweep,
- * the latter being the first cron trigger in wrangler.toml) rather than a method
- * added speculatively here.
- */
 
 /** Pure helper (unit-tested): compose a public URL from a base + relative key. */
 export function composePublicUrl(cdnBase: string, key: string): string {
@@ -108,6 +109,13 @@ export function getStorage(): StorageService {
         contentType: res.headers.get("content-type"),
         contentLength: length === null ? null : Number(length),
       };
+    },
+
+    async deleteObject(key) {
+      const res = await client.fetch(objectUrl(key), { method: "DELETE" });
+      if (!res.ok && res.status !== 404) {
+        throw new Error(`storage deleteObject failed: ${res.status}`);
+      }
     },
   };
 }

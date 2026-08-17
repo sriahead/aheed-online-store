@@ -4,12 +4,12 @@ title: Master Application Gap Register
 audience: [dev, staff]
 type: doc
 status: approved
-version: "2.0.0"
+version: "2.1.0"
 updated: 2026-08-17
 visibility: internal
 summary: The single master gap register for the application — every GAP-ID in the repo, its severity, its current status and the artifact that proves it, reconciled against the code rather than against itself.
 tags: [gap-register, audit, orient, master]
-related: [gap-register, self-review-report, p6-5-residual-validation-plan]
+related: [gap-register, self-review-report, p6-5-residual-validation-plan, catalogue-debt-bucket-plan]
 ---
 
 # Master Application Gap Register
@@ -35,9 +35,9 @@ second table using the same ID space; it now keeps its P6.5 narrative and points
 | GAP-010 | Feature / Admin | Staff Bulk Order Status Transitions (#162) | **P2** | Staff order dashboard advanced one order at a time. Built in PR #204. | Fixed |
 | GAP-011 | Feature / Search | Dedicated Database Trigram Index for Search (#163, #169) | **P2** | Global product search uses token matching; `pg_trgm` fuzzy search index deferred until catalogue size demands a raw SQL query. | Deferred |
 | GAP-012 | User Journey / Cart | Reorder Past Order in One Click (#124) | **P3** | Order history had no one-click reorder. Built as `features/orders/reorder-items.ts` and wired into the order detail page. | Fixed |
-| GAP-013 | UI Reference Parity | Homepage Featured Products Rail (#45) | **P3** | Reference mockup includes a featured-products rail. The rail shipped, but is populated by an `isHalal` proxy query rather than a real featured flag — see #208. | Fixed (partial) |
-| GAP-014 | Feature / Admin | Admin Multi-Image Product Management (#173) | **P3** | `ProductImage` supports many rows per product and the admin can upload and set a primary image; **remove** and **reorder** are not built. | Deferred |
-| GAP-015 | Feature / Admin | Superseded Image Storage Cleanup (#174) | **P3** | Replacing a product photo uploads a new immutable S3 key; old orphaned storage keys are retained in the bucket with no delete path. | Deferred |
+| GAP-013 | UI Reference Parity | Homepage Featured Products Rail (#45) | **P3** | Reference mockup includes a featured-products rail. Now driven by a real `Product.isFeatured` flag; the rail also turned out to render nothing at all until the 2026-08-17 audit (#211) found and fixed the underlying `search("")` misuse. | Fixed |
+| GAP-014 | Feature / Admin | Admin Multi-Image Product Management (#173) | **P3** | `ProductImage` supports many rows per product; the admin can now add, remove, reorder and set the primary image — the real gap (no code path ever created a second row) was bigger than "remove and reorder", fixed in #211. | Fixed |
+| GAP-015 | Feature / Admin | Superseded Image Storage Cleanup (#174) | **P3** | Replacing or removing a product photo now deletes the superseded object from storage (`StorageService.deleteObject`, #211). Abandoned uploads (no `ProductImage` row ever written) are still not cleaned up — #174 stays open for that narrower remainder. | Fixed (partial) |
 
 ---
 
@@ -179,21 +179,22 @@ That is why P6.5's exit gate was rewritten in the same slice
 
 ### GAP-013 — Homepage Featured Products Rail (#45)
 - **Category:** UI Reference Parity
-- **Severity:** **P3** · **Status:** Fixed (partial)
-- **Evidence:** `app/(storefront)/page.tsx:175` renders a `ProductRow` titled "Featured Halal Deals"; #45 is closed.
-- **Remaining:** the rail is populated by `productsRepo.search("", { take: 4, isHalal: true })` — a proxy, annotated in that file as "simulated deals / halal featured". `Product` has no featured flag, so a vendor cannot choose what appears. Tracked as **#208**.
+- **Severity:** **P3** · **Status:** Fixed
+- **Evidence:** `Product.isFeatured` (`prisma/schema.prisma`), an admin checkbox in `ProductForm`, and `app/(storefront)/page.tsx` reading it via `ProductRepository.list({ isFeatured: true })`. The rail is retitled "Featured Products".
+- **Also found and fixed (#211):** the rail — and the "New Arrivals" row beside it — rendered **nothing at all**, independent of the proxy-flag issue. Both called `productsRepo.search("", {...})`, and `search()`'s empty-query guard (`lib/repositories/products.ts`) unconditionally returns zero results; `ProductRow` renders `null` for zero products. Neither row's title appeared anywhere in `npm run preview`'s rendered homepage before this fix. `#208`'s own text ("It renders correctly; only its data source is a placeholder") was itself wrong on the first half — this is the reconciliation.
 
 ### GAP-014 — Admin Multi-Image Product Management (#173)
 - **Category:** Feature / Admin
-- **Severity:** **P3** · **Status:** Deferred
-- **Description:** `ProductImage` already models many images per product (`sortOrder`, `isPrimary`), the storefront reads a gallery, and the admin can upload an image and set a primary. **Removing** an image and **reordering** images are not implemented.
-- **Evidence:** `features/admin/product-image.ts` exports only `requestImageUpload` and `attachProductImage`; no remove or reorder action exists.
+- **Severity:** **P3** · **Status:** Fixed
+- **Description (was):** `ProductImage` already modelled many images per product (`sortOrder`, `isPrimary`) and the storefront read a gallery, but **no code path had ever created a second row** — `attachProductImage` always repointed the single primary row. The real gap was bigger than "remove and reorder are missing".
+- **Evidence:** `lib/repositories/products.ts`'s `addProductImage`/`promoteProductImage`/`removeProductImage`/`reorderProductImages`, wired into `features/admin/product-image.ts`'s four new server actions and `components/staff/ProductImageManager.tsx`.
 
 ### GAP-015 — Superseded Image Storage Cleanup (#174)
 - **Category:** Feature / Admin
-- **Severity:** **P3** · **Status:** Deferred
-- **Description:** Replacing a product photo writes a new immutable key and repoints the row (by design — keys are immutable so no CDN purge is needed). The superseded object is never deleted.
-- **Evidence:** `lib/storage` exposes no delete operation.
+- **Severity:** **P3** · **Status:** Fixed (partial)
+- **Description (was):** Replacing a product photo writes a new immutable key and repoints the row (by design — keys are immutable so no CDN purge is needed). The superseded object was never deleted, and neither was an abandoned upload's.
+- **Evidence:** `lib/storage.ts`'s `deleteObject`, called from `removeProductImage` (`features/admin/product-image.ts`) whenever an image is removed or replaced.
+- **Remaining:** an abandoned upload — an object PUT to storage whose `ProductImage` row was never written (browser closed mid-flow) — has no cleanup path. Inline delete doesn't reach it; a scheduled sweep was considered and deliberately deferred as bigger infrastructure than this slice's scope. **#174 stays open** for that narrower remainder.
 
 ---
 
@@ -202,8 +203,8 @@ That is why P6.5's exit gate was rewritten in the same slice
 | Status | Total | P1 | P2 | P3 |
 |---|---|---|---|---|
 | Open | 3 | 3 | 0 | 0 |
-| Deferred | 3 | 0 | 1 | 2 |
-| Fixed | 9 | 2 | 4 | 3 |
+| Deferred | 1 | 0 | 1 | 0 |
+| Fixed | 11 | 2 | 4 | 5 |
 | **Total** | **15** | **5** | **5** | **5** |
 
 All three `Open` rows are P1 operational prerequisites whose fix is an action outside this

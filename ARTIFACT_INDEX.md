@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-17T15:42:57.000Z` · commit `1df8996` · `66` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-17T16:24:43.866Z` · commit `e23b8c1` · `66` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -77,7 +77,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [ADR-005 — Payments & multi-vendor money flow](specs/decisions/ADR-005-payments-money-flow.md) | adr | 1.3.0 | 2026-08-11 | approved | internal | Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite. |
 | [Design System](specs/design-system.md) | doc | 1.6.0 | 2026-08-09 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases. |
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
-| [Roadmap](specs/roadmap.md) | doc | 1.27.0 | 2026-08-17 | approved | internal | Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |
+| [Roadmap](specs/roadmap.md) | doc | 1.28.0 | 2026-08-17 | approved | internal | Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |
 | [SDD Workflow](specs/sdd-workflow.md) | doc | 2.14.0 | 2026-08-17 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command. |
 | [Tech Stack](specs/tech-stack.md) | doc | 1.3.0 | 2026-08-12 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
 
@@ -85,7 +85,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
-| [Master Application Gap Register](docs/gap-register.md) | doc | 2.0.0 | 2026-08-17 | approved | internal | The single master gap register for the application — every GAP-ID in the repo, its severity, its current status and the artifact that proves it, reconciled against the code rather than against itself. |
+| [Master Application Gap Register](docs/gap-register.md) | doc | 2.1.0 | 2026-08-17 | approved | internal | The single master gap register for the application — every GAP-ID in the repo, its severity, its current status and the artifact that proves it, reconciled against the code rather than against itself. |
 | [Phase 6.5 Gap Register (superseded by the master register)](docs/sdd/self-review/GAP-REGISTER.md) | doc | 2.0.0 | 2026-08-17 | approved | internal | The Phase 6.5 audit's gap register, now a pointer — its four findings (GAP-001..004) were folded into the single master register at docs/gap-register.md on 2026-08-17. |
 | [Phase 6.5 Autonomous Self-Review Report](docs/sdd/self-review/SELF-REVIEW.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Executive summary and status breakdown of Phase 6.5 audit loop across architecture, schema, security, payments, and deployment. |
 | [Phase 6.5 Validation & Test Results](docs/sdd/self-review/VALIDATION-RESULTS.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Verification log of test runs, build checks, and validation evidence for Phase 6.5 audit loop. |
