@@ -32,8 +32,17 @@ export interface DemoAccount {
   vendorRole?: VendorRole;
 }
 
-/** Fixed, code-defined roster. demo-admin is a platform admin; demo-staff is a normal user
- *  with a vendor STAFF membership (not a platform staffer); demo-customer is a plain shopper. */
+/** Fixed, code-defined roster. demo-admin is a platform admin; demo-store-admin is a store
+ *  admin (vendor ADMIN only); demo-staff is a normal user with a vendor STAFF membership
+ *  (not a platform staffer); demo-customer is a plain shopper.
+ *
+ *  demo-store-admin exists because a platform admin CANNOT stand in for a store admin:
+ *  requireVendorRole() returns early with `via: "platform-admin"` for anyone whose
+ *  User.role is ADMIN (lib/auth-rbac.ts), so demo-admin's vendorRole is never actually
+ *  read. The role-hierarchy guards in lib/repositories/roles.ts — only a platform admin
+ *  may grant ADMIN, a store admin may not touch a platform admin's privileges, and the
+ *  self-lockout check — all fire only when `via === "ADMIN"`, which no other account in
+ *  this roster can produce. Added for P6.7's validation walk (#190). */
 export const DEMO_ACCOUNTS: DemoAccount[] = [
   {
     email: "demo-admin@example.com",
@@ -48,6 +57,12 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     vendorRole: "STAFF",
   },
   { email: "demo-customer@example.com", name: "Demo Customer", platformRole: "CUSTOMER" },
+  {
+    email: "demo-store-admin@example.com",
+    name: "Demo Store Admin",
+    platformRole: "CUSTOMER",
+    vendorRole: "ADMIN",
+  },
 ];
 
 /**

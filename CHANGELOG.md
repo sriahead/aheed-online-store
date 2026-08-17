@@ -6,6 +6,36 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+- **`demo-store-admin@example.com` in the demo-accounts roster** (#190): a store admin — vendor
+  `ADMIN`, platform `CUSTOMER`. This role was previously impossible to represent:
+  `requireVendorRole()` short-circuits to `via: "platform-admin"` for any platform `ADMIN`
+  (`lib/auth-rbac.ts`), so `demo-admin`'s `vendorRole` is never read, and the three guards that only
+  fire for `via: "ADMIN"` (`roles.ts:42`, `roles.ts:64`, the self-lockout branch) had unit coverage
+  but had never run against a real session. `tests/demo-accounts.test.ts`'s roster assertions now
+  derive from `DEMO_ACCOUNTS` instead of hardcoding its size and shape.
+
+### Docs
+- **P6.7 closed out** (#186, `specs/2026-08-17-p6.7-closeout-promotion/`): walked `validation.md`
+  §1.1–§1.4 and §2 live on staging across four accounts — all 29 rows now checked off with the
+  observed result recorded against each. Both hierarchy refusals, the STAFF denial and both
+  self-lockout variants hold; the store admin's role selector omits `ADMIN` from the DOM entirely,
+  and injecting the option server-side is still refused. The audit trail wrote **6 rows for 6
+  successful writes and 0 rows for the 4 refusals**, confirming the guards run inside the
+  `$transaction`. Smoke-checked P6.6/P6.6c/P7a and the #187 cart/checkout paths ahead of promotion;
+  P6.5 and a live order status transition are recorded as deliberately not covered.
+- **`specs/Validation.md` → `docs/regression-tests.md`**: given KMS front-matter and moved out of
+  `specs/`, where it had no front-matter, never reached `ARTIFACT_INDEX.md`, and collided by name
+  with every slice-local `validation.md`. Both of its regression scenarios were re-verified on
+  staging and are annotated with the result.
+- **Roadmap corrections**: the P6.5 row cited "Issue #180" (an unrelated CORS issue) and the P7a row
+  cited "PR #183" (an issue number, and no PR carried P7a). Both now record that the slice shipped
+  by direct push with no anchoring issue, naming the actual commits `982eafb` and `624a842`.
+- **Board reconciliation**: #183/#184/#187 → In Review; **#185 corrected from Done → In Review**
+  (its fix was never promoted, so it was not in production); #176 → Backlog; added a draft item for
+  P6.6, which shipped via PR #182 with no issue and no board presence.
+- Filed **#191** — eleven orphaned debug scripts still tracked from the ungated period.
+
 ### Docs
 - **P6.7 Document (final)**: rebuilt `ARTIFACT_INDEX.md` (P6.7's `plan.md` was missing KMS
   front-matter, so the slice was invisible to `sdd:audit`'s index check — added it); added the
@@ -37,7 +67,7 @@ every branch merges.
 
 ### Added
 - **Promo Slider & UI Animations**: Added a new `PromoSlider` component to the homepage to showcase the latest offers. Enhanced the overall visual impact with subtle animations (hover translations, shadows, and scaling) across the `ProductCard`, `DepartmentScroller`, and homepage trust sections.
-- **Validation Guidelines**: Added `specs/Validation.md` to track test cases for critical system logic including the hybrid Prisma driver architecture and cart persistence, preventing regressions.
+- **Validation Guidelines**: Added a manual regression register tracking test cases for critical system logic including the hybrid Prisma driver architecture and cart persistence, preventing regressions. (Originally added as `specs/Validation.md`; moved to `docs/regression-tests.md` with front-matter during P6.7's closeout.)
 - **P6.7 — Staff Team & Role Management**:
   - Built a new `/staff/team` interface for managing staff members within a vendor organization.
   - Added a backend integration allowing STORE_ADMIN users to assign `STAFF` and `STORE_ADMIN` roles to existing users.
