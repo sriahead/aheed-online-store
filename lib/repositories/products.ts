@@ -11,6 +11,16 @@ export interface ProductImageSummary {
   isPrimary: boolean;
 }
 
+/**
+ * The admin gallery (#211) needs to target one specific row, which the
+ * public-facing ProductImageSummary deliberately doesn't carry — storefront
+ * reads never need a row's id.
+ */
+export interface AdminProductImage extends ProductImageSummary {
+  id: string;
+  sortOrder: number;
+}
+
 export interface ProductSummary {
   id: string;
   slug: string;
@@ -39,7 +49,7 @@ export interface ProductPage {
   nextCursor: string | null;
 }
 
-/** Shared filter shape for both listByCategory() and search() — one definition, not two. */
+/** Shared filter shape for listByCategory(), search() and list() — one definition, not three. */
 export interface ProductFilters {
   minPricePence?: number;
   maxPricePence?: number;
@@ -47,6 +57,7 @@ export interface ProductFilters {
   isHalal?: boolean;
   isFresh?: boolean;
   isOrganic?: boolean;
+  isFeatured?: boolean;
 }
 
 /** Which speciality attributes the current vendor actually uses (≥1 active product). */
@@ -65,6 +76,16 @@ export interface ProductRepository {
     query: string,
     opts: { take: number; cursor?: string } & ProductFilters,
   ): Promise<ProductPage>;
+  /**
+   * Filtered product listing with NO text query and no category constraint
+   * (#211) — for the homepage's "recent"/"featured" rows, which need "products
+   * matching these filters", not "products matching this search term". Kept
+   * separate from search() rather than teaching it to treat "" as "no text
+   * filter": search()'s empty-query guard is correct for its real caller, the
+   * /search page, where an empty box means "nothing searched yet", not
+   * "browse everything".
+   */
+  list(opts: { take: number; cursor?: string } & ProductFilters): Promise<ProductPage>;
   getBySlug(slug: string): Promise<ProductDetail | null>;
   /** Drives per-vendor filter visibility — a food vendor shows Halal/Fresh/Organic; a tech one shows none. */
   availableSpecialities(): Promise<AvailableSpecialities>;
@@ -80,6 +101,15 @@ export interface ProductRepository {
 
 const productImageSelect = { storageKey: true, alt: true, isPrimary: true } as const;
 
+/** productImageSelect plus id/sortOrder — see AdminProductImage. */
+const adminProductImageSelect = {
+  id: true,
+  storageKey: true,
+  alt: true,
+  isPrimary: true,
+  sortOrder: true,
+} as const;
+
 function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereInput {
   const where: Prisma.ProductWhereInput = {};
   if (filters.minPricePence !== undefined || filters.maxPricePence !== undefined) {
@@ -94,6 +124,7 @@ function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereInput {
   if (filters.isHalal) where.isHalal = true;
   if (filters.isFresh) where.isFresh = true;
   if (filters.isOrganic) where.isOrganic = true;
+  if (filters.isFeatured) where.isFeatured = true;
   return where;
 }
 
@@ -166,6 +197,13 @@ export function getProductRepository(): ProductRepository {
     async listByCategory(categoryId, { take, cursor, ...filters }) {
       return findPage(
         { vendorId: await vendorId(), categoryId, isActive: true, ...buildFilterWhere(filters) },
+        { take, cursor },
+      );
+    },
+
+    async list({ take, cursor, ...filters }) {
+      return findPage(
+        { vendorId: await vendorId(), isActive: true, ...buildFilterWhere(filters) },
         { take, cursor },
       );
     },
@@ -315,11 +353,12 @@ export interface AdminProductDetail {
   isHalal: boolean;
   isFresh: boolean;
   isOrganic: boolean;
+  isFeatured: boolean;
   isActive: boolean;
   quantity: number;
   lowStockThreshold: number;
-  /** Read here; written by setPrimaryProductImage (P6b2, #167). */
-  images: ProductImageSummary[];
+  /** Read here; written by setPrimaryProductImage/addProductImage/etc. (P6b2, #211). */
+  images: AdminProductImage[];
 }
 
 /** Everything a product write needs, already validated by lib/catalogue-form.ts. */
@@ -335,6 +374,7 @@ export interface ProductWriteInput {
   isHalal: boolean;
   isFresh: boolean;
   isOrganic: boolean;
+  isFeatured: boolean;
   isActive: boolean;
   quantity: number;
   lowStockThreshold: number;
@@ -473,9 +513,10 @@ export async function getProductForAdmin(
       isHalal: true,
       isFresh: true,
       isOrganic: true,
+      isFeatured: true,
       isActive: true,
       inventory: { select: { quantity: true, lowStockThreshold: true } },
-      images: { orderBy: { sortOrder: "asc" }, select: productImageSelect },
+      images: { orderBy: { sortOrder: "asc" }, select: adminProductImageSelect },
     },
   });
   if (!row) return null;
@@ -546,6 +587,7 @@ export async function createProductForVendor(
         isHalal: input.isHalal,
         isFresh: input.isFresh,
         isOrganic: input.isOrganic,
+        isFeatured: input.isFeatured,
         isActive: input.isActive,
         inventory: {
           create: {
@@ -595,6 +637,7 @@ export async function updateProductForVendor(
           isHalal: input.isHalal,
           isFresh: input.isFresh,
           isOrganic: input.isOrganic,
+          isFeatured: input.isFeatured,
           isActive: input.isActive,
         },
       });
@@ -669,6 +712,161 @@ export async function setPrimaryProductImage(
         data: { productId, storageKey, alt: altText, isPrimary: true, sortOrder: 0 },
       });
     }
+
+    return { ok: true as const, id: productId };
+  });
+}
+
+/**
+ * Add a NON-primary image (#211) — the gap #173 named: nothing before this
+ * ever created a second ProductImage row. `isPrimary: true` only when the
+ * product currently has zero images, so a product's first image is primary
+ * however it arrived (this action or the original upload-as-primary flow).
+ */
+export async function addProductImage(
+  vendorId: string,
+  productId: string,
+  storageKey: string,
+  alt: string,
+): Promise<CatalogueWriteResult> {
+  return await getPrismaWs().$transaction(async (tx) => {
+    const product = await tx.product.findFirst({
+      where: { id: productId, vendorId },
+      select: { id: true, name: true },
+    });
+    if (!product) return { ok: false as const, error: "That product no longer exists." };
+
+    const existing = await tx.productImage.findMany({
+      where: { productId },
+      select: { sortOrder: true },
+      orderBy: { sortOrder: "desc" },
+      take: 1,
+    });
+    const nextSortOrder = existing.length === 0 ? 0 : existing[0].sortOrder + 1;
+    const altText = alt.trim() === "" ? product.name : alt.trim();
+
+    await tx.productImage.create({
+      data: {
+        productId,
+        storageKey,
+        alt: altText,
+        isPrimary: existing.length === 0,
+        sortOrder: nextSortOrder,
+      },
+    });
+
+    return { ok: true as const, id: productId };
+  });
+}
+
+/**
+ * Promote an existing image to primary (#211) — unlike setPrimaryProductImage,
+ * this never touches storageKey; it only moves which row `isPrimary` sits on.
+ */
+export async function promoteProductImage(
+  vendorId: string,
+  productId: string,
+  imageId: string,
+): Promise<CatalogueWriteResult> {
+  return await getPrismaWs().$transaction(async (tx) => {
+    const product = await tx.product.findFirst({ where: { id: productId, vendorId } });
+    if (!product) return { ok: false as const, error: "That product no longer exists." };
+
+    const target = await tx.productImage.findFirst({
+      where: { id: imageId, productId },
+      select: { id: true, isPrimary: true },
+    });
+    if (!target) return { ok: false as const, error: "That image no longer exists." };
+    if (target.isPrimary) return { ok: true as const, id: productId };
+
+    await tx.productImage.updateMany({
+      where: { productId, isPrimary: true },
+      data: { isPrimary: false },
+    });
+    await tx.productImage.update({ where: { id: target.id }, data: { isPrimary: true } });
+
+    return { ok: true as const, id: productId };
+  });
+}
+
+/** What removeProductImage deleted, so the caller (Service layer) can remove it from storage too. */
+export type RemoveImageResult = { ok: true; storageKey: string } | { ok: false; error: string };
+
+/**
+ * Delete a ProductImage row (#211). Deliberately does NOT touch storage —
+ * Presentation -> Service -> Repository -> Prisma (specs/architecture.md):
+ * the repository layer is DB-only, same as setPrimaryProductImage never
+ * called headObject itself. The Service layer (features/admin/product-image.ts)
+ * calls StorageService.deleteObject with the storageKey this returns.
+ *
+ * If the removed row was primary and others remain, the row with the lowest
+ * remaining sortOrder is promoted in the same transaction — a product with
+ * any images always has exactly one primary.
+ */
+export async function removeProductImage(
+  vendorId: string,
+  productId: string,
+  imageId: string,
+): Promise<RemoveImageResult> {
+  return await getPrismaWs().$transaction(async (tx) => {
+    const product = await tx.product.findFirst({ where: { id: productId, vendorId } });
+    if (!product) return { ok: false as const, error: "That product no longer exists." };
+
+    const target = await tx.productImage.findFirst({
+      where: { id: imageId, productId },
+      select: { id: true, storageKey: true, isPrimary: true },
+    });
+    if (!target) return { ok: false as const, error: "That image no longer exists." };
+
+    await tx.productImage.delete({ where: { id: target.id } });
+
+    if (target.isPrimary) {
+      const next = await tx.productImage.findFirst({
+        where: { productId },
+        orderBy: { sortOrder: "asc" },
+        select: { id: true },
+      });
+      if (next) {
+        await tx.productImage.update({ where: { id: next.id }, data: { isPrimary: true } });
+      }
+    }
+
+    return { ok: true as const, storageKey: target.storageKey };
+  });
+}
+
+/**
+ * Rewrite sortOrder to match a given order (#211). Refuses (no writes) unless
+ * `orderedImageIds` is EXACTLY the product's current image id set — a partial
+ * or stale list would otherwise silently reorder a subset and leave the rest
+ * inconsistent.
+ */
+export async function reorderProductImages(
+  vendorId: string,
+  productId: string,
+  orderedImageIds: string[],
+): Promise<CatalogueWriteResult> {
+  return await getPrismaWs().$transaction(async (tx) => {
+    const product = await tx.product.findFirst({ where: { id: productId, vendorId } });
+    if (!product) return { ok: false as const, error: "That product no longer exists." };
+
+    const current = await tx.productImage.findMany({
+      where: { productId },
+      select: { id: true },
+    });
+    const currentIds = new Set(current.map((row) => row.id));
+    const requestedIds = new Set(orderedImageIds);
+    const sameSet =
+      currentIds.size === requestedIds.size && [...currentIds].every((id) => requestedIds.has(id));
+    if (!sameSet) {
+      return { ok: false as const, error: "That image list doesn't match this product anymore." };
+    }
+
+    await Promise.all(
+      orderedImageIds.map((id, index) =>
+        tx.productImage.update({ where: { id }, data: { sortOrder: index } }),
+      ),
+    );
 
     return { ok: true as const, id: productId };
   });

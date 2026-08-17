@@ -150,7 +150,14 @@ describe('features/admin/product-image.ts is a valid "use server" module', () =>
     }
   });
 
-  it("exports exactly the two actions", () => {
-    expect(Object.keys(imageActions).sort()).toEqual(["attachProductImage", "requestImageUpload"]);
+  it("exports exactly the six actions", () => {
+    expect(Object.keys(imageActions).sort()).toEqual([
+      "addProductImage",
+      "attachProductImage",
+      "promoteProductImage",
+      "removeProductImage",
+      "reorderProductImages",
+      "requestImageUpload",
+    ]);
   });
 });

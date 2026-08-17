@@ -6,6 +6,33 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **The homepage's "New Arrivals" and "Featured Halal Deals" rows rendered nothing at all**
+  (issue #211, closes #208's remainder). Both fetched products via
+  `productsRepo.search("", {...})`; `search()`'s empty-query guard — correct for its real caller,
+  the `/search` page — unconditionally returns zero results, and `ProductRow` renders `null` for
+  zero products. Neither row's title appeared anywhere in `npm run preview`'s rendered homepage
+  before this fix. Added `ProductRepository.list()` for filtered listing without search text;
+  `search()` itself is unchanged.
+
+### Added
+- **Real `Product.isFeatured` flag** (additive migration), replacing the `isHalal` proxy the
+  homepage's featured rail ran on (GAP-013, #208). Admin checkbox in `ProductForm`, rail retitled
+  "Featured Products". Deliberately independent of `originalPrice`'s existing discount-badge
+  derivation — featured and "on offer" stay two separate concepts.
+- **Multi-image admin management** (GAP-014, #173): add a second (or third...) image, set which one
+  is primary, remove one, reorder them — `lib/repositories/products.ts`'s `addProductImage`/
+  `promoteProductImage`/`removeProductImage`/`reorderProductImages`, four new server actions, and
+  `components/staff/ProductImageManager.tsx`. The real gap was bigger than "remove and reorder are
+  missing": no code path had ever created a second `ProductImage` row — `attachProductImage` only
+  ever repointed the single primary, unchanged by this slice.
+- **`StorageService.deleteObject`** (GAP-015, #174 partial): removing or replacing a product image
+  now deletes the superseded object from storage. Decided inline delete over a scheduled sweep — no
+  new infrastructure, `wrangler.toml` still has no cron triggers. Doesn't cover an abandoned upload
+  (object written, `ProductImage` row never created) — #174 stays open for that narrower remainder.
+  `specs/architecture.md` and ADR-003 updated; both previously documented delete as "deliberately
+  absent".
+
 ### Docs
 - **`/document` pass for the P6.5 residual-validation `/validate` + `/fix` + `/ship` cycle
   (PR #209).** Added the roadmap row recording the actual merge (`74b6d02`) and the `/fix` pass

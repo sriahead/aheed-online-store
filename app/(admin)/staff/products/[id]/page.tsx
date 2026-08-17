@@ -49,8 +49,10 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
   const cdnBaseUrl = getEnv().CDN_BASE_URL ?? "";
   const imageUrls = product.images.map((image) => ({
+    id: image.id,
     url: composePublicUrl(cdnBaseUrl, image.storageKey),
     alt: image.alt,
+    isPrimary: image.isPrimary,
   }));
 
   return (

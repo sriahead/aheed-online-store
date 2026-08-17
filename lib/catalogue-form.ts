@@ -37,6 +37,7 @@ export interface ProductFormValues {
   isHalal: boolean;
   isFresh: boolean;
   isOrganic: boolean;
+  isFeatured: boolean;
   isActive: boolean;
   quantity: number;
   lowStockThreshold: number;
@@ -234,6 +235,7 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
       isHalal: checkbox(raw, "isHalal"),
       isFresh: checkbox(raw, "isFresh"),
       isOrganic: checkbox(raw, "isOrganic"),
+      isFeatured: checkbox(raw, "isFeatured"),
       isActive: checkbox(raw, "isActive"),
       quantity: quantity.value,
       lowStockThreshold: lowStockThreshold.value,
@@ -287,6 +289,7 @@ export const PRODUCT_FIELDS = [
   "isHalal",
   "isFresh",
   "isOrganic",
+  "isFeatured",
   "isActive",
   "quantity",
   "lowStockThreshold",
