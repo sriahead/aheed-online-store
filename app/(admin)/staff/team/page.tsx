@@ -26,7 +26,7 @@ export default async function TeamPage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold text-primary">Team & Access</h1>
-      
+
       <div className="mb-10 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-primary">Grant Access</h2>
         <p className="mb-4 text-sm text-primary/80">
@@ -52,9 +52,7 @@ export default async function TeamPage() {
               <tr key={member.id} className="hover:bg-black/5">
                 <td className="px-4 py-3 text-primary">{member.name}</td>
                 <td className="px-4 py-3 text-primary/80">{member.email}</td>
-                <td className="px-4 py-3 font-medium text-action">
-                  {member.vendorRole}
-                </td>
+                <td className="px-4 py-3 font-medium text-action">{member.vendorRole}</td>
                 <td className="px-4 py-3 text-primary/60">
                   {member.platformRole === "ADMIN" ? (
                     <span className="rounded bg-black/10 px-2 py-0.5 text-xs font-semibold text-primary">

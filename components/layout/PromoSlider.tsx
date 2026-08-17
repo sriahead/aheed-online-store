@@ -49,12 +49,15 @@ export function PromoSlider() {
 
   return (
     <div className="relative overflow-hidden rounded-2xl shadow-lg border border-black/10 group">
-      <div 
-        className="flex transition-transform duration-700 ease-in-out" 
+      <div
+        className="flex transition-transform duration-700 ease-in-out"
         style={{ transform: `translateX(-${current * 100}%)` }}
       >
         {PROMOS.map((promo) => (
-          <div key={promo.id} className={`w-full shrink-0 ${promo.color} p-6 md:p-8 flex items-center justify-between`}>
+          <div
+            key={promo.id}
+            className={`w-full shrink-0 ${promo.color} p-6 md:p-8 flex items-center justify-between`}
+          >
             <div className="flex items-start gap-4">
               <div className="hidden sm:flex w-12 h-12 rounded-full bg-white/20 items-center justify-center shrink-0">
                 {promo.icon}
@@ -67,7 +70,7 @@ export function PromoSlider() {
                 <p className="text-white/90 text-sm md:text-base max-w-lg mb-4">
                   {promo.description}
                 </p>
-                <Link 
+                <Link
                   href={promo.link}
                   className="inline-block bg-white text-black text-sm font-bold px-4 py-2 rounded-xl shadow-sm hover:bg-slate-50 transition-transform active:scale-95"
                 >
@@ -80,14 +83,14 @@ export function PromoSlider() {
       </div>
 
       {/* Navigation Buttons */}
-      <button 
+      <button
         onClick={prevSlide}
         className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/30 hover:bg-white/50 backdrop-blur text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
         aria-label="Previous promo"
       >
         <ChevronLeft className="w-5 h-5" />
       </button>
-      <button 
+      <button
         onClick={nextSlide}
         className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/30 hover:bg-white/50 backdrop-blur text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
         aria-label="Next promo"

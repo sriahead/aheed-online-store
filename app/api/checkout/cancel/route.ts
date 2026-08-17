@@ -22,16 +22,16 @@ export async function GET(req: NextRequest) {
   // The shopper's userId ensures they own it if signed in. If they are a guest (userId is null),
   // they can only cancel by knowing the exact unguessable orderNumber, which is safe enough.
   const order = await orderRepo.getByOrderNumber(orderNumber, userId);
-  
+
   if (order && order.status === "PENDING_PAYMENT") {
     // 1. Cancel the order (releases inventory)
     await getWebhookOrderService().fail(orderNumber, "Shopper cancelled payment at checkout");
-    
+
     // 2. Restore items to cart
     if (order.items.length > 0) {
       await repo.addItems(
         scoped,
-        order.items.map((i) => ({ productId: i.productId, quantity: i.quantity }))
+        order.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
       );
     }
   }

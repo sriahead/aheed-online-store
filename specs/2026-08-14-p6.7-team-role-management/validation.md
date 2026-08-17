@@ -18,9 +18,12 @@
 - [ ] Search for a standard `USER` by email and assign them the `STAFF` role.
 - [ ] **Verify:** The user now appears in the Team list as Staff.
 - [ ] Attempt to assign a user the `ADMIN` role.
-- [ ] **Verify:** The UI does not offer the `ADMIN` option, and any direct server action call fails with a 403 Forbidden error.
+- [ ] **Verify:** The UI does not offer the `ADMIN` option, and any direct server action call is
+      refused — `assignRoleAction` returns `{ success: false, error }` rather than applying the
+      change (a Next.js Server Action returns a normal 200 with an error payload, not a literal
+      HTTP 403; there is no route handler here to return one from).
 - [ ] Attempt to demote a `platform-admin` user.
-- [ ] **Verify:** The server action fails with a 403 Forbidden error.
+- [ ] **Verify:** The server action refuses the same way — `{ success: false, error }`, no write.
 
 ### 1.3 Staff Restrictions
 - [ ] Sign in as a standard `STAFF` user.
