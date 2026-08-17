@@ -4,8 +4,8 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.1.1"
-updated: 2026-08-09
+version: "1.2.0"
+updated: 2026-08-17
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
@@ -128,6 +128,12 @@ Land before P3, as independently-validatable slices:
    the data-driven auth cookie domain / `trustedOrigins` + `VendorMembership`.
 4. **Branding-as-CSS-vars + config split**, collapsing the hardcoded surfaces (`lib/delivery.ts`,
    header/hero/`manifest.ts` copy, `tokens.css`, storage keys, `lib/config.ts`, category-icon map).
+
+> **Slices 0–1 implemented** (2026-08-08, `specs/roadmap.md`'s change log): Neon environment
+> isolation and the `Vendor` aggregate + `vendorId` migration both shipped to production, backfilled
+> cleanly onto existing rows. One follow-up remains open, tracked in **#65**: independently verifying
+> the hand-authored migration (`20260808130000_multitenancy_vendor_scope`) has no Prisma schema
+> drift, since CI's `migrate deploy` doesn't compare against `schema.prisma`.
 
 ## Consequences
 

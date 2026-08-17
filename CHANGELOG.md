@@ -6,6 +6,21 @@ every branch merges.
 
 ## [Unreleased]
 
+### Removed
+- **Eleven orphaned debug scripts** (#191): five ad-hoc Puppeteer scripts at the repo root
+  (`parse-logs.js`, `test-action.js`, `test-checkout.js`, `test-local.js`, `test-staging.js`) and six
+  more under `tests/regression/`, none referenced by any workflow, `package.json` script, test
+  config, or source import. The two regression scenarios they exercised (rapid cart mutation,
+  checkout-cancel cart restoration) are already covered as a manual register in
+  `docs/regression-tests.md`, verified live on staging during P6.7's closeout. `puppeteer` removed
+  from `package.json` — these scripts were its only consumer in the repo.
+
+### Docs
+- **ADR-004**: added an implementation-status breadcrumb for slices 0–1 (Neon environment isolation,
+  the `Vendor` aggregate + `vendorId` migration), both shipped to production 2026-08-08. One
+  follow-up item from #65 remains open and un-narrowed to just that: independently verifying the
+  hand-authored migration has no Prisma schema drift.
+
 ### Added
 - **`demo-store-admin@example.com` in the demo-accounts roster** (#190): a store admin — vendor
   `ADMIN`, platform `CUSTOMER`. This role was previously impossible to represent:
