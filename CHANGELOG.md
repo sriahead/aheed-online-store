@@ -7,6 +7,18 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **`demo-srimart-admin@example.com` in the demo-accounts roster** (#141): a store admin on the
+  platform's second vendor (SriMart), needed to close P5a's R56 gap — every other vendor-role demo
+  account attaches to the same (first ACTIVE) vendor, so a cross-vendor write could only ever be
+  tested in one direction. `DemoAccount` gains an optional `vendorSlug` field (omitted = existing
+  "first ACTIVE vendor" default) so an account can target a specific second vendor.
+  R56's reverse leg verified live against staging with a repository-level check
+  (`vendorConfig.update({ where: { vendorId: <srimart-id> }, ... })` leaves Aheed's row's
+  `updatedAt` untouched) rather than an interactive browser sign-in, which isn't something the
+  assistant can do itself even for a non-sensitive demo account — see
+  `specs/2026-08-11-p5a-loyalty-points/validation.md`'s R56 row.
+
+### Added
 - **`sdd:preclear` now checks `ARTIFACT_INDEX.md` staleness** (#132), mirroring `gates.yml`'s own
   check so it can't surface for the first time on an open PR — P4b lost a CI run and a fix commit to
   exactly that. Rebuilds the index into memory, diffs it against what's on disk with the generated
