@@ -6,6 +6,13 @@ every branch merges.
 
 ## [Unreleased]
 
+### Docs
+- **Backfilled `specs/roadmap.md`'s missing PR #200 promotion row.** `sdd:audit` only checks that a
+  roadmap entry cites a `specs/<slice>/` path, so a missing *promotion* row (as opposed to a missing
+  *slice* row) goes uncaught — the same class of gap **#144** recorded for P5a. PR #200 (`staging →
+  main`, merge `399ecef`) carried PR #195's doc reconciliation plus buckets A/C and the demo-accounts
+  fix (#199) to production with no migration; production `/api/health` reconfirmed at `399ecef`.
+
 ### Fixed
 - **SriMart's `VendorConfig` delivery values re-seeded on staging** (#98): `npm run db:seed` had
   never run with both `SEED_AHEED_HOST` and `SEED_SRIMART_HOST` set against staging, so SriMart's
