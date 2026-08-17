@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.2.0"
-updated: 2026-08-12
+version: "1.3.0"
+updated: 2026-08-17
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -242,6 +242,14 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `npm run preview`'s live write rows at Validate. Keep any such state constant in a plain module
   (e.g. `lib/<feature>-form.ts`) and import it from the client component directly — never from the
   `"use server"` file itself.
+- **A page needing both a per-row action and a bulk action over the same rows cannot nest one
+  `<form>` inside another** — HTML forbids it outright. Bind a row's control to a form it isn't a
+  DOM descendant of via the standard `form="<id>"` attribute on that `<input>`/`<button>`, pointing
+  at a separate top-level `<form id="...">` elsewhere on the page; both stay real progressive-
+  enhancement forms, no client JS. First used in the P7a fix (#162) for `/staff/orders`: each row
+  keeps its own untouched single-order `<form action={advanceStatus}>`, and a row's bulk-select
+  checkbox sits in the same `<li>` but carries `form="bulk-advance"` to bind to a separate
+  `<form id="bulk-advance" action={advanceStatusBulk}>` rendered once above the list.
 
 ## Hard stops
 - Never invent infrastructure or credentials. If a resource/secret is missing, STOP and list what
