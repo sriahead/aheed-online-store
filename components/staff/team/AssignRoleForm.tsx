@@ -17,8 +17,15 @@ function SubmitButton() {
   );
 }
 
-export function AssignRoleForm({ currentAuthVia }: { currentAuthVia: "platform-admin" | "ADMIN" | "STAFF" }) {
-  const [state, formAction] = useActionState(assignRoleAction, { error: undefined, success: undefined });
+export function AssignRoleForm({
+  currentAuthVia,
+}: {
+  currentAuthVia: "platform-admin" | "ADMIN" | "STAFF";
+}) {
+  const [state, formAction] = useActionState(assignRoleAction, {
+    error: undefined,
+    success: undefined,
+  });
   const canGrantAdmin = currentAuthVia === "platform-admin";
 
   return (
@@ -55,15 +62,9 @@ export function AssignRoleForm({ currentAuthVia }: { currentAuthVia: "platform-a
         <SubmitButton />
       </div>
 
-      {state?.error && (
-        <p className="text-sm font-medium text-[#d32f2f]">
-          {state.error}
-        </p>
-      )}
+      {state?.error && <p className="text-sm font-medium text-[#d32f2f]">{state.error}</p>}
       {state?.success && (
-        <p className="text-sm font-medium text-[#2e7d32]">
-          Role updated successfully.
-        </p>
+        <p className="text-sm font-medium text-[#2e7d32]">Role updated successfully.</p>
       )}
     </form>
   );

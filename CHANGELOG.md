@@ -6,6 +6,24 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **P6.7 Validate pass — self-lockout race, missing test coverage, and branch-wide gate breakage**:
+  - `lib/repositories/roles.ts`: closed a TOCTOU race in the last-admin self-lockout guard — the
+    admin count and the demoting write now run inside the same `$transaction` at `Serializable`
+    isolation, so two concurrent self-demotions can no longer both pass the check and leave a
+    vendor with zero admins.
+  - Added `tests/roles.test.ts` (12 tests) covering the role-transition matrix `validation.md` §3
+    asked for, plus the self-lockout guard.
+  - Corrected `validation.md`'s "403 Forbidden" wording to match how a Next.js Server Action
+    actually reports a refusal (`{success:false, error}` on a normal response, not a route
+    handler's HTTP status).
+  - Removed the leftover diagnostic try/catch wrapper in `checkout/page.tsx` and
+    `categories/page.tsx` (23 lint errors) now that the connection-exhaustion bug it was added to
+    diagnose is fixed elsewhere; deleted a stray UTF-16-encoded scratch file (`test-cart.ts`) that
+    broke `lint`/`format:check` outright; fixed a stale `tests/payments.test.ts` assertion left
+    over from the checkout-cancel-routing fix; reformatted the remaining root-level scratch
+    scripts flagged by `format:check`.
+
 ### Added
 - **Promo Slider & UI Animations**: Added a new `PromoSlider` component to the homepage to showcase the latest offers. Enhanced the overall visual impact with subtle animations (hover translations, shadows, and scaling) across the `ProductCard`, `DepartmentScroller`, and homepage trust sections.
 - **Validation Guidelines**: Added `specs/Validation.md` to track test cases for critical system logic including the hybrid Prisma driver architecture and cart persistence, preventing regressions.

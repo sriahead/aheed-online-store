@@ -15,7 +15,7 @@ export const getPrisma = cache(() => {
 
 /**
  * WebSocket driver strictly for interactive transactions (e.g. addToCart, checkout).
- * Kept separate so we only open a WebSocket when a transaction actually runs, 
+ * Kept separate so we only open a WebSocket when a transaction actually runs,
  * keeping concurrent connection counts well below Cloudflare's limits.
  */
 export const getPrismaWs = cache(() => {

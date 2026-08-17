@@ -37,7 +37,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   // which silently constrained every page since P2a.)
   return (
     <html lang="en" className={poppins.variable} suppressHydrationWarning>
-      <body className="leading-relaxed" suppressHydrationWarning>{children}</body>
+      <body className="leading-relaxed" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }
