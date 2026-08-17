@@ -37,6 +37,22 @@ every branch merges.
 - Filed **#191** — eleven orphaned debug scripts still tracked from the ungated period.
 
 ### Docs
+- **P6.7 closeout — Document (final)**: corrected `specs/roadmap.md`'s 2026-08-17 closeout row,
+  which had recorded promotion to production as already done — it was written during Build, before
+  the promotion PR existed. Added the real promotion row: **PR #194**, merge `7c9409c`, 56 commits
+  (not the 51 `plan.md` estimated pre-Ship), `deploy-production` green, production `/api/health`
+  confirmed `db.ok: true`. Board reconciled to match: #183/#184/#185/#187 and the P6.6 (PR #182)
+  draft item moved to **Done** — all four fixes were confirmed inside the promoted commit range, so
+  "In Review" (PR #193's placeholder, written before promotion) was no longer accurate. #186/#190
+  closed on the `main` merge. **Process lesson recorded in `specs/sdd-workflow.md`**: a slice's own
+  `validation.md` should never check `ARTIFACT_INDEX.md` staleness with a bare
+  `git diff --exit-code` — the footer embeds `git rev-parse HEAD` at generation time, so a committed
+  index can only ever cite its own parent commit, and a bare diff will show that one-commit gap
+  forever, by construction. CI's `gates.yml` normalizes the footer away before comparing; P6.7's
+  `validation.md` didn't, so `/validate` reported a false failure and `/fix` spent a harmless-but-
+  unnecessary commit chasing it.
+
+### Docs
 - **P6.7 Document (final)**: rebuilt `ARTIFACT_INDEX.md` (P6.7's `plan.md` was missing KMS
   front-matter, so the slice was invisible to `sdd:audit`'s index check — added it); added the
   2026-08-17 roadmap closure/status row recording what PR #188 actually verified vs. what's still
