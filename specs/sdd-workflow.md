@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.13.0"
+version: "2.14.0"
 updated: 2026-08-17
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -429,6 +429,16 @@ named gates, but the part of this repo's actual history most prone to drift.
   is exactly where several `Closes` references pile up at once.
 - If a PR merges before a fix/follow-up commit lands, don't force-push or rewrite history to patch it
   in retroactively — open a tracking issue and land the fix as its own proper follow-up PR.
+- **A PR body referencing an issue that must stay open is a closing-keyword trap, independent of the
+  staging/main issue above.** Drafting PR #209's body for a slice against issue #192 (an umbrella
+  issue that stays open on purpose — one of its four items was explicitly left undischarged), a
+  first draft included a line reading "Closes issue #192's uncovered validation debt…" — not the
+  canonical `Closes #NN` form, but close enough in prose to be worth not trusting by eye. Verified
+  with `gh pr view <N> --json closingIssuesReferences` (empty, confirming GitHub's keyword parser
+  requires the keyword immediately adjacent to the reference, e.g. `Closes #192` with nothing
+  between them) — but the safer habit is to avoid the closing-keyword words entirely anywhere near
+  that issue number in the body, and to run the same `closingIssuesReferences` check on any PR that
+  references an issue it must not close, before merging rather than after.
 
 Then go straight to **Document (final)** — no model switch here. It runs on the same Sonnet 5
 session that just shipped.

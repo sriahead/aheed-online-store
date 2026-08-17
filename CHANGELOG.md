@@ -6,6 +6,16 @@ every branch merges.
 
 ## [Unreleased]
 
+### Docs
+- **`/document` pass for the P6.5 residual-validation `/validate` + `/fix` + `/ship` cycle
+  (PR #209).** Added the roadmap row recording the actual merge (`74b6d02`) and the `/fix` pass
+  that preceded it — the Build-time row predicted the outcome before Ship ran, matching the pattern
+  already seen for PR #205/#206. Rebuilt `ARTIFACT_INDEX.md`. Confirmed issue #192's board item is
+  `In Review` (not `Done` — merged to `staging` only) and that #208/#176 are correctly placed.
+  Recorded a lesson in `specs/sdd-workflow.md`'s Ship section: a PR body referencing an issue that
+  must stay open is a closing-keyword trap even in prose that isn't the canonical `Closes #NN`
+  form — verify with `gh pr view <N> --json closingIssuesReferences` before merging.
+
 ### Fixed
 - **Gap-register reconciliation: the registers were wrong on seven of fifteen rows**
   (specs/2026-08-17-p6.5-residual-validation/, issue #192). Two `status: approved` registers were
