@@ -6,6 +6,17 @@ every branch merges.
 
 ## [Unreleased]
 
+### Docs
+- **P6.7 Document (final)**: rebuilt `ARTIFACT_INDEX.md` (P6.7's `plan.md` was missing KMS
+  front-matter, so the slice was invisible to `sdd:audit`'s index check — added it); added the
+  2026-08-17 roadmap closure/status row recording what PR #188 actually verified vs. what's still
+  open (live multi-role validation, promotion to `main`); reconciled `validation.md` to check off
+  §3's now-real automated coverage while leaving §1/§2 explicitly unverified rather than silently
+  passing; reopened issue #186 (closed prematurely on staging, before review) and set its board
+  status to In Review; recorded the ungated-direct-push pattern in `specs/sdd-workflow.md`'s Orient
+  section so the next session checks `gh pr list` against the commit range, not just divergence
+  counts.
+
 ### Fixed
 - **P6.7 Validate pass — self-lockout race, missing test coverage, and branch-wide gate breakage**:
   - `lib/repositories/roles.ts`: closed a TOCTOU race in the last-admin self-lockout guard — the

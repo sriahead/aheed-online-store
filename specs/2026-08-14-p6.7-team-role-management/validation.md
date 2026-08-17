@@ -1,5 +1,11 @@
 # Validation: Team & Role Management (P6.7)
 
+> **Status (2026-08-17):** §3's automated coverage now exists (`tests/roles.test.ts`, added
+> alongside the self-lockout fix in PR #188) and is checked off below. §1 and §2 have **not** been
+> walked live — that needs a real multi-account browser session (platform-admin / store-admin /
+> staff / plain user) against `npm run preview` or staging, plus a live query against
+> `VendorRoleAuditLog`. Tracked on issue #186 before this closes or promotes to `main`.
+
 ## 1. Role Provisioning & Hierarchy
 
 ### 1.1 Platform Admin Capabilities
@@ -45,9 +51,14 @@
 - [ ] **Verify:** The `vendorId` and `userId` are correctly populated.
 
 ## 3. Automated Test Coverage (Unit & Integration)
-- [ ] Ensure that `lib/repositories/vendor.ts` (or the respective role service) contains comprehensive unit tests simulating the matrix of role transitions:
+- [x] `tests/roles.test.ts` (added 2026-08-17, PR #188) covers the full matrix against
+      `lib/repositories/roles.ts`:
   - `platform-admin` upgrading `USER` to `ADMIN` -> pass
   - `ADMIN` upgrading `USER` to `STAFF` -> pass
   - `ADMIN` upgrading `USER` to `ADMIN` -> fail
-  - `STAFF` upgrading `USER` to `STAFF` -> fail
-- [ ] Ensure that the Prisma transaction guarantees the audit log is written atomically with the role change (i.e. one cannot succeed if the other fails).
+  - `STAFF` upgrading `USER` to `STAFF` -> fail (via `requireVendorRole` never granting entry)
+  - plus the self-lockout guard (blocks the last admin, allows demotion when another remains,
+    exempts platform-admins) and the redundant-assignment and platform-admin-target refusals.
+- [x] The transaction is asserted directly: the membership write and the audit-log write both run
+      against the same `tx` client the `$transaction` callback receives (not the outer `getPrisma()`
+      client), and the call is asserted to run at `Serializable` isolation.

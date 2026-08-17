@@ -1,3 +1,17 @@
+---
+id: p6-7-team-role-management
+title: "P6.7 — Team & Role Management (plan)"
+audience: [dev]
+type: spec
+status: draft
+version: "1.0.0"
+updated: 2026-08-17
+visibility: internal
+summary: An auditable /staff/team UI letting a platform admin provision Store Admins and a Store Admin provision Staff, with every role change recorded in VendorRoleAuditLog and a last-admin self-lockout guard.
+tags: [p6.7, admin, rbac, audit]
+related: [adr-004-multi-tenancy, p6a-admin-shell-orders, architecture]
+---
+
 # Plan: Team & Role Management (P6.7)
 
 ## 1. Problem Statement

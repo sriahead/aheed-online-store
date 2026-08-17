@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.8.0"
-updated: 2026-08-12
+version: "2.9.0"
+updated: 2026-08-17
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -126,6 +126,13 @@ Check the actual repo before proposing or building anything — not what a doc *
 - Check current branch and how far `staging`/`main` have actually diverged (`git fetch` + `git log
   origin/main..origin/staging`) before assuming either is in a known state — both moved underneath
   this workflow mid-session more than once.
+- **Divergence alone doesn't prove the commits were gated.** Cross-check `gh pr list --state all
+  --limit 15` against that commit range — if recent `staging` commits don't line up with merged PRs,
+  they were pushed directly, which means `gates` never ran on them. Caught at a P6.7 Orient (2026-08-17):
+  six slices' worth of commits after PR #182 turned out to be direct pushes, and the one PR that *did*
+  run `gates` in that window had failed and been merged anyway — `staging` had been quietly red on
+  `lint`/`format:check`/`vitest` the whole time. `git log`'s divergence count doesn't distinguish a
+  reviewed merge commit from a direct push; only the PR list does.
 - Coming out of a Clear, Orient is also the *re-entry* point: the previous loop's docs are on disk,
   so read them rather than assuming continuity with a conversation that no longer exists.
 - **Run `npm run sdd:audit`.** It reports whether slices shipped under this loop got their roadmap

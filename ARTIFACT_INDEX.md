@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-13T20:03:15.390Z` · commit `15506f1` · `61` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-17T02:44:29.437Z` · commit `0b741ef` · `62` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -64,6 +64,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P6 Missing Gap: Staff-Visible Stock-Only Surface](specs/2026-08-13-p6-missing-gap-inventory/plan.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Implements the deferred P6 requirement for a staff-visible stock-only surface (Issue |
 | [Phase 6.6 — P0 Core Shopping UI Overhaul (plan)](specs/2026-08-13-p6.6-p0-ui-overhaul/plan.md) | spec | 1.0.0 | 2026-08-13 | draft | internal | Overhaul the core shopping UI components (Header, Hero, Product Cards, Categories) to match the AI Studio prototype while preserving multi-tenancy. |
 | [P6.6c: Operations Views Completion (Staff/Admin)](specs/2026-08-13-p6.6c-operations-completion/plan.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Align the Staff/Admin operations portal with the docs/ui-ref mockup. |
+| [P6.7 — Team & Role Management (plan)](specs/2026-08-14-p6.7-team-role-management/plan.md) | spec | 1.0.0 | 2026-08-17 | draft | internal | An auditable /staff/team UI letting a platform admin provision Store Admins and a Store Admin provision Staff, with every role change recorded in VendorRoleAuditLog and a last-admin self-lockout guard. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.13.0 | 2026-08-12 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
@@ -72,8 +73,8 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [ADR-005 — Payments & multi-vendor money flow](specs/decisions/ADR-005-payments-money-flow.md) | adr | 1.3.0 | 2026-08-11 | approved | internal | Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite. |
 | [Design System](specs/design-system.md) | doc | 1.6.0 | 2026-08-09 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases. |
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
-| [Roadmap](specs/roadmap.md) | doc | 1.20.0 | 2026-08-12 | approved | internal | Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |
-| [SDD Workflow](specs/sdd-workflow.md) | doc | 2.8.0 | 2026-08-12 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command. |
+| [Roadmap](specs/roadmap.md) | doc | 1.21.0 | 2026-08-17 | approved | internal | Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |
+| [SDD Workflow](specs/sdd-workflow.md) | doc | 2.9.0 | 2026-08-17 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command. |
 | [Tech Stack](specs/tech-stack.md) | doc | 1.3.0 | 2026-08-12 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
 
 ## Track 2 — Staff / Operations (`staff-ops`)  ·  audience: staff
