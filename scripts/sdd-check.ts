@@ -12,7 +12,7 @@
  * hatch are copied from hooks/pre-push (Gate 4) so all the SDD checks behave alike.
  */
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ROOT } from "../kms/schema/repo";
 
@@ -76,22 +76,70 @@ function pass(msg: string): void {
   console.log(`  ✓ ${msg}`);
 }
 
+/** Normalises away the generated timestamp/commit footer — mirrors gates.yml's own sed pattern,
+ * so this check and CI's agree on what counts as "stale" (#132). Also normalises line endings:
+ * a Windows checkout with `core.autocrlf` holds `\r\n` on disk while `kms:build-index` always
+ * writes `\n` (Node's default), which git's own diff treats as identical but a plain string
+ * compare does not — every line would otherwise register as "different" (`CLAUDE.md`'s Windows
+ * section covers the same class of trap for hand-edited files; this is the codegen version). */
+function normaliseIndexFooter(s: string): string {
+  return s
+    .replace(/\r\n/g, "\n")
+    .replace(/Last build: `[^`]+`/, "Last build: TS")
+    .replace(/commit `[^`]+`/, "commit SHA");
+}
+
+/** Rebuilds ARTIFACT_INDEX.md and diffs it (footer normalised out) against what's on disk —
+ * the same check CI's `gates` job runs, moved earlier so it can't surface for the first time
+ * on an open PR (#132: P4b lost a CI run and a fix commit to exactly that). Restores the
+ * original bytes when the only difference is the footer, so a footer-only rebuild doesn't
+ * masquerade as real uncommitted work for the clean-tree check below (the same self-citation
+ * trap recorded in specs/sdd-workflow.md 2.10.0) — but leaves the regenerated file in place
+ * when there's real content drift, since that's the fix ("run kms:build-index and commit"). */
+function checkArtifactIndexStale(): boolean {
+  const indexPath = join(ROOT, "ARTIFACT_INDEX.md");
+  const before = readFileSync(indexPath, "utf8");
+  sh("npm run kms:build-index");
+  const after = readFileSync(indexPath, "utf8");
+
+  if (normaliseIndexFooter(before) === normaliseIndexFooter(after)) {
+    if (before !== after) writeFileSync(indexPath, before);
+    return false;
+  }
+  return true;
+}
+
 // ---------------------------------------------------------------- preclear
 
 function preclear(): number {
   console.log("sdd:preclear — is everything load-bearing on disk before the Clear?\n");
 
+  console.log("ARTIFACT_INDEX.md:");
+  let failures = 0;
+  if (checkArtifactIndexStale()) {
+    fail("stale — run `npm run kms:build-index` and commit the result (this is what CI's gates");
+    fail("job would also fail on — catching it here saves the round trip)");
+    failures++;
+  } else {
+    pass("current (content-wise; footer normalised)");
+  }
+  console.log("");
+
   const baseRef = resolveBaseRef();
   if (!baseRef) {
-    console.log("  neither origin/staging nor origin/main resolves (offline?) — not blocking.");
-    return 0;
+    console.log("  neither origin/staging nor origin/main resolves (offline?) — not blocking on");
+    console.log("  the branch checks below, but the ARTIFACT_INDEX.md result above still stands.");
+    if (failures > 0) console.error(`\nNOT safe to /clear — ${failures} check(s) failed.`);
+    return failures > 0 ? 1 : 0;
   }
 
   const base = sh(`git merge-base HEAD ${baseRef}`);
   const head = sh("git rev-parse HEAD");
   if (!base || base === head) {
-    console.log(`  nothing to check relative to ${baseRef} — not blocking.`);
-    return 0;
+    console.log(`  nothing to check relative to ${baseRef} — not blocking on the branch checks`);
+    console.log("  below, but the ARTIFACT_INDEX.md result above still stands.");
+    if (failures > 0) console.error(`\nNOT safe to /clear — ${failures} check(s) failed.`);
+    return failures > 0 ? 1 : 0;
   }
 
   const committed = (sh(`git diff --name-only ${base}...HEAD`) ?? "").split("\n").filter(Boolean);
@@ -109,12 +157,12 @@ function preclear(): number {
   ].sort();
 
   if (slices.length === 0) {
-    console.log(`  no specs/<date-slice>/ touched on this branch (vs ${baseRef}) — not blocking.`);
-    console.log("  (a docs-only or tooling branch has no slice to pre-check)");
-    return 0;
+    console.log(`  no specs/<date-slice>/ touched on this branch (vs ${baseRef}) — not blocking`);
+    console.log("  on the slice checks below (a docs-only or tooling branch has no slice to");
+    console.log("  pre-check), but the ARTIFACT_INDEX.md result above still stands.");
+    if (failures > 0) console.error(`\nNOT safe to /clear — ${failures} check(s) failed.`);
+    return failures > 0 ? 1 : 0;
   }
-
-  let failures = 0;
 
   for (const slice of slices) {
     console.log(`slice: specs/${slice}/`);

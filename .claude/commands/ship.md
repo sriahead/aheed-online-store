@@ -22,7 +22,9 @@ Follow the **Ship** stage of `specs/sdd-workflow.md` (read it if not already in 
 6. `staging → main` is its own deliberate promotion PR (title convention: "Promote X to
    production"), opened only once staging's own PR is merged and its CI is green. It gets the same
    explicit-confirmation treatment before merging, since merging to `main` triggers a real
-   production deploy.
+   production deploy. **If it closes more than one issue, repeat the keyword per issue**
+   (`closes #93, closes #96`, not `Closes #93, #96`) — GitHub only honours the first in a
+   comma-separated list, and the rest stay open on merge with no warning (#112).
 7. After merging, confirm the relevant deploy workflow (`deploy-staging`/`deploy-production`)
    actually completed — don't assume success from the merge alone.
 8. If a PR merges before a fix/follow-up commit lands, don't force-push or rewrite history to
