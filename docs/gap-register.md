@@ -59,7 +59,7 @@ itself. Prior to this audit the register had been wrong on **seven** of fifteen 
 | GAP-008 | **`Deferred` → `Fixed`.** Shipped in P7a and corrected in PR #204; #123 closed. |
 | GAP-009 | **`Deferred` → `Fixed`.** `components/cart/CartDrawer.tsx` ships and is mounted from `components/layout/Header.tsx`. |
 | GAP-010 | **`Deferred` → `Fixed`.** Built in PR #204 (`features/orders/advance-status-bulk.ts`); #162 closed. |
-| GAP-011 | Confirmed unchanged (`Deferred`); no `pg_trgm` index exists, #163 and #169 both open. |
+| GAP-011 | Confirmed unchanged (`Deferred`); no `pg_trgm` index exists, #163 and #169 both open. Evidence added: `lib/repositories/products.ts:173`. |
 | GAP-012 | **`Deferred` → `Fixed`.** `features/orders/reorder-items.ts` is a complete server action wired into a real `<form action={reorderItems}>` on the order detail page. **Issue #124 was still open** against work that had already shipped. |
 | GAP-013 | **`Deferred` → `Fixed (partial)`.** The rail shipped and #45 is closed, but `app/(storefront)/page.tsx:28` populates it with `productsRepo.search("", { take: 4, isHalal: true })` — the comment in that file calls it "simulated deals / halal featured". No featured flag exists on `Product`. The remainder is **#208**. |
 | GAP-014 | Status `Deferred` unchanged and correct, but the Root Cause understated the position: the schema already has `ProductImage` with `sortOrder`/`isPrimary`, a gallery read path, and `attachProductImage`/`setPrimaryProductImage`. What is missing is **remove** and **reorder**, not multi-image support outright. Wording corrected. |
@@ -161,6 +161,14 @@ That is why P6.5's exit gate was rewritten in the same slice
 - **Severity:** **P2** · **Status:** Fixed
 - **Evidence:** `features/orders/advance-status-bulk.ts`, wired into `app/(admin)/staff/orders/page.tsx` via HTML5's `form=` attribute (nested `<form>`s being invalid). One `$transaction` per batch, legality re-checked per order against its own persisted status. Built in **PR #204**; #162 closed.
 - **History:** This row read `Deferred` while `specs/roadmap.md`'s 2026-08-13 P7a-closure row simultaneously claimed bulk transitions had shipped. Neither was true until PR #204.
+
+### GAP-011 — Dedicated Database Trigram Index for Search (#163, #169)
+- **Category:** Feature / Search
+- **Severity:** **P2** · **Status:** Deferred
+- **Description:** Global product search matches on substring containment rather than fuzzy/typo-tolerant matching.
+- **Evidence:** `lib/repositories/products.ts:173`'s `search()` builds an `OR` of `contains`/`insensitive`
+  filters on `name` and `description` — no `pg_trgm` extension, index, or raw SQL query anywhere in
+  the repo. Deferred until catalogue size demands it; #163 and #169 both open.
 
 ### GAP-012 — Reorder Past Order in One Click (#124)
 - **Category:** User Journey / Cart

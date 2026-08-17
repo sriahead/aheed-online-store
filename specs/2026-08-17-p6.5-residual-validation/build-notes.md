@@ -76,12 +76,23 @@ cross-vendor order-disclosure hole that PR #204 had to fix, and with GAP-010 unb
 percentage that nothing measures is the thing being corrected, so it was deleted rather than
 re-scored.
 
-**Cookie banner accepted via "Essential Only"** rather than "Accept All" — the privacy-preserving
-option, and it exercises the same cookie-setting path. "Accept All" was therefore not exercised.
+**R22 — live staff order status transition (2026-08-17), fired against `npm run preview` on the
+staging Neon project** (env confirmed against `secrets/staging.vars` first): order
+`AHE-20260814-VZ68SL`, recipient `demo-customer@example.com` (synthetic), transition
+`OUT_FOR_DELIVERY → DELIVERED`. The resulting `OrderStatusEvent` row read *"Delivered · 17 August
+2026 at 15:09 · Demo Staff · Marked delivered by staff."*, and the action control correctly
+disappeared once the order reached its terminal state. Email dispatch outcome: see the "R22" note
+under Deviations below.
+
+**R23 — first-visit cookie consent banner (2026-08-17), no `aheed_cookie_consent` cookie present at
+start.** The banner rendered on first load; **"Essential Only"** was clicked (the privacy-preserving
+option, rather than "Accept All" — it exercises the same cookie-setting path) and set
+`aheed_cookie_consent=essential`; the banner then disappeared, and a reload of the page did not
+re-render it. "Accept All" was therefore not exercised.
 
 ## Deviations from the spec
 
-**R21's email-dispatch outcome is recorded as inferred, not directly observed.** The requirement
+**R22's email-dispatch outcome is recorded as inferred, not directly observed.** The requirement
 asks whether dispatch "succeeded or failed with which error". `lib/email.ts` logs on both failure
 paths (`email send skipped` at line 18, `email send failed: <status> <body>` at line 34) and
 **neither line appeared**, with the action completing `200 OK` in 890ms — consistent with a
@@ -89,6 +100,12 @@ successful Resend API call. That is the strongest available evidence, but it is 
 plus timing, not a captured success response. Inbox delivery was neither confirmed nor confirmable:
 the recipient is a reserved `example.com` address, and Resend still has no verified sending domain
 (**#104**).
+
+**No recorded-but-unbuilt gap was found (R12).** All previously-`Fixed` rows (GAP-001..004) were
+re-checked against the code and held up unchanged; every discrepancy this audit found ran the other
+direction — a row reading `Deferred` for a feature that had already shipped (GAP-008, GAP-009,
+GAP-010, GAP-012), never a row reading `Fixed`/`Resolved` for something absent from the code. No
+GitHub issue was filed under R12.
 
 **GAP-012 was live-verified after all**, going slightly beyond what the spec required. R5 forbids a
 `Fixed` row citing an open issue, so marking GAP-012 `Fixed` forced the question of whether #124
@@ -128,3 +145,23 @@ someone reads those rows as seed state.
 and P6.5's is now rewritten and re-run, but **P6.6 and P6.6c never got their own per-slice walks**.
 No discrepancy in the register pointed at them, so no spot-check was triggered. #192 stays open with
 that item named explicitly.
+
+## Fix pass (2026-08-17)
+
+The first `/validate` on this slice found four rows recorded or evidenced incompletely; all four
+were documentation gaps, not code or process defects:
+
+- **R4/GAP-011** had no detailed section and cited only issues (#163, #169) — R4 requires a PR,
+  commit SHA, or repo-relative path. Added a `### GAP-011` section citing
+  `lib/repositories/products.ts:173` (the `contains`/`insensitive` search that stands in for the
+  deferred `pg_trgm` index), and the same citation to the reconciliation-note row.
+- **R12** had no explicit statement of the audit's finding either way. Added one: no row previously
+  `Fixed`/`Resolved` turned out to be unbuilt this round (every discrepancy ran the opposite
+  direction — see the table above), so no issue was filed under R12.
+- **R22** recorded the order number and transition but not the observed `OrderStatusEvent` row
+  content, which existed only in the `#192` closing comment. Copied the row's text in.
+- **R23** recorded which consent option was clicked but not the required three facts (no cookie
+  present at start, the cookie's value after accepting, no re-render on reload) — those also existed
+  only in the `#192` comment. Copied them in.
+
+No code changed; nothing here alters `CHANGELOG.md`'s entry.
