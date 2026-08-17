@@ -10,6 +10,7 @@ import { formatPrice } from "@/components/product/format-price";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { advanceStatus } from "@/features/orders/advance-status";
+import { advanceStatusBulk } from "@/features/orders/advance-status-bulk";
 
 // Reads the session and this vendor's live orders — must render per-request.
 export const dynamic = "force-dynamic";
@@ -113,60 +114,91 @@ export default async function StaffOrdersPage({
           <p className="text-sm text-primary/70">No orders match this view.</p>
         </div>
       ) : (
-        <ul className="space-y-3">
-          {items.map((order) => {
-            const next = nextStatus(order.status);
-            return (
-              <li
-                key={order.orderNumber}
-                className="rounded-2xl border border-black/10 bg-white p-5"
-              >
-                <div className="mb-2 flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/staff/orders/${encodeURIComponent(order.orderNumber)}`}
-                      className="font-semibold text-primary hover:underline"
-                    >
-                      {order.orderNumber}
-                    </Link>
-                    <p className="text-xs text-primary/60">{formatOrderDate(order.createdAt)}</p>
+        <>
+          {/* Bound to each row's checkbox by `form="bulk-advance"`, not by DOM
+              nesting — a <form> cannot contain another <form>, and every row
+              below still needs its own single-order "Mark X" form untouched.
+              Each checkbox's value is `orderNumber:toStatus`: the queue mixes
+              orders at different stages, so there is no one shared target
+              status to submit as a plain hidden field. */}
+          <form id="bulk-advance" action={advanceStatusBulk} className="mb-3">
+            <button
+              type="submit"
+              className="rounded-xl border border-primary/20 bg-white px-4 py-2 text-xs font-bold text-primary hover:bg-gray-50"
+            >
+              Advance selected
+            </button>
+          </form>
+
+          <ul className="space-y-3">
+            {items.map((order) => {
+              const next = nextStatus(order.status);
+              return (
+                <li
+                  key={order.orderNumber}
+                  className="rounded-2xl border border-black/10 bg-white p-5"
+                >
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      {next && (
+                        <input
+                          type="checkbox"
+                          name="selection"
+                          value={`${order.orderNumber}:${next}`}
+                          form="bulk-advance"
+                          aria-label={`Select order ${order.orderNumber} for bulk advance`}
+                          className="mt-1.5 h-4 w-4 rounded border-black/20"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <Link
+                          href={`/staff/orders/${encodeURIComponent(order.orderNumber)}`}
+                          className="font-semibold text-primary hover:underline"
+                        >
+                          {order.orderNumber}
+                        </Link>
+                        <p className="text-xs text-primary/60">
+                          {formatOrderDate(order.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                    <OrderStatusBadge status={order.status} />
                   </div>
-                  <OrderStatusBadge status={order.status} />
-                </div>
 
-                <p className="mb-2 truncate text-sm text-primary/70">
-                  {order.previewItems
-                    .map((item) => `${item.quantity} × ${item.productName}`)
-                    .join(", ")}
-                  {order.itemCount >
-                    order.previewItems.reduce((sum, item) => sum + item.quantity, 0) && " …"}
-                </p>
+                  <p className="mb-2 truncate text-sm text-primary/70">
+                    {order.previewItems
+                      .map((item) => `${item.quantity} × ${item.productName}`)
+                      .join(", ")}
+                    {order.itemCount >
+                      order.previewItems.reduce((sum, item) => sum + item.quantity, 0) && " …"}
+                  </p>
 
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-primary/60">
-                    {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
-                  </span>
-                  <span className="font-bold text-primary">{formatPrice(order.totalPence)}</span>
-                </div>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-primary/60">
+                      {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
+                    </span>
+                    <span className="font-bold text-primary">{formatPrice(order.totalPence)}</span>
+                  </div>
 
-                {/* One button, labelled by the single legal next rung — the UI
+                  {/* One button, labelled by the single legal next rung — the UI
                     cannot offer a move the service would reject. */}
-                {next && (
-                  <form action={advanceStatus} className="mt-4">
-                    <input type="hidden" name="orderNumber" value={order.orderNumber} />
-                    <input type="hidden" name="toStatus" value={next} />
-                    <button
-                      type="submit"
-                      className="w-full rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-white"
-                    >
-                      Mark {orderStatusLabel(next).toLowerCase()}
-                    </button>
-                  </form>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                  {next && (
+                    <form action={advanceStatus} className="mt-4">
+                      <input type="hidden" name="orderNumber" value={order.orderNumber} />
+                      <input type="hidden" name="toStatus" value={next} />
+                      <button
+                        type="submit"
+                        className="w-full rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-white"
+                      >
+                        Mark {orderStatusLabel(next).toLowerCase()}
+                      </button>
+                    </form>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
 
       {/* The cursor link MUST carry the active filter — a next page that quietly
