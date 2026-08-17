@@ -93,6 +93,17 @@ gap-register lineage (P6.5's residual-validation slice, and the slice before tha
 R17's wording was imprecise, not the intended scope — caught while actually writing the register
 row, not a scope change.
 
+**R14 said the up/down reorder controls should be "absent where not applicable — first image has
+no up, last has no down." They're `disabled`, not absent from the DOM.** Found and should have been
+disclosed here at Build time — caught instead during `/validate`. `ProductImageManager.tsx`'s move
+buttons render at every position with `disabled={pending || index === 0}` (up) /
+`disabled={pending || index === images.length - 1}` (down), rather than being conditionally
+unrendered at the boundary. Functionally equivalent — an image at either end still cannot move past
+it — and arguably better UX: a disabled control communicates the affordance exists but isn't
+currently usable, where removing it entirely reads as a layout shift or missing functionality.
+Kept as `disabled` rather than changed to match R14's literal wording; this note is the missing
+disclosure, not a code change.
+
 **No new GitHub issue filed for anything newly deferred** — there was nothing new to defer.
 `plan.md`'s two carried-forward items (`#174` for abandoned-upload cleanup, GAP-011 on `#163`/`#169`
 for the raw-SQL question) were both already-existing issues identified at Propose/Spec time, not
