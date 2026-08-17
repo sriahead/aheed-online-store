@@ -4,7 +4,7 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.2.0"
+version: "1.2.1"
 updated: 2026-08-17
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
@@ -131,9 +131,13 @@ Land before P3, as independently-validatable slices:
 
 > **Slices 0–1 implemented** (2026-08-08, `specs/roadmap.md`'s change log): Neon environment
 > isolation and the `Vendor` aggregate + `vendorId` migration both shipped to production, backfilled
-> cleanly onto existing rows. One follow-up remains open, tracked in **#65**: independently verifying
-> the hand-authored migration (`20260808130000_multitenancy_vendor_scope`) has no Prisma schema
-> drift, since CI's `migrate deploy` doesn't compare against `schema.prisma`.
+> cleanly onto existing rows.
+>
+> **Schema-drift check closed** (2026-08-17, **#197**, split from #65): `prisma migrate diff
+> --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma` against a
+> throwaway local Postgres shadow database reported **"No difference detected."** The hand-authored
+> `20260808130000_multitenancy_vendor_scope` migration exactly matches what `schema.prisma` implies
+> — no reconciling migration needed.
 
 ## Consequences
 
