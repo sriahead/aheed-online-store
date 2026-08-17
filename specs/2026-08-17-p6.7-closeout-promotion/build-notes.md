@@ -187,3 +187,20 @@ against staging, 2026-08-17.
 - **Eleven orphaned debug scripts are tracked in the repo** (`test-*.js`, `parse-logs.js` at root
   and in `tests/regression/`). Found while confirming the `format:check` artifact. Filed as **#191**,
   deliberately not fixed here.
+
+## Fix pass (R15)
+
+First `/validate` run found R15 failing: `npm run kms:build-index && git diff --exit-code
+ARTIFACT_INDEX.md` did not exit 0. The committed file's header line (`Last build: … · commit
+cc15790 · 64 artifacts`) cited a commit two behind HEAD (`3f0bafc`) — `kms:build-index` embeds
+`git rev-parse --short HEAD` at generation time (`kms/scripts/build-index.ts:24`), and the index
+hadn't been regenerated since the `280fd6f` and `3f0bafc` commits landed. Content was unaffected
+(still 64 artifacts, no row changes) — neither of those two commits touched a front-matter file —
+so this was staleness in the header line only, not real drift.
+
+Root cause, not the check: the fix is to actually do what R15's own instruction says — run
+`kms:build-index` as the literal last file-content change before the branch's final commit, then
+commit it. (The header will always cite the *parent* of whatever commit carries it — a file can't
+embed its own future SHA — so this is the closest to current the check can ever be; it holds until
+another commit lands.) Regenerated and committed as the last commit on this branch, immediately
+before `/ship`. No observable behaviour changed, so no CHANGELOG entry.
