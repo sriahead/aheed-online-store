@@ -6,6 +6,16 @@ every branch merges.
 
 ## [Unreleased]
 
+### Docs
+- **`/document` pass for the P7a `/validate`+`/fix`+`/ship` cycle (PR #204).** Backfilled two
+  missing promotion rows in `specs/roadmap.md`'s change log — PR #203 (`staging → main`, closing
+  P8 operational-debt issues #98/#156/#197) and today's P7a fix (PR #204, merged to `staging`) —
+  the same recurring "`sdd:audit` catches a missing slice row, not a missing promotion row" gap
+  #144 first named. Corrected the 2026-08-13 P7a-closure row's claim that staff bulk transitions
+  had shipped (they hadn't; #162, now actually built). Recorded that issue #123 was closed
+  prematurely on 2026-08-13 — accurate now that the guest-lookup fix landed, but the underlying
+  feature was broken/insecure at the time it was marked done. Rebuilt `ARTIFACT_INDEX.md`.
+
 ### Fixed
 - **P7a compliance/hardening: three defects found and fixed at its first-ever `/validate` pass**
   (specs/2026-08-13-p7a-compliance-hardening/). P7a shipped ungated (direct push, no PR, no

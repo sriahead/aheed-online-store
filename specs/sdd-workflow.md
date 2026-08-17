@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.11.0"
+version: "2.12.0"
 updated: 2026-08-17
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -366,6 +366,14 @@ that failed, since a fix can break a row that previously passed.
   that's a Spec-level change, and improvising it here — on the validation model, in a validation
   mindset — is how scope quietly escapes review. Say so and go back.
 - Update `build-notes.md` and, if the fix changed observable behaviour, the CHANGELOG entry.
+- **`hooks/pre-commit`'s Gate 2 check only looks for a *new* `specs/*/requirements.md` on the
+  branch** — it has no way to recognise "this branch corrects an already-existing, already-approved
+  spec," which is exactly what a Fix-stage branch usually is. A Fix commit that touches
+  `app/`/`lib/`/etc. with no new spec file will be blocked by the hook even when the actual Gate 2
+  intent (spec exists before code) is satisfied — the spec just isn't new. `git commit --no-verify`
+  is the hook's own documented escape hatch for this case; use it, and say so in the commit message
+  and to the user, rather than silently bypassing or inventing a throwaway spec file just to satisfy
+  the heuristic. First hit at the P7a `/fix` pass (2026-08-17, #123/#162).
 
 ## Ship
 
