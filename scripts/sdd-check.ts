@@ -2,7 +2,8 @@
  * SDD loop forcing function — one check, two entry points.
  *
  *   npm run sdd:preclear   Before a Clear: is everything load-bearing actually on disk?
- *   npm run sdd:audit      At Orient: did the last shipped slice get its roadmap entry?
+ *   npm run sdd:audit      At Orient: did the last shipped slice — and the last promotion
+ *                          (staging → main) — get its roadmap entry? (#207)
  *
  * The loop's whole bet is "persist before clear" and "documentation actually lands".
  * Both were prose in specs/sdd-workflow.md, which is how three slices (P3a/P3b/P3c)
@@ -15,6 +16,12 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ROOT } from "../kms/schema/repo";
+import {
+  auditPromotions,
+  missingPromotionRows,
+  type Promotion,
+  type PromotionVerdict,
+} from "./sdd-promotions";
 
 /**
  * Slices at or before this one predate the loop (specs/sdd-workflow.md 2.0.0) and are
@@ -107,6 +114,75 @@ function checkArtifactIndexStale(): boolean {
     return false;
   }
   return true;
+}
+
+// ------------------------------------------------------------- promotions
+
+/**
+ * Merged `staging → main` PRs since the loop baseline, newest-first from `gh`.
+ *
+ * Returns null — not an empty list — when `gh` is missing, unauthenticated, or errors.
+ * The distinction matters: an empty list means "no promotions to check", while null means
+ * "couldn't look", and only the former should ever be reported as a clean result. Matches
+ * hooks/pre-push's posture: resolve what you can, otherwise don't block.
+ */
+function listPromotions(sinceDate: string): Promotion[] | null {
+  const raw = sh(
+    "gh pr list --base main --state merged --limit 60 --json number,mergeCommit,mergedAt",
+  );
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as {
+      number: number;
+      mergeCommit: { oid?: string } | null;
+      mergedAt: string;
+    }[];
+    return parsed
+      .filter((p) => typeof p.mergedAt === "string" && p.mergedAt.slice(0, 10) >= sinceDate)
+      .map((p) => ({
+        number: p.number,
+        mergeSha: p.mergeCommit?.oid ?? null,
+        mergedAt: p.mergedAt,
+      }));
+  } catch {
+    return null;
+  }
+}
+
+function reportPromotions(roadmapText: string): number {
+  console.log("promotions (staging → main) since the baseline:");
+
+  const sinceDate = LOOP_BASELINE_SLICE.slice(0, 10);
+  const promotions = listPromotions(sinceDate);
+
+  if (promotions === null) {
+    console.log("  skipped — `gh` unavailable, unauthenticated, or returned no usable JSON.");
+    console.log("  Not treated as a failure: this check needs the GitHub API and the audit");
+    console.log("  must stay runnable offline. Re-run once `gh auth status` succeeds.");
+    return 0;
+  }
+  if (promotions.length === 0) {
+    console.log(`  none merged since ${sinceDate}.`);
+    return 0;
+  }
+
+  // Carry-forward: a promotion merged after the roadmap was last touched can't have a row
+  // yet, by construction — its row rides the next slice's branch.
+  const lastRoadmapEdit = sh("git log -1 --format=%cI -- specs/roadmap.md");
+  const verdicts: PromotionVerdict[] = auditPromotions(promotions, roadmapText, lastRoadmapEdit);
+
+  for (const { promotion, cited, pending } of verdicts) {
+    const sha = promotion.mergeSha ? promotion.mergeSha.slice(0, 7) : "unknown";
+    const label = `PR #${promotion.number} (merge ${sha}, ${promotion.mergedAt.slice(0, 10)})`;
+    if (cited) pass(`${label} — cited by a roadmap change-log row`);
+    else if (pending)
+      console.log(`  · ${label} — merged after the last roadmap edit; row pending carry-forward`);
+    else fail(`${label} — NO roadmap change-log row cites it`);
+  }
+
+  const missing = missingPromotionRows(verdicts);
+  return missing.length;
 }
 
 // ---------------------------------------------------------------- preclear
@@ -218,12 +294,18 @@ function preclear(): number {
 // ------------------------------------------------------------------- audit
 
 function audit(): number {
-  console.log("sdd:audit — did shipped slices get their roadmap entry?\n");
+  console.log("sdd:audit — did shipped slices and promotions get their roadmap entry?\n");
   console.log(`  baseline: slices after ${LOOP_BASELINE_SLICE} (earlier ones predate the loop)\n`);
 
+  const roadmapText = readFileSync(join(ROOT, "specs", "roadmap.md"), "utf8");
   const slices = sliceDirs().filter((d) => d > LOOP_BASELINE_SLICE);
   if (slices.length === 0) {
-    console.log("  no slices under the new loop yet — nothing to audit.");
+    console.log("  no slices under the new loop yet — nothing to audit.\n");
+    const missing = reportPromotions(roadmapText);
+    if (missing > 0) {
+      console.error(`\n${missing} promotion(s) with no roadmap change-log row.`);
+      return 1;
+    }
     return 0;
   }
 
@@ -239,7 +321,7 @@ function audit(): number {
   //
   // Requiring the path is both precise and a convention worth having: every real closure
   // row already cites it (see P3c's row), and prose can't accidentally satisfy it.
-  const roadmapRows = readFileSync(join(ROOT, "specs", "roadmap.md"), "utf8")
+  const roadmapRows = roadmapText
     .split("\n")
     .map((l) => /^\|\s*(\d{4}-\d{2}-\d{2})\s*\|/.exec(l))
     .filter((m): m is RegExpExecArray => m !== null)
@@ -268,6 +350,9 @@ function audit(): number {
     }
   }
 
+  console.log("");
+  gaps += reportPromotions(roadmapText);
+
   if (gaps > 0) {
     console.error(`\n${gaps} documentation gap(s). The Document (final) pass did not land.`);
     console.error(
@@ -276,7 +361,7 @@ function audit(): number {
     return 1;
   }
 
-  console.log("\nAll slices under the loop are documented.");
+  console.log("\nAll slices and promotions under the loop are documented.");
   return 0;
 }
 

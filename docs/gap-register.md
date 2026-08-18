@@ -4,7 +4,7 @@ title: Master Application Gap Register
 audience: [dev, staff]
 type: doc
 status: approved
-version: "2.2.0"
+version: "2.3.0"
 updated: 2026-08-18
 visibility: internal
 summary: The single master gap register for the application — every GAP-ID in the repo, its severity, its current status and the artifact that proves it, reconciled against the code rather than against itself.
@@ -38,6 +38,8 @@ second table using the same ID space; it now keeps its P6.5 narrative and points
 | GAP-013 | UI Reference Parity | Homepage Featured Products Rail (#45) | **P3** | Reference mockup includes a featured-products rail. Now driven by a real `Product.isFeatured` flag; the rail also turned out to render nothing at all until the 2026-08-17 audit (#211) found and fixed the underlying `search("")` misuse. | Fixed |
 | GAP-014 | Feature / Admin | Admin Multi-Image Product Management (#173) | **P3** | `ProductImage` supports many rows per product; the admin can now add, remove, reorder and set the primary image — the real gap (no code path ever created a second row) was bigger than "remove and reorder", fixed in #211. | Fixed |
 | GAP-015 | Feature / Admin | Superseded Image Storage Cleanup (#174) | **P3** | Replacing or removing a product photo now deletes the superseded object from storage (`StorageService.deleteObject`, #211). Abandoned uploads (no `ProductImage` row ever written) are still not cleaned up — #174 stays open for that narrower remainder. | Fixed (partial) |
+| GAP-016 | Frontend / Security | Homepage hero image blocked by the app's own CSP | **P2** | `app/(storefront)/page.tsx` rendered a hardcoded `images.unsplash.com` stock photo — the only external image URL in the codebase — while P7a's `Content-Security-Policy` (`next.config.mjs`) allows `img-src 'self' data: https://*.nocaped.com`. It had been failing its CSP check in production since PR #206 promoted the CSP on 2026-08-17, and independently violated P6.6's own R6 (no hardcoded global assets) by rendering identically for every vendor. Element removed under #231; a real per-vendor hero image needs a `VendorConfig` field and a migration — **#233**. | Fixed |
+| GAP-017 | Feature / Storefront | Header wishlist link was never built (#232) | **P3** | `specs/2026-08-13-p6.6-p0-ui-overhaul/requirements.md` R1 requires a wishlist link in the storefront header. The string `wishlist` appears nowhere in `app/`, `components/`, `features/` or `lib/` — only in P6.6's own spec files. The same shape as GAP-010: a requirement recorded as delivered against code that never implemented it, found only when #231 rewrote P6.6's exit gate so it could be walked. P6.6's requirement deliberately retains the obligation rather than being edited to match the code. | Deferred |
 
 ---
 
@@ -81,6 +83,29 @@ tested, and verified". Both claims were false on the day they were written:
 Neither was detectable from inside the register, because nothing checked a row against the code.
 That is why P6.5's exit gate was rewritten in the same slice
 (`specs/2026-08-13-p6.5-self-review-hardening/validation.md`).
+
+---
+
+## Reconciliation note — 2026-08-18
+
+Performed by `specs/2026-08-18-validation-debt-bucket/` (issue #231), which rewrote P6.6's and
+P6.6c's exit gates so they could be walked at all. **Two new gaps were found before the walk even
+started**, both by reading the code against the requirements rather than by running anything:
+
+| GAP-ID | Change |
+|---|---|
+| GAP-016 | **New.** The homepage hero's hardcoded `images.unsplash.com` image is outside this app's own CSP `img-src` allowlist and had been failing in production since 2026-08-17. Recorded `Fixed` — the element was removed in the same slice, since P6.6's R6 already forbade it; the per-vendor replacement is **#233**. |
+| GAP-017 | **New.** P6.6's R1 requires a header wishlist link that does not exist anywhere in the code. Recorded `Deferred` against **#232**. The same shape as GAP-010, and found the same way — by comparing a requirement to the artifact instead of to another document. |
+
+Rows GAP-001..GAP-015 were not re-derived in this pass; the 2026-08-17 audit above remains their
+last full reconciliation. **GAP-011 stays `Deferred`** and is assessed under #218 (P7d), not here.
+
+**What this pass says about the register's coverage.** Both new rows come from *slice specs*, not
+from the register's own review process — which had no way to find them, because it audits gaps
+already recorded rather than requirements never checked. GAP-010's lesson was that a recorded row
+can be wrong about the code; GAP-016/017's is narrower and sharper: **a requirement that was never
+compared to the artifact does not appear in this register at all**, at any status. The register is a
+ledger of known gaps, not a measure of how much has actually been verified.
 
 ---
 

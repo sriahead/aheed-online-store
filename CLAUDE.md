@@ -156,8 +156,12 @@ branch before it merges, and Ship precedes the final documentation pass.
   `/clear`. Verifies the four spec files, the build-notes template's sections, a CHANGELOG diff vs
   base, and a clean tree.
 - `npm run sdd:audit` — run at `/orient`. Reports slices that shipped without a roadmap change-log
-  entry. Every other gate fires before or at merge; this is the only one after Ship, which is how
-  P3a/P3b/P3c all shipped undocumented.
+  entry, **and merged `staging → main` promotions with no roadmap row** (#207, added 2026-08-18 —
+  a row must cite `PR #NNN` or the merge SHA; a bare `#NNN` doesn't count, since issues and PRs
+  share one number space). Every other gate fires before or at merge; this is the only one after
+  Ship, which is how P3a/P3b/P3c all shipped undocumented — and how PRs #118/#121/#134 sat
+  undocumented until the promotion half of this check existed to find them. It **skips** the
+  promotion half rather than failing when `gh` is unavailable, so a skip line is not a pass.
 
 **Delivery board** — GitHub Project #2 "Aheed Online Store — Delivery" (owner `sriahead`), a
 generated *view* of `specs/roadmap.md` holding **status only**; scope lives in `specs/`. Propose adds
