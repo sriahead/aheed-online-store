@@ -35,6 +35,12 @@ every branch merges.
   P6.6's own R12 forbids. Confirmed still live and blocked on staging at `64e4a46`
   (`unsplashLoaded: false`). The hero keeps its token-driven brand panel and glow; a real
   per-vendor hero image needs a `VendorConfig` field and a migration (**#233**).
+- **`/staff/runbook` now refuses a signed-in non-staff visitor the same way every other staff page
+  does.** Its role check returned `null` on refusal instead of rendering `<PanelRefusal>`, so a
+  signed-in customer got a blank content area inside the admin shell (HTTP 200, no message) rather
+  than "Staff only — this area is restricted to store staff." Found at `/validate` by exercising the
+  exact row `build-notes.md` had disclosed as never fired; fixed to match the other 8 `/staff/*`
+  pages' pattern.
 
 ### Changed
 - **P6.6's and P6.6c's exit gates rewritten so they can be walked** (#192 item 4). Six of P6.6's

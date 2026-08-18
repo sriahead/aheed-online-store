@@ -45,6 +45,34 @@ live owner, so the null assertions prove a real branch rather than a fake that n
 `specs/sdd-workflow.md` 2.17.0 and `CLAUDE.md` (both described `sdd:audit` in terms that the
 promotion check made incomplete).
 
+## P6.6 rewritten requirements — per-row verdict (R5)
+
+Added at `/fix`: R5 requires this table to exist and at least one row to read not satisfied. It
+did not exist after Build — the two failing rows were only described in prose (above, and in
+"Known-shaky areas" below). Verdicts below reflect what `/validate`'s independent live walk against
+`npm run preview` (and, for the second-vendor/image rows, staging) actually observed, not a
+re-reading of the rewritten `requirements.md`.
+
+| Req | Satisfied? | Evidence |
+|-----|------------|----------|
+| R1  | Satisfied | Header `<img src>` composes `${CDN_BASE_URL}/${logoStorageKey}`; confirmed by inspecting the rendered `src` under `npm run preview` and by the logo rendering on deployed staging. Renders broken under local preview only — CDN hotlink protection (GAP-022/#235), not a code defect. |
+| R2  | Satisfied | Header shows "Milton Keynes" for Aheed and "Reading" for SriMart, read from each vendor's `localityName`. |
+| R3  | Satisfied | `components/layout/Header.tsx`'s `SearchForm` is `<form method="GET" action="/search">`, rendered once for desktop and once for the mobile row. |
+| R4  | Satisfied | `Header.tsx` renders `/account` when `session.user` is present, `/login` otherwise; observed signed-in state links to `/account`. |
+| R5  | Satisfied | Header cart trigger reads "Cart, 5 items" / "£16.45", sourced from the live cart. |
+| R6  | **Not satisfied — expected.** | No `wishlist` string anywhere in `app/`, `components/`, `features/` or `lib/`. Tracked at #232. |
+| R7  | Satisfied | Hero renders each vendor's own tagline text; confirmed it differs between Aheed and SriMart. |
+| R8  | Satisfied | Postcode form is the CTA; submitting `MK1 1AA` returns "✓ We deliver to MK1 1AA", submitting `EH1 1AA` returns "✗ Sorry, Milton Keynes MK only". |
+| R9  | Satisfied | Homepage renders "New Arrivals" (4 cards) and "Featured Products" (4 cards) — two rows, both non-empty. |
+| R10 | Satisfied | A discounted card ("Date Bites") and a plain card ("Kitchen Roll") both show image → name → unit label → price → (discount: strikethrough original price) → qty selector → Add, in that order. Two supplementary discount badges ("Offer", "Save £X") also render, positioned before the image/name rather than after price — additional to, not a replacement for, the required sequence, so this row still passes; noted here since a stricter reading of "in this order" could disagree. |
+| R11 | Satisfied | All 9 department links render with an icon/image element, not bare text. |
+| R12 | **Not satisfied — expected.** | SriMart (an electronics retailer) renders "100% Certified Halal Meat", "Free Delivery Over £30" and the grocery trust badges identically to Aheed — hardcoded copy in `Header.tsx`/`page.tsx`, not vendor-derived. Tracked at #239 (GAP-018). |
+| R13 | Satisfied | Every `<img>` on the rendered homepage resolves to `images.staging.aheedfoodcentre.nocaped.com`; no other host. |
+| R14 | Satisfied | `lint`/`typecheck`/`test`/`format:check` all exit 0 (see Gates, below). |
+
+Two rows read not satisfied, as R5 requires — both were already known and tracked before this
+table was written, not discovered by writing it.
+
 ## Decisions taken during the build
 
 **The promotion matcher rejects a bare `#229`.** Issues and PRs share one number space here, so a
@@ -64,9 +92,37 @@ into any field. **The restore was proven by successful Stripe Checkout *session 
 completed payment** — session creation is the precise inverse of the failure under test, and
 completing a payment would mean entering card details. See Deviations.
 
+**R24 — human confirmation, recorded at `/fix` (missed at Build).** The user explicitly confirmed
+the window immediately before `STRIPE_SECRET_KEY` was rotated on staging. Window: **2026-08-18,
+13:21:05Z → 13:25:00Z** (as already cited in `CHANGELOG.md`'s Validated entry). This confirmation
+existed at the time but was never written into this file, which is what made `/validate` correctly
+report R24–R27 unverified per `validation.md`'s own rule ("without a recorded confirmation this row
+and R25–R27 are reported unverified, not skipped silently") — the underlying window was genuinely
+authorized; only the record of that authorization was missing. `/validate` independently confirmed
+the R26 evidence still holds against live staging data: order `AHE-20260818-U82BM2` is `CANCELLED`
+with the two matching `OrderStatusEvent` rows, and apples/bananas inventory match this file's
+already-recorded values (rice had moved further by the time of that later check — see "Known-shaky
+areas", already flagged there as an expected drift on shared infrastructure).
+
 **GAP-019/#238 was filed rather than fixed, and P6.6c's rewritten R12 still describes current
 behaviour.** Redefining what "revenue" means is a product decision; #231's rule was to state
 P6.6c's original obligation, not to widen scope while rewriting a gate.
+
+## Fixed at /fix
+
+**`app/(admin)/staff/runbook/page.tsx` refused a signed-in non-staff visitor by returning `null`
+instead of rendering `<PanelRefusal>`, unlike all 8 other `/staff/*` pages.** `build-notes.md`'s own
+"One row left unexercised" (below) flagged P6.6c's R9 signed-in-non-staff case as never fired for
+this specific page — `/validate` fired it: `demo-customer@example.com` against `/staff/runbook`
+returned `200` with the admin shell but a blank content area, no "Staff only" message, because the
+403 branch was `return null;` rather than the `<PanelRefusal>` every sibling page
+(`categories`, `inventory`, `orders`, `products`, `reports`, `team`, `staff/page.tsx`) uses. Root
+cause, not the check: the page's refusal branch didn't render anything, so no `validation.md` row
+could have passed it. Fixed to match the established pattern exactly — `<PanelRefusal title="Staff
+only" message="This area is restricted to store staff." />`, the same title/message `inventory`
+already uses for the same STAFF+ADMIN gate. Pre-existing code, not introduced by this branch (empty
+diff against `origin/staging` before this fix); a one-line inconsistency, not a redesign, so fixed
+here rather than filed.
 
 ## Deviations from the spec
 
@@ -137,7 +193,10 @@ against a real transaction. That is the same limitation `tests/orders.test.ts` c
 `validation-harness@example.com`: two `PENDING_PAYMENT`, one `CANCELLED` (`AHE-20260818-U82BM2`, the
 R26 evidence — do not delete it), one more from R14. Inventory moved: **apples 17 → 7**, **basmati
 rice 5 → 2**; bananas were decremented and correctly restored to 57. Any later check that assumes
-prior inventory numbers should re-read them.
+prior inventory numbers should re-read them — confirmed necessary at `/validate`: re-reading staging
+found basmati rice at **0**, not 2, apples still 7 and bananas still 57 as recorded. Staging is
+shared infrastructure and continues to move under later activity; this is drift, not a defect in
+this slice's own work.
 
 **`npm run format:check` reports ~180 files locally.** Confirmed to be the `core.autocrlf` artifact,
 not drift: `tsconfig.json` — untouched by this branch — fails from the working copy and passes when

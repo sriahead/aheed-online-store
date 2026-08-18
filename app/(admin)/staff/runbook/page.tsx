@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
+import { PanelRefusal } from "@/components/staff/PanelRefusal";
 
 export const metadata: Metadata = { title: "Internal Operational Runbook" };
 
@@ -64,7 +65,7 @@ export default async function RunbookPage() {
   const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
-    return null;
+    return <PanelRefusal title="Staff only" message="This area is restricted to store staff." />;
   }
 
   return (
