@@ -6,6 +6,23 @@ every branch merges.
 
 ## [Unreleased]
 
+### Docs
+- **`/document` pass reconciling P7b's staging merge (PR #223) with what `/validate` actually
+  found.** `specs/roadmap.md` now records the real `/validate` → `/fix` cycle: a genuine spec
+  contract violation (`getDataRightsRepository()` had been added to `lib/repositories/data-rights.ts`
+  and called `getCurrentVendorId()` with no explicit `vendorId`, breaking that file's own "every
+  export takes prisma/vendor explicitly, no request context" property) and a `validation.md` gap
+  (the slice's migration was never instructed to be applied to staging before the write-path
+  harness, unlike the catalogue-debt-bucket slice's own `validation.md`). Both fixed before shipping;
+  R15's coverage gap (harness never exercised `DiscountRedemption`) closed in the same pass.
+  `CLAUDE.md` gained a new "Repository layer" section recording the facade-placement rule generally
+  (`lib/auth-rbac.ts`'s pattern — a request-context wrapper beside, not inside, `lib/repositories/`)
+  so future slices don't rediscover it; `specs/sdd-workflow.md` gained the missing-migration-step
+  trap so it's written into every slice's `validation.md` that ships a migration, not left to be
+  rediscovered per-slice. Filed **#224** (untested `reverseRedemption` null-owner refund path,
+  a real behaviour change reached sideways through this slice's migration) rather than leaving it
+  as an unverified `/validate` note. Issue #216 moved to **In Review** (staging only, not promoted).
+
 ### Added
 - **UK GDPR data-subject rights — download, correct and erase your data** (P7b, issue #216,
   `specs/2026-08-18-p7b-data-rights/`). `/privacy` §5 already told customers they could "access,

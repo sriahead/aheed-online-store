@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.15.0"
+version: "2.16.0"
 updated: 2026-08-18
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -338,6 +338,20 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   reads `.dev.vars`; `prisma migrate`/`db:seed` and any local inspection script read `.env`. When
   those point at different Neon projects, a live check silently validates against a database the app
   isn't using. Compare both before starting, not after a confusing result.
+- **A slice's `validation.md` must say to apply its own pending migration to staging before any
+  write-path row that needs it — this doesn't happen automatically.** CI applies migrations via
+  `prisma migrate deploy` only at merge (CLAUDE.md); a fresh-context `/validate` runs before that,
+  so staging's schema is still one migration behind whatever the branch adds. Skipping this line
+  isn't a "the harness happened to fail" outcome — it's a hard crash: `npx prisma migrate status`
+  reports the migration pending, and the write-path check throws a real Postgres
+  `NullConstraintViolation`/similar, indistinguishable at first glance from a genuine code defect.
+  The fix is `npm run db:migrate` (or `db:migrate:dev`) against `DIRECT_URL`, additive and safe on
+  staging, but only if `validation.md` actually says to run it. First given this instruction in the
+  catalogue-debt-bucket slice's `validation.md`; P7b's `validation.md` omitted the same instruction
+  for its own migration and hit exactly this crash at `/validate`, caught and fixed only because the
+  session recognised the error shape rather than reporting a false code failure. **Write this line
+  into every slice's `validation.md` that ships a migration, not just the ones that happened to get
+  bitten** — don't wait for the next slice to rediscover it the hard way.
 - **A real browser can sign in against `npm run preview` — #176 is fixed** (verified 2026-08-17 at
   the #192 audit). `lib/auth-origin.ts`'s `splitHostPort` keeps the request port (and handles
   bracketed IPv6 literals) and `inferProto` returns `http` for loopback rather than trusting
