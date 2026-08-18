@@ -4,8 +4,8 @@ title: Master Application Gap Register
 audience: [dev, staff]
 type: doc
 status: approved
-version: "2.1.0"
-updated: 2026-08-17
+version: "2.2.0"
+updated: 2026-08-18
 visibility: internal
 summary: The single master gap register for the application — every GAP-ID in the repo, its severity, its current status and the artifact that proves it, reconciled against the code rather than against itself.
 tags: [gap-register, audit, orient, master]
@@ -29,7 +29,7 @@ second table using the same ID space; it now keeps its P6.5 narrative and points
 | GAP-004 | KMS Docs | `ARTIFACT_INDEX.md` staleness | **P3** | Index not rebuilt after front-matter edits. | Fixed |
 | GAP-005 | Operations / Email | Resend Unverified Custom Domain (#104) | **P1** | No verified domain configured in Resend account, preventing delivery emails from reaching real customer inboxes. | Open |
 | GAP-006 | Operations / Payments | Stripe Production Live Keys (#113) | **P1** | Environment configured with Stripe test-mode keys; requires owner live key provisioning before opening store. | Open |
-| GAP-007 | Operations / Infra | Production R2 Bucket CORS Setup (#180) | **P1** | Production R2 bucket `aheed-images-production` CORS rules must be set via Wrangler CLI for live browser uploads. | Open |
+| GAP-007 | Operations / Infra | Production R2 Bucket CORS Setup (#180) | **P1** | Production R2 bucket `aheed-images-production` had no CORS rules, so every browser-direct presigned `PUT` failed preflight. Policy applied 2026-08-18; #180 closed. | Fixed |
 | GAP-008 | User Journey / Auth | Guest Order Status Lookup (#123) | **P2** | Guest shoppers could not track an order without an account. Shipped in P7a, then found insecure and corrected in PR #204. | Fixed |
 | GAP-009 | UI Reference Parity | Slide-Over Cart Drawer vs Dedicated Cart Page | **P2** | Reference mockup uses a slide-over drawer; storefront used only a `/cart` page. Drawer shipped in P7a alongside the page. | Fixed |
 | GAP-010 | Feature / Admin | Staff Bulk Order Status Transitions (#162) | **P2** | Staff order dashboard advanced one order at a time. Built in PR #204. | Fixed |
@@ -131,12 +131,27 @@ That is why P6.5's exit gate was rewritten in the same slice
 
 ### GAP-007 — Production R2 Bucket CORS Setup (#180)
 - **Category:** Operations / Storage Infrastructure
-- **Severity:** **P1** · **Status:** Open
-- **Description:** Browser-direct product image uploads (presigned `PUT`) work in staging (`aheed-images-staging`), but the production R2 bucket (`aheed-images-production`) requires CORS rules set via Wrangler CLI before production browser uploads succeed.
-- **Evidence:** `specs/2026-08-12-p6b2-image-upload/plan.md` Prerequisites section; issue `#180`.
-- **Root Cause:** Cloudflare R2 bucket CORS policies are applied per bucket via Wrangler CLI, not via application code.
-- **Recommended Fix:** Execute `wrangler r2 bucket cors set aheed-images-production --file cors-config.json` against production.
-- **Dependencies:** Owner Wrangler CLI access. **External to this repo.**
+- **Severity:** **P1** · **Status:** **Fixed** (2026-08-18)
+- **Description:** Browser-direct product image uploads (presigned `PUT`) worked in staging
+  (`aheed-images-staging`), but the production bucket (`aheed-images-production`) had no CORS
+  configuration at all, so every production browser upload failed at preflight.
+- **Evidence:** Applied out of band at P7's `/propose` with
+  `wrangler r2 bucket cors set aheed-images-production --file <policy> --force`, using the R2 API
+  shape (`rules[].allowed`) documented in `specs/2026-08-12-p6b2-image-upload/plan.md`. Absence was
+  confirmed first — `wrangler r2 bucket cors list` returned *"The CORS configuration does not exist
+  [code: 10059]"*. Verified afterwards by live `OPTIONS` preflight rather than by the set command's
+  own success: `https://aheedfoodcentre.nocaped.com` and `https://srimart.nocaped.com` each return
+  `204` with `Access-Control-Allow-Origin` echoing the origin, `PUT` and `content-type` allowed;
+  `https://staging.aheedfoodcentre.nocaped.com` and `https://example.invalid` each return `403`
+  with no such header, proving the policy discriminates rather than being permissive. Full record
+  on **#180**.
+- **Root Cause:** Cloudflare R2 bucket CORS policies are applied per bucket via Wrangler CLI, not
+  via application code — so nothing in a deploy could ever have applied it.
+- **Severity in hindsight:** #180's own text read "Blocks nothing else… the last outstanding item
+  from P6." That was true when filed, when the only upload path was P6b2's single primary image.
+  PR #214 then promoted the whole multi-image manager to production, and **every** admin image
+  operation there was failing preflight. An issue's severity assessment goes stale when a later
+  slice widens the surface depending on it, and nothing re-reads it.
 - **Citation history:** This row cited `#167` until 2026-08-17. #167 is the closed P6b2 image-upload
   slice, not the CORS prerequisite; the correct issue is **#180**.
 
@@ -217,7 +232,9 @@ policy. No P1 gap remains open against a code defect.
 
 **Decision: READY WITH CONDITIONS**, unchanged — but on evidence rather than on assertion.
 
-The three conditions are GAP-005, GAP-006 and GAP-007: all owner actions, none of them code.
+Two conditions remain: **GAP-005** (Resend sending domain, #104) and **GAP-006** (Stripe live keys,
+#113) — both owner actions, neither of them code. **GAP-007 was the third and is now discharged**
+(production bucket CORS applied and preflight-verified, 2026-08-18).
 
 > **Superseded claims (2026-08-13).** This section previously stated "0 P0 (Critical Code/Security)
 > gaps" and that the application was "100% functionally complete, fully tested, and verified", and

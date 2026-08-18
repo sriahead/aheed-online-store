@@ -564,8 +564,15 @@ model LoyaltyLedgerEntry {
   id       String           @id @default(uuid())
   vendorId String
   vendor   Vendor           @relation(fields: [vendorId], references: [id])
-  userId   String
-  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Nullable since P7b (#216). Erasure must sever the personal link WITHOUT
+  // destroying the row: a surviving Order keeps its discountPence, and this
+  // ledger is the only thing that explains where that number came from. The
+  // column was non-null with onDelete: Cascade, so deleting a User took the
+  // financial audit trail with it — against this model's own append-only rule.
+  // A null userId means "the person who earned or spent these points has been
+  // erased", never "no owner" — every write path still requires one.
+  userId   String?
+  user     User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
   orderId  String
   order    Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
   kind     LoyaltyEntryKind
