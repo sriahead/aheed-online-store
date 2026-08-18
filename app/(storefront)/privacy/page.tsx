@@ -29,7 +29,7 @@ export default async function PrivacyPage() {
       <article className="prose prose-sm max-w-none space-y-6">
         <header className="border-b border-black/10 pb-4">
           <h1 className="text-2xl font-bold tracking-tight">{vendorName} — Privacy Policy</h1>
-          <p className="text-xs text-primary/60 mt-1">Last updated: August 13, 2026</p>
+          <p className="text-xs text-primary/60 mt-1">Last updated: August 18, 2026</p>
         </header>
 
         <section className="space-y-2">
@@ -67,10 +67,38 @@ export default async function PrivacyPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-primary">5. Your Data Rights</h2>
+          <h2 className="text-lg font-semibold text-primary">5. How Long We Keep Your Data</h2>
           <p className="text-sm text-primary/80 leading-relaxed">
-            Under UK GDPR, you have the right to access, rectify, or request deletion of your
-            personal data. Contact our privacy compliance team to exercise your rights.
+            We keep records of completed orders for <strong>six years</strong>, which is the
+            retention period UK tax law requires for proof of sale. Your account details, saved
+            addresses, reviews, basket and loyalty points are kept for as long as you have an
+            account with us, and are removed when you ask us to erase your data.
+          </p>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold text-primary">6. Your Data Rights</h2>
+          <p className="text-sm text-primary/80 leading-relaxed">
+            Under UK GDPR you have the right to access, rectify and request deletion of your
+            personal data. If you have an account with us, you can exercise all three yourself from{" "}
+            <Link href="/account/data" className="font-medium underline">
+              your data
+            </Link>{" "}
+            in your account — download everything we hold about you, correct your name, or erase
+            your data without needing to contact anyone.
+          </p>
+          <p className="text-sm text-primary/80 leading-relaxed">
+            <strong>What erasure does.</strong> We remove your name, contact details, addresses,
+            reviews, basket and loyalty points. We <em>keep</em> your past orders, because we are
+            required to retain proof of sale — but we strip your name and address from them first,
+            so the records that remain no longer identify you. If you do not shop with any of our
+            other stores, your sign-in is deleted too.
+          </p>
+          <p className="text-sm text-primary/80 leading-relaxed">
+            Each of our stores holds its own records, so erasing your data here does not affect an
+            account you hold with another store on this platform. Payments are processed by Stripe,
+            which keeps its own transaction records under its own privacy policy; erasing your data
+            here does not remove them.
           </p>
         </section>
       </article>
