@@ -4,7 +4,7 @@ title: Master Application Gap Register
 audience: [dev, staff]
 type: doc
 status: approved
-version: "2.4.0"
+version: "2.5.0"
 updated: 2026-08-18
 visibility: internal
 summary: The single master gap register for the application — every GAP-ID in the repo, its severity, its current status and the artifact that proves it, reconciled against the code rather than against itself.
@@ -46,6 +46,7 @@ second table using the same ID space; it now keeps its P6.5 narrative and points
 | GAP-021 | User Journey / Cart | Payment-provider failure destroys the cart (#234) | **P2** | On a failed Stripe session the order is correctly cancelled and stock released, but the cart is not restored, while the UI says "please try again". Verified during #103's deliberate failure window: cart of 17 items gone, `/cart` empty, `/checkout` 307'd away. The compensating logic is careful about stock and money and does not extend to the cart. | Deferred |
 | GAP-022 | Operations / Infra | CDN hotlink protection blocks all images under local preview (#235) | **P3** | The image CDN 403s any request refered from `http://localhost:8787` while returning 200 for a deployed origin, so no CDN image renders under `npm run preview`. Not CSP (zero violations logged) and not an app defect. Invalidates a whole class of local UI validation; pairs with the R2 bucket CORS gap that makes browser-direct upload equally untestable locally. | Open |
 | GAP-023 | Performance / Workers | Rapid sequential cart mutations still reach a failure ceiling (#236) | **P3** | 19 sequential add-to-cart mutations at ~1.1s intervals succeeded; 20 produced "This page couldn't load" and a wedged renderer, recovering automatically within a minute. #187's switch to `PrismaNeonHttp` clearly raised the ceiling rather than removing it. Filed because it was measured, not because it is known to affect real users; needs #218's observability to attribute cause. | Deferred |
+| GAP-024 | Frontend / Consistency | `/staff/runbook` refusal rendered a blank shell, not `PanelRefusal` | **P3** | `app/(admin)/staff/runbook/page.tsx`'s `requireVendorRole` refusal branch was `return null`, unlike all 8 other `/staff/*` pages' `<PanelRefusal>`. A signed-in `demo-customer@example.com` got `200` with the admin shell and no content, no "Staff only" message. `validation.md`'s own R9 row had flagged this exact case as never exercised; `/validate` fired it and found the gap. Fixed at `/fix` (#231) to match the established pattern. | Fixed |
 
 ---
 
@@ -113,6 +114,13 @@ already recorded rather than requirements never checked. GAP-010's lesson was th
 can be wrong about the code; GAP-016/017's is narrower and sharper: **a requirement that was never
 compared to the artifact does not appear in this register at all**, at any status. The register is a
 ledger of known gaps, not a measure of how much has actually been verified.
+
+**Addendum, `/document` (same slice, after `/validate`/`/fix`): GAP-024.** A third, different shape
+from GAP-016/017 — this one *was* named in `validation.md` (P6.6c's R9 row explicitly flagged the
+signed-in-non-staff runbook case as never exercised) but wasn't actually checked until the
+fresh-context `/validate` pass fired it. The gap existed the whole time the slice's own spec
+correctly anticipated it; what changed was someone finally running the row. Recorded `Fixed` —
+corrected at `/fix` in the same slice, before shipping.
 
 ---
 

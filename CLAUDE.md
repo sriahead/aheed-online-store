@@ -4,7 +4,7 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.5.0"
+version: "1.6.0"
 updated: 2026-08-18
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
@@ -285,6 +285,18 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   it. Fixed at `/fix` by moving it to `lib/data-rights-service.ts`; the facade also became a plain
   sync factory (matching `getCartRepository` et al.) once it no longer needed a dynamic `import()` to
   stay loadable by the same file a `tsx` script has to import.
+
+## Staff panel pages (`app/(admin)/staff/*`) — learned the hard way
+- **Every page's `requireVendorRole(...)` refusal branch must render `<PanelRefusal>` — never
+  `return null` or fall through silently.** `app/(admin)/staff/layout.tsx` renders the portal shell
+  (header, tier badge, "View store" link) around whatever the page returns, so a page that returns
+  `null` on refusal still serves `200` with that shell and a blank content area — no "Staff only"
+  message, easy to mistake for a loading state rather than a real refusal. All other `/staff/*`
+  pages (`categories`, `inventory`, `orders`, `products`, `reports`, `team`, `staff/page.tsx`) use
+  `<PanelRefusal title="..." message="..." />`; `runbook/page.tsx` didn't, until #231's `/validate`
+  fired the exact signed-in-non-staff case its own `validation.md` had flagged as never exercised
+  and found it. Fixed at `/fix` to match the established pattern. When adding a new `/staff/*` page,
+  copy an existing one's refusal branch rather than writing a bare `if (!auth.ok) return null`.
 
 ## Hard stops
 - Never invent infrastructure or credentials. If a resource/secret is missing, STOP and list what
