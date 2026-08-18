@@ -7,6 +7,22 @@ every branch merges.
 ## [Unreleased]
 
 ### Docs
+- **Local `dev` environment tier** (`specs/2026-08-18-dev-environment/`, closes #226). `docs/
+  env-setup.md` gains a "Local development (dev)" section: one disposable Neon **branch** per
+  developer (not a project, unlike staging/production — a personal branch holds no real vendor
+  data, so ADR-004's "separate projects, not branches" ruling doesn't apply), branched off
+  **staging** so it inherits current schema + seed/demo data with no `db:seed` step, and reset by
+  delete-and-recreate. Deliberately **local-only**: no `wrangler.toml` env block, no deploy, no CI,
+  no GitHub environment, not routed through `scripts/configure-env.mjs` — both files are untouched
+  by this slice. Object storage is one **shared** `aheed-images-dev` R2 bucket across every
+  developer, not per-developer. Fixes the actual behaviour this replaces: `.env`/`.dev.vars`
+  previously pointed local `next dev`/`npm run preview` straight at the **staging** database and
+  bucket, so every local validation pass either risked staging data or needed scratch infra stood
+  up by hand — `.env.example`/`.dev.vars.example`'s `S3_BUCKET` placeholder is corrected from
+  `aheed-images-staging` to `aheed-images-dev` accordingly. Docs-only; no application code, no
+  schema change. Live-branch proof (a personal branch boots with seed data intact and is provably
+  isolated from staging) is deferred to `/validate`, once a developer has created their own branch
+  by hand per the new doc section.
 - **`/document` pass reconciling P7b's staging merge (PR #223) with what `/validate` actually
   found.** `specs/roadmap.md` now records the real `/validate` → `/fix` cycle: a genuine spec
   contract violation (`getDataRightsRepository()` had been added to `lib/repositories/data-rights.ts`
