@@ -4,7 +4,7 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.4.0"
+version: "1.5.0"
 updated: 2026-08-18
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
@@ -190,6 +190,17 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `SEED_`, and prefer printing keys over lines.
 - `gh` args containing double quotes break native argument parsing in PS 5.1 (`accepts 1 arg(s),
   received 8`). Write the body to a file and use `--body-file`.
+- **`npx tsx -e "<multi-line script>"` fails silently on this Windows setup the moment the script
+  imports an installed package (e.g. `@prisma/client`) — no stdout, no stderr, exit 0, even with an
+  explicit `.catch()`/`.finally()` around every promise.** It isn't a working-directory problem
+  (the shell's cwd is already the repo, so `node_modules` resolves fine) — a script that does
+  nothing but `console.log('hello')` via `-e` works, but the same process with a real `import`
+  produces no output at all, indistinguishable from success without independently confirming the
+  side effect happened. Hit in the dev-environment slice's `/validate` (R10's live isolation
+  check, inserting a marker `HealthCheck` row into a Neon branch) — three silent `-e` attempts
+  before switching to a real `.ts` file. **Write the script to a file inside the repo (so module
+  resolution and `tsx`'s own error reporting both work) and run `npx tsx path/to/script.ts`
+  instead of `-e`** for anything beyond a trivial one-liner; delete the scratch file afterward.
 - **Stopping `npm run preview` does not stop `npm run preview`.** The task-runner kill only ends the
   top-level `npm` process; `opennextjs-cloudflare preview` chains into `wrangler dev`, which spawns
   its own `wrangler.js` and `workerd.exe` children that survive the parent's termination on Windows.

@@ -7,6 +7,16 @@ every branch merges.
 ## [Unreleased]
 
 ### Docs
+- **`/document` pass reconciling P7b (#216) + the local dev environment tier (#226) with their
+  live promotion to production** (PR #229, `staging → main`, merge `6a6f51d`). `specs/roadmap.md`
+  gains the dev-environment slice's first-ever roadmap entry (build through staging merge, PR #228,
+  never recorded until now) and a promotion row covering both slices together — staging was 13
+  commits ahead of `main` at promotion time, so a docs-only slice and a GDPR feature carrying a
+  real migration went out in the same PR. `npm run sdd:audit` confirms all slices documented.
+  `CLAUDE.md` gains a new Windows-shell lesson: `npx tsx -e "<script>"` fails **silently** (no
+  stdout, no stderr, exit 0) the moment the inline script imports an installed package, hit three
+  times during `/validate`'s live R10 isolation check before switching to a real `.ts` file — write
+  ad hoc DB scripts to a file inside the repo, not `-e`, for anything beyond a trivial one-liner.
 - **Local `dev` environment tier** (`specs/2026-08-18-dev-environment/`, closes #226). `docs/
   env-setup.md` gains a "Local development (dev)" section: one disposable Neon **branch** per
   developer (not a project, unlike staging/production — a personal branch holds no real vendor
