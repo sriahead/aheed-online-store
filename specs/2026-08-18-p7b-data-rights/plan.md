@@ -144,8 +144,8 @@ routes; `specs/roadmap.md:64` drops "backups + monitoring" (resolved at `/propos
   mutating rows this user has not been proven to own — two people share a household mailbox often
   enough for that to be a real risk, and the guest-lookup credential pair (order number **and**
   email) exists precisely because email alone was judged insufficient proof in P7a. A guest with no
-  account has no authenticated route to request erasure today; that gap is real and is called out
-  here rather than papered over.
+  account has no authenticated route to request erasure today; that gap is real, is called out here
+  rather than papered over, and is tracked as **#222**.
 - **Data portability (Art. 20) as a distinct obligation.** The Art. 15 JSON export is
   machine-readable and structured, which satisfies portability in practice for this data; no second
   format is added.

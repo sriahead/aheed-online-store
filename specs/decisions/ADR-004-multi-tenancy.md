@@ -4,8 +4,8 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.2.1"
-updated: 2026-08-17
+version: "1.3.0"
+updated: 2026-08-18
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
@@ -174,6 +174,27 @@ trusted origin for that family) with no code change. This does **not** change de
 global identity, per-vendor `VendorMembership` authz, cookie config derived from the request — only
 its default posture, since the family it presupposed does not currently exist. Cross-**custom-domain**
 SSO remains the deferred federation upgrade below.
+
+## Implementation note — the one permitted cross-vendor query (P7b, 2026-08-18, #216)
+
+Decision 2 makes every domain read `vendorId`-scoped in `lib/repositories/*`. **P7b introduces the
+single deliberate exception**, and it is recorded here rather than only in that slice's folder so it
+does not read as precedent later: `countOtherVendorData(prisma, userId, excludingVendorId)` in
+`lib/repositories/data-rights.ts` spans tenants because UK GDPR erasure has to answer "is this the
+user's last vendor?" before deciding whether to delete the shared `User` row — and that question is
+unanswerable from inside one vendor.
+
+Its contract is as narrow as the question allows: **it returns an integer and nothing else** — never
+rows, never field values, never a vendor id or name. That is what distinguishes it from
+`findOrderForWebhook`, this codebase's other un-scoped read, which returns full order contents and
+became an unauthenticated cross-vendor disclosure the moment P7a wired it to a public page (PR
+#204). A function that can only answer *how many* tells vendor A nothing about vendor B beyond the
+fact that this user also shops there — which the user already knows about themselves.
+
+**Do not widen it to return rows.** A caller needing more than a count is a new decision, not a
+small change. The deeper fix is **#220 (P7e)** — row-level security, which decision 2 already defers
+to P7 — so that a missing `vendorId` filter fails closed at Postgres instead of relying on the
+repository layer and the `no-restricted-imports` lint rule being the only enforcement.
 
 ## Deferred upgrade — cross-domain SSO (federated auth)
 

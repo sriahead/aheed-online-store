@@ -65,9 +65,14 @@ R10. After erasure at vendor A, every `Order` row for that user at vendor A has 
      `deliveryFeePence`, `status`, `createdAt` and its `OrderItem` rows are unchanged from their
      pre-erasure values.
 
-R11. After erasure at vendor A, every `Address` row referenced by those orders still exists, has
-     `userId = null`, and has `recipientName`, `phone`, `line1`, `line2`, `city`, `postcode` and
-     `notes` replaced by redaction placeholders rather than their original values.
+R11. After erasure at vendor A, every `Address` row referenced by those orders still exists and has
+     `userId = null`, with `recipientName`, `phone`, `line1`, `city` and `postcode` set to the
+     redaction marker, and the two nullable columns `line2` and `notes` set to `NULL`. No original
+     personal value remains in any of the seven.
+     *(Amended at Build. This read "all seven replaced by redaction placeholders", which would have
+     required writing a marker string into columns that can simply hold nothing — storing a value
+     where absence is the honest answer. The property that matters, no original value surviving, is
+     unchanged; see `build-notes.md`.)*
 
 R12. After erasure at vendor A, the count of `Review`, `Cart`, `CartItem` and `LoyaltyAccount` rows
      for that user at vendor A is `0`.
