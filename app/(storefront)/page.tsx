@@ -97,14 +97,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </div>
         </div>
 
-        {/* Hero Banner Accent Image */}
-        <div className="hidden lg:block absolute right-8 top-1/2 -translate-y-1/2 w-[350px] h-[280px] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 rotate-2 hover:rotate-0 hover:scale-105 transition-all duration-700 ease-out">
-          <img
-            src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80"
-            alt="Fresh Produce"
-            className="w-full h-full object-cover"
-          />
-        </div>
+        {/* No hero accent image. The one that used to sit here was a hardcoded stock photo on
+            images.unsplash.com — outside this app's own CSP `img-src` allowlist (next.config.mjs
+            permits 'self', data: and *.nocaped.com only), so it had been failing its CSP check in
+            production since P7a's headers shipped. It also rendered identically for every vendor,
+            which P6.6's R6 forbids. A real per-vendor hero image needs a VendorConfig field and a
+            migration — tracked at #233. Until then the section's brand-coloured panel and glow,
+            both token-driven, carry the visual weight. */}
       </section>
 
       {/* Trust Values Strip */}

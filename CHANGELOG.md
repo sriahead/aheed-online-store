@@ -6,6 +6,77 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+- **`sdd:audit` now checks promotions, not just slices** (#207,
+  `specs/2026-08-18-validation-debt-bucket/`). A merged `staging → main` PR with no
+  `specs/roadmap.md` change-log row was structurally invisible to the audit, which is how the same
+  gap recurred five consecutive times, each caught by eye at a later `/orient` while the check
+  reported green. `scripts/sdd-promotions.ts` holds the matcher as a pure, importable module —
+  `sdd-check.ts` calls `process.exit()` at module scope, so importing *it* from a test would kill
+  the run. A row must cite `PR #NNN` or the merge SHA; a bare `#NNN` deliberately does not count,
+  since issues and PRs share one number space here. The check **skips rather than fails** when `gh`
+  is unavailable, and reports a promotion merged after the last roadmap edit as a *pending
+  carry-forward* rather than a gap, so it can't fire falsely on every branch cut after a promotion.
+  **On its first real run it found three promotions nobody knew were undocumented — PRs #118, #121
+  and #134** — whose rows are backfilled here.
+- **Test coverage for `reverseRedemption`'s null-owner path** (#224). P7b made
+  `LoyaltyLedgerEntry.userId` nullable, forcing a behaviour change that `/validate` called the
+  highest-risk edit in that diff and that shipped verified by code reading alone: when the
+  redeeming user has been erased, the `LoyaltyAccount` credit is skipped while the `REVERSAL` row
+  is still written. Five cases in `tests/loyalty-repository.test.ts`, including a live-owner
+  contrast case so the null assertions prove a real branch.
+
+### Fixed
+- **The homepage hero no longer loads a CSP-blocked external image.**
+  `app/(storefront)/page.tsx` hardcoded an `images.unsplash.com` photo — the only external image
+  URL in the codebase — while P7a's `Content-Security-Policy` allows
+  `img-src 'self' data: https://*.nocaped.com`. It had been failing its CSP check in production
+  since PR #206 promoted the CSP on 2026-08-17, and rendered identically for every vendor, which
+  P6.6's own R12 forbids. Confirmed still live and blocked on staging at `64e4a46`
+  (`unsplashLoaded: false`). The hero keeps its token-driven brand panel and glow; a real
+  per-vendor hero image needs a `VendorConfig` field and a migration (**#233**).
+- **`/staff/runbook` now refuses a signed-in non-staff visitor the same way every other staff page
+  does.** Its role check returned `null` on refusal instead of rendering `<PanelRefusal>`, so a
+  signed-in customer got a blank content area inside the admin shell (HTTP 200, no message) rather
+  than "Staff only — this area is restricted to store staff." Found at `/validate` by exercising the
+  exact row `build-notes.md` had disclosed as never fired; fixed to match the other 8 `/staff/*`
+  pages' pattern.
+
+### Changed
+- **P6.6's and P6.6c's exit gates rewritten so they can be walked** (#192 item 4). Six of P6.6's
+  eight validation rows asked a reader to confirm the UI "matches the prototype" — unfalsifiable,
+  the same defect P6.5's gate was rewritten to remove. P6.6c had never used the Gate-2 format at
+  all: checkbox bullets on both sides, so no numbering to map one onto the other. Now `R1..R14` and
+  `R1..R17` respectively, every row naming a command, a file property or an observable behaviour.
+  P6.6c's navigation requirement states a required **subset** rather than "all 9 tabs", which P6.7
+  falsified by legitimately adding a tenth. **Neither rewrite was edited to match the code**: where
+  the artifact fails an obligation, the obligation stands and the gap is tracked.
+- **`docs/gap-register.md` 2.4.0** — GAP-016..GAP-023, six of them found by actually walking the
+  rewritten gates and by #103's live window rather than by reading anything.
+  `specs/sdd-workflow.md` 2.17.0 and `CLAUDE.md` updated: both described `sdd:audit` in terms the
+  promotion check made incomplete.
+
+### Validated
+- **P3c's R7 payment-failure path proven live for the first time** (#103), in a deliberate,
+  separately-confirmed window against staging's Worker (13:21:05Z → 13:25:00Z). With an invalid
+  `STRIPE_SECRET_KEY`, order `AHE-20260818-U82BM2` was left `CANCELLED` with two `OrderStatusEvent`
+  rows (`PENDING_PAYMENT` → `CANCELLED`, *"Payment provider unavailable; order cancelled and stock
+  released."*) and `Inventory.quantity` restored to **exactly** its pre-order value. The key was
+  restored from `secrets/staging.vars` and the restore proven by a new Stripe Checkout session
+  created through the real app — not by the write's exit code, since Cloudflare secrets cannot be
+  read back.
+- **P6.6 and P6.6c walked against their rewritten gates**, which found two defects no amount of
+  reading would have caught: **SriMart, an electronics store in Reading, advertises certified halal
+  meat** because `Header.tsx`/`page.tsx` hardcode Aheed grocery copy (**#239**), and the staff
+  financial report **counts cancelled and unpaid orders as revenue** — £1,162.64 of a £3,003.49
+  headline, 39%, never collected (**#238**). Both were reachable only by exercising the artifact
+  against a second tenant and against real order data.
+- Deferred with issues filed, not remembered: **#232** (wishlist link never built), **#233**
+  (per-vendor hero image), **#234** (payment failure destroys the cart while telling the shopper to
+  try again), **#235** (CDN hotlink 403s local preview, so no image renders there), **#236** (rapid
+  cart mutations still reach a failure ceiling), **#237** (admin financial report served stale from
+  cache despite `force-dynamic`).
+
 ### Docs
 - **`/document` pass reconciling P7b (#216) + the local dev environment tier (#226) with their
   live promotion to production** (PR #229, `staging → main`, merge `6a6f51d`). `specs/roadmap.md`
