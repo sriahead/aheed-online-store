@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Download } from "lucide-react";
 import { getAuth } from "@/lib/auth";
-import { getDataRightsRepository } from "@/lib/repositories/data-rights";
+import { getDataRightsRepository } from "@/lib/data-rights-service";
 import { eraseConfirmationMode } from "@/lib/data-rights-form";
 import { NameForm } from "@/components/account/NameForm";
 import { EraseDataForm } from "@/components/account/EraseDataForm";
@@ -30,7 +30,7 @@ export default async function AccountDataPage() {
   }
 
   const user = session.user as { id: string; name: string; email: string };
-  const repo = await getDataRightsRepository();
+  const repo = getDataRightsRepository();
   const [providers, isStaff] = await Promise.all([
     repo.getAccountProviders(user.id),
     repo.hasVendorMembership(user.id),

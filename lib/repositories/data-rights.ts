@@ -2,8 +2,10 @@ import type { getPrisma } from "@/lib/db";
 
 /**
  * UK GDPR data-subject rights (P7b, #216) — the ONLY DB access for export and
- * erasure. Pages, route handlers and feature actions go through here (ADR-004
- * slice-2 no-direct-Prisma guard).
+ * erasure. Pages, route handlers and feature actions reach this through
+ * lib/data-rights-service.ts's request-scoped wrapper (ADR-004 slice-2
+ * no-direct-Prisma guard) — nothing in this file resolves a live client or a
+ * request itself; see that file for why the split exists.
  *
  * THE `@/lib/db` IMPORT IS TYPE-ONLY, DELIBERATELY. lib/db.ts imports
  * PrismaClient from `@prisma/client/wasm`, which is the workerd-safe loader and
@@ -15,10 +17,17 @@ import type { getPrisma } from "@/lib/db";
  * module at all — and that script is how the erasure's atomicity and
  * cross-vendor isolation get proven.
  *
- * Every function takes `prisma` and the vendor as EXPLICIT arguments and reads
- * no request context, matching `placeOrder(prisma, vendorId, input)` and the
- * loyalty repository. Same reason: these properties cannot be tested at all if
- * the only entry point needs a live Workers request.
+ * EVERY EXPORTED FUNCTION HERE takes `prisma` and the vendor as EXPLICIT
+ * arguments and reads no request context — no `getCurrentVendorId()`, no
+ * `headers()`, no `getAuth()` — matching `placeOrder(prisma, vendorId, input)`
+ * and the loyalty repository. That is why the request-scoped facade lives in
+ * lib/data-rights-service.ts instead of here: it necessarily resolves a live
+ * client and calls `getCurrentVendorId()`, and if it lived in this file that
+ * import would be a second entry point request context could reach the
+ * exports through — the property this module exists to hold would only be
+ * true of *some* of its exports, not all of them. lib/auth-rbac.ts is the
+ * same split for the same reason (a request-context wrapper beside, not
+ * inside, `lib/repositories/`).
  */
 
 type Db = ReturnType<typeof getPrisma>;
@@ -440,69 +449,4 @@ export async function getAccountProviders(prisma: AnyDb, userId: string): Promis
     select: { providerId: true },
   });
   return rows.map((row) => row.providerId);
-}
-
-// ---------------------------------------------------------------------------
-// Request-scoped facade
-// ---------------------------------------------------------------------------
-
-export interface DataRightsRepository {
-  exportForCurrentVendor(userId: string): Promise<PersonalDataExport>;
-  eraseForCurrentVendor(userId: string): Promise<EraseResult>;
-  updateDisplayName(userId: string, name: string): Promise<void>;
-  hasVendorMembership(userId: string): Promise<boolean>;
-  getAccountProviders(userId: string): Promise<string[]>;
-}
-
-/**
- * The request-scoped wrapper the app layer uses, resolving the client and the
- * vendor itself — `features/` and `app/` cannot import `@/lib/db` (ADR-004
- * slice-2 lint guard), so something in `lib/` has to.
- *
- * THE `@/lib/db` IMPORT IS DYNAMIC, AND THAT IS LOAD-BEARING, not a style
- * choice. A top-level import would make this whole module unloadable outside
- * workerd: `@prisma/client/wasm` does not resolve in real Node at all
- * (`Cannot find module .../wasm.mjs` — verified, not assumed), so
- * scripts/verify-data-rights.ts could not import the pure functions above, and
- * those functions are the only way the erasure's atomicity and cross-vendor
- * isolation get proven. Deferring the import to the one place that genuinely
- * needs a live client keeps both properties: the module loads in Node, and the
- * facade works on Workers.
- *
- * Async for the same reason, unlike the other repositories' sync factories.
- *
- * Constructed fresh per call, never cached across requests — a cached client
- * throws "Cannot perform I/O on behalf of a different request" on Workers
- * (CLAUDE.md), and caching a wrapper pins the first request's client inside it
- * just the same.
- */
-export async function getDataRightsRepository(): Promise<DataRightsRepository> {
-  const [{ getPrisma, getPrismaWs }, { getCurrentVendorId }] = await Promise.all([
-    import("@/lib/db"),
-    import("@/lib/tenant"),
-  ]);
-  const prisma = getPrisma();
-  let vendorIdPromise: Promise<string> | undefined;
-  const vendorId = () => (vendorIdPromise ??= getCurrentVendorId());
-
-  return {
-    async exportForCurrentVendor(userId) {
-      return exportPersonalData(prisma, await vendorId(), userId);
-    },
-    async eraseForCurrentVendor(userId) {
-      // The WebSocket client, strictly for this transaction: PrismaNeonHttp
-      // cannot run interactive transactions, and a half-applied erasure is the
-      // one outcome there is no way to recover from.
-      return eraseVendorData(getPrismaWs(), await vendorId(), userId);
-    },
-    async updateDisplayName(userId, name) {
-      return updateDisplayName(prisma, userId, name);
-    },
-    async hasVendorMembership(userId) {
-      return hasVendorMembership(prisma, userId);
-    },
-    async getAccountProviders(userId) {
-      return getAccountProviders(prisma, userId);
-    },
-  };
 }

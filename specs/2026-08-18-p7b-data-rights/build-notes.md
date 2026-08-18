@@ -118,6 +118,42 @@ now uses `m.default ?? m` and says why. This is the same inverted-diagnostic sha
 `specs/sdd-workflow.md` records for #176 — a validator following the old text would have concluded
 working code was broken.
 
+## Fixed at `/fix`, after `/validate` (2026-08-18)
+
+Two findings from the first `/validate` pass, both closed before re-running from the top:
+
+**1. `validation.md` was missing a required pre-step, and the write-path harness failed for real
+because of it.** Running `scripts/verify-data-rights.ts erase` against staging hit a genuine
+Postgres `NullConstraintViolation` on `LoyaltyLedgerEntry.userId` — the P7b migration had never
+been applied to staging, and `validation.md` never said to. The catalogue-debt-bucket slice's
+`validation.md` carries this exact instruction for its own migration (R3 row); this slice's did
+not. Root cause was the doc, not the code: the migration itself is correct (confirmed separately
+by `prisma migrate diff` against a throwaway shadow DB). Fixed by adding the missing step to
+`validation.md`'s preamble and applying the migration to staging (additive, user-approved). No code
+change.
+
+**2. R2 failed literally — `getDataRightsRepository` lived in `lib/repositories/data-rights.ts` and
+called `getCurrentVendorId()` with no explicit `vendorId` parameter, which is exactly what R2 says
+no exported function in that file may do.** Deviation 2 above disclosed that the facade's existence
+changed how R9 reads, but never flagged that the facade's own presence broke R2 for the file as a
+whole — an omission `/validate` caught by running R2's own probe command, not by re-deriving it.
+This was a real design gap, not a wording problem: `requirements.md`'s R2 wasn't wrong, the code
+just hadn't been shaped to satisfy it once the facade was added. Fixed by moving
+`getDataRightsRepository` and the `DataRightsRepository` interface out to a new
+`lib/data-rights-service.ts`, mirroring `lib/auth-rbac.ts` (a request-context wrapper that sits
+beside `lib/repositories/`, not inside it) — the same precedent build-notes already cited and
+rejected for the wrong reason (it was rejected as "no gain"; it turned out to be exactly what R2
+needed). The dynamic `import("@/lib/db")` is gone too: it was only ever needed because the facade
+shared a file with code `scripts/verify-data-rights.ts` had to load in real Node, and that's no
+longer true once the facade moved. `getDataRightsRepository()` is sync now, matching every other
+repository factory (`getCartRepository` et al.) — `getPrisma()` resolves immediately; only the
+vendor id is lazy. `lib/repositories/data-rights.ts` now exports exactly the six pure functions R1
+lists, and R2's probe (`grep`-style call-syntax search) finds no match outside its own explanatory
+comment. No observable behaviour changed — same functions, same transaction, same client selection
+— so no `CHANGELOG.md` entry.
+
+Both fixes verified by re-running `/validate` from the top, not just the failing rows.
+
 ## Known-shaky areas
 
 **Nothing on the write path has run against Postgres.** `eraseVendorData` has never executed. The

@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
-import { getDataRightsRepository } from "@/lib/repositories/data-rights";
+import { getDataRightsRepository } from "@/lib/data-rights-service";
 
 // Reads the session and the viewer's own data — must run per request.
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export async function GET() {
   }
 
   const userId = (session.user as { id: string }).id;
-  const data = await (await getDataRightsRepository()).exportForCurrentVendor(userId);
+  const data = await getDataRightsRepository().exportForCurrentVendor(userId);
 
   const stamp = new Date().toISOString().slice(0, 10);
   return new NextResponse(JSON.stringify(data, null, 2), {

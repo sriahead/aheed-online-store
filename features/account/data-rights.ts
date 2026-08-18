@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getAuth } from "@/lib/auth";
-import { getDataRightsRepository } from "@/lib/repositories/data-rights";
+import { getDataRightsRepository } from "@/lib/data-rights-service";
 import {
   checkEmailConfirmation,
   eraseConfirmationMode,
@@ -57,7 +57,7 @@ export async function updateMyName(
   const parsed = parseDisplayName(formData.get("name") as string | null);
   if (!parsed.ok) return parsed.state;
 
-  const repo = await getDataRightsRepository();
+  const repo = getDataRightsRepository();
   await repo.updateDisplayName(user.id, parsed.value);
 
   // The account page renders the name from the session, which Better Auth
@@ -88,7 +88,7 @@ export async function eraseMyData(
   const user = await currentUser();
   if (!user) return SIGNED_OUT;
 
-  const repo = await getDataRightsRepository();
+  const repo = getDataRightsRepository();
 
   // A vendor ADMIN erasing themselves would walk straight through P6.7's
   // self-lockout guards from an angle they don't cover, and could leave a

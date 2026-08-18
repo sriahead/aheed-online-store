@@ -180,6 +180,25 @@ async function buildFixture(prisma: PrismaClient, vendorIds: string[]): Promise<
         multiplierBps: 10000,
       },
     });
+
+    const code = await prisma.discountCode.create({
+      data: {
+        vendorId,
+        code: `P7B-${stamp}-${vendorId.slice(0, 4)}`,
+        kind: "FIXED_AMOUNT",
+        value: 100,
+      },
+    });
+    await prisma.discountRedemption.create({
+      data: {
+        vendorId,
+        codeId: code.id,
+        orderId: order.id,
+        userId: user.id,
+        seq: 0,
+        amountPence: 100,
+      },
+    });
   }
 
   return { userId: user.id, vendorA: vendorIds[0], vendorB: vendorIds[1] ?? null };
@@ -196,6 +215,7 @@ async function cleanup(prisma: PrismaClient, fixture: Fixture): Promise<void> {
 
   await prisma.loyaltyLedgerEntry.deleteMany({ where: { orderId: { in: orderIds } } });
   await prisma.discountRedemption.deleteMany({ where: { orderId: { in: orderIds } } });
+  await prisma.discountCode.deleteMany({ where: { code: { startsWith: "P7B-" } } });
   await prisma.orderStatusEvent.deleteMany({ where: { orderId: { in: orderIds } } });
   await prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } });
   await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
@@ -322,6 +342,10 @@ async function modeErase(prisma: PrismaClient): Promise<void> {
           multiplierBps: true,
         },
       }),
+      redemptionsA: await prisma.discountRedemption.findMany({
+        where: { vendorId: a, userId: fixture.userId },
+        select: { id: true },
+      }),
       addressB: await prisma.address.findFirst({
         where: { vendorId: b!, userId: fixture.userId },
         select: { id: true, recipientName: true, phone: true, line1: true, postcode: true },
@@ -442,6 +466,17 @@ async function modeErase(prisma: PrismaClient): Promise<void> {
           after.multiplierBps === prior.multiplierBps
         );
       }),
+    );
+
+    // R15
+    const redemptionsAfter = await prisma.discountRedemption.findMany({
+      where: { id: { in: before.redemptionsA.map((r) => r.id) } },
+      select: { id: true, userId: true },
+    });
+    check("R15 redemption rows retained", redemptionsAfter.length === before.redemptionsA.length);
+    check(
+      "R15 redemption owner nulled",
+      redemptionsAfter.every((after) => after.userId === null),
     );
 
     // R16
