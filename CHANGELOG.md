@@ -6,6 +6,104 @@ every branch merges.
 
 ## [Unreleased]
 
+### Docs
+- **Local `dev` environment tier** (`specs/2026-08-18-dev-environment/`, closes #226). `docs/
+  env-setup.md` gains a "Local development (dev)" section: one disposable Neon **branch** per
+  developer (not a project, unlike staging/production — a personal branch holds no real vendor
+  data, so ADR-004's "separate projects, not branches" ruling doesn't apply), branched off
+  **staging** so it inherits current schema + seed/demo data with no `db:seed` step, and reset by
+  delete-and-recreate. Deliberately **local-only**: no `wrangler.toml` env block, no deploy, no CI,
+  no GitHub environment, not routed through `scripts/configure-env.mjs` — both files are untouched
+  by this slice. Object storage is one **shared** `aheed-images-dev` R2 bucket across every
+  developer, not per-developer. Fixes the actual behaviour this replaces: `.env`/`.dev.vars`
+  previously pointed local `next dev`/`npm run preview` straight at the **staging** database and
+  bucket, so every local validation pass either risked staging data or needed scratch infra stood
+  up by hand — `.env.example`/`.dev.vars.example`'s `S3_BUCKET` placeholder is corrected from
+  `aheed-images-staging` to `aheed-images-dev` accordingly. Docs-only; no application code, no
+  schema change. Live-branch proof (a personal branch boots with seed data intact and is provably
+  isolated from staging) is deferred to `/validate`, once a developer has created their own branch
+  by hand per the new doc section.
+- **`/document` pass reconciling P7b's staging merge (PR #223) with what `/validate` actually
+  found.** `specs/roadmap.md` now records the real `/validate` → `/fix` cycle: a genuine spec
+  contract violation (`getDataRightsRepository()` had been added to `lib/repositories/data-rights.ts`
+  and called `getCurrentVendorId()` with no explicit `vendorId`, breaking that file's own "every
+  export takes prisma/vendor explicitly, no request context" property) and a `validation.md` gap
+  (the slice's migration was never instructed to be applied to staging before the write-path
+  harness, unlike the catalogue-debt-bucket slice's own `validation.md`). Both fixed before shipping;
+  R15's coverage gap (harness never exercised `DiscountRedemption`) closed in the same pass.
+  `CLAUDE.md` gained a new "Repository layer" section recording the facade-placement rule generally
+  (`lib/auth-rbac.ts`'s pattern — a request-context wrapper beside, not inside, `lib/repositories/`)
+  so future slices don't rediscover it; `specs/sdd-workflow.md` gained the missing-migration-step
+  trap so it's written into every slice's `validation.md` that ships a migration, not left to be
+  rediscovered per-slice. Filed **#224** (untested `reverseRedemption` null-owner refund path,
+  a real behaviour change reached sideways through this slice's migration) rather than leaving it
+  as an unverified `/validate` note. Issue #216 moved to **In Review** (staging only, not promoted).
+
+### Added
+- **UK GDPR data-subject rights — download, correct and erase your data** (P7b, issue #216,
+  `specs/2026-08-18-p7b-data-rights/`). `/privacy` §5 already told customers they could "access,
+  rectify, or request deletion" by contacting a "privacy compliance team" that exists nowhere in
+  the app, and none of the three had a mechanism behind it: no export path anywhere in the
+  codebase, no account deletion, and `/account` rendering name/email/role as static text with no
+  edit control. New `/account/data` offers all three. **Export** (Art. 15) is a JSON download
+  served by a route handler, covering account details, orders, addresses, reviews, basket, loyalty
+  and discount redemptions — and deliberately no credential material: linked accounts disclose the
+  provider name only, sessions their metadata but never the token. **Erasure** (Art. 17) keeps the
+  money and drops the person — orders are tombstoned with totals and items untouched, addresses
+  redacted in place (`Order.addressId` is not nullable, so the row cannot go), reviews/basket/
+  loyalty balance deleted, and the loyalty ledger and discount redemptions retained but detached.
+  **Rectification** (Art. 16) is name-only for now; email change needs verification mail and is
+  deferred to #221 behind #104.
+- Everything is **vendor-scoped** (ADR-004 global identity + row-level `vendorId`): erasing at one
+  store leaves your account at another untouched, and the shared sign-in is deleted only when no
+  other vendor still holds data. The platform-wide alternative was rejected because it needs
+  un-scoped repository methods, and this repo's one existing un-scoped read is what became P7a's
+  order-disclosure defect. `countOtherVendorData` is the single permitted cross-vendor query,
+  contracted to return an integer and never rows — recorded in ADR-004 so it doesn't read as
+  precedent.
+
+### Changed
+- **`LoyaltyLedgerEntry.userId` is now nullable with `ON DELETE SET NULL`** (additive migration
+  `20260818021500_p7b_loyalty_ledger_user_nullable`). It was non-null with `Cascade`, so deleting a
+  `User` destroyed the ledger rows that are the only explanation of a surviving order's
+  `discountPence` — a financial audit trail the order must retain, and a violation of that model's
+  own documented append-only invariant. Consequently `reverseRedemption` now skips the
+  `LoyaltyAccount` balance update when the owner has been erased (there is no balance left to
+  credit) while still writing the `REVERSAL` row, so the trail balances and the idempotency guard
+  still holds.
+- **`specs/roadmap.md`'s P7 and P8 lines no longer both claim backups and monitoring.** P7 said
+  "backups + monitoring" while P8 said "backups/PITR, monitoring", so each phase could assume the
+  other owned them — the same shape that let GAP-010 sit unbuilt behind an accounted-for row.
+  Resolved at `/propose`: **P8 owns them**; P7 stops at what lives in the repo. P7's remainder is
+  now four tracked slices — #216 (this), #217 accessibility, #218 observability + index/query
+  review, and #220 row-level security, the last being an already-approved ADR-004 obligation the
+  first decomposition had missed entirely.
+
+### Fixed
+- **Production R2 bucket CORS applied** (#180, GAP-007 → `Fixed`) — owner action, no code change.
+  `aheed-images-production` had never had a CORS policy, so every browser-direct presigned `PUT`
+  failed preflight. This stopped being a dormant P6 leftover the moment PR #214 promoted the
+  multi-image manager: **every admin image operation in production was failing**. Absence confirmed
+  first (`The CORS configuration does not exist [code: 10059]`), then verified by live `OPTIONS`
+  preflight in both directions — both production origins return `204` with the origin echoed, while
+  the staging origin and an unknown origin both return `403` with no `Access-Control-Allow-Origin`,
+  proving the policy discriminates rather than being permissive.
+
+### Docs
+- **`/document` pass reconciling both promotions to production (PR #214) and a real
+  closing-keyword incident.** `specs/roadmap.md` now records the catalogue-debt-bucket slice's
+  actual staging outcome (both R2/R15 blockers found and resolved before Ship — one was a test-
+  harness bug, the other a local-only R2 CORS limitation, not app defects) and the combined
+  production promotion. **Issue #174 was closed by accident during that promotion** — a `/fix`
+  commit message quoting the exact wrong text it was correcting (`"closes #174"`, inside a sentence
+  saying the opposite) still matched GitHub's closing-keyword scanner, which reads every commit in
+  the merged set, not just the PR body. Caught within minutes via the routine post-promotion
+  issue-state check, reopened with an explanatory comment, board status corrected. Recorded a
+  sharper version of this trap in `specs/sdd-workflow.md`'s Ship section: `closingIssuesReferences`
+  doesn't see every commit message, so it isn't sufficient on its own — the literal string
+  `closes #NNN` (or any closing-keyword variant) must never appear anywhere near an issue number
+  that must stay open, including inside a quotation.
+
 ### Fixed
 - **The homepage's "New Arrivals" and "Featured Halal Deals" rows rendered nothing at all**
   (issue #211, closes #208's remainder). Both fetched products via

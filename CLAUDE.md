@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.3.0"
-updated: 2026-08-17
+version: "1.4.0"
+updated: 2026-08-18
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -250,6 +250,26 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   keeps its own untouched single-order `<form action={advanceStatus}>`, and a row's bulk-select
   checkbox sits in the same `<li>` but carries `form="bulk-advance"` to bind to a separate
   `<form id="bulk-advance" action={advanceStatusBulk}>` rendered once above the list.
+
+## Repository layer (`lib/repositories/*`) — learned the hard way
+- **A request-scoped facade (resolving a live Prisma client and/or the current vendor from request
+  context) does not belong in the same file as the pure functions it wraps.** Every function
+  exported from a `lib/repositories/<name>.ts` file is expected to take its Prisma client and
+  `vendorId`/`userId` as **explicit parameters** and read no request context — that is what lets a
+  plain `tsx` script (a validation harness, a seed script) import the module in real Node and
+  exercise it directly, without a live Workers request. Adding a `getCurrentVendorId()`-calling
+  factory to the same file — even one that only wraps the pure functions "for convenience" — breaks
+  that property for the whole module, not just for itself: the file's own contract becomes true of
+  *some* of its exports and not others, and a validator running the file's own literal check (grep
+  for `getCurrentVendorId(`, `headers(`, `getAuth(`) will find it. Put the facade in a sibling
+  `lib/<name>-service.ts` instead, matching `lib/auth-rbac.ts`'s existing pattern — a request-context
+  wrapper living *beside*, not inside, `lib/repositories/`. First hit in P7b (#216, PR #223):
+  `getDataRightsRepository()` was added to `lib/repositories/data-rights.ts` at Build for exactly
+  this "convenience" reason, `build-notes.md` disclosed two smaller deviations from spec but not this
+  one, and `/validate` caught it by running `validation.md`'s own R2 probe rather than re-deriving
+  it. Fixed at `/fix` by moving it to `lib/data-rights-service.ts`; the facade also became a plain
+  sync factory (matching `getCartRepository` et al.) once it no longer needed a dynamic `import()` to
+  stay loadable by the same file a `tsx` script has to import.
 
 ## Hard stops
 - Never invent infrastructure or credentials. If a resource/secret is missing, STOP and list what

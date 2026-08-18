@@ -1,15 +1,15 @@
 ---
 id: env-setup
-title: "Environment Setup — Secrets & Config (staging / production)"
+title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.7.0"
-updated: 2026-08-10
+version: "1.8.0"
+updated: 2026-08-18
 visibility: internal
-summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, the demo-accounts tool, per-vendor host mapping, per-vendor branding/logo seeding, and auth cookie scoping.
+summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
-related: [architecture, adr-003-storage-abstraction, adr-004-multi-tenancy, neon-db-separation, demo-accounts-tool, multitenancy-slice3b-host-resolver, multitenancy-slice3c-auth-cookie-scoping]
+related: [architecture, adr-003-storage-abstraction, adr-004-multi-tenancy, neon-db-separation, demo-accounts-tool, multitenancy-slice3b-host-resolver, multitenancy-slice3c-auth-cookie-scoping, dev-environment]
 ---
 
 # Environment Setup — Secrets & Config
@@ -99,6 +99,68 @@ aws s3 cp public/images/brand/logo.png "s3://<bucket>/vendors/<aheed-vendor-id>/
 Until the object exists (or where `CDN_BASE_URL` is unset, e.g. local `preview`), the header falls
 back to the Aheed wordmark — never a broken image. SriMart has no logo yet (`logoStorageKey` null →
 wordmark); setting a real one later is data-only, no deploy.
+
+## Local development (`dev`)
+
+A third environment tier, alongside staging and production — but **local-only**: no `wrangler.toml`
+`[env.dev]` block, no Cloudflare Worker deploy, no custom domain, no CI workflow, and no GitHub
+environment. It's not configured through `scripts/configure-env.mjs` either — that script routes
+values to GitHub/Cloudflare secret stores, and `dev` has nothing deployed for either store to reach.
+It exists purely so `next dev` / `npm run preview` on your own machine stop pointing at the shared
+**staging** database and bucket (their default before this section existed — every local run either
+risked staging data or needed scratch infra stood up by hand). Ref: #226.
+
+**Isolation model:** one **personal Neon branch per developer**, not one shared database. Two
+developers fixing different bugs at once would otherwise collide on the same test data if `dev` were
+a single shared DB — a branch each avoids that, and branching is free and instant, unlike the
+separate-project isolation staging/production use (see "One Neon project per environment" above;
+that rationale is about real vendor data under shared compute limits, which doesn't apply to a
+disposable personal branch — see `specs/2026-08-18-dev-environment/plan.md`).
+
+**Create your branch** (Neon Console → the **staging** project → *Branches* → *Create Branch* →
+parent = staging's default branch): name it `dev-<you>` (e.g. `dev-sri`). A new branch is a
+copy-on-write snapshot of its parent at creation time, so it starts with staging's **current schema
+and seed/demo data already loaded** — no `npm run db:seed` or `npm run demo:accounts` needed for the
+common case of just wanting a working local database.
+
+Open the branch's *Connection Details* panel for its two URLs, same pooled/direct split every other
+environment uses:
+
+```bash
+# .env / .dev.vars — from YOUR branch's Connection Details panel
+DATABASE_URL="<branch pooled URL, host contains -pooler>"   # runtime
+DIRECT_URL="<branch direct URL, no -pooler>"                 # migrations/seed, local Node only
+```
+
+**Reset**: delete the branch and recreate it from staging's current tip — no migration or re-seed
+step, that's the point of branching instead of a from-scratch project.
+
+**Testing a locally-authored, not-yet-merged Prisma migration** against your branch before opening a
+PR:
+
+```bash
+DIRECT_URL="<branch-direct-url>" npx prisma migrate deploy   # or `migrate dev` while iterating
+```
+
+This runs from your machine via the Node Prisma CLI, not the Worker — consistent with `CLAUDE.md`'s
+"migrations never run on the Worker, never at request time."
+
+**Object storage**: one **shared** R2 bucket, `aheed-images-dev` — used by *every* developer, not one
+per developer. Object storage isn't where concurrent local test writes actually collide; the worst
+case is a stale test image, not corrupted state, so a per-developer bucket isn't worth provisioning.
+
+```bash
+S3_BUCKET="aheed-images-dev"
+```
+
+**Integration is unchanged**: a bug fix built and validated against your personal branch still goes
+out as `feature/<slug>` → PR into `staging` per `CLAUDE.md`'s branch strategy. System integration
+testing happens on `staging` against the shared staging database, exactly as it does today — `dev`
+only replaces what your *local* loop was pointed at before that PR exists.
+
+**Neon plan/branch limits**: not verified against this account as of this writing — if you hit a
+branch-limit error creating your personal branch, that's a real constraint on this design, not a bug
+in these instructions.
 
 ### Auth cookie scoping (ADR-004 slice 3c)
 

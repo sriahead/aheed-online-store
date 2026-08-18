@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.14.0"
-updated: 2026-08-17
+version: "2.16.0"
+updated: 2026-08-18
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -338,6 +338,20 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   reads `.dev.vars`; `prisma migrate`/`db:seed` and any local inspection script read `.env`. When
   those point at different Neon projects, a live check silently validates against a database the app
   isn't using. Compare both before starting, not after a confusing result.
+- **A slice's `validation.md` must say to apply its own pending migration to staging before any
+  write-path row that needs it — this doesn't happen automatically.** CI applies migrations via
+  `prisma migrate deploy` only at merge (CLAUDE.md); a fresh-context `/validate` runs before that,
+  so staging's schema is still one migration behind whatever the branch adds. Skipping this line
+  isn't a "the harness happened to fail" outcome — it's a hard crash: `npx prisma migrate status`
+  reports the migration pending, and the write-path check throws a real Postgres
+  `NullConstraintViolation`/similar, indistinguishable at first glance from a genuine code defect.
+  The fix is `npm run db:migrate` (or `db:migrate:dev`) against `DIRECT_URL`, additive and safe on
+  staging, but only if `validation.md` actually says to run it. First given this instruction in the
+  catalogue-debt-bucket slice's `validation.md`; P7b's `validation.md` omitted the same instruction
+  for its own migration and hit exactly this crash at `/validate`, caught and fixed only because the
+  session recognised the error shape rather than reporting a false code failure. **Write this line
+  into every slice's `validation.md` that ships a migration, not just the ones that happened to get
+  bitten** — don't wait for the next slice to rediscover it the hard way.
 - **A real browser can sign in against `npm run preview` — #176 is fixed** (verified 2026-08-17 at
   the #192 audit). `lib/auth-origin.ts`'s `splitHostPort` keeps the request port (and handles
   bracketed IPv6 literals) and `inferProto` returns `http` for loopback rather than trusting
@@ -439,6 +453,26 @@ named gates, but the part of this repo's actual history most prone to drift.
   between them) — but the safer habit is to avoid the closing-keyword words entirely anywhere near
   that issue number in the body, and to run the same `closingIssuesReferences` check on any PR that
   references an issue it must not close, before merging rather than after.
+- **That `closingIssuesReferences` check is not sufficient — it doesn't see every commit message in
+  the merged set, and one of those closed an issue for real.** PR #214 (promoting to `main`)
+  correctly showed no `#174` in `closingIssuesReferences` before merging — verified per the bullet
+  above. It still closed `#174`. The actual trigger was a *commit* message already on `staging`
+  (`/fix`'s `2b04085`), which quoted the exact wrong text it was correcting:
+  `specs/roadmap.md's Build-time row claimed "closes #174"... corrected to state only #173/#208
+  close`. GitHub's closing-keyword scanner reads every commit landing on the default branch, not
+  just the PR's own body/title that `closingIssuesReferences` reports on — and it doesn't parse
+  quotation marks or surrounding context, so it pattern-matched `"closes #174"` inside that quote
+  and closed the issue despite the sentence's actual point being the opposite. Caught within minutes
+  via the routine post-promotion issue-state check (`gh issue view <N> --json state` on every issue
+  touched by the slice) and fixed — `gh issue reopen` with a comment explaining what happened, board
+  status corrected from the auto-triggered `Done` back to where it belonged. **The rule this
+  generalises to**: never write the literal string `closes #NNN` (or `close`/`closed`/`fixes`/
+  `fixed`/`resolves`/`resolved` immediately followed by `#NNN`) anywhere near an issue number that
+  must stay open — not in a PR body, not in a commit message, not inside a quotation, not inside a
+  sentence whose entire point is that the issue *shouldn't* close. `closingIssuesReferences` only
+  covers one of those surfaces; the only fully reliable check is reading every commit message in the
+  set before it merges, or checking actual issue state immediately after — which is why that
+  post-promotion check belongs in the routine, not just as a recovery step.
 
 Then go straight to **Document (final)** — no model switch here. It runs on the same Sonnet 5
 session that just shipped.

@@ -357,10 +357,17 @@ export async function reverseRedemption(
 
   const restored = -redeem.points; // REDEEM.points is negative
 
-  await tx.loyaltyAccount.updateMany({
-    where: { vendorId, userId: redeem.userId },
-    data: { balancePoints: { increment: restored }, lastActivityAt: now },
-  });
+  // userId is null when the shopper has since exercised erasure (P7b, #216):
+  // their LoyaltyAccount was deleted and this ledger row was detached, but the
+  // row itself survives because a retained order's discountPence needs it to
+  // stay explainable. There is no balance left to credit — write the REVERSAL
+  // anyway, so the trail still balances and the idempotency guard still holds.
+  if (redeem.userId !== null) {
+    await tx.loyaltyAccount.updateMany({
+      where: { vendorId, userId: redeem.userId },
+      data: { balancePoints: { increment: restored }, lastActivityAt: now },
+    });
+  }
 
   await tx.loyaltyLedgerEntry.create({
     data: {

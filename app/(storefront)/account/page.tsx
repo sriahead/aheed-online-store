@@ -49,12 +49,22 @@ export default async function AccountPage() {
       {loyaltyEnabled && (
         <Link
           href="/account/loyalty"
-          className="mb-6 flex items-center justify-between rounded-md border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
+          className="mb-3 flex items-center justify-between rounded-md border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
         >
           <span className="font-semibold text-primary">Loyalty points</span>
           <ChevronRight className="h-5 w-5 text-primary/50" aria-hidden />
         </Link>
       )}
+
+      {/* P7b (#216) — download, correct or erase your data. Always shown: the
+          rights it exercises are not conditional on a vendor feature flag. */}
+      <Link
+        href="/account/data"
+        className="mb-6 flex items-center justify-between rounded-md border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
+      >
+        <span className="font-semibold text-primary">Your data</span>
+        <ChevronRight className="h-5 w-5 text-primary/50" aria-hidden />
+      </Link>
 
       <LogoutButton />
     </main>
