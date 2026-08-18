@@ -6,6 +6,17 @@ every branch merges.
 
 ## [Unreleased]
 
+### Documentation
+- **`/document` closeout for the validation debt bucket (#231, PRs #240/#241).** Roadmap gains the
+  `/fix` and Ship-time rows (PR #240 to staging, PR #241 promotion to production, post-promotion
+  issue-state check confirming no accidental closure). `docs/gap-register.md` gains GAP-024 (the
+  `/staff/runbook` `PanelRefusal` gap `/fix` corrected). Two lessons recorded while still cheap:
+  `CLAUDE.md` gets a new "Staff panel pages" section (every `/staff/*` refusal branch must render
+  `PanelRefusal`, never `return null`, since the layout shell still renders around a `null` page);
+  `specs/sdd-workflow.md` gets a third instance of the grep-matches-the-explanation trap, this time
+  in a requirement's own literal text (R40 was broader than its own `validation.md` row).
+  `ARTIFACT_INDEX.md` rebuilt; `npm run sdd:audit` and `npm run kms:validate` both clean.
+
 ### Added
 - **`sdd:audit` now checks promotions, not just slices** (#207,
   `specs/2026-08-18-validation-debt-bucket/`). A merged `staging → main` PR with no

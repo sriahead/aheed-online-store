@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.17.0"
+version: "2.18.0"
 updated: 2026-08-18
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -211,6 +211,23 @@ not present.
   blockquote naming the mistake it had just fixed) caught at Validate. Target the syntax that would
   actually constitute the defect (`\bnote\s*[:?]` for a field), or assert the property in a test, or
   state the property and read it — but don't let a check reward deleting the rationale.
+- **A third instance of the same trap, this time in a requirement's own literal text rather than a
+  grep**: `requirements.md`'s R40 in the validation-debt-bucket slice forbade a closing keyword
+  "immediately before" a protected issue number in "any commit message, PR body, **or document**
+  changed on this branch" — broader than `validation.md`'s own row, which checked only commit
+  messages and the PR body (the actual surfaces GitHub's closing-keyword scanner reads). Several
+  already-existing docs, and this slice's own new `plan.md`, quote the literal string `closes #174`
+  *to warn against writing it* — the #214 lesson two bullets above only exists because someone
+  needs to keep telling that story. A validator reading R40 at face value would have to scrub that
+  quote to "pass" a document-content check that was never actually load-bearing (file prose isn't a
+  GitHub closing-keyword surface), which is exactly the P4a failure mode: the check rewards
+  deleting the rationale. Caught at `/validate` (2026-08-18) by checking against `validation.md`'s
+  actual operational scope rather than `requirements.md`'s broader prose, and flagged as a
+  spec-wording note rather than patched under `/fix` (tightening the requirement's own text is a
+  Spec-level correction, not a validation finding). **When writing a requirement that forbids a
+  pattern, scope its text to the surface that's actually checked** — a requirement broader than its
+  own validation row is a requirement two readers can satisfy differently, which is the same defect
+  this stage exists to prevent everywhere else.
 - If the slice also changes a **standing decision** (architecture, tech choice, design tokens), also
   write or update the relevant **persistent doc** (`specs/architecture.md`, `tech-stack.md`,
   `design-system.md`, ...) — the dated folder is the one-time slice, the persistent doc is what
