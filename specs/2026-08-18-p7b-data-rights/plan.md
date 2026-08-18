@@ -129,7 +129,7 @@ routes; `specs/roadmap.md:64` drops "backups + monitoring" (resolved at `/propos
 
 - **Platform-wide account deletion across vendors** — see the scope decision above. The
   last-vendor rule means the common single-vendor case still results in a full identity delete.
-- **Email address change** — blocked by #104; filed separately.
+- **Email address change** — blocked by #104; tracked as **#221**.
 - **An admin-facing view of erasure requests.** Self-service only. There is no case-handling
   workflow, no queue, and no staff surface, because there is no human step in the flow to manage.
 - **Erasure of data held by Stripe.** `Payment.providerReference` points at a PaymentIntent that
