@@ -9,9 +9,18 @@
 the WASM query engine, so any DB-touching route silently renders an error state. Confirm which Neon
 project the app is on before trusting a live result (`.dev.vars` under `preview`, not `.env`).
 
+> **Any row that asserts an image *renders* must be walked on a deployed environment, not local
+> preview.** The CDN zone enforces referer-based hotlink protection: the same object returns 200
+> refered from `staging.aheedfoodcentre.nocaped.com` and **403** refered from `http://localhost:8787`,
+> so under `npm run preview` every CDN image fires an `error` event and renders broken. This is not
+> a CSP problem (the console logs zero CSP violations and `img-src` allows the host) and not an app
+> defect — it happens at the CDN edge. Measured 2026-08-18 under #231; tracked at **#235**. Without
+> this note a validator sees broken images everywhere and cannot distinguish it from a real
+> image-path regression.
+
 | Req | How to verify |
 |-----|---------------|
-| R1  | Load the storefront homepage. For a vendor with `logoStorageKey` set, confirm the header `<img src>` is `${CDN_BASE_URL}/${logoStorageKey}` and the image loads (HTTP 200). For a vendor without one, confirm the fallback renders the vendor's own initial and name rather than a fixed asset. |
+| R1  | Load the storefront homepage **on a deployed environment** (see the hotlink note above). For a vendor with `logoStorageKey` set, confirm the header `<img src>` is `${CDN_BASE_URL}/${logoStorageKey}` and the image renders. For a vendor without one, confirm the fallback renders the vendor's own initial and name rather than a fixed asset. Under local preview, verify only the composed URL, and confirm the object separately with an out-of-browser request carrying a deployed-origin `Referer`. |
 | R2  | On the same page, confirm the header displays the vendor's `localityName` as seeded for that vendor; compare against the `VendorConfig` row read from the DB. |
 | R3  | Confirm a search input is present. Submit a term; confirm navigation to `/search?q=<term>` and that results reflect the term. Repeat at a 375px viewport to confirm the mobile search row renders. |
 | R4  | Signed out: confirm a link to `/login`. Signed in as `demo-customer@example.com`: confirm a link to `/account`. |
