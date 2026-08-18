@@ -216,12 +216,13 @@ not present.
   "immediately before" a protected issue number in "any commit message, PR body, **or document**
   changed on this branch" — broader than `validation.md`'s own row, which checked only commit
   messages and the PR body (the actual surfaces GitHub's closing-keyword scanner reads). Several
-  already-existing docs, and this slice's own new `plan.md`, quote the literal string `closes #174`
-  *to warn against writing it* — the #214 lesson two bullets above only exists because someone
-  needs to keep telling that story. A validator reading R40 at face value would have to scrub that
-  quote to "pass" a document-content check that was never actually load-bearing (file prose isn't a
-  GitHub closing-keyword surface), which is exactly the P4a failure mode: the check rewards
-  deleting the rationale. Caught at `/validate` (2026-08-18) by checking against `validation.md`'s
+  already-existing docs, and this slice's own new `plan.md`, quote the exact wrong-example phrase
+  from the #214 lesson two bullets above *to warn against writing it* — that lesson only exists
+  because someone needs to keep telling the story. A validator reading R40 at face value would have
+  to scrub that quote to "pass" a document-content check that was never actually load-bearing (file
+  prose isn't a GitHub closing-keyword surface), which is exactly the P4a failure mode: the check
+  rewards deleting the rationale. This paragraph itself now avoids reproducing that phrase, for the
+  same reason. Caught at `/validate` (2026-08-18) by checking against `validation.md`'s
   actual operational scope rather than `requirements.md`'s broader prose, and flagged as a
   spec-wording note rather than patched under `/fix` (tightening the requirement's own text is a
   Spec-level correction, not a validation finding). **When writing a requirement that forbids a
