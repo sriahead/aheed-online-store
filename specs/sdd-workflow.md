@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.16.0"
+version: "2.17.0"
 updated: 2026-08-18
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
@@ -68,15 +68,34 @@ turn the loop's two honor-system promises into exit codes:
 | Command | Stage | Asks |
 |---|---|---|
 | `npm run sdd:preclear` | end of Document (build notes) | Would this Clear destroy anything? |
-| `npm run sdd:audit` | Orient | Did the last shipped slice actually get documented? |
+| `npm run sdd:audit` | Orient | Did the last shipped slice — and the last promotion — actually get documented? |
 
 Both live in `scripts/sdd-check.ts` and copy `hooks/pre-push`'s posture: resolve `origin/staging`,
 else `origin/main`, else don't block. `sdd:audit` only looks at slices *after* the loop baseline
 constant — it deliberately does not police slices that predate this workflow.
 
-Neither is a substitute for judgment. `sdd:preclear` proves files exist and the tree is clean, not
-that the build notes are any good; `sdd:audit` proves a roadmap row *mentions* the slice, not that
-the row is worth reading.
+`sdd:audit` checks **two** things as of 2026-08-18 (#207): that every slice after the baseline has a
+change-log row citing its spec path, and that every merged `staging → main` **promotion** has a row
+citing its PR number (`PR #229`) or its merge SHA. The promotion half was missing for a long time,
+which is why a missing promotion row recurred five times, each caught by eye at a later `/orient`
+while the audit reported green. Three details it is worth knowing before trusting its output:
+
+- **A bare `#229` does not count.** Issues and PRs share one number space here, so a row about issue
+  #229 would otherwise satisfy a promotion PR #229 that nobody ever documented. Write `PR #229`.
+- **A promotion merged after the roadmap was last edited is reported as *pending*, not missing.**
+  Under the carry-forward rule its row can only land on the next slice's branch, so failing it would
+  fire on every branch cut straight after a promotion — the fastest way to get a check ignored.
+- **It skips rather than fails when `gh` is unavailable or unauthenticated**, matching
+  `hooks/pre-push`'s "resolve what you can, else don't block" posture. A skip line in the output is
+  not a pass; re-run it once `gh auth status` succeeds.
+
+On its first real run it found **three** promotions nobody had ever noticed were undocumented —
+PRs #118, #121 and #134 — on top of the five that had been caught by eye. Their rows were backfilled
+in the same slice.
+
+Neither check is a substitute for judgment. `sdd:preclear` proves files exist and the tree is clean,
+not that the build notes are any good; `sdd:audit` proves a roadmap row *mentions* the slice or
+promotion, not that the row is worth reading.
 
 ## The delivery board
 

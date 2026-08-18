@@ -4,7 +4,7 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.4.0"
+version: "1.5.0"
 updated: 2026-08-18
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
@@ -156,8 +156,12 @@ branch before it merges, and Ship precedes the final documentation pass.
   `/clear`. Verifies the four spec files, the build-notes template's sections, a CHANGELOG diff vs
   base, and a clean tree.
 - `npm run sdd:audit` — run at `/orient`. Reports slices that shipped without a roadmap change-log
-  entry. Every other gate fires before or at merge; this is the only one after Ship, which is how
-  P3a/P3b/P3c all shipped undocumented.
+  entry, **and merged `staging → main` promotions with no roadmap row** (#207, added 2026-08-18 —
+  a row must cite `PR #NNN` or the merge SHA; a bare `#NNN` doesn't count, since issues and PRs
+  share one number space). Every other gate fires before or at merge; this is the only one after
+  Ship, which is how P3a/P3b/P3c all shipped undocumented — and how PRs #118/#121/#134 sat
+  undocumented until the promotion half of this check existed to find them. It **skips** the
+  promotion half rather than failing when `gh` is unavailable, so a skip line is not a pass.
 
 **Delivery board** — GitHub Project #2 "Aheed Online Store — Delivery" (owner `sriahead`), a
 generated *view* of `specs/roadmap.md` holding **status only**; scope lives in `specs/`. Propose adds
@@ -190,6 +194,17 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `SEED_`, and prefer printing keys over lines.
 - `gh` args containing double quotes break native argument parsing in PS 5.1 (`accepts 1 arg(s),
   received 8`). Write the body to a file and use `--body-file`.
+- **`npx tsx -e "<multi-line script>"` fails silently on this Windows setup the moment the script
+  imports an installed package (e.g. `@prisma/client`) — no stdout, no stderr, exit 0, even with an
+  explicit `.catch()`/`.finally()` around every promise.** It isn't a working-directory problem
+  (the shell's cwd is already the repo, so `node_modules` resolves fine) — a script that does
+  nothing but `console.log('hello')` via `-e` works, but the same process with a real `import`
+  produces no output at all, indistinguishable from success without independently confirming the
+  side effect happened. Hit in the dev-environment slice's `/validate` (R10's live isolation
+  check, inserting a marker `HealthCheck` row into a Neon branch) — three silent `-e` attempts
+  before switching to a real `.ts` file. **Write the script to a file inside the repo (so module
+  resolution and `tsx`'s own error reporting both work) and run `npx tsx path/to/script.ts`
+  instead of `-e`** for anything beyond a trivial one-liner; delete the scratch file afterward.
 - **Stopping `npm run preview` does not stop `npm run preview`.** The task-runner kill only ends the
   top-level `npm` process; `opennextjs-cloudflare preview` chains into `wrangler dev`, which spawns
   its own `wrangler.js` and `workerd.exe` children that survive the parent's termination on Windows.
