@@ -4,8 +4,8 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.3.0"
-updated: 2026-08-18
+version: "1.4.0"
+updated: 2026-08-19
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
@@ -54,8 +54,12 @@ should be reasoned about together.
    - **Composite indexes lead with `vendorId`** (e.g. `@@index([vendorId, isActive, basePrice])`).
    - **Guardrail:** a lint/test rule forbids importing `@prisma/client` outside `lib/repositories/*`,
      so a missing filter can't leak cross-vendor data.
-   - **Deferred:** Postgres row-level security (RLS) as defense-in-depth → **P7 hardening** (RLS +
-     Prisma driver adapter + per-request session vars on Workers isolates is fiddly; not now).
+   - ~~**Deferred:** Postgres row-level security (RLS) as defense-in-depth → **P7 hardening**~~
+     **Settled 2026-08-19: RLS is NOT adopted** — see "Row-level security" below. The 2026-08-08
+     guess that "per-request session vars on Workers isolates is fiddly" turned out to understate
+     it: there is no session at all on the HTTP driver the app reads through, and the adapter
+     refuses transactions in HTTP mode, so there is nowhere for a session variable to live. The
+     repository layer plus `tests/repository-vendor-scoping.test.ts` is the compensating control.
 
 3. **Resolve the tenant per request from the host — subdomain, with an optional custom-domain
    override.** Default host is `{slug}.aheedfoodcentre.nocaped.com`; an optional `Vendor.customDomain`
@@ -196,6 +200,60 @@ small change. The deeper fix is **#220 (P7e)** — row-level security, which dec
 to P7 — so that a missing `vendorId` filter fails closed at Postgres instead of relying on the
 repository layer and the `no-restricted-imports` lint rule being the only enforcement.
 
+## Row-level security — determined 2026-08-19, NOT adopted (#220, P7 closeout #251)
+
+Decision 2 deferred RLS to P7. P7 ran the experiment. **RLS is not adopted, because it is not
+reachable on this stack** — and that is a property of the driver, not a matter of effort.
+
+Evidence: `specs/2026-08-19-p7-closeout/rls-experiment.md`, produced by
+`scripts/rls-experiment.ts` (re-runnable, read-only).
+
+An RLS policy reads the current tenant from **session state** — conventionally a GUC set with
+`SET LOCAL app.current_vendor` and read via `current_setting(...)`. That requires the `SET` and the
+guarded query to share a session. Measured behaviour:
+
+| Case | Result |
+|---|---|
+| A. `PrismaNeonHttp`, `SET` and read as two queries | **GUC lost** — no shared session |
+| B. `PrismaNeonHttp`, both in one batched `$transaction` | **Errors**: `Transactions are not supported in HTTP mode` |
+| C. `PrismaNeon` (WebSocket), inside one interactive `$transaction` | GUC survives |
+| D. `PrismaNeon`, read after the transaction ends | GUC correctly gone — `SET LOCAL` does not leak |
+
+Case A is the shape of **every repository read**, so a policy reading a GUC would see nothing on all
+of them and fail closed — returning no rows at all. Case B is the finding that removes the obvious
+workaround: the batched-transaction escape hatch does not exist at the adapter layer, so this cannot
+be solved by restructuring calls.
+
+Adopting RLS would therefore require routing **every read** through `getPrismaWs()` to give each one
+a session. That is precisely the configuration that caused **#187** — WebSocket connections
+exhausting the per-isolate limit under ordinary concurrent load, fixed by moving reads to HTTP. RLS
+would trade a defence-in-depth control for a previously-experienced production outage. Case D is the
+one reassuring result: `SET LOCAL` is properly transaction-scoped, so nothing leaks between callers
+on a pooled connection.
+
+**Not evaluated:** Neon's RLS integration carries identity in a **JWT on the connection** rather than
+a session GUC, which would sidestep case A. It is gated behind **Neon Auth**, which `CLAUDE.md`
+keeps deliberately off — authentication is Better Auth per ADR-002. Reopening a settled
+authentication decision to obtain a secondary control is out of proportion. Recorded so a later
+reader knows it was considered, not missed.
+
+### Compensating control
+
+The tenant boundary stays in `lib/repositories/*`, and `tests/repository-vendor-scoping.test.ts`
+makes it executable rather than conventional. It walks each repository module's TypeScript AST and
+asserts that (a) every exported function querying a `vendorId`-bearing model takes a vendor id
+parameter, and (b) a function given one actually references it, so the parameter cannot be
+decorative. Twelve exceptions are allowlisted **with reasons** in that file — the eight
+request-scoped facades (#252), `countOtherVendorData` and `hasVendorMembership` (both deliberately
+cross-vendor), and `findOrderForWebhook`/`confirmPayment` (webhooks arrive with no host to scope by).
+
+**State the limit plainly:** a function that takes `vendorId`, applies it to one query and omits it
+on a second is still not detected. A stronger per-call-site check was built and rejected during the
+slice — it flagged 38 of 155 call sites, almost all correct code keyed by an id already fetched
+under a vendor scope, and would have needed ~38 hand-written justifications, the kind of list that
+gets rubber-stamped rather than read. What is lost by RLS being unavailable is real, and this
+records it rather than implying parity.
+
 ## Deferred upgrade — cross-domain SSO (federated auth)
 
 Custom-domain vendors have isolated sessions today. If platform-wide SSO across custom domains ever
@@ -208,7 +266,8 @@ and is deliberately out of scope now.
 1. **Tenant resolution** — subdomain (`{slug}.aheedfoodcentre.nocaped.com`) + optional
    `Vendor.customDomain` override; canonical-origin redirect once a custom domain is set. *(decision 3)*
 2. **Data isolation** — row-level `vendorId`, enforced centrally in the repository layer; per-vendor
-   composite uniques; RLS deferred to P7. *(decision 2)*
+   composite uniques; RLS deferred to P7 and, on 2026-08-19, **determined not adoptable** on this
+   driver — see "Row-level security" above for the evidence and the compensating control. *(decision 2)*
 3. **Auth across tenants** — global identity; SSO within the subdomain family, isolated session per
    custom domain; per-vendor authorization via `VendorMembership`; cookie domain + `trustedOrigins`
    derived from the `Vendor` table. *(decision 4)*

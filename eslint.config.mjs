@@ -1,4 +1,31 @@
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import jsxA11y from "eslint-plugin-jsx-a11y";
+
+/**
+ * P7 closeout (#251/#217) — jsx-a11y's recommended set, at `error`.
+ *
+ * `eslint-config-next/core-web-vitals` already activates six jsx-a11y rules
+ * (alt-text, aria-props, aria-proptypes, aria-unsupported-elements,
+ * role-has-required-aria-props, role-supports-aria-props) — but every one of
+ * them at severity 1, so `npm run lint` exited 0 with real defects present. A
+ * warning nobody reads is not a gate.
+ *
+ * This escalates the plugin's recommended set as its author wrote it, rather
+ * than turning every rule it ships on. That distinction is the whole cost of
+ * this part: recommended deliberately sets `label-has-for` (deprecated in
+ * favour of `label-has-associated-control`) and `control-has-associated-label`
+ * to "off", and forcing those two on produces 140 findings against markup that
+ * is largely correct. Escalating only what recommended enables produces 2.
+ */
+function recommendedA11yAtErrorSeverity() {
+  return Object.fromEntries(
+    Object.entries(jsxA11y.flatConfigs.recommended.rules).map(([rule, setting]) => {
+      const severity = Array.isArray(setting) ? setting[0] : setting;
+      if (severity === "off" || severity === 0) return [rule, "off"];
+      return [rule, Array.isArray(setting) ? ["error", ...setting.slice(1)] : "error"];
+    }),
+  );
+}
 
 const config = [
   {
@@ -18,6 +45,16 @@ const config = [
     ],
   },
   ...nextCoreWebVitals,
+
+  // Accessibility gate — must come AFTER nextCoreWebVitals so these severities
+  // win over the six warnings that config sets. No `plugins` key here on
+  // purpose: eslint-config-next already registers "jsx-a11y", and flat config
+  // treats a second registration of the same name as an error rather than a
+  // merge ("Cannot redefine plugin"). The import above is for its rule table.
+  {
+    files: ["app/**/*.tsx", "components/**/*.tsx", "features/**/*.tsx"],
+    rules: recommendedA11yAtErrorSeverity(),
+  },
 
   // ADR-004 slice 2 — keep domain data access inside the repository layer. The app/UI/
   // feature layers must go through lib/repositories/* (which enforce vendorId scoping),
