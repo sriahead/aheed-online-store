@@ -6,7 +6,45 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **P7.5a — staff reports correctness & checkout cart preservation** (#261, closing #238, #237,
+  #234, `specs/2026-08-19-p7.5a-reports-cart-integrity/`). First slice of **P7.5**, the pre-launch
+  closeout of P3/P5/P6 deferred debt (epic #260). The three places this system asserted something
+  false to the person acting on it.
+  **Revenue no longer counts orders that were never paid for** (#238): `getFinancialsForStaff`
+  aggregated on `vendorId` alone, so abandoned checkouts and cancelled orders were reported as money
+  taken — **39% overstated**, measured on staging. New `REVENUE_STATUSES` in `lib/order-status.ts`
+  (`CONFIRMED`/`OUT_FOR_DELIVERY`/`DELIVERED`), written as a literal and deliberately **not** derived
+  from `STAFF_QUEUE_STATUSES`, which is a worklist and omits `DELIVERED`. Avg Basket Value derives
+  from the same two figures, so one filter corrects all three tiles.
+  **The admin panel is no longer edge-cached** (#237): `/staff/reports` served a signed-in admin
+  stale financials despite `force-dynamic` — so Next was not the cache. The app emitted no
+  `Cache-Control` on any HTML route, leaving an intermediary free to invent a policy. Every
+  `/staff/:path*` response now carries `private, no-store, must-revalidate`; storefront routes are
+  deliberately untouched.
+  **A failed payment no longer destroys the basket** (#234): `placeOrder` clears the cart inside the
+  order transaction (load-bearing for double-submit safety), and when `createPayment` threw, the
+  compensation returned stock, points and the discount-code use but not the cart — so "please try
+  again" left the shopper an empty basket. New `restoreCartFromOrder` refills the originating cart,
+  called from `placeOrder`'s `catch` rather than `releaseOrder` (which the Stripe webhook shares for
+  sessions that expired hours earlier), and **only when `releaseOrder` actually cancelled**, so a
+  racing confirmation cannot hand the shopper a duplicate basket for an order they paid for.
+
 ### Changed
+- **`specs/architecture.md` (v1.16.0) — Cloudflare's edge cache is documented as active, not
+  optional.** Its caching section listed "Cloudflare's own edge cache in front of the Worker" as
+  something that *could* be added; #237 proves it is already there and was caching authenticated
+  admin pages. Now states the rule: a per-session or role-gated route must declare its cacheability
+  explicitly, because `force-dynamic` governs Next's rendering and not what sits in front of the
+  Worker — two different things with an identical symptom.
+- **`specs/decisions/ADR-005-payments-money-flow.md` (v1.4.0)** gains a P7.5a implementation note.
+  Its P3c note described the payment-failure compensation as releasing stock, which understated it
+  after this slice; the note records both constraints on `restoreCartFromOrder` (called outside
+  `releaseOrder`; only on a real cancellation) that a later consolidation would otherwise undo.
+- **`specs/roadmap.md` (v1.37.0)** gains the **P7.5** phase entry — six slices covering fourteen
+  issues, with eleven others explicitly deferred to P8 and **#137/#151 explicitly not scheduled**
+  (structurally unreachable until refunds exist) — plus the PR #259 promotion row that
+  `npm run sdd:audit` reported as pending carry-forward.
 - **`/document` closeout for P7 closeout (#251, PRs #256/#257, now in production) — P7 is closed.**
   Roadmap gains the build/validate/fix, staging-merge and promotion rows, plus a phase-closure
   summary. `CLAUDE.md` gains a new "Design tokens & per-vendor branding" section recording the

@@ -8,6 +8,8 @@ import {
   isOrderStatus,
   nextStatus,
   orderStatusLabel,
+  REVENUE_STATUSES,
+  STAFF_QUEUE_STATUSES,
   type StaffStatusEventInput,
   type StatusEventInput,
 } from "@/lib/order-status";
@@ -265,5 +267,32 @@ describe("buildStaffTimeline", () => {
 
   it("returns an empty timeline for no events", () => {
     expect(buildStaffTimeline([])).toEqual([]);
+  });
+});
+
+/**
+ * P7.5a (#238) — the set of statuses that count as revenue.
+ *
+ * `getFinancialsForStaff` aggregated on vendorId alone, so abandoned checkouts
+ * and cancelled orders were reported to the owner as money taken (39% overstated
+ * on staging). These tests pin the two ways that fix can silently regress.
+ */
+describe("REVENUE_STATUSES", () => {
+  it("excludes orders that were never paid for or were cancelled", () => {
+    expect(REVENUE_STATUSES).not.toContain("PENDING_PAYMENT");
+    expect(REVENUE_STATUSES).not.toContain("CANCELLED");
+  });
+
+  it("includes DELIVERED — the case that breaks if it is derived from the staff queue", () => {
+    // STAFF_QUEUE_STATUSES is a WORKLIST: it omits DELIVERED because there is
+    // nothing left to do, not because the money isn't real. Expressing revenue
+    // in terms of it is the tempting one-liner and would drop the most certain
+    // revenue there is.
+    expect(REVENUE_STATUSES).toContain("DELIVERED");
+    expect(STAFF_QUEUE_STATUSES).not.toContain("DELIVERED");
+  });
+
+  it("is exactly the three post-payment statuses", () => {
+    expect([...REVENUE_STATUSES]).toEqual(["CONFIRMED", "OUT_FOR_DELIVERY", "DELIVERED"]);
   });
 });
