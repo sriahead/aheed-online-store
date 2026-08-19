@@ -45,6 +45,15 @@ every branch merges.
   issues, with eleven others explicitly deferred to P8 and **#137/#151 explicitly not scheduled**
   (structurally unreachable until refunds exist) — plus the PR #259 promotion row that
   `npm run sdd:audit` reported as pending carry-forward.
+- **`/document` closeout for P7.5a (#261, PR #268, merged to staging) — P7.5's first slice.**
+  Roadmap (v1.38.0) gains the build/validate/merge row, including the real dev-Neon-branch
+  credential failure `/validate` hit mid-run (handled per `CLAUDE.md`'s hard stop — recreated, not
+  guessed) and the two live rows it unblocked (R5, R13) once the branch was recreated. Delivery
+  board reconciled: #261 confirmed **In Review**. New issue **#269** filed (Phase P7, Backlog) for
+  R8 — confirming the new `/staff/*` cache header actually stops staleness on the real Cloudflare
+  edge, deliberately deferred past Ship rather than exercised for its own sake once
+  `deploy-staging` was already green. `ARTIFACT_INDEX.md` rebuilt; `npm run sdd:audit` and
+  `npm run kms:validate` both clean.
 - **`/document` closeout for P7 closeout (#251, PRs #256/#257, now in production) — P7 is closed.**
   Roadmap gains the build/validate/fix, staging-merge and promotion rows, plus a phase-closure
   summary. `CLAUDE.md` gains a new "Design tokens & per-vendor branding" section recording the
