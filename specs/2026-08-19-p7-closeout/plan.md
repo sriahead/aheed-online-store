@@ -237,6 +237,11 @@ as **#252**.
 
 - **#252** — the nine facade factories. Filed 2026-08-19, unscheduled.
 - **#253** — machine-readable guest export. Filed at Build on 2026-08-19, unscheduled.
+- **#255** — per-vendor action/accent/danger colours have no AA-contrast guarantee. Filed at `/fix`
+  on 2026-08-19 after `/validate` found `lib/vendor-theme.ts` was overriding this slice's darkened
+  semantic tokens with each vendor's raw, unaudited primitive; the fix stopped that override for
+  every vendor, which also removed SriMart's prior (unaudited) differentiation on those three
+  tokens. Unscheduled.
 - **#46** — closed as housekeeping on this branch; P7d settled it and the code already shipped.
 - **PR #250's roadmap change-log row** — `npm run sdd:audit` reports it pending carry-forward. A
   `/document` closeout PR cannot cite its own promotion, so it rides this branch (the #144 pattern).

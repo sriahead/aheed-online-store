@@ -58,6 +58,24 @@ every branch merges.
   defect. Now says to copy the shape, not the address, and names all nine non-compliant factories
   (#252).
 
+### Fixed
+- **The WCAG AA contrast fix above never reached a real rendered page — found at `/validate`,
+  fixed at `/fix`** (#251). `lib/vendor-theme.ts`'s `brandStyle()` injects per-vendor branding as an
+  inline style on every page's root element, and was re-declaring `--color-action`, `--color-accent`,
+  `--color-danger` and their hover shades straight from each vendor's raw primitive colour — the
+  same 1:1 mapping `tokens.css` used *before* this slice darkened those five independently of the
+  primitives. An inline style always beats a stylesheet rule, so every real page kept rendering the
+  pre-slice, AA-*failing* hex regardless of `tokens.css`; the jsdom contrast test never caught it
+  because it reads `tokens.css` directly rather than rendering through the real layout. Fixed by no
+  longer re-declaring those five tokens per vendor — they now resolve to the platform's fixed,
+  audited default everywhere. `--color-primary`, `--color-surface-muted` and the three semantic
+  tints are unaffected and still vary per vendor, since `tokens.css` still defines those as plain
+  primitive aliases. **Consequence:** SriMart's own action/accent/danger primitives (never
+  contrast-audited) no longer drive those three roles — SriMart now renders the same audited colours
+  as every vendor there, trading its prior, unaudited differentiation for a real AA guarantee. Filed
+  as **#255**: whether/how to bring back per-vendor differentiation for these three tokens with a
+  real contrast guarantee is its own decision.
+
 ### Removed
 - **`components/cart/CartDrawer.tsx`** — dead code. Added by P7a (`624a842`) and never imported by
   anything, as `git log -S` confirms across all branches; the live drawer is `CartDrawerShell.tsx`,

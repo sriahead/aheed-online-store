@@ -177,6 +177,60 @@ match at 28 with identical ordering.
 **R27 (CHANGELOG) is satisfied in this stage, not during Build** — Gate 4 lands at `/build-notes`
 per `CLAUDE.md`.
 
+## Fix (post-`/validate`, 2026-08-19)
+
+**`/validate` found R7/R8's contrast fix never reached a real rendered page.**
+`lib/vendor-theme.ts`'s `brandStyle()` (pre-existing since P6a, `#158`) injects per-vendor branding
+as an inline `style` on the root element of every page, and was re-declaring `--color-action`,
+`--color-accent`, `--color-danger` and their hover shades directly from each vendor's raw
+primitive colour — the SAME primitive→semantic mapping `tokens.css` used *before* this slice. This
+slice's Part A deliberately broke that 1:1 mapping (that is the whole fix: darken the semantic
+value independently of the brand-kit primitive), but never touched `brandStyle()`, which kept
+computing the old mapping. An inline style always outranks a stylesheet `:root` rule on CSS
+specificity, so every real page — storefront and admin, every vendor including Aheed — rendered
+the pre-slice, AA-*failing* hex regardless of what `tokens.css` said. `/validate`'s own jsdom tests
+never caught this because they read `tokens.css` directly and never render through the real
+layout; the defect only showed up by pulling live rendered HTML from `npm run preview` against
+staging.
+
+**Root cause, not the check.** `tests/design-tokens-contrast.test.ts` and R7/R8 as worded were
+correct and stayed unchanged — loosening them would have been validating around a real defect. The
+code that needed reshaping was `brandStyle()` itself.
+
+**The fix, and why it stops at exactly these five tokens.** `lib/vendor-theme.ts`'s `brandStyle()`
+no longer re-declares `--color-action`, `--color-accent`, `--color-danger`, `--color-action-hover`
+or `--color-accent-hover` — those five now always resolve to `tokens.css`'s fixed, AA-audited
+default, for every vendor. Three *other* tokens brandStyle() sets — `--color-primary`,
+`--color-surface-muted`, and the three semantic tints (`--color-action-tint` etc.) — are left
+exactly as they were, because they are still plain `var()` aliases to a primitive in `tokens.css`
+(R7 only darkened the five *base*/hover tokens, never the tints or primary/surface-muted), and a
+CSS custom property's `var()` substitutes once at the element that declares it — an override
+further down the tree only reaches a semantic alias if that alias is re-declared at the same
+element, which is the entire reason `brandStyle()` exists. Removing those three would have broken
+vendor branding for a property this slice never touched; that would have been fixing a bug by
+introducing a different one.
+
+**A consequence, checked and recorded rather than assumed harmless.** SriMart's `VendorBranding`
+row carries real, distinct action/accent/danger primitives (`#1e88e5` blue, `#8e24aa` purple,
+`#c62828` red) that were never contrast-audited. Before the fix it rendered them directly,
+unaudited. After the fix, SriMart's action/accent/danger buttons now render as Aheed's audited
+green/orange/red instead of SriMart's own colours — differentiation for those three roles is gone,
+traded for every vendor now guaranteeing AA on them. This matches ADR-004 decision 5's original
+wording ("the semantic layer... stay unchanged"; only primitives vary), so it is a correction
+toward an already-accepted architecture, not a new one — but it is a real, visible behaviour change
+for the one other live vendor, filed as **#255** rather than left implicit. Verified live: fetched
+`/` with `Host: srimart-staging.nocaped.com` under `npm run preview` against staging and confirmed
+`--color-primary`/`--color-surface-muted`/tints still carry SriMart's own blue/tints while
+`--color-action` etc. are absent from the inline style (falling through to the shared stylesheet
+default) for both vendors.
+
+**Verification.** Reran the full pre-flight (`lint`, `typecheck`, `vitest run` — 447/447,
+`build`) clean. Live-verified against staging under `npm run preview`: Aheed's compiled stylesheet
+and rendered inline style now agree (`--color-action:#2e7d32`, `--color-accent:#a85400`,
+`--color-danger:#c82d2d`, hovers `#276a2b`/`#8f4700`); SriMart's inline style still carries its own
+`--color-primary`/`--color-surface-muted`/tints and no longer overrides the three base colours.
+No test previously covered `lib/vendor-theme.ts` — none existed to break or need updating.
+
 ## Known-shaky areas
 
 **R15–R19 have had no live run. This is the biggest gap and where validation should start.**
