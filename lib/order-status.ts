@@ -162,6 +162,29 @@ export function nextStatus(from: string): string | null {
  */
 export const STAFF_QUEUE_STATUSES = ["CONFIRMED", "OUT_FOR_DELIVERY"] as const;
 
+/**
+ * The statuses that count as revenue (P7.5a, #238).
+ *
+ * These are exactly the statuses reachable only AFTER `confirmPayment`: money
+ * changed hands and has not been given back. `PENDING_PAYMENT` is money that
+ * never arrived (an abandoned checkout), and `CANCELLED` is an order whose stock
+ * `releaseOrder` already returned. `getFinancialsForStaff` counted both as
+ * revenue until this slice — 39% overstated, measured on staging 2026-08-18 —
+ * and `/staff/reports` derives Avg Basket Value from the same two numbers, so
+ * one missing filter made all three tiles wrong.
+ *
+ * Written as a literal and NOT derived from `STAFF_QUEUE_STATUSES`, which is the
+ * tempting one-liner and is wrong: that constant is a staff WORKLIST and
+ * deliberately omits `DELIVERED` — the status most certain to be real revenue.
+ * The two sets answer different questions and must not be expressed in terms of
+ * each other.
+ *
+ * When refunds land (ADR-005 territory, still undecided — see #137/#151), a
+ * refunded order will need to leave this set. There is no refund path today, so
+ * there is nothing to exclude yet.
+ */
+export const REVENUE_STATUSES = ["CONFIRMED", "OUT_FOR_DELIVERY", "DELIVERED"] as const;
+
 // ---- Staff-facing timeline (P6a, #158) -------------------------------------
 
 /**

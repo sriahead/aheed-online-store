@@ -8,15 +8,19 @@ vi.mock("@/lib/db", () => ({ getPrisma: vi.fn() }));
 vi.mock("@/lib/tenant", () => ({ getCurrentVendorId: vi.fn() }));
 // Keep the provider out of these tests: they assert what the ORDER TRANSACTION
 // writes. The adapter itself is covered by tests/payments.test.ts.
+// Hoisted so an individual test can swap in a failing provider (P7.5a, #234)
+// without changing the default any other test sees.
+const paymentStub = vi.hoisted(() => {
+  const succeed = async () => ({
+    provider: "stub",
+    status: "PENDING",
+    providerReference: null,
+    redirectUrl: null,
+  });
+  return { succeed, createPayment: succeed as () => Promise<unknown> };
+});
 vi.mock("@/lib/payments", () => ({
-  getPaymentService: () => ({
-    createPayment: async () => ({
-      provider: "stub",
-      status: "PENDING",
-      providerReference: null,
-      redirectUrl: null,
-    }),
-  }),
+  getPaymentService: () => ({ createPayment: () => paymentStub.createPayment() }),
 }));
 
 const { placeOrder, CheckoutError } = await import("@/lib/repositories/orders");
@@ -46,17 +50,37 @@ type FakeState = {
   loyaltyAccount: { balancePoints: number; lastActivityAt: Date } | null;
   /** How many rows the guarded points debit claims to have updated. */
   loyaltyDebitCount: number;
+  /** How many rows releaseOrder's guarded cancel claims to have updated (P7.5a). */
+  releaseCount: number;
 };
 
 let state: FakeState;
 const created: Record<string, unknown[]> = {};
+
+/**
+ * The order's lines as `releaseOrder` and `restoreCartFromOrder` read them back.
+ * Derived from what the order transaction actually wrote rather than restated,
+ * so a change to the order lines cannot leave the compensation asserting against
+ * stale fixtures.
+ */
+function orderItemRows(): { productId: string; quantity: number }[] {
+  return (created.orderItem as { productId: string; quantity: number }[]).map((row) => ({
+    productId: row.productId,
+    quantity: row.quantity,
+  }));
+}
 
 /** Minimal Prisma double: only the calls placeOrder actually makes. */
 function fakePrisma() {
   const tx = {
     cart: { findFirst: async () => state.cart },
     product: { findMany: async () => state.products },
-    inventory: { updateMany: async () => ({ count: state.decrementCount }) },
+    inventory: {
+      updateMany: async (args: unknown) => {
+        created.inventoryUpdate.push(args);
+        return { count: state.decrementCount };
+      },
+    },
     address: {
       create: async ({ data }: { data: unknown }) => {
         created.address.push(data);
@@ -69,19 +93,40 @@ function fakePrisma() {
         created.order.push(data);
         return { id: "order-1", orderNumber: data.orderNumber };
       },
+      // P7.5a — releaseOrder's guarded cancel. count 0 means someone already
+      // handled it, which is how the real path stays idempotent.
+      updateMany: async (args: unknown) => {
+        created.orderCancelled.push(args);
+        return { count: state.releaseCount };
+      },
     },
     orderItem: {
       createMany: async ({ data }: { data: unknown[] }) => {
         created.orderItem.push(...data);
         return { count: data.length };
       },
+      // What releaseOrder reads back to return stock. Derived from what the
+      // order actually created, so the two cannot drift.
+      findMany: async () => orderItemRows(),
     },
     payment: {
       create: async ({ data }: { data: unknown }) => {
         created.payment.push(data);
         return {};
       },
+      updateMany: async (args: unknown) => {
+        created.paymentFailed.push(args);
+        return { count: 1 };
+      },
     },
+    // P7.5a — reverseRedemption / releaseCodeRedemption run inside
+    // releaseOrder's transaction. Neither has anything to reverse in these
+    // tests; they just have to be callable.
+    discountRedemption: {
+      findFirst: async () => null,
+      deleteMany: async () => ({ count: 0 }),
+    },
+    discountCode: { updateMany: async () => ({ count: 0 }) },
     orderStatusEvent: {
       create: async ({ data }: { data: unknown }) => {
         created.statusEvent.push(data);
@@ -107,6 +152,8 @@ function fakePrisma() {
         created.loyaltyEntry.push(data);
         return {};
       },
+      // reverseRedemption looks for a REDEEM to reverse; these tests have none.
+      findUnique: async () => null,
     },
   };
   return {
@@ -116,6 +163,22 @@ function fakePrisma() {
       update: async ({ data }: { data: unknown }) => {
         created.paymentUpdate.push(data);
         return {};
+      },
+    },
+    // P7.5a (#234) — restoreCartFromOrder runs OUTSIDE releaseOrder's
+    // transaction, so these are top-level, not on `tx`.
+    orderItem: { findMany: async () => orderItemRows() },
+    cartItem: {
+      createMany: async ({
+        data,
+        skipDuplicates,
+      }: {
+        data: unknown[];
+        skipDuplicates?: boolean;
+      }) => {
+        created.cartRestored.push(...data);
+        created.cartRestoreOptions.push({ skipDuplicates });
+        return { count: data.length };
       },
     },
   } as never;
@@ -156,6 +219,11 @@ beforeEach(() => {
     "paymentUpdate",
     "loyaltyDebit",
     "loyaltyEntry",
+    "inventoryUpdate",
+    "orderCancelled",
+    "paymentFailed",
+    "cartRestored",
+    "cartRestoreOptions",
   ]) {
     created[key] = [];
   }
@@ -177,7 +245,10 @@ beforeEach(() => {
     },
     loyaltyAccount: null,
     loyaltyDebitCount: 1,
+    releaseCount: 1,
   };
+  // Every test starts with a provider that works; the #234 cases opt out.
+  paymentStub.createPayment = paymentStub.succeed;
 });
 
 describe("placeOrder — buyer identity (R5)", () => {
@@ -615,5 +686,91 @@ describe("placeOrder — loyalty redemption (R28-R35)", () => {
     await placeOrder(fakePrisma(), VENDOR, { ...withBalance(500), redeemPoints: 300 });
     // Payment.amountPence is what Stripe is eventually asked for.
     expect((created.payment[0] as Record<string, number>).amountPence).toBe(2000 - 300 + 349);
+  });
+});
+
+/**
+ * P7.5a (#234) — the payment-provider failure path.
+ *
+ * placeOrder clears the cart INSIDE the order transaction (deliberately: it is
+ * what makes a double submit safe). When createPayment then fails, the order is
+ * cancelled and its stock returned — but until this slice the cart was left
+ * empty while the error told the shopper "please try again", which they could
+ * not do. Observed on staging with a 17-item basket.
+ */
+describe("placeOrder — payment provider unavailable", () => {
+  const failProvider = () => {
+    paymentStub.createPayment = async () => {
+      throw new Error("stripe unreachable");
+    };
+  };
+
+  it("throws PAYMENT_PROVIDER_FAILED", async () => {
+    failProvider();
+    await expect(placeOrder(fakePrisma(), VENDOR, input())).rejects.toMatchObject({
+      code: "PAYMENT_PROVIDER_FAILED",
+    });
+    await expect(placeOrder(fakePrisma(), VENDOR, input())).rejects.toBeInstanceOf(CheckoutError);
+  });
+
+  it("puts the cart back, matching the cancelled order's lines exactly", async () => {
+    failProvider();
+    await expect(placeOrder(fakePrisma(), VENDOR, input())).rejects.toThrow();
+
+    // The order captured 2x p1, so that is precisely what returns to the cart.
+    expect(created.cartRestored).toEqual([
+      { cartId: "cart-1", vendorId: VENDOR, productId: "p1", quantity: 2 },
+    ]);
+  });
+
+  it("restores into the ORIGINAL cart, not a new one", async () => {
+    failProvider();
+    await expect(placeOrder(fakePrisma(), VENDOR, input({ cartId: "cart-99" }))).rejects.toThrow();
+
+    for (const row of created.cartRestored as { cartId: string }[]) {
+      expect(row.cartId).toBe("cart-99");
+    }
+  });
+
+  it("still cancels the order, fails the payment and returns the stock", async () => {
+    failProvider();
+    await expect(placeOrder(fakePrisma(), VENDOR, input())).rejects.toThrow();
+
+    // P3c's R7 compensation must be untouched by the cart restore.
+    expect(created.orderCancelled).toHaveLength(1);
+    expect(created.paymentFailed).toHaveLength(1);
+    // One guarded decrement at creation, one increment on release.
+    const increments = (created.inventoryUpdate as { data?: { quantity?: unknown } }[]).filter(
+      (call) => JSON.stringify(call.data ?? {}).includes("increment"),
+    );
+    expect(increments).toHaveLength(1);
+  });
+
+  it("skips duplicates rather than colliding on the cart's unique constraint", async () => {
+    failProvider();
+    await expect(placeOrder(fakePrisma(), VENDOR, input())).rejects.toThrow();
+
+    // CartItem is unique on [cartId, productId]. If the shopper re-added the
+    // product in the meantime, their newer row wins and this must not throw.
+    expect(created.cartRestoreOptions).toEqual([{ skipDuplicates: true }]);
+  });
+
+  it("does NOT restore the cart when releaseOrder found nothing to cancel", async () => {
+    failProvider();
+    state.releaseCount = 0; // already CONFIRMED or already CANCELLED elsewhere
+    await expect(placeOrder(fakePrisma(), VENDOR, input())).rejects.toThrow();
+
+    // `count === 0` means the order was not this call's to cancel. If it had
+    // been confirmed by a racing webhook, refilling the cart would hand the
+    // shopper a duplicate basket for an order they actually paid for — a worse
+    // failure than the empty cart #234 is about.
+    expect(created.cartRestored).toEqual([]);
+  });
+
+  it("leaves the cart alone when the provider succeeds", async () => {
+    await expect(placeOrder(fakePrisma(), VENDOR, input())).resolves.toMatchObject({
+      orderNumber: expect.any(String),
+    });
+    expect(created.cartRestored).toEqual([]);
   });
 });
