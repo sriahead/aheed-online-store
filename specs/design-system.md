@@ -4,7 +4,7 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.7.0"
+version: "1.7.1"
 updated: 2026-08-19
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
@@ -23,17 +23,25 @@ Two-layer tokens: **primitive** (exact brand-kit hex, never referenced directly 
 **semantic** (what components actually use — `bg-action`, `text-primary`, etc.), so a future
 palette revision only touches the primitive → semantic mapping, not every component.
 
-> **Tokens are overridable per vendor at runtime (ADR-004 slice 4).** The `tokens.css` values are the
-> **default (Aheed) vendor's** palette. The storefront layout injects the resolved vendor's colours as
-> inline CSS custom properties on a wrapper element per request, recolouring the whole storefront with
-> **no token or component change**. It must override **both layers**: the eight `--color-brand-*`
-> primitives **and** the semantic tokens (`--color-primary`, `--color-action`, …) — because Tailwind v4
-> emits the semantic tokens at `:root` as `var(--color-brand-*)` and the browser resolves that inner
-> `var()` *at `:root`*, freezing the semantic value to the default palette; overriding only a primitive
-> on a descendant never re-flows into it. The wrapper re-declares the semantic tokens with the same
-> primitive→semantic mapping this file defines, so they resolve against the vendor's palette. The
-> ~15%-darker hover shades are derived per vendor via `color-mix()` (no `VendorBranding` column needed).
-> A named theme *catalogue* is deferred (#75).
+> **Tokens are overridable per vendor at runtime (ADR-004 slice 4) — but only where `tokens.css`
+> still defines the semantic token as a `var()` alias of a primitive.** The storefront/admin layouts
+> inject the resolved vendor's colours as inline CSS custom properties on a wrapper element per
+> request (`lib/vendor-theme.ts`'s `brandStyle()`), recolouring parts of the app with no token or
+> component change. It overrides the eight `--color-brand-*` primitives, plus `--color-primary`,
+> `--color-surface-muted` and the three semantic tints (`--color-action-tint` etc.) — because
+> Tailwind v4 emits those as `var(--color-brand-*)` at `:root`, and the browser resolves that inner
+> `var()` *where the property is declared*, freezing the semantic value to the default palette unless
+> a descendant re-declares the same alias against its own overridden primitive. **It does NOT
+> override `--color-action`, `--color-accent`, `--color-danger` or their hover shades** — P7 closeout
+> (#251/#217) decoupled those five into independent, WCAG-AA-audited literal values (see below), and
+> `brandStyle()` re-declaring them from a vendor's raw primitive was found at `/validate` to be
+> silently overwriting the audited fix on every real page (an inline style always beats a stylesheet
+> rule); corrected at `/fix` by removing them from `brandStyle()`'s per-vendor list. **Consequence:**
+> those five tokens are now fixed platform-wide for every vendor — SriMart's own action/accent/danger
+> primitives no longer drive its buttons/alerts, trading its prior (never contrast-audited)
+> differentiation for a real AA guarantee. Whether/how per-vendor differentiation comes back with a
+> contrast guarantee is an open decision, tracked as **#255**. A named theme *catalogue* is deferred
+> (#75).
 
 | Primitive | Hex | Semantic | Semantic value | Role |
 |---|---|---|---|---|
