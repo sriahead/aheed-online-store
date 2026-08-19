@@ -111,7 +111,9 @@ export async function Header() {
         <div className="flex items-center gap-3 shrink-0">
           <Link href="/" className="flex items-center gap-2.5 group text-left">
             {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
+              // Plain <img> by decision — see #46 / eslint.config.mjs. NOTE: this logo is
+              // the storefront's dominant byte cost (1.9 MB, 83% of page weight, rendered
+              // into a 40px box) and the whole of the ~12s LCP breach — tracked as #243.
               <img
                 src={logoUrl}
                 alt={`${name} — Your Local Store`}
