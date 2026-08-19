@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.18.0"
-updated: 2026-08-18
+version: "2.19.0"
+updated: 2026-08-19
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -346,6 +346,11 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   on the real (Linux) CI runner. When local and CI disagree, CI is the authority; verify by diffing
   against the actual committed git blob (`git show HEAD:<file>`) before treating a flagged file as
   real drift.
+- **If the slice touches `docs/*.md` or `specs/*.md`, that local suite is not the fast pre-flight
+  it looks like — none of `lint`/`build`/`test` build the internal KMS docs site, and a defect
+  there merges clean and only fails on the next push.** See `CLAUDE.md`'s "KMS docs" section
+  (added at P7d's `/document`, #218, after exactly this happened): `npm run kms:assemble:internal
+  && (cd kms/site-internal && npx next build --webpack)` is the real check for those directories.
 - Walk **every row** of `validation.md`, not just the generic lint/test/build commands. A row that
   can't be checked in this environment is reported as unverified, with the reason — never quietly
   marked as passing.

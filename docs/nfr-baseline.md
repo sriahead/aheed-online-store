@@ -4,7 +4,7 @@ title: NFR Baseline — measured performance against the Gate-3 targets
 audience: [dev]
 type: doc
 status: approved
-version: "1.0.0"
+version: "1.1.0"
 updated: 2026-08-19
 visibility: internal
 summary: The first real measurements of this app against mission.md's LCP and API p95 targets, plus the index/query review behind them — including a 4.7x LCP breach caused by a 1.9 MB vendor logo and a production logo that 404s.
@@ -291,9 +291,15 @@ above.** Both were attempted and both are blocked in this environment:
 
 Validation runs *before* the staging merge, so a check demanding post-deploy evidence at Gate 3 is
 unverifiable by construction. This is recorded in the slice's `requirements.md` as **R2a** and
-**R22a**, and the confirmation itself is a **Ship-stage step**: after `deploy-staging` completes,
-confirm persisted logs are arriving, and re-run #236's pattern C with server-side records to settle
-the attribution left open above.
+**R22a**, and the confirmation itself was named a **Ship-stage step**.
+
+**Attempted at Ship (2026-08-19), after `deploy-staging` and `deploy-production` both succeeded —
+still blocked, both documented routes:** `wrangler tail` failed the same way as above (`fetch
+failed`, even with an explicit `CLOUDFLARE_API_TOKEN` and real traffic generated concurrently), and
+the Cloudflare dashboard fallback required an interactive login unavailable to the session doing
+the deploy. **Filed as #246** rather than left as an implicit Ship-stage promise — confirming
+persisted logs are arriving, and re-running #236's pattern C with server-side records, are both
+still open and need an environment that can reach Cloudflare's tail API or a human dashboard login.
 
 ## Issues opened or updated by this baseline
 
