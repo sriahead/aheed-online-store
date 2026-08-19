@@ -4,7 +4,7 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.15.0"
+version: "1.16.0"
 updated: 2026-08-19
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
@@ -345,6 +345,18 @@ database rather than the app.
   (server-rendered per request, same as the auth pages) until a caching layer that doesn't require
   Node-side Prisma execution is added — the edge KV option below, or Cloudflare's own edge cache in
   front of the Worker.
+- **Cloudflare's edge cache in front of the Worker is not a future option — it is already active,
+  and it required an explicit opt-out for the admin panel** (P7.5a, #237). The bullet above lists it
+  as something that *could* be added; in fact `/staff/reports` was measured serving a signed-in
+  admin stale financial figures on staging (£2,982.02/109 cached against £3,003.49/110 uncached,
+  the database agreeing with the uncached read) while the page was `force-dynamic` and Next was
+  therefore not the cache. The app emitted **no `Cache-Control` at all**, which leaves an
+  intermediary free to choose its own policy. Every `/staff/:path*` response now carries
+  `private, no-store, must-revalidate` from `next.config.mjs`'s `headers()`. The general rule this
+  establishes: **a route whose response is per-session or role-gated must state its cacheability
+  explicitly** — `force-dynamic` governs Next's rendering, not what sits in front of the Worker, and
+  the two are easy to confuse because the symptom (a stale page) looks identical. Storefront routes
+  are deliberately left cacheable.
 - Optional **edge KV** for hot reads (categories, homepage rails) behind a `CacheService` port; if
   absent it falls through to the DB. KV ↔ Redis is a one-file swap.
 - The **database is always the source of truth**; caches are accelerators with explicit TTLs and
