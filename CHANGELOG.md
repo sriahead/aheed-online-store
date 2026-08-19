@@ -36,6 +36,12 @@ every branch merges.
   `specs/tech-stack.md` still presented Next.js Data Cache / ISR as the catalogue caching strategy,
   which `specs/architecture.md` has documented as unworkable on this stack since P2a — whichever
   document a reader opened first decided what they believed.
+- **A `<1%` table cell in `docs/nfr-baseline.md` broke the internal KMS docs site build.** MDX
+  parses a bare `<` followed by a digit as the start of an invalid JSX tag name, which failed
+  `deploy-docs-internal`'s Nextra build the moment this doc was assembled into the site. Reworded
+  to "under 1%"; the app's own `gates`/`build` never touch this pipeline, so the app-level slice
+  PR's CI stayed green while this broke on the next push. Found and fixed at `/ship` for #218
+  (PR #245/#247).
 
 ### Changed
 - **#46 settled: keep plain `<img>`.** Cloudflare Image Transformations are **not enabled** on this

@@ -102,7 +102,7 @@ image. It is bandwidth starvation:
 | `vendors/…/logo.png` | **1,926,055** | **83%** |
 | a product `.webp` | 144,518 | 6% |
 | largest JS chunk | 65,255 | 3% |
-| the HTML document | 14,825 | <1% |
+| the HTML document | 14,825 | under 1% |
 
 At the simulated 1,474 Kbps downlink, 1.9 MB alone takes **~10.5 s** — which accounts for
 essentially the whole LCP figure. Supporting evidence that the app itself is not slow: FCP is
