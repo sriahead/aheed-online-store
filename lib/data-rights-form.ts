@@ -101,3 +101,84 @@ export function erasureSummary(identityDeleted: boolean, ordersAnonymised: numbe
     ? `Your data has been erased and your sign-in has been deleted. ${orders}, with your name and address removed.`
     : `Your data at this store has been erased. ${orders}, with your name and address removed. Your sign-in still works at the other store you shop with.`;
 }
+
+// ---------------------------------------------------------------------------
+// Guest erasure (P7 closeout, #251 / #222)
+// ---------------------------------------------------------------------------
+
+/**
+ * The typed confirmation a guest must supply before an order's personal data is
+ * erased. Same reasoning as the account-holder confirmations above: deliberate
+ * friction on an irreversible action, so "close enough" is not the standard.
+ *
+ * A fixed word rather than the guest's own email, which they have already had to
+ * type once to be shown the order at all — asking for it a second time would
+ * look like a control while adding nothing.
+ */
+export const GUEST_ERASE_CONFIRMATION = "ERASE";
+
+export interface GuestErasureFields {
+  orderNumber: string;
+  email: string;
+}
+
+export type ParsedGuestErasure =
+  { ok: true; value: GuestErasureFields } | { ok: false; state: DataRightsFormState };
+
+/**
+ * Validate the guest erasure submission's shape — before anything touches a
+ * database or a rate limiter.
+ *
+ * This decides only whether the form was filled in, never whether the pair is
+ * genuine: proving the order-number/email pair happens at the query level in
+ * `eraseGuestOrderData`, so that no caller can skip it.
+ */
+export function parseGuestErasure(
+  orderNumber: string | null,
+  email: string | null,
+  confirmation: string | null,
+): ParsedGuestErasure {
+  const trimmedOrder = (orderNumber ?? "").trim();
+  const trimmedEmail = (email ?? "").trim();
+
+  if (!trimmedOrder || !trimmedEmail) {
+    return {
+      ok: false,
+      state: {
+        error: "Look up your order first, then request erasure from the result.",
+        field: null,
+        done: null,
+      },
+    };
+  }
+
+  if ((confirmation ?? "").trim() !== GUEST_ERASE_CONFIRMATION) {
+    return {
+      ok: false,
+      state: {
+        error: `Type ${GUEST_ERASE_CONFIRMATION} to confirm. This cannot be undone.`,
+        field: "confirmErase",
+        done: null,
+      },
+    };
+  }
+
+  return { ok: true, value: { orderNumber: trimmedOrder, email: trimmedEmail } };
+}
+
+/**
+ * What a guest is told after a successful erasure.
+ *
+ * States the one-order scope explicitly. A guest with several orders has to
+ * repeat the flow, and discovering that by noticing another order still carries
+ * their address would be exactly the promise/behaviour mismatch this slice
+ * exists to remove.
+ */
+export function guestErasureSummary(orderNumber: string): string {
+  return (
+    `The personal details on order ${orderNumber} have been erased — the delivery name, ` +
+    `address and phone number are removed and the email is unlinked. The order itself is kept ` +
+    `as an anonymised financial record, which the law requires. This covers this one order; ` +
+    `if you placed others as a guest, look each one up and erase it the same way.`
+  );
+}

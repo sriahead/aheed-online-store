@@ -5,6 +5,7 @@ import { getCurrentVendorId } from "@/lib/tenant";
 import { getGuestOrderLookupService, type GuestLookupOrder } from "@/lib/repositories/orders";
 import { checkOrderLookupRateLimit } from "@/lib/repositories/order-lookup-rate-limit";
 import { formatPrice } from "@/components/product/format-price";
+import { GuestEraseForm } from "@/components/orders/GuestEraseForm";
 import { Package, Truck, CheckCircle2, Search, MapPin, AlertCircle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -238,6 +239,13 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                 <span className="text-primary">{formatPrice(orderResult.totalPence)}</span>
               </div>
             </div>
+
+            {/*
+              Art. 17 for guests (#251 / #222). Rendered only under a proven
+              order-number/email pair — the same credential the lookup required —
+              and the action re-proves it rather than trusting these fields.
+            */}
+            <GuestEraseForm orderNumber={orderResult.orderNumber} email={email.trim()} />
           </div>
         )}
       </div>

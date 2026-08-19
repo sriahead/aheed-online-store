@@ -5,6 +5,9 @@ import {
   erasureSummary,
   initialDataRightsState,
   parseDisplayName,
+  parseGuestErasure,
+  guestErasureSummary,
+  GUEST_ERASE_CONFIRMATION,
 } from "@/lib/data-rights-form";
 
 /**
@@ -110,5 +113,78 @@ describe("erasureSummary", () => {
 describe("initialDataRightsState", () => {
   it("starts clean", () => {
     expect(initialDataRightsState).toEqual({ error: null, field: null, done: null });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Guest erasure (P7 closeout, #251 / #222)
+// ---------------------------------------------------------------------------
+
+describe("parseGuestErasure", () => {
+  const ok = (c: string | null = GUEST_ERASE_CONFIRMATION) =>
+    parseGuestErasure("AHE-20260813-K4M2XQ", "shopper@example.com", c);
+
+  it("accepts a complete submission with the exact confirmation word", () => {
+    const result = ok();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.orderNumber).toBe("AHE-20260813-K4M2XQ");
+      expect(result.value.email).toBe("shopper@example.com");
+    }
+  });
+
+  it("trims surrounding whitespace a paste tends to add", () => {
+    const result = parseGuestErasure(
+      "  AHE-20260813-K4M2XQ  ",
+      "  shopper@example.com  ",
+      GUEST_ERASE_CONFIRMATION,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.email).toBe("shopper@example.com");
+  });
+
+  it("refuses a missing order number or email rather than erasing something else", () => {
+    expect(parseGuestErasure(null, "shopper@example.com", GUEST_ERASE_CONFIRMATION).ok).toBe(false);
+    expect(parseGuestErasure("AHE-1", null, GUEST_ERASE_CONFIRMATION).ok).toBe(false);
+    expect(parseGuestErasure("   ", "shopper@example.com", GUEST_ERASE_CONFIRMATION).ok).toBe(
+      false,
+    );
+  });
+
+  it("refuses a wrong, empty or lowercase confirmation", () => {
+    // Deliberate friction on an irreversible action — "close enough" is not the
+    // standard, so the lowercase spelling must fail too.
+    for (const attempt of [null, "", "erase", "ERASE ME", "yes"]) {
+      const result = ok(attempt);
+      expect(result.ok, `"${attempt}" should not confirm an erasure`).toBe(false);
+      if (!result.ok) expect(result.state.field).toBe("confirmErase");
+    }
+  });
+
+  it("points the error at the confirmation control, not the whole form", () => {
+    const result = ok("nope");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.state.field).toBe("confirmErase");
+      expect(result.state.error).toContain(GUEST_ERASE_CONFIRMATION);
+      expect(result.state.done).toBeNull();
+    }
+  });
+});
+
+describe("guestErasureSummary", () => {
+  const summary = guestErasureSummary("AHE-20260813-K4M2XQ");
+
+  it("names the order it acted on", () => {
+    expect(summary).toContain("AHE-20260813-K4M2XQ");
+  });
+
+  it("states the one-order scope, so a guest with others is not misled", () => {
+    expect(summary).toMatch(/this one order/i);
+    expect(summary).toMatch(/if you placed others/i);
+  });
+
+  it("says the order itself is retained rather than implying full deletion", () => {
+    expect(summary).toMatch(/anonymised financial record/i);
   });
 });

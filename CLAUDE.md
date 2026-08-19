@@ -303,8 +303,21 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   this "convenience" reason, `build-notes.md` disclosed two smaller deviations from spec but not this
   one, and `/validate` caught it by running `validation.md`'s own R2 probe rather than re-deriving
   it. Fixed at `/fix` by moving it to `lib/data-rights-service.ts`; the facade also became a plain
-  sync factory (matching `getCartRepository` et al.) once it no longer needed a dynamic `import()` to
-  stay loadable by the same file a `tsx` script has to import.
+  sync factory once it no longer needed a dynamic `import()` to stay loadable by the same file a
+  `tsx` script has to import.
+- **`getCartRepository` et al. are the right SHAPE but the wrong LOCATION — copy the shape, not the
+  address.** This rule previously pointed at `getCartRepository` as the thing to match, without
+  saying which part, and that sentence was self-defeating: `getCartRepository` lives *inside*
+  `lib/repositories/cart.ts`, which is exactly what the rule forbids. A reader following it
+  literally reproduced the defect. **Nine facade factories are known non-compliant** —
+  `getCartRepository`, `getCategoryRepository`, `getDiscountRepository`, `getLoyaltyRepository`,
+  `getOrderRepository`, `getWebhookOrderService`, `getGuestOrderLookupService`,
+  `getProductRepository`, `getReviewRepository` — across seven files. `lib/repositories/data-rights.ts`
+  is the only compliant one. Tracked as **#252**; the P7 closeout slice (#251) corrected this wording
+  only, because moving nine factories and every call site is a refactor of its own. Until #252 lands,
+  the compliant examples to copy are `lib/data-rights-service.ts` and `lib/auth-rbac.ts`.
+  `tests/repository-vendor-scoping.test.ts` allowlists all nine by name with their reasons, so the
+  list cannot quietly grow.
 
 ## Staff panel pages (`app/(admin)/staff/*`) — learned the hard way
 - **Every page's `requireVendorRole(...)` refusal branch must render `<PanelRefusal>` — never

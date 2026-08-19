@@ -95,6 +95,23 @@ export default async function PrivacyPage() {
             other stores, your sign-in is deleted too.
           </p>
           <p className="text-sm text-primary/80 leading-relaxed">
+            <strong>If you checked out as a guest.</strong> You do not need an account to exercise
+            these rights. Look your order up at{" "}
+            <Link href="/orders/lookup" className="font-medium underline">
+              track your order
+            </Link>{" "}
+            using the order number and the email address you gave at checkout — that shows you
+            everything we hold about the order, and lets you erase the personal details on it. We
+            ask for both the order number and the email because either one on its own is not proof
+            the order is yours; households often share a mailbox.
+          </p>
+          <p className="text-sm text-primary/80 leading-relaxed">
+            Guest erasure covers <strong>one order per request</strong>. If you placed several
+            orders as a guest, look each one up and erase it the same way. As above, the order
+            itself is kept as an anonymised financial record with your name, address and phone
+            number removed.
+          </p>
+          <p className="text-sm text-primary/80 leading-relaxed">
             Each of our stores holds its own records, so erasing your data here does not affect an
             account you hold with another store on this platform. Payments are processed by Stripe,
             which keeps its own transaction records under its own privacy policy; erasing your data
