@@ -347,6 +347,34 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   kms:assemble:internal && (cd kms/site-internal && npx next build --webpack)` — not just the root
   `lint`/`build`.
 
+## Design tokens & per-vendor branding (`design-system/tokens/tokens.css`, `lib/vendor-theme.ts`) — learned the hard way
+- **A jsdom test that parses `tokens.css` directly proves the file is right — it proves nothing
+  about what a browser actually renders, because `lib/vendor-theme.ts`'s `brandStyle()` injects a
+  second, competing set of CSS custom properties as an inline `style` on every page's root element
+  (ADR-004 decision 5, per-vendor branding), and an inline style always beats a `:root` stylesheet
+  rule on specificity.** `brandStyle()` re-declares each semantic token it lists from that vendor's
+  raw primitive colour — correct for `--color-primary`/`--color-surface-muted`/the three semantic
+  tints, which really are simple `var()` aliases of a primitive in `tokens.css` and need the
+  per-element re-declaration to pick up an override at all (a custom property's `var()` substitutes
+  once, where the property is *declared* — a descendant overriding the referenced primitive does not
+  make an ancestor's already-computed alias recompute). It is **wrong** for any semantic token
+  `tokens.css` has decoupled into an independent literal value, because re-declaring it from a
+  primitive silently reintroduces whatever `tokens.css` moved away from. Hit in P7 closeout (#251):
+  darkening `--color-action`/`--color-accent`/`--color-danger` (plus hover shades) for WCAG AA
+  landed cleanly in `tokens.css` and its contrast test passed, but every real page kept rendering the
+  pre-slice, AA-*failing* hex — found only by pulling live rendered HTML from `npm run preview`
+  against staging at `/validate`, not from the test suite. **Before trusting a `tokens.css` edit,
+  check whether `brandStyle()` also lists the token being changed** — if it does and the change is
+  meant to be a fixed, audited constant rather than something that should keep tracking a vendor's
+  brand colour, remove it from `brandStyle()`'s per-vendor list too, or the CSS file's value never
+  reaches a browser.
+- **SriMart's `VendorBranding` primitives are real, live-differentiated colours (`#1e88e5` blue,
+  `#8e24aa` purple, `#c62828` red), not filler test data** — a change that assumes every vendor
+  looks like Aheed's default green/orange/red will visibly break SriMart's theme, and nothing in
+  `lint`/`typecheck`/`test` checks a second vendor's rendered output. Curl or otherwise fetch a page
+  with `Host: srimart-staging.nocaped.com` (or `srimart.nocaped.com` in production) under
+  `npm run preview` before treating a branding/token change as verified.
+
 ## Hard stops
 - Never invent infrastructure or credentials. If a resource/secret is missing, STOP and list what
   the human must create.

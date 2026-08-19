@@ -6,6 +6,20 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+- **`/document` closeout for P7 closeout (#251, PRs #256/#257, now in production) — P7 is closed.**
+  Roadmap gains the build/validate/fix, staging-merge and promotion rows, plus a phase-closure
+  summary. `CLAUDE.md` gains a new "Design tokens & per-vendor branding" section recording the
+  `brandStyle()` trap `/validate` found (a jsdom test that parses `tokens.css` directly proves
+  nothing about what a browser renders when a parallel per-vendor CSS-injection mechanism can
+  silently override the same tokens). `specs/design-system.md`'s per-vendor-theming note corrected
+  to match verified reality — it previously said both the primitive and semantic layers are
+  overridden per vendor; only primitives, `--color-primary`/`--color-surface-muted` and the three
+  semantic tints are, since the `/fix` that landed with #251. Delivery board reconciled: #251/#217/
+  #220/#222/#90 confirmed `Done`; #252/#253/#254/#255 (all filed during this slice or its `/fix`)
+  given **Phase P8** so they don't sit unscheduled and un-phased. `ARTIFACT_INDEX.md` rebuilt;
+  `npm run sdd:audit` and `npm run kms:validate` both clean.
+
 ### Added
 - **P7 closeout — accessibility gate, RLS determination, guest data rights** (#251, closing #217,
   #220, #222 and the phase epic #90, `specs/2026-08-19-p7-closeout/`). One combined slice, decided
