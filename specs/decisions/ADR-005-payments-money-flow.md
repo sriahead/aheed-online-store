@@ -4,8 +4,8 @@ title: "ADR-005 — Payments & multi-vendor money flow"
 audience: [dev]
 type: adr
 status: approved
-version: "1.3.0"
-updated: 2026-08-11
+version: "1.4.0"
+updated: 2026-08-19
 visibility: internal
 summary: Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite.
 tags: [adr, payments, stripe, multi-tenancy, compliance]
@@ -125,6 +125,35 @@ One consequence worth recording for a future refund path: a *paid* order's code 
 be returned, because `releaseOrder` acts only on `PENDING_PAYMENT` orders. That is the same
 structural reason #137 gives for earn reversal, and it is tracked as #151 rather than solved here —
 refunds are this ADR's territory, and the decision belongs with them.
+
+## Implementation note (P7.5a, 2026-08-19, #234)
+
+**The payment-failure compensation restores the shopper's cart as well as the stock.** P3c's note
+above describes that path as releasing stock; that was the whole of it, and it was incomplete in a
+way that only showed up in front of a real shopper. `placeOrder` clears the cart *inside* the
+order-creating transaction — deliberately, because that is what makes a double submit safe (the
+second attempt finds `CART_EMPTY`) — so when `createPayment` then throws, the order is cancelled and
+its stock, points and discount-code use are all returned, while the basket stays deleted. The error
+copy tells the shopper "Nothing has been charged — please try again", and trying again was
+impossible: they landed on an empty cart and had to rebuild it item by item. Observed on staging
+with a 17-item basket during #103's deliberate payment-failure window.
+
+`restoreCartFromOrder` now re-inserts the cancelled order's lines into the originating cart.
+
+**Two constraints on that function that are easy to undo by tidying it up:**
+
+1. **It is called from `placeOrder`'s `catch`, not from inside `releaseOrder`,** even though the
+   rest of the compensation lives there and moving it would look like obvious consolidation.
+   `releaseOrder` is shared with the Stripe webhook, which cancels orders whose Checkout session
+   *expired* — typically hours later, with the shopper long gone and possibly a new basket already
+   built. Restoring a cart there resurrects a stale basket rather than repairing anything.
+2. **It runs only when `releaseOrder` actually cancelled the order** (`count === 1`). A `false`
+   return means the order was already `CONFIRMED` or already `CANCELLED` by someone else; refilling
+   the cart for an order that turned out to be *paid* would hand the shopper a duplicate basket,
+   which is a worse failure than the empty one this fixes.
+
+Nothing here reopens a decision — the money flow is unchanged. It records what the compensation path
+now does, so a future reader does not infer from the P3c note that stock is all it covers.
 
 ## Deferred upgrade — Stripe Connect
 

@@ -55,6 +55,30 @@ const nextConfig = {
           },
         ],
       },
+      // P7.5a (#237). `/staff/reports` served stale financial figures to a
+      // signed-in admin despite `export const dynamic = "force-dynamic"` — so
+      // Next was not the cache; something in front of the Worker was. Measured
+      // on staging seconds apart: £2,982.02/109 cached vs £3,003.49/110 with a
+      // cachebust, the database agreeing with the UNCACHED figure. Nothing in
+      // this app emitted any Cache-Control at all, which leaves an intermediary
+      // free to invent one.
+      //
+      // Scoped to the whole panel rather than just the reports page on purpose:
+      // every /staff/* route is per-vendor, role-gated, mutable operational
+      // data, and a cached packing queue on /staff/orders is the same defect
+      // with worse consequences. `private` because these responses are
+      // per-session; `no-store` because there is no version of them worth
+      // keeping. Storefront routes are deliberately untouched — they benefit
+      // from edge caching and carry no per-session data.
+      {
+        source: "/staff/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "private, no-store, must-revalidate",
+          },
+        ],
+      },
     ];
   },
 };

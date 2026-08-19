@@ -8,6 +8,7 @@ import {
   buildTimeline,
   canTransition,
   isOrderStatus,
+  REVENUE_STATUSES,
   STAFF_QUEUE_STATUSES,
   type OrderStatusValue,
   type StaffTimelineEntry,
@@ -379,12 +380,24 @@ export async function placeOrder(
       redirectUrl: intent.redirectUrl,
     };
   } catch (error) {
-    await releaseOrder(
+    const cancelled = await releaseOrder(
       prisma,
       vendorId,
       created.orderId,
       "Payment provider unavailable; order cancelled and stock released.",
     );
+    // The message below tells the shopper to try again, so the basket they were
+    // about to buy has to still exist (P7.5a, #234). The transaction above
+    // cleared it, and everything else that transaction did has just been undone
+    // by releaseOrder — the cart was the one piece of the compensation missing.
+    //
+    // Guarded on releaseOrder actually having cancelled: `false` means the order
+    // was already CONFIRMED or already CANCELLED by someone else. Refilling the
+    // cart for an order that turned out to be PAID would hand the shopper a
+    // duplicate basket, which is a worse failure than the empty one this fixes.
+    if (cancelled) {
+      await restoreCartFromOrder(prisma, vendorId, created.orderId, input.cartId);
+    }
     throw new CheckoutError(
       "PAYMENT_PROVIDER_FAILED",
       "We couldn't reach our payment provider. Nothing has been charged — please try again.",
@@ -441,6 +454,51 @@ async function releaseOrder(
     await releaseCodeRedemption(tx, vendorId, orderId);
 
     return true;
+  });
+}
+
+/**
+ * Puts an order's lines back into the cart they came from (P7.5a, #234).
+ *
+ * `placeOrder` clears the cart INSIDE the order-creating transaction, and that
+ * placement is load-bearing — it is what makes a double submit safe, because the
+ * second attempt finds CART_EMPTY. So the cart cannot simply be cleared later;
+ * it has to be put back when the order it paid for is cancelled seconds after
+ * being created.
+ *
+ * Deliberately NOT called from `releaseOrder`, even though the rest of the
+ * compensation (stock, points, discount-code use) lives there. `releaseOrder` is
+ * shared with the Stripe webhook, which cancels orders whose Checkout session
+ * EXPIRED — typically hours later, with the shopper long gone and quite possibly
+ * a new basket already built. Restoring a cart there would resurrect a stale
+ * basket rather than repair anything. Only `placeOrder`'s synchronous failure
+ * has a shopper waiting on the response, and only it knows which cart to refill.
+ *
+ * `skipDuplicates` rather than an upsert: `CartItem` is unique on
+ * `[cartId, productId]`, and if a row for that product somehow already exists,
+ * the shopper's own newer quantity is the one to keep, not the one this order
+ * captured.
+ */
+async function restoreCartFromOrder(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  orderId: string,
+  cartId: string,
+): Promise<void> {
+  const items = await prisma.orderItem.findMany({
+    where: { orderId },
+    select: { productId: true, quantity: true },
+  });
+  if (items.length === 0) return;
+
+  await prisma.cartItem.createMany({
+    data: items.map((item) => ({
+      cartId,
+      vendorId,
+      productId: item.productId,
+      quantity: item.quantity,
+    })),
+    skipDuplicates: true,
   });
 }
 
@@ -870,8 +928,11 @@ export function getOrderRepository(): OrderRepository {
     async getFinancialsForStaff() {
       const vId = await vendorId();
 
+      // Only orders that were actually paid for. Without the status filter this
+      // counted abandoned checkouts and cancelled orders as revenue (P7.5a,
+      // #238) — 39% overstated on staging.
       const aggregate = await prisma.order.aggregate({
-        where: { vendorId: vId },
+        where: { vendorId: vId, status: { in: [...REVENUE_STATUSES] } },
         _sum: { totalPence: true },
         _count: { id: true },
       });
