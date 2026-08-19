@@ -7,6 +7,65 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P7 closeout — accessibility gate, RLS determination, guest data rights** (#251, closing #217,
+  #220, #222 and the phase epic #90, `specs/2026-08-19-p7-closeout/`). One combined slice, decided
+  at `/propose`.
+  **Accessibility:** `eslint-plugin-jsx-a11y`'s recommended set now runs at `error` across `app/`,
+  `components/` and `features/` — `eslint-config-next` already activated six of its rules but all at
+  severity 1, so `npm run lint` exited 0 with real defects present. `CartDrawerShell` (the live cart
+  drawer) gains the keyboard half of the dialog contract it lacked: focus moved into the panel on
+  open, a `Tab`/`Shift+Tab` trap, focus restored to the cart button on close, `Escape`, and
+  `aria-labelledby` naming its own heading. Key handling sits on `document` rather than the dialog
+  container, because a container handler stops firing the moment focus leaves — which is when
+  `Escape` matters most. New `tests/a11y/*` assert all of it in jsdom.
+  **Guest UK GDPR erasure:** P7b gave account holders export, erasure and rectification; a guest who
+  checked out without an account had no route to any of them. `/orders/lookup` now offers erasure
+  behind the same order-number/email pair, rate-limited by the same limiter and budget (a fast "no
+  such order" is an oracle for guessing pairs). `eraseGuestOrderData` verifies the pair itself, at
+  the query level, inside the transaction — there is no window between proving ownership and
+  erasing. One order per request, stated up front in both the form and the confirmation.
+- **`tests/repository-vendor-scoping.test.ts`** — the compensating control for RLS. Walks each
+  repository's TypeScript AST and asserts every exported function querying a `vendorId`-bearing
+  model takes a vendor id, and that a function given one actually references it. Twelve exceptions
+  allowlisted with reasons.
+
+### Changed
+- **Three semantic colour tokens darkened for WCAG 2.2 AA** — `--color-action` `#4caf50` →
+  `#2e7d32`, `--color-accent` `#f57c00` → `#a85400`, `--color-danger` `#d32f2f` → `#c82d2d`, plus
+  both derived hover shades. The `--color-brand-*` primitives keep their exact brand-kit values;
+  only the semantic layer moved, which corrected **45-plus call sites across 20-plus files with no
+  component edits**. The brand values fail AA in combinations the UI actually renders: action and
+  accent on white at 2.78:1 and 2.70:1 (both under even the 3:1 UI threshold), and `--color-danger`
+  on `--color-danger-tint` at 4.36:1 — the standard error-message treatment at `text-sm` in
+  checkout, every account form and `OrderStatusBadge`. `tests/design-tokens-contrast.test.ts` reads
+  `tokens.css` directly and asserts 17 pairs, so a future "restore the brand colours" edit fails.
+  `specs/design-system.md` records why, and its Accessibility section — which already mandated
+  icon-only `aria-label`s, no heading skips and non-brand-green button contrast — now notes that
+  `CartDrawer.tsx` broke three of those rules while the doc stated them. Rules nobody executes are
+  not controls.
+- **ADR-004: row-level security determined NOT adoptable** (v1.4.0). Decision 2 deferred RLS to P7
+  on the guess that per-request session vars on Workers isolates would be "fiddly". Measured, it is
+  unavailable: `PrismaNeonHttp` has no session for a `SET LOCAL` GUC to live on, and the adapter
+  refuses transactions in HTTP mode outright (`Transactions are not supported in HTTP mode`) — so
+  the batched escape hatch does not exist at the adapter layer either. Adopting RLS would mean
+  routing every read through WebSockets, the configuration that caused #187. Evidence in
+  `specs/2026-08-19-p7-closeout/rls-experiment.md`, re-runnable via `scripts/rls-experiment.ts`.
+  Neon's JWT-on-connection RLS would sidestep it but is gated behind Neon Auth, which `CLAUDE.md`
+  keeps off. ADR-004 states the residual gap rather than implying parity.
+- **`CLAUDE.md`'s repository-facade rule no longer contradicts itself.** It directed facades into a
+  sibling `lib/<name>-service.ts`, then held up `getCartRepository` as the thing to match — while
+  that function's own *location* is the violation, so a reader following it literally reproduced the
+  defect. Now says to copy the shape, not the address, and names all nine non-compliant factories
+  (#252).
+
+### Removed
+- **`components/cart/CartDrawer.tsx`** — dead code. Added by P7a (`624a842`) and never imported by
+  anything, as `git log -S` confirms across all branches; the live drawer is `CartDrawerShell.tsx`,
+  rendered by `Header.tsx`. It held both violations the new accessibility gate found. #251's spec
+  originally targeted it for the dialog-semantics work, which would have asserted accessibility
+  properties of a component no user can reach.
+
+### Added
 - **P7d — Workers observability and the first NFR measurement** (#218,
   `specs/2026-08-19-p7d-observability-nfr/`). `wrangler.toml` gains a top-level `[observability]`
   block (`enabled = true`, `head_sampling_rate = 1`, inheritable by both envs) — until now there was
