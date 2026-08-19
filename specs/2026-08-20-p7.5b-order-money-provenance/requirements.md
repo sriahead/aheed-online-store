@@ -54,8 +54,17 @@ R11. When `discountPence` is `0`, `OrderItemsCard` renders no discount row of an
      from today.
 
 R12. When `discountPence` is greater than `0` and no `discountCode` is supplied, `OrderItemsCard`
-     renders exactly one row labelled `Discount`, identical to today's output — the backward path
-     for pre-P5b orders.
+     renders exactly one row, labelled as loyalty points, carrying the whole figure.
+
+     *Corrected during Build (2026-08-20).* This requirement originally demanded a generic
+     `Discount` label here, as "the backward path for pre-P5b orders" — which contradicted R10's
+     rule that a loyalty share greater than `0` renders a loyalty row, since a no-code order's
+     loyalty share **is** the whole discount. The generic case it was protecting does not exist:
+     `Order.discountPence` has exactly one writer (`placeOrder`,
+     `lib/repositories/orders.ts:248/267`), which sets it to `codeDiscountPence +
+     redemption.discountPence` and nothing else, so a non-zero discount always has at least one
+     of the two sources. An order with no code therefore has a loyalty redemption, and naming it
+     is both provable and more useful than hiding it behind a generic word.
 
 R13. A new component `components/orders/OrderPointsNote.tsx` renders: the earned figure when
      `pointsEarned` is non-null and greater than `0`; a static line containing no digits when the

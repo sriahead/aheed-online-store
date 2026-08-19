@@ -7,6 +7,7 @@ import { getAuth } from "@/lib/auth";
 import { getOrderRepository } from "@/lib/repositories/orders";
 import { formatOrderDate } from "@/lib/order-status";
 import { OrderItemsCard } from "@/components/orders/OrderItemsCard";
+import { OrderPointsNote } from "@/components/orders/OrderPointsNote";
 import { OrderAddressCard } from "@/components/orders/OrderAddressCard";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
@@ -64,10 +65,17 @@ export default async function AccountOrderPage({
 
       <OrderTimeline timeline={order.timeline} />
 
+      <OrderPointsNote
+        status={order.status}
+        pointsEarned={order.pointsEarned}
+        hasAccount={order.hasAccount}
+      />
+
       <OrderItemsCard
         items={order.items}
         subtotalPence={order.subtotalPence}
         discountPence={order.discountPence}
+        discountCode={order.discountCode}
         deliveryFeePence={order.deliveryFeePence}
         totalPence={order.totalPence}
       />

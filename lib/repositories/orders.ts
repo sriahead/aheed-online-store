@@ -502,6 +502,43 @@ async function restoreCartFromOrder(
   });
 }
 
+/**
+ * The two relations an order's money provenance is read from (P7.5b, #150/#138).
+ *
+ * One constant shared by every read that returns an `OrderSummary`, rather than
+ * the same two clauses copied into each: `getByOrderNumber`, `getForUser` and
+ * `getForStaff` all build their own select literal, and a field added to three
+ * of four places is exactly the defect this slice exists to remove.
+ *
+ * `discountUse` is `@@unique([orderId])` and `loyaltyEntries` is
+ * `@@unique([orderId, kind])`, so both yield at most one row per order.
+ */
+const ORDER_PROVENANCE_SELECT = {
+  discountUse: { select: { amountPence: true, code: { select: { code: true } } } },
+  loyaltyEntries: { where: { kind: "EARN" as const }, select: { points: true } },
+} as const;
+
+/**
+ * Shape the two provenance relations into the fields `OrderSummary` declares.
+ *
+ * Exported for the same reason `placeOrder` takes its client explicitly: the
+ * three reads that use it resolve Prisma and the vendor from request context, so
+ * this mapping could not otherwise be proven from a plain test. Pure — explicit
+ * argument in, plain object out, no request context read.
+ */
+export function toProvenance(row: {
+  discountUse: { amountPence: number; code: { code: string } } | null;
+  loyaltyEntries: { points: number }[];
+}): Pick<OrderSummary, "discountCode" | "pointsEarned"> {
+  return {
+    discountCode: row.discountUse
+      ? { code: row.discountUse.code.code, amountPence: row.discountUse.amountPence }
+      : null,
+    // Absent row → null, never 0. See the field's own note.
+    pointsEarned: row.loyaltyEntries[0]?.points ?? null,
+  };
+}
+
 export interface OrderSummary {
   orderNumber: string;
   status: string;
@@ -509,6 +546,34 @@ export interface OrderSummary {
   subtotalPence: number;
   /** P5a (#135). Zero for every pre-P5a order and for any order with no discount. */
   discountPence: number;
+  /**
+   * P7.5b (#150) — the code applied to this order, or null if none was. Since
+   * `discountPence` can combine a code AND a loyalty redemption, `amountPence`
+   * is the code's own share of it; pass both to `splitDiscount` rather than
+   * assuming the code accounts for the whole figure.
+   */
+  discountCode: { code: string; amountPence: number } | null;
+  /**
+   * P7.5b (#138) — points this order earned, from its EARN ledger row.
+   *
+   * `null` means NO EARN ROW EXISTS — the order has not been paid for yet, or it
+   * belongs to a guest, who earns nothing. Deliberately not `0`: "we have not
+   * awarded points" and "we awarded zero points" are different claims, and only
+   * the second one may be rendered as a figure.
+   */
+  pointsEarned: number | null;
+  /**
+   * P7.5b (#138) — does this order belong to a registered account?
+   *
+   * Derived from `userId`, which this type deliberately does NOT expose (a guest
+   * order's random number is its only credential — see `getByOrderNumber`). The
+   * boolean is needed because "will this order ever earn points?" cannot be
+   * answered from the viewer's session: `getByOrderNumber` refuses an OWNED
+   * order to a non-owner, but a signed-in shopper holding a guest order's
+   * capability URL passes that check, and telling them points are coming would
+   * promise what a guest order never delivers.
+   */
+  hasAccount: boolean;
   deliveryFeePence: number;
   totalPence: number;
   items: {
@@ -753,6 +818,7 @@ export function getOrderRepository(): OrderRepository {
               notes: true,
             },
           },
+          ...ORDER_PROVENANCE_SELECT,
         },
       });
       if (!order) return null;
@@ -761,8 +827,12 @@ export function getOrderRepository(): OrderRepository {
       // (random) order number is the only credential — see the spec's R19a.
       if (order.userId && order.userId !== viewerUserId) return null;
 
-      const { userId: _ownerId, ...summary } = order;
-      return summary;
+      const { userId: ownerId, discountUse, loyaltyEntries, ...summary } = order;
+      return {
+        ...summary,
+        ...toProvenance({ discountUse, loyaltyEntries }),
+        hasAccount: ownerId !== null,
+      };
     },
 
     async listForUser(userId, { take, cursor }) {
@@ -823,12 +893,19 @@ export function getOrderRepository(): OrderRepository {
           },
           // `note` is deliberately NOT selected — see buildTimeline's contract.
           statusEvents: { select: { status: true, createdAt: true } },
+          ...ORDER_PROVENANCE_SELECT,
         },
       });
       if (!order) return null;
 
-      const { statusEvents, ...summary } = order;
-      return { ...summary, timeline: buildTimeline(statusEvents) };
+      const { statusEvents, discountUse, loyaltyEntries, ...summary } = order;
+      return {
+        ...summary,
+        ...toProvenance({ discountUse, loyaltyEntries }),
+        // `userId` is in this method's WHERE, so a row here is always a member's.
+        hasAccount: true,
+        timeline: buildTimeline(statusEvents),
+      };
     },
 
     async listForStaff({ take, cursor, filter }) {
@@ -866,6 +943,7 @@ export function getOrderRepository(): OrderRepository {
           deliveryFeePence: true,
           totalPence: true,
           guestEmail: true,
+          userId: true,
           user: { select: { email: true } },
           items: {
             select: {
@@ -898,13 +976,17 @@ export function getOrderRepository(): OrderRepository {
               createdBy: { select: { name: true } },
             },
           },
+          ...ORDER_PROVENANCE_SELECT,
         },
       });
       if (!order) return null;
 
-      const { statusEvents, guestEmail, user, ...summary } = order;
+      const { statusEvents, guestEmail, user, userId, discountUse, loyaltyEntries, ...summary } =
+        order;
       return {
         ...summary,
+        ...toProvenance({ discountUse, loyaltyEntries }),
+        hasAccount: userId !== null,
         buyerEmail: guestEmail ?? user?.email ?? null,
         timeline: buildStaffTimeline(
           statusEvents.map((event) => ({
@@ -1136,6 +1218,18 @@ export interface WebhookOrder {
   buyerEmail: string | null;
   /** Null for a guest order — P5a needs it to decide whether points can be earned. */
   userId: string | null;
+  /** P7.5b (#150) — as `OrderSummary.discountCode`. */
+  discountCode: { code: string; amountPence: number } | null;
+  /**
+   * P7.5b (#138) — as `OrderSummary.pointsEarned`.
+   *
+   * Timing matters on this path: `confirmPayment` calls `findOrderForWebhook`
+   * BEFORE its transaction, so the order it works from always has `null` here.
+   * The confirmation email reads a SECOND, post-commit fetch — the webhook route
+   * re-calls `findOrder` only once `confirm` returned true — which is the one
+   * that carries the awarded figure.
+   */
+  pointsEarned: number | null;
   items: {
     productName: string;
     unitPricePence: number;
@@ -1178,12 +1272,17 @@ export async function findOrderForWebhook(
           lineTotalPence: true,
         },
       },
+      ...ORDER_PROVENANCE_SELECT,
     },
   });
   if (!order) return null;
 
-  const { guestEmail, user, ...rest } = order;
-  return { ...rest, buyerEmail: guestEmail ?? user?.email ?? null };
+  const { guestEmail, user, discountUse, loyaltyEntries, ...rest } = order;
+  return {
+    ...rest,
+    ...toProvenance({ discountUse, loyaltyEntries }),
+    buyerEmail: guestEmail ?? user?.email ?? null,
+  };
 }
 
 /**

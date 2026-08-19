@@ -7,6 +7,7 @@ import { getOrderRepository } from "@/lib/repositories/orders";
 import { getAuth } from "@/lib/auth";
 import { OrderItemsCard } from "@/components/orders/OrderItemsCard";
 import { OrderAddressCard } from "@/components/orders/OrderAddressCard";
+import { OrderPointsNote } from "@/components/orders/OrderPointsNote";
 
 export const dynamic = "force-dynamic";
 
@@ -75,10 +76,17 @@ export default async function OrderConfirmationPage({
         </p>
       )}
 
+      <OrderPointsNote
+        status={order.status}
+        pointsEarned={order.pointsEarned}
+        hasAccount={order.hasAccount}
+      />
+
       <OrderItemsCard
         items={order.items}
         subtotalPence={order.subtotalPence}
         discountPence={order.discountPence}
+        discountCode={order.discountCode}
         deliveryFeePence={order.deliveryFeePence}
         totalPence={order.totalPence}
       />
