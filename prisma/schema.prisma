@@ -487,6 +487,12 @@ model Order {
 
   @@index([vendorId, createdAt])
   @@index([vendorId, status, createdAt])
+  // P7d (#218) — order history. listForUser filters {vendorId, userId} ordered by
+  // (createdAt desc, id desc); without userId in an index Postgres can only walk the
+  // VENDOR's orders in date order and discard other customers' rows, so a shopper's
+  // history costs the store's whole order volume. specs/architecture.md §3.4 claimed an
+  // Order(userId, createdAt) index served this — it never existed.
+  @@index([vendorId, userId, createdAt])
 }
 
 // productName / unitPricePence are SNAPSHOTS at purchase time — a later price or

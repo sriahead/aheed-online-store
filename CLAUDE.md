@@ -71,6 +71,26 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
 ## Schema rules
 - Strict relational / 3NF, explicit foreign keys, provider-neutral Postgres types only.
 - **No `Json` columns / document storage** for domain data. **No raw SQL** in application code.
+- **"No raw SQL" governs application code, NOT migrations.** Confirmed and written down here in P7d
+  (#218). This was **never actually an open question** — `specs/architecture.md` §3.1 has said it
+  since the schema was written ("DDL for indexes lives in migrations, which is standard portable
+  SQL, not application queries"), and §3.1 even names `citext`/`pg_trgm` as acceptable "via portable
+  migrations". But **this file never said it**, and this file is what gets read every session, so
+  GAP-011 sat deferred behind a question that was already answered one document over. That is the
+  transferable lesson: a ruling that lives only in a doc nobody opens at decision time is not a
+  ruling. The rule's purpose is that the Prisma schema stays the single source of truth for the data
+  model and that queries stay portable; a migration is the mechanism by which the schema *becomes*
+  the database. Concretely: **DDL that Prisma generates from a
+  schema declaration is always fine** (P7d's `CREATE INDEX` came from an `@@index` line —
+  `schema.prisma` still describes it fully). **Hand-authored DDL in a migration is permitted but is
+  a deliberate exception**, and it costs something specific: for anything Prisma's schema language
+  cannot express — a `pg_trgm` trigram index (GAP-011), a row-level-security policy (#220) — the
+  schema stops describing the database, so `prisma migrate diff` can report drift that isn't drift
+  and a future `migrate dev` can propose dropping the object. So: hand-authored DDL requires a
+  comment in the migration saying what Prisma cannot express and why, and a note in the ADR or spec
+  that introduced it. What stays banned either way is raw SQL **at request time** in `app/`,
+  `features/`, `components/` or `lib/repositories/*` — that is the portability and injection
+  surface the rule was written for.
 - Money = **integer pence** + explicit currency. No floats, no `money` type.
 - Images: store a **relative key** (e.g. `products/{productId}/{uuid}.webp`), **never a URL**.
   Keys are **immutable** — replacing an image writes a new key and repoints the row, so a CDN purge

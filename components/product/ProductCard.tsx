@@ -43,9 +43,14 @@ export function ProductCard({
       {/* Image container */}
       <div className="relative aspect-4/3 w-full bg-surface-muted overflow-hidden shrink-0">
         {product.primaryImage ? (
+          // P7d (#218/#46): intrinsic dimensions so the browser can reserve the box before
+          // the bytes land. CSS still drives layout (w-full/h-full inside the aspect-4/3
+          // container) — these attributes only supply the aspect ratio.
           <img
             src={composePublicUrl(cdnBaseUrl, product.primaryImage.storageKey)}
             alt={product.primaryImage.alt}
+            width={400}
+            height={300}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
           />

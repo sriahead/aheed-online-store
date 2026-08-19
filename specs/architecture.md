@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.14.0"
-updated: 2026-08-17
+version: "1.15.0"
+updated: 2026-08-19
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -303,11 +303,28 @@ change, not a data migration of DB rows (see §4.2).
 
 ### 3.4 Performance strategy (target: ~1,000 orders/day, mobile-first)
 
-**Indexing.** Composite indexes aligned to real access paths and **lead with `vendorId`** (ADR-004):
+**Indexing.** Composite indexes aligned to real access paths and **lead with `vendorId`** (ADR-004).
+The list below is reconciled against `prisma/schema.prisma` as of P7d (#218) — every index named
+here exists in the schema:
 `Product(vendorId, categoryId, isActive)` and `Product(vendorId, isActive, basePrice)` for
-browse+filter+sort; `Order(userId, createdAt)` for history; `Order(status, createdAt)` for the staff
-dashboard; per-vendor unique indexes on `slug` (`@@unique([vendorId, slug])`), plus `orderNumber` and
-`Inventory.productId`. Add a partial/trigram index for name search only when the catalogue grows.
+browse+filter+sort; `Product(vendorId, isActive, isFeatured)` for the homepage rail;
+`Order(vendorId, userId, createdAt)` for order history; `Order(vendorId, status, createdAt)` for the
+staff dashboard and `Order(vendorId, createdAt)` for the unfiltered list; per-vendor unique indexes
+on `slug` (`@@unique([vendorId, slug])`), plus `orderNumber` and `Inventory.productId`. Add a
+partial/trigram index for name search only when the catalogue grows.
+
+> **This paragraph named two indexes that did not exist**, until P7d checked it against the schema
+> rather than against another document. It claimed `Order(userId, createdAt)` served order history
+> and `Order(status, createdAt)` served the staff dashboard; neither was ever created, and both
+> omitted the leading `vendorId` that ADR-004 requires of every tenant-scoped index. The staff
+> dashboard was in fact already covered by `Order(vendorId, status, createdAt)`. Order history was
+> not covered at all — `listForUser` filters `{vendorId, userId}` ordered by `(createdAt desc, id
+> desc)`, so Postgres could only walk the **vendor's** orders in date order and discard other
+> customers' rows, making one shopper's history cost the whole store's order volume. P7d added
+> `Order(vendorId, userId, createdAt)`. At the row counts measured then (118 orders) the fix was
+> not observable — every query was dominated by the ~15ms Neon round-trip — so this is a
+> correctness-of-documentation and future-proofing change, not a measured speed-up. Don't claim it
+> as one.
 
 **Pagination.** **Keyset (cursor) pagination** on `(createdAt, id)` everywhere lists can grow
 (product grids, order history, admin tables). Never `OFFSET` — it degrades linearly and is the

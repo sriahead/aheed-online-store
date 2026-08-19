@@ -6,7 +6,59 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+- **P7d — Workers observability and the first NFR measurement** (#218,
+  `specs/2026-08-19-p7d-observability-nfr/`). `wrangler.toml` gains a top-level `[observability]`
+  block (`enabled = true`, `head_sampling_rate = 1`, inheritable by both envs) — until now there was
+  no way to take a server-side latency measurement at all, while `specs/mission.md` had set
+  `LCP < 2.5s` and API `p95 < 400ms` as Gate-3 criteria from the start. `scripts/measure-nfr.ts`
+  (+ `npm run nfr:measure`) measures client-observed TTFB percentiles over public routes with no
+  database credential or session, so the numbers are reproducible from a clean checkout. Results are
+  recorded in the new `docs/nfr-baseline.md`, which labels every figure client-observed or
+  server-side rather than blurring the two.
+  **API p95 meets its target** (worst warm route 138.92 ms vs 400 ms; cold start 924.94 ms recorded
+  separately rather than averaged away). **LCP breaches it by ~5x** — 11,700 / 12,482 / 12,633 ms
+  across three Lighthouse runs. The cause is one asset: the vendor logo is **1,926,055 bytes, 83% of
+  page weight**, rendered into a 40 px-tall box on every storefront page, and it is `docs/logo.png`
+  uploaded unresized. Filed as **#243**; not remediated here because the fix is an account/plan
+  decision plus asset ops, not repo code.
+- **`Order(vendorId, userId, createdAt)` index** (migration
+  `20260818233907_p7d_order_user_history_index`). `specs/architecture.md` §3.4 claimed an
+  `Order(userId, createdAt)` index served order history; **it never existed**, so `listForUser`
+  (which filters `{vendorId, userId}`) could only walk the *vendor's* orders and discard other
+  customers' rows — one shopper's history costing the whole store's order volume. At 118 rows the
+  fix is not observable, and the baseline says so rather than claiming a speed-up.
+
+### Fixed
+- **Two persistent docs corrected against the artifact rather than against each other.**
+  `specs/architecture.md` §3.4 named two indexes that did not exist and both omitted the leading
+  `vendorId` ADR-004 requires; the paragraph is now reconciled to `prisma/schema.prisma`.
+  `specs/tech-stack.md` still presented Next.js Data Cache / ISR as the catalogue caching strategy,
+  which `specs/architecture.md` has documented as unworkable on this stack since P2a — whichever
+  document a reader opened first decided what they believed.
+
+### Changed
+- **#46 settled: keep plain `<img>`.** Cloudflare Image Transformations are **not enabled** on this
+  zone (`/cdn-cgi/image/…` returns 404 in all three URL forms), so a `next/image` custom loader
+  would ship byte-for-byte identical images. `ProductCard` and `ProductImageGallery` gain intrinsic
+  `width`/`height`, and the gallery's first image loads eagerly at high priority;
+  `@next/next/no-img-element` is now off repo-wide with the reasoning inline, replacing a mix of
+  inline disables that made the warning meaningless. Admin and staff surfaces untouched.
+- **`CLAUDE.md` now states that "no raw SQL" governs application code, not migrations.** This was
+  never actually undecided — `specs/architecture.md` §3.1 has said it since the schema was written —
+  but it was absent from the file read at decision time, which is why GAP-011 sat deferred behind an
+  answer that already existed one document over. Unblocks the `pg_trgm` question (#163/GAP-011) and
+  the same question in #220 (RLS).
+
 ### Documentation
+- **#236 re-driven with real Server Action calls** (25 sequential at ~1.1 s and 30 back-to-back both
+  clean; **20 concurrent produced 3 connection-level failures**). The reported sequential ceiling did
+  not reproduce — the constraint is concurrency, not rate. Whether those failures are server-side or
+  the client's own socket pool is **deliberately not asserted**: separating them needs the persisted
+  Workers Logs that only exist after `deploy-staging`. **#163** and **#236** stay open with their
+  measurements recorded; **#244** is new — production's vendor logo object was never uploaded, so
+  every production page renders a broken image (verified with and without a `Referer`, ruling out
+  hotlink protection).
 - **`/document` closeout for the validation debt bucket (#231, PRs #240/#241).** Roadmap gains the
   `/fix` and Ship-time rows (PR #240 to staging, PR #241 promotion to production, post-promotion
   issue-state check confirming no accidental closure). `docs/gap-register.md` gains GAP-024 (the

@@ -106,10 +106,16 @@ R21. `docs/gap-register.md`'s GAP-011 row reflects the R20 ruling in its Root Ca
 
 ## #236 — cart-mutation ceiling
 
-R22. The baseline document records a re-run of #236's scenario against staging with observability
-     enabled, stating: the number of sequential add-to-cart mutations attempted, the interval
-     between them, the mutation count at which a failure occurred (or that none did), and the
-     observability evidence gathered during the run.
+R22. The baseline document records a re-run of #236's scenario against staging, stating: the number
+     of add-to-cart mutations attempted, the interval between them, the concurrency used, and the
+     mutation count at which a failure occurred (or that none did) — for each pattern exercised.
+
+R22a. The baseline document states which of R22's failures could and could not be attributed to a
+      cause, and names server-side attribution as needing the persisted Workers Logs that only
+      exist after `deploy-staging` (the same constraint R2a records). As with R2a, this row is
+      satisfied by the disclosure. A client-observed connection failure has at least two possible
+      origins — the client's own socket pool and the Worker — and the baseline document must not
+      assert one without the evidence that separates them.
 
 R23. Issue **#236** is either closed with a reference to the fix that closed it, or carries a
      comment quoting R22's numbers and naming the causes attributed or ruled out.

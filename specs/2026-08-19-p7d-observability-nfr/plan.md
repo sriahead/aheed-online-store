@@ -77,10 +77,18 @@ already turned up two things worth the whole review:
   because caching strategy is this slice's subject matter.
 
 **The `pg_trgm` / raw-SQL ruling (GAP-011).** The trigram index for product search has stayed
-deferred because nobody has decided whether **migration-level DDL** counts as "raw SQL in
-application code" under `CLAUDE.md`'s schema rules. This slice settles that question and records
-the ruling in `CLAUDE.md`, because the same question blocks #220 (RLS policies are also raw DDL)
-and it should be answered once, by the slice that reaches it first, rather than twice.
+deferred partly because whether **migration-level DDL** counts as "raw SQL in application code"
+under `CLAUDE.md`'s schema rules appeared undecided. This slice settles it and records the ruling in
+`CLAUDE.md`, because the same question blocks #220 (RLS policies are also raw DDL) and it should be
+answered once, by the slice that reaches it first, rather than twice.
+
+*Corrected during Build:* it turned out **not to be undecided at all**. `specs/architecture.md` §3.1
+has said since the schema was written that "DDL for indexes lives in migrations, which is standard
+portable SQL, not application queries", and even names `citext`/`pg_trgm` as acceptable via portable
+migrations. The ruling existed; it just wasn't in `CLAUDE.md`, which is the file actually read at
+decision time. So the deliverable changes shape — from *making* a ruling to *relocating* one — and
+the lesson is the more useful half: a ruling that lives only where nobody looks when deciding is not
+a ruling. Recorded in `CLAUDE.md` accordingly.
 
 The distinction the ruling has to draw is already visible inside this slice, which is part of why
 it belongs here. R15's index migration contains a `CREATE INDEX` statement — but nobody
