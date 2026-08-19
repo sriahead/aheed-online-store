@@ -1,12 +1,14 @@
 import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import {
+  eraseGuestOrderData,
   eraseVendorData,
   exportPersonalData,
   getAccountProviders,
   hasVendorMembership,
   updateDisplayName,
   type EraseResult,
+  type GuestEraseResult,
   type PersonalDataExport,
 } from "@/lib/repositories/data-rights";
 
@@ -68,6 +70,34 @@ export function getDataRightsRepository(): DataRightsRepository {
     },
     async getAccountProviders(userId) {
       return getAccountProviders(prisma, userId);
+    },
+  };
+}
+
+/**
+ * Guest half of the data-rights surface (P7 closeout, #251 / #222).
+ *
+ * Separate from `getDataRightsRepository()` above because it is a different
+ * trust story, not a different query: that one acts on a proven session, this
+ * one acts on an order-number/email pair that `eraseGuestOrderData` verifies
+ * itself at the query level. Keeping them apart means neither can be reached
+ * through the other's proof by accident.
+ *
+ * Always the WEBSOCKET client — the erasure is an interactive transaction and
+ * `PrismaNeonHttp` cannot run one. Constructed fresh per call, never cached
+ * across requests (CLAUDE.md).
+ */
+export interface GuestDataRightsService {
+  eraseGuestOrder(orderNumber: string, email: string): Promise<GuestEraseResult | null>;
+}
+
+export function getGuestDataRightsService(): GuestDataRightsService {
+  let vendorIdPromise: Promise<string> | undefined;
+  const vendorId = () => (vendorIdPromise ??= getCurrentVendorId());
+
+  return {
+    async eraseGuestOrder(orderNumber, email) {
+      return eraseGuestOrderData(getPrismaWs(), await vendorId(), orderNumber, email);
     },
   };
 }

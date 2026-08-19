@@ -416,6 +416,90 @@ export async function eraseVendorData(
   });
 }
 
+export interface GuestEraseResult {
+  /** Echoed back so the caller can confirm what was erased without re-reading. */
+  orderNumber: string;
+  addressesRedacted: number;
+}
+
+/**
+ * Erase the personal data attached to ONE guest order, atomically.
+ *
+ * P7 closeout (#251 / #222). P7b gave account holders self-service erasure;
+ * a guest who checked out without an account had no route to Art. 17 at all,
+ * and UK GDPR rights are not conditional on holding an account.
+ *
+ * THE CREDENTIAL PAIR IS CHECKED HERE, INSIDE THE TRANSACTION — not by the
+ * caller. `vendorId + orderNumber + email` is matched at the query level, so
+ * there is no window between "the caller proved ownership" and "we erased", and
+ * no way to invoke this with an unverified pair. A non-matching pair returns
+ * null and touches nothing; the caller cannot distinguish a wrong order number
+ * from a wrong email, which is the same posture `findOrderForGuestLookup` takes
+ * and for the same reason.
+ *
+ * ONE ORDER PER CALL, deliberately. The pair proves control of *that order*, so
+ * that is exactly what it erases. Widening to "every order for this email" would
+ * mean acting on an email string alone, and P7a already judged email
+ * insufficient proof of ownership because households share mailboxes — which is
+ * why the lookup requires the pair plus a rate limiter in the first place. A
+ * guest with three orders repeats the flow three times; that repetition is the
+ * price of not weakening the proof.
+ *
+ * The shape mirrors `eraseVendorData`: the money survives, the person does not.
+ * `guestEmail` is cleared and the delivery address is redacted in place
+ * (`Order.addressId` is not nullable, so the row cannot simply go), while
+ * `totalPence`, `status` and `orderNumber` are untouched — the order still has
+ * to stand as a financial record.
+ *
+ * Must be called with the WEBSOCKET client (`getPrismaWs()`): `PrismaNeonHttp`
+ * cannot run interactive transactions, and a half-applied erasure leaves a
+ * shopper partly deleted with no way to tell where it stopped.
+ */
+export async function eraseGuestOrderData(
+  prisma: Db,
+  vendorId: string,
+  orderNumber: string,
+  email: string,
+): Promise<GuestEraseResult | null> {
+  return prisma.$transaction(async (tx) => {
+    // Guest orders only: `userId` must be null. An account-holder's order is
+    // reachable from /account/data with a real session, and erasing it from
+    // behind an order-number pair would be a weaker proof for the same data.
+    const order = await tx.order.findFirst({
+      where: {
+        orderNumber,
+        vendorId,
+        userId: null,
+        guestEmail: { equals: email, mode: "insensitive" },
+      },
+      select: { id: true, orderNumber: true, addressId: true },
+    });
+
+    if (!order) return null;
+
+    await tx.order.updateMany({
+      where: { id: order.id, vendorId },
+      data: { guestEmail: null },
+    });
+
+    const redacted = await tx.address.updateMany({
+      where: { id: order.addressId, vendorId },
+      data: {
+        recipientName: REDACTED,
+        phone: REDACTED,
+        line1: REDACTED,
+        line2: null,
+        city: REDACTED,
+        postcode: REDACTED,
+        notes: null,
+        userId: null,
+      },
+    });
+
+    return { orderNumber: order.orderNumber, addressesRedacted: redacted.count };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Art. 16 — rectification
 // ---------------------------------------------------------------------------

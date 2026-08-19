@@ -103,22 +103,30 @@ Approved at `/spec` on 2026-08-19:
 | `--color-action-hover` | `#419544` | `#276a2b` | 6.60 (white on it) |
 | `--color-accent-hover` | `#d06900` | `#8f4700` | 6.84 (white on it) |
 
-All 17 pairs in R7a then pass at 4.5:1 with no exceptions and no large-text carve-out. The visible
+All 17 pairs in R8 then pass at 4.5:1 with no exceptions and no large-text carve-out. The visible
 effect is that the green and orange both read noticeably deeper.
 
 **`--color-danger` was an extension beyond the two tokens originally put up for decision** — it is
 included because the error-message pair sits at 4.36 and darkening it 5% clears it, and leaving the
-one failing pair behind would have meant R7a needed a carve-out for the most safety-relevant text
+one failing pair behind would have meant R8 needed a carve-out for the most safety-relevant text
 on the site.
 
 **Scope (Part A):**
 
 - `eslint.config.mjs` adopts `jsx-a11y`'s recommended set at `error` for `app/`, `components/`,
-  `features/` `.tsx`, and the two `CartDrawer.tsx:57` violations are fixed.
-- `components/cart/CartDrawer.tsx` gains dialog semantics, focus management, Escape handling,
-  accessible names on every icon-only control, and a corrected heading order.
-- `components/consent/CookieBanner.tsx` gains accessible names wherever it lacks them; its
-  non-trapping behaviour is preserved intentionally.
+  `features/` `.tsx`.
+- **`components/cart/CartDrawer.tsx` was deleted, not fixed.** Build established it was dead code —
+  added by P7a (`624a842`) and never imported by anything, with the live drawer being
+  `components/cart/CartDrawerShell.tsx` that `Header.tsx` renders. Both of the two `jsx-a11y`
+  violations were in it. The defects listed above were real, but in a component no user could
+  reach; asserting accessibility against it would have been theatre. See the correction note in
+  `requirements.md` Part A.
+- `components/cart/CartDrawerShell.tsx` — which already had the ARIA half (`role="dialog"`,
+  `aria-modal`, labelled close button, `aria-hidden` icons) — gains the keyboard half it lacked:
+  focus into the panel on open, a `Tab`/`Shift+Tab` trap, focus restored to the cart button on
+  close, `Escape`, and `aria-labelledby` pointing at its own heading.
+- `components/consent/CookieBanner.tsx` was already correct on every count checked; its
+  non-trapping behaviour is preserved intentionally and now pinned by a test.
 - A DOM test environment is introduced (the repo has none — `vitest.config.mts` is
   `environment: "node"` with no testing-library and no jsdom) so the properties above are asserted
   by executed tests rather than by grepping source.
@@ -166,8 +174,8 @@ account.
 **1. Erasure only — not export.** Art. 15 (access) is already served for guests: `/orders/lookup`
 renders the order's contents in human-readable form once the credential pair is proven. Art. 17
 (erasure) has no route at all. Building a second machine-readable export for guests would widen an
-already three-part slice to serve a right that is not currently unmet. A follow-up issue records
-the machine-readable-copy question rather than losing it.
+already three-part slice to serve a right that is not currently unmet. Filed as **#253** (guest
+machine-readable export) rather than lost.
 
 **2. One order per request — the proof is not widened.** The credential is the order-number/email
 pair, which proves control of *that order*. A guest with three orders repeats the flow three times.
@@ -228,7 +236,7 @@ as **#252**.
 ## Open items carried forward
 
 - **#252** — the nine facade factories. Filed 2026-08-19, unscheduled.
-- **Machine-readable guest export** — to be filed during Build, referenced from `/privacy`.
+- **#253** — machine-readable guest export. Filed at Build on 2026-08-19, unscheduled.
 - **#46** — closed as housekeeping on this branch; P7d settled it and the code already shipped.
 - **PR #250's roadmap change-log row** — `npm run sdd:audit` reports it pending carry-forward. A
   `/document` closeout PR cannot cite its own promotion, so it rides this branch (the #144 pattern).
