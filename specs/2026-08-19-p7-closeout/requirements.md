@@ -9,12 +9,21 @@ findings and the decisions behind the scope boundaries are in `plan.md`.
 
 ## Part A — Accessibility (#217)
 
+> **Correction applied at Build (2026-08-19), approved before proceeding.** R2–R6 as approved named
+> `components/cart/CartDrawer.tsx`. That file was **dead code** — added by P7a (commit `624a842`)
+> and never imported by anything, as `git log -S` across all branches confirms. The drawer users
+> actually get is `components/cart/CartDrawerShell.tsx`, which `components/layout/Header.tsx`
+> renders. R2, R5 and R6 below now name the live component; `CartDrawer.tsx` was deleted rather
+> than repaired, which also cleared the two `jsx-a11y` violations R1 surfaced (both were in it).
+> Building the approved text literally would have asserted accessibility properties of a component
+> no user can reach.
+
 R1. `eslint.config.mjs` applies `eslint-plugin-jsx-a11y`'s recommended rule set at severity
     `error` to `app/**/*.tsx`, `components/**/*.tsx` and `features/**/*.tsx`, and leaves
     `jsx-a11y/label-has-for` and `jsx-a11y/control-has-associated-label` disabled (both ship as
     `"off"` in that recommended set; see `plan.md`).
 
-R2. The root element of the open cart drawer in `components/cart/CartDrawer.tsx` carries
+R2. The root element of the open cart drawer in `components/cart/CartDrawerShell.tsx` carries
     `role="dialog"`, `aria-modal="true"`, and an `aria-labelledby` whose value is the `id` of a
     heading element rendered inside the drawer.
 
@@ -24,10 +33,10 @@ R3. When the drawer opens, focus moves to an element inside it; `Tab` from the l
 
 R4. Pressing `Escape` while the drawer is open invokes the same close path as the close button.
 
-R5. Every interactive control rendered by `components/cart/CartDrawer.tsx` and
+R5. Every interactive control rendered by `components/cart/CartDrawerShell.tsx` and
     `components/consent/CookieBanner.tsx` has a non-empty accessible name.
 
-R6. Heading elements rendered inside `components/cart/CartDrawer.tsx` descend without skipping a
+R6. Heading elements rendered inside `components/cart/CartDrawerShell.tsx` descend without skipping a
     level, in both the empty-cart and populated-cart states.
 
 R7. `design-system/tokens/tokens.css` sets `--color-action` to `#2e7d32`, `--color-accent` to

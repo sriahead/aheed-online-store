@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.6.0"
-updated: 2026-08-09
+version: "1.7.0"
+updated: 2026-08-19
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -35,13 +35,32 @@ palette revision only touches the primitive → semantic mapping, not every comp
 > ~15%-darker hover shades are derived per vendor via `color-mix()` (no `VendorBranding` column needed).
 > A named theme *catalogue* is deferred (#75).
 
-| Primitive | Hex | Semantic | Role |
-|---|---|---|---|
-| `--color-brand-green-dark` | `#1B5E20` | `--color-primary` | Wordmark/headings, primary text-on-light |
-| `--color-brand-green` | `#4CAF50` | `--color-action` | Primary buttons/links (brand kit's "Shop Now") |
-| `--color-brand-orange` | `#F57C00` | `--color-accent` | CTA highlights, secondary emphasis |
-| `--color-brand-red` | `#D32F2F` | `--color-danger` | Alerts; may double as a "sale" badge color |
-| `--color-brand-cream` | `#F5F5F0` | `--color-surface-muted` | Page/section background, off-white |
+| Primitive | Hex | Semantic | Semantic value | Role |
+|---|---|---|---|---|
+| `--color-brand-green-dark` | `#1B5E20` | `--color-primary` | = primitive | Wordmark/headings, primary text-on-light |
+| `--color-brand-green` | `#4CAF50` | `--color-action` | **`#2E7D32`** | Primary buttons/links (brand kit's "Shop Now") |
+| `--color-brand-orange` | `#F57C00` | `--color-accent` | **`#A85400`** | CTA highlights, secondary emphasis |
+| `--color-brand-red` | `#D32F2F` | `--color-danger` | **`#C82D2D`** | Alerts; may double as a "sale" badge color |
+| `--color-brand-cream` | `#F5F5F0` | `--color-surface-muted` | = primitive | Page/section background, off-white |
+
+**Three semantic values deliberately diverge from their primitive** (P7 closeout, #251/#217). The
+primitives still carry the exact brand-kit hex and are unchanged; only the semantic layer moved, so
+all 45-plus call sites were corrected without touching a single component. **Do not "restore" the
+brand hex into the semantic layer** — the brand values fail WCAG AA in the combinations the UI
+actually renders:
+
+| Pair | Brand value | Corrected |
+|---|---:|---:|
+| `--color-action` on white | 2.78:1 | 5.13:1 |
+| white on `--color-action` | 2.78:1 | 5.13:1 |
+| `--color-accent` on white | 2.70:1 | 5.34:1 |
+| `--color-accent` on `--color-accent-tint` | 2.47:1 | 4.87:1 |
+| `--color-danger` on `--color-danger-tint` | 4.36:1 | 4.75:1 |
+
+The last of those is the standard error-message treatment (`text-danger` on `bg-danger-tint`, at
+`text-sm`) used across checkout, the account forms and `OrderStatusBadge` — the text on the site
+that most needs to be readable. `tests/design-tokens-contrast.test.ts` asserts all 17 pairs and
+fails if any token regresses.
 
 Everything else (body text gray, borders, disabled states) uses Tailwind v4's stock neutral scale —
 the brand kit gives no signal for these, so there's nothing brand-specific to encode.
@@ -106,10 +125,20 @@ Spacing scale and breakpoints are **not brand-derived** — Tailwind v4's defaul
 To ensure compliance with WCAG AA standards (minimum 4.5:1 contrast ratio for text) and robust screen reader support across all multi-tenant brands, the following design constraints are strictly enforced:
 
 - **Opacity Minimums:** Never use opacity layers below `80%` (e.g. `text-primary/70` or `text-black/50`) for functional text or links against light backgrounds (white or `--color-surface-muted`), as they mathematically fall below the 4.5:1 contrast threshold. 
-- **Button Contrast:** Primary and action buttons must use highly contrasting text colors (e.g., solid `bg-primary` or darker action variants) rather than standard brand greens, which often fail contrast requirements against white text.
+- **Button Contrast:** Primary and action buttons must use highly contrasting text colors (e.g., solid `bg-primary` or darker action variants) rather than standard brand greens, which often fail contrast requirements against white text. **Resolved at the token layer in P7 closeout (#251)** — `--color-action`, `--color-accent` and `--color-danger` now hold AA-passing values, so `bg-action` is safe with white text and this rule no longer has to be remembered per call site. `tests/design-tokens-contrast.test.ts` enforces it.
 - **Semantic Landmarks:** All top-level navigation groups must be wrapped in a `<nav aria-label="...">` landmark.
 - **Heading Hierarchy:** Component heading levels (`h1`, `h2`, `h3`) must not skip ranks in the document flow. Where a visual heading is absent but semantically required (e.g., a "Products" wrapper for `h3` product cards following a category `h1`), inject a visually hidden `<h2 className="sr-only">` to satisfy the hierarchy.
 - **Interactive Elements:** Icon-only buttons (such as quantity increment/decrement controls) must carry explicit `aria-label`s, with inner icons marked `aria-hidden="true"`.
+- **Modal surfaces:** A component that overlays the page (the cart drawer) must carry `role="dialog"`, `aria-modal="true"` and an `aria-labelledby` naming its own heading; move focus into itself on open, trap `Tab`/`Shift+Tab` within itself while open, restore focus to the opener on close, and close on `Escape`. A non-blocking banner (the cookie banner) must **not** trap focus — trapping there would be a defect, not compliance.
+
+> **These rules predate their enforcement, and that gap cost something.** Every constraint in this
+> section was written before P6.6 — yet `components/cart/CartDrawer.tsx`, added afterwards, broke
+> three of them at once: icon-only close/quantity/remove controls with no `aria-label`, an `h2` to
+> `h4` heading skip, and no dialog semantics or focus management at all. Prose in a spec nobody
+> opens at the moment of writing a component is not a control. P7 closeout (#251) made these
+> executable — `tests/a11y/*` asserts the modal and labelling rules,
+> `tests/design-tokens-contrast.test.ts` asserts the contrast ones, and `eslint.config.mjs` runs
+> `jsx-a11y`'s recommended set at `error` rather than as warnings nobody reads.
 
 ## Storefront components (P2.5b2)
 
