@@ -74,6 +74,16 @@ every branch merges.
   `specs/sdd-workflow.md` gets a third instance of the grep-matches-the-explanation trap, this time
   in a requirement's own literal text (R40 was broader than its own `validation.md` row).
   `ARTIFACT_INDEX.md` rebuilt; `npm run sdd:audit` and `npm run kms:validate` both clean.
+- **`/document` closeout for P7d (#218, PRs #245/#248/#247, now in production).** Roadmap gains the
+  build/validate, staging-merge, `deploy-docs-internal` fix, and promotion rows. `CLAUDE.md` gains a
+  new "KMS docs" section and `specs/sdd-workflow.md`'s Validate pre-flight names the real check for
+  any slice touching `docs/`/`specs/` — the app's own `lint`/`build` never build the internal KMS
+  site, so a defect there (this slice's MDX-breaking `<1%` table cell) merges clean and only fails
+  on the next push. `docs/nfr-baseline.md`'s Observability section reconciled with what Ship actually
+  found: persisted-Workers-Logs confirmation stayed blocked in that environment even after deploy
+  (both `wrangler tail` and the Cloudflare dashboard), filed as **#246** rather than left as an
+  implicit promise. `ARTIFACT_INDEX.md` rebuilt; `npm run sdd:audit` and `npm run kms:validate` both
+  clean.
 
 ### Added
 - **`sdd:audit` now checks promotions, not just slices** (#207,

@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.6.0"
-updated: 2026-08-18
+version: "1.7.0"
+updated: 2026-08-19
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -317,6 +317,22 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   fired the exact signed-in-non-staff case its own `validation.md` had flagged as never exercised
   and found it. Fixed at `/fix` to match the established pattern. When adding a new `/staff/*` page,
   copy an existing one's refusal branch rather than writing a bare `if (!auth.ok) return null`.
+
+## KMS docs (`docs/*.md`, `specs/*.md`) — learned the hard way
+- **A GFM table cell (or any prose) containing a bare `<` immediately followed by a digit breaks
+  the internal KMS docs site build, and nothing in the app's own `lint`/`typecheck`/`test`/`build`
+  catches it.** `docs/*.md` and `specs/*.md` are assembled into MDX (`npm run
+  kms:assemble:internal`) and built with Nextra in `kms/site-internal`, a separate pipeline the
+  `gates` workflow never runs. MDX parses `<1%` as the start of an invalid JSX tag name
+  (`Unexpected character '1' before name`), so a slice's own PR can pass every check and merge
+  clean while `deploy-docs-internal` fails on the very next push. Hit in P7d (#218):
+  `docs/nfr-baseline.md` shipped a `<1%` table cell in PR #245, and the break was found only when
+  `/ship` opened the staging→main promotion PR and read `deploy-docs-internal`'s status. Fixed as
+  its own follow-up PR (#248) rather than amending the already-merged one. Write `under 1%` (or
+  wrap the value in backticks) instead of a bare `<N` anywhere in `docs/`/`specs/` prose or tables.
+  Before merging a slice that adds or edits either directory, a real check is `npm run
+  kms:assemble:internal && (cd kms/site-internal && npx next build --webpack)` — not just the root
+  `lint`/`build`.
 
 ## Hard stops
 - Never invent infrastructure or credentials. If a resource/secret is missing, STOP and list what
