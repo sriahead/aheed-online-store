@@ -15,6 +15,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "demo:accounts": "tsx scripts/demo-accounts.ts",
     "configure-env": "node scripts/configure-env.mjs",
+    "nfr:measure": "tsx scripts/measure-nfr.ts",
     "sdd:preclear": "tsx scripts/sdd-check.ts preclear",
     "sdd:audit": "tsx scripts/sdd-check.ts audit",
     "kms:validate": "tsx kms/schema/validate.ts",

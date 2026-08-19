@@ -80,7 +80,9 @@ export function CartContents({
               className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white p-3"
             >
               {line.imageKey && cdnBaseUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- next/image adoption is tracked in #46
+                // Plain <img> by decision, not omission — #46 settled at P7d (#218):
+                // Image Transformations aren't enabled on this zone, so a next/image
+                // loader would ship identical bytes. Rule is off in eslint.config.mjs.
                 <img
                   src={composePublicUrl(cdnBaseUrl, line.imageKey)}
                   alt=""

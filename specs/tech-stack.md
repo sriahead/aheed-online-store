@@ -4,8 +4,8 @@ title: Tech Stack
 audience: [dev]
 type: doc
 status: approved
-version: "1.3.0"
-updated: 2026-08-12
+version: "1.4.0"
+updated: 2026-08-19
 visibility: internal
 summary: Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal.
 tags: [tech-stack, guardrails]
@@ -96,8 +96,14 @@ environment-configured seam.
 - **Neon Serverless PostgreSQL** as the database origin (no co-located compute needed; connection is
   serverless-native over the pooled endpoint).
 - **Secrets** via Cloudflare environment/secret bindings; typed and validated in `lib/config`.
-- **Observability** via Cloudflare analytics/logs plus application logging; alerting on error rate
-  and latency.
+- **Observability** via **Workers Logs**, configured in `wrangler.toml`'s top-level
+  `[observability]` block (`enabled = true`, `head_sampling_rate = 1` — 100% of requests, right at
+  today's pre-launch volume and due to come down before launch rather than be removed). The block
+  is inheritable, so `staging` and `production` both pick it up. Live `wrangler tail` streams
+  regardless of this setting; what the block adds is *persisted*, queryable logs. Added in P7d
+  (#218) — before it, no server-side latency measurement was possible at all, while
+  `specs/mission.md` had been setting API `p95 < 400ms` as a Gate-3 criterion since the start.
+  **Alert routing on error rate and latency is P8's**, not this line's — see `specs/roadmap.md`.
 - **Scheduled tasks** via Cloudflare Cron Triggers where required.
 - *Portability note:* every provider above is reachable through a port + env config, so the origin
   can move to Node/containers on AWS/GCP and the DB/storage to RDS+S3 or Cloud SQL+GCS without
@@ -105,7 +111,15 @@ environment-configured seam.
 
 ## Caching & performance
 
-- Next.js Data Cache / ISR for catalogue and product pages (framework-native, portable).
+- ~~Next.js Data Cache / ISR for catalogue and product pages (framework-native, portable).~~
+  **This does not hold on this stack and never did** — corrected in P7d (#218). Next's SSG-based
+  ISR has to prerender in plain Node, but Prisma here loads via `@prisma/client/wasm`, which only
+  runs in the Workers runtime; attempting it hard-fails the build (`Unknown file extension
+  ".wasm"`), found while shipping P2a. Catalogue and product pages are `force-dynamic`.
+  `specs/architecture.md` §3.4 has recorded this since P2a — **this file kept asserting the
+  opposite**, so whichever doc a reader opened first decided what they believed. See §3.4 for the
+  caching options that do apply (edge KV behind a `CacheService` port; Cloudflare's edge cache in
+  front of the Worker).
 - Optional edge KV for hot reads behind a `CacheService` port (KV ↔ Redis swap); DB remains source
   of truth.
 - **Keyset (cursor) pagination** for all growable lists; composite indexes shipped with each

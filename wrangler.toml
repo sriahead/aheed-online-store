@@ -8,6 +8,21 @@ compatibility_flags = ["nodejs_compat"]
 [limits]
 cpu_ms = 50
 
+# P7d (#218) — Workers Logs. Until this block existed there was no way to take a
+# server-side latency measurement at all, while specs/mission.md sets API p95 < 400ms as a
+# Gate-3 acceptance criterion. Inheritable, so staging and production both pick it up.
+#
+# head_sampling_rate = 1 means 100% of requests are logged. That is the right setting at
+# today's pre-launch traffic (staging plus a handful of production requests) because a
+# sampled log cannot answer "what happened on that one broken request". REVISIT BEFORE
+# LAUNCH: at mission.md's ~1,000 orders/day plus browse traffic this will consume the
+# Workers Logs daily quota, and the sampling rate should come down rather than the block
+# being removed. Live tail (`wrangler tail`) is independent of this setting and always works;
+# what this enables is *persisted*, queryable logs.
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 # Static assets produced by the OpenNext build.
 [assets]
 directory = ".open-next/assets"
