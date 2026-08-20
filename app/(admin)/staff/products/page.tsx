@@ -11,6 +11,7 @@ import {
 } from "@/lib/staff-products-query";
 import { formatPrice } from "@/components/product/format-price";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
+import { BackfillImagesButton } from "@/components/staff/BackfillImagesButton";
 
 // Reads the session and this vendor's live catalogue — must render per-request.
 export const dynamic = "force-dynamic";
@@ -68,13 +69,16 @@ export default async function StaffProductsPage({
             Everything this store sells, including items hidden from shoppers.
           </p>
         </div>
-        <Link
-          href="/staff/products/new"
-          className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white"
-        >
-          <Plus className="h-4 w-4" aria-hidden />
-          New product
-        </Link>
+        <div className="flex gap-3">
+          <BackfillImagesButton />
+          <Link
+            href="/staff/products/new"
+            className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            New product
+          </Link>
+        </div>
       </div>
 
       {/* A plain GET form, matching /staff/orders: no client component, no JS,
