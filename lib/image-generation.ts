@@ -24,21 +24,41 @@ export function getImageGenerationService(): ImageGenerationService {
         return null; // Degrade gracefully if not configured
       }
 
-      const res = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/black-forest-labs/flux-1-schnell`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiToken}`,
-            "Content-Type": "application/json",
+      let attempt = 0;
+      let res;
+      
+      while (attempt < 3) {
+        res = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/black-forest-labs/flux-1-schnell`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ prompt }),
           },
-          body: JSON.stringify({ prompt }),
-        },
-      );
+        );
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`AI generation failed: ${res.status} - ${text}`);
+        if (res.status === 429) {
+          attempt++;
+          if (attempt >= 3) break;
+          // Exponential backoff: 2s, then 4s
+          await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
+          continue;
+        }
+        break;
+      }
+
+      if (!res || !res.ok) {
+        const text = res ? await res.text() : "Unknown error";
+        const status = res ? res.status : 500;
+        
+        // If it's still 429 after retries, throw a clean error
+        if (status === 429) {
+          throw new Error("Cloudflare AI is temporarily at capacity. Please try again in a few seconds.");
+        }
+        throw new Error(`AI generation failed: ${status} - ${text}`);
       }
 
       // The REST API for text-to-image returns binary by default unless response_format is used
