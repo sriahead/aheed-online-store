@@ -102,6 +102,20 @@ every branch merges.
   bounds a code's face value; `clampRedemption` fills only the headroom it left), so `splitDiscount`
   needs no defensive cap — and stating that recomputing the loyalty share from vendor config must not
   be "fixed" back in later.
+- **`specs/roadmap.md` (v1.41.0)** and **`specs/sdd-workflow.md` (v2.20.0)** — P7.5c+f's `/document`
+  closeout (#263). Roadmap gains the slice's build/merge and production-promotion rows, including the
+  live-verification detail (four DB-mutation rows and the carousel's pause control all closed live,
+  not left disclosed-but-unverified) and an honest note that this session's sandboxed network egress
+  couldn't reach either deployed domain directly, so "production is serving this commit" rests on the
+  `deploy-production` workflow's own log rather than an independent curl. `sdd-workflow.md` gains two
+  process lessons this loop surfaced: a generalisation of the `PromoSlider`/P4a bare-word-match trap
+  to `validation.md` rows whose literal grep command is a stricter or looser proxy for its own
+  requirement's actual wording (three instances found this pass, none real defects); and the root
+  cause of PR #283's `mergeable: CONFLICTING` — PR #275's squash-merge had left `origin/main` without
+  P7.5b's original commits as ancestors, which broke the *next* regular-merge promotion with a
+  spurious conflict in the shared log files, resolved with a content-identical reconciliation merge
+  pushed to `staging` rather than a forced rewrite. Promotion PRs should use a regular merge, never
+  squash, to avoid recreating this.
 
 ### Fixed
 - **P7.5a — staff reports correctness & checkout cart preservation** (#261, closing #238, #237,
