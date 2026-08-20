@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { saveLoyaltySettings, type LoyaltySettingsInput } from "@/lib/repositories/loyalty";
+import {
+  createLoyaltyTier,
+  deleteLoyaltyTier,
+  saveLoyaltySettings,
+  type LoyaltySettingsInput,
+} from "@/lib/repositories/loyalty";
 
 /**
  * Loyalty configuration action (P5a, #135) — the write half of `/staff/loyalty`.
@@ -117,4 +122,104 @@ function indexedIntegerField(form: FormData, field: string, index: number, min: 
     throw new InvalidFieldError(`Tier values must be whole numbers of at least ${min}.`);
   }
   return parsed;
+}
+
+// ---- Tier create / delete (P7.5d+e, #136) ----------------------------------
+//
+// Separate actions rather than more fields on saveLoyaltyConfig: creating and
+// deleting a row are not "saving the form", and folding them in would mean one
+// submit could both edit every tier and delete one, with no way to report which
+// half failed.
+//
+// Both re-check requireVendorRole("ADMIN") themselves for the same reason
+// saveLoyaltyConfig does — a server action is a public endpoint at a stable id,
+// so the page's gate protects the page, not these.
+
+/** A tier key: uppercase letters, digits and underscores. Stable, and it is what
+ *  LoyaltyLedgerEntry snapshots, so it must not carry spaces or punctuation. */
+const TIER_KEY_PATTERN = /^[A-Z0-9_]{2,32}$/;
+
+export async function createTier(
+  _prev: LoyaltyConfigState,
+  form: FormData,
+): Promise<LoyaltyConfigState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) {
+    return {
+      error:
+        auth.status === 401
+          ? "Please sign in as a store admin to change these settings."
+          : "You don't have permission to change this store's loyalty settings.",
+      saved: false,
+    };
+  }
+
+  const key = String(form.get("newTierKey") ?? "")
+    .trim()
+    .toUpperCase();
+  const name = String(form.get("newTierName") ?? "").trim();
+
+  if (!TIER_KEY_PATTERN.test(key)) {
+    return {
+      error: "Tier key must be 2-32 characters, using only letters, numbers and underscores.",
+      saved: false,
+    };
+  }
+  if (name === "") {
+    return { error: "Tier name is required.", saved: false };
+  }
+
+  let thresholdPence: number;
+  let multiplierBps: number;
+  try {
+    thresholdPence = integerField(form, "newTierThresholdPence", 0);
+    multiplierBps = integerField(form, "newTierMultiplierBps", 1);
+  } catch (error) {
+    if (error instanceof InvalidFieldError) return { error: error.message, saved: false };
+    throw error;
+  }
+
+  const result = await createLoyaltyTier(auth.vendorId, {
+    key,
+    name,
+    thresholdPence,
+    multiplierBps,
+  });
+
+  if (!result.ok) {
+    return { error: `This store already has a tier with the key "${key}".`, saved: false };
+  }
+
+  revalidatePath("/staff/loyalty");
+  return { error: null, saved: true };
+}
+
+export async function deleteTier(
+  _prev: LoyaltyConfigState,
+  form: FormData,
+): Promise<LoyaltyConfigState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) {
+    return {
+      error:
+        auth.status === 401
+          ? "Please sign in as a store admin to change these settings."
+          : "You don't have permission to change this store's loyalty settings.",
+      saved: false,
+    };
+  }
+
+  const key = String(form.get("deleteTierKey") ?? "").trim();
+  if (key === "") return { error: "No tier selected to remove.", saved: false };
+
+  const { count } = await deleteLoyaltyTier(auth.vendorId, key);
+  if (count === 0) {
+    return {
+      error: "That tier no longer exists — it may already have been removed.",
+      saved: false,
+    };
+  }
+
+  revalidatePath("/staff/loyalty");
+  return { error: null, saved: true };
 }

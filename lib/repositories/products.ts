@@ -455,11 +455,31 @@ export async function listInventoryForStaff(
 /** Keyset-paginated on (createdAt, id) like findPage() above — never OFFSET. */
 export async function listProductsForAdmin(
   vendorId: string,
-  { take, cursor }: { take: number; cursor?: string },
+  {
+    take,
+    cursor,
+    search,
+    isActive,
+  }: {
+    take: number;
+    cursor?: string;
+    /** Case-insensitive substring of Product.name. Null/undefined applies no filter (#169). */
+    search?: string | null;
+    /** undefined applies no filter, preserving P6b1's "show everything" default (#169). */
+    isActive?: boolean;
+  },
 ): Promise<AdminProductPage> {
   const prisma = getPrisma();
   const rows = await prisma.product.findMany({
-    where: { vendorId },
+    where: {
+      vendorId,
+      // Name only, deliberately. The storefront's search() ORs a `contains`
+      // across name AND description, which is right for a shopper hunting a
+      // concept and wrong for an owner who knows what the product is called —
+      // a description match would bury the exact-name hit they came for.
+      ...(search ? { name: { contains: search, mode: "insensitive" as const } } : {}),
+      ...(isActive === undefined ? {} : { isActive }),
+    },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: take + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),

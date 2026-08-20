@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Package, Plus } from "lucide-react";
+import { Package, Plus, Search } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { listProductsForAdmin } from "@/lib/repositories/products";
+import {
+  PRODUCT_STATUS_ALL,
+  parseStaffProductsQuery,
+  staffProductsHref,
+} from "@/lib/staff-products-query";
 import { formatPrice } from "@/components/product/format-price";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 
@@ -29,9 +34,9 @@ const PAGE_SIZE = 25;
 export default async function StaffProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cursor?: string }>;
+  searchParams: Promise<{ cursor?: string; status?: string; q?: string }>;
 }) {
-  const { cursor } = await searchParams;
+  const { cursor, status, q } = await searchParams;
   const auth = await requireVendorRole("ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
@@ -43,10 +48,16 @@ export default async function StaffProductsPage({
     );
   }
 
+  const query = parseStaffProductsQuery({ status, q });
+
   const { items, nextCursor } = await listProductsForAdmin(auth.vendorId, {
     take: PAGE_SIZE,
     cursor,
+    search: query.search,
+    isActive: query.isActive,
   });
+
+  const isFiltered = query.search !== null || query.status !== PRODUCT_STATUS_ALL;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8">
@@ -66,11 +77,49 @@ export default async function StaffProductsPage({
         </Link>
       </div>
 
+      {/* A plain GET form, matching /staff/orders: no client component, no JS,
+          and the resulting URL is shareable. */}
+      <form method="get" action="/staff/products" className="mb-6 flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wide text-primary">
+          Status
+          <select
+            name="status"
+            defaultValue={query.status}
+            className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-primary"
+          >
+            <option value={PRODUCT_STATUS_ALL}>All products</option>
+            <option value="active">Visible to shoppers</option>
+            <option value="inactive">Hidden</option>
+          </select>
+        </label>
+
+        <label className="flex flex-1 flex-col gap-1 text-xs font-bold uppercase tracking-wide text-primary">
+          Search
+          <input
+            type="search"
+            name="q"
+            defaultValue={query.search ?? ""}
+            placeholder="Product name"
+            className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-primary"
+          />
+        </label>
+
+        <button
+          type="submit"
+          className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-bold text-white"
+        >
+          <Search className="h-4 w-4" aria-hidden />
+          Apply
+        </button>
+      </form>
+
       {items.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
           <Package className="mx-auto mb-3 h-8 w-8 text-primary/40" aria-hidden />
           <p className="text-sm text-primary/70">
-            No products yet. Create a category first, then add your first product.
+            {isFiltered
+              ? "No products match this view. Clear the filters to see the whole catalogue."
+              : "No products yet. Create a category first, then add your first product."}
           </p>
         </div>
       ) : (
@@ -112,8 +161,10 @@ export default async function StaffProductsPage({
       )}
 
       {nextCursor && (
+        /* The cursor link MUST carry the active filter — a next page that quietly
+           widened back to the whole catalogue would be worse than no paging. */
         <Link
-          href={`/staff/products?cursor=${encodeURIComponent(nextCursor)}`}
+          href={staffProductsHref(query, nextCursor)}
           className="mt-6 inline-block rounded-full bg-action px-4 py-2 font-semibold text-white"
         >
           Older products

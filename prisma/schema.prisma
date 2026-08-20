@@ -508,6 +508,15 @@ model Address {
 // Exactly one of userId / guestEmail identifies the buyer (enforced in the
 // repository). Money is integer pence throughout; no discountTotal/loyaltyRedeemed
 // columns — those are P5's to add when they exist.
+//
+// NOT FULLY DESCRIBED BY THIS SCHEMA (P7.5d+e, #163). Three GIN trigram indexes —
+// Order_orderNumber_trgm_idx, Order_guestEmail_trgm_idx and User_email_trgm_idx —
+// exist in the database but CANNOT be declared here: Prisma's schema language has
+// no syntax for an index's access method or operator class, so `@@index` always
+// means a B-tree, which cannot serve the staff order search's `ILIKE '%term%'`.
+// They are created by migration 20260820143949_p7_5de_order_search_trigram, which
+// carries the full rationale. Consequence: `prisma migrate diff` may report drift
+// that is not drift, and `prisma migrate dev` may propose DROPPING them. Keep them.
 model Order {
   id               String               @id @default(uuid())
   vendorId         String
