@@ -88,10 +88,15 @@ export default async function StaffOrderDetailPage({
 
       <StaffOrderTimeline timeline={order.timeline} />
 
+      {/* P7.5b (#150): the same attributed breakdown the customer sees. Staff
+          answering "why was I only charged £35?" need the identical rows — two
+          different stories about one order is the defect this phase removes.
+          Points earned deliberately stay off this page; see OrderPointsNote. */}
       <OrderItemsCard
         items={order.items}
         subtotalPence={order.subtotalPence}
         discountPence={order.discountPence}
+        discountCode={order.discountCode}
         deliveryFeePence={order.deliveryFeePence}
         totalPence={order.totalPence}
       />

@@ -23,7 +23,7 @@ vi.mock("@/lib/payments", () => ({
   getPaymentService: () => ({ createPayment: () => paymentStub.createPayment() }),
 }));
 
-const { placeOrder, CheckoutError } = await import("@/lib/repositories/orders");
+const { placeOrder, CheckoutError, toProvenance } = await import("@/lib/repositories/orders");
 
 const VENDOR = "v-aheed";
 
@@ -397,6 +397,38 @@ describe("placeOrder — what it writes", () => {
   });
 });
 
+describe("toProvenance — what an order can prove about its money (P7.5b, #150/#138)", () => {
+  it("reports NO points as null, never as zero (R3)", () => {
+    // The distinction is the whole point: "not awarded yet" (unpaid, or a guest)
+    // and "awarded nothing" are different claims, and only the second one may be
+    // rendered as a figure. Collapsing them to 0 would put "You earned 0 points"
+    // on every unpaid order.
+    expect(toProvenance({ discountUse: null, loyaltyEntries: [] }).pointsEarned).toBeNull();
+  });
+
+  it("reports the awarded figure once an EARN row exists (R3)", () => {
+    expect(toProvenance({ discountUse: null, loyaltyEntries: [{ points: 34 }] }).pointsEarned).toBe(
+      34,
+    );
+  });
+
+  it("reports no discount code as null (R4)", () => {
+    expect(toProvenance({ discountUse: null, loyaltyEntries: [] }).discountCode).toBeNull();
+  });
+
+  it("carries the code's own stored share, not the order's whole discount (R4)", () => {
+    // amountPence is the snapshot written at redemption. splitDiscount subtracts
+    // it from discountPence to get loyalty's share, so passing anything else
+    // here silently misattributes both rows.
+    expect(
+      toProvenance({
+        discountUse: { amountPence: 500, code: { code: "WELCOME10" } },
+        loyaltyEntries: [],
+      }).discountCode,
+    ).toEqual({ code: "WELCOME10", amountPence: 500 });
+  });
+});
+
 describe("CheckoutError", () => {
   it("carries a machine-readable code the UI can branch on", () => {
     expect(new CheckoutError("CART_EMPTY", "empty").code).toBe("CART_EMPTY");
@@ -451,8 +483,16 @@ function fakeAdvancePrisma(advance: AdvanceState) {
         subtotalPence: 1000,
         deliveryFeePence: 250,
         guestEmail: "shopper@example.com",
+        userId: null,
         user: null,
         items: [],
+        // P7.5b (#150/#138): findOrderForWebhook now selects these two relations,
+        // so the fake returns them the way Prisma does — a selected to-many
+        // relation is always an array, never undefined. Modelled here rather than
+        // absorbed by a `?? []` in toProvenance, which would hide a real select
+        // that had been forgotten.
+        discountUse: null,
+        loyaltyEntries: [],
       }),
     },
     $transaction: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx),

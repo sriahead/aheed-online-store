@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildOrderNumber,
   computeTotals,
+  splitDiscount,
   vendorOrderPrefix,
   type DeliveryRules,
   type TotalsLine,
@@ -161,5 +162,61 @@ describe("computeTotals — discount (P5a)", () => {
     // The paired case: proves the row above tests the ordering, not just that
     // free delivery works at all.
     expect(computeTotals([line(2900, 1)], AHEED, 0).deliveryFeePence).toBe(349);
+  });
+});
+
+describe("splitDiscount (P7.5b, #150)", () => {
+  // What matters here is not the individual numbers but the INVARIANT: the two
+  // shares must always reconstitute the single figure they decompose. An order
+  // page renders both rows next to `discountPence`'s effect on the total, so a
+  // split that does not sum is arithmetic the customer can see is wrong.
+  const cases: {
+    name: string;
+    discountPence: number;
+    code: { code: string; amountPence: number } | null;
+  }[] = [
+    { name: "code only", discountPence: 500, code: { code: "WELCOME10", amountPence: 500 } },
+    { name: "loyalty only", discountPence: 200, code: null },
+    { name: "both", discountPence: 700, code: { code: "WELCOME10", amountPence: 500 } },
+    { name: "neither", discountPence: 0, code: null },
+  ];
+
+  for (const { name, discountPence, code } of cases) {
+    it(`${name}: the two shares sum to discountPence (R9)`, () => {
+      const { codePence, loyaltyPence } = splitDiscount({ discountPence, discountCode: code });
+      expect(codePence + loyaltyPence).toBe(discountPence);
+    });
+  }
+
+  it("attributes a code-only discount entirely to the code (R7)", () => {
+    expect(
+      splitDiscount({ discountPence: 500, discountCode: { code: "X", amountPence: 500 } }),
+    ).toEqual({ codePence: 500, loyaltyPence: 0 });
+  });
+
+  it("attributes a no-code discount entirely to loyalty (R12)", () => {
+    // placeOrder is discountPence's only writer and composes it from exactly two
+    // sources, so "no code" leaves only one thing it can be.
+    expect(splitDiscount({ discountPence: 200, discountCode: null })).toEqual({
+      codePence: 0,
+      loyaltyPence: 200,
+    });
+  });
+
+  it("splits a combined discount along the stored code snapshot (R7)", () => {
+    expect(
+      splitDiscount({ discountPence: 700, discountCode: { code: "X", amountPence: 500 } }),
+    ).toEqual({ codePence: 500, loyaltyPence: 200 });
+  });
+
+  it("never returns a negative loyalty share", () => {
+    // Unreachable through placeOrder — lib/discounts.ts clamps the code's face
+    // value and clampRedemption only fills the headroom it left — but the floor
+    // is asserted so a future writer of discountPence cannot produce a negative
+    // row without a test failing.
+    expect(
+      splitDiscount({ discountPence: 100, discountCode: { code: "X", amountPence: 500 } })
+        .loyaltyPence,
+    ).toBe(0);
   });
 });

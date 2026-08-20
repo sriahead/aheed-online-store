@@ -1,4 +1,5 @@
 import { formatPrice } from "@/components/product/format-price";
+import { splitDiscount, type OrderDiscountCode } from "@/lib/order-totals";
 
 /**
  * An order's purchased lines and money breakdown (P4a, #122).
@@ -19,6 +20,7 @@ export function OrderItemsCard({
   items,
   subtotalPence,
   discountPence = 0,
+  discountCode = null,
   deliveryFeePence,
   totalPence,
 }: {
@@ -27,12 +29,20 @@ export function OrderItemsCard({
   /**
    * P5a (#135) — rendered only when non-zero, so a pre-P5a order looks unchanged.
    * Since P5b (#145) this can be a loyalty redemption, a discount code, or both
-   * combined into one figure — never labelled as loyalty-specific below.
+   * combined into one figure, which is why P7.5b (#150) splits it below rather
+   * than labelling the whole amount with one source's name.
    */
   discountPence?: number;
+  /**
+   * P7.5b (#150) — the code applied, with its own share of `discountPence`.
+   * Null means no code was used, which (given `placeOrder` is the only writer of
+   * `discountPence`) means any discount present is a loyalty redemption.
+   */
+  discountCode?: OrderDiscountCode | null;
   deliveryFeePence: number;
   totalPence: number;
 }) {
+  const { codePence, loyaltyPence } = splitDiscount({ discountPence, discountCode });
   return (
     <section className="mb-5 rounded-2xl border border-black/10 bg-white p-5">
       <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-primary">Your items</h2>
@@ -57,10 +67,21 @@ export function OrderItemsCard({
           <dt className="text-primary/70">Subtotal</dt>
           <dd className="font-medium text-primary">{formatPrice(subtotalPence)}</dd>
         </div>
-        {discountPence > 0 && (
+        {/* Each source gets its own row and its own amount (P7.5b, #150). The two
+            always sum to `discountPence` — see splitDiscount — so the money block
+            still reconciles line by line. */}
+        {codePence > 0 && discountCode && (
           <div className="flex justify-between">
-            <dt className="text-primary/70">Discount</dt>
-            <dd className="font-medium text-action">−{formatPrice(discountPence)}</dd>
+            <dt className="text-primary/70">
+              Code <span className="font-semibold text-primary">{discountCode.code}</span>
+            </dt>
+            <dd className="font-medium text-action">−{formatPrice(codePence)}</dd>
+          </div>
+        )}
+        {loyaltyPence > 0 && (
+          <div className="flex justify-between">
+            <dt className="text-primary/70">Loyalty points</dt>
+            <dd className="font-medium text-action">−{formatPrice(loyaltyPence)}</dd>
           </div>
         )}
         <div className="flex justify-between">

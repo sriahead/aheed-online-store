@@ -1,6 +1,7 @@
 import { getEmailService } from "@/lib/email";
 import { fetchVendorProfile } from "@/lib/repositories/vendor";
 import { formatPrice } from "@/components/product/format-price";
+import { splitDiscount } from "@/lib/order-totals";
 import type { WebhookOrder } from "@/lib/repositories/orders";
 
 /**
@@ -33,6 +34,8 @@ export async function sendOrderConfirmationEmail(order: WebhookOrder): Promise<v
       )
       .join("");
 
+    const { codePence, loyaltyPence } = splitDiscount(order);
+
     await getEmailService().send({
       to: order.buyerEmail,
       subject: `${vendor.senderName} — order ${order.orderNumber} confirmed`,
@@ -43,15 +46,23 @@ export async function sendOrderConfirmationEmail(order: WebhookOrder): Promise<v
           ${lines}
           <tr><td>Subtotal</td><td align="right">${formatPrice(order.subtotalPence)}</td></tr>
           ${
-            // P5a (#135), generic since P5b (#145): discountPence can be a loyalty
-            // redemption, a discount code, or both combined into one line — never
-            // labelled "Loyalty points", which would misname a code-only discount.
-            // Without this row the three money lines stop adding up the moment an
-            // order carries a discount, and the customer receives an email whose
-            // arithmetic is visibly wrong.
-            order.discountPence > 0
-              ? `<tr><td>Discount</td><td align="right">−${formatPrice(
-                  order.discountPence,
+            // P5a (#135) rendered ONE generic Discount row here, because
+            // discountPence can be a loyalty redemption, a discount code, or both
+            // combined into one line, so no single label was true of every order.
+            // P7.5b (#150) splits it into the parts it is made of, using the SAME
+            // splitDiscount the order pages use rather than a second arithmetic
+            // that could disagree with them. The rows still sum to discountPence,
+            // so the money block reconciles exactly as before.
+            codePence > 0 && order.discountCode
+              ? `<tr><td>Code ${order.discountCode.code}</td><td align="right">−${formatPrice(
+                  codePence,
+                )}</td></tr>`
+              : ""
+          }
+          ${
+            loyaltyPence > 0
+              ? `<tr><td>Loyalty points</td><td align="right">−${formatPrice(
+                  loyaltyPence,
                 )}</td></tr>`
               : ""
           }
@@ -62,6 +73,15 @@ export async function sendOrderConfirmationEmail(order: WebhookOrder): Promise<v
             order.totalPence,
           )}</strong></td></tr>
         </table>
+        ${
+          // P7.5b (#138). Only ever a settled figure: this email is sent from the
+          // webhook route AFTER confirmPayment committed, and its order is a
+          // second, post-commit read, so a non-null pointsEarned is an award that
+          // has actually happened. A guest order carries null and gets no line.
+          order.pointsEarned !== null && order.pointsEarned > 0
+            ? `<p>You earned <strong>${order.pointsEarned}</strong> loyalty points on this order.</p>`
+            : ""
+        }
         <p>We'll be in touch when it's on its way.</p>
       `,
     });

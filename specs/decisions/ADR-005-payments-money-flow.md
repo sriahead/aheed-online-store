@@ -4,8 +4,8 @@ title: "ADR-005 — Payments & multi-vendor money flow"
 audience: [dev]
 type: adr
 status: approved
-version: "1.4.0"
-updated: 2026-08-19
+version: "1.5.0"
+updated: 2026-08-20
 visibility: internal
 summary: Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite.
 tags: [adr, payments, stripe, multi-tenancy, compliance]
@@ -154,6 +154,43 @@ with a 17-item basket during #103's deliberate payment-failure window.
 
 Nothing here reopens a decision — the money flow is unchanged. It records what the compensation path
 now does, so a future reader does not infer from the P3c note that stock is all it covers.
+
+## Implementation note (P7.5b, 2026-08-20, #150 / #138)
+
+**An order's `discountPence` is now decomposed for display, and the loyalty share is obtained by
+subtraction — deliberately, not for want of a better source.**
+
+`Order.discountPence` is a single generic column by design (see the P5a note above): it holds a
+loyalty redemption, a discount code, or both added together, and `placeOrder` is its only writer
+(`codeDiscountPence + redemption.discountPence`). Only the code's share is separately stored, as
+`DiscountRedemption.amountPence`. So:
+
+- **code share** = `DiscountRedemption.amountPence`
+- **loyalty share** = `discountPence − code share`
+
+The obvious-looking alternative — recovering the loyalty share from the REDEEM ledger row via
+`pointsToPence(points, pencePerPointRedeemed)` — is **wrong, and must not be "fixed" back to it**.
+The ledger stores a redemption in *points*, not pence, and `pencePerPointRedeemed` is vendor config
+an admin can change at any time afterwards. A recomputed share would therefore drift away from the
+`discountPence` displayed beside it, and an order page would stop adding up. Subtraction cannot
+drift: the two shares sum to the figure they decompose, by construction.
+
+Two bounds make that safe rather than merely convenient, and both are enforced upstream: a code's
+face value is clamped before it is stored (`lib/discounts.ts:141`), and `clampRedemption` gives
+points only the headroom the code left. So the code share can never exceed `discountPence`, and
+`splitDiscount` needs no defensive cap — one is deliberately absent so that a genuine data defect
+would surface rather than be silently absorbed.
+
+**Points earned are read, never predicted.** `earnPoints` writes its EARN row inside
+`confirmPayment`'s transaction, so `pointsEarned` is non-null exactly when the award has happened.
+Surfaces that render an order before payment clears show a line with no number rather than an
+estimate — the tier multiplier comes from a windowed spend query and is snapshotted onto the EARN
+row *because* it moves, so an estimate computed outside that write path can legitimately disagree
+with the award. The confirmation email is unaffected either way: it is sent only after the webhook's
+`confirm` returned true, from a second, post-commit read of the order.
+
+Nothing here changes how money is calculated, charged or recorded — only what an order is able to
+explain about the figures it already carries.
 
 ## Deferred upgrade — Stripe Connect
 
