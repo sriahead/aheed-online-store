@@ -127,6 +127,19 @@ every branch merges.
   internal KMS docs site (`kms/site-internal`) rebuilds and compiles cleanly.
 
 ### Changed
+- **`specs/roadmap.md` (v1.42.0)** — P7.5d+e's `/document` closeout (#264). Roadmap gains the
+  slice's build/merge row (PR #289) and the production-promotion row (PR #290, which also carries
+  **P7.5 — Pre-launch closeout of P3/P5/P6 deferred debt is closed** — fourteen carried-forward
+  P3/P5/P6 issues resolved across the phase's six slices, and "safe to start P8" is now a statement
+  the roadmap can point at). The promotion row records that `deploy-production`'s migration step
+  (`CREATE EXTENSION pg_trgm` + three trigram indexes) applied cleanly, confirmed directly from the
+  workflow's own log, and the post-promotion issue-state check confirming no accidental closure
+  among the nine issues explicitly carried into P8.
+- **`specs/2026-08-20-p7.5de-staff-panel-completion/requirements.md`** — R27 and R36 corrected at
+  `/validate` after being found genuinely broken (R27 demanded an impossible keyset pagination for
+  a `groupBy` aggregate with no stable key; R36 directly contradicted R25's own per-customer-spend
+  requirement) — both amended rather than shipped disclosed-but-unreconciled. Detail in
+  `build-notes.md`'s "Deviations from the spec" section.
 - **`specs/decisions/ADR-004-multi-tenancy.md` (v1.5.0)** — decision 5 amended by P7.5c+f (#263).
   It said per-vendor primitives are injected and "the **semantic** layer and every component stay
   unchanged." Components still are; the semantic *layer* no longer is, because `brandStyle()` now
