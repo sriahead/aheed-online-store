@@ -1,7 +1,7 @@
 /**
  * ProductMetadataService port.
  * Fetches product metadata (specifically an image) from Open Food Facts API.
- * 
+ *
  * Complies with vendor-agnostic architecture using standard fetch.
  */
 
@@ -23,9 +23,11 @@ export function getProductMetadataService(): ProductMetadataService {
           }
         }
       }
-      
+
       // Fallback to text search
-      const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(productName)}&search_simple=1&action=process&json=1&page_size=1`);
+      const res = await fetch(
+        `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(productName)}&search_simple=1&action=process&json=1&page_size=1`,
+      );
       if (res.ok) {
         const data = (await res.json()) as any;
         if (data.products && data.products.length > 0 && data.products[0].image_url) {
@@ -33,6 +35,6 @@ export function getProductMetadataService(): ProductMetadataService {
         }
       }
       return null;
-    }
+    },
   };
 }

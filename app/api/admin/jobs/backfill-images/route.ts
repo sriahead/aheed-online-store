@@ -21,7 +21,13 @@ export async function POST(request: Request) {
     try {
       const result = await runProductImagePipeline(product.id, product.name, null);
       if (result) {
-        await saveGeneratedProductImage(auth.vendorId, product.id, result.imageKey, product.name, result.needsReview);
+        await saveGeneratedProductImage(
+          auth.vendorId,
+          product.id,
+          result.imageKey,
+          product.name,
+          result.needsReview,
+        );
         processed++;
       }
     } catch (err) {
@@ -29,5 +35,9 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ message: "Backfill complete", processed, totalFound: products.length });
+  return NextResponse.json({
+    message: "Backfill complete",
+    processed,
+    totalFound: products.length,
+  });
 }

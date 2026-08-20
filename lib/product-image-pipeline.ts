@@ -10,9 +10,9 @@ export interface PipelineResult {
 }
 
 export async function runProductImagePipeline(
-  productId: string, 
-  productName: string, 
-  barcode?: string | null
+  productId: string,
+  productName: string,
+  barcode?: string | null,
 ): Promise<PipelineResult | null> {
   const metadataSvc = getProductMetadataService();
   const aiSvc = getImageGenerationService();
@@ -36,12 +36,12 @@ export async function runProductImagePipeline(
   if (!imageBuffer) {
     const prompt = `Professional studio photography of fresh grocery item: ${productName}. Shot on a clean, bright, white background. High resolution, appetizing lighting, highly detailed food photography, centered.`;
     imageBuffer = await aiSvc.generateImage(prompt);
-    
+
     if (!imageBuffer) {
       // Both failed or AI not configured
       return null;
     }
-    
+
     needsReview = true;
     contentType = "image/png"; // Workers AI generally returns PNG or JPEG binary
   }
@@ -55,6 +55,6 @@ export async function runProductImagePipeline(
 
   return {
     imageKey: key,
-    needsReview
+    needsReview,
   };
 }

@@ -21,7 +21,13 @@ export async function POST(request: Request) {
     }
 
     const { saveGeneratedProductImage } = require("@/lib/repositories/products");
-    await saveGeneratedProductImage(auth.vendorId, productId, result.imageKey, productName, result.needsReview);
+    await saveGeneratedProductImage(
+      auth.vendorId,
+      productId,
+      result.imageKey,
+      productName,
+      result.needsReview,
+    );
 
     return NextResponse.json(result);
   } catch (error: any) {

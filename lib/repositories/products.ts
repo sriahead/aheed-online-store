@@ -932,7 +932,7 @@ export async function quickUpdateInventory(
           update: { quantity: data.quantity },
         });
       }
-      
+
       return { ok: true as const, id: productId };
     });
   } catch (error) {
@@ -940,7 +940,13 @@ export async function quickUpdateInventory(
   }
 }
 
-export async function saveGeneratedProductImage(vendorId: string, productId: string, storageKey: string, alt: string, needsReview: boolean): Promise<void> {
+export async function saveGeneratedProductImage(
+  vendorId: string,
+  productId: string,
+  storageKey: string,
+  alt: string,
+  needsReview: boolean,
+): Promise<void> {
   const prisma = getPrisma();
   await prisma.$transaction([
     prisma.productImage.create({
@@ -948,26 +954,28 @@ export async function saveGeneratedProductImage(vendorId: string, productId: str
         productId,
         storageKey,
         alt,
-        isPrimary: false
-      }
+        isPrimary: false,
+      },
     }),
-    ...(needsReview ? [
-      prisma.product.update({
-        where: { id: productId, vendorId },
-        data: { imageNeedsReview: true }
-      })
-    ] : [])
+    ...(needsReview
+      ? [
+          prisma.product.update({
+            where: { id: productId, vendorId },
+            data: { imageNeedsReview: true },
+          }),
+        ]
+      : []),
   ]);
 }
 
 export async function getProductsWithoutImages(vendorId: string, limit: number) {
   const prisma = getPrisma();
   return await prisma.product.findMany({
-    where: { 
-      vendorId, 
-      images: { none: {} } 
+    where: {
+      vendorId,
+      images: { none: {} },
     },
     take: limit,
-    select: { id: true, name: true }
+    select: { id: true, name: true },
   });
 }
