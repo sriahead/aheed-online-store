@@ -103,6 +103,10 @@ type VendorSatellites = {
     senderName: string;
     senderEmail: string;
     searchPlaceholder: string;
+    // P7.5c+f — per-vendor storefront copy (#239). Nullable in the schema
+    // because a null HIDES its element; both seeded vendors set them.
+    bannerNote: string | null;
+    heroSubtitle: string | null;
     // P3a — delivery rules are vendor data, not constants. Deliberately
     // different per vendor so the cart proves it reads them from the DB.
     deliveryFeePence: number;
@@ -137,6 +141,20 @@ type VendorSatellites = {
     minSubtotalPence: number;
     remainingRedemptions: number | null;
     maxPerCustomer: number | null;
+  }[];
+  // P7.5c+f — storefront promotions are vendor data (#233). These replace
+  // components/layout/PromoSlider.tsx's hardcoded array, which advertised "20%
+  // off all fresh produce" on every vendor's homepage including SriMart's.
+  // Deterministic ids so a re-seed updates rather than duplicates; imageKey is
+  // deliberately absent, so each renders as a token-styled card until an owner
+  // uploads artwork (seeding a key for an object nobody uploaded is how #244
+  // happens).
+  promotions: {
+    id: string;
+    title: string;
+    description: string;
+    linkUrl: string;
+    sortOrder: number;
   }[];
 };
 
@@ -186,7 +204,29 @@ async function upsertVendorSatellites(vendorId: string, s: VendorSatellites) {
       update: {},
     });
   }
-  console.log(`seeded branding/config/delivery/loyalty/discounts for ${vendorId}`);
+  // Keyed on a deterministic id, so a re-seed updates in place rather than
+  // duplicating (VendorPromotion has no natural unique key, and inventing a
+  // @@unique([vendorId, sortOrder]) would stop a vendor ever holding two promos
+  // at the same position for real reasons).
+  //
+  // `imageKey` and `altText` are NOT in the update set on purpose — the same
+  // reasoning as the discount codes above. The seed declares the copy; the
+  // artwork is something an owner uploads afterwards, and a re-seed must not
+  // wipe it.
+  for (const promo of s.promotions) {
+    await prisma.vendorPromotion.upsert({
+      where: { id: promo.id },
+      create: { vendorId, ...promo },
+      update: {
+        title: promo.title,
+        description: promo.description,
+        linkUrl: promo.linkUrl,
+        sortOrder: promo.sortOrder,
+        isActive: true,
+      },
+    });
+  }
+  console.log(`seeded branding/config/delivery/loyalty/discounts/promotions for ${vendorId}`);
 }
 
 // Aheed's primitives are the exact current tokens.css hex; tagline preserves the
@@ -211,6 +251,12 @@ const AHEED_SATELLITES: VendorSatellites = {
     senderName: "Aheed Food Centre",
     senderEmail: "orders@aheedfoodcentre.nocaped.com",
     searchPlaceholder: "Search halal lamb, basmati, lentils…",
+    // P7.5c+f (#239) — copy that used to be hardcoded in Header.tsx and the
+    // homepage hero, and so rendered for SriMart too. Aheed's halal claim is
+    // legitimate vendor data; it just had to stop being a platform constant.
+    bannerNote: "100% Certified HMC Halal Fresh Meat Cut Daily",
+    heroSubtitle:
+      "Delivering fresh groceries straight to your door with our own dedicated delivery team.",
     deliveryFeePence: 349,
     freeDeliveryThresholdPence: 3000,
     minimumOrderPence: 1500,
@@ -238,6 +284,32 @@ const AHEED_SATELLITES: VendorSatellites = {
       // Capped per customer, which also means the code requires sign-in — a
       // guest has no identity to count uses against.
       maxPerCustomer: 1,
+    },
+  ],
+  // Every claim here is one Aheed can actually keep, and each links somewhere
+  // that exists. The slider these replaced promised "up to 20% off on all fresh
+  // produce" with no discount behind it at all.
+  promotions: [
+    {
+      id: "5217a4a7-0000-4000-b000-000000000101",
+      title: "10% off your first order",
+      description: "New here? Use code WELCOME10 at checkout on orders over £15.",
+      linkUrl: "/search",
+      sortOrder: 0,
+    },
+    {
+      id: "5217a4a7-0000-4000-b000-000000000102",
+      title: "Free delivery over £30",
+      description: "Milton Keynes deliveries, handled by our own drivers.",
+      linkUrl: "/search",
+      sortOrder: 1,
+    },
+    {
+      id: "5217a4a7-0000-4000-b000-000000000103",
+      title: "Shop your whole list at once",
+      description: "Paste your shopping list and we'll match it to the catalogue.",
+      linkUrl: "/shop-your-list",
+      sortOrder: 2,
     },
   ],
 };
@@ -595,6 +667,12 @@ const SRIMART_SATELLITES: VendorSatellites = {
     senderName: "SriMart",
     senderEmail: "orders@srimart.nocaped.com",
     searchPlaceholder: "Search chargers, earbuds, lamps…",
+    // P7.5c+f (#239) — SriMart's own voice. Before this slice it advertised
+    // "100% Certified HMC Halal Fresh Meat Cut Daily" and "Delivering fresh
+    // groceries…", because both were literals in shared components. Nothing
+    // here names a trade belonging to Aheed, which is what R17 checks.
+    bannerNote: "12-month warranty on every device",
+    heroSubtitle: "Everyday tech and home essentials, delivered across Reading by our own team.",
     deliveryFeePence: 299,
     freeDeliveryThresholdPence: 5000,
     minimumOrderPence: 1000,
@@ -612,6 +690,25 @@ const SRIMART_SATELLITES: VendorSatellites = {
   // Deliberately empty: SriMart runs no discount scheme, which is what proves
   // codes are per-vendor data rather than a platform-wide list.
   discountCodes: [],
+  // Deliberately DIFFERENT copy, a different count (two, not Aheed's three) and
+  // no discount claim — SriMart has no discount codes, so a promo offering one
+  // would be the exact defect this slice removes, just pointing the other way.
+  promotions: [
+    {
+      id: "5217a4a7-0000-4000-b000-000000000201",
+      title: "Free delivery over £50",
+      description: "Reading and the surrounding RG districts, delivered by our own team.",
+      linkUrl: "/search",
+      sortOrder: 0,
+    },
+    {
+      id: "5217a4a7-0000-4000-b000-000000000202",
+      title: "12-month warranty as standard",
+      description: "Every device we sell is covered for a full year.",
+      linkUrl: "/search",
+      sortOrder: 1,
+    },
+  ],
 };
 
 const SRIMART_CATALOGUE: CatalogueCategory[] = [

@@ -28,6 +28,14 @@ export interface VendorProfile {
   senderName: string;
   senderEmail: string;
   searchPlaceholder: string;
+  /**
+   * P7.5c+f (#239) — per-vendor storefront copy. `null` means HIDE the element,
+   * not "fall back to something neutral": the strings these replaced were Aheed
+   * marketing rendering on every vendor, and platform-written filler is still a
+   * claim made on a vendor's behalf.
+   */
+  bannerNote: string | null;
+  heroSubtitle: string | null;
   deliveryPrefixes: string[];
   // P3a — delivery rules as vendor data. P3a reads only the threshold (cart
   // banner); applying fee/minimum to a payable total is P3b.
@@ -81,6 +89,8 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
           senderName: true,
           senderEmail: true,
           searchPlaceholder: true,
+          bannerNote: true,
+          heroSubtitle: true,
           deliveryFeePence: true,
           freeDeliveryThresholdPence: true,
           minimumOrderPence: true,
@@ -112,6 +122,10 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
     senderName: vendor?.config?.senderName ?? DEFAULT_SENDER_NAME,
     senderEmail: vendor?.config?.senderEmail ?? "",
     searchPlaceholder: vendor?.config?.searchPlaceholder ?? DEFAULT_SEARCH_PLACEHOLDER,
+    // No platform default for either — an unseeded vendor renders neither
+    // element rather than borrowing Aheed's voice.
+    bannerNote: vendor?.config?.bannerNote ?? null,
+    heroSubtitle: vendor?.config?.heroSubtitle ?? null,
     deliveryPrefixes: (vendor?.deliveryAreas ?? []).map((a) => a.prefix),
     // Fall back to the schema defaults when the config satellite is unseeded,
     // matching the deploy-before-seed safety the rest of this file uses.

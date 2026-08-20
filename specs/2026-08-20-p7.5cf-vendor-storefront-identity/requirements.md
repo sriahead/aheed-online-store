@@ -83,7 +83,12 @@ R17. Rendered `/` for SriMart's host contains none of the case-insensitive subst
 ## Promotions rendering (#233)
 
 R18. `components/layout/PromoSlider.tsx` no longer exists, and no file under `app/`, `components/` or
-     `features/` imports or references `PromoSlider`.
+     `features/` **imports it or renders it as a JSX element** — target `^import.*PromoSlider` and
+     `<PromoSlider`, not the bare word. `PromoCarousel.tsx`'s doc comment names `PromoSlider` twice,
+     to record what it replaced and why the auto-rotation was not copied across; a bare-word grep
+     would "pass" only by deleting that explanation. This is the P4a trap (see
+     `specs/sdd-workflow.md`), hit for the fourth time in this repo — the first three were R5 and
+     R27 in P4a and R17/R22 in P7.5b.
 
 R19. The hero renders a promotions carousel populated from `listActivePromotions` for the resolved
      vendor, in ascending `sortOrder`, showing only `isActive` rows.
@@ -116,8 +121,12 @@ R25. `clampForContrast(fg, backgrounds, minRatio)` returns a 6-digit lowercase h
 R26. For each of `#1e88e5`, `#4caf50`, `#f57c00` and `#d32f2f` clamped against `["#ffffff"]` at
      `4.5`, `contrastRatio(result, "#ffffff") >= 4.5`.
 
-R27. For each input in R26, the OKLCH hue angle of the result is within 2 degrees of the input's, and
-     the result differs from the input.
+R27. For each of `#1e88e5`, `#4caf50` and `#f57c00` — the three seeded primitives that measurably
+     fail 4.5:1 against white (3.68, 2.78 and 2.70 respectively) — the clamp's result differs from
+     the input and its OKLCH hue angle is within 2 degrees of the input's. `#d32f2f` is excluded
+     from the "differs" half deliberately: it measures **4.98:1 and already passes**, so R25 requires
+     it to come back untouched. Aheed's red not being restyled is the assertion here, and a
+     requirement demanding it change would have forced the clamp to damage a compliant colour.
 
 R28. `clampForContrast("#ffffff", ["#ffffff"], 4.5)` returns a value meeting 4.5:1 against white
      rather than looping or returning `#ffffff`.

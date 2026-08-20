@@ -12,16 +12,29 @@
 > `ep-empty-scene-zafjzeye`; production is `ep-young-glitter-zadlkttm`. **If the host matches
 > staging or production, stop** — this slice runs a migration that creates a table.
 >
-> **P2. Establish which hosts resolve to which vendor in *this* database.** Do not assume
-> `srimart-staging.nocaped.com` is seeded here: `prisma/seed.ts` only creates SriMart when both
-> `SEED_AHEED_HOST` and `SEED_SRIMART_HOST` are set, and neither is set in `.env` today, so the dev
-> branch carries whatever rows it inherited. Write a real file `scripts/list-vendor-domains.ts`
-> printing every `VendorDomain.host` with its vendor slug, and run
-> `npx tsx scripts/list-vendor-domains.ts`. **Do not use `npx tsx -e`** — per `CLAUDE.md` it exits 0
-> with no output on this Windows setup as soon as the script imports `@prisma/client`. Record both
-> hosts; every `Host:` header below means *the host this step printed*. If no SriMart host exists,
-> seed one before continuing rather than declaring the two-vendor rows unverifiable. Delete the
-> scratch script afterwards.
+> **P2. Establish which hosts resolve to which vendor, and SEED BOTH VENDORS.** Two traps here,
+> both hit during Build:
+>
+> *The hosts.* Write a real file `scripts/list-vendor-domains.ts` printing every
+> `VendorDomain.host` with its vendor slug, and run `npx tsx scripts/list-vendor-domains.ts`.
+> **Do not use `npx tsx -e`** — per `CLAUDE.md` it exits 0 with no output on this Windows setup as
+> soon as the script imports `@prisma/client`. Also construct the client the way `prisma/seed.ts`
+> does — `new PrismaClient({ adapter: new PrismaNeon({ connectionString }) })` — because
+> `engineType = "client"` fails with `P2038 Missing configured driver adapter` otherwise. At the
+> time of writing the dev branch holds `staging.aheedfoodcentre.nocaped.com` and `localhost` →
+> `aheed-food-centre`, and `srimart-staging.nocaped.com` → `srimart`. **`localhost` resolving to
+> Aheed means a bare `curl http://127.0.0.1:<port>/` is an AHEED request** — the two-vendor rows
+> below need an explicit `Host:` header for both vendors, not just for SriMart. Delete the scratch
+> script afterwards.
+>
+> *The seed.* **`npm run db:seed` alone will NOT seed SriMart.** `prisma/seed.ts` gates the entire
+> second vendor — catalogue, satellites, and this slice's `bannerNote`/`heroSubtitle`/promotions —
+> behind BOTH `SEED_AHEED_HOST` and `SEED_SRIMART_HOST` being set, and neither is set in `.env`.
+> Without them the seed logs success for Aheed only, SriMart's config columns stay `NULL`, it gets
+> zero promotions, and R17/R23 look like failures when they are just unseeded. Run:
+> `SEED_AHEED_HOST=staging.aheedfoodcentre.nocaped.com SEED_SRIMART_HOST=srimart-staging.nocaped.com npx tsx prisma/seed.ts`
+> (substituting whatever hosts the step above printed). Expect `seeded
+> branding/config/delivery/loyalty/discounts/promotions` twice, once per vendor id.
 >
 > **P3. Start `npm run preview` and record the port it prints** (usually `8787`). Every `curl` below
 > assumes `http://127.0.0.1:<port>`. **`npm run dev` is not a substitute** — it cannot load
@@ -58,7 +71,7 @@
 | R15 | `curl -s -H "Host: <Aheed host>" http://127.0.0.1:<port>/ \| grep -o '£[0-9.]*' \| sort -u` includes `£30.00` and `£15.00` and excludes `£50.00`/`£10.00`; the same with SriMart's host includes `£50.00` and `£10.00` and excludes `£30.00`/`£15.00`. (Seeded values are Aheed 3000/1500, SriMart 5000/1000 — re-read `prisma/seed.ts` rather than trusting these if the seed changed.) |
 | R16 | Read the trust strip in `app/(storefront)/page.tsx`: exactly three tiles, one interpolating `localityName`. Confirm the two capability claims are real: `grep -n 'stripe' lib/payments.ts` matches, and `grep -n 'sendOrderStatusEmail\|sendOrderConfirmationEmail' lib/email.ts` matches. |
 | R17 | `curl -s -H "Host: <SriMart host>" http://127.0.0.1:<port>/ > "$TMP/srimart.html"` (any scratch dir outside the repo), then `grep -icE 'halal\|grocer\|fresh produce\|meat\|spice\|lentil\|cultural staple' "$TMP/srimart.html"` returns `0`. If non-zero, print the matching lines: a match inside a SriMart **product name** is a seed-data problem to report, not a pass. |
-| R18 | `test ! -e components/layout/PromoSlider.tsx` succeeds. `grep -rn 'PromoSlider' app/ components/ features/` returns no match. |
+| R18 | `test ! -e components/layout/PromoSlider.tsx` succeeds. `grep -rnE '^import.*PromoSlider\|<PromoSlider' app/ components/ features/` returns no match. **Do not grep the bare word** — `PromoCarousel.tsx`'s doc comment names `PromoSlider` twice on purpose, recording what it replaced and why its unpausable auto-rotation was not carried across; a bare-word check can only be "passed" by deleting that. The two matches are the rationale, not the defect. |
 | R19 | Read the hero in `app/(storefront)/page.tsx`: it renders the carousel from the promotions accessor. Then `curl` `/` for one host and confirm the seeded promo titles appear **in ascending `sortOrder`** — compare the order in the HTML against `SELECT title, "sortOrder" FROM "VendorPromotion" WHERE "vendorId" = ... ORDER BY "sortOrder"`. Set one row `isActive = false`, re-fetch, confirm it disappears and the others remain; restore it. |
 | R20 | With all rows `imageKey IS NULL` (R6), the fetched carousel markup contains each promo's title and description and no `<img`. Then set one row's `imageKey` to an existing object key — take it from a `ProductImage.storageKey` row so the object genuinely exists — and its `altText` to a known string; re-fetch and confirm an `<img>` whose `src` is `${CDN_BASE_URL}/<that key>` and whose `alt` is that string. Revert both to `NULL`. `grep -nE 'https?://' 'app/(storefront)/page.tsx' <carousel component>` returns no image URL. |
 | R21 | Set every promotion row for one vendor to `isActive = false`. `curl -s -o /dev/null -w '%{http_code}'` for that host returns `200`, and the fetched body contains neither the carousel's container class nor any promo title. Restore the rows. |
@@ -67,7 +80,7 @@
 | R24 | `test -f lib/color-contrast.ts` succeeds; `grep -c '^import' lib/color-contrast.ts` returns `0`; `grep -n 'export function contrastRatio\|export function clampForContrast' lib/color-contrast.ts` matches both. |
 | R25 | `npm test -- tests/color-contrast.test.ts` passes, including a case asserting every returned value matches `/^#[0-9a-f]{6}$/` and a case asserting `clampForContrast("#2e7d32", ["#ffffff"], 4.5) === "#2e7d32"`. |
 | R26 | In the same run, a table-driven case asserts `contrastRatio(clampForContrast(c, ["#ffffff"], 4.5), "#ffffff") >= 4.5` for `c` in `#1e88e5`, `#4caf50`, `#f57c00`, `#d32f2f`. |
-| R27 | In the same run, a case asserts for each of those four that the result differs from the input and `Math.abs(hue(result) - hue(input)) <= 2` in OKLCH degrees, wrapping at 360. |
+| R27 | In the same run, a case asserts for `#1e88e5`, `#4caf50` and `#f57c00` — the three that actually fail — that the result differs from the input and `hueDelta(result, input) <= 2` in OKLCH degrees, wrapping at 360. A separate case asserts `clampForContrast("#d32f2f", ["#ffffff"], 4.5) === "#d32f2f"`: it measures 4.98:1, already passes, and must come back untouched. **If a future edit makes that case fail, the clamp has started damaging compliant colours** — do not "fix" it by loosening the assertion. |
 | R28 | In the same run, `clampForContrast("#ffffff", ["#ffffff"], 4.5)` returns within the test timeout and its result meets 4.5:1 against white. A hang, or a returned `#ffffff`, is a failure. |
 | R29 | `npm test -- tests/vendor-theme.test.ts` passes a case asserting `Object.keys(brandStyle(AHEED_PRIMITIVES))` contains all six of `--color-action`, `--color-accent`, `--color-danger`, `--color-action-hover`, `--color-accent-hover`, `--color-primary`, plus the eight `--color-brand-*`, `--color-surface-muted` and the three tints. |
 | R30 | In the same file, for both vendors' primitive sets: each of the three base colours meets 4.5:1 against `#ffffff`; each hover has strictly lower OKLCH lightness than its base and also meets 4.5:1. |
