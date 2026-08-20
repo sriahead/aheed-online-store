@@ -28,6 +28,17 @@ every branch merges.
   discount rows (deliberately — two stories about one order is the defect this phase removes) while
   points, an account fact, stay off it. The confirmation email uses the same `splitDiscount`, not a
   second arithmetic.
+- **`/document` closeout for P7.5b (#262, PR #272, merged to staging) — P7.5's second slice.**
+  Roadmap (v1.39.0) gains the build/validate/merge row, plus a backfilled row for **P7.5a's
+  promotion to production** (PR #271, `staging → main`, merge `b8066e2`) that `npm run sdd:audit`
+  reported as pending carry-forward. `/validate` closed R19/R20 with a full live Stripe test-card
+  checkout → webhook → confirmation round-trip via the Stripe CLI, not unit tests alone; `CLAUDE.md`
+  gains a new "Local Stripe webhook testing" section recording the `stripe listen` signing-secret
+  and Resend sandbox traps hit along the way. Delivery board reconciled: #262 confirmed **In
+  Review**. New issue **#273** filed (Phase P8, Backlog) for two hand-inserted dev-DB
+  `DiscountRedemption` fixture rows found during validation, unrelated to this slice's code.
+  `ARTIFACT_INDEX.md` rebuilt; `npm run sdd:audit` and `npm run kms:validate` both clean; the
+  internal KMS docs site (`kms/site-internal`) rebuilds and compiles cleanly.
 
 ### Changed
 - **`specs/decisions/ADR-005-payments-money-flow.md` (v1.5.0)** gains a P7.5b implementation note

@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.7.0"
-updated: 2026-08-19
+version: "1.8.0"
+updated: 2026-08-20
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -374,6 +374,30 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `lint`/`typecheck`/`test` checks a second vendor's rendered output. Curl or otherwise fetch a page
   with `Host: srimart-staging.nocaped.com` (or `srimart.nocaped.com` in production) under
   `npm run preview` before treating a branding/token change as verified.
+
+## Local Stripe webhook testing — learned the hard way
+- **`stripe listen`'s webhook signing secret is per-invocation, not fixed** — it will differ from
+  whatever is already sitting in `.dev.vars`'s `STRIPE_WEBHOOK_SECRET` (itself likely written down
+  from a previous, different `stripe listen` session). A mismatch fails the webhook route's
+  signature check silently from the outside: the Stripe test-card payment itself succeeds, the
+  order sits forever in `PENDING_PAYMENT`, and nothing in the browser or `npm run preview` console
+  says why. Before relying on a live checkout→webhook round-trip, start
+  `stripe listen --forward-to <preview-url>/api/webhooks/stripe`, copy the secret it prints into
+  `.dev.vars`, and **restart `npm run preview`** — `.dev.vars` is read at Worker boot, so editing it
+  with the preview server already running has no effect until it restarts.
+- **`stripe listen` only forwards events that occur while it is running.** A payment completed
+  *before* starting the listener is not retroactively forwarded — `stripe events resend <id>`
+  resends to a registered webhook **endpoint** in the Stripe dashboard, not to an ad-hoc CLI
+  listener, so it doesn't help here either. Place a fresh order after `stripe listen` is confirmed
+  ready (`Ready! ... webhook signing secret is whsec_...` in its output) rather than trying to
+  recover an already-completed payment's event.
+- **Resend's API rejects `to` addresses on unverified domains (`example.com` included) even in test
+  mode**, so a live checkout using a demo account's `@example.com` address will genuinely fail to
+  send — `lib/email.ts`'s try/catch swallows it correctly (this is what R20-style requirements are
+  for), but it also means the actual outbound HTML is never observable this way. Confirmed in
+  P7.5b's `/validate` (#262): the full webhook→confirm→email pipeline was proven live up to the
+  point of the real Resend call; the literal HTML bytes still have to come from a unit test that
+  parses the outbound request body, not from watching a real send succeed.
 
 ## Hard stops
 - Never invent infrastructure or credentials. If a resource/secret is missing, STOP and list what
