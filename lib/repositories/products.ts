@@ -948,24 +948,21 @@ export async function saveGeneratedProductImage(
   needsReview: boolean,
 ): Promise<void> {
   const prisma = getPrisma();
-  await prisma.$transaction([
-    prisma.productImage.create({
-      data: {
-        productId,
-        storageKey,
-        alt,
-        isPrimary: false,
-      },
-    }),
-    ...(needsReview
-      ? [
-          prisma.product.update({
-            where: { id: productId, vendorId },
-            data: { imageNeedsReview: true },
-          }),
-        ]
-      : []),
-  ]);
+  await prisma.productImage.create({
+    data: {
+      productId,
+      storageKey,
+      alt,
+      isPrimary: false,
+    },
+  });
+
+  if (needsReview) {
+    await prisma.product.update({
+      where: { id: productId, vendorId },
+      data: { imageNeedsReview: true },
+    });
+  }
 }
 
 export async function getProductsWithoutImages(vendorId: string, limit: number) {
