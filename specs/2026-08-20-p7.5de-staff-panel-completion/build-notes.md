@@ -164,9 +164,9 @@ All three are on Project #2, Phase P8, Backlog.
 
 ## Deviations from the spec
 
-Two, both deliberate.
+Three, all deliberate; two required a requirements.md correction at Validate (below).
 
-### 1. R27 — the customer directory is OFFSET-paginated, not keyset. **This will fail R27 as written.**
+### 1. R27 — the customer directory is OFFSET-paginated, not keyset.
 
 R27 says the directory is "keyset-paginated in the same shape as `/staff/orders` and
 `/staff/products`". It is not. It uses `page`-based offset pagination ordered by total spend
@@ -185,7 +185,21 @@ say offset pagination (my recommendation — the reasoning is in the module comm
 changes. The *observable* intent of R27 — page two is disjoint from page one, with no duplicates —
 does hold and is worth checking regardless.
 
-### 2. R1 — a third index the requirement does not name
+**Resolved at Validate (2026-08-20):** R27 amended to describe offset pagination, per the
+recommendation above. The live check (31 customers, a 25+6 page split against real dev data) found
+no duplicates and no gaps.
+
+### 2. R36 — contradicted R25, corrected at Validate
+
+R36's original wording ("no new aggregate over `Order.totalPence` grouped by ... customer appears
+**anywhere in this slice**") was broader than intended and directly contradicted R25, which requires
+the customer directory to show per-customer total spend — itself a `groupBy`-by-customer aggregate
+over `Order.totalPence`. Not caught during Build because both requirements were read in isolation
+against their own sections rather than against each other. **Resolved at Validate (2026-08-20):**
+R36 scoped to `/staff/reports` specifically, matching its actual intent (no sales-trend dashboard on
+that page) — confirmed live that the page still renders exactly P7.5a's three revenue tiles.
+
+### 3. R1 — a third index the requirement does not name
 
 R1 requires trigram indexes covering `Order.orderNumber` and `Order.guestEmail`. The migration also
 creates `User_email_trgm_idx`. Justification is decision 1 above: the third search arm would
@@ -229,6 +243,17 @@ Ordered by where I would actually look first.
    trigram indexes, so `prisma migrate diff` may report drift that is not drift and `migrate dev` may
    propose dropping them. The migration and the schema comment both say to keep them. If a future
    session reports "unexpected indexes", this is why.
+10. **Added at Validate (2026-08-20): `npm run preview`'s local Windows session intermittently
+    returned raw 500/503 responses on `POST /staff/loyalty` (create and delete) while the
+    underlying write completed correctly every time** — confirmed via direct DB inspection after
+    each occurrence (no duplicate row on the R16 duplicate-key case; the GOLD tier genuinely
+    deleted with all 11 ledger rows byte-identical for R19). The same symptom hit a non-conflicting
+    create and a non-conflicting delete, ruling out the duplicate-key catch itself as the cause, and
+    coincided with persistent CDP screenshot timeouts ("renderer may be frozen") in the same
+    session — consistent with this repo's already-documented local Windows OpenNext/workerd
+    instability (`CLAUDE.md`'s "Local Stripe webhook testing" and "Stopping `npm run preview`"
+    entries are the same family of issue). Treated as environment noise, not an app defect; worth a
+    spot-check against staging if it recurs.
 
 Green at the end of Build: `lint`, `typecheck`, `npm test` (524 tests, 42 files), `npm run build`,
 and the KMS internal site build (`kms:assemble:internal` + `next build --webpack`, 81 pages).

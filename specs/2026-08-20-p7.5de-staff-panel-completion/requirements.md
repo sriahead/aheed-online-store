@@ -113,8 +113,15 @@ R26. Guest orders (`userId` null, `guestEmail` set) and erased users (`userId` n
      erasure) both appear rather than being dropped, and two distinct guest emails are never merged
      into one directory entry.
 
-R27. The directory is keyset-paginated in the same shape as `/staff/orders` and `/staff/products`,
-     with a next-page link that returns the following page and no duplicate entries.
+R27. The directory is offset-paginated, ordered by total spend descending, with a next-page link
+     that returns the following page with no duplicate or missing entries. **Corrected at Validate
+     (2026-08-20) from an original "keyset-paginated" wording**: a customer here is a `groupBy`
+     aggregate over orders, keyed on the nullable `(userId, guestEmail)` pair the grouping is done
+     on — not a row with a stable unique id to key on, and spend-ordering has no tiebreak column
+     either. Keyset paging over that aggregate is expressible only as raw SQL, which
+     `lib/repositories/*` forbids. The requirement's actual intent — page two disjoint from page
+     one, no duplicates — is unaffected and was verified live against real data (31 customers
+     across a 25+6 page split).
 
 R28. The directory is vendor-scoped: a customer who has ordered only from vendor B does not appear
      for an admin of vendor A.
@@ -147,9 +154,14 @@ R35. `/staff/reports` renders a discount configuration section listing the curre
      codes with, for each, redemptions used and `remainingRedemptions` (rendered as unlimited when
      null).
 
-R36. No sales analytics is added: the only revenue figures on `/staff/reports` remain P7.5a's three
-     existing tiles. No new aggregate over `Order.totalPence` grouped by time, product or customer
-     appears anywhere in this slice.
+R36. No sales analytics is added to `/staff/reports`: the only revenue figures that page renders
+     remain P7.5a's three existing tiles, and no new aggregate over `Order.totalPence` grouped by
+     time, product or customer appears on it. **Scoped to `/staff/reports` at Validate (2026-08-20)
+     from an original "anywhere in this slice" wording**, which contradicted R25: the customer
+     directory's required per-customer total spend (R25) is itself a `groupBy`-by-customer
+     aggregate over `Order.totalPence`, and is not sales analytics in the sense this requirement
+     guards against (revenue trends, best-sellers, time-period breakdowns). Verified
+     `/staff/reports` still renders exactly the three pre-existing tiles and nothing more.
 
 ## Cross-cutting
 
