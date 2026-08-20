@@ -9,6 +9,7 @@ import {
   removeProductImage,
   reorderProductImages,
   requestImageUpload,
+  approveProductImage,
 } from "@/features/admin/product-image";
 import {
   IMAGE_CONTENT_TYPE,
@@ -47,6 +48,7 @@ export interface ProductImageManagerProps {
   productId: string;
   productName: string;
   images: ProductImageManagerImage[];
+  imageNeedsReview: boolean;
 }
 
 const ACCEPTED_INPUT = "image/*";
@@ -74,7 +76,7 @@ async function toWebp(file: File): Promise<Blob> {
   }
 }
 
-export function ProductImageManager({ productId, productName, images }: ProductImageManagerProps) {
+export function ProductImageManager({ productId, productName, images, imageNeedsReview }: ProductImageManagerProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -162,6 +164,14 @@ export function ProductImageManager({ productId, productName, images }: ProductI
     });
   }
 
+  function approve() {
+    setError(null);
+    startTransition(async () => {
+      const result = await approveProductImage(productId);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
   function move(index: number, direction: -1 | 1) {
     const next = images.map((image) => image.id);
     const swapWith = index + direction;
@@ -177,6 +187,22 @@ export function ProductImageManager({ productId, productName, images }: ProductI
 
   return (
     <div className="space-y-3">
+      {imageNeedsReview && (
+        <div className="mb-4 rounded-xl border border-warning/30 bg-warning/10 p-4">
+          <p className="mb-3 text-sm font-medium text-warning-strong">
+            An AI-generated image was added to this product and needs review.
+          </p>
+          <button
+            type="button"
+            onClick={approve}
+            disabled={pending || generating}
+            className="rounded-lg bg-warning px-4 py-2 text-sm font-bold text-white transition hover:bg-warning-strong disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pending ? "Approving?" : "Approve Image"}
+          </button>
+        </div>
+      )}
+
       {error && (
         <p
           role="alert"
