@@ -333,6 +333,7 @@ export interface AdminProductRow {
   isActive: boolean;
   categoryName: string;
   quantity: number;
+  imageNeedsReview: boolean;
 }
 
 export interface AdminProductPage {
@@ -489,6 +490,7 @@ export async function listProductsForAdmin(
       name: true,
       basePrice: true,
       isActive: true,
+      imageNeedsReview: true,
       category: { select: { name: true } },
       inventory: { select: { quantity: true } },
     },
@@ -506,6 +508,7 @@ export async function listProductsForAdmin(
       isActive: row.isActive,
       categoryName: row.category?.name ?? "Unknown",
       quantity: row.inventory?.quantity ?? 0,
+      imageNeedsReview: row.imageNeedsReview,
     })),
     nextCursor: hasMore ? page[page.length - 1].id : null,
   };
@@ -935,4 +938,44 @@ export async function quickUpdateInventory(
   } catch (error) {
     throw error;
   }
+}
+
+export async function saveGeneratedProductImage(
+  vendorId: string,
+  productId: string,
+  storageKey: string,
+  alt: string,
+  needsReview: boolean,
+): Promise<void> {
+  const prisma = getPrisma();
+  await prisma.$transaction([
+    prisma.productImage.create({
+      data: {
+        productId,
+        storageKey,
+        alt,
+        isPrimary: false,
+      },
+    }),
+    ...(needsReview
+      ? [
+          prisma.product.update({
+            where: { id: productId, vendorId },
+            data: { imageNeedsReview: true },
+          }),
+        ]
+      : []),
+  ]);
+}
+
+export async function getProductsWithoutImages(vendorId: string, limit: number) {
+  const prisma = getPrisma();
+  return await prisma.product.findMany({
+    where: {
+      vendorId,
+      images: { none: {} },
+    },
+    take: limit,
+    select: { id: true, name: true },
+  });
 }

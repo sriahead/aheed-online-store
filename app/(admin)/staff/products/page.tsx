@@ -145,6 +145,11 @@ export default async function StaffProductsPage({
                         Out of stock
                       </span>
                     )}
+                    {product.imageNeedsReview && (
+                      <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-700">
+                        Image Needs Review
+                      </span>
+                    )}
                   </p>
                   <p className="mt-0.5 truncate text-xs text-primary/60">
                     {product.categoryName} · {product.slug}
