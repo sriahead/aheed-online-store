@@ -299,6 +299,7 @@ export function ProductForm({ product, categories, imageUrls }: ProductFormProps
             productId={product.id}
             productName={product.name}
             images={imageUrls}
+            imageNeedsReview={product.imageNeedsReview}
           />
           <div className="border-t border-black/10 pt-4">
             <p className="mb-1 text-xs font-medium text-primary/70">

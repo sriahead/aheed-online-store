@@ -358,6 +358,7 @@ export interface AdminProductDetail {
   isActive: boolean;
   quantity: number;
   lowStockThreshold: number;
+  imageNeedsReview: boolean;
   /** Read here; written by setPrimaryProductImage/addProductImage/etc. (P6b2, #211). */
   images: AdminProductImage[];
 }
@@ -538,6 +539,7 @@ export async function getProductForAdmin(
       isOrganic: true,
       isFeatured: true,
       isActive: true,
+      imageNeedsReview: true,
       inventory: { select: { quantity: true, lowStockThreshold: true } },
       images: { orderBy: { sortOrder: "asc" }, select: adminProductImageSelect },
     },
@@ -975,4 +977,23 @@ export async function getProductsWithoutImages(vendorId: string, limit: number) 
     take: limit,
     select: { id: true, name: true },
   });
+}
+
+export async function approveProductImageRow(
+  vendorId: string,
+  productId: string,
+): Promise<CatalogueWriteResult> {
+  const prisma = getPrisma();
+  const existing = await prisma.product.findFirst({
+    where: { id: productId, vendorId },
+    select: { id: true },
+  });
+  if (!existing) return { ok: false as const, error: "That product no longer exists." };
+
+  await prisma.product.update({
+    where: { id: productId },
+    data: { imageNeedsReview: false },
+  });
+
+  return { ok: true as const, id: productId };
 }
