@@ -6,6 +6,36 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+- **P7.5b — order money provenance: points earned and discount code on order pages** (#262, closing
+  #138, #150, `specs/2026-08-20-p7.5b-order-money-provenance/`). Second slice of **P7.5** (epic
+  #260). An order's money summary now explains itself, with no schema change — both relations
+  already existed.
+  **The discount says which code produced it** (#150): `Order.discountPence` is one generic figure
+  that since P5b can combine a loyalty redemption *and* a code, so labelling the whole amount with a
+  code's name would state something false. New `splitDiscount` (`lib/order-totals.ts`) divides it —
+  code share from the stored `DiscountRedemption.amountPence` snapshot, loyalty share by
+  **subtraction**. Deliberately not recomputed from `pointsToPence(points, pencePerPointRedeemed)`:
+  the ledger stores redemptions in points and that config can change after an order, so a recomputed
+  share would drift from the figure beside it. `lib/order-totals.ts` keeps **zero imports**, which is
+  what structurally prevents it reaching vendor config.
+  **Orders show the points they earned** (#138): read from the EARN ledger row `confirmPayment`
+  writes inside its own transaction, so the figure is a settled fact. An order still awaiting payment
+  shows a line carrying **no digits** rather than an estimate — the tier multiplier is snapshotted
+  onto the EARN row precisely because it moves. A guest order says nothing at all, in any status.
+  New `OrderPointsNote` is a separate component rather than part of the money card, because
+  `OrderItemsCard` is shared with `/staff/orders/{n}`: the staff view gets the same attributed
+  discount rows (deliberately — two stories about one order is the defect this phase removes) while
+  points, an account fact, stay off it. The confirmation email uses the same `splitDiscount`, not a
+  second arithmetic.
+
+### Changed
+- **`specs/decisions/ADR-005-payments-money-flow.md` (v1.5.0)** gains a P7.5b implementation note
+  recording the subtraction rule and the two upstream clamps that make it safe (`lib/discounts.ts`
+  bounds a code's face value; `clampRedemption` fills only the headroom it left), so `splitDiscount`
+  needs no defensive cap — and stating that recomputing the loyalty share from vendor config must not
+  be "fixed" back in later.
+
 ### Fixed
 - **P7.5a — staff reports correctness & checkout cart preservation** (#261, closing #238, #237,
   #234, `specs/2026-08-19-p7.5a-reports-cart-integrity/`). First slice of **P7.5**, the pre-launch
