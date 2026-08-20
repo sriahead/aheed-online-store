@@ -62,14 +62,19 @@ export async function Header() {
   const profile = await getCurrentVendorProfile();
   const name = profile?.name ?? "";
   const localityName = profile?.localityName ?? "";
+  const bannerNote = profile?.bannerNote ?? null;
 
   const cartIdentity = await getCartIdentity();
   const cartSummary =
     cartIdentity.userId || cartIdentity.guestToken
       ? await getCartRepository().getSummary(cartIdentity)
       : EMPTY_CART;
-  const searchPlaceholder =
-    profile?.searchPlaceholder ?? "Search vine tomatoes, halal lamb chops, basmati, lentils...";
+  // #239: this fallback was itself Aheed copy ("vine tomatoes, halal lamb
+  // chops, basmati, lentils"). It only fires when no vendor resolves at all —
+  // fetchVendorProfile already substitutes DEFAULT_SEARCH_PLACEHOLDER for a
+  // vendor with none — but a platform default naming one vendor's trade is the
+  // same defect this slice exists to remove.
+  const searchPlaceholder = profile?.searchPlaceholder ?? "Search products…";
   const { CDN_BASE_URL } = getEnv();
   const logoUrl =
     profile?.logoStorageKey && CDN_BASE_URL
@@ -81,16 +86,26 @@ export async function Header() {
       {/* Top Banner - Delivery Promise & Trust bar */}
       <div className="bg-primary text-white text-xs py-1.5 px-4">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+          {/* P7.5c+f (#239): both lines used to be Aheed's. The first named a
+              trade ("Local Grocery & Self-Delivery") and the second was a
+              literal halal claim, so SriMart — an electronics shop in Reading —
+              advertised certified halal meat. The first is now derived from
+              vendor data alone; the second is that vendor's own bannerNote, and
+              renders nothing at all when they have none. */}
           <div className="flex items-center gap-4 text-white/90">
             <span className="flex items-center gap-1 font-medium text-white">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              {name} — {localityName} Local Grocery &amp; Self-Delivery
+              {name} — local delivery across {localityName}
             </span>
-            <span className="hidden md:inline text-white/50">|</span>
-            <span className="hidden md:inline-flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-action-tint" />
-              100% Certified HMC Halal Fresh Meat Cut Daily
-            </span>
+            {bannerNote && (
+              <>
+                <span className="hidden md:inline text-white/50">|</span>
+                <span className="hidden md:inline-flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-action-tint" />
+                  {bannerNote}
+                </span>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-3 text-xs">
@@ -133,8 +148,12 @@ export async function Header() {
                       {name.split(" ").slice(1).join(" ")}
                     </span>
                   </div>
+                  {/* #239: was "{localityName} Groceries", which rendered
+                      "Reading Groceries" under SriMart's wordmark. Only shown
+                      in the logo fallback (a vendor with no logoStorageKey), so
+                      it was easy to miss — the locality alone names no trade. */}
                   <p className="text-[10px] text-black/50 font-medium tracking-wide uppercase">
-                    {localityName} Groceries
+                    {localityName}
                   </p>
                 </div>
               </>

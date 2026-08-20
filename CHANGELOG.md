@@ -7,6 +7,48 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P7.5c+f — per-vendor storefront identity: copy, promotions & contrast-clamped colour** (#263,
+  closing #239, #233, #255, and #266 which was folded in at Propose,
+  `specs/2026-08-20-p7.5cf-vendor-storefront-identity/`). Third slice of **P7.5** (epic #260),
+  combining slices c and f because neither can be proven by the test suite — `brandStyle()` injects
+  per-vendor tokens as an inline style that outranks `tokens.css`, so both halves are only
+  observable in live rendered HTML for two hosts, and that rig is the expensive part.
+  **The storefront stops speaking in Aheed's voice** (#239): ~12 hardcoded strings were classified
+  rather than columnised. The hero's "Free Delivery Over £30" now reads
+  `freeDeliveryThresholdPence` — Aheed's threshold *is* £30, so the literal was accidentally true for
+  the vendor it was written for and wrong for SriMart at £50; it was hiding a data bug, not just a
+  copy one. A minimum-order badge follows the same rule and both hide when the rule doesn't apply.
+  Unverifiable claims ("100% Certified Halal Meat", "Same-Day Local Dispatch") are deleted rather
+  than made configurable; the four trust tiles become three statements true of the *platform* and
+  checkable against this repo (locality delivery, Stripe payment, order-status email). Only genuine
+  vendor identity became columns — `VendorConfig.bannerNote` and `.heroSubtitle`, both hiding when
+  null, since platform-written filler is still a claim made on a vendor's behalf. Three surfaces #239
+  never listed were found during Build: the search-placeholder fallback, the hero `h1`'s tagline
+  fallback (the one slot that keeps a fallback — an empty `h1` is an accessibility defect), and
+  `{localityName} Groceries` in the logo-fallback wordmark, which rendered "Reading Groceries" under
+  SriMart's name and survived because Aheed has a logo so nobody ever saw it.
+  **Promotions become real vendor data** (#233): new 1:N `VendorPromotion` model
+  (`lib/repositories/promotions.ts` + request-scoped `lib/promotions-service.ts`, so the #252
+  allowlist gains no tenth facade) driving a new `PromoCarousel` in the hero's image slot. It replaces
+  `PromoSlider`, a hardcoded array of three invented offers that rendered for every vendor and
+  advertised discounts nothing in the engine backed — SriMart has no discount codes at all.
+  `imageKey` is **nullable on purpose**: a promo with no artwork renders as a token-styled card, so
+  both vendors ship live-verifiable promotions with zero uploads, and seeding keys for objects nobody
+  uploaded is how #244 happened. The carousel carries a real pause control, pauses on hover/focus and
+  honours `prefers-reduced-motion` — `PromoSlider` auto-advanced every 5s with no way to stop it,
+  failing WCAG 2.2 SC 2.2.2.
+  **Per-vendor colour returns with a guarantee** (#255): new zero-import `lib/color-contrast.ts`
+  converts sRGB to OKLCH, lowers lightness until the value clears AA against every surface it renders
+  on, and preserves hue and chroma (reducing chroma rather than clipping channels when out of gamut,
+  because clipping shifts hue — the one property the module exists to protect). `brandStyle()` now
+  derives `--color-primary`/`-action`/`-accent`/`-danger` and the two hover shades per vendor through
+  that clamp. Measured: Aheed `#4caf50` 2.78:1 → `#1e8929` 4.50:1 and `#f57c00` 2.70:1 → `#ba5d00`
+  4.51:1; SriMart `#1e88e5` 3.68:1 → `#0078d3` 4.54:1. Aheed's `#d32f2f` already measures 4.98:1 and
+  comes back untouched, which `tests/color-contrast.test.ts` pins — the clamp must not damage a
+  compliant colour. **The clamp is load-bearing, not a safety net:** Aheed's own primitives fail
+  hardest of anything in the repo, so an unclamped restoration would have re-broken the vendor that
+  has been live longest. Backgrounds (`--color-surface-muted`, the three tints) stay plain aliases —
+  clamping them would move the surface rather than the foreground (#281).
 - **P7.5b — order money provenance: points earned and discount code on order pages** (#262, closing
   #138, #150, `specs/2026-08-20-p7.5b-order-money-provenance/`). Second slice of **P7.5** (epic
   #260). An order's money summary now explains itself, with no schema change — both relations
@@ -41,6 +83,20 @@ every branch merges.
   internal KMS docs site (`kms/site-internal`) rebuilds and compiles cleanly.
 
 ### Changed
+- **`specs/decisions/ADR-004-multi-tenancy.md` (v1.5.0)** — decision 5 amended by P7.5c+f (#263).
+  It said per-vendor primitives are injected and "the **semantic** layer and every component stay
+  unchanged." Components still are; the semantic *layer* no longer is, because `brandStyle()` now
+  derives the foreground tokens per vendor through `clampForContrast`. The original wording was
+  written when "semantic layer unchanged" and "vendors are differentiated" were compatible — #251
+  broke that tie by decoupling three tokens into audited constants, and the clamp resolves it
+  properly rather than picking a side. Also records that promotional content is vendor data on the
+  same principle (#233).
+- **`specs/design-system.md` (v1.8.0)** — the "do not restore the brand hex into the semantic layer"
+  rule now says **raw** brand hex, and explains why the word matters: writing a primitive straight
+  into the semantic layer stays forbidden (Aheed's `#4caf50` and `#f57c00` measure 2.78:1 and 2.70:1,
+  the worst in the repo), while deriving one through the clamp is the opposite operation — it cannot
+  return a value below the ratio it was given — and is how per-vendor colour is now delivered. A
+  reader applying the old wording literally would have rejected the mechanism that enforces it.
 - **`specs/decisions/ADR-005-payments-money-flow.md` (v1.5.0)** gains a P7.5b implementation note
   recording the subtraction rule and the two upstream clamps that make it safe (`lib/discounts.ts`
   bounds a code's face value; `clampRedemption` fills only the headroom it left), so `splitDiscount`
@@ -2144,5 +2200,6 @@ every branch merges.
 ### Notes
 - No feature code beyond the skeleton. Auth, catalogue, cart, checkout, and the design system
   arrive in P1+ behind their specs and gates.
- 
+
+ 
  
