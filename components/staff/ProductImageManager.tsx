@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { ImageUp, Star, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ImageUp, Star, Trash2, ChevronUp, ChevronDown, Sparkles } from "lucide-react";
 import {
   addProductImage,
   promoteProductImage,
@@ -77,6 +78,29 @@ export function ProductImageManager({ productId, productName, images }: ProductI
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [generating, setGenerating] = useState(false);
+  const router = useRouter();
+
+  async function autoGenerateImage() {
+    setError(null);
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/admin/product-images/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ productId, productName }),
+      });
+      const data = (await res.json()) as any;
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate image");
+      }
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   function addAnother() {
     const file = fileRef.current?.files?.[0];
@@ -243,15 +267,26 @@ export function ProductImageManager({ productId, productName, images }: ProductI
           className="w-full text-sm text-primary/80 file:mr-3 file:rounded-xl file:border-0 file:bg-surface-muted file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary"
         />
       </div>
-      <button
-        type="button"
-        onClick={addAnother}
-        disabled={pending}
-        className="flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-white px-4 py-3 text-sm font-bold text-primary shadow-sm transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        <ImageUp className="h-4 w-4" aria-hidden />
-        {pending ? "Working…" : "Add another image"}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={addAnother}
+          disabled={pending || generating}
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-white px-4 py-3 text-sm font-bold text-primary shadow-sm transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <ImageUp className="h-4 w-4" aria-hidden />
+          {pending ? "Working…" : "Add another image"}
+        </button>
+        <button
+          type="button"
+          onClick={autoGenerateImage}
+          disabled={pending || generating}
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-action/30 bg-action/10 px-4 py-3 text-sm font-bold text-action shadow-sm transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <Sparkles className="h-4 w-4" aria-hidden />
+          {generating ? "Generating…" : "✨ Auto-Generate Image"}
+        </button>
+      </div>
     </div>
   );
 }

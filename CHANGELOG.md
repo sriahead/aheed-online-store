@@ -7,6 +7,7 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P8 — Smart Product Image Generation** (#293, closing #293, `specs/2026-08-20-p8-smart-image-generation/`). Added AI image generation and barcode lookup fallback to automate product image creation. Integrates Open Food Facts API and Cloudflare Workers AI `flux-1-schnell`. Added manual generation button in the Admin UI and a background job route for backfilling missing images. Added `imageNeedsReview` flag to visually warn staff when an AI hallucination may have occurred.
 - **P7.5d+e — staff panel completion: order-search index, product filters, tier CRUD, customer
   directory & non-sales reports** (#264, closing #265, #160, #161, #169, #163, #136,
   `specs/2026-08-20-p7.5de-staff-panel-completion/`). **P7.5's final slice** (epic #260), combining
