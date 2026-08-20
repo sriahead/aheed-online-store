@@ -14,7 +14,9 @@ jobs:
       - run: npm ci
 
       - name: Apply migrations (direct connection)
-        run: npx prisma migrate deploy
+        run: |
+          npx prisma migrate resolve --rolled-back 20260820200500_p8_image_needs_review || true
+          npx prisma migrate deploy
         env:
           # migrate uses the DIRECT (unpooled) Neon URL; set both so schema env resolves
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
