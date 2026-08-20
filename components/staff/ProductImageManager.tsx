@@ -188,17 +188,17 @@ export function ProductImageManager({ productId, productName, images, imageNeeds
   return (
     <div className="space-y-3">
       {imageNeedsReview && (
-        <div className="mb-4 rounded-xl border border-warning/30 bg-warning/10 p-4">
-          <p className="mb-3 text-sm font-medium text-warning-strong">
+        <div className="mb-4 rounded-xl border border-accent/30 bg-accent-tint p-4">
+          <p className="mb-3 text-sm font-medium text-accent">
             An AI-generated image was added to this product and needs review.
           </p>
           <button
             type="button"
             onClick={approve}
             disabled={pending || generating}
-            className="rounded-lg bg-warning px-4 py-2 text-sm font-bold text-white transition hover:bg-warning-strong disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-bold text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {pending ? "Approving?" : "Approve Image"}
+            {pending ? "Approving..." : "Approve Image"}
           </button>
         </div>
       )}
