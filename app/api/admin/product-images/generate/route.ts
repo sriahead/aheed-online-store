@@ -1,5 +1,6 @@
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { runProductImagePipeline } from "@/lib/product-image-pipeline";
+import { saveGeneratedProductImage } from "@/lib/repositories/products";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -20,7 +21,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to fetch or generate image" }, { status: 500 });
     }
 
-    const { saveGeneratedProductImage } = require("@/lib/repositories/products");
     await saveGeneratedProductImage(
       auth.vendorId,
       productId,
