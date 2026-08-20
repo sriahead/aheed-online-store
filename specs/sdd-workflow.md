@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.19.0"
-updated: 2026-08-19
+version: "2.20.0"
+updated: 2026-08-20
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -354,6 +354,22 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
 - Walk **every row** of `validation.md`, not just the generic lint/test/build commands. A row that
   can't be checked in this environment is reported as unverified, with the reason — never quietly
   marked as passing.
+- **A `validation.md` row's literal command can be a stricter or looser proxy for its own
+  requirement's actual wording — check the requirement text, not just the command's exit code.**
+  Three instances in one slice's `/validate` (P7.5c+f, #263): a `grep -icE '\b(DROP\|NOT
+  NULL\|UPDATE)\b'` restricted to `ALTER TABLE` lines matched a migration's standard `ON UPDATE
+  CASCADE` foreign-key clause on a table the *same* migration creates — the requirement's own text
+  scoped the ban to "pre-existing tables," which the blanket grep didn't encode; a doc comment
+  explaining, in prose, why a file makes *no* call to three named functions matched a grep built to
+  catch an actual call to them — the same shape as the established `PromoSlider`/P4a trap (bare-word
+  match on a reference, not a use), just applied to negative-space documentation instead of a
+  replaced component's name; and a check's target file (`lib/email.ts`) didn't contain the function
+  name it was grepping for because that function lives one layer up
+  (`features/orders/send-status-email.ts`, which calls into `lib/email.ts`) — the underlying claim
+  was true, the file path in the check was stale. None were code defects; all three were caught only
+  by reading the requirement's own prose after the literal command "failed" or "passed" for the
+  wrong reason, and reported as such rather than either blindly trusting the grep or blindly
+  reporting a false failure.
 - UI changes: verify against rendered output (compiled CSS, rendered HTML, browser screenshot), not
   code review alone. DB-touching code: `npm run preview`, never `npm run dev` (see `CLAUDE.md`).
 - **Server actions can be driven headlessly against `npm run preview`** — no browser needed. Next
@@ -515,6 +531,28 @@ named gates, but the part of this repo's actual history most prone to drift.
   covers one of those surfaces; the only fully reliable check is reading every commit message in the
   set before it merges, or checking actual issue state immediately after — which is why that
   post-promotion check belongs in the routine, not just as a recovery step.
+- **A squash-merged promotion PR breaks every regular-merge promotion that comes after it, with a
+  spurious content conflict in whatever files both promotions touch.** First flagged as "worth
+  knowing" when PR #275 squash-merged P7.5b into `main` (leaving `origin/main` without P7.5b's
+  original commits as ancestors); it became a real blocker two slices later, at PR #283's promotion.
+  A **regular** merge computes a 3-way diff against the merge-base — but the merge-base was the
+  commit *before* PR #275, and both `main` (via the squash) and `staging` (via the original commits)
+  had since diverged from it in the same append-only log files (`ARTIFACT_INDEX.md`, `CHANGELOG.md`,
+  `specs/roadmap.md`), so git reported `CONFLICTING` even though `staging`'s content was a strict
+  superset of `main`'s in every touched file — verified with `git diff origin/main origin/staging`
+  before touching anything, which is the check to run first rather than assuming a real conflict.
+  **The fix generalises, not just for this one instance**: merge `origin/main` into `staging` with a
+  content-identical resolution (confirm with `git diff origin/staging HEAD --stat` being empty
+  *before* pushing — if it isn't empty, something in `main` really is unique and needs a real
+  decision, not this shortcut) and push that reconciliation commit to `staging`, restoring `main` as
+  an ancestor so the pending promotion PR becomes a clean fast-forward-style merge again. That push
+  will fail Gate 4's CHANGELOG-diff hook (a reconciliation commit carries no new content by
+  construction) — `--no-verify` is correct there, with the same explicit-confirmation treatment as
+  any other hook bypass or merge. **The real fix is upstream of all this: promotion PRs use a
+  regular merge (`gh pr merge --merge`), never squash**, matching every promotion before and since
+  PR #275 (#250, #257, #259, #271). Squash-merging one is what created the divergence in the first
+  place; there is no known reason PR #275 needed to deviate, so treat a squash option on a promotion
+  PR as a mistake to avoid rather than a style choice.
 
 Then go straight to **Document (final)** — no model switch here. It runs on the same Sonnet 5
 session that just shipped.
