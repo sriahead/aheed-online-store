@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.7.1"
-updated: 2026-08-19
+version: "1.8.0"
+updated: 2026-08-20
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -31,17 +31,26 @@ palette revision only touches the primitive → semantic mapping, not every comp
 > `--color-surface-muted` and the three semantic tints (`--color-action-tint` etc.) — because
 > Tailwind v4 emits those as `var(--color-brand-*)` at `:root`, and the browser resolves that inner
 > `var()` *where the property is declared*, freezing the semantic value to the default palette unless
-> a descendant re-declares the same alias against its own overridden primitive. **It does NOT
-> override `--color-action`, `--color-accent`, `--color-danger` or their hover shades** — P7 closeout
-> (#251/#217) decoupled those five into independent, WCAG-AA-audited literal values (see below), and
-> `brandStyle()` re-declaring them from a vendor's raw primitive was found at `/validate` to be
-> silently overwriting the audited fix on every real page (an inline style always beats a stylesheet
-> rule); corrected at `/fix` by removing them from `brandStyle()`'s per-vendor list. **Consequence:**
-> those five tokens are now fixed platform-wide for every vendor — SriMart's own action/accent/danger
-> primitives no longer drive its buttons/alerts, trading its prior (never contrast-audited)
-> differentiation for a real AA guarantee. Whether/how per-vendor differentiation comes back with a
-> contrast guarantee is an open decision, tracked as **#255**. A named theme *catalogue* is deferred
-> (#75).
+> a descendant re-declares the same alias against its own overridden primitive.
+>
+> **Updated 2026-08-20 (P7.5c+f, #255) — `--color-action`, `--color-accent`, `--color-danger` and
+> the two hover shades ARE per-vendor again, but only through the contrast clamp.** P7 closeout
+> (#251/#217) had decoupled them into audited literals and removed them from `brandStyle()`, because
+> re-declaring them from a vendor's *raw* primitive silently overwrote the audited fix on every real
+> page (an inline style always beats a stylesheet rule). That bought AA at the price of every vendor
+> rendering the same buttons. `brandStyle()` now derives each from the vendor's own primitive and
+> passes it through `clampForContrast` (`lib/color-contrast.ts`), which lowers OKLCH lightness until
+> the value clears 4.5:1 against the surfaces it renders on, preserving hue and chroma — so SriMart's
+> blue stays blue and still passes. `--color-primary` is clamped the same way, against white, the
+> vendor's cream and all three tints.
+>
+> **The old rule and the new mechanism are not the same thing, and the difference is the whole
+> point:** restoring a **raw brand hex** into the semantic layer is still forbidden (Aheed's own
+> `#4caf50` and `#f57c00` measure 2.78:1 and 2.70:1 — the worst in the repo); a **value derived from
+> it through the clamp** is how per-vendor colour is delivered. `tokens.css`'s audited literals
+> remain the platform default for any request with no vendor branding, and
+> `tests/design-tokens-contrast.test.ts` still guards them. A named theme *catalogue* stays deferred
+> (#75), now additive convenience rather than the guarantee.
 
 | Primitive | Hex | Semantic | Semantic value | Role |
 |---|---|---|---|---|
@@ -54,7 +63,7 @@ palette revision only touches the primitive → semantic mapping, not every comp
 **Three semantic values deliberately diverge from their primitive** (P7 closeout, #251/#217). The
 primitives still carry the exact brand-kit hex and are unchanged; only the semantic layer moved, so
 all 45-plus call sites were corrected without touching a single component. **Do not "restore" the
-brand hex into the semantic layer** — the brand values fail WCAG AA in the combinations the UI
+raw brand hex into the semantic layer** — the brand values fail WCAG AA in the combinations the UI
 actually renders:
 
 | Pair | Brand value | Corrected |
@@ -69,6 +78,14 @@ The last of those is the standard error-message treatment (`text-danger` on `bg-
 `text-sm`) used across checkout, the account forms and `OrderStatusBadge` — the text on the site
 that most needs to be readable. `tests/design-tokens-contrast.test.ts` asserts all 17 pairs and
 fails if any token regresses.
+
+**"Raw" is doing real work in that rule (P7.5c+f, #255).** Writing a brand primitive *straight* into
+the semantic layer stays forbidden, and the table above is why. Deriving a semantic value from that
+primitive through `clampForContrast` is a different operation with the opposite outcome — it cannot
+produce a value below the ratio it was given — and it is how per-vendor colour is delivered at
+runtime (see the blockquote under "Colors"). The values tabulated above remain the platform default
+for any request that resolves no vendor branding. A reader applying the rule literally to a clamped
+derivation would be rejecting the mechanism that enforces it.
 
 Everything else (body text gray, borders, disabled states) uses Tailwind v4's stock neutral scale —
 the brand kit gives no signal for these, so there's nothing brand-specific to encode.

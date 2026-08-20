@@ -4,8 +4,8 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.4.0"
-updated: 2026-08-19
+version: "1.5.0"
+updated: 2026-08-20
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
@@ -97,8 +97,32 @@ should be reasoned about together.
 5. **Branding is data, delivered as CSS variables.** The existing two-layer token system
    (primitive → semantic in `design-system/tokens/tokens.css`) already provides the seam: per-vendor
    **primitives** come from `VendorBranding` and are injected as CSS custom properties at request
-   time; the **semantic** layer and every component stay unchanged. Per-vendor logo and assets
-   resolve through storage keys (ADR-003), namespaced per vendor (e.g. `vendors/{vendorId}/...`).
+   time. Per-vendor logo and assets resolve through storage keys (ADR-003), namespaced per vendor
+   (e.g. `vendors/{vendorId}/...`).
+
+   **Amended 2026-08-20 (P7.5c+f, #255).** This decision originally added "the **semantic** layer
+   and every component stay unchanged." Components still are — that part holds, and is why 45-plus
+   call sites were recoloured in #251 without touching one of them. The semantic *layer* is no
+   longer unchanged: `brandStyle()` now derives `--color-primary`, `--color-action`,
+   `--color-accent`, `--color-danger` and the two hover shades from each vendor's own primitives,
+   each passed through `clampForContrast` (`lib/color-contrast.ts`), which moves OKLCH lightness
+   until the value clears WCAG AA against the surfaces it renders on while preserving hue and
+   chroma.
+
+   The original wording was written when "semantic layer unchanged" and "vendors are
+   differentiated" were compatible, because every semantic token was a plain alias of a primitive.
+   #251 broke that tie by decoupling three of them into audited constants — buying an AA guarantee
+   at the cost of every vendor rendering identical buttons. The clamp resolves it properly: colour
+   varies per vendor **and** AA holds by construction rather than by curation. Measured at
+   P7.5c+f's `/propose`, Aheed's own primitives failed hardest of anything in the repo (`#4caf50`
+   at 2.78:1, `#f57c00` at 2.70:1, against SriMart's `#1e88e5` at 3.68:1), so a clamp is not
+   optional decoration on this decision — an unclamped restoration would breach AA for the vendor
+   that has been live longest.
+
+   **Backgrounds are still plain aliases** (`--color-surface-muted` and the three tints): they are
+   what text sits on, and clamping them would move the surface instead of the foreground.
+   **Promotional content is data on the same principle** — `VendorPromotion` rows, not constants in
+   a shared component (#233).
 
 6. **Split platform config from vendor config.** `lib/config.ts` keeps **platform/infra** values in
    env (DB endpoint, storage endpoint, secrets); **vendor** values (name, tagline, locality,
