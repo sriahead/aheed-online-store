@@ -71,6 +71,58 @@ export function computeTotals(
 }
 
 /**
+ * The discount code applied to an order, as an order page needs to render it.
+ * `amountPence` is the SNAPSHOT stored on `DiscountRedemption` at redemption —
+ * never recomputed from the code's current `value`, which an admin can edit.
+ */
+export interface OrderDiscountCode {
+  code: string;
+  amountPence: number;
+}
+
+/** How an order's single `discountPence` figure divides between its sources. */
+export interface DiscountShares {
+  /** Attributable to the discount code; 0 when no code was used. */
+  codePence: number;
+  /** The remainder, which is a loyalty redemption; 0 when there was none. */
+  loyaltyPence: number;
+}
+
+/**
+ * Split an order's `discountPence` into the parts it is actually made of (P7.5b,
+ * #150).
+ *
+ * `Order.discountPence` is deliberately GENERIC — since P5b it can hold a
+ * loyalty redemption, a discount code, or both added together — so labelling the
+ * whole figure with a code's name states something false whenever both are
+ * present. Only the code's share is stored (`DiscountRedemption.amountPence`),
+ * so the loyalty share is obtained by SUBTRACTION.
+ *
+ * Not by recomputing `pointsToPence(points, pencePerPointRedeemed)` from the
+ * REDEEM ledger row, which is the obvious-looking alternative and is wrong:
+ * `pencePerPointRedeemed` is vendor config an admin can change after the order
+ * was placed, and the ledger stores the redemption in POINTS, not pence. A
+ * recomputed share would drift away from the `discountPence` sitting next to it
+ * on the same page. Subtraction cannot drift — the two shares sum to the figure
+ * they decompose, by construction.
+ *
+ * Deliberately does NOT cap `codePence` at `discountPence`: the snapshot is a
+ * component OF that figure, so exceeding it is unreachable, and a defensive
+ * branch here would be untestable code that quietly hides a real data defect if
+ * one ever occurred.
+ */
+export function splitDiscount(order: {
+  discountPence: number;
+  discountCode: OrderDiscountCode | null;
+}): DiscountShares {
+  const codePence = order.discountCode?.amountPence ?? 0;
+  return {
+    codePence,
+    loyaltyPence: Math.max(0, order.discountPence - codePence),
+  };
+}
+
+/**
  * Vendor prefix for an order number: first three alphanumeric characters of the
  * vendor's slug, uppercased. Derived, never hardcoded — onboarding a vendor must
  * not require a code change (ADR-004's rule of thumb).

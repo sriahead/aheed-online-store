@@ -27,6 +27,11 @@ const order = (overrides: Partial<WebhookOrder> = {}): WebhookOrder => ({
   vendorId: "v-aheed",
   orderNumber: "AHD-ABC123",
   status: "CONFIRMED",
+  // P7.5b (#150/#138) defaults: no code, no points awarded. Cases that exercise
+  // provenance override them explicitly, so every other case here keeps
+  // asserting the pre-P7.5b money block unchanged.
+  discountCode: null,
+  pointsEarned: null,
   subtotalPence: 2000,
   discountPence: 0,
   deliveryFeePence: 349,
@@ -71,7 +76,10 @@ describe("order confirmation email — money block (R61)", () => {
     const html = sentHtml();
 
     const subtotal = moneyRow(html, "Subtotal");
-    const discount = moneyRow(html, "Discount");
+    // P7.5b (#150): this row was labelled a generic "Discount" until the sources
+    // became attributable. An order with no code is a loyalty redemption, so the
+    // row is now named — the amount and the reconciliation below are unchanged.
+    const discount = moneyRow(html, "Loyalty points");
     const delivery = moneyRow(html, "Delivery");
     const total = moneyRow(html, "Total");
 
@@ -88,11 +96,70 @@ describe("order confirmation email — money block (R61)", () => {
     const html = sentHtml();
 
     expect(moneyRow(html, "Discount")).toBeNull();
+    expect(moneyRow(html, "Loyalty points")).toBeNull();
     expect(moneyRow(html, "Subtotal")! + moneyRow(html, "Delivery")!).toBe(moneyRow(html, "Total"));
   });
 
   it("still sends exactly one email per confirmation", async () => {
     await sendOrderConfirmationEmail(order({ discountPence: 500, totalPence: 1849 }));
     expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+});
+
+describe("order confirmation email — money provenance (P7.5b, #150/#138)", () => {
+  it("splits a combined discount into the code's share and loyalty's, and still reconciles", async () => {
+    await sendOrderConfirmationEmail(
+      order({
+        discountPence: 700,
+        totalPence: 1649,
+        discountCode: { code: "WELCOME10", amountPence: 500 },
+      }),
+    );
+    const html = sentHtml();
+
+    const subtotal = moneyRow(html, "Subtotal");
+    const code = moneyRow(html, "Code WELCOME10");
+    const loyalty = moneyRow(html, "Loyalty points");
+    const delivery = moneyRow(html, "Delivery");
+    const total = moneyRow(html, "Total");
+
+    expect(code).toBe(-500);
+    expect(loyalty).toBe(-200);
+    // No row claims the combined figure, and the email still adds up.
+    expect(moneyRow(html, "Discount")).toBeNull();
+    expect(subtotal! + code! + loyalty! + delivery!).toBe(total);
+  });
+
+  it("names the code alone when it accounts for the whole discount", async () => {
+    await sendOrderConfirmationEmail(
+      order({
+        discountPence: 500,
+        totalPence: 1849,
+        discountCode: { code: "SAVE5", amountPence: 500 },
+      }),
+    );
+    const html = sentHtml();
+
+    expect(moneyRow(html, "Code SAVE5")).toBe(-500);
+    expect(moneyRow(html, "Loyalty points")).toBeNull();
+  });
+
+  it("states the points earned when the order awarded some", async () => {
+    await sendOrderConfirmationEmail(order({ pointsEarned: 34 }));
+    expect(sentHtml()).toContain("<strong>34</strong> loyalty points");
+  });
+
+  it("says nothing about points for a guest order", async () => {
+    // A guest has no loyalty account, so pointsEarned is null and the email must
+    // not imply an award that will never arrive.
+    await sendOrderConfirmationEmail(order({ userId: null, pointsEarned: null }));
+    expect(sentHtml()).not.toContain("loyalty points");
+  });
+
+  it("says nothing about points when the award was zero", async () => {
+    // Distinct from the guest case: an account exists, the order simply did not
+    // clear the earn threshold. "You earned 0 points" is worse than silence.
+    await sendOrderConfirmationEmail(order({ pointsEarned: 0 }));
+    expect(sentHtml()).not.toContain("loyalty points");
   });
 });
