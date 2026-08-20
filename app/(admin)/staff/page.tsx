@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ClipboardList,
+  Contact,
   FolderTree,
   Package,
   Sparkles,
@@ -145,6 +146,17 @@ export default async function StaffHomePage() {
               <p className="font-semibold text-primary">Reports</p>
               <p className="mt-1 text-sm text-primary/80">
                 Sales, total orders, and average basket value financials.
+              </p>
+            </Link>
+
+            <Link
+              href="/staff/customers"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Contact className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Customers</p>
+              <p className="mt-1 text-sm text-primary/80">
+                Who buys from this store, what they spend, and their loyalty standing.
               </p>
             </Link>
 

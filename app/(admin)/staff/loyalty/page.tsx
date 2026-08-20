@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getLoyaltyRepository } from "@/lib/repositories/loyalty";
 import { LoyaltyConfigForm } from "@/components/staff/LoyaltyConfigForm";
+import { PanelRefusal } from "@/components/staff/PanelRefusal";
 
 // Reads the session and this vendor's live config — must render per-request.
 export const dynamic = "force-dynamic";
@@ -23,13 +24,10 @@ export default async function StaffLoyaltyPage() {
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
     return (
-      <main className="mx-auto max-w-md px-4 py-16 text-center">
-        <h1 className="text-2xl font-semibold text-primary">Store admins only</h1>
-        <p className="mt-3 text-primary/70">
-          You&apos;re signed in, but your account doesn&apos;t have permission to change this
-          store&apos;s loyalty settings.
-        </p>
-      </main>
+      <PanelRefusal
+        title="Store admins only"
+        message="You're signed in, but your account doesn't have permission to change this store's loyalty settings."
+      />
     );
   }
 

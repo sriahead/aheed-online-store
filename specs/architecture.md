@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.16.0"
-updated: 2026-08-19
+version: "1.17.0"
+updated: 2026-08-20
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -103,6 +103,18 @@ No layer skips inward; components never touch Prisma or the S3 client directly.
 - **Provider-neutral types only.** Integers, `text`/`varchar`, `boolean`, `timestamptz`, `numeric`,
   Prisma enums (compile to standard Postgres enums), `uuid`. **No** `money`, no Neon/RDS-specific
   extensions in the hot path. `citext`/`pg_trgm` are optional and only via portable migrations.
+  **`pg_trgm` is now actually installed** (P7.5d+e, #163, migration
+  `20260820143949_p7_5de_order_search_trigram`) — the first extension this database has ever
+  carried, and still provider-neutral: `pg_trgm` is a stock contrib module, not a Neon feature.
+  It backs three GIN trigram indexes (`Order.orderNumber`, `Order.guestEmail`, `User.email`) that
+  make the staff order search's leading-wildcard `ILIKE` servable; no B-tree can do that, which is
+  why the indexes could not simply be `@@index` declarations.
+  **Standing consequence:** Prisma's schema language cannot express an index's access method or
+  operator class, so `schema.prisma` no longer fully describes the database. `prisma migrate diff`
+  may report drift that is not drift, and `prisma migrate dev` may propose **dropping** these
+  indexes — keep them and re-assert the migration. This is the first exercise of the
+  hand-authored-DDL exception ruled on in P7d (#218); the migration carries the disclosure that
+  ruling requires.
 - **Money as integer minor units (pence).** Currency stored explicitly (`GBP` default). Avoids
   float drift and locale-bound types.
 - **Images/large files never in the DB.** Only a **relative storage key** (e.g.

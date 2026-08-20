@@ -7,6 +7,50 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **P7.5d+e — staff panel completion: order-search index, product filters, tier CRUD, customer
+  directory & non-sales reports** (#264, closing #265, #160, #161, #169, #163, #136,
+  `specs/2026-08-20-p7.5de-staff-panel-completion/`). **P7.5's final slice** (epic #260), combining
+  slices d and e because all five underlying issues live on the same `/staff/*` surface behind the
+  same demo-admin `npm run preview` rig, and standing that rig up twice is the real cost — the same
+  reasoning that combined c+f. Built #163 first, since it was the only item carrying
+  production-migration risk and must not gate the four pure-assembly items.
+  **The staff order search stops being a sequential scan** (#163): the repo's **first
+  `CREATE EXTENSION`** installs `pg_trgm` and adds three GIN trigram indexes over
+  `Order.orderNumber`, `Order.guestEmail` and `User.email`. No application code changed —
+  `staffOrderWhere()` was already correct, only slow, because a leading-wildcard `ILIKE` cannot use
+  any of `Order`'s three B-tree indexes. Taken as a **deliberate hand-authored-DDL exception** under
+  the P7d (#218) ruling, which costs a disclosure in the migration naming what Prisma's schema
+  language cannot express (an index's access method or operator class) and a pointer comment on
+  `model Order`; both are present, as is the standing consequence that `schema.prisma` no longer
+  fully describes the database. The `User.email` arm the plan left open **is** index-servable.
+  **`/staff/products` gains search and a status filter** (#169): a plain GET form mirroring
+  `/staff/orders`, with pagination that carries the filter. New pure `lib/staff-products-query.ts`
+  deliberately inverts the orders module's default — an absent or unrecognised status applies **no**
+  `isActive` filter, because P6b1 shipped this list showing hidden products on purpose so an owner
+  can find what they switched off; three of its twelve tests exist only to pin that.
+  **Loyalty tiers become creatable and deletable** (#136): duplicate keys are refused by
+  `@@unique([vendorId, key])` through the existing `isUniqueViolation` helper rather than
+  check-then-insert, so concurrent creates cannot race and the same key stays creatable for another
+  vendor. Delete deliberately leaves `LoyaltyLedgerEntry` alone — `tierKey` is a snapshot with no
+  foreign key, so a ledger row naming a removed tier is correct, not dangling. The per-row Remove
+  control binds to a separate top-level form via `form="delete-tier"` and carries the key as its own
+  name/value, since HTML forbids the nested form the single-form layout would otherwise need (P7a,
+  #162 pattern).
+  **A customer directory exists** (#160, new `/staff/customers`): a customer is derived from
+  vendor-scoped `Order`, never from the global `User` table, which makes the tenant boundary
+  structural rather than a filter someone must remember. Guests appear by email; P7b-erased orders
+  (both `userId` and `guestEmail` nulled) collapse into one honest "Erased customers" aggregate
+  rather than being dropped, so the directory still reconciles against `/staff/reports`.
+  **Non-sales reports** (#161): catalogue and stock health, loyalty liability, and discount
+  redemption config. **No sales analytics** — production still runs Stripe test keys (#113), so
+  there is no real trading data to design it against. Liability calls `visibleBalance()` per account
+  rather than `SUM(balancePoints)`, which would overstate it by every lapsed balance still sitting in
+  the table — the same class of knowably-wrong aggregate as #238, the defect P7.5a exists to fix.
+  Also on the branch: the **PR #285** roadmap promotion row `sdd:audit` reported as pending
+  carry-forward, and a `CLAUDE.md` correction — its staff-panel rule pointed at
+  `app/(admin)/staff/layout.tsx`, a file that has never existed (the shell is
+  `app/(admin)/layout.tsx`), and it now also records `loyalty/page.tsx` as a second `PanelRefusal`
+  instance, converted here.
 - **P7.5c+f — per-vendor storefront identity: copy, promotions & contrast-clamped colour** (#263,
   closing #239, #233, #255, and #266 which was folded in at Propose,
   `specs/2026-08-20-p7.5cf-vendor-storefront-identity/`). Third slice of **P7.5** (epic #260),
