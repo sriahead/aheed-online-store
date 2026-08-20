@@ -34,7 +34,7 @@ export async function runProductImagePipeline(
 
   // 2. Fallback to AI
   if (!imageBuffer) {
-    const prompt = `Professional studio photography of fresh grocery item: ${productName}. Shot on a clean, bright, white background. High resolution, appetizing lighting, highly detailed food photography, centered.`;
+    const prompt = `Product photo of ${productName} on a plain white background, studio lighting, top quality, centered.`;
     imageBuffer = await aiSvc.generateImage(prompt);
 
     if (!imageBuffer) {
