@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-20T00:00:46.741Z` · commit `3fe888e` · `74` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-20T00:55:29.766Z` · commit `d4c9048` · `74` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -22,7 +22,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
-| [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 1.7.0 | 2026-08-19 | approved | internal | AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow. |
+| [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 1.8.0 | 2026-08-20 | approved | internal | AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow. |
 | [Environment Setup — Secrets & Config (staging / production / dev)](docs/env-setup.md) | doc | 1.8.0 | 2026-08-18 | approved | internal | How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier. |
 | [NFR Baseline — measured performance against the Gate-3 targets](docs/nfr-baseline.md) | doc | 1.1.0 | 2026-08-19 | approved | internal | The first real measurements of this app against mission.md's LCP and API p95 targets, plus the index/query review behind them — including a 4.7x LCP breach caused by a 1.9 MB vendor logo and a production logo that 404s. |
 | [Onboarding](docs/onboarding.md) | doc | 1.1.0 | 2026-08-06 | approved | internal | 5-minute start-here guide — where the project actually is, prerequisites, local setup, and how to get a new developer running, tested, and branching independently. |
@@ -85,7 +85,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [ADR-005 — Payments & multi-vendor money flow](specs/decisions/ADR-005-payments-money-flow.md) | adr | 1.5.0 | 2026-08-20 | approved | internal | Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite. |
 | [Design System](specs/design-system.md) | doc | 1.7.1 | 2026-08-19 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases. |
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
-| [Roadmap](specs/roadmap.md) | doc | 1.38.0 | 2026-08-19 | approved | internal | Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |
+| [Roadmap](specs/roadmap.md) | doc | 1.39.0 | 2026-08-20 | approved | internal | Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. |
 | [SDD Workflow](specs/sdd-workflow.md) | doc | 2.19.0 | 2026-08-19 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command. |
 | [Tech Stack](specs/tech-stack.md) | doc | 1.4.0 | 2026-08-19 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
 
