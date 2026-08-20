@@ -186,14 +186,33 @@ Both must be updated on this branch — a future session reads the persistent do
 
 ## Open items carried forward
 
-- **Admin management of promotions** — without it, a vendor cannot add or retire an offer without a
-  DB write. To be filed at `/build-notes`; the most likely immediate follow-up.
-- **Promo artwork for both vendors** — the column ships empty by design. Needs assets from the owner;
-  related to **#244** (missing production logo object), since both are "a row points at an object
-  nobody uploaded".
-- **Date-based scheduling** — excluded above; worth an issue so the manual `isActive` boolean is a
-  recorded decision rather than an oversight.
-- **Per-vendor tint/background contrast** — if a future vendor picks a dark `cream`, `text-primary` on
-  `--color-surface-muted` could breach with nothing to catch it.
-- **The roadmap row for PR #275** (P7.5b's promotion to production) rides this branch per the
-  carry-forward pattern in #144 — `staging` takes no direct pushes, so it has nowhere else to go.
+All filed at `/build-notes` and added to Project #2 at Phase **P8**:
+
+- **#278 — no admin UI for vendor storefront content.** Promotions, banner note, hero subtitle and
+  branding are all vendor data now, and nothing can edit them without a direct DB write. The sharpest
+  of the four: a 1:N promo model whose whole point is "however many campaigns you want" is not usable
+  while adding one requires SQL. The most likely immediate follow-up.
+- **#279 — promo artwork.** `imageKey` ships `null` for both vendors by design; seeding a key for an
+  object nobody uploaded is how **#244** happened. Needs assets from the owner, and is entangled with
+  #278 (nowhere to upload), #277 (local bucket/CDN mismatch) and #243 (LCP — hero bytes are on the
+  critical path).
+- **#280 — date-based promo scheduling.** `isActive` is a manual boolean. Real scheduling needs
+  either request-time filtering (which changes the index) or a cron seam that does not exist yet
+  (#101, #94, both P8). The 1:N shape makes this an additive migration later rather than a remodel.
+- **#281 — per-vendor tint/surface colours have no AA guarantee.** Foregrounds are clamped;
+  backgrounds (`--color-surface-muted` and the three tints) are still plain aliases of a vendor's raw
+  hex. Nothing fails today — both vendors use light tints — and `--color-primary` is clamped against
+  all of them, so the pairing the storefront actually renders is guarded from the foreground side. A
+  third vendor with a dark `cream` would breach with nothing to catch it.
+
+Two dev-environment traps found while building, also filed and boarded:
+
+- **#276 — `prisma/seed.ts` silently skips SriMart** unless both `SEED_*_HOST` vars are set. This is
+  the most likely cause of a false validation failure on this slice; `validation.md` preflight P2
+  carries the workaround.
+- **#277 — `.env` pairs the `aheed-images-dev` bucket with staging's CDN host**, so a locally
+  uploaded image can never load. Compounds with #235.
+
+Not an issue, handled on this branch: **the roadmap row for PR #275** (P7.5b's promotion to
+production) rides here per the carry-forward pattern in #144 — `staging` takes no direct pushes, so
+it has nowhere else to go.
