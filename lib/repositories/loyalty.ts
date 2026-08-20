@@ -1,5 +1,6 @@
 import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
+import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import {
   DEFAULT_MULTIPLIER_BPS,
   clampRedemption,
@@ -452,6 +453,75 @@ export async function saveLoyaltySettings(
       });
     }
   });
+}
+
+export interface CreateTierInput {
+  key: string;
+  name: string;
+  thresholdPence: number;
+  multiplierBps: number;
+}
+
+export type CreateTierResult = { ok: true } | { ok: false; reason: "DUPLICATE_KEY" };
+
+/**
+ * Create one loyalty tier for this vendor (P7.5d+e, #136).
+ *
+ * `vendorId` is an explicit parameter and no request context is read, so a plain
+ * `tsx` script can exercise this directly — the property every function in this
+ * directory is expected to have.
+ *
+ * Duplicate keys are detected by LETTING THE DATABASE REFUSE, not by a
+ * check-then-insert: `@@unique([vendorId, key])` is the only thing that can
+ * decide this without a race, and two admins creating "GOLD" at once is a real
+ * enough sequence to not hand-roll. The vendorId in the constraint is why the
+ * SAME key remains creatable for a different vendor.
+ */
+export async function createLoyaltyTier(
+  vendorId: string,
+  input: CreateTierInput,
+): Promise<CreateTierResult> {
+  const prisma = getPrisma();
+  try {
+    await prisma.vendorLoyaltyTier.create({
+      data: {
+        vendorId,
+        key: input.key,
+        name: input.name,
+        thresholdPence: input.thresholdPence,
+        multiplierBps: input.multiplierBps,
+        // Ordering follows the threshold, which is what resolveTier() actually
+        // sorts on — a separately-managed sortOrder would be a second source of
+        // truth for the same ranking.
+        sortOrder: input.thresholdPence,
+      },
+    });
+    return { ok: true };
+  } catch (error) {
+    if (isUniqueViolation(error)) return { ok: false, reason: "DUPLICATE_KEY" };
+    throw error;
+  }
+}
+
+/**
+ * Delete one loyalty tier for this vendor (P7.5d+e, #136).
+ *
+ * `deleteMany` scoped by (vendorId, key), so another vendor's tier with the same
+ * key matches nothing rather than being deleted.
+ *
+ * THIS DELIBERATELY DOES NOT TOUCH LoyaltyLedgerEntry. That table snapshots
+ * `tierKey` and `multiplierBps` onto each EARN precisely so history survives the
+ * tier table changing, and it holds no foreign key to VendorLoyaltyTier — so a
+ * ledger row referencing a deleted tier is CORRECT, not dangling. Rewriting or
+ * cascading those rows would destroy the audit trail's ability to explain its own
+ * numbers, which is the one thing that model is for.
+ *
+ * Returns how many rows went, so the caller can tell "deleted" from "no such
+ * tier" without a second read.
+ */
+export async function deleteLoyaltyTier(vendorId: string, key: string): Promise<{ count: number }> {
+  const prisma = getPrisma();
+  return prisma.vendorLoyaltyTier.deleteMany({ where: { vendorId, key } });
 }
 
 export interface LedgerRow {

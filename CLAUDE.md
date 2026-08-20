@@ -321,14 +321,20 @@ issues for shipped slices are expected. The Status field's one-time UI rename
 
 ## Staff panel pages (`app/(admin)/staff/*`) — learned the hard way
 - **Every page's `requireVendorRole(...)` refusal branch must render `<PanelRefusal>` — never
-  `return null` or fall through silently.** `app/(admin)/staff/layout.tsx` renders the portal shell
+  `return null` or fall through silently.** **`app/(admin)/layout.tsx`** renders the portal shell
   (header, tier badge, "View store" link) around whatever the page returns, so a page that returns
   `null` on refusal still serves `200` with that shell and a blank content area — no "Staff only"
-  message, easy to mistake for a loading state rather than a real refusal. All other `/staff/*`
-  pages (`categories`, `inventory`, `orders`, `products`, `reports`, `team`, `staff/page.tsx`) use
-  `<PanelRefusal title="..." message="..." />`; `runbook/page.tsx` didn't, until #231's `/validate`
-  fired the exact signed-in-non-staff case its own `validation.md` had flagged as never exercised
-  and found it. Fixed at `/fix` to match the established pattern. When adding a new `/staff/*` page,
+  message, easy to mistake for a loading state rather than a real refusal. (This line said
+  `app/(admin)/staff/layout.tsx` until P7.5d+e; **no such file has ever existed** — the shell is one
+  segment up, at the route group. The rule's substance was unaffected, but the path a reader would
+  open to check it was wrong, which is the same failure mode as a ruling nobody can find.) All other
+  `/staff/*` pages (`categories`, `inventory`, `orders`, `products`, `reports`, `team`, `customers`,
+  `staff/page.tsx`) use `<PanelRefusal title="..." message="..." />`; `runbook/page.tsx` didn't,
+  until #231's `/validate` fired the exact signed-in-non-staff case its own `validation.md` had
+  flagged as never exercised and found it. Fixed at `/fix` to match the established pattern.
+  **`loyalty/page.tsx` was a second instance** — it hand-rolled equivalent markup rather than
+  returning `null`, so it was a consistency defect rather than a live one, and it was converted in
+  P7.5d+e (#136) while that slice was editing the page anyway. When adding a new `/staff/*` page,
   copy an existing one's refusal branch rather than writing a bare `if (!auth.ok) return null`.
 
 ## KMS docs (`docs/*.md`, `specs/*.md`) — learned the hard way

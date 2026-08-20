@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-20T13:46:59.548Z` · commit `a47e6a0` · `75` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-20T15:05:51.428Z` · commit `2639ffb` · `76` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -78,7 +78,8 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P7d — Workers observability & NFR baseline (plan)](specs/2026-08-19-p7d-observability-nfr/plan.md) | spec | 1.0.0 | 2026-08-19 | draft | internal | Turns on Workers observability, builds a repeatable NFR measurement harness, and records the first real numbers for LCP and API p95 — plus an index/query review that already found a documented index which does not exist. |
 | [P7.5b — Order money provenance: points earned and discount code on order pages (plan)](specs/2026-08-20-p7.5b-order-money-provenance/plan.md) | spec | 1.0.0 | 2026-08-20 | draft | internal | Makes an order's money summary explain itself — which discount code produced the reduction, how much of it was loyalty points, and how many points the order earned — on both order pages and in the confirmation email, with no schema change. |
 | [P7.5c+f — Per-vendor storefront identity: copy, promotions & contrast-preserving colour (plan)](specs/2026-08-20-p7.5cf-vendor-storefront-identity/plan.md) | spec | 1.0.0 | 2026-08-20 | draft | internal | Removes Aheed's hardcoded copy and invented promo claims from shared storefront components, adds a 1:N VendorPromotion model driving a real hero carousel, and restores per-vendor semantic colour behind an OKLCH contrast clamp so vendors differ without breaching WCAG AA. |
-| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.16.0 | 2026-08-19 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
+| [P7.5d+e — Staff panel completion: customer directory, non-sales reports, admin search & tier CRUD (plan)](specs/2026-08-20-p7.5de-staff-panel-completion/plan.md) | spec | 1.0.0 | 2026-08-20 | draft | internal | P7.5's final slice — combines P7.5d (#264) and P7.5e (#265) into one staff-panel pass closing |
+| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.17.0 | 2026-08-20 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
 | [ADR-003 — Object Storage Abstraction (S3-compatible)](specs/decisions/ADR-003-storage-abstraction.md) | adr | 1.2.0 | 2026-08-17 | approved | internal | Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time. |
