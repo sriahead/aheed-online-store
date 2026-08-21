@@ -15,6 +15,7 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
+  Store,
 } from "lucide-react";
 
 export interface PanelNavProps {
@@ -81,6 +82,7 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
               <NavLink href="/staff/orders" icon={ClipboardList} label="Orders" />
               <NavLink href="/staff/products" icon={Package} label="Catalogue" />
               <NavLink href="/staff/categories" icon={LayoutDashboard} label="Categories" />
+              <NavLink href="/staff/storefront" icon={Store} label="Storefront" />
               <NavLink href="/staff/loyalty" icon={Sparkles} label="Loyalty" />
               <NavLink href="/staff/discounts" icon={TicketPercent} label="Discounts" />
               <NavLink href="/staff/reports" icon={TrendingUp} label="Reports" />
