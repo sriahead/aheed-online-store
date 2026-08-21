@@ -1,7 +1,7 @@
 ---
 id: self-review-report
 title: Phase 6.5 Autonomous Self-Review Report
-audience: [dev, staff]
+audience: [dev, admin]
 type: doc
 status: approved
 version: "1.1.0"

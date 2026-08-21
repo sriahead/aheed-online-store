@@ -123,8 +123,8 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
               </div>
             </div>
 
-            <div className="mt-6">
-              <div className="prose prose-slate max-w-none prose-headings:font-bold prose-a:text-emerald-600 hover:prose-a:text-emerald-700">
+            <div className="mt-8">
+              <div className="prose prose-slate prose-base max-w-4xl mx-auto prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-a:text-emerald-600 hover:prose-a:text-emerald-700 prose-img:rounded-2xl">
                 <Markdown>{selectedDoc.content}</Markdown>
               </div>
             </div>
