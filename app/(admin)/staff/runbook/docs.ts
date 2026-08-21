@@ -120,6 +120,30 @@ export const DOC_ARTICLES: any[] = [
       '\r\n# Phase 6.5 — Validation Results Log\r\n\r\n## Summary of Automated Checks\r\n- `npx vitest run`: **PASSED** (30 test files, 347 tests passed)\r\n- `npm run kms:validate`: **PASSED** (54 valid KMS artifacts, 0 failing)\r\n- `npm run sdd:audit`: **PASSED** (all shipped slices documented)\r\n- `npm run kms:build-index`: **PASSED** (`ARTIFACT_INDEX.md` written with 54 artifacts)\r\n- `npm run kms:assemble:internal`: **PASSED** (54 docs assembled to `kms/site-internal/content`)\r\n\r\n---\r\n\r\n## Log of Audit Steps & Fixes\r\n\r\n### 1. GAP-001 (High - Tenancy / Host Resolution)\r\n- **Problem:** `lib/tenant.ts` used `.split(":")[0]`, truncating bracketed IPv6 literal hosts (`[::1]:8787` -> `[`).\r\n- **Fix:** Swapped to `splitHostPort(rawHost).hostname` from `lib/auth-origin.ts`.\r\n- **Validation:** Unit tests passing cleanly (`tests/auth-origin.test.ts`).\r\n\r\n### 2. GAP-002 (High - Security & Auth / Local Preview Origin Mismatch)\r\n- **Problem:** Local preview sign-ins (`http://localhost:8787`) failed with 403 CSRF origin mismatch because port was stripped and `wrangler dev` default `x-forwarded-proto` was trusted over loopback HTTP.\r\n- **Fix:** Exported `splitHostPort` and `inferProto` in `lib/auth-origin.ts`, preserving non-default ports and inferring loopback `http`.\r\n- **Validation:** 26 dedicated unit tests added and passing in `tests/auth-origin.test.ts`.\r\n- **Live validation (added 2026-08-17, #192):** the unit tests above were the *only* evidence\r\n  recorded here, and they exercise the helpers rather than the reported failure. The symptom itself\r\n  was re-fired on 2026-08-17 against `npm run preview`: headless, `Origin: http://localhost:8787`\r\n  returns `401 INVALID_EMAIL_OR_PASSWORD` (origin accepted) while `Origin: http://localhost` returns\r\n  `403 INVALID_ORIGIN` (correctly refused); from Chrome, the real login form\'s\r\n  `POST /api/auth/sign-in/email` returned `401`. Issue #176 closed on that evidence.\r\n\r\n### 3. GAP-003 (Medium - Frontend / UI Missing 404 Page)\r\n- **Problem:** Missing custom 404 error page.\r\n- **Fix:** Created `app/not-found.tsx` with design system tokens and store return link.\r\n- **Validation:** Typecheck and route rendering verified.\r\n\r\n### 4. GAP-004 (Low - KMS Docs Refresh)\r\n- **Problem:** KMS artifact index required rebuild.\r\n- **Fix:** Rebuilt `ARTIFACT_INDEX.md` and reassembled internal docs site.\r\n- **Validation:** `npm run kms:validate` passing cleanly.\r\n',
   },
   {
+    id: "docs/staff-runbook-guides/admin-tabs-guide.md",
+    title: "How to Use the Admin Panel Tabs",
+    audience: ["admin"],
+    visibility: "internal",
+    category: "runbook",
+    summary:
+      "A guide on how to navigate and use the Catalogue, Storefront, Loyalty, and Reports tabs.",
+    lastUpdated: "2026-08-21",
+    content:
+      "\n# Admin Panel Guide\n\nWelcome to the **Admin Panel**. As a store manager or administrator, you have access to advanced configuration tabs to manage the business logic and presentation of the storefront.\n\n## Orders & Fulfillment\nWhile staff handle picking, you can view the macroscopic order flow, issue full refunds, and monitor SLA compliance.\n\n## Catalogue & Categories\n- **Catalogue**: Manage product listings, update prices (always in integer pence), upload imagery, and tweak SEO metadata.\n- **Categories**: Organize the storefront hierarchy (e.g., *Fresh Produce*, *HMC Halal Meat*) to help customers navigate.\n\n## Storefront Configuration\nCustomize the visual identity of your online store. Update the logo, change brand colors, and edit the promotional banner at the top of the homepage.\n\n## Loyalty & Discounts\n- **Loyalty**: Configure point multipliers and redemption rates for the customer rewards program.\n- **Discounts**: Create promotional codes (e.g., `SUMMER10`), set usage limits, and define minimum cart thresholds.\n\n## Reports & Team\n- **Reports**: View aggregate sales data, best-selling items, and revenue over time.\n- **Team**: Invite new staff members and manage their roles (Staff vs. Admin) securely.\n",
+  },
+  {
+    id: "docs/staff-runbook-guides/staff-tabs-guide.md",
+    title: "How to Use the Staff Panel Tabs",
+    audience: ["staff"],
+    visibility: "internal",
+    category: "runbook",
+    summary:
+      "A guide on how to navigate and use the Overview, Live Inventory, and Fulfillment tabs.",
+    lastUpdated: "2026-08-21",
+    content:
+      "\n# Staff Panel Guide\n\nWelcome to the **Staff Panel**. As a staff member, your primary interface contains three main tabs designed to help you run day-to-day shop-floor operations.\n\n## 1. Overview\nThe **Overview** tab provides a quick snapshot of the current shift. Here you will see:\n- Urgent pending orders that need picking.\n- Recent alerts about low stock items.\n- Quick links to common actions.\n\n## 2. Live Inventory & Availability\nThe **Live Inventory & Availability** tab is where you manage what's currently on the shelves.\n- **Honest Stock**: Only mark items as out-of-stock when they are truly gone.\n- **Adjustments**: Update quantities if you spot discrepancies during your shift.\n- **Back-in-Stock**: Rapidly toggle availability for high-turnover items like fresh produce.\n\n## 3. Fulfillment & Orders\nThe **Fulfillment & Orders** tab is your workstation for handling customer orders.\n- **Picking**: View items required for new orders and pick them from the shop floor.\n- **Status Updates**: Transition orders from *Confirmed* → *Out for Delivery* → *Delivered*.\n- **Exceptions**: Handle substitutions or refunds if an item is missing during picking.\n",
+  },
+  {
     id: "docs/walking-skeleton-runbook.md",
     title: "Walking-Skeleton Runbook (M0)",
     audience: ["dev"],
