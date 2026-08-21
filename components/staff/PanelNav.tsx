@@ -16,12 +16,10 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { TierToggle } from "./TierToggle";
 
 export interface PanelNavProps {
   canSeeOrders: boolean;
   currentTier: "staff" | "admin";
-  canSeeAdmin: boolean;
 }
 
 function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: string }) {
@@ -44,7 +42,7 @@ function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: 
   );
 }
 
-export function PanelNav({ canSeeOrders, currentTier, canSeeAdmin }: PanelNavProps) {
+export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
   const trackRef = useRef<HTMLDivElement>(null);
 
   if (!canSeeOrders) return null;
@@ -102,12 +100,6 @@ export function PanelNav({ canSeeOrders, currentTier, canSeeAdmin }: PanelNavPro
             <ChevronRight className="h-4 w-4" aria-hidden />
           </button>
         </div>
-
-        {canSeeAdmin && (
-          <div className="pb-3 sm:pb-0 shrink-0">
-            <TierToggle initialTier={currentTier} canSeeAdmin={canSeeAdmin} />
-          </div>
-        )}
 
       </div>
     </nav>
