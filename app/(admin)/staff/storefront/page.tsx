@@ -1,5 +1,5 @@
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getPrisma } from "@/lib/db";
+import { getVendorConfig, getVendorBranding } from "@/lib/repositories/vendor";
 import { StorefrontConfigForm } from "@/components/staff/StorefrontConfigForm";
 import { getStorage } from "@/lib/storage";
 
@@ -9,9 +9,8 @@ export default async function StorefrontAdminPage() {
   const auth = await requireVendorRole("ADMIN");
   if (!auth.ok) return null;
 
-  const db = getPrisma();
-  const config = await db.vendorConfig.findUnique({ where: { vendorId: auth.vendorId } });
-  const branding = await db.vendorBranding.findUnique({ where: { vendorId: auth.vendorId } });
+  const config = await getVendorConfig(auth.vendorId);
+  const branding = await getVendorBranding(auth.vendorId);
 
   if (!config || !branding) {
     return <div className="p-8">Vendor config or branding not found.</div>;
