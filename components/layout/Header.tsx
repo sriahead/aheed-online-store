@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import {
   MapPin,
   Search,
@@ -21,6 +21,7 @@ import { getCartRepository, EMPTY_CART } from "@/lib/repositories/cart";
 import { getCartIdentity } from "@/lib/cart-identity";
 import { CartDrawerShell } from "@/components/cart/CartDrawerShell";
 import { CartContents } from "@/components/cart/CartContents";
+import { ViewSwitcher } from "./ViewSwitcher";
 
 /**
  * Storefront header — a Server Component (no "use client"), so it reads the
@@ -48,15 +49,28 @@ function SearchForm({ className = "", placeholder }: { className?: string; place
   );
 }
 
-export async function Header() {
+export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) {
   const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const user = session?.user as { name: string } | undefined;
   const firstName = user?.name?.split(" ")[0];
 
   let isStaffOrAdmin = false;
+  let canSeeAdmin = false;
   if (user) {
     const staffCheck = await requireVendorRole("STAFF", "ADMIN");
     isStaffOrAdmin = staffCheck.ok;
+    canSeeAdmin = staffCheck.ok && (staffCheck.via === "platform-admin" || staffCheck.via === "ADMIN");
+  }
+
+  const cookieStore = await cookies();
+  let currentTier: "staff" | "admin" = "staff";
+  if (canSeeAdmin) {
+    const saved = cookieStore.get("admin-tier")?.value;
+    if (saved === "admin" || saved === "staff") {
+      currentTier = saved;
+    } else {
+      currentTier = "admin";
+    }
   }
 
   const profile = await getCurrentVendorProfile();
@@ -124,7 +138,7 @@ export async function Header() {
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
         {/* Brand Logo */}
         <div className="flex items-center gap-3 shrink-0">
-          <Link href="/" className="flex items-center gap-2.5 group text-left">
+          <Link href={isPortal ? "/staff" : "/"} className="flex items-center gap-2.5 group text-left">
             {logoUrl ? (
               // Plain <img> by decision — see #46 / eslint.config.mjs. NOTE: this logo is
               // the storefront's dominant byte cost (1.9 MB, 83% of page weight, rendered
@@ -163,35 +177,22 @@ export async function Header() {
 
         {/* Global Search Bar */}
         <div className="flex-1 max-w-md hidden sm:block">
-          <SearchForm placeholder={searchPlaceholder} />
+          {!isPortal && <SearchForm placeholder={searchPlaceholder} />}
         </div>
 
         {/* Action Controls & Navigation */}
         <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-2">
           {/* Account / Sign In & Sign Out Controls */}
           {user ? (
-            <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-xl border border-black/10">
-              <Link
-                href="/account"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-black/80 hover:text-primary transition-colors"
-              >
-                <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
-                  {firstName?.charAt(0) ?? <User className="h-3.5 w-3.5" />}
-                </div>
-                <span className="hidden sm:inline">{firstName}</span>
-              </Link>
-              {isStaffOrAdmin && (
-                <>
-                  <div className="w-px h-4 bg-black/10 mx-1 hidden sm:block"></div>
-                  <Link
-                    href="/staff"
-                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
-                  >
-                    Staff Panel
-                  </Link>
-                </>
-              )}
-            </div>
+            <Link
+              href="/account"
+              className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 p-1 pr-3 rounded-xl border border-black/10 transition-colors text-xs font-bold text-black/80 hover:text-primary"
+            >
+              <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
+                {firstName?.charAt(0) ?? <User className="h-3.5 w-3.5" />}
+              </div>
+              <span className="hidden sm:inline">{firstName}</span>
+            </Link>
           ) : (
             <Link
               href="/login"
@@ -203,24 +204,33 @@ export async function Header() {
           )}
 
           {/* Cart Trigger */}
-          <CartDrawerShell
-            itemCount={cartSummary.itemCount}
-            subtotalPence={cartSummary.subtotalPence}
-          >
-            <CartContents
-              summary={cartSummary}
-              freeDeliveryThresholdPence={profile?.freeDeliveryThresholdPence ?? null}
-              localityName={localityName}
-              cdnBaseUrl={CDN_BASE_URL ?? ""}
-              showViewCartLink
-            />
-          </CartDrawerShell>
+          {!isPortal && (
+            <CartDrawerShell
+              itemCount={cartSummary.itemCount}
+              subtotalPence={cartSummary.subtotalPence}
+            >
+              <CartContents
+                summary={cartSummary}
+                freeDeliveryThresholdPence={profile?.freeDeliveryThresholdPence ?? null}
+                localityName={localityName}
+                cdnBaseUrl={CDN_BASE_URL ?? ""}
+                showViewCartLink
+              />
+            </CartDrawerShell>
+          )}
+
+          {/* View Switcher (Anchored Far Right) */}
+          {isStaffOrAdmin && (
+            <div className="border-l border-black/10 pl-2 ml-1">
+              <ViewSwitcher canSeeAdmin={canSeeAdmin} currentTier={currentTier} isPortal={isPortal} />
+            </div>
+          )}
         </nav>
       </div>
 
       {/* Mobile search row */}
       <div className="px-4 pb-2.5 sm:hidden">
-        <SearchForm placeholder={searchPlaceholder} />
+        {!isPortal && <SearchForm placeholder={searchPlaceholder} />}
       </div>
     </header>
   );

@@ -7,6 +7,13 @@ every branch merges.
 ## [Unreleased]
 
 ### Changed
+- **Cart UI**: Converted the top-header Shopping Cart into a bottom-right Floating Action Button (FAB). This completely decouples the cart from the header layout, providing a stable, jump-free header when toggling between Shopper and Staff views, and improves mobile accessibility.
+
+### Changed
+- **Header UI**: Replaced the disjointed 'Staff Panel' button and 'Tier Toggle' with a unified 'View Switcher' dropdown in the main Header. Staff and Admin views correctly configure the header layout to hide the shopper search bar and cart drawer. The View Switcher respects role-gating so STAFF users only see Shopper and Staff views.
+
+
+### Changed
 - **Admin UI**: Unify admin Operations Portal layout with storefront theme. Removed custom PortalHeader in favor of standard <Header />, moved TierToggle to PanelNav, added horizontal scrolling to PanelNav tabs, and configured pp/(admin)/staff/page.tsx to read the tier cookie so Admin users can successfully preview the limited staff layout.
 
 ### Fixed
