@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-20T18:00:13.988Z` · commit `d00e776` · `77` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-21T03:00:46.212Z` · commit `1281a3e` · `79` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -80,6 +80,8 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P7.5c+f — Per-vendor storefront identity: copy, promotions & contrast-preserving colour (plan)](specs/2026-08-20-p7.5cf-vendor-storefront-identity/plan.md) | spec | 1.0.0 | 2026-08-20 | draft | internal | Removes Aheed's hardcoded copy and invented promo claims from shared storefront components, adds a 1:N VendorPromotion model driving a real hero carousel, and restores per-vendor semantic colour behind an OKLCH contrast clamp so vendors differ without breaching WCAG AA. |
 | [P7.5d+e — Staff panel completion: customer directory, non-sales reports, admin search & tier CRUD (plan)](specs/2026-08-20-p7.5de-staff-panel-completion/plan.md) | spec | 1.0.0 | 2026-08-20 | draft | internal | P7.5's final slice — combines P7.5d (#264) and P7.5e (#265) into one staff-panel pass closing |
 | [P8 — Smart Product Image Generation (plan)](specs/2026-08-20-p8-smart-image-generation/plan.md) | spec | 1.0.0 | 2026-08-20 | approved | internal | A smart product image pipeline that fetches from Open Food Facts or falls back to Cloudflare Workers AI flux-1-schnell, with an interactive admin preview and a batch backfill job. |
+| [View Switcher Plan](specs/2026-08-21-view-switcher/plan.md) | spec | 1.0.0 | 2026-08-21 | approved | internal | Implementation plan for the Global View Switcher. |
+| [View Switcher Requirements](specs/2026-08-21-view-switcher/requirements.md) | spec | 1.0.0 | 2026-08-21 | approved | internal | Requirements for the Global View Switcher and FAB Cart. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.17.0 | 2026-08-20 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
