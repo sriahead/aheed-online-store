@@ -12,7 +12,7 @@ export function BackfillImagesButton() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/jobs/backfill-images", { method: "POST" });
-      const data = await res.json() as any;
+      const data = (await res.json()) as any;
       alert(data.message + (data.processed ? ` (${data.processed} generated)` : ""));
       router.refresh();
     } catch (err) {

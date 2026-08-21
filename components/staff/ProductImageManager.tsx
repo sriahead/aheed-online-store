@@ -76,7 +76,12 @@ async function toWebp(file: File): Promise<Blob> {
   }
 }
 
-export function ProductImageManager({ productId, productName, images, imageNeedsReview }: ProductImageManagerProps) {
+export function ProductImageManager({
+  productId,
+  productName,
+  images,
+  imageNeedsReview,
+}: ProductImageManagerProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
