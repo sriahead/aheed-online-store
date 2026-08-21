@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Markdown from "react-markdown";
 
 type DocArticle = {
   id: string;
   title: string;
-  audience: "staff" | "dev" | "customer" | "all";
+  audience: string[];
   visibility?: "internal" | "public";
   category: string;
   summary: string;
@@ -14,15 +15,22 @@ type DocArticle = {
 };
 
 export function RunbookClient({ docs }: { docs: DocArticle[] }) {
-  const [filter, setFilter] = useState<"all" | "customer" | "staff" | "dev">("all");
-  const filteredDocs = filter === "all" ? docs : docs.filter((d) => d.audience === filter);
-  const [selectedDoc, setSelectedDoc] = useState<DocArticle>(docs[0] || null);
+  // Filter out pure dev docs (they go to the dev KMS site) and pure customer docs (they go to /help)
+  const staffAdminDocs = docs.filter(
+    (d) => d.audience.includes("staff") || d.audience.includes("admin"),
+  );
+
+  const [filter, setFilter] = useState<"all" | "staff" | "admin">("all");
+  const filteredDocs =
+    filter === "all" ? staffAdminDocs : staffAdminDocs.filter((d) => d.audience.includes(filter));
+
+  const [selectedDoc, setSelectedDoc] = useState<DocArticle>(staffAdminDocs[0] || null);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       <div className="lg:col-span-4 space-y-4">
         <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-          {(["all", "customer", "staff", "dev"] as const).map((aud) => (
+          {(["all", "staff", "admin"] as const).map((aud) => (
             <button
               key={aud}
               type="button"
@@ -102,9 +110,9 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
             </div>
 
             <div className="bg-slate-900 p-4 sm:p-6 rounded-2xl border border-slate-800 overflow-x-auto">
-              <pre className="text-slate-300 whitespace-pre-wrap font-mono text-xs leading-relaxed">
-                {selectedDoc.content}
-              </pre>
+              <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-slate-950 prose-pre:border prose-pre:border-slate-800">
+                <Markdown>{selectedDoc.content}</Markdown>
+              </div>
             </div>
           </div>
         ) : (
