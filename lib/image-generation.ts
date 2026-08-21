@@ -26,7 +26,7 @@ export function getImageGenerationService(): ImageGenerationService {
 
       let attempt = 0;
       let res;
-      
+
       while (attempt < 3) {
         res = await fetch(
           `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/black-forest-labs/flux-1-schnell`,
@@ -53,10 +53,12 @@ export function getImageGenerationService(): ImageGenerationService {
       if (!res || !res.ok) {
         const text = res ? await res.text() : "Unknown error";
         const status = res ? res.status : 500;
-        
+
         // If it's still 429 after retries, throw a clean error
         if (status === 429) {
-          throw new Error("Cloudflare AI is temporarily at capacity. Please try again in a few seconds.");
+          throw new Error(
+            "Cloudflare AI is temporarily at capacity. Please try again in a few seconds.",
+          );
         }
         throw new Error(`AI generation failed: ${status} - ${text}`);
       }

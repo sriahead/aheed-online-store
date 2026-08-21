@@ -259,9 +259,7 @@ export async function reorderProductImages(
   return { ok: true, value: null };
 }
 
-export async function approveProductImage(
-  productId: string,
-): Promise<ImageActionResult<null>> {
+export async function approveProductImage(productId: string): Promise<ImageActionResult<null>> {
   const auth = await requireVendorRole("ADMIN");
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
