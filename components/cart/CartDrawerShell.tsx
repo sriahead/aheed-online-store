@@ -102,17 +102,16 @@ export function CartDrawerShell({
         aria-label={itemCount > 0 ? `Cart, ${itemCount} items` : "Cart, empty"}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="relative flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-white sm:px-3.5 transition-all hover:opacity-90 shadow-sm"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full bg-primary px-4 py-3 text-sm font-bold text-white shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-transform hover:scale-105 hover:bg-primary/90 hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] sm:bottom-8 sm:right-8 group"
       >
-        <ShoppingBag className="h-4 w-4" aria-hidden />
-        <span className="hidden sm:inline">Cart</span>
+        <ShoppingBag className="h-5 w-5" aria-hidden />
         {itemCount > 0 && (
-          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-white">
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-extrabold text-white shadow-sm">
             {itemCount}
           </span>
         )}
         {(subtotalPence ?? 0) > 0 && (
-          <span className="hidden md:inline font-bold border-l border-white/30 pl-2">
+          <span className="font-extrabold border-l border-white/30 pl-3 ml-1">
             £{(subtotalPence! / 100).toFixed(2)}
           </span>
         )}
