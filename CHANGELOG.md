@@ -6,6 +6,9 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+- **Admin UI**: Unify admin Operations Portal layout with storefront theme. Removed custom PortalHeader in favor of standard <Header />, moved TierToggle to PanelNav, added horizontal scrolling to PanelNav tabs, and configured pp/(admin)/staff/page.tsx to read the tier cookie so Admin users can successfully preview the limited staff layout.
+
 ### Fixed
 - **CI**: Injected missing Cloudflare AI secrets (CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN) into the production worker runtime in .github/workflows/deploy-production.yml.
 

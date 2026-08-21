@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -12,11 +13,15 @@ import {
   BookOpen,
   TrendingUp,
   Users,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+import { TierToggle } from "./TierToggle";
 
 export interface PanelNavProps {
   canSeeOrders: boolean;
   currentTier: "staff" | "admin";
+  canSeeAdmin: boolean;
 }
 
 function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: string }) {
@@ -29,7 +34,7 @@ function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: 
       href={href}
       className={`inline-flex items-center gap-2 border-b-2 px-1 pb-3 pt-4 text-sm font-bold transition-colors whitespace-nowrap ${
         isActive
-          ? "border-[#2e7d32] text-[#2e7d32]"
+          ? "border-primary text-primary"
           : "border-transparent text-black/60 hover:border-black/20 hover:text-black/80"
       }`}
     >
@@ -39,36 +44,71 @@ function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: 
   );
 }
 
-export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
+export function PanelNav({ canSeeOrders, currentTier, canSeeAdmin }: PanelNavProps) {
+  const trackRef = useRef<HTMLDivElement>(null);
+
   if (!canSeeOrders) return null;
+
+  const nudge = (direction: 1 | -1) =>
+    trackRef.current?.scrollBy({ left: direction * 260, behavior: "smooth" });
 
   return (
     <nav
       aria-label="Store admin"
-      className="bg-white border-b border-black/10 shadow-sm w-full overflow-x-auto"
+      className="bg-white border-b border-black/10 shadow-sm w-full"
     >
-      <div className="mx-auto flex w-full max-w-5xl items-center gap-6 px-4">
-        {currentTier === "staff" ? (
-          <>
-            <NavLink href="/staff" icon={LayoutDashboard} label="Overview" />
-            <NavLink href="/staff/inventory" icon={Layers} label="Live Inventory & Availability" />
-            <NavLink href="/staff/orders" icon={ClipboardList} label="Fulfillment & Orders" />
-            <NavLink href="/staff/runbook" icon={BookOpen} label="Internal Operational Runbook" />
-          </>
-        ) : (
-          <>
-            <NavLink href="/staff" icon={LayoutDashboard} label="Overview" />
-            <NavLink href="/staff/inventory" icon={Layers} label="Live Inventory & Availability" />
-            <NavLink href="/staff/orders" icon={ClipboardList} label="Orders" />
-            <NavLink href="/staff/products" icon={Package} label="Catalogue" />
-            <NavLink href="/staff/categories" icon={LayoutDashboard} label="Categories" />
-            <NavLink href="/staff/loyalty" icon={Sparkles} label="Loyalty" />
-            <NavLink href="/staff/discounts" icon={TicketPercent} label="Discounts" />
-            <NavLink href="/staff/reports" icon={TrendingUp} label="Reports" />
-            <NavLink href="/staff/team" icon={Users} label="Team" />
-            <NavLink href="/staff/runbook" icon={BookOpen} label="Runbook" />
-          </>
+      <div className="mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4">
+        
+        <div className="relative flex-1 min-w-0 flex items-center group">
+          <button
+            type="button"
+            aria-label="Scroll left"
+            onClick={() => nudge(-1)}
+            className="absolute left-0 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-white text-black/60 shadow hover:bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden />
+          </button>
+
+          <div ref={trackRef} className="no-scrollbar flex w-full gap-6 overflow-x-auto scroll-smooth px-8">
+            {currentTier === "staff" ? (
+              <>
+                <NavLink href="/staff" icon={LayoutDashboard} label="Overview" />
+                <NavLink href="/staff/inventory" icon={Layers} label="Live Inventory & Availability" />
+                <NavLink href="/staff/orders" icon={ClipboardList} label="Fulfillment & Orders" />
+                <NavLink href="/staff/runbook" icon={BookOpen} label="Internal Operational Runbook" />
+              </>
+            ) : (
+              <>
+                <NavLink href="/staff" icon={LayoutDashboard} label="Overview" />
+                <NavLink href="/staff/inventory" icon={Layers} label="Live Inventory & Availability" />
+                <NavLink href="/staff/orders" icon={ClipboardList} label="Orders" />
+                <NavLink href="/staff/products" icon={Package} label="Catalogue" />
+                <NavLink href="/staff/categories" icon={LayoutDashboard} label="Categories" />
+                <NavLink href="/staff/loyalty" icon={Sparkles} label="Loyalty" />
+                <NavLink href="/staff/discounts" icon={TicketPercent} label="Discounts" />
+                <NavLink href="/staff/reports" icon={TrendingUp} label="Reports" />
+                <NavLink href="/staff/team" icon={Users} label="Team" />
+                <NavLink href="/staff/runbook" icon={BookOpen} label="Runbook" />
+              </>
+            )}
+          </div>
+
+          <button
+            type="button"
+            aria-label="Scroll right"
+            onClick={() => nudge(1)}
+            className="absolute right-0 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-white text-black/60 shadow hover:bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+
+        {canSeeAdmin && (
+          <div className="pb-3 sm:pb-0 shrink-0">
+            <TierToggle initialTier={currentTier} canSeeAdmin={canSeeAdmin} />
+          </div>
         )}
+
       </div>
     </nav>
   );

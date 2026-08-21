@@ -32,11 +32,13 @@ export function TierToggle({
   };
 
   return (
-    <div className="flex items-center rounded-full bg-white/10 p-1">
+    <div className="flex items-center rounded-full bg-black/5 p-1 border border-black/5">
       <button
         onClick={() => handleToggle("staff")}
         className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-          tier === "staff" ? "bg-yellow-400 text-black" : "text-white/70 hover:text-white"
+          tier === "staff"
+            ? "bg-yellow-400 text-black shadow-sm"
+            : "text-black/60 hover:text-black"
         }`}
         disabled={isPending}
       >
@@ -45,7 +47,9 @@ export function TierToggle({
       <button
         onClick={() => handleToggle("admin")}
         className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-          tier === "admin" ? "bg-white/20 text-white" : "text-white/70 hover:text-white"
+          tier === "admin"
+            ? "bg-white text-black shadow-sm"
+            : "text-black/60 hover:text-black"
         }`}
         disabled={isPending}
       >
