@@ -85,7 +85,11 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
   structurally unreachable until refunds or staff cancellation of a confirmed order exist — ADR-005
   records refunds as its own undecided territory.
 - **P8 — Deployment & launch.** Full Cloudflare + Neon + R2 wiring, secrets, backups/PITR,
-  monitoring, UAT, production deployment, handover & training. Migration playbooks verified.
+  monitoring, UAT, production deployment, handover & training. Migration playbooks verified. 
+  *Restructured 2026-08-21 to carry all remaining open items, decomposed as follows:*
+  - **P8.1 — Core Debt & Compliance (Pre-Launch):** Resolve non-negotiable security, compliance (UK GDPR/WCAG), and architectural bugs left over from earlier phases (Group 1 issues, e.g., #253, #254, #281, #104, #175, #219, #221, #151, #137, #269, #235, #273, #276, #277, #252, #287).
+  - **P8.2 — Launch & Operations:** The original P8 mandate. Stripe live keys (#113), image cleanup (#174), abandoned carts (#94), Stripe sweep (#101), confirm Workers Logs (#246), and Verify Neon limits (#227).
+  - **P8.3 — Post-Launch Backlog (Enhancements):** All feature enhancements and non-critical deferred items (Group 2 issues, e.g., #286, #280, #279, #232, #146-149, #115-116, #288, #75).
 
 ## Roadmap Change Log
 
