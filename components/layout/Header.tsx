@@ -184,23 +184,15 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
         <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-2">
           {/* Account / Sign In & Sign Out Controls */}
           {user ? (
-            <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-xl border border-black/10">
-              <Link
-                href="/account"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-black/80 hover:text-primary transition-colors"
-              >
-                <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
-                  {firstName?.charAt(0) ?? <User className="h-3.5 w-3.5" />}
-                </div>
-                <span className="hidden sm:inline">{firstName}</span>
-              </Link>
-              {isStaffOrAdmin && (
-                <>
-                  <div className="w-px h-4 bg-black/10 mx-1 hidden sm:block"></div>
-                  <ViewSwitcher canSeeAdmin={canSeeAdmin} currentTier={currentTier} isPortal={isPortal} />
-                </>
-              )}
-            </div>
+            <Link
+              href="/account"
+              className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 p-1 pr-3 rounded-xl border border-black/10 transition-colors text-xs font-bold text-black/80 hover:text-primary"
+            >
+              <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
+                {firstName?.charAt(0) ?? <User className="h-3.5 w-3.5" />}
+              </div>
+              <span className="hidden sm:inline">{firstName}</span>
+            </Link>
           ) : (
             <Link
               href="/login"
@@ -225,6 +217,13 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
                 showViewCartLink
               />
             </CartDrawerShell>
+          )}
+
+          {/* View Switcher (Anchored Far Right) */}
+          {isStaffOrAdmin && (
+            <div className="border-l border-black/10 pl-2 ml-1">
+              <ViewSwitcher canSeeAdmin={canSeeAdmin} currentTier={currentTier} isPortal={isPortal} />
+            </div>
           )}
         </nav>
       </div>
