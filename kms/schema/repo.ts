@@ -57,3 +57,9 @@ export function readFrontMatter(file: string): Record<string, unknown> {
   const raw = readFileSync(file, "utf8");
   return matter(raw).data;
 }
+
+export function readDoc(file: string) {
+  const raw = readFileSync(file, "utf8");
+  const parsed = matter(raw);
+  return { data: parsed.data, content: parsed.content };
+}
