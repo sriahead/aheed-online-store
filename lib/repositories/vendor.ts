@@ -155,3 +155,47 @@ export async function getCurrentVendorSenderName(): Promise<string> {
   if (!vendorId) return DEFAULT_SENDER_NAME;
   return (await fetchVendorProfile(vendorId)).senderName;
 }
+
+export async function getVendorConfig(vendorId: string) {
+  return getPrisma().vendorConfig.findUnique({ where: { vendorId } });
+}
+
+export async function getVendorBranding(vendorId: string) {
+  return getPrisma().vendorBranding.findUnique({ where: { vendorId } });
+}
+
+export async function updateVendorLogoKey(vendorId: string, logoStorageKey: string) {
+  return getPrisma().vendorBranding.update({
+    where: { vendorId },
+    data: { logoStorageKey },
+  });
+}
+
+export async function updateVendorStorefrontConfig(vendorId: string, data: any) {
+  return getPrisma().$transaction(async (tx) => {
+    await tx.vendorConfig.update({
+      where: { vendorId },
+      data: {
+        bannerNote: data.bannerNote,
+        heroSubtitle: data.heroSubtitle,
+      },
+    });
+
+    const brandingUpdates: any = {};
+    if (data.brandGreenDark) brandingUpdates.brandGreenDark = data.brandGreenDark;
+    if (data.brandGreen) brandingUpdates.brandGreen = data.brandGreen;
+    if (data.brandOrange) brandingUpdates.brandOrange = data.brandOrange;
+    if (data.brandRed) brandingUpdates.brandRed = data.brandRed;
+    if (data.brandCream) brandingUpdates.brandCream = data.brandCream;
+    if (data.brandGreenTint) brandingUpdates.brandGreenTint = data.brandGreenTint;
+    if (data.brandOrangeTint) brandingUpdates.brandOrangeTint = data.brandOrangeTint;
+    if (data.brandRedTint) brandingUpdates.brandRedTint = data.brandRedTint;
+
+    if (Object.keys(brandingUpdates).length > 0) {
+      await tx.vendorBranding.update({
+        where: { vendorId },
+        data: brandingUpdates,
+      });
+    }
+  });
+}
