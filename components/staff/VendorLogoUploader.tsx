@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRef, useState, useTransition } from "react";
 import { ImageUp } from "lucide-react";
@@ -101,12 +101,13 @@ export function VendorLogoUploader({ currentLogoUrl }: { currentLogoUrl: string 
       )}
       
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-bold text-black/60">Replace Logo</label>
+        <label htmlFor="logo-upload" className="text-sm font-bold text-black/60">Replace Logo</label>
         <p className="text-sm text-black/60">
           New image — resized to {MAX_IMAGE_EDGE_PX}px and converted to WebP before uploading to save space.
         </p>
         <div className="flex items-center gap-3">
           <input
+            id="logo-upload"
             ref={fileRef}
             type="file"
             accept="image/*"

@@ -85,7 +85,11 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
   structurally unreachable until refunds or staff cancellation of a confirmed order exist — ADR-005
   records refunds as its own undecided territory.
 - **P8 — Deployment & launch.** Full Cloudflare + Neon + R2 wiring, secrets, backups/PITR,
-  monitoring, UAT, production deployment, handover & training. Migration playbooks verified.
+  monitoring, UAT, production deployment, handover & training. Migration playbooks verified. 
+  *Restructured 2026-08-21 to carry all remaining open items, decomposed as follows:*
+  - **P8.1 — Core Debt & Compliance (Pre-Launch):** Resolve non-negotiable security, compliance (UK GDPR/WCAG), and architectural bugs left over from earlier phases (Group 1 issues, e.g., #253, #254, #281, #104, #175, #219, #221, #151, #137, #269, #235, #273, #276, #277, #252, #287).
+  - **P8.2 — Launch & Operations:** The original P8 mandate. Stripe live keys (#113), image cleanup (#174), abandoned carts (#94), Stripe sweep (#101), confirm Workers Logs (#246), and Verify Neon limits (#227).
+  - **P8.3 — Post-Launch Backlog (Enhancements):** All feature enhancements and non-critical deferred items (Group 2 issues, e.g., #286, #280, #279, #232, #146-149, #115-116, #288, #75).
 
 ## Roadmap Change Log
 
@@ -186,6 +190,6 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
 | 2026-08-21 | **P8 Smart Image Generation promoted to production & Hotfixed** (**PR #306**, **PR #307**, staging -> main, merge ef2736a): Successfully promoted the P8 Smart Image Generation feature to main and deployed a hotfix injecting missing Cloudflare AI secrets via wrangler to fix production generation errors. | Promotion recorded; carried forward per #144 |
 | 2026-08-21 | **Global View Switcher and FAB Cart built and merged to staging** (**PR #308**, **PR #309**, **PR #310**, **PR #311**, **PR #312**, specs/2026-08-21-view-switcher/): UI overhaul replacing the disjointed Staff Panel button and TierToggle with a unified global ViewSwitcher in the main Header. Converted the Shopping Cart into a bottom-right Floating Action Button (FAB) to eliminate layout shifts when toggling to Staff View. Aligned the PanelNav tabs to the max-w-5xl content container for correct Gestalt continuation. Merged to staging. | Built and validated live on staging; cleared for promotion |
 | 2026-08-21 | **P8 Smart Image Generation & UI Overhaul promoted to production** (**PR #313**, staging -> main, merge dc8b3d0): Ships the P8 Smart Image Generation feature (PR #294 and its hotfixes #301-#304, #307) and the Global View Switcher / FAB Cart UI overhaul to production. | Promotion recorded; carried forward per #144 |
-
-| 2026-08-21 | **Vendor Storefront Branding UI & WebP Uploads** (**PR #315**, specs/2026-08-21-p8-storefront-branding-webp/) |
-| 2026-08-21 | **Vendor Storefront Branding UI Promoted to Prod** (**PR #316**, staging -> main) |
+| 2026-08-21 | **Vendor Storefront Branding UI & WebP Uploads** (**PR #315**, specs/2026-08-21-p8-storefront-branding-webp/) | Built and merged to staging |
+| 2026-08-21 | **Vendor Storefront Branding UI Promoted to Prod** (**PR #316**, staging -> main) | Promotion recorded |
+| 2026-08-21 | **P8.1 Unified Role-Aware Help Centre built and merged to main** (Issue #318): Replaced the dead 'Help Guide' link with a unified `/help` page rendering shopper FAQs and gated internal staff resources. | Resolves UI regression / missing docs |
