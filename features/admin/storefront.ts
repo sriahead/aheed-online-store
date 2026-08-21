@@ -3,8 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getStorage } from "@/lib/storage";
-import { IMAGE_CONTENT_TYPE, MAX_IMAGE_BYTES, type ImageActionResult, type UploadTicket } from "@/lib/product-image";
-import { updateVendorLogoKey, updateVendorStorefrontConfig as updateConfigRepo } from "@/lib/repositories/vendor";
+import {
+  IMAGE_CONTENT_TYPE,
+  MAX_IMAGE_BYTES,
+  type ImageActionResult,
+  type UploadTicket,
+} from "@/lib/product-image";
+import {
+  updateVendorLogoKey,
+  updateVendorStorefrontConfig as updateConfigRepo,
+} from "@/lib/repositories/vendor";
 import crypto from "crypto";
 
 const PRESIGN_TTL_SECONDS = 300;

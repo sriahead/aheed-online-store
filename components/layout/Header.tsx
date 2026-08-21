@@ -59,7 +59,8 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
   if (user) {
     const staffCheck = await requireVendorRole("STAFF", "ADMIN");
     isStaffOrAdmin = staffCheck.ok;
-    canSeeAdmin = staffCheck.ok && (staffCheck.via === "platform-admin" || staffCheck.via === "ADMIN");
+    canSeeAdmin =
+      staffCheck.ok && (staffCheck.via === "platform-admin" || staffCheck.via === "ADMIN");
   }
 
   const cookieStore = await cookies();
@@ -138,7 +139,10 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
         {/* Brand Logo */}
         <div className="flex items-center gap-3 shrink-0">
-          <Link href={isPortal ? "/staff" : "/"} className="flex items-center gap-2.5 group text-left">
+          <Link
+            href={isPortal ? "/staff" : "/"}
+            className="flex items-center gap-2.5 group text-left"
+          >
             {logoUrl ? (
               // Plain <img> by decision — see #46 / eslint.config.mjs. NOTE: this logo is
               // the storefront's dominant byte cost (1.9 MB, 83% of page weight, rendered
@@ -222,7 +226,11 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
           {/* View Switcher (Anchored Far Right) */}
           {isStaffOrAdmin && (
             <div className="border-l border-black/10 pl-2 ml-1">
-              <ViewSwitcher canSeeAdmin={canSeeAdmin} currentTier={currentTier} isPortal={isPortal} />
+              <ViewSwitcher
+                canSeeAdmin={canSeeAdmin}
+                currentTier={currentTier}
+                isPortal={isPortal}
+              />
             </div>
           )}
         </nav>

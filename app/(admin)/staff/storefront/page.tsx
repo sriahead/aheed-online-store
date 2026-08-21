@@ -21,12 +21,7 @@ export default async function StorefrontAdminPage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <h1 className="mb-8 text-3xl font-extrabold text-black">Storefront Branding</h1>
-      <StorefrontConfigForm 
-        initialConfig={config} 
-        initialBranding={branding}
-        logoUrl={logoUrl}
-      />
+      <StorefrontConfigForm initialConfig={config} initialBranding={branding} logoUrl={logoUrl} />
     </main>
   );
 }
-

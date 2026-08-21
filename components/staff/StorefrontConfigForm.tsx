@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { updateStorefrontConfig } from "@/features/admin/storefront";
 import { VendorLogoUploader } from "@/components/staff/VendorLogoUploader";
 
-export function StorefrontConfigForm({ 
-  initialConfig, 
+export function StorefrontConfigForm({
+  initialConfig,
   initialBranding,
-  logoUrl 
-}: { 
-  initialConfig: any, 
-  initialBranding: any,
-  logoUrl: string | null 
+  logoUrl,
+}: {
+  initialConfig: any;
+  initialBranding: any;
+  logoUrl: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -40,7 +40,9 @@ export function StorefrontConfigForm({
 
       <form action={action} className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <label htmlFor="heroSubtitle" className="font-bold text-black">Hero Subtitle</label>
+          <label htmlFor="heroSubtitle" className="font-bold text-black">
+            Hero Subtitle
+          </label>
           <input
             id="heroSubtitle"
             name="heroSubtitle"
@@ -52,7 +54,9 @@ export function StorefrontConfigForm({
         </div>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="bannerNote" className="font-bold text-black">Banner Note</label>
+          <label htmlFor="bannerNote" className="font-bold text-black">
+            Banner Note
+          </label>
           <input
             id="bannerNote"
             name="bannerNote"
@@ -64,7 +68,9 @@ export function StorefrontConfigForm({
         </div>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="brandGreenDark" className="font-bold text-black">Primary Brand Color (Dark)</label>
+          <label htmlFor="brandGreenDark" className="font-bold text-black">
+            Primary Brand Color (Dark)
+          </label>
           <input
             id="brandGreenDark"
             name="brandGreenDark"
@@ -74,9 +80,11 @@ export function StorefrontConfigForm({
             placeholder="e.g. #2e4d26"
           />
         </div>
-        
+
         <div className="flex flex-col gap-2">
-          <label htmlFor="brandGreen" className="font-bold text-black">Primary Brand Color</label>
+          <label htmlFor="brandGreen" className="font-bold text-black">
+            Primary Brand Color
+          </label>
           <input
             id="brandGreen"
             name="brandGreen"
@@ -98,4 +106,3 @@ export function StorefrontConfigForm({
     </div>
   );
 }
-

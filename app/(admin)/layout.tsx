@@ -37,7 +37,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   return (
-    <div style={brandStyle(profile.primitives)} className="min-h-screen bg-surface-muted flex flex-col">
+    <div
+      style={brandStyle(profile.primitives)}
+      className="min-h-screen bg-surface-muted flex flex-col"
+    >
       <Header isPortal={true} />
       <PanelNav canSeeOrders={canSeeOrders} currentTier={currentTier} />
       <div className="flex-1">{children}</div>

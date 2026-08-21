@@ -92,18 +92,17 @@ export function VendorLogoUploader({ currentLogoUrl }: { currentLogoUrl: string 
       <h3 className="font-bold text-black">Vendor Logo</h3>
       {displayUrl && (
         <div className="relative h-32 w-32 overflow-hidden rounded-lg border border-black/10 bg-white">
-          <img
-            src={displayUrl}
-            alt="Vendor Logo"
-            className="h-full w-full object-contain"
-          />
+          <img src={displayUrl} alt="Vendor Logo" className="h-full w-full object-contain" />
         </div>
       )}
-      
+
       <div className="flex flex-col gap-2">
-        <label htmlFor="logo-upload" className="text-sm font-bold text-black/60">Replace Logo</label>
+        <label htmlFor="logo-upload" className="text-sm font-bold text-black/60">
+          Replace Logo
+        </label>
         <p className="text-sm text-black/60">
-          New image — resized to {MAX_IMAGE_EDGE_PX}px and converted to WebP before uploading to save space.
+          New image — resized to {MAX_IMAGE_EDGE_PX}px and converted to WebP before uploading to
+          save space.
         </p>
         <div className="flex items-center gap-3">
           <input
@@ -129,4 +128,3 @@ export function VendorLogoUploader({ currentLogoUrl }: { currentLogoUrl: string 
     </div>
   );
 }
-

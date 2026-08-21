@@ -29,14 +29,26 @@ export default async function HelpPage() {
             <div>
               <h2 className="text-lg font-bold text-primary">Internal Staff Resources</h2>
               <p className="text-sm text-black/70 mt-1">
-                You are authenticated as store staff. The operational runbook and administrative tools are available in the Staff Panel.
+                You are authenticated as store staff. The operational runbook and administrative
+                tools are available in the Staff Panel.
               </p>
               <div className="mt-4 p-4 bg-white rounded-xl border border-primary/10">
                 <h3 className="font-bold text-sm mb-2">How to access the Staff Panel:</h3>
                 <ol className="list-decimal list-inside text-sm text-black/70 space-y-2">
-                  <li>Click the <strong>View Switcher</strong> in the top right of the header (currently says &quot;Shopper View&quot;).</li>
-                  <li>Select <strong>Staff View</strong> (or Admin View if available).</li>
-                  <li>Use the navigation tabs to access Orders, Live Inventory, and the <Link href="/staff/runbook" className="font-bold text-primary hover:underline">Operational Runbook</Link>.</li>
+                  <li>
+                    Click the <strong>View Switcher</strong> in the top right of the header
+                    (currently says &quot;Shopper View&quot;).
+                  </li>
+                  <li>
+                    Select <strong>Staff View</strong> (or Admin View if available).
+                  </li>
+                  <li>
+                    Use the navigation tabs to access Orders, Live Inventory, and the{" "}
+                    <Link href="/staff/runbook" className="font-bold text-primary hover:underline">
+                      Operational Runbook
+                    </Link>
+                    .
+                  </li>
                 </ol>
               </div>
             </div>
@@ -52,10 +64,12 @@ export default async function HelpPage() {
           </div>
           <div className="space-y-3 text-sm text-black/70">
             <p>
-              <strong>Delivery Zones:</strong> We currently deliver across Milton Keynes and surrounding local areas. Eligibility is verified at checkout using your postcode.
+              <strong>Delivery Zones:</strong> We currently deliver across Milton Keynes and
+              surrounding local areas. Eligibility is verified at checkout using your postcode.
             </p>
             <p>
-              <strong>Minimum Order:</strong> A minimum order value is required for delivery, which varies by vendor and distance. This will be clearly shown in your cart.
+              <strong>Minimum Order:</strong> A minimum order value is required for delivery, which
+              varies by vendor and distance. This will be clearly shown in your cart.
             </p>
           </div>
         </section>
@@ -67,10 +81,12 @@ export default async function HelpPage() {
           </div>
           <div className="space-y-3 text-sm text-black/70">
             <p>
-              <strong>Earning Points:</strong> Every purchase earns you points automatically. Points are credited once your order is confirmed by the store.
+              <strong>Earning Points:</strong> Every purchase earns you points automatically. Points
+              are credited once your order is confirmed by the store.
             </p>
             <p>
-              <strong>Redeeming Points:</strong> Points can be redeemed for money off your next order. They are automatically applied at checkout when you have enough points.
+              <strong>Redeeming Points:</strong> Points can be redeemed for money off your next
+              order. They are automatically applied at checkout when you have enough points.
             </p>
           </div>
         </section>
@@ -85,7 +101,9 @@ export default async function HelpPage() {
               <strong>How to use:</strong> Enter your promo code at checkout before payment.
             </p>
             <p>
-              <strong>Limitations:</strong> Currently, only one discount code can be used per order. Discount codes cannot be stacked, but they can be used alongside your earned loyalty points.
+              <strong>Limitations:</strong> Currently, only one discount code can be used per order.
+              Discount codes cannot be stacked, but they can be used alongside your earned loyalty
+              points.
             </p>
           </div>
         </section>
@@ -97,10 +115,13 @@ export default async function HelpPage() {
           </div>
           <div className="space-y-3 text-sm text-black/70">
             <p>
-              <strong>Data Portability:</strong> If you are an account holder, you can request a machine-readable export of your data from your Account Settings page.
+              <strong>Data Portability:</strong> If you are an account holder, you can request a
+              machine-readable export of your data from your Account Settings page.
             </p>
             <p>
-              <strong>Right to Erasure:</strong> You can permanently delete your account and anonymize your historical order data via your Account Settings. Guest shoppers can also request erasure using their order details.
+              <strong>Right to Erasure:</strong> You can permanently delete your account and
+              anonymize your historical order data via your Account Settings. Guest shoppers can
+              also request erasure using their order details.
             </p>
           </div>
         </section>
