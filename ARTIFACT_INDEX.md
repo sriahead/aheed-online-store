@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-21T03:29:15.843Z` · commit `c0bc77b` · `82` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-21T18:37:51.633Z` · commit `1476afb` · `83` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -80,6 +80,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P7.5c+f — Per-vendor storefront identity: copy, promotions & contrast-preserving colour (plan)](specs/2026-08-20-p7.5cf-vendor-storefront-identity/plan.md) | spec | 1.0.0 | 2026-08-20 | draft | internal | Removes Aheed's hardcoded copy and invented promo claims from shared storefront components, adds a 1:N VendorPromotion model driving a real hero carousel, and restores per-vendor semantic colour behind an OKLCH contrast clamp so vendors differ without breaching WCAG AA. |
 | [P7.5d+e — Staff panel completion: customer directory, non-sales reports, admin search & tier CRUD (plan)](specs/2026-08-20-p7.5de-staff-panel-completion/plan.md) | spec | 1.0.0 | 2026-08-20 | draft | internal | P7.5's final slice — combines P7.5d (#264) and P7.5e (#265) into one staff-panel pass closing |
 | [P8 — Smart Product Image Generation (plan)](specs/2026-08-20-p8-smart-image-generation/plan.md) | spec | 1.0.0 | 2026-08-20 | approved | internal | A smart product image pipeline that fetches from Open Food Facts or falls back to Cloudflare Workers AI flux-1-schnell, with an interactive admin preview and a batch backfill job. |
+| [P8.1 Help Centre (plan)](specs/2026-08-21-p8-help-centre/plan.md) | spec | 1.0.0 | 2026-08-21 | draft | internal | A role-aware unified Help Centre at `/help` replacing the dead link in the global header, resolving Issue |
 | [Storefront Branding & WebP Compression Plan](specs/2026-08-21-p8-storefront-branding-webp/plan.md) | spec | 1.0.0 | 2026-08-21 | approved | internal | Implementation plan for vendor branding admin UI and WebP compression. |
 | [Storefront Branding & WebP Compression Requirements](specs/2026-08-21-p8-storefront-branding-webp/requirements.md) | spec | 1.0.0 | 2026-08-21 | approved | internal | Requirements for the vendor branding admin UI and WebP compression. |
 | [Storefront Branding & WebP Compression Validation](specs/2026-08-21-p8-storefront-branding-webp/validation.md) | spec | 1.0.0 | 2026-08-21 | approved | internal | Validation steps for the vendor branding admin UI and WebP compression. |
