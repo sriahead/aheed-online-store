@@ -5,7 +5,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
 import { brandStyle } from "@/lib/vendor-theme";
 import { PanelNav } from "@/components/staff/PanelNav";
-import { PortalHeader } from "@/components/staff/PortalHeader";
+import { Header } from "@/components/layout/Header";
 
 // force-dynamic: reads the session and the resolved vendor, which only work in
 // the Workers runtime — next build's Node-based static prerender can't load
@@ -37,17 +37,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   return (
-    <div style={brandStyle(profile.primitives)} className="min-h-screen bg-surface-muted">
-      <PortalHeader
-        profileName={profile.name}
-        localityName={profile.localityName}
-        canSeeAdmin={canSeeAdmin}
-        currentTier={currentTier}
-      />
-
-      <PanelNav canSeeOrders={canSeeOrders} currentTier={currentTier} />
-
-      {children}
+    <div style={brandStyle(profile.primitives)} className="min-h-screen bg-surface-muted flex flex-col">
+      <Header />
+      <PanelNav canSeeOrders={canSeeOrders} currentTier={currentTier} canSeeAdmin={canSeeAdmin} />
+      <div className="flex-1">{children}</div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -46,7 +47,13 @@ export default async function StaffHomePage() {
     );
   }
 
-  const isAdmin = auth.via === "platform-admin" || auth.via === "ADMIN";
+  let isAdmin = auth.via === "platform-admin" || auth.via === "ADMIN";
+  if (isAdmin) {
+    const cookieStore = await cookies();
+    if (cookieStore.get("admin-tier")?.value === "staff") {
+      isAdmin = false;
+    }
+  }
   const awaitingAction = await getOrderRepository().countForStaff();
 
   return (
