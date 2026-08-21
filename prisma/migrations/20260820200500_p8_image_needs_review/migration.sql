@@ -1,0 +1,1 @@
+ALTER TABLE "Product" ADD COLUMN "imageNeedsReview" BOOLEAN NOT NULL DEFAULT false;

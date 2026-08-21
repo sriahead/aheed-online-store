@@ -1,13 +1,15 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { ImageUp, Star, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ImageUp, Star, Trash2, ChevronUp, ChevronDown, Sparkles } from "lucide-react";
 import {
   addProductImage,
   promoteProductImage,
   removeProductImage,
   reorderProductImages,
   requestImageUpload,
+  approveProductImage,
 } from "@/features/admin/product-image";
 import {
   IMAGE_CONTENT_TYPE,
@@ -46,6 +48,7 @@ export interface ProductImageManagerProps {
   productId: string;
   productName: string;
   images: ProductImageManagerImage[];
+  imageNeedsReview: boolean;
 }
 
 const ACCEPTED_INPUT = "image/*";
@@ -73,10 +76,38 @@ async function toWebp(file: File): Promise<Blob> {
   }
 }
 
-export function ProductImageManager({ productId, productName, images }: ProductImageManagerProps) {
+export function ProductImageManager({
+  productId,
+  productName,
+  images,
+  imageNeedsReview,
+}: ProductImageManagerProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [generating, setGenerating] = useState(false);
+  const router = useRouter();
+
+  async function autoGenerateImage() {
+    setError(null);
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/admin/product-images/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ productId, productName }),
+      });
+      const data = (await res.json()) as any;
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate image");
+      }
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   function addAnother() {
     const file = fileRef.current?.files?.[0];
@@ -138,6 +169,14 @@ export function ProductImageManager({ productId, productName, images }: ProductI
     });
   }
 
+  function approve() {
+    setError(null);
+    startTransition(async () => {
+      const result = await approveProductImage(productId);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
   function move(index: number, direction: -1 | 1) {
     const next = images.map((image) => image.id);
     const swapWith = index + direction;
@@ -153,6 +192,22 @@ export function ProductImageManager({ productId, productName, images }: ProductI
 
   return (
     <div className="space-y-3">
+      {imageNeedsReview && (
+        <div className="mb-4 rounded-xl border border-accent/30 bg-accent-tint p-4">
+          <p className="mb-3 text-sm font-medium text-accent">
+            An AI-generated image was added to this product and needs review.
+          </p>
+          <button
+            type="button"
+            onClick={approve}
+            disabled={pending || generating}
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-bold text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pending ? "Approving..." : "Approve Image"}
+          </button>
+        </div>
+      )}
+
       {error && (
         <p
           role="alert"
@@ -243,15 +298,26 @@ export function ProductImageManager({ productId, productName, images }: ProductI
           className="w-full text-sm text-primary/80 file:mr-3 file:rounded-xl file:border-0 file:bg-surface-muted file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary"
         />
       </div>
-      <button
-        type="button"
-        onClick={addAnother}
-        disabled={pending}
-        className="flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-white px-4 py-3 text-sm font-bold text-primary shadow-sm transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        <ImageUp className="h-4 w-4" aria-hidden />
-        {pending ? "Working…" : "Add another image"}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={addAnother}
+          disabled={pending || generating}
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-white px-4 py-3 text-sm font-bold text-primary shadow-sm transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <ImageUp className="h-4 w-4" aria-hidden />
+          {pending ? "Working…" : "Add another image"}
+        </button>
+        <button
+          type="button"
+          onClick={autoGenerateImage}
+          disabled={pending || generating}
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-action/30 bg-action/10 px-4 py-3 text-sm font-bold text-action shadow-sm transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <Sparkles className="h-4 w-4" aria-hidden />
+          {generating ? "Generating…" : "✨ Auto-Generate Image"}
+        </button>
+      </div>
     </div>
   );
 }

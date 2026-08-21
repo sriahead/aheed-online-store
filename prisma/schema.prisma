@@ -369,7 +369,8 @@ model Product {
   // #211 — vendor curation flag driving the homepage "Featured Products" rail.
   // Independent of originalPrice's discount-badge derivation: featured and
   // "on offer" are two separate concepts.
-  isFeatured    Boolean        @default(false)
+  isFeatured       Boolean        @default(false)
+  imageNeedsReview Boolean        @default(false)
 
   @@unique([vendorId, slug])
   @@index([vendorId, categoryId, isActive])

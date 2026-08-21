@@ -333,6 +333,7 @@ export interface AdminProductRow {
   isActive: boolean;
   categoryName: string;
   quantity: number;
+  imageNeedsReview: boolean;
 }
 
 export interface AdminProductPage {
@@ -357,6 +358,7 @@ export interface AdminProductDetail {
   isActive: boolean;
   quantity: number;
   lowStockThreshold: number;
+  imageNeedsReview: boolean;
   /** Read here; written by setPrimaryProductImage/addProductImage/etc. (P6b2, #211). */
   images: AdminProductImage[];
 }
@@ -489,6 +491,7 @@ export async function listProductsForAdmin(
       name: true,
       basePrice: true,
       isActive: true,
+      imageNeedsReview: true,
       category: { select: { name: true } },
       inventory: { select: { quantity: true } },
     },
@@ -506,6 +509,7 @@ export async function listProductsForAdmin(
       isActive: row.isActive,
       categoryName: row.category?.name ?? "Unknown",
       quantity: row.inventory?.quantity ?? 0,
+      imageNeedsReview: row.imageNeedsReview,
     })),
     nextCursor: hasMore ? page[page.length - 1].id : null,
   };
@@ -535,6 +539,7 @@ export async function getProductForAdmin(
       isOrganic: true,
       isFeatured: true,
       isActive: true,
+      imageNeedsReview: true,
       inventory: { select: { quantity: true, lowStockThreshold: true } },
       images: { orderBy: { sortOrder: "asc" }, select: adminProductImageSelect },
     },
@@ -935,4 +940,60 @@ export async function quickUpdateInventory(
   } catch (error) {
     throw error;
   }
+}
+
+export async function saveGeneratedProductImage(
+  vendorId: string,
+  productId: string,
+  storageKey: string,
+  alt: string,
+  needsReview: boolean,
+): Promise<void> {
+  const prisma = getPrisma();
+  await prisma.productImage.create({
+    data: {
+      productId,
+      storageKey,
+      alt,
+      isPrimary: false,
+    },
+  });
+
+  if (needsReview) {
+    await prisma.product.update({
+      where: { id: productId, vendorId },
+      data: { imageNeedsReview: true },
+    });
+  }
+}
+
+export async function getProductsWithoutImages(vendorId: string, limit: number) {
+  const prisma = getPrisma();
+  return await prisma.product.findMany({
+    where: {
+      vendorId,
+      images: { none: {} },
+    },
+    take: limit,
+    select: { id: true, name: true },
+  });
+}
+
+export async function approveProductImageRow(
+  vendorId: string,
+  productId: string,
+): Promise<CatalogueWriteResult> {
+  const prisma = getPrisma();
+  const existing = await prisma.product.findFirst({
+    where: { id: productId, vendorId },
+    select: { id: true },
+  });
+  if (!existing) return { ok: false as const, error: "That product no longer exists." };
+
+  await prisma.product.update({
+    where: { id: productId },
+    data: { imageNeedsReview: false },
+  });
+
+  return { ok: true as const, id: productId };
 }

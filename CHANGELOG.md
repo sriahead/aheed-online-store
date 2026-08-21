@@ -7,6 +7,8 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Documentation**: Added missing roadmap change-log entry for P8 smart image generation (and PR #292 carry-forward) to satisfy the SDD audit.
+- **P8 — Smart Product Image Generation** (#293 + hotfixes #301–#304, `specs/2026-08-20-p8-smart-image-generation/`). Added AI image generation and barcode lookup fallback to automate product image creation. Integrates Open Food Facts API and Cloudflare Workers AI `flux-1-schnell`. Added manual generation button in the Admin UI (`ProductImageManager`) and a batch **"Auto-fill Missing Images"** button on the products list page that triggers the backfill API job. Added `imageNeedsReview` flag with an **"Approve Image"** banner so staff can review and clear AI-generated images. Staging validation surfaced and resolved: worker secrets not bound to runtime, edge `require()` incompatibility, Prisma HTTP transaction incompatibility, Cloudflare AI `429` rate-limit bursts (retry backoff added), missing Approve UI, invalid design-system class names in the banner, and a Cloudflare NSFW false-positive on food-photography prompt language (prompt simplified to neutral form).
 - **P7.5d+e — staff panel completion: order-search index, product filters, tier CRUD, customer
   directory & non-sales reports** (#264, closing #265, #160, #161, #169, #163, #136,
   `specs/2026-08-20-p7.5de-staff-panel-completion/`). **P7.5's final slice** (epic #260), combining

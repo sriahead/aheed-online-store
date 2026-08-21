@@ -150,9 +150,10 @@ describe('features/admin/product-image.ts is a valid "use server" module', () =>
     }
   });
 
-  it("exports exactly the six actions", () => {
+  it("exports exactly the seven actions", () => {
     expect(Object.keys(imageActions).sort()).toEqual([
       "addProductImage",
+      "approveProductImage",
       "attachProductImage",
       "promoteProductImage",
       "removeProductImage",

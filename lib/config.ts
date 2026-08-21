@@ -92,3 +92,17 @@ export function getEmailEnv(): EmailEnv {
     RESEND_FROM_EMAIL: readEnv("RESEND_FROM_EMAIL"),
   });
 }
+
+const aiSchema = z.object({
+  CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
+  CLOUDFLARE_API_TOKEN: z.string().optional(),
+});
+
+export type AiEnv = z.infer<typeof aiSchema>;
+
+export function getAiEnv(): AiEnv {
+  return aiSchema.parse({
+    CLOUDFLARE_ACCOUNT_ID: readEnv("CLOUDFLARE_ACCOUNT_ID"),
+    CLOUDFLARE_API_TOKEN: readEnv("CLOUDFLARE_API_TOKEN"),
+  });
+}

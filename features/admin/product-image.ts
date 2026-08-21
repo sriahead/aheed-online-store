@@ -18,6 +18,7 @@ import {
   removeProductImage as removeProductImageRow,
   reorderProductImages as reorderProductImagesRow,
   setPrimaryProductImage,
+  approveProductImageRow,
 } from "@/lib/repositories/products";
 
 /**
@@ -251,6 +252,18 @@ export async function reorderProductImages(
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   const result = await reorderProductImagesRow(auth.vendorId, productId, orderedImageIds);
+  if (!result.ok) return { ok: false, error: result.error };
+
+  const product = await getProductForAdmin(auth.vendorId, productId);
+  if (product) revalidateProductSurfaces(product.id, product.slug);
+  return { ok: true, value: null };
+}
+
+export async function approveProductImage(productId: string): Promise<ImageActionResult<null>> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  const result = await approveProductImageRow(auth.vendorId, productId);
   if (!result.ok) return { ok: false, error: result.error };
 
   const product = await getProductForAdmin(auth.vendorId, productId);
