@@ -155,7 +155,7 @@ Every PR references its issue (`Closes #NN`), carries `phase:P_` + `gate:_` labe
 Document (final) → CLEAR → Orient**
 
 Most stages are slash commands (`/orient`, `/propose`, `/spec`, `/build`, `/build-notes`,
-`/validate`, `/fix`, `/ship`, `/document`). Use them; that doc carries lessons already paid for
+`/validate`, `/fix`, `/ship`, `/document`). For detailed procedures on each stage, read the corresponding markdown file in `.claude/commands/`. Use them; that doc carries lessons already paid for
 (stale-doc traps, CI-vs-local-Windows drift, PR merge races) that are easy to relearn the hard way.
 
 Two rules the assistant **cannot** enforce for itself, so it must ask:
