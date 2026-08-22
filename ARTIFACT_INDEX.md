@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-21T19:46:17.488Z` · commit `0ea3776` · `85` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-22T13:44:42.528Z` · commit `be97a81` · `86` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -86,6 +86,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Storefront Branding & WebP Compression Validation](specs/2026-08-21-p8-storefront-branding-webp/validation.md) | spec | 1.0.0 | 2026-08-21 | approved | internal | Validation steps for the vendor branding admin UI and WebP compression. |
 | [View Switcher Plan](specs/2026-08-21-view-switcher/plan.md) | spec | 1.0.0 | 2026-08-21 | approved | internal | Implementation plan for the Global View Switcher. |
 | [View Switcher Requirements](specs/2026-08-21-view-switcher/requirements.md) | spec | 1.0.0 | 2026-08-21 | approved | internal | Requirements for the Global View Switcher and FAB Cart. |
+| [P8.x Shop Your List Improvements (plan)](specs/2026-08-22-p8-shop-list-improvements/plan.md) | spec | 1.0.0 | 2026-08-22 | draft | internal | Add partial-match fallback for Shop Your List and address Cart/Header UI feedback. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.17.0 | 2026-08-20 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
