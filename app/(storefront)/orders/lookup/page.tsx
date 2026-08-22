@@ -188,7 +188,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                 return (
                   <div key={step.status} className="relative flex items-start gap-4">
                     <div
-                      className={`absolute -left-[25px] top-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                      className={`absolute -left-[25px] top-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition ${
                         isCompleted
                           ? "bg-primary text-white ring-4 ring-emerald-100 shadow-sm"
                           : "bg-slate-200 text-slate-500"

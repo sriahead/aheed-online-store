@@ -42,7 +42,7 @@ function SearchForm({ className = "", placeholder }: { className?: string; place
           name="q"
           placeholder={placeholder}
           aria-label="Search products"
-          className="w-full bg-surface-muted hover:bg-black/5 focus:bg-white pl-10 pr-4 py-2 rounded-xl text-sm border border-black/10 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+          className="w-full bg-surface-muted hover:bg-black/5 focus:bg-white pl-10 pr-4 py-2 rounded-xl text-sm border border-black/10 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition"
         />
       </div>
     </form>
@@ -190,7 +190,7 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
           {!isPortal && (
             <Link
               href="/shop-your-list"
-              className="hidden lg:flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition-all border border-black/10"
+              className="hidden lg:flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
               title="Shop by pasting your list"
             >
               <ShoppingBag className="w-4 h-4 text-primary" />
@@ -212,7 +212,7 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
           ) : (
             <Link
               href="/login"
-              className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition-all border border-black/10"
+              className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
             >
               <LogIn className="w-4 h-4 text-primary" />
               <span className="hidden sm:inline">Sign In</span>
