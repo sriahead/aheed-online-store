@@ -5,6 +5,7 @@ audience: [design]
 type: guide
 status: approved
 version: "1.0.0"
+updated: 2026-08-22
 visibility: internal
 summary: "A guide for UI/UX designers detailing the design system, storefront customization, and the role of the ui-ref prototype."
 tags: ["design", "ux", "ui", "prototype", "branding"]
@@ -39,3 +40,4 @@ Because the platform supports multiple vendors, the UI is designed to be highly 
 
 ## Design System
 For a deeper dive into the specific React components, design tokens, and technical implementation of the UI, please refer to the `design-system/` directory in the repository root and the developer `specs/design-system.md`.
+

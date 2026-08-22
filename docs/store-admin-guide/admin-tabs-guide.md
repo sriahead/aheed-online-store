@@ -37,3 +37,4 @@ While staff handle the day-to-day picking, you can view the macroscopic order fl
 
 ## Team Management
 - **Staff Accounts:** Invite new staff members and manage their roles securely. You can assign users as either *Staff* (who see the fulfillment interface) or *Admins* (who see this configuration interface).
+

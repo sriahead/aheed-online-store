@@ -5,6 +5,7 @@ audience: [shopper]
 type: guide
 status: approved
 version: "1.0.0"
+updated: 2026-08-22
 visibility: public
 summary: "A complete guide for customers on how to browse, place orders, and manage their account."
 tags: ["shopper", "help", "orders", "loyalty"]
@@ -43,3 +44,4 @@ If the store has opted into the rewards program:
 
 ## Ratings & Reviews
 After trying a product, you can leave a 1 to 5-star rating and a written review to help other shoppers!
+

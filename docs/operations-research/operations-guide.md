@@ -5,6 +5,7 @@ audience: [operations]
 type: guide
 status: approved
 version: "1.0.0"
+updated: 2026-08-22
 visibility: internal
 summary: "A guide for operations teams detailing the fulfillment lifecycle, stock management, and exception handling."
 tags: ["operations", "fulfillment", "supply-chain", "sop"]
@@ -33,3 +34,4 @@ The typical order flows through the following states:
 ## Research & Feedback Loops
 - Operations researchers should regularly interview fulfillment staff to identify bottlenecks in the picking interface.
 - If staff are frequently overriding inventory counts for a specific supplier, flag this to the procurement team for investigation.
+

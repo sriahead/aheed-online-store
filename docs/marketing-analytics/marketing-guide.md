@@ -5,6 +5,7 @@ audience: [marketing]
 type: guide
 status: approved
 version: "1.0.0"
+updated: 2026-08-22
 visibility: internal
 summary: "A guide for marketing analysts on how to track user behavior, promotions, and campaign performance."
 tags: ["marketing", "analytics", "tracking", "promotions"]
@@ -31,3 +32,4 @@ Welcome to the **Marketing Analytics** documentation. This guide outlines how ma
 ## Data & Reporting
 - At this time, basic sales aggregates and best-selling items can be viewed in the Admin Panel's **Reports** tab.
 - For deeper analytics (e.g., Google Analytics, Meta Pixel), tracking scripts should be injected via the platform's frontend configuration (pending integration).
+

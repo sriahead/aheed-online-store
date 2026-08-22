@@ -5,6 +5,7 @@ audience: [dev, architect]
 type: guide
 status: approved
 version: "1.0.0"
+updated: 2026-08-22
 visibility: internal
 summary: "A high-level map of the platform's architecture, system design, and database design, acting as a directory to the deeper technical specifications."
 tags: ["architecture", "system-design", "database", "specs"]
@@ -46,3 +47,4 @@ When working on or debugging a specific domain, refer to its corresponding SDD i
 - **Quality Gates:** Every PR is gated by Vitest, ESLint, TypeScript compilation, and KMS artifact staleness checks before merging to `staging` or `main`.
 
 > 💡 **Next Steps:** If you are a new developer, start by reading `docs/developer-portal/onboarding.md` and `docs/developer-portal/repo-structure.md`.
+

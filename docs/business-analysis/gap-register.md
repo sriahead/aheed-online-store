@@ -285,3 +285,4 @@ Two conditions remain: **GAP-005** (Resend sending domain, #104) and **GAP-006**
 > unauthenticated cross-vendor order-disclosure hole and a feature recorded as deferred that had
 > never been built. They are removed rather than restated: a readiness percentage that nothing
 > measures is exactly the kind of self-certification this register is being corrected for.
+

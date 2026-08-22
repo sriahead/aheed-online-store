@@ -5,6 +5,7 @@ audience: [product]
 type: guide
 status: approved
 version: "1.0.0"
+updated: 2026-08-22
 visibility: internal
 summary: "A guide for Business Analysts and Project Managers detailing the core business logic, feature requirements, and workflows."
 tags: ["product", "ba", "requirements", "workflows"]
@@ -40,3 +41,4 @@ Welcome to the **Business Analysis** documentation. This hub contains the core b
 ## Requirement Management
 - Use this space to map out User Stories, Acceptance Criteria, and State Diagrams for upcoming features on the roadmap.
 - Refer to the existing `gap-register.md` to track unresolved requirements or technical debt that impacts business goals.
+

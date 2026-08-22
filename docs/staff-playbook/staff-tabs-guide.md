@@ -37,3 +37,4 @@ The **Overview** tab provides a quick snapshot of the current shift. Here you wi
 ## Customer Data & Loyalty
 - **Loyalty Points:** Customer loyalty points are earned and deducted automatically during checkout. You do not need to manage these manually.
 - **Security:** Remember that customer data (like addresses and emails) is strictly confidential. Only search for orders when directly assisting a customer.
+

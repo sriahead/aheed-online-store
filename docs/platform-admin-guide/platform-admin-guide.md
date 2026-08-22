@@ -5,6 +5,7 @@ audience: [platform-admin]
 type: guide
 status: approved
 version: "1.0.0"
+updated: 2026-08-22
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
 tags: ["admin", "platform", "technical", "multi-tenancy"]
@@ -31,3 +32,4 @@ The platform is designed to host multiple independent store fronts (vendors) fro
 
 ## Store Impersonation (Dev/Support)
 For support and debugging, Platform Admins can use the View Switcher to impersonate specific vendors and view the platform exactly as a Store Admin or Staff member of that vendor would see it.
+

@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-22T18:55:57.186Z` · commit `eb10f37` · `85` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-22T19:15:51.482Z` · commit `533f0da` · `93` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -23,12 +23,17 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
 | [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 1.8.0 | 2026-08-20 | approved | internal | AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow. |
+| [Product Requirements & Feature Workflows](docs/business-analysis/product-requirements.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for Business Analysts and Project Managers detailing the core business logic, feature requirements, and workflows. |
+| [UI/UX & Design Guidelines](docs/design-ux/ux-guidelines.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for UI/UX designers detailing the design system, storefront customization, and the role of the ui-ref prototype. |
+| [Architecture & System Design Overview](docs/developer-portal/architecture-overview.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A high-level map of the platform's architecture, system design, and database design, acting as a directory to the deeper technical specifications. |
 | [Environment Setup — Secrets & Config (staging / production / dev)](docs/developer-portal/env-setup.md) | doc | 1.8.0 | 2026-08-18 | approved | internal | How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier. |
 | [NFR Baseline — measured performance against the Gate-3 targets](docs/developer-portal/nfr-baseline.md) | doc | 1.1.0 | 2026-08-19 | approved | internal | The first real measurements of this app against mission.md's LCP and API p95 targets, plus the index/query review behind them — including a 4.7x LCP breach caused by a 1.9 MB vendor logo and a production logo that 404s. |
 | [Onboarding](docs/developer-portal/onboarding.md) | doc | 1.1.0 | 2026-08-06 | approved | internal | 5-minute start-here guide — where the project actually is, prerequisites, local setup, and how to get a new developer running, tested, and branching independently. |
 | [Manual Regression Test Register](docs/developer-portal/regression-tests.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Manual regression test cases for known critical issues — the hybrid Prisma client contract under Cloudflare Worker connection limits, and cart persistence across a cancelled Stripe checkout. |
 | [Repository Structure](docs/developer-portal/repo-structure.md) | doc | 1.2.0 | 2026-08-12 | approved | internal | The agreed target folder layout for the Next.js + Prisma + Cloudflare app, Clean Architecture layering, and which phase scaffolds each folder. |
 | [Walking-Skeleton Runbook (M0)](docs/developer-portal/walking-skeleton-runbook.md) | runbook | 1.0.0 | 2026-08-06 | approved | internal | Step-by-step runbook to stand up the M0 walking skeleton — Cloudflare, R2, Neon, and GitHub environment provisioning through to a green production health check. |
+| [Marketing & Analytics Data Guide](docs/marketing-analytics/marketing-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for marketing analysts on how to track user behavior, promotions, and campaign performance. |
+| [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
 | [M0 — Walking Skeleton (plan)](specs/2026-08-05-m0-walking-skeleton/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for the smallest possible end-to-end app (Next.js on Workers, Neon, CI/CD) proving the Cloudflare + Neon pipeline before any feature work begins. |
 | [P0 — Design-System Tokens (plan)](specs/2026-08-06-design-system/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for installing Tailwind CSS v4 and encoding the Aheed brand kit as design tokens, closing the last item deferred from P0's first slice. |
 | [Aheed KMS — Design (structure, deployment, schema)](specs/2026-08-06-kms/plan.md) | spec | 0.1.0 | 2026-08-06 | draft | internal | Folder structure, deployment plan, and front-matter schema for the Aheed knowledge system — phased to M0 reality, with a generated index and an internal/public publication split. |
@@ -107,7 +112,9 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Phase 6.5 Gap Register (superseded by the master register)](docs/developer-portal/sdd/self-review/GAP-REGISTER.md) | doc | 2.0.0 | 2026-08-17 | approved | internal | The Phase 6.5 audit's gap register, now a pointer — its four findings (GAP-001..004) were folded into the single master register at docs/gap-register.md on 2026-08-17. |
 | [Phase 6.5 Autonomous Self-Review Report](docs/developer-portal/sdd/self-review/SELF-REVIEW.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Executive summary and status breakdown of Phase 6.5 audit loop across architecture, schema, security, payments, and deployment. |
 | [Phase 6.5 Validation & Test Results](docs/developer-portal/sdd/self-review/VALIDATION-RESULTS.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Verification log of test runs, build checks, and validation evidence for Phase 6.5 audit loop. |
+| [Operations & Fulfillment Procedures](docs/operations-research/operations-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for operations teams detailing the fulfillment lifecycle, stock management, and exception handling. |
 | [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 1.1.0 | 2026-08-22 | approved | internal | A guide on how to navigate and use the Staff Panel to fulfill orders, manage inventory, and help customers. |
+| [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 1.2.0 | 2026-08-22 | approved | internal | A guide on how to configure the storefront, manage the catalogue, configure loyalty and discounts, and manage staff. |
 | [Phase 6.5 — Autonomous Application Self-Review, Gap Detection & Hardening Plan](specs/2026-08-13-p6.5-self-review-hardening/plan.md) | spec | 1.0.0 | 2026-08-13 | approved | internal | Plan for Phase 6.5 autonomous self-review and hardening audit loop prior to Phase 7. |
 | [Phase 7a Implementation & Execution Plan](specs/2026-08-13-p7a-compliance-hardening/plan.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Step-by-step implementation plan for Phase 7a operational closure, UK compliance, security headers, and user-experience gaps. |
 | [Phase 7a — Compliance, Operational Closure & Application Hardening Requirements](specs/2026-08-13-p7a-compliance-hardening/requirements.md) | spec | 1.1.0 | 2026-08-13 | approved | internal | Spec and requirements for closing Phase 6 gaps, completing UK GDPR/PECR compliance, matching UI reference look-and-feel (docs/ui-ref), and de-risking operational launch prerequisites before Phase 8. |
@@ -117,4 +124,4 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
-| _`<no artifacts yet>`_ | | | | | | |
+| [Shopping Guide & Help Center](docs/shopper-help/shopping-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | public | A complete guide for customers on how to browse, place orders, and manage their account. |

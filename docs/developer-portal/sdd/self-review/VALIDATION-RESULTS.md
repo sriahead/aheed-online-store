@@ -49,3 +49,4 @@ tags: [self-review, validation, tests]
 - **Problem:** KMS artifact index required rebuild.
 - **Fix:** Rebuilt `ARTIFACT_INDEX.md` and reassembled internal docs site.
 - **Validation:** `npm run kms:validate` passing cleanly.
+
