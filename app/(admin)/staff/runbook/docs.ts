@@ -993,6 +993,42 @@ export const DOC_ARTICLES: any[] = [
     "content": "\r\n# P8.x Shop Your List Improvements (plan)\r\n\r\n**Goal:** Improve the UX of the \"Shop your list\" feature by adding partial-match fallback, increasing its discoverability, and fixing a Cart popover navigation bug.\r\n\r\n**Scope (this slice):**\r\n- Update `lib/shopping-list.ts` to implement partial-match fallback. If no candidate matches all terms, it will score candidates by the number of matched terms, and return the highest-scoring ones as `ambiguous`.\r\n- Add the \"Shop your list\" link to the global header (next to the search bar) so it is discoverable outside of the full cart view.\r\n- Ensure the Cart popover (or FAB cart) automatically closes when the user clicks \"Proceed to checkout\" or \"View full cart\", preventing the cart from obscuring the next view.\r\n\r\n**Deliberately excluded:**\r\n- Issue #116 (Saved shopping lists) — remains deferred as it requires significant schema and account UI additions.\r\n- Any new database tables or Prisma migrations.\r\n\r\n**Open items carried forward:**\r\n- Issue #116.\r\n"
   },
   {
+    "id": "specs/2026-08-22-ui-polish-docs-integration/build-notes.md",
+    "title": "UI Polish & Docs Integration Build Notes",
+    "audience": [
+      "dev"
+    ],
+    "visibility": "internal",
+    "category": "spec",
+    "summary": "Technical notes detailing the CSS animation injection and the resolution of the KMS indexing bug for new audiences.",
+    "lastUpdated": "2026-08-22",
+    "content": "\n# UI Polish & Docs Integration (build notes)\n\n- **UI Animations:** Rather than individually patching every Tailwind component, a robust base layer override was applied in `app/globals.css`. It targets all semantic interactive elements and assigns a hardware-accelerated transition property.\n- **KMS Schema Bug:** While attempting to surface the `shopping-guide.md`, it was discovered that `kms:build-index.ts` silently ignores files with invalid Zod frontmatter. Because the previous documentation restructuring introduced new audiences (`shopper`, `store-admin`, etc.) that were not in the Zod schema, the KMS index entirely dropped 7 markdown files.\n- **KMS Schema Resolution:** `kms/schema/frontmatter.ts` was updated to expand the `Audience` and `DocType` enums. The `trackFor` derivation function was also updated so that `store-admin` maps to `staff-ops` and `shopper` maps to `customer-help`.\n- **Help Centre Rendering:** The `HelpPage` (`app/(storefront)/help/page.tsx`) was upgraded to a Server Component that queries the local `docs.ts` index, finds the shopper guide, and renders it safely via `react-markdown`.\n"
+  },
+  {
+    "id": "specs/2026-08-22-ui-polish-docs-integration/requirements.md",
+    "title": "UI Polish & Docs Integration Requirements",
+    "audience": [
+      "dev"
+    ],
+    "visibility": "internal",
+    "category": "spec",
+    "summary": "Requirements for adding global micro-interactions to the UI, strictly filtering the Staff Runbook, and surfacing the Shopper Guide in the Help Centre.",
+    "lastUpdated": "2026-08-22",
+    "content": "\n# UI Polish & Docs Integration (requirements)\n\nThis slice addresses minor UI polish feedback and integrates the newly created role-based documentation into the application UI.\n\nR1. **UI Micro-Interactions:** A global CSS transition must be applied to all interactive elements (`button`, `a`, `input`, `select`, `textarea`) to ensure hover and focus states change smoothly (e.g. 200ms cubic-bezier). Furthermore, an active state scale-down effect (`scale(0.98)`) should be globally applied to buttons.\nR2. **Staff Runbook Filtering:** The Staff Runbook (`app/(admin)/staff/runbook/page.tsx`) must be updated to strictly filter the rendered `DOC_ARTICLES` array so that only articles with `staff` or `store-admin` audiences are visible. Platform-admin documentation must not leak into the store-admin view.\nR3. **Schema Update:** The KMS Frontmatter schema (`kms/schema/frontmatter.ts`) must be updated to support the new role-based audiences (`shopper`, `store-admin`, `platform-admin`, etc.) and correctly map them to the existing tracks.\nR4. **Shopper Help Guide Integration:** The public `/help` page must dynamically read the `shopping-guide.md` from the KMS index (via `DOC_ARTICLES`) and render it using `react-markdown` below the static FAQ sections.\nR5. `CHANGELOG.md` updated (Gate 4).\nR6. `npm run kms:validate` and `npm run kms:build-index` must execute successfully, ensuring no broken frontmatter in the documentation.\n"
+  },
+  {
+    "id": "specs/2026-08-22-ui-polish-docs-integration/validation.md",
+    "title": "UI Polish & Docs Integration Validation",
+    "audience": [
+      "dev"
+    ],
+    "visibility": "internal",
+    "category": "spec",
+    "summary": "Validation steps for ensuring the global UI animations and documentation integrations behave exactly as specified.",
+    "lastUpdated": "2026-08-22",
+    "content": "\n# UI Polish & Docs Integration (validation)\n\nV1. [x] **UI Micro-Interactions:** Inspected `app/globals.css`. A global transition rule applies `200ms cubic-bezier` to interactive elements (`a`, `button`, `input`). A `transform: scale(0.98)` rule applies to `button:active`.\nV2. [x] **Staff Runbook Filtering:** Inspected `app/(admin)/staff/runbook/page.tsx`. A `.filter()` explicitly asserts that only documents containing `staff` or `store-admin` in their audience array are passed to the `RunbookClient`.\nV3. [x] **Schema Update:** Inspected `kms/schema/frontmatter.ts`. The `Audience` z.enum contains `shopper`, `store-admin`, and `platform-admin`. The `trackFor` function correctly maps them to `customer-help`, `staff-ops`, and `internal-eng`.\nV4. [x] **Shopper Help Guide Integration:** Inspected `app/(storefront)/help/page.tsx`. `DOC_ARTICLES` is imported, filtered for `shopper` or `customer`, and rendered using `<Markdown>` at the bottom of the page.\nV5. [x] **CHANGELOG:** `CHANGELOG.md` includes an entry for this feature.\nV6. [x] **KMS Validation:** `npm run kms:validate` ran and returned 0 failing documents. The index was successfully built with 93 artifacts.\n"
+  },
+  {
     "id": "specs/architecture.md",
     "title": "System Architecture — Aheed Online Store",
     "audience": [

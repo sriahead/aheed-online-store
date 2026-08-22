@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-22T19:15:51.482Z` · commit `533f0da` · `93` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-22T19:18:21.385Z` · commit `d25e32d` · `96` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -92,6 +92,9 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [View Switcher Plan](specs/2026-08-21-view-switcher/plan.md) | spec | 1.0.0 | 2026-08-21 | approved | internal | Implementation plan for the Global View Switcher. |
 | [View Switcher Requirements](specs/2026-08-21-view-switcher/requirements.md) | spec | 1.0.0 | 2026-08-21 | approved | internal | Requirements for the Global View Switcher and FAB Cart. |
 | [P8.x Shop Your List Improvements (plan)](specs/2026-08-22-p8-shop-list-improvements/plan.md) | spec | 1.0.0 | 2026-08-22 | draft | internal | Add partial-match fallback for Shop Your List and address Cart/Header UI feedback. |
+| [UI Polish & Docs Integration Build Notes](specs/2026-08-22-ui-polish-docs-integration/build-notes.md) | spec | 1.0.0 | 2026-08-22 | approved | internal | Technical notes detailing the CSS animation injection and the resolution of the KMS indexing bug for new audiences. |
+| [UI Polish & Docs Integration Requirements](specs/2026-08-22-ui-polish-docs-integration/requirements.md) | spec | 1.0.0 | 2026-08-22 | approved | internal | Requirements for adding global micro-interactions to the UI, strictly filtering the Staff Runbook, and surfacing the Shopper Guide in the Help Centre. |
+| [UI Polish & Docs Integration Validation](specs/2026-08-22-ui-polish-docs-integration/validation.md) | spec | 1.0.0 | 2026-08-22 | approved | internal | Validation steps for ensuring the global UI animations and documentation integrations behave exactly as specified. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.17.0 | 2026-08-20 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
