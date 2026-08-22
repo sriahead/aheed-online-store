@@ -1,19 +1,19 @@
 ---
-id: admin-tabs-guide
-title: "Admin & Store Management Guide"
-audience: [admin]
+id: store-admin-tabs-guide
+title: "Store Admin Management Guide"
+audience: [store-admin]
 type: runbook
 status: approved
-version: "1.1.0"
+version: "1.2.0"
 updated: "2026-08-22"
 visibility: internal
 summary: "A guide on how to configure the storefront, manage the catalogue, configure loyalty and discounts, and manage staff."
-tags: ["admin", "guide", "ui", "configuration"]
+tags: ["admin", "guide", "ui", "configuration", "vendor"]
 ---
 
-# Admin & Store Management Guide
+# Store Admin Management Guide
 
-Welcome to the **Admin Panel**. As a store manager or administrator, you have access to advanced configuration tabs to manage the business logic and presentation of the storefront.
+Welcome to the **Store Admin Panel**. As a store manager or administrator for a specific vendor, you have access to advanced configuration tabs to manage the business logic and presentation of your storefront.
 
 ## Store Configuration & Branding
 - **Delivery Rules:** Set your store's standard Delivery Fee, Free Delivery Threshold, and Minimum Order Amount.

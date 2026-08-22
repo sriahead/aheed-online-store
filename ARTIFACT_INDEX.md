@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-22T18:45:25.735Z` · commit `7a82014` · `86` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-22T18:55:57.186Z` · commit `eb10f37` · `85` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -103,7 +103,6 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
-| [Admin & Store Management Guide](docs/admin-guide/admin-tabs-guide.md) | runbook | 1.1.0 | 2026-08-22 | approved | internal | A guide on how to configure the storefront, manage the catalogue, configure loyalty and discounts, and manage staff. |
 | [Master Application Gap Register](docs/business-analysis/gap-register.md) | doc | 2.6.0 | 2026-08-19 | approved | internal | The single master gap register for the application — every GAP-ID in the repo, its severity, its current status and the artifact that proves it, reconciled against the code rather than against itself. |
 | [Phase 6.5 Gap Register (superseded by the master register)](docs/developer-portal/sdd/self-review/GAP-REGISTER.md) | doc | 2.0.0 | 2026-08-17 | approved | internal | The Phase 6.5 audit's gap register, now a pointer — its four findings (GAP-001..004) were folded into the single master register at docs/gap-register.md on 2026-08-17. |
 | [Phase 6.5 Autonomous Self-Review Report](docs/developer-portal/sdd/self-review/SELF-REVIEW.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Executive summary and status breakdown of Phase 6.5 audit loop across architecture, schema, security, payments, and deployment. |
