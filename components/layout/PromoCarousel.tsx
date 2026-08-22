@@ -161,12 +161,17 @@ export function PromoCarousel({
               {paused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
             </button>
 
+            {/* `width` is named explicitly. The blanket `transition-all` -> `transition`
+                sweep (PR #324) stopped layout thrashing, but Tailwind v4's `transition`
+                property list has no `width`, so the active dot's w-2 -> w-4 expand
+                silently began snapping. This dot row is `absolute`, so animating its
+                width cannot move page layout -- the thing #324 was actually fixing. */}
             {promotions.map((promo, index) => (
               <button
                 key={promo.id}
                 type="button"
                 onClick={() => setCurrent(index)}
-                className={`h-2 rounded-full transition duration-300 ${
+                className={`h-2 rounded-full transition-[width,background-color] duration-300 ${
                   index === current ? "w-4 bg-white" : "w-2 bg-white/50 hover:bg-white/80"
                 }`}
                 aria-label={`Show promotion ${index + 1}`}
