@@ -85,7 +85,7 @@ export function AddToCartButton({
           disabled={pending}
           className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl bg-primary text-white text-xs font-bold transition-all hover:bg-primary/90 active:scale-95 shadow-sm"
         >
-          <Icon className="w-3.5 h-3.5" />
+          <Icon className={`w-3.5 h-3.5 ${pending ? "animate-spin" : ""}`} />
           {added ? "Added" : "Add"}
         </button>
       </div>
@@ -101,7 +101,7 @@ export function AddToCartButton({
         aria-label={disabled ? "Out of stock" : label}
         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <Icon className="h-4 w-4" aria-hidden />
+        <Icon className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} aria-hidden />
         <span>{disabled ? "Out of stock" : added ? "Added" : label}</span>
       </button>
     );
@@ -115,7 +115,7 @@ export function AddToCartButton({
       aria-label={disabled ? "Out of stock" : label}
       className="flex items-center justify-center rounded-full bg-primary p-2 text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
     >
-      <Icon className="h-4 w-4" aria-hidden />
+      <Icon className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} aria-hidden />
     </button>
   );
 }

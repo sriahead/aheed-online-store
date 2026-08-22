@@ -19,7 +19,6 @@ every branch merges.
 - **P8.1 — Unified Role-Aware Help Centre** (#318, `specs/2026-08-21-p8-help-centre/`). Replaced the dead 'Help Guide' link in the global storefront header with a unified `/help` page. The page statically renders delivery, loyalty, discount, and privacy FAQs for shoppers. For authenticated `STAFF` and `ADMIN` users, it dynamically renders an 'Internal Staff Resources' section containing instructions on using the View Switcher and a direct link to the Operational Runbook.
 
 ### Fixed
-- **UI:** Removed the `animate-spin` loading animation from the `AddToCartButton` component to resolve user-reported layout issues during state transition.
 - **Vendor repository exports** (#318 follow-up): Exported `getVendorConfig`, `getVendorBranding`, `updateVendorLogoKey`, and `updateVendorStorefrontConfig` from `lib/repositories/vendor.ts` — these were referenced by the storefront page and server actions but missing from the module. Resolved build failure on staging.
 - **Prettier formatting**: Re-ran Prettier across 9 files touched by the Storefront Branding UI (PR #315) and Help Centre (PR #319) that had not been auto-formatted before merging.
 
