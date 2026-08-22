@@ -14,7 +14,8 @@ export default async function HelpPage() {
   const isStaff = auth.ok;
 
   const shopperDocs = (DOC_ARTICLES as any[]).filter(
-    (doc) => doc.audience && (doc.audience.includes("shopper") || doc.audience.includes("customer"))
+    (doc) =>
+      doc.audience && (doc.audience.includes("shopper") || doc.audience.includes("customer")),
   );
 
   return (
