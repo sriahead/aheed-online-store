@@ -44,8 +44,9 @@ export function CartDrawerShell({
 
   // Close the drawer automatically when navigating to another page (like /checkout or /cart)
   useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    close();
+  }, [pathname, close]);
 
   // Move focus into the drawer on open, and hand it back to the cart button on
   // close. Restoring to openerRef rather than to whatever was focused before is
