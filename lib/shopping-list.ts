@@ -188,10 +188,8 @@ export function resolveLines(lines: ParsedLine[], candidates: ListCandidate[]): 
       });
 
       if (maxScore > 0) {
-        const partialMatches = scored
-          .filter((s) => s.score === maxScore)
-          .map((s) => s.candidate);
-        
+        const partialMatches = scored.filter((s) => s.score === maxScore).map((s) => s.candidate);
+
         return {
           ...line,
           resolution: {
