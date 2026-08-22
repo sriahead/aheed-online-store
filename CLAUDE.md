@@ -405,6 +405,9 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   point of the real Resend call; the literal HTML bytes still have to come from a unit test that
   parses the outbound request body, not from watching a real send succeed.
 
+## React & Next.js Hooks — learned the hard way
+- **A `useEffect` that listens for `pathname` changes to auto-close a UI element (e.g. a drawer/modal) must NOT include its `open` state in its dependencies.** If `open` is included, the act of opening the drawer changes `open` to true, which triggers the effect immediately and closes the drawer right back. Hit in P8: a cart drawer instantly closed on open because the builder passed `open` and `close()` into the dependency array to satisfy the lint rule. The correct pattern is to call the closure function unconditionally (e.g., `close()`) inside the effect, leaving `open` out of the dependency array, and if needed, explicitly silencing the specific lint rule (e.g., `react-hooks/set-state-in-effect`) for that line rather than changing the dependency semantics.
+
 ## Hard stops
 - Never invent infrastructure or credentials. If a resource/secret is missing, STOP and list what
   the human must create.
