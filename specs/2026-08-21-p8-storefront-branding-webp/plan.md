@@ -3,7 +3,7 @@ id: 2026-08-21-p8-storefront-branding-webp
 title: Storefront Branding & WebP Compression Plan
 summary: Implementation plan for vendor branding admin UI and WebP compression.
 audience: [dev]
-type: plan
+type: spec
 version: 1.0.0
 updated: 2026-08-21
 status: approved

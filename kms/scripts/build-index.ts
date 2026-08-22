@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { join } from "node:path";
 import { FrontMatter, trackFor, type Track } from "../schema/frontmatter";
-import { ROOT, walk, relPath, normalize, readFrontMatter } from "../schema/repo";
+import { ROOT, walk, relPath, normalize, readFrontMatter, readDoc } from "../schema/repo";
 
 /**
  * Walks the repo, reads valid front-matter, derives track (audience -> track),
@@ -40,18 +40,30 @@ function main() {
     "customer-help": [],
   };
   let total = 0;
+  const allDocs = [];
 
   for (const file of files) {
-    const data = readFrontMatter(file);
-    if (Object.keys(data).length === 0) continue;
+    const docInfo = readDoc(file);
+    if (Object.keys(docInfo.data).length === 0) continue;
 
-    const result = FrontMatter.safeParse(normalize(data));
+    const result = FrontMatter.safeParse(normalize(docInfo.data));
     if (!result.success) continue; // kms:validate reports these; the generator just skips them
 
     const fm = result.data;
     const track = trackFor(fm);
     byTrack[track].push(renderRow(relPath(file), fm));
     total++;
+
+    allDocs.push({
+      id: relPath(file),
+      title: fm.title,
+      audience: fm.audience,
+      visibility: fm.visibility,
+      category: fm.type,
+      summary: fm.summary,
+      lastUpdated: fm.updated,
+      content: docInfo.content,
+    });
   }
 
   const timestamp = new Date().toISOString();
@@ -90,8 +102,12 @@ ${sections.join("\n\n")}
 `;
 
   writeFileSync(join(ROOT, "ARTIFACT_INDEX.md"), content);
+  writeFileSync(
+    join(ROOT, "app/(admin)/staff/runbook/docs.ts"),
+    `export const DOC_ARTICLES: any[] = ${JSON.stringify(allDocs, null, 2)};\n`,
+  );
   console.log(
-    `build-index — wrote ARTIFACT_INDEX.md (${total} artifact(s) from ${files.length} scanned file(s))`,
+    `build-index — wrote ARTIFACT_INDEX.md and docs.ts (${total} artifact(s) from ${files.length} scanned file(s))`,
   );
 }
 

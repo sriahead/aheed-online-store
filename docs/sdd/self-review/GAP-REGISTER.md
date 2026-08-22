@@ -1,7 +1,7 @@
 ---
 id: gap-register
 title: Phase 6.5 Gap Register (superseded by the master register)
-audience: [dev, staff]
+audience: [dev, admin]
 type: doc
 status: approved
 version: "2.0.0"

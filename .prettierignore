@@ -12,3 +12,4 @@ docs/ui-ref/
 # roadmap changelog). Markdown is deliberately excluded, not an oversight.
 *.md
 *.mdx
+app/(admin)/staff/runbook/docs.ts

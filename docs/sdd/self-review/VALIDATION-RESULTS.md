@@ -1,7 +1,7 @@
 ---
 id: self-review-validation-results
 title: Phase 6.5 Validation & Test Results
-audience: [dev, staff]
+audience: [dev, admin]
 type: doc
 status: approved
 version: "1.1.0"

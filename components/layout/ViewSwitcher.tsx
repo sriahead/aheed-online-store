@@ -37,7 +37,9 @@ export function ViewSwitcher({ canSeeAdmin, currentTier, isPortal }: ViewSwitche
         document.cookie = `admin-tier=${view}; path=/; max-age=31536000`;
         if (
           view === "staff" &&
-          window.location.pathname.match(/^\/staff\/(products|categories|loyalty|discounts|customers|team|reports)/)
+          window.location.pathname.match(
+            /^\/staff\/(products|categories|loyalty|discounts|customers|team|reports)/,
+          )
         ) {
           router.push("/staff");
         } else {
@@ -84,7 +86,9 @@ export function ViewSwitcher({ canSeeAdmin, currentTier, isPortal }: ViewSwitche
                 key={view.id}
                 onClick={() => handleSelect(view.id as any)}
                 className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                  isSelected ? "bg-primary/5 font-bold text-primary" : "font-medium text-black/70 hover:bg-black/5"
+                  isSelected
+                    ? "bg-primary/5 font-bold text-primary"
+                    : "font-medium text-black/70 hover:bg-black/5"
                 }`}
               >
                 <Icon className="h-4 w-4" />

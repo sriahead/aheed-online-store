@@ -1,7 +1,7 @@
 ---
 id: p6-5-self-review-hardening-plan
 title: Phase 6.5 — Autonomous Application Self-Review, Gap Detection & Hardening Plan
-audience: [dev, staff]
+audience: [dev, admin]
 type: spec
 status: approved
 version: "1.0.0"

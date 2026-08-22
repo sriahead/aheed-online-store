@@ -7,7 +7,18 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
-- **P8.1 ?" Unified Role-Aware Help Centre** (#318, `specs/2026-08-21-p8-help-centre/`). Replaced the dead 'Help Guide' link in the global storefront header with a unified `/help` page. The page statically renders delivery, loyalty, discount, and privacy FAQs for shoppers. For authenticated `STAFF` and `ADMIN` users, it dynamically renders an 'Internal Staff Resources' section containing instructions on using the View Switcher and a direct link to the Operational Runbook.
+- **Shop Your List Partial Matches** (Issue #115): Implemented partial-match fallback in `resolveLines` (lib/shopping-list.ts). When a pasted list line contains terms that don't all match a single product, the candidates with the most matched terms are returned as "ambiguous" for user review, instead of discarding the line completely.
+
+### Changed
+- **Header UI**: Added a "Shop List" button to the main navigation (beside the search input) for better discoverability.
+- **Cart UI**: The Cart popover now automatically closes when navigating away (e.g. to checkout or the full cart view).
+
+### Added
+- **P8.1 — Unified Role-Aware Help Centre** (#318, `specs/2026-08-21-p8-help-centre/`). Replaced the dead 'Help Guide' link in the global storefront header with a unified `/help` page. The page statically renders delivery, loyalty, discount, and privacy FAQs for shoppers. For authenticated `STAFF` and `ADMIN` users, it dynamically renders an 'Internal Staff Resources' section containing instructions on using the View Switcher and a direct link to the Operational Runbook.
+
+### Fixed
+- **Vendor repository exports** (#318 follow-up): Exported `getVendorConfig`, `getVendorBranding`, `updateVendorLogoKey`, and `updateVendorStorefrontConfig` from `lib/repositories/vendor.ts` — these were referenced by the storefront page and server actions but missing from the module. Resolved build failure on staging.
+- **Prettier formatting**: Re-ran Prettier across 9 files touched by the Storefront Branding UI (PR #315) and Help Centre (PR #319) that had not been auto-formatted before merging.
 
 ### Changed
 - **Cart UI**: Converted the top-header Shopping Cart into a bottom-right Floating Action Button (FAB). This completely decouples the cart from the header layout, providing a stable, jump-free header when toggling between Shopper and Staff views, and improves mobile accessibility.

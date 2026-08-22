@@ -1,7 +1,7 @@
 ---
 id: gap-register-audit
 title: Master Application Gap Register
-audience: [dev, staff]
+audience: [dev, admin]
 type: doc
 status: approved
 version: "2.6.0"

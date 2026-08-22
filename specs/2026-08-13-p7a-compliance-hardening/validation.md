@@ -1,7 +1,7 @@
 ---
 id: p7a-compliance-hardening-validation
 title: Phase 7a Validation & Acceptance Plan
-audience: [dev, staff]
+audience: [dev, admin]
 type: spec
 status: approved
 version: "1.1.0"

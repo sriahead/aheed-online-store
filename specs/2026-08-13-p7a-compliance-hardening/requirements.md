@@ -1,7 +1,7 @@
 ---
 id: p7a-compliance-hardening-requirements
 title: Phase 7a — Compliance, Operational Closure & Application Hardening Requirements
-audience: [dev, staff]
+audience: [dev, admin]
 type: spec
 status: approved
 version: "1.1.0"

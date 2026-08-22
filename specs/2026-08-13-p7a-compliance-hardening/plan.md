@@ -1,7 +1,7 @@
 ---
 id: p7a-compliance-hardening-plan
 title: Phase 7a Implementation & Execution Plan
-audience: [dev, staff]
+audience: [dev, admin]
 type: doc
 status: approved
 version: "1.0.0"

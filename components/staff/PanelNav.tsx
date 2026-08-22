@@ -52,12 +52,8 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
     trackRef.current?.scrollBy({ left: direction * 260, behavior: "smooth" });
 
   return (
-    <nav
-      aria-label="Store admin"
-      className="bg-white border-b border-black/10 shadow-sm w-full"
-    >
+    <nav aria-label="Store admin" className="bg-white border-b border-black/10 shadow-sm w-full">
       <div className="mx-auto flex w-full max-w-5xl items-center px-4 relative group">
-        
         <button
           type="button"
           aria-label="Scroll left"
@@ -67,18 +63,29 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
           <ChevronLeft className="h-4 w-4" aria-hidden />
         </button>
 
-        <div ref={trackRef} className="no-scrollbar flex w-full gap-6 overflow-x-auto scroll-smooth">
+        <div
+          ref={trackRef}
+          className="no-scrollbar flex w-full gap-6 overflow-x-auto scroll-smooth"
+        >
           {currentTier === "staff" ? (
             <>
               <NavLink href="/staff" icon={LayoutDashboard} label="Overview" />
-              <NavLink href="/staff/inventory" icon={Layers} label="Live Inventory & Availability" />
+              <NavLink
+                href="/staff/inventory"
+                icon={Layers}
+                label="Live Inventory & Availability"
+              />
               <NavLink href="/staff/orders" icon={ClipboardList} label="Fulfillment & Orders" />
               <NavLink href="/staff/runbook" icon={BookOpen} label="Internal Operational Runbook" />
             </>
           ) : (
             <>
               <NavLink href="/staff" icon={LayoutDashboard} label="Overview" />
-              <NavLink href="/staff/inventory" icon={Layers} label="Live Inventory & Availability" />
+              <NavLink
+                href="/staff/inventory"
+                icon={Layers}
+                label="Live Inventory & Availability"
+              />
               <NavLink href="/staff/orders" icon={ClipboardList} label="Orders" />
               <NavLink href="/staff/products" icon={Package} label="Catalogue" />
               <NavLink href="/staff/categories" icon={LayoutDashboard} label="Categories" />
@@ -100,7 +107,6 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
         >
           <ChevronRight className="h-4 w-4" aria-hidden />
         </button>
-
       </div>
     </nav>
   );

@@ -59,7 +59,8 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
   if (user) {
     const staffCheck = await requireVendorRole("STAFF", "ADMIN");
     isStaffOrAdmin = staffCheck.ok;
-    canSeeAdmin = staffCheck.ok && (staffCheck.via === "platform-admin" || staffCheck.via === "ADMIN");
+    canSeeAdmin =
+      staffCheck.ok && (staffCheck.via === "platform-admin" || staffCheck.via === "ADMIN");
   }
 
   const cookieStore = await cookies();
@@ -138,7 +139,10 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
         {/* Brand Logo */}
         <div className="flex items-center gap-3 shrink-0">
-          <Link href={isPortal ? "/staff" : "/"} className="flex items-center gap-2.5 group text-left">
+          <Link
+            href={isPortal ? "/staff" : "/"}
+            className="flex items-center gap-2.5 group text-left"
+          >
             {logoUrl ? (
               // Plain <img> by decision — see #46 / eslint.config.mjs. NOTE: this logo is
               // the storefront's dominant byte cost (1.9 MB, 83% of page weight, rendered
@@ -182,6 +186,18 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
 
         {/* Action Controls & Navigation */}
         <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-2">
+          {/* Shop your list link */}
+          {!isPortal && (
+            <Link
+              href="/shop-your-list"
+              className="hidden lg:flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition-all border border-black/10"
+              title="Shop by pasting your list"
+            >
+              <ShoppingBag className="w-4 h-4 text-primary" />
+              <span>Shop List</span>
+            </Link>
+          )}
+
           {/* Account / Sign In & Sign Out Controls */}
           {user ? (
             <Link
@@ -222,7 +238,11 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
           {/* View Switcher (Anchored Far Right) */}
           {isStaffOrAdmin && (
             <div className="border-l border-black/10 pl-2 ml-1">
-              <ViewSwitcher canSeeAdmin={canSeeAdmin} currentTier={currentTier} isPortal={isPortal} />
+              <ViewSwitcher
+                canSeeAdmin={canSeeAdmin}
+                currentTier={currentTier}
+                isPortal={isPortal}
+              />
             </div>
           )}
         </nav>
