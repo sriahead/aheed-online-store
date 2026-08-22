@@ -7,6 +7,13 @@ every branch merges.
 ## [Unreleased]
 
 ### Added
+- **Shop Your List Partial Matches** (Issue #115): Implemented partial-match fallback in `resolveLines` (lib/shopping-list.ts). When a pasted list line contains terms that don't all match a single product, the candidates with the most matched terms are returned as "ambiguous" for user review, instead of discarding the line completely.
+
+### Changed
+- **Header UI**: Added a "Shop List" button to the main navigation (beside the search input) for better discoverability.
+- **Cart UI**: The Cart popover now automatically closes when navigating away (e.g. to checkout or the full cart view).
+
+### Added
 - **P8.1 — Unified Role-Aware Help Centre** (#318, `specs/2026-08-21-p8-help-centre/`). Replaced the dead 'Help Guide' link in the global storefront header with a unified `/help` page. The page statically renders delivery, loyalty, discount, and privacy FAQs for shoppers. For authenticated `STAFF` and `ADMIN` users, it dynamically renders an 'Internal Staff Resources' section containing instructions on using the View Switcher and a direct link to the Operational Runbook.
 
 ### Fixed

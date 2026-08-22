@@ -176,9 +176,35 @@ function matchesAllTerms(candidate: ListCandidate, terms: string[]): boolean {
  */
 export function resolveLines(lines: ParsedLine[], candidates: ListCandidate[]): ResolvedLine[] {
   return lines.map((line) => {
-    const matching = candidates.filter((candidate) => matchesAllTerms(candidate, line.terms));
+    const fullMatches = candidates.filter((candidate) => matchesAllTerms(candidate, line.terms));
 
-    if (matching.length === 0) return { ...line, resolution: { kind: "unmatched" } };
+    if (fullMatches.length === 0) {
+      let maxScore = 0;
+      const scored = candidates.map((candidate) => {
+        const name = normaliseName(candidate.name);
+        const score = line.terms.filter((term) => name.includes(term)).length;
+        if (score > maxScore) maxScore = score;
+        return { candidate, score };
+      });
+
+      if (maxScore > 0) {
+        const partialMatches = scored
+          .filter((s) => s.score === maxScore)
+          .map((s) => s.candidate);
+        
+        return {
+          ...line,
+          resolution: {
+            kind: "ambiguous",
+            candidates: partialMatches.sort(rankCandidates).slice(0, MAX_CANDIDATES_PER_LINE),
+          },
+        };
+      }
+
+      return { ...line, resolution: { kind: "unmatched" } };
+    }
+
+    const matching = fullMatches;
 
     // An exact name match resolves the line outright, even when other products
     // also contain every term ("milk" → Milk, not Milk + Whole Milk).

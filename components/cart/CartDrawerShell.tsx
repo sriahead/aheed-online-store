@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { ShoppingBag, X } from "lucide-react";
 
 /** Everything focusable we expect inside the drawer, in DOM order. */
@@ -39,6 +40,15 @@ export function CartDrawerShell({
   const titleId = useId();
 
   const close = useCallback(() => setOpen(false), []);
+  const pathname = usePathname();
+
+  // Close the drawer automatically when navigating to another page (like /checkout or /cart)
+  useEffect(() => {
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      close();
+    }
+  }, [pathname, open, close]);
 
   // Move focus into the drawer on open, and hand it back to the cart button on
   // close. Restoring to openerRef rather than to whatever was focused before is

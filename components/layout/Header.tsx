@@ -186,6 +186,18 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
 
         {/* Action Controls & Navigation */}
         <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-2">
+          {/* Shop your list link */}
+          {!isPortal && (
+            <Link
+              href="/shop-your-list"
+              className="hidden lg:flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition-all border border-black/10"
+              title="Shop by pasting your list"
+            >
+              <ShoppingBag className="w-4 h-4 text-primary" />
+              <span>Shop List</span>
+            </Link>
+          )}
+
           {/* Account / Sign In & Sign Out Controls */}
           {user ? (
             <Link

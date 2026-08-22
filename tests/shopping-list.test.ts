@@ -140,6 +140,16 @@ describe("resolveLines", () => {
     expect(resolution.kind === "matched" && resolution.product.name).toBe("Milk");
   });
 
+  it("falls back to the largest term subset and returns it as ambiguous", () => {
+    // "chicken breast 500g" doesn't have an exact match because "500g" isn't in "Halal Chicken Breast".
+    // But it shares "chicken" and "breast" with it (score=2).
+    const resolution = resolve("chicken breast 500g");
+    expect(resolution.kind).toBe("ambiguous");
+    const names =
+      resolution.kind === "ambiguous" ? resolution.candidates.map((c) => c.name) : undefined;
+    expect(names).toContain("Halal Chicken Breast");
+  });
+
   it("is deterministic regardless of candidate order", () => {
     const shuffled = [...CATALOGUE].reverse();
     expect(resolveLines(parseList("milk"), shuffled)).toEqual(
