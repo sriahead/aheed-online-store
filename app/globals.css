@@ -29,7 +29,10 @@ body {
 
 /* Subtle UI Animations & Micro-interactions */
 a, button, input, select, textarea, .transition-base {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 200ms;
 }
@@ -37,4 +40,5 @@ a, button, input, select, textarea, .transition-base {
 button:active {
   transform: scale(0.98);
 }
+
 
