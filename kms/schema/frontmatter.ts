@@ -1,6 +1,19 @@
 import { z } from "zod";
 
-export const Audience = z.enum(["dev", "staff", "admin", "customer", "shopper", "store-admin", "platform-admin", "product", "operations", "marketing", "design", "architect"]);
+export const Audience = z.enum([
+  "dev",
+  "staff",
+  "admin",
+  "customer",
+  "shopper",
+  "store-admin",
+  "platform-admin",
+  "product",
+  "operations",
+  "marketing",
+  "design",
+  "architect",
+]);
 export const Track = z.enum(["internal-eng", "staff-ops", "customer-help"]);
 export type Track = z.infer<typeof Track>;
 export const DocType = z.enum(["doc", "adr", "spec", "runbook", "prompt", "sop", "faq", "guide"]);
@@ -28,9 +41,12 @@ export type FrontMatter = z.infer<typeof FrontMatter>;
 // track is DERIVED (audience → track) so it can't disagree with audience.
 export function trackFor(fm: FrontMatter): Track {
   if (fm.audience.includes("customer") || fm.audience.includes("shopper")) return "customer-help";
-  if (fm.audience.includes("staff") || fm.audience.includes("admin") || fm.audience.includes("store-admin") || fm.audience.includes("operations")) return "staff-ops";
+  if (
+    fm.audience.includes("staff") ||
+    fm.audience.includes("admin") ||
+    fm.audience.includes("store-admin") ||
+    fm.audience.includes("operations")
+  )
+    return "staff-ops";
   return "internal-eng";
 }
-
-
-

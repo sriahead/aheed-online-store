@@ -16,8 +16,9 @@ export default async function RunbookPage() {
   }
 
   // Filter out platform-admin, shopper, developer, etc. docs
-  const filteredDocs = (INTERNAL_DOCS as any[]).filter(doc => 
-    doc.audience && (doc.audience.includes("staff") || doc.audience.includes("store-admin"))
+  const filteredDocs = (INTERNAL_DOCS as any[]).filter(
+    (doc) =>
+      doc.audience && (doc.audience.includes("staff") || doc.audience.includes("store-admin")),
   );
 
   return (
