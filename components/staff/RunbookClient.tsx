@@ -34,7 +34,7 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
               key={aud}
               type="button"
               onClick={() => setFilter(aud)}
-              className={`flex-1 py-1.5 rounded-lg text-sm font-medium capitalize transition-all ${
+              className={`flex-1 py-1.5 rounded-lg text-sm font-medium capitalize transition ${
                 filter === aud
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
@@ -51,7 +51,7 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
               key={doc.id}
               type="button"
               onClick={() => setSelectedDoc(doc)}
-              className={`w-full text-left p-4 rounded-2xl border text-sm transition-all ${
+              className={`w-full text-left p-4 rounded-2xl border text-sm transition ${
                 selectedDoc?.id === doc.id
                   ? "bg-emerald-50/50 border-emerald-200 ring-1 ring-emerald-500 shadow-sm"
                   : "bg-white border-slate-200 text-slate-800 hover:border-slate-300 hover:bg-slate-50"

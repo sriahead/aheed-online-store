@@ -166,7 +166,7 @@ export function PromoCarousel({
                 key={promo.id}
                 type="button"
                 onClick={() => setCurrent(index)}
-                className={`h-2 rounded-full transition-all duration-300 ${
+                className={`h-2 rounded-full transition duration-300 ${
                   index === current ? "w-4 bg-white" : "w-2 bg-white/50 hover:bg-white/80"
                 }`}
                 aria-label={`Show promotion ${index + 1}`}

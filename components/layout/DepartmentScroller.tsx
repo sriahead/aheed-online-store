@@ -46,13 +46,13 @@ export function DepartmentScroller({
               aria-current={isActive ? "page" : undefined}
               className="group flex w-20 shrink-0 flex-col items-center gap-2 text-center"
             >
-              <span
-                className={`flex h-16 w-16 items-center justify-center rounded-full bg-action-tint transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1 group-hover:ring-2 group-hover:ring-action/40 group-hover:shadow-lg ${
+              <div
+                className={`flex h-16 w-16 items-center justify-center rounded-full bg-action-tint transition duration-300 group-hover:scale-110 group-hover:-translate-y-1 group-hover:ring-2 group-hover:ring-action/40 group-hover:shadow-lg ${
                   isActive ? "ring-2 ring-action/60" : ""
                 }`}
               >
                 <Icon className="h-7 w-7 text-primary" aria-hidden />
-              </span>
+              </div>
               <span className="line-clamp-2 text-xs font-medium leading-tight text-primary">
                 {category.name}
               </span>
