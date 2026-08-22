@@ -4,7 +4,9 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
-## [Unreleased]
+
+### Changed
+- **Documentation Architecture:** Restructured the entire docs/ directory into a role-based architecture (Shopper, Staff, Admin, Marketing, BA, Ops, Dev). Rewrote end-user documentation to hide technical implementations and focus entirely on user workflows.
 
 ### Added
 - **Shop Your List Partial Matches** (Issue #115): Implemented partial-match fallback in `resolveLines` (lib/shopping-list.ts). When a pasted list line contains terms that don't all match a single product, the candidates with the most matched terms are returned as "ambiguous" for user review, instead of discarding the line completely.
