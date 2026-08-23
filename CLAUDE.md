@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.8.0"
-updated: 2026-08-20
+version: "1.9.0"
+updated: 2026-08-23
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -352,6 +352,20 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   Before merging a slice that adds or edits either directory, a real check is `npm run
   kms:assemble:internal && (cd kms/site-internal && npx next build --webpack)` — not just the root
   `lint`/`build`.
+- **A spec's front-matter `id` cannot contain a literal `.`** — `kms/schema/frontmatter.ts`'s `id`
+  regex is `^[a-z0-9-]+$`. A phase name that already has a dot (`P8.1a`, `P7.5a`, `P6.5`, …) is easy
+  to copy straight into `id:` when writing a new `plan.md` at `/spec`, and none of
+  `lint`/`typecheck`/`test`/`format:check`/`build` catch it — only the `gates` workflow's own "KMS —
+  front-matter validation" step does, on the next push. Every existing dotted-phase slice's `id`
+  replaces the dot with a dash and suffixes `-plan` (e.g. `p7-5a-reports-cart-integrity-plan`);
+  follow that convention at `/spec` rather than rediscovering the regex at `/ship`. First hit this
+  way in P8.1a (#334, PR #338): `id: p8.1a-frontend-a11y-debt` failed `gates` on first push, fixed to
+  `p8-1a-frontend-a11y-debt-plan` — which then required its own `npm run kms:build-index` (a
+  previously-invalid `plan.md` becoming valid makes it a newly-countable artifact, so the checked-in
+  `ARTIFACT_INDEX.md`/`docs.ts` go stale in the same commit that fixes the `id`). Run `npm run
+  kms:validate` locally after writing or editing any spec's front-matter — it's fast and catches
+  this before a push, unlike the `<1%` MDX trap above which needs the heavier
+  `kms:assemble:internal` build.
 
 ## Design tokens & per-vendor branding (`design-system/tokens/tokens.css`, `lib/vendor-theme.ts`) — learned the hard way
 - **A jsdom test that parses `tokens.css` directly proves the file is right — it proves nothing
