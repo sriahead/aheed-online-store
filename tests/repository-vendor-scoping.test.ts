@@ -82,7 +82,7 @@ const ALLOWED = new Map<string, string>([
   // genuine, individually-argued exceptions.
   [
     "reviews.ts:upsertReview",
-    "A review inherits its product's vendor (ADR-004 slice 1): both writes resolve vendorId from the Product row INSIDE their transaction rather than taking it, so the value written is always the product's own vendor and cannot be redirected by a caller. NOT NEW — this is the pre-existing body of getReviewRepository().upsert(), which this check could not see while it sat inside an allowlisted facade; P8.1b's extraction (#252) made it visible without changing a line of it. Whether the review form should additionally scope the product lookup to the current vendor is a real question this refactor deliberately did not answer — tracked separately rather than changed inside a no-behaviour-change slice.",
+    "A review inherits its product's vendor (ADR-004 slice 1): both writes resolve vendorId from the Product row INSIDE their transaction rather than taking it, so the value written is always the product's own vendor and cannot be redirected by a caller. NOT NEW — this is the pre-existing body of getReviewRepository().upsert(), which this check could not see while it sat inside an allowlisted facade; P8.1b's extraction (#252) made it visible without changing a line of it. Whether the review form should additionally scope the product lookup to the current vendor is a real question this refactor deliberately did not answer — tracked as #340 rather than changed inside a no-behaviour-change slice.",
   ],
   [
     "reviews.ts:deleteReview",

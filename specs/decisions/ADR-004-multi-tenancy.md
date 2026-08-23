@@ -4,8 +4,8 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.5.0"
-updated: 2026-08-20
+version: "1.6.0"
+updated: 2026-08-23
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
@@ -59,7 +59,8 @@ should be reasoned about together.
      guess that "per-request session vars on Workers isolates is fiddly" turned out to understate
      it: there is no session at all on the HTTP driver the app reads through, and the adapter
      refuses transactions in HTTP mode, so there is nowhere for a session variable to live. The
-     repository layer plus `tests/repository-vendor-scoping.test.ts` is the compensating control.
+     repository layer plus `tests/repository-vendor-scoping.test.ts` and
+     `tests/repository-purity.test.ts` is the compensating control.
 
 3. **Resolve the tenant per request from the host — subdomain, with an optional custom-domain
    override.** Default host is `{slug}.aheedfoodcentre.nocaped.com`; an optional `Vendor.customDomain`
@@ -263,13 +264,30 @@ reader knows it was considered, not missed.
 
 ### Compensating control
 
-The tenant boundary stays in `lib/repositories/*`, and `tests/repository-vendor-scoping.test.ts`
-makes it executable rather than conventional. It walks each repository module's TypeScript AST and
-asserts that (a) every exported function querying a `vendorId`-bearing model takes a vendor id
-parameter, and (b) a function given one actually references it, so the parameter cannot be
-decorative. Twelve exceptions are allowlisted **with reasons** in that file — the eight
-request-scoped facades (#252), `countOtherVendorData` and `hasVendorMembership` (both deliberately
-cross-vendor), and `findOrderForWebhook`/`confirmPayment` (webhooks arrive with no host to scope by).
+The tenant boundary stays in `lib/repositories/*`, and **two** tests make it executable rather than
+conventional.
+
+`tests/repository-vendor-scoping.test.ts` walks each repository module's TypeScript AST and asserts
+that (a) every exported function querying a `vendorId`-bearing model takes a vendor id parameter,
+and (b) a function given one actually references it, so the parameter cannot be decorative. Six
+exceptions are allowlisted **with reasons** in that file: `countOtherVendorData` and
+`hasVendorMembership` (both deliberately cross-vendor), `findOrderForWebhook`/`confirmPayment`
+(webhooks arrive with no host to scope by), and `upsertReview`/`deleteReview`, which resolve the
+vendor from the `Product` row inside their own transaction rather than taking it.
+
+`tests/repository-purity.test.ts` (P8.1b, closing #252) asserts the *location* half: no file in
+`lib/repositories/` may contain a value import of `next/headers`, `@/lib/tenant`, `@/lib/auth` or
+`@/lib/auth-rbac`, so a request-scoped facade cannot live beside the pure functions it wraps. It
+has **no allowlist** — a facade always has a sibling `lib/<name>-service.ts` to live in.
+
+**Why two tests and not one, stated because the conflation cost two failed attempts at #252:** this
+ADR and `CLAUDE.md` both used to cite the vendor-scoping test as the enforcement of the location
+rule. It never was, and could not be. Asking "does this function query a vendor-scoped model
+without a vendor id?" says nothing about where a facade lives, and it is structurally blind to a
+facade that *delegates* to pure functions, because such a facade issues no Prisma call of its own —
+three of the nine (`getDiscountRepository`, `getWebhookOrderService`, `getGuestOrderLookupService`)
+were invisible to it for exactly that reason. Scoping and location are different invariants and
+need different checks.
 
 **State the limit plainly:** a function that takes `vendorId`, applies it to one query and omits it
 on a second is still not detected. A stronger per-call-site check was built and rejected during the
