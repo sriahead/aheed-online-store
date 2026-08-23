@@ -5,6 +5,15 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 every branch merges.
 
 
+### Fixed
+- **UI — carousel pagination dot stopped animating** (`components/layout/PromoCarousel.tsx`). The `transition-all` -> `transition` sweep in PR #324 correctly stopped the layout thrashing, but over-corrected at one site: Tailwind v4's `transition` property list contains no `width`, so the active promo dot's `w-2` -> `w-4` expand began snapping instead of animating. Restored with an explicit `transition-[width,background-color]`. Safe at this site specifically because the dot row is `absolute bottom-3 left-1/2`, i.e. out of document flow, so animating its width cannot move page layout. Verified by compiling Tailwind 4.3.3 directly rather than relying on documentation; the same check confirms `translate`, `scale` and `rotate` **are** in the default list, so the `ProductCard` hover-lift and `DepartmentScroller` hover-scale were never affected by the sweep.
+
+### Documentation
+- **UI polish & docs integration slice: specs corrected and completed** (`specs/2026-08-22-ui-polish-docs-integration/`). `requirements.md` R1 and `validation.md` V1 described a global transition rule in `app/globals.css` (`200ms cubic-bezier` on interactive elements, plus a `button:active` scale-down) — and V1 was ticked `[x]` against it — but that rule was removed in `a9d886c` precisely because it was the cause of the page-refresh layout thrashing. Both rewritten to state the rule that actually holds (per-component transitions naming their properties; never `transition-all`, never a global element-selector rule), with the superseded text preserved and attributed rather than deleted. `build-notes.md` updated for the same reason.
+- **Added the slice's missing `plan.md`.** It was the one required spec file never written, which is also why the slice never appeared in `ARTIFACT_INDEX.md` — the KMS index keys artifacts on `specs/<slice>/plan.md`. Index rebuilt (`npm run kms:build-index`, 97 artifacts). This closes both failures reported by `npm run sdd:audit`.
+- **`specs/roadmap.md`:** added the missing change-log row citing the slice, and repaired PowerShell backtick damage in the two 2026-08-22 rows, where a literal CR byte (`0x0D`) sat mid-line inside `resolveLines` and four pairs of backticks had become backslashes.
+- **`CHANGELOG.md`:** removed two stray NUL bytes (`0x00`) at end of file. They made every tool treat this file as binary — ripgrep refused to search past them, and `git diff` could not produce a text diff — which is a good way for a changelog defect to hide.
+
 ### Changed
 - **Documentation Architecture:** Restructured the entire docs/ directory into a role-based architecture (Shopper, Staff, Admin, Marketing, BA, Ops, Dev). Rewrote end-user documentation to hide technical implementations and focus entirely on user workflows.
 
@@ -2304,7 +2313,7 @@ every branch merges.
 - No feature code beyond the skeleton. Auth, catalogue, cart, checkout, and the design system
   arrive in P1+ behind their specs and gates.
 
- 
- 
+
+
 
 
