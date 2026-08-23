@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { ChevronLeft, RotateCcw } from "lucide-react";
 import { getAuth } from "@/lib/auth";
-import { getOrderRepository } from "@/lib/repositories/orders";
+import { getOrderRepository } from "@/lib/orders-service";
 import { formatOrderDate } from "@/lib/order-status";
 import { OrderItemsCard } from "@/components/orders/OrderItemsCard";
 import { OrderPointsNote } from "@/components/orders/OrderPointsNote";

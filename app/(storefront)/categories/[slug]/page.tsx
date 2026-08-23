@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCategoryRepository } from "@/lib/repositories/categories";
-import { getProductRepository } from "@/lib/repositories/products";
+import { getCategoryRepository } from "@/lib/categories-service";
+import { getProductRepository } from "@/lib/products-service";
 import { getEnv } from "@/lib/config";
 import { ProductCard } from "@/components/product/ProductCard";
 import { ProductFilterForm } from "@/components/product/ProductFilterForm";

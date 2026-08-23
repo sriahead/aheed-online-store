@@ -1,6 +1,6 @@
 "use server";
 
-import { getProductRepository } from "@/lib/repositories/products";
+import { getProductRepository } from "@/lib/products-service";
 import { distinctTerms, parseList, resolveLines, type MatchListState } from "@/lib/shopping-list";
 
 /**

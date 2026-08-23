@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getOrderRepository } from "@/lib/repositories/orders";
+import { getOrderRepository } from "@/lib/orders-service";
 import { sendOrderStatusEmail } from "./send-status-email";
 
 /**

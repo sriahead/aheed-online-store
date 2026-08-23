@@ -1,5 +1,4 @@
 import { getPrisma, getPrismaWs } from "@/lib/db";
-import { getCurrentVendorId } from "@/lib/tenant";
 import { buildOrderNumber, computeTotals, type DeliveryRules } from "@/lib/order-totals";
 import { getPaymentService } from "@/lib/payments";
 import { effectiveStock } from "@/lib/cart-rules";
@@ -776,254 +775,263 @@ export interface OrderRepository {
   getFinancialsForStaff(): Promise<{ totalRevenuePence: number; totalOrders: number }>;
 }
 
-export function getOrderRepository(): OrderRepository {
-  const prisma = getPrisma();
-  let vendorIdPromise: Promise<string> | undefined;
-  const vendorId = () => (vendorIdPromise ??= getCurrentVendorId());
+/**
+ * Order reads (#252). Every one takes `prisma` and `vendorId` as explicit
+ * arguments and reads no request context — the request-scoped facade that
+ * resolves both lives in `lib/orders-service.ts`, beside the webhook and
+ * guest-lookup services that used to sit here too.
+ */
+export async function findOrderForViewer(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  orderNumber: string,
+  viewerUserId: string | null,
+) {
+  const order = await prisma.order.findFirst({
+    where: { orderNumber, vendorId },
+    select: {
+      orderNumber: true,
+      status: true,
+      createdAt: true,
+      subtotalPence: true,
+      discountPence: true,
+      deliveryFeePence: true,
+      totalPence: true,
+      userId: true,
+      items: {
+        select: {
+          productId: true,
+          productName: true,
+          unitPricePence: true,
+          quantity: true,
+          lineTotalPence: true,
+        },
+      },
+      address: {
+        select: {
+          recipientName: true,
+          phone: true,
+          line1: true,
+          line2: true,
+          city: true,
+          postcode: true,
+          notes: true,
+        },
+      },
+      ...ORDER_PROVENANCE_SELECT,
+    },
+  });
+  if (!order) return null;
+
+  // A member's order is theirs alone. A guest order has no owner, so the
+  // (random) order number is the only credential — see the spec's R19a.
+  if (order.userId && order.userId !== viewerUserId) return null;
+
+  const { userId: ownerId, discountUse, loyaltyEntries, ...summary } = order;
+  return {
+    ...summary,
+    ...toProvenance({ discountUse, loyaltyEntries }),
+    hasAccount: ownerId !== null,
+  };
+}
+
+export async function listOrdersForUser(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  userId: string,
+  { take, cursor }: { take: number; cursor?: string },
+) {
+  // Keyset (cursor) pagination on (createdAt, id) — never OFFSET, per
+  // specs/architecture.md's pagination strategy and matching
+  // ProductRepository.findPage. Over-fetch by one to know whether a next
+  // page exists without a separate count query.
+  //
+  // ONE query for the page: items arrive via a nested select, so ten orders
+  // are ten rows of one result, not eleven round trips.
+  //
+  // Deliberately NOT filtered by status. An abandoned PENDING_PAYMENT order
+  // and a CANCELLED one are both visible history — hiding them would leave a
+  // shopper wondering where their attempted order went.
+  const rows = await prisma.order.findMany({
+    where: { vendorId, userId },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: take + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    select: ORDER_LIST_SELECT,
+  });
+
+  return toOrderListPage(rows, take);
+}
+
+export async function findOrderForUser(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  orderNumber: string,
+  userId: string,
+) {
+  const order = await prisma.order.findFirst({
+    // userId is part of the WHERE, not a post-hoc check: a guest order
+    // (userId null) and another member's order both simply do not match.
+    where: { orderNumber, vendorId, userId },
+    select: {
+      orderNumber: true,
+      status: true,
+      createdAt: true,
+      subtotalPence: true,
+      discountPence: true,
+      deliveryFeePence: true,
+      totalPence: true,
+      items: {
+        select: {
+          productId: true,
+          productName: true,
+          unitPricePence: true,
+          quantity: true,
+          lineTotalPence: true,
+        },
+      },
+      address: {
+        select: {
+          recipientName: true,
+          phone: true,
+          line1: true,
+          line2: true,
+          city: true,
+          postcode: true,
+          notes: true,
+        },
+      },
+      // `note` is deliberately NOT selected — see buildTimeline's contract.
+      statusEvents: { select: { status: true, createdAt: true } },
+      ...ORDER_PROVENANCE_SELECT,
+    },
+  });
+  if (!order) return null;
+
+  const { statusEvents, discountUse, loyaltyEntries, ...summary } = order;
+  return {
+    ...summary,
+    ...toProvenance({ discountUse, loyaltyEntries }),
+    // `userId` is in this method's WHERE, so a row here is always a member's.
+    hasAccount: true,
+    timeline: buildTimeline(statusEvents),
+  };
+}
+
+export async function listOrdersForStaff(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  { take, cursor, filter }: { take: number; cursor?: string; filter: StaffOrderFilter },
+) {
+  // Same keyset shape as listForUser, but scoped by status instead of by
+  // owner — and served by Order's existing @@index([vendorId, status,
+  // createdAt]) from P3b, so no index work was needed for this slice.
+  const rows = await prisma.order.findMany({
+    where: staffOrderWhere(vendorId, filter),
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: take + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    select: ORDER_LIST_SELECT,
+  });
+
+  return toOrderListPage(rows, take);
+}
+
+export async function countOrdersForStaff(prisma: ReturnType<typeof getPrisma>, vendorId: string) {
+  return prisma.order.count({
+    where: { vendorId, status: { in: [...STAFF_QUEUE_STATUSES] } },
+  });
+}
+
+export async function findOrderForStaff(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  orderNumber: string,
+) {
+  const order = await prisma.order.findFirst({
+    // vendorId only. No userId — see the interface note: a guest order has
+    // no owner and still has to be packed by this vendor's staff.
+    where: { orderNumber, vendorId },
+    select: {
+      orderNumber: true,
+      status: true,
+      createdAt: true,
+      subtotalPence: true,
+      discountPence: true,
+      deliveryFeePence: true,
+      totalPence: true,
+      guestEmail: true,
+      userId: true,
+      user: { select: { email: true } },
+      items: {
+        select: {
+          productId: true,
+          productName: true,
+          unitPricePence: true,
+          quantity: true,
+          lineTotalPence: true,
+        },
+      },
+      address: {
+        select: {
+          recipientName: true,
+          phone: true,
+          line1: true,
+          line2: true,
+          city: true,
+          postcode: true,
+          notes: true,
+        },
+      },
+      // `note` and the actor ARE selected here — the inverse of getForUser,
+      // and the whole point of the staff view. P4b has been writing
+      // createdByUserId since #125 with nothing able to read it.
+      statusEvents: {
+        select: {
+          status: true,
+          createdAt: true,
+          note: true,
+          createdBy: { select: { name: true } },
+        },
+      },
+      ...ORDER_PROVENANCE_SELECT,
+    },
+  });
+  if (!order) return null;
+
+  const { statusEvents, guestEmail, user, userId, discountUse, loyaltyEntries, ...summary } = order;
+  return {
+    ...summary,
+    ...toProvenance({ discountUse, loyaltyEntries }),
+    hasAccount: userId !== null,
+    buyerEmail: guestEmail ?? user?.email ?? null,
+    timeline: buildStaffTimeline(
+      statusEvents.map((event) => ({
+        status: event.status,
+        createdAt: event.createdAt,
+        note: event.note,
+        actorName: event.createdBy?.name ?? null,
+      })),
+    ),
+  };
+}
+
+export async function getFinancialsForStaff(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+): Promise<{ totalRevenuePence: number; totalOrders: number }> {
+  // Only orders that were actually paid for. Without the status filter this
+  // counted abandoned checkouts and cancelled orders as revenue (P7.5a,
+  // #238) — 39% overstated on staging.
+  const aggregate = await prisma.order.aggregate({
+    where: { vendorId, status: { in: [...REVENUE_STATUSES] } },
+    _sum: { totalPence: true },
+    _count: { id: true },
+  });
 
   return {
-    async createOrder(input) {
-      return placeOrder(getPrismaWs(), await vendorId(), input);
-    },
-
-    async getByOrderNumber(orderNumber, viewerUserId) {
-      const order = await prisma.order.findFirst({
-        where: { orderNumber, vendorId: await vendorId() },
-        select: {
-          orderNumber: true,
-          status: true,
-          createdAt: true,
-          subtotalPence: true,
-          discountPence: true,
-          deliveryFeePence: true,
-          totalPence: true,
-          userId: true,
-          items: {
-            select: {
-              productId: true,
-              productName: true,
-              unitPricePence: true,
-              quantity: true,
-              lineTotalPence: true,
-            },
-          },
-          address: {
-            select: {
-              recipientName: true,
-              phone: true,
-              line1: true,
-              line2: true,
-              city: true,
-              postcode: true,
-              notes: true,
-            },
-          },
-          ...ORDER_PROVENANCE_SELECT,
-        },
-      });
-      if (!order) return null;
-
-      // A member's order is theirs alone. A guest order has no owner, so the
-      // (random) order number is the only credential — see the spec's R19a.
-      if (order.userId && order.userId !== viewerUserId) return null;
-
-      const { userId: ownerId, discountUse, loyaltyEntries, ...summary } = order;
-      return {
-        ...summary,
-        ...toProvenance({ discountUse, loyaltyEntries }),
-        hasAccount: ownerId !== null,
-      };
-    },
-
-    async listForUser(userId, { take, cursor }) {
-      // Keyset (cursor) pagination on (createdAt, id) — never OFFSET, per
-      // specs/architecture.md's pagination strategy and matching
-      // ProductRepository.findPage. Over-fetch by one to know whether a next
-      // page exists without a separate count query.
-      //
-      // ONE query for the page: items arrive via a nested select, so ten orders
-      // are ten rows of one result, not eleven round trips.
-      //
-      // Deliberately NOT filtered by status. An abandoned PENDING_PAYMENT order
-      // and a CANCELLED one are both visible history — hiding them would leave a
-      // shopper wondering where their attempted order went.
-      const rows = await prisma.order.findMany({
-        where: { vendorId: await vendorId(), userId },
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        take: take + 1,
-        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        select: ORDER_LIST_SELECT,
-      });
-
-      return toOrderListPage(rows, take);
-    },
-
-    async getForUser(orderNumber, userId) {
-      const order = await prisma.order.findFirst({
-        // userId is part of the WHERE, not a post-hoc check: a guest order
-        // (userId null) and another member's order both simply do not match.
-        where: { orderNumber, vendorId: await vendorId(), userId },
-        select: {
-          orderNumber: true,
-          status: true,
-          createdAt: true,
-          subtotalPence: true,
-          discountPence: true,
-          deliveryFeePence: true,
-          totalPence: true,
-          items: {
-            select: {
-              productId: true,
-              productName: true,
-              unitPricePence: true,
-              quantity: true,
-              lineTotalPence: true,
-            },
-          },
-          address: {
-            select: {
-              recipientName: true,
-              phone: true,
-              line1: true,
-              line2: true,
-              city: true,
-              postcode: true,
-              notes: true,
-            },
-          },
-          // `note` is deliberately NOT selected — see buildTimeline's contract.
-          statusEvents: { select: { status: true, createdAt: true } },
-          ...ORDER_PROVENANCE_SELECT,
-        },
-      });
-      if (!order) return null;
-
-      const { statusEvents, discountUse, loyaltyEntries, ...summary } = order;
-      return {
-        ...summary,
-        ...toProvenance({ discountUse, loyaltyEntries }),
-        // `userId` is in this method's WHERE, so a row here is always a member's.
-        hasAccount: true,
-        timeline: buildTimeline(statusEvents),
-      };
-    },
-
-    async listForStaff({ take, cursor, filter }) {
-      // Same keyset shape as listForUser, but scoped by status instead of by
-      // owner — and served by Order's existing @@index([vendorId, status,
-      // createdAt]) from P3b, so no index work was needed for this slice.
-      const rows = await prisma.order.findMany({
-        where: staffOrderWhere(await vendorId(), filter),
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        take: take + 1,
-        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        select: ORDER_LIST_SELECT,
-      });
-
-      return toOrderListPage(rows, take);
-    },
-
-    async countForStaff() {
-      return prisma.order.count({
-        where: { vendorId: await vendorId(), status: { in: [...STAFF_QUEUE_STATUSES] } },
-      });
-    },
-
-    async getForStaff(orderNumber) {
-      const order = await prisma.order.findFirst({
-        // vendorId only. No userId — see the interface note: a guest order has
-        // no owner and still has to be packed by this vendor's staff.
-        where: { orderNumber, vendorId: await vendorId() },
-        select: {
-          orderNumber: true,
-          status: true,
-          createdAt: true,
-          subtotalPence: true,
-          discountPence: true,
-          deliveryFeePence: true,
-          totalPence: true,
-          guestEmail: true,
-          userId: true,
-          user: { select: { email: true } },
-          items: {
-            select: {
-              productId: true,
-              productName: true,
-              unitPricePence: true,
-              quantity: true,
-              lineTotalPence: true,
-            },
-          },
-          address: {
-            select: {
-              recipientName: true,
-              phone: true,
-              line1: true,
-              line2: true,
-              city: true,
-              postcode: true,
-              notes: true,
-            },
-          },
-          // `note` and the actor ARE selected here — the inverse of getForUser,
-          // and the whole point of the staff view. P4b has been writing
-          // createdByUserId since #125 with nothing able to read it.
-          statusEvents: {
-            select: {
-              status: true,
-              createdAt: true,
-              note: true,
-              createdBy: { select: { name: true } },
-            },
-          },
-          ...ORDER_PROVENANCE_SELECT,
-        },
-      });
-      if (!order) return null;
-
-      const { statusEvents, guestEmail, user, userId, discountUse, loyaltyEntries, ...summary } =
-        order;
-      return {
-        ...summary,
-        ...toProvenance({ discountUse, loyaltyEntries }),
-        hasAccount: userId !== null,
-        buyerEmail: guestEmail ?? user?.email ?? null,
-        timeline: buildStaffTimeline(
-          statusEvents.map((event) => ({
-            status: event.status,
-            createdAt: event.createdAt,
-            note: event.note,
-            actorName: event.createdBy?.name ?? null,
-          })),
-        ),
-      };
-    },
-
-    async advance(orderNumber, toStatus, actor) {
-      return advanceOrderStatus(getPrismaWs(), await vendorId(), orderNumber, toStatus, actor);
-    },
-
-    async advanceBulk(items, actor) {
-      return advanceOrderStatusBulk(getPrismaWs(), await vendorId(), items, actor);
-    },
-
-    async getFinancialsForStaff() {
-      const vId = await vendorId();
-
-      // Only orders that were actually paid for. Without the status filter this
-      // counted abandoned checkouts and cancelled orders as revenue (P7.5a,
-      // #238) — 39% overstated on staging.
-      const aggregate = await prisma.order.aggregate({
-        where: { vendorId: vId, status: { in: [...REVENUE_STATUSES] } },
-        _sum: { totalPence: true },
-        _count: { id: true },
-      });
-
-      return {
-        totalRevenuePence: aggregate._sum.totalPence ?? 0,
-        totalOrders: aggregate._count.id,
-      };
-    },
+    totalRevenuePence: aggregate._sum.totalPence ?? 0,
+    totalOrders: aggregate._count.id,
   };
 }
 
@@ -1366,23 +1374,11 @@ export async function failPayment(
   return releaseOrder(prisma, order.vendorId, order.id, reason);
 }
 
-/**
- * Webhook-facing factory, matching `getOrderRepository()`'s shape: resolves its
- * own client internally, so `app/api/webhooks/stripe/route.ts` never imports
- * `@/lib/db` itself (the no-direct-Prisma guard covers `app/`, `features/` and
- * `components/` — there is no webhook-specific carve-out, unlike `/api/health`'s
- * narrow infra-probe exception). The underlying `findOrderForWebhook` /
- * `confirmPayment` / `failPayment` still take `prisma` explicitly, so they stay
- * testable from a plain script against a real database.
- */
-export function getWebhookOrderService() {
-  const prisma = getPrismaWs();
-  return {
-    findOrder: (orderNumber: string) => findOrderForWebhook(prisma, orderNumber),
-    confirm: (orderNumber: string) => confirmPayment(prisma, orderNumber),
-    fail: (orderNumber: string, reason: string) => failPayment(prisma, orderNumber, reason),
-  };
-}
+/* `getWebhookOrderService()` moved to `lib/orders-service.ts` (#252). It resolved
+ * a live client itself, which is the property this module must not have — the
+ * pure functions it wrapped (`findOrderForWebhook`, `confirmPayment`,
+ * `failPayment`) are unchanged and still take their client explicitly, so they
+ * stay testable from a plain script against a real database. */
 
 // ---- Guest order lookup (P7a fix, #123/#192) -------------------------------
 //
@@ -1432,16 +1428,8 @@ export async function findOrderForGuestLookup(
   });
 }
 
-/**
- * Request-scoped factory, matching `getWebhookOrderService()`'s shape: resolves
- * its own client and the current vendor here so `app/(storefront)/orders/lookup`
- * never imports `@/lib/db` itself (the no-direct-Prisma guard covers app/,
- * features/ and components/ with no carve-out for this page).
- */
-export function getGuestOrderLookupService() {
-  const prisma = getPrisma();
-  return {
-    find: async (orderNumber: string, email: string) =>
-      findOrderForGuestLookup(prisma, await getCurrentVendorId(), orderNumber, email),
-  };
-}
+/* `getGuestOrderLookupService()` moved to `lib/orders-service.ts` (#252) — it
+ * resolved both a live client and the current vendor from request context.
+ * `findOrderForGuestLookup` above is unchanged and still takes both explicitly,
+ * which is what lets a `tsx` script prove the order-number/email credential
+ * pair is enforced at the query level. */

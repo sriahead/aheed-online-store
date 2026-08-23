@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.20.0"
-updated: 2026-08-20
+version: "2.22.0"
+updated: 2026-08-24
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -369,7 +369,27 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   was true, the file path in the check was stale. None were code defects; all three were caught only
   by reading the requirement's own prose after the literal command "failed" or "passed" for the
   wrong reason, and reported as such rather than either blindly trusting the grep or blindly
-  reporting a false failure.
+  reporting a false failure. **A fourth instance, P8.1a (#334):** a row asserted `grep -n
+  "overflow-clip" <file>` would return exactly one match as proof a class landed nowhere else, but
+  it returned three — the code's own explanatory comment (added in the same slice, saying *why* the
+  class is scoped where it is) said the word twice in prose. Same shape as the bare-word-match trap
+  above, just triggered by the fix's own documentation rather than a stale reference. Fixed by
+  scoping the check to the className attribute (`grep -n 'className="[^"]*overflow-clip'`) rather
+  than the bare string — the general fix for this whole class of trap is to grep for the *construct*
+  the requirement actually cares about, not a word that construct happens to contain.
+  **A fifth and sixth instance, P8.1b (#335/#337), both structural rather than a bare-word
+  match this time.** A row required `lib/repositories/roles.ts`'s exports to have `prisma` and
+  `vendorId` as their literal "first two parameters" — true for one of the two functions, but the
+  other's real second parameter is a second Prisma client the transaction needs
+  (`applyVendorRole(prisma, prismaWs, vendorId, ...)`), with `vendorId` third. The requirement's own
+  text only asked that both be explicit parameters *somewhere*, with no ordering claim — the
+  `validation.md` row was stricter than what it was proving. Separately, a gate-stage row asserted
+  `grep -n "<id>" ARTIFACT_INDEX.md` would find the slice's front-matter `id` string, but the
+  generated table never renders that field at all (it shows title/type/version/summary, keyed
+  internally by file path) — no slice's `id` has ever appeared there, so the check as written could
+  not pass for *any* slice, not just this one. Neither was a code defect; both were caught by
+  checking what the generator actually emits and what the requirement's prose actually claims,
+  rather than trusting either check's literal exit code.
 - UI changes: verify against rendered output (compiled CSS, rendered HTML, browser screenshot), not
   code review alone. DB-touching code: `npm run preview`, never `npm run dev` (see `CLAUDE.md`).
 - **Server actions can be driven headlessly against `npm run preview`** — no browser needed. Next

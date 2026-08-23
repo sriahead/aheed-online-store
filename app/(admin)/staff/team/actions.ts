@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { setVendorRole, VendorRoleAction } from "@/lib/repositories/roles";
+import { setVendorRole } from "@/lib/roles-service";
+import type { VendorRoleAction } from "@/lib/repositories/roles";
 
 export async function assignRoleAction(prevState: any, formData: FormData) {
   const email = formData.get("email")?.toString();

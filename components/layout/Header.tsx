@@ -16,8 +16,9 @@ import { getAuth } from "@/lib/auth";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
-import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
-import { getCartRepository, EMPTY_CART } from "@/lib/repositories/cart";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { getCartRepository } from "@/lib/cart-service";
+import { EMPTY_CART } from "@/lib/repositories/cart";
 import { getCartIdentity } from "@/lib/cart-identity";
 import { CartDrawerShell } from "@/components/cart/CartDrawerShell";
 import { CartContents } from "@/components/cart/CartContents";
@@ -137,8 +138,14 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
 
       {/* Main Nav Header */}
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-        {/* Brand Logo */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* Brand Logo. h-10 overflow-clip caps this container at the logo's own
+            height so a third-party browser extension's content script injecting
+            an element inside it (confirmed: Coupert, #333) cannot stretch it and
+            reflow the row. Deliberately NOT applied to the row or <nav> below —
+            ViewSwitcher's dropdown (components/layout/ViewSwitcher.tsx) renders
+            below the row via `absolute top-full` and an ancestor overflow-clip
+            would cut it off. */}
+        <div className="flex items-center gap-3 shrink-0 h-10 overflow-clip">
           <Link
             href={isPortal ? "/staff" : "/"}
             className="flex items-center gap-2.5 group text-left"

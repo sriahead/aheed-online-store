@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
-import { getOrderRepository } from "@/lib/repositories/orders";
+import { getOrderRepository } from "@/lib/orders-service";
 import { getAuth } from "@/lib/auth";
 import { OrderItemsCard } from "@/components/orders/OrderItemsCard";
 import { OrderAddressCard } from "@/components/orders/OrderAddressCard";

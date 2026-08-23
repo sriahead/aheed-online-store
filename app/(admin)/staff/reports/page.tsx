@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getOrderRepository } from "@/lib/repositories/orders";
-import { getDiscountRepository } from "@/lib/repositories/discounts";
+import { getOrderRepository } from "@/lib/orders-service";
+import { getDiscountRepository } from "@/lib/discounts-service";
 import { getCatalogueHealth, getLoyaltyLiability } from "@/lib/repositories/reports";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { TrendingUp, ShoppingBag, Banknote, Package, Sparkles, TicketPercent } from "lucide-react";
@@ -42,34 +42,40 @@ export default async function ReportsPage() {
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <div className="flex items-center gap-2 mb-6">
         <TrendingUp className="h-6 w-6 text-primary" aria-hidden />
-        <h1 className="text-2xl font-semibold text-primary">Sales & Pence Financials</h1>
+        <h1 className="text-2xl font-semibold text-primary">Store reports</h1>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-4 text-primary/60">
-            <Banknote className="h-4 w-4" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider">Total Revenue</h2>
-          </div>
-          <p className="text-4xl font-bold text-primary">{formatMoney(totalRevenuePence)}</p>
+      <section>
+        <div className="mb-4 flex items-center gap-2">
+          <Banknote className="h-5 w-5 text-accent" aria-hidden />
+          <h2 className="text-lg font-semibold text-primary">Sales</h2>
         </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-4 text-primary/60">
+              <Banknote className="h-4 w-4" />
+              <h3 className="text-sm font-semibold uppercase tracking-wider">Total Revenue</h3>
+            </div>
+            <p className="text-4xl font-bold text-primary">{formatMoney(totalRevenuePence)}</p>
+          </div>
 
-        <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-4 text-primary/60">
-            <ShoppingBag className="h-4 w-4" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider">Total Orders</h2>
+          <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-4 text-primary/60">
+              <ShoppingBag className="h-4 w-4" />
+              <h3 className="text-sm font-semibold uppercase tracking-wider">Total Orders</h3>
+            </div>
+            <p className="text-4xl font-bold text-primary">{totalOrders}</p>
           </div>
-          <p className="text-4xl font-bold text-primary">{totalOrders}</p>
-        </div>
 
-        <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-4 text-primary/60">
-            <TrendingUp className="h-4 w-4" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider">Avg Basket Value</h2>
+          <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-4 text-primary/60">
+              <TrendingUp className="h-4 w-4" />
+              <h3 className="text-sm font-semibold uppercase tracking-wider">Avg Basket Value</h3>
+            </div>
+            <p className="text-4xl font-bold text-primary">{formatMoney(avgBasketPence)}</p>
           </div>
-          <p className="text-4xl font-bold text-primary">{formatMoney(avgBasketPence)}</p>
         </div>
-      </div>
+      </section>
 
       {/* Non-sales reporting (P7.5d+e, #161). Sales analytics is deliberately
           absent — production runs Stripe TEST keys (#113), so there is no real

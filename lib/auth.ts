@@ -3,7 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { getPrisma } from "./db";
 import { getEnv, type AppEnv } from "./config";
 import { getEmailService } from "./email";
-import { getCurrentVendorSenderName } from "./repositories/vendor";
+import { getCurrentVendorSenderName } from "./vendor-service";
 import { resolveAuthOrigin } from "./auth-origin";
 
 /**

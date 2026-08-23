@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { brandStyle } from "@/lib/vendor-theme";
 import { PanelNav } from "@/components/staff/PanelNav";
 import { Header } from "@/components/layout/Header";

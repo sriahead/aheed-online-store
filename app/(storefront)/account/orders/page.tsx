@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Package } from "lucide-react";
 import { getAuth } from "@/lib/auth";
-import { getOrderRepository } from "@/lib/repositories/orders";
+import { getOrderRepository } from "@/lib/orders-service";
 import { formatOrderDate } from "@/lib/order-status";
 import { formatPrice } from "@/components/product/format-price";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";

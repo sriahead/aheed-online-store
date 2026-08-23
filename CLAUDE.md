@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.8.0"
-updated: 2026-08-20
+version: "1.9.0"
+updated: 2026-08-23
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -203,12 +203,17 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   Edit tool. **Use the Edit/Write tools for file content; keep PowerShell for git, npm and gh.**
 - **Check `git diff --numstat` after any scripted file rewrite.** A line count far larger than the
   edit is the cheapest possible signal that an encoding or line-ending rewrite happened.
-- **`format:check` failing on dozens of untouched files is the `core.autocrlf` artifact, not drift.**
-  Confirm it the documented way — write a file's committed blob (`git show HEAD:<file>`) out with LF
-  endings and run `prettier --config .prettierrc.json --check` on it. **Do that in a directory
-  prettier can still resolve the config from, or pass `--config` explicitly**: checking a copy in a
-  temp directory silently falls back to prettier's *defaults* and reports failures that mean
-  nothing. CI on Linux is the authority.
+- **`format:check` failing on dozens of untouched files was the `core.autocrlf` artifact — FIXED in
+  PR #328 (`.gitattributes`, #327), so it is no longer the expected explanation.** `eol=lf` now pins
+  the working tree, which is what makes local Prettier agree with CI; `git add --renormalize .`
+  produces zero changes and `prettier --check .` passes across the repo. **If `format:check` fails
+  on files you did not touch today, treat it as real drift and read the diff** rather than reaching
+  for the old ritual. Should a line-ending question genuinely resurface, the way to settle it is
+  still to write a file's committed blob (`git show HEAD:<file>`) out with LF endings and run
+  `prettier --config .prettierrc.json --check` on it — **in a directory prettier can resolve the
+  config from, or passing `--config` explicitly**, since checking a copy in a temp directory
+  silently falls back to prettier's *defaults* and reports failures that mean nothing. CI on Linux
+  remains the authority.
 - **Anchor patterns when grepping an env file.** `DATABASE_URL` ends in `BASE_URL`, so a filter for
   `BASE_URL` prints the Neon connection string, password included (#175). Prefer `^SEED_` over
   `SEED_`, and prefer printing keys over lines.
@@ -305,19 +310,33 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   it. Fixed at `/fix` by moving it to `lib/data-rights-service.ts`; the facade also became a plain
   sync factory once it no longer needed a dynamic `import()` to stay loadable by the same file a
   `tsx` script has to import.
-- **`getCartRepository` et al. are the right SHAPE but the wrong LOCATION — copy the shape, not the
-  address.** This rule previously pointed at `getCartRepository` as the thing to match, without
-  saying which part, and that sentence was self-defeating: `getCartRepository` lives *inside*
-  `lib/repositories/cart.ts`, which is exactly what the rule forbids. A reader following it
-  literally reproduced the defect. **Nine facade factories are known non-compliant** —
-  `getCartRepository`, `getCategoryRepository`, `getDiscountRepository`, `getLoyaltyRepository`,
-  `getOrderRepository`, `getWebhookOrderService`, `getGuestOrderLookupService`,
-  `getProductRepository`, `getReviewRepository` — across seven files. `lib/repositories/data-rights.ts`
-  is the only compliant one. Tracked as **#252**; the P7 closeout slice (#251) corrected this wording
-  only, because moving nine factories and every call site is a refactor of its own. Until #252 lands,
-  the compliant examples to copy are `lib/data-rights-service.ts` and `lib/auth-rbac.ts`.
-  `tests/repository-vendor-scoping.test.ts` allowlists all nine by name with their reasons, so the
-  list cannot quietly grow.
+- **#252 is CLOSED (P8.1b) and the rule is now machine-enforced — `tests/repository-purity.test.ts`
+  fails if any file in `lib/repositories/*.ts` contains a *value* import of `next/headers`,
+  `@/lib/tenant`, `@/lib/auth` or `@/lib/auth-rbac`.** Type-only imports stay legal and are the
+  documented pattern (`import type { getPrisma } from "@/lib/db"`). The check is whole-file and
+  import-level, with **no allowlist**, so it cannot be satisfied by argument — put the facade in
+  `lib/<name>-service.ts` and it passes. Every repository module now has a sibling service where one
+  is needed: `cart`, `categories`, `discounts`, `loyalty`, `orders`, `products`, `reviews`, `roles`,
+  `vendor`, `data-rights`, `promotions`.
+- **The reason it took three attempts is worth more than the fix.** This rule twice claimed an
+  enforcement that did not exist: it said `tests/repository-vendor-scoping.test.ts` "allowlists all
+  nine by name … so the list cannot quietly grow." Both halves were false. That test asks whether an
+  exported function **queries a vendor-scoped model without taking a vendor id** — a question about
+  *scoping*, not about *location*. It held six of the nine plus two functions that were never on the
+  list, and was structurally blind to `getDiscountRepository`, `getWebhookOrderService` and
+  `getGuestOrderLookupService`, because a facade that *delegates* to pure functions issues no Prisma
+  call of its own for it to see. An earlier version of this rule also pointed at `getCartRepository`
+  as the example to copy while `getCartRepository` was itself the defect, so a reader following it
+  literally reproduced the problem. **The transferable lesson: a rule that names its own enforcement
+  must be checked against that enforcement, or it becomes a rule that documents a guarantee nobody
+  provides.**
+- **`lib/repositories/roles.ts` was the hardest case and shows what a real fix looks like.** It was
+  never on #252's list, and it had **no pure functions at all** — both exports resolved the vendor
+  themselves and one ran its own `requireVendorRole("ADMIN")`. So it needed a *split written*, not a
+  move: `listVendorTeam(prisma, vendorId)` / `applyVendorRole(prisma, prismaWs, vendorId, actor, …)`
+  stayed, and `lib/roles-service.ts` performs the session check and passes the resulting actor in as
+  **data**. That is what made the hierarchy rules (who may grant ADMIN, who may touch a platform
+  admin, the last-admin self-demotion guard) testable at all — which authorization logic needs most.
 
 ## Staff panel pages (`app/(admin)/staff/*`) — learned the hard way
 - **Every page's `requireVendorRole(...)` refusal branch must render `<PanelRefusal>` — never
@@ -352,6 +371,20 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   Before merging a slice that adds or edits either directory, a real check is `npm run
   kms:assemble:internal && (cd kms/site-internal && npx next build --webpack)` — not just the root
   `lint`/`build`.
+- **A spec's front-matter `id` cannot contain a literal `.`** — `kms/schema/frontmatter.ts`'s `id`
+  regex is `^[a-z0-9-]+$`. A phase name that already has a dot (`P8.1a`, `P7.5a`, `P6.5`, …) is easy
+  to copy straight into `id:` when writing a new `plan.md` at `/spec`, and none of
+  `lint`/`typecheck`/`test`/`format:check`/`build` catch it — only the `gates` workflow's own "KMS —
+  front-matter validation" step does, on the next push. Every existing dotted-phase slice's `id`
+  replaces the dot with a dash and suffixes `-plan` (e.g. `p7-5a-reports-cart-integrity-plan`);
+  follow that convention at `/spec` rather than rediscovering the regex at `/ship`. First hit this
+  way in P8.1a (#334, PR #338): `id: p8.1a-frontend-a11y-debt` failed `gates` on first push, fixed to
+  `p8-1a-frontend-a11y-debt-plan` — which then required its own `npm run kms:build-index` (a
+  previously-invalid `plan.md` becoming valid makes it a newly-countable artifact, so the checked-in
+  `ARTIFACT_INDEX.md`/`docs.ts` go stale in the same commit that fixes the `id`). Run `npm run
+  kms:validate` locally after writing or editing any spec's front-matter — it's fast and catches
+  this before a push, unlike the `<1%` MDX trap above which needs the heavier
+  `kms:assemble:internal` build.
 
 ## Design tokens & per-vendor branding (`design-system/tokens/tokens.css`, `lib/vendor-theme.ts`) — learned the hard way
 - **A jsdom test that parses `tokens.css` directly proves the file is right — it proves nothing

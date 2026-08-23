@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getAuth } from "@/lib/auth";
-import { getReviewRepository } from "@/lib/repositories/reviews";
+import { getReviewRepository } from "@/lib/reviews-service";
 
 /** Deleting another user's review is a silent no-op — see ReviewRepository.delete()'s ownership check. */
 export async function deleteReview(formData: FormData): Promise<void> {

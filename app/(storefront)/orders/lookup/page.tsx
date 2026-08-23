@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { getCurrentVendorId } from "@/lib/tenant";
-import { getGuestOrderLookupService, type GuestLookupOrder } from "@/lib/repositories/orders";
+import { getGuestOrderLookupService } from "@/lib/orders-service";
+import type { GuestLookupOrder } from "@/lib/repositories/orders";
 import { checkOrderLookupRateLimit } from "@/lib/repositories/order-lookup-rate-limit";
 import { formatPrice } from "@/components/product/format-price";
 import { GuestEraseForm } from "@/components/orders/GuestEraseForm";
-import { Package, Truck, CheckCircle2, Search, MapPin, AlertCircle } from "lucide-react";
+import { Package, Truck, CheckCircle2, Search, MapPin, AlertCircle, Download } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -180,6 +181,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
             </div>
 
             {/* 3-Step Pipeline Visualizer */}
+            <h2 className="sr-only">Delivery Status</h2>
             <div className="relative space-y-6 pl-4 border-l-2 border-slate-200 my-4">
               {steps.map((step, idx) => {
                 const isCompleted = idx <= currentIndex;
@@ -198,7 +200,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                     </div>
 
                     <div className="pl-2">
-                      <h4
+                      <h3
                         className={`font-bold text-sm leading-tight ${
                           isCurrent
                             ? "text-primary"
@@ -208,7 +210,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                         }`}
                       >
                         {step.label}
-                      </h4>
+                      </h3>
                       <p className="text-xs text-slate-500 mt-0.5">{step.desc}</p>
                     </div>
                   </div>
@@ -217,6 +219,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
             </div>
 
             {/* Items Summary */}
+            <h2 className="sr-only">Order Items</h2>
             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3">
               <h3 className="text-xs font-bold text-slate-900">Items Ordered</h3>
               <div className="space-y-2">
@@ -238,6 +241,32 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                 <span>Total Amount:</span>
                 <span className="text-primary">{formatPrice(orderResult.totalPence)}</span>
               </div>
+            </div>
+
+            {/*
+              Art. 15 for guests (#253). Rendered only under a proven
+              order-number/email pair, like the erase form below it — and the
+              route re-proves the pair rather than trusting these values, which
+              is why passing them in the query string is safe: they are a
+              convenience for the link, never the authorisation.
+
+              A plain <a download>, not a fetch: the response carries
+              Content-Disposition, so the browser saves it with no client JS.
+            */}
+            <div className="mt-6 pt-4 border-t border-slate-200">
+              <a
+                href={`/orders/lookup/export?orderNumber=${encodeURIComponent(
+                  orderResult.orderNumber,
+                )}&email=${encodeURIComponent(email.trim())}`}
+                download
+                className="inline-flex items-center gap-2 text-sm font-medium text-action hover:text-action-hover underline"
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                Download this order&rsquo;s data (JSON)
+              </a>
+              <p className="mt-1 text-xs text-slate-600">
+                A machine-readable copy of this one order, under UK GDPR Article 15.
+              </p>
             </div>
 
             {/*

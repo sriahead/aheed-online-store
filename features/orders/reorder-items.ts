@@ -3,8 +3,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
-import { getOrderRepository } from "@/lib/repositories/orders";
-import { getCartRepository } from "@/lib/repositories/cart";
+import { getOrderRepository } from "@/lib/orders-service";
+import { getCartRepository } from "@/lib/cart-service";
 
 export async function reorderItems(formData: FormData): Promise<void> {
   const orderNumber = formData.get("orderNumber");

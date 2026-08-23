@@ -2,10 +2,11 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getCartRepository } from "@/lib/repositories/cart";
-import { CheckoutError, getOrderRepository } from "@/lib/repositories/orders";
+import { getCartRepository } from "@/lib/cart-service";
+import { getOrderRepository } from "@/lib/orders-service";
+import { CheckoutError } from "@/lib/repositories/orders";
 import { getCartIdentity } from "@/lib/cart-identity";
-import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { isDeliverable } from "@/lib/delivery";
 
 /**

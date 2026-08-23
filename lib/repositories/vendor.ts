@@ -1,14 +1,16 @@
-import { cache } from "react";
 import { getPrisma } from "@/lib/db";
-import { getCurrentVendorIdOrNull } from "@/lib/tenant";
 
 /**
  * Per-vendor branding/config/delivery read path (ADR-004 slice 4). The ONLY
- * DB-access path for vendor branding — layouts/components/pages call this, never
- * Prisma directly (slice-2 no-direct-Prisma guard). Prisma is constructed fresh
- * per call (Workers rule); the RSC-facing `getCurrentVendorProfile` is memoized
- * per request with React `cache()` so header + layout + page + metadata share a
- * single query, never cached across requests.
+ * DB-access path for vendor branding — layouts/components/pages reach it through
+ * `lib/vendor-service.ts` (slice-2 no-direct-Prisma guard). Prisma is
+ * constructed fresh per call (Workers rule).
+ *
+ * Every export here takes `vendorId` explicitly and reads no request context;
+ * the RSC-facing `getCurrentVendorProfile`, which resolves the vendor from the
+ * request host and memoizes it per request with React `cache()`, lives in
+ * `lib/vendor-service.ts` (#252). `tests/repository-purity.test.ts` enforces
+ * that split.
  */
 
 /** The eight `--color-brand-*` primitives, keyed by the token suffix. */
@@ -135,26 +137,10 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
   };
 }
 
-/**
- * The current request's vendor profile, or `null` when the host resolves to no
- * vendor (the storefront layout redirects those to /coming-soon). Memoized per
- * request — one query shared across layout/header/page/metadata.
- */
-export const getCurrentVendorProfile = cache(async (): Promise<VendorProfile | null> => {
-  const vendorId = await getCurrentVendorIdOrNull();
-  return vendorId ? fetchVendorProfile(vendorId) : null;
-});
-
-/**
- * Vendor sender name for transactional email subjects (lib/auth.ts). Deliberately
- * NOT the `cache()`d accessor: it runs inside Better Auth's route-handler callback,
- * not a React render. Falls back to the platform default when unresolved.
- */
-export async function getCurrentVendorSenderName(): Promise<string> {
-  const vendorId = await getCurrentVendorIdOrNull();
-  if (!vendorId) return DEFAULT_SENDER_NAME;
-  return (await fetchVendorProfile(vendorId)).senderName;
-}
+/* The two request-scoped accessors that used to sit here — `getCurrentVendorProfile`
+ * and `getCurrentVendorSenderName` — now live in `lib/vendor-service.ts` (#252).
+ * They resolved the vendor from the request host, which is the one thing this
+ * module must not do if a plain `tsx` script is to be able to import it. */
 
 export async function getVendorConfig(vendorId: string) {
   return getPrisma().vendorConfig.findUnique({ where: { vendorId } });

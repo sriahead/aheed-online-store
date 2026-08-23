@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { CookieBanner } from "@/components/consent/CookieBanner";
-import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { brandStyle } from "@/lib/vendor-theme";
 
 // force-dynamic: the Header reads the session (getAuth → getPrisma), which only
