@@ -1,5 +1,5 @@
 import { revalidatePath } from "next/cache";
-import { getCartRepository } from "@/lib/repositories/cart";
+import { getCartRepository } from "@/lib/cart-service";
 import { clearGuestToken, type CartIdentity } from "@/lib/cart-identity";
 
 /**

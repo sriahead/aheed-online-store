@@ -416,6 +416,135 @@ export async function eraseVendorData(
   });
 }
 
+/**
+ * A guest's Art. 15 export: exactly one order, proven by the order-number/email
+ * pair (#253, P8.1b).
+ *
+ * Deliberately a NARROWER shape than `PersonalDataExport`, not a reuse of it.
+ * That type is built around an `identity` — a `User` row, its linked accounts
+ * and its sessions — and a guest has none of those; there is no account, only an
+ * order with an email attached to it. Reusing the wider type would have meant
+ * emitting a dozen empty arrays and a fabricated identity block, which reads as
+ * "we hold nothing of this kind about you" when the truth is "that question does
+ * not apply to a guest". The overlapping parts — the `order` and `address`
+ * blocks — are field-for-field the same as their counterparts there, so the two
+ * documents remain the same format for the data they both describe.
+ */
+export interface GuestOrderExport {
+  exportedAt: string;
+  vendor: { id: string; name: string };
+  /**
+   * SCOPE, stated in the document itself. The household-mailbox limit
+   * (specs/2026-08-19-p7-closeout/plan.md Part C decision 2) means this covers
+   * the ONE order proven by the credential pair, never every order sharing the
+   * address — so the export says so rather than leaving a reader to assume it is
+   * everything held about them.
+   */
+  scope: string;
+  order: {
+    orderNumber: string;
+    status: string;
+    currency: string;
+    subtotalPence: number;
+    discountPence: number;
+    deliveryFeePence: number;
+    totalPence: number;
+    createdAt: Date;
+    guestEmail: string | null;
+    items: { productName: string; quantity: number; unitPricePence: number }[];
+    payment: { provider: string; status: string; amountPence: number; createdAt: Date } | null;
+    statusHistory: { status: string; note: string | null; createdAt: Date }[];
+  };
+  address: {
+    recipientName: string;
+    phone: string;
+    line1: string;
+    line2: string | null;
+    city: string;
+    postcode: string;
+    notes: string | null;
+    createdAt: Date;
+  } | null;
+}
+
+const GUEST_EXPORT_SCOPE =
+  "This document covers only the single order identified by the order number and email address " +
+  "supplied. It is not a record of every order placed from that email address: an order number is " +
+  "proof of one order, not proof of identity, so a broader export would disclose other people's " +
+  "orders to anyone holding one order number for a shared household mailbox.";
+
+/**
+ * Everything this vendor holds about one guest order (Art. 15), keyed by the
+ * same order-number/email credential pair `eraseGuestOrderData` uses below.
+ *
+ * The pair is verified AT THE QUERY LEVEL — `orderNumber`, `vendorId`,
+ * `userId: null` and a case-insensitive `guestEmail` all sit in the WHERE, so a
+ * wrong email does not match rather than being compared afterwards, and an
+ * account-holder's order is unreachable through this door however its number is
+ * guessed. Returns `null` on no match, exactly like the erasure, so a caller
+ * cannot distinguish "no such order" from "wrong email".
+ */
+export async function exportGuestOrderData(
+  prisma: AnyDb,
+  vendorId: string,
+  orderNumber: string,
+  email: string,
+): Promise<GuestOrderExport | null> {
+  const [vendor, order] = await Promise.all([
+    prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { id: true, name: true } }),
+    prisma.order.findFirst({
+      where: {
+        orderNumber,
+        vendorId,
+        userId: null,
+        guestEmail: { equals: email, mode: "insensitive" },
+      },
+      select: {
+        orderNumber: true,
+        status: true,
+        currency: true,
+        subtotalPence: true,
+        discountPence: true,
+        deliveryFeePence: true,
+        totalPence: true,
+        createdAt: true,
+        guestEmail: true,
+        items: { select: { productName: true, quantity: true, unitPricePence: true } },
+        payment: {
+          select: { provider: true, status: true, amountPence: true, createdAt: true },
+        },
+        statusEvents: {
+          select: { status: true, note: true, createdAt: true },
+          orderBy: { createdAt: "asc" },
+        },
+        address: {
+          select: {
+            recipientName: true,
+            phone: true,
+            line1: true,
+            line2: true,
+            city: true,
+            postcode: true,
+            notes: true,
+            createdAt: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  if (!order) return null;
+
+  const { statusEvents, address, ...rest } = order;
+  return {
+    exportedAt: new Date().toISOString(),
+    vendor,
+    scope: GUEST_EXPORT_SCOPE,
+    order: { ...rest, statusHistory: statusEvents },
+    address,
+  };
+}
+
 export interface GuestEraseResult {
   /** Echoed back so the caller can confirm what was erased without re-reading. */
   orderNumber: string;

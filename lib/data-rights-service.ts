@@ -3,12 +3,14 @@ import { getCurrentVendorId } from "@/lib/tenant";
 import {
   eraseGuestOrderData,
   eraseVendorData,
+  exportGuestOrderData,
   exportPersonalData,
   getAccountProviders,
   hasVendorMembership,
   updateDisplayName,
   type EraseResult,
   type GuestEraseResult,
+  type GuestOrderExport,
   type PersonalDataExport,
 } from "@/lib/repositories/data-rights";
 
@@ -89,6 +91,8 @@ export function getDataRightsRepository(): DataRightsRepository {
  */
 export interface GuestDataRightsService {
   eraseGuestOrder(orderNumber: string, email: string): Promise<GuestEraseResult | null>;
+  /** Art. 15 counterpart to the erasure above (#253) — same credential pair, same scope limit. */
+  exportGuestOrder(orderNumber: string, email: string): Promise<GuestOrderExport | null>;
 }
 
 export function getGuestDataRightsService(): GuestDataRightsService {
@@ -98,6 +102,12 @@ export function getGuestDataRightsService(): GuestDataRightsService {
   return {
     async eraseGuestOrder(orderNumber, email) {
       return eraseGuestOrderData(getPrismaWs(), await vendorId(), orderNumber, email);
+    },
+
+    async exportGuestOrder(orderNumber, email) {
+      // The FETCH client, not the WebSocket one: this is a read, and CLAUDE.md's
+      // hybrid strategy keeps sockets for the transactions that actually need them.
+      return exportGuestOrderData(getPrisma(), await vendorId(), orderNumber, email);
     },
   };
 }

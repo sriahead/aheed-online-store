@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getAuth } from "@/lib/auth";
-import { getReviewRepository } from "@/lib/repositories/reviews";
+import { getReviewRepository } from "@/lib/reviews-service";
 import { parseRating } from "./validate-rating";
 
 /**

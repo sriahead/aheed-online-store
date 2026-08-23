@@ -1,13 +1,13 @@
 import { MapPin, Sparkles, Truck, ShieldCheck, CreditCard, BellRing } from "lucide-react";
-import { getCategoryRepository } from "@/lib/repositories/categories";
-import { getProductRepository } from "@/lib/repositories/products";
+import { getCategoryRepository } from "@/lib/categories-service";
+import { getProductRepository } from "@/lib/products-service";
 import { getEnv } from "@/lib/config";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { PromoCarousel } from "@/components/layout/PromoCarousel";
 import { ProductRow } from "@/components/product/ProductRow";
 import { formatPrice } from "@/components/product/format-price";
 import { isDeliverable } from "@/lib/delivery";
-import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getCurrentVendorPromotions } from "@/lib/promotions-service";
 
 export const dynamic = "force-dynamic";

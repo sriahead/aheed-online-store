@@ -68,6 +68,18 @@ async function main() {
     await upsertVendorDomain(SRIMART_VENDOR_ID, srimartHost);
   } else if (srimartHost && !aheedHost) {
     console.log("SEED_SRIMART_HOST set but SEED_AHEED_HOST is not — skipping SriMart to stay safe");
+  } else if (aheedHost && !srimartHost) {
+    // #276 — this was the SILENT path, and it is the one that matters. It leaves a
+    // database that looks correctly seeded while holding only one vendor, so every
+    // multi-tenant check (per-vendor branding, cross-tenant isolation, SriMart's
+    // deliberately different brand colours) silently exercises nothing. Warn loudly
+    // rather than exiting non-zero: single-vendor seeding is a legitimate thing to
+    // want, it just must not happen by accident.
+    console.warn(
+      "WARNING: SEED_SRIMART_HOST unset — SriMart was NOT seeded. This database has ONE vendor,\n" +
+        "         so any multi-tenant check against it proves nothing. Set SEED_SRIMART_HOST\n" +
+        "         (alongside SEED_AHEED_HOST) if you meant to seed both vendors.",
+    );
   }
 }
 

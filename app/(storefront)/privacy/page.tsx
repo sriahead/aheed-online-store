@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 
 export const dynamic = "force-dynamic";
 

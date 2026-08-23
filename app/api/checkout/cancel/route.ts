@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getOrderRepository, getWebhookOrderService } from "@/lib/repositories/orders";
-import { getCartRepository } from "@/lib/repositories/cart";
+import { getOrderRepository, getWebhookOrderService } from "@/lib/orders-service";
+import { getCartRepository } from "@/lib/cart-service";
 import { getCartIdentity } from "@/lib/cart-identity";
 import { scopedToUser } from "@/features/cart/shared";
 

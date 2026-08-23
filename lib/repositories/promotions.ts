@@ -20,9 +20,16 @@ import type { getPrisma } from "@/lib/db";
  * `lib/promotions-service.ts` instead of here: it necessarily resolves a live
  * client and the current vendor, and if it lived in this file that would be a
  * second entry point request context could reach these exports through, making
- * the module's contract true of some exports and not others. `#252` tracks the
- * nine legacy facades that got this wrong; this slice adds no tenth, and
- * `tests/repository-vendor-scoping.test.ts` is what enforces it.
+ * the module's contract true of some exports and not others.
+ *
+ * `tests/repository-purity.test.ts` is what enforces it. This comment named
+ * `tests/repository-vendor-scoping.test.ts` until P8.1b, which was wrong: that
+ * test checks whether an export QUERIES a vendor-scoped model without taking a
+ * vendor id, which says nothing about where a facade lives, and it could not
+ * see a delegating facade at all. `#252` tracked the nine legacy facades that
+ * got this wrong and is now closed — they live in sibling
+ * `lib/<name>-service.ts` modules, and a tenth cannot be added here without
+ * failing the purity test.
  */
 
 type Db = ReturnType<typeof getPrisma>;

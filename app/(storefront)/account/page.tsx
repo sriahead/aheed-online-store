@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { LogoutButton } from "@/features/auth/components/LogoutButton";
-import { getLoyaltyRepository } from "@/lib/repositories/loyalty";
+import { getLoyaltyRepository } from "@/lib/loyalty-service";
 
 export const dynamic = "force-dynamic";
 

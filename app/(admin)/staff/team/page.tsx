@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getVendorTeam } from "@/lib/repositories/roles";
+import { getVendorTeam } from "@/lib/roles-service";
 import { AssignRoleForm } from "@/components/staff/team/AssignRoleForm";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 

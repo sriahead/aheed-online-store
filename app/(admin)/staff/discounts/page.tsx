@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getDiscountRepository } from "@/lib/repositories/discounts";
+import { getDiscountRepository } from "@/lib/discounts-service";
 import { DiscountCodesPanel } from "@/components/staff/DiscountCodesPanel";
 
 // Reads the session and this vendor's live codes — must render per-request.

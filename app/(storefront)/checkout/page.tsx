@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { getCartRepository } from "@/lib/repositories/cart";
+import { getCartRepository } from "@/lib/cart-service";
 import { getCartIdentity } from "@/lib/cart-identity";
-import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getAuth } from "@/lib/auth";
 import { computeTotals } from "@/lib/order-totals";
 import { formatPrice } from "@/components/product/format-price";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
-import { getLoyaltyRepository } from "@/lib/repositories/loyalty";
+import { getLoyaltyRepository } from "@/lib/loyalty-service";
 
 // Prisma's @prisma/client/wasm can't load during next build's Node-based
 // static prerendering — same reason as the other DB-backed storefront routes.

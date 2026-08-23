@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 
 // Vendor-aware PWA manifest (ADR-004 slice 4 follow-up). Resolves per request from the
 // host: name/short_name from the vendor, theme/background from its brand primitives.

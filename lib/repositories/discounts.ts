@@ -1,5 +1,4 @@
 import { getPrisma } from "@/lib/db";
-import { getCurrentVendorId } from "@/lib/tenant";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import {
   evaluateCode,
@@ -352,19 +351,6 @@ export async function deactivateCodeForVendor(vendorId: string, codeId: string):
   return deactivateCode(getPrisma(), vendorId, codeId);
 }
 
-/**
- * Request-scoped read facade for pages, matching `getLoyaltyRepository()`.
- * Constructs Prisma fresh per call — a cached client cannot cross a Workers
- * request boundary (CLAUDE.md).
- */
-export function getDiscountRepository() {
-  const prisma = getPrisma();
-  let vendorIdPromise: Promise<string> | undefined;
-  const vendorId = () => (vendorIdPromise ??= getCurrentVendorId());
-
-  return {
-    async list(): Promise<CodeListRow[]> {
-      return listCodes(prisma, await vendorId());
-    },
-  };
-}
+/* The request-scoped read facade that used to sit here now lives in
+ * `lib/discounts-service.ts` (#252) — it resolves the current vendor from
+ * request context, which this module deliberately never does. */
