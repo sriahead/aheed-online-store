@@ -15,7 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getOrderRepository } from "@/lib/repositories/orders";
+import { getOrderRepository } from "@/lib/orders-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 
 // Reads the session and this vendor's live order counts — must render per-request.

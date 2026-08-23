@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getLoyaltyRepository } from "@/lib/repositories/loyalty";
+import { getLoyaltyRepository } from "@/lib/loyalty-service";
 import { LoyaltyConfigForm } from "@/components/staff/LoyaltyConfigForm";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 

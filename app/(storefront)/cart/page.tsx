@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ListChecks } from "lucide-react";
-import { getCartRepository } from "@/lib/repositories/cart";
+import { getCartRepository } from "@/lib/cart-service";
 import { getCartIdentity } from "@/lib/cart-identity";
-import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getEnv } from "@/lib/config";
 import { CartContents } from "@/components/cart/CartContents";
 import { MergePrompt } from "@/components/cart/MergePrompt";

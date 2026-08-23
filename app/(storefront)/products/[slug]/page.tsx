@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getProductRepository } from "@/lib/repositories/products";
-import { getReviewRepository } from "@/lib/repositories/reviews";
+import { getProductRepository } from "@/lib/products-service";
+import { getReviewRepository } from "@/lib/reviews-service";
 import { getAuth } from "@/lib/auth";
 import { getEnv } from "@/lib/config";
 import { formatPrice } from "@/components/product/format-price";

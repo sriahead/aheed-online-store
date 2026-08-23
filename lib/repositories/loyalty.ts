@@ -1,5 +1,4 @@
 import { getPrisma, getPrismaWs } from "@/lib/db";
-import { getCurrentVendorId } from "@/lib/tenant";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import {
   DEFAULT_MULTIPLIER_BPS,
@@ -533,51 +532,32 @@ export interface LedgerRow {
 const LEDGER_PAGE_SIZE = 50;
 
 /**
- * Request-scoped read facade for the account page, matching
- * `getOrderRepository()`'s shape — resolves prisma and the current vendor here so
- * the app layer never touches lib/db.
+ * This vendor's ledger entries for this user only, newest first.
+ *
+ * Takes `prisma` and `vendorId` explicitly and reads no request context — the
+ * request-scoped facade that resolves both lives in `lib/loyalty-service.ts`
+ * (#252).
  */
-export function getLoyaltyRepository() {
-  const prisma = getPrisma();
-  let vendorIdPromise: Promise<string> | undefined;
-  const vendorId = () => (vendorIdPromise ??= getCurrentVendorId());
-
-  return {
-    async config(): Promise<LoyaltyConfig> {
-      return getLoyaltyConfig(prisma, await vendorId());
+export async function listLedgerForUser(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  userId: string,
+): Promise<LedgerRow[]> {
+  const rows = await prisma.loyaltyLedgerEntry.findMany({
+    where: { vendorId, userId },
+    select: {
+      kind: true,
+      points: true,
+      createdAt: true,
+      order: { select: { orderNumber: true } },
     },
-
-    async tiers(): Promise<LoyaltyTier[]> {
-      return getTiers(prisma, await vendorId());
-    },
-
-    async balance(userId: string, config: LoyaltyConfig): Promise<LoyaltyBalance> {
-      return getBalance(prisma, await vendorId(), userId, config);
-    },
-
-    async windowSpend(userId: string, tierWindowDays: number): Promise<number> {
-      return windowSpendPence(prisma, await vendorId(), userId, tierWindowDays);
-    },
-
-    /** This vendor's entries for this user only, newest first. */
-    async ledger(userId: string): Promise<LedgerRow[]> {
-      const rows = await prisma.loyaltyLedgerEntry.findMany({
-        where: { vendorId: await vendorId(), userId },
-        select: {
-          kind: true,
-          points: true,
-          createdAt: true,
-          order: { select: { orderNumber: true } },
-        },
-        orderBy: { createdAt: "desc" },
-        take: LEDGER_PAGE_SIZE,
-      });
-      return rows.map((row) => ({
-        kind: row.kind,
-        points: row.points,
-        createdAt: row.createdAt,
-        orderNumber: row.order.orderNumber,
-      }));
-    },
-  };
+    orderBy: { createdAt: "desc" },
+    take: LEDGER_PAGE_SIZE,
+  });
+  return rows.map((row) => ({
+    kind: row.kind,
+    points: row.points,
+    createdAt: row.createdAt,
+    orderNumber: row.order.orderNumber,
+  }));
 }

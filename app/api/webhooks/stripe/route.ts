@@ -1,6 +1,6 @@
 import { getEnv } from "@/lib/config";
 import { parseCheckoutEvent, verifyStripeSignature } from "@/lib/stripe-webhook";
-import { getWebhookOrderService } from "@/lib/repositories/orders";
+import { getWebhookOrderService } from "@/lib/orders-service";
 import { sendOrderConfirmationEmail } from "@/features/checkout/send-confirmation";
 
 export const dynamic = "force-dynamic";

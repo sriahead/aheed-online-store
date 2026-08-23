@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Poppins } from "next/font/google";
-import { getCurrentVendorProfile } from "@/lib/repositories/vendor";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import "./globals.css";
 
 const poppins = Poppins({

@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { getAuth } from "@/lib/auth";
-import { getLoyaltyRepository } from "@/lib/repositories/loyalty";
+import { getLoyaltyRepository } from "@/lib/loyalty-service";
 import { resolveTier } from "@/lib/loyalty";
 import { formatPrice } from "@/components/product/format-price";
 import { formatOrderDate } from "@/lib/order-status";

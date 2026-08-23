@@ -1,6 +1,5 @@
 import type { Prisma } from "@prisma/client";
 import { getPrisma, getPrismaWs } from "@/lib/db";
-import { getCurrentVendorId } from "@/lib/tenant";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import { effectiveStock } from "@/lib/cart-rules";
 import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
@@ -129,177 +128,197 @@ function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereInput {
 }
 
 /**
- * Prisma-backed ProductRepository. Constructed fresh per call, never cached
- * across requests — matches lib/db.ts's getPrisma() contract on Workers.
+ * Storefront product reads (#252). Every one takes `prisma` and `vendorId` as
+ * explicit arguments and reads no request context — the request-scoped facade
+ * that resolves both lives in `lib/products-service.ts`.
  */
-export function getProductRepository(): ProductRepository {
-  const prisma = getPrisma();
-  // Resolve the current vendor once per repository instance (request-scoped);
-  // never cached across requests. Every query below is scoped to it (ADR-004 slice 2).
-  let vendorIdPromise: Promise<string> | undefined;
-  const vendorId = () => (vendorIdPromise ??= getCurrentVendorId());
+async function findPage(
+  prisma: ReturnType<typeof getPrisma>,
+  where: Prisma.ProductWhereInput,
+  { take, cursor }: { take: number; cursor?: string },
+): Promise<ProductPage> {
+  // Keyset (cursor) pagination on (createdAt, id) — never OFFSET, per
+  // specs/architecture.md's pagination strategy. Over-fetch by one to
+  // know whether a next page exists without a separate count query.
+  const rows = await prisma.product.findMany({
+    where,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: take + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      basePrice: true,
+      unitLabel: true,
+      origin: true,
+      originalPrice: true,
+      isHalal: true,
+      isFresh: true,
+      isOrganic: true,
+      averageRating: true,
+      reviewCount: true,
+      images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
+      inventory: { select: { quantity: true } },
+    },
+  });
 
-  async function findPage(
-    where: Prisma.ProductWhereInput,
-    { take, cursor }: { take: number; cursor?: string },
-  ): Promise<ProductPage> {
-    // Keyset (cursor) pagination on (createdAt, id) — never OFFSET, per
-    // specs/architecture.md's pagination strategy. Over-fetch by one to
-    // know whether a next page exists without a separate count query.
-    const rows = await prisma.product.findMany({
-      where,
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      take: take + 1,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        basePrice: true,
-        unitLabel: true,
-        origin: true,
-        originalPrice: true,
-        isHalal: true,
-        isFresh: true,
-        isOrganic: true,
-        averageRating: true,
-        reviewCount: true,
-        images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
-        inventory: { select: { quantity: true } },
-      },
-    });
-
-    const hasMore = rows.length > take;
-    const page = hasMore ? rows.slice(0, take) : rows;
-
-    return {
-      items: page.map((p) => ({
-        id: p.id,
-        slug: p.slug,
-        name: p.name,
-        basePrice: p.basePrice,
-        unitLabel: p.unitLabel,
-        origin: p.origin,
-        originalPrice: p.originalPrice,
-        isHalal: p.isHalal,
-        isFresh: p.isFresh,
-        isOrganic: p.isOrganic,
-        averageRating: p.averageRating,
-        reviewCount: p.reviewCount,
-        primaryImage: p.images[0] ?? null,
-        inStock: (p.inventory?.quantity ?? 0) > 0,
-      })),
-      nextCursor: hasMore ? page[page.length - 1].id : null,
-    };
-  }
+  const hasMore = rows.length > take;
+  const page = hasMore ? rows.slice(0, take) : rows;
 
   return {
-    async listByCategory(categoryId, { take, cursor, ...filters }) {
-      return findPage(
-        { vendorId: await vendorId(), categoryId, isActive: true, ...buildFilterWhere(filters) },
-        { take, cursor },
-      );
-    },
-
-    async list({ take, cursor, ...filters }) {
-      return findPage(
-        { vendorId: await vendorId(), isActive: true, ...buildFilterWhere(filters) },
-        { take, cursor },
-      );
-    },
-
-    async search(query, { take, cursor, ...filters }) {
-      const trimmed = query.trim();
-      if (!trimmed) return { items: [], nextCursor: null };
-
-      return findPage(
-        {
-          vendorId: await vendorId(),
-          isActive: true,
-          ...buildFilterWhere(filters),
-          OR: [
-            { name: { contains: trimmed, mode: "insensitive" } },
-            { description: { contains: trimmed, mode: "insensitive" } },
-          ],
-        },
-        { take, cursor },
-      );
-    },
-
-    async getBySlug(slug) {
-      const product = await prisma.product.findFirst({
-        where: { vendorId: await vendorId(), slug, isActive: true },
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          description: true,
-          basePrice: true,
-          unitLabel: true,
-          origin: true,
-          originalPrice: true,
-          isHalal: true,
-          isFresh: true,
-          isOrganic: true,
-          averageRating: true,
-          reviewCount: true,
-          images: { orderBy: { sortOrder: "asc" }, select: productImageSelect },
-          inventory: { select: { quantity: true } },
-        },
-      });
-      if (!product) return null;
-
-      const { inventory, images, ...rest } = product;
-      return {
-        ...rest,
-        images,
-        primaryImage: images.find((i) => i.isPrimary) ?? images[0] ?? null,
-        inStock: (inventory?.quantity ?? 0) > 0,
-      };
-    },
-
-    async availableSpecialities() {
-      const base = { vendorId: await vendorId(), isActive: true };
-      const [halal, fresh, organic] = await Promise.all([
-        prisma.product.findFirst({ where: { ...base, isHalal: true }, select: { id: true } }),
-        prisma.product.findFirst({ where: { ...base, isFresh: true }, select: { id: true } }),
-        prisma.product.findFirst({ where: { ...base, isOrganic: true }, select: { id: true } }),
-      ]);
-      return { halal: halal !== null, fresh: fresh !== null, organic: organic !== null };
-    },
-
-    async matchListTerms(terms) {
-      if (terms.length === 0) return [];
-
-      const rows = await prisma.product.findMany({
-        where: {
-          vendorId: await vendorId(),
-          isActive: true,
-          OR: terms.map((term) => ({
-            name: { contains: term, mode: "insensitive" as const },
-          })),
-        },
-        take: CANDIDATE_QUERY_LIMIT,
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          basePrice: true,
-          unitLabel: true,
-          inventory: { select: { quantity: true } },
-        },
-      });
-
-      return rows.map((row) => ({
-        id: row.id,
-        slug: row.slug,
-        name: row.name,
-        basePrice: row.basePrice,
-        unitLabel: row.unitLabel,
-        stock: effectiveStock(row.inventory?.quantity),
-      }));
-    },
+    items: page.map((p) => ({
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      basePrice: p.basePrice,
+      unitLabel: p.unitLabel,
+      origin: p.origin,
+      originalPrice: p.originalPrice,
+      isHalal: p.isHalal,
+      isFresh: p.isFresh,
+      isOrganic: p.isOrganic,
+      averageRating: p.averageRating,
+      reviewCount: p.reviewCount,
+      primaryImage: p.images[0] ?? null,
+      inStock: (p.inventory?.quantity ?? 0) > 0,
+    })),
+    nextCursor: hasMore ? page[page.length - 1].id : null,
   };
+}
+
+export async function listProductsByCategory(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  categoryId: string,
+  { take, cursor, ...filters }: { take: number; cursor?: string } & ProductFilters,
+): Promise<ProductPage> {
+  return findPage(
+    prisma,
+    { vendorId, categoryId, isActive: true, ...buildFilterWhere(filters) },
+    { take, cursor },
+  );
+}
+
+export async function listProducts(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  { take, cursor, ...filters }: { take: number; cursor?: string } & ProductFilters,
+): Promise<ProductPage> {
+  return findPage(
+    prisma,
+    { vendorId, isActive: true, ...buildFilterWhere(filters) },
+    { take, cursor },
+  );
+}
+
+export async function searchProducts(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  query: string,
+  { take, cursor, ...filters }: { take: number; cursor?: string } & ProductFilters,
+): Promise<ProductPage> {
+  const trimmed = query.trim();
+  if (!trimmed) return { items: [], nextCursor: null };
+
+  return findPage(
+    prisma,
+    {
+      vendorId,
+      isActive: true,
+      ...buildFilterWhere(filters),
+      OR: [
+        { name: { contains: trimmed, mode: "insensitive" } },
+        { description: { contains: trimmed, mode: "insensitive" } },
+      ],
+    },
+    { take, cursor },
+  );
+}
+
+export async function getProductBySlug(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  slug: string,
+): Promise<ProductDetail | null> {
+  const product = await prisma.product.findFirst({
+    where: { vendorId, slug, isActive: true },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      description: true,
+      basePrice: true,
+      unitLabel: true,
+      origin: true,
+      originalPrice: true,
+      isHalal: true,
+      isFresh: true,
+      isOrganic: true,
+      averageRating: true,
+      reviewCount: true,
+      images: { orderBy: { sortOrder: "asc" }, select: productImageSelect },
+      inventory: { select: { quantity: true } },
+    },
+  });
+  if (!product) return null;
+
+  const { inventory, images, ...rest } = product;
+  return {
+    ...rest,
+    images,
+    primaryImage: images.find((i) => i.isPrimary) ?? images[0] ?? null,
+    inStock: (inventory?.quantity ?? 0) > 0,
+  };
+}
+
+export async function getAvailableSpecialities(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+): Promise<AvailableSpecialities> {
+  const base = { vendorId, isActive: true };
+  const [halal, fresh, organic] = await Promise.all([
+    prisma.product.findFirst({ where: { ...base, isHalal: true }, select: { id: true } }),
+    prisma.product.findFirst({ where: { ...base, isFresh: true }, select: { id: true } }),
+    prisma.product.findFirst({ where: { ...base, isOrganic: true }, select: { id: true } }),
+  ]);
+  return { halal: halal !== null, fresh: fresh !== null, organic: organic !== null };
+}
+
+export async function matchProductListTerms(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  terms: string[],
+): Promise<ListCandidate[]> {
+  if (terms.length === 0) return [];
+
+  const rows = await prisma.product.findMany({
+    where: {
+      vendorId,
+      isActive: true,
+      OR: terms.map((term) => ({
+        name: { contains: term, mode: "insensitive" as const },
+      })),
+    },
+    take: CANDIDATE_QUERY_LIMIT,
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      basePrice: true,
+      unitLabel: true,
+      inventory: { select: { quantity: true } },
+    },
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    basePrice: row.basePrice,
+    unitLabel: row.unitLabel,
+    stock: effectiveStock(row.inventory?.quantity),
+  }));
 }
 
 /* ------------------------------------------------------------------------- *

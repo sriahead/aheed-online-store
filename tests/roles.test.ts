@@ -56,7 +56,7 @@ describe("setVendorRole — role-transition matrix", () => {
 
   it("platform-admin upgrading USER to ADMIN -> pass", async () => {
     requireVendorRole.mockResolvedValue(PLATFORM_ADMIN_AUTH);
-    const { setVendorRole } = await import("@/lib/repositories/roles");
+    const { setVendorRole } = await import("@/lib/roles-service");
 
     await expect(setVendorRole("target@example.com", "ADMIN")).resolves.toBeUndefined();
     expect(txUpsert).toHaveBeenCalledWith(
@@ -71,7 +71,7 @@ describe("setVendorRole — role-transition matrix", () => {
 
   it("ADMIN (store admin) upgrading USER to STAFF -> pass", async () => {
     requireVendorRole.mockResolvedValue(STORE_ADMIN_AUTH);
-    const { setVendorRole } = await import("@/lib/repositories/roles");
+    const { setVendorRole } = await import("@/lib/roles-service");
 
     await expect(setVendorRole("target@example.com", "STAFF")).resolves.toBeUndefined();
     expect(txUpsert).toHaveBeenCalledWith(
@@ -81,7 +81,7 @@ describe("setVendorRole — role-transition matrix", () => {
 
   it("ADMIN (store admin) upgrading USER to ADMIN -> fail", async () => {
     requireVendorRole.mockResolvedValue(STORE_ADMIN_AUTH);
-    const { setVendorRole } = await import("@/lib/repositories/roles");
+    const { setVendorRole } = await import("@/lib/roles-service");
 
     await expect(setVendorRole("target@example.com", "ADMIN")).rejects.toThrow(
       /platform-admin can grant/i,
@@ -91,7 +91,7 @@ describe("setVendorRole — role-transition matrix", () => {
 
   it("STAFF upgrading USER to STAFF -> fail (requireVendorRole never grants STAFF entry)", async () => {
     requireVendorRole.mockResolvedValue(FORBIDDEN_AUTH);
-    const { setVendorRole } = await import("@/lib/repositories/roles");
+    const { setVendorRole } = await import("@/lib/roles-service");
 
     await expect(setVendorRole("target@example.com", "STAFF")).rejects.toThrow(/unauthorized/i);
     expect(transaction).not.toHaveBeenCalled();
@@ -100,7 +100,7 @@ describe("setVendorRole — role-transition matrix", () => {
   it("blocks a store admin from modifying a platform-admin's privileges", async () => {
     requireVendorRole.mockResolvedValue(STORE_ADMIN_AUTH);
     findUniqueUser.mockResolvedValue({ ...TARGET_USER, role: "ADMIN" });
-    const { setVendorRole } = await import("@/lib/repositories/roles");
+    const { setVendorRole } = await import("@/lib/roles-service");
 
     await expect(setVendorRole("target@example.com", "STAFF")).rejects.toThrow(
       /cannot modify a platform-admin/i,
@@ -111,7 +111,7 @@ describe("setVendorRole — role-transition matrix", () => {
   it("refuses a redundant assignment of the role the user already has", async () => {
     requireVendorRole.mockResolvedValue(STORE_ADMIN_AUTH);
     findUniqueMembership.mockResolvedValue({ role: "STAFF" });
-    const { setVendorRole } = await import("@/lib/repositories/roles");
+    const { setVendorRole } = await import("@/lib/roles-service");
 
     await expect(setVendorRole("target@example.com", "STAFF")).rejects.toThrow(/already assigned/i);
     expect(transaction).not.toHaveBeenCalled();
@@ -119,7 +119,7 @@ describe("setVendorRole — role-transition matrix", () => {
 
   it("writes the membership change and the audit log inside the same transaction", async () => {
     requireVendorRole.mockResolvedValue(STORE_ADMIN_AUTH);
-    const { setVendorRole } = await import("@/lib/repositories/roles");
+    const { setVendorRole } = await import("@/lib/roles-service");
 
     await setVendorRole("target@example.com", "STAFF");
 
@@ -132,7 +132,7 @@ describe("setVendorRole — role-transition matrix", () => {
 
   it("runs the write at Serializable isolation", async () => {
     requireVendorRole.mockResolvedValue(STORE_ADMIN_AUTH);
-    const { setVendorRole } = await import("@/lib/repositories/roles");
+    const { setVendorRole } = await import("@/lib/roles-service");
 
     await setVendorRole("target@example.com", "STAFF");
 
@@ -143,7 +143,7 @@ describe("setVendorRole — role-transition matrix", () => {
   it("never runs the self-lockout count when the actor and target are different people", async () => {
     // STORE_ADMIN_AUTH's actor id ("actor-1") differs from TARGET_USER's id ("target-1").
     requireVendorRole.mockResolvedValue(STORE_ADMIN_AUTH);
-    const { setVendorRole } = await import("@/lib/repositories/roles");
+    const { setVendorRole } = await import("@/lib/roles-service");
 
     await setVendorRole("target@example.com", "STAFF");
     expect(txCount).not.toHaveBeenCalled();
@@ -163,7 +163,7 @@ describe("setVendorRole — self-lockout guard", () => {
     findUniqueMembership.mockResolvedValue({ role: "ADMIN" });
     txCount.mockResolvedValue(1);
 
-    const { setVendorRole } = await import("@/lib/repositories/roles");
+    const { setVendorRole } = await import("@/lib/roles-service");
 
     await expect(setVendorRole("target@example.com", null)).rejects.toThrow(
       /cannot demote the last remaining store admin/i,
@@ -182,7 +182,7 @@ describe("setVendorRole — self-lockout guard", () => {
     findUniqueMembership.mockResolvedValue({ role: "ADMIN" });
     txCount.mockResolvedValue(2);
 
-    const { setVendorRole } = await import("@/lib/repositories/roles");
+    const { setVendorRole } = await import("@/lib/roles-service");
 
     await expect(setVendorRole("target@example.com", null)).resolves.toBeUndefined();
     expect(txDeleteMany).toHaveBeenCalledTimes(1);
@@ -197,7 +197,7 @@ describe("setVendorRole — self-lockout guard", () => {
     findUniqueUser.mockResolvedValue({ ...TARGET_USER, id: "target-1", role: "ADMIN" });
     findUniqueMembership.mockResolvedValue({ role: "ADMIN" });
 
-    const { setVendorRole } = await import("@/lib/repositories/roles");
+    const { setVendorRole } = await import("@/lib/roles-service");
 
     // Platform-admin transcends vendors regardless of this vendor's VendorMembership
     // count, so the guard (scoped to `auth.via === "ADMIN"`) must not fire here.

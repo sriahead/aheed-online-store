@@ -1,6 +1,6 @@
 "use server";
 
-import { getCartRepository } from "@/lib/repositories/cart";
+import { getCartRepository } from "@/lib/cart-service";
 import { clearGuestToken, getCartIdentity } from "@/lib/cart-identity";
 import { isMergeResolution } from "@/lib/cart-rules";
 import { revalidateCartSurfaces } from "./shared";

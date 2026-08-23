@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ClipboardList, Search } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getOrderRepository } from "@/lib/repositories/orders";
+import { getOrderRepository } from "@/lib/orders-service";
 import { ORDER_STATUSES, formatOrderDate, nextStatus, orderStatusLabel } from "@/lib/order-status";
 import { STATUS_ALL, parseStaffOrdersQuery, staffOrdersHref } from "@/lib/staff-orders-query";
 import { formatPrice } from "@/components/product/format-price";

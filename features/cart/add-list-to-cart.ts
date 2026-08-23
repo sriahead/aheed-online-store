@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getCartRepository } from "@/lib/repositories/cart";
+import { getCartRepository } from "@/lib/cart-service";
 import { getUserId, issueGuestToken, type CartIdentity } from "@/lib/cart-identity";
 import type { MergeLine } from "@/lib/cart-rules";
 import { MAX_LINE_QUANTITY } from "@/lib/shopping-list";

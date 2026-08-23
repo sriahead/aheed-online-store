@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCategoryRepository } from "@/lib/repositories/categories";
+import { getCategoryRepository } from "@/lib/categories-service";
 
 // Without this, Next's build-time static optimization tries to prerender this
 // page in plain Node — but lib/db.ts loads Prisma via @prisma/client/wasm,
