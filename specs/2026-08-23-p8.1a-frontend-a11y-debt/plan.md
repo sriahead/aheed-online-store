@@ -1,5 +1,5 @@
 ---
-id: p8.1a-frontend-a11y-debt
+id: p8-1a-frontend-a11y-debt-plan
 title: "P8.1a — Frontend & Accessibility Debt (plan)"
 audience: [dev]
 type: spec

@@ -90,3 +90,18 @@ needed here either — same result). Two things came out of it, neither a code d
 
 No CHANGELOG update — neither change altered observable behaviour; both close out verification gaps
 in the spec/validation artifacts themselves.
+
+## Fix pass 2 (post-Ship, CI-caught)
+
+PR #338's `gates` run failed on **KMS front-matter validation**: `plan.md`'s `id:
+p8.1a-frontend-a11y-debt` doesn't match the KMS schema's `id` regex (`kms/schema/frontmatter.ts`,
+`^[a-z0-9-]+$` — no dots). Root cause, not a check to loosen: every other dotted-phase slice in
+`specs/` (`p6.5`, `p6.7`, `p7.5a`, `p7.5b`, …) replaces the dot with a dash and suffixes `-plan`
+(e.g. `p7-5a-reports-cart-integrity-plan`) — this slice's `plan.md` just didn't follow that
+convention when it was written at `/spec`, and nothing in the local gate suite (`lint`, `typecheck`,
+`test`, `format:check`, `build`) covers KMS front-matter, exactly as `CLAUDE.md`'s "KMS docs"
+section already documents for a different failure mode in the same pipeline. Fixed by renaming the
+id to `p8-1a-frontend-a11y-debt-plan`, matching convention. Verified locally before pushing the fix:
+`npm run kms:validate` now reports `invalid front-matter (failing): 0`, and `npm run
+kms:assemble:internal` succeeds (97 docs). No CHANGELOG entry — front-matter isn't observable
+behaviour.
