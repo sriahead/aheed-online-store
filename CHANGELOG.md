@@ -5,6 +5,9 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 every branch merges.
 
 
+### Documentation
+- **Roadmap change-log rows for the header logo fix (#329, PR #330), the `.gitattributes` LF policy (#327, PR #328), and the staging→main promotion (PR #331).** The promotion row is what `npm run sdd:audit`'s promotion half requires — it is the only SDD gate that fires *after* Ship, which is exactly how PRs #118/#121/#134 once sat undocumented. Recorded before the promotion merges, so the row rides the promotion itself rather than trailing it.
+
 ### Changed
 - **Added `.gitattributes`, pinning all text files to LF in both the repository and the working tree** (#327). The repo ran `core.autocrlf=true` with no `.gitattributes` and had CRLF stored in some blobs, which caused two long-standing problems. First, any commit touching `CHANGELOG.md` or `specs/roadmap.md` renormalised the whole file — a nine-line entry staged as 2289 insertions / 2280 deletions, which is why PR #326 had to isolate its normalisation into a separate commit just to stay reviewable. Second, `npm run format:check` failed locally against dozens of untouched files, because Prettier defaults to `endOfLine: "lf"` and the checkout was CRLF; CLAUDE.md documented that artifact along with a multi-step ritual for distinguishing it from real drift. `eol=lf` rather than a bare `text=auto` is the operative part — it pins the working tree, which is what makes local Prettier agree with CI. Verified: `git add --renormalize .` produces zero changes (every blob was already LF after PR #326), and `npx prettier --check .` now reports "All matched files use Prettier code style!" across the whole repo. Image and font types are marked `binary` explicitly; no tracked `.bat`/`.cmd`/`.ps1` files exist, so LF everywhere is safe.
 
