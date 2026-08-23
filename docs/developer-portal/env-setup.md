@@ -316,3 +316,4 @@ DIRECT_URL=<env-direct-url> npm run demo:accounts -- remove
 - **"gh not authenticated" / "wrangler not authenticated"** — run the prerequisite login above.
 - **A single `✗ NAME`** — that one secret failed (e.g. token lacks scope); the rest still applied.
   Fix and re-run; re-running is idempotent (it overwrites).
+

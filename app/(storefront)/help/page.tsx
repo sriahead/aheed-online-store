@@ -2,6 +2,8 @@ import { Metadata } from "next";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import Link from "next/link";
 import { ShieldAlert, MapPin, Sparkles, TicketPercent, Lock } from "lucide-react";
+import Markdown from "react-markdown";
+import { DOC_ARTICLES } from "../../(admin)/staff/runbook/docs";
 
 export const metadata: Metadata = {
   title: "Help Centre",
@@ -10,6 +12,11 @@ export const metadata: Metadata = {
 export default async function HelpPage() {
   const auth = await requireVendorRole("STAFF", "ADMIN");
   const isStaff = auth.ok;
+
+  const shopperDocs = (DOC_ARTICLES as any[]).filter(
+    (doc) =>
+      doc.audience && (doc.audience.includes("shopper") || doc.audience.includes("customer")),
+  );
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8 space-y-12">
@@ -126,6 +133,15 @@ export default async function HelpPage() {
           </div>
         </section>
       </div>
+
+      {shopperDocs.length > 0 && (
+        <section className="mt-12 bg-white rounded-2xl p-6 sm:p-8 border border-black/10">
+          <h2 className="text-2xl font-bold mb-6">Detailed Shopping Guide</h2>
+          <div className="prose prose-sm max-w-none text-black/80 prose-headings:text-black prose-a:text-primary hover:prose-a:opacity-80">
+            <Markdown>{shopperDocs[0].content}</Markdown>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

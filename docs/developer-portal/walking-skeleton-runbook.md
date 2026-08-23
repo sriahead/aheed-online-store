@@ -113,3 +113,4 @@ feature branch → Propose → Spec → Validate → Changelog → PR → stagin
 - **`curl`/automated health checks get an Cloudflare "Just a moment..." challenge page** → that's
   Bot Fight Mode / a Managed Challenge on the zone, not an app error. Check from a real browser, or
   `wrangler tail --env <env>` for live logs.
+

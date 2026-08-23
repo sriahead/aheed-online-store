@@ -83,7 +83,7 @@ export function AddToCartButton({
           type="button"
           onClick={onClickAdd}
           disabled={pending}
-          className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl bg-primary text-white text-xs font-bold transition-all hover:bg-primary/90 active:scale-95 shadow-sm"
+          className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl bg-primary text-white text-xs font-bold transition hover:bg-primary/90 active:scale-95 shadow-sm"
         >
           <Icon className={`w-3.5 h-3.5 ${pending ? "animate-spin" : ""}`} />
           {added ? "Added" : "Add"}

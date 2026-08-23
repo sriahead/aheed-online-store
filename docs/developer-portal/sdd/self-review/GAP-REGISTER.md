@@ -37,3 +37,4 @@ The Phase 6.5 narrative and results remain here alongside this pointer:
 
 - [`SELF-REVIEW.md`](SELF-REVIEW.md) — the Phase 6 exit-gate report.
 - [`VALIDATION-RESULTS.md`](VALIDATION-RESULTS.md) — the audit-step and fix log.
+

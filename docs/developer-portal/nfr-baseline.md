@@ -311,3 +311,4 @@ still open and need an environment that can reach Cloudflare's tail API or a hum
 | **#236** | Comment recording patterns A/B/C and what is left unattributed. Stays open. |
 | **#46** | Decision recorded: keep `<img>`. Transformations are unavailable, so a `next/image` loader would ship identical bytes. |
 | **GAP-011** | Root cause updated with P7d's raw-SQL ruling (see `CLAUDE.md`). |
+

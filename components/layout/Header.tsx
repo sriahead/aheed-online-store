@@ -42,7 +42,7 @@ function SearchForm({ className = "", placeholder }: { className?: string; place
           name="q"
           placeholder={placeholder}
           aria-label="Search products"
-          className="w-full bg-surface-muted hover:bg-black/5 focus:bg-white pl-10 pr-4 py-2 rounded-xl text-sm border border-black/10 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+          className="w-full bg-surface-muted hover:bg-black/5 focus:bg-white pl-10 pr-4 py-2 rounded-xl text-sm border border-black/10 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition"
         />
       </div>
     </form>
@@ -147,10 +147,23 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
               // Plain <img> by decision — see #46 / eslint.config.mjs. NOTE: this logo is
               // the storefront's dominant byte cost (1.9 MB, 83% of page weight, rendered
               // into a 40px box) and the whole of the ~12s LCP breach — tracked as #243.
+              //
+              // `aspect-9/5` (= 1.8) reserves the box BEFORE the bytes land. Without it, `w-auto`
+              // gave the element zero width until the image decoded, and it then snapped to
+              // ~72px and shoved the whole header row sideways — the visible "jerk on
+              // refresh". That shift was invisible to the transition sweeps in #323/#324
+              // because it is a layout shift, not an animation, and it is made far worse by
+              // the 1.9 MB payload above: the bigger the file, the later the jolt.
+              // Dimensions cannot come from the DB — VendorBranding stores only
+              // logoStorageKey, no width/height — so the ratio is pinned in CSS instead.
+              // 1.8 matches both seeded logos (298x160 and 1664x928); `object-contain` means
+              // a vendor whose logo is a different shape is letterboxed inside the reserved
+              // box rather than distorted, and still never shifts. If #243 later stores real
+              // dimensions, replace this with width/height attributes.
               <img
                 src={logoUrl}
                 alt={`${name} — Your Local Store`}
-                className="h-10 w-auto rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"
+                className="h-10 w-auto aspect-9/5 object-contain rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"
               />
             ) : (
               <>
@@ -190,7 +203,7 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
           {!isPortal && (
             <Link
               href="/shop-your-list"
-              className="hidden lg:flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition-all border border-black/10"
+              className="hidden lg:flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
               title="Shop by pasting your list"
             >
               <ShoppingBag className="w-4 h-4 text-primary" />
@@ -212,7 +225,7 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
           ) : (
             <Link
               href="/login"
-              className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition-all border border-black/10"
+              className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
             >
               <LogIn className="w-4 h-4 text-primary" />
               <span className="hidden sm:inline">Sign In</span>

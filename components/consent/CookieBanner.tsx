@@ -28,7 +28,7 @@ export function CookieBanner() {
   return (
     <aside
       aria-label="Cookie Consent Banner"
-      className="fixed bottom-0 inset-x-0 z-50 p-4 bg-white/95 backdrop-blur border-t border-black/10 shadow-lg text-primary transition-all duration-300"
+      className="fixed bottom-0 inset-x-0 z-50 p-4 bg-white/95 backdrop-blur border-t border-black/10 shadow-lg text-primary transition duration-300"
     >
       <div className="mx-auto flex max-w-5xl flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="text-xs sm:text-sm text-primary/80 max-w-2xl leading-relaxed">

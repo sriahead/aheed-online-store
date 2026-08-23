@@ -177,3 +177,4 @@ Everything else (`app/`, `components/`, `features/`, `design-system/`, `specs/`,
 
 Approve this structure and the physical skeleton (empty dirs with `.gitkeep`) can be scaffolded as
 part of P0, or continue with the SDD phase sequence.
+

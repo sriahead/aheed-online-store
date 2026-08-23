@@ -76,3 +76,4 @@ CRLF-vs-CI drift, PR merge races) that are cheap to read and expensive to relear
 `docs/repo-structure.md`. Or browse the internal docs site (once deployed —
 `kms/site-internal/README.md` for local setup): it serves all of the above assembled under `/dev`,
 generated from these same source files, never hand-edited separately.
+

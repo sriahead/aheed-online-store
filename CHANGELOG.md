@@ -4,7 +4,27 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
-## [Unreleased]
+
+### Documentation
+- **Roadmap change-log rows for the header logo fix (#329, PR #330), the `.gitattributes` LF policy (#327, PR #328), and the staging→main promotion (PR #331).** The promotion row is what `npm run sdd:audit`'s promotion half requires — it is the only SDD gate that fires *after* Ship, which is exactly how PRs #118/#121/#134 once sat undocumented. Recorded before the promotion merges, so the row rides the promotion itself rather than trailing it.
+
+### Changed
+- **Added `.gitattributes`, pinning all text files to LF in both the repository and the working tree** (#327). The repo ran `core.autocrlf=true` with no `.gitattributes` and had CRLF stored in some blobs, which caused two long-standing problems. First, any commit touching `CHANGELOG.md` or `specs/roadmap.md` renormalised the whole file — a nine-line entry staged as 2289 insertions / 2280 deletions, which is why PR #326 had to isolate its normalisation into a separate commit just to stay reviewable. Second, `npm run format:check` failed locally against dozens of untouched files, because Prettier defaults to `endOfLine: "lf"` and the checkout was CRLF; CLAUDE.md documented that artifact along with a multi-step ritual for distinguishing it from real drift. `eol=lf` rather than a bare `text=auto` is the operative part — it pins the working tree, which is what makes local Prettier agree with CI. Verified: `git add --renormalize .` produces zero changes (every blob was already LF after PR #326), and `npx prettier --check .` now reports "All matched files use Prettier code style!" across the whole repo. Image and font types are marked `binary` explicitly; no tracked `.bat`/`.cmd`/`.ps1` files exist, so LF everywhere is safe.
+
+### Fixed
+- **UI — the header logo caused a visible layout jerk on every page refresh** (`components/layout/Header.tsx`). The logo was `h-10 w-auto` with no reserved box and no `width`/`height`, so it occupied **zero width** until its bytes decoded, then snapped to ~72px and shoved the entire header row — search bar and nav included — sideways. This is a layout shift, not an animation, which is why the `transition-all` sweeps in #323/#324 could not have caught it, and why it survived them. It is made far worse by the logo being 1.9 MB (83% of page weight, already tracked as #243): the larger the payload, the later and more jarring the jolt. Fixed by pinning `aspect-9/5` (1.8, matching both seeded logos at 298x160 and 1664x928) alongside the existing `h-10`, which reserves the 72x40 box before the image loads, plus `object-contain` so a vendor whose logo is a different shape is letterboxed rather than distorted — and still never shifts. Dimensions cannot come from the database: `VendorBranding` stores only `logoStorageKey`, with no width/height. Audited the other four storefront images while here — `ProductCard` (`aspect-4/3` + intrinsic `width`/`height`), `ProductImageGallery` (`width`/`height`), `PromoCarousel` (`h-32 w-32`) and `CartContents` (`h-16 w-16`) all reserve their boxes correctly; the header logo was the sole outlier, and the only one positioned above the whole page.
+
+### Fixed
+- **UI — carousel pagination dot stopped animating** (`components/layout/PromoCarousel.tsx`). The `transition-all` -> `transition` sweep in PR #324 correctly stopped the layout thrashing, but over-corrected at one site: Tailwind v4's `transition` property list contains no `width`, so the active promo dot's `w-2` -> `w-4` expand began snapping instead of animating. Restored with an explicit `transition-[width,background-color]`. Safe at this site specifically because the dot row is `absolute bottom-3 left-1/2`, i.e. out of document flow, so animating its width cannot move page layout. Verified by compiling Tailwind 4.3.3 directly rather than relying on documentation; the same check confirms `translate`, `scale` and `rotate` **are** in the default list, so the `ProductCard` hover-lift and `DepartmentScroller` hover-scale were never affected by the sweep.
+
+### Documentation
+- **UI polish & docs integration slice: specs corrected and completed** (`specs/2026-08-22-ui-polish-docs-integration/`). `requirements.md` R1 and `validation.md` V1 described a global transition rule in `app/globals.css` (`200ms cubic-bezier` on interactive elements, plus a `button:active` scale-down) — and V1 was ticked `[x]` against it — but that rule was removed in `a9d886c` precisely because it was the cause of the page-refresh layout thrashing. Both rewritten to state the rule that actually holds (per-component transitions naming their properties; never `transition-all`, never a global element-selector rule), with the superseded text preserved and attributed rather than deleted. `build-notes.md` updated for the same reason.
+- **Added the slice's missing `plan.md`.** It was the one required spec file never written, which is also why the slice never appeared in `ARTIFACT_INDEX.md` — the KMS index keys artifacts on `specs/<slice>/plan.md`. Index rebuilt (`npm run kms:build-index`, 97 artifacts). This closes both failures reported by `npm run sdd:audit`.
+- **`specs/roadmap.md`:** added the missing change-log row citing the slice, and repaired PowerShell backtick damage in the two 2026-08-22 rows, where a literal CR byte (`0x0D`) sat mid-line inside `resolveLines` and four pairs of backticks had become backslashes.
+- **`CHANGELOG.md`:** removed two stray NUL bytes (`0x00`) at end of file. They made every tool treat this file as binary — ripgrep refused to search past them, and `git diff` could not produce a text diff — which is a good way for a changelog defect to hide.
+
+### Changed
+- **Documentation Architecture:** Restructured the entire docs/ directory into a role-based architecture (Shopper, Staff, Admin, Marketing, BA, Ops, Dev). Rewrote end-user documentation to hide technical implementations and focus entirely on user workflows.
 
 ### Added
 - **Shop Your List Partial Matches** (Issue #115): Implemented partial-match fallback in `resolveLines` (lib/shopping-list.ts). When a pasted list line contains terms that don't all match a single product, the candidates with the most matched terms are returned as "ambiguous" for user review, instead of discarding the line completely.
@@ -17,6 +37,7 @@ every branch merges.
 - **P8.1 — Unified Role-Aware Help Centre** (#318, `specs/2026-08-21-p8-help-centre/`). Replaced the dead 'Help Guide' link in the global storefront header with a unified `/help` page. The page statically renders delivery, loyalty, discount, and privacy FAQs for shoppers. For authenticated `STAFF` and `ADMIN` users, it dynamically renders an 'Internal Staff Resources' section containing instructions on using the View Switcher and a direct link to the Operational Runbook.
 
 ### Fixed
+- **UI:** Replaced `transition-all` with `transition` across storefront components (`ProductCard`, `Header`, `PromoCarousel`, etc.) to prevent jarring layout thrashing/animations on page refresh when components dynamically mount and adjust dimensions.
 - **Vendor repository exports** (#318 follow-up): Exported `getVendorConfig`, `getVendorBranding`, `updateVendorLogoKey`, and `updateVendorStorefrontConfig` from `lib/repositories/vendor.ts` — these were referenced by the storefront page and server actions but missing from the module. Resolved build failure on staging.
 - **Prettier formatting**: Re-ran Prettier across 9 files touched by the Storefront Branding UI (PR #315) and Help Centre (PR #319) that had not been auto-formatted before merging.
 
@@ -2301,5 +2322,7 @@ every branch merges.
 - No feature code beyond the skeleton. Auth, catalogue, cart, checkout, and the design system
   arrive in P1+ behind their specs and gates.
 
- 
- 
+
+
+
+

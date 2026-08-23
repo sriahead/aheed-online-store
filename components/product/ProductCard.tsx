@@ -18,7 +18,7 @@ export function ProductCard({
   return (
     <Link
       href={`/products/${product.slug}`}
-      className="group relative bg-white rounded-2xl border border-black/10 hover:border-action/50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden cursor-pointer h-full"
+      className="group relative bg-white rounded-2xl border border-black/10 hover:border-action/50 hover:shadow-2xl hover:-translate-y-1 transition duration-300 flex flex-col overflow-hidden cursor-pointer h-full"
     >
       {/* Top badges */}
       <div className="absolute top-2.5 left-2.5 z-10 flex flex-wrap gap-1">
