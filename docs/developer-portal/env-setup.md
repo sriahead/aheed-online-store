@@ -149,9 +149,29 @@ This runs from your machine via the Node Prisma CLI, not the Worker — consiste
 per developer. Object storage isn't where concurrent local test writes actually collide; the worst
 case is a stale test image, not corrupted state, so a per-developer bucket isn't worth provisioning.
 
+**Pair it with the DEV CDN host, not staging's.** `aheed-images-dev` is served by
+`images.dev.aheedfoodcentre.nocaped.com`, which is the only one of the three CDN hostnames with **no
+hotlink/referer rule** — that is what lets an image load under `npm run preview`, where the referer
+is `http://localhost:3000`. The three hosts and their buckets are strictly paired:
+
+| Environment | `S3_BUCKET` | `CDN_BASE_URL` | Hotlink rule |
+|---|---|---|---|
+| local dev | `aheed-images-dev` | `https://images.dev.aheedfoodcentre.nocaped.com` | none |
+| staging | `aheed-images-staging` | `https://images.staging.aheedfoodcentre.nocaped.com` | yes |
+| production | `aheed-images-production` | `https://images.aheedfoodcentre.nocaped.com` | yes |
+
 ```bash
 S3_BUCKET="aheed-images-dev"
+CDN_BASE_URL="https://images.dev.aheedfoodcentre.nocaped.com"
 ```
+
+Mixing a row — the state `.env` and `.dev.vars` shipped in until P8.1b (#277) — gives you a bucket
+whose objects the configured CDN host does not serve, so anything you seed or upload locally is
+unreachable from the URL the app composes for it. Because the app only ever stores a **relative
+key** and composes `${CDN_BASE_URL}/${key}` at read time, the symptom is a broken image with a
+correct-looking key in the DB, not an error anywhere. Separately, pointing local dev at a
+hotlink-protected host returns **403 for every image including the header logo** (#235), which looks
+identical to a missing object.
 
 **Integration is unchanged**: a bug fix built and validated against your personal branch still goes
 out as `feature/<slug>` → PR into `staging` per `CLAUDE.md`'s branch strategy. System integration
