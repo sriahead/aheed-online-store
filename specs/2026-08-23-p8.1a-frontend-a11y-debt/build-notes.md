@@ -46,17 +46,14 @@ already part of the approved spec (not deviations introduced during Build).
 
 ## Known-shaky areas
 
-- **R4's "ViewSwitcher's dropdown isn't clipped" claim was not interactively verified.** The Chrome
-  browser extension (claude-in-chrome) was not connected this session, so there was no way to
-  actually open the dropdown and look at it. What *was* verified: curl'ing the real
-  `npm run preview` server's rendered HTML (signed in as `demo-admin@example.com`) confirms
-  `overflow-clip` appears **exactly once** in the whole page, on the brand div, and that the brand
-  div and `<nav>` (containing `ViewSwitcher`) are siblings under the header row — not
-  ancestor/descendant. CSS `overflow-clip` can only clip an element's own descendants, so this is a
-  structural guarantee, not a probabilistic one — but it is still reasoning from markup rather than
-  a rendered screenshot of the open dropdown. If a real browser is available at `/validate`, opening
-  `ViewSwitcher` as `demo-admin@example.com` and confirming the menu renders fully (not cut off) is
-  the one thing this slice's own reasoning couldn't close out directly.
+- ~~R4's "ViewSwitcher's dropdown isn't clipped" claim was not interactively verified.~~ **Resolved
+  at `/fix` (see "Fix pass" below)** — the Chrome browser extension connected on the second
+  `/validate` attempt and the dropdown was opened and screenshotted for real. Left here for
+  history: curl'ing the rendered HTML (signed in as `demo-admin@example.com`) had already shown the
+  brand div and `<nav>` (containing `ViewSwitcher`) as siblings under the header row, not
+  ancestor/descendant, which is a structural guarantee against clipping (CSS `overflow-clip` only
+  clips an element's own descendants) — but a screenshot of the actual open menu is the real thing
+  that was missing, and now exists.
 - **The dev Neon branch changed identity mid-Build.** Its password had failed
   (`NeonDbError: password authentication failed`, old host `ep-curly-wave-za9h66wr`); the user's fix
   turned out to recreate the branch under a new host (`ep-sparkling-paper-za3j7xza`). `.dev.vars`
@@ -69,3 +66,27 @@ already part of the approved spec (not deviations introduced during Build).
   `DiscountRedemption` fixture row. That's irrelevant to this slice (heading structure doesn't touch
   money/discount rendering), but if `/validate` re-uses this order for a different check, #273's
   known-bad discount display on that specific order is not a new defect.
+
+## Fix pass (post-Validate)
+
+`/validate` ran clean on R1, R2, R3, R5, R6, R7, R8, R9 (live-curled R1/R2 against a different
+seeded order, `AHE-20260822-EMBFFH`/`demo-admin@example.com`, since #273's flagged order wasn't
+needed here either — same result). Two things came out of it, neither a code defect:
+
+- **R4's dropdown-open state, closed out for real.** The Chrome extension connected on this pass.
+  Signed in as `demo-admin@example.com`, opened `ViewSwitcher` ("Shopper View" control, top-right of
+  the header) — the "Shopper View / Staff View / Admin View" menu renders fully below the header
+  row, not clipped. This is the actual thing R4's structural reasoning stood in for; no code change
+  needed since the structural argument was already correct, but the row is now genuinely verified
+  rather than inferred.
+- **`validation.md`'s R4 check text was imprecise, fixed.** `grep -n "overflow-clip"
+  components/layout/Header.tsx` was written to assert "exactly one match" as proof the class landed
+  nowhere else — but it actually returns 3, because the explanatory comment immediately above the
+  div (added in this same slice, describing *why* `overflow-clip` is scoped there) contains the word
+  twice in prose. The div's className itself is still the only place the class is applied — verified
+  with a className-scoped grep (`grep -n 'className="[^"]*overflow-clip'`), which does return exactly
+  one match. This was the validation.md row being wrong, not the code: updated the row's grep to the
+  className-scoped pattern and noted why the bare pattern legitimately returns 3.
+
+No CHANGELOG update — neither change altered observable behaviour; both close out verification gaps
+in the spec/validation artifacts themselves.
