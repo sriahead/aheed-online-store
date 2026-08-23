@@ -180,6 +180,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
             </div>
 
             {/* 3-Step Pipeline Visualizer */}
+            <h2 className="sr-only">Delivery Status</h2>
             <div className="relative space-y-6 pl-4 border-l-2 border-slate-200 my-4">
               {steps.map((step, idx) => {
                 const isCompleted = idx <= currentIndex;
@@ -198,7 +199,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                     </div>
 
                     <div className="pl-2">
-                      <h4
+                      <h3
                         className={`font-bold text-sm leading-tight ${
                           isCurrent
                             ? "text-primary"
@@ -208,7 +209,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                         }`}
                       >
                         {step.label}
-                      </h4>
+                      </h3>
                       <p className="text-xs text-slate-500 mt-0.5">{step.desc}</p>
                     </div>
                   </div>
@@ -217,6 +218,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
             </div>
 
             {/* Items Summary */}
+            <h2 className="sr-only">Order Items</h2>
             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3">
               <h3 className="text-xs font-bold text-slate-900">Items Ordered</h3>
               <div className="space-y-2">
