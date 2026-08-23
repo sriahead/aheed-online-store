@@ -1,0 +1,34 @@
+# Line-ending policy — normalise text to LF in the repository AND in the working tree.
+#
+# Why this file exists (#327):
+#
+# The repo ran `core.autocrlf=true` with no `.gitattributes`, and a handful of files
+# (`CHANGELOG.md`, `specs/roadmap.md`) had been committed with CRLF *stored in the blob*.
+# That combination means git renormalises the whole file on any commit that touches it, so
+# a nine-line CHANGELOG entry lands as a ~2500-line diff. PR #326 had to isolate the
+# normalisation into its own commit just to keep its real change reviewable — a workaround
+# that would otherwise be needed on every future docs change.
+#
+# `eol=lf` (not just `text=auto`) also pins the WORKING TREE to LF, which removes a second,
+# long-standing papercut documented in CLAUDE.md: Prettier defaults to `endOfLine: "lf"`, so
+# on a CRLF checkout `npm run format:check` fails against dozens of files nobody touched.
+# That artifact has cost real debugging time and trained people to ignore a real gate. With
+# this file, local `format:check` agrees with CI on Linux.
+#
+# No tracked `.bat`, `.cmd` or `.ps1` files exist, so pinning LF everywhere is safe here.
+# Revisit this line if a Windows-only script is ever added — those need CRLF.
+* text=auto eol=lf
+
+# Binary assets — never touch. The five PNGs below are what git currently detects as binary;
+# the rest are listed pre-emptively so adding one later cannot silently corrupt it.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.pdf  binary
+*.woff  binary
+*.woff2 binary
+*.ttf  binary
+*.otf  binary
