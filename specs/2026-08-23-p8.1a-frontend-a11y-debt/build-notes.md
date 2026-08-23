@@ -105,3 +105,11 @@ id to `p8-1a-frontend-a11y-debt-plan`, matching convention. Verified locally bef
 `npm run kms:validate` now reports `invalid front-matter (failing): 0`, and `npm run
 kms:assemble:internal` succeeds (97 docs). No CHANGELOG entry — front-matter isn't observable
 behaviour.
+
+That fix immediately surfaced a second, expected CI failure: the now-valid `plan.md` is a newly
+countable artifact (97 -> 98), so the checked-in `ARTIFACT_INDEX.md`/`docs.ts` — generated before
+the id was fixable — were stale by CI's own **KMS — ARTIFACT_INDEX.md staleness check**. Ran `npm
+run kms:build-index` and committed the regenerated `ARTIFACT_INDEX.md` and
+`app/(admin)/staff/runbook/docs.ts` (diff confirmed small and additive — the new plan.md row plus
+its `DOC_ARTICLES` entry, nothing else touched, so not the Windows `Get-Content`/mojibake trap
+`CLAUDE.md` warns about). `lint`/`typecheck`/`format:check` re-run clean after.

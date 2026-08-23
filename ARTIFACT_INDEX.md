@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-23T00:38:44.051Z` · commit `fb6ce16` · `97` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-23T19:17:09.622Z` · commit `476e9e3` · `98` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -96,6 +96,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [UI Polish & Docs Integration (plan)](specs/2026-08-22-ui-polish-docs-integration/plan.md) | spec | 1.0.0 | 2026-08-22 | draft | internal | Smooth interactive-state transitions without animating layout, strict Staff Runbook audience filtering, and the Shopper Guide surfaced in the Help Centre. |
 | [UI Polish & Docs Integration Requirements](specs/2026-08-22-ui-polish-docs-integration/requirements.md) | spec | 1.1.0 | 2026-08-23 | approved | internal | Requirements for smooth interactive-state transitions that never animate layout, strict Staff Runbook audience filtering, and surfacing the Shopper Guide in the Help Centre. |
 | [UI Polish & Docs Integration Validation](specs/2026-08-22-ui-polish-docs-integration/validation.md) | spec | 1.1.0 | 2026-08-23 | approved | internal | Re-run validation for the UI transition rules (compiled against Tailwind v4 directly) and the documentation integrations, replacing checks that had been ticked against reverted code. |
+| [P8.1a — Frontend & Accessibility Debt (plan)](specs/2026-08-23-p8.1a-frontend-a11y-debt/plan.md) | spec | 1.0.0 | 2026-08-23 | draft | internal | Four self-contained rendering-layer fixes closing P8.1's frontend/a11y debt — heading hierarchy, a stale report heading plus a dead client call, header resilience against extension-injected DOM shifts, and a real per-vendor contrast gap on tint backgrounds. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.17.0 | 2026-08-20 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
