@@ -441,7 +441,6 @@ export async function saveLoyaltySettings(
   vendorId: string,
   settings: LoyaltySettingsInput,
 ): Promise<void> {
-  const prisma = getPrisma();
   const { tiers, ...config } = settings;
 
   await getPrismaWs().$transaction(async (tx) => {

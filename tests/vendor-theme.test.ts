@@ -157,4 +157,25 @@ describe("brandStyle", () => {
       expect(contrastRatio(style["--color-primary"], surface)).toBeGreaterThanOrEqual(AA_NORMAL);
     }
   });
+
+  // P8.1a (#281) — the real gap found by grepping actual component usage:
+  // `text-danger` renders on `bg-danger-tint` (error banners) and was
+  // unguarded, since --color-danger's clamp previously checked only white and
+  // cream. action/accent gain the same check defensively even though nothing
+  // currently renders them on their own tint.
+  it.each(VENDORS)(
+    "%s's action/accent/danger meet AA against their own tint",
+    (_name, primitives) => {
+      const style = brandStyle(primitives) as Record<string, string>;
+      expect(
+        contrastRatio(style["--color-action"], primitives["green-tint"]),
+      ).toBeGreaterThanOrEqual(AA_NORMAL);
+      expect(
+        contrastRatio(style["--color-accent"], primitives["orange-tint"]),
+      ).toBeGreaterThanOrEqual(AA_NORMAL);
+      expect(contrastRatio(style["--color-danger"], primitives["red-tint"])).toBeGreaterThanOrEqual(
+        AA_NORMAL,
+      );
+    },
+  );
 });

@@ -42,29 +42,42 @@ import { clampForContrast, darkenForHover } from "@/lib/color-contrast";
  * `npm run preview`. **Any change here must be verified against live rendered
  * output for both vendors, not against a unit test.**
  *
- * ── WHAT IS RE-DECLARED, AND HOW IT IS MADE SAFE (P7.5c+f, #255) ──────────────
+ * ── WHAT IS RE-DECLARED, AND HOW IT IS MADE SAFE (P7.5c+f, #255; widened P8.1a, #281) ──
  *
  * #251's fix was to stop re-declaring the three semantic base colours at all,
  * which bought the AA guarantee by giving up per-vendor differentiation — every
- * vendor rendered the same platform green regardless of their brand. This slice
- * restores the differentiation and KEEPS the guarantee, by passing each value
+ * vendor rendered the same platform green regardless of their brand. P7.5c+f
+ * restored the differentiation and KEPT the guarantee, by passing each value
  * through `clampForContrast` (`lib/color-contrast.ts`) instead of using the raw
  * primitive:
  *
  *   - `--color-action`, `--color-accent`, `--color-danger` — derived from the
- *     vendor's green/orange/red, clamped to 4.5:1 against the light surfaces
- *     they render on.
+ *     vendor's green/orange/red, clamped to 4.5:1 against white, the vendor's
+ *     cream, AND their own matching tint (`green-tint`/`orange-tint`/
+ *     `red-tint` respectively) — widened in P8.1a (#281) after a repo-wide grep
+ *     of real usage found `text-danger` actually renders on `bg-danger-tint`
+ *     (error banners) and was unguarded: the original clamp list only checked
+ *     white and cream, never the matching tint. `action`/`accent` gained the
+ *     same treatment defensively, though nothing currently renders them on
+ *     their own tint.
  *   - `--color-action-hover`, `--color-accent-hover` — a darker shade of the
  *     already-clamped base, re-clamped, so a hover state cannot be the one thing
  *     on the page that fails. (`tokens.css` defines no `--color-danger-hover`,
  *     so none is emitted.)
  *   - `--color-primary` — clamped against white, the vendor's cream AND all
  *     three tints, because it renders on all of them (`bg-action-tint
- *     text-primary` in the homepage trust strip).
- *   - `--color-surface-muted` and the three tints — plain 1:1 aliases, NOT
- *     clamped. They are backgrounds, not foregrounds; clamping them would move
- *     the surface a reader's text sits on rather than the text itself, which is
- *     a different transform with different failure modes (see plan.md).
+ *     text-primary` in the homepage trust strip). This was already the widest
+ *     clamp list here, which is why #281's actual gap was narrower than its
+ *     title suggested — every `text-primary`-on-tint pairing the app renders
+ *     was already safe; only the `danger`/`red-tint` pairing was not.
+ *   - `--color-surface-muted` and the three tints THEMSELVES — still plain 1:1
+ *     aliases, NOT clamped. They are backgrounds, not foregrounds; clamping the
+ *     raw tint/cream hex would move the surface a reader's text sits on rather
+ *     than the text itself, a different transform with different failure modes,
+ *     and one that visibly restyles a vendor's page for a failure mode that
+ *     does not currently reproduce anywhere in real usage (see plan.md,
+ *     `specs/2026-08-23-p8.1a-frontend-a11y-debt/`). Widening the foreground
+ *     clamp lists above closes the one real gap without that risk.
  *
  * The clamp is not a guard around SriMart's edge case. Measured at
  * P7.5c+f's /propose, Aheed's OWN primitives fail hardest of anything in the
@@ -98,9 +111,14 @@ export function brandStyle(primitives: BrandPrimitives): CSSProperties {
     p["red-tint"],
   ] as const;
 
-  const action = clampForContrast(p.green, surfaces, AA_NORMAL);
-  const accent = clampForContrast(p.orange, surfaces, AA_NORMAL);
-  const danger = clampForContrast(p.red, surfaces, AA_NORMAL);
+  // Each colour's own matching tint joins its clamp list (P8.1a, #281): the app
+  // renders `text-danger` on `bg-danger-tint` (error banners), and `action`/
+  // `accent` gain the same treatment defensively even though nothing currently
+  // renders them on their own tint. See the doc comment above for why this is
+  // narrower than clamping the tints/cream themselves.
+  const action = clampForContrast(p.green, [...surfaces, p["green-tint"]], AA_NORMAL);
+  const accent = clampForContrast(p.orange, [...surfaces, p["orange-tint"]], AA_NORMAL);
+  const danger = clampForContrast(p.red, [...surfaces, p["red-tint"]], AA_NORMAL);
 
   return {
     // primitives (for any brand-* utility used directly) — never clamped: they
