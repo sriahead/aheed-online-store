@@ -42,6 +42,7 @@ const config = [
       "kms/site-internal/**",
       "kms/site-public/**",
       "docs/ui-ref/**",
+      "docs/ui-ref-revised/**",
     ],
   },
   ...nextCoreWebVitals,
