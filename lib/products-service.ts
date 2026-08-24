@@ -4,6 +4,7 @@ import {
   getAvailableSpecialities,
   getProductBySlug,
   listProducts,
+  listCategorySpotlights,
   listProductsByCategory,
   matchProductListTerms,
   searchProducts,
@@ -16,7 +17,7 @@ import {
  * need a real Workers request.
  *
  * Lives beside, not inside, `lib/repositories/`, matching
- * `lib/data-rights-service.ts` and `lib/promotions-service.ts`. The repository
+ * `lib/data-rights-service.ts` and `lib/categories-service.ts`. The repository
  * module's admin write path takes `vendorId` explicitly for the same reason
  * these reads now do, so a plain `tsx` script can exercise either without a
  * live Workers request. `tests/repository-purity.test.ts` enforces the
@@ -54,6 +55,10 @@ export function getProductRepository(): ProductRepository {
 
     async matchListTerms(terms) {
       return matchProductListTerms(prisma, await vendorId(), terms);
+    },
+
+    async categorySpotlights(categoryIds) {
+      return listCategorySpotlights(prisma, await vendorId(), categoryIds);
     },
   };
 }

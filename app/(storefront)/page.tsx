@@ -3,12 +3,11 @@ import { getCategoryRepository } from "@/lib/categories-service";
 import { getProductRepository } from "@/lib/products-service";
 import { getEnv } from "@/lib/config";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
-import { PromoCarousel } from "@/components/layout/PromoCarousel";
+import { DepartmentHero } from "@/components/layout/DepartmentHero";
 import { ProductRow } from "@/components/product/ProductRow";
 import { formatPrice } from "@/components/product/format-price";
 import { isDeliverable } from "@/lib/delivery";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
-import { getCurrentVendorPromotions } from "@/lib/promotions-service";
 
 export const dynamic = "force-dynamic";
 
@@ -23,13 +22,25 @@ type SearchParams = { postcode?: string };
 export default async function HomePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const { postcode } = await searchParams;
   const productsRepo = getProductRepository();
-  const [categories, profile, promotions, newArrivalsPage, featuredPage] = await Promise.all([
+  const [categories, profile, newArrivalsPage, featuredPage] = await Promise.all([
     getCategoryRepository().listTopLevel(),
     getCurrentVendorProfile(),
-    getCurrentVendorPromotions(),
     productsRepo.list({ take: 4 }), // recent products
     productsRepo.list({ take: 4, isFeatured: true }), // vendor-curated featured products
   ]);
+  // P8.5b (#346): one query for every department's headline product, not one
+  // per department. Depends on `categories`, so it cannot join the Promise.all
+  // above.
+  const spotlights = await productsRepo.categorySpotlights(categories.map((c) => c.id));
+  const heroDepartments = categories.map((category) => ({
+    id: category.id,
+    slug: category.slug,
+    name: category.name,
+    // `Category` has no image column yet (#279 / P8.5b's plan.md); the hero
+    // renders each department's icon until one exists.
+    imageKey: null,
+    spotlight: spotlights.get(category.id) ?? null,
+  }));
   const { CDN_BASE_URL } = getEnv();
   const localityName = profile?.localityName ?? "";
   const vendorName = profile?.name ?? "Welcome";
@@ -51,10 +62,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         {/* Background glow placeholder */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Two columns once this vendor has promotions to show; a single
+        {/* Two columns once this vendor has departments to show; a single
             column when they don't, so the hero never renders an empty well. */}
         <div
-          className={`relative z-10 gap-8 ${promotions.length > 0 ? "lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:items-center" : ""}`}
+          className={`relative z-10 gap-8 ${heroDepartments.length > 0 ? "lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:items-center" : ""}`}
         >
           <div className="max-w-2xl space-y-4">
             <div className="inline-flex items-center gap-1.5 bg-black/20 border border-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
@@ -130,17 +141,19 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             </div>
           </div>
 
-          {/* #233: the hero's image slot. What used to sit here was a hardcoded
-              stock photo on images.unsplash.com, removed in #231 for failing
-              P7a's CSP (img-src 'self' data: https://*.nocaped.com) and for
-              rendering identically for every vendor. It is now this vendor's own
-              promotions — a carousel rather than a single image, so a vendor
-              with three campaigns doesn't have to merge them into one graphic.
-              Promotions with no artwork render as token-styled cards, which is
-              why this works before anyone uploads anything. */}
-          {promotions.length > 0 && (
+          {/* P8.5b (#346): the hero's second column. This slot has now held
+              three things. A hardcoded unsplash photo, removed in #231 for
+              failing P7a's CSP and for rendering identically for every vendor.
+              Then this vendor's VendorPromotion rows as a carousel (#233) —
+              which never had a staff UI, so the rows stayed seed-only and no
+              vendor could ever edit a campaign. Now the departments themselves,
+              generated from real categories and real product prices, so the
+              panel cannot advertise something the catalogue does not have.
+              VendorPromotion is deleted in this slice; see the spec for why
+              "superseded" rather than "unused" is the accurate reason. */}
+          {heroDepartments.length > 0 && (
             <div className="mt-8 lg:mt-0">
-              <PromoCarousel promotions={promotions} cdnBaseUrl={CDN_BASE_URL ?? null} />
+              <DepartmentHero departments={heroDepartments} cdnBaseUrl={CDN_BASE_URL ?? null} />
             </div>
           )}
         </div>

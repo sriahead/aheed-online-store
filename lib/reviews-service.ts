@@ -14,7 +14,7 @@ import {
  * need a real Workers request.
  *
  * Lives beside, not inside, `lib/repositories/`, matching
- * `lib/data-rights-service.ts` and `lib/promotions-service.ts`. The write
+ * `lib/data-rights-service.ts` and `lib/categories-service.ts`. The write
  * methods take the WebSocket client because they are interactive transactions;
  * the reads take the fetch-based client (CLAUDE.md's hybrid strategy).
  *
