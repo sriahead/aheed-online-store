@@ -36,7 +36,27 @@ export interface ProductSummary {
   reviewCount: number;
   /** P3a — cards need this to render the add-to-cart out-of-stock state. */
   inStock: boolean;
+  /**
+   * P8.5a (#345) — the card's low-stock urgency badge needs the COUNT, not just
+   * `inStock`. Both come from the `Inventory` row that was already joined for
+   * `inStock`, so this adds no query and no migration.
+   *
+   * `stockQuantity` is normalised through `effectiveStock()`, so a negative or
+   * null inventory reads as 0 rather than leaking a nonsense number into the
+   * UI. `lowStockThreshold` falls back to the schema default (3) when there is
+   * no inventory row at all — a product with no inventory is out of stock, so
+   * the threshold is never actually consulted for it, but a number keeps the
+   * type honest and the card free of null handling.
+   */
+  stockQuantity: number;
+  lowStockThreshold: number;
 }
+
+/**
+ * Mirrors `Inventory.lowStockThreshold`'s schema default. Used only when a
+ * product has no inventory row; see ProductSummary's note.
+ */
+const DEFAULT_LOW_STOCK_THRESHOLD = 3;
 
 export interface ProductDetail extends ProductSummary {
   description: string;
@@ -159,7 +179,7 @@ async function findPage(
       averageRating: true,
       reviewCount: true,
       images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
-      inventory: { select: { quantity: true } },
+      inventory: { select: { quantity: true, lowStockThreshold: true } },
     },
   });
 
@@ -182,6 +202,8 @@ async function findPage(
       reviewCount: p.reviewCount,
       primaryImage: p.images[0] ?? null,
       inStock: (p.inventory?.quantity ?? 0) > 0,
+      stockQuantity: effectiveStock(p.inventory?.quantity),
+      lowStockThreshold: p.inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
     })),
     nextCursor: hasMore ? page[page.length - 1].id : null,
   };
@@ -258,7 +280,7 @@ export async function getProductBySlug(
       averageRating: true,
       reviewCount: true,
       images: { orderBy: { sortOrder: "asc" }, select: productImageSelect },
-      inventory: { select: { quantity: true } },
+      inventory: { select: { quantity: true, lowStockThreshold: true } },
     },
   });
   if (!product) return null;
@@ -269,6 +291,8 @@ export async function getProductBySlug(
     images,
     primaryImage: images.find((i) => i.isPrimary) ?? images[0] ?? null,
     inStock: (inventory?.quantity ?? 0) > 0,
+    stockQuantity: effectiveStock(inventory?.quantity),
+    lowStockThreshold: inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
   };
 }
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { getProductRepository } from "@/lib/products-service";
+import { getRequestCartQuantities } from "@/lib/cart-summary";
 import { getEnv } from "@/lib/config";
 import { ProductCard } from "@/components/product/ProductCard";
 import { ProductFilterForm } from "@/components/product/ProductFilterForm";
@@ -67,6 +68,9 @@ export default async function CategoryPage({
     isOrganic: query.isOrganic === "1",
   });
   const specialities = await products.availableSpecialities();
+  // P8.5a (#345): request-memoised, so this shares the header's cart read
+  // rather than issuing a second identical query.
+  const cartQuantities = await getRequestCartQuantities();
   const { CDN_BASE_URL } = getEnv();
 
   return (
@@ -88,7 +92,12 @@ export default async function CategoryPage({
           <h2 className="sr-only">Products</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {items.map((product) => (
-              <ProductCard key={product.id} product={product} cdnBaseUrl={CDN_BASE_URL ?? ""} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                cdnBaseUrl={CDN_BASE_URL ?? ""}
+                cartQuantity={cartQuantities.get(product.id) ?? 0}
+              />
             ))}
           </div>
           {nextCursor && (

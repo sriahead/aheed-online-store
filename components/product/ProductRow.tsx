@@ -8,9 +8,22 @@ interface ProductRowProps {
   products: ProductSummary[];
   cdnBaseUrl: string;
   viewAllLink?: string;
+  /**
+   * P8.5a (#345) — product id -> quantity in the cart, from the page's
+   * request-memoised read. Optional so a caller that has no cart context (a
+   * test, a future embed) still renders; those cards simply show the add
+   * control.
+   */
+  cartQuantities?: ReadonlyMap<string, number>;
 }
 
-export function ProductRow({ title, products, cdnBaseUrl, viewAllLink }: ProductRowProps) {
+export function ProductRow({
+  title,
+  products,
+  cdnBaseUrl,
+  viewAllLink,
+  cartQuantities,
+}: ProductRowProps) {
   if (products.length === 0) return null;
 
   return (
@@ -30,7 +43,12 @@ export function ProductRow({ title, products, cdnBaseUrl, viewAllLink }: Product
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {products.map((product) => (
-          <ProductCard key={product.id} product={product} cdnBaseUrl={cdnBaseUrl} />
+          <ProductCard
+            key={product.id}
+            product={product}
+            cdnBaseUrl={cdnBaseUrl}
+            cartQuantity={cartQuantities?.get(product.id) ?? 0}
+          />
         ))}
       </div>
     </section>

@@ -17,9 +17,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
-import { getCartRepository } from "@/lib/cart-service";
-import { EMPTY_CART } from "@/lib/repositories/cart";
-import { getCartIdentity } from "@/lib/cart-identity";
+import { getRequestCartSummary } from "@/lib/cart-summary";
 import { CartDrawerShell } from "@/components/cart/CartDrawerShell";
 import { CartContents } from "@/components/cart/CartContents";
 import { ViewSwitcher } from "./ViewSwitcher";
@@ -80,11 +78,10 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
   const localityName = profile?.localityName ?? "";
   const bannerNote = profile?.bannerNote ?? null;
 
-  const cartIdentity = await getCartIdentity();
-  const cartSummary =
-    cartIdentity.userId || cartIdentity.guestToken
-      ? await getCartRepository().getSummary(cartIdentity)
-      : EMPTY_CART;
+  // P8.5a (#345): routed through the request-memoised reader so the header and
+  // a product grid on the same page share ONE getSummary() call. The identity
+  // guard and the EMPTY_CART fallback moved inside it unchanged.
+  const cartSummary = await getRequestCartSummary();
   // #239: this fallback was itself Aheed copy ("vine tomatoes, halal lamb
   // chops, basmati, lentils"). It only fires when no vendor resolves at all —
   // fetchVendorProfile already substitutes DEFAULT_SEARCH_PLACEHOLDER for a

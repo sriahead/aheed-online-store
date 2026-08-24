@@ -26,3 +26,88 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/*
+ * P8.5a (#345) — skewed product card.
+ *
+ * The card rests at a -2deg skew on a perspective plane and straightens on
+ * hover; its content is counter-skewed +2deg so text and images stay
+ * rectangular at rest. Badges and the price tag carry their own steeper skew,
+ * which is why they are separate classes rather than inheriting the card's.
+ *
+ * TRANSITIONS NAME THEIR PROPERTIES. `transition-all` and global
+ * element-selector transition rules are both banned here — a global rule was
+ * the cause of the page-refresh layout thrashing removed in #324, and the
+ * `transition-all` sweep that followed is what broke the carousel dot in #326.
+ * `transform` and `box-shadow` are the only animated properties, and neither
+ * affects layout, so nothing here can shift the page.
+ *
+ * COLOUR IS TOKEN-DERIVED. The reference implementation
+ * (docs/ui-ref-revised/src/index.css:183-230) hardcodes rgba(27, 94, 32, .18) —
+ * Aheed's green — for the hover shadow. SriMart renders blue/purple/red, so the
+ * shadow is mixed from --color-primary instead, which brandStyle() overrides
+ * per vendor.
+ */
+.skew-card-wrap {
+  perspective: 1200px;
+}
+
+.skew-card {
+  transform: skewX(-2deg);
+  transform-origin: center center;
+  transition:
+    transform 380ms ease-out,
+    box-shadow 380ms ease-out,
+    border-color 300ms ease;
+}
+
+.skew-card-inner {
+  transform: skewX(2deg);
+  transition: transform 380ms ease-out;
+}
+
+.skew-card-badge {
+  transform: skewX(-6deg);
+  transition: transform 350ms ease-out;
+}
+
+.skew-card-price {
+  transform: skewX(-4deg);
+  transition: transform 350ms ease-out;
+}
+
+.skew-card:hover {
+  transform: skewX(0deg) translateY(-6px);
+  box-shadow:
+    0 20px 35px -8px color-mix(in srgb, var(--color-primary) 22%, transparent),
+    0 10px 15px -5px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.skew-card:hover .skew-card-inner,
+.skew-card:hover .skew-card-badge,
+.skew-card:hover .skew-card-price {
+  transform: skewX(0deg);
+}
+
+/*
+ * The repo's FIRST CSS reduced-motion block. PromoCarousel.tsx handles the
+ * preference in JS (matchMedia) because it governs an auto-rotating timer;
+ * this one governs a purely CSS effect, so it belongs here. Both the skew and
+ * the hover lift are removed — the card keeps its hover shadow and border, so
+ * hover is still perceivable without motion.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .skew-card,
+  .skew-card-inner,
+  .skew-card-badge,
+  .skew-card-price,
+  .skew-card:hover,
+  .skew-card:hover .skew-card-inner,
+  .skew-card:hover .skew-card-badge,
+  .skew-card:hover .skew-card-price {
+    transform: none;
+    transition:
+      box-shadow 380ms ease-out,
+      border-color 300ms ease;
+  }
+}
