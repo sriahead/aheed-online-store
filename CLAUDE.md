@@ -101,6 +101,18 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
 - Object storage via the **S3-compatible API only**, behind `lib/storage` (`StorageService` port).
   No R2 SDK, no R2-specific features. Prefer `aws4fetch` over the AWS SDK (Worker bundle size).
 - DB holds relative keys; compose `${CDN_BASE_URL}/${key}` at read time.
+- **Raster images (confirmed: `.png`) cannot be validated visually under `npm run preview` —
+  accept this and check them on a deployed environment instead.** Both the staging and dev CDN
+  zones enforce Cloudflare hotlink/referer protection: a request carrying `Referer:
+  http://localhost:8787/` gets **403**, live-confirmed against both hosts on 2026-08-24 (#235,
+  originally found in #231's `/build`, 2026-08-18). `next.config`'s CSP is not the cause and logs no
+  violation — the block happens at the CDN edge, before the app is involved, so it cannot be fixed
+  in application code. **`.svg` is not covered by the rule** — every seeded *product* image is
+  `.svg` and loads fine locally; only raster assets are blocked, which today means just the vendor
+  logo. Provisioning a dev-tier CDN host (#277) did not incidentally fix this — the restriction is
+  zone-level, not host-specific, and the dev zone carries the identical rule. Walk image-load rows
+  in `validation.md` against a real deployed environment, not local preview; see
+  `specs/2026-08-13-p6.6-p0-ui-overhaul/validation.md` for the pattern this line generalizes.
 
 ## Config & secrets
 - All config through validated **`lib/config`** (zod). Precedence is the **Cloudflare request context
