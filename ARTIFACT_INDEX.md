@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-23T23:06:44.013Z` · commit `09e3d9d` · `99` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-24T17:12:30.473Z` · commit `2f091de` · `100` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -98,6 +98,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [UI Polish & Docs Integration Validation](specs/2026-08-22-ui-polish-docs-integration/validation.md) | spec | 1.1.0 | 2026-08-23 | approved | internal | Re-run validation for the UI transition rules (compiled against Tailwind v4 directly) and the documentation integrations, replacing checks that had been ticked against reverted code. |
 | [P8.1a — Frontend & Accessibility Debt (plan)](specs/2026-08-23-p8.1a-frontend-a11y-debt/plan.md) | spec | 1.0.0 | 2026-08-23 | draft | internal | Four self-contained rendering-layer fixes closing P8.1's frontend/a11y debt — heading hierarchy, a stale report heading plus a dead client call, header resilience against extension-injected DOM shifts, and a real per-vendor contrast gap on tint backgrounds. |
 | [P8.1b — P8.1 Closeout (plan)](specs/2026-08-23-p8.1b-closeout/plan.md) | spec | 1.0.0 | 2026-08-23 | draft | internal | The remaining three P8.1 slices delivered as one — relocating every request-scoped facade out of lib/repositories behind a real location gate, dev/staging environment hygiene, and the guest machine-readable data export. |
+| [P8.5a — Product card upgrade (plan)](specs/2026-08-24-p8.5a-product-card-upgrade/plan.md) | spec | 1.0.0 | 2026-08-24 | draft | internal | First slice of P8.5 — skew geometry with tokenised colour, a coalesced cart-mutating quantity stepper on the product grid, and a low-stock badge from the existing Inventory join. No schema migration. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.18.0 | 2026-08-23 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
