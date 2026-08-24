@@ -4,7 +4,7 @@ title: "P8.5b — Department hero (plan)"
 audience: [dev]
 type: spec
 status: draft
-version: "1.0.0"
+version: "1.1.0"
 updated: 2026-08-24
 visibility: internal
 summary: Second slice of P8.5 — an icon-led, image-optional department hero with 1-click filtered routing and a WCAG-compliant auto-flip, replacing PromoCarousel in the homepage hero slot.
@@ -117,11 +117,33 @@ stating plainly because the opposite assumption would have made this a much larg
 and are closed or re-scoped as part of this slice rather than left dangling against a surface that
 no longer renders.
 
-Whether the model, its repository and its service are **deleted** or left in place unused is
-resolved in `requirements.md`: they are removed, because leaving an unreferenced model and two
-unreferenced modules behind is precisely the kind of drift `tests/repository-purity.test.ts` and
-#252 exist to prevent. The Prisma model's removal is a migration, and that migration is part of
-this slice.
+**The model, its repository and its service are deleted** — confirmed by the human on 2026-08-24,
+and the reasoning matters more than the decision, because "deleted as dead code" and "deleted
+because superseded" leave very different records for whoever asks later why a campaign model
+disappeared.
+
+`VendorPromotion` was a single generic surface: a title, a description, an optional image and a
+link, rendered as a rotating banner. Everything it was standing in for is being replaced by
+purpose-built surfaces that model the actual merchandising concept rather than a picture of one:
+
+- **The department hero itself** is now the vendor's promotional slot on the homepage, and unlike a
+  `VendorPromotion` row it is generated from real categories and real product prices, so it cannot
+  advertise something the catalogue does not have.
+- **Curated bundles** — P8.5c (#347).
+- **Multi-buy tier pricing** — P8.5d (#348), which closes #147.
+- **Offers and clearance** are anticipated as their own surfaces on the same principle. Not yet
+  tracked as issues; noted here so the intent behind the deletion survives, not as a commitment to
+  scope.
+
+That is why deletion is right rather than merely tidy. A generic banner model left in place would
+compete with those surfaces, and the failure mode is already documented in this repo: `PromoSlider`
+advertised "20% off all fresh produce" that no discount in the engine backed, which is exactly what
+#233 replaced it to stop. Keeping an unbacked campaign banner alongside real, data-derived
+promotions would reintroduce the same class of claim.
+
+Leaving an unreferenced model and two unreferenced modules behind would additionally be the drift
+`tests/repository-purity.test.ts` and #252 exist to prevent. The Prisma model's removal is a
+migration, and that migration is part of this slice.
 
 ## Deliberately excluded
 
@@ -135,6 +157,7 @@ this slice.
 
 - **Artwork.** The hero is image-ready and image-less. Whoever produces department photography
   later swaps the icon for an image with no component change.
-- **#279 / #280** are closed or re-scoped by this slice; if the human prefers to keep
-  `VendorPromotion` for a future campaign surface, that decision changes R11 and must be taken
-  before Build.
+- **#279 / #280** are closed by this slice as **superseded**, not deferred. Both describe gaps in
+  `VendorPromotion` — missing artwork, and scheduling being a manual boolean — and neither survives
+  the model's removal. The decision to delete rather than keep was taken before Build, so nothing
+  here is left open for the builder to interpret.

@@ -67,8 +67,10 @@ R15. The `VendorPromotion` model is removed from `prisma/schema.prisma` by a mig
      slice, and `prisma/seed.ts` no longer writes promotion rows. `npx prisma migrate diff` reports
      no drift between schema and migrations.
 
-R16. Issues **#279** and **#280** are closed or re-scoped, with a comment naming this slice as the
-     reason, rather than left open against a surface that no longer renders.
+R16. Issues **#279** and **#280** are **closed as superseded**, each with a comment naming this
+     slice and the surfaces that replace `VendorPromotion` (the department hero itself, plus #347
+     bundles and #348 multi-buy tiers). Neither is deferred or re-milestoned — both describe gaps
+     in a model that no longer exists.
 
 ## Regression
 
