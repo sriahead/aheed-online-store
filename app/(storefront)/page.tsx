@@ -8,6 +8,7 @@ import { ProductRow } from "@/components/product/ProductRow";
 import { formatPrice } from "@/components/product/format-price";
 import { isDeliverable } from "@/lib/delivery";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { getRequestCartQuantities } from "@/lib/cart-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     productsRepo.list({ take: 4 }), // recent products
     productsRepo.list({ take: 4, isFeatured: true }), // vendor-curated featured products
   ]);
+  // P8.5a (#345): request-memoised, shared with the header's cart read.
+  const cartQuantities = await getRequestCartQuantities();
   // P8.5b (#346): one query for every department's headline product, not one
   // per department. Depends on `categories`, so it cannot join the Promise.all
   // above.
@@ -220,11 +223,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         products={newArrivalsPage.items}
         cdnBaseUrl={CDN_BASE_URL ?? ""}
         viewAllLink="/search"
+        cartQuantities={cartQuantities}
       />
       <ProductRow
         title="Featured Products"
         products={featuredPage.items}
         cdnBaseUrl={CDN_BASE_URL ?? ""}
+        cartQuantities={cartQuantities}
       />
     </main>
   );

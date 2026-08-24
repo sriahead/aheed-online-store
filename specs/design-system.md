@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.8.0"
-updated: 2026-08-20
+version: "1.9.0"
+updated: 2026-08-24
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -155,6 +155,19 @@ To ensure compliance with WCAG AA standards (minimum 4.5:1 contrast ratio for te
 - **Heading Hierarchy:** Component heading levels (`h1`, `h2`, `h3`) must not skip ranks in the document flow. Where a visual heading is absent but semantically required (e.g., a "Products" wrapper for `h3` product cards following a category `h1`), inject a visually hidden `<h2 className="sr-only">` to satisfy the hierarchy.
 - **Interactive Elements:** Icon-only buttons (such as quantity increment/decrement controls) must carry explicit `aria-label`s, with inner icons marked `aria-hidden="true"`.
 - **Modal surfaces:** A component that overlays the page (the cart drawer) must carry `role="dialog"`, `aria-modal="true"` and an `aria-labelledby` naming its own heading; move focus into itself on open, trap `Tab`/`Shift+Tab` within itself while open, restore focus to the opener on close, and close on `Escape`. A non-blocking banner (the cookie banner) must **not** trap focus — trapping there would be a defect, not compliance.
+- **Motion** (added P8.5a, #345). Three rules, all learned from defects rather than chosen:
+  1. **A transition names its properties.** Never `transition-all`, and never a global
+     element-selector transition rule. A global rule caused the page-refresh layout thrashing
+     removed in #324; the blanket `transition-all` sweep that followed silently broke the carousel
+     dot in #326, because Tailwind v4's default `transition` property list contains no `width`.
+  2. **Animate only properties that cannot move layout** — `transform`, `opacity`, `box-shadow`,
+     `clip-path`. Anything that reflows belongs in a reserved box instead (see #329's header logo).
+  3. **Every motion effect has a reduced-motion opt-out.** CSS effects use
+     `@media (prefers-reduced-motion: reduce)`; a JS-driven timer (an auto-rotating carousel)
+     checks `matchMedia` and does not start. `app/globals.css`'s `.skew-card` block and
+     `components/layout/PromoCarousel.tsx` are the respective reference implementations.
+     **No lint rule checks any of this**, and WCAG SC 2.2.2 in particular (moving content lasting
+     more than five seconds needs a pause/stop/hide mechanism) is only ever verified in a browser.
 
 > **These rules predate their enforcement, and that gap cost something.** Every constraint in this
 > section was written before P6.6 — yet `components/cart/CartDrawer.tsx`, added afterwards, broke
