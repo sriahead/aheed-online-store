@@ -17,7 +17,7 @@ import type { CartIdentity } from "@/lib/cart-identity";
  * request-scoped wrapper (ADR-004 slice-2 no-direct-Prisma guard).
  *
  * THE `@/lib/db` IMPORT IS TYPE-ONLY, DELIBERATELY — matching
- * `lib/repositories/promotions.ts` and `lib/repositories/data-rights.ts`.
+ * `lib/repositories/categories.ts` and `lib/repositories/data-rights.ts`.
  * `lib/db.ts` imports PrismaClient from `@prisma/client/wasm`, the workerd-safe
  * loader, which a plain Node process should not pull in. Every function here
  * takes its client as an argument, so a runtime import would buy nothing and

@@ -4,8 +4,8 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.6.0"
-updated: 2026-08-23
+version: "1.7.0"
+updated: 2026-08-24
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
@@ -122,8 +122,18 @@ should be reasoned about together.
 
    **Backgrounds are still plain aliases** (`--color-surface-muted` and the three tints): they are
    what text sits on, and clamping them would move the surface instead of the foreground.
-   **Promotional content is data on the same principle** — `VendorPromotion` rows, not constants in
-   a shared component (#233).
+   **Promotional content is data on the same principle** — not constants in a shared component
+   (#233). **The mechanism changed in P8.5b (#346); the principle did not.** #233 delivered this as
+   a `VendorPromotion` table rendered by a homepage carousel. That model was deleted in P8.5b as
+   **superseded**: it was one generic banner (title, description, optional image, link) and it
+   never gained a staff UI, so its rows stayed seed-only and no vendor could ever edit a campaign —
+   which made it data in shape only. The homepage hero is now generated from the vendor's own
+   **categories and real product prices**, so it satisfies this decision more strictly than the
+   table did: a panel cannot advertise something the catalogue does not contain, which is the
+   failure mode (`PromoSlider`'s unbacked "20% off all fresh produce") that #233 existed to stop in
+   the first place. Purpose-built merchandising surfaces follow in P8.5c (curated bundles, #347)
+   and P8.5d (multi-buy tier pricing, #348). If a general campaign surface is wanted again, it
+   needs a staff UI as part of its scope — that absence is what made the first attempt inert.
 
 6. **Split platform config from vendor config.** `lib/config.ts` keeps **platform/infra** values in
    env (DB endpoint, storage endpoint, secrets); **vendor** values (name, tagline, locality,
