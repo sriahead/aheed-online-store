@@ -6,6 +6,7 @@ package-lock.json
 tsconfig.tsbuildinfo
 prisma/migrations/
 docs/ui-ref/
+docs/ui-ref-revised/
 
 # Hand-crafted prose/tables — Prettier's markdown table reformatting pads every
 # cell to align columns, which wrecks readability on long-prose cells (e.g. the

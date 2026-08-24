@@ -111,3 +111,33 @@ body {
       border-color 300ms ease;
   }
 }
+
+/*
+ * P8.5b (#346) — the department hero's chevron cutout.
+ *
+ * A clip-path polygon rather than a background image: it costs no bytes, takes
+ * the vendor's palette from the panel behind it, and sidesteps the CSP entirely
+ * (img-src allows only 'self' and the CDN, which is why the prototype's 39
+ * unsplash URLs could never have shipped).
+ *
+ * The expand-on-hover lives here rather than as a Tailwind `group-hover:`
+ * variant because `clip-path` is set as an inline style in the component and a
+ * utility cannot override that on hover. Only `clip-path` transitions, and it
+ * is not a layout property, so this cannot shift the page.
+ */
+.dept-chevron {
+  clip-path: polygon(28% 0%, 100% 0%, 100% 100%, 0% 100%);
+  transition: clip-path 500ms ease-out;
+}
+
+.dept-panel:hover .dept-chevron {
+  /* The leading edge slides left, widening the cut. */
+  clip-path: polygon(8% 0%, 100% 0%, 100% 100%, 0% 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dept-chevron,
+  .dept-panel:hover .dept-chevron {
+    transition: none;
+  }
+}

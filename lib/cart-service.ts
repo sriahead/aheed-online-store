@@ -18,7 +18,7 @@ import {
  * need a real Workers request.
  *
  * Lives beside, not inside, `lib/repositories/`, matching
- * `lib/data-rights-service.ts` and `lib/promotions-service.ts`. The repository
+ * `lib/data-rights-service.ts` and `lib/categories-service.ts`. The repository
  * module's cart-merge and stock-clamp behaviour is what a plain `tsx` script
  * needs to be able to exercise, which is only possible while every export there
  * takes its client and `vendorId` explicitly.
