@@ -40,6 +40,9 @@ async function main() {
   await seedCatalogue(AHEED_VENDOR_ID, CATALOGUE);
   await refreshProductImages(CATALOGUE);
   await upsertVendorSatellites(AHEED_VENDOR_ID, AHEED_SATELLITES);
+  // After the catalogue: bundles resolve their constituents by product slug.
+  await seedBundles(AHEED_VENDOR_ID, AHEED_BUNDLES);
+  await seedPriceTiers(AHEED_VENDOR_ID, AHEED_PRICE_TIERS);
 
   // ADR-004 slice 3b — host→tenant mapping. Hosts are per-environment (staging & prod are
   // separate DBs), sourced from env vars. SriMart (a 2nd vendor) is only seeded when BOTH
@@ -65,6 +68,8 @@ async function main() {
     await seedCatalogue(SRIMART_VENDOR_ID, SRIMART_CATALOGUE);
     await refreshProductImages(SRIMART_CATALOGUE);
     await upsertVendorSatellites(SRIMART_VENDOR_ID, SRIMART_SATELLITES);
+    await seedBundles(SRIMART_VENDOR_ID, SRIMART_BUNDLES);
+    await seedPriceTiers(SRIMART_VENDOR_ID, SRIMART_PRICE_TIERS);
     await upsertVendorDomain(SRIMART_VENDOR_ID, srimartHost);
   } else if (srimartHost && !aheedHost) {
     console.log("SEED_SRIMART_HOST set but SEED_AHEED_HOST is not — skipping SriMart to stay safe");
@@ -641,6 +646,208 @@ const SRIMART_SATELLITES: VendorSatellites = {
   // codes are per-vendor data rather than a platform-wide list.
   discountCodes: [],
 };
+
+// P8.5c (#347) — curated bundles, addressed by PRODUCT SLUG rather than id so
+// the fixture is readable and stays valid across a `migrate reset` (ids are
+// generated, slugs are authored). A bundle names products that must already
+// belong to the same vendor; seedBundles resolves and refuses otherwise.
+//
+// SriMart gets one too, deliberately (R5). `prisma/seed.ts` warns rather than
+// silently skipping SriMart (#276), and a bundle-less second vendor is exactly
+// what makes a per-vendor rendering bug invisible.
+interface BundleFixture {
+  slug: string;
+  name: string;
+  tagline: string;
+  sortOrder: number;
+  items: { productSlug: string; quantity: number }[];
+}
+
+const AHEED_BUNDLES: BundleFixture[] = [
+  {
+    slug: "weekly-halal-meat-box",
+    name: "Weekly Halal Meat Box",
+    tagline: "Chicken breast, lamb mince and rice — the week's cooking, sorted.",
+    sortOrder: 0,
+    items: [
+      { productSlug: "halal-chicken-breast", quantity: 2 },
+      { productSlug: "halal-lamb-mince", quantity: 1 },
+      { productSlug: "basmati-rice-5kg", quantity: 1 },
+    ],
+  },
+  {
+    slug: "breakfast-basics",
+    name: "Breakfast Basics",
+    tagline: "Bread, milk and eggs — the three things that run out first.",
+    sortOrder: 1,
+    items: [
+      { productSlug: "sourdough-loaf", quantity: 1 },
+      { productSlug: "whole-milk", quantity: 2 },
+      { productSlug: "free-range-eggs", quantity: 1 },
+    ],
+  },
+  {
+    slug: "store-cupboard-starter",
+    name: "Store Cupboard Starter",
+    tagline: "Rice, oil and coconut milk to build a week of meals on.",
+    sortOrder: 2,
+    items: [
+      { productSlug: "basmati-rice-5kg", quantity: 1 },
+      { productSlug: "sunflower-oil-2l", quantity: 1 },
+      { productSlug: "coconut-milk", quantity: 3 },
+    ],
+  },
+];
+
+const SRIMART_BUNDLES: BundleFixture[] = [
+  {
+    slug: "sri-desk-setup",
+    name: "Desk Setup Bundle",
+    tagline: "Lamp, charger and earbuds for a working-from-home desk.",
+    sortOrder: 0,
+    items: [
+      { productSlug: "sri-desk-lamp", quantity: 1 },
+      { productSlug: "sri-phone-charger", quantity: 1 },
+      { productSlug: "sri-earbuds", quantity: 1 },
+    ],
+  },
+];
+
+/**
+ * Idempotent per vendor: a bundle already present for THIS vendor (by slug) is
+ * left alone, matching seedCatalogue's per-vendor posture. Re-running the seed
+ * therefore neither duplicates bundles nor overwrites a curation an admin has
+ * since edited by hand.
+ */
+async function seedBundles(vendorId: string, fixtures: BundleFixture[]) {
+  const existing = new Set(
+    (await prisma.bundle.findMany({ where: { vendorId }, select: { slug: true } })).map(
+      (b) => b.slug,
+    ),
+  );
+  const pending = fixtures.filter((fixture) => !existing.has(fixture.slug));
+  if (pending.length === 0) {
+    console.log(`All ${fixtures.length} bundles already exist for ${vendorId} — skipping`);
+    return;
+  }
+
+  const slugs = [...new Set(pending.flatMap((f) => f.items.map((i) => i.productSlug)))];
+  const products = await prisma.product.findMany({
+    where: { vendorId, slug: { in: slugs } },
+    select: { id: true, slug: true },
+  });
+  const idBySlug = new Map(products.map((p) => [p.slug, p.id]));
+
+  for (const fixture of pending) {
+    const missing = fixture.items.filter((item) => !idBySlug.has(item.productSlug));
+    if (missing.length > 0) {
+      // Loud, not silent — the #276 lesson. A bundle quietly seeded without its
+      // products would render as an empty card and look like a rendering bug.
+      console.log(
+        `WARNING: skipping bundle "${fixture.slug}" for ${vendorId} — no such product(s): ` +
+          missing.map((item) => item.productSlug).join(", "),
+      );
+      continue;
+    }
+
+    await prisma.bundle.create({
+      data: {
+        vendorId,
+        slug: fixture.slug,
+        name: fixture.name,
+        tagline: fixture.tagline,
+        sortOrder: fixture.sortOrder,
+        items: {
+          create: fixture.items.map((item, index) => ({
+            productId: idBySlug.get(item.productSlug)!,
+            quantity: item.quantity,
+            sortOrder: index,
+          })),
+        },
+      },
+    });
+  }
+
+  console.log(`seeded ${pending.length} bundles for ${vendorId}`);
+}
+
+/** A product's multi-buy tier (P8.5d, #348), resolved by product slug. */
+interface PriceTierFixture {
+  productSlug: string;
+  groupQuantity: number;
+  groupPricePence: number;
+}
+
+/**
+ * Multi-buy tiers for BOTH vendors — SriMart included, deliberately.
+ *
+ * A one-vendor seed is exactly the gap #276 exists for: cross-tenant pricing
+ * bugs are invisible when only one tenant has any data to price. The two
+ * fixtures also differ on purpose — Aheed's group price divides evenly by its
+ * group quantity and SriMart's does not (3500 / 3), so a live check exercises
+ * both the tidy case and the one where a per-unit price could not have been
+ * exact.
+ */
+async function seedPriceTiers(vendorId: string, fixtures: PriceTierFixture[]) {
+  const products = await prisma.product.findMany({
+    where: { vendorId, slug: { in: fixtures.map((f) => f.productSlug) } },
+    select: { id: true, slug: true, basePrice: true },
+  });
+  const bySlug = new Map(products.map((p) => [p.slug, p]));
+
+  let seeded = 0;
+  for (const fixture of fixtures) {
+    const product = bySlug.get(fixture.productSlug);
+    if (!product) {
+      // Loud, not silent — the #276 lesson, same as seedBundles above.
+      console.log(
+        `WARNING: skipping multi-buy tier for ${vendorId} — no such product: ${fixture.productSlug}`,
+      );
+      continue;
+    }
+
+    // A tier that does not beat buying singly would be clamped away at runtime
+    // by lib/tier-pricing.ts and render nothing — a silently inert fixture,
+    // which is worse than a loud one.
+    if (fixture.groupPricePence >= fixture.groupQuantity * product.basePrice) {
+      console.log(
+        `WARNING: skipping multi-buy tier for "${fixture.productSlug}" — ` +
+          `${fixture.groupPricePence}p for ${fixture.groupQuantity} is not cheaper than ` +
+          `${fixture.groupQuantity} x ${product.basePrice}p`,
+      );
+      continue;
+    }
+
+    const existing = await prisma.productPriceTier.findFirst({
+      where: { vendorId, productId: product.id },
+      select: { id: true },
+    });
+    if (existing) continue;
+
+    await prisma.productPriceTier.create({
+      data: {
+        vendorId,
+        productId: product.id,
+        groupQuantity: fixture.groupQuantity,
+        groupPricePence: fixture.groupPricePence,
+        isActive: true,
+      },
+    });
+    seeded += 1;
+  }
+
+  console.log(`seeded ${seeded} multi-buy tier(s) for ${vendorId}`);
+}
+
+/** "Buy 2 x 5kg Basmati for £16.50" — the P8.5 brief's own worked example. */
+const AHEED_PRICE_TIERS: PriceTierFixture[] = [
+  { productSlug: "basmati-rice-5kg", groupQuantity: 2, groupPricePence: 1650 },
+];
+
+/** 3500 / 3 is not an integer — the case a per-unit tier price gets wrong. */
+const SRIMART_PRICE_TIERS: PriceTierFixture[] = [
+  { productSlug: "sri-phone-charger", groupQuantity: 3, groupPricePence: 3500 },
+];
 
 const SRIMART_CATALOGUE: CatalogueCategory[] = [
   {

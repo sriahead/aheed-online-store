@@ -155,6 +155,8 @@ model Vendor {
   roleAuditLogs   VendorRoleAuditLog[]
   lookupAttempts  OrderLookupAttempt[]
   campaigns       DepartmentCampaign[]
+  bundles         Bundle[]
+  priceTiers      ProductPriceTier[]
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
@@ -326,6 +328,62 @@ model DepartmentCampaign {
   @@index([vendorId, isActive])
 }
 
+// P8.5c (#347) — a curated BUNDLE is a vendor-authored list of products already
+// in the catalogue, which "Add all N to basket" expands into ordinary CartItem
+// rows. It is deliberately NOT a purchasable SKU: that shape would need its own
+// inventory, its own decrement inside placeOrder's transaction, and its own
+// cases in refunds, loyalty and discounts — four subsystems changed to sell
+// three things the catalogue already holds.
+//
+// THERE IS NO STORED PRICE OR SAVING HERE, and that is the whole design.
+// A bundle's total is summed from its constituents' live Product.basePrice at
+// read time (lib/bundle-pricing.ts), so it can never drift out of date the way
+// a copied price would. The accepted cost: the figure cannot be hand-set, so a
+// genuine "save £4.50" needs a mechanism that actually reduces the charge —
+// that is P8.5d (#348), auto-applied quantity-triggered tier pricing, and it is
+// NOT built. Until it is, the storefront shows the derived total and makes no
+// savings claim at all rather than render a number with nothing behind it.
+model Bundle {
+  id        String       @id @default(uuid())
+  vendorId  String
+  vendor    Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  slug      String
+  name      String
+  tagline   String?
+  imageKey  String? // RELATIVE key only (ADR-003) — never a URL
+  altText   String? // required by jsx-a11y whenever imageKey is set
+  isActive  Boolean      @default(true)
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  items     BundleItem[]
+
+  @@unique([vendorId, slug])
+  @@index([vendorId, isActive])
+}
+
+// One constituent line of a bundle. `quantity` is how many of that product the
+// bundle contributes, which is what makes "2 x 60g packs" expressible as data
+// rather than as the prototype's free-text label.
+//
+// @@unique([bundleId, productId]) keeps a product from appearing twice in one
+// bundle. sumLinesByProduct (lib/cart-rules.ts) would collapse duplicates
+// safely at add time anyway, but two rows for one product would render as two
+// visually identical constituent entries, which is a data defect, not a
+// rendering one.
+model BundleItem {
+  id        String  @id @default(uuid())
+  bundleId  String
+  bundle    Bundle  @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  sortOrder Int     @default(0)
+
+  @@unique([bundleId, productId])
+  @@index([bundleId, sortOrder])
+}
+
 model Product {
   id               String         @id @default(uuid())
   vendorId         String
@@ -344,6 +402,8 @@ model Product {
   reviews          Review[]
   cartItems        CartItem[]
   orderItems       OrderItem[]
+  bundleItems      BundleItem[]
+  priceTier        ProductPriceTier?
   averageRating    Float          @default(0) // denormalized, recomputed on every review write
   reviewCount      Int            @default(0)
   // P2.5b1 — visual redesign foundation (specs/2026-08-07-p2-5b1-visual-foundation/).
@@ -365,6 +425,61 @@ model Product {
   @@index([vendorId, categoryId, isActive])
   @@index([vendorId, isActive, basePrice]) // catalogue filter + sort
   @@index([vendorId, isActive, isFeatured]) // homepage featured rail
+}
+
+// ---- P8.5d — Multi-buy tier pricing (#348) ----------------------------------
+
+/// A product's multi-buy tier: `groupQuantity` units for `groupPricePence`.
+/// "3 for £10.00". Applied automatically with nothing typed.
+///
+/// THIS IS A PRICE, NOT A DISCOUNT, and deliberately so. A codeless
+/// DiscountCode was rejected at /propose on three counts: DiscountRedemption
+/// has @@unique([orderId]) so an order carries at most one redemption row;
+/// evaluateCode (lib/discounts.ts) is subtotal-scoped and cannot express a
+/// per-line quantity predicate; and #273 exists because redemption rows were
+/// once written around placeOrder's transaction. Pricing a line differently
+/// leaves the whole discounts engine — its audit trail and both its concurrency
+/// guarantees — untouched. OrderItem already stores unitPricePence and
+/// lineTotalPence separately, so the per-order audit record needed no change.
+///
+/// A GROUP price, not a reduced unit price, because "3 for the price of 2" has
+/// no exact unit price: on a £5 item that is 1000/3 = 333p, charging £9.99
+/// forever. Groups are exact integer pence at every quantity. The arithmetic
+/// (whole groups at groupPricePence, remainder units at basePrice, clamped so a
+/// mistyped tier can never charge MORE than base) lives in lib/tier-pricing.ts.
+///
+/// EXACTLY ONE TIER PER PRODUCT, via @@unique([vendorId, productId]). Two
+/// concurrent multi-buys on one product ("3 for £10" and "5 for £15") would make
+/// a line total an optimal-packing problem with more than one defensible answer;
+/// one row makes the arithmetic unambiguous by construction. Editing a live tier
+/// is safe because orders snapshot OrderItem.lineTotalPence and never recompute.
+///
+/// No startsAt/endsAt: date windowing would re-open the hardcoded vendor
+/// timezone (#363), which P8.5f had just finished fixing a campaign date bug
+/// over. isActive only until #363 is resolved.
+model ProductPriceTier {
+  id              String   @id @default(uuid())
+  vendorId        String
+  vendor          Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  /// @unique carries the one-tier-per-product rule on its own (a product belongs
+  /// to exactly one vendor, so per-product and per-vendor-product mean the same
+  /// thing here) and is what lets `Product.priceTier` be a true 1-1. The
+  /// composite @@unique below is kept anyway: it is the index every vendor-scoped
+  /// read actually goes through, since R12a requires vendorId in the where clause
+  /// rather than trusting a bare productId lookup.
+  productId       String   @unique
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// Units per group. Always >= 2 — 1 would be a markdown, which is
+  /// Product.originalPrice's job. lib/tier-pricing.ts refuses anything lower.
+  groupQuantity   Int
+  /// Pence charged for one whole group.
+  groupPricePence Int
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([vendorId, productId])
+  @@index([vendorId, isActive])
 }
 
 model ProductImage {

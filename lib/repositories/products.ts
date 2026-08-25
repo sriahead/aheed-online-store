@@ -3,6 +3,13 @@ import { getPrisma, getPrismaWs } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import { effectiveStock } from "@/lib/cart-rules";
 import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
+import type { ProductTier } from "@/lib/tier-pricing";
+import {
+  deleteProductTier,
+  getTierForProduct,
+  listActiveTiersForProducts,
+  upsertProductTier,
+} from "@/lib/repositories/product-tiers";
 
 export interface ProductImageSummary {
   storageKey: string;
@@ -50,6 +57,15 @@ export interface ProductSummary {
    */
   stockQuantity: number;
   lowStockThreshold: number;
+  /**
+   * P8.5d (#348) — the product's active multi-buy tier, or null.
+   *
+   * The card advertises it ("3 for £10.00") without knowing any quantity, which
+   * is why the tier itself travels rather than a computed saving: a saving needs
+   * a line quantity and a card has none. `lib/tier-pricing.ts` does the
+   * arithmetic wherever a quantity actually exists (the cart, the order).
+   */
+  tier: ProductTier | null;
 }
 
 /**
@@ -174,6 +190,7 @@ function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereInput {
  */
 async function findPage(
   prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
   where: Prisma.ProductWhereInput,
   { take, cursor }: { take: number; cursor?: string },
 ): Promise<ProductPage> {
@@ -206,6 +223,13 @@ async function findPage(
   const hasMore = rows.length > take;
   const page = hasMore ? rows.slice(0, take) : rows;
 
+  // One query for the page's tiers, then a lookup per card — never one per row.
+  const tiers = await listActiveTiersForProducts(
+    prisma,
+    vendorId,
+    page.map((p) => p.id),
+  );
+
   return {
     items: page.map((p) => ({
       id: p.id,
@@ -224,6 +248,7 @@ async function findPage(
       inStock: (p.inventory?.quantity ?? 0) > 0,
       stockQuantity: effectiveStock(p.inventory?.quantity),
       lowStockThreshold: p.inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
+      tier: tiers.get(p.id) ?? null,
     })),
     nextCursor: hasMore ? page[page.length - 1].id : null,
   };
@@ -237,6 +262,7 @@ export async function listProductsByCategory(
 ): Promise<ProductPage> {
   return findPage(
     prisma,
+    vendorId,
     { vendorId, categoryId, isActive: true, ...buildFilterWhere(filters) },
     { take, cursor },
   );
@@ -303,6 +329,7 @@ export async function listProducts(
 ): Promise<ProductPage> {
   return findPage(
     prisma,
+    vendorId,
     { vendorId, isActive: true, ...buildFilterWhere(filters) },
     { take, cursor },
   );
@@ -319,6 +346,7 @@ export async function searchProducts(
 
   return findPage(
     prisma,
+    vendorId,
     {
       vendorId,
       isActive: true,
@@ -360,6 +388,7 @@ export async function getProductBySlug(
   if (!product) return null;
 
   const { inventory, images, ...rest } = product;
+  const tiers = await listActiveTiersForProducts(prisma, vendorId, [product.id]);
   return {
     ...rest,
     images,
@@ -367,6 +396,7 @@ export async function getProductBySlug(
     inStock: (inventory?.quantity ?? 0) > 0,
     stockQuantity: effectiveStock(inventory?.quantity),
     lowStockThreshold: inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
+    tier: tiers.get(product.id) ?? null,
   };
 }
 
@@ -478,6 +508,8 @@ export interface AdminProductDetail {
   imageNeedsReview: boolean;
   /** Read here; written by setPrimaryProductImage/addProductImage/etc. (P6b2, #211). */
   images: AdminProductImage[];
+  /** P8.5d (#348) — the multi-buy tier, active or not, so the form can re-enable one. */
+  tier: ProductTier | null;
 }
 
 /** Everything a product write needs, already validated by lib/catalogue-form.ts. */
@@ -497,6 +529,8 @@ export interface ProductWriteInput {
   isActive: boolean;
   quantity: number;
   lowStockThreshold: number;
+  /** P8.5d (#348) — the multi-buy tier, or null to remove it entirely. */
+  tier: { groupQuantity: number; groupPricePence: number; isActive: boolean } | null;
 }
 
 export type CatalogueWriteResult =
@@ -664,12 +698,17 @@ export async function getProductForAdmin(
   if (!row) return null;
 
   const { inventory, ...product } = row;
+  // Active OR inactive: the form has to be able to re-activate a switched-off
+  // multi-buy without the owner retyping its numbers, so this read is
+  // deliberately not the active-only one the storefront uses.
+  const tier = await getTierForProduct(prisma, vendorId, id);
   return {
     ...product,
     // A product seeded before P6b1 may have no Inventory row at all; the form
     // shows zeroes and the first save creates it (see updateProductForVendor).
     quantity: inventory?.quantity ?? 0,
     lowStockThreshold: inventory?.lowStockThreshold ?? 3,
+    tier,
   };
 }
 
@@ -738,6 +777,20 @@ export async function createProductForVendor(
             lowStockThreshold: input.lowStockThreshold,
           },
         },
+        // Nested for the same reason Inventory is: one implicit transaction, so
+        // a product can never exist with a half-written multi-buy beside it.
+        ...(input.tier
+          ? {
+              priceTier: {
+                create: {
+                  vendorId,
+                  groupQuantity: input.tier.groupQuantity,
+                  groupPricePence: input.tier.groupPricePence,
+                  isActive: input.tier.isActive,
+                },
+              },
+            }
+          : {}),
       },
       select: { id: true },
     });
@@ -797,6 +850,17 @@ export async function updateProductForVendor(
         },
         update: { quantity: input.quantity, lowStockThreshold: input.lowStockThreshold },
       });
+
+      // P8.5d (#348). Clearing both multi-buy fields DELETES the row rather than
+      // deactivating it: "no multi-buy" and "a multi-buy that is switched off"
+      // are different intents, and the form offers both (the active checkbox is
+      // how you keep the numbers for next season). Inside this transaction, so
+      // a product and its tier commit or roll back together.
+      if (input.tier) {
+        await upsertProductTier(tx, vendorId, id, input.tier);
+      } else {
+        await deleteProductTier(tx, vendorId, id);
+      }
 
       return { ok: true as const, id };
     });
