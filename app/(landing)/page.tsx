@@ -1,14 +1,12 @@
-import { MapPin, Sparkles, Truck, ShieldCheck, CreditCard, BellRing } from "lucide-react";
+import { Sparkles, Truck, ShieldCheck, CreditCard, BellRing } from "lucide-react";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { getProductRepository } from "@/lib/products-service";
 import { getEnv } from "@/lib/config";
-import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
-import { PromoCarousel } from "@/components/layout/PromoCarousel";
-import { ProductRow } from "@/components/product/ProductRow";
+import { DepartmentHero } from "@/components/layout/DepartmentHero";
 import { formatPrice } from "@/components/product/format-price";
-import { isDeliverable } from "@/lib/delivery";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
-import { getCurrentVendorPromotions } from "@/lib/promotions-service";
+import { getCampaignsForHero } from "@/lib/campaigns-service";
+import { isCampaignLive } from "@/lib/campaign-liveness";
 
 export const dynamic = "force-dynamic";
 
@@ -18,24 +16,53 @@ export async function generateMetadata() {
   return { title: profile?.tagline ? `${name} — ${profile.tagline}` : name };
 }
 
-type SearchParams = { postcode?: string };
-
-export default async function HomePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const { postcode } = await searchParams;
+/**
+ * P8.5f: the landing page is now hero-first. The department scroller and the New
+ * Arrivals / Featured Products rows moved to `/categories`, which this slice
+ * rebuilt as the shop page, and the postcode checker moved into the header. What
+ * remains is the one thing this page is FOR: the vendor's hero and the three
+ * platform-true trust claims.
+ */
+export default async function HomePage() {
   const productsRepo = getProductRepository();
-  const [categories, profile, promotions, newArrivalsPage, featuredPage] = await Promise.all([
+  const [categories, profile] = await Promise.all([
     getCategoryRepository().listTopLevel(),
     getCurrentVendorProfile(),
-    getCurrentVendorPromotions(),
-    productsRepo.list({ take: 4 }), // recent products
-    productsRepo.list({ take: 4, isFeatured: true }), // vendor-curated featured products
   ]);
+  // P8.5b (#346): one query for every department's headline product, not one
+  // per department. Depends on `categories`, so it cannot join the Promise.all
+  // above.
+  const spotlights = await productsRepo.categorySpotlights(categories.map((c) => c.id));
+  // P8.5e (#356): campaigns are read alongside spotlights, keyed the same way.
+  // Liveness is decided HERE, once, so DepartmentHero never has to re-derive it
+  // from isActive/startsAt/endsAt.
+  const campaigns = await getCampaignsForHero(categories.map((c) => c.id));
+  const now = new Date();
+  const heroDepartments = categories.map((category) => {
+    const campaign = campaigns.get(category.id);
+    return {
+      id: category.id,
+      slug: category.slug,
+      name: category.name,
+      // `Category` has no image column yet (#279 / P8.5b's plan.md); the hero
+      // renders each department's icon until one exists.
+      imageKey: null,
+      spotlight: spotlights.get(category.id) ?? null,
+      campaign:
+        campaign && isCampaignLive(campaign, now)
+          ? {
+              headline: campaign.headline,
+              subtitle: campaign.subtitle,
+              imageKey: campaign.imageKey,
+              altText: campaign.altText,
+              linkUrl: campaign.linkUrl,
+            }
+          : null,
+    };
+  });
   const { CDN_BASE_URL } = getEnv();
   const localityName = profile?.localityName ?? "";
   const vendorName = profile?.name ?? "Welcome";
-  const prefixes = profile?.deliveryPrefixes ?? [];
-  const trimmedPostcode = postcode?.trim() ?? "";
-  const deliverable = trimmedPostcode ? isDeliverable(trimmedPostcode, prefixes) : null;
   // P7.5c+f (#239): the hero used to state "Free Delivery Over £30" to every
   // vendor. Aheed's threshold IS £30, so the literal was accidentally true for
   // the vendor it was written for and wrong for SriMart, whose threshold is
@@ -51,10 +78,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         {/* Background glow placeholder */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Two columns once this vendor has promotions to show; a single
+        {/* Two columns once this vendor has departments to show; a single
             column when they don't, so the hero never renders an empty well. */}
         <div
-          className={`relative z-10 gap-8 ${promotions.length > 0 ? "lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:items-center" : ""}`}
+          className={`relative z-10 gap-8 ${heroDepartments.length > 0 ? "lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:items-center" : ""}`}
         >
           <div className="max-w-2xl space-y-4">
             <div className="inline-flex items-center gap-1.5 bg-black/20 border border-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
@@ -99,48 +126,25 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               )}
             </div>
 
-            <div className="pt-4">
-              <form method="GET" className="flex flex-wrap items-center gap-3">
-                <div className="relative flex items-center">
-                  <MapPin className="absolute left-3 w-4 h-4 text-black/40" />
-                  <input
-                    type="text"
-                    name="postcode"
-                    defaultValue={trimmedPostcode}
-                    placeholder={prefixes.length ? `e.g. ${prefixes[0]}1 1AA` : "Enter postcode"}
-                    className="w-48 pl-9 pr-4 py-2.5 rounded-l-xl text-black font-semibold text-sm focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    className="bg-accent text-white px-5 py-2.5 font-bold text-sm rounded-r-xl transition-colors hover:opacity-90"
-                  >
-                    Check Area
-                  </button>
-                </div>
-                {deliverable !== null && (
-                  <p
-                    className={`text-sm font-semibold px-2 py-1 rounded ${deliverable ? "bg-action text-white" : "bg-danger text-white"}`}
-                  >
-                    {deliverable
-                      ? `✓ We deliver to ${trimmedPostcode.toUpperCase()}`
-                      : `✗ Sorry, ${localityName} ${prefixes.join("/")} only`}
-                  </p>
-                )}
-              </form>
-            </div>
+            {/* P8.5f: the postcode checker that used to sit here now lives in
+                the header (components/layout/PostcodeChecker.tsx), where its
+                answer is carried in a cookie and survives navigation instead of
+                vanishing with the `?postcode=` query string. */}
           </div>
 
-          {/* #233: the hero's image slot. What used to sit here was a hardcoded
-              stock photo on images.unsplash.com, removed in #231 for failing
-              P7a's CSP (img-src 'self' data: https://*.nocaped.com) and for
-              rendering identically for every vendor. It is now this vendor's own
-              promotions — a carousel rather than a single image, so a vendor
-              with three campaigns doesn't have to merge them into one graphic.
-              Promotions with no artwork render as token-styled cards, which is
-              why this works before anyone uploads anything. */}
-          {promotions.length > 0 && (
+          {/* P8.5b (#346): the hero's second column. This slot has now held
+              three things. A hardcoded unsplash photo, removed in #231 for
+              failing P7a's CSP and for rendering identically for every vendor.
+              Then this vendor's VendorPromotion rows as a carousel (#233) —
+              which never had a staff UI, so the rows stayed seed-only and no
+              vendor could ever edit a campaign. Now the departments themselves,
+              generated from real categories and real product prices, so the
+              panel cannot advertise something the catalogue does not have.
+              VendorPromotion is deleted in this slice; see the spec for why
+              "superseded" rather than "unused" is the accurate reason. */}
+          {heroDepartments.length > 0 && (
             <div className="mt-8 lg:mt-0">
-              <PromoCarousel promotions={promotions} cdnBaseUrl={CDN_BASE_URL ?? null} />
+              <DepartmentHero departments={heroDepartments} cdnBaseUrl={CDN_BASE_URL ?? null} />
             </div>
           )}
         </div>
@@ -194,25 +198,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </div>
         </div>
       </section>
-
-      {/* Store Categories Nav */}
-      <section className="bg-white rounded-2xl border border-black/10 p-5 shadow-sm">
-        <h2 className="mb-4 text-xl font-bold text-primary">Shop by department</h2>
-        <DepartmentScroller categories={categories} />
-      </section>
-
-      {/* Product Discovery Rows */}
-      <ProductRow
-        title="New Arrivals"
-        products={newArrivalsPage.items}
-        cdnBaseUrl={CDN_BASE_URL ?? ""}
-        viewAllLink="/search"
-      />
-      <ProductRow
-        title="Featured Products"
-        products={featuredPage.items}
-        cdnBaseUrl={CDN_BASE_URL ?? ""}
-      />
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getProductRepository } from "@/lib/products-service";
+import { getRequestCartQuantities } from "@/lib/cart-summary";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { getEnv } from "@/lib/config";
 import { ProductCard } from "@/components/product/ProductCard";
@@ -68,6 +69,8 @@ export default async function SearchPage({
     nextCursor = result.nextCursor;
   }
   const specialities = await products.availableSpecialities();
+  // P8.5a (#345): request-memoised, shared with the header's cart read.
+  const cartQuantities = await getRequestCartQuantities();
 
   const { CDN_BASE_URL } = getEnv();
 
@@ -90,7 +93,12 @@ export default async function SearchPage({
           {query && (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {items.map((product) => (
-                <ProductCard key={product.id} product={product} cdnBaseUrl={CDN_BASE_URL ?? ""} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  cdnBaseUrl={CDN_BASE_URL ?? ""}
+                  cartQuantity={cartQuantities.get(product.id) ?? 0}
+                />
               ))}
             </div>
           )}

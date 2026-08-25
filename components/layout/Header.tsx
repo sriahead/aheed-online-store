@@ -17,11 +17,12 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
-import { getCartRepository } from "@/lib/cart-service";
-import { EMPTY_CART } from "@/lib/repositories/cart";
-import { getCartIdentity } from "@/lib/cart-identity";
+import { getRequestCartSummary } from "@/lib/cart-summary";
+import { isDeliverable } from "@/lib/delivery";
+import { DELIVERY_POSTCODE_COOKIE } from "@/lib/delivery-cookie";
 import { CartDrawerShell } from "@/components/cart/CartDrawerShell";
 import { CartContents } from "@/components/cart/CartContents";
+import { PostcodeChecker } from "./PostcodeChecker";
 import { ViewSwitcher } from "./ViewSwitcher";
 
 /**
@@ -50,10 +51,32 @@ function SearchForm({ className = "", placeholder }: { className?: string; place
   );
 }
 
-export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) {
-  const session = await (await getAuth()).api.getSession({ headers: await headers() });
+export async function Header({
+  isPortal = false,
+  isLanding: isLandingProp = false,
+}: {
+  isPortal?: boolean;
+  /**
+   * P8.5f: whether this is the storefront's landing route (`/`), where the
+   * postcode checker replaces search. Passed explicitly by whichever layout
+   * renders `Header` — `app/(landing)/layout.tsx` passes `true`,
+   * `app/(storefront)/layout.tsx` and `app/(admin)/layout.tsx` don't, same
+   * pattern `isPortal` already uses. Not derived from a request header: a
+   * layout in the App Router cannot see which page it wraps, and the earlier
+   * approach (a root `proxy.ts` annotating the request) is unbuildable on this
+   * project's pinned `@opennextjs/cloudflare` — Next 16 forces Proxy files onto
+   * the Node.js runtime and forbids opting out, and the Cloudflare adapter
+   * rejects any Node-runtime middleware outright (`process.exit(1)`, confirmed
+   * against both `npm run preview` and a real `staging` deploy). See
+   * `specs/architecture.md` §2.1.
+   */
+  isLanding?: boolean;
+} = {}) {
+  const requestHeaders = await headers();
+  const session = await (await getAuth()).api.getSession({ headers: requestHeaders });
   const user = session?.user as { name: string } | undefined;
   const firstName = user?.name?.split(" ")[0];
+  const isLanding = !isPortal && isLandingProp;
 
   let isStaffOrAdmin = false;
   let canSeeAdmin = false;
@@ -80,11 +103,18 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
   const localityName = profile?.localityName ?? "";
   const bannerNote = profile?.bannerNote ?? null;
 
-  const cartIdentity = await getCartIdentity();
-  const cartSummary =
-    cartIdentity.userId || cartIdentity.guestToken
-      ? await getCartRepository().getSummary(cartIdentity)
-      : EMPTY_CART;
+  // P8.5f: the checker moved here from the homepage hero. Only the postcode is
+  // stored; the verdict is recomputed every render against the vendor's CURRENT
+  // prefixes, so extending a delivery area doesn't leave a shopper holding a
+  // stale "we don't deliver to you".
+  const deliveryPrefixes = profile?.deliveryPrefixes ?? [];
+  const storedPostcode = cookieStore.get(DELIVERY_POSTCODE_COOKIE)?.value ?? null;
+  const deliverable = storedPostcode ? isDeliverable(storedPostcode, deliveryPrefixes) : null;
+
+  // P8.5a (#345): routed through the request-memoised reader so the header and
+  // a product grid on the same page share ONE getSummary() call. The identity
+  // guard and the EMPTY_CART fallback moved inside it unchanged.
+  const cartSummary = await getRequestCartSummary();
   // #239: this fallback was itself Aheed copy ("vine tomatoes, halal lamb
   // chops, basmati, lentils"). It only fires when no vendor resolves at all —
   // fetchVendorProfile already substitutes DEFAULT_SEARCH_PLACEHOLDER for a
@@ -199,15 +229,28 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
           </Link>
         </div>
 
-        {/* Global Search Bar */}
+        {/* P8.5f: the landing page trades the search box for the postcode
+            checker — search is reachable from every other route's header and
+            from /categories. Every other route keeps search exactly as before. */}
         <div className="flex-1 max-w-md hidden sm:block">
-          {!isPortal && <SearchForm placeholder={searchPlaceholder} />}
+          {isLanding ? (
+            <PostcodeChecker
+              postcode={storedPostcode}
+              deliverable={deliverable}
+              localityName={localityName}
+              prefixes={deliveryPrefixes}
+              variant="full"
+            />
+          ) : (
+            !isPortal && <SearchForm placeholder={searchPlaceholder} />
+          )}
         </div>
 
         {/* Action Controls & Navigation */}
         <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-2">
-          {/* Shop your list link */}
-          {!isPortal && (
+          {/* P8.5f: hidden on the landing page (see the search slot above); the
+              standing postcode answer takes this space instead. */}
+          {!isPortal && !isLanding && (
             <Link
               href="/shop-your-list"
               className="hidden lg:flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
@@ -216,6 +259,16 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
               <ShoppingBag className="w-4 h-4 text-primary" />
               <span>Shop List</span>
             </Link>
+          )}
+
+          {!isPortal && !isLanding && (
+            <PostcodeChecker
+              postcode={storedPostcode}
+              deliverable={deliverable}
+              localityName={localityName}
+              prefixes={deliveryPrefixes}
+              variant="badge"
+            />
           )}
 
           {/* Account / Sign In & Sign Out Controls */}
@@ -268,9 +321,21 @@ export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) 
         </nav>
       </div>
 
-      {/* Mobile search row */}
+      {/* Mobile row. Mirrors the desktop slot's landing/non-landing swap — the
+          desktop slot is `hidden sm:block`, so without this the postcode checker
+          would be unreachable on a phone, which is most of this store's traffic. */}
       <div className="px-4 pb-2.5 sm:hidden">
-        {!isPortal && <SearchForm placeholder={searchPlaceholder} />}
+        {isLanding ? (
+          <PostcodeChecker
+            postcode={storedPostcode}
+            deliverable={deliverable}
+            localityName={localityName}
+            prefixes={deliveryPrefixes}
+            variant="full"
+          />
+        ) : (
+          !isPortal && <SearchForm placeholder={searchPlaceholder} />
+        )}
       </div>
     </header>
   );

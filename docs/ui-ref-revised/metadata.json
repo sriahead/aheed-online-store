@@ -1,0 +1,8 @@
+{
+  "name": "Remix Aheed Food Centre",
+  "description": "Online store and mobile web prototype for Aheed Food Centre featuring cultural groceries, fresh produce, halal meat, responsive shopping experience, cart, checkout, and 3-step delivery tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

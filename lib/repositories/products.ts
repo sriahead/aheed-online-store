@@ -36,7 +36,27 @@ export interface ProductSummary {
   reviewCount: number;
   /** P3a — cards need this to render the add-to-cart out-of-stock state. */
   inStock: boolean;
+  /**
+   * P8.5a (#345) — the card's low-stock urgency badge needs the COUNT, not just
+   * `inStock`. Both come from the `Inventory` row that was already joined for
+   * `inStock`, so this adds no query and no migration.
+   *
+   * `stockQuantity` is normalised through `effectiveStock()`, so a negative or
+   * null inventory reads as 0 rather than leaking a nonsense number into the
+   * UI. `lowStockThreshold` falls back to the schema default (3) when there is
+   * no inventory row at all — a product with no inventory is out of stock, so
+   * the threshold is never actually consulted for it, but a number keeps the
+   * type honest and the card free of null handling.
+   */
+  stockQuantity: number;
+  lowStockThreshold: number;
 }
+
+/**
+ * Mirrors `Inventory.lowStockThreshold`'s schema default. Used only when a
+ * product has no inventory row; see ProductSummary's note.
+ */
+const DEFAULT_LOW_STOCK_THRESHOLD = 3;
 
 export interface ProductDetail extends ProductSummary {
   description: string;
@@ -57,6 +77,21 @@ export interface ProductFilters {
   isFresh?: boolean;
   isOrganic?: boolean;
   isFeatured?: boolean;
+}
+
+/**
+ * P8.5b (#346) — one department's headline product, for the hero's live price
+ * callout. Deliberately smaller than ProductSummary: the hero shows a name, a
+ * price and a link, and carrying rating/stock/badges it never renders would
+ * invite them onto the panel later without anyone deciding to put them there.
+ */
+export interface CategorySpotlight {
+  categoryId: string;
+  name: string;
+  slug: string;
+  basePrice: number;
+  originalPrice: number | null;
+  unitLabel: string;
 }
 
 /** Which speciality attributes the current vendor actually uses (≥1 active product). */
@@ -96,6 +131,11 @@ export interface ProductRepository {
    * per-line all-terms decision to lib/shopping-list.ts.
    */
   matchListTerms(terms: string[]): Promise<ListCandidate[]>;
+  /**
+   * P8.5b (#346) — one headline product per department for the homepage hero,
+   * in a single query. Keyed by category id.
+   */
+  categorySpotlights(categoryIds: readonly string[]): Promise<Map<string, CategorySpotlight>>;
 }
 
 const productImageSelect = { storageKey: true, alt: true, isPrimary: true } as const;
@@ -159,7 +199,7 @@ async function findPage(
       averageRating: true,
       reviewCount: true,
       images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
-      inventory: { select: { quantity: true } },
+      inventory: { select: { quantity: true, lowStockThreshold: true } },
     },
   });
 
@@ -182,6 +222,8 @@ async function findPage(
       reviewCount: p.reviewCount,
       primaryImage: p.images[0] ?? null,
       inStock: (p.inventory?.quantity ?? 0) > 0,
+      stockQuantity: effectiveStock(p.inventory?.quantity),
+      lowStockThreshold: p.inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
     })),
     nextCursor: hasMore ? page[page.length - 1].id : null,
   };
@@ -198,6 +240,60 @@ export async function listProductsByCategory(
     { vendorId, categoryId, isActive: true, ...buildFilterWhere(filters) },
     { take, cursor },
   );
+}
+
+/**
+ * How many rows to pull per requested category. The hero needs ONE product per
+ * department, but "one per group" is not expressible in a single Prisma query
+ * without raw SQL — which `CLAUDE.md` bans in application code. So this
+ * over-fetches a bounded window and picks the first per category in memory.
+ *
+ * 4 is chosen against the real ordering: featured products sort first, and a
+ * department with four or more featured products is choosing between good
+ * candidates, not missing one. The cost is bounded at `4 x departments` rows
+ * (roughly 36 for the seeded vendors), which is smaller than the product rows
+ * the same page already fetches.
+ */
+const SPOTLIGHT_ROWS_PER_CATEGORY = 4;
+
+/**
+ * P8.5b (#346) — the headline product for each of several departments, in ONE
+ * query rather than one per department (requirement R5).
+ *
+ * Ordering is `isFeatured desc, createdAt desc`: a vendor's own curation wins,
+ * and newest-first breaks the tie. A department whose products all fall outside
+ * the fetched window simply has no spotlight, and the hero renders that panel
+ * without a price callout rather than inventing one — the same principle #239
+ * established when hardcoded hero copy turned out to be one vendor's claim
+ * rendered for everyone.
+ */
+export async function listCategorySpotlights(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  categoryIds: readonly string[],
+): Promise<Map<string, CategorySpotlight>> {
+  if (categoryIds.length === 0) return new Map();
+
+  const rows = await prisma.product.findMany({
+    where: { vendorId, isActive: true, categoryId: { in: [...categoryIds] } },
+    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+    take: categoryIds.length * SPOTLIGHT_ROWS_PER_CATEGORY,
+    select: {
+      categoryId: true,
+      name: true,
+      slug: true,
+      basePrice: true,
+      originalPrice: true,
+      unitLabel: true,
+    },
+  });
+
+  const spotlights = new Map<string, CategorySpotlight>();
+  for (const row of rows) {
+    // First row wins per category — the list is already in priority order.
+    if (!spotlights.has(row.categoryId)) spotlights.set(row.categoryId, row);
+  }
+  return spotlights;
 }
 
 export async function listProducts(
@@ -258,7 +354,7 @@ export async function getProductBySlug(
       averageRating: true,
       reviewCount: true,
       images: { orderBy: { sortOrder: "asc" }, select: productImageSelect },
-      inventory: { select: { quantity: true } },
+      inventory: { select: { quantity: true, lowStockThreshold: true } },
     },
   });
   if (!product) return null;
@@ -269,6 +365,8 @@ export async function getProductBySlug(
     images,
     primaryImage: images.find((i) => i.isPrimary) ?? images[0] ?? null,
     inStock: (inventory?.quantity ?? 0) > 0,
+    stockQuantity: effectiveStock(inventory?.quantity),
+    lowStockThreshold: inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
   };
 }
 

@@ -4,8 +4,8 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.6.0"
-updated: 2026-08-23
+version: "1.9.0"
+updated: 2026-08-25
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
@@ -122,8 +122,37 @@ should be reasoned about together.
 
    **Backgrounds are still plain aliases** (`--color-surface-muted` and the three tints): they are
    what text sits on, and clamping them would move the surface instead of the foreground.
-   **Promotional content is data on the same principle** — `VendorPromotion` rows, not constants in
-   a shared component (#233).
+   **Promotional content is data on the same principle** — not constants in a shared component
+   (#233). **The mechanism changed in P8.5b (#346); the principle did not.** #233 delivered this as
+   a `VendorPromotion` table rendered by a homepage carousel. That model was deleted in P8.5b as
+   **superseded**: it was one generic banner (title, description, optional image, link) and it
+   never gained a staff UI, so its rows stayed seed-only and no vendor could ever edit a campaign —
+   which made it data in shape only. The homepage hero is now generated from the vendor's own
+   **categories and real product prices**, so it satisfies this decision more strictly than the
+   table did: a panel cannot advertise something the catalogue does not contain, which is the
+   failure mode (`PromoSlider`'s unbacked "20% off all fresh produce") that #233 existed to stop in
+   the first place. Purpose-built merchandising surfaces follow in P8.5c (curated bundles, #347)
+   and P8.5d (multi-buy tier pricing, #348). If a general campaign surface is wanted again, it
+   needs a staff UI as part of its scope — that absence is what made the first attempt inert.
+
+   **Amended 2026-08-25 (P8.5e, #356).** The general campaign surface was wanted again, sooner than
+   expected — a human review of the live P8.5b hero against the AI Studio prototype that P8.5's
+   brief was drawn from found the data-only hero doesn't deliver the photographic, benefit-led
+   copy the brief asked for, which no product or category field can supply. P8.5e is that surface,
+   built with the staff UI this amendment named as the prerequisite: `DepartmentCampaign`, one row
+   per top-level category, edited at `/staff/promotions`.
+
+   This is a **deliberate, narrow exception** to "promotional content is data," not a reversal of
+   it, made **by explicit human decision at `/propose` having been shown the risk**: a campaign's
+   `headline` and `subtitle` are free text, not derived from product or discount data, so nothing
+   in the schema stops a future campaign from repeating #233's unbacked-claim failure. What stays
+   structured, and what limits the exception's reach: `imageKey` and `linkUrl` are validated
+   storage keys and routes, not arbitrary strings; `isActive`/`startsAt`/`endsAt` are the only
+   things that decide whether a campaign renders at all; and the panel's real product-price
+   callout renders unconditionally underneath a campaign's copy, campaign or not — a vendor can
+   caption a photo, but cannot make the panel stop showing a real price. The exception is scoped to
+   two text fields on one new model, not a general license to reintroduce free-text marketing
+   surfaces elsewhere.
 
 6. **Split platform config from vendor config.** `lib/config.ts` keeps **platform/infra** values in
    env (DB endpoint, storage endpoint, secrets); **vendor** values (name, tagline, locality,
@@ -224,6 +253,31 @@ fact that this user also shops there — which the user already knows about them
 small change. The deeper fix is **#220 (P7e)** — row-level security, which decision 2 already defers
 to P7 — so that a missing `vendorId` filter fails closed at Postgres instead of relying on the
 repository layer and the `no-restricted-imports` lint rule being the only enforcement.
+
+## Implementation note — store timezone is a constant, not yet vendor data (P8.5f, 2026-08-25)
+
+Decision 3 makes region, locality and delivery footprint **DB-driven per vendor**. Time zone is the
+one region-shaped value that P8.5f deliberately did **not** put in the database: `lib/local-datetime.ts`
+pins a single `STORE_TIMEZONE = "Europe/London"` for the whole platform.
+
+The reason is that the slice existed to fix a *correctness* bug, and a constant fixes it completely
+for every vendor that exists. `datetime-local` form values (campaign `startsAt`/`endsAt`, discount
+code windows) were being parsed with a bare `new Date(value)`, which ECMAScript interprets in **the
+runtime's own** zone — UTC on the Worker — and rendered back through the browser's local clock. The
+two assumptions disagreed by exactly the UK's summer offset, so an admin typing `07:25` in BST read
+back `08:25` and the database held an instant nobody chose. Fixing that requires only that **one
+explicit zone is used on both sides**; which zone it is matters only when a vendor is somewhere else.
+
+Both seeded vendors are UK (Aheed in Milton Keynes, SriMart in Reading), so today the constant and a
+per-vendor column produce identical results for every row in the system.
+
+**What makes it safe to defer:** the constant is read in exactly one module, and every caller already
+passes through `parseLocalInput`/`formatLocalInput`. Adding `Vendor.timezone` later means a migration,
+a default of `Europe/London`, and threading a vendor id into those two functions — mechanical, and
+guarded by tests that already assert the conversion is independent of the process clock. **What makes
+it a real limit:** the moment a non-UK vendor onboards, every campaign schedule and discount window
+on the platform is interpreted in London time until that column exists. That is a blocker for
+international onboarding, not a cosmetic gap — treat this note as the prerequisite it is.
 
 ## Row-level security — determined 2026-08-19, NOT adopted (#220, P7 closeout #251)
 

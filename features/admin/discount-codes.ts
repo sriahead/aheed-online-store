@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { normaliseCode, type DiscountKind } from "@/lib/discounts";
+import { parseLocalInput } from "@/lib/local-datetime";
 import {
   createCodeForVendor,
   deactivateCodeForVendor,
@@ -62,11 +63,18 @@ function optionalIntegerField(form: FormData, field: string, min: number): numbe
   return integerField(form, field, min);
 }
 
+/**
+ * P8.5f: parsed via `parseLocalInput`, NOT `new Date(raw)` — see
+ * `lib/local-datetime.ts`. This is the same defect the campaign form carried, and
+ * it mattered more here: these two fields decide when a discount code starts and
+ * stops being redeemable, so an hour's drift is an hour of unintended (or
+ * refused) redemptions.
+ */
 function optionalDateField(form: FormData, field: string): Date | null {
   const raw = String(form.get(field) ?? "").trim();
   if (raw === "") return null;
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) {
+  const parsed = parseLocalInput(raw);
+  if (parsed === null) {
     throw new InvalidFieldError("Dates must be valid.");
   }
   return parsed;

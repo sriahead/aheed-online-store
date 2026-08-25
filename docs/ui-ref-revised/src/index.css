@@ -1,0 +1,302 @@
+@import "tailwindcss";
+
+@theme {
+  --font-poppins: 'Poppins', sans-serif;
+  --color-aheed-green: #1B5E20;
+  --color-aheed-leaf: #4CAF50;
+  --color-aheed-orange: #F57C00;
+  --color-aheed-red: #D32F2F;
+  --color-aheed-bg: #E8F5E9;
+  --color-aheed-neutral: #FAFAFA;
+}
+
+@layer utilities {
+  .bg-aheed-green { background-color: #1B5E20; }
+  .text-aheed-green { color: #1B5E20; }
+  .border-aheed-green { border-color: #1B5E20; }
+  
+  .bg-aheed-leaf { background-color: #4CAF50; }
+  .text-aheed-leaf { color: #4CAF50; }
+  
+  .bg-aheed-orange { background-color: #F57C00; }
+  .text-aheed-orange { color: #F57C00; }
+  
+  .bg-aheed-red { background-color: #D32F2F; }
+  .text-aheed-red { color: #D32F2F; }
+
+  .bg-aheed-light-green { background-color: #E8F5E9; }
+  .bg-aheed-light-orange { background-color: #FFF3E0; }
+  .bg-aheed-light-red { background-color: #FFEBEE; }
+}
+
+/* Custom scrollbar for clean prototype feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Hide scrollbar utility for clean carousel navigation */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.writing-vertical-lr {
+  writing-mode: vertical-lr;
+}
+
+/* =========================================================
+   HexagonCircle & Arrow / Chevron Clip-Path Dynamic Effect
+   ========================================================= */
+
+:root {
+  --ease-out-smooth: cubic-bezier(0.25, 1, 0.5, 1);
+  --bounce-out: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.promo-card {
+  position: relative;
+  cursor: pointer;
+  overflow: visible;
+  transition: transform 300ms var(--ease-out-smooth);
+}
+
+.promo-image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  clip-path: polygon(78% 0%, 100% 50%, 78% 100%, 0% 100%, 22% 50%, 0% 0%);
+  transition: transform 350ms var(--ease-out-smooth),
+              clip-path 350ms var(--ease-out-smooth);
+  filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.6));
+}
+
+.arrow-clip-shape {
+  clip-path: polygon(78% 0%, 100% 50%, 78% 100%, 0% 100%, 22% 50%, 0% 0%);
+  transition: transform 350ms var(--ease-out-smooth),
+              clip-path 350ms var(--ease-out-smooth);
+}
+
+.promo-image-wrapper img,
+.arrow-clip-shape img {
+  position: relative;
+  width: 120%;
+  height: 100%;
+  object-fit: cover;
+  transform: translateX(-5%);
+  transition: transform 350ms var(--ease-out-smooth);
+}
+
+.promo-image-wrapper::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--overlay-color, rgba(27, 94, 32, 0.8));
+  mix-blend-mode: multiply;
+  opacity: 0.4;
+  transition: opacity 300ms var(--ease-out-smooth);
+}
+
+.promo-card:hover .promo-image-wrapper img,
+.group\/hero:hover .arrow-clip-shape img {
+  transform: translateX(0) scale(1.05);
+}
+
+.promo-card:hover .promo-image-wrapper,
+.group\/hero:hover .arrow-clip-shape {
+  clip-path: polygon(74% 0%, 100% 50%, 74% 100%, 0% 100%, 26% 50%, 0% 0%);
+  transform: translateX(12px);
+  transition-timing-function: var(--bounce-out);
+}
+
+.promo-card:hover .promo-image-wrapper::after {
+  opacity: 0.75;
+}
+
+.promo-title {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  left: 1.25rem;
+  bottom: 1.25rem;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  transform: translate(-3%, 0);
+  transition: transform 350ms var(--ease-out-smooth);
+  pointer-events: none;
+  z-index: 25;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
+}
+
+.promo-title::after {
+  content: attr(data-cta);
+  display: inline-block;
+  margin-left: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  opacity: 0;
+  transform: translateX(-15%);
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: transform 350ms var(--ease-out-smooth),
+              opacity 350ms var(--ease-out-smooth);
+}
+
+.promo-card:hover .promo-title {
+  transform: translate(4%, 0);
+  transition-timing-function: var(--bounce-out);
+}
+
+.promo-card:hover .promo-title::after {
+  opacity: 1;
+  transform: translateX(0);
+  transition-timing-function: var(--bounce-out);
+}
+
+/* =========================================================
+   Skewed Card Mechanics (Functionality adapted from Pen)
+   ========================================================= */
+
+.skew-product-card-wrap {
+  perspective: 1200px;
+}
+
+.skew-product-card {
+  position: relative;
+  transition: transform 380ms var(--ease-out-smooth),
+              box-shadow 380ms var(--ease-out-smooth),
+              border-color 300ms ease;
+  transform: skewX(-2deg);
+  transform-origin: center center;
+}
+
+.skew-product-card .skew-inner-content {
+  transform: skewX(2deg);
+  transition: transform 380ms var(--ease-out-smooth);
+}
+
+.skew-product-card:hover {
+  transform: skewX(0deg) translateY(-6px) scale(1.02);
+  transition-timing-function: var(--bounce-out);
+  box-shadow: 0 20px 35px -8px rgba(27, 94, 32, 0.18), 0 10px 15px -5px rgba(0, 0, 0, 0.08);
+}
+
+.skew-product-card:hover .skew-inner-content {
+  transform: skewX(0deg);
+  transition-timing-function: var(--bounce-out);
+}
+
+.skew-badge {
+  transform: skewX(-6deg);
+  transition: transform 350ms var(--ease-out-smooth);
+}
+
+.skew-product-card:hover .skew-badge {
+  transform: skewX(0deg) scale(1.05);
+  transition-timing-function: var(--bounce-out);
+}
+
+.skew-price-tag {
+  transform: skewX(-4deg);
+  transition: transform 350ms var(--ease-out-smooth);
+}
+
+.skew-product-card:hover .skew-price-tag {
+  transform: skewX(0deg);
+  transition-timing-function: var(--bounce-out);
+}
+
+/* 3D Book Spine & Page Turn Effects */
+.book-perspective {
+  perspective: 1800px;
+}
+
+.book-shadow {
+  box-shadow: 
+    0 20px 40px -15px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 0 50px rgba(0, 0, 0, 0.5);
+}
+
+.book-spine-gradient {
+  background: linear-gradient(
+    90deg,
+    rgba(15, 23, 42, 0.95) 0%,
+    rgba(51, 65, 85, 0.8) 40%,
+    rgba(15, 23, 42, 0.95) 100%
+  );
+}
+
+@keyframes pageFlipInRight {
+  0% {
+    transform: rotateY(-70deg) scale(0.95);
+    opacity: 0;
+    transform-origin: left center;
+  }
+  100% {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+    transform-origin: left center;
+  }
+}
+
+@keyframes pageFlipInLeft {
+  0% {
+    transform: rotateY(70deg) scale(0.95);
+    opacity: 0;
+    transform-origin: right center;
+  }
+  100% {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+    transform-origin: right center;
+  }
+}
+
+.animate-page-flip-right {
+  animation: pageFlipInRight 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+.animate-page-flip-left {
+  animation: pageFlipInLeft 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+

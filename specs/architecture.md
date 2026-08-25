@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.18.0"
-updated: 2026-08-23
+version: "1.20.0"
+updated: 2026-08-25
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -71,6 +71,32 @@ flowchart TD
     R2 --> CDN["CDN (CDN_BASE_URL)"] --> U
     STRIPE -- "webhooks (idempotent)" --> APP
 ```
+
+**Route-aware header via a second route group, not `proxy.ts` (P8.5f, revised).** `components/layout/Header.tsx`
+— rendered once by a shared layout — must render differently on `/` (the postcode checker) than on
+every other storefront route (search). A **layout cannot see which page it wraps**, so the header
+cannot decide this from inside `app/(storefront)/layout.tsx` alone.
+
+P8.5f's first attempt was a root `proxy.ts` (Next 16's rename of `middleware.js`) annotating each
+request with an `x-pathname` header for `Header` to read. **That approach is unbuildable on this
+project's pinned `@opennextjs/cloudflare` (latest published, `1.20.2`) and was reverted the same
+day.** Next 16 forces every Proxy file onto the Node.js runtime and forbids opting out — setting
+`export const runtime` in a Proxy file throws — but `@opennextjs/cloudflare` unconditionally
+`process.exit(1)`s the build the moment it detects Node-runtime middleware
+(`ERROR Node.js middleware is not currently supported. Consider switching to Edge Middleware.`).
+There is no `proxy.ts` configuration that satisfies both constraints at once on this toolchain pin.
+Confirmed twice: identically under local `npm run preview` and on a real `staging` deploy (PR #367)
+— the build step failed both times with the same error, and no new Worker version went live from
+that push.
+
+The fix instead adds a second route group, `app/(landing)/`, holding only `page.tsx` for `/` (route
+groups — the parenthesised segment — don't affect the URL, so this is still served at `/`). Both
+`app/(storefront)/layout.tsx` and `app/(landing)/layout.tsx` render the same extracted
+`components/layout/StorefrontChrome.tsx`, passing an explicit `isLanding` boolean into `Header` —
+the same pattern `isPortal` already used for `app/(admin)/layout.tsx`. No middleware, no request
+header, no build-time risk: every route's layout already knows which route it is, which is the
+property a request-scoped proxy was trying to reconstruct in a place structurally unable to have it
+for free.
 
 ### 2.2 Layering (Dependency Inversion — arrows point inward)
 

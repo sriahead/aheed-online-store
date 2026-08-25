@@ -154,7 +154,7 @@ model Vendor {
   discountUses    DiscountRedemption[]
   roleAuditLogs   VendorRoleAuditLog[]
   lookupAttempts  OrderLookupAttempt[]
-  promotions      VendorPromotion[]
+  campaigns       DepartmentCampaign[]
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
@@ -275,97 +275,86 @@ model VendorDeliveryArea {
   @@unique([vendorId, prefix])
 }
 
-// P7.5c+f (#233) — per-vendor storefront promotions, driving the homepage hero
-// carousel.
-//
-// Replaces components/layout/PromoSlider.tsx, a hardcoded array of three invented
-// offers ("20% off all fresh produce") that rendered on EVERY vendor's homepage
-// and advertised discounts nothing in the discounts engine backed.
-//
-// 1:N rather than fixed slot columns on VendorConfig, because vendors do not
-// have the same number of campaigns — fixed slots are simultaneously bloated and
-// restrictive. Not a Json column: CLAUDE.md bans those for domain data, and rows
-// are what make `isActive` and `sortOrder` queryable.
-//
-// `imageKey` is a RELATIVE storage key (ADR-003), namespaced vendors/{vendorId}/
-// per ADR-004 decision 5 — never a URL. It is NULLABLE on purpose: a promo with
-// no artwork renders as a token-styled card, so a vendor has working promotions
-// before anyone uploads anything. Seeding a key whose object does not exist is
-// how #244 happens (a row pointing at missing storage, so every page renders a
-// broken image).
-//
-// `altText` accompanies `imageKey` because jsx-a11y/alt-text runs at `error`
-// since P7 closeout — an <img> without alt fails `npm run lint`.
-//
-// Deliberately NOT here: startsAt/endsAt scheduling (#101-style cron work does
-// not exist yet, so `isActive` is a manual boolean) and any foreign key to
-// DiscountCode — `linkUrl` is a navigation target, not a discount reference.
-model VendorPromotion {
-  id          String   @id @default(uuid())
-  vendorId    String
-  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  title       String
-  description String
-  imageKey    String? // RELATIVE key only (ADR-003) — never a URL
-  altText     String? // required by jsx-a11y whenever imageKey is set
-  linkUrl     String // relative path, e.g. "/search?isOffer=true"
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Serves the only query this model has: this vendor's active promos in order.
-  @@index([vendorId, isActive, sortOrder])
-}
-
 // P2a — catalogue browsing (specs/2026-08-07-p2a-catalogue-browsing/). Matches the
 // representative schema already designed in specs/architecture.md §3.2.
 model Category {
-  id        String     @id @default(uuid())
+  id        String              @id @default(uuid())
   vendorId  String
-  vendor    Vendor     @relation(fields: [vendorId], references: [id])
+  vendor    Vendor              @relation(fields: [vendorId], references: [id])
   slug      String
   name      String
   parentId  String?
-  parent    Category?  @relation("Sub", fields: [parentId], references: [id])
-  children  Category[] @relation("Sub")
-  sortOrder Int        @default(0)
-  isActive  Boolean    @default(true)
+  parent    Category?           @relation("Sub", fields: [parentId], references: [id])
+  children  Category[]          @relation("Sub")
+  sortOrder Int                 @default(0)
+  isActive  Boolean             @default(true)
   products  Product[]
+  campaign  DepartmentCampaign?
 
   @@unique([vendorId, slug])
   @@index([vendorId, parentId, isActive])
 }
 
+// P8.5e (#356) — staff-editable hero campaign content, one row per top-level
+// Category. Reopens the "general campaign surface" ADR-004 (decision 5, 1.7.0)
+// named as future work, this time with the staff UI that made the deleted
+// VendorPromotion (P8.5b, #346) inert. `headline`/`subtitle` are free text —
+// a deliberate, narrow exception to "promotional content is data" (ADR-004
+// 1.8.0) — while `imageKey`/`linkUrl`/the schedule stay structured, and
+// `DepartmentHero` always renders the real product-price callout alongside a
+// campaign's copy regardless.
+model DepartmentCampaign {
+  id         String    @id @default(uuid())
+  vendorId   String
+  vendor     Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  categoryId String    @unique
+  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  headline   String
+  subtitle   String?
+  imageKey   String? // RELATIVE key only (ADR-003) — never a URL
+  altText    String? // required by jsx-a11y whenever imageKey is set
+  linkUrl    String? // relative path only, e.g. "/categories/household?isOffer=true"
+  isActive   Boolean   @default(true)
+  startsAt   DateTime?
+  endsAt     DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // Serves both queries this model has: "this vendor's active campaigns" (the
+  // hero read) and "does this category already have a campaign" (categoryId
+  // is unique, so a lookup by it alone is already indexed).
+  @@index([vendorId, isActive])
+}
+
 model Product {
-  id            String         @id @default(uuid())
-  vendorId      String
-  vendor        Vendor         @relation(fields: [vendorId], references: [id])
-  slug          String
-  name          String
-  description   String
-  categoryId    String
-  category      Category       @relation(fields: [categoryId], references: [id])
-  basePrice     Int // pence
-  unitLabel     String // "£2.40 / kg"
-  isActive      Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  images        ProductImage[]
-  inventory     Inventory?
-  reviews       Review[]
-  cartItems     CartItem[]
-  orderItems    OrderItem[]
-  averageRating Float          @default(0) // denormalized, recomputed on every review write
-  reviewCount   Int            @default(0)
+  id               String         @id @default(uuid())
+  vendorId         String
+  vendor           Vendor         @relation(fields: [vendorId], references: [id])
+  slug             String
+  name             String
+  description      String
+  categoryId       String
+  category         Category       @relation(fields: [categoryId], references: [id])
+  basePrice        Int // pence
+  unitLabel        String // "£2.40 / kg"
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  images           ProductImage[]
+  inventory        Inventory?
+  reviews          Review[]
+  cartItems        CartItem[]
+  orderItems       OrderItem[]
+  averageRating    Float          @default(0) // denormalized, recomputed on every review write
+  reviewCount      Int            @default(0)
   // P2.5b1 — visual redesign foundation (specs/2026-08-07-p2-5b1-visual-foundation/).
   // originalPrice, when set, is basePrice's pre-discount price — a discount badge is
   // derived from the difference at render time, not a separate boolean flag that could
   // drift out of sync with the actual prices.
-  origin        String?
-  originalPrice Int? // pence, pre-discount price
-  isHalal       Boolean        @default(false)
-  isFresh       Boolean        @default(false)
-  isOrganic     Boolean        @default(false)
+  origin           String?
+  originalPrice    Int? // pence, pre-discount price
+  isHalal          Boolean        @default(false)
+  isFresh          Boolean        @default(false)
+  isOrganic        Boolean        @default(false)
   // #211 — vendor curation flag driving the homepage "Featured Products" rail.
   // Independent of originalPrice's discount-badge derivation: featured and
   // "on offer" are two separate concepts.

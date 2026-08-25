@@ -12,7 +12,7 @@ import {
  * need a real Workers request.
  *
  * Lives beside, not inside, `lib/repositories/` for the reason
- * `lib/data-rights-service.ts` and `lib/promotions-service.ts` already do: the
+ * `lib/data-rights-service.ts` and `lib/products-service.ts` already do: the
  * repository module's defining property is that every export takes `prisma` and
  * `vendorId` explicitly and reads no request context, so a plain `tsx` script
  * can import it in real Node. A context-resolving factory in that file would

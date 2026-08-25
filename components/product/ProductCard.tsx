@@ -1,115 +1,165 @@
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { AlertTriangle, Star } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
+import { CartQuantityStepper } from "@/components/cart/CartQuantityStepper";
 import { composePublicUrl } from "@/lib/storage";
 import { formatPrice } from "./format-price";
 import type { ProductSummary } from "@/lib/repositories/products";
 
+/**
+ * P8.5a (#345) — the skewed card.
+ *
+ * Geometry lives in `app/globals.css` (`.skew-card*`), not in Tailwind classes,
+ * because the counter-skew is a parent/child relationship rather than a set of
+ * utilities: the card skews and every `.skew-card-inner` inside it skews back.
+ * That file also carries the reduced-motion opt-out and the reasoning for both.
+ *
+ * `cartQuantity` comes from the page's request-memoised cart read
+ * (`lib/cart-summary.ts`), so a grid of these costs no extra query — the header
+ * on the same page already resolved the cart.
+ */
 export function ProductCard({
   product,
   cdnBaseUrl,
+  cartQuantity = 0,
 }: {
   product: ProductSummary;
   cdnBaseUrl: string;
+  /** Quantity of this product currently in the cart; 0 when it isn't. */
+  cartQuantity?: number;
 }) {
   const hasDiscount = product.originalPrice != null && product.originalPrice > product.basePrice;
   const saving = hasDiscount ? product.originalPrice! - product.basePrice : 0;
+  // Only meaningful while there is still stock to run out of — a zero-stock
+  // product renders the out-of-stock control instead, and "Only 0 left" would
+  // be both wrong and alarming.
+  const isLowStock =
+    product.inStock &&
+    product.stockQuantity > 0 &&
+    product.stockQuantity <= product.lowStockThreshold;
 
   return (
-    <Link
-      href={`/products/${product.slug}`}
-      className="group relative bg-white rounded-2xl border border-black/10 hover:border-action/50 hover:shadow-2xl hover:-translate-y-1 transition duration-300 flex flex-col overflow-hidden cursor-pointer h-full"
-    >
-      {/* Top badges */}
-      <div className="absolute top-2.5 left-2.5 z-10 flex flex-wrap gap-1">
-        {product.isHalal && (
-          <span className="bg-primary text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-action-tint"></span>
-            Halal
-          </span>
-        )}
-        {product.isFresh && (
-          <span className="bg-action text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
-            Fresh
-          </span>
-        )}
-        {hasDiscount && (
-          <span className="bg-accent text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
-            Offer
-          </span>
-        )}
-      </div>
-
-      {/* Image container */}
-      <div className="relative aspect-4/3 w-full bg-surface-muted overflow-hidden shrink-0">
-        {product.primaryImage ? (
-          // P7d (#218/#46): intrinsic dimensions so the browser can reserve the box before
-          // the bytes land. CSS still drives layout (w-full/h-full inside the aspect-4/3
-          // container) — these attributes only supply the aspect ratio.
-          <img
-            src={composePublicUrl(cdnBaseUrl, product.primaryImage.storageKey)}
-            alt={product.primaryImage.alt}
-            width={400}
-            height={300}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            loading="lazy"
-          />
-        ) : (
-          <div className="h-full w-full bg-surface-muted" />
-        )}
-        {hasDiscount && (
-          <div className="absolute bottom-2 right-2 bg-danger text-white text-[11px] font-bold px-1.5 py-0.5 rounded">
-            Save {formatPrice(saving)}
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="p-3.5 flex flex-col flex-1 justify-between">
-        <div>
-          {/* Rating & Origin */}
-          <div className="flex items-center justify-between text-xs text-black/60 mb-1">
-            <div className="flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" aria-hidden />
-              <span className="font-medium text-black/70">{product.averageRating.toFixed(1)}</span>
-              <span>({product.reviewCount})</span>
-            </div>
-            {product.origin && (
-              <span className="text-[11px] truncate max-w-[100px]" title={product.origin}>
-                {product.origin}
-              </span>
-            )}
-          </div>
-
-          {/* Title */}
-          <h3 className="font-semibold text-black/90 text-sm group-hover:text-primary transition-colors line-clamp-2 leading-tight">
-            {product.name}
-          </h3>
-
-          <p className="text-xs text-black/60 mt-0.5">{product.unitLabel}</p>
-        </div>
-
-        {/* Price & Add Button */}
-        <div className="mt-3 flex flex-col gap-2 pt-2 border-t border-black/5">
-          <div className="flex flex-wrap items-baseline gap-1.5">
-            <span className="text-base font-bold text-primary">
-              {formatPrice(product.basePrice)}
+    <div className="skew-card-wrap h-full">
+      <Link
+        href={`/products/${product.slug}`}
+        className="skew-card group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-black/10 bg-white hover:border-action/50"
+      >
+        {/* Top badges */}
+        <div className="absolute top-2.5 left-2.5 z-10 flex flex-wrap gap-1">
+          {product.isHalal && (
+            <span className="skew-card-badge flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-action-tint"></span>
+              Halal
             </span>
-            {hasDiscount && (
-              <span className="text-xs text-black/60 line-through">
-                {formatPrice(product.originalPrice!)}
-              </span>
+          )}
+          {product.isFresh && (
+            <span className="skew-card-badge rounded-full bg-action px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+              Fresh
+            </span>
+          )}
+          {hasDiscount && (
+            <span className="skew-card-badge rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+              Offer
+            </span>
+          )}
+        </div>
+
+        {/* Image container */}
+        <div className="relative aspect-4/3 w-full shrink-0 overflow-hidden bg-surface-muted">
+          <div className="skew-card-inner h-full w-full">
+            {product.primaryImage ? (
+              // P7d (#218/#46): intrinsic dimensions so the browser can reserve the box before
+              // the bytes land. CSS still drives layout (w-full/h-full inside the aspect-4/3
+              // container) — these attributes only supply the aspect ratio.
+              <img
+                src={composePublicUrl(cdnBaseUrl, product.primaryImage.storageKey)}
+                alt={product.primaryImage.alt}
+                width={400}
+                height={300}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                loading="lazy"
+              />
+            ) : (
+              <div className="h-full w-full bg-surface-muted" />
+            )}
+          </div>
+          {hasDiscount && (
+            <div className="skew-card-badge absolute right-2 bottom-2 rounded bg-danger px-1.5 py-0.5 text-[11px] font-bold text-white">
+              Save {formatPrice(saving)}
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="skew-card-inner flex flex-1 flex-col justify-between p-3.5">
+          <div>
+            {/* Rating & Origin */}
+            <div className="mb-1 flex items-center justify-between text-xs text-black/60">
+              <div className="flex items-center gap-1">
+                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden />
+                <span className="font-medium text-black/70">
+                  {product.averageRating.toFixed(1)}
+                </span>
+                <span>({product.reviewCount})</span>
+              </div>
+              {product.origin && (
+                <span className="max-w-[100px] truncate text-[11px]" title={product.origin}>
+                  {product.origin}
+                </span>
+              )}
+            </div>
+
+            {/* Title */}
+            <h3 className="line-clamp-2 text-sm leading-tight font-semibold text-black/90 transition-colors group-hover:text-primary">
+              {product.name}
+            </h3>
+
+            <p className="mt-0.5 text-xs text-black/60">{product.unitLabel}</p>
+
+            {isLowStock && (
+              <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-danger">
+                <AlertTriangle className="h-3 w-3" aria-hidden />
+                Only {product.stockQuantity} left
+              </p>
             )}
           </div>
 
-          <AddToCartButton
-            productId={product.id}
-            disabled={!product.inStock}
-            label={`Add ${product.name} to cart`}
-            variant="card"
-          />
+          {/* Price & cart controls */}
+          <div className="mt-3 flex flex-col gap-2 border-t border-black/5 pt-2">
+            <div className="skew-card-price flex flex-wrap items-baseline gap-1.5">
+              <span className="text-base font-bold text-primary">
+                {formatPrice(product.basePrice)}
+              </span>
+              {hasDiscount && (
+                <span className="text-xs text-black/60 line-through">
+                  {formatPrice(product.originalPrice!)}
+                </span>
+              )}
+            </div>
+
+            {/*
+              In the cart -> the stepper mutates it. Not in the cart -> the
+              existing add control, unchanged. An out-of-stock product always
+              gets the disabled add control and never a stepper (R13).
+            */}
+            {product.inStock && cartQuantity > 0 ? (
+              <CartQuantityStepper
+                productId={product.id}
+                quantity={cartQuantity}
+                stock={product.stockQuantity}
+                productName={product.name}
+              />
+            ) : (
+              <AddToCartButton
+                productId={product.id}
+                disabled={!product.inStock}
+                label={`Add ${product.name} to cart`}
+                variant="card"
+              />
+            )}
+          </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }
