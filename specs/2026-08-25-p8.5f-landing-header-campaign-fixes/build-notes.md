@@ -156,3 +156,43 @@ Ranked by where I would look first.
 8. **The landing page now has two `name="postcode"` inputs in the DOM** (desktop and mobile slots,
    one CSS-hidden). No duplicate `id`s were introduced, and it mirrors what `SearchForm` already did
    — but the a11y suite in `tests/a11y/` has not been run against this specific arrangement.
+
+## Addendum — `/fix` pass, 2026-08-25 (post-merge)
+
+Written after `/validate` found the "Known-shaky area #2" risk above was not a risk but a confirmed,
+reproducible failure: `npm run preview` and, after merging PR #367 to `staging` specifically to check
+this, the real `deploy-staging` run **both** hard-fail at the `opennextjs-cloudflare build` step with
+`ERROR Node.js middleware is not currently supported. Consider switching to Edge Middleware.` —
+`process.exit(1)`, unconditional, in `@opennextjs/cloudflare`'s own build script the moment it detects
+Node-runtime middleware. Next 16 forces every Proxy file onto the Node.js runtime and forbids opting
+out (`runtime` in a Proxy file throws) — so no `proxy.ts` on this project's pinned
+`@opennextjs/cloudflare` (`1.20.2`, the newest published version) can satisfy both constraints. This
+was never exercised at Build; `next build` (used to write the "reports `ƒ Proxy (Middleware)`" line
+above) never invokes the Cloudflare adapter's build step, so it stayed green while the thing it was
+meant to prove was already broken.
+
+**Fix:** replaced `proxy.ts`/`x-pathname` with a second route group. `app/(landing)/` now holds only
+`page.tsx` for `/` (route groups don't affect the URL); both it and `app/(storefront)/layout.tsx`
+render the newly-extracted `components/layout/StorefrontChrome.tsx`, passing an explicit `isLanding`
+boolean into `Header` — the same pattern `isPortal` already used for the admin layout. `proxy.ts` and
+`lib/request-headers.ts` are deleted. R13/R16/R29 were revised in `requirements.md`/`validation.md`
+to describe the new mechanism (a Spec-level correction, per the R25 precedent — the original
+technical approach was proven undeployable, not merely mis-described).
+
+**Also fixed at this pass:** R1 requires none of `/`'s rendered HTML to contain "Shop by department",
+but `DepartmentHero`'s own (pre-existing, P8.5b) carousel `aria-label` used exactly that phrase —
+found only by running R1's literal `curl`+`grep` check against a live server, which the original
+Build never did for this row. Renamed to "Department spotlight" (`components/layout/DepartmentHero.tsx`).
+
+**Re-verified live** (migrated the local dev DB, which was 2 migrations behind on P8.5b/P8.5e, then
+re-ran the full `npm run preview` + browser pass): R1, R2, R3, R4 (cart stepper in both rows), R5
+(SriMart title via `Host` header), R6, R7, R8 (Set-Cookie attributes match exactly), R9, R10, R11,
+R14, R15, R16, R21 (DB-verified: `startsAt` stored as `2026-08-25T06:25:00.000Z` for `07:25` typed on
+a BST date), R22 (401/403/503 all confirmed), R23, R26. R24/R25 (AI banner happy path) and the
+pre-existing upload control's PUT-to-R2 step remain unverified — no `CLOUDFLARE_ACCOUNT_ID`/
+`CLOUDFLARE_API_TOKEN` in this environment for the former, and the browser's direct PUT to the
+presigned R2 URL did not complete in this sandboxed session for the latter (reproducible, but the
+underlying primitives — `createImageBitmap`, `canvas.toBlob`, the presign server action itself all
+confirmed instant and correct in isolation; the crash is specific to the automated tab reaching an
+external `https://*.r2.cloudflarestorage.com` origin, not app code). Consistent with CLAUDE.md's
+already-documented raster-image local-preview limitation — confirm both on deployed staging.

@@ -115,7 +115,13 @@ export function DepartmentHero({
       className="relative overflow-hidden rounded-3xl border border-black/10 shadow-lg"
       role="region"
       aria-roledescription="carousel"
-      aria-label="Shop by department"
+      // P8.5f (R1): was "Shop by department" — that literal phrase is now the
+      // /categories page's own heading, and R1 requires it absent from the
+      // landing page entirely. This carousel's accessible name never described
+      // the same thing as that heading (one department at a time, not a full
+      // list), so "Department spotlight" is a more accurate name, not just a
+      // dodge of the string ban.
+      aria-label="Department spotlight"
       onMouseEnter={() => setInteractionPaused(true)}
       onMouseLeave={() => setInteractionPaused(false)}
       onFocus={() => setInteractionPaused(true)}

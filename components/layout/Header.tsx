@@ -20,7 +20,6 @@ import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getRequestCartSummary } from "@/lib/cart-summary";
 import { isDeliverable } from "@/lib/delivery";
 import { DELIVERY_POSTCODE_COOKIE } from "@/lib/delivery-cookie";
-import { PATHNAME_HEADER } from "@/lib/request-headers";
 import { CartDrawerShell } from "@/components/cart/CartDrawerShell";
 import { CartContents } from "@/components/cart/CartContents";
 import { PostcodeChecker } from "./PostcodeChecker";
@@ -52,18 +51,32 @@ function SearchForm({ className = "", placeholder }: { className?: string; place
   );
 }
 
-export async function Header({ isPortal = false }: { isPortal?: boolean } = {}) {
+export async function Header({
+  isPortal = false,
+  isLanding: isLandingProp = false,
+}: {
+  isPortal?: boolean;
+  /**
+   * P8.5f: whether this is the storefront's landing route (`/`), where the
+   * postcode checker replaces search. Passed explicitly by whichever layout
+   * renders `Header` — `app/(landing)/layout.tsx` passes `true`,
+   * `app/(storefront)/layout.tsx` and `app/(admin)/layout.tsx` don't, same
+   * pattern `isPortal` already uses. Not derived from a request header: a
+   * layout in the App Router cannot see which page it wraps, and the earlier
+   * approach (a root `proxy.ts` annotating the request) is unbuildable on this
+   * project's pinned `@opennextjs/cloudflare` — Next 16 forces Proxy files onto
+   * the Node.js runtime and forbids opting out, and the Cloudflare adapter
+   * rejects any Node-runtime middleware outright (`process.exit(1)`, confirmed
+   * against both `npm run preview` and a real `staging` deploy). See
+   * `specs/architecture.md` §2.1.
+   */
+  isLanding?: boolean;
+} = {}) {
   const requestHeaders = await headers();
   const session = await (await getAuth()).api.getSession({ headers: requestHeaders });
   const user = session?.user as { name: string } | undefined;
   const firstName = user?.name?.split(" ")[0];
-
-  // P8.5f: a layout cannot see which page it wraps, so the pathname is carried in
-  // by `proxy.ts`. Absent header ⇒ treat as a non-landing route: the landing page
-  // is the one that HIDES search, and failing closed keeps search reachable
-  // rather than silently removing it everywhere if the proxy ever stops running.
-  const pathname = requestHeaders.get(PATHNAME_HEADER) ?? "";
-  const isLanding = !isPortal && pathname === "/";
+  const isLanding = !isPortal && isLandingProp;
 
   let isStaffOrAdmin = false;
   let canSeeAdmin = false;

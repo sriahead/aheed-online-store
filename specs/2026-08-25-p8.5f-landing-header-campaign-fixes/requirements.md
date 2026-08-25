@@ -58,10 +58,19 @@ R12. No file added or modified to render the postcode form declares `"use client
 
 **Header: route-aware landing variant**
 
-R13. A `proxy.ts` exists at the repository root exporting a default function that returns
-     `NextResponse.next({ request: { headers } })` with an `x-pathname` header set to the request's
-     pathname, and exporting a `config` whose `matcher` excludes `_next/static`, `_next/image` and
-     `favicon.ico`. It declares no `runtime` export (forbidden in Next 16 Proxy files).
+R13. **Revised at `/fix` (2026-08-25) — superseded, not met as originally written.** The original
+     text required a root `proxy.ts` per Next 16's Proxy convention. That mechanism is unbuildable on
+     this project's pinned `@opennextjs/cloudflare` (latest published, `1.20.2`): Next 16 forces every
+     Proxy file onto the Node.js runtime and forbids opting out (setting `runtime` in a Proxy file
+     throws), while `@opennextjs/cloudflare` unconditionally rejects any Node-runtime middleware it
+     detects (`process.exit(1)`, `"Node.js middleware is not currently supported"`). Confirmed both
+     under local `npm run preview` and on a real `staging` deploy (PR #367) — same failure both
+     times, and the push that failed never went live. **Revised requirement:** `Header` receives an
+     explicit `isLanding` boolean prop from whichever layout renders it (the same pattern `isPortal`
+     already uses for `app/(admin)/layout.tsx`), sourced from a second route group — `app/(landing)/`
+     — holding only the `/` page, sharing `components/layout/StorefrontChrome.tsx` with
+     `app/(storefront)/layout.tsx`. No root-level routing file exists. See `specs/architecture.md`
+     §2.1.
 
 R14. Under preview, the rendered HTML of `/` contains no `<input name="q">` and no link with
      `href="/shop-your-list"`; the rendered HTML of `/categories` contains both.
@@ -69,8 +78,10 @@ R14. Under preview, the rendered HTML of `/` contains no `<input name="q">` and 
 R15. Under preview, `/staff` still returns 200 for a signed-in vendor `ADMIN` and its portal header
      renders without a search input, unchanged from before this slice.
 
-R16. A request for a static asset path under `/_next/static/` returns its asset normally under
-     preview (the matcher exclusion is live, not merely written).
+R16. **Revised at `/fix` (2026-08-25).** The original text asserted a middleware `matcher` exclusion
+     was live at runtime. There is no middleware in the revised mechanism (R13), so there is no
+     matcher to verify — static assets under `/_next/static/` are untouched by anything this slice
+     added and load exactly as they did before this slice, which is what this requirement now checks.
 
 **Timezone correctness**
 
@@ -126,10 +137,11 @@ R27. `components/staff/CampaignBannerUploader.tsx` renders an "Auto-Generate" bu
 R28. `git diff --stat` against the base branch shows no change to `prisma/schema.prisma` and no new
      directory under `prisma/migrations/`.
 
-R29. `specs/architecture.md` §2.1 documents `proxy.ts` — why a layout cannot see its own route, the
-     Next 16 `middleware`→`proxy` rename, the `NextResponse.next({ request: { headers } })` form,
-     and what deliberately stays out of the proxy — with its front-matter `version` and `updated`
-     bumped.
+R29. **Revised at `/fix` (2026-08-25).** `specs/architecture.md` §2.1 documents the route-aware header
+     mechanism (R13) — why a layout cannot see its own route, why the originally-planned `proxy.ts`
+     is unbuildable on this project's pinned `@opennextjs/cloudflare` and was reverted, and the
+     `app/(landing)/` route-group mechanism that replaced it — with its front-matter `version` and
+     `updated` bumped.
 
 R30. `specs/decisions/ADR-004-multi-tenancy.md` carries an implementation note recording that
      `STORE_TIMEZONE` is a platform constant rather than vendor data, why that is safe today, and

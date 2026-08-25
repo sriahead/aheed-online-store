@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-25T08:10:41.516Z` · commit `40ee7a3` · `104` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-25T10:05:01.319Z` · commit `5973505` · `104` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -103,7 +103,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P8.5b — Department hero (plan)](specs/2026-08-24-p8.5b-department-hero/plan.md) | spec | 1.1.0 | 2026-08-24 | draft | internal | Second slice of P8.5 — an icon-led, image-optional department hero with 1-click filtered routing and a WCAG-compliant auto-flip, replacing PromoCarousel in the homepage hero slot. |
 | [P8.5e — Staff-Editable Hero Campaigns (plan)](specs/2026-08-25-p8.5e-hero-campaigns/plan.md) | spec | 1.0.0 | 2026-08-25 | draft | internal | A new per-department campaign model with a real staff CRUD UI and photographic banner upload, layered onto DepartmentHero (#346) — reopening the "general campaign surface" ADR-004 named as future work, this time with the staff UI that made the first attempt (VendorPromotion) inert. |
 | [P8.5f — Landing Slim-Down, Header Postcode & Campaign Date/Banner Fixes (plan)](specs/2026-08-25-p8.5f-landing-header-campaign-fixes/plan.md) | spec | 1.0.0 | 2026-08-25 | draft | internal | Moves the landing page's browse sections to a rebuilt /categories, relocates the postcode checker into a route-aware header, fixes a live timezone defect that shifted campaign schedules by the BST offset, and adds AI banner generation reusing the existing Workers AI pipeline. |
-| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.19.0 | 2026-08-25 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
+| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.20.0 | 2026-08-25 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
 | [ADR-003 — Object Storage Abstraction (S3-compatible)](specs/decisions/ADR-003-storage-abstraction.md) | adr | 1.2.0 | 2026-08-17 | approved | internal | Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time. |
