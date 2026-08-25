@@ -23,6 +23,11 @@ every branch merges.
 - **`/categories` was titled "Categories — Aheed Food Centre" for every vendor**, so SriMart's shop
   page advertised Aheed's trading name. Now vendor-derived, matching the landing page. Same defect
   class #239 removed elsewhere; fixed here because this slice rewrote the page.
+- **`DepartmentHero`'s carousel `aria-label` still read "Shop by department"** (P8.5b), which is now
+  the literal heading of `/categories`' own section of the same name — the landing page's own hero
+  carried the phrase this slice requires be absent from `/` entirely. Renamed to "Department
+  spotlight", which is a more accurate name in its own right (one department at a time, not the full
+  list `/categories` shows) rather than merely a dodge.
 
 ### Changed
 - **The landing page is hero-first** (P8.5f). The department scroller and the New Arrivals /
@@ -39,13 +44,16 @@ every branch merges.
   deliberate submission.
 
 ### Added
-- **`proxy.ts`** (P8.5f) — the app's first global request hook, setting `x-pathname` so the header
-  can differ on `/` from every other route (a layout cannot see which page it wraps). Deliberately
-  thin: header annotation only, with auth, tenant resolution and redirects left in-request where
-  Prisma is reachable. Note this is **Next 16, where `middleware.js` is deprecated and renamed to
-  `proxy.js`**, request headers must be passed as `NextResponse.next({ request: { headers } })` (the
-  lookalike `{ headers }` form sends them to the client), and the `runtime` segment option is
-  forbidden. Documented in `specs/architecture.md` 1.19.0.
+- **`app/(landing)/` route group** (P8.5f) — a second route group holding only the `/` page, so the
+  header can differ on `/` from every other route (a layout cannot see which page it wraps) without
+  a root-level routing file. Both `app/(storefront)/layout.tsx` and `app/(landing)/layout.tsx` render
+  the shared `components/layout/StorefrontChrome.tsx`, passing an explicit `isLanding` boolean into
+  `Header` — the same pattern `isPortal` already used. **Superseded a root `proxy.ts`** (Next 16's
+  rename of `middleware.js`) within the same day: Next 16 forces every Proxy file onto the Node.js
+  runtime and forbids opting out, while this project's pinned `@opennextjs/cloudflare` (latest
+  published, `1.20.2`) unconditionally rejects any Node-runtime middleware it detects
+  (`process.exit(1)`, confirmed identically under local `npm run preview` and on a real `staging`
+  deploy, PR #367 — the push never went live). Documented in `specs/architecture.md` 1.20.0.
 - **AI-generated campaign banners** — `POST /api/admin/campaign-images/generate` plus an
   "Auto-Generate" button on the campaign banner panel. Reuses the existing `lib/image-generation.ts`
   port (Cloudflare Workers AI, `flux-1-schnell`) that has backed product images since P8; no new
