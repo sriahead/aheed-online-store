@@ -4,7 +4,7 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.20.0"
+version: "1.21.0"
 updated: 2026-08-25
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
@@ -140,13 +140,32 @@ No layer skips inward; components never touch Prisma or the S3 client directly.
   may report drift that is not drift, and `prisma migrate dev` may propose **dropping** these
   indexes — keep them and re-assert the migration. This is the first exercise of the
   hand-authored-DDL exception ruled on in P7d (#218); the migration carries the disclosure that
-  ruling requires.
+  ruling requires. **This warning fired for real in P8.5d (#348)**, two slices after it was
+  written: `prisma migrate diff` for an unrelated new table emitted `DROP INDEX` for all three
+  trigram indexes, and applying that output verbatim would have destroyed order and customer
+  search. They were stripped before the migration was saved, and
+  `prisma/migrations/20260825190000_p8_5d_product_price_tier/migration.sql` names the three
+  statements it omits so a regeneration does not silently reintroduce them. Treat the paragraph
+  above as an operational instruction, not a theoretical caveat.
 - **Money as integer minor units (pence).** Currency stored explicitly (`GBP` default). Avoids
   float drift and locale-bound types.
 - **Images/large files never in the DB.** Only a **relative storage key** (e.g.
   `products/{productId}/{uuid}.webp`). Full URL is composed at read time from `CDN_BASE_URL`.
 - **Historical snapshots are intentional.** `OrderItem` stores name + unit price at purchase time —
   a recorded fact, not a normalization breach.
+- **`OrderItem.lineTotalPence` is independently load-bearing, not `unitPricePence × quantity`**
+  (P8.5d, #348). It was that product until multi-buy tier pricing shipped. A `ProductPriceTier`
+  prices whole groups at a group price and charges the remainder at base, so a tiered line's
+  effective unit price is *fractional* and the multiplication is simply wrong for it. The two
+  columns now record different facts — what the product listed at, and what the line actually
+  charged — which is what makes an auto-applied multi-buy auditable without a `DiscountRedemption`
+  row. **Never re-derive a line total from unit price and quantity**; `lib/tier-pricing.ts` is the
+  only place that arithmetic lives, and both the cart and `placeOrder` go through it.
+- **A multi-buy tier is a PRICE, not a discount** (P8.5d, #348). It never touches `DiscountCode`,
+  writes no `DiscountRedemption`, and consumes no `remainingRedemptions`. The consequence that
+  surprises people: because a tier is inside the subtotal rather than a deduction from it, the
+  vendor's `minimumOrderPence` and the free-delivery threshold are judged on the *tier-reduced*
+  figure — the opposite of how discount codes and loyalty redemption behave, and deliberate.
 
 ### 3.2 Core schema (representative Prisma excerpt)
 
