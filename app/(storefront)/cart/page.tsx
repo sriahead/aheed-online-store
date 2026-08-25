@@ -7,6 +7,7 @@ import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getEnv } from "@/lib/config";
 import { CartContents } from "@/components/cart/CartContents";
 import { MergePrompt } from "@/components/cart/MergePrompt";
+import { parseUnavailableNames } from "@/lib/bundle-notice";
 
 /**
  * Canonical cart URL (P3a, #93). The drawer is the primary surface, but this
@@ -17,10 +18,21 @@ import { MergePrompt } from "@/components/cart/MergePrompt";
  */
 export const metadata: Metadata = { title: "Your cart" };
 
-export default async function CartPage() {
-  const [identity, vendor] = await Promise.all([getCartIdentity(), getCurrentVendorProfile()]);
+export default async function CartPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ unavailable?: string }>;
+}) {
+  const [identity, vendor, params] = await Promise.all([
+    getCartIdentity(),
+    getCurrentVendorProfile(),
+    searchParams,
+  ]);
   const summary = await getCartRepository().getSummary(identity);
   const cdnBaseUrl = getEnv().CDN_BASE_URL ?? "";
+  // P8.5c (#347): "Add all N to basket" adds what it can and names what it
+  // couldn't, rather than silently delivering a partial bundle.
+  const unavailable = parseUnavailableNames(params.unavailable);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
@@ -35,6 +47,25 @@ export default async function CartPage() {
           Shop your list
         </Link>
       </div>
+
+      {unavailable.length > 0 && (
+        <div
+          role="status"
+          className="mb-4 rounded-2xl border border-accent/30 bg-accent-tint px-4 py-3 text-sm text-primary"
+        >
+          <p className="font-bold">
+            {unavailable.length === 1
+              ? "One item from that bundle wasn't available:"
+              : `${unavailable.length} items from that bundle weren't available:`}
+          </p>
+          <ul className="mt-1 list-disc ps-5">
+            {unavailable.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ul>
+          <p className="mt-1 text-primary/70">Everything else has been added to your cart.</p>
+        </div>
+      )}
 
       {summary.mergePending && (
         <MergePrompt

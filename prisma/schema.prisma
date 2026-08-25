@@ -155,6 +155,7 @@ model Vendor {
   roleAuditLogs   VendorRoleAuditLog[]
   lookupAttempts  OrderLookupAttempt[]
   campaigns       DepartmentCampaign[]
+  bundles         Bundle[]
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
@@ -326,6 +327,62 @@ model DepartmentCampaign {
   @@index([vendorId, isActive])
 }
 
+// P8.5c (#347) — a curated BUNDLE is a vendor-authored list of products already
+// in the catalogue, which "Add all N to basket" expands into ordinary CartItem
+// rows. It is deliberately NOT a purchasable SKU: that shape would need its own
+// inventory, its own decrement inside placeOrder's transaction, and its own
+// cases in refunds, loyalty and discounts — four subsystems changed to sell
+// three things the catalogue already holds.
+//
+// THERE IS NO STORED PRICE OR SAVING HERE, and that is the whole design.
+// A bundle's total is summed from its constituents' live Product.basePrice at
+// read time (lib/bundle-pricing.ts), so it can never drift out of date the way
+// a copied price would. The accepted cost: the figure cannot be hand-set, so a
+// genuine "save £4.50" needs a mechanism that actually reduces the charge —
+// that is P8.5d (#348), auto-applied quantity-triggered tier pricing, and it is
+// NOT built. Until it is, the storefront shows the derived total and makes no
+// savings claim at all rather than render a number with nothing behind it.
+model Bundle {
+  id        String       @id @default(uuid())
+  vendorId  String
+  vendor    Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  slug      String
+  name      String
+  tagline   String?
+  imageKey  String? // RELATIVE key only (ADR-003) — never a URL
+  altText   String? // required by jsx-a11y whenever imageKey is set
+  isActive  Boolean      @default(true)
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  items     BundleItem[]
+
+  @@unique([vendorId, slug])
+  @@index([vendorId, isActive])
+}
+
+// One constituent line of a bundle. `quantity` is how many of that product the
+// bundle contributes, which is what makes "2 x 60g packs" expressible as data
+// rather than as the prototype's free-text label.
+//
+// @@unique([bundleId, productId]) keeps a product from appearing twice in one
+// bundle. sumLinesByProduct (lib/cart-rules.ts) would collapse duplicates
+// safely at add time anyway, but two rows for one product would render as two
+// visually identical constituent entries, which is a data defect, not a
+// rendering one.
+model BundleItem {
+  id        String  @id @default(uuid())
+  bundleId  String
+  bundle    Bundle  @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  sortOrder Int     @default(0)
+
+  @@unique([bundleId, productId])
+  @@index([bundleId, sortOrder])
+}
+
 model Product {
   id               String         @id @default(uuid())
   vendorId         String
@@ -344,6 +401,7 @@ model Product {
   reviews          Review[]
   cartItems        CartItem[]
   orderItems       OrderItem[]
+  bundleItems      BundleItem[]
   averageRating    Float          @default(0) // denormalized, recomputed on every review write
   reviewCount      Int            @default(0)
   // P2.5b1 — visual redesign foundation (specs/2026-08-07-p2-5b1-visual-foundation/).
