@@ -135,4 +135,160 @@ describe("DepartmentHero", () => {
     // keyboard focus pause it, are browser checks in validation.md.
     expect(screen.getByRole("button", { name: "Pause department rotation" })).toBeDefined();
   });
+
+  /**
+   * P8.5e (#356) — a LIVE campaign overrides heading/subtitle and, with a
+   * photo, the panel's visual treatment. `campaign` here is always already
+   * "live" by construction: liveness itself is `isCampaignLive`'s job (see
+   * tests/campaigns.test.ts), tested separately so this component never has
+   * to re-decide it.
+   */
+  it("renders the campaign headline in place of the department name (R7)", () => {
+    const withCampaign: HeroDepartment[] = [
+      {
+        ...DEPARTMENTS[0],
+        campaign: {
+          headline: "Craft Halal Butchery, Cut Fresh Daily",
+          subtitle: null,
+          imageKey: null,
+          altText: null,
+          linkUrl: null,
+        },
+      },
+      DEPARTMENTS[1],
+    ];
+
+    render(<DepartmentHero departments={withCampaign} cdnBaseUrl={null} />);
+
+    expect(
+      screen.getByRole("heading", { name: "Craft Halal Butchery, Cut Fresh Daily" }),
+    ).toBeDefined();
+    expect(screen.queryByRole("heading", { name: "Halal Meat" })).toBeNull();
+  });
+
+  it("renders the campaign subtitle when present, and nothing extra when absent (R7)", () => {
+    const withSubtitle: HeroDepartment[] = [
+      {
+        ...DEPARTMENTS[0],
+        campaign: {
+          headline: "Craft Halal Butchery",
+          subtitle: "English lamb, cut to order",
+          imageKey: null,
+          altText: null,
+          linkUrl: null,
+        },
+      },
+      DEPARTMENTS[1],
+    ];
+
+    render(<DepartmentHero departments={withSubtitle} cdnBaseUrl={null} />);
+    expect(screen.getByText("English lamb, cut to order")).toBeDefined();
+  });
+
+  it("keeps the real spotlight price callout alongside a campaign's copy (R10)", () => {
+    const withCampaign: HeroDepartment[] = [
+      {
+        ...DEPARTMENTS[0],
+        campaign: {
+          headline: "Craft Halal Butchery",
+          subtitle: null,
+          imageKey: null,
+          altText: null,
+          linkUrl: null,
+        },
+      },
+      DEPARTMENTS[1],
+    ];
+
+    render(<DepartmentHero departments={withCampaign} cdnBaseUrl={null} />);
+
+    // The campaign never suppresses the real price — this is the one thing
+    // that stays true whether or not a department has a campaign.
+    expect(screen.getByText("Fresh Lamb Curry Cut")).toBeDefined();
+    expect(screen.getByText("£10.99")).toBeDefined();
+  });
+
+  it("renders the campaign photo full-bleed and drops the chevron cutout, when a photo exists (R8)", () => {
+    const withPhoto: HeroDepartment[] = [
+      {
+        ...DEPARTMENTS[0],
+        campaign: {
+          headline: "Craft Halal Butchery",
+          subtitle: null,
+          imageKey: "categories/halal-meat/banner.webp",
+          altText: "Butcher's counter",
+          linkUrl: null,
+        },
+      },
+      DEPARTMENTS[1],
+    ];
+
+    render(<DepartmentHero departments={withPhoto} cdnBaseUrl="https://cdn.example.test" />);
+
+    const image = screen.getByAltText("Butcher's counter") as HTMLImageElement;
+    expect(image.getAttribute("src")).toBe(
+      "https://cdn.example.test/categories/halal-meat/banner.webp",
+    );
+    // Scoped to THIS panel — the other (non-campaign) panel in the carousel
+    // legitimately keeps its own chevron, which is what the next test checks.
+    const photoPanel = image.closest('[role="group"]');
+    expect(photoPanel?.querySelector(".dept-chevron")).toBeNull();
+  });
+
+  it("keeps the chevron and icon layout for a live campaign with no photo (R9)", () => {
+    const textOnly: HeroDepartment[] = [
+      {
+        ...DEPARTMENTS[0],
+        campaign: {
+          headline: "Craft Halal Butchery",
+          subtitle: null,
+          imageKey: null,
+          altText: null,
+          linkUrl: null,
+        },
+      },
+      DEPARTMENTS[1],
+    ];
+
+    render(<DepartmentHero departments={textOnly} cdnBaseUrl={null} />);
+
+    const panel = screen
+      .getByRole("heading", { name: "Craft Halal Butchery" })
+      .closest('[role="group"]');
+    expect(panel?.querySelector(".dept-chevron")).not.toBeNull();
+  });
+
+  it("renders identically to a department with no campaign at all (R9)", () => {
+    const { container: withoutCampaignField } = render(
+      <DepartmentHero departments={DEPARTMENTS} cdnBaseUrl={null} />,
+    );
+    const explicitNull: HeroDepartment[] = [{ ...DEPARTMENTS[0], campaign: null }, DEPARTMENTS[1]];
+    const { container: withNullCampaign } = render(
+      <DepartmentHero departments={explicitNull} cdnBaseUrl={null} />,
+    );
+
+    expect(withNullCampaign.innerHTML).toBe(withoutCampaignField.innerHTML);
+  });
+
+  it("uses the campaign's link when supplied, and the default catalogue link otherwise (R11)", () => {
+    const withLink: HeroDepartment[] = [
+      {
+        ...DEPARTMENTS[0],
+        campaign: {
+          headline: "Craft Halal Butchery",
+          subtitle: null,
+          imageKey: null,
+          altText: null,
+          linkUrl: "/categories/halal-meat?isOffer=true",
+        },
+      },
+      DEPARTMENTS[1],
+    ];
+
+    render(<DepartmentHero departments={withLink} cdnBaseUrl={null} />);
+
+    // The CTA's visible text is always data-derived — never campaign copy.
+    const link = screen.getByRole("link", { name: /Shop Halal Meat/ });
+    expect(link.getAttribute("href")).toBe("/categories/halal-meat?isOffer=true");
+  });
 });

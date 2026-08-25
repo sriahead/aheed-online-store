@@ -48,6 +48,19 @@ export interface HeroDepartment {
     originalPrice: number | null;
     unitLabel: string;
   } | null;
+  /**
+   * P8.5e (#356) — this department's LIVE campaign, or null. Liveness
+   * (`isActive` + the `startsAt`/`endsAt` window) is decided by the caller via
+   * `isCampaignLive` before this component ever sees the value; this type has
+   * no `isActive`/dates precisely so that decision can't be re-made in here.
+   */
+  campaign?: {
+    headline: string;
+    subtitle: string | null;
+    imageKey: string | null;
+    altText: string | null;
+    linkUrl: string | null;
+  } | null;
 }
 
 const ROTATE_MS = 6000;
@@ -120,33 +133,67 @@ export function DepartmentHero({
               : null;
           const isCurrent = index === current;
 
+          // P8.5e (#356): a LIVE campaign (liveness already decided by the
+          // caller — see the HeroDepartment.campaign doc comment) overrides the
+          // heading/subtitle and, when it has a photo, the whole panel's visual
+          // treatment. A campaign with no photo only swaps the text — see
+          // plan.md's "Open items carried forward" for why that's a decision,
+          // not an oversight.
+          const campaign = department.campaign ?? null;
+          const campaignImageUrl =
+            campaign?.imageKey && cdnBaseUrl
+              ? composePublicUrl(cdnBaseUrl, campaign.imageKey)
+              : null;
+          const heading = campaign?.headline ?? department.name;
+          const ctaHref = campaign?.linkUrl ?? `/categories/${department.slug}`;
+
           return (
             <div
               key={department.id}
-              className={`dept-panel relative w-full shrink-0 ${PANEL_TONES[index % PANEL_TONES.length]} p-6 md:p-10`}
+              className={`dept-panel relative w-full shrink-0 overflow-hidden ${PANEL_TONES[index % PANEL_TONES.length]} p-6 md:p-10`}
               role="group"
               aria-roledescription="slide"
               aria-label={`${index + 1} of ${count}`}
               aria-hidden={!isCurrent}
             >
-              {/*
-                The chevron cutout. The polygon and its expand-on-hover live in
-                app/globals.css (.dept-chevron), not here: an inline clipPath
-                style cannot be overridden by a Tailwind hover variant, which is
-                how an earlier draft of this ended up with a `group-hover:` that
-                had no `group` ancestor and therefore never fired.
-              */}
-              <div
-                className="dept-chevron pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-white/10"
-                aria-hidden
-              />
+              {campaignImageUrl ? (
+                // The photographic treatment: a full-bleed banner with a scrim
+                // for text legibility, replacing the chevron + corner-icon
+                // layout for this panel only. Plain <img> by decision (#46).
+                <>
+                  <img
+                    src={campaignImageUrl}
+                    alt={campaign?.altText ?? ""}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div
+                    className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/10"
+                    aria-hidden
+                  />
+                </>
+              ) : (
+                /*
+                  The chevron cutout. The polygon and its expand-on-hover live in
+                  app/globals.css (.dept-chevron), not here: an inline clipPath
+                  style cannot be overridden by a Tailwind hover variant, which is
+                  how an earlier draft of this ended up with a `group-hover:` that
+                  had no `group` ancestor and therefore never fired.
+                */
+                <div
+                  className="dept-chevron pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-white/10"
+                  aria-hidden
+                />
+              )}
 
               <div className="relative z-10 flex items-center justify-between gap-6">
                 <div className="max-w-lg text-white">
                   <p className="mb-2 text-xs font-semibold tracking-wide text-white/80 uppercase">
                     Department {index + 1} of {count}
                   </p>
-                  <h2 className="mb-3 text-2xl font-extrabold md:text-4xl">{department.name}</h2>
+                  <h2 className="mb-3 text-2xl font-extrabold md:text-4xl">{heading}</h2>
+                  {campaign?.subtitle && (
+                    <p className="mb-3 -mt-2 max-w-md text-sm text-white/85">{campaign.subtitle}</p>
+                  )}
 
                   {department.spotlight ? (
                     /*
@@ -179,36 +226,43 @@ export function DepartmentHero({
 
                   <div>
                     <Link
-                      href={`/categories/${department.slug}`}
+                      href={ctaHref}
                       tabIndex={isCurrent ? undefined : -1}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-sm font-bold text-primary shadow-sm transition-transform hover:bg-surface-muted active:scale-95"
                     >
+                      {/* CTA label is always data-derived, never campaign copy
+                          (R11) — one fewer free-text a11y surface than the
+                          approved direction implied. */}
                       Shop {department.name}
                       <ArrowRight className="h-4 w-4" aria-hidden />
                     </Link>
                   </div>
                 </div>
 
-                <div className="hidden shrink-0 sm:block">
-                  {imageUrl ? (
-                    // Plain <img> by decision (#46), like every other storefront
-                    // image. Empty alt when the row supplies none: the heading
-                    // beside it already carries the meaning.
-                    <img
-                      src={imageUrl}
-                      alt={department.altText ?? ""}
-                      width={160}
-                      height={160}
-                      className="h-32 w-32 rounded-2xl object-cover md:h-40 md:w-40"
-                    />
-                  ) : (
-                    <Icon
-                      className="h-24 w-24 text-white/85 md:h-32 md:w-32"
-                      strokeWidth={1.25}
-                      aria-hidden
-                    />
-                  )}
-                </div>
+                {/* The corner icon/thumbnail slot is redundant once a
+                    full-bleed campaign photo already fills the panel. */}
+                {!campaignImageUrl && (
+                  <div className="hidden shrink-0 sm:block">
+                    {imageUrl ? (
+                      // Plain <img> by decision (#46), like every other storefront
+                      // image. Empty alt when the row supplies none: the heading
+                      // beside it already carries the meaning.
+                      <img
+                        src={imageUrl}
+                        alt={department.altText ?? ""}
+                        width={160}
+                        height={160}
+                        className="h-32 w-32 rounded-2xl object-cover md:h-40 md:w-40"
+                      />
+                    ) : (
+                      <Icon
+                        className="h-24 w-24 text-white/85 md:h-32 md:w-32"
+                        strokeWidth={1.25}
+                        aria-hidden
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           );

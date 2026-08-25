@@ -4,8 +4,8 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.7.0"
-updated: 2026-08-24
+version: "1.8.0"
+updated: 2026-08-25
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
@@ -134,6 +134,25 @@ should be reasoned about together.
    the first place. Purpose-built merchandising surfaces follow in P8.5c (curated bundles, #347)
    and P8.5d (multi-buy tier pricing, #348). If a general campaign surface is wanted again, it
    needs a staff UI as part of its scope — that absence is what made the first attempt inert.
+
+   **Amended 2026-08-25 (P8.5e, #356).** The general campaign surface was wanted again, sooner than
+   expected — a human review of the live P8.5b hero against the AI Studio prototype that P8.5's
+   brief was drawn from found the data-only hero doesn't deliver the photographic, benefit-led
+   copy the brief asked for, which no product or category field can supply. P8.5e is that surface,
+   built with the staff UI this amendment named as the prerequisite: `DepartmentCampaign`, one row
+   per top-level category, edited at `/staff/promotions`.
+
+   This is a **deliberate, narrow exception** to "promotional content is data," not a reversal of
+   it, made **by explicit human decision at `/propose` having been shown the risk**: a campaign's
+   `headline` and `subtitle` are free text, not derived from product or discount data, so nothing
+   in the schema stops a future campaign from repeating #233's unbacked-claim failure. What stays
+   structured, and what limits the exception's reach: `imageKey` and `linkUrl` are validated
+   storage keys and routes, not arbitrary strings; `isActive`/`startsAt`/`endsAt` are the only
+   things that decide whether a campaign renders at all; and the panel's real product-price
+   callout renders unconditionally underneath a campaign's copy, campaign or not — a vendor can
+   caption a photo, but cannot make the panel stop showing a real price. The exception is scoped to
+   two text fields on one new model, not a general license to reintroduce free-text marketing
+   surfaces elsewhere.
 
 6. **Split platform config from vendor config.** `lib/config.ts` keeps **platform/infra** values in
    env (DB endpoint, storage endpoint, secrets); **vendor** values (name, tagline, locality,
