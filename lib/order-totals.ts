@@ -12,6 +12,31 @@ export interface TotalsLine {
   quantity: number;
   /** Unavailable lines never contribute money (matches the cart's subtotal rule). */
   available: boolean;
+  /**
+   * P8.5d (#348) — what this line ACTUALLY costs, when that is not
+   * `unitPricePence * quantity`.
+   *
+   * A multi-buy tier prices whole groups at a group price and charges the
+   * remainder at base (`lib/tier-pricing.ts`), so a tiered line's effective unit
+   * price is fractional and the multiplication above is simply wrong for it.
+   * Rather than let callers compute tiered subtotals beside this function — which
+   * would quietly falsify the "single place an order's money is decided" claim
+   * above — they pass the figure in and it is used verbatim.
+   *
+   * OPTIONAL, and absent means exactly what it did before: multiply. Every
+   * pre-P8.5d call site is unchanged and behaves identically.
+   */
+  lineTotalPence?: number;
+}
+
+/**
+ * What one line contributes to the subtotal. Unavailable lines contribute
+ * nothing; everything else costs its explicit total when it has one, and
+ * `unitPricePence * quantity` when it doesn't.
+ */
+function lineContribution(line: TotalsLine): number {
+  if (!line.available) return 0;
+  return line.lineTotalPence ?? line.unitPricePence * line.quantity;
 }
 
 export interface DeliveryRules {
@@ -46,10 +71,7 @@ export function computeTotals(
   rules: DeliveryRules,
   discountPence = 0,
 ): OrderTotals {
-  const subtotalPence = lines.reduce(
-    (sum, line) => sum + (line.available ? line.unitPricePence * line.quantity : 0),
-    0,
-  );
+  const subtotalPence = lines.reduce((sum, line) => sum + lineContribution(line), 0);
 
   const qualifiesForFree =
     rules.freeDeliveryThresholdPence !== null &&

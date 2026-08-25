@@ -243,6 +243,63 @@ export function ProductForm({ product, categories, imageUrls }: ProductFormProps
           </div>
         </section>
 
+        {/*
+          P8.5d (#348) — the multi-buy tier. Its own section rather than another
+          pair of fields in "Price & stock", because it is a different KIND of
+          price: "Was-price" above marks one unit down, this prices a group. A
+          product can carry both and they mean different things.
+
+          Leaving both number fields blank removes any multi-buy. Unticking the
+          checkbox keeps the numbers but stops it applying, so a seasonal offer
+          can be switched back on without being retyped.
+        */}
+        <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
+          <h2 className="text-sm font-bold text-primary">Multi-buy offer</h2>
+          <p className="text-xs text-black/60">
+            Applies automatically — the shopper types nothing. Leave both fields blank for no
+            multi-buy.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelClass} htmlFor="tierGroupQuantity">
+                Quantity — how many the price covers
+              </label>
+              <input
+                id="tierGroupQuantity"
+                name="tierGroupQuantity"
+                type="number"
+                inputMode="numeric"
+                min={2}
+                step={1}
+                placeholder="3"
+                defaultValue={product?.tier?.groupQuantity ?? ""}
+                className={fieldClass("tierGroupQuantity")}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="tierGroupPrice">
+                Multi-buy price (£) for that quantity
+              </label>
+              <input
+                id="tierGroupPrice"
+                name="tierGroupPrice"
+                inputMode="decimal"
+                placeholder="10.00"
+                defaultValue={poundsValue(product?.tier?.groupPricePence)}
+                className={fieldClass("tierGroupPrice")}
+              />
+            </div>
+          </div>
+
+          <Checkbox
+            name="tierIsActive"
+            label="Multi-buy is running"
+            defaultChecked={product?.tier?.isActive ?? true}
+          />
+        </section>
+
         <section className="space-y-3 rounded-2xl border border-black/10 bg-white p-5">
           <h2 className="text-sm font-bold text-primary">Labels &amp; visibility</h2>
           <div className="flex flex-wrap gap-x-6 gap-y-3">

@@ -38,6 +38,13 @@ type FakeState = {
   }[];
   /** How many rows the guarded decrement claims to have updated. */
   decrementCount: number;
+  /** P8.5d (#348) — active multi-buy tiers visible to this checkout. */
+  priceTiers: {
+    productId: string;
+    groupQuantity: number;
+    groupPricePence: number;
+    isActive: boolean;
+  }[];
   // P5a (#135) — the loyalty rows placeOrder now touches.
   loyaltyConfig: {
     loyaltyEnabled: boolean;
@@ -75,6 +82,12 @@ function fakePrisma() {
   const tx = {
     cart: { findFirst: async () => state.cart },
     product: { findMany: async () => state.products },
+    // P8.5d (#348) — placeOrder reads multi-buy tiers inside the transaction.
+    // Empty by default: every pre-P8.5d case below asserts base-price totals,
+    // and no tier means lib/tier-pricing.ts returns exactly unitPrice ×
+    // quantity, so those expectations stay true rather than being adjusted.
+    // The tiered cases set `state.priceTiers` explicitly.
+    productPriceTier: { findMany: async () => state.priceTiers },
     inventory: {
       updateMany: async (args: unknown) => {
         created.inventoryUpdate.push(args);
@@ -233,6 +246,7 @@ beforeEach(() => {
       { id: "p1", name: "Bananas", basePrice: 1000, isActive: true, inventory: { quantity: 10 } },
     ],
     decrementCount: 1,
+    priceTiers: [],
     // Loyalty ON by default so the P5a cases below can simply supply an account;
     // the pre-P5a cases all place guest orders, which return before it matters.
     loyaltyConfig: {
@@ -358,6 +372,50 @@ describe("placeOrder — what it writes", () => {
       deliveryFeePence: 349,
       totalPence: 2349,
     });
+  });
+
+  /**
+   * P8.5d (#348) — a multi-buy tier reaches the money the order actually
+   * charges. The unit-level companion to the slice's live cart-vs-checkout
+   * check: this proves placeOrder's half, but only a live order can prove the
+   * cart's independent path agrees with it.
+   *
+   * Fixture: 2 x Bananas at £10.00, tier "2 for £16.50".
+   */
+  const TWO_FOR_1650 = {
+    productId: "p1",
+    groupQuantity: 2,
+    groupPricePence: 1650,
+    isActive: true,
+  };
+
+  it("charges the tiered line total, not unit price × quantity", async () => {
+    state.priceTiers = [TWO_FOR_1650];
+    await placeOrder(fakePrisma(), VENDOR, input());
+    expect(created.orderItem[0]).toMatchObject({
+      // The BASE unit price is still snapshotted — the two columns together
+      // record what the product listed at and what the line actually charged.
+      unitPricePence: 1000,
+      quantity: 2,
+      lineTotalPence: 1650,
+    });
+  });
+
+  it("carries the tiered total into the order subtotal and payment", async () => {
+    state.priceTiers = [TWO_FOR_1650];
+    await placeOrder(fakePrisma(), VENDOR, input());
+    expect(created.order[0]).toMatchObject({
+      subtotalPence: 1650,
+      deliveryFeePence: 349,
+      totalPence: 1999,
+    });
+    expect(created.payment[0]).toMatchObject({ amountPence: 1999 });
+  });
+
+  it("ignores an inactive tier", async () => {
+    state.priceTiers = [{ ...TWO_FOR_1650, isActive: false }];
+    await placeOrder(fakePrisma(), VENDOR, input());
+    expect(created.order[0]).toMatchObject({ subtotalPence: 2000 });
   });
 
   it("opens the order PENDING_PAYMENT with a matching status event", async () => {

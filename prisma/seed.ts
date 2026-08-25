@@ -42,6 +42,7 @@ async function main() {
   await upsertVendorSatellites(AHEED_VENDOR_ID, AHEED_SATELLITES);
   // After the catalogue: bundles resolve their constituents by product slug.
   await seedBundles(AHEED_VENDOR_ID, AHEED_BUNDLES);
+  await seedPriceTiers(AHEED_VENDOR_ID, AHEED_PRICE_TIERS);
 
   // ADR-004 slice 3b — host→tenant mapping. Hosts are per-environment (staging & prod are
   // separate DBs), sourced from env vars. SriMart (a 2nd vendor) is only seeded when BOTH
@@ -68,6 +69,7 @@ async function main() {
     await refreshProductImages(SRIMART_CATALOGUE);
     await upsertVendorSatellites(SRIMART_VENDOR_ID, SRIMART_SATELLITES);
     await seedBundles(SRIMART_VENDOR_ID, SRIMART_BUNDLES);
+    await seedPriceTiers(SRIMART_VENDOR_ID, SRIMART_PRICE_TIERS);
     await upsertVendorDomain(SRIMART_VENDOR_ID, srimartHost);
   } else if (srimartHost && !aheedHost) {
     console.log("SEED_SRIMART_HOST set but SEED_AHEED_HOST is not — skipping SriMart to stay safe");
@@ -768,6 +770,84 @@ async function seedBundles(vendorId: string, fixtures: BundleFixture[]) {
 
   console.log(`seeded ${pending.length} bundles for ${vendorId}`);
 }
+
+/** A product's multi-buy tier (P8.5d, #348), resolved by product slug. */
+interface PriceTierFixture {
+  productSlug: string;
+  groupQuantity: number;
+  groupPricePence: number;
+}
+
+/**
+ * Multi-buy tiers for BOTH vendors — SriMart included, deliberately.
+ *
+ * A one-vendor seed is exactly the gap #276 exists for: cross-tenant pricing
+ * bugs are invisible when only one tenant has any data to price. The two
+ * fixtures also differ on purpose — Aheed's group price divides evenly by its
+ * group quantity and SriMart's does not (3500 / 3), so a live check exercises
+ * both the tidy case and the one where a per-unit price could not have been
+ * exact.
+ */
+async function seedPriceTiers(vendorId: string, fixtures: PriceTierFixture[]) {
+  const products = await prisma.product.findMany({
+    where: { vendorId, slug: { in: fixtures.map((f) => f.productSlug) } },
+    select: { id: true, slug: true, basePrice: true },
+  });
+  const bySlug = new Map(products.map((p) => [p.slug, p]));
+
+  let seeded = 0;
+  for (const fixture of fixtures) {
+    const product = bySlug.get(fixture.productSlug);
+    if (!product) {
+      // Loud, not silent — the #276 lesson, same as seedBundles above.
+      console.log(
+        `WARNING: skipping multi-buy tier for ${vendorId} — no such product: ${fixture.productSlug}`,
+      );
+      continue;
+    }
+
+    // A tier that does not beat buying singly would be clamped away at runtime
+    // by lib/tier-pricing.ts and render nothing — a silently inert fixture,
+    // which is worse than a loud one.
+    if (fixture.groupPricePence >= fixture.groupQuantity * product.basePrice) {
+      console.log(
+        `WARNING: skipping multi-buy tier for "${fixture.productSlug}" — ` +
+          `${fixture.groupPricePence}p for ${fixture.groupQuantity} is not cheaper than ` +
+          `${fixture.groupQuantity} x ${product.basePrice}p`,
+      );
+      continue;
+    }
+
+    const existing = await prisma.productPriceTier.findFirst({
+      where: { vendorId, productId: product.id },
+      select: { id: true },
+    });
+    if (existing) continue;
+
+    await prisma.productPriceTier.create({
+      data: {
+        vendorId,
+        productId: product.id,
+        groupQuantity: fixture.groupQuantity,
+        groupPricePence: fixture.groupPricePence,
+        isActive: true,
+      },
+    });
+    seeded += 1;
+  }
+
+  console.log(`seeded ${seeded} multi-buy tier(s) for ${vendorId}`);
+}
+
+/** "Buy 2 x 5kg Basmati for £16.50" — the P8.5 brief's own worked example. */
+const AHEED_PRICE_TIERS: PriceTierFixture[] = [
+  { productSlug: "basmati-rice-5kg", groupQuantity: 2, groupPricePence: 1650 },
+];
+
+/** 3500 / 3 is not an integer — the case a per-unit tier price gets wrong. */
+const SRIMART_PRICE_TIERS: PriceTierFixture[] = [
+  { productSlug: "sri-phone-charger", groupQuantity: 3, groupPricePence: 3500 },
+];
 
 const SRIMART_CATALOGUE: CatalogueCategory[] = [
   {

@@ -160,11 +160,23 @@ export function CartContents({
                 </div>
               </div>
 
-              <span
-                className={`text-sm font-extrabold ${line.available ? "text-primary" : "text-primary/30 line-through"}`}
-              >
-                {formatPrice(line.lineTotalPence)}
-              </span>
+              <div className="flex flex-col items-end">
+                <span
+                  className={`text-sm font-extrabold ${line.available ? "text-primary" : "text-primary/30 line-through"}`}
+                >
+                  {formatPrice(line.lineTotalPence)}
+                </span>
+                {/* P8.5d (#348) — the multi-buy saving this line actually earned.
+                    Only shown when it is non-zero and the line is still payable:
+                    an unavailable line contributes nothing to the subtotal, so
+                    advertising a saving on it would be a claim about money the
+                    shopper is not being charged. */}
+                {line.available && line.tierSavingPence > 0 && (
+                  <span className="text-[11px] font-semibold text-action">
+                    Saving {formatPrice(line.tierSavingPence)}
+                  </span>
+                )}
+              </div>
             </div>
           ))
         )}
