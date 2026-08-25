@@ -5,6 +5,8 @@ import { getRequestCartQuantities } from "@/lib/cart-summary";
 import { getEnv } from "@/lib/config";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { ProductRow } from "@/components/product/ProductRow";
+import { BundleRow } from "@/components/bundle/BundleRow";
+import { getBundlesForStorefront } from "@/lib/bundles-service";
 
 // Without this, Next's build-time static optimization tries to prerender this
 // page in plain Node — but lib/db.ts loads Prisma via @prisma/client/wasm,
@@ -31,10 +33,13 @@ export async function generateMetadata() {
 
 export default async function CategoriesPage() {
   const productsRepo = getProductRepository();
-  const [categories, newArrivalsPage, featuredPage] = await Promise.all([
+  const [categories, newArrivalsPage, featuredPage, bundles] = await Promise.all([
     getCategoryRepository().listTopLevel(),
     productsRepo.list({ take: 4 }), // recent products
     productsRepo.list({ take: 4, isFeatured: true }), // vendor-curated featured products
+    // P8.5c (#347): one nested query for every bundle and its constituents —
+    // adding a fourth bundle adds no query.
+    getBundlesForStorefront(),
   ]);
   // P8.5a (#345): request-memoised, shared with the header's cart read — the
   // cards need it to render the cart-aware stepper rather than a plain add.
@@ -47,6 +52,11 @@ export default async function CategoriesPage() {
         <h1 className="mb-4 text-xl font-bold text-primary">Shop by department</h1>
         <DepartmentScroller categories={categories} />
       </section>
+
+      {/* P8.5c (#347): after the departments, before the product rows — the
+          shop page's merchandising slot. The landing page stays as P8.5f left
+          it: hero and trust strip only. */}
+      <BundleRow title="Meal bundles" bundles={bundles} cdnBaseUrl={CDN_BASE_URL ?? ""} />
 
       <ProductRow
         title="New Arrivals"
