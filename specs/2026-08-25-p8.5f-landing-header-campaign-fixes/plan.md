@@ -178,10 +178,15 @@ generate rather than having to photograph.
 
 ## Open items carried forward
 
-- **No GitHub issue exists for this slice yet.** `/propose` was deliberately skipped by human
-  decision after the proposal was reviewed in-conversation, so Gate 1's artifact is this plan rather
-  than an issue. An issue must be opened before `/ship`, because every PR carries `Closes #NN` plus
-  `phase:` / `gate:` labels, and `npm run sdd:audit` reports a shipped slice with no roadmap entry.
+- **Tracking issue is #362**, opened at `/build-notes` rather than `/propose`: the proposal was
+  reviewed and approved in-conversation and the human elected to go straight to `/spec`, so Gate 1's
+  artifact is this plan. The issue exists so the PR can carry `Closes #362` plus `phase:` / `gate:`
+  labels and so `npm run sdd:audit` has a roadmap row to reconcile against.
+- **Deferred items filed at `/build-notes`:** **#363** (vendor timezone is a hardcoded constant —
+  blocks non-UK onboarding), **#364** (AI-generated images stored as PNG bytes under a `.webp` key,
+  affecting the product pipeline too), **#365** (admin-editable AI prompt — needs its own
+  `/propose`, since a caller-supplied prompt would undo the reason it is server-side), **#366**
+  (stale agent worktree for a merged branch breaking local `format:check`).
 - **Board `Phase` field still has no option past `P8`**, so this item is tagged `P8` like the rest
   of P8.5 — the same gap **#267** already records.
 - **#351** (product card nests `<button>` inside `<a>`) is untouched here, but this slice puts more
