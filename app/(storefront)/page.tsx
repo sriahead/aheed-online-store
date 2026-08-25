@@ -9,6 +9,8 @@ import { formatPrice } from "@/components/product/format-price";
 import { isDeliverable } from "@/lib/delivery";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getRequestCartQuantities } from "@/lib/cart-summary";
+import { getCampaignsForHero } from "@/lib/campaigns-service";
+import { isCampaignLive } from "@/lib/campaign-liveness";
 
 export const dynamic = "force-dynamic";
 
@@ -35,15 +37,33 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // per department. Depends on `categories`, so it cannot join the Promise.all
   // above.
   const spotlights = await productsRepo.categorySpotlights(categories.map((c) => c.id));
-  const heroDepartments = categories.map((category) => ({
-    id: category.id,
-    slug: category.slug,
-    name: category.name,
-    // `Category` has no image column yet (#279 / P8.5b's plan.md); the hero
-    // renders each department's icon until one exists.
-    imageKey: null,
-    spotlight: spotlights.get(category.id) ?? null,
-  }));
+  // P8.5e (#356): campaigns are read alongside spotlights, keyed the same way.
+  // Liveness is decided HERE, once, so DepartmentHero never has to re-derive it
+  // from isActive/startsAt/endsAt.
+  const campaigns = await getCampaignsForHero(categories.map((c) => c.id));
+  const now = new Date();
+  const heroDepartments = categories.map((category) => {
+    const campaign = campaigns.get(category.id);
+    return {
+      id: category.id,
+      slug: category.slug,
+      name: category.name,
+      // `Category` has no image column yet (#279 / P8.5b's plan.md); the hero
+      // renders each department's icon until one exists.
+      imageKey: null,
+      spotlight: spotlights.get(category.id) ?? null,
+      campaign:
+        campaign && isCampaignLive(campaign, now)
+          ? {
+              headline: campaign.headline,
+              subtitle: campaign.subtitle,
+              imageKey: campaign.imageKey,
+              altText: campaign.altText,
+              linkUrl: campaign.linkUrl,
+            }
+          : null,
+    };
+  });
   const { CDN_BASE_URL } = getEnv();
   const localityName = profile?.localityName ?? "";
   const vendorName = profile?.name ?? "Welcome";
