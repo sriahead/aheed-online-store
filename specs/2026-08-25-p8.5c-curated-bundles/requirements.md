@@ -72,18 +72,30 @@ R13. Each rendered bundle shows its `name`, its `tagline` when present, one entr
      constituent showing the product name and the bundle's quantity for it, and the derived total
      formatted through the existing `formatPrice`.
 
-R14. **No _bundle-level_ savings claim renders**: a bundle's card shows exactly one price — the
-     derived total — with no struck-through bundle price, no bundle-level "Save £X" text, and no
-     stored-vs-derived comparison.
+R14. **No _bundle-level_ savings claim renders anywhere on the card**: a bundle's card shows exactly
+     one price — the derived total — with no struck-through bundle price, no bundle-level "Save £X"
+     text, no per-constituent price or badge, and no stored-vs-derived comparison. The constituent
+     list carries name and quantity only.
 
-     **This requirement does not extend to a constituent product's own pre-existing discount badge.**
-     `ProductCard` has rendered `Save {formatPrice(saving)}` and a `line-through` `originalPrice`
-     since P2.5b1 for any product where `originalPrice > basePrice` (`components/product/ProductCard.tsx:88,134`).
-     That badge is a true statement about that product, predates this slice, and must keep working.
-     A check written as a blanket "no `/save/i` in the bundles section" would fail the moment a
-     bundle contains a product that is genuinely on offer, and the only way to pass it would be
-     deleting a correct feature — so the check must target the bundle's own price row, not the
-     section's text.
+     **This requirement does not touch `ProductCard`'s own pre-existing discount badge, which lives
+     outside the bundle card.** `ProductCard` has rendered `Save {formatPrice(saving)}` and a
+     `line-through` `originalPrice` since P2.5b1 for any product where `originalPrice > basePrice`
+     (`components/product/ProductCard.tsx:88,134`) — in the product rows, search, and the product
+     page. That badge is a true statement about that product, predates this slice, and must keep
+     working *there*. It is not rendered a second time inside a bundle's constituent list: a
+     per-constituent price row is exactly where such a badge would sit, and repeated down a bundle
+     card it would read as a bundle-level saving — the one claim this slice must not make. A check
+     written as a blanket "no `/save/i` anywhere on the page" would fail the moment a product on
+     offer is rendered by `ProductCard` elsewhere on the same page — so the check must target the
+     bundle card's own markup, not the whole page's text.
+
+     **Corrected at `/validate` (2026-08-25): this row previously also required the constituent's
+     badge to appear *inside* the bundle card ("SHOULD now appear"), which directly contradicted the
+     first paragraph's "exactly one price." `plan.md`'s own scope section (the source both this row
+     and the build were drawn from) already specified the constituent list as "quantities" only, with
+     no per-item price — so the contradiction was a drafting error introduced when the plan's prose
+     became this acceptance row, not a live design question. The build's R14(a) interpretation (no
+     per-constituent prices or badges anywhere in `BundleCard`) is confirmed correct.
 
 R15. A bundle with `imageKey` null renders its card fully — name, constituents, total and the add
      control all present — with no broken-image element and no empty reserved image box.
