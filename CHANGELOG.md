@@ -34,6 +34,19 @@ every branch merges.
   `tests/prisma-errors.test.ts`.
 
 ### Documentation
+- **P8.5c closeout** — `specs/roadmap.md`'s P8.5c row (added at Gate 4, before `/validate`) is
+  reconciled with what actually shipped: cites **PR #374** (it previously cited no PR at all), and
+  replaces "R14 left uncorrected on purpose" with how `/validate` actually resolved it, plus the two
+  live defects `/validate` found and `/fix` corrected (seed fixture, `isUniqueViolation`). `CLAUDE.md`
+  gains a permanent note on the `PrismaNeonHttp`/`PrismaNeon` error-code discrepancy (`23505` vs
+  `P2002`) that caused the duplicate-slug crash, under the Database section's existing hybrid-strategy
+  explanation. Filed **#375** — auditing `categories.ts`/`discounts.ts`/`loyalty.ts`/`products.ts`'s
+  own `isUniqueViolation` call sites for the same exposure, deferred rather than done here since it
+  needs live reproduction per call site, not a guess. Issue #347 moved to **In Review** (merged to
+  `staging`, not yet promoted — deliberately batching with P8.5d rather than promoting solo, matching
+  the a/b/e/f precedent); #372/#373 (already-filed P8.5c follow-ups) and #375 tagged Phase `P8` on the
+  delivery board.
+
 - **P8.5 (slices a, b, e, f) closeout** — `specs/roadmap.md` gained the four build rows and the
   promotion row `npm run sdd:audit` flagged as missing (P8.5a/b/e had shipped to `staging` across
   earlier sessions with no roadmap citation; P8.5f's own build and its `/fix` pivot away from

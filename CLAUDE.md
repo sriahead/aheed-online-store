@@ -49,6 +49,25 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   in P1 once something actually stress-tested it, not before. Any function wrapping `getPrisma()`
   (e.g. `lib/auth.ts`'s `getAuth()`) must also construct fresh per call — caching the wrapper still
   pins the first request's Prisma client inside it.
+- **`getPrisma()`'s HTTP adapter (`PrismaNeonHttp`) and `getPrismaWs()`'s WebSocket adapter
+  (`PrismaNeon`) surface the SAME underlying Postgres error with DIFFERENT `.code` values** — a
+  driver-error-code check written and tested against one silently doesn't fire under the other.
+  Confirmed for a unique-constraint violation: the WebSocket adapter normalises it to Prisma's own
+  `P2002`; the HTTP adapter — what `getPrisma()` returns, i.e. what the large majority of writes in
+  this app actually run through — throws the same `PrismaClientKnownRequestError` but with the raw
+  Postgres SQLSTATE `"23505"` on `.code` instead. `lib/repositories/prisma-errors.ts`'s
+  `isUniqueViolation()` checked only `P2002`, so `lib/repositories/bundles.ts`'s `upsertBundle`
+  (writing through `getPrisma()`) 500ed uncaught on a real duplicate-slug submission — found live at
+  P8.5c's `/validate` (#347, PR #374) against `npm run preview`, invisible to `lint`/`typecheck`/
+  `npx vitest run`/`npm run build`, because a unit test constructing the error object by hand
+  reproduces whichever shape the test author assumed, not the shape either real adapter actually
+  throws. Fixed by widening the shared predicate to accept both codes — `lib/repositories/
+  categories.ts` had the identical exposure through the same predicate, unconfirmed (#375). **The
+  transferable lesson: any `error.code`/error-shape check guarding a write reachable through
+  `getPrisma()` needs to be verified against what that adapter actually throws, not against what
+  Prisma's own docs or `PrismaClientKnownRequestError`'s shape under the WebSocket adapter would
+  suggest** — reproduce it live (a real duplicate/invalid submission through `npm run preview`), not
+  by constructing the error object from a guess.
 - **Validate DB-touching code with `npm run preview` (OpenNext + local Workers/Miniflare), never
   `npm run dev`.** Plain `next dev` runs in real Node, which cannot load `@prisma/client/wasm`'s
   WASM query engine — any DB-touching route silently renders an error state, with no crash and no
