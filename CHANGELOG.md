@@ -5,6 +5,29 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 every branch merges.
 
 ### Documentation
+- **`specs/sdd-workflow.md` 2.22.0 -> 2.23.0 gains worktree awareness** (#357). The workflow had no
+  concept of a sub-agent building in an isolated git worktree (`.claude/worktrees/agent-<id>/`, the
+  Agent tool's `isolation: "worktree"`) — live-hit the same session this line was written, when a
+  fresh `/validate` context found nothing wrong because it never knew to run `git worktree list`,
+  and the P8.5e (#356) artifact lived only in one. Orient now runs `git worktree list` on re-entry;
+  Document (build notes) and Clear's checklist require the worktree's path/branch to be named in
+  `build-notes.md` rather than left for `git worktree list` to rediscover later; Validate checks for
+  a named worktree and runs every check against that path, not the main checkout; Ship gains a step
+  to remove a worktree once its branch merges, since nothing does that automatically.
+- **`kms/schema/repo.ts`'s `EXCLUDE_DIRS` gains `.claude`** (#357). Its file walk had no exclusion
+  for `.claude/worktrees/*` — a full, separate checkout each sub-agent builds in — so
+  `npm run kms:build-index`, run while three sub-agent worktrees sat on disk, indexed their entire
+  `specs/`/`docs/` trees as belonging to the main repo (99 -> 599 "artifacts", live-caught and
+  reverted before commit). Confirmed nothing under `.claude/` was legitimately indexed before this
+  change, so the exclusion loses no coverage.
+- **`vitest.config.mts` gains an `exclude` for `.claude`** (#357), same root cause a second place:
+  vitest's own default excludes (`node_modules`, `.git`) don't cover it either, so `npx vitest run`
+  with any sub-agent worktree on disk picked up and executed *that worktree's* test files against
+  *its own* `node_modules` — a real crash (`react-dom`/jsdom internals failing to resolve), not a
+  false pass, caught live while re-verifying this same fix. `[...configDefaults.exclude,
+  "**/.claude/**"]` keeps vitest's own defaults rather than silently dropping them.
+
+### Documentation
 - **`specs/design-system.md` 1.8.0 -> 1.9.0 gains a Motion subsection** (P8.5a, #345). Three rules that until now lived only in `CLAUDE.md`, which is an assistant guardrail file rather than the doc a human opens before writing a component: a transition names its properties (never `transition-all`, never a global element-selector rule — #324 and #326 are the two defects behind that); animate only properties that cannot move layout; and every motion effect has a reduced-motion opt-out, CSS effects via `@media (prefers-reduced-motion: reduce)` and JS timers via `matchMedia`. States plainly that no lint rule checks any of it and that WCAG SC 2.2.2 is only ever verified in a browser.
 - **Build notes** for the slice at `specs/2026-08-24-p8.5a-product-card-upgrade/build-notes.md`, naming five known-shaky areas for validation to target first — per-vendor rendering above all, since `tests/vendor-theme.test.ts` passing is not evidence for it (#251's precedent).
 - **#351 filed**: the product card nests `<button>` inside `<a>`, which HTML's content model for `<a>` forbids. **Pre-existing** — `AddToCartButton` has always done it and P8.5a did not widen it — but recorded rather than left as folklore, since `jsx-a11y` has no rule for it and the correctness currently rests on every handler calling `preventDefault()`.
