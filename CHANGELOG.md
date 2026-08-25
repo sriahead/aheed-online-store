@@ -4,6 +4,29 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Documentation
+- **New SDD Operator Runbook** (`docs/developer-portal/sdd/operator-runbook.md`, `id:
+  sdd-operator-runbook`, `type: runbook`) — a human-executable manual for the Orient/Propose/Spec/
+  Build/Document/Validate/Fix/Ship/Document loop, written so a human with no Claude Code session
+  could run the same commands, read the same files, and recognize the same failure modes the
+  assistant would. Per stage: purpose, inputs, what happens behind the scenes, a manual procedure,
+  expected results, a troubleshooting table, where to investigate, and decision points requiring a
+  human call — plus a consolidated troubleshooting table and decision-point summary at the end.
+  Derived from `specs/sdd-workflow.md`, `.claude/commands/*.md`, `scripts/sdd-check.ts`'s actual
+  source, and the git hooks/CI workflows — not invented — with two things it observed live in the
+  same session: a stray sub-agent worktree at `.claude/worktrees/` and the delivery board showing
+  `Backlog`/`In Progress` for three issues (#345, #346, #356) already merged to staging. First drafted
+  at `.claude/onboarding.md` (never committed) then moved into the KMS-indexed `docs/developer-portal/`
+  tree at the user's request, since `docs/developer-portal/onboarding.md` already exists for a
+  different purpose (new-developer setup) and this needed its own name. Verified against the real
+  pipeline, not just assumed: `npm run kms:validate` (0 invalid front-matter), `npm run
+  kms:build-index` (102 -> 103 artifacts), and `npm run kms:assemble:internal && (cd
+  kms/site-internal && npx next build --webpack)` (107 pages built, including
+  `/dev/sdd-operator-runbook`). Went through Build only — no `/propose`/`/spec` — scaled down per
+  `specs/sdd-workflow.md`'s own "scale the loop to the change" rule: a single new doc file, no
+  `app`/`lib`/`prisma` code touched, no tracked issue, so `specs/roadmap.md` and the delivery board
+  have nothing to reconcile against once this merges.
+
 ### Fixed
 - **`specs/2026-08-25-p8.5e-hero-campaigns/plan.md` broke `deploy-docs-internal` on merge** — a bare
   `"Shop {name}"` in prose (not backtick-quoted) parses as a JSX expression referencing an undefined

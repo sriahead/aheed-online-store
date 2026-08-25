@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-25T05:04:37.444Z` · commit `bf29290` · `102` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-25T06:02:15.580Z` · commit `3cbb236` · `103` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -31,6 +31,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Onboarding](docs/developer-portal/onboarding.md) | doc | 1.1.0 | 2026-08-06 | approved | internal | 5-minute start-here guide — where the project actually is, prerequisites, local setup, and how to get a new developer running, tested, and branching independently. |
 | [Manual Regression Test Register](docs/developer-portal/regression-tests.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Manual regression test cases for known critical issues — the hybrid Prisma client contract under Cloudflare Worker connection limits, and cart persistence across a cancelled Stripe checkout. |
 | [Repository Structure](docs/developer-portal/repo-structure.md) | doc | 1.2.0 | 2026-08-12 | approved | internal | The agreed target folder layout for the Next.js + Prisma + Cloudflare app, Clean Architecture layering, and which phase scaffolds each folder. |
+| [SDD Operator Runbook](docs/developer-portal/sdd/operator-runbook.md) | runbook | 1.0.0 | 2026-08-25 | approved | internal | Human-executable manual for the SDD delivery loop — Orient, Propose, Spec, Build, Document, Validate, Fix, Ship, Document — covering what each stage does behind the scenes, how to run it by hand, how to verify it worked, and how to diagnose and recover when it doesn't. |
 | [Walking-Skeleton Runbook (M0)](docs/developer-portal/walking-skeleton-runbook.md) | runbook | 1.0.0 | 2026-08-06 | approved | internal | Step-by-step runbook to stand up the M0 walking skeleton — Cloudflare, R2, Neon, and GitHub environment provisioning through to a green production health check. |
 | [Marketing & Analytics Data Guide](docs/marketing-analytics/marketing-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for marketing analysts on how to track user behavior, promotions, and campaign performance. |
 | [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
