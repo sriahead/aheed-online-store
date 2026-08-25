@@ -273,6 +273,28 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `@prisma/client/wasm`'s subpath export** (`Module not found`) even though webpack handles it fine
   and the package.json `exports` map is valid. Both `dev` and `build` scripts pin `--webpack`
   explicitly until Turbopack's resolver catches up — don't remove that flag without re-verifying.
+- **There is no `proxy.ts`/`middleware.ts` this project can currently ship, on any configuration.**
+  Next 16 renamed `middleware.js` to `proxy.js` and made Node.js the *only* runtime a Proxy file can
+  use — the `runtime` segment option is not just defaulted, it's **forbidden**; setting it throws.
+  But `@opennextjs/cloudflare` (pinned `^1.20.2`, and `1.20.2` is the newest version published as of
+  P8.5f) unconditionally `process.exit(1)`s the `opennextjs-cloudflare build` step the moment it
+  detects Node-runtime middleware (`ERROR Node.js middleware is not currently supported. Consider
+  switching to Edge Middleware.` — `useNodeMiddleware()` in its own `build.js`). Next 16 forbids the
+  one thing that would satisfy the adapter (opting back into Edge). `next build` alone stays green
+  and even prints `ƒ Proxy (Middleware)` — it never runs the Cloudflare adapter's build step, so it
+  proves nothing about deployability. **Only `npm run preview` (`opennextjs-cloudflare build`) or an
+  actual `deploy-staging`/`deploy-production` run surfaces this.** Hit in P8.5f (#362): a root
+  `proxy.ts` annotating requests with a pathname header passed `next build` and every local
+  `lint`/`typecheck`/`test`, merged to `staging`, and only failed when `deploy-staging` actually ran
+  — confirmed by deliberately merging the unfixed build and watching the real deploy fail before
+  fixing it, not by local reasoning alone. **There is no per-file workaround** — the incompatibility
+  is between "any Proxy file exists" and "this adapter version," not between two implementation
+  choices within one. If a route needs to differ by path (e.g. a header rendering differently on `/`
+  than elsewhere), reach for **an explicit prop passed down from whichever layout/route renders it**
+  instead — a second route group sharing an extracted layout-body component if the App Router
+  structure requires it (see `components/layout/StorefrontChrome.tsx` / `app/(landing)/`), same
+  pattern as the existing `isPortal` prop. Re-check `@opennextjs/cloudflare`'s changelog before
+  reaching for `proxy.ts` again — this note is only current as of `1.20.2`.
 - **ESLint 9 requires flat config** (`eslint.config.mjs`), not `.eslintrc.json`. `eslint-config-next`
   (bumped to match `next`'s major) exports flat-config-ready arrays directly:
   `eslint-config-next/core-web-vitals`. The `lint` script is plain `eslint .`, not `next lint`
