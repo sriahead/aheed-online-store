@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Save } from "lucide-react";
 import { saveCampaign } from "@/features/admin/campaigns";
 import { initialCampaignFormState } from "@/lib/campaign-form";
+import { formatLocalInput } from "@/lib/local-datetime";
 import { CampaignBannerUploader } from "@/components/staff/CampaignBannerUploader";
 import type { CampaignRow } from "@/lib/repositories/campaigns";
 
@@ -24,13 +25,6 @@ const inputClass =
   "w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none";
 const labelClass = "mb-1 block text-xs font-medium text-primary/70";
 const errorInputClass = "border-danger bg-danger-tint";
-
-/** `datetime-local` needs `YYYY-MM-DDTHH:mm`, not a full ISO string. */
-function toLocalInputValue(date: Date | null): string {
-  if (date === null) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 export function CampaignForm({
   categoryId,
@@ -119,7 +113,7 @@ export function CampaignForm({
                 id="startsAt"
                 name="startsAt"
                 type="datetime-local"
-                defaultValue={toLocalInputValue(campaign?.startsAt ?? null)}
+                defaultValue={formatLocalInput(campaign?.startsAt ?? null)}
                 className={fieldClass("startsAt")}
               />
             </div>
@@ -131,7 +125,7 @@ export function CampaignForm({
                 id="endsAt"
                 name="endsAt"
                 type="datetime-local"
-                defaultValue={toLocalInputValue(campaign?.endsAt ?? null)}
+                defaultValue={formatLocalInput(campaign?.endsAt ?? null)}
                 className={fieldClass("endsAt")}
               />
             </div>

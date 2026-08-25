@@ -1,14 +1,10 @@
-import { MapPin, Sparkles, Truck, ShieldCheck, CreditCard, BellRing } from "lucide-react";
+import { Sparkles, Truck, ShieldCheck, CreditCard, BellRing } from "lucide-react";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { getProductRepository } from "@/lib/products-service";
 import { getEnv } from "@/lib/config";
-import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { DepartmentHero } from "@/components/layout/DepartmentHero";
-import { ProductRow } from "@/components/product/ProductRow";
 import { formatPrice } from "@/components/product/format-price";
-import { isDeliverable } from "@/lib/delivery";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
-import { getRequestCartQuantities } from "@/lib/cart-summary";
 import { getCampaignsForHero } from "@/lib/campaigns-service";
 import { isCampaignLive } from "@/lib/campaign-liveness";
 
@@ -20,19 +16,19 @@ export async function generateMetadata() {
   return { title: profile?.tagline ? `${name} — ${profile.tagline}` : name };
 }
 
-type SearchParams = { postcode?: string };
-
-export default async function HomePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const { postcode } = await searchParams;
+/**
+ * P8.5f: the landing page is now hero-first. The department scroller and the New
+ * Arrivals / Featured Products rows moved to `/categories`, which this slice
+ * rebuilt as the shop page, and the postcode checker moved into the header. What
+ * remains is the one thing this page is FOR: the vendor's hero and the three
+ * platform-true trust claims.
+ */
+export default async function HomePage() {
   const productsRepo = getProductRepository();
-  const [categories, profile, newArrivalsPage, featuredPage] = await Promise.all([
+  const [categories, profile] = await Promise.all([
     getCategoryRepository().listTopLevel(),
     getCurrentVendorProfile(),
-    productsRepo.list({ take: 4 }), // recent products
-    productsRepo.list({ take: 4, isFeatured: true }), // vendor-curated featured products
   ]);
-  // P8.5a (#345): request-memoised, shared with the header's cart read.
-  const cartQuantities = await getRequestCartQuantities();
   // P8.5b (#346): one query for every department's headline product, not one
   // per department. Depends on `categories`, so it cannot join the Promise.all
   // above.
@@ -67,9 +63,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const { CDN_BASE_URL } = getEnv();
   const localityName = profile?.localityName ?? "";
   const vendorName = profile?.name ?? "Welcome";
-  const prefixes = profile?.deliveryPrefixes ?? [];
-  const trimmedPostcode = postcode?.trim() ?? "";
-  const deliverable = trimmedPostcode ? isDeliverable(trimmedPostcode, prefixes) : null;
   // P7.5c+f (#239): the hero used to state "Free Delivery Over £30" to every
   // vendor. Aheed's threshold IS £30, so the literal was accidentally true for
   // the vendor it was written for and wrong for SriMart, whose threshold is
@@ -133,35 +126,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               )}
             </div>
 
-            <div className="pt-4">
-              <form method="GET" className="flex flex-wrap items-center gap-3">
-                <div className="relative flex items-center">
-                  <MapPin className="absolute left-3 w-4 h-4 text-black/40" />
-                  <input
-                    type="text"
-                    name="postcode"
-                    defaultValue={trimmedPostcode}
-                    placeholder={prefixes.length ? `e.g. ${prefixes[0]}1 1AA` : "Enter postcode"}
-                    className="w-48 pl-9 pr-4 py-2.5 rounded-l-xl text-black font-semibold text-sm focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    className="bg-accent text-white px-5 py-2.5 font-bold text-sm rounded-r-xl transition-colors hover:opacity-90"
-                  >
-                    Check Area
-                  </button>
-                </div>
-                {deliverable !== null && (
-                  <p
-                    className={`text-sm font-semibold px-2 py-1 rounded ${deliverable ? "bg-action text-white" : "bg-danger text-white"}`}
-                  >
-                    {deliverable
-                      ? `✓ We deliver to ${trimmedPostcode.toUpperCase()}`
-                      : `✗ Sorry, ${localityName} ${prefixes.join("/")} only`}
-                  </p>
-                )}
-              </form>
-            </div>
+            {/* P8.5f: the postcode checker that used to sit here now lives in
+                the header (components/layout/PostcodeChecker.tsx), where its
+                answer is carried in a cookie and survives navigation instead of
+                vanishing with the `?postcode=` query string. */}
           </div>
 
           {/* P8.5b (#346): the hero's second column. This slot has now held
@@ -230,27 +198,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </div>
         </div>
       </section>
-
-      {/* Store Categories Nav */}
-      <section className="bg-white rounded-2xl border border-black/10 p-5 shadow-sm">
-        <h2 className="mb-4 text-xl font-bold text-primary">Shop by department</h2>
-        <DepartmentScroller categories={categories} />
-      </section>
-
-      {/* Product Discovery Rows */}
-      <ProductRow
-        title="New Arrivals"
-        products={newArrivalsPage.items}
-        cdnBaseUrl={CDN_BASE_URL ?? ""}
-        viewAllLink="/search"
-        cartQuantities={cartQuantities}
-      />
-      <ProductRow
-        title="Featured Products"
-        products={featuredPage.items}
-        cdnBaseUrl={CDN_BASE_URL ?? ""}
-        cartQuantities={cartQuantities}
-      />
     </main>
   );
 }
