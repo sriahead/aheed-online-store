@@ -4,6 +4,19 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Fixed
+- **`specs/2026-08-25-p8.5e-hero-campaigns/plan.md` broke `deploy-docs-internal` on merge** — a bare
+  `"Shop {name}"` in prose (not backtick-quoted) parses as a JSX expression referencing an undefined
+  `name` in the assembled MDX, crashing the internal docs site's build with `ReferenceError: name is
+  not defined` (`deploy-docs-internal` run `32810911550`, PR #359's merge). Same class of trap
+  CLAUDE.md's "KMS docs" section already documents for a bare `<1%` — nothing in `lint`/`typecheck`/
+  `test`/`build` catches it, only the separate `kms:assemble:internal` + Nextra build pipeline does,
+  on the next push. Fixed as its own follow-up (not amending the already-merged PR, matching #218's
+  precedent) by wrapping the reference in backticks: `` "Shop `{name}`" ``. Same text in
+  `requirements.md` R11 fixed too, though it isn't part of the assembled site (no front-matter).
+  Verified with the actual check — `npm run kms:assemble:internal && (cd kms/site-internal && npx
+  next build --webpack)` — not just the root build.
+
 ### Documentation
 - **`specs/sdd-workflow.md` 2.22.0 -> 2.23.0 gains worktree awareness** (#357). The workflow had no
   concept of a sub-agent building in an isolated git worktree (`.claude/worktrees/agent-<id>/`, the
