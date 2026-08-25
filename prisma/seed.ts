@@ -665,11 +665,12 @@ const AHEED_BUNDLES: BundleFixture[] = [
   {
     slug: "weekly-halal-meat-box",
     name: "Weekly Halal Meat Box",
-    tagline: "Chicken breast and lamb mince — the week's cooking, sorted.",
+    tagline: "Chicken breast, lamb mince and rice — the week's cooking, sorted.",
     sortOrder: 0,
     items: [
       { productSlug: "halal-chicken-breast", quantity: 2 },
       { productSlug: "halal-lamb-mince", quantity: 1 },
+      { productSlug: "basmati-rice-5kg", quantity: 1 },
     ],
   },
   {

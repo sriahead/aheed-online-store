@@ -22,6 +22,17 @@ every branch merges.
   card shows the derived total and claims no saving rather than rendering a figure the checkout
   would not honour. `app/(landing)/page.tsx` is untouched, so P8.5f's landing slim-down stands.
 
+### Fixed
+- **Creating a bundle (or, more broadly, anything going through `isUniqueViolation()` and the
+  `getPrisma()` HTTP adapter) with a duplicate slug crashed with an unhandled `500`** instead of
+  returning the intended form error. `lib/repositories/prisma-errors.ts`'s `isUniqueViolation()`
+  checked only Prisma's normalised `P2002` code; `getPrisma()`'s HTTP adapter (`PrismaNeonHttp`,
+  used for the large majority of writes app-wide) throws the same underlying error but with the raw
+  Postgres SQLSTATE `23505` instead, which the predicate missed. Fixed at the shared helper so every
+  caller benefits, not just bundles — `lib/repositories/categories.ts` had the identical latent
+  exposure. Found live at `/validate` for P8.5c (#347); regression-tested in
+  `tests/prisma-errors.test.ts`.
+
 ### Documentation
 - **P8.5 (slices a, b, e, f) closeout** — `specs/roadmap.md` gained the four build rows and the
   promotion row `npm run sdd:audit` flagged as missing (P8.5a/b/e had shipped to `staging` across

@@ -162,3 +162,53 @@ bug would show up there and nowhere else; the vendor-differentiation check needs
 **The image upload's browser→R2 PUT step is environment-limited**, the same limitation P8.5f
 recorded. The key-shape rules are unit-tested (R30), but a real presign→PUT→attach round trip has not
 run.
+
+## Fix (2026-08-25, post-`/validate`)
+
+`/validate` ran fully live against the dev Neon branch (migration applied, both vendors seeded, real
+`npm run preview` HTTP requests including signed-in staff sessions) and found two real defects. Both
+are fixed here; `/validate` re-ran from the top afterward.
+
+**R14 was resolved at `/validate`, not here** — the contradiction between R14(a) ("exactly one
+price") and R14(b) ("the constituent's own badge SHOULD now appear") was a `requirements.md`
+drafting error, not a code defect. `/validate` corrected `requirements.md`/`validation.md` to match
+`plan.md`'s actual intent and confirmed the built `BundleCard` (R14a: no per-constituent prices or
+badges) was already right. No code change needed for this one.
+
+**R5 — `weekly-halal-meat-box` had only 2 `BundleItem`s, not the required ≥3.** The catalogue only
+seeds two halal-meat products, so adding a third *meat* item would mean growing the product
+catalogue — out of scope for a Fix-stage correction. Added `basmati-rice-5kg` (qty 1, already used
+elsewhere in the catalogue) as a complementary staple instead, and adjusted the tagline to name it.
+Re-seeding the dev branch confirmed 3 items land correctly and idempotency is unaffected (slug-keyed
+skip, unchanged).
+
+**R29 — creating a bundle with a duplicate slug 500ed instead of returning the handled error.**
+Root cause, confirmed by direct reproduction: `lib/repositories/prisma-errors.ts`'s
+`isUniqueViolation()` checked only Prisma's normalised `P2002` code. `getPrisma()`'s HTTP adapter
+(`PrismaNeonHttp`) — what `upsertBundle` actually receives via `lib/bundles-service.ts` in every real
+request, dev/staging/production alike — throws the same `PrismaClientKnownRequestError` but with the
+**raw Postgres SQLSTATE `"23505"`** on `.code` instead; `getPrismaWs()`'s WebSocket adapter
+(`PrismaNeon`) is the only one that normalises to `P2002`. The predicate missed the shape its own
+majority write path actually produces.
+
+**This is a shared-helper bug, not a bundles-only one.** `lib/repositories/categories.ts:213` has the
+identical pattern (`getPrisma()` + `isUniqueViolation` around `category.create()`) and is exposed the
+same way — `upsertBundle` faithfully copied an already-broken, already-established convention.
+Fixed at the root: `isUniqueViolation()` now recognises both `"P2002"` and `"23505"`. This is a
+correction, not a redesign — the predicate's contract ("is this a unique-constraint violation")
+didn't change, it just now actually recognises the error shape its own codebase's HTTP adapter
+produces. Fixing it here also silently fixes `categories.ts`'s identical latent exposure, which is a
+desirable side effect of fixing the real bug at its actual location, not scope creep — `categories.ts`
+itself was not touched. A full audit of every other `isUniqueViolation` call site
+(`discounts.ts`, `loyalty.ts`, `products.ts`) for the same exposure is worth doing but is beyond this
+slice; not filed as a tracked issue here because it would need someone to actually decide whether
+each call site's write path can reach the HTTP adapter, which is investigation, not a known gap.
+
+Added `tests/prisma-errors.test.ts` (5 cases: both violation-code shapes, an unrelated Prisma code,
+a numeric code, and non-error values) as the regression check — nothing previously tested this
+helper directly. Re-confirmed live post-fix: the exact duplicate-slug submission that 500ed now
+returns `{ ok: false, error: "Another bundle in this store already uses that web address.", field:
+"slug" }` under the HTTP adapter.
+
+Both fixes change observable behaviour (a production 500 becomes a handled form error; the seeded
+demo bundle's contents change) — see the CHANGELOG addendum.
