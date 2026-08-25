@@ -4,6 +4,20 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Documentation
+- **P8.5 (slices a, b, e, f) closeout** — `specs/roadmap.md` gained the four build rows and the
+  promotion row `npm run sdd:audit` flagged as missing (P8.5a/b/e had shipped to `staging` across
+  earlier sessions with no roadmap citation; P8.5f's own build and its `/fix` pivot away from
+  `proxy.ts` are recorded together with the PR #369 promotion that shipped all four to production).
+  `CLAUDE.md` gained a permanent note on why no `proxy.ts`/`middleware.ts` can currently be built on
+  this project's pinned `@opennextjs/cloudflare` (Next 16 forces Proxy files onto the Node.js
+  runtime and forbids opting out; the adapter rejects any Node-runtime middleware outright) and what
+  to reach for instead (an explicit prop from the rendering layout, same pattern as `isPortal`).
+  Issue #362 (P8.5f's own tracking issue, missed from PR #369's `Closes` list because its
+  `requirements.md` still read a stale "no issue opened yet") and #279 (superseded by
+  `DepartmentCampaign`'s shipped staff UI) closed manually with explanation. A stale, merged
+  sub-agent worktree (`feature/p8.5a-product-card-upgrade`) found and removed, closing #366.
+
 ### Fixed
 - **Campaign and discount schedules were stored an hour from what staff typed** (P8.5f). An
   `<input type="datetime-local">` submits a naked wall-clock string with no offset, and ECMAScript
