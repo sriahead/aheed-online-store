@@ -111,7 +111,7 @@ P8.5d doesn't exist. Leaving prices off the lines removes the temptation structu
 relying on wording.
 
 R14(b)'s actual purpose — *don't delete a correct pre-existing feature* — is still satisfied:
-`ProductCard`'s "Save {formatPrice(saving)}" and struck-through `originalPrice` (live since P2.5b1,
+`ProductCard`'s `Save {formatPrice(saving)}` and struck-through `originalPrice` (live since P2.5b1,
 `components/product/ProductCard.tsx:88`, `:134`) are untouched everywhere they really live: the
 product rows, search, and the product page. Nothing correct was removed; it simply isn't repeated
 inside a bundle card.

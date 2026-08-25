@@ -55,7 +55,7 @@ value bundles" delivers curation and convenience, not value. This document, the 
 the staff UI all say *curated bundles*, not *value bundles*, for that reason.
 
 **One boundary this rule does not cross, found while writing the spec rather than at Validate.**
-`ProductCard` has rendered "Save {formatPrice(saving)}" and a struck-through `originalPrice` since
+`ProductCard` has rendered `Save {formatPrice(saving)}` and a struck-through `originalPrice` since
 P2.5b1, for any product where `originalPrice > basePrice`
 (`components/product/ProductCard.tsx:88`, `:134`). That is a true claim about an individual product,
 independent of bundles, and it keeps working. "No savings claim" here means **no bundle-level

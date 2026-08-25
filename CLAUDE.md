@@ -405,6 +405,19 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   Before merging a slice that adds or edits either directory, a real check is `npm run
   kms:assemble:internal && (cd kms/site-internal && npx next build --webpack)` — not just the root
   `lint`/`build`.
+- **The same pipeline breaks on a bare `{...}` in prose, and this one has now cost a build twice.**
+  MDX evaluates `{anything}` outside backticks as a **JSX expression**, so quoting a code fragment
+  the natural way — `"Save {formatPrice(saving)}"` inside double quotes — compiles fine, passes every
+  root gate, and then dies at *prerender* with `ReferenceError: formatPrice is not defined` naming
+  the doc's own URL (`/dev/<id>`). Double quotes do not escape anything in Markdown; only backticks
+  do. **Write `` `Save {formatPrice(saving)}` ``**, and note a path template like
+  `` `bundles/{bundleId}/{uuid}.webp` `` is already safe *because* it is in backticks — the trap is
+  the unbackticked case, not the braces themselves. First hit at P8.5e (PR #360, "escape bare
+  curly-brace reference breaking `deploy-docs-internal`"); hit again at P8.5c's `/build-notes`,
+  caught before merge only because that slice actually ran the check above. **Run the two-command
+  check, and read its real exit status** — piping it through `tail` reports the pipe's success, not
+  the build's, which is how a `Next.js build worker exited with code: 1` can look like `exited with
+  code 0`.
 - **A spec's front-matter `id` cannot contain a literal `.`** — `kms/schema/frontmatter.ts`'s `id`
   regex is `^[a-z0-9-]+$`. A phase name that already has a dot (`P8.1a`, `P7.5a`, `P6.5`, …) is easy
   to copy straight into `id:` when writing a new `plan.md` at `/spec`, and none of

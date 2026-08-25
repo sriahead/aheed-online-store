@@ -77,7 +77,7 @@ R14. **No _bundle-level_ savings claim renders**: a bundle's card shows exactly 
      stored-vs-derived comparison.
 
      **This requirement does not extend to a constituent product's own pre-existing discount badge.**
-     `ProductCard` has rendered "Save {formatPrice(saving)}" and a `line-through` `originalPrice`
+     `ProductCard` has rendered `Save {formatPrice(saving)}` and a `line-through` `originalPrice`
      since P2.5b1 for any product where `originalPrice > basePrice` (`components/product/ProductCard.tsx:88,134`).
      That badge is a true statement about that product, predates this slice, and must keep working.
      A check written as a blanket "no `/save/i` in the bundles section" would fail the moment a
