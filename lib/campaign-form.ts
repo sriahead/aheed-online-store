@@ -1,4 +1,5 @@
 import type { FieldError, ParseResult, RawForm } from "@/lib/catalogue-form";
+import { parseLocalInput } from "@/lib/local-datetime";
 
 /**
  * Department campaign field rules (P8.5e, #356) — pure, DB-free, unit-tested.
@@ -82,12 +83,21 @@ function relativeLinkUrl(raw: RawForm): ParseResult<string | null> {
   return { ok: true, value };
 }
 
-/** `datetime-local` input value, or blank. Rejects an unparsable non-blank value. */
+/**
+ * `datetime-local` input value, or blank. Rejects an unparsable non-blank value.
+ *
+ * P8.5f: parsed via `parseLocalInput`, NOT `new Date(value)`. A datetime-local
+ * value carries no timezone designator, so `new Date()` reads it in whatever zone
+ * the runtime happens to be — UTC on the Worker — while the form rendered it back
+ * through the admin's browser clock. The two disagreed by the BST offset, so
+ * `07:25` typed in Milton Keynes was stored as `07:25Z` and redisplayed as
+ * `08:25`. `parseLocalInput` names the zone explicitly on both sides.
+ */
 function optionalDate(raw: RawForm, field: string, label: string): ParseResult<Date | null> {
   const value = text(raw, field);
   if (value === "") return { ok: true, value: null };
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
+  const parsed = parseLocalInput(value);
+  if (parsed === null) {
     return { ok: false, error: { field, message: `${label} isn't a valid date.` } };
   }
   return { ok: true, value: parsed };

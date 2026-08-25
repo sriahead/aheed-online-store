@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.18.0"
-updated: 2026-08-23
+version: "1.19.0"
+updated: 2026-08-25
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -71,6 +71,23 @@ flowchart TD
     R2 --> CDN["CDN (CDN_BASE_URL)"] --> U
     STRIPE -- "webhooks (idempotent)" --> APP
 ```
+
+**Request-scoped routing context (`proxy.ts`, added P8.5f).** One file runs ahead of the App Router
+on every non-static request: a root `proxy.ts` that copies the incoming headers, adds `x-pathname`,
+and returns `NextResponse.next({ request: { headers } })`. It exists because a **layout cannot see
+which page it wraps**, and `components/layout/Header.tsx` — rendered once by the storefront layout —
+must render differently on `/` than on every other route. Two constraints bind it:
+
+- This is **Next 16, where `middleware.js` is deprecated and renamed to `proxy.js`.** Proxy defaults
+  to the Node.js runtime and the `runtime` segment option is **forbidden** (setting it throws).
+- Request headers must be passed as `NextResponse.next({ request: { headers } })`. Passing `headers`
+  at the top level instead sends them **to the client**, which is a disclosure bug, not a
+  routing one.
+
+It stays deliberately thin: header annotation only. Auth, tenant resolution and redirects stay where
+they are — `lib/tenant.ts` resolves the vendor from `Host` inside the request, and the storefront
+layout owns the `/coming-soon` redirect. Putting either in the proxy would move a security decision
+into a layer with no access to Prisma.
 
 ### 2.2 Layering (Dependency Inversion — arrows point inward)
 

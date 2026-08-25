@@ -88,6 +88,30 @@ describe("parseCampaignForm", () => {
     }
   });
 
+  /*
+   * P8.5f (R20). The test above asserts only `toBeInstanceOf(Date)` — which is
+   * exactly why the timezone defect shipped: a Date built from the WRONG instant
+   * is still a Date. These two pin the actual instant, in UTC, so a regression to
+   * `new Date(value)` fails here instead of on a staff member's screen.
+   *
+   * `07:25` typed on a BST date means `06:25Z`, not `07:25Z`.
+   */
+  it("reads a summer (BST) start time as the instant the admin meant", () => {
+    const result = parseCampaignForm(campaignForm({ startsAt: "2026-08-25T07:25" }));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.startsAt?.toISOString()).toBe("2026-08-25T06:25:00.000Z");
+    }
+  });
+
+  it("reads a winter (GMT) start time with no offset applied", () => {
+    const result = parseCampaignForm(campaignForm({ startsAt: "2026-01-15T07:25" }));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.startsAt?.toISOString()).toBe("2026-01-15T07:25:00.000Z");
+    }
+  });
+
   it("refuses an end date before the start date", () => {
     const result = parseCampaignForm(
       campaignForm({ startsAt: "2026-09-30T09:00", endsAt: "2026-09-01T17:00" }),

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { ImageUp } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ImageUp, Sparkles } from "lucide-react";
 import { requestCampaignImageUpload, attachCampaignImage } from "@/features/admin/campaign-image";
 import {
   IMAGE_CONTENT_TYPE,
@@ -57,6 +58,36 @@ export function CampaignBannerUploader({
   const [error, setError] = useState<string | null>(null);
   const [uploaded, setUploaded] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [generating, setGenerating] = useState(false);
+  const router = useRouter();
+
+  /**
+   * P8.5f — the AI half of this panel, copying `ProductImageManager`'s
+   * fetch → `router.refresh()` shape. The route takes only the categoryId: it
+   * builds the prompt and the storage key server-side from the saved campaign,
+   * so nothing here can steer either.
+   */
+  async function autoGenerate() {
+    setError(null);
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/admin/campaign-images/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ categoryId }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error || "Failed to generate a banner.");
+
+      // Drop any locally-previewed upload so the refreshed server value shows.
+      setUploaded(null);
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   function upload() {
     const file = fileRef.current?.files?.[0];
@@ -155,7 +186,7 @@ export function CampaignBannerUploader({
           />
           <button
             type="button"
-            disabled={pending}
+            disabled={pending || generating}
             onClick={upload}
             className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-bold text-black hover:bg-black/5 disabled:opacity-50"
           >
@@ -163,6 +194,22 @@ export function CampaignBannerUploader({
             {pending ? "Uploading…" : "Upload"}
           </button>
         </div>
+
+        <div className="mt-2 border-t border-black/10 pt-3">
+          <p className="mb-2 text-sm text-black/60">
+            No photo to hand? Generate one from this campaign&apos;s headline.
+          </p>
+          <button
+            type="button"
+            disabled={pending || generating}
+            onClick={autoGenerate}
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90 disabled:opacity-50"
+          >
+            <Sparkles className="h-4 w-4" aria-hidden />
+            {generating ? "Generating…" : "Auto-Generate"}
+          </button>
+        </div>
+
         {error && <p className="text-sm font-bold text-red-600">{error}</p>}
       </div>
     </div>

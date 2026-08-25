@@ -2,6 +2,12 @@ node_modules/
 .next/
 .open-next/
 .wrangler/
+# Agent git worktrees are full nested checkouts of this repo (see `git worktree
+# list`). Their copies of docs/ui-ref/ etc. are already ignored below, but those
+# patterns are root-anchored and don't reach into a nested worktree — so a stale
+# worktree made local `format:check` fail on 26 files CI never sees, because it
+# is untracked. Ignoring the whole directory keeps local agreeing with CI.
+.claude/
 package-lock.json
 tsconfig.tsbuildinfo
 prisma/migrations/

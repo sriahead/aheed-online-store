@@ -4,6 +4,55 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Fixed
+- **Campaign and discount schedules were stored an hour from what staff typed** (P8.5f). An
+  `<input type="datetime-local">` submits a naked wall-clock string with no offset, and ECMAScript
+  reads such a string in **the runtime's own** timezone — so `lib/campaign-form.ts`'s
+  `new Date("2026-08-25T07:25")` meant `07:25Z` on the Worker, while `CampaignForm.tsx` rendered it
+  back with `date.getHours()` in the admin's browser and showed `08:25`. Write and read assumed
+  different zones and the gap was exactly the BST offset; the database held an instant nobody chose.
+  `features/admin/discount-codes.ts` carried the same defect independently, where it decided when a
+  code starts being redeemable. New pure `lib/local-datetime.ts` pins `STORE_TIMEZONE =
+  "Europe/London"` and reads offsets from `Intl.DateTimeFormat` rather than the process clock, so
+  conversion is identical on the Worker, in CI and in the browser — asserted by running its tests
+  under both `TZ=UTC` and `TZ=America/New_York`. Nothing in `lint`/`typecheck`/`test` caught this:
+  each runs in a single process where the two wrong assumptions cancel, and the existing test
+  asserted only `toBeInstanceOf(Date)` — a `Date` built from the wrong instant is still a `Date`.
+  Rows written before this fix still hold the old instants; correcting them is deliberately out of
+  scope. Per-vendor timezones are **not** introduced (both vendors are UK) — see ADR-004 1.9.0.
+- **`/categories` was titled "Categories — Aheed Food Centre" for every vendor**, so SriMart's shop
+  page advertised Aheed's trading name. Now vendor-derived, matching the landing page. Same defect
+  class #239 removed elsewhere; fixed here because this slice rewrote the page.
+
+### Changed
+- **The landing page is hero-first** (P8.5f). The department scroller and the New Arrivals /
+  Featured Products rows moved to `/categories`, rebuilt from a bare `<ul>` of links into the shop
+  page; the landing page keeps its hero and trust strip. The search box and "Shop List" link are
+  hidden on `/` only.
+- **The postcode delivery checker moved from the homepage hero into the header** and now persists.
+  It was a `method="GET"` form whose answer lived in `?postcode=` and vanished on the first
+  navigation; it is now a server-action form (no client JS) storing a `delivery-postcode` cookie,
+  attributes mirroring `lib/cart-identity.ts`. **Only the postcode is stored, never the verdict** —
+  that is recomputed each render against the vendor's current prefixes, so widening a delivery area
+  cannot leave a shopper holding a stale refusal. Consent posture unchanged: a functional store
+  preference, inside the essential set the cookie banner already describes, written only on
+  deliberate submission.
+
+### Added
+- **`proxy.ts`** (P8.5f) — the app's first global request hook, setting `x-pathname` so the header
+  can differ on `/` from every other route (a layout cannot see which page it wraps). Deliberately
+  thin: header annotation only, with auth, tenant resolution and redirects left in-request where
+  Prisma is reachable. Note this is **Next 16, where `middleware.js` is deprecated and renamed to
+  `proxy.js`**, request headers must be passed as `NextResponse.next({ request: { headers } })` (the
+  lookalike `{ headers }` form sends them to the client), and the `runtime` segment option is
+  forbidden. Documented in `specs/architecture.md` 1.19.0.
+- **AI-generated campaign banners** — `POST /api/admin/campaign-images/generate` plus an
+  "Auto-Generate" button on the campaign banner panel. Reuses the existing `lib/image-generation.ts`
+  port (Cloudflare Workers AI, `flux-1-schnell`) that has backed product images since P8; no new
+  infrastructure. The request body carries only a `categoryId` — prompt and storage key are built
+  server-side, so a caller can neither steer the model under this store's branding nor aim a write
+  at another vendor's object.
+
 ### Documentation
 - **New SDD Operator Runbook** (`docs/developer-portal/sdd/operator-runbook.md`, `id:
   sdd-operator-runbook`, `type: runbook`) — a human-executable manual for the Orient/Propose/Spec/
