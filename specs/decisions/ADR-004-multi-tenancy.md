@@ -4,7 +4,7 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.8.0"
+version: "1.9.0"
 updated: 2026-08-25
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
@@ -253,6 +253,31 @@ fact that this user also shops there — which the user already knows about them
 small change. The deeper fix is **#220 (P7e)** — row-level security, which decision 2 already defers
 to P7 — so that a missing `vendorId` filter fails closed at Postgres instead of relying on the
 repository layer and the `no-restricted-imports` lint rule being the only enforcement.
+
+## Implementation note — store timezone is a constant, not yet vendor data (P8.5f, 2026-08-25)
+
+Decision 3 makes region, locality and delivery footprint **DB-driven per vendor**. Time zone is the
+one region-shaped value that P8.5f deliberately did **not** put in the database: `lib/local-datetime.ts`
+pins a single `STORE_TIMEZONE = "Europe/London"` for the whole platform.
+
+The reason is that the slice existed to fix a *correctness* bug, and a constant fixes it completely
+for every vendor that exists. `datetime-local` form values (campaign `startsAt`/`endsAt`, discount
+code windows) were being parsed with a bare `new Date(value)`, which ECMAScript interprets in **the
+runtime's own** zone — UTC on the Worker — and rendered back through the browser's local clock. The
+two assumptions disagreed by exactly the UK's summer offset, so an admin typing `07:25` in BST read
+back `08:25` and the database held an instant nobody chose. Fixing that requires only that **one
+explicit zone is used on both sides**; which zone it is matters only when a vendor is somewhere else.
+
+Both seeded vendors are UK (Aheed in Milton Keynes, SriMart in Reading), so today the constant and a
+per-vendor column produce identical results for every row in the system.
+
+**What makes it safe to defer:** the constant is read in exactly one module, and every caller already
+passes through `parseLocalInput`/`formatLocalInput`. Adding `Vendor.timezone` later means a migration,
+a default of `Europe/London`, and threading a vendor id into those two functions — mechanical, and
+guarded by tests that already assert the conversion is independent of the process clock. **What makes
+it a real limit:** the moment a non-UK vendor onboards, every campaign schedule and discount window
+on the platform is interpreted in London time until that column exists. That is a blocker for
+international onboarding, not a cosmetic gap — treat this note as the prerequisite it is.
 
 ## Row-level security — determined 2026-08-19, NOT adopted (#220, P7 closeout #251)
 
