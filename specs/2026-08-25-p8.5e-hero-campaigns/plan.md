@@ -90,7 +90,7 @@ case where a department has no campaign.
   A vendor wanting a future campaign queued up edits the same row when the time comes, the same way
   editing a `Product` or `Category` works everywhere else in this repo. A scheduling *queue* is a
   different, larger feature.
-- **Free-text CTA button label.** The button stays "Shop {name}" — data-derived, not
+- **Free-text CTA button label.** The button stays "Shop `{name}`" — data-derived, not
   campaign-authored — deliberately narrower than the approved direction's implied scope, to avoid
   opening a second uncontrolled a11y-relevant text surface beyond headline/subtitle. If this turns
   out to matter, it's a small follow-up, not a blocker to this slice.

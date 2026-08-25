@@ -58,7 +58,7 @@ R10. The product spotlight price callout (`department.spotlight`) renders on eve
      it does today, regardless of whether a live campaign is present — a campaign's copy is never
      the only thing shown; the real price callout is never suppressed by it.
 
-R11. A panel's "Shop {name}" CTA links to `campaign.linkUrl` when the live campaign supplies a
+R11. A panel's "Shop `{name}`" CTA links to `campaign.linkUrl` when the live campaign supplies a
      non-null one, otherwise to the existing default `/categories/{slug}`; the button's visible
      label text is unchanged ("Shop {department.name}"), never sourced from campaign data.
 
