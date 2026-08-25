@@ -29,6 +29,8 @@ import {
   releaseCodeRedemption,
 } from "@/lib/repositories/discounts";
 import { refusalMessage } from "@/lib/discounts";
+import { tieredLineTotalPence } from "@/lib/tier-pricing";
+import { listActiveTiersForProducts } from "@/lib/repositories/product-tiers";
 
 /**
  * Order read/write path (P3b, #96) — the ONLY DB access for orders. Pages,
@@ -155,6 +157,17 @@ export async function placeOrder(
     });
     const byId = new Map(products.map((p) => [p.id, p]));
 
+    // P8.5d (#348) — multi-buy tiers, read inside the transaction for the same
+    // reason prices are: never trust what the page rendered. The SAME
+    // `lib/tier-pricing.ts` function prices the cart display
+    // (`lib/repositories/cart.ts`), and those are independent code paths — if
+    // they ever diverge the shopper sees one total and is charged another.
+    const tiers = await listActiveTiersForProducts(
+      tx,
+      vendorId,
+      products.map((p) => p.id),
+    );
+
     const lines = cart.items.map((item) => {
       const product = byId.get(item.productId);
       if (!product) {
@@ -173,6 +186,13 @@ export async function placeOrder(
         unitPricePence: product.basePrice,
         quantity: item.quantity,
         available,
+        // Explicit because a tiered line is not unitPrice × quantity. When no
+        // tier applies this is exactly that product, so nothing changes.
+        lineTotalPence: tieredLineTotalPence(
+          product.basePrice,
+          item.quantity,
+          tiers.get(product.id) ?? null,
+        ),
       };
     });
 
@@ -181,6 +201,14 @@ export async function placeOrder(
     // bought, not on what they paid after spending points. Redeeming must not
     // push an otherwise-valid order under the minimum, nor claw back free
     // delivery already earned.
+    //
+    // A MULTI-BUY TIER IS ON THE OTHER SIDE OF THAT LINE, deliberately (P8.5d,
+    // #348). A tier is not a deduction from what the shopper bought — it IS the
+    // price they bought it at — so it is already inside `preDiscount` here, and
+    // both the vendor minimum and the free-delivery threshold are judged on the
+    // tier-reduced figure. A shopper whose multi-buy drops them under the
+    // minimum is genuinely under it. Codes and points behave the opposite way
+    // and that asymmetry is intended, not an oversight.
     const preDiscount = computeTotals(lines, input.rules);
     if (preDiscount.subtotalPence < input.rules.minimumOrderPence) {
       throw new CheckoutError("BELOW_MINIMUM", "Your order is below this store's minimum.");
@@ -315,7 +343,12 @@ export async function placeOrder(
         productName: line.productName,
         unitPricePence: line.unitPricePence,
         quantity: line.quantity,
-        lineTotalPence: line.unitPricePence * line.quantity,
+        // P8.5d (#348): the tiered total, NOT unitPricePence × quantity.
+        // `unitPricePence` stays the product's base unit price, so the two
+        // columns together record both what the product listed at and what this
+        // line actually charged — which is what makes the multi-buy auditable
+        // without a DiscountRedemption row.
+        lineTotalPence: line.lineTotalPence,
       })),
     });
 

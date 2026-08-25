@@ -10,6 +10,8 @@ import {
   type MergeResolution,
 } from "@/lib/cart-rules";
 import type { CartIdentity } from "@/lib/cart-identity";
+import { tierSavingPence, tieredLineTotalPence, type ProductTier } from "@/lib/tier-pricing";
+import { listActiveTiersForProducts } from "@/lib/repositories/product-tiers";
 
 /**
  * Cart read/write path (P3a, #93) — the ONLY DB access for carts; pages,
@@ -37,6 +39,13 @@ import type { CartIdentity } from "@/lib/cart-identity";
  *
  * The cart stores no prices: unit price is read from Product at read time and is
  * snapshotted only into OrderItem at order creation (P3b).
+ *
+ * P8.5d (#348) — a line's total is no longer `unitPricePence * quantity`. A
+ * multi-buy tier prices whole groups at a group price and the remainder at base,
+ * so `decorate` runs every line through `lib/tier-pricing.ts`. `placeOrder`
+ * computes its lines through the SAME function: these are two independent code
+ * paths over the same money, and any divergence shows the shopper one total and
+ * charges another.
  */
 
 type Db = ReturnType<typeof getPrisma>;
@@ -48,9 +57,20 @@ export interface CartLine {
   slug: string;
   name: string;
   unitLabel: string;
+  /** The product's BASE unit price. Not the effective one when a tier applies. */
   unitPricePence: number;
   quantity: number;
+  /**
+   * What this line costs. P8.5d (#348): for a line with an applied multi-buy
+   * tier this is NOT `unitPricePence * quantity` — whole groups charge the group
+   * price and the remainder charges base, so the effective unit price is
+   * fractional. Always computed by `lib/tier-pricing.ts`.
+   */
   lineTotalPence: number;
+  /** Pence saved on this line by an applied tier; 0 when none applies. */
+  tierSavingPence: number;
+  /** The applied tier, for rendering "3 for £10.00"; null when there is none. */
+  tier: ProductTier | null;
   imageKey: string | null;
   stock: number;
   /** false when the product went inactive or out of stock while sitting in the cart */
@@ -202,11 +222,22 @@ async function decorate(
   });
   const byId = new Map(products.map((p) => [p.id, p]));
 
+  // P8.5d (#348) — multi-buy tiers. One query for the whole cart, then a lookup
+  // per line. `lineTotalPence` below is NOT `basePrice * quantity` for a tiered
+  // line, and `placeOrder` must reach the same figure through the same function
+  // or the cart shows one number and the card charges another.
+  const tiers = await listActiveTiersForProducts(
+    prisma,
+    vendorId,
+    products.map((p) => p.id),
+  );
+
   return items.flatMap((item) => {
     const p = byId.get(item.productId);
     if (!p) return []; // product deleted outright — nothing sensible to render
     const stock = effectiveStock(p.inventory?.quantity);
     const available = p.isActive && stock > 0;
+    const tier = tiers.get(p.id) ?? null;
     return [
       {
         productId: p.id,
@@ -215,7 +246,9 @@ async function decorate(
         unitLabel: p.unitLabel,
         unitPricePence: p.basePrice,
         quantity: item.quantity,
-        lineTotalPence: p.basePrice * item.quantity,
+        lineTotalPence: tieredLineTotalPence(p.basePrice, item.quantity, tier),
+        tierSavingPence: tierSavingPence(p.basePrice, item.quantity, tier),
+        tier,
         imageKey: p.images[0]?.storageKey ?? null,
         stock,
         available,

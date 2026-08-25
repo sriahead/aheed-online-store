@@ -3,6 +3,7 @@ import { AlertTriangle, Star } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { CartQuantityStepper } from "@/components/cart/CartQuantityStepper";
 import { composePublicUrl } from "@/lib/storage";
+import { tierThresholdQuantity } from "@/lib/tier-pricing";
 import { formatPrice } from "./format-price";
 import type { ProductSummary } from "@/lib/repositories/products";
 
@@ -30,6 +31,20 @@ export function ProductCard({
 }) {
   const hasDiscount = product.originalPrice != null && product.originalPrice > product.basePrice;
   const saving = hasDiscount ? product.originalPrice! - product.basePrice : 0;
+  /**
+   * P8.5d (#348) — the multi-buy tier, e.g. "3 for £10.00".
+   *
+   * A SEPARATE CLAIM FROM `hasDiscount` ABOVE, and deliberately rendered as one.
+   * `originalPrice` is a single-unit markdown ("this £4.00 item is down from
+   * £5.00"); a tier is a quantity offer ("three of them cost £10.00"). A product
+   * can carry both, and they describe different things — so no figure is counted
+   * in both places: the markdown keeps its "Save £X" image badge and its
+   * struck-through price, and the tier gets its own badge in the price row
+   * naming a quantity. Collapsing them into one "saving" would state something
+   * false for whichever shopper isn't buying the group quantity.
+   */
+  const tierQuantity = tierThresholdQuantity(product.tier);
+  const hasTier = tierQuantity !== null && product.tier !== null;
   // Only meaningful while there is still stock to run out of — a zero-stock
   // product renders the out-of-stock control instead, and "Only 0 left" would
   // be both wrong and alarming.
@@ -136,6 +151,12 @@ export function ProductCard({
                 </span>
               )}
             </div>
+
+            {hasTier && (
+              <p className="skew-card-price -mt-1 text-[11px] font-semibold text-action">
+                {tierQuantity} for {formatPrice(product.tier!.groupPricePence)}
+              </p>
+            )}
 
             {/*
               In the cart -> the stepper mutates it. Not in the cart -> the

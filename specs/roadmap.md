@@ -98,7 +98,19 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
     routing and an accessible auto-flip (#346); **P8.5c** curated value bundles, modelled as a
     vendor-curated list that expands into ordinary cart lines rather than a purchasable SKU (#347);
     **P8.5d** multi-buy tier pricing, which is where the savings figures behind P8.5c actually live
-    and which closes #147 (#348). **Two further slices were added after this paragraph was first
+    (#348). **This paragraph claimed until 2026-08-25 that P8.5d discharges #147; it does not, and
+    the claim was corrected while building the slice rather than after.** At `/propose` the slice was
+    ruled to be a per-product *price* — a group multi-buy ("3 for £10.00") priced in
+    `lib/tier-pricing.ts` and never touching `DiscountCode` — because `DiscountRedemption`'s
+    `@@unique([orderId])` allows one redemption per order, `evaluateCode` is subtotal-scoped and
+    cannot express a per-line quantity predicate, and #273 exists precisely because redemption rows
+    were once written around `placeOrder`'s transaction. #147's own example is *"10% off everything
+    this weekend"* — order-level and discovery-based, inside the discounts engine — so a quantity
+    tier delivers none of that machinery. **#147, #146, #148 and #149 all remain open** after this
+    slice; what it does contribute is an answer to #147's three open questions for the quantity case
+    (two auto promotions colliding is unreachable with one tier per product; an auto promotion stacks
+    with a typed code, which applies to the tier-reduced subtotal; and a tier consumes no
+    `remainingRedemptions` because it is not a `DiscountCode`). **Two further slices were added after this paragraph was first
     written, and shipped before P8.5c:** **P8.5e** staff-editable hero campaigns, giving
     `DepartmentHero` the artwork and copy `VendorPromotion` never had a UI for (#356); and **P8.5f**
     the landing slim-down, header postcode checker, campaign timezone fix and AI banner (#362). The

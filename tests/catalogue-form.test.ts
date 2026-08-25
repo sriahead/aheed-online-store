@@ -176,6 +176,87 @@ describe("parseProductForm — was-price (R6)", () => {
   });
 });
 
+describe("parseProductForm — multi-buy tier (P8.5d, #348)", () => {
+  // productForm()'s basePrice is 2.40, so 2 singly = 480p and 3 singly = 720p.
+
+  it("is null when both tier fields are blank", () => {
+    expect(accepted(parseProductForm(productForm())).tier).toBeNull();
+    expect(
+      accepted(parseProductForm(productForm({ tierGroupQuantity: "", tierGroupPrice: "" }))).tier,
+    ).toBeNull();
+  });
+
+  it("parses a complete tier into whole pence", () => {
+    const value = accepted(
+      parseProductForm(
+        productForm({ tierGroupQuantity: "3", tierGroupPrice: "6.00", tierIsActive: "on" }),
+      ),
+    );
+    expect(value.tier).toEqual({ groupQuantity: 3, groupPricePence: 600, isActive: true });
+  });
+
+  it("keeps an inactive tier's numbers rather than discarding them", () => {
+    // Unticking "running" must not be the same as clearing the offer — the
+    // numbers survive so a seasonal multi-buy can be switched back on.
+    const value = accepted(
+      parseProductForm(productForm({ tierGroupQuantity: "3", tierGroupPrice: "6.00" })),
+    );
+    expect(value.tier).toEqual({ groupQuantity: 3, groupPricePence: 600, isActive: false });
+  });
+
+  it("refuses a half-typed tier, naming the empty field", () => {
+    expect(rejectedField(parseProductForm(productForm({ tierGroupQuantity: "3" })))).toBe(
+      "tierGroupPrice",
+    );
+    expect(rejectedField(parseProductForm(productForm({ tierGroupPrice: "6.00" })))).toBe(
+      "tierGroupQuantity",
+    );
+  });
+
+  it("refuses a group of fewer than two", () => {
+    // A "group" of 1 is a markdown, which is what originalPrice is for.
+    expect(
+      rejectedField(
+        parseProductForm(productForm({ tierGroupQuantity: "1", tierGroupPrice: "2.00" })),
+      ),
+    ).toBe("tierGroupQuantity");
+  });
+
+  it("refuses a non-numeric or fractional quantity", () => {
+    expect(
+      rejectedField(
+        parseProductForm(productForm({ tierGroupQuantity: "two", tierGroupPrice: "6.00" })),
+      ),
+    ).toBe("tierGroupQuantity");
+    expect(
+      rejectedField(
+        parseProductForm(productForm({ tierGroupQuantity: "2.5", tierGroupPrice: "6.00" })),
+      ),
+    ).toBe("tierGroupQuantity");
+  });
+
+  it("refuses a price that does not beat buying that many singly", () => {
+    // 3 x 2.40 = 7.20. Anything at or above that saves nothing.
+    expect(
+      rejectedField(
+        parseProductForm(productForm({ tierGroupQuantity: "3", tierGroupPrice: "7.20" })),
+      ),
+    ).toBe("tierGroupPrice");
+    expect(
+      rejectedField(
+        parseProductForm(productForm({ tierGroupQuantity: "3", tierGroupPrice: "8.00" })),
+      ),
+    ).toBe("tierGroupPrice");
+  });
+
+  it("accepts a price one penny under the singly total", () => {
+    const value = accepted(
+      parseProductForm(productForm({ tierGroupQuantity: "3", tierGroupPrice: "7.19" })),
+    );
+    expect(value.tier?.groupPricePence).toBe(719);
+  });
+});
+
 describe("parseProductForm — checkboxes and optional text", () => {
   it("reads an absent checkbox as false and a present one as true", () => {
     const off = accepted(parseProductForm(productForm()));

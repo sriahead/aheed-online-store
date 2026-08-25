@@ -41,6 +41,21 @@ export interface ProductFormValues {
   isActive: boolean;
   quantity: number;
   lowStockThreshold: number;
+  /**
+   * P8.5d (#348) — the product's multi-buy tier, or null to clear it.
+   *
+   * null and "an inactive tier" are different intents and both are reachable:
+   * clearing both number fields removes the row, while unticking the active box
+   * keeps the numbers so a seasonal multi-buy can be switched back on without
+   * being retyped.
+   */
+  tier: ProductTierFormValues | null;
+}
+
+export interface ProductTierFormValues {
+  groupQuantity: number;
+  groupPricePence: number;
+  isActive: boolean;
 }
 
 export interface CategoryFormValues {
@@ -220,6 +235,9 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
   const lowStockThreshold = wholeNumber(raw, "lowStockThreshold", "Low-stock threshold", 0);
   if (!lowStockThreshold.ok) return lowStockThreshold;
 
+  const tier = parseTierFields(raw, basePrice);
+  if (!tier.ok) return tier;
+
   return {
     ok: true,
     value: {
@@ -239,6 +257,92 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
       isActive: checkbox(raw, "isActive"),
       quantity: quantity.value,
       lowStockThreshold: lowStockThreshold.value,
+      tier: tier.value,
+    },
+  };
+}
+
+/** The smallest group a multi-buy can have. See MIN_TIER_GROUP_QUANTITY's note. */
+const MIN_TIER_GROUP_QUANTITY = 2;
+
+/**
+ * The multi-buy tier fields (P8.5d, #348), validated against the base price the
+ * same form just supplied.
+ *
+ * Both blank means "no multi-buy" and clears any existing one. Filling one and
+ * not the other is a half-typed offer, so it is refused with the empty field
+ * named rather than guessed at.
+ *
+ * THE GROUP PRICE MUST BEAT BUYING THAT MANY SINGLY. Exactly the rule
+ * `originalPrice` already carries above ("must be higher than the price"), for
+ * exactly the same reason: a tier at or above `groupQuantity * basePrice`
+ * advertises a saving of zero or less. `lib/tier-pricing.ts` clamps such a tier
+ * at runtime so a shopper can never be overcharged, but the clamp is a
+ * last-resort guard — the form is where a typo should be caught and explained.
+ */
+function parseTierFields(
+  raw: RawForm,
+  basePrice: number,
+): ParseResult<ProductTierFormValues | null> {
+  const quantityRaw = text(raw, "tierGroupQuantity");
+  const priceRaw = text(raw, "tierGroupPrice");
+
+  if (quantityRaw === "" && priceRaw === "") return { ok: true, value: null };
+
+  if (quantityRaw === "") {
+    return {
+      ok: false,
+      error: {
+        field: "tierGroupQuantity",
+        message: "Enter how many items the multi-buy price covers, or clear the multi-buy price.",
+      },
+    };
+  }
+  if (priceRaw === "") {
+    return {
+      ok: false,
+      error: {
+        field: "tierGroupPrice",
+        message: "Enter the multi-buy price, or clear the multi-buy quantity.",
+      },
+    };
+  }
+
+  const groupQuantity = wholeNumber(
+    raw,
+    "tierGroupQuantity",
+    "Multi-buy quantity",
+    MIN_TIER_GROUP_QUANTITY,
+  );
+  if (!groupQuantity.ok) return groupQuantity;
+
+  const groupPricePence = parsePriceInput(priceRaw);
+  if (groupPricePence === undefined) {
+    return {
+      ok: false,
+      error: {
+        field: "tierGroupPrice",
+        message: "Multi-buy price must be an amount in pounds, like 10.00.",
+      },
+    };
+  }
+
+  if (groupPricePence >= groupQuantity.value * basePrice) {
+    return {
+      ok: false,
+      error: {
+        field: "tierGroupPrice",
+        message: "Multi-buy price must be less than buying that many at the normal price.",
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    value: {
+      groupQuantity: groupQuantity.value,
+      groupPricePence,
+      isActive: checkbox(raw, "tierIsActive"),
     },
   };
 }
@@ -293,6 +397,9 @@ export const PRODUCT_FIELDS = [
   "isActive",
   "quantity",
   "lowStockThreshold",
+  "tierGroupQuantity",
+  "tierGroupPrice",
+  "tierIsActive",
 ] as const;
 
 export const CATEGORY_FIELDS = ["name", "slug", "parentId", "sortOrder", "isActive"] as const;
