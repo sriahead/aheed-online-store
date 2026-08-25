@@ -151,4 +151,8 @@ advisory rather than load-bearing.
 - **A bundle whose constituent is later deleted or deactivated.** This slice reads only active,
   in-stock constituents at render time, so such a bundle quietly renders shorter. Whether staff
   should be *warned* about a degraded bundle in the admin list is deferred; it needs a UI decision
-  and this slice is already carrying storefront, cart, admin and upload surfaces.
+  and this slice is already carrying storefront, cart, admin and upload surfaces. **Tracked as
+  #373.**
+- **No AI "Auto-Generate" on the bundle image uploader**, unlike the campaign banner's. The AI route
+  builds its prompt from a campaign's `headline`, which a bundle has no equivalent of — an
+  equivalent needs its own route and its own prompt decision. **Tracked as #372.**
