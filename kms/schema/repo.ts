@@ -10,6 +10,12 @@ const EXCLUDE_DIRS = new Set([
   ".open-next",
   ".wrangler",
   ".vercel",
+  // .claude/worktrees/<agent-id>/ is a full, separate checkout a forked sub-agent builds in —
+  // its own specs/, docs/, CLAUDE.md, everything. Walking into it indexes that checkout's
+  // entire artifact set as if it belonged to this one (599 vs the real ~99, live-hit
+  // 2026-08-25 rebuilding after a worktree was left on disk). None of .claude/ is a KMS
+  // source today, so excluding it outright loses nothing.
+  ".claude",
 ]);
 
 // kms/site-*/content/ is assembled build output (kms/scripts/assemble.ts), gitignored

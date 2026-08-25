@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.22.0"
-updated: 2026-08-24
+version: "2.23.0"
+updated: 2026-08-25
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -154,6 +154,15 @@ Check the actual repo before proposing or building anything — not what a doc *
   reviewed merge commit from a direct push; only the PR list does.
 - Coming out of a Clear, Orient is also the *re-entry* point: the previous loop's docs are on disk,
   so read them rather than assuming continuity with a conversation that no longer exists.
+- **Run `git worktree list`.** A Build carried out by a forked/sub-agent under an isolated worktree
+  (the Agent tool's `isolation: "worktree"`) commits to a checkout at `.claude/worktrees/<agent-id>/`
+  on its own branch — not to the main checkout. `git status`, `git log`, and `sdd:preclear`'s
+  clean-tree check all run against whatever directory they're invoked from, so none of them see that
+  work at all; the main checkout can report a fully clean tree while a worktree sitting one level
+  down holds spec, build, and index-rebuild commits nobody's looked at. First hit 2026-08-25: a
+  fresh `/validate` context found nothing wrong by every check it knew to run, because it never knew
+  to run `git worktree list` — the human had to name the path before the work was found at all. See
+  Document (build notes) and Validate below for the other two ends of this.
 - **Run `npm run sdd:audit`.** It reports whether slices shipped under this loop got their roadmap
   change-log entry and reached `ARTIFACT_INDEX.md`. A gap here means the previous loop's Document
   (final) never landed — fix it on the current branch, per the carry-forward rule, rather than
@@ -276,6 +285,14 @@ Everything that must survive the Clear. This is a **write-to-disk** stage, not a
   of the change and belong on the same branch, not deferred to the post-ship pass.
 - Anything deliberately deferred becomes a tracked GitHub issue now, while the reasoning is fresh —
   not a comment, and not something the next context is expected to remember.
+- **If this Build ran under a forked sub-agent's isolated worktree rather than the main checkout,
+  say so in "What changed and why" — name the worktree path and branch explicitly** (e.g.
+  `.claude/worktrees/agent-<id>/`, branch `feature/<slug>`). `git worktree list` can enumerate
+  whatever worktrees still exist at the time someone thinks to run it, but it ties a path to a
+  branch name, not to a task — it cannot tell a fresh context which worktree is *this* slice's, and
+  a worktree can be removed or pruned before anyone looks. The build-notes file is the one artifact
+  the Clear bets on (see above); a worktree's location is exactly the kind of thing that doesn't
+  survive the Clear unless it's written down here.
 - Commit it all. If it isn't committed, the Clear destroys it.
 - **Then run `npm run sdd:preclear` and get exit 0.** It is the gate on this stage, not a
   formality: it derives the slice from the branch, requires all four spec files, requires the
@@ -299,6 +316,12 @@ Still on you, because no script can judge them:
 - [ ] The build notes are actually *informative*, not just present
 - [ ] Persistent-doc updates for any changed standing decision
 - [ ] GitHub issues filed for every deferred item
+- [ ] **If Build ran in an isolated sub-agent worktree, its path and branch are written into
+      `build-notes.md`, not left to `git worktree list` to rediscover.** `sdd:preclear`'s clean-tree
+      check runs `git status --porcelain` in the main checkout only — a worktree with committed,
+      unpushed changes reports the main tree as clean and passes this gate while the actual work sits
+      undiscoverable one directory down. Nothing mechanical catches a missing worktree reference; this
+      is a judgment check, same as the other items in this list.
 - [ ] **`npm run kms:build-index` has been run and the result committed.** Every slice adds a
       front-mattered `plan.md`, so every slice makes `ARTIFACT_INDEX.md` stale — and CI's `gates`
       job fails on exactly that. Nothing before CI catches it: `sdd:preclear` doesn't check it, and
@@ -340,6 +363,16 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
 - **If the spec itself looks wrong**, say so rather than validating around it. A fresh context that
   conforms to a bad requirement produces a passing slice that's still broken; escalate it as a
   finding and, if it's a real design defect, go back to Spec rather than patching under Fix.
+- **Check `git worktree list` before concluding a slice's work doesn't exist.** If `build-notes.md`
+  names a sub-agent worktree (see Document (build notes)), or if the main checkout looks clean but
+  the spec claims a Build happened, the artifact may live at `.claude/worktrees/<agent-id>/` on its
+  own branch rather than in the current directory. Run every check in this stage — reading the
+  artifact, `lint`/`test`/`build`, `git log` — against that worktree's path (`git -C
+  <worktree-path>` or `cd` into it), not the main checkout; the two are separate working trees with
+  independent `git status`, and the main checkout's history will not contain the worktree's commits
+  until something merges them. A worktree branch is also very likely unpushed and PR-less at this
+  point — that's expected, not itself a finding, but it means CI has not run against it and Ship
+  hasn't happened yet either.
 - Run the local suite as a fast pre-flight (`lint`, `format:check`, `typecheck`, `test`, `build`) —
   but **don't fully trust local `format`/`lint` output on a Windows checkout**. `core.autocrlf`
   rewrites line endings on checkout, which makes `prettier --check` flag files that are actually fine
@@ -507,6 +540,15 @@ named gates, but the part of this repo's actual history most prone to drift.
   merge is not blanket permission for the next one.
 - Confirm the deploy workflow (`deploy-staging`/`deploy-production`) actually completed. Don't infer
   success from the merge alone.
+- **If this Build ran in a sub-agent's isolated worktree, remove it once its branch has merged.**
+  Nothing does this automatically — a worktree survives merge indefinitely, and its content becomes
+  a strict subset of the target branch the moment the merge lands. Confirm the branch actually
+  merged and the worktree is clean (`git -C <path> status --porcelain`), then `git worktree remove
+  <path>` (unlock first with `git worktree unlock <path>` if needed). Three worktrees were found
+  sitting idle at once in the same session that added this line — two from already-merged P8.5a/b
+  slices — and idle worktrees are exactly what makes `kms:build-index`'s walk-scoping bug (#357;
+  `kms/schema/repo.ts`'s `EXCLUDE_DIRS` now excludes `.claude`) reachable at all: the more of these
+  accumulate unremoved, the bigger that blast radius gets.
 - **Move the issue to `In Review` once it's merged to `staging`** — not `Done`. `Done` means in
   production, and `Closes #NN` won't fire on a staging merge because staging isn't the default
   branch. The issue closes (→ `Done`) when the work is promoted to `main`.

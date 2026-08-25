@@ -5,6 +5,27 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 every branch merges.
 
 ### Documentation
+- **`specs/sdd-workflow.md` 2.22.0 -> 2.23.0 gains worktree awareness** (#357). The workflow had no
+  concept of a sub-agent building in an isolated git worktree (`.claude/worktrees/agent-<id>/`, the
+  Agent tool's `isolation: "worktree"`) — live-hit the same session this line was written, when a
+  fresh `/validate` context found nothing wrong because it never knew to run `git worktree list`,
+  and the P8.5e (#356) artifact lived only in one. Orient now runs `git worktree list` on re-entry;
+  Document (build notes) and Clear's checklist require the worktree's path/branch to be named in
+  `build-notes.md` rather than left for `git worktree list` to rediscover later; Validate checks for
+  a named worktree and runs every check against that path, not the main checkout; Ship gains a step
+  to remove a worktree once its branch merges, since nothing does that automatically.
+- **`kms/schema/repo.ts`'s `EXCLUDE_DIRS` gains `.claude`** (#357). Its file walk had no exclusion
+  for `.claude/worktrees/*` — a full, separate checkout each sub-agent builds in — so
+  `npm run kms:build-index`, run while three sub-agent worktrees sat on disk, indexed their entire
+  `specs/`/`docs/` trees as belonging to the main repo (99 -> 599 "artifacts", live-caught and
+  reverted before commit). Confirmed nothing under `.claude/` was legitimately indexed before this
+  change, so the exclusion loses no coverage.
+- **`vitest.config.mts` gains an `exclude` for `.claude`** (#357), same root cause a second place:
+  vitest's own default excludes (`node_modules`, `.git`) don't cover it either, so `npx vitest run`
+  with any sub-agent worktree on disk picked up and executed *that worktree's* test files against
+  *its own* `node_modules` — a real crash (`react-dom`/jsdom internals failing to resolve), not a
+  false pass, caught live while re-verifying this same fix. `[...configDefaults.exclude,
+  "**/.claude/**"]` keeps vitest's own defaults rather than silently dropping them.
 - **`specs/decisions/ADR-004-multi-tenancy.md` 1.7.0 -> 1.8.0** (P8.5e, #356). Decision 5 amended again: the "general campaign surface" the 2026-08-24 amendment deferred is this slice, built with the staff UI that amendment named as the prerequisite. Names the accepted risk explicitly — a campaign's `headline`/`subtitle` are free text, not derived from product or discount data, a deliberate narrow exception the human approved at `/propose` having been shown it — and what stays structured regardless: `imageKey`/`linkUrl`/the schedule, and the panel's real product-price callout, which renders unconditionally whether or not a campaign is active.
 - **Spec for P8.5e — staff-editable hero campaigns** (#356, `specs/2026-08-25-p8.5e-hero-campaigns/`). Gate 2: `plan.md`, `requirements.md` (R1–R25), `validation.md`. A new `DepartmentCampaign` model (one row per top-level department) plus a staff CRUD UI at `/staff/promotions`, layered onto `DepartmentHero` (#346) without changing its output for a department with no live campaign. Triggered by a human review of the live P8.5b hero against the AI Studio prototype it was drawn from, which found the data-only hero can't produce photographic, benefit-led copy.
 - **Build notes** at `specs/2026-08-25-p8.5e-hero-campaigns/build-notes.md`, naming six known-shaky areas — the unrun migration first (same situation P8.5a/b's were before merge), then the never-browser-tested upload path, per-vendor rendering, the newly-enforced `linkUrl` convention, the untested staff status labels, and the untested image-attach refusal path.
