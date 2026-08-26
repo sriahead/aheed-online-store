@@ -26,7 +26,12 @@ import { resolveAuthOrigin } from "./auth-origin";
 export function authDb<T extends object>(client: T): T {
   return new Proxy(client, {
     get(target, prop, _receiver) {
-      if (prop === "$transaction") return undefined;
+      if (prop === "$transaction") {
+        // TEMP DIAGNOSTIC (#382) — remove before merging.
+        console.log("[382-diag] $transaction accessed on authDb-wrapped client; returning undefined");
+        console.log("[382-diag] access stack:", new Error().stack);
+        return undefined;
+      }
       const value = Reflect.get(target, prop, target);
       return typeof value === "function" ? value.bind(target) : value;
     },
@@ -75,8 +80,12 @@ export async function getAuth() {
   const email = getEmailService();
   const origin = await resolveAuthOrigin();
 
+  // TEMP DIAGNOSTIC (#382) — remove before merging.
+  const wrappedDb = authDb(getPrisma());
+  console.log("[382-diag] typeof wrappedDb.$transaction at construction:", typeof wrappedDb.$transaction);
+
   return betterAuth({
-    database: prismaAdapter(authDb(getPrisma()), { provider: "postgresql" }),
+    database: prismaAdapter(wrappedDb, { provider: "postgresql" }),
     secret: env.BETTER_AUTH_SECRET,
     // Derived per request from the host; BETTER_AUTH_URL is only a fallback when
     // no host header is present (resolveAuthOrigin yields an empty host → "https://").
