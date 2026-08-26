@@ -11,6 +11,11 @@ every branch merges.
   adapter is actually reading `$transaction` from the wrapped client at runtime, since local Node
   testing against a real Prisma client with real staging credentials shows the wrapping working
   correctly in isolation. This commit exists only to get a live answer; it will be reverted.
+  **Update**: the `authDb()` diagnostic confirmed the wrapped client is NOT the crash source —
+  live logs show `typeof wrappedDb.$transaction === "undefined"` on every access, including on the
+  exact request that still crashes immediately afterward. A second, more direct diagnostic now
+  patches every `getPrisma()` instance to log a stack trace the moment its real (unwrapped)
+  `$transaction` is actually called, to find the true caller.
 
 ### Fixed
 - **Any authenticated action could intermittently 500** with a generic "This page couldn't load —
