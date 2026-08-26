@@ -70,7 +70,9 @@ export async function attachBundleImage(
   storageKey: string,
   altText: string,
 ): Promise<ImageActionResult<void>> {
+  console.log("[382-diag-STEP] 1: before requireVendorRole");
   const auth = await requireVendorRole("ADMIN");
+  console.log("[382-diag-STEP] 2: after requireVendorRole, ok=", auth.ok);
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   const trimmedAlt = altText.trim();
@@ -82,7 +84,9 @@ export async function attachBundleImage(
     return { ok: false, error: "Invalid upload key." };
   }
 
+  console.log("[382-diag-STEP] 3: before headObject");
   const meta = await getStorage().headObject(storageKey);
+  console.log("[382-diag-STEP] 4: after headObject, meta=", JSON.stringify(meta));
   if (!meta) {
     return { ok: false, error: "The uploaded file could not be verified." };
   }
@@ -95,11 +99,15 @@ export async function attachBundleImage(
     return { ok: false, error: "The uploaded file exceeded the size limit." };
   }
 
+  console.log("[382-diag-STEP] 5: before saveBundleImageForVendor");
   const result = await saveBundleImageForVendor(auth.vendorId, bundleId, storageKey, trimmedAlt);
+  console.log("[382-diag-STEP] 6: after saveBundleImageForVendor, ok=", result.ok);
   if (!result.ok) return { ok: false, error: result.error };
 
+  console.log("[382-diag-STEP] 7: before revalidatePath x3");
   revalidatePath("/staff/bundles");
   revalidatePath(`/staff/bundles/${bundleId}`);
   revalidatePath("/categories");
+  console.log("[382-diag-STEP] 8: after revalidatePath x3, returning ok");
   return { ok: true, value: undefined };
 }
