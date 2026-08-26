@@ -16,6 +16,13 @@ every branch merges.
   exact request that still crashes immediately afterward. A second, more direct diagnostic now
   patches every `getPrisma()` instance to log a stack trace the moment its real (unwrapped)
   `$transaction` is actually called, to find the true caller.
+  **Update 2**: that diagnostic *also* never fired, live, on the exact request that still crashed —
+  neither the `authDb()`-wrapped client nor `getPrisma()`'s own instance-level `$transaction` is
+  ever called. The throw (`PrismaNeonHttpAdapter.startTransaction`, confirmed via `wrangler tail`)
+  is a **prototype** method on a class `@prisma/adapter-neon` never exports directly (created
+  internally by `PrismaNeonHttp.connect()`), so it's shared across every instance regardless of
+  which `PrismaClient` wrapper called it. Patched via `connect()` instead, to reach that prototype
+  directly and catch the call regardless of which client instance is actually involved.
 
 ### Fixed
 - **Any authenticated action could intermittently 500** with a generic "This page couldn't load —
