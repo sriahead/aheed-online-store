@@ -4,6 +4,21 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Fixed
+- **Any authenticated action could intermittently 500** with a generic "This page couldn't load —
+  a server error occurred" page, on both staging and production. Root cause: `lib/auth.ts`'s
+  `getAuth()` handed Better Auth's Prisma adapter the app's HTTP-mode client (`getPrisma()`), which
+  has a `$transaction` method that throws `Transactions are not supported in HTTP mode` instead of
+  being absent. Better Auth's own Prisma adapter (`@better-auth/prisma-adapter`) already falls back
+  to a non-transactional path for exactly this case, but only when `typeof db.$transaction !==
+  "function"` — since the HTTP client's `$transaction` genuinely is a function (just one that
+  throws), that guard never tripped and the adapter called the throwing method instead. Fixed by
+  wrapping the client passed to `prismaAdapter()` in a `Proxy` that hides `$transaction`, so the
+  adapter's own fallback engages — deliberately not switching to `getPrismaWs()`, which would have
+  fixed the crash at the cost of a new WebSocket connection on every authenticated request. Found
+  live while shipping and validating P8.5d (#348, PR #380/#381), tracked and fixed as its own issue
+  (#382) per this repo's SDD gates rather than folded into that unrelated slice.
+
 ### Added
 - **P8.5d — multi-buy tier pricing** (#348). A vendor can run "3 for £10.00" on a product; it applies
   automatically with nothing typed, shows on the card and the cart line, and the checkout charges it.
