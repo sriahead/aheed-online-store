@@ -10,7 +10,18 @@ import { getEnv } from "./config";
 export const getPrisma = cache(() => {
   const { DATABASE_URL } = getEnv();
   const adapter = new PrismaNeonHttp(DATABASE_URL, {});
-  return new PrismaClient({ adapter });
+  const client = new PrismaClient({ adapter });
+  // TEMP DIAGNOSTIC (#382) — remove before merging. Logs every call to
+  // $transaction on the raw HTTP-mode client, with a stack trace, before it
+  // throws — to find which caller reaches the RAW (unwrapped) client.
+  const originalTransaction = client.$transaction.bind(client);
+  client.$transaction = (...args: unknown[]) => {
+    console.log("[382-diag-RAW] $transaction CALLED on raw getPrisma() client!");
+    console.log("[382-diag-RAW] call stack:", new Error().stack);
+    // @ts-expect-error temporary diagnostic override
+    return originalTransaction(...args);
+  };
+  return client;
 });
 
 /**
