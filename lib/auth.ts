@@ -86,6 +86,16 @@ export async function getAuth() {
       ? { advanced: { crossSubDomainCookies: origin.crossSubDomainCookies } }
       : {}),
     socialProviders: buildSocialProviders(env),
+    // Better Auth enables its built-in rate limiter by default whenever
+    // NODE_ENV is production (`options.rateLimit?.enabled ?? isProduction` —
+    // this app never opted into it explicitly). Its storage wrapper calls the
+    // database adapter's `incrementOne`, which — like the session-consume path
+    // authDb() above already covers — falls back to `db.$transaction(...)`
+    // when the where-clause isn't a bare id match (#382). Rather than rely on
+    // authDb() covering every such path across Better Auth's internals
+    // (session handling, rate limiting, and anything a future plugin adds),
+    // disable the feature this app never deliberately enabled.
+    rateLimit: { enabled: false },
     user: {
       additionalFields: {
         role: { type: "string", defaultValue: "CUSTOMER", input: false },
