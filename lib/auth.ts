@@ -28,7 +28,9 @@ export function authDb<T extends object>(client: T): T {
     get(target, prop, _receiver) {
       if (prop === "$transaction") {
         // TEMP DIAGNOSTIC (#382) — remove before merging.
-        console.log("[382-diag] $transaction accessed on authDb-wrapped client; returning undefined");
+        console.log(
+          "[382-diag] $transaction accessed on authDb-wrapped client; returning undefined",
+        );
         console.log("[382-diag] access stack:", new Error().stack);
         return undefined;
       }
@@ -82,7 +84,10 @@ export async function getAuth() {
 
   // TEMP DIAGNOSTIC (#382) — remove before merging.
   const wrappedDb = authDb(getPrisma());
-  console.log("[382-diag] typeof wrappedDb.$transaction at construction:", typeof wrappedDb.$transaction);
+  console.log(
+    "[382-diag] typeof wrappedDb.$transaction at construction:",
+    typeof wrappedDb.$transaction,
+  );
 
   return betterAuth({
     database: prismaAdapter(wrappedDb, { provider: "postgresql" }),
