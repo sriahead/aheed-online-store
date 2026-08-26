@@ -4,6 +4,14 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Diagnostic (temporary — not a real change, will be reverted)
+- **#382 investigation**: two live fix attempts (`authDb()` Proxy wrapper, then also disabling
+  Better Auth's rate limiter) both still crashed identically on staging. Temporary `console.log`
+  instrumentation added to `lib/auth.ts` to observe via `wrangler tail` whether Better Auth's
+  adapter is actually reading `$transaction` from the wrapped client at runtime, since local Node
+  testing against a real Prisma client with real staging credentials shows the wrapping working
+  correctly in isolation. This commit exists only to get a live answer; it will be reverted.
+
 ### Fixed
 - **Any authenticated action could intermittently 500** with a generic "This page couldn't load —
   a server error occurred" page, on both staging and production. Root cause: `lib/auth.ts`'s
