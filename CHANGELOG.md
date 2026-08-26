@@ -17,7 +17,15 @@ every branch merges.
   adapter's own fallback engages — deliberately not switching to `getPrismaWs()`, which would have
   fixed the crash at the cost of a new WebSocket connection on every authenticated request. Found
   live while shipping and validating P8.5d (#348, PR #380/#381), tracked and fixed as its own issue
-  (#382) per this repo's SDD gates rather than folded into that unrelated slice.
+  (#382) per this repo's SDD gates rather than folded into that unrelated slice. **This alone was
+  not sufficient** — re-verified live, the crash persisted with an identical error digest, which
+  turned out to be a second, independent trigger for the same underlying throw rather than proof the
+  first fix failed (Next.js's `digest` hashes a stack trace that Prisma's shared transaction
+  dispatcher makes caller-agnostic). The second cause: Better Auth's **built-in rate limiter
+  defaults to enabled whenever `NODE_ENV=production`** — never a deliberate choice in this app — and
+  its storage wrapper hits the identical `db.$transaction` fallback pattern via `incrementOne`. Fixed
+  by explicitly disabling it (`rateLimit: { enabled: false }`); re-verified live with 5+ consecutive
+  attempts, not a single clean run, given the bug's own intermittency.
 
 ### Added
 - **P8.5d — multi-buy tier pricing** (#348). A vendor can run "3 for £10.00" on a product; it applies
