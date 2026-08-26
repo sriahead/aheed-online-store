@@ -23,6 +23,13 @@ every branch merges.
   internally by `PrismaNeonHttp.connect()`), so it's shared across every instance regardless of
   which `PrismaClient` wrapper called it. Patched via `connect()` instead, to reach that prototype
   directly and catch the call regardless of which client instance is actually involved.
+  **Update 3**: the prototype patch *did* fire, but its captured stack trace bottoms out entirely
+  inside Prisma's own query-plan interpreter (`interpretNode`/`execute`/`singleLoader`) — Prisma 6's
+  client-engine-runtime doesn't preserve the original application call site across its internal
+  async dispatch, so no amount of logging at the throw site can attribute this to a specific
+  caller. Reoriented: instrumenting `attachBundleImage`'s own sequential steps directly (before/after
+  each `await`) to find which of *its* operations is running when the crash happens, since Prisma's
+  own internals can't say.
 
 ### Fixed
 - **Any authenticated action could intermittently 500** with a generic "This page couldn't load —
