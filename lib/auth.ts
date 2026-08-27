@@ -7,6 +7,35 @@ import { getCurrentVendorSenderName } from "./vendor-service";
 import { resolveAuthOrigin } from "./auth-origin";
 
 /**
+ * Hide `$transaction` from the client handed to Better Auth's Prisma adapter
+ * (#382). `@better-auth/prisma-adapter` wraps two of its own operations (a
+ * token-consume path, a find-then-update path) in `db.$transaction(...)`
+ * ONLY when `typeof db.$transaction === "function"` — it already has a
+ * working non-transactional fallback for the opposite case, precisely for
+ * HTTP-only Prisma drivers. `getPrisma()`'s client (`PrismaNeonHttp`) HAS a
+ * `$transaction` method — it just throws "Transactions are not supported in
+ * HTTP mode" at runtime — so the adapter's guard never trips and it calls the
+ * throwing method instead of its own fallback.
+ *
+ * Deliberately NOT `getPrismaWs()`: that would fix the crash too, but at the
+ * cost of a WebSocket connection on every authenticated request, exactly what
+ * the HTTP/WS split in lib/db.ts exists to avoid. Every other property is
+ * forwarded and bound to the real client, so Prisma-internal `this`-dependent
+ * methods keep working.
+ */
+export function authDb<T extends object>(client: T): T {
+  return new Proxy(client, {
+    get(target, prop, _receiver) {
+      if (prop === "$transaction") {
+        return undefined;
+      }
+      const value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+}
+
+/**
  * Pure helper, split out of getAuth() so it's unit-testable without a DB
  * (getAuth() itself has none, since it depends on getPrisma()). Returns
  * undefined — not `{ google: undefined }` — when either credential is
@@ -48,8 +77,10 @@ export async function getAuth() {
   const email = getEmailService();
   const origin = await resolveAuthOrigin();
 
+  const wrappedDb = authDb(getPrisma());
+
   return betterAuth({
-    database: prismaAdapter(getPrisma(), { provider: "postgresql" }),
+    database: prismaAdapter(wrappedDb, { provider: "postgresql" }),
     secret: env.BETTER_AUTH_SECRET,
     // Derived per request from the host; BETTER_AUTH_URL is only a fallback when
     // no host header is present (resolveAuthOrigin yields an empty host → "https://").
@@ -59,6 +90,16 @@ export async function getAuth() {
       ? { advanced: { crossSubDomainCookies: origin.crossSubDomainCookies } }
       : {}),
     socialProviders: buildSocialProviders(env),
+    // Better Auth enables its built-in rate limiter by default whenever
+    // NODE_ENV is production (`options.rateLimit?.enabled ?? isProduction` —
+    // this app never opted into it explicitly). Its storage wrapper calls the
+    // database adapter's `incrementOne`, which — like the session-consume path
+    // authDb() above already covers — falls back to `db.$transaction(...)`
+    // when the where-clause isn't a bare id match (#382). Rather than rely on
+    // authDb() covering every such path across Better Auth's internals
+    // (session handling, rate limiting, and anything a future plugin adds),
+    // disable the feature this app never deliberately enabled.
+    rateLimit: { enabled: false },
     user: {
       additionalFields: {
         role: { type: "string", defaultValue: "CUSTOMER", input: false },

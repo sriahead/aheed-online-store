@@ -4,6 +4,101 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Documentation
+- **Roadmap change-log rows for P8.5d, the P8.5c+P8.5d production promotion, and the full `#382`
+  saga** (`specs/roadmap.md`) — the three gaps `npm run sdd:audit` reported at this pass:
+  `specs/2026-08-25-p8.5d-multi-buy-tier-pricing/` (PR #380, staging), the PR #381 promotion
+  (`staging -> main`, closing #347/#348), `specs/2026-08-26-auth-http-transaction-fix/` (PRs #383,
+  #384 — two real, independently-correct fixes that were still insufficient), and
+  `specs/2026-08-27-prisma-many-http-transaction-fix/` (PR #391 — the fix that actually closed the
+  bug). **Correction against issue #382's own write-up, found writing this pass's roadmap row**:
+  its "corrected root cause" section named `restoreCartFromOrder` as a 4th broken call site: traced
+  by hand and found already safe (its `prisma` parameter always resolves to `getPrismaWs()` via
+  `placeOrder`); the real 4th site, `updateVendorStorefrontConfig`, was omitted from the issue
+  entirely. Corrected via an issue comment rather than silently left stale. `#390` (nominal/branded
+  `getPrisma()`/`getPrismaWs()` types, filed at Build) tagged Phase P8 on the delivery board — it
+  had none. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt (108 artifacts). `npm run sdd:audit` confirmed
+  exiting 0 after this pass.
+
+### Fixed
+- **#382, corrected root cause**: four writes could 500 intermittently or unconditionally with
+  `Transactions are not supported in HTTP mode` — never Better Auth, despite the identical error
+  message and throw site. Prisma 6's client-side query compiler (`engineType = "client"`) wraps
+  `updateMany`/`createMany` in an internal transaction the HTTP-mode adapter can't execute,
+  regardless of `where`-clause shape or match count (confirmed empirically against a live Neon DB);
+  a direct `.$transaction()` call on the HTTP client fails the same way unconditionally.
+  `upsertBundle`/`setBundleImage` (bundle save/image upload), `deactivateCode` (discount
+  deactivation), and `updateVendorStorefrontConfig` (`/staff/storefront` save) all now route
+  through `getPrismaWs()` instead of `getPrisma()`. A new regression test,
+  `tests/repository-transaction-safety.test.ts` (same no-allowlist AST pattern as
+  `tests/repository-purity.test.ts`), statically enforces that no `updateMany`/`createMany` call
+  site in the repository layer passes `getPrisma()` to a function that needs a transaction-capable
+  client, and that no repository file calls `.$transaction(` directly on `getPrisma()`. Verified
+  the test actually catches the bug by temporarily reverting the fix and confirming it fails on
+  exactly these four sites and no others. See
+  `specs/2026-08-27-prisma-many-http-transaction-fix/` for the full investigation and
+  `specs/2026-08-26-auth-http-transaction-fix/build-notes.md`'s "RESUMED" section for how the
+  original (correct-but-insufficient) diagnosis led here. The diagnostic instrumentation from that
+  earlier investigation (see below) is fully reverted.
+
+### Diagnostic (temporary — not a real change, will be reverted)
+- **RESOLVED — all instrumentation below has been reverted; kept for history.**
+- **#382 investigation**: two live fix attempts (`authDb()` Proxy wrapper, then also disabling
+  Better Auth's rate limiter) both still crashed identically on staging. Temporary `console.log`
+  instrumentation added to `lib/auth.ts` to observe via `wrangler tail` whether Better Auth's
+  adapter is actually reading `$transaction` from the wrapped client at runtime, since local Node
+  testing against a real Prisma client with real staging credentials shows the wrapping working
+  correctly in isolation. This commit exists only to get a live answer; it will be reverted.
+  **Update**: the `authDb()` diagnostic confirmed the wrapped client is NOT the crash source —
+  live logs show `typeof wrappedDb.$transaction === "undefined"` on every access, including on the
+  exact request that still crashes immediately afterward. A second, more direct diagnostic now
+  patches every `getPrisma()` instance to log a stack trace the moment its real (unwrapped)
+  `$transaction` is actually called, to find the true caller.
+  **Update 2**: that diagnostic *also* never fired, live, on the exact request that still crashed —
+  neither the `authDb()`-wrapped client nor `getPrisma()`'s own instance-level `$transaction` is
+  ever called. The throw (`PrismaNeonHttpAdapter.startTransaction`, confirmed via `wrangler tail`)
+  is a **prototype** method on a class `@prisma/adapter-neon` never exports directly (created
+  internally by `PrismaNeonHttp.connect()`), so it's shared across every instance regardless of
+  which `PrismaClient` wrapper called it. Patched via `connect()` instead, to reach that prototype
+  directly and catch the call regardless of which client instance is actually involved.
+  **Update 3**: the prototype patch *did* fire, but its captured stack trace bottoms out entirely
+  inside Prisma's own query-plan interpreter (`interpretNode`/`execute`/`singleLoader`) — Prisma 6's
+  client-engine-runtime doesn't preserve the original application call site across its internal
+  async dispatch, so no amount of logging at the throw site can attribute this to a specific
+  caller. Reoriented: instrumenting `attachBundleImage`'s own sequential steps directly (before/after
+  each `await`) to find which of *its* operations is running when the crash happens, since Prisma's
+  own internals can't say.
+  **Update 4**: the step-logging diagnostic merged to `staging` (PR #388, `fe1ed5d`), but its
+  `deploy-staging` run never acquired a runner — a GitHub Actions outage, confirmed via
+  `githubstatus.com`. This PR carries no code change; it exists only to retrigger that stuck deploy
+  via a fresh push (rerunning/cancelling the stuck run directly failed with contradictory API
+  errors, itself a symptom of the same outage) and to land the prior session's pause notes, which
+  were pushed to the already-merged `fix/auth-diag-382d` branch and never actually reached
+  `staging`.
+
+### Fixed
+- **Any authenticated action could intermittently 500** with a generic "This page couldn't load —
+  a server error occurred" page, on both staging and production. Root cause: `lib/auth.ts`'s
+  `getAuth()` handed Better Auth's Prisma adapter the app's HTTP-mode client (`getPrisma()`), which
+  has a `$transaction` method that throws `Transactions are not supported in HTTP mode` instead of
+  being absent. Better Auth's own Prisma adapter (`@better-auth/prisma-adapter`) already falls back
+  to a non-transactional path for exactly this case, but only when `typeof db.$transaction !==
+  "function"` — since the HTTP client's `$transaction` genuinely is a function (just one that
+  throws), that guard never tripped and the adapter called the throwing method instead. Fixed by
+  wrapping the client passed to `prismaAdapter()` in a `Proxy` that hides `$transaction`, so the
+  adapter's own fallback engages — deliberately not switching to `getPrismaWs()`, which would have
+  fixed the crash at the cost of a new WebSocket connection on every authenticated request. Found
+  live while shipping and validating P8.5d (#348, PR #380/#381), tracked and fixed as its own issue
+  (#382) per this repo's SDD gates rather than folded into that unrelated slice. **This alone was
+  not sufficient** — re-verified live, the crash persisted with an identical error digest, which
+  turned out to be a second, independent trigger for the same underlying throw rather than proof the
+  first fix failed (Next.js's `digest` hashes a stack trace that Prisma's shared transaction
+  dispatcher makes caller-agnostic). The second cause: Better Auth's **built-in rate limiter
+  defaults to enabled whenever `NODE_ENV=production`** — never a deliberate choice in this app — and
+  its storage wrapper hits the identical `db.$transaction` fallback pattern via `incrementOne`. Fixed
+  by explicitly disabling it (`rateLimit: { enabled: false }`); re-verified live with 5+ consecutive
+  attempts, not a single clean run, given the bug's own intermittency.
+
 ### Added
 - **P8.5d — multi-buy tier pricing** (#348). A vendor can run "3 for £10.00" on a product; it applies
   automatically with nothing typed, shows on the card and the cart line, and the checkout charges it.

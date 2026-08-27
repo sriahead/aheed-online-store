@@ -86,6 +86,25 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   supports. `prisma/seed.ts` runs in real Node (CI runner via `tsx`), so it correctly keeps the
   bare `@prisma/client` specifier there — don't "fix" it to `/wasm`.
 - **Neon Auth: leave OFF.** Auth is Better Auth (ADR-002), added in P1 via a normal Prisma migration.
+- **`prisma.<model>.updateMany(...)` and `.createMany(...)` — and ONLY those two operations —
+  unconditionally crash when run through `getPrisma()`, regardless of `where`-clause shape or match
+  count**, with `Error: Transactions are not supported in HTTP mode` thrown from
+  `PrismaNeonHttpAdapter.startTransaction`. This is **not** a Better Auth or application-code bug:
+  Prisma 6's client-side query compiler (`engineType = "client"`, mandatory — see below) internally
+  wraps `updateMany`/`createMany` in a transaction it opens itself, which the HTTP adapter can never
+  execute. Confirmed empirically in #382 (2026-08-27) with a local Node script run directly against
+  a live Neon DB (`PrismaNeonHttp` is fetch-based, so it reproduces identically outside Workers):
+  `updateMany`/`createMany` crash every time, including a 0-row match; `deleteMany` (0-row AND a
+  real match), `upsert`, and singular `create`/`update` all succeed. First found live via
+  `setBundleImage` (`lib/repositories/bundles.ts`) 500ing on a real bundle-image upload during
+  P8.5d — three prior diagnostic rounds correctly ruled out Better Auth's adapter (its
+  `$transaction` really is `undefined` on the HTTP client and really is never called) before a
+  fourth round of step-logging pinned it to this instead. **Any `updateMany`/`createMany` call in
+  `lib/repositories/*` MUST run through `getPrismaWs()`** (inside a `tx.` block, or directly if no
+  application-level transaction is otherwise needed — the query compiler's own internal transaction
+  is enough, and the WS adapter can execute it). `deleteMany`/`upsert`/singular `create`/`update`
+  have no such requirement and may use either client per the normal read/write split. Full
+  investigation: `specs/2026-08-26-auth-http-transaction-fix/build-notes.md`.
 
 ## Schema rules
 - Strict relational / 3NF, explicit foreign keys, provider-neutral Postgres types only.

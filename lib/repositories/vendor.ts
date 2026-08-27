@@ -1,4 +1,4 @@
-import { getPrisma } from "@/lib/db";
+import { getPrisma, getPrismaWs } from "@/lib/db";
 
 /**
  * Per-vendor branding/config/delivery read path (ADR-004 slice 4). The ONLY
@@ -158,7 +158,10 @@ export async function updateVendorLogoKey(vendorId: string, logoStorageKey: stri
 }
 
 export async function updateVendorStorefrontConfig(vendorId: string, data: any) {
-  return getPrisma().$transaction(async (tx) => {
+  // getPrismaWs(), not getPrisma(): $transaction throws unconditionally on the
+  // HTTP-mode client — PrismaNeonHttp cannot execute interactive transactions
+  // at all, regardless of what runs inside them (#382).
+  return getPrismaWs().$transaction(async (tx) => {
     await tx.vendorConfig.update({
       where: { vendorId },
       data: {
