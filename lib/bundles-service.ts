@@ -70,7 +70,9 @@ export function saveBundleForVendor(
   bundleId: string | null,
   input: BundleWriteInput,
 ): Promise<BundleWriteResult> {
-  return upsertBundle(getPrisma(), vendorId, bundleId, input);
+  // getPrismaWs(), not getPrisma(): Prisma 6's client-side query compiler wraps
+  // updateMany in a transaction PrismaNeonHttp can't execute (#382).
+  return upsertBundle(getPrismaWs(), vendorId, bundleId, input);
 }
 
 /** `features/admin/bundles.ts`'s `saveBundleItems` action. */
@@ -97,5 +99,6 @@ export function saveBundleImageForVendor(
   imageKey: string,
   altText: string,
 ): Promise<BundleWriteResult> {
-  return setBundleImage(getPrisma(), vendorId, bundleId, imageKey, altText);
+  // getPrismaWs(), not getPrisma(): same reason as saveBundleForVendor above (#382).
+  return setBundleImage(getPrismaWs(), vendorId, bundleId, imageKey, altText);
 }
