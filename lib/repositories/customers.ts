@@ -1,4 +1,4 @@
-import { getPrisma } from "@/lib/db";
+import type { getPrisma } from "@/lib/db";
 import { REVENUE_STATUSES } from "@/lib/order-status";
 import { visibleBalance } from "@/lib/loyalty";
 
@@ -6,11 +6,16 @@ import { visibleBalance } from "@/lib/loyalty";
  * The staff customer directory (P7.5d+e, #160) — the P6 roadmap line's
  * "customer directory", which had never been built.
  *
- * NO REQUEST-SCOPED FACADE LIVES IN THIS FILE. `vendorId` is an explicit
- * parameter and nothing here reads request context, so a plain `tsx` script can
- * exercise it directly. That is the property `lib/repositories/*` is supposed to
- * have and that nine existing facades break (#252) — this file does not add a
- * tenth.
+ * NO REQUEST-SCOPED FACADE LIVES IN THIS FILE, and nothing here resolves its own
+ * Prisma client: both `prisma` and `vendorId` are explicit parameters, so a plain
+ * `tsx` script can exercise it directly. See `lib/customers-service.ts` for the
+ * request-scoped entry point.
+ *
+ * This docstring used to make that claim while `listCustomersForAdmin` called
+ * `getPrisma()` itself, which made it false — a `lib/db` client is built from
+ * `@prisma/client/wasm`, whose query compiler Node cannot load, so the function
+ * could not run in a script at all (#409). Keep the import above type-only: that
+ * is what makes the claim structurally true rather than aspirational.
  *
  * WHAT A "CUSTOMER" IS HERE
  *
@@ -73,10 +78,10 @@ export interface AdminCustomerPage {
  * the group does not have.
  */
 export async function listCustomersForAdmin(
+  prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
   { take, page }: { take: number; page: number },
 ): Promise<AdminCustomerPage> {
-  const prisma = getPrisma();
   const safePage = Number.isInteger(page) && page > 0 ? page : 0;
 
   const groups = await prisma.order.groupBy({

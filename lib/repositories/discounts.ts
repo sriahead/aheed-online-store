@@ -1,4 +1,4 @@
-import { getPrisma, getPrismaWs } from "@/lib/db";
+import type { getPrisma } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import {
   evaluateCode,
@@ -328,31 +328,19 @@ export async function deactivateCode(db: AnyDb, vendorId: string, codeId: string
   return count;
 }
 
-/**
- * Admin write wrappers for `features/admin/discount-codes.ts`.
+/* The admin write wrappers `createCodeForVendor` / `deactivateCodeForVendor` used
+ * to sit here and resolved Prisma themselves. They now live in
+ * `lib/discounts-service.ts` (#409).
  *
- * These take `vendorId` only and resolve Prisma themselves, matching P5a's
- * `saveLoyaltySettings`. ADR-004 slice 2's ESLint guard forbids `@/lib/db` in the
- * feature layer, so an action cannot hand a client in — and unlike the
- * transactional functions above, there is no concurrency guarantee here that
- * needs proving from a plain script.
- *
- * `vendorId` still comes from the caller's `requireVendorRole`, which resolves it
- * from the request host, never from the form.
+ * Their old docstring argued the resolution belonged here because ADR-004 slice
+ * 2's ESLint guard forbids `@/lib/db` in the feature layer, so an action cannot
+ * hand a client in. That premise is correct and is exactly why the wrappers
+ * moved: `lib/` is outside the guard's scope, so the sibling service is where a
+ * caller-supplied client can legally be resolved. It also claimed no property
+ * here needed proving from a plain script — but a self-resolving export cannot
+ * run in one at all, so the choice was never between "provable" and "not worth
+ * proving"; it was between provable and impossible.
  */
-export async function createCodeForVendor(
-  vendorId: string,
-  input: CreateCodeInput,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  return createCode(getPrisma(), vendorId, input);
-}
-
-export async function deactivateCodeForVendor(vendorId: string, codeId: string): Promise<number> {
-  // getPrismaWs(), not getPrisma(): deactivateCode's updateMany needs a
-  // transaction-capable client — PrismaNeonHttp can't execute the one Prisma 6's
-  // client-side query compiler opens internally for updateMany (#382).
-  return deactivateCode(getPrismaWs(), vendorId, codeId);
-}
 
 /* The request-scoped read facade that used to sit here now lives in
  * `lib/discounts-service.ts` (#252) — it resolves the current vendor from

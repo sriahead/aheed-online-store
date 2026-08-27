@@ -1,10 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  fetchVendorProfile,
+  DEFAULT_BRAND_PRIMITIVES,
+  DEFAULT_SENDER_NAME,
+  DEFAULT_SEARCH_PLACEHOLDER,
+} from "@/lib/repositories/vendor";
 
 const findUnique = vi.fn(); // vendor.findUnique
 
-vi.mock("@/lib/db", () => ({
-  getPrisma: () => ({ vendor: { findUnique } }),
-}));
+/**
+ * The stub client, passed in as an argument (#411).
+ *
+ * This test used to `vi.mock("@/lib/db")` and load the module under test with a
+ * dynamic `await import()` so the mock was registered first — the only way to
+ * substitute a client for a function that resolved its own. Now that
+ * `fetchVendorProfile` takes one as a parameter, the module mock and the dynamic
+ * import are both unnecessary: the stub goes in through the front door.
+ *
+ * The cast is because the stub implements only the one method this function
+ * calls, which is the point of a stub. #390 tracks branding the client types.
+ */
+const prisma = { vendor: { findUnique } } as unknown as Parameters<typeof fetchVendorProfile>[0];
 
 beforeEach(() => findUnique.mockReset());
 
@@ -33,9 +49,8 @@ describe("fetchVendorProfile", () => {
       },
       deliveryAreas: [{ prefix: "RG" }],
     });
-    const { fetchVendorProfile } = await import("@/lib/repositories/vendor");
 
-    const p = await fetchVendorProfile("v-srimart");
+    const p = await fetchVendorProfile(prisma, "v-srimart");
     expect(p.name).toBe("SriMart");
     expect(p.tagline).toBe("Everyday tech");
     expect(p.logoStorageKey).toBeNull();
@@ -54,14 +69,8 @@ describe("fetchVendorProfile", () => {
       config: null,
       deliveryAreas: [],
     });
-    const {
-      fetchVendorProfile,
-      DEFAULT_BRAND_PRIMITIVES,
-      DEFAULT_SENDER_NAME,
-      DEFAULT_SEARCH_PLACEHOLDER,
-    } = await import("@/lib/repositories/vendor");
 
-    const p = await fetchVendorProfile("v-new");
+    const p = await fetchVendorProfile(prisma, "v-new");
     expect(p.name).toBe("New Vendor"); // vendor.name when no branding row
     expect(p.tagline).toBeNull();
     expect(p.primitives).toEqual(DEFAULT_BRAND_PRIMITIVES);

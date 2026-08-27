@@ -1,13 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { WebhookOrder } from "@/lib/repositories/orders";
 
-// send-status-email.ts reaches lib/repositories/vendor (→ lib/db →
+// send-status-email.ts reaches lib/vendor-service (→ lib/db →
 // @prisma/client/wasm, unresolvable under vitest) and lib/email. Mock the vendor
 // lookup so the module loads and so the sender identity is a value this test
 // controls; leave lib/email REAL, so what is asserted below is the actual
 // outbound Resend request rather than a stub of our own making.
+//
+// The target moved from lib/repositories/vendor to lib/vendor-service in #411:
+// the repository now takes its Prisma client as a parameter and imports lib/db
+// for types only, so the service is what pulls in the WASM client.
 const senderName = vi.fn(() => "Aheed Food Centre");
-vi.mock("@/lib/repositories/vendor", () => ({
+vi.mock("@/lib/vendor-service", () => ({
   fetchVendorProfile: async () => ({ senderName: senderName() }),
 }));
 

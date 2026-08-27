@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { getPrisma, getPrismaWs } from "@/lib/db";
+import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import { effectiveStock } from "@/lib/cart-rules";
 import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
@@ -472,6 +472,17 @@ type Db = ReturnType<typeof getPrisma>;
 type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
 type AnyDb = Db | Tx;
 
+/**
+ * The WebSocket-adapter client, required by every export below that opens an
+ * interactive transaction — `PrismaNeonHttp` cannot execute one at all (#382).
+ *
+ * Structurally identical to `Db` today, so the compiler will not stop you
+ * passing the wrong one; #390 tracks making them nominally distinct. Until then
+ * the parameter NAME (`prismaWs` vs `prisma`) is the signal, and
+ * `tests/repository-transaction-safety.test.ts` is the check.
+ */
+type DbWs = ReturnType<typeof getPrismaWs>;
+
 export interface AdminProductRow {
   id: string;
   slug: string;
@@ -554,10 +565,10 @@ export interface StaffInventoryPage {
 }
 
 export async function listInventoryForStaff(
+  prisma: Db,
   vendorId: string,
   { take, cursor, query }: { take: number; cursor?: string; query?: string },
 ): Promise<StaffInventoryPage> {
-  const prisma = getPrisma();
   const trimmed = query?.trim() ?? "";
 
   const whereClause: Prisma.ProductWhereInput = { vendorId };
@@ -607,6 +618,7 @@ export async function listInventoryForStaff(
 
 /** Keyset-paginated on (createdAt, id) like findPage() above — never OFFSET. */
 export async function listProductsForAdmin(
+  prisma: Db,
   vendorId: string,
   {
     take,
@@ -622,7 +634,6 @@ export async function listProductsForAdmin(
     isActive?: boolean;
   },
 ): Promise<AdminProductPage> {
-  const prisma = getPrisma();
   const rows = await prisma.product.findMany({
     where: {
       vendorId,
@@ -667,10 +678,10 @@ export async function listProductsForAdmin(
 }
 
 export async function getProductForAdmin(
+  prisma: Db,
   vendorId: string,
   id: string,
 ): Promise<AdminProductDetail | null> {
-  const prisma = getPrisma();
   // findFirst, not findUnique: `id` alone is unique, but a vendor-less read has
   // no place in this layer (ADR-004 slice 2).
   const row = await prisma.product.findFirst({
@@ -743,10 +754,10 @@ const DUPLICATE_SLUG = {
 };
 
 export async function createProductForVendor(
+  prisma: Db,
   vendorId: string,
   input: ProductWriteInput,
 ): Promise<CatalogueWriteResult> {
-  const prisma = getPrisma();
   try {
     if (!(await assertOwnCategory(prisma, vendorId, input.categoryId))) return WRONG_CATEGORY;
 
@@ -802,13 +813,13 @@ export async function createProductForVendor(
 }
 
 export async function updateProductForVendor(
+  prismaWs: DbWs,
   vendorId: string,
   id: string,
   input: ProductWriteInput,
 ): Promise<CatalogueWriteResult> {
-  const prisma = getPrisma();
   try {
-    return await getPrismaWs().$transaction(async (tx) => {
+    return await prismaWs.$transaction(async (tx) => {
       const existing = await tx.product.findFirst({
         where: { id, vendorId },
         select: { id: true },
@@ -887,13 +898,13 @@ export async function updateProductForVendor(
  * an accessibility defect rather than a tidy default.
  */
 export async function setPrimaryProductImage(
+  prismaWs: DbWs,
   vendorId: string,
   productId: string,
   storageKey: string,
   alt: string,
 ): Promise<CatalogueWriteResult> {
-  const prisma = getPrisma();
-  return await getPrismaWs().$transaction(async (tx) => {
+  return await prismaWs.$transaction(async (tx) => {
     // Vendor-scoped: another vendor's product is indistinguishable from one that
     // never existed, exactly as updateProductForVendor treats it.
     const product = await tx.product.findFirst({
@@ -930,12 +941,13 @@ export async function setPrimaryProductImage(
  * however it arrived (this action or the original upload-as-primary flow).
  */
 export async function addProductImage(
+  prismaWs: DbWs,
   vendorId: string,
   productId: string,
   storageKey: string,
   alt: string,
 ): Promise<CatalogueWriteResult> {
-  return await getPrismaWs().$transaction(async (tx) => {
+  return await prismaWs.$transaction(async (tx) => {
     const product = await tx.product.findFirst({
       where: { id: productId, vendorId },
       select: { id: true, name: true },
@@ -970,11 +982,12 @@ export async function addProductImage(
  * this never touches storageKey; it only moves which row `isPrimary` sits on.
  */
 export async function promoteProductImage(
+  prismaWs: DbWs,
   vendorId: string,
   productId: string,
   imageId: string,
 ): Promise<CatalogueWriteResult> {
-  return await getPrismaWs().$transaction(async (tx) => {
+  return await prismaWs.$transaction(async (tx) => {
     const product = await tx.product.findFirst({ where: { id: productId, vendorId } });
     if (!product) return { ok: false as const, error: "That product no longer exists." };
 
@@ -1010,11 +1023,12 @@ export type RemoveImageResult = { ok: true; storageKey: string } | { ok: false; 
  * any images always has exactly one primary.
  */
 export async function removeProductImage(
+  prismaWs: DbWs,
   vendorId: string,
   productId: string,
   imageId: string,
 ): Promise<RemoveImageResult> {
-  return await getPrismaWs().$transaction(async (tx) => {
+  return await prismaWs.$transaction(async (tx) => {
     const product = await tx.product.findFirst({ where: { id: productId, vendorId } });
     if (!product) return { ok: false as const, error: "That product no longer exists." };
 
@@ -1048,11 +1062,12 @@ export async function removeProductImage(
  * inconsistent.
  */
 export async function reorderProductImages(
+  prismaWs: DbWs,
   vendorId: string,
   productId: string,
   orderedImageIds: string[],
 ): Promise<CatalogueWriteResult> {
-  return await getPrismaWs().$transaction(async (tx) => {
+  return await prismaWs.$transaction(async (tx) => {
     const product = await tx.product.findFirst({ where: { id: productId, vendorId } });
     if (!product) return { ok: false as const, error: "That product no longer exists." };
 
@@ -1083,13 +1098,13 @@ export async function reorderProductImages(
  * without needing the full product edit payload (P6, #168).
  */
 export async function quickUpdateInventory(
+  prismaWs: DbWs,
   vendorId: string,
   productId: string,
   data: { quantity?: number; isActive?: boolean },
 ): Promise<CatalogueWriteResult> {
-  const prisma = getPrisma();
   try {
-    return await getPrismaWs().$transaction(async (tx) => {
+    return await prismaWs.$transaction(async (tx) => {
       const existing = await tx.product.findFirst({
         where: { id: productId, vendorId },
         select: { id: true, inventory: { select: { quantity: true, lowStockThreshold: true } } },
@@ -1124,13 +1139,13 @@ export async function quickUpdateInventory(
 }
 
 export async function saveGeneratedProductImage(
+  prisma: Db,
   vendorId: string,
   productId: string,
   storageKey: string,
   alt: string,
   needsReview: boolean,
 ): Promise<void> {
-  const prisma = getPrisma();
   await prisma.productImage.create({
     data: {
       productId,
@@ -1148,8 +1163,7 @@ export async function saveGeneratedProductImage(
   }
 }
 
-export async function getProductsWithoutImages(vendorId: string, limit: number) {
-  const prisma = getPrisma();
+export async function getProductsWithoutImages(prisma: Db, vendorId: string, limit: number) {
   return await prisma.product.findMany({
     where: {
       vendorId,
@@ -1161,10 +1175,10 @@ export async function getProductsWithoutImages(vendorId: string, limit: number) 
 }
 
 export async function approveProductImageRow(
+  prisma: Db,
   vendorId: string,
   productId: string,
 ): Promise<CatalogueWriteResult> {
-  const prisma = getPrisma();
   const existing = await prisma.product.findFirst({
     where: { id: productId, vendorId },
     select: { id: true },

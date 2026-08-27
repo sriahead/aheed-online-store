@@ -292,6 +292,16 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   ProcessId,CommandLine` (match on the repo path and `wrangler dev` in the command line, not just
   the image name — other unrelated `node.exe`/`workerd.exe` processes are common) and
   `taskkill /F /PID <every id>` before retrying the build.
+- **Never pipe a live-writing script's output through `head` (or anything else that closes the pipe
+  early).** The reader closing the pipe sends the writer SIGPIPE, which can kill the process **before
+  its own cleanup section runs** — indistinguishable from the command completing normally except for
+  a shorter-than-expected output. Hit at `/validate` for #411/#412 (2026-08-27):
+  `npx tsx scripts/verify-repository-injection.ts | head -30` — a script that creates real rows and
+  deletes them itself at the end — got cut off mid-run and left one `__verify-`-prefixed product, two
+  images and one category behind in the dev database, found only by a follow-up query and cleaned up
+  by hand before the real (untruncated) run could be trusted. **Redirect to a file and `Read` it, or
+  let it print in full** — never truncate a script's stdout with a command that can close the pipe
+  before the writer's own exit path runs.
 
 ## Dependency & version discipline (learned the hard way)
 - **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their
@@ -382,14 +392,72 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   it. Fixed at `/fix` by moving it to `lib/data-rights-service.ts`; the facade also became a plain
   sync factory once it no longer needed a dynamic `import()` to stay loadable by the same file a
   `tsx` script has to import.
-- **#252 is CLOSED (P8.1b) and the rule is now machine-enforced — `tests/repository-purity.test.ts`
-  fails if any file in `lib/repositories/*.ts` contains a *value* import of `next/headers`,
-  `@/lib/tenant`, `@/lib/auth` or `@/lib/auth-rbac`.** Type-only imports stay legal and are the
-  documented pattern (`import type { getPrisma } from "@/lib/db"`). The check is whole-file and
-  import-level, with **no allowlist**, so it cannot be satisfied by argument — put the facade in
-  `lib/<name>-service.ts` and it passes. Every repository module now has a sibling service where one
-  is needed: `cart`, `categories`, `discounts`, `loyalty`, `orders`, `products`, `reviews`, `roles`,
-  `vendor`, `data-rights`, `promotions`.
+- **The rule has TWO halves, and they are enforced by two different tests. Both must pass.**
+  - **Request context** — `tests/repository-purity.test.ts` (#252, CLOSED at P8.1b) fails if any file
+    in `lib/repositories/*.ts` contains a *value* import of `next/headers`, `@/lib/tenant`,
+    `@/lib/auth` or `@/lib/auth-rbac`. Type-only imports stay legal and are the documented pattern
+    (`import type { getPrisma } from "@/lib/db"`). Whole-file, import-level, **no allowlist** — put
+    the facade in `lib/<name>-service.ts` and it passes.
+  - **Client injection** — `tests/repository-client-injection.test.ts` (#409) fails on a
+    `getPrisma()`/`getPrismaWs()` **call expression** inside a repository file. AST-based, not a
+    grep, because these files legitimately name both functions in prose and in
+    `ReturnType<typeof getPrisma>` type positions. **Unscoped as of #411/#412 (2026-08-27): it walks
+    every `.ts` file in `lib/repositories/` discovered from the filesystem**, so a newly added
+    repository file is covered the moment it exists. It shipped in #410 scoped to an explicit
+    four-file list because the other four files were still non-compliant; that list is gone and must
+    not come back.
+  Every repository module has a sibling service where one is needed: `cart`, `categories`,
+  `customers`, `discounts`, `loyalty`, `order-lookup-rate-limit`, `orders`, `products`, `reports`,
+  `reviews`, `roles`, `vendor`, `data-rights`, `promotions`.
+- **When you convert an export, the client moves to the sibling service and the call sites keep the
+  function's NAME.** #411/#412 imported each repository function into its service under a `…Repo`
+  alias and re-exported a same-named wrapper, so 29 call sites changed only their import path. That
+  is deliberate: across 26 conversions a rename is the mistake most likely to go unnoticed, and a
+  type-only import (`import type { AdminProductRow }`) must keep pointing at the repository while
+  the value import moves. **Sweep by symbol, not by name** — `features/admin/storefront.ts` imported
+  `updateVendorStorefrontConfig as updateConfigRepo` and called it under the alias, so a grep for the
+  function name reported zero call sites and made it look like dead code.
+- **A repository export that resolves its own Prisma client cannot be run from a plain `tsx` script
+  AT ALL — this is structural, not a matter of inconvenience, and it is why the client must be a
+  parameter.** `lib/db.ts` imports `PrismaClient` from `@prisma/client/wasm`, which is mandatory on
+  Workers (see the Database section). **Node cannot load that build's WASM query compiler**, so any
+  call routed through `lib/db` dies with `PrismaClientKnownRequestError (ERR_UNKNOWN_FILE_EXTENSION):
+  Unknown file extension ".wasm" for node_modules/.prisma/client/query_compiler_bg.wasm`. Measured
+  2026-08-27 against the dev Neon branch: `getAvailableSpecialities(prisma, vendorId)` **passed** with
+  a client the script built from the bare `@prisma/client` specifier (as `prisma/seed.ts` does);
+  `getVendorConfig(vendorId)`, which resolved its own, **failed**; the identical query through the
+  script's own client **passed**. Same query, same database — the only variable was where the client
+  came from. `scripts/verify-repository-injection.ts` is the committed harness that demonstrates this.
+- **This rule has now claimed a false enforcement THREE times, and the third is the most instructive.**
+  The first two pointed at `tests/repository-vendor-scoping.test.ts` (a test about *scoping*, not
+  *location*). The third was subtler: `tests/repository-purity.test.ts` genuinely enforces what it
+  claims — but its docstring also asserted that "several **compliant** repository functions call
+  `getPrisma()` internally while still taking `vendorId` explicitly," which quietly blessed the other
+  half of the rule as optional. **32 of 109 exports across 8 files** had done exactly that, including
+  every catalogue write, every product-image mutation, loyalty tier CRUD, discount create/deactivate,
+  and the guest order-lookup **rate limiter** — a security control that could not be exercised outside
+  a live request. Three separate repository docstrings (`customers.ts`, `reports.ts`, and
+  `discounts-service.ts`'s "every export there takes `prisma`") asserted the property while the file
+  violated it. **The transferable lesson beyond the earlier two: a test that correctly enforces its
+  own invariant can still launder a second, unenforced invariant if its comments opine on one.**
+  Scope a test's prose to what it checks; if it must mention a neighbouring rule, name the test that
+  enforces that one, or say plainly that nothing does.
+  **A FOURTH docstring turned up while finishing the conversion** — `lib/products-service.ts` said
+  the repository's "admin write path takes `vendorId` explicitly for the same reason these reads now
+  do, so a plain `tsx` script can exercise either without a live Workers request," false for all 14
+  of those exports. Four files asserting the same untrue sentence is what a property nobody ever
+  executed looks like; the fix is `scripts/verify-repository-injection.ts`, which now *runs* all four
+  files' exports against a real database instead of asserting anything.
+- **The conversion found three dead Prisma clients, and the reason nothing caught them matters more
+  than the waste.** `updateProductForVendor`, `setPrimaryProductImage` and `quickUpdateInventory` each
+  opened with `const prisma = getPrisma();` and then **never read it** — every statement ran on the
+  transaction client. So each admin product update, image set and stock tweak constructed an
+  HTTP-adapter `PrismaClient` and discarded it. They had also been recorded in #409's own plan as
+  functions "needing both clients," a claim that survived into two issues and a spec before anyone
+  checked the bodies. **`eslint.config.mjs` enables no `no-unused-vars` rule of any kind** (verified
+  empirically — a file with an unused local lints clean), so nothing in `lint`/`typecheck`/`test`
+  reports an assigned-and-never-read variable. Tracked as **#416**. Until that lands, an unused
+  binding is invisible here: do not assume a variable is used because CI is green.
 - **The reason it took three attempts is worth more than the fix.** This rule twice claimed an
   enforcement that did not exist: it said `tests/repository-vendor-scoping.test.ts` "allowlists all
   nine by name … so the list cannot quietly grow." Both halves were false. That test asks whether an

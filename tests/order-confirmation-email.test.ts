@@ -13,8 +13,13 @@ import type { WebhookOrder } from "@/lib/repositories/orders";
  * Same mocking posture as tests/order-status-email.test.ts: stub the vendor
  * lookup so the module loads without @prisma/client/wasm, leave lib/email real
  * so the assertion is against the actual outbound Resend request.
+ *
+ * The mock target moved to `@/lib/vendor-service` in #411. That is where the
+ * Prisma client is now resolved — `lib/repositories/vendor.ts` takes one as a
+ * parameter and imports `@/lib/db` for types only, so mocking the repository no
+ * longer intercepts anything that loads the WASM client.
  */
-vi.mock("@/lib/repositories/vendor", () => ({
+vi.mock("@/lib/vendor-service", () => ({
   fetchVendorProfile: async () => ({ senderName: "Aheed Food Centre" }),
 }));
 

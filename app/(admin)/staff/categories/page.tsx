@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FolderTree } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { listCategoriesForAdmin } from "@/lib/repositories/categories";
+import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { CategoryForm } from "@/components/staff/CategoryForm";
 

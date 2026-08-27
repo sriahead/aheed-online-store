@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { quickUpdateInventory } from "@/lib/repositories/products";
+import { quickUpdateInventory } from "@/lib/products-service";
 
 export async function updateInventoryAction(
   productId: string,

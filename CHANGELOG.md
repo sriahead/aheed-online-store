@@ -5,6 +5,107 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 every branch merges.
 
 ### Documentation
+- **`/document` closeout for `#409`/`#411`/`#412`/`#415` (repository client injection, slices 2+3
+  of 3 — #409 fully closed out).** `specs/roadmap.md` gets a full closure row for **PR #417**
+  (merge `1cf7fd3`), recording `gates` green (1m15s), post-merge `deploy-staging` and
+  `deploy-docs-internal` both completing, and the #415 smoke check (10/10 sequential requests to
+  `https://staging.aheedfoodcentre.nocaped.com/` returning HTTP 200 with no Error 1102). Project
+  #2's **#409, #410, #411, #412, #415** all moved to **In Review** (stay open; each closes only on
+  promotion to `main`). Two lessons from this loop recorded where future sessions will actually
+  read them: `CLAUDE.md` gains a note that piping a live-writing script (e.g.
+  `scripts/verify-repository-injection.ts`) through `head` risks SIGPIPE killing it before its own
+  cleanup runs — hit at `/validate`, left one product/two images/one category behind in the dev
+  database until found and removed by hand; `specs/sdd-workflow.md` gains a note that a
+  `validation.md` row checking `sdd:audit` reports zero gaps cannot pass at `/validate` if it means
+  the *current* slice's own roadmap row, since that row is Document (final)'s job and can't exist
+  yet — write such a row pinned to a specific already-landed PR instead, the way slice 1's own R19
+  did. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt (110 artifacts); `npm run sdd:audit` and
+  `npm run kms:validate` both confirmed clean after the edits.
+
+### Changed
+- **`#409`/`#411`/`#412` — repository client injection, slices 2+3, completing `#409`.** The
+  enforcement `#410` added could only cover four of the eight non-compliant files, so it shipped
+  scoped to a `FILES_IN_SCOPE` list. **That list is deleted**: `tests/repository-client-injection.test.ts`
+  now enumerates `lib/repositories/` from the filesystem and checks every file, so a newly added
+  repository module is covered the moment it exists. Slices 2 and 3 were merged into one because that
+  scoping window was slice 1's own declared weakness and two more loops would have kept it open.
+  - **Converted (26):** `categories.ts` (4), `loyalty.ts` (3), `vendor.ts` (5), `products.ts` (14).
+    All four now import `@/lib/db` with `import type` only. Resolution moved into the four existing
+    sibling services — **no new service files**.
+  - **Call sites keep the function names.** Each service imports the repository original under a
+    `…Repo` alias and re-exports a same-named wrapper, so 29 call sites changed only their import
+    path. `features/admin/storefront.ts` imported `updateVendorStorefrontConfig` under an alias, so
+    the sweep was by symbol, not by name — a name grep reported it as dead code.
+  - **Three dead Prisma clients removed.** `updateProductForVendor`, `setPrimaryProductImage` and
+    `quickUpdateInventory` each constructed an HTTP-adapter client and **never read it**. So no
+    `products.ts` export needs two clients — correcting "four of which need both clients", a figure
+    carried through `#409`'s plan and both issue bodies. ESLint enables no `no-unused-vars` rule of
+    any kind (verified empirically), which is why nothing caught it: filed as **`#416`**.
+  - **`updateVendorStorefrontConfig`'s `data: any`** replaced with a named
+    `VendorStorefrontConfigInput`, and its eight `brand*` writes iterated from a tuple instead of
+    sixteen hand-written identifiers — a typo in one had been enough to silently stop writing a colour.
+  - **Tests got simpler.** `tests/vendor-profile.test.ts` drops `vi.mock("@/lib/db")` and its dynamic
+    import for a stub client passed as an argument; the two email tests re-point their mock at
+    `@/lib/vendor-service`. Both email suites had been failing to load — 695 → 709 passing.
+  - `scripts/verify-repository-injection.ts` extended to 14 checks spanning reads and writes across
+    all four files, including the WebSocket `$transaction` path, with cleanup verified by re-count.
+    It now **refuses to run** against any host named in `secrets/staging.vars` or
+    `secrets/production.vars`, before constructing a client, with no override flag.
+- **`#415` — Worker `cpu_ms` raised 50 → 300.** Error 1102 ("Worker exceeded resource limits") kept
+  recurring on staging at 50, observed live at `2026-08-27T12:46:36Z` (Ray ID `a31b2e161d0a63c5`).
+  React SSR plus Prisma's WASM query-compiler instantiation on a cold isolate is genuinely CPU-bound;
+  Workers bills CPU actually used, not the ceiling, so the raise carries no cost on its own.
+  Confirmation on deployed staging is a Ship-stage check, not a pre-merge one.
+
+### Documentation
+- **`/document` closeout for `#409`/`#410` (repository client injection, slice 1 of 3).** The
+  `specs/roadmap.md` row this slice's own branch added is now updated with **PR #413**
+  (merge `464b59d`) — unknown at Build/Ship time. Records that `gates` was green on the PR,
+  `deploy-staging`/`deploy-docs-internal` both completed, and Project #2's **#410** moved to
+  **In Review** (stays open; only closes on promotion to `main`). No reconciliation was needed
+  against `/validate`'s findings — nothing surfaced there beyond what `build-notes.md` already
+  recorded. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt (109 artifacts); `npm run sdd:audit` and
+  `npm run kms:validate` both confirmed clean after the edit.
+
+### Changed
+- **`#409`/`#410` — repository client injection, slice 1 of 3.** `CLAUDE.md` requires every
+  `lib/repositories/*` export to take its Prisma client as an explicit parameter, so a plain `tsx`
+  script can exercise it against a real database. **32 of 109 exports across 8 files did not**, and
+  nothing checked it: `tests/repository-purity.test.ts` covers only the request-context half of the
+  rule, and its docstring actively declared internal `getPrisma()` calls "compliant". They are not —
+  `lib/db.ts` builds its client from `@prisma/client/wasm` (mandatory on Workers), whose query
+  compiler **Node cannot load**, so a self-resolving export cannot run in a script at all. Measured
+  against the dev Neon branch, not argued: an injected-client call passed, the self-resolving
+  equivalent failed with `ERR_UNKNOWN_FILE_EXTENSION`, and the same query through the script's own
+  client passed.
+  - **New:** `tests/repository-client-injection.test.ts` — AST call-expression check (not a grep:
+    these files legitimately name `getPrisma()` in prose and in `ReturnType<typeof getPrisma>` type
+    positions). No function-level allowlist; temporarily scoped by a **file** list that #412 deletes.
+    Proven to fire by reintroducing the defect and watching it fail.
+  - **Converted (6):** `listCustomersForAdmin`, `checkOrderLookupRateLimit`, `getCatalogueHealth`,
+    `getLoyaltyLiability` now take `prisma` explicitly; `createCodeForVendor`/`deactivateCodeForVendor`
+    **relocated** to `lib/discounts-service.ts` rather than parameterised — they are pure facades over
+    functions that already take a client, so a parameter would have left two identical entry points.
+  - **New services:** `lib/customers-service.ts`, `lib/reports-service.ts`,
+    `lib/order-lookup-rate-limit-service.ts`. Resolution has to live in `lib/` because ADR-004 slice
+    2's `no-restricted-imports` rule forbids `@/lib/db` in `app/`/`features/`/`components/` — a caller
+    there physically cannot hand a client in.
+  - **New:** `scripts/verify-repository-injection.ts`, proving all five converted paths run against a
+    real database with a Node-native client. The **guest order-lookup rate limiter** — a security
+    control that could not be exercised outside a live request — now demonstrably refuses past its
+    5-per-minute threshold.
+  - Which client each path uses is unchanged; `deactivateCodeForVendor` still resolves `getPrismaWs()`
+    for its `updateMany` (#382), and `tests/repository-transaction-safety.test.ts` is untouched.
+  - Slices 2 (**#411** — `categories`, `loyalty`, `vendor`) and 3 (**#412** — `products.ts`, then
+    delete the file scoping) remain open. The rule is not fully enforced until #412 lands.
+
+### Documentation
+- **Roadmap row for the `#382` production promotion (PR #393)** — carry-forward from the previous
+  slice, the one gap `npm run sdd:audit` reported at this Orient.
+- **`CLAUDE.md`'s repository-layer section rewritten** to state the rule once, name **both** enforcing
+  tests, and record the `@prisma/client/wasm` finding. Adds the third instance of this rule claiming a
+  false enforcement — and its distinct lesson: *a test that correctly enforces its own invariant can
+  still launder a second, unenforced invariant if its comments opine on one.*
 - **Roadmap change-log rows for P8.5d, the P8.5c+P8.5d production promotion, and the full `#382`
   saga** (`specs/roadmap.md`) — the three gaps `npm run sdd:audit` reported at this pass:
   `specs/2026-08-25-p8.5d-multi-buy-tier-pricing/` (PR #380, staging), the PR #381 promotion

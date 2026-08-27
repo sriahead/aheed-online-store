@@ -4,11 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { normaliseCode, type DiscountKind } from "@/lib/discounts";
 import { parseLocalInput } from "@/lib/local-datetime";
-import {
-  createCodeForVendor,
-  deactivateCodeForVendor,
-  type CreateCodeInput,
-} from "@/lib/repositories/discounts";
+import { createCodeForVendor, deactivateCodeForVendor } from "@/lib/discounts-service";
+import type { CreateCodeInput } from "@/lib/repositories/discounts";
 
 /**
  * Discount-code admin actions (P5b, #145) — the write half of `/staff/discounts`.

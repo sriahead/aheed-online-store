@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getCategoryForAdmin } from "@/lib/repositories/categories";
+import { getCategoryForAdmin } from "@/lib/categories-service";
 import { getCampaignForVendorCategory, saveCampaignImageForVendor } from "@/lib/campaigns-service";
 import { getImageGenerationService } from "@/lib/image-generation";
 import { getStorage } from "@/lib/storage";

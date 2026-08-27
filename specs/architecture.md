@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.21.0"
-updated: 2026-08-25
+version: "1.21.1"
+updated: 2026-08-27
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -190,7 +190,8 @@ No layer skips inward; components never touch Prisma or the S3 client directly.
 > area, metadata and email sender come from `VendorBranding`/`VendorConfig`/`VendorDeliveryArea` via
 > `lib/repositories/vendor.ts`, reached through `lib/vendor-service.ts`'s `getCurrentVendorProfile`
 > (per-request `cache()`; the accessor moved out of the repository in P8.1b, #252, so every export
-> in `lib/repositories/vendor.ts` takes `vendorId` explicitly); the eight brand primitives are injected as CSS
+> in `lib/repositories/vendor.ts` takes `vendorId` explicitly — and, since #411, its Prisma client
+> too, which is what makes the file loadable by a plain `tsx` script); the eight brand primitives are injected as CSS
 > custom properties so components are unchanged. **Auth cookie scoping is per-request, same-vendor-only
 > (slice 3c):** `getAuth()`'s `baseURL`, `trustedOrigins` and cookie domain are resolved per request
 > from the host alone (`lib/auth-origin.ts`, no DB call) — **host-only sessions by default, trusting
