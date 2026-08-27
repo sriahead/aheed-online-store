@@ -292,6 +292,16 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   ProcessId,CommandLine` (match on the repo path and `wrangler dev` in the command line, not just
   the image name — other unrelated `node.exe`/`workerd.exe` processes are common) and
   `taskkill /F /PID <every id>` before retrying the build.
+- **Never pipe a live-writing script's output through `head` (or anything else that closes the pipe
+  early).** The reader closing the pipe sends the writer SIGPIPE, which can kill the process **before
+  its own cleanup section runs** — indistinguishable from the command completing normally except for
+  a shorter-than-expected output. Hit at `/validate` for #411/#412 (2026-08-27):
+  `npx tsx scripts/verify-repository-injection.ts | head -30` — a script that creates real rows and
+  deletes them itself at the end — got cut off mid-run and left one `__verify-`-prefixed product, two
+  images and one category behind in the dev database, found only by a follow-up query and cleaned up
+  by hand before the real (untruncated) run could be trusted. **Redirect to a file and `Read` it, or
+  let it print in full** — never truncate a script's stdout with a command that can close the pipe
+  before the writer's own exit path runs.
 
 ## Dependency & version discipline (learned the hard way)
 - **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their

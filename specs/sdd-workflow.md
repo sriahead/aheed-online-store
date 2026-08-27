@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.23.0"
-updated: 2026-08-25
+version: "2.24.0"
+updated: 2026-08-27
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -96,6 +96,19 @@ in the same slice.
 Neither check is a substitute for judgment. `sdd:preclear` proves files exist and the tree is clean,
 not that the build notes are any good; `sdd:audit` proves a roadmap row *mentions* the slice or
 promotion, not that the row is worth reading.
+
+**A `validation.md` row asking `sdd:audit` to report zero gaps cannot pass at `/validate` if it
+means the CURRENT slice's own row** — `sliceDirs()` walks the live `specs/` filesystem, so the
+slice being validated is always present and always ungapped-only-after-Document(final), which is
+what writes its roadmap row. `/validate` runs *before* Ship, so that row cannot exist yet by
+construction. Written correctly, such a row names a **specific prior PR or slice** the way slice 1's
+own R19 did ("confirm the roadmap row for PR #393 exists") — checking that the *previous* loop's
+Document(final) landed, not this one's. Hit at #411/#412's `/validate` (2026-08-27): the row was
+copied forward as "`sdd:audit` exits 0 and prints no ✘ line" with no PR pinned, so it failed on the
+slice's own not-yet-documented directory — a spec-writing mistake, not a code defect, and NOT
+something to patch under `/fix`. Report it unverified/deferred (same posture as the R33/R34-style
+post-deploy rows) rather than blocking on it, and write the next slice's equivalent row pinned to a
+specific already-landed PR.
 
 ## The delivery board
 

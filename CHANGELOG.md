@@ -4,6 +4,24 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Documentation
+- **`/document` closeout for `#409`/`#411`/`#412`/`#415` (repository client injection, slices 2+3
+  of 3 — #409 fully closed out).** `specs/roadmap.md` gets a full closure row for **PR #417**
+  (merge `1cf7fd3`), recording `gates` green (1m15s), post-merge `deploy-staging` and
+  `deploy-docs-internal` both completing, and the #415 smoke check (10/10 sequential requests to
+  `https://staging.aheedfoodcentre.nocaped.com/` returning HTTP 200 with no Error 1102). Project
+  #2's **#409, #410, #411, #412, #415** all moved to **In Review** (stay open; each closes only on
+  promotion to `main`). Two lessons from this loop recorded where future sessions will actually
+  read them: `CLAUDE.md` gains a note that piping a live-writing script (e.g.
+  `scripts/verify-repository-injection.ts`) through `head` risks SIGPIPE killing it before its own
+  cleanup runs — hit at `/validate`, left one product/two images/one category behind in the dev
+  database until found and removed by hand; `specs/sdd-workflow.md` gains a note that a
+  `validation.md` row checking `sdd:audit` reports zero gaps cannot pass at `/validate` if it means
+  the *current* slice's own roadmap row, since that row is Document (final)'s job and can't exist
+  yet — write such a row pinned to a specific already-landed PR instead, the way slice 1's own R19
+  did. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt (110 artifacts); `npm run sdd:audit` and
+  `npm run kms:validate` both confirmed clean after the edits.
+
 ### Changed
 - **`#409`/`#411`/`#412` — repository client injection, slices 2+3, completing `#409`.** The
   enforcement `#410` added could only cover four of the eight non-compliant files, so it shipped
