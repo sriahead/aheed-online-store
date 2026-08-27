@@ -30,6 +30,13 @@ every branch merges.
   caller. Reoriented: instrumenting `attachBundleImage`'s own sequential steps directly (before/after
   each `await`) to find which of *its* operations is running when the crash happens, since Prisma's
   own internals can't say.
+  **Update 4**: the step-logging diagnostic merged to `staging` (PR #388, `fe1ed5d`), but its
+  `deploy-staging` run never acquired a runner — a GitHub Actions outage, confirmed via
+  `githubstatus.com`. This PR carries no code change; it exists only to retrigger that stuck deploy
+  via a fresh push (rerunning/cancelling the stuck run directly failed with contradictory API
+  errors, itself a symptom of the same outage) and to land the prior session's pause notes, which
+  were pushed to the already-merged `fix/auth-diag-382d` branch and never actually reached
+  `staging`.
 
 ### Fixed
 - **Any authenticated action could intermittently 500** with a generic "This page couldn't load —
