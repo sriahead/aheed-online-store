@@ -4,6 +4,22 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Documentation
+- **Roadmap change-log rows for P8.5d, the P8.5c+P8.5d production promotion, and the full `#382`
+  saga** (`specs/roadmap.md`) — the three gaps `npm run sdd:audit` reported at this pass:
+  `specs/2026-08-25-p8.5d-multi-buy-tier-pricing/` (PR #380, staging), the PR #381 promotion
+  (`staging -> main`, closing #347/#348), `specs/2026-08-26-auth-http-transaction-fix/` (PRs #383,
+  #384 — two real, independently-correct fixes that were still insufficient), and
+  `specs/2026-08-27-prisma-many-http-transaction-fix/` (PR #391 — the fix that actually closed the
+  bug). **Correction against issue #382's own write-up, found writing this pass's roadmap row**:
+  its "corrected root cause" section named `restoreCartFromOrder` as a 4th broken call site: traced
+  by hand and found already safe (its `prisma` parameter always resolves to `getPrismaWs()` via
+  `placeOrder`); the real 4th site, `updateVendorStorefrontConfig`, was omitted from the issue
+  entirely. Corrected via an issue comment rather than silently left stale. `#390` (nominal/branded
+  `getPrisma()`/`getPrismaWs()` types, filed at Build) tagged Phase P8 on the delivery board — it
+  had none. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt (108 artifacts). `npm run sdd:audit` confirmed
+  exiting 0 after this pass.
+
 ### Fixed
 - **#382, corrected root cause**: four writes could 500 intermittently or unconditionally with
   `Transactions are not supported in HTTP mode` — never Better Auth, despite the identical error
