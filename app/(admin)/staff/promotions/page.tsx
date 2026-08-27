@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Megaphone } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { listCategoriesForAdmin } from "@/lib/repositories/categories";
+import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { isCampaignLive } from "@/lib/campaign-liveness";
 import { listCampaignsForVendor } from "@/lib/campaigns-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";

@@ -391,10 +391,22 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   - **Client injection** — `tests/repository-client-injection.test.ts` (#409) fails on a
     `getPrisma()`/`getPrismaWs()` **call expression** inside a repository file. AST-based, not a
     grep, because these files legitimately name both functions in prose and in
-    `ReturnType<typeof getPrisma>` type positions.
+    `ReturnType<typeof getPrisma>` type positions. **Unscoped as of #411/#412 (2026-08-27): it walks
+    every `.ts` file in `lib/repositories/` discovered from the filesystem**, so a newly added
+    repository file is covered the moment it exists. It shipped in #410 scoped to an explicit
+    four-file list because the other four files were still non-compliant; that list is gone and must
+    not come back.
   Every repository module has a sibling service where one is needed: `cart`, `categories`,
   `customers`, `discounts`, `loyalty`, `order-lookup-rate-limit`, `orders`, `products`, `reports`,
   `reviews`, `roles`, `vendor`, `data-rights`, `promotions`.
+- **When you convert an export, the client moves to the sibling service and the call sites keep the
+  function's NAME.** #411/#412 imported each repository function into its service under a `…Repo`
+  alias and re-exported a same-named wrapper, so 29 call sites changed only their import path. That
+  is deliberate: across 26 conversions a rename is the mistake most likely to go unnoticed, and a
+  type-only import (`import type { AdminProductRow }`) must keep pointing at the repository while
+  the value import moves. **Sweep by symbol, not by name** — `features/admin/storefront.ts` imported
+  `updateVendorStorefrontConfig as updateConfigRepo` and called it under the alias, so a grep for the
+  function name reported zero call sites and made it look like dead code.
 - **A repository export that resolves its own Prisma client cannot be run from a plain `tsx` script
   AT ALL — this is structural, not a matter of inconvenience, and it is why the client must be a
   parameter.** `lib/db.ts` imports `PrismaClient` from `@prisma/client/wasm`, which is mandatory on
@@ -420,6 +432,22 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   own invariant can still launder a second, unenforced invariant if its comments opine on one.**
   Scope a test's prose to what it checks; if it must mention a neighbouring rule, name the test that
   enforces that one, or say plainly that nothing does.
+  **A FOURTH docstring turned up while finishing the conversion** — `lib/products-service.ts` said
+  the repository's "admin write path takes `vendorId` explicitly for the same reason these reads now
+  do, so a plain `tsx` script can exercise either without a live Workers request," false for all 14
+  of those exports. Four files asserting the same untrue sentence is what a property nobody ever
+  executed looks like; the fix is `scripts/verify-repository-injection.ts`, which now *runs* all four
+  files' exports against a real database instead of asserting anything.
+- **The conversion found three dead Prisma clients, and the reason nothing caught them matters more
+  than the waste.** `updateProductForVendor`, `setPrimaryProductImage` and `quickUpdateInventory` each
+  opened with `const prisma = getPrisma();` and then **never read it** — every statement ran on the
+  transaction client. So each admin product update, image set and stock tweak constructed an
+  HTTP-adapter `PrismaClient` and discarded it. They had also been recorded in #409's own plan as
+  functions "needing both clients," a claim that survived into two issues and a spec before anyone
+  checked the bodies. **`eslint.config.mjs` enables no `no-unused-vars` rule of any kind** (verified
+  empirically — a file with an unused local lints clean), so nothing in `lint`/`typecheck`/`test`
+  reports an assigned-and-never-read variable. Tracked as **#416**. Until that lands, an unused
+  binding is invisible here: do not assume a variable is used because CI is green.
 - **The reason it took three attempts is worth more than the fix.** This rule twice claimed an
   enforcement that did not exist: it said `tests/repository-vendor-scoping.test.ts` "allowlists all
   nine by name … so the list cannot quietly grow." Both halves were false. That test asks whether an

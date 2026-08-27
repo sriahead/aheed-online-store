@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getProductRepository } from "@/lib/products-service";
-import { listInventoryForStaff } from "@/lib/repositories/products";
+import { listInventoryForStaff } from "@/lib/products-service";
 import { InventoryTable } from "./InventoryTable";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { getEnv } from "@/lib/config";

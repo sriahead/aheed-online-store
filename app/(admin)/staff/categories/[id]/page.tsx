@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getCategoryForAdmin, listCategoriesForAdmin } from "@/lib/repositories/categories";
+import { getCategoryForAdmin, listCategoriesForAdmin } from "@/lib/categories-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { CategoryForm } from "@/components/staff/CategoryForm";
 

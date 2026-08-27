@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { listProductsForAdmin } from "@/lib/repositories/products";
+import { listProductsForAdmin } from "@/lib/products-service";
 import { getBundleForVendor } from "@/lib/bundles-service";
 import { removeBundle } from "@/features/admin/bundles";
 import { getEnv } from "@/lib/config";

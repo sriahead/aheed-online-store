@@ -9,10 +9,8 @@ import {
   type ImageActionResult,
   type UploadTicket,
 } from "@/lib/product-image";
-import {
-  updateVendorLogoKey,
-  updateVendorStorefrontConfig as updateConfigRepo,
-} from "@/lib/repositories/vendor";
+import { updateVendorLogoKey, updateVendorStorefrontConfig } from "@/lib/vendor-service";
+import type { VendorStorefrontConfigInput } from "@/lib/repositories/vendor";
 import crypto from "crypto";
 
 const PRESIGN_TTL_SECONDS = 300;
@@ -74,22 +72,13 @@ export async function attachVendorLogo(key: string): Promise<ImageActionResult<v
   return { ok: true, value: undefined };
 }
 
-export async function updateStorefrontConfig(data: {
-  bannerNote: string | null;
-  heroSubtitle: string | null;
-  brandGreenDark?: string;
-  brandGreen?: string;
-  brandOrange?: string;
-  brandRed?: string;
-  brandCream?: string;
-  brandGreenTint?: string;
-  brandOrangeTint?: string;
-  brandRedTint?: string;
-}): Promise<{ ok: boolean; error?: string }> {
+export async function updateStorefrontConfig(
+  data: VendorStorefrontConfigInput,
+): Promise<{ ok: boolean; error?: string }> {
   const auth = await requireVendorRole("ADMIN");
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
-  await updateConfigRepo(auth.vendorId, data);
+  await updateVendorStorefrontConfig(auth.vendorId, data);
 
   revalidatePath("/staff/storefront");
   revalidatePath("/", "layout");

@@ -1,10 +1,18 @@
 import { getPrisma } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import {
+  createCategoryForVendor as createCategoryForVendorRepo,
   getCategoryBySlug,
+  getCategoryForAdmin as getCategoryForAdminRepo,
+  listCategoriesForAdmin as listCategoriesForAdminRepo,
   listTopLevelCategories,
+  updateCategoryForVendor as updateCategoryForVendorRepo,
+  type AdminCategoryDetail,
+  type AdminCategoryRow,
   type CategoryRepository,
+  type CategoryWriteInput,
 } from "@/lib/repositories/categories";
+import type { CatalogueWriteResult } from "@/lib/repositories/products";
 
 /**
  * Request-scoped wrapper around `lib/repositories/categories.ts`'s pure reads
@@ -38,4 +46,47 @@ export function getCategoryRepository(): CategoryRepository {
       return getCategoryBySlug(prisma, await vendorId(), slug);
     },
   };
+}
+
+/* ------------------------------------------------------------------------- *
+ * Admin catalogue entry points (#411)
+ *
+ * These deliberately keep the repository functions' NAMES, so a call site moves
+ * by changing its import path and nothing else — across 26 conversions that
+ * keeps the diff reviewable and removes a whole class of rename mistake. The
+ * repository originals are imported here under a `…Repo` alias.
+ *
+ * They take `vendorId` rather than resolving it, unlike the storefront factory
+ * above: every caller already holds an authoritative one from
+ * `requireVendorRole`, which derives it from the request host. See
+ * `lib/customers-service.ts` for the full rationale.
+ *
+ * Each resolves its client per call, inside the function — never at module
+ * scope, which would cache it across requests (CLAUDE.md).
+ * ------------------------------------------------------------------------- */
+
+export async function listCategoriesForAdmin(vendorId: string): Promise<AdminCategoryRow[]> {
+  return listCategoriesForAdminRepo(getPrisma(), vendorId);
+}
+
+export async function getCategoryForAdmin(
+  vendorId: string,
+  id: string,
+): Promise<AdminCategoryDetail | null> {
+  return getCategoryForAdminRepo(getPrisma(), vendorId, id);
+}
+
+export async function createCategoryForVendor(
+  vendorId: string,
+  input: CategoryWriteInput,
+): Promise<CatalogueWriteResult> {
+  return createCategoryForVendorRepo(getPrisma(), vendorId, input);
+}
+
+export async function updateCategoryForVendor(
+  vendorId: string,
+  id: string,
+  input: CategoryWriteInput,
+): Promise<CatalogueWriteResult> {
+  return updateCategoryForVendorRepo(getPrisma(), vendorId, id, input);
 }

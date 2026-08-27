@@ -1,6 +1,6 @@
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { runProductImagePipeline } from "@/lib/product-image-pipeline";
-import { saveGeneratedProductImage } from "@/lib/repositories/products";
+import { saveGeneratedProductImage } from "@/lib/products-service";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {

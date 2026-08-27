@@ -19,7 +19,7 @@ import {
   reorderProductImages as reorderProductImagesRow,
   setPrimaryProductImage,
   approveProductImageRow,
-} from "@/lib/repositories/products";
+} from "@/lib/products-service";
 
 /**
  * Product image upload actions (P6b2, #167) — the image half of the catalogue

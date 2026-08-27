@@ -1,5 +1,5 @@
 import { getEmailService } from "@/lib/email";
-import { fetchVendorProfile } from "@/lib/repositories/vendor";
+import { fetchVendorProfile } from "@/lib/vendor-service";
 import { formatPrice } from "@/components/product/format-price";
 import { splitDiscount } from "@/lib/order-totals";
 import type { WebhookOrder } from "@/lib/repositories/orders";

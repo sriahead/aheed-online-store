@@ -1,4 +1,4 @@
-import { getPrisma } from "@/lib/db";
+import type { getPrisma } from "@/lib/db";
 
 /**
  * Department hero campaigns (P8.5e, #356) — one row per top-level Category.
