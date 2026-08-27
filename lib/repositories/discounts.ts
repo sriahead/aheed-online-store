@@ -1,4 +1,4 @@
-import { getPrisma } from "@/lib/db";
+import { getPrisma, getPrismaWs } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import {
   evaluateCode,
@@ -348,7 +348,10 @@ export async function createCodeForVendor(
 }
 
 export async function deactivateCodeForVendor(vendorId: string, codeId: string): Promise<number> {
-  return deactivateCode(getPrisma(), vendorId, codeId);
+  // getPrismaWs(), not getPrisma(): deactivateCode's updateMany needs a
+  // transaction-capable client — PrismaNeonHttp can't execute the one Prisma 6's
+  // client-side query compiler opens internally for updateMany (#382).
+  return deactivateCode(getPrismaWs(), vendorId, codeId);
 }
 
 /* The request-scoped read facade that used to sit here now lives in

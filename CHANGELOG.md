@@ -4,7 +4,29 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Fixed
+- **#382, corrected root cause**: four writes could 500 intermittently or unconditionally with
+  `Transactions are not supported in HTTP mode` — never Better Auth, despite the identical error
+  message and throw site. Prisma 6's client-side query compiler (`engineType = "client"`) wraps
+  `updateMany`/`createMany` in an internal transaction the HTTP-mode adapter can't execute,
+  regardless of `where`-clause shape or match count (confirmed empirically against a live Neon DB);
+  a direct `.$transaction()` call on the HTTP client fails the same way unconditionally.
+  `upsertBundle`/`setBundleImage` (bundle save/image upload), `deactivateCode` (discount
+  deactivation), and `updateVendorStorefrontConfig` (`/staff/storefront` save) all now route
+  through `getPrismaWs()` instead of `getPrisma()`. A new regression test,
+  `tests/repository-transaction-safety.test.ts` (same no-allowlist AST pattern as
+  `tests/repository-purity.test.ts`), statically enforces that no `updateMany`/`createMany` call
+  site in the repository layer passes `getPrisma()` to a function that needs a transaction-capable
+  client, and that no repository file calls `.$transaction(` directly on `getPrisma()`. Verified
+  the test actually catches the bug by temporarily reverting the fix and confirming it fails on
+  exactly these four sites and no others. See
+  `specs/2026-08-27-prisma-many-http-transaction-fix/` for the full investigation and
+  `specs/2026-08-26-auth-http-transaction-fix/build-notes.md`'s "RESUMED" section for how the
+  original (correct-but-insufficient) diagnosis led here. The diagnostic instrumentation from that
+  earlier investigation (see below) is fully reverted.
+
 ### Diagnostic (temporary — not a real change, will be reverted)
+- **RESOLVED — all instrumentation below has been reverted; kept for history.**
 - **#382 investigation**: two live fix attempts (`authDb()` Proxy wrapper, then also disabling
   Better Auth's rate limiter) both still crashed identically on staging. Temporary `console.log`
   instrumentation added to `lib/auth.ts` to observe via `wrangler tail` whether Better Auth's

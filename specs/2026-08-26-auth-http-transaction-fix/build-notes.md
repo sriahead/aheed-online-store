@@ -185,3 +185,77 @@ should report `"commit":"fe1ed5d"` (or later) once it has.
 empty-cart "Start shopping" link go to `/categories/*` or the bare index) — flagged to the user,
 not yet actioned. And the user separately floated "bundles can be promotions" as a future idea.
 Neither is part of #382; don't conflate them when resuming.
+
+## RESUMED, root cause found and re-scoped (2026-08-27)
+
+**The step-logging diagnostic deploy (`fe1ed5d`) was stuck in `deploy-staging` for 8+ hours behind
+a genuine GitHub Actions outage** (confirmed via `githubstatus.com`, `"major"` at the time). `gh run
+rerun`/`gh run cancel` on the stuck run both failed with contradictory errors ("already running" vs.
+"completed") — itself a symptom of the outage, not a real state conflict. Unblocked via PR #389: a
+trivial no-op PR into `staging` (per CLAUDE.md's "never push directly to staging") that retriggered
+`deploy-staging` through a fresh push. It succeeded immediately — the outage had genuinely cleared
+by then (downgraded to `"minor"` on githubstatus.com) — confirming the earlier queued run really was
+an outage casualty, not a symptom of anything in this repo's own config.
+
+**First live repro after redeploy succeeded on attempt 1.** The `[382-diag-STEP]` log showed steps
+1–4 firing (`requireVendorRole`, `headObject`), then step 5 (`before saveBundleImageForVendor`) —
+**no step 6**. The `PrismaNeonHttpAdapter.startTransaction` prototype patch fired twice immediately
+after, then threw. **This is NOT Better Auth's adapter** — every prior diagnostic round correctly
+ruled that out (the `authDb()`-wrapped client's `$transaction` really is `undefined` and really is
+never called, reconfirmed in this same request). The crash is the app's own repository code:
+`setBundleImage` (`lib/repositories/bundles.ts`) does nothing but a single
+`prisma.bundle.updateMany({ where: { id, vendorId }, data: {...} })` through `getPrisma()` — no
+`$transaction` anywhere in the app code. Issue #382's original root-cause writeup (Better Auth's
+adapter internally calling `db.$transaction()`) is **wrong** as the mechanism, even though the
+throw site and error message are identical — see the digest-collision lesson above; it applies to
+the root-cause investigation too, not just to comparing two live attempts against each other.
+
+**Trigger condition, confirmed empirically via a local Node script (`npx tsx`) against the real
+staging Neon DB** — `PrismaNeonHttp` is a fetch-based adapter, so it reproduces identically outside
+Workers, which made this much faster than another round of staging deploys:
+
+| Operation (via `getPrisma()`/HTTP adapter) | Result |
+|---|---|
+| `updateMany` — any `where` shape, any match count (compound where, unique-only where, even a 0-row match) | **Crashes**, always |
+| `createMany` | **Crashes** |
+| `update` (singular, unique where) | OK |
+| `create` (singular) | OK |
+| `upsert` (update branch, on a real `@@unique`) | OK |
+| `deleteMany` (0-row match AND a real 1-row match) | OK |
+
+So the mechanism is **operation-type-specific, not where-clause-shape-specific**: Prisma 6's
+client-side query compiler (`engineType = "client"`, mandatory per CLAUDE.md) unconditionally wraps
+`updateMany`/`createMany` in an internal transaction it cannot execute over the HTTP driver.
+`deleteMany` does not, despite being an equally "Many" bulk operation — confirmed with both a 0-row
+and a real 1-row deleteMany, so this isn't a row-count effect either. No confirmed public Prisma
+issue found describing this exactly; treat it as this app's own confirmed empirical finding, not a
+cited upstream bug.
+
+**Full scope, grepped across `lib/repositories/*.ts`**: every standalone (not already inside a
+`tx.` block backed by `getPrismaWs()`) `updateMany`/`createMany` call is a live crash waiting to
+happen. Four found, all confirmed routed through `getPrisma()` at their call sites:
+
+1. `setBundleImage` (`bundles.ts:342`) — live-confirmed crashing (this session's repro).
+2. `upsertBundle` (`bundles.ts:224`) — the `updateMany` branch of the SAME "Save bundle" form's
+   update path (name/tagline/slug/etc., not just the image). Likely another instance of what's
+   been seen live, given it's the same page's primary save action.
+3. `deactivateCode` (`discounts.ts:324`) — called via `getPrisma()` from `lib/discounts-service.ts`;
+   hit whenever staff deactivates a discount code.
+4. `restoreCartFromOrder` (`orders.ts:526`) — typed `ReturnType<typeof getPrisma>` explicitly; hit
+   when a failed order placement restores the shopper's cart.
+
+Every other `updateMany`/`createMany` in the repository layer (`cart.ts`, `data-rights.ts`,
+`discounts.ts`'s other calls, `loyalty.ts`, `orders.ts`'s other calls) is already inside a `tx.`
+block on `getPrismaWs()` and is NOT at risk — confirmed by grepping for `tx\.` prefixes separately.
+`deleteMany`/`upsert`/singular `create`/`update` calls anywhere in the repository layer are also NOT
+at risk, per the trigger-condition table above, regardless of which client they run through.
+
+**Not yet done — this is where `/propose` picks up:** decide the fix shape for the four at-risk
+call sites (most likely: route each through `getPrismaWs()`'s `$transaction`, matching the pattern
+CLAUDE.md already documents for other transactional writes — `updateMany`/`createMany` apparently
+need an actual transaction-capable connection regardless of whether the app logic itself needs
+transactional semantics), and whether the underlying rule ("use `getPrismaWs()` only for operations
+requiring `$transaction`") needs updating in CLAUDE.md to also cover "`updateMany`/`createMany`,
+even standalone, unconditionally require it" — since that's a stronger and more surprising
+constraint than the current wording implies. Still need to revert the diagnostic instrumentation
+(see point 6 above) as part of whatever PR ships the real fix.

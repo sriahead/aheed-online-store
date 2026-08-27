@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-26T09:07:36.688Z` · commit `e715343` · `107` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-27T02:49:58.352Z` · commit `9617a53` · `108` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -106,6 +106,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P8.5e — Staff-Editable Hero Campaigns (plan)](specs/2026-08-25-p8.5e-hero-campaigns/plan.md) | spec | 1.0.0 | 2026-08-25 | draft | internal | A new per-department campaign model with a real staff CRUD UI and photographic banner upload, layered onto DepartmentHero (#346) — reopening the "general campaign surface" ADR-004 named as future work, this time with the staff UI that made the first attempt (VendorPromotion) inert. |
 | [P8.5f — Landing Slim-Down, Header Postcode & Campaign Date/Banner Fixes (plan)](specs/2026-08-25-p8.5f-landing-header-campaign-fixes/plan.md) | spec | 1.0.0 | 2026-08-25 | draft | internal | Moves the landing page's browse sections to a rebuilt /categories, relocates the postcode checker into a route-aware header, fixes a live timezone defect that shifted campaign schedules by the BST offset, and adds AI banner generation reusing the existing Workers AI pipeline. |
 | [Auth HTTP-mode transaction crash fix (plan)](specs/2026-08-26-auth-http-transaction-fix/plan.md) | spec | 1.0.0 | 2026-08-26 | draft | internal | Fix Better Auth's Prisma adapter throwing "Transactions are not supported in HTTP mode" by hiding $transaction on the client it's handed, triggering the adapter's own existing non-transactional fallback. |
+| [updateMany/createMany + direct $transaction HTTP-mode crash fix (plan)](specs/2026-08-27-prisma-many-http-transaction-fix/plan.md) | spec | 1.0.0 | 2026-08-27 | draft | internal | Fix four live 500s caused by writes that need a transaction-capable Prisma client but were wired to getPrisma() (HTTP mode), and add a regression test so this class of bug can't reappear silently. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.21.0 | 2026-08-25 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
