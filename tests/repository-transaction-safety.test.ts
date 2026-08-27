@@ -104,7 +104,10 @@ function lineOf(sourceFile: ts.SourceFile, node: ts.Node): number {
 }
 
 /** Pass 1 + Rule B, over `lib/repositories/*.ts`. */
-function analyseRepositories(files: string[]): { sensitive: Set<string>; ruleBViolations: Violation[] } {
+function analyseRepositories(files: string[]): {
+  sensitive: Set<string>;
+  ruleBViolations: Violation[];
+} {
   const sensitive = new Set<string>();
   const ruleBViolations: Violation[] = [];
 
@@ -160,16 +163,16 @@ function analyseRepositories(files: string[]): { sensitive: Set<string>; ruleBVi
 }
 
 /** Pass 2, over every lib/*.ts and lib/repositories/*.ts file. */
-function findUnsafeCallSites(
-  dir: string,
-  file: string,
-  sensitive: Set<string>,
-): Violation[] {
+function findUnsafeCallSites(dir: string, file: string, sensitive: Set<string>): Violation[] {
   const sourceFile = parse(dir, file);
   const found: Violation[] = [];
 
   function visit(node: ts.Node) {
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && sensitive.has(node.expression.text)) {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      sensitive.has(node.expression.text)
+    ) {
       const firstArg = node.arguments[0];
       if (
         firstArg &&

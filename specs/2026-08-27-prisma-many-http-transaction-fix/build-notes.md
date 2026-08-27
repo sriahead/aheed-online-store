@@ -114,3 +114,22 @@ real. Worth a `{ timeout: ... }` bump if it recurs.
 
 **`updateVendorStorefrontConfig` takes `data: any`** — pre-existing, unrelated to this bug, not
 touched (noted in `plan.md`'s Deliberately Excluded section already).
+
+## Fix pass (post-/validate)
+
+`/validate`'s pre-flight `npm run format:check` failed on `tests/repository-transaction-safety.test.ts`
+(two long function signatures Prettier wraps that the file, hand-written during Build, didn't).
+Verified this was real drift, not the Windows/autocrlf false-positive CLAUDE.md warns about — diffed
+the committed blob against `prettier --config .prettierrc.json`'s own output directly, which showed
+the same two wrapping diffs independent of any checkout/line-ending state. Fixed with
+`npx prettier --config .prettierrc.json --write` on that one file; the diff is pure line-wrapping
+(a return-type annotation, one `if` condition) with no logic change. Re-ran `lint`, `typecheck`, and
+the full `vitest` suite (707/707) after — all still green. No CHANGELOG entry: this fix has no
+observable behaviour change.
+
+R7-R10 (the live staging checks) were reported at `/validate` as unverified, not failed — this
+branch is unpushed (5 commits ahead of `origin/staging`), so the staging URL doesn't run this fix
+yet, and local `.dev.vars` points at a third, separate dev-only Neon DB lacking the staging seed
+data (`demo-admin@example.com`, the "Kitchen Pack" bundle) the repro steps name. That's expected at
+this stage per `sdd-workflow.md`'s Validate section, not something to fix here — those four rows are
+Ship's live-check responsibility once the branch is pushed and staging has the fix deployed.
