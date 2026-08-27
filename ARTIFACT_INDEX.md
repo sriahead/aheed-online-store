@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-27T12:50:49.090Z` · commit `464b59d` · `109` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-27T15:35:33.990Z` · commit `f92b957` · `110` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -108,7 +108,8 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Auth HTTP-mode transaction crash fix (plan)](specs/2026-08-26-auth-http-transaction-fix/plan.md) | spec | 1.0.0 | 2026-08-26 | draft | internal | Fix Better Auth's Prisma adapter throwing "Transactions are not supported in HTTP mode" by hiding $transaction on the client it's handed, triggering the adapter's own existing non-transactional fallback. |
 | [updateMany/createMany + direct $transaction HTTP-mode crash fix (plan)](specs/2026-08-27-prisma-many-http-transaction-fix/plan.md) | spec | 1.0.0 | 2026-08-27 | draft | internal | Fix four live 500s caused by writes that need a transaction-capable Prisma client but were wired to getPrisma() (HTTP mode), and add a regression test so this class of bug can't reappear silently. |
 | [Repository client injection — slice 1 of 3 (plan)](specs/2026-08-27-repository-client-injection/plan.md) | spec | 1.0.0 | 2026-08-27 | draft | internal | Slice 1 of #409 — add the missing enforcement for CLAUDE.md's repository-client rule, reconcile the rule with the test that contradicted it, and convert the six self-resolving exports in customers, order-lookup-rate-limit, reports and discounts. |
-| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.21.0 | 2026-08-25 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
+| [Repository client injection — completion, slices 2+3 (plan)](specs/2026-08-27-repository-client-injection-completion/plan.md) | spec | 1.0.0 | 2026-08-27 | draft | internal | Completes #409 by converting the remaining 26 self-resolving exports in categories, loyalty, vendor and products, then deleting the enforcement check's file scoping so the rule holds repo-wide. Also raises the Worker cpu_ms ceiling (#415). |
+| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.21.1 | 2026-08-27 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
 | [ADR-003 — Object Storage Abstraction (S3-compatible)](specs/decisions/ADR-003-storage-abstraction.md) | adr | 1.2.0 | 2026-08-17 | approved | internal | Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time. |

@@ -4,6 +4,41 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Changed
+- **`#409`/`#411`/`#412` — repository client injection, slices 2+3, completing `#409`.** The
+  enforcement `#410` added could only cover four of the eight non-compliant files, so it shipped
+  scoped to a `FILES_IN_SCOPE` list. **That list is deleted**: `tests/repository-client-injection.test.ts`
+  now enumerates `lib/repositories/` from the filesystem and checks every file, so a newly added
+  repository module is covered the moment it exists. Slices 2 and 3 were merged into one because that
+  scoping window was slice 1's own declared weakness and two more loops would have kept it open.
+  - **Converted (26):** `categories.ts` (4), `loyalty.ts` (3), `vendor.ts` (5), `products.ts` (14).
+    All four now import `@/lib/db` with `import type` only. Resolution moved into the four existing
+    sibling services — **no new service files**.
+  - **Call sites keep the function names.** Each service imports the repository original under a
+    `…Repo` alias and re-exports a same-named wrapper, so 29 call sites changed only their import
+    path. `features/admin/storefront.ts` imported `updateVendorStorefrontConfig` under an alias, so
+    the sweep was by symbol, not by name — a name grep reported it as dead code.
+  - **Three dead Prisma clients removed.** `updateProductForVendor`, `setPrimaryProductImage` and
+    `quickUpdateInventory` each constructed an HTTP-adapter client and **never read it**. So no
+    `products.ts` export needs two clients — correcting "four of which need both clients", a figure
+    carried through `#409`'s plan and both issue bodies. ESLint enables no `no-unused-vars` rule of
+    any kind (verified empirically), which is why nothing caught it: filed as **`#416`**.
+  - **`updateVendorStorefrontConfig`'s `data: any`** replaced with a named
+    `VendorStorefrontConfigInput`, and its eight `brand*` writes iterated from a tuple instead of
+    sixteen hand-written identifiers — a typo in one had been enough to silently stop writing a colour.
+  - **Tests got simpler.** `tests/vendor-profile.test.ts` drops `vi.mock("@/lib/db")` and its dynamic
+    import for a stub client passed as an argument; the two email tests re-point their mock at
+    `@/lib/vendor-service`. Both email suites had been failing to load — 695 → 709 passing.
+  - `scripts/verify-repository-injection.ts` extended to 14 checks spanning reads and writes across
+    all four files, including the WebSocket `$transaction` path, with cleanup verified by re-count.
+    It now **refuses to run** against any host named in `secrets/staging.vars` or
+    `secrets/production.vars`, before constructing a client, with no override flag.
+- **`#415` — Worker `cpu_ms` raised 50 → 300.** Error 1102 ("Worker exceeded resource limits") kept
+  recurring on staging at 50, observed live at `2026-08-27T12:46:36Z` (Ray ID `a31b2e161d0a63c5`).
+  React SSR plus Prisma's WASM query-compiler instantiation on a cold isolate is genuinely CPU-bound;
+  Workers bills CPU actually used, not the ceiling, so the raise carries no cost on its own.
+  Confirmation on deployed staging is a Ship-stage check, not a pre-merge one.
+
 ### Documentation
 - **`/document` closeout for `#409`/`#410` (repository client injection, slice 1 of 3).** The
   `specs/roadmap.md` row this slice's own branch added is now updated with **PR #413**
