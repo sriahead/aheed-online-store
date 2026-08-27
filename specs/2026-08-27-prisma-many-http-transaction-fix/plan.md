@@ -100,7 +100,7 @@ instrumentation still live in `lib/auth.ts`, `lib/db.ts`, and `features/admin/bu
   grep-and-trace pass and the new test's scope.
 
 **Open items carried forward:**
-- The type-level (branded-client) fix noted above, as its own future proposal if the team wants
-  compiler-enforced rather than test-enforced protection.
+- The type-level (branded-client) fix noted above, filed as **#390** for its own future `/propose`
+  if the team wants compiler-enforced rather than test-enforced protection.
 - `updateVendorStorefrontConfig` takes `data: any` — a pre-existing type-safety gap, unrelated to
   this bug, not touched here.
