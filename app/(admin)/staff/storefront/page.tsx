@@ -1,5 +1,5 @@
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getVendorConfig, getVendorBranding } from "@/lib/repositories/vendor";
+import { getVendorConfig, getVendorBranding } from "@/lib/vendor-service";
 import { StorefrontConfigForm } from "@/components/staff/StorefrontConfigForm";
 import { getStorage } from "@/lib/storage";
 

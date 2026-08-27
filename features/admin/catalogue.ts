@@ -11,12 +11,9 @@ import {
   readForm,
   type CatalogueFormState,
 } from "@/lib/catalogue-form";
-import {
-  createProductForVendor,
-  updateProductForVendor,
-  type CatalogueWriteResult,
-} from "@/lib/repositories/products";
-import { createCategoryForVendor, updateCategoryForVendor } from "@/lib/repositories/categories";
+import { createProductForVendor, updateProductForVendor } from "@/lib/products-service";
+import type { CatalogueWriteResult } from "@/lib/repositories/products";
+import { createCategoryForVendor, updateCategoryForVendor } from "@/lib/categories-service";
 
 /**
  * Catalogue admin actions (P6b1, #159) — the write half of /staff/products and

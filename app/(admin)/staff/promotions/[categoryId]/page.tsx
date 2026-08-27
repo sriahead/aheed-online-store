@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getCategoryForAdmin } from "@/lib/repositories/categories";
+import { getCategoryForAdmin } from "@/lib/categories-service";
 import { getCampaignForVendorCategory } from "@/lib/campaigns-service";
 import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";

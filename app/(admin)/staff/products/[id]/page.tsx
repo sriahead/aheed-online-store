@@ -3,8 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
-import { getProductForAdmin } from "@/lib/repositories/products";
-import { listCategoriesForAdmin } from "@/lib/repositories/categories";
+import { getProductForAdmin } from "@/lib/products-service";
+import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { ProductForm } from "@/components/staff/ProductForm";
 

@@ -1,4 +1,4 @@
-import { getPrisma } from "@/lib/db";
+import type { getPrisma } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import type { CatalogueWriteResult } from "@/lib/repositories/products";
 
@@ -106,8 +106,10 @@ export interface CategoryWriteInput {
  * whole set anyway. If that ever stops being true it becomes the same keyset
  * problem the product list already solves.
  */
-export async function listCategoriesForAdmin(vendorId: string): Promise<AdminCategoryRow[]> {
-  const prisma = getPrisma();
+export async function listCategoriesForAdmin(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+): Promise<AdminCategoryRow[]> {
   const rows = await prisma.category.findMany({
     where: { vendorId },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -136,10 +138,10 @@ export async function listCategoriesForAdmin(vendorId: string): Promise<AdminCat
 }
 
 export async function getCategoryForAdmin(
+  prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
   id: string,
 ): Promise<AdminCategoryDetail | null> {
-  const prisma = getPrisma();
   return prisma.category.findFirst({
     where: { id, vendorId },
     select: { id: true, slug: true, name: true, parentId: true, sortOrder: true, isActive: true },
@@ -189,10 +191,10 @@ async function checkParent(
 }
 
 export async function createCategoryForVendor(
+  prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
   input: CategoryWriteInput,
 ): Promise<CatalogueWriteResult> {
-  const prisma = getPrisma();
   const parent = await checkParent(prisma, vendorId, input.parentId, null);
   if (!parent.ok) return parent;
 
@@ -216,12 +218,11 @@ export async function createCategoryForVendor(
 }
 
 export async function updateCategoryForVendor(
+  prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
   id: string,
   input: CategoryWriteInput,
 ): Promise<CatalogueWriteResult> {
-  const prisma = getPrisma();
-
   const existing = await prisma.category.findFirst({
     where: { id, vendorId },
     select: { isActive: true },

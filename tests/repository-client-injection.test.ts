@@ -38,6 +38,16 @@ import { describe, expect, it } from "vitest";
  * script by construction. This is the THIRD time this rule has named an
  * enforcement it did not have; CLAUDE.md records the first two.
  *
+ * SCOPE — WHOLE DIRECTORY, as of #411/#412 (2026-08-27)
+ *
+ * This test shipped in slice 1 (#410) scoped to an explicit list of four files,
+ * because the other four were still non-compliant and an unscoped check would
+ * have been red on merge. That list is GONE: every `.ts` file in
+ * `lib/repositories/` is now checked, discovered from the filesystem, so a newly
+ * added repository file is covered the moment it exists. Do not reintroduce a
+ * scoping list — it was a temporary measure with a tracked end date, and the
+ * window in which a new file could land unchecked was its one real weakness.
+ *
  * WHAT THIS CHECKS
  *
  * A CALL EXPRESSION to `getPrisma`/`getPrismaWs` anywhere in a repository file.
@@ -59,22 +69,6 @@ const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const REPOSITORIES_DIR = join(REPO_ROOT, "lib", "repositories");
 
 const CLIENT_RESOLVERS = new Set(["getPrisma", "getPrismaWs"]);
-
-/**
- * TEMPORARY — the files #409 slice 1 has actually cleared.
- *
- * 32 exports across 8 files resolved their own client when #409 was opened.
- * Slice 1 (#410) cleared these four; slice 2 (#411) takes categories.ts,
- * loyalty.ts and vendor.ts; slice 3 (#412) takes products.ts and then DELETES
- * this constant so the check applies to the whole directory.
- *
- * This is a list of FILES, not of functions or symbols. It scopes how much of
- * the directory is under the check yet — it cannot exempt an individual
- * function inside a file that is in scope, so it cannot be used to readmit the
- * defect in covered territory. Adding a new repository file leaves it unchecked
- * until #412 lands, which is the one real gap and is why #412 is not optional.
- */
-const FILES_IN_SCOPE = ["customers.ts", "discounts.ts", "order-lookup-rate-limit.ts", "reports.ts"];
 
 interface Violation {
   file: string;
@@ -114,16 +108,8 @@ describe("lib/repositories client injection (#409)", () => {
     expect(present.length).toBeGreaterThan(0);
   });
 
-  it("every file in scope still exists", () => {
-    // A renamed or deleted file would otherwise drop out of the check silently.
-    const missing = FILES_IN_SCOPE.filter((f) => !present.includes(f));
-    expect(missing, `scoped file(s) no longer in lib/repositories: ${missing.join(", ")}`).toEqual(
-      [],
-    );
-  });
-
-  it("no repository module in scope resolves its own Prisma client", () => {
-    const violations = FILES_IN_SCOPE.flatMap(findViolations);
+  it("no repository module resolves its own Prisma client", () => {
+    const violations = present.flatMap(findViolations);
 
     const detail = violations
       .map(

@@ -11,7 +11,7 @@ import {
 } from "@/lib/product-image";
 import { buildCampaignImageKey, isCampaignImageKey } from "@/lib/campaign-image";
 import { saveCampaignImageForVendor } from "@/lib/campaigns-service";
-import { getCategoryForAdmin } from "@/lib/repositories/categories";
+import { getCategoryForAdmin } from "@/lib/categories-service";
 
 /**
  * Campaign banner upload actions (P8.5e, #356) — the image half of

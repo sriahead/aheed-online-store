@@ -63,13 +63,19 @@ R11. These 14 exports in `lib/repositories/products.ts` each declare a Prisma cl
      `reorderProductImages`, `quickUpdateInventory`, `saveGeneratedProductImage`,
      `getProductsWithoutImages`, `approveProductImageRow`.
 
-R12. `updateProductForVendor`, `setPrimaryProductImage` and `quickUpdateInventory` — the three that
-     read through an HTTP client and then open a WebSocket transaction — each declare **two** Prisma
-     client parameters, matching the shape `lib/repositories/roles.ts`'s `applyVendorRole` uses.
+R12. **No export in `products.ts` declares two Prisma client parameters.** Each of the 14 declares
+     exactly one. (Corrected during Build; the spec originally required two for
+     `updateProductForVendor`, `setPrimaryProductImage` and `quickUpdateInventory`. Measured against
+     the file, all three constructed an HTTP client with `const prisma = getPrisma();` and then
+     **never read it** — every statement in each body runs on the transaction client. There was no
+     dual-client function to preserve. See `build-notes.md`.)
 
-R13. `addProductImage`, `promoteProductImage`, `removeProductImage` and `reorderProductImages` each
-     declare exactly one Prisma client parameter, and their callers pass a client obtained from
-     `getPrismaWs`.
+R13. These seven take a client obtained from `getPrismaWs`, because each opens an interactive
+     transaction (#382): `updateProductForVendor`, `setPrimaryProductImage`, `addProductImage`,
+     `promoteProductImage`, `removeProductImage`, `reorderProductImages`, `quickUpdateInventory`.
+     The other seven take a client obtained from `getPrisma`: `listInventoryForStaff`,
+     `listProductsForAdmin`, `getProductForAdmin`, `createProductForVendor`,
+     `saveGeneratedProductImage`, `getProductsWithoutImages`, `approveProductImageRow`.
 
 ## Services and call sites
 

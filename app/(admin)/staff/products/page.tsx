@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Package, Plus, Search } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { listProductsForAdmin } from "@/lib/repositories/products";
+import { listProductsForAdmin } from "@/lib/products-service";
 import {
   PRODUCT_STATUS_ALL,
   parseStaffProductsQuery,

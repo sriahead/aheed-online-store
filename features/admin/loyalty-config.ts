@@ -2,12 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import {
-  createLoyaltyTier,
-  deleteLoyaltyTier,
-  saveLoyaltySettings,
-  type LoyaltySettingsInput,
-} from "@/lib/repositories/loyalty";
+import { createLoyaltyTier, deleteLoyaltyTier, saveLoyaltySettings } from "@/lib/loyalty-service";
+import type { LoyaltySettingsInput } from "@/lib/repositories/loyalty";
 
 /**
  * Loyalty configuration action (P5a, #135) — the write half of `/staff/loyalty`.

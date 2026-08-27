@@ -1,16 +1,21 @@
-import { getPrisma, getPrismaWs } from "@/lib/db";
+import type { getPrisma, getPrismaWs } from "@/lib/db";
 
 /**
  * Per-vendor branding/config/delivery read path (ADR-004 slice 4). The ONLY
  * DB-access path for vendor branding — layouts/components/pages reach it through
- * `lib/vendor-service.ts` (slice-2 no-direct-Prisma guard). Prisma is
- * constructed fresh per call (Workers rule).
+ * `lib/vendor-service.ts` (slice-2 no-direct-Prisma guard).
  *
- * Every export here takes `vendorId` explicitly and reads no request context;
- * the RSC-facing `getCurrentVendorProfile`, which resolves the vendor from the
- * request host and memoizes it per request with React `cache()`, lives in
- * `lib/vendor-service.ts` (#252). `tests/repository-purity.test.ts` enforces
- * that split.
+ * Every export here takes its Prisma client AND `vendorId` explicitly and reads
+ * no request context; the RSC-facing `getCurrentVendorProfile`, which resolves
+ * the vendor from the request host and memoizes it per request with React
+ * `cache()`, lives in `lib/vendor-service.ts` (#252). That service is also what
+ * constructs the client, fresh per call (Workers rule).
+ *
+ * Two tests enforce the two halves: `tests/repository-purity.test.ts` for the
+ * request-context split, `tests/repository-client-injection.test.ts` for the
+ * client parameter. **Until #411 this file resolved its own client in all five
+ * exports**, while the paragraph above already claimed the property — one of
+ * several docstrings that asserted it without it being true or checked.
  */
 
 /** The eight `--color-brand-*` primitives, keyed by the token suffix. */
@@ -63,8 +68,10 @@ export const DEFAULT_SENDER_NAME = "Aheed Food Centre";
 export const DEFAULT_SEARCH_PLACEHOLDER = "Search products…";
 
 /** Core fetch (not memoized) — safe to call outside a React render, and unit-testable. */
-export async function fetchVendorProfile(vendorId: string): Promise<VendorProfile> {
-  const prisma = getPrisma();
+export async function fetchVendorProfile(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+): Promise<VendorProfile> {
   const vendor = await prisma.vendor.findUnique({
     where: { id: vendorId },
     select: {
@@ -142,26 +149,74 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
  * They resolved the vendor from the request host, which is the one thing this
  * module must not do if a plain `tsx` script is to be able to import it. */
 
-export async function getVendorConfig(vendorId: string) {
-  return getPrisma().vendorConfig.findUnique({ where: { vendorId } });
+export async function getVendorConfig(prisma: ReturnType<typeof getPrisma>, vendorId: string) {
+  return prisma.vendorConfig.findUnique({ where: { vendorId } });
 }
 
-export async function getVendorBranding(vendorId: string) {
-  return getPrisma().vendorBranding.findUnique({ where: { vendorId } });
+export async function getVendorBranding(prisma: ReturnType<typeof getPrisma>, vendorId: string) {
+  return prisma.vendorBranding.findUnique({ where: { vendorId } });
 }
 
-export async function updateVendorLogoKey(vendorId: string, logoStorageKey: string) {
-  return getPrisma().vendorBranding.update({
+export async function updateVendorLogoKey(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  logoStorageKey: string,
+) {
+  return prisma.vendorBranding.update({
     where: { vendorId },
     data: { logoStorageKey },
   });
 }
 
-export async function updateVendorStorefrontConfig(vendorId: string, data: any) {
-  // getPrismaWs(), not getPrisma(): $transaction throws unconditionally on the
-  // HTTP-mode client — PrismaNeonHttp cannot execute interactive transactions
-  // at all, regardless of what runs inside them (#382).
-  return getPrismaWs().$transaction(async (tx) => {
+/**
+ * The staff storefront form's payload (#411).
+ *
+ * The two config fields are `string | null` because `null` is meaningful here —
+ * it HIDES the element rather than falling back to filler (see `VendorProfile`
+ * above). The eight brand primitives are optional because the form submits only
+ * what changed; an absent key must leave the stored colour alone, which is why
+ * the writes below test presence rather than spreading the object.
+ *
+ * Replaced a `data: any` (#411). That `any` meant the caller's shape and this
+ * function's reads could drift apart with nothing to catch it — the eight
+ * `brand*` names are matched by hand below and a typo would simply have stopped
+ * writing that colour, silently.
+ */
+export interface VendorStorefrontConfigInput {
+  bannerNote: string | null;
+  heroSubtitle: string | null;
+  brandGreenDark?: string;
+  brandGreen?: string;
+  brandOrange?: string;
+  brandRed?: string;
+  brandCream?: string;
+  brandGreenTint?: string;
+  brandOrangeTint?: string;
+  brandRedTint?: string;
+}
+
+/** The eight optional brand primitives, in the order the form presents them. */
+const BRAND_FIELDS = [
+  "brandGreenDark",
+  "brandGreen",
+  "brandOrange",
+  "brandRed",
+  "brandCream",
+  "brandGreenTint",
+  "brandOrangeTint",
+  "brandRedTint",
+] as const satisfies readonly (keyof VendorStorefrontConfigInput)[];
+
+export async function updateVendorStorefrontConfig(
+  prismaWs: ReturnType<typeof getPrismaWs>,
+  vendorId: string,
+  data: VendorStorefrontConfigInput,
+) {
+  // A WebSocket client, not an HTTP one: $transaction throws unconditionally on
+  // the HTTP-mode client — PrismaNeonHttp cannot execute interactive
+  // transactions at all, regardless of what runs inside them (#382). The caller
+  // in lib/vendor-service.ts is what passes getPrismaWs().
+  return prismaWs.$transaction(async (tx) => {
     await tx.vendorConfig.update({
       where: { vendorId },
       data: {
@@ -170,15 +225,11 @@ export async function updateVendorStorefrontConfig(vendorId: string, data: any) 
       },
     });
 
-    const brandingUpdates: any = {};
-    if (data.brandGreenDark) brandingUpdates.brandGreenDark = data.brandGreenDark;
-    if (data.brandGreen) brandingUpdates.brandGreen = data.brandGreen;
-    if (data.brandOrange) brandingUpdates.brandOrange = data.brandOrange;
-    if (data.brandRed) brandingUpdates.brandRed = data.brandRed;
-    if (data.brandCream) brandingUpdates.brandCream = data.brandCream;
-    if (data.brandGreenTint) brandingUpdates.brandGreenTint = data.brandGreenTint;
-    if (data.brandOrangeTint) brandingUpdates.brandOrangeTint = data.brandOrangeTint;
-    if (data.brandRedTint) brandingUpdates.brandRedTint = data.brandRedTint;
+    const brandingUpdates: Partial<Record<(typeof BRAND_FIELDS)[number], string>> = {};
+    for (const field of BRAND_FIELDS) {
+      const value = data[field];
+      if (value) brandingUpdates[field] = value;
+    }
 
     if (Object.keys(brandingUpdates).length > 0) {
       await tx.vendorBranding.update({

@@ -1,4 +1,4 @@
-import { getPrisma, getPrismaWs } from "@/lib/db";
+import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import {
   DEFAULT_MULTIPLIER_BPS,
@@ -28,6 +28,14 @@ import {
 type Db = ReturnType<typeof getPrisma>;
 type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
 type AnyDb = Db | Tx;
+
+/**
+ * The WebSocket-adapter client, for the one export here that opens an
+ * interactive transaction. `PrismaNeonHttp` cannot execute one at all (#382), so
+ * this is a distinct type from `Db` by intent, not by accident — #390 tracks
+ * making the two nominally incompatible so the compiler enforces it.
+ */
+type DbWs = ReturnType<typeof getPrismaWs>;
 
 /** The vendor's loyalty settings, as the pure rules need them. */
 export interface LoyaltyConfig {
@@ -437,12 +445,13 @@ export interface LoyaltySettingsInput {
  * no-op rather than an accidental insert.
  */
 export async function saveLoyaltySettings(
+  prismaWs: DbWs,
   vendorId: string,
   settings: LoyaltySettingsInput,
 ): Promise<void> {
   const { tiers, ...config } = settings;
 
-  await getPrismaWs().$transaction(async (tx) => {
+  await prismaWs.$transaction(async (tx) => {
     await tx.vendorConfig.update({ where: { vendorId }, data: config });
     for (const tier of tiers) {
       await tx.vendorLoyaltyTier.updateMany({
@@ -476,10 +485,10 @@ export type CreateTierResult = { ok: true } | { ok: false; reason: "DUPLICATE_KE
  * SAME key remains creatable for a different vendor.
  */
 export async function createLoyaltyTier(
+  prisma: Db,
   vendorId: string,
   input: CreateTierInput,
 ): Promise<CreateTierResult> {
-  const prisma = getPrisma();
   try {
     await prisma.vendorLoyaltyTier.create({
       data: {
@@ -517,8 +526,11 @@ export async function createLoyaltyTier(
  * Returns how many rows went, so the caller can tell "deleted" from "no such
  * tier" without a second read.
  */
-export async function deleteLoyaltyTier(vendorId: string, key: string): Promise<{ count: number }> {
-  const prisma = getPrisma();
+export async function deleteLoyaltyTier(
+  prisma: Db,
+  vendorId: string,
+  key: string,
+): Promise<{ count: number }> {
   return prisma.vendorLoyaltyTier.deleteMany({ where: { vendorId, key } });
 }
 

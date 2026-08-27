@@ -4,9 +4,19 @@ main = ".open-next/worker.js"
 compatibility_date = "2025-03-25"
 compatibility_flags = ["nodejs_compat"]
 
-# Worker CPU execution limits (raise from default 10ms to prevent Error 1102 on SSR cold starts)
+# Worker CPU execution limits (raise from default 10ms to prevent Error 1102 on SSR cold starts).
+#
+# 2026-08-13 (`7ad9f6c`): 10 -> 50, for exactly that reason.
+# 2026-08-27 (#415): 50 -> 300. It still recurred at 50 — observed live on staging
+# at 12:46:36Z (Ray ID a31b2e161d0a63c5). This is a CPU-time trip, not an
+# application exception: DB latency does not count against it, but React SSR plus
+# Prisma's WASM query-compiler instantiation on a COLD isolate genuinely does, and
+# 50ms is not a reliable ceiling for that. The 50 having taken effect at all is
+# what proves this account is not on the free plan's hard 10ms cap; paid Workers
+# allow up to 30000ms, so 300 is still conservative. Raising the ceiling does not
+# raise the bill on its own — Workers bills CPU actually used, not the limit.
 [limits]
-cpu_ms = 50
+cpu_ms = 300
 
 # P7d (#218) — Workers Logs. Until this block existed there was no way to take a
 # server-side latency measurement at all, while specs/mission.md sets API p95 < 400ms as a
