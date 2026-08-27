@@ -382,14 +382,44 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   it. Fixed at `/fix` by moving it to `lib/data-rights-service.ts`; the facade also became a plain
   sync factory once it no longer needed a dynamic `import()` to stay loadable by the same file a
   `tsx` script has to import.
-- **#252 is CLOSED (P8.1b) and the rule is now machine-enforced — `tests/repository-purity.test.ts`
-  fails if any file in `lib/repositories/*.ts` contains a *value* import of `next/headers`,
-  `@/lib/tenant`, `@/lib/auth` or `@/lib/auth-rbac`.** Type-only imports stay legal and are the
-  documented pattern (`import type { getPrisma } from "@/lib/db"`). The check is whole-file and
-  import-level, with **no allowlist**, so it cannot be satisfied by argument — put the facade in
-  `lib/<name>-service.ts` and it passes. Every repository module now has a sibling service where one
-  is needed: `cart`, `categories`, `discounts`, `loyalty`, `orders`, `products`, `reviews`, `roles`,
-  `vendor`, `data-rights`, `promotions`.
+- **The rule has TWO halves, and they are enforced by two different tests. Both must pass.**
+  - **Request context** — `tests/repository-purity.test.ts` (#252, CLOSED at P8.1b) fails if any file
+    in `lib/repositories/*.ts` contains a *value* import of `next/headers`, `@/lib/tenant`,
+    `@/lib/auth` or `@/lib/auth-rbac`. Type-only imports stay legal and are the documented pattern
+    (`import type { getPrisma } from "@/lib/db"`). Whole-file, import-level, **no allowlist** — put
+    the facade in `lib/<name>-service.ts` and it passes.
+  - **Client injection** — `tests/repository-client-injection.test.ts` (#409) fails on a
+    `getPrisma()`/`getPrismaWs()` **call expression** inside a repository file. AST-based, not a
+    grep, because these files legitimately name both functions in prose and in
+    `ReturnType<typeof getPrisma>` type positions.
+  Every repository module has a sibling service where one is needed: `cart`, `categories`,
+  `customers`, `discounts`, `loyalty`, `order-lookup-rate-limit`, `orders`, `products`, `reports`,
+  `reviews`, `roles`, `vendor`, `data-rights`, `promotions`.
+- **A repository export that resolves its own Prisma client cannot be run from a plain `tsx` script
+  AT ALL — this is structural, not a matter of inconvenience, and it is why the client must be a
+  parameter.** `lib/db.ts` imports `PrismaClient` from `@prisma/client/wasm`, which is mandatory on
+  Workers (see the Database section). **Node cannot load that build's WASM query compiler**, so any
+  call routed through `lib/db` dies with `PrismaClientKnownRequestError (ERR_UNKNOWN_FILE_EXTENSION):
+  Unknown file extension ".wasm" for node_modules/.prisma/client/query_compiler_bg.wasm`. Measured
+  2026-08-27 against the dev Neon branch: `getAvailableSpecialities(prisma, vendorId)` **passed** with
+  a client the script built from the bare `@prisma/client` specifier (as `prisma/seed.ts` does);
+  `getVendorConfig(vendorId)`, which resolved its own, **failed**; the identical query through the
+  script's own client **passed**. Same query, same database — the only variable was where the client
+  came from. `scripts/verify-repository-injection.ts` is the committed harness that demonstrates this.
+- **This rule has now claimed a false enforcement THREE times, and the third is the most instructive.**
+  The first two pointed at `tests/repository-vendor-scoping.test.ts` (a test about *scoping*, not
+  *location*). The third was subtler: `tests/repository-purity.test.ts` genuinely enforces what it
+  claims — but its docstring also asserted that "several **compliant** repository functions call
+  `getPrisma()` internally while still taking `vendorId` explicitly," which quietly blessed the other
+  half of the rule as optional. **32 of 109 exports across 8 files** had done exactly that, including
+  every catalogue write, every product-image mutation, loyalty tier CRUD, discount create/deactivate,
+  and the guest order-lookup **rate limiter** — a security control that could not be exercised outside
+  a live request. Three separate repository docstrings (`customers.ts`, `reports.ts`, and
+  `discounts-service.ts`'s "every export there takes `prisma`") asserted the property while the file
+  violated it. **The transferable lesson beyond the earlier two: a test that correctly enforces its
+  own invariant can still launder a second, unenforced invariant if its comments opine on one.**
+  Scope a test's prose to what it checks; if it must mention a neighbouring rule, name the test that
+  enforces that one, or say plainly that nothing does.
 - **The reason it took three attempts is worth more than the fix.** This rule twice claimed an
   enforcement that did not exist: it said `tests/repository-vendor-scoping.test.ts` "allowlists all
   nine by name … so the list cannot quietly grow." Both halves were false. That test asks whether an

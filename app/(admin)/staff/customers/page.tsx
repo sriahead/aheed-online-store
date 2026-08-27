@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Users, UserX } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { listCustomersForAdmin } from "@/lib/repositories/customers";
+import { listCustomersForVendor } from "@/lib/customers-service";
 import { formatPrice } from "@/components/product/format-price";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 
@@ -48,7 +48,7 @@ export default async function StaffCustomersPage({
     items,
     page: currentPage,
     hasMore,
-  } = await listCustomersForAdmin(auth.vendorId, {
+  } = await listCustomersForVendor(auth.vendorId, {
     take: PAGE_SIZE,
     page: Number.isNaN(requestedPage) ? 0 : requestedPage,
   });

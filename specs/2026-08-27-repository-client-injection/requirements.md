@@ -31,9 +31,12 @@ R6. `checkOrderLookupRateLimit` in `lib/repositories/order-lookup-rate-limit.ts`
 R7. `getCatalogueHealth` and `getLoyaltyLiability` in `lib/repositories/reports.ts` each declare a
     Prisma client as a parameter and neither body contains a call to `getPrisma`/`getPrismaWs`.
 
-R8. `createCodeForVendor` and `deactivateCodeForVendor` in `lib/repositories/discounts.ts` each
-    declare a Prisma client as a parameter and neither body contains a call to
-    `getPrisma`/`getPrismaWs`.
+R8. `lib/repositories/discounts.ts` contains no call to `getPrisma`/`getPrismaWs`. Its
+    `createCodeForVendor` and `deactivateCodeForVendor` wrappers are **relocated** to
+    `lib/discounts-service.ts` rather than given a client parameter — they are pure facades over
+    `createCode`/`deactivateCode`, which already take a client, so parameterising them in place would
+    leave two identical entry points. (Corrected during Build: the spec first required a parameter
+    here; see `build-notes.md`.)
 
 R9. `lib/customers-service.ts`, `lib/reports-service.ts` and `lib/order-lookup-rate-limit-service.ts`
     exist, each resolving a Prisma client per call and taking `vendorId` as a parameter.
@@ -52,8 +55,11 @@ R13. All six call sites compile and resolve against the new signatures:
      `app/(storefront)/orders/lookup/page.tsx`, `app/(storefront)/orders/lookup/export/route.ts`,
      `features/orders/guest-data-rights.ts`, `features/admin/discount-codes.ts`.
 
-R14. No file under `app/`, `features/` or `components/` gains a value import of `@/lib/db`.
-     `app/api/health/route.ts`'s existing import is the only one permitted to remain.
+R14. No file under `app/`, `features/` or `components/` gains an import of `@/lib/db`.
+     `app/api/health/route.ts`'s existing import is the only one permitted to remain. (ADR-004 slice
+     2's `no-restricted-imports` rule in `eslint.config.mjs` already enforces this, which is why the
+     new resolution must live in `lib/<name>-service.ts` — a caller in those layers physically
+     cannot hand a client in.)
 
 R15. `scripts/verify-repository-injection.ts` exists, and when run with `npx tsx` against a database
      it exercises at least one converted repository export using a Prisma client the script itself
