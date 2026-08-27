@@ -4,6 +4,16 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Documentation
+- **`/document` closeout for `#409`/`#410` (repository client injection, slice 1 of 3).** The
+  `specs/roadmap.md` row this slice's own branch added is now updated with **PR #413**
+  (merge `464b59d`) — unknown at Build/Ship time. Records that `gates` was green on the PR,
+  `deploy-staging`/`deploy-docs-internal` both completed, and Project #2's **#410** moved to
+  **In Review** (stays open; only closes on promotion to `main`). No reconciliation was needed
+  against `/validate`'s findings — nothing surfaced there beyond what `build-notes.md` already
+  recorded. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt (109 artifacts); `npm run sdd:audit` and
+  `npm run kms:validate` both confirmed clean after the edit.
+
 ### Changed
 - **`#409`/`#410` — repository client injection, slice 1 of 3.** `CLAUDE.md` requires every
   `lib/repositories/*` export to take its Prisma client as an explicit parameter, so a plain `tsx`
