@@ -1,4 +1,4 @@
-import { getPrisma } from "@/lib/db";
+import type { getPrisma } from "@/lib/db";
 import { pointsToPence, visibleBalance } from "@/lib/loyalty";
 
 /**
@@ -13,9 +13,15 @@ import { pointsToPence, visibleBalance } from "@/lib/loyalty";
  * What IS here describes configuration and catalogue state, both of which are
  * real today regardless of whether any money has moved.
  *
- * As with lib/repositories/customers.ts, `vendorId` is an explicit parameter and
- * nothing reads request context, so a plain `tsx` script can exercise these
- * directly — and no tenth non-compliant facade (#252) is added.
+ * As with lib/repositories/customers.ts, both `prisma` and `vendorId` are
+ * explicit parameters and nothing reads request context, so a plain `tsx` script
+ * can exercise these directly. `lib/reports-service.ts` is the request-scoped
+ * entry point.
+ *
+ * Until #409 this docstring made that claim while both exports called
+ * `getPrisma()` themselves, which made it false: a `lib/db` client is built from
+ * `@prisma/client/wasm`, whose query compiler Node cannot load, so neither could
+ * run in a script. The type-only import above is what keeps the claim true.
  */
 
 export interface CatalogueHealth {
@@ -40,9 +46,10 @@ export interface CatalogueHealth {
  * is out of stock, not "also low" — so the two figures sum to something
  * meaningful rather than double-counting the worst rows.
  */
-export async function getCatalogueHealth(vendorId: string): Promise<CatalogueHealth> {
-  const prisma = getPrisma();
-
+export async function getCatalogueHealth(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+): Promise<CatalogueHealth> {
   const [totalProducts, activeProducts, inventory] = await Promise.all([
     prisma.product.count({ where: { vendorId } }),
     prisma.product.count({ where: { vendorId, isActive: true } }),
@@ -92,9 +99,10 @@ export interface LoyaltyLiability {
  * summed in memory rather than by the database; the rows are two small columns
  * per account for one vendor, and correctness is worth more than that here.
  */
-export async function getLoyaltyLiability(vendorId: string): Promise<LoyaltyLiability> {
-  const prisma = getPrisma();
-
+export async function getLoyaltyLiability(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+): Promise<LoyaltyLiability> {
   const [accounts, config] = await Promise.all([
     prisma.loyaltyAccount.findMany({
       where: { vendorId },

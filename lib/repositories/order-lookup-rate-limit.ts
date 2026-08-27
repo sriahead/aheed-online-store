@@ -1,4 +1,4 @@
-import { getPrisma } from "@/lib/db";
+import type { getPrisma } from "@/lib/db";
 
 const WINDOW_MS = 60_000;
 const MAX_ATTEMPTS = 5;
@@ -25,12 +25,19 @@ async function hashIp(ip: string): Promise<string> {
  * a lookup throttle (worst case, one caller gets one extra try in a window) —
  * a $transaction on getPrismaWs() for every single public lookup would be
  * disproportionate to what is actually being protected.
+ *
+ * `prisma` is an explicit parameter (#409) so this throttle can be exercised
+ * against a real database from a plain `tsx` script. It is a security control,
+ * and while it resolved its own client it could not be tested outside a live
+ * Workers request at all — `lib/db`'s client is built from `@prisma/client/wasm`,
+ * whose query compiler Node cannot load. `lib/order-lookup-rate-limit-service.ts`
+ * is the request-scoped entry point.
  */
 export async function checkOrderLookupRateLimit(
+  prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
   ip: string,
 ): Promise<{ allowed: boolean }> {
-  const prisma = getPrisma();
   const ipHash = await hashIp(ip);
   const since = new Date(Date.now() - WINDOW_MS);
 

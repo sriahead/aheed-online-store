@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
 import { getDiscountRepository } from "@/lib/discounts-service";
-import { getCatalogueHealth, getLoyaltyLiability } from "@/lib/repositories/reports";
+import { getCatalogueHealthForVendor, getLoyaltyLiabilityForVendor } from "@/lib/reports-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { TrendingUp, ShoppingBag, Banknote, Package, Sparkles, TicketPercent } from "lucide-react";
 
@@ -30,8 +30,8 @@ export default async function ReportsPage() {
   const [{ totalRevenuePence, totalOrders }, catalogue, loyalty, discountCodes] = await Promise.all(
     [
       getOrderRepository().getFinancialsForStaff(),
-      getCatalogueHealth(auth.vendorId),
-      getLoyaltyLiability(auth.vendorId),
+      getCatalogueHealthForVendor(auth.vendorId),
+      getLoyaltyLiabilityForVendor(auth.vendorId),
       getDiscountRepository().list(),
     ],
   );

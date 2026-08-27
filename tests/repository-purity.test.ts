@@ -64,10 +64,20 @@ const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const REPOSITORIES_DIR = join(REPO_ROOT, "lib", "repositories");
 
 /**
- * Modules that can only answer from a live Workers request. `@/lib/db` is
- * deliberately NOT here: resolving a client is not reading request context, and
- * several compliant repository functions call `getPrisma()` internally while
- * still taking `vendorId` explicitly.
+ * Modules that can only answer from a live Workers request. `@/lib/db` is not
+ * here because this test covers the REQUEST-CONTEXT half of the rule only —
+ * resolving a client is not reading request context, so it is a different
+ * question, checked by a different test.
+ *
+ * The client half is `tests/repository-client-injection.test.ts` (#409), which
+ * fails on a `getPrisma()`/`getPrismaWs()` CALL inside a repository file. That
+ * test exists because this comment used to end "…and several compliant
+ * repository functions call `getPrisma()` internally while still taking
+ * `vendorId` explicitly." That was wrong: 32 exports did so, and none of them
+ * were compliant. A self-resolving export cannot be run from a plain `tsx`
+ * script at all — `lib/db.ts` builds its client from `@prisma/client/wasm`,
+ * whose query compiler Node cannot load — which is precisely the capability the
+ * rule exists to preserve. Measured, not argued; see #409.
  */
 const REQUEST_CONTEXT_MODULES = ["next/headers", "@/lib/tenant", "@/lib/auth", "@/lib/auth-rbac"];
 

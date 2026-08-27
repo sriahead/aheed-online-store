@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { getCurrentVendorId } from "@/lib/tenant";
 import { getGuestDataRightsService } from "@/lib/data-rights-service";
-import { checkOrderLookupRateLimit } from "@/lib/repositories/order-lookup-rate-limit";
+import { checkOrderLookupRateLimitForVendor } from "@/lib/order-lookup-rate-limit-service";
 
 // Reads the caller's order and their IP for throttling — must run per request.
 export const dynamic = "force-dynamic";
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
   }
 
   const vendorId = await getCurrentVendorId();
-  const { allowed } = await checkOrderLookupRateLimit(vendorId, await resolveClientIp());
+  const { allowed } = await checkOrderLookupRateLimitForVendor(vendorId, await resolveClientIp());
   if (!allowed) {
     return NextResponse.json(
       { error: "Too many attempts. Please wait a minute and try again." },

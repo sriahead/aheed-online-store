@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { getCurrentVendorId } from "@/lib/tenant";
 import { getGuestOrderLookupService } from "@/lib/orders-service";
 import type { GuestLookupOrder } from "@/lib/repositories/orders";
-import { checkOrderLookupRateLimit } from "@/lib/repositories/order-lookup-rate-limit";
+import { checkOrderLookupRateLimitForVendor } from "@/lib/order-lookup-rate-limit-service";
 import { formatPrice } from "@/components/product/format-price";
 import { GuestEraseForm } from "@/components/orders/GuestEraseForm";
 import { Package, Truck, CheckCircle2, Search, MapPin, AlertCircle, Download } from "lucide-react";
@@ -45,7 +45,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
   if (orderNumber.trim()) {
     const vendorId = await getCurrentVendorId();
 
-    const { allowed } = await checkOrderLookupRateLimit(vendorId, await resolveClientIp());
+    const { allowed } = await checkOrderLookupRateLimitForVendor(vendorId, await resolveClientIp());
     if (!allowed) {
       rateLimited = true;
     } else if (!email.trim()) {

@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getCurrentVendorId } from "@/lib/tenant";
 import { getGuestDataRightsService } from "@/lib/data-rights-service";
-import { checkOrderLookupRateLimit } from "@/lib/repositories/order-lookup-rate-limit";
+import { checkOrderLookupRateLimitForVendor } from "@/lib/order-lookup-rate-limit-service";
 import {
   guestErasureSummary,
   parseGuestErasure,
@@ -57,7 +57,7 @@ export async function eraseGuestOrder(
   // "no such order" quickly enough is an oracle for guessing order/email pairs,
   // which is the same exposure the lookup's own limiter exists to close — so it
   // shares that limiter and its budget rather than getting one of its own.
-  const { allowed } = await checkOrderLookupRateLimit(vendorId, await resolveClientIp());
+  const { allowed } = await checkOrderLookupRateLimitForVendor(vendorId, await resolveClientIp());
   if (!allowed) {
     return {
       error: "Too many attempts. Please wait a minute and try again.",

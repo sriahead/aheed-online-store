@@ -4,7 +4,45 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Changed
+- **`#409`/`#410` — repository client injection, slice 1 of 3.** `CLAUDE.md` requires every
+  `lib/repositories/*` export to take its Prisma client as an explicit parameter, so a plain `tsx`
+  script can exercise it against a real database. **32 of 109 exports across 8 files did not**, and
+  nothing checked it: `tests/repository-purity.test.ts` covers only the request-context half of the
+  rule, and its docstring actively declared internal `getPrisma()` calls "compliant". They are not —
+  `lib/db.ts` builds its client from `@prisma/client/wasm` (mandatory on Workers), whose query
+  compiler **Node cannot load**, so a self-resolving export cannot run in a script at all. Measured
+  against the dev Neon branch, not argued: an injected-client call passed, the self-resolving
+  equivalent failed with `ERR_UNKNOWN_FILE_EXTENSION`, and the same query through the script's own
+  client passed.
+  - **New:** `tests/repository-client-injection.test.ts` — AST call-expression check (not a grep:
+    these files legitimately name `getPrisma()` in prose and in `ReturnType<typeof getPrisma>` type
+    positions). No function-level allowlist; temporarily scoped by a **file** list that #412 deletes.
+    Proven to fire by reintroducing the defect and watching it fail.
+  - **Converted (6):** `listCustomersForAdmin`, `checkOrderLookupRateLimit`, `getCatalogueHealth`,
+    `getLoyaltyLiability` now take `prisma` explicitly; `createCodeForVendor`/`deactivateCodeForVendor`
+    **relocated** to `lib/discounts-service.ts` rather than parameterised — they are pure facades over
+    functions that already take a client, so a parameter would have left two identical entry points.
+  - **New services:** `lib/customers-service.ts`, `lib/reports-service.ts`,
+    `lib/order-lookup-rate-limit-service.ts`. Resolution has to live in `lib/` because ADR-004 slice
+    2's `no-restricted-imports` rule forbids `@/lib/db` in `app/`/`features/`/`components/` — a caller
+    there physically cannot hand a client in.
+  - **New:** `scripts/verify-repository-injection.ts`, proving all five converted paths run against a
+    real database with a Node-native client. The **guest order-lookup rate limiter** — a security
+    control that could not be exercised outside a live request — now demonstrably refuses past its
+    5-per-minute threshold.
+  - Which client each path uses is unchanged; `deactivateCodeForVendor` still resolves `getPrismaWs()`
+    for its `updateMany` (#382), and `tests/repository-transaction-safety.test.ts` is untouched.
+  - Slices 2 (**#411** — `categories`, `loyalty`, `vendor`) and 3 (**#412** — `products.ts`, then
+    delete the file scoping) remain open. The rule is not fully enforced until #412 lands.
+
 ### Documentation
+- **Roadmap row for the `#382` production promotion (PR #393)** — carry-forward from the previous
+  slice, the one gap `npm run sdd:audit` reported at this Orient.
+- **`CLAUDE.md`'s repository-layer section rewritten** to state the rule once, name **both** enforcing
+  tests, and record the `@prisma/client/wasm` finding. Adds the third instance of this rule claiming a
+  false enforcement — and its distinct lesson: *a test that correctly enforces its own invariant can
+  still launder a second, unenforced invariant if its comments opine on one.*
 - **Roadmap change-log rows for P8.5d, the P8.5c+P8.5d production promotion, and the full `#382`
   saga** (`specs/roadmap.md`) — the three gaps `npm run sdd:audit` reported at this pass:
   `specs/2026-08-25-p8.5d-multi-buy-tier-pricing/` (PR #380, staging), the PR #381 promotion
