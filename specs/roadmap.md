@@ -4,10 +4,10 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.52.0"
+version: "1.54.0"
 updated: 2026-08-28
 visibility: internal
-summary: Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures.
+summary: Master backlog and phase sequencing (M0, P0-P10, including the inserted P2.5 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is now a historical record; launch work lives in P9 and post-launch work in P10.
 tags: [roadmap, phases, backlog]
 ---
 
@@ -22,6 +22,17 @@ prove the infrastructure end-to-end with a walking skeleton, *then* build featur
 > review, or blocked right now. Phases, scope and acceptance criteria live here and in
 > `specs/<slice>/`; if something belongs in a doc, it does not go in the Project.
 > Provisioned by `scripts/provision-project.sh` (idempotent).
+>
+> **Milestone titles are zero-padded; phase names in prose are not.** GitHub sorts milestones as
+> text, so `P10` sorted between `P1` and `P2` and the list was unreadable. Since 2026-08-28 (#426)
+> every milestone title carries a two-digit phase — `P00 — Foundation & scaffolding` through
+> `P09.4 — Launch certification`, then `P10 — Post-launch improvements` — and they now sort in
+> delivery order. **The canonical phase name everywhere else stays the short form**: this roadmap,
+> the specs, `CHANGELOG.md`, ADRs, spec directory names and front-matter `id` values all say `P8`,
+> `P8.5`, `P9.1`. That mismatch is deliberate and was chosen over rewriting roughly 2,900 phase
+> tokens, 47 spec directory names and 52 front-matter ids — a rename on that scale edits shipped
+> history and breaks every path citation for a cosmetic gain. So: **`P09.1` in a milestone title and
+> `P9.1` in prose are the same phase.** Do not "fix" either to match the other.
 
 ## Milestone 0 — Walking Skeleton (infrastructure proof) 🩻
 The smallest app that exercises `browser → Worker → Prisma → Neon` on real infra, plus the full
@@ -84,9 +95,19 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
   (#174) and the theme catalogue (#75). **Explicitly not scheduled at all:** #137 and #151, both
   structurally unreachable until refunds or staff cancellation of a confirmed order exist — ADR-005
   records refunds as its own undecided territory.
-- **P8 — Deployment & launch.** Full Cloudflare + Neon + R2 wiring, secrets, backups/PITR,
-  monitoring, UAT, production deployment, handover & training. Migration playbooks verified. 
-  *Restructured 2026-08-21 to carry all remaining open items, decomposed as follows:*
+- **P8 — Deployment & launch. CLOSED 2026-08-28 — historical record only.** Originally scoped as
+  full Cloudflare + Neon + R2 wiring, secrets, backups/PITR, monitoring, UAT, production deployment,
+  handover & training, with migration playbooks verified. **P8 delivered its debt-and-compliance
+  half (P8.1) and its storefront half (P8.5); it never delivered the launch itself.** By 2026-08-28
+  the `P8 — Deployment & launch` milestone held **39 open issues** that were not one kind of thing —
+  genuine launch gates, post-launch enhancements, unresolved security work that nothing marked as
+  such (#340), and bookkeeping. A phase holding all four cannot answer whether it is safe to launch.
+  **#426 closed P8 and redistributed every one of those 39: launch work to P9, post-launch work to
+  P10, two closed as historical (#91, the P8 epic; #408, fully sequenced by #420).** The
+  subdivisions below **keep their numbers and their original meanings** — renumbering them would
+  falsify `specs/2026-08-23-p8.1b-closeout/plan.md` and the change-log rows that cite them, the same
+  reasoning that kept P8.5 out of sequence. They are preserved as written, and are read as history:
+  *decomposed 2026-08-21 as follows.*
   - **P8.1 — Core Debt & Compliance (Pre-Launch):** Resolve non-negotiable security, compliance (UK GDPR/WCAG), and architectural bugs left over from earlier phases (Group 1 issues, e.g., #253, #254, #281, #104, #221, #151, #137, #269, #235, #273, #276, #277, #252, #287, #333).
   - **P8.5 — Storefront Conversion Overhaul.** Inserted 2026-08-24, after P8.1 closed and
     **before P8.2** — the storefront that goes live is the new one, by the human's explicit
@@ -121,7 +142,10 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
     record. Deliberately *not* in this phase: product variants, butcher-cut selection, approximate
     scale weight, per-product free-delivery overrides, and the wishlist (#232) — each is a data
     model this repo does not have, not a styling gap.
-  - **P8.2 — Launch & Operations:** The original P8 mandate. Stripe live keys (#113), image cleanup (#174), abandoned carts (#94), Stripe sweep (#101), confirm Workers Logs (#246), Verify Neon limits (#227), and the two outstanding credential rotations (#175 staging Neon password, #219 shared Cloudflare API token) — sequenced at the end of the launch-prep line rather than in P8.1, so they land right before go-live instead of being rotated once now and needing a second look later.
+  - **P8.2 — Launch & Operations. → superseded by P9.2 (#426).** Never started; its nine launch-ops
+    issues (#113, #104, #227, #246, #175, #219, #101, #94, #236) moved to **P9.2** intact, and its
+    pre-launch storefront set moved to **P10** except #398's unit-price half, which is in **P9.3**.
+    Recorded as originally written: The original P8 mandate. Stripe live keys (#113), image cleanup (#174), abandoned carts (#94), Stripe sweep (#101), confirm Workers Logs (#246), Verify Neon limits (#227), and the two outstanding credential rotations (#175 staging Neon password, #219 shared Cloudflare API token) — sequenced at the end of the launch-prep line rather than in P8.1, so they land right before go-live instead of being rotated once now and needing a second look later.
     **Pre-launch set from the #408 brief, added 2026-08-28 by #420:** four items judged small enough
     to cross in front of launch — **#407** (Facebook and Instagram links, per-vendor and
     data-driven), the **Country-of-Origin facet only** of **#397**, the **#403** investigation
@@ -139,8 +163,11 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
     Marking Order drift exposure that should not be carried into a live store; deriving the displayed
     unit price from `basePrice` and a structured quantity is small and does not need the variant
     model that the rest of #398 (P8.7) does.
-  - **P8.3 — Post-Launch Backlog (Enhancements):** All feature enhancements and non-critical deferred items (Group 2 issues, e.g., #286, #280, #279, #232, #146-149, #115-116, #288, #75). **Remains the unscheduled catch-all** after P8.6 and P8.7 were added below — those two took named storefront and fulfilment work out of this bucket, they did not replace it.
-  - **P8.6 — Storefront discovery & conversion.** Added 2026-08-28 by **#420**, sequencing the
+  - **P8.3 — Post-Launch Backlog (Enhancements). → folded into P10 (#426).** All feature enhancements and non-critical deferred items (Group 2 issues, e.g., #286, #280, #279, #232, #146-149, #115-116, #288, #75). It was the unscheduled catch-all after P8.6 and P8.7 were added below — those two took named storefront and fulfilment work out of this bucket, they did not replace it. **P10 is now that catch-all**, and it holds P8.3's members along with P8.6's and P8.7's.
+  - **P8.6 — Storefront discovery & conversion. → folded into P10 (#426), milestone closed.** Its
+    seven issues moved to P10 the day after it was created; the gate analysis below is preserved in
+    the P10 section rather than discarded. Recorded as originally written:
+    Added 2026-08-28 by **#420**, sequencing the
     **#408** storefront and fulfilment brief (given 2026-08-27, filed as **#394**–**#407**). The
     post-launch half of that brief: the desktop 2-tier sticky mega-menu (**#394**), the mobile
     sticky bottom navigation bar (**#395**), Desi-translated search (**#396**, paired with **#286**
@@ -156,7 +183,10 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
     cannot honestly precede the discount-engine decision. P8.5c shipped bundle cards with no savings
     claim for exactly this reason. **Deliberately excluded:** the chat-driven re-order half of
     **#405**, which stays out of scope as notification/marketing automation per `specs/mission.md`.
-  - **P8.7 — Fulfilment & merchandising data models.** Added 2026-08-28 by **#420**, from the same
+  - **P8.7 — Fulfilment & merchandising data models. → folded into P10 (#426), milestone closed.**
+    Its four issues moved to P10 the day after it was created; its gate analysis is preserved in the
+    P10 section. Recorded as originally written:
+    Added 2026-08-28 by **#420**, from the same
     **#408** brief. The largest block by a wide margin, and the one the brief most under-states —
     every item here is a data model this repo does not have, not a styling gap, which is the same
     reason `specs/roadmap.md` already recorded product variants, butcher-cut selection and
@@ -177,6 +207,15 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
     authorisation, which is a payments decision **amending ADR-005** — on top of the variant model
     #399 already depends on. Recorded here rather than in ADR-005 itself, because the decision
     belongs to whichever slice actually builds #399.
+- **P9 — Production launch readiness.** Added 2026-08-28 by **#426**, replacing P8.2 as the phase
+  that actually gets this store live. Objective: get the current application from its present state
+  to a defensible **GO** without introducing unnecessary architecture or product scope. Four
+  sub-phases, each with an exit gate — **P9.1** security & transaction safety, **P9.2** production
+  infrastructure & reliability, **P9.3** launch quality validation, **P9.4** launch certification.
+  Full scope in the dedicated section below.
+- **P10 — Post-launch improvements.** Added 2026-08-28 by **#426**. Absorbs P8.3's catch-all, P8.6
+  and P8.7. Real engineering improvements that are **not launch gates** unless new evidence changes
+  their risk. Full scope in the dedicated section below.
 
 > **The #408 brief and how it was split.** #408 (2026-08-27) filed fourteen issues, **#394**–**#407**,
 > covering navigation, product discovery, halal meat merchandising, fulfilment, checkout and
@@ -193,13 +232,218 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
 > model is P8.7; #400's async loading is P8.6 and its per-store counts are P8.7.
 >
 > **Milestone rule, since a GitHub issue carries only one:** a split issue takes the milestone of its
-> **earliest** phase. So #397, #398, #403 and #407 stay on `P8 — Deployment & launch` (their earliest
-> phase is P8.2, a subdivision of P8 with no milestone of its own), and #400 sits on P8.6.
+> **earliest** phase. This originally put #397, #398, #403 and #407 on `P8 — Deployment & launch` and
+> #400 on P8.6. **Re-applied by #426 after the restructure:** #398 sits on **P9.3**, because its
+> unit-price half is the one part of this brief that stays pre-launch; #397, #400, #403 and #407 all
+> sit on **P10**, their earliest surviving phase.
 >
 > **Board limitation.** Project #2's Phase field has options only through `P8` — it cannot express
-> P8.5, P8.6 or P8.7, and per the open **#267** it cannot express P7.5 either. The options are UI-only
-> in Projects V2 with no API to add them, so board items for these issues stay on Phase `P8`; this
-> roadmap and the GitHub milestone carry the real phase.
+> P8.5, P8.6 or P8.7, and per the open **#267** it cannot express P7.5 either. **Nor can it express
+> P9, P9.1–P9.4 or P10** (#426). The options are UI-only in Projects V2 with no API to add them, so
+> board items for all of these stay on Phase `P8`; this roadmap and the GitHub milestone carry the
+> real phase. There is no application-code fix, and #426 did not attempt one — it extended this note
+> rather than leaving the next reader to re-investigate.
+
+## P9 — Production launch readiness
+
+Added 2026-08-28 by **#426**, which closed P8 and redistributed its 39 open issues. **Objective:**
+get the current application from its present state to a defensible **GO** without introducing
+unnecessary architecture or product scope.
+
+**The rule that decides membership:** P9 is for work required to launch the product *safely*.
+Improvements that can reasonably wait go to P10. This is narrower than P8.2's "launch prep" was, and
+it is what moved #421's pre-launch storefront set — social links, a country-of-origin facet, a wallet
+check — out to P10. The one exception is **#398's unit-price derivation half**, which stays in P9.3
+because `Product.unitLabel` is free text with no computed relation to `basePrice`; that is a UK Price
+Marking Order drift exposure, not a feature gap, and it should not be carried into a live store.
+
+**Two claims that reached this phase's proposal did not survive a check against the code**, and are
+recorded here because filing them anyway is the exact failure this restructure exists to stop:
+
+- **#243 is closed and was deliberately not reopened.** It recorded a roughly 12s storefront LCP
+  caused by a 1.9 MB vendor logo, and it was resolved. **#439** measures LCP against the *release
+  candidate* instead — a different task, on a storefront substantially rebuilt by all six P8.5
+  slices since. Do not blindly reproduce historical fixes.
+- **`/staff/bundles/new` is not a broken journey.** `app/(admin)/staff/bundles/[bundleId]/page.tsx`
+  reads `const isNew = bundleId === "new"` and branches on it; the dynamic segment matches, and the
+  CTA in `app/(admin)/staff/bundles/page.tsx` resolves to it. No issue was filed. The live check is
+  recorded in `specs/2026-08-28-p9-launch-readiness-restructure/build-notes.md`.
+
+### P9.1 — Security & transaction safety
+
+**Objective:** remove vulnerabilities capable of exposing customer data, crossing tenant boundaries,
+corrupting commercial data, or incorrectly changing payment/order state.
+
+- **#427** — secure guest order confirmation. `app/(storefront)/checkout/[orderNumber]/page.tsx`
+  resolves a guest's order with the order number as the only credential and renders the full delivery
+  address; the page's own docstring already calls it a capability URL and deferred stronger access to
+  P4. Prefer reusing the existing order-number-plus-email model or a capability token.
+- **#428** — secure checkout cancellation. `app/api/checkout/cancel/route.ts` cancels an order and
+  releases inventory from a `GET`, with possession of the order number as the only guest credential.
+  Depends on #427's authorization design.
+- **#429** — bind the Stripe webhook to the expected payment. Signature verification is sound;
+  `app/api/webhooks/stripe/route.ts` then confirms on `metadata.orderNumber` alone, never comparing
+  the session id to the stored `Payment.providerReference`.
+- **#430** — fail closed on invalid production payment configuration. `lib/payments.ts` falls back to
+  the stub provider whenever `STRIPE_SECRET_KEY` is unset, with no environment guard. Counterpart to
+  #113.
+- **#431** — production authentication rate limiting. `lib/auth.ts` disables Better Auth's built-in
+  limiter because its in-memory store does not work across Workers isolates. Reuse the
+  database-backed pattern in `lib/repositories/order-lookup-rate-limit.ts` before introducing a
+  second mechanism; do not redesign the auth architecture.
+- **#432** — enforce cross-tenant integrity in the database. Six relationships carry a duplicated
+  `vendorId` and rely on repository discipline. **#340 is the existing open instance** of that class.
+  Audit data first; work through the relationships incrementally.
+- **#433** — commercial CHECK constraints for money, stock and quantity invariants. Audit current
+  data first. Hand-authored DDL in a migration is a permitted deliberate exception to the no-raw-SQL
+  rule and carries its documentation cost.
+- **#340** — review writes derive `vendorId` from the product without scoping the lookup to the
+  current vendor. Pre-existing, surfaced by P8.1b's facade relocation.
+
+**Exit gate.** Customer PII authorization is safe; cancellation is authorized; Stripe events are
+bound to expected payments; production payment configuration fails closed; critical tenant boundaries
+are structurally protected; critical commercial invariants are protected.
+
+### P9.2 — Production infrastructure & reliability
+
+**Objective:** make production deployable, recoverable and observable.
+
+- **#434** — make production deployment migration-safe. `.github/workflows/deploy-production.yml`
+  runs `prisma migrate deploy` before the OpenNext build, so a failed build leaves production on a
+  newly migrated schema. The OpenNext build is not a formality here: a root `proxy.ts` once passed
+  `next build`, lint, typecheck and every test and failed only when the adapter's build ran.
+- **#435** — require release quality gates. That same workflow runs no lint, format, typecheck or
+  test step. This compounds a known repository limitation: required-reviewer protection needs a paid
+  plan for private repos and was rejected with a 422, so `production` has no enforced approval gate.
+- **#113** — Stripe production live configuration. Depends on #430's fail-closed protection.
+- **#104** — production email sending domain, verified by real delivery to external inboxes.
+- **#227** — verify Neon plan, capacity and connection limits; record operational thresholds.
+  **Sequence before #436**, since the plan tier bounds available retention.
+- **#175** — rotate the staging Neon password. **#219** — rotate the shared Cloudflare API token.
+- **#246** — confirm persisted Workers Logs. **Sequence before #437**; alerting on unretained logs is
+  not alerting.
+- **#236** — diagnose the concurrent-mutation ceiling. **Diagnose before fixing**: reproduce with
+  server-side telemetry and identify whether the failure is Workers, Neon, WebSockets, connection
+  handling or application code. File a remediation issue only if evidence demands one.
+- **#101** — Stripe reconciliation sweep for webhooks that never arrive. A small Cloudflare scheduled
+  mechanism is appropriate; do not introduce a heavy job platform.
+- **#94** — abandoned checkout handling: define the timeout, resolve order/payment/inventory/cart
+  state, make it idempotent, schedule it.
+- **#436** — verify Neon backups/PITR and **perform a real restore** into an isolated environment.
+  Done when recovery has been demonstrated, not documented.
+- **#437** — critical production alerting. Keep it minimal: 5xx, checkout/order failures, Stripe
+  webhook/payment failures, database availability, critical health failures.
+- **#438** — production rollback procedure, with the important path actually tested.
+
+**Exit gate.** Production can be deployed, monitored, diagnosed, and rolled back or recovered.
+
+### P9.3 — Launch quality validation
+
+**Objective:** test the actual candidate rather than continuing to add architecture.
+
+- **#439** — re-measure storefront LCP on the deployed candidate under agreed mobile and network
+  conditions. Measurement first; remediate only the current dominant contributor. See the #243 note
+  above.
+- **#440** — minimal Playwright launch smoke suite. **This is a new harness, not five new tests** —
+  there is no `playwright.config.ts`, no `e2e/` directory and no Playwright dependency in this repo,
+  so config, an authenticated-session fixture, a target environment and CI wiring all precede the
+  first journey. Five journeys only: browse to cart; guest checkout; authenticated checkout; guest
+  order lookup; staff authentication and RBAC. Add cross-vendor denial to the staff journey if
+  practical. Sequence after P9.1, or expect to rewrite the guest-lookup journey.
+- **#441** — customer and staff UAT against the deployed release candidate. Record defects as
+  separate issues rather than expanding the UAT issue. Walk the storefront against **both** vendors —
+  SriMart's branding primitives are real, live-differentiated values and nothing in lint, typecheck
+  or tests checks a second vendor's rendered output.
+- **#442** — accessibility launch validation: keyboard, focus, zoom/reflow, automated tooling, and a
+  representative screen-reader journey. Do not reopen historical accessibility issues unless the
+  candidate demonstrates a new or recurrent defect.
+- **#174** — production and orphan image lifecycle cleanup. Do not turn this into a media-platform
+  rewrite.
+- **#350** — `/staff/storefront` returns `null` on refusal instead of `PanelRefusal`; the last such
+  instance. **#351** — the product card nests interactive controls inside an `<a>`, an invalid
+  content model that #442 is expected to surface.
+- **#398** — the unit-price derivation half only, as UK Price Marking Order compliance. Its variant
+  and unit-of-measure model stays in P10.
+
+**Exit gate.** Critical journeys pass E2E and UAT, no unresolved launch-severity UX defect remains,
+and the agreed accessibility and performance requirements are met.
+
+### P9.4 — Launch certification
+
+**Objective:** prove the system is ready to operate. **There should be virtually no normal feature
+development here.** A material defect goes back to P9.1–P9.3 rather than being carried as a note.
+
+- **#443** — production game day. Payment failure (delayed/missing webhook, duplicate event,
+  reconciliation recovery), database interruption and recovery, and a failed deployment with
+  rollback and migration compatibility. Record **actual** results and remediation.
+- **#444** — exact release-candidate verification, run against the exact commit and artifact intended
+  for production: clean install, Prisma generation, lint, formatting, typecheck, full tests, OpenNext
+  production build, migration status, deployment, health verification, critical smoke tests. Record
+  the commit SHA.
+- **#445** — final GO / NO-GO. The last P9 issue. GO requires no unresolved P0 blocker, no known
+  customer-data authorization vulnerability, payment correctness demonstrated, tenant boundaries
+  protected, backup/restore demonstrated, monitoring operational, critical journeys passing, the
+  performance gate passing, rollback tested, and the exact candidate green. Any accepted P1 exception
+  must be documented with an **owner** and a rationale.
+
+**Exit gate.** GO. P9 closes and the application moves into production operation.
+
+## P10 — Post-launch improvements
+
+Added 2026-08-28 by **#426**. **Purpose:** keep useful engineering improvements from slowing down
+launch. These are real tasks, **not launch gates** unless new evidence changes their risk.
+
+P10 absorbs three predecessors: **P8.3**'s post-launch catch-all, and **P8.6** and **P8.7**, both
+created by #420 on 2026-08-28 and folded in the following day. Folding them was a deliberate ruling —
+keeping them would have given the roadmap four post-launch buckets whose boundaries were drawn by
+filing date rather than by anything a reader could use.
+
+**Tracked issues.** Engineering hygiene: **#390** (nominal/branded types for `getPrisma()` versus
+`getPrismaWs()`), **#416** (ESLint enables no `no-unused-vars` rule — three dead Prisma clients
+survived undetected), **#423** (docs-site builds dirty `next-env.d.ts`, tripping `sdd:preclear`), and
+the new **#446** (CSP hardening — investigate removing production `unsafe-eval` and reducing
+`unsafe-inline` without breaking OpenNext). Storefront and discovery: **#394**, **#395**, **#396**,
+**#397**, **#400**, **#404**, **#405**, **#406**, **#286**, **#421**, **#403**, **#407**. Fulfilment
+and merchandising data models: **#398** (variant and unit-of-measure model; its unit-price half is in
+P9.3), **#399**, **#401**, **#402**, **#422**. Commerce and account features: **#75**, **#100**,
+**#116**, **#137**, **#146**, **#147**, **#148**, **#149**, **#151**, **#221**, **#232**, **#280**,
+**#288**, **#372**, **#373**.
+
+**#221 sits here rather than in P9**, ruled explicitly: P7b shipped Art. 16 rectification as a
+name-change control and recorded the email half as a known gap, and **#104** landing in P9.2 removes
+its blocker, making it buildable immediately post-launch.
+
+**#420's gate analysis is preserved here rather than discarded** — it cost a slice to produce and
+none of it has expired. **#363** (the store timezone is a hardcoded constant, `lib/local-datetime.ts`)
+gates **#401** and **#402**, the same blocker that already holds #379. **ADR-006** gates **#402** and
+**#400**'s per-store half. **#398**'s variant model gates **#399** and **#397**'s Pack Size facet.
+And **#399 is gated twice**: its "pre-authorise plus or minus 10 percent" scale guarantee is a
+payments change, not a merchandising one — `lib/payments.ts` sets no `capture_method`, so this
+integration captures immediately on hosted Stripe Checkout, and a pre-authorise-then-adjust flow
+needs manual capture or adjustable authorisation, **amending ADR-005**. Separately, **#404** (merging
+Promotions and Bundles into one savings section) is gated on the discount-engine decision behind
+#146, #147, #148, #372 and #377, since `DiscountRedemption`'s `@@unique([orderId])` permits one
+redemption per order.
+
+**Themes recorded as prose, deliberately not filed as issues.** An issue that cannot state what
+evidence would close it is a placeholder, and placeholders in a milestone are what produced the
+39-issue P8 this restructure unwound.
+
+- **Broader E2E coverage** — expand beyond P9's five launch-critical journeys, driven by escaped
+  defects and real usage.
+- **Loading and error-state polish** — route-level loading and error recovery beyond P9's critical
+  requirements.
+- **Database and index optimization** — create issues only from actual production query plans and
+  telemetry. **Do not create a generic "optimize database" project.**
+- **Search evolution** — stay with PostgreSQL until catalogue and relevance measurements justify
+  more. Possible progression: current search, then `pg_trgm`/full-text, then a dedicated search
+  engine only if justified.
+- **Caching** — targeted anonymous storefront caching only when measurements justify it. **Do not
+  introduce Redis by default.**
+- **Background processing** — build on the minimal scheduler introduced for P9's payment reliability
+  (#101, #94). Heavier orchestration only when workload complexity demands it.
+- **Analytics and reporting evolution** — keep transactional workloads separate from future analytics
+  workloads as volume grows.
 
 ## Roadmap Change Log
 
@@ -330,3 +574,5 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
 | 2026-08-27 | **Repository client-injection rule completed — slices 2+3 of 3, #409 fully closed out** (**#409**, **#411**, **#412**, **#415**, **PR #417**, merge `1cf7fd3`, `staging`, `specs/2026-08-27-repository-client-injection-completion/`): the remaining 26 self-resolving exports across `categories.ts` (4), `loyalty.ts` (3), `vendor.ts` (5) and `products.ts` (14) converted to take their Prisma client as an explicit parameter, and slice 1's `FILES_IN_SCOPE` scoping list **deleted** — `tests/repository-client-injection.test.ts` now enumerates `lib/repositories/` from the filesystem, so the rule is enforced repo-wide for the first time and a newly added repository file is covered the moment it exists. **Found three dead Prisma clients while converting**: `updateProductForVendor`, `setPrimaryProductImage` and `quickUpdateInventory` each built an HTTP-adapter client with `const prisma = getPrisma();` and never read it, correcting a "14 functions, four of which need both clients" figure that had been carried through #409's own plan and both issue bodies unchallenged — no export needs two clients. `eslint.config.mjs` enables no `no-unused-vars` rule of any kind, which is why nothing caught it; filed **#416**. `updateVendorStorefrontConfig`'s `data: any` replaced with a named `VendorStorefrontConfigInput`. Call sites keep the repository functions' names throughout — each service imports the original under a `…Repo` alias and re-exports a same-named wrapper — so all 29 call sites changed only their import path; `features/admin/storefront.ts`'s aliased `updateVendorStorefrontConfig as updateConfigRepo` import was the one hazard a name-based sweep would have missed, caught by sweeping by symbol instead. `scripts/verify-repository-injection.ts` extended to 14 read/write checks across all four files including the WebSocket `$transaction` path, and now refuses to run against any host named in `secrets/staging.vars`/`secrets/production.vars`, checked before any client is constructed. **Bundled #415** (Worker `cpu_ms` 50 → 300) — Error 1102 kept recurring on staging at 50 (observed live `2026-08-27T12:46:36Z`, Ray ID `a31b2e161d0a63c5`). `/validate` ran fresh-context: R3's deliberate-failure case reproduced live, R12's "no dual-client export" correction independently re-derived from the pre-slice `origin/staging` bodies rather than trusted from build-notes, R23's full diff review across all four files came back clean (signature-only changes plus one disclosed, semantically-identical `BRAND_FIELDS` refactor), the live script run twice against the dev Neon branch (`ep-sparkling-paper`) with all 14 checks PASS both times, and the refusal guard exercised directly against the staging host with a deliberately wrong password (refused before constructing any client). `gates` green on PR #417 (1m15s); post-merge, `deploy-staging` and `deploy-docs-internal` both completed successfully, and the #415 smoke check — 10 sequential requests to `https://staging.aheedfoodcentre.nocaped.com/` — returned HTTP 200 with no Error 1102 on every request. **#409, #410, #411, #412, #415 all moved to In Review** on Project #2 — all five stay open; each closes only on promotion to `main`. **#409 is now code-complete**: every `lib/repositories/*` export takes its client as an explicit parameter, with no remaining scoping gap. | Closes out the three-slice #409 epic; the sandboxed shell used for `/ship`'s post-deploy smoke check could not reach the staging host at all (allowlisted-egress artifact, confirmed by a working `google.com` request from the same shell) — PowerShell's `Invoke-WebRequest` from the same machine reached it fine, which is the transferable lesson worth carrying: a failed request from this environment is not evidence the target is down until a second tool confirms it |
 | 2026-08-27 | **Repository client injection promoted to production** (**PR #419**, merge `4d418be`, `staging -> main`): all three slices of #409 together — slice 1's enforcement test and six conversions (PR #413), slices 2+3's remaining 26 conversions and the deletion of the `FILES_IN_SCOPE` scoping list (PR #417), the #415 Worker `cpu_ms` raise from 50 to 300, and both closeout documentation passes (PRs #414, #418). **No migration; no schema change.** The application-code change is entirely which Prisma client each repository export receives, and it is a signature change rather than a behavioural one — every converted export already ran the same queries, it just resolved its own client instead of being handed one. Issues **#409**, **#410**, **#411**, **#412** and **#415** all reached `Done` on the `main` merge, their Project #2 items auto-moving with them. Carry-forward row: the promotion merged after this roadmap was last edited, so per the carry-forward rule its row lands on the next slice's branch (`specs/2026-08-28-storefront-brief-sequencing/`) rather than a PR of its own — which is exactly what `npm run sdd:audit` reported as the one pending promotion at the following `/orient`. | The rule that `lib/repositories/*` exports take their Prisma client as an explicit parameter is now enforced repo-wide and in production, after three separate occasions on which `CLAUDE.md` claimed an enforcement that did not exist |
 | 2026-08-28 | **The #408 storefront and fulfilment brief sequenced into this roadmap — built and merged to staging** (issue **#420**, **PR #424**, merge `be57b26`, `staging`, `specs/2026-08-28-storefront-brief-sequencing/`): fourteen issues (**#394**–**#407**, filed 2026-08-27) moved off their stated P8 holding position into two new phases plus a pre-launch set. Before this slice `specs/roadmap.md` did not contain the strings `#408`, `#394` or `#407` at all — the issues existed, were on Project #2, and were sequenced nowhere, while the roadmap said P8.2 was next and the store is not live. **P8.6 — Storefront discovery & conversion** and **P8.7 — Fulfilment & merchandising data models** are appended, not renumbered; P8.3 stays the unscheduled catch-all. Four items cross in front of launch inside P8.2 (#407, #397's Country-of-Origin facet, the #403 investigation, and #398's unit-price derivation half), sequenced here and built by a separate later slice. **`specs/decisions/ADR-006-store-locations.md` added** to settle the question gating #400's per-store half and #402: a store location is a child of `Vendor`, never a second tenancy axis, and never a second mandatory filter in `lib/repositories/*` — `vendorId` stays the sole isolation axis, so adopting locations later is an additive migration rather than a rewrite of every repository query. ADR-006 also resolves a naming collision with ADR-004 decision 1's anticipated `Region`/`Location` geography reference tables, which are a different concept from a trading site. **The business question — whether Aheed trades from more than one site — is deliberately left open**; ADR-006 rules shape, not commerce, and `specs/mission.md`'s out-of-scope line on multi-branch management is **not** amended. Three findings from checking the brief against the code rather than trusting it: #407 needs a migration after all (no social field exists on `VendorConfig` or `VendorBranding`); #403 is expected to ship no application code (hosted Checkout pins no `payment_method_types`, so wallets are Dashboard-controlled); and #399 is gated twice, the second gate being a payments-capture decision amending ADR-005, because `lib/payments.ts` sets no `capture_method`. **Documentation and decision work only — no feature from the brief is built.** `gates` green on PR #424 (1m20s); post-merge, `deploy-staging` and `deploy-docs-internal` both completed successfully. **Three follow-up issues filed and left in Backlog, tagged Phase `P8`:** **#421** (build the pre-launch set itself — #407, #397's origin facet, #403, #398's unit-price half), **#422** (the business question ADR-006 deliberately left open — whether Aheed trades from more than one physical site — blocking #402 and #400's per-store half for scoping until answered), and **#423** (every internal docs-site build dirties `kms/site-internal/next-env.d.ts`, tripping `sdd:preclear` — a tooling gap, not a content one). **#420 moved to `In Review`** on Project #2; it closes to `Done` only on promotion to `main`. | The roadmap and the issue tracker disagreed for a day; a brief that is filed but unsequenced is a plan nobody can act on, and #408's own body called its P8 milestone "not a sequencing decision" |
+| 2026-08-28 | **P8 closed as a historical record; P9 and P10 created** (issue **#426**, `specs/2026-08-28-p9-launch-readiness-restructure/`). The `P8 — Deployment & launch` milestone held **39 open issues** mixing shipped history, post-launch enhancements, bookkeeping, and unresolved security work that nothing marked as such (#340). All 39 were redistributed: **#340** to P9.1; **#113, #104, #227, #246, #175, #219, #101, #94, #236** to P9.2; **#174, #350, #351, #398** to P9.3; twenty-three to P10; **#91** (the P8 epic) and **#408** (fully sequenced by #420) closed with reasons; **#420** left open to close on its own promotion. **P8.6 and P8.7 folded into P10 and their milestones closed** one day after #420 created them, with #420's gate analysis preserved in the P10 prose rather than discarded. Six milestones created (`P9`, `P9.1`–`P9.4`, `P10`) and **twenty new issues filed** — #427–#433 (P9.1), #434–#438 (P9.2), #439–#442 (P9.3), #443–#445 (P9.4), #446 (P10). **Two brief items were checked against the code and not filed as written:** #243 was already **closed** and was deliberately not reopened (#439 measures the release candidate instead), and `/staff/bundles/new` proved not to be a broken journey — `[bundleId]/page.tsx` branches on `bundleId === "new"`. Six other claims were confirmed true against the code before filing. Sequencing and decision work only; no application code. | P8 could not answer "is it safe to launch?" while holding four different kinds of work at once, and its launch-critical items were indistinguishable on the board from a wishlist link |
+| 2026-08-28 | **All P-phase GitHub milestone titles zero-padded so the milestone list sorts in delivery order** (issue **#426**, same slice as the P8/P9/P10 restructure above). GitHub sorts milestones as text, so `P10` sorted between `P1` and `P2`. Nineteen titles renamed — `P00 — Foundation & scaffolding` through `P09.4 — Launch certification`, with `P10 — Post-launch improvements` already correct and `M0 — Walking Skeleton` deliberately untouched. **Milestone titles only.** Phase names in prose, the 47 spec directory names and the 52 front-matter `id` values all keep the short form (`P8`, `P8.5`, `P9.1`) — renaming roughly 2,900 phase tokens would edit shipped history and break every path citation for a cosmetic gain. `P09.1` and `P9.1` denote the same phase; the convention is recorded in the delivery-tracking block at the top of this file so neither gets "fixed" to match the other. | The milestone list was unreadable in delivery order, which is the one thing a milestone list is for |

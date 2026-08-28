@@ -5,6 +5,33 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 every branch merges.
 
 ### Documentation
+- **`#426` — P8 closed as a historical record; P9 and P10 created.** The `P8 — Deployment & launch`
+  milestone held **39 open issues** that were four different kinds of thing at once: genuine launch
+  gates, post-launch enhancements, bookkeeping, and unresolved security work that nothing marked as
+  such (**#340**, a cross-tenant write path). All 39 were redistributed with an explicit destination
+  each — **#340** to P9.1; **#113, #104, #227, #246, #175, #219, #101, #94, #236** to P9.2;
+  **#174, #350, #351, #398** to P9.3; twenty-three to P10; **#91** (the P8 epic) and **#408** (fully
+  sequenced by #420) closed with reasons; **#420** left open to close on its own promotion.
+  **P8.6 and P8.7 folded into P10** and their milestones closed one day after #420 created them,
+  with #420's gate analysis (#363 gating #401/#402, ADR-006 gating #402 and #400's per-store half,
+  #398's variant model gating #399 and #397's Pack Size facet, #399's second gate amending ADR-005)
+  **preserved in the P10 prose rather than discarded**. P8.1/P8.2/P8.3/P8.5/P8.6/P8.7 keep their
+  numbers and original text, marked with where their work went — renumbering would falsify
+  `specs/2026-08-23-p8.1b-closeout/plan.md` and the change-log rows citing them. Six milestones
+  created (`P9`, `P9.1`–`P9.4`, `P10`) and **twenty issues filed**: **#427**–**#433** (guest order
+  PII, cancellation authorization, Stripe session binding, payment fail-closed, auth rate limiting,
+  cross-tenant DB integrity, commercial CHECK constraints), **#434**–**#438** (migration-safe
+  deploy, release quality gates, backup/PITR restore, alerting, rollback), **#439**–**#442** (LCP
+  re-measurement, Playwright smoke suite, UAT, accessibility), **#443**–**#445** (game day, exact
+  release-candidate verification, GO/NO-GO), **#446** (CSP hardening). Seven P10 themes are recorded
+  as **prose, deliberately not filed as issues**. **Two claims were checked against the code and
+  not filed as written:** **#243** was already closed and was **not** reopened (#439 measures the
+  release candidate instead), and `/staff/bundles/new` proved not to be a broken journey —
+  `[bundleId]/page.tsx` branches on `bundleId === "new"`. Six other claims were confirmed true
+  against the code first, each cited to a file and line in `plan.md`. Extends the #267 board note to
+  cover P9 and P10, which Project #2's Phase field cannot express either. Sequencing and decision
+  work only — **no application code, including no fix for any security item filed**.
+  `specs/2026-08-28-p9-launch-readiness-restructure/`, roadmap v1.53.0.
 - **`/document` closeout for `#420`.** Reconciles `specs/roadmap.md`'s #420 row (written at Build,
   before the PR existed) with what actually shipped: cites **PR #424**, merge `be57b26`, `staging`;
   records `gates` green (1m20s) and both `deploy-staging`/`deploy-docs-internal` completing
