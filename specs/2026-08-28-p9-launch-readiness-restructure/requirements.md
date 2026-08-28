@@ -16,9 +16,9 @@ R1. GitHub milestones exist with these exact titles: `P09 — Production launch 
 R2. The milestones `P08.6 — Storefront discovery & conversion` and
     `P08.7 — Fulfilment & merchandising data models` are **closed** and hold **zero open issues**.
 
-R3. The milestone `P08 — Deployment & launch` holds **zero open issues**. It remains open as a
-    historical record only if it still holds closed issues; its closed-issue count is unchanged by
-    this slice except for #91 and #408.
+R3. The milestone `P08 — Deployment & launch` holds **zero open issues except #420**, which R11
+    keeps open and unchanged. It remains open as a historical record only if it still holds closed
+    issues; its closed-issue count is unchanged by this slice except for #91 and #408.
 
 ## Issue disposition
 

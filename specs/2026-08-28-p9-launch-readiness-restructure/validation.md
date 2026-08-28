@@ -13,7 +13,7 @@ writer before its own cleanup runs.
 |-----|---------------|
 | R1  | `gh api repos/sriahead/aheed-online-store/milestones --paginate` — the returned titles include all six exactly: `P09 — Production launch readiness`, `P09.1 — Security & transaction safety`, `P09.2 — Production infrastructure & reliability`, `P09.3 — Launch quality validation`, `P09.4 — Launch certification`, `P10 — Post-launch improvements`. Check the em-dash is a real `—`, not a hyphen — a title mismatch silently creates a seventh milestone rather than erroring. |
 | R2  | Same milestone listing, filtered to P8.6 and P8.7: both show `"state": "closed"` and `"open_issues": 0`. |
-| R3  | Same listing, filtered to `P08 — Deployment & launch`: `"open_issues": 0`. Then `gh issue list --state open --milestone "P08 — Deployment & launch" --limit 60` returns nothing. |
+| R3  | Same listing, filtered to `P08 — Deployment & launch`: `"open_issues": 1`. Then `gh issue list --state open --milestone "P08 — Deployment & launch" --limit 60` returns exactly one issue, #420 (see R11). |
 | R4  | `gh issue view 340 --json number,state,milestone` — state `OPEN`, milestone `P09.1 — Security & transaction safety`. |
 | R5  | `gh issue list --state open --milestone "P09.2 — Production infrastructure & reliability" --limit 60 --json number` — the set of numbers **contains** 113, 104, 227, 246, 175, 219, 101, 94 and 236. It will also contain the five new P9.2 issues from R13; that is expected, not a failure. |
 | R6  | `gh issue list --state open --milestone "P09.3 — Launch quality validation" --limit 60 --json number` — contains 174, 350, 351 and 398, plus the four new P9.3 issues. |
