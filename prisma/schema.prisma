@@ -627,6 +627,13 @@ model Order {
   vendorId         String
   vendor           Vendor               @relation(fields: [vendorId], references: [id])
   orderNumber      String               @unique
+  // P9.1 (#427/#428) — a guest order's actual credential. The order number is
+  // NOT one: it appears in emails, shared links, browser history and support
+  // threads, so knowing it must not return a name and a residential address.
+  // Nullable because every order placed before this migration has none; those
+  // guests fall back to /orders/lookup (order number + email). Never selected
+  // into OrderSummary — see findOrderForViewer.
+  confirmationToken String?             @unique
   userId           String?
   user             User?                @relation(fields: [userId], references: [id])
   guestEmail       String?

@@ -23,7 +23,8 @@ vi.mock("@/lib/payments", () => ({
   getPaymentService: () => ({ createPayment: () => paymentStub.createPayment() }),
 }));
 
-const { placeOrder, CheckoutError, toProvenance } = await import("@/lib/repositories/orders");
+const { placeOrder, CheckoutError, toProvenance, findOrderForViewer } =
+  await import("@/lib/repositories/orders");
 
 const VENDOR = "v-aheed";
 
@@ -870,5 +871,127 @@ describe("placeOrder — payment provider unavailable", () => {
       orderNumber: expect.any(String),
     });
     expect(created.cartRestored).toEqual([]);
+  });
+});
+
+/**
+ * P9.1 (#427) — who may read an order.
+ *
+ * The rule this locks down: a guest order is authorized by its capability token
+ * and nothing else, because the order number travels through emails, shared
+ * links, browser history and support threads. A member's order stays owner-only
+ * and the token is irrelevant to it.
+ *
+ * `findOrderForViewer` issues exactly one call, `prisma.order.findFirst`, so the
+ * double below is deliberately tiny and separate from placeOrder's harness. It
+ * honours the `where` clause rather than always returning its row — otherwise
+ * the cross-vendor case would pass without proving anything.
+ */
+describe("findOrderForViewer — guest capability token (#427)", () => {
+  const TOKEN = "6f1d1c2e-9b4a-4a7e-8f2b-0d3c5e7a9b11";
+
+  function orderRow(over: { userId?: string | null; confirmationToken?: string | null } = {}) {
+    return {
+      orderNumber: "AHE-20260829-K4M2XQ",
+      confirmationToken: TOKEN,
+      status: "CONFIRMED",
+      createdAt: new Date("2026-08-29T10:00:00Z"),
+      subtotalPence: 2000,
+      discountPence: 0,
+      deliveryFeePence: 346,
+      totalPence: 2346,
+      userId: null as string | null,
+      items: [
+        {
+          productId: "p-1",
+          productName: "Basmati Rice 5kg",
+          unitPricePence: 2000,
+          quantity: 1,
+          lineTotalPence: 2000,
+        },
+      ],
+      address: {
+        recipientName: "Test Recipient",
+        phone: "07700900000",
+        line1: "1 Test Street",
+        line2: null,
+        city: "Leicester",
+        postcode: "LE1 1AA",
+        notes: null,
+      },
+      discountUse: null,
+      loyaltyEntries: [] as { points: number }[],
+      ...over,
+    };
+  }
+
+  /** Honours `where` exactly as Postgres would, so vendor scoping is real. */
+  function fakeDb(row: ReturnType<typeof orderRow>, vendorId = VENDOR) {
+    return {
+      order: {
+        findFirst: async ({ where }: { where: { orderNumber: string; vendorId: string } }) =>
+          where.vendorId === vendorId && where.orderNumber === row.orderNumber ? row : null,
+      },
+    } as unknown as Parameters<typeof findOrderForViewer>[0];
+  }
+
+  const read = (row: ReturnType<typeof orderRow>, viewer: string | null, token: string | null) =>
+    findOrderForViewer(fakeDb(row), VENDOR, row.orderNumber, viewer, token);
+
+  it("returns a guest order to a caller holding the matching token", async () => {
+    await expect(read(orderRow(), null, TOKEN)).resolves.toMatchObject({
+      orderNumber: "AHE-20260829-K4M2XQ",
+      hasAccount: false,
+    });
+  });
+
+  it("refuses a guest order when no token is supplied — the order number is not a credential", async () => {
+    await expect(read(orderRow(), null, null)).resolves.toBeNull();
+  });
+
+  it("refuses a guest order when the token is wrong", async () => {
+    await expect(read(orderRow(), null, "not-the-token")).resolves.toBeNull();
+  });
+
+  it("refuses a guest order when the token is the empty string", async () => {
+    await expect(read(orderRow(), null, "")).resolves.toBeNull();
+  });
+
+  // Orders placed before this migration have a NULL token. Without the explicit
+  // null guard, `null === null` would hand every one of them to a caller passing
+  // nothing at all — the exact hole #427 closes.
+  it("refuses a pre-migration guest order whose stored token is null, even with no token passed", async () => {
+    await expect(read(orderRow({ confirmationToken: null }), null, null)).resolves.toBeNull();
+  });
+
+  it("returns a member's own order to its owner", async () => {
+    await expect(read(orderRow({ userId: "u-1" }), "u-1", null)).resolves.toMatchObject({
+      hasAccount: true,
+    });
+  });
+
+  // The token is irrelevant to an owned order: holding a correct one must not
+  // promote a stranger into the owner.
+  it("refuses a member's order to a non-owner even holding the correct token", async () => {
+    await expect(read(orderRow({ userId: "u-1" }), "u-2", TOKEN)).resolves.toBeNull();
+  });
+
+  it("refuses another vendor's order for every viewer and token combination", async () => {
+    const row = orderRow();
+    await expect(
+      findOrderForViewer(fakeDb(row), "v-other", row.orderNumber, null, TOKEN),
+    ).resolves.toBeNull();
+    await expect(
+      findOrderForViewer(fakeDb(row), "v-other", row.orderNumber, "u-1", null),
+    ).resolves.toBeNull();
+  });
+
+  // OrderSummary is what every order page renders from, so the credential must
+  // not survive into it — same reason userId doesn't.
+  it("never returns the token itself", async () => {
+    const result = await read(orderRow(), null, TOKEN);
+    expect(result).not.toBeNull();
+    expect("confirmationToken" in (result as object)).toBe(false);
+    expect("userId" in (result as object)).toBe(false);
   });
 });

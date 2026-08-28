@@ -29,6 +29,11 @@ export interface CreatePaymentInput {
    *  in rather than read from request context, so the order transaction stays
    *  free of `headers()` and remains testable from a plain script (P3b R9a). */
   returnOrigin: string;
+  /** P9.1 (#427/#428) — the order's capability token, carried on both return
+   *  URLs. Required, not optional: a guest returning from Stripe without it is
+   *  refused by `findOrderForViewer`, so an adapter that forgot to include it
+   *  would lock every guest out of their own confirmation. */
+  confirmationToken: string;
 }
 
 export interface CreatePaymentResult {
@@ -79,13 +84,23 @@ export function createStubPaymentService(): PaymentService {
 export function createStripePaymentService(secretKey: string): PaymentService {
   return {
     async createPayment(input) {
+      // P9.1 (#427/#428). Both return URLs carry the order's capability token —
+      // the order number alone authorizes nothing. Encoded because it rides in a
+      // query string, even though randomUUID() emits nothing that needs it.
+      const token = encodeURIComponent(input.confirmationToken);
+
       // Stripe's API is form-encoded, including its bracketed nested keys.
       const body = new URLSearchParams({
         mode: "payment",
         // The shopper returns here; the page reads the order's real status from
         // the DB rather than trusting the redirect (P3c R21).
-        success_url: `${input.returnOrigin}/checkout/${input.orderNumber}`,
-        cancel_url: `${input.returnOrigin}/api/checkout/cancel?orderNumber=${input.orderNumber}`,
+        success_url: `${input.returnOrigin}/checkout/${input.orderNumber}?t=${token}`,
+        // A PAGE, not an API route, and deliberately not a mutation: Stripe
+        // returns the browser here with a GET, so cancelling from this request
+        // would be a destructive GET reachable by any prefetcher, scanner or
+        // unfurler that touches the URL. The page asks; a POST server action
+        // acts (#428).
+        cancel_url: `${input.returnOrigin}/checkout/${input.orderNumber}/cancel?t=${token}`,
         // Traceable from the Stripe dashboard back to an order without a query.
         client_reference_id: input.orderNumber,
         "metadata[orderNumber]": input.orderNumber,

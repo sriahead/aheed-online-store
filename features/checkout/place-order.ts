@@ -139,7 +139,14 @@ export async function placeOrderAction(
     });
     // With Stripe configured the shopper goes to hosted Checkout; with the stub
     // adapter there is nowhere to pay, so they land on the order page directly.
-    destination = placed.redirectUrl ?? `/checkout/${placed.orderNumber}`;
+    //
+    // That fallback MUST carry the capability token too (P9.1, #427). It is not a
+    // rare path — it is every checkout wherever STRIPE_SECRET_KEY is unset, which
+    // is local preview and CI — and without the token the confirmation page
+    // refuses the shopper their own order.
+    destination =
+      placed.redirectUrl ??
+      `/checkout/${placed.orderNumber}?t=${encodeURIComponent(placed.confirmationToken)}`;
   } catch (error) {
     if (error instanceof MissingFieldError) return { error: error.message };
     if (error instanceof CheckoutError) return { error: error.message };
