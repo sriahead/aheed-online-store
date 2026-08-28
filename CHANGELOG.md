@@ -5,6 +5,91 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 every branch merges.
 
 ### Documentation
+- **`/document` closeout for `#426`.** Reconciles `specs/roadmap.md`'s #426 row (written at Build,
+  before the PR existed) with what actually shipped: cites **PR #447**, merge `7ab23c5`, `staging`;
+  records `gates` green (1m18s on the merged commit) and both `deploy-staging`/`deploy-docs-internal`
+  completing successfully post-merge. `/validate` found and fixed a genuine defect before merge — R3
+  claimed `P08 — Deployment & launch` holds zero open issues, contradicting R11's requirement that
+  **#420** stay open on it unchanged; the artifact was already correct (P08 shows exactly one open
+  issue, #420), so `requirements.md`/`validation.md` were fixed instead, shipped in commit `96936db`
+  on the same PR. `/validate` also finished R32's live check, left incomplete at Build — signed in
+  live as `demo-store-admin@example.com` under `npm run preview` and confirmed `/staff/bundles/new`
+  renders its create form. **#426 moved to `In Review`** on Project #2; the twenty new issues
+  (**#427**–**#446**) are tagged Phase `P8` per the board's known limitation. `ARTIFACT_INDEX.md`/
+  `docs.ts` rebuilt (113 artifacts); `npm run sdd:audit` re-run and exits 0.
+- **`#426` — P8 closed as a historical record; P9 and P10 created.** The `P8 — Deployment & launch`
+  milestone held **39 open issues** that were four different kinds of thing at once: genuine launch
+  gates, post-launch enhancements, bookkeeping, and unresolved security work that nothing marked as
+  such (**#340**, a cross-tenant write path). All 39 were redistributed with an explicit destination
+  each — **#340** to P9.1; **#113, #104, #227, #246, #175, #219, #101, #94, #236** to P9.2;
+  **#174, #350, #351, #398** to P9.3; twenty-three to P10; **#91** (the P8 epic) and **#408** (fully
+  sequenced by #420) closed with reasons; **#420** left open to close on its own promotion.
+  **P8.6 and P8.7 folded into P10** and their milestones closed one day after #420 created them,
+  with #420's gate analysis (#363 gating #401/#402, ADR-006 gating #402 and #400's per-store half,
+  #398's variant model gating #399 and #397's Pack Size facet, #399's second gate amending ADR-005)
+  **preserved in the P10 prose rather than discarded**. P8.1/P8.2/P8.3/P8.5/P8.6/P8.7 keep their
+  numbers and original text, marked with where their work went — renumbering would falsify
+  `specs/2026-08-23-p8.1b-closeout/plan.md` and the change-log rows citing them. Six milestones
+  created (`P9`, `P9.1`–`P9.4`, `P10`) and **twenty issues filed**: **#427**–**#433** (guest order
+  PII, cancellation authorization, Stripe session binding, payment fail-closed, auth rate limiting,
+  cross-tenant DB integrity, commercial CHECK constraints), **#434**–**#438** (migration-safe
+  deploy, release quality gates, backup/PITR restore, alerting, rollback), **#439**–**#442** (LCP
+  re-measurement, Playwright smoke suite, UAT, accessibility), **#443**–**#445** (game day, exact
+  release-candidate verification, GO/NO-GO), **#446** (CSP hardening). Seven P10 themes are recorded
+  as **prose, deliberately not filed as issues**. **Two claims were checked against the code and
+  not filed as written:** **#243** was already closed and was **not** reopened (#439 measures the
+  release candidate instead), and `/staff/bundles/new` proved not to be a broken journey —
+  `[bundleId]/page.tsx` branches on `bundleId === "new"`. Six other claims were confirmed true
+  against the code first, each cited to a file and line in `plan.md`. Extends the #267 board note to
+  cover P9 and P10, which Project #2's Phase field cannot express either. Sequencing and decision
+  work only — **no application code, including no fix for any security item filed**.
+  `specs/2026-08-28-p9-launch-readiness-restructure/`, roadmap v1.53.0.
+- **`/document` closeout for `#420`.** Reconciles `specs/roadmap.md`'s #420 row (written at Build,
+  before the PR existed) with what actually shipped: cites **PR #424**, merge `be57b26`, `staging`;
+  records `gates` green (1m20s) and both `deploy-staging`/`deploy-docs-internal` completing
+  successfully post-merge. Names the three follow-up issues filed at Build and confirms their board
+  placement (Backlog, Phase `P8`): **#421** (build the pre-launch set), **#422** (the business
+  question ADR-006 left open), **#423** (`kms/site-internal/next-env.d.ts` dirtying `sdd:preclear`
+  on every internal docs build). **#420 moved to `In Review`** on Project #2. `ARTIFACT_INDEX.md`/
+  `docs.ts` rebuilt (112 artifacts); `npm run sdd:audit` re-run and exits 0.
+- **`#420` — the `#408` storefront and fulfilment brief sequenced into the roadmap.** Fourteen
+  issues (**#394**–**#407**, filed 2026-08-27) moved off their stated `P8` holding position.
+  Before this slice `specs/roadmap.md` contained none of the strings `#408`, `#394` or `#407` —
+  the issues existed, sat on Project #2, and were sequenced nowhere, while the roadmap said P8.2
+  was next and the store is not live. Two phases **appended, not renumbered** (P8.1/P8.2/P8.3/P8.5
+  keep their numbers, P8.3 stays the unscheduled catch-all): **P8.6 — Storefront discovery &
+  conversion** (#394, #395, #396 paired with #286, #406, #405's link-only half, #400's
+  async-loading half, #397's three boolean certification facets, and a **gated** #404) and
+  **P8.7 — Fulfilment & merchandising data models** (#398's variant model, #399, #401, #402,
+  #397's Pack Size and Brand facets, #400's per-store half). A **pre-launch set inside P8.2** —
+  #407, #397's Country-of-Origin facet, the #403 investigation, #398's unit-price derivation half
+  — is sequenced here and built by a separate later slice under its own issue; **no feature from
+  the brief is built by this slice**. Also records the #397/#398/#400 phase splits, six gating
+  relationships, the earliest-phase milestone rule (a GitHub issue carries one milestone; three of
+  these are split), and the #267 board Phase-field limitation. GitHub milestones **P8.6** and
+  **P8.7** created and ten issues re-milestoned; all fourteen stay open.
+  **Three findings from checking the brief against the code rather than trusting it:** #407 is not
+  schema-free (no social field exists on `VendorConfig` or `VendorBranding`, so it needs an
+  additive migration); #403 is expected to ship no application code (`lib/payments.ts` uses hosted
+  Stripe Checkout with `mode: "payment"` and pins no `payment_method_types`, so wallets are
+  Dashboard-controlled — only Apple Pay domain registration is real work, and the live half waits
+  on #113); and #399 is gated **twice**, the second gate being a payments-capture decision amending
+  ADR-005, because `lib/payments.ts` sets no `capture_method` and the integration therefore captures
+  immediately. Carry-forward change-log row for **PR #419** added, which `npm run sdd:audit` had
+  reported as the one pending promotion.
+- **`ADR-006 — Store locations (multi-branch shape)` added**, settling the question that gated
+  #400's per-store half and #402. A store location is a child of `Vendor`, **never a second tenancy
+  axis and never a second mandatory filter in `lib/repositories/*`** — `vendorId` stays the sole
+  isolation axis, so adopting locations later is an additive migration rather than a rewrite of
+  every repository query and of `tests/repository-vendor-scoping.test.ts`'s premise. Resolves a
+  naming collision the brief never raised: **ADR-004 decision 1 already anticipates
+  `Region`/`Location` reference tables**, which are *geography reference data* and a different
+  concept from a trading site with stock and a collection counter — a trading site takes the more
+  specific name `VendorLocation`. **The business question — whether Aheed trades from more than one
+  site — is deliberately left open**; ADR-006 rules shape, not commerce, and `specs/mission.md`'s
+  out-of-scope line on multi-branch management is **not** amended. `ADR-004` (1.9.0 → 1.10.0) gains
+  a cross-reference on decision 1 so a reader with a locations question, who would open ADR-004
+  rather than ADR-006, finds the ruling.
 - **`/document` closeout for `#409`/`#411`/`#412`/`#415` (repository client injection, slices 2+3
   of 3 — #409 fully closed out).** `specs/roadmap.md` gets a full closure row for **PR #417**
   (merge `1cf7fd3`), recording `gates` green (1m15s), post-merge `deploy-staging` and

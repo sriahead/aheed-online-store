@@ -4,12 +4,19 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.9.0"
-updated: 2026-08-25
+version: "1.10.0"
+updated: 2026-08-28
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
-related: [architecture, adr-001-hosting, adr-002-auth-library, adr-003-storage-abstraction]
+related:
+  [
+    architecture,
+    adr-001-hosting,
+    adr-002-auth-library,
+    adr-003-storage-abstraction,
+    adr-006-store-locations,
+  ]
 ---
 
 # ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)
@@ -42,6 +49,11 @@ should be reasoned about together.
      flags), and a **delivery-area** table (`VendorDeliveryArea`: per-vendor postcode prefixes /
      regions — replaces `lib/delivery.ts`'s hardcoded `MK1–MK19`).
    - `Region`/`Location` as their own reference tables when geography grows beyond delivery areas.
+     **Qualified by ADR-006 (2026-08-28, #420):** the `Location` anticipated here is *geography
+     reference data* — a normalised place a delivery area points at. It is **not** a trading site
+     with its own stock, opening hours or collection counter, which is a separate concept ADR-006
+     rules on and names `VendorLocation`. Neither table is built. Read ADR-006 before adding either,
+     so the two do not collide on the name.
 
 2. **Scope every domain row to a vendor — row-level tenancy.** Add a mandatory `vendorId` (FK) to
    `Category`, `Product`, `Inventory`, `Review`, and the future `Order`/`Cart`. Row-level tenancy
