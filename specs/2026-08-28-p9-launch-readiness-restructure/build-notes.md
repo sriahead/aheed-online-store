@@ -78,21 +78,20 @@ Gate 4 entry added under `### Documentation`.
 
 ## Deviations from the spec
 
-- **R32's live check was completed only in part, and this is a real gap rather than a formality.**
-  The spec asked for `/staff/bundles/new` to be loaded under `npm run preview` **while signed in as a
-  store admin**. What was verified live: the route resolves and is not a dead end — it returned
-  `307 → /login`, identical to a real bundle id (`/staff/bundles/some-nonexistent-id`), while a
-  genuinely unmatched path (`/staff/bundles/new/definitely-not-a-route`) returned `404`. That proves
-  the `[bundleId]` segment matches `new` and the request reaches the page's auth gate.
-  **What was not verified: that the create form renders for an authenticated admin.** Sign-in as
-  `demo-admin@example.com` through `/api/auth/sign-in/email` returned **401** against the database
-  `.dev.vars` points at — the demo account is not present there, or was created with a different
-  password. Reseeding a database to prove a negative was judged disproportionate, so the check was
-  stopped rather than escalated.
-  **Per R20, no issue was filed** — the routing evidence plus the explicit `const isNew = bundleId
-  === "new"` branch at `[bundleId]/page.tsx:47` is enough to say the reported dead end does not
-  exist. If anyone wants the render itself confirmed, it is one signed-in page load away and belongs
-  in #441's staff UAT walk, which covers bundles anyway.
+- **R32's live check was completed only in part at Build time; `/validate` finished it and it passed
+  clean.** At Build, the spec's requirement to load `/staff/bundles/new` under `npm run preview`
+  **while signed in as a store admin** was only half done: the route's resolution was verified
+  (`307 → /login`, identical to a real bundle id, vs. `404` for a genuinely unmatched path), but
+  sign-in as `demo-admin@example.com` returned **401**, and reseeding a database to prove a negative
+  was judged disproportionate at the time, so the check was stopped rather than escalated. At
+  `/validate`, a fresh context redid this properly: confirmed `.dev.vars`/`.env` point at the dev
+  Neon host (`ep-sparkling-paper-za3j7xza`, distinct from staging's `ep-empty-scene` and
+  production's `ep-young-glitter`), ran `npm run demo:accounts -- remove` then `add` to guarantee
+  the demo accounts' passwords match the current `DEMO_ACCOUNT_PASSWORD`, started `npm run preview`,
+  signed in as `demo-store-admin@example.com` (200, session cookie issued), and fetched
+  `/staff/bundles/new` with that session: **200, the create-bundle form renders, no `PanelRefusal`
+  and no refusal markers in the response body.** R20 is confirmed correct — no issue needed to be
+  filed — and this is no longer an open gap.
 - **The password was deliberately never printed.** It was read into a shell variable and JSON-encoded
   through `node -e` rather than interpolated. A first attempt at naive interpolation returned
   `Invalid JSON in request body`, which is itself a signal the value contains JSON-hostile
@@ -118,3 +117,16 @@ Gate 4 entry added under `### Documentation`.
 - **CLAUDE.md's label rule is stale** and is not something this slice fixed. Worth either creating
   the labels or removing the claim; not filed as an issue, because it is a one-line documentation
   correction rather than tracked work.
+- **R3 contradicted R11 in `requirements.md` as originally written.** R3 said P08 holds "zero open
+  issues"; R11 requires #420 to stay open on P08, unchanged. Both can't be literally true — the
+  artifact was always correct (P08 shows `open_issues: 1`, exactly #420, matching the disposition
+  table above), but the requirement's wording was not. Found at `/validate`; fixed in
+  `requirements.md`/`validation.md` (not the artifact) and shipped in the same PR (commit `96936db`).
+- **R33 produced two Roadmap Change Log rows instead of the one its wording names**, because the
+  human-directed milestone zero-padding pass (a decision taken after the main build) was recorded as
+  its own row rather than folded into the first. Both rows are real and document distinct work under
+  the same issue; `specs/roadmap.md`'s version still moved past `1.52.0` as required (1.52.0 →
+  1.53.0 → 1.54.0). Flagged at `/validate` as a minor, undisclosed deviation from the requirement's
+  literal text — not fixed, since splitting a human-directed follow-on decision into its own log row
+  is a reasonable editorial call and rewriting `requirements.md` to say "one or more" would be
+  fitting the spec to the artifact after the fact rather than a correction.
