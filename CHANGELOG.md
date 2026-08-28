@@ -4,6 +4,33 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+### Security
+- **`#427` / `#428` — an order number is no longer a credential.** First slice of **P9.1**.
+  `app/(storefront)/checkout/[orderNumber]/page.tsx` resolved a guest's order with the order number
+  alone and rendered their name, phone and delivery address; order numbers travel through emails,
+  shared links, browser history and support threads. `Order` gains a nullable, unique
+  `confirmationToken`, minted with `crypto.randomUUID()` inside `placeOrder`'s existing transaction
+  and carried on both of Stripe's return URLs. `findOrderForViewer` takes it as a fifth explicit
+  parameter: a member's order stays owner-only and ignores the token (a non-owner holding a valid one
+  is still refused), a guest order needs a non-empty match against a **non-null** stored value, and
+  the token is destructured out of the result beside `userId` so it never reaches `OrderSummary`.
+  Every refusal — no such order, wrong token, not the owner — takes one branch to `/orders/lookup`
+  instead of `notFound()`, so nothing confirms which order numbers are real. Orders placed before the
+  migration keep a null token and fall back to that same lookup (order number + email); deliberately
+  **not** backfilled, since minting tokens nobody was ever sent buys nothing.
+  **`app/api/checkout/cancel/route.ts` is deleted.** Stripe's `cancel_url` returns the browser with a
+  `GET`, so that route cancelled a live order and released its inventory for any link prefetcher,
+  mail scanner, chat unfurler or crawler that touched the URL — which a token alone would not have
+  fixed. The `GET` is now a non-mutating confirmation page at `/checkout/[orderNumber]/cancel`, and
+  the write sits behind a POST server action that re-proves the token rather than trusting the form's
+  hidden fields. The stub adapter's fallback destination in `features/checkout/place-order.ts` also
+  carries the token: that branch is **every** checkout wherever `STRIPE_SECRET_KEY` is unset, so
+  without it local preview and CI would refuse shoppers their own confirmation. Migration generated
+  with `prisma migrate diff`, not `migrate dev`, which demands a dev-DB reset over a drifted
+  checksum (**#378**); the same diff reported three `DROP INDEX` statements for the `pg_trgm`
+  indexes, the false drift CLAUDE.md predicts for hand-authored DDL, deliberately excluded. Deferred:
+  **#450** (a `getForStaff` comment still describing the old rule).
+
 ### Documentation
 - **`/document` closeout for `#426`.** Reconciles `specs/roadmap.md`'s #426 row (written at Build,
   before the PR existed) with what actually shipped: cites **PR #447**, merge `7ab23c5`, `staging`;
