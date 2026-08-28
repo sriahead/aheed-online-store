@@ -4,8 +4,8 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.51.0"
-updated: 2026-08-27
+version: "1.52.0"
+updated: 2026-08-28
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P8, plus inserted P2.5 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures.
 tags: [roadmap, phases, backlog]
@@ -122,7 +122,84 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
     scale weight, per-product free-delivery overrides, and the wishlist (#232) — each is a data
     model this repo does not have, not a styling gap.
   - **P8.2 — Launch & Operations:** The original P8 mandate. Stripe live keys (#113), image cleanup (#174), abandoned carts (#94), Stripe sweep (#101), confirm Workers Logs (#246), Verify Neon limits (#227), and the two outstanding credential rotations (#175 staging Neon password, #219 shared Cloudflare API token) — sequenced at the end of the launch-prep line rather than in P8.1, so they land right before go-live instead of being rotated once now and needing a second look later.
-  - **P8.3 — Post-Launch Backlog (Enhancements):** All feature enhancements and non-critical deferred items (Group 2 issues, e.g., #286, #280, #279, #232, #146-149, #115-116, #288, #75).
+    **Pre-launch set from the #408 brief, added 2026-08-28 by #420:** four items judged small enough
+    to cross in front of launch — **#407** (Facebook and Instagram links, per-vendor and
+    data-driven), the **Country-of-Origin facet only** of **#397**, the **#403** investigation
+    (Apple Pay / Google Pay express checkout), and the **unit-price derivation half** of **#398**.
+    **This set is sequenced here and built by a separate later slice under its own issue** — #420 is
+    a sequencing slice and deliberately builds no feature from the brief.
+    Three notes that change what these cost, each checked against the code rather than the brief:
+    **#407 is not schema-free** — neither `VendorConfig` nor `VendorBranding` has any social field,
+    so it needs a migration, additive and nullable but real. **#403 is expected to ship no
+    application code at all** — `lib/payments.ts` uses hosted Stripe Checkout with `mode: "payment"`
+    and pins no `payment_method_types`, so wallet availability is Stripe Dashboard-controlled; the
+    only real work is Apple Pay domain registration, and the live half is gated on **#113** (production
+    still runs Stripe test keys). **#398's half is here as compliance, not as a feature** —
+    `Product.unitLabel` is free text with no computed relation to `basePrice`, which is a UK Price
+    Marking Order drift exposure that should not be carried into a live store; deriving the displayed
+    unit price from `basePrice` and a structured quantity is small and does not need the variant
+    model that the rest of #398 (P8.7) does.
+  - **P8.3 — Post-Launch Backlog (Enhancements):** All feature enhancements and non-critical deferred items (Group 2 issues, e.g., #286, #280, #279, #232, #146-149, #115-116, #288, #75). **Remains the unscheduled catch-all** after P8.6 and P8.7 were added below — those two took named storefront and fulfilment work out of this bucket, they did not replace it.
+  - **P8.6 — Storefront discovery & conversion.** Added 2026-08-28 by **#420**, sequencing the
+    **#408** storefront and fulfilment brief (given 2026-08-27, filed as **#394**–**#407**). The
+    post-launch half of that brief: the desktop 2-tier sticky mega-menu (**#394**), the mobile
+    sticky bottom navigation bar (**#395**), Desi-translated search (**#396**, paired with **#286**
+    since both run through the same `pg_trgm` code path already installed by
+    `20260820143949_p7_5de_order_search_trigram` — #286 first), embedded Google and Trustpilot
+    review widgets (**#406**), the **link-only** half of the floating WhatsApp button (**#405**),
+    the async-loading half of smart stock badges (**#400**), and the three boolean certification
+    facets of **#397** (HMC Certified, Vegetarian, Gluten-Free — the same column shape as the
+    existing `isHalal`/`isFresh`/`isOrganic` fields, which is what makes them cheap).
+    **#404** (merging Promotions and Bundles into one savings section) sits in this phase but is
+    **gated**: it is really a grouping of **#146**, **#147**, **#148**, **#372** and **#377**, and
+    `DiscountRedemption`'s `@@unique([orderId])` permits one redemption per order, so the UI merge
+    cannot honestly precede the discount-engine decision. P8.5c shipped bundle cards with no savings
+    claim for exactly this reason. **Deliberately excluded:** the chat-driven re-order half of
+    **#405**, which stays out of scope as notification/marketing automation per `specs/mission.md`.
+  - **P8.7 — Fulfilment & merchandising data models.** Added 2026-08-28 by **#420**, from the same
+    **#408** brief. The largest block by a wide margin, and the one the brief most under-states —
+    every item here is a data model this repo does not have, not a styling gap, which is the same
+    reason `specs/roadmap.md` already recorded product variants, butcher-cut selection and
+    approximate scale weight as deliberately excluded from P8.5. Scope: the variant and
+    unit-of-measure model of **#398** (its unit-price derivation half ships pre-launch in P8.2, see
+    above), the butcher cut selector and scale guarantee (**#399**), the delivery calendar picker
+    with specific time windows (**#401**), Click & Collect including 60-minute express pickup
+    (**#402**), the Pack Size and Brand facets of **#397**, and the per-store counts half of
+    **#400**.
+    **Gates, recorded so they are not re-derived:** **#363** (the store timezone is a hardcoded
+    constant, `lib/local-datetime.ts:43`) gates **#401** and **#402**, the same blocker that already
+    holds #379; **ADR-006** gates **#402** and **#400**'s per-store half; and **#398**'s variant
+    model gates **#399** and **#397**'s Pack Size facet.
+    **#399 is gated twice, and the second gate is not in the brief.** Its "pre-authorise plus or
+    minus 10 percent" scale guarantee is a payments-integration change, not a merchandising one:
+    `lib/payments.ts` sets no `capture_method`, so this integration captures immediately on hosted
+    Stripe Checkout. A pre-authorise-then-adjust flow needs manual capture or adjustable
+    authorisation, which is a payments decision **amending ADR-005** — on top of the variant model
+    #399 already depends on. Recorded here rather than in ADR-005 itself, because the decision
+    belongs to whichever slice actually builds #399.
+
+> **The #408 brief and how it was split.** #408 (2026-08-27) filed fourteen issues, **#394**–**#407**,
+> covering navigation, product discovery, halal meat merchandising, fulfilment, checkout and
+> trust/marketing surfaces. **#420** sequenced them on 2026-08-28: a small pre-launch set inside
+> P8.2, the post-launch storefront work as P8.6, and the fulfilment and merchandising data models as
+> P8.7. **P8.6 and P8.7 are appended rather than renumbered** — P8.1, P8.2, P8.3 and P8.5 keep their
+> existing numbers and meanings, the same "out of sequence on purpose" convention P8.5 itself set.
+>
+> **#397 is split across all three buckets**, because the brief files it as one item and it is not
+> one: **Country-of-Origin is pre-launch** (the `Product.origin` column already exists and is already
+> selected by the repository — it has no filter control, nothing more), the **three boolean
+> certification facets are P8.6**, and **Pack Size and Brand are P8.7**, behind #398's variant model.
+> **#398 and #400 are likewise split** — #398's unit-price derivation is pre-launch and its variant
+> model is P8.7; #400's async loading is P8.6 and its per-store counts are P8.7.
+>
+> **Milestone rule, since a GitHub issue carries only one:** a split issue takes the milestone of its
+> **earliest** phase. So #397, #398, #403 and #407 stay on `P8 — Deployment & launch` (their earliest
+> phase is P8.2, a subdivision of P8 with no milestone of its own), and #400 sits on P8.6.
+>
+> **Board limitation.** Project #2's Phase field has options only through `P8` — it cannot express
+> P8.5, P8.6 or P8.7, and per the open **#267** it cannot express P7.5 either. The options are UI-only
+> in Projects V2 with no API to add them, so board items for these issues stay on Phase `P8`; this
+> roadmap and the GitHub milestone carry the real phase.
 
 ## Roadmap Change Log
 
@@ -251,3 +328,5 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
 | 2026-08-27 | **`#382`'s fix promoted to production** (**PR #393**, merge `2baaaea`, `staging -> main`): the `updateMany`/`createMany` HTTP-mode fix from PR #391, plus the roadmap closeout from PR #392, reached production. No migration; the change is entirely which Prisma client four write paths resolve. `deploy-production` and `deploy-docs-internal` both completed green. **#382 closed**, its Project #2 item auto-moved to **Done**. Carry-forward row: the promotion merged after this roadmap was last edited, so per the carry-forward rule its row lands on the next slice's branch (`specs/2026-08-27-repository-client-injection/`) rather than a PR of its own. | Closes out the four-round #382 investigation; `npm run sdd:audit` had reported it as the one pending promotion at the following Orient |
 | 2026-08-27 | **Repository client-injection rule enforced for the first time — slice 1 of 3** (**#409**, **#410**, **PR #413**, merge `464b59d`, `staging`, `specs/2026-08-27-repository-client-injection/`): `CLAUDE.md`'s rule that every `lib/repositories/*` export takes its Prisma client as an explicit parameter was **never enforced**, and `tests/repository-purity.test.ts`'s own docstring contradicted it by declaring internally-resolving functions "compliant". **32 of 109 exports across 8 files** resolved their own client. Settled empirically rather than by argument: `lib/db.ts` builds its client from `@prisma/client/wasm` (mandatory on Workers), whose query compiler **Node cannot load**, so a self-resolving export cannot run in a plain `tsx` script at all — measured against the dev Neon branch, where an injected-client call passed, the self-resolving equivalent failed with `ERR_UNKNOWN_FILE_EXTENSION`, and the identical query through the script's own client passed. Slice 1 adds `tests/repository-client-injection.test.ts` (AST call-expression check, no function-level allowlist, temporarily scoped by file list), converts the six exports in `customers.ts`, `order-lookup-rate-limit.ts`, `reports.ts` and `discounts.ts`, adds `lib/customers-service.ts`, `lib/reports-service.ts` and `lib/order-lookup-rate-limit-service.ts`, and commits `scripts/verify-repository-injection.ts` proving all five converted paths run against a real database. `/validate` ran fresh-context against the spec (not the build's own account), including reintroducing the defect in `listCustomersForAdmin` and confirming the new test actually fails, and running the live script against the dev Neon branch (`ep-sparkling-paper`, confirmed distinct from both `secrets/staging.vars` and `secrets/production.vars` hosts first) — all five checks passed. `gates` green on PR #413; `deploy-staging`/`deploy-docs-internal` both green. **#410 moved to In Review** on Project #2 — stays open; only closes on promotion to `main`. Slices 2 (**#411**) and 3 (**#412**) carry `categories`/`loyalty`/`vendor` and `products.ts`; #412 deletes the file scoping. | Third time this rule claimed an enforcement it did not have — and the first where the false claim sat inside a test that otherwise works, which is the transferable lesson now recorded in `CLAUDE.md` |
 | 2026-08-27 | **Repository client-injection rule completed — slices 2+3 of 3, #409 fully closed out** (**#409**, **#411**, **#412**, **#415**, **PR #417**, merge `1cf7fd3`, `staging`, `specs/2026-08-27-repository-client-injection-completion/`): the remaining 26 self-resolving exports across `categories.ts` (4), `loyalty.ts` (3), `vendor.ts` (5) and `products.ts` (14) converted to take their Prisma client as an explicit parameter, and slice 1's `FILES_IN_SCOPE` scoping list **deleted** — `tests/repository-client-injection.test.ts` now enumerates `lib/repositories/` from the filesystem, so the rule is enforced repo-wide for the first time and a newly added repository file is covered the moment it exists. **Found three dead Prisma clients while converting**: `updateProductForVendor`, `setPrimaryProductImage` and `quickUpdateInventory` each built an HTTP-adapter client with `const prisma = getPrisma();` and never read it, correcting a "14 functions, four of which need both clients" figure that had been carried through #409's own plan and both issue bodies unchallenged — no export needs two clients. `eslint.config.mjs` enables no `no-unused-vars` rule of any kind, which is why nothing caught it; filed **#416**. `updateVendorStorefrontConfig`'s `data: any` replaced with a named `VendorStorefrontConfigInput`. Call sites keep the repository functions' names throughout — each service imports the original under a `…Repo` alias and re-exports a same-named wrapper — so all 29 call sites changed only their import path; `features/admin/storefront.ts`'s aliased `updateVendorStorefrontConfig as updateConfigRepo` import was the one hazard a name-based sweep would have missed, caught by sweeping by symbol instead. `scripts/verify-repository-injection.ts` extended to 14 read/write checks across all four files including the WebSocket `$transaction` path, and now refuses to run against any host named in `secrets/staging.vars`/`secrets/production.vars`, checked before any client is constructed. **Bundled #415** (Worker `cpu_ms` 50 → 300) — Error 1102 kept recurring on staging at 50 (observed live `2026-08-27T12:46:36Z`, Ray ID `a31b2e161d0a63c5`). `/validate` ran fresh-context: R3's deliberate-failure case reproduced live, R12's "no dual-client export" correction independently re-derived from the pre-slice `origin/staging` bodies rather than trusted from build-notes, R23's full diff review across all four files came back clean (signature-only changes plus one disclosed, semantically-identical `BRAND_FIELDS` refactor), the live script run twice against the dev Neon branch (`ep-sparkling-paper`) with all 14 checks PASS both times, and the refusal guard exercised directly against the staging host with a deliberately wrong password (refused before constructing any client). `gates` green on PR #417 (1m15s); post-merge, `deploy-staging` and `deploy-docs-internal` both completed successfully, and the #415 smoke check — 10 sequential requests to `https://staging.aheedfoodcentre.nocaped.com/` — returned HTTP 200 with no Error 1102 on every request. **#409, #410, #411, #412, #415 all moved to In Review** on Project #2 — all five stay open; each closes only on promotion to `main`. **#409 is now code-complete**: every `lib/repositories/*` export takes its client as an explicit parameter, with no remaining scoping gap. | Closes out the three-slice #409 epic; the sandboxed shell used for `/ship`'s post-deploy smoke check could not reach the staging host at all (allowlisted-egress artifact, confirmed by a working `google.com` request from the same shell) — PowerShell's `Invoke-WebRequest` from the same machine reached it fine, which is the transferable lesson worth carrying: a failed request from this environment is not evidence the target is down until a second tool confirms it |
+| 2026-08-27 | **Repository client injection promoted to production** (**PR #419**, merge `4d418be`, `staging -> main`): all three slices of #409 together — slice 1's enforcement test and six conversions (PR #413), slices 2+3's remaining 26 conversions and the deletion of the `FILES_IN_SCOPE` scoping list (PR #417), the #415 Worker `cpu_ms` raise from 50 to 300, and both closeout documentation passes (PRs #414, #418). **No migration; no schema change.** The application-code change is entirely which Prisma client each repository export receives, and it is a signature change rather than a behavioural one — every converted export already ran the same queries, it just resolved its own client instead of being handed one. Issues **#409**, **#410**, **#411**, **#412** and **#415** all reached `Done` on the `main` merge, their Project #2 items auto-moving with them. Carry-forward row: the promotion merged after this roadmap was last edited, so per the carry-forward rule its row lands on the next slice's branch (`specs/2026-08-28-storefront-brief-sequencing/`) rather than a PR of its own — which is exactly what `npm run sdd:audit` reported as the one pending promotion at the following `/orient`. | The rule that `lib/repositories/*` exports take their Prisma client as an explicit parameter is now enforced repo-wide and in production, after three separate occasions on which `CLAUDE.md` claimed an enforcement that did not exist |
+| 2026-08-28 | **The #408 storefront and fulfilment brief sequenced into this roadmap** (**#420**, `specs/2026-08-28-storefront-brief-sequencing/`): fourteen issues (**#394**–**#407**, filed 2026-08-27) moved off their stated P8 holding position into two new phases plus a pre-launch set. Before this slice `specs/roadmap.md` did not contain the strings `#408`, `#394` or `#407` at all — the issues existed, were on Project #2, and were sequenced nowhere, while the roadmap said P8.2 was next and the store is not live. **P8.6 — Storefront discovery & conversion** and **P8.7 — Fulfilment & merchandising data models** are appended, not renumbered; P8.3 stays the unscheduled catch-all. Four items cross in front of launch inside P8.2 (#407, #397's Country-of-Origin facet, the #403 investigation, and #398's unit-price derivation half), sequenced here and built by a separate later slice. **`specs/decisions/ADR-006-store-locations.md` added** to settle the question gating #400's per-store half and #402: a store location is a child of `Vendor`, never a second tenancy axis, and never a second mandatory filter in `lib/repositories/*` — `vendorId` stays the sole isolation axis, so adopting locations later is an additive migration rather than a rewrite of every repository query. ADR-006 also resolves a naming collision with ADR-004 decision 1's anticipated `Region`/`Location` geography reference tables, which are a different concept from a trading site. **The business question — whether Aheed trades from more than one site — is deliberately left open**; ADR-006 rules shape, not commerce, and `specs/mission.md`'s out-of-scope line on multi-branch management is **not** amended. Three findings from checking the brief against the code rather than trusting it: #407 needs a migration after all (no social field exists on `VendorConfig` or `VendorBranding`); #403 is expected to ship no application code (hosted Checkout pins no `payment_method_types`, so wallets are Dashboard-controlled); and #399 is gated twice, the second gate being a payments-capture decision amending ADR-005, because `lib/payments.ts` sets no `capture_method`. **Documentation and decision work only — no feature from the brief is built.** | The roadmap and the issue tracker disagreed for a day; a brief that is filed but unsequenced is a plan nobody can act on, and #408's own body called its P8 milestone "not a sequencing decision" |
