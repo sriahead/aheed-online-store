@@ -5,6 +5,18 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 every branch merges.
 
 ### Documentation
+- **`/document` closeout for `#426`.** Reconciles `specs/roadmap.md`'s #426 row (written at Build,
+  before the PR existed) with what actually shipped: cites **PR #447**, merge `7ab23c5`, `staging`;
+  records `gates` green (1m18s on the merged commit) and both `deploy-staging`/`deploy-docs-internal`
+  completing successfully post-merge. `/validate` found and fixed a genuine defect before merge — R3
+  claimed `P08 — Deployment & launch` holds zero open issues, contradicting R11's requirement that
+  **#420** stay open on it unchanged; the artifact was already correct (P08 shows exactly one open
+  issue, #420), so `requirements.md`/`validation.md` were fixed instead, shipped in commit `96936db`
+  on the same PR. `/validate` also finished R32's live check, left incomplete at Build — signed in
+  live as `demo-store-admin@example.com` under `npm run preview` and confirmed `/staff/bundles/new`
+  renders its create form. **#426 moved to `In Review`** on Project #2; the twenty new issues
+  (**#427**–**#446**) are tagged Phase `P8` per the board's known limitation. `ARTIFACT_INDEX.md`/
+  `docs.ts` rebuilt (113 artifacts); `npm run sdd:audit` re-run and exits 0.
 - **`#426` — P8 closed as a historical record; P9 and P10 created.** The `P8 — Deployment & launch`
   milestone held **39 open issues** that were four different kinds of thing at once: genuine launch
   gates, post-launch enhancements, bookkeeping, and unresolved security work that nothing marked as
