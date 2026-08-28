@@ -5,6 +5,14 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 every branch merges.
 
 ### Documentation
+- **`/document` closeout for `#420`.** Reconciles `specs/roadmap.md`'s #420 row (written at Build,
+  before the PR existed) with what actually shipped: cites **PR #424**, merge `be57b26`, `staging`;
+  records `gates` green (1m20s) and both `deploy-staging`/`deploy-docs-internal` completing
+  successfully post-merge. Names the three follow-up issues filed at Build and confirms their board
+  placement (Backlog, Phase `P8`): **#421** (build the pre-launch set), **#422** (the business
+  question ADR-006 left open), **#423** (`kms/site-internal/next-env.d.ts` dirtying `sdd:preclear`
+  on every internal docs build). **#420 moved to `In Review`** on Project #2. `ARTIFACT_INDEX.md`/
+  `docs.ts` rebuilt (112 artifacts); `npm run sdd:audit` re-run and exits 0.
 - **`#420` — the `#408` storefront and fulfilment brief sequenced into the roadmap.** Fourteen
   issues (**#394**–**#407**, filed 2026-08-27) moved off their stated `P8` holding position.
   Before this slice `specs/roadmap.md` contained none of the strings `#408`, `#394` or `#407` —
