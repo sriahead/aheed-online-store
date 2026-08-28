@@ -29,7 +29,7 @@ nothing from it.
 
 `specs/roadmap.md` v1.52.0 describes **P8 — Deployment & launch** as the phase that carries "all
 remaining open items", decomposed into P8.1 (closed), P8.2 (launch & operations), P8.3 (post-launch
-catch-all), P8.5 (closed), P8.6 and P8.7. The GitHub milestone `P8 — Deployment & launch` holds
+catch-all), P8.5 (closed), P8.6 and P8.7. The GitHub milestone `P08 — Deployment & launch` holds
 **39 open issues**.
 
 Those 39 are not one kind of thing. They are at least four:

@@ -17,7 +17,7 @@ and picked up this slice's `plan.md` as artifact 113.
   superseded by P9.2; P8.3, P8.6, P8.7 → folded into P10. Their original text is preserved verbatim
   after a `Recorded as originally written:` marker, because change-log rows and
   `specs/2026-08-23-p8.1b-closeout/plan.md` cite these numbers.
-- **Two new `##` sections added**, `P9 — Production launch readiness` (with `###` subsections for
+- **Two new `##` sections added**, `P09 — Production launch readiness` (with `###` subsections for
   P9.1–P9.4, each carrying an objective, its issues, and an exit gate) and
   `P10 — Post-launch improvements`. Pointer bullets for both were added to the `## Phases` list so
   that list stays complete.
@@ -28,13 +28,13 @@ and picked up this slice's `plan.md` as artifact 113.
 
 ### Issue tracker
 
-Six milestones created — `P9 — Production launch readiness`, `P9.1 — Security & transaction safety`,
-`P9.2 — Production infrastructure & reliability`, `P9.3 — Launch quality validation`,
-`P9.4 — Launch certification`, `P10 — Post-launch improvements`. `P8.6` and `P8.7` closed at zero
+Six milestones created — `P09 — Production launch readiness`, `P09.1 — Security & transaction safety`,
+`P09.2 — Production infrastructure & reliability`, `P09.3 — Launch quality validation`,
+`P09.4 — Launch certification`, `P10 — Post-launch improvements`. `P8.6` and `P8.7` closed at zero
 open issues.
 
 All 39 open P8 issues redistributed; membership was verified exactly (not by a `contains` check) for
-every milestone. `P8 — Deployment & launch` now holds exactly one open issue, **#420**, which closes
+every milestone. `P08 — Deployment & launch` now holds exactly one open issue, **#420**, which closes
 on its own promotion. **#91** and **#408** closed with explanatory comments via `gh issue close`, not
 through the PR.
 
@@ -60,6 +60,18 @@ Gate 4 entry added under `### Documentation`.
   labels. **No such labels exist in this repository** — `gh label list` returns fifteen labels, none
   of them phase or gate. #420, #421 and #409 carry none either. Followed actual practice (topical
   labels) rather than the documented-but-unimplemented rule. Flagged below.
+- **All 19 P-phase milestone titles zero-padded, prose left alone.** Added after the main build, on
+  the human's instruction. GitHub sorts milestones as text, so `P10` sorted between `P1` and `P2`.
+  Every P-phase milestone is now two-digit (`P00`–`P09.4`, then `P10`); `M0 — Walking Skeleton` is
+  untouched. **The scope question was put to the human explicitly** — the alternative was renaming
+  roughly 2,900 phase tokens across `specs/`, `docs/`, `CHANGELOG.md` and `CLAUDE.md`, plus 47 spec
+  directory names and 52 front-matter `id` values. That was rejected: it edits shipped history and
+  breaks every path citation for a cosmetic gain. The resulting mismatch (`P09.1` in a milestone
+  title, `P9.1` in prose) is deliberate and is recorded in the roadmap's delivery-tracking block so
+  a later reader does not "fix" it.
+  Only **quoted or backticked** milestone titles in this slice's spec files were updated — bold
+  prose like `**P9 — Production launch readiness**` names a roadmap section, not a milestone, and
+  was deliberately left. R40–R42 were added to cover the change.
 - **#91 and #408 closed outside the PR.** A PR body naming roughly forty issue numbers is exactly the
   shape that once closed #174 and #214 by accident. The PR carries one closing keyword, `Closes
   #426`, and a note at the top saying so.
