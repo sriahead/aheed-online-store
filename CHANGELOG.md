@@ -5,6 +5,44 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 every branch merges.
 
 ### Documentation
+- **`#420` — the `#408` storefront and fulfilment brief sequenced into the roadmap.** Fourteen
+  issues (**#394**–**#407**, filed 2026-08-27) moved off their stated `P8` holding position.
+  Before this slice `specs/roadmap.md` contained none of the strings `#408`, `#394` or `#407` —
+  the issues existed, sat on Project #2, and were sequenced nowhere, while the roadmap said P8.2
+  was next and the store is not live. Two phases **appended, not renumbered** (P8.1/P8.2/P8.3/P8.5
+  keep their numbers, P8.3 stays the unscheduled catch-all): **P8.6 — Storefront discovery &
+  conversion** (#394, #395, #396 paired with #286, #406, #405's link-only half, #400's
+  async-loading half, #397's three boolean certification facets, and a **gated** #404) and
+  **P8.7 — Fulfilment & merchandising data models** (#398's variant model, #399, #401, #402,
+  #397's Pack Size and Brand facets, #400's per-store half). A **pre-launch set inside P8.2** —
+  #407, #397's Country-of-Origin facet, the #403 investigation, #398's unit-price derivation half
+  — is sequenced here and built by a separate later slice under its own issue; **no feature from
+  the brief is built by this slice**. Also records the #397/#398/#400 phase splits, six gating
+  relationships, the earliest-phase milestone rule (a GitHub issue carries one milestone; three of
+  these are split), and the #267 board Phase-field limitation. GitHub milestones **P8.6** and
+  **P8.7** created and ten issues re-milestoned; all fourteen stay open.
+  **Three findings from checking the brief against the code rather than trusting it:** #407 is not
+  schema-free (no social field exists on `VendorConfig` or `VendorBranding`, so it needs an
+  additive migration); #403 is expected to ship no application code (`lib/payments.ts` uses hosted
+  Stripe Checkout with `mode: "payment"` and pins no `payment_method_types`, so wallets are
+  Dashboard-controlled — only Apple Pay domain registration is real work, and the live half waits
+  on #113); and #399 is gated **twice**, the second gate being a payments-capture decision amending
+  ADR-005, because `lib/payments.ts` sets no `capture_method` and the integration therefore captures
+  immediately. Carry-forward change-log row for **PR #419** added, which `npm run sdd:audit` had
+  reported as the one pending promotion.
+- **`ADR-006 — Store locations (multi-branch shape)` added**, settling the question that gated
+  #400's per-store half and #402. A store location is a child of `Vendor`, **never a second tenancy
+  axis and never a second mandatory filter in `lib/repositories/*`** — `vendorId` stays the sole
+  isolation axis, so adopting locations later is an additive migration rather than a rewrite of
+  every repository query and of `tests/repository-vendor-scoping.test.ts`'s premise. Resolves a
+  naming collision the brief never raised: **ADR-004 decision 1 already anticipates
+  `Region`/`Location` reference tables**, which are *geography reference data* and a different
+  concept from a trading site with stock and a collection counter — a trading site takes the more
+  specific name `VendorLocation`. **The business question — whether Aheed trades from more than one
+  site — is deliberately left open**; ADR-006 rules shape, not commerce, and `specs/mission.md`'s
+  out-of-scope line on multi-branch management is **not** amended. `ADR-004` (1.9.0 → 1.10.0) gains
+  a cross-reference on decision 1 so a reader with a locations question, who would open ADR-004
+  rather than ADR-006, finds the ruling.
 - **`/document` closeout for `#409`/`#411`/`#412`/`#415` (repository client injection, slices 2+3
   of 3 — #409 fully closed out).** `specs/roadmap.md` gets a full closure row for **PR #417**
   (merge `1cf7fd3`), recording `gates` green (1m15s), post-merge `deploy-staging` and
