@@ -104,6 +104,19 @@ export interface PlacedOrder {
   totalPence: number;
   /** Where to send the shopper to pay; null when the stub adapter is active. */
   redirectUrl: string | null;
+  /**
+   * P9.1 (#427/#428) — the order's capability token, returned so the caller can
+   * build the shopper's own confirmation URL when `redirectUrl` is null (the
+   * stub adapter: local preview, CI, and any environment with no
+   * STRIPE_SECRET_KEY). Without it that fallback hands the shopper a URL the
+   * authorization rule immediately refuses.
+   *
+   * This is the ONLY type that carries the token back into application code, and
+   * it is deliberately not `OrderSummary` — every order page renders from that
+   * one. `features/checkout/place-order.ts` reads two fields off this object and
+   * never renders it.
+   */
+  confirmationToken: string;
 }
 
 const ORDER_NUMBER_ATTEMPTS = 5;
@@ -275,7 +288,7 @@ export async function placeOrder(
     const totals = computeTotals(lines, input.rules, codeDiscountPence + redemption.discountPence);
 
     // Retry against the unique index rather than assuming randomness never collides.
-    let order: { id: string; orderNumber: string } | null = null;
+    let order: { id: string; orderNumber: string; confirmationToken: string | null } | null = null;
     for (let attempt = 0; attempt < ORDER_NUMBER_ATTEMPTS; attempt++) {
       const orderNumber = buildOrderNumber(input.vendorSlug, new Date());
       const clash = await tx.order.findUnique({
@@ -287,6 +300,10 @@ export async function placeOrder(
         data: {
           vendorId,
           orderNumber,
+          // P9.1 (#427/#428) — minted here, in the same write as the order
+          // number, so no order can ever exist without one. 122 bits of
+          // randomness from the same source lib/cart-identity.ts already uses.
+          confirmationToken: crypto.randomUUID(),
           userId: input.userId,
           guestEmail: input.guestEmail,
           addressId: address.id,
@@ -295,7 +312,7 @@ export async function placeOrder(
           deliveryFeePence: totals.deliveryFeePence,
           totalPence: totals.totalPence,
         },
-        select: { id: true, orderNumber: true },
+        select: { id: true, orderNumber: true, confirmationToken: true },
       });
       break;
     }
@@ -383,6 +400,9 @@ export async function placeOrder(
     return {
       orderId: order.id,
       orderNumber: order.orderNumber,
+      // Non-null by construction: the create above always supplies it. The
+      // column is nullable only for orders that predate the P9.1 migration.
+      confirmationToken: order.confirmationToken ?? "",
       totalPence: totals.totalPence,
       currency: CURRENCY,
     };
@@ -399,6 +419,7 @@ export async function placeOrder(
       currency: created.currency,
       vendorId,
       returnOrigin: input.returnOrigin,
+      confirmationToken: created.confirmationToken,
     });
 
     await prisma.payment.update({
@@ -410,6 +431,7 @@ export async function placeOrder(
       orderNumber: created.orderNumber,
       totalPence: created.totalPence,
       redirectUrl: intent.redirectUrl,
+      confirmationToken: created.confirmationToken,
     };
   } catch (error) {
     const cancelled = await releaseOrder(
@@ -597,13 +619,13 @@ export interface OrderSummary {
   /**
    * P7.5b (#138) — does this order belong to a registered account?
    *
-   * Derived from `userId`, which this type deliberately does NOT expose (a guest
-   * order's random number is its only credential — see `getByOrderNumber`). The
-   * boolean is needed because "will this order ever earn points?" cannot be
-   * answered from the viewer's session: `getByOrderNumber` refuses an OWNED
-   * order to a non-owner, but a signed-in shopper holding a guest order's
-   * capability URL passes that check, and telling them points are coming would
-   * promise what a guest order never delivers.
+   * Derived from `userId`, which this type deliberately does NOT expose — along
+   * with `confirmationToken`, the credential that actually authorizes a guest
+   * order since P9.1 (#427). The boolean is needed because "will this order ever
+   * earn points?" cannot be answered from the viewer's session: a signed-in
+   * shopper can legitimately hold a guest order's token (they may have created
+   * an account after checking out as a guest), and telling them points are
+   * coming would promise what a guest order never delivers.
    */
   hasAccount: boolean;
   deliveryFeePence: number;
@@ -750,18 +772,25 @@ function staffOrderWhere(vendorId: string, filter: StaffOrderFilter) {
 
 export interface OrderRepository {
   createOrder(input: PlaceOrderInput): Promise<PlacedOrder>;
-  /** Scoped to the current vendor, so one vendor's number never resolves on another's host. */
-  getByOrderNumber(orderNumber: string, viewerUserId: string | null): Promise<OrderSummary | null>;
+  /**
+   * Scoped to the current vendor, so one vendor's number never resolves on
+   * another's host. `confirmationToken` is the guest credential (P9.1, #427);
+   * pass the request's `t` search parameter, or null when there is none.
+   */
+  getByOrderNumber(
+    orderNumber: string,
+    viewerUserId: string | null,
+    confirmationToken: string | null,
+  ): Promise<OrderSummary | null>;
   /** The signed-in shopper's own orders for this vendor, newest first (P4a). */
   listForUser(userId: string, opts: { take: number; cursor?: string }): Promise<OrderListPage>;
   /**
    * One order the viewer OWNS. Stricter than getByOrderNumber on purpose: that
-   * method implements P3b's capability-URL rule (a guest order has no owner, so
-   * the unguessable number is the credential), which is right for
-   * /checkout/{n} and wrong for /account/orders/{n} — a page claiming to be
-   * *your* history must not render an order that is not yours because someone
-   * pasted a number. Filtering on userId makes a guest order and another
-   * member's order both resolve to null.
+   * method also admits a guest order presented with its capability token (P9.1,
+   * #427), which is right for /checkout/{n} and wrong for /account/orders/{n} —
+   * a page claiming to be *your* history must not render an order that is not
+   * yours because someone pasted a link. Filtering on userId makes a guest order
+   * and another member's order both resolve to null.
    */
   getForUser(orderNumber: string, userId: string): Promise<OrderDetail | null>;
   /**
@@ -819,11 +848,13 @@ export async function findOrderForViewer(
   vendorId: string,
   orderNumber: string,
   viewerUserId: string | null,
+  confirmationToken: string | null,
 ) {
   const order = await prisma.order.findFirst({
     where: { orderNumber, vendorId },
     select: {
       orderNumber: true,
+      confirmationToken: true,
       status: true,
       createdAt: true,
       subtotalPence: true,
@@ -856,11 +887,39 @@ export async function findOrderForViewer(
   });
   if (!order) return null;
 
-  // A member's order is theirs alone. A guest order has no owner, so the
-  // (random) order number is the only credential — see the spec's R19a.
-  if (order.userId && order.userId !== viewerUserId) return null;
+  // A member's order is theirs alone — the token is irrelevant to it, so a
+  // non-owner holding a valid token is still refused.
+  if (order.userId) {
+    if (order.userId !== viewerUserId) return null;
+  } else {
+    // P9.1 (#427). A guest order has no owner, so it is authorized by its
+    // capability token and nothing else. The order number is NOT a credential:
+    // it travels through emails, shared links and support threads.
+    //
+    // Both null checks are load-bearing. An order placed before the P9.1
+    // migration has a null stored token, and `null === null` would otherwise
+    // hand every pre-migration guest order to a caller passing no token at all
+    // — exactly the hole this closes. Those orders are reachable through
+    // /orders/lookup instead, which proves order number + email.
+    //
+    // Plain equality, deliberately: see plan.md's "On not claiming constant-time
+    // comparison". The right fix, if ever needed, moves this into the `where`
+    // clause so Postgres does it — not a hand-rolled JS loop claiming a
+    // property the JIT makes unprovable.
+    if (!confirmationToken) return null;
+    if (!order.confirmationToken) return null;
+    if (order.confirmationToken !== confirmationToken) return null;
+  }
 
-  const { userId: ownerId, discountUse, loyaltyEntries, ...summary } = order;
+  // `confirmationToken` is pulled out here for the same reason `userId` is: it
+  // is a credential, and OrderSummary is what every order page renders from.
+  const {
+    userId: ownerId,
+    confirmationToken: _token,
+    discountUse,
+    loyaltyEntries,
+    ...summary
+  } = order;
   return {
     ...summary,
     ...toProvenance({ discountUse, loyaltyEntries }),

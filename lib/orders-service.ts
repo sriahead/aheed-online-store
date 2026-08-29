@@ -42,8 +42,14 @@ export function getOrderRepository(): OrderRepository {
       return placeOrder(getPrismaWs(), await vendorId(), input);
     },
 
-    async getByOrderNumber(orderNumber, viewerUserId) {
-      return findOrderForViewer(prisma, await vendorId(), orderNumber, viewerUserId);
+    async getByOrderNumber(orderNumber, viewerUserId, confirmationToken) {
+      return findOrderForViewer(
+        prisma,
+        await vendorId(),
+        orderNumber,
+        viewerUserId,
+        confirmationToken,
+      );
     },
 
     async listForUser(userId, opts) {

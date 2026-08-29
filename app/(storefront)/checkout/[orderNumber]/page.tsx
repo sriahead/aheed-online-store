@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import { getOrderRepository } from "@/lib/orders-service";
@@ -15,24 +15,33 @@ export const metadata: Metadata = { title: "Order confirmed" };
 
 /**
  * Order confirmation (P3b, #96). Served entirely from the persisted order, not
- * session state, so a refresh or a shared link shows the same thing.
+ * session state, so a refresh shows the same thing.
  *
- * Access: a member's order is theirs alone (enforced in the repository). A guest
- * order has no owner, so the random order number is its only credential — a
- * capability URL. Stronger guest access (emailed link / lookup by email + number)
- * is P4; see the spec's R19a.
+ * Access (P9.1, #427): a member's order is theirs alone. A guest order is
+ * authorized by the capability token in `?t=`, which checkout puts on both of
+ * Stripe's return URLs — the order number is NOT a credential, because it
+ * travels through emails, shared links, browser history and support threads.
+ *
+ * Every refusal takes ONE branch to /orders/lookup, whether the order does not
+ * exist, the token is wrong, or the viewer is not the owner. That is deliberate:
+ * a distinct 404 for "no such order" would confirm which order numbers are real,
+ * and lookup is somewhere the shopper can actually recover with the order
+ * number + email pair they do have.
  */
 export default async function OrderConfirmationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orderNumber: string }>;
+  searchParams: Promise<{ t?: string }>;
 }) {
   const { orderNumber } = await params;
+  const { t } = await searchParams;
   const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const viewerUserId = (session?.user as { id?: string } | undefined)?.id ?? null;
 
-  const order = await getOrderRepository().getByOrderNumber(orderNumber, viewerUserId);
-  if (!order) notFound();
+  const order = await getOrderRepository().getByOrderNumber(orderNumber, viewerUserId, t ?? null);
+  if (!order) redirect(`/orders/lookup?orderNumber=${encodeURIComponent(orderNumber)}`);
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
