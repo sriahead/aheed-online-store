@@ -81,14 +81,6 @@ const ALLOWED = new Map<string, string>([
   // now makes their return structurally impossible. What remains below are the
   // genuine, individually-argued exceptions.
   [
-    "reviews.ts:upsertReview",
-    "A review inherits its product's vendor (ADR-004 slice 1): both writes resolve vendorId from the Product row INSIDE their transaction rather than taking it, so the value written is always the product's own vendor and cannot be redirected by a caller. NOT NEW — this is the pre-existing body of getReviewRepository().upsert(), which this check could not see while it sat inside an allowlisted facade; P8.1b's extraction (#252) made it visible without changing a line of it. Whether the review form should additionally scope the product lookup to the current vendor is a real question this refactor deliberately did not answer — tracked as #340 rather than changed inside a no-behaviour-change slice.",
-  ],
-  [
-    "reviews.ts:deleteReview",
-    "Same as upsertReview: the vendor comes from the Product row reached via the review being deleted, and ownership is enforced by userId in the delete's own WHERE. Pre-existing body of getReviewRepository().delete(), surfaced by P8.1b's extraction (#252).",
-  ],
-  [
     "data-rights.ts:countOtherVendorData",
     "ADR-004's single recorded cross-tenant exception. UK GDPR erasure must answer 'is this the user's last vendor?' before deleting the shared User row, which is unanswerable from inside one vendor. Takes excludingVendorId and returns an integer only — never rows, never field values.",
   ],

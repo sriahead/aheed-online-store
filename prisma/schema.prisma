@@ -295,6 +295,7 @@ model Category {
   campaign  DepartmentCampaign?
 
   @@unique([vendorId, slug])
+  @@unique([id, vendorId])
   @@index([vendorId, parentId, isActive])
 }
 
@@ -393,7 +394,7 @@ model Product {
   name             String
   description      String
   categoryId       String
-  category         Category          @relation(fields: [categoryId], references: [id])
+  category         Category          @relation(fields: [categoryId, vendorId], references: [id, vendorId])
   basePrice        Int // pence
   unitLabel        String // "£2.40 / kg"
   isActive         Boolean           @default(true)

@@ -4,6 +4,16 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+## [Unreleased]
+
+### Security
+- **`#340` — Cross-tenant writes prevented in reviews repository.** (P9.1).
+  Added `vendorId` enforcement to `upsertReview` and `deleteReview`. Previously, these functions implicitly relied on `productId` and `userId` ownership, which failed the explicit tenancy boundary requirement. The functions now strictly filter by `vendorId`, preventing cross-tenant manipulation. Callers in `lib/reviews-service.ts` supply the current tenant via request-scoped identity. Test exceptions for `reviews.ts` in `repository-vendor-scoping.test.ts` were removed.
+- **`#432` Slice 1 — Cross-tenant data integrity for Product → Category relation.** (P9.1).
+  Added a composite foreign key `(categoryId, vendorId)` to `Product` referencing `Category(id, vendorId)`. Previously, a vendor's product could cite another vendor's category. This structural schema change physically prevents cross-tenant references from being persisted.
+- **`#433` — Commercial CHECK constraints.** (P9.1).
+  Added native PostgreSQL `CHECK` constraints via a hand-authored migration to prevent logically invalid commercial data (e.g. negative prices, negative stock, bad price tiers). Prisma cannot natively model table-level checks in `schema.prisma`. Hand-authored migration `20260829232000_p9_1_data_integrity_hardening` contains the necessary DDL. Data audit scripts were run against the shadow DB to guarantee no constraints were violated by existing records.
+
 ### Security
 - **`#431` — Production authentication rate limiting.** (P9.1).
   Added a Workers-compatible abuse-control mechanism to bound credential stuffing and password-reset abuse. Better Auth's default rate limiter relies on an in-memory store (ineffective across isolates) and a database increment operation that crashes on HTTP Prisma clients. This slice explicitly disables Better Auth's limiter and instead intercepts sensitive paths (`/sign-in`, `/sign-up`, `/forget-password`, `/reset-password`, `/send-verification-email`) via Better Auth's `onRequest` hook in `lib/auth.ts`. The check reuses the proven Postgres-backed fixed-window rate-limiting pattern introduced for order lookups, enforcing a maximum of 5 attempts per IP per minute via a new `AuthenticationAttempt` table.

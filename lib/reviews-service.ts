@@ -27,11 +27,11 @@ export function getReviewRepository(): ReviewRepository {
 
   return {
     async upsert(userId, productId, rating, comment) {
-      return upsertReview(getPrismaWs(), userId, productId, rating, comment);
+      return upsertReview(getPrismaWs(), await vendorId(), userId, productId, rating, comment);
     },
 
     async delete(reviewId, userId) {
-      return deleteReview(getPrismaWs(), reviewId, userId);
+      return deleteReview(getPrismaWs(), await vendorId(), reviewId, userId);
     },
 
     async listByProduct(productId, take) {
