@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.9.0"
-updated: 2026-08-23
+version: "1.10.0"
+updated: 2026-08-29
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -603,6 +603,19 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   P7.5b's `/validate` (#262): the full webhook→confirm→email pipeline was proven live up to the
   point of the real Resend call; the literal HTML bytes still have to come from a unit test that
   parses the outbound request body, not from watching a real send succeed.
+- **`npm run preview`'s local Worker exposes a queryable log of its own `console.*` output — use it
+  instead of trying to read `npm run preview`'s own terminal, which interleaves the dev server's own
+  noise with application logs and scrolls past whatever a webhook call just printed.** `wrangler dev`
+  captures every request/console line into a local SQLite-backed store, queryable via
+  `POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query` with a body of
+  `{"sql": "..."}` against a `logs` table (`ts_ms`, `level`, `message`, plus `trace_id`/`span_id`).
+  This is what actually proves a `console.error` line's exact wording, that it fired exactly once,
+  and that it did **not** fire on an adjacent case — filter on `level = 'error'` and a substring of
+  the order number or session id. Used to confirm R23/R24/R31–R33 live for #429's webhook-binding
+  slice (2026-08-29): a `binding-mismatch` refusal logs exactly the reason/event-type/order/session
+  line the route promises, a duplicate delivery (`already-processed`) logs nothing, and no unrelated
+  error fires alongside either. `GET .../cdn-cgi/local/explorer/api/local/workers` lists the other
+  endpoints the same Explorer API exposes (KV, D1, R2, Durable Objects, Workflows).
 
 ## React & Next.js Hooks — learned the hard way
 - **A `useEffect` that listens for `pathname` changes to auto-close a UI element (e.g. a drawer/modal) must NOT include its `open` state in its dependencies.** If `open` is included, the act of opening the drawer changes `open` to true, which triggers the effect immediately and closes the drawer right back. Hit in P8: a cart drawer instantly closed on open because the builder passed `open` and `close()` into the dependency array to satisfy the lint rule. The correct pattern is to call the closure function unconditionally (e.g., `close()`) inside the effect, leaving `open` out of the dependency array, and if needed, explicitly silencing the specific lint rule (e.g., `react-hooks/set-state-in-effect`) for that line rather than changing the dependency semantics.
