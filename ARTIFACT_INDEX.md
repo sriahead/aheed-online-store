@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-29T21:29:12.540Z` · commit `f1a85cb` · `117` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-29T22:10:11.754Z` · commit `e490dbf` · `118` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -113,6 +113,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Storefront & fulfilment brief — roadmap sequencing (plan)](specs/2026-08-28-storefront-brief-sequencing/plan.md) | spec | 1.0.0 | 2026-08-28 | draft | internal | Sequences the fourteen issues of the #408 storefront and fulfilment brief into the roadmap as two new phases (P8.6, P8.7) plus a small pre-launch set inside P8.2, and writes ADR-006 to settle the store-location question that gates two of them. |
 | [P9.1: Production Authentication Rate Limiting](specs/2026-08-29-auth-rate-limiting/plan.md) | spec | 1.0.0 | 2026-08-29 | approved | internal | Introduce a Workers-compatible rate limiter for authentication routes to prevent credential stuffing and abuse, resolving |
 | [Guest order authorization — confirmation and cancellation (plan)](specs/2026-08-29-guest-order-authorization/plan.md) | spec | 1.0.0 | 2026-08-29 | draft | internal | Replaces the order number as a guest's only credential with a per-order capability token, and turns the destructive checkout-cancellation GET into an authorized confirmation page backed by a POST server action. First slice of P9.1. |
+| [P9.1 Data Integrity Hardening (plan)](specs/2026-08-29-p9-1-data-integrity-hardening/plan.md) | spec | 1.0.0 | 2026-08-29 | draft | internal | Centralize critical constraints (commercial CHECK invariants and review vendor-scoping) in the database and repositories. |
 | [P9.1: Fail Closed on Missing Production Config](specs/2026-08-29-p9-1-fail-closed-config/plan.md) | spec | 1.0.0 | 2026-08-29 | approved | internal | Enforce presence of Stripe and Resend secrets in production via Zod refinement, preventing silent degradation to stub/logging providers. |
 | [Bind Stripe webhook confirmation and failure to the expected stored payment (plan)](specs/2026-08-29-webhook-payment-binding/plan.md) | spec | 1.0.0 | 2026-08-29 | draft | internal | Makes a signed Stripe event unable to confirm or cancel an order unless it corresponds to the payment that order is actually waiting on, by folding the stored provider reference into the same compare-and-set that already guards the status transition. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.21.1 | 2026-08-27 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
