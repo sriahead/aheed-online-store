@@ -60,6 +60,22 @@ every branch merges.
   **#450** (a `getForStaff` comment still describing the old rule).
 
 ### Documentation
+- **`/document` closeout for `#429`.** Reconciles `specs/roadmap.md` with what actually shipped: a
+  new change-log row cites **PR #455**, merge `5f7e32e`, `staging`; records `gates` green (1m10s) and
+  both `deploy-staging`/`deploy-docs-internal` completing successfully post-merge, with staging's
+  `/api/health` confirming commit `5f7e32e`. **All five live validation rows (R30–R34) were run for
+  real**, not deferred: a genuine Stripe test-mode checkout confirmed an order through the binding;
+  a signed-but-mismatched event was refused (`binding-mismatch`, order untouched); the genuine event
+  replayed cleanly (`already-processed`, silent, no second email); a mismatched `expired` event left
+  stock held and a genuine one released it. This is what proved the relation-filtered `updateMany` —
+  untested against real Postgres until this run, per the slice's own build notes — is actually
+  evaluated by the WebSocket adapter rather than silently ignored. **One gap found at Validate and
+  filed rather than patched into scope**: `cancelUnpaidOrder` (the shopper-facing cancel path split
+  off `failPayment` by this slice) has no unit test and no validation row reaches it — **#456**,
+  tagged Phase `P8` per the board's known limitation. **#429 moved to `In Review`** on Project #2; it
+  closes to `Done` only on promotion to `main`. Notes P9.1 has five issues remaining (**#430**–**#433**,
+  plus the pre-existing **#340**) of its eight. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt; `npm run
+  sdd:audit` re-run and exits 0.
 - **`/document` closeout for `#427`, `#428`.** Reconciles `specs/roadmap.md` with what actually
   shipped: a new change-log row cites **PR #451**, merge `221aea4`, `staging`; records `gates` green
   (1m6s) and both `deploy-staging`/`deploy-docs-internal` completing successfully post-merge. Notes
