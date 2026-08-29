@@ -3,7 +3,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // lib/payments.ts reads lib/config (→ getCloudflareContext); mock it so the
 // selection logic is testable without any Stripe or Worker environment.
 const getEnvMock = vi.fn();
-vi.mock("@/lib/config", () => ({ getEnv: () => getEnvMock() }));
+vi.mock("@/lib/config", () => ({
+  getEnv: () => getEnvMock(),
+  getPaymentEnv: () => getEnvMock(),
+}));
 
 const {
   createStripePaymentService,
