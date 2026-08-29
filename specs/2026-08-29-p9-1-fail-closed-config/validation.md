@@ -35,11 +35,12 @@ Every feature should have appropriate **Unit** and **Integration** testing, foll
 
 ## Validation Steps
 
-| Req | Testing Area | How to verify |
-|-----|--------------|---------------|
-| R1  | Unit         | `npx vitest run lib/config.test.ts` exits 0 (verifies production rejection for STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET). |
-| R2  | Unit         | `npx vitest run lib/config.test.ts` exits 0 (verifies production rejection for RESEND_API_KEY/RESEND_FROM_EMAIL). |
-| R3  | Unit         | `npx vitest run lib/config.test.ts` exits 0 (verifies dev allowance). |
-| R4  | Integration  | `ls lib/config.test.ts` exits 0. |
-| R5  | Regression   | `git diff origin/staging CHANGELOG.md` shows the P9.1 entry. |
-| R6  | Regression   | `npm run lint && npm run typecheck && npm run test && npm run format:check` all exit 0. |
+| Req | Testing Area           | How to verify |
+|-----|------------------------|---------------|
+| R1  | Unit                   | `npx vitest run lib/config.test.ts` exits 0 (verifies production rejection for STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET). |
+| R2  | Unit                   | `npx vitest run lib/config.test.ts` exits 0 (verifies production rejection for RESEND_API_KEY/RESEND_FROM_EMAIL). |
+| R3  | Unit                   | `npx vitest run lib/config.test.ts` exits 0 (verifies dev allowance). |
+| R4  | Integration            | `ls lib/config.test.ts` exits 0. |
+| R5  | Security / System (E2E)| Using `npm run preview` with `STRIPE_SECRET_KEY` stripped from `.dev.vars`, verify that submitting a cart to checkout causes a server crash (500) logging the Zod configuration error, rather than completing the checkout with a stub. |
+| R6  | Regression             | `git diff origin/staging CHANGELOG.md` shows the P9.1 entry. |
+| R7  | Regression             | `npm run lint && npm run typecheck && npm run test && npm run format:check` all exit 0. |
