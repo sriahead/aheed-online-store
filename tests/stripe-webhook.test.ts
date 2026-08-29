@@ -33,7 +33,18 @@ async function signPayload(body: string, secret: string, timestamp: number): Pro
 
 const BODY = JSON.stringify({
   type: "checkout.session.completed",
-  data: { object: { id: "cs_test_1", payment_status: "paid", metadata: { orderNumber: "AHE-1" } } },
+  data: {
+    object: {
+      id: "cs_test_1",
+      payment_status: "paid",
+      // P9.1 (#429) — the two fields the payment binding compares on, in the
+      // shape and units Stripe actually sends them: the currency lower-cased,
+      // the amount in the currency's minor unit.
+      amount_total: 2346,
+      currency: "gbp",
+      metadata: { orderNumber: "AHE-1" },
+    },
+  },
 });
 
 describe("verifyStripeSignature", () => {
@@ -113,12 +124,30 @@ describe("timingSafeEqual", () => {
 });
 
 describe("parseCheckoutEvent", () => {
-  it("extracts the fields the handler needs", () => {
+  it("extracts the fields the handler needs, including the binding's amount and currency", () => {
     expect(parseCheckoutEvent(JSON.parse(BODY))).toEqual({
       type: "checkout.session.completed",
       orderNumber: "AHE-1",
       paymentStatus: "paid",
       sessionId: "cs_test_1",
+      amountTotal: 2346,
+      currency: "gbp",
+    });
+  });
+
+  // P9.1 (#429). A completed session that carries no amount or currency is not a
+  // parse failure — it parses, with nulls, and `confirmPayment` then refuses it
+  // as `unbindable`. The refusal is the repository's decision to make, not this
+  // parser's, so the nulls have to survive being read.
+  it("yields null amount and currency when the session carries neither", () => {
+    const payload = {
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_test_2", payment_status: "paid", metadata: { orderNumber: "A" } } },
+    };
+    expect(parseCheckoutEvent(payload)).toMatchObject({
+      sessionId: "cs_test_2",
+      amountTotal: null,
+      currency: null,
     });
   });
 
@@ -128,6 +157,8 @@ describe("parseCheckoutEvent", () => {
       orderNumber: null,
       paymentStatus: null,
       sessionId: null,
+      amountTotal: null,
+      currency: null,
     });
   });
 

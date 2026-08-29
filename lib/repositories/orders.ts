@@ -467,19 +467,38 @@ export async function placeOrder(
  * order, and releasing the same stock twice would silently inflate inventory.
  * `count === 0` means someone already handled it — same technique as the
  * decrement guard above.
+ *
+ * `binding` (P9.1, #429) is supplied only by the webhook path, where the request
+ * to cancel arrives from outside and has to prove which payment it is about; it
+ * is added to the same guarded `where`, so an unbound event matches no row and
+ * changes nothing. `placeOrder`'s own failure path passes nothing and is
+ * unchanged by this slice: it already holds the order id from the transaction it
+ * just committed, so there is no external claim to verify.
  */
 async function releaseOrder(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
   orderId: string,
   note: string,
+  binding?: { provider: string; providerReference: string },
 ): Promise<boolean> {
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.order.updateMany({
-      where: { id: orderId, vendorId, status: "PENDING_PAYMENT" },
+      where: {
+        id: orderId,
+        vendorId,
+        status: "PENDING_PAYMENT",
+        ...(binding
+          ? {
+              payment: {
+                is: { provider: binding.provider, providerReference: binding.providerReference },
+              },
+            }
+          : {}),
+      },
       data: { status: "CANCELLED" },
     });
-    if (count === 0) return false; // already confirmed or already cancelled
+    if (count === 0) return false; // already handled, or the binding refused it
 
     const items = await tx.orderItem.findMany({
       where: { orderId },
@@ -1385,19 +1404,121 @@ export async function findOrderForWebhook(
   };
 }
 
-/**
- * PENDING_PAYMENT → CONFIRMED, idempotently.
+/* ---- Payment binding (P9.1, #429) ------------------------------------------
  *
- * Returns true only when THIS call performed the transition — the caller uses
- * that to decide whether to send the confirmation email, so a duplicate webhook
- * delivery (Stripe retries aggressively) can't email the shopper twice.
+ * A verified Stripe signature proves an event came from Stripe. It does NOT
+ * prove the event is about the payment THIS order is waiting on: a session
+ * created in the same Stripe account with crafted metadata, or a metadata mix-up
+ * during an integration change, both arrive correctly signed. Until this slice,
+ * `metadata.orderNumber` was the only thing standing between such an event and a
+ * confirmed order.
+ *
+ * The binding is enforced in the `where` clause of the compare-and-set that
+ * already guards the status transition, never by fetching and then comparing in
+ * application code. That is the P7a lesson recorded on `findOrderForGuestLookup`
+ * below: the previous guest lookup returned a full match with no email supplied
+ * at all, precisely because a missing credential SKIPPED the comparison instead
+ * of failing it. In a `where`, a missing credential simply matches nothing.
+ *
+ * It also makes the nullable-reference case free. `Payment.providerReference` is
+ * null between order creation and the post-commit session write, and for any
+ * order whose provider call never completed. A stored null cannot equal a
+ * non-null session id, so those orders are refused by the same predicate that
+ * refuses a wrong one — the same property #427 relied on for `confirmationToken`.
+ */
+
+/** Same shape the other repository modules use, so a read can run inside a caller's transaction. */
+type OrdersDb = ReturnType<typeof getPrisma>;
+type OrdersTx = Parameters<Parameters<OrdersDb["$transaction"]>[0]>[0];
+
+/** What the caller claims this event is about. Any null field is unprovable. */
+export interface PaymentBinding {
+  provider: string;
+  providerReference: string | null;
+  amountPence: number | null;
+  currency: string | null;
+}
+
+/**
+ * Why a payment transition did not happen.
+ *
+ * `already-processed` and `binding-mismatch` are deliberately distinct even
+ * though both mean "no row moved". The first is normal — Stripe retries
+ * aggressively and duplicate deliveries are expected — and must stay silent. The
+ * second is an integration defect or an attempt, and must be loud. A bare
+ * boolean cannot carry that difference, which is why these are unions.
+ */
+export type PaymentTransitionRefusal =
+  "not-found" | "unbindable" | "binding-mismatch" | "already-processed";
+
+export type ConfirmPaymentResult = { ok: true } | { ok: false; reason: PaymentTransitionRefusal };
+export type FailPaymentResult = { ok: true } | { ok: false; reason: PaymentTransitionRefusal };
+
+/**
+ * Classifies a zero-row compare-and-set, and NOTHING else.
+ *
+ * This is the one read in the binding path that is not part of the `where`, so
+ * it is worth being explicit about what it may do: authorization has already
+ * been decided, atomically, by the predicate that matched no rows. This runs
+ * only on that failure path and can only ever choose between two refusals. It
+ * cannot grant a transition, and no caller may use it to.
+ */
+async function classifyNoMatch(
+  client: OrdersDb | OrdersTx,
+  orderId: string,
+): Promise<"already-processed" | "binding-mismatch"> {
+  const current = await client.order.findUnique({
+    where: { id: orderId },
+    select: { status: true },
+  });
+  // A row that is no longer awaiting payment was moved by someone else — a
+  // duplicate delivery, or a staff cancellation. Anything else means the row is
+  // still there, still PENDING_PAYMENT, and the binding is what refused it.
+  return current && current.status !== "PENDING_PAYMENT" ? "already-processed" : "binding-mismatch";
+}
+
+/**
+ * PENDING_PAYMENT → CONFIRMED, idempotently AND only for the expected payment.
+ *
+ * Returns `{ ok: true }` only when THIS call performed the transition — the
+ * caller uses that to decide whether to send the confirmation email, so a
+ * duplicate webhook delivery (Stripe retries aggressively) can't email the
+ * shopper twice.
+ *
+ * The order number alone does not authorize this transition. The event must also
+ * correspond to the Checkout Session stored on this order's `Payment` row, for
+ * the expected provider, at the expected amount and currency — see the binding
+ * note above. Amount and currency are checked here because confirmation is where
+ * money is asserted; `failPayment` deliberately checks neither.
  */
 export async function confirmPayment(
   prisma: ReturnType<typeof getPrisma>,
   orderNumber: string,
-): Promise<boolean> {
+  binding: PaymentBinding,
+): Promise<ConfirmPaymentResult> {
+  // Destructured to `const` BEFORE the guard so the narrowing survives into the
+  // transaction callback below — TypeScript discards narrowing of a mutable
+  // property access across a closure boundary, which would leave
+  // `providerReference` typed `string | null` exactly where it must not be.
+  const { provider, providerReference, amountPence, currency: rawCurrency } = binding;
+
+  // Refuse before reading anything: an event missing any of these cannot be
+  // proved to be about this payment, and guessing is the failure mode this
+  // function exists to remove.
+  if (providerReference === null || amountPence === null || rawCurrency === null) {
+    return { ok: false, reason: "unbindable" };
+  }
+
   const order = await findOrderForWebhook(prisma, orderNumber);
-  if (!order) return false;
+  if (!order) return { ok: false, reason: "not-found" };
+
+  // `Order.currency` is upper-case ("GBP", the column default); Stripe echoes it
+  // back lower-cased because `lib/payments.ts` sends it lower-cased. Normalising
+  // the INPUT once is not the same thing as comparing a credential in
+  // application code — the value still has to survive the `where` below. Doing it
+  // here rather than with `mode: "insensitive"` keeps the guard off collation
+  // semantics inside a write path.
+  const currency = rawCurrency.toUpperCase();
 
   // Tier depends on a windowed spend query, so it is resolved before the
   // transaction opens rather than holding one open across extra reads. The
@@ -1413,10 +1534,21 @@ export async function confirmPayment(
 
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.order.updateMany({
-      where: { id: order.id, status: "PENDING_PAYMENT" },
+      where: {
+        id: order.id,
+        status: "PENDING_PAYMENT",
+        currency,
+        // The binding itself. One predicate, evaluated by Postgres, in the same
+        // statement that performs the transition — so a mismatched event and a
+        // duplicate delivery are refused by the same mechanism, and neither can
+        // race the other.
+        payment: { is: { provider, providerReference, amountPence } },
+      },
       data: { status: "CONFIRMED" },
     });
-    if (count === 0) return false; // already processed
+    if (count === 0) {
+      return { ok: false as const, reason: await classifyNoMatch(tx, order.id) };
+    }
 
     await tx.payment.updateMany({
       where: { orderId: order.id },
@@ -1446,24 +1578,77 @@ export async function confirmPayment(
       windowSpendPence: windowSpend,
     });
 
-    return true;
+    return { ok: true as const };
   });
 }
 
 /**
- * PENDING_PAYMENT → CANCELLED with stock released, idempotently.
+ * PENDING_PAYMENT → CANCELLED with stock released, idempotently AND only for the
+ * expected payment.
  *
- * This is the gap P3b explicitly left open: until now an abandoned checkout held
- * its stock forever.
+ * This is the gap P3b explicitly left open: until P3c an abandoned checkout held
+ * its stock forever. P9.1 (#429) closes a second one — the order number alone
+ * used to be enough to cancel an order and return its inventory, reverse a
+ * loyalty redemption and free a discount-code use, from an event nothing had
+ * bound to this order's payment.
+ *
+ * Binds on the session identity ONLY — deliberately not on amount or currency,
+ * unlike `confirmPayment`. Cancellation asserts no money, so the amount is not
+ * what authorizes it; and refusing to release stock because Stripe omitted
+ * `amount_total` on an expired session would leave an order holding inventory
+ * indefinitely, which is a worse failure than the one being prevented and needs
+ * no attacker to reach.
  */
 export async function failPayment(
   prisma: ReturnType<typeof getPrisma>,
   orderNumber: string,
+  binding: PaymentBinding,
+  reason: string,
+): Promise<FailPaymentResult> {
+  if (binding.providerReference === null) return { ok: false, reason: "unbindable" };
+
+  const order = await findOrderForWebhook(prisma, orderNumber);
+  if (!order) return { ok: false, reason: "not-found" };
+
+  const released = await releaseOrder(prisma, order.vendorId, order.id, reason, {
+    provider: binding.provider,
+    providerReference: binding.providerReference,
+  });
+  if (released) return { ok: true };
+  return { ok: false, reason: await classifyNoMatch(prisma, order.id) };
+}
+
+/**
+ * Cancels a still-unpaid order the CALLER has already authorized (P9.1, #429).
+ *
+ * The shopper-facing cancel action (`features/checkout/cancel-order.ts`) proves
+ * the order's capability token before it gets here, so there is no Stripe event
+ * and no session id to bind against — the same position `placeOrder`'s own
+ * failure path is in. It therefore calls `releaseOrder` with no binding, and the
+ * unchanged status guard still makes calling it twice safe.
+ *
+ * It exists as its own export rather than reusing `failPayment` because that
+ * function now REQUIRES a binding, correctly: the webhook must never be able to
+ * cancel an order without proving which payment it means. Handing it a
+ * placeholder binding to satisfy the type would defeat the whole slice.
+ *
+ * Vendor-scoped, unlike the webhook path. `#428` routed this through
+ * `getWebhookOrderService()`, whose read is deliberately un-scoped because a
+ * payment provider arrives with no host — an exemption ADR-004 records and that
+ * a request-bound shopper action does not need or want.
+ */
+export async function cancelUnpaidOrder(
+  prisma: ReturnType<typeof getPrismaWs>,
+  vendorId: string,
+  orderNumber: string,
   reason: string,
 ): Promise<boolean> {
-  const order = await findOrderForWebhook(prisma, orderNumber);
+  const order = await prisma.order.findFirst({
+    where: { orderNumber, vendorId },
+    select: { id: true },
+  });
   if (!order) return false;
-  return releaseOrder(prisma, order.vendorId, order.id, reason);
+  return releaseOrder(prisma, vendorId, order.id, reason);
 }
 
 /* `getWebhookOrderService()` moved to `lib/orders-service.ts` (#252). It resolved
