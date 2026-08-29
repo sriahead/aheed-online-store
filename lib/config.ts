@@ -46,29 +46,10 @@ const schema = z
     // P3c (#99) — Stripe. Both optional in dev/CI: an unconfigured environment falls back to
     // the stub PaymentService rather than crashing, so local dev and CI keep working
     // with no Stripe setup (same degradation as lib/email.ts).
-    // P9.1 (#430) — In production, these are explicitly enforced via superRefine to fail closed.
-    // No STRIPE_PUBLISHABLE_KEY: hosted Checkout is a server-created session plus a
-    // redirect, so no publishable key ever reaches the browser.
-    STRIPE_SECRET_KEY: z.string().optional(),
-    STRIPE_WEBHOOK_SECRET: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    if (process.env.NODE_ENV === "production") {
-      if (!data.STRIPE_SECRET_KEY) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "STRIPE_SECRET_KEY is required in production",
-          path: ["STRIPE_SECRET_KEY"],
-        });
-      }
-      if (!data.STRIPE_WEBHOOK_SECRET) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "STRIPE_WEBHOOK_SECRET is required in production",
-          path: ["STRIPE_WEBHOOK_SECRET"],
-        });
-      }
-    }
+    // P9.1 (#430) note: Stripe and Resend have their own schemas/getters below
+    // to prevent a missing payments key from crashing the entire application (e.g. database reads).
   });
 
 export type AppEnv = z.infer<typeof schema>;
@@ -88,8 +69,6 @@ export function getEnv(): AppEnv {
     AUTH_COOKIE_FAMILY_DOMAIN: readEnv("AUTH_COOKIE_FAMILY_DOMAIN"),
     GOOGLE_CLIENT_ID: readEnv("GOOGLE_CLIENT_ID"),
     GOOGLE_CLIENT_SECRET: readEnv("GOOGLE_CLIENT_SECRET"),
-    STRIPE_SECRET_KEY: readEnv("STRIPE_SECRET_KEY"),
-    STRIPE_WEBHOOK_SECRET: readEnv("STRIPE_WEBHOOK_SECRET"),
   });
 }
 
@@ -130,6 +109,39 @@ export function getEmailEnv(): EmailEnv {
   return emailSchema.parse({
     RESEND_API_KEY: readEnv("RESEND_API_KEY"),
     RESEND_FROM_EMAIL: readEnv("RESEND_FROM_EMAIL"),
+  });
+}
+
+const paymentSchema = z
+  .object({
+    STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (process.env.NODE_ENV === "production") {
+      if (!data.STRIPE_SECRET_KEY) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "STRIPE_SECRET_KEY is required in production",
+          path: ["STRIPE_SECRET_KEY"],
+        });
+      }
+      if (!data.STRIPE_WEBHOOK_SECRET) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "STRIPE_WEBHOOK_SECRET is required in production",
+          path: ["STRIPE_WEBHOOK_SECRET"],
+        });
+      }
+    }
+  });
+
+export type PaymentEnv = z.infer<typeof paymentSchema>;
+
+export function getPaymentEnv(): PaymentEnv {
+  return paymentSchema.parse({
+    STRIPE_SECRET_KEY: readEnv("STRIPE_SECRET_KEY"),
+    STRIPE_WEBHOOK_SECRET: readEnv("STRIPE_WEBHOOK_SECRET"),
   });
 }
 

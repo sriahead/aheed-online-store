@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import { getEnv, getEmailEnv } from "./config";
+import { getEnv, getEmailEnv, getPaymentEnv } from "./config";
 
 describe("config environments", () => {
   const originalEnv = process.env;
@@ -26,10 +26,10 @@ describe("config environments", () => {
     });
 
     it("rejects missing Stripe keys in production", () => {
-      expect(() => getEnv()).toThrow("STRIPE_SECRET_KEY is required in production");
+      expect(() => getPaymentEnv()).toThrow("STRIPE_SECRET_KEY is required in production");
       // Add key to see if the other is required
       process.env.STRIPE_SECRET_KEY = "sk_test_123";
-      expect(() => getEnv()).toThrow("STRIPE_WEBHOOK_SECRET is required in production");
+      expect(() => getPaymentEnv()).toThrow("STRIPE_WEBHOOK_SECRET is required in production");
     });
 
     it("rejects missing Resend keys in production", () => {
@@ -41,7 +41,7 @@ describe("config environments", () => {
     it("passes when all production required keys are present", () => {
       process.env.STRIPE_SECRET_KEY = "sk_test_123";
       process.env.STRIPE_WEBHOOK_SECRET = "whsec_123";
-      expect(() => getEnv()).not.toThrow();
+      expect(() => getPaymentEnv()).not.toThrow();
 
       process.env.RESEND_API_KEY = "re_123";
       process.env.RESEND_FROM_EMAIL = "test@example.com";
@@ -61,11 +61,9 @@ describe("config environments", () => {
       delete process.env.RESEND_FROM_EMAIL;
     });
 
-    it("allows missing Stripe keys in development", () => {
-      expect(() => getEnv()).not.toThrow();
-    });
-
-    it("allows missing Resend keys in development", () => {
+    it("allows missing optional keys in development", () => {
+      // Despite missing Stripe and Resend keys, it does not throw
+      expect(() => getPaymentEnv()).not.toThrow();
       expect(() => getEmailEnv()).not.toThrow();
     });
   });
