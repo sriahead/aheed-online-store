@@ -47,14 +47,12 @@ export interface ReviewRepository {
  * Write (or replace) this user's review of this product, recomputing the
  * product's aggregate in the same transaction.
  *
- * Takes no `vendorId`: a review inherits its product's vendor (ADR-004 slice 1),
- * resolved from the product row inside the transaction rather than passed in.
- *
  * Always the WEBSOCKET client — `PrismaNeonHttp` cannot run an interactive
  * transaction, and a half-applied review would leave the aggregate lying.
  */
 export async function upsertReview(
   prismaWs: DbWs,
+  vendorId: string,
   userId: string,
   productId: string,
   rating: number,
@@ -64,8 +62,8 @@ export async function upsertReview(
   // drift, matches Inventory.quantity's denormalized-and-recomputed
   // precedent. Both writes share one transaction.
   await prismaWs.$transaction(async (tx) => {
-    const product = await tx.product.findUnique({
-      where: { id: productId },
+    const product = await tx.product.findFirst({
+      where: { id: productId, vendorId },
       select: { vendorId: true },
     });
     if (!product) throw new Error("Product not found");
@@ -84,7 +82,7 @@ export async function upsertReview(
       _count: true,
     });
     await tx.product.update({
-      where: { id: productId },
+      where: { id: productId, vendorId },
       data: { averageRating: agg._avg.rating ?? 0, reviewCount: agg._count },
     });
   });
@@ -96,12 +94,13 @@ export async function upsertReview(
  */
 export async function deleteReview(
   prismaWs: DbWs,
+  vendorId: string,
   reviewId: string,
   userId: string,
 ): Promise<void> {
   await prismaWs.$transaction(async (tx) => {
-    const review = await tx.review.findUnique({
-      where: { id: reviewId },
+    const review = await tx.review.findFirst({
+      where: { id: reviewId, vendorId },
       select: { productId: true },
     });
     if (!review) return;
@@ -109,7 +108,7 @@ export async function deleteReview(
     // Ownership check baked into the delete itself (atomic, no
     // read-then-check gap) — deleting another user's review is a
     // silent no-op (count: 0), not an error.
-    const { count } = await tx.review.deleteMany({ where: { id: reviewId, userId } });
+    const { count } = await tx.review.deleteMany({ where: { id: reviewId, userId, vendorId } });
     if (count === 0) return;
 
     const agg = await tx.review.aggregate({
@@ -118,7 +117,7 @@ export async function deleteReview(
       _count: true,
     });
     await tx.product.update({
-      where: { id: review.productId },
+      where: { id: review.productId, vendorId },
       data: { averageRating: agg._avg.rating ?? 0, reviewCount: agg._count },
     });
   });
