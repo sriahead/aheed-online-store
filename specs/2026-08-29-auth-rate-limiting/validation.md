@@ -1,4 +1,4 @@
-# REPLACE ME — Feature Name (validation)
+# P9.1: Production Authentication Rate Limiting (validation)
 
 > **Testing Strategy (Lean 80/20 Model)**
 > Provide enough testing to give confidence without creating unnecessary or duplicate tests. Avoid testing the same behaviour multiple times at different levels unless doing so provides additional confidence.
@@ -37,12 +37,11 @@ Every feature should have appropriate **Unit** and **Integration** testing, foll
 
 | Req | Testing Area | How to verify |
 |-----|--------------|---------------|
-| R1  | Unit         | The exact command/step, not a description of intent — e.g. `npm run kms:validate` exits 0 with `invalid front-matter (failing): 0`, not "validation passes". |
-| R2  | E2E          | ... |
-
-<!--
-  One row per requirement, same order as requirements.md. Delete this comment block once real
-  rows exist. If a requirement genuinely needs a DB-touching or Workers-runtime check, say
-  `npm run preview` explicitly — `npm run dev` cannot load @prisma/client/wasm and will silently
-  show a wrong result (see CLAUDE.md's Database section).
--->
+| R1  | Integration  | Run `npx prisma format` and `npx prisma validate`. Both exit 0, and `prisma/schema.prisma` contains the `AuthenticationAttempt` model. |
+| R2  | Unit         | Run `npm test tests/repository-auth-rate-limit.test.ts` (write it) to assert 5 attempts pass and the 6th is rejected within the time window. |
+| R3  | Build        | Run `npm run test tests/repository-client-injection.test.ts` to confirm `lib/repositories/auth-rate-limit.ts` is pure and takes `prisma` as an argument. |
+| R4  | System       | Start `npm run preview`. Attempt a sign-in with a valid email but incorrect password 6 times rapidly. The 6th attempt should return a `429` status code. |
+| R5  | System       | In `npm run preview`, ensure that non-sensitive paths like `getSession` (`/api/auth/get-session`) do not get rate-limited after 6 calls. |
+| R6  | System       | Verified manually in R4: network response is `429 Too Many Requests`. |
+| R7  | Build        | Check `CHANGELOG.md` diff for the new entry. |
+| R8  | Build        | `npm run lint && npm run typecheck && npm run test && npm run format:check` all exit 0. |

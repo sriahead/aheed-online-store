@@ -1,4 +1,4 @@
-import { getEnv } from "./config";
+import { getPaymentEnv } from "./config";
 
 /**
  * PaymentService port (P3b, #96) with the real Stripe adapter (P3c, #99).
@@ -147,7 +147,7 @@ export function createStripePaymentService(secretKey: string): PaymentService {
 
 /** Stripe when configured, stub otherwise — mirrors getEmailService()'s degradation. */
 export function getPaymentService(): PaymentService {
-  const { STRIPE_SECRET_KEY } = getEnv();
+  const { STRIPE_SECRET_KEY } = getPaymentEnv();
   return STRIPE_SECRET_KEY
     ? createStripePaymentService(STRIPE_SECRET_KEY)
     : createStubPaymentService();

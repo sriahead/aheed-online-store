@@ -106,6 +106,18 @@ export interface StripeCheckoutEvent {
   /** Only meaningful for checkout.session.completed. */
   paymentStatus: string | null;
   sessionId: string | null;
+  /**
+   * P9.1 (#429) — the three fields the payment binding is built from, alongside
+   * `sessionId`. Each is null whenever Stripe did not send it in a usable shape;
+   * `confirmPayment` refuses rather than guesses when one is missing, so a
+   * narrowed-away field fails closed instead of being silently skipped.
+   *
+   * `amountTotal` is in the currency's minor unit — pence for GBP — which is the
+   * same unit `Payment.amountPence` stores, so the two compare directly.
+   */
+  amountTotal: number | null;
+  /** Lower-cased by Stripe (`gbp`); `Order.currency` is upper-case (`GBP`). */
+  currency: string | null;
 }
 
 /** Extracts just what the handler needs; tolerant of unknown/other event shapes. */
@@ -114,7 +126,13 @@ export function parseCheckoutEvent(payload: unknown): StripeCheckoutEvent | null
   const event = payload as {
     type?: unknown;
     data?: {
-      object?: { metadata?: { orderNumber?: unknown }; payment_status?: unknown; id?: unknown };
+      object?: {
+        metadata?: { orderNumber?: unknown };
+        payment_status?: unknown;
+        id?: unknown;
+        amount_total?: unknown;
+        currency?: unknown;
+      };
     };
   };
   if (typeof event.type !== "string") return null;
@@ -126,5 +144,7 @@ export function parseCheckoutEvent(payload: unknown): StripeCheckoutEvent | null
       typeof session?.metadata?.orderNumber === "string" ? session.metadata.orderNumber : null,
     paymentStatus: typeof session?.payment_status === "string" ? session.payment_status : null,
     sessionId: typeof session?.id === "string" ? session.id : null,
+    amountTotal: typeof session?.amount_total === "number" ? session.amount_total : null,
+    currency: typeof session?.currency === "string" ? session.currency : null,
   };
 }

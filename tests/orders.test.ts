@@ -995,3 +995,302 @@ describe("findOrderForViewer — guest capability token (#427)", () => {
     expect("userId" in (result as object)).toBe(false);
   });
 });
+
+// ---- Payment binding (P9.1, #429) ------------------------------------------
+
+const { confirmPayment, failPayment } = await import("@/lib/repositories/orders");
+type PaymentBinding = import("@/lib/repositories/orders").PaymentBinding;
+
+/**
+ * P9.1 (#429) — which Stripe event may move an order's payment state.
+ *
+ * The rule: a verified signature proves an event came from Stripe, not that it is
+ * about the payment THIS order is waiting on. So the stored
+ * `Payment.providerReference` is folded into the `where` of the same
+ * compare-and-set that already guards the status transition.
+ *
+ * THE DOUBLE BELOW HONOURS `where`, INCLUDING THE NESTED `payment.is` FILTER.
+ * That is the whole point of it. A double returning a count of 1 unconditionally
+ * would pass every case here while proving nothing — the mismatch cases would
+ * "pass" precisely because the guard had been ignored.
+ */
+describe("confirmPayment / failPayment — payment binding (#429)", () => {
+  const ORDER_ID = "order-bind-1";
+  const ORDER_NUMBER = "AHE-20260829-BIND01";
+  const SESSION = "cs_test_the_real_one";
+
+  type PaymentRow = {
+    provider: string;
+    providerReference: string | null;
+    amountPence: number;
+  } | null;
+  type Row = { status: string; currency: string; payment: PaymentRow };
+
+  function binding(over: Partial<PaymentBinding> = {}): PaymentBinding {
+    return {
+      provider: "stripe",
+      providerReference: SESSION,
+      amountPence: 2346,
+      currency: "gbp",
+      ...over,
+    };
+  }
+
+  /**
+   * Evaluates a `where` the way Postgres would — false as soon as any condition
+   * fails, and a null `payment` relation is unmatchable, which is exactly how an
+   * order whose session write never landed has to behave.
+   */
+  function matches(where: Record<string, unknown>, row: Row): boolean {
+    if (where.id !== undefined && where.id !== ORDER_ID) return false;
+    if (where.status !== undefined && where.status !== row.status) return false;
+    if (where.currency !== undefined && where.currency !== row.currency) return false;
+    const payment = where.payment as { is?: Record<string, unknown> } | undefined;
+    if (payment?.is) {
+      if (!row.payment) return false;
+      const stored = row.payment as unknown as Record<string, unknown>;
+      for (const [key, value] of Object.entries(payment.is)) {
+        if (stored[key] !== value) return false;
+      }
+    }
+    return true;
+  }
+
+  function fakeDb(row: Row) {
+    const writes: string[] = [];
+    const inventoryIncrements: unknown[] = [];
+
+    // findOrderForWebhook's wide select and classifyNoMatch's `{ status: true }`
+    // are both served by this one object: the first destructures it, the second
+    // reads `.status`. Keeping it as one row is what makes the status the
+    // classifier sees the same status the guarded write just left behind.
+    const orderRow = () => ({
+      id: ORDER_ID,
+      vendorId: VENDOR,
+      orderNumber: ORDER_NUMBER,
+      status: row.status,
+      totalPence: 2346,
+      subtotalPence: 2000,
+      discountPence: 0,
+      deliveryFeePence: 346,
+      guestEmail: "shopper@example.com",
+      userId: null,
+      user: null,
+      items: [
+        {
+          productName: "Basmati Rice 5kg",
+          unitPricePence: 2000,
+          quantity: 1,
+          lineTotalPence: 2000,
+        },
+      ],
+      discountUse: null,
+      loyaltyEntries: [] as { points: number }[],
+    });
+
+    const tx = {
+      order: {
+        updateMany: async (args: { where: Record<string, unknown>; data: { status: string } }) => {
+          if (!matches(args.where, row)) return { count: 0 };
+          row.status = args.data.status;
+          writes.push(`order:${args.data.status}`);
+          return { count: 1 };
+        },
+        findUnique: async () => orderRow(),
+      },
+      payment: {
+        updateMany: async () => {
+          writes.push("payment");
+          return { count: 1 };
+        },
+      },
+      orderStatusEvent: {
+        create: async () => {
+          writes.push("statusEvent");
+          return {};
+        },
+      },
+      orderItem: { findMany: async () => [{ productId: "p-1", quantity: 1 }] },
+      inventory: {
+        updateMany: async (args: unknown) => {
+          inventoryIncrements.push(args);
+          writes.push("inventory");
+          return { count: 1 };
+        },
+      },
+      // reverseRedemption and releaseCodeRedemption both exit on a null lookup.
+      loyaltyLedgerEntry: { findUnique: async () => null },
+      discountRedemption: { findFirst: async () => null },
+    };
+
+    const prisma = {
+      order: { findUnique: async () => orderRow() },
+      vendorConfig: { findUnique: async () => null },
+      $transaction: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx),
+    } as never;
+
+    return { prisma, writes, inventoryIncrements, row };
+  }
+
+  const paid = (): Row => ({
+    status: "PENDING_PAYMENT",
+    currency: "GBP",
+    payment: { provider: "stripe", providerReference: SESSION, amountPence: 2346 },
+  });
+
+  describe("confirmPayment", () => {
+    it("confirms when the event corresponds to the stored payment", async () => {
+      const db = fakeDb(paid());
+      await expect(confirmPayment(db.prisma, ORDER_NUMBER, binding())).resolves.toEqual({
+        ok: true,
+      });
+      expect(db.row.status).toBe("CONFIRMED");
+    });
+
+    // Stripe sends `gbp`; Order.currency is `GBP`. The binding upper-cases its
+    // input so the where can use exact equality rather than collation semantics.
+    it("accepts a currency that differs only in case", async () => {
+      const db = fakeDb(paid());
+      await expect(
+        confirmPayment(db.prisma, ORDER_NUMBER, binding({ currency: "gbp" })),
+      ).resolves.toEqual({ ok: true });
+    });
+
+    it("refuses an event whose session id is not this order's", async () => {
+      const db = fakeDb(paid());
+      await expect(
+        confirmPayment(db.prisma, ORDER_NUMBER, binding({ providerReference: "cs_test_other" })),
+      ).resolves.toEqual({ ok: false, reason: "binding-mismatch" });
+      expect(db.row.status).toBe("PENDING_PAYMENT");
+      expect(db.writes).toEqual([]);
+    });
+
+    // The window between order creation and the post-commit session write, and
+    // any order whose provider call never completed. A stored null cannot equal a
+    // non-null session id, so this is refused by the same predicate with no
+    // separate branch — the property #427 established for capability tokens.
+    it("refuses an order whose stored provider reference is still null", async () => {
+      const db = fakeDb({
+        status: "PENDING_PAYMENT",
+        currency: "GBP",
+        payment: { provider: "stripe", providerReference: null, amountPence: 2346 },
+      });
+      await expect(confirmPayment(db.prisma, ORDER_NUMBER, binding())).resolves.toEqual({
+        ok: false,
+        reason: "binding-mismatch",
+      });
+      expect(db.writes).toEqual([]);
+    });
+
+    it("refuses an event whose amount is not this order's", async () => {
+      const db = fakeDb(paid());
+      await expect(
+        confirmPayment(db.prisma, ORDER_NUMBER, binding({ amountPence: 1 })),
+      ).resolves.toEqual({ ok: false, reason: "binding-mismatch" });
+      expect(db.writes).toEqual([]);
+    });
+
+    it("refuses an event missing any binding field, writing nothing", async () => {
+      const db = fakeDb(paid());
+      const incomplete: Partial<PaymentBinding>[] = [
+        { providerReference: null },
+        { amountPence: null },
+        { currency: null },
+      ];
+      for (const missing of incomplete) {
+        await expect(confirmPayment(db.prisma, ORDER_NUMBER, binding(missing))).resolves.toEqual({
+          ok: false,
+          reason: "unbindable",
+        });
+      }
+      expect(db.writes).toEqual([]);
+      expect(db.row.status).toBe("PENDING_PAYMENT");
+    });
+
+    // A duplicate delivery is Stripe working as designed and must stay SILENT.
+    // Reporting it as a mismatch would bury the real mismatches in noise.
+    it("reports a duplicate delivery as already-processed, not as a mismatch", async () => {
+      const db = fakeDb({
+        status: "CONFIRMED",
+        currency: "GBP",
+        payment: { provider: "stripe", providerReference: SESSION, amountPence: 2346 },
+      });
+      await expect(confirmPayment(db.prisma, ORDER_NUMBER, binding())).resolves.toEqual({
+        ok: false,
+        reason: "already-processed",
+      });
+      expect(db.writes).toEqual([]);
+    });
+
+    // Asserted on the recorded `where` itself, so the guard cannot be quietly
+    // moved out of the query and into application code while every behavioural
+    // case above carries on passing.
+    it("puts the binding in the WHERE clause, not in application code", async () => {
+      let seen: Record<string, unknown> | null = null;
+      const db = fakeDb(paid());
+      const spy = {
+        ...(db.prisma as unknown as Record<string, unknown>),
+        $transaction: async (fn: (t: unknown) => Promise<unknown>) =>
+          fn({
+            order: {
+              updateMany: async (args: { where: Record<string, unknown> }) => {
+                seen = args.where;
+                return { count: 0 };
+              },
+              findUnique: async () => ({ status: "PENDING_PAYMENT" }),
+            },
+          }),
+      } as never;
+
+      await confirmPayment(spy, ORDER_NUMBER, binding());
+
+      expect(seen).toMatchObject({
+        id: ORDER_ID,
+        status: "PENDING_PAYMENT",
+        currency: "GBP",
+        payment: { is: { provider: "stripe", providerReference: SESSION, amountPence: 2346 } },
+      });
+    });
+  });
+
+  describe("failPayment", () => {
+    it("cancels and releases stock when the event corresponds to the stored payment", async () => {
+      const db = fakeDb(paid());
+      await expect(failPayment(db.prisma, ORDER_NUMBER, binding(), "expired")).resolves.toEqual({
+        ok: true,
+      });
+      expect(db.row.status).toBe("CANCELLED");
+      expect(db.inventoryIncrements).toHaveLength(1);
+    });
+
+    it("refuses an event whose session id is not this order's, and releases no stock", async () => {
+      const db = fakeDb(paid());
+      await expect(
+        failPayment(
+          db.prisma,
+          ORDER_NUMBER,
+          binding({ providerReference: "cs_test_other" }),
+          "expired",
+        ),
+      ).resolves.toEqual({ ok: false, reason: "binding-mismatch" });
+      expect(db.row.status).toBe("PENDING_PAYMENT");
+      expect(db.inventoryIncrements).toEqual([]);
+    });
+
+    // The deliberate asymmetry with confirmPayment. An expired session asserts no
+    // money, so amount and currency are not what authorize releasing stock — and
+    // refusing over a missing amount_total would strand inventory indefinitely.
+    it("still cancels when amount and currency are absent — it binds on session identity alone", async () => {
+      const db = fakeDb(paid());
+      await expect(
+        failPayment(
+          db.prisma,
+          ORDER_NUMBER,
+          binding({ amountPence: null, currency: null }),
+          "expired",
+        ),
+      ).resolves.toEqual({ ok: true });
+      expect(db.row.status).toBe("CANCELLED");
+    });
+  });
+});

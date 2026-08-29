@@ -3,6 +3,7 @@ import { getCurrentVendorId } from "@/lib/tenant";
 import {
   advanceOrderStatus,
   advanceOrderStatusBulk,
+  cancelUnpaidOrder,
   confirmPayment,
   countOrdersForStaff,
   failPayment,
@@ -16,6 +17,7 @@ import {
   listOrdersForUser,
   placeOrder,
   type OrderRepository,
+  type PaymentBinding,
 } from "@/lib/repositories/orders";
 
 /**
@@ -99,13 +101,21 @@ export function getOrderRepository(): OrderRepository {
  * `tests/repository-vendor-scoping.test.ts` records it as a deliberate one.
  *
  * Always the WEBSOCKET client — `confirmPayment` runs an interactive transaction.
+ *
+ * `confirm` and `fail` both take a `PaymentBinding` (P9.1, #429): the order
+ * number arriving in the event authorizes nothing on its own, so the caller must
+ * also pass what the event claims about the payment. This wrapper forwards it
+ * unchanged and makes no decision about it — the whole point is that the
+ * comparison happens in the repository's `where` clause, against Postgres.
  */
 export function getWebhookOrderService() {
   const prisma = getPrismaWs();
   return {
     findOrder: (orderNumber: string) => findOrderForWebhook(prisma, orderNumber),
-    confirm: (orderNumber: string) => confirmPayment(prisma, orderNumber),
-    fail: (orderNumber: string, reason: string) => failPayment(prisma, orderNumber, reason),
+    confirm: (orderNumber: string, binding: PaymentBinding) =>
+      confirmPayment(prisma, orderNumber, binding),
+    fail: (orderNumber: string, binding: PaymentBinding, reason: string) =>
+      failPayment(prisma, orderNumber, binding, reason),
   };
 }
 
@@ -117,6 +127,21 @@ export function getWebhookOrderService() {
  * public, and `findOrderForGuestLookup` verifies the order-number/email
  * credential pair at the query level within one vendor.
  */
+/**
+ * The shopper-facing "cancel my unpaid order" path (P9.1, #429).
+ *
+ * Vendor-scoped, and deliberately NOT `getWebhookOrderService().fail` — that now
+ * requires a payment binding, which a shopper cancelling from their own browser
+ * has no session id to supply. Authorization for this path is the capability
+ * token, proved by the action before it calls here.
+ */
+export function getOrderCancelService() {
+  return {
+    cancelUnpaid: async (orderNumber: string, reason: string) =>
+      cancelUnpaidOrder(getPrismaWs(), await getCurrentVendorId(), orderNumber, reason),
+  };
+}
+
 export function getGuestOrderLookupService() {
   const prisma = getPrisma();
   return {

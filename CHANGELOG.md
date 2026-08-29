@@ -4,7 +4,51 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 [Keep a Changelog](https://keepachangelog.com/). Per SDD Gate 4, this file is updated **before**
 every branch merges.
 
+## [Unreleased]
+
 ### Security
+- **`#340` — Cross-tenant writes prevented in reviews repository.** (P9.1).
+  Added `vendorId` enforcement to `upsertReview` and `deleteReview`. Previously, these functions implicitly relied on `productId` and `userId` ownership, which failed the explicit tenancy boundary requirement. The functions now strictly filter by `vendorId`, preventing cross-tenant manipulation. Callers in `lib/reviews-service.ts` supply the current tenant via request-scoped identity. Test exceptions for `reviews.ts` in `repository-vendor-scoping.test.ts` were removed.
+- **`#432` Slice 1 — Cross-tenant data integrity for Product → Category relation.** (P9.1).
+  Added a composite foreign key `(categoryId, vendorId)` to `Product` referencing `Category(id, vendorId)`. Previously, a vendor's product could cite another vendor's category. This structural schema change physically prevents cross-tenant references from being persisted.
+- **`#433` — Commercial CHECK constraints.** (P9.1).
+  Added native PostgreSQL `CHECK` constraints via a hand-authored migration to prevent logically invalid commercial data (e.g. negative prices, negative stock, bad price tiers). Prisma cannot natively model table-level checks in `schema.prisma`. Hand-authored migration `20260829232000_p9_1_data_integrity_hardening` contains the necessary DDL. Data audit scripts were run against the shadow DB to guarantee no constraints were violated by existing records.
+
+### Security
+- **`#431` — Production authentication rate limiting.** (P9.1).
+  Added a Workers-compatible abuse-control mechanism to bound credential stuffing and password-reset abuse. Better Auth's default rate limiter relies on an in-memory store (ineffective across isolates) and a database increment operation that crashes on HTTP Prisma clients. This slice explicitly disables Better Auth's limiter and instead intercepts sensitive paths (`/sign-in`, `/sign-up`, `/forget-password`, `/reset-password`, `/send-verification-email`) via Better Auth's `onRequest` hook in `lib/auth.ts`. The check reuses the proven Postgres-backed fixed-window rate-limiting pattern introduced for order lookups, enforcing a maximum of 5 attempts per IP per minute via a new `AuthenticationAttempt` table.
+- **`#430` — Fail closed when Stripe production configuration is missing or invalid.** (P9.1).
+  Previously, `getPaymentService()` and `getEmailService()` gracefully degraded to stub implementations if their respective API keys were missing. This allowed local development and CI to operate safely without real credentials, but posed a critical risk in production: a misconfigured environment would silently accept orders without ever processing a payment or sending an email.
+  Fixed by attaching `.superRefine()` validation to `schema` and `emailSchema` in `lib/config.ts`. If `process.env.NODE_ENV === "production"`, these schemas explicitly reject missing `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, and `RESEND_FROM_EMAIL`. A new test file `lib/config.test.ts` asserts that this strict enforcement only applies in production environments, fully preserving the mock capability for dev/test safely. `vi.stubEnv` was used to robustly isolate environment variables in the tests.
+
+- **`#429` — a verified Stripe signature no longer confirms or cancels an order on its own.** Second
+  slice of **P9.1**. Signature verification is sound and untouched; the gap was downstream.
+  `app/api/webhooks/stripe/route.ts` acted on `metadata.orderNumber` alone, and
+  `Payment.providerReference` — the Checkout Session id, written post-commit — was never read back.
+  A session created in the same Stripe account with crafted metadata, or a metadata mix-up during an
+  integration change, both arrive correctly signed. Both transitions now also prove correspondence
+  against the stored payment, **in the `where` clause of the compare-and-set that already guarded the
+  status change**, never by fetching and then comparing in application code — the P7a lesson recorded
+  on `findOrderForGuestLookup`, where a missing credential *skipped* the comparison rather than
+  failing it. That placement makes the nullable case free: a stored `null` cannot equal a non-null
+  session id, so an order whose session write never landed is refused by the same predicate that
+  refuses a wrong one, with no separate branch. **`checkout.session.expired` /
+  `async_payment_failed` are bound too**, beyond the issue's literal ask — `failPayment` cancels an
+  order, returns its stock, reverses a loyalty redemption and frees a discount-code use, all
+  previously on an unbound order number. The two paths bind differently on purpose:
+  `confirmPayment` checks provider, session id, amount and currency; `failPayment` checks session
+  identity only, because cancellation asserts no money and refusing to release stock over a missing
+  `amount_total` would strand inventory indefinitely. `confirmPayment`/`failPayment` return result
+  unions instead of booleans — a bare `false` could not separate a duplicate delivery (normal and
+  silent; Stripe retries aggressively) from a mismatch (loud), and the route logs identifiers only,
+  never customer data. Every post-signature outcome still answers **200**, unchanged and deliberate.
+  `features/checkout/cancel-order.ts` (#428's shopper-facing cancel) moves off the webhook service to
+  a new **vendor-scoped** `cancelUnpaidOrder`: its credential is the capability token, it has no
+  Stripe session to bind, and a placeholder binding would have defeated the slice. Adds
+  `scripts/sign-stripe-event.ts`, committed because neither `stripe listen` nor a hand-built unit test
+  can produce a genuinely-signed *mismatched* event — the only input that exercises the refusal path.
+  No schema change, no migration. Deferred: **#454** (recovery for an order stranded
+  `PENDING_PAYMENT` by a refused binding; #101 covers webhooks that never arrive, not ones refused).
 - **`#427` / `#428` — an order number is no longer a credential.** First slice of **P9.1**.
   `app/(storefront)/checkout/[orderNumber]/page.tsx` resolved a guest's order with the order number
   alone and rendered their name, phone and delivery address; order numbers travel through emails,
@@ -32,6 +76,27 @@ every branch merges.
   **#450** (a `getForStaff` comment still describing the old rule).
 
 ### Documentation
+- **`CLAUDE.md` gains a note on `npm run preview`'s local observability query API**, found useful
+  while validating #429's live rows: `wrangler dev` captures every `console.*` line into a queryable
+  local store at `POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query`,
+  which is what actually proved a `binding-mismatch` refusal logs exactly once and an
+  `already-processed` duplicate logs nothing, rather than eyeballing an interleaved terminal.
+- **`/document` closeout for `#429`.** Reconciles `specs/roadmap.md` with what actually shipped: a
+  new change-log row cites **PR #455**, merge `5f7e32e`, `staging`; records `gates` green (1m10s) and
+  both `deploy-staging`/`deploy-docs-internal` completing successfully post-merge, with staging's
+  `/api/health` confirming commit `5f7e32e`. **All five live validation rows (R30–R34) were run for
+  real**, not deferred: a genuine Stripe test-mode checkout confirmed an order through the binding;
+  a signed-but-mismatched event was refused (`binding-mismatch`, order untouched); the genuine event
+  replayed cleanly (`already-processed`, silent, no second email); a mismatched `expired` event left
+  stock held and a genuine one released it. This is what proved the relation-filtered `updateMany` —
+  untested against real Postgres until this run, per the slice's own build notes — is actually
+  evaluated by the WebSocket adapter rather than silently ignored. **One gap found at Validate and
+  filed rather than patched into scope**: `cancelUnpaidOrder` (the shopper-facing cancel path split
+  off `failPayment` by this slice) has no unit test and no validation row reaches it — **#456**,
+  tagged Phase `P8` per the board's known limitation. **#429 moved to `In Review`** on Project #2; it
+  closes to `Done` only on promotion to `main`. Notes P9.1 has five issues remaining (**#430**–**#433**,
+  plus the pre-existing **#340**) of its eight. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt; `npm run
+  sdd:audit` re-run and exits 0.
 - **`/document` closeout for `#427`, `#428`.** Reconciles `specs/roadmap.md` with what actually
   shipped: a new change-log row cites **PR #451**, merge `221aea4`, `staging`; records `gates` green
   (1m6s) and both `deploy-staging`/`deploy-docs-internal` completing successfully post-merge. Notes
