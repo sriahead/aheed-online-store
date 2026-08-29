@@ -5,6 +5,34 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 every branch merges.
 
 ### Security
+- **`#429` — a verified Stripe signature no longer confirms or cancels an order on its own.** Second
+  slice of **P9.1**. Signature verification is sound and untouched; the gap was downstream.
+  `app/api/webhooks/stripe/route.ts` acted on `metadata.orderNumber` alone, and
+  `Payment.providerReference` — the Checkout Session id, written post-commit — was never read back.
+  A session created in the same Stripe account with crafted metadata, or a metadata mix-up during an
+  integration change, both arrive correctly signed. Both transitions now also prove correspondence
+  against the stored payment, **in the `where` clause of the compare-and-set that already guarded the
+  status change**, never by fetching and then comparing in application code — the P7a lesson recorded
+  on `findOrderForGuestLookup`, where a missing credential *skipped* the comparison rather than
+  failing it. That placement makes the nullable case free: a stored `null` cannot equal a non-null
+  session id, so an order whose session write never landed is refused by the same predicate that
+  refuses a wrong one, with no separate branch. **`checkout.session.expired` /
+  `async_payment_failed` are bound too**, beyond the issue's literal ask — `failPayment` cancels an
+  order, returns its stock, reverses a loyalty redemption and frees a discount-code use, all
+  previously on an unbound order number. The two paths bind differently on purpose:
+  `confirmPayment` checks provider, session id, amount and currency; `failPayment` checks session
+  identity only, because cancellation asserts no money and refusing to release stock over a missing
+  `amount_total` would strand inventory indefinitely. `confirmPayment`/`failPayment` return result
+  unions instead of booleans — a bare `false` could not separate a duplicate delivery (normal and
+  silent; Stripe retries aggressively) from a mismatch (loud), and the route logs identifiers only,
+  never customer data. Every post-signature outcome still answers **200**, unchanged and deliberate.
+  `features/checkout/cancel-order.ts` (#428's shopper-facing cancel) moves off the webhook service to
+  a new **vendor-scoped** `cancelUnpaidOrder`: its credential is the capability token, it has no
+  Stripe session to bind, and a placeholder binding would have defeated the slice. Adds
+  `scripts/sign-stripe-event.ts`, committed because neither `stripe listen` nor a hand-built unit test
+  can produce a genuinely-signed *mismatched* event — the only input that exercises the refusal path.
+  No schema change, no migration. Deferred: **#454** (recovery for an order stranded
+  `PENDING_PAYMENT` by a refused binding; #101 covers webhooks that never arrive, not ones refused).
 - **`#427` / `#428` — an order number is no longer a credential.** First slice of **P9.1**.
   `app/(storefront)/checkout/[orderNumber]/page.tsx` resolved a guest's order with the order number
   alone and rendered their name, phone and delivery address; order numbers travel through emails,

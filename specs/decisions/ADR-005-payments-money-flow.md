@@ -4,8 +4,8 @@ title: "ADR-005 — Payments & multi-vendor money flow"
 audience: [dev]
 type: adr
 status: approved
-version: "1.5.0"
-updated: 2026-08-20
+version: "1.6.0"
+updated: 2026-08-29
 visibility: internal
 summary: Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite.
 tags: [adr, payments, stripe, multi-tenancy, compliance]
@@ -191,6 +191,44 @@ with the award. The confirmation email is unaffected either way: it is sent only
 
 Nothing here changes how money is calculated, charged or recorded — only what an order is able to
 explain about the figures it already carries.
+
+## Implementation note (P9.1, 2026-08-29, #429)
+
+**A verified webhook signature is no longer sufficient to move an order's payment state.** The
+Decision's "signature-verified, idempotent webhook" is unchanged and no decision here is reopened —
+this records a third property it now also has, and which the wording above does not imply.
+
+A signature proves an event came from Stripe. It does not prove the event concerns *the payment this
+order is waiting on*: a session created in the same Stripe account with crafted metadata, or a
+metadata mix-up during an integration change, both arrive correctly signed. Until this slice
+`metadata.orderNumber` was the only link between an event and the order it moved, and
+`Payment.providerReference` — written post-commit with the Checkout Session id — was never read back.
+
+Both transitions now also prove correspondence, in the `where` clause of the compare-and-set that
+already guarded the status change, never by fetching and comparing in application code. That
+placement is the point: it is the P7a lesson recorded on `findOrderForGuestLookup`, where a missing
+credential *skipped* the comparison instead of failing it. It also makes the nullable-reference case
+free — a stored `null` cannot equal a non-null session id, so an order whose session write never
+landed is refused by the same predicate that refuses a wrong one, with no separate branch.
+
+The two paths bind on deliberately different fields:
+
+| | binds on | rationale |
+|---|---|---|
+| `confirmPayment` | provider, session id, amount, currency | confirmation is where money is asserted, so the money is checked |
+| `failPayment` | provider, session id | cancellation asserts no money; refusing to release stock because Stripe omitted `amount_total` would strand inventory indefinitely — a worse failure, reachable with no attacker |
+
+**Money is still calculated, charged and recorded exactly as before.** `computeTotals` remains the
+only place an order's money is decided, and `lib/payments.ts` is untouched. What changed is which
+events are permitted to act on a figure that was already correct.
+
+**Two consequential details for future readers.** First, a mismatch **fails closed**: the order stays
+`PENDING_PAYMENT` and the refusal is logged, which means a genuine integration defect would leave a
+real shopper charged with no confirmation and their stock held, needing manual reconciliation —
+tracked as **#454**, since #101 covers webhooks that never *arrive*, not ones that arrive and are
+refused. Second, the P7.5b note above says the confirmation email is sent "after the webhook's
+`confirm` returned true"; `confirmPayment` now returns a result union rather than a boolean, and the
+email is keyed on `{ ok: true }`. The behaviour is the same — the wording predates the type.
 
 ## Deferred upgrade — Stripe Connect
 
