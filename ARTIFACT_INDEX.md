@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-29T18:17:51.837Z` · commit `b56cd4a` · `116` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-29T21:29:12.540Z` · commit `f1a85cb` · `117` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -111,6 +111,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Repository client injection — completion, slices 2+3 (plan)](specs/2026-08-27-repository-client-injection-completion/plan.md) | spec | 1.0.0 | 2026-08-27 | draft | internal | Completes #409 by converting the remaining 26 self-resolving exports in categories, loyalty, vendor and products, then deleting the enforcement check's file scoping so the rule holds repo-wide. Also raises the Worker cpu_ms ceiling (#415). |
 | [P8 closeout and the P9 / P10 restructure (plan)](specs/2026-08-28-p9-launch-readiness-restructure/plan.md) | spec | 1.0.0 | 2026-08-28 | draft | internal | Closes P8 as a historical record, moves the unresolved production-launch work hidden inside it into a new P9 with four sub-phases, folds P8.3/P8.6/P8.7 into a new P10, and files the launch-readiness issues P9 needs. Sequencing and decision work only — no application code. |
 | [Storefront & fulfilment brief — roadmap sequencing (plan)](specs/2026-08-28-storefront-brief-sequencing/plan.md) | spec | 1.0.0 | 2026-08-28 | draft | internal | Sequences the fourteen issues of the #408 storefront and fulfilment brief into the roadmap as two new phases (P8.6, P8.7) plus a small pre-launch set inside P8.2, and writes ADR-006 to settle the store-location question that gates two of them. |
+| [P9.1: Production Authentication Rate Limiting](specs/2026-08-29-auth-rate-limiting/plan.md) | spec | 1.0.0 | 2026-08-29 | approved | internal | Introduce a Workers-compatible rate limiter for authentication routes to prevent credential stuffing and abuse, resolving |
 | [Guest order authorization — confirmation and cancellation (plan)](specs/2026-08-29-guest-order-authorization/plan.md) | spec | 1.0.0 | 2026-08-29 | draft | internal | Replaces the order number as a guest's only credential with a per-order capability token, and turns the destructive checkout-cancellation GET into an authorized confirmation page backed by a POST server action. First slice of P9.1. |
 | [P9.1: Fail Closed on Missing Production Config](specs/2026-08-29-p9-1-fail-closed-config/plan.md) | spec | 1.0.0 | 2026-08-29 | approved | internal | Enforce presence of Stripe and Resend secrets in production via Zod refinement, preventing silent degradation to stub/logging providers. |
 | [Bind Stripe webhook confirmation and failure to the expected stored payment (plan)](specs/2026-08-29-webhook-payment-binding/plan.md) | spec | 1.0.0 | 2026-08-29 | draft | internal | Makes a signed Stripe event unable to confirm or cancel an order unless it corresponds to the payment that order is actually waiting on, by folding the stored provider reference into the same compare-and-set that already guards the status transition. |

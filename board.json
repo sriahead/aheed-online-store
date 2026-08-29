@@ -1,0 +1,616 @@
+{
+  "items": [
+    {
+      "content": {
+        "body": "Umbrella issue for **P8 — Deployment & launch** — one epic per phase until that phase has a spec.\n\n- **Scope & sequencing:** `specs/roadmap.md` (the single source — deliberately not restated here).\n- **Acceptance criteria:** none yet; this phase has no spec. Once\n  `specs/<YYYY-MM-DD-p8-*>/` exists, its `validation.md` **is** the acceptance\n  criteria — link to it, never copy it.\n- **On spec approval:** decompose this epic into slice issues and close it.\n\n_Filed by `scripts/provision-project.sh`. The Project tracks status only; content stays in specs/._",
+        "number": 91,
+        "repository": "sriahead/aheed-online-store",
+        "title": "P8 — Deployment & launch",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/91"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-g0",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P08 — Deployment & launch"
+      },
+      "phase": "P8",
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "P8 — Deployment & launch"
+    },
+    {
+      "content": {
+        "body": "Umbrella issue for **P7 — Compliance & hardening** — one epic per phase until that phase has a spec.\n\n- **Scope & sequencing:** `specs/roadmap.md` (the single source — deliberately not restated here).\n- **Acceptance criteria:** none yet; this phase has no spec. Once\n  `specs/<YYYY-MM-DD-p7-*>/` exists, its `validation.md` **is** the acceptance\n  criteria — link to it, never copy it.\n- **On spec approval:** decompose this epic into slice issues and close it.\n\n_Filed by `scripts/provision-project.sh`. The Project tracks status only; content stays in specs/._",
+        "number": 90,
+        "repository": "sriahead/aheed-online-store",
+        "title": "P7 — Compliance & hardening",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/90"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-hU",
+      "labels": ["enhancement"],
+      "linked pull requests": ["https://github.com/sriahead/aheed-online-store/pull/257"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P07 — Compliance & hardening"
+      },
+      "phase": "P7",
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "P7 — Compliance & hardening"
+    },
+    {
+      "content": {
+        "body": "Umbrella issue for **P6 — Admin & staff panel** — one epic per phase until that phase has a spec.\n\n- **Scope & sequencing:** `specs/roadmap.md` (the single source — deliberately not restated here).\n- **Acceptance criteria:** none yet; this phase has no spec. Once\n  `specs/<YYYY-MM-DD-p6-*>/` exists, its `validation.md` **is** the acceptance\n  criteria — link to it, never copy it.\n- **On spec approval:** decompose this epic into slice issues and close it.\n\n_Filed by `scripts/provision-project.sh`. The Project tracks status only; content stays in specs/._",
+        "number": 89,
+        "repository": "sriahead/aheed-online-store",
+        "title": "P6 — Admin & staff panel",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/89"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-hs",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P06 — Admin & staff panel"
+      },
+      "phase": "P6",
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "P6 — Admin & staff panel"
+    },
+    {
+      "content": {
+        "body": "Umbrella issue for **P5 — Loyalty & discounts** — one epic per phase until that phase has a spec.\n\n- **Scope & sequencing:** `specs/roadmap.md` (the single source — deliberately not restated here).\n- **Acceptance criteria:** none yet; this phase has no spec. Once\n  `specs/<YYYY-MM-DD-p5-*>/` exists, its `validation.md` **is** the acceptance\n  criteria — link to it, never copy it.\n- **On spec approval:** decompose this epic into slice issues and close it.\n\n_Filed by `scripts/provision-project.sh`. The Project tracks status only; content stays in specs/._",
+        "number": 88,
+        "repository": "sriahead/aheed-online-store",
+        "title": "P5 — Loyalty & discounts",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/88"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-h8",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P05 — Loyalty & discounts"
+      },
+      "phase": "P5",
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "P5 — Loyalty & discounts"
+    },
+    {
+      "content": {
+        "body": "Umbrella issue for **P4 — Orders & delivery status** — one epic per phase until that phase has a spec.\n\n- **Scope & sequencing:** `specs/roadmap.md` (the single source — deliberately not restated here).\n- **Acceptance criteria:** none yet; this phase has no spec. Once\n  `specs/<YYYY-MM-DD-p4-*>/` exists, its `validation.md` **is** the acceptance\n  criteria — link to it, never copy it.\n- **On spec approval:** decompose this epic into slice issues and close it.\n\n_Filed by `scripts/provision-project.sh`. The Project tracks status only; content stays in specs/._",
+        "number": 87,
+        "repository": "sriahead/aheed-online-store",
+        "title": "P4 — Orders & delivery status",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/87"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-ig",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P04 — Orders & delivery status"
+      },
+      "phase": "P4",
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "P4 — Orders & delivery status"
+    },
+    {
+      "content": {
+        "body": "Umbrella issue for **P3 — Cart & checkout** — one epic per phase until that phase has a spec.\n\n- **Scope & sequencing:** `specs/roadmap.md` (the single source — deliberately not restated here).\n- **Acceptance criteria:** none yet; this phase has no spec. Once\n  `specs/<YYYY-MM-DD-p3-*>/` exists, its `validation.md` **is** the acceptance\n  criteria — link to it, never copy it.\n- **On spec approval:** decompose this epic into slice issues and close it.\n\n_Filed by `scripts/provision-project.sh`. The Project tracks status only; content stays in specs/._",
+        "number": 86,
+        "repository": "sriahead/aheed-online-store",
+        "title": "P3 — Cart & checkout",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/86"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-jA",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P03 — Cart & checkout"
+      },
+      "phase": "P3",
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "P3 — Cart & checkout"
+    },
+    {
+      "content": {
+        "body": "## What happened\n\nWhile validating #74's live behavior on staging post-merge (PR #82), found that R7 in\n`specs/2026-08-09-multitenancy-slice3c-auth-cookie-scoping/requirements.md` specified\n`trustedOrigins` should include **every** `VendorDomain` host (so any vendor's origin is trusted\nby any other vendor's auth endpoint). Live testing on staging showed the actual deployed behavior\nonly trusts each vendor's **own** origin — same-origin sign-in attempts succeed (401 wrong\npassword), a cross-vendor origin (`srimart-staging.nocaped.com` sent to\n`staging.aheedfoodcentre.nocaped.com`) is rejected (403 `INVALID_ORIGIN`), same as a genuinely\nunknown origin — even though the `VendorDomain` row for SriMart demonstrably exists (its storefront\nresolves correctly with distinct branding).\n\n## Why the narrow behavior is actually correct\n\nBlanket-trusting every vendor's origin on every other vendor's auth endpoint reopens a\ncross-tenant CSRF-adjacent surface that \"isolated-by-default\" (the direction confirmed for slice\n3c) was meant to close — a page served from SriMart's origin shouldn't be a trusted CSRF origin\nfor POSTing to Aheed's `/api/auth/*` endpoints. There's no current use case requiring it; the\nconfig-gated family-SSO path already exists for the one case where cross-origin trust between\nrelated hosts is actually wanted.\n\n## Fix\n\nConfirmed with the human: keep the narrow (same-origin-only, + family wildcard when armed)\nbehavior, and correct the spec/code to describe it deliberately instead of leaving it as\nunexplained/undocumented behavior. `buildAuthOrigin`/`resolveAuthOrigin` no longer need a DB call\nat all (the only DB use was populating the now-removed cross-vendor trustedOrigins entries).\n\nFollow-up to #74, discovered during that slice's own `/ship` staging verification.",
+        "number": 83,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Fix: narrow auth trustedOrigins to same-vendor-only (ADR-004 slice 3c correction)",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/83"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-j0",
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P03 — Cart & checkout"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "Fix: narrow auth trustedOrigins to same-vendor-only (ADR-004 slice 3c correction)"
+    },
+    {
+      "content": {
+        "body": "Considered during ADR-004 slice 4 (#73) and deferred to the P6 era.\n\n**Idea:** a curated `Theme` catalogue — named, reusable themes (each = the 8 `--color-brand-*` primitives) that a vendor **picks** from, instead of storing 8 raw hex values per vendor in `VendorBranding`.\n\n**Why deferred (not dropped):**\n- **No performance reason to rush it.** Every request is single-tenant (host→one vendor), so branding is one indexed read regardless of vendor count — flat in N for both the raw-primitives and catalogue designs. A catalogue adds at most one join.\n- **Additive, not a rewrite.** The CSS-var injection seam is identical either way (components read semantic tokens; we inject 8 primitives). Introducing a `Theme` table + `VendorBranding.themeId` FK later — optionally keeping per-vendor overrides — reuses the whole slice-4 mechanism with zero throwaway work.\n- **Payoff needs an admin surface.** Curation, cross-vendor reuse, and a pick-list only matter once there's a **P6** admin/onboarding UI to choose a theme; today \"pick a theme\" and \"store 8 hex\" are the same seed action.\n\n**Scope when built:** `Theme` table (name + 8 primitives), `themeId` FK, seed a few themes, join in the branding read path, and a picker in the admin panel (P6). ~half a day of data/logic plus the UI.\n",
+        "number": 75,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Theme catalogue: named reusable themes vendors pick from (P6-era, additive to ADR-004 slice 4)",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/75"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-kQ",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Real engineering improvements that are not launch gates unless new evidence changes their risk. Absorbs the former P8.3 backlog plus P8.6 and P8.7.",
+        "dueOn": "",
+        "title": "P10 — Post-launch improvements"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Backlog",
+      "title": "Theme catalogue: named reusable themes vendors pick from (P6-era, additive to ADR-004 slice 4)"
+    },
+    {
+      "content": {
+        "body": "**ADR-004 slice 3c** — the outstanding piece of slice 3, deferred by slice 3b (#70) and not previously tracked. Surfaced during the slice-4 orient pass.\n\nImplements **ADR-004 decision 4** (`specs/decisions/ADR-004-multi-tenancy.md`): auth cookie scoping derived from the `Vendor` table, not hardcoded.\n- **Family SSO:** within `.aheedfoodcentre.nocaped.com`, set the session cookie on the **parent domain** → SSO across all subdomain vendors; every family subdomain in Better Auth `trustedOrigins`.\n- **Custom-domain isolation:** a vendor on its own registrable domain gets an isolated session (own cookie; separate login).\n- **Data-driven:** cookie `Domain` + `trustedOrigins` derived from `Vendor`/`VendorDomain` at runtime via the slice-3b resolver seam — never hardcoded (else onboarding a domain needs a deploy, violating ADR §7).\n\n**Current state:** `lib/auth.ts` has **no** `trustedOrigins` / cookie-domain / cross-subdomain config — cookies are single-origin today.\n\n**Sequencing:** ADR-004 sequences this **before P3**. Owner elected to build slice 4 (branding) first and circle back to 3c; this issue keeps it on the board. Cross-domain *federated* SSO remains deferred (ADR \"Deferred upgrade\").\n",
+        "number": 74,
+        "repository": "sriahead/aheed-online-store",
+        "title": "ADR-004 slice 3c: data-driven auth cookie scoping + family SSO (before P3)",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/74"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-kc",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P03 — Cart & checkout"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "ADR-004 slice 3c: data-driven auth cookie scoping + family SSO (before P3)"
+    },
+    {
+      "content": {
+        "body": "## Deferred /document items + follow-ups for ADR-004 slices 0–1\n\nGate-4 docs (CHANGELOG, `specs/architecture.md`, `ARTIFACT_INDEX.md`) shipped inline with PRs #59/#63/#64. These are the lighter `/document`-stage items, deferred so slice 2 can start:\n\n- [ ] **Roadmap closure note** — add a `specs/roadmap.md` change-log entry recording ADR-004 **slice 0** (Neon DB separation, #56) and **slice 1** (Vendor + vendorId, #62) shipped to prod (2026-08-08). Fold into slice 2's branch to avoid a docs-only PR.\n- [ ] **Verify the hand-authored migration has no Prisma drift.** `20260808130000_multitenancy_vendor_scope` was written by hand (Prisma can't auto-generate a non-null FK + backfill). On a clean throwaway DB, run `prisma migrate dev` (or `prisma migrate diff` schema↔migrations) and confirm it reports **no drift** — i.e. the hand-authored SQL exactly matches what `schema.prisma` implies (index/constraint names, column order). If drift is found, add a small reconciling migration. CI only runs `migrate deploy` (which doesn't compare to schema), so this isn't caught automatically.\n- [ ] Optionally note in ADR-004 that slices 0–1 are now implemented (status breadcrumb).\n\nLow priority; none blocks slice 2.\n",
+        "number": 65,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Docs + follow-ups for ADR-004 slices 0–1 (roadmap note, migration-drift check)",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/65"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-k4",
+      "labels": ["documentation"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P03 — Cart & checkout"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "Docs + follow-ups for ADR-004 slices 0–1 (roadmap note, migration-drift check)"
+    },
+    {
+      "content": {
+        "body": "## Wire the KMS internal docs site into the `/dev` view (deferred to dev-role view work)\n\nThe KMS internal docs site is **live** at `https://docs.internal.aheedfoodcentre.nocaped.com`, gated by a Cloudflare Access self-hosted app (One-time PIN, allow-list). Deferred to the upcoming **dev-role / view changes** work:\n\n- **Set `KMS_INTERNAL_URL`** = `https://docs.internal.aheedfoodcentre.nocaped.com` for the main app (staging + production) so the `ADMIN`-gated `/dev` page renders the KMS link instead of the \"pending setup\" note. `lib/dev-diagnostics.ts` reads it via `readEnv(\"KMS_INTERNAL_URL\")`; cleanest as `[env.*.vars]` in the main `wrangler.toml`.\n- Confirm the two-gate UX end to end: app RBAC (only ADMIN sees the link) → Cloudflare Access PIN on the KMS site.\n\nNote: the KMS site's own `wrangler.toml` route flip is being handled separately/immediately (tree-honesty) so CI doesn't tear down the live custom domain.\n",
+        "number": 60,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Wire KMS internal docs link into /dev (KMS_INTERNAL_URL) — with dev-role view work",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/60"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-lM",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P00 — Foundation & scaffolding"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "Wire KMS internal docs link into /dev (KMS_INTERNAL_URL) — with dev-role view work"
+    },
+    {
+      "content": {
+        "body": "## Goal\nEvolve the platform from single-vendor (hardcoded Aheed / Milton Keynes) to **multi-tenant**: regions, locations, vendors, delivery areas, and branding all come from the **database**, so a new vendor can be onboarded without code changes, each with their own branding/UI over shared business logic and data.\n\nDesign decision captured in **ADR-004 (draft)**.\n\n## Why now (sequencing)\nDo this **before P3 (cart/checkout/orders)**. Orders, carts, and payments will otherwise bake in single-vendor assumptions (an order belongs to a vendor; payment routing/payouts are per-vendor), and retrofitting vendor scoping after P3–P6 is far more expensive.\n\n## Flagged areas (from the 2026-08-07 audit)\n- **No `Vendor`/`Tenant` entity** in `prisma/schema.prisma`; no `vendorId` on `Category`/`Product`/`Inventory`/`Review`/(future `Order`).\n- **Region/delivery hardcoded**: `lib/delivery.ts` (`MK1–MK19`), locality copy in header/hero/metadata.\n- **Brand identity hardcoded**: `components/layout/Header.tsx` (logo + copy), `app/layout.tsx`, `app/manifest.ts`, auth pages, `lib/auth.ts` email subjects, `public/images/brand/logo.png`.\n- **Design tokens**: `design-system/tokens/tokens.css` is one global theme — the two-layer (primitive→semantic) design maps cleanly to per-vendor primitives injected as CSS vars at request time.\n- **Storage namespacing**: keys like `products/{slug}/...` + single `CDN_BASE_URL` — need per-vendor prefixes.\n- **Config layering**: `lib/config.ts` treats brand/locality/sender as single env values — split platform config (infra) from vendor config (DB).\n- **Category taxonomy/icons**: `components/product/category-icon.ts` hardcoded slug→icon map.\n\n## Cross-cutting decisions (in the ADR)\n1. **Tenant resolution** — custom domain vs subdomain vs path prefix.\n2. **Data isolation** — row-level `vendorId` + enforced filtering vs schema-per-tenant.\n3. **Theming delivery** — per-vendor primitives → CSS variables.\n4. **Onboarding** — new vendor = data only, no deploy.\n\n## Also surfaced\n- **Staging and production currently share one Neon database** (confirmed 2026-08-07 — identical `db.checkedAt`). Multi-tenancy and environment isolation should be resolved together; a bad staging migration/seed currently hits prod.\n\n## Deliverable\nADR-004 approved, then a dedicated foundation phase (schema + repository scoping + theming + config split) inserted before P3.",
+        "number": 49,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Multi-tenancy foundation: DB-driven vendors/regions/branding (ADR-004)",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/49"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-lk",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P03 — Cart & checkout"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "Multi-tenancy foundation: DB-driven vendors/regions/branding (ADR-004)"
+    },
+    {
+      "content": {
+        "body": "## Context\nThe storefront renders product images with plain `<img>` + `composePublicUrl()` (established since P2a, reaffirmed in **P2.5b2** #43). ESLint's `@next/next/no-img-element` warning is accepted repo-wide as a result.\n\n## Why deferred\n`next/image` on Cloudflare Workers needs a custom loader (Next's default optimizer isn't available in the Workers runtime). Choosing/wiring that loader is a separate infra decision, not visual-redesign work. It matters most once **real product photography** replaces the placeholder SVGs.\n\n## Scope when picked up\n- Pick an approach: a custom `next/image` loader that composes `${CDN_BASE_URL}/${key}` (and possibly Cloudflare Image Resizing), or keep `<img>` and silence the rule deliberately.\n- Apply to `ProductCard`, `ProductImageGallery`, and any new image surfaces.\n- Fits naturally with **P7 (perf/hardening)** or whenever real photography lands.",
+        "number": 46,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Storefront: adopt next/image (or a Workers image loader) for product images",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/46"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-mI",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P07 — Compliance & hardening"
+      },
+      "phase": "P7",
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "Storefront: adopt next/image (or a Workers image loader) for product images"
+    },
+    {
+      "content": {
+        "body": "## Context\nDeferred from **P2.5b2** (#43). The AI Studio mockup's landing page (`docs/ui-ref/src/components/DesktopStorefront.tsx`) shows a product rail (popular/offers) on the homepage. P2.5b2's hero deliberately shipped without it.\n\n## Why it was deferred\nIt has **no backing data**:\n- There's no `isPopular`/`isFeatured` field on `Product` (P2.5b1 didn't add one).\n- There's no list-all-products repository method — only `listByCategory()` and `search()`.\n\nAdding either is real new surface (a schema field + migration, or a new repository method), not \"UI work\" that belonged in the visual slice.\n\n## Scope when picked up\n- Decide the \"featured\" concept: a `Product.isFeatured` boolean, or a curated admin-managed list (P6 territory), or simply \"newest N across all categories\" (a `listRecent()` repository method — no schema change).\n- Render a rail on `app/(storefront)/page.tsx` reusing the existing `ProductCard`.\n\nNeeds its own `/propose` to pick the approach.",
+        "number": 45,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Storefront: homepage featured/popular products rail",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/45"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg13-ms",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P06 — Admin & staff panel"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "Storefront: homepage featured/popular products rail"
+    },
+    {
+      "content": {
+        "body": "The seven-stage SDD sequence (Orient -> Propose -> Spec -> Build -> Validate -> Document -> Ship) validates the artifact in the same context that built it. That context remembers the intent and reads it back into the code, which is the weakest possible position for Gate 3.\n\nRestructure `specs/sdd-workflow.md` into a loop with two deliberate context resets:\n\n**Orient -> Propose -> Spec -> Build -> Document (build notes) -> CLEAR -> Validate <-> Fix -> Ship -> Document (final) -> CLEAR -> Orient**\n\n- Clear before Validate, switching to Sonnet 5; validation loads `requirements.md` + `validation.md` + the artifact, and treats `build-notes.md` as supporting context only.\n- Clear after the final documentation pass, switching back to Opus 5, returning to Orient.\n- Document splits in two: `/build-notes` (write-to-disk before the Clear, and where **Gate 4's CHANGELOG entry** now lands, since Ship precedes the final pass) and `/document` (post-ship durable record incl. KMS index and roadmap).\n- New `/fix` command formalises the Validate <-> Fix cycle.\n\nBoth Clears and every model switch are user-invoked; the assistant must ask rather than proceed.",
+        "number": 106,
+        "repository": "sriahead/aheed-online-store",
+        "title": "SDD workflow v2: restructure into a delivery loop with two context Clears",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/106"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg19Mvc",
+      "labels": ["documentation"],
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "SDD workflow v2: restructure into a delivery loop with two context Clears"
+    },
+    {
+      "content": {
+        "body": "## Context\n\nWhile live-validating P3c (#99)'s confirmation email (R18), a real order's webhook fired correctly and the email send was genuinely attempted (`lib/email.ts` -> Resend REST API), but Resend rejected it:\n\n\\`\\`\\`\nemail send failed: 422 {\\\"statusCode\\\":422,\\\"name\\\":\\\"validation_error\\\",\\\"message\\\":\\\"Invalid \\`to\\` field. Please use our testing email address instead of domains like \\`example.com\\`. See our documentation for more information.\\\"}\n\\`\\`\\`\n\nThis is Resend's own sandbox-mode restriction (no verified sending domain on the account yet), not an application bug. `RESEND_API_KEY`/`RESEND_FROM_EMAIL` (`no-reply@aheedfoodcentre.nocaped.com`) are correctly configured as Cloudflare Worker secrets on staging, and the code path (webhook -> confirm -> `sendOrderConfirmationEmail`) worked exactly as designed, including failing gracefully without blocking order confirmation (see #99's R19, now confirmed live).\n\nUntil a sending domain is verified in Resend, **no confirmation email can reach a real customer inbox in any environment** \\u2014 only Resend's own designated test address. This blocks:\n- Full live verification of P3c's R18 (email content/delivery)\n- Any real order confirmation email in production once P3c reaches `main`\n\n## What's needed (owner action \\u2014 Resend dashboard + DNS)\n\n- Verify `aheedfoodcentre.nocaped.com` (or a subdomain) as a sending domain in Resend (adds DNS records: SPF/DKIM, possibly DMARC).\n- Once verified, re-run a live order to confirm the email actually arrives with correct content (completes R18).\n\n## Acceptance\n\nA real order placed against staging results in a delivered confirmation email at a real inbox, with correct order number, line items, and vendor sender name.",
+        "number": 104,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Resend account needs a verified sending domain before real customer emails can be delivered",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/104"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg19Mwg",
+      "labels": ["devops"],
+      "milestone": {
+        "description": "Make production deployable, recoverable and observable. Exit gate: production can be deployed, monitored, diagnosed, and rolled back or recovered.",
+        "dueOn": "",
+        "title": "P09.2 — Production infrastructure & reliability"
+      },
+      "phase": "P8",
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Backlog",
+      "title": "Resend account needs a verified sending domain before real customer emails can be delivered"
+    },
+    {
+      "content": {
+        "body": "## Context\n\nP3c (#99) shipped in PR #102 with the payment-failure and email-failure paths proven only by unit tests + code review, not a live run against staging — see `specs/2026-08-10-p3c-stripe-payments/validation.md` rows R7 and R19.\n\nLive Stripe payment validation was completed 2026-08-10 (order `AHE-20260810-H6HWXL`, real test-mode Checkout + real webhook delivery), confirming R4/R12/R13/R20 against staging's real DB.\n\n**Update 2026-08-10: R19 is now confirmed live** — a second real payment (order `AHE-20260810-5Q7FU2`) hit a genuine Resend delivery failure (no verified sending domain yet, tracked separately as #104), and the order still reached `CONFIRMED`/`SUCCEEDED` with the webhook still returning 200, exactly as R19 requires. This was a real failure, not a staged one, so R19 no longer needs the deliberate-secret-break treatment.\n\n**R7 remains open.** Proving it requires deliberately breaking `STRIPE_SECRET_KEY` on staging's live Cloudflare Worker secret store — shared infrastructure other testing could be relying on at the same time — so it needs a deliberate, scheduled window rather than being done inline.\n\n## What's needed\n\n- **R7**: temporarily set `STRIPE_SECRET_KEY` to an invalid value on staging, place an order, confirm it fails with the order left `CANCELLED`, a matching `OrderStatusEvent`, and `Inventory.quantity` restored to its pre-order value. Restore the real key after.\n\n## Acceptance\n\nR7 verified against real staging infrastructure with the secret restored afterward and confirmed working again (e.g. one more successful stub/real payment run).",
+        "number": 103,
+        "repository": "sriahead/aheed-online-store",
+        "title": "P3c: live-verify R7/R19 failure paths (broken Stripe/Resend secrets on staging)",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/103"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg19Mx0",
+      "labels": ["testing", "devops"],
+      "linked pull requests": ["https://github.com/sriahead/aheed-online-store/pull/241"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P03 — Cart & checkout"
+      },
+      "phase": "P3",
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "P3c: live-verify R7/R19 failure paths (broken Stripe/Resend secrets on staging)"
+    },
+    {
+      "content": {
+        "body": "Deferred from **P3c — Stripe payments** (#99).\n\nP3c's order lifecycle depends entirely on Stripe's webhook being delivered. If it never arrives —\nStripe outage, endpoint misconfigured after a deploy, signing secret rotated without updating\n`STRIPE_WEBHOOK_SECRET` — an order stays `PENDING_PAYMENT` indefinitely and **its stock stays held**,\neven though the customer may well have paid.\n\nStripe retries for up to ~3 days, so this is genuinely unlikely. But the failure is silent and the\nconsequence is real (held stock, and a paying customer with no confirmation), so it shouldn't rest\non retries alone.\n\nProposed: a scheduled sweep (Cloudflare Cron Trigger) that finds `PENDING_PAYMENT` orders older than\nsome threshold, queries Stripe for the session's actual status, and reconciles — confirm if paid,\nrelease if expired/failed.\n\nHome: **P7 — Compliance & hardening**, alongside the other monitoring/backup work. Worth pairing\nwith an alert on \"orders stuck in PENDING_PAYMENT for more than N hours\", since that signal catches\na misconfigured webhook far faster than a customer complaint.",
+        "number": 101,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Reconciliation sweep for Stripe webhooks that never arrive",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/101"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg19MzM",
+      "labels": ["enhancement", "devops"],
+      "milestone": {
+        "description": "Make production deployable, recoverable and observable. Exit gate: production can be deployed, monitored, diagnosed, and rolled back or recovered.",
+        "dueOn": "",
+        "title": "P09.2 — Production infrastructure & reliability"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Backlog",
+      "title": "Reconciliation sweep for Stripe webhooks that never arrive"
+    },
+    {
+      "content": {
+        "body": "Deferred from **P3c — Stripe payments** (#99), recorded rather than half-built.\n\nIf a shopper abandons Stripe Checkout (closes the tab, back button, card declined mid-flow), their\norder sits at `PENDING_PAYMENT` holding stock until the Checkout session expires and the webhook\nreleases it. There is no way to *resume* paying that order — the shopper has to build the cart again\nand check out from scratch.\n\nA \"pay now\" path would need: a route that recreates a Checkout Session for an existing\n`PENDING_PAYMENT` order, guarded so it can't be used on a `CONFIRMED`/`CANCELLED` one, plus a\ndecision about whether the original session should be cancelled first (Stripe allows multiple live\nsessions for the same order, which risks a double charge if both are completed).\n\nThat last point is why this wasn't built inline: it's a correctness question about money, and it\ndeserves its own thinking rather than being tacked onto P3c.\n\nNot blocking anything — the current behaviour is safe, just inconvenient.",
+        "number": 100,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Resume payment for an order stuck in PENDING_PAYMENT",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/100"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg19M0o",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Real engineering improvements that are not launch gates unless new evidence changes their risk. Absorbs the former P8.3 backlog plus P8.6 and P8.7.",
+        "dueOn": "",
+        "title": "P10 — Post-launch improvements"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Backlog",
+      "title": "Resume payment for an order stuck in PENDING_PAYMENT"
+    },
+    {
+      "content": {
+        "body": "Third slice of **P3 — Cart & checkout** (epic #86), following P3b (#96). Swaps the stub\n`PaymentService` for real Stripe, closing the gap P3b explicitly left open: stock held by an\nabandoned checkout has no release path until this slice.\n\n## 🛑 Hard blocker — no Stripe credentials exist anywhere\nChecked: staging secrets, production secrets, local `.env`/`.dev.vars` — all empty. **The owner\nmust create a Stripe account (or use an existing one) and provide test-mode keys** before this can\nbe validated end-to-end. Per environment (staging + production), as Cloudflare Worker secrets:\n- `STRIPE_SECRET_KEY`\n- `STRIPE_PUBLISHABLE_KEY`\n- `STRIPE_WEBHOOK_SECRET`\n\nSpec and most of the build can proceed against Stripe's documented API without these (mirroring how\nP3b was built and unit-tested with a stub before any keys existed); only final live/staging\nvalidation is blocked.\n\n## Scope\n- **Real `PaymentService` adapter** (`lib/payments.ts`) creating a hosted Stripe Checkout session via\n  raw `fetch()` to Stripe's REST API — **not the `stripe` npm SDK**, matching this repo's established\n  pattern (`aws4fetch` over the AWS SDK, plain `fetch` over Resend's SDK, both for Worker bundle\n  size). ADR-005's single-platform-account decision is unchanged; `vendorId` continues to flow\n  through for the future Connect seam.\n- **Signature-verified, idempotent webhook** (`app/api/webhooks/stripe/route.ts`, Node runtime).\n  Idempotency reuses the **conditional-update guard pattern** from P3b's stock decrement (`WHERE\n  status = 'PENDING_PAYMENT'` on the transition) — no new event-log table, same proven technique.\n- **Stock release on payment failure / Checkout session expiry** — the order moves to `CANCELLED`\n  (existing enum value, no schema change) and each line's `Inventory.quantity` is incremented back.\n  This is the gap P3b recorded and must not ship ahead of.\n- **The success_url is the existing `/checkout/{orderNumber}` confirmation page**, made\n  status-aware. Stripe's own guidance: the client redirect is never the source of truth (closed tab,\n  race with the webhook) — the page renders whatever `order.status` actually is (`PENDING_PAYMENT` →\n  \"confirming your payment…\", `CONFIRMED` → today's confirmation, `CANCELLED` → failure messaging).\n  No new route.\n- **Confirmation email fires only from the webhook**, once status flips to `CONFIRMED` — never at\n  order creation (owner decision, 2026-08-10). Matches this codebase's consistent \"never assume\n  money\" pattern (P3b's server-side-only totals, the stock decrement's atomicity). A guest sees a\n  short delay between placing the order and the email; the email is never wrong.\n\n## Explicitly NOT in this slice\n- Cash on Delivery — out of scope entirely (P3b decision, unchanged).\n- Delivery slots — P4.\n- \"Shop your list\" — P3d.\n- Stripe Connect / per-vendor payout routing — deferred upgrade per ADR-005.\n\n## Acceptance criteria\nNone here — per Gate 2 they live in `specs/<YYYY-MM-DD-p3c-*>/validation.md` once the spec is\nwritten.",
+        "number": 99,
+        "repository": "sriahead/aheed-online-store",
+        "title": "P3c — Stripe adapter + webhooks + confirmation email",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/99"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg19M10",
+      "labels": ["enhancement", "backend"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P03 — Cart & checkout"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "P3c — Stripe adapter + webhooks + confirmation email"
+    },
+    {
+      "content": {
+        "body": "Follow-up from validating **P3b — checkout + order core** (#96) live on staging.\n\n## What's true today\nSriMart's `/checkout` on `srimart-staging.nocaped.com` correctly renders its own theme, locality\nand delivery fee with **zero per-vendor code branches** — the architecture claim (ADR-004's rule of\nthumb: onboarding/config changes are data-only) is proven. But the delivery *value* shown is\n`£3.49`, which is `VendorConfig.deliveryFeePence`'s **schema default** (`349`), not the\nSriMart-specific values seeded in `prisma/seed.ts` (`deliveryFeePence: 299`,\n`freeDeliveryThresholdPence: 5000`, `minimumOrderPence: 1000`).\n\n## Why\n`prisma/seed.ts` only touches SriMart's vendor/catalogue/satellites when **both**\n`SEED_AHEED_HOST` and `SEED_SRIMART_HOST` are set (a deliberate safety design — see the seed\nscript's own log line, `\"SEED_SRIMART_HOST set but SEED_AHEED_HOST is not — skipping SriMart to\nstay safe\"`). The `npm run db:seed` run that populated Aheed's P3a delivery columns had neither set,\nso SriMart's `VendorConfig` row was never touched and is running on migration defaults.\n\n## Fix\nRe-run the seed against staging with both host vars set, per `docs/env-setup.md`'s existing pattern:\n\n```\nDIRECT_URL=\"<staging DIRECT_URL>\" \\\nSEED_AHEED_HOST=\"staging.aheedfoodcentre.nocaped.com\" \\\nSEED_SRIMART_HOST=\"srimart-staging.nocaped.com\" \\\nnpm run db:seed\n```\n\nNot urgent — the current default values are safe and sensible, and nothing is broken. This is\npurely to make SriMart's demo data actually distinct from Aheed's, matching the intent of the\nper-vendor seed values already written in `prisma/seed.ts`.",
+        "number": 98,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Staging: re-seed SriMart's VendorConfig delivery values (SEED_SRIMART_HOST)",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/98"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg19M3E",
+      "labels": ["documentation"],
+      "linked pull requests": ["https://github.com/sriahead/aheed-online-store/pull/203"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P08 — Deployment & launch"
+      },
+      "phase": "P8",
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "Staging: re-seed SriMart's VendorConfig delivery values (SEED_SRIMART_HOST)"
+    },
+    {
+      "content": {
+        "body": "Second slice of **P3 — Cart & checkout** (epic #86), following P3a (#93). Turns a cart into a real order. **No Stripe** — payment is stubbed behind the port so the riskiest logic is testable before any credential exists.\n\n## Scope\n- **Schema:** `Address`, `Order`, `OrderItem`, `Payment`, `OrderStatusEvent` — all `vendorId`-scoped per ADR-004 (which names `Order` explicitly). Reuses the `OrderStatus`/`PaymentStatus` enums and the `Order`/`OrderItem` shape already sketched in `specs/architecture.md` §3.2, which predates tenancy and needs `vendorId` added.\n- **Totals from vendor data:** subtotal, `deliveryFeePence`, `freeDeliveryThresholdPence`, `minimumOrderPence` (all landed in P3a's `VendorConfig`). No constants.\n- **Deliverability gate:** checkout refuses a postcode outside the vendor's `VendorDeliveryArea`, reusing the pure `isDeliverable(postcode, prefixes)`.\n- **Atomic order creation with stock decrement** — the core of this slice. Conditional `updateMany` guard inside an interactive transaction, **no raw SQL** (CLAUDE.md):\n  ```ts\n  const { count } = await tx.inventory.updateMany({\n    where: { productId, vendorId, quantity: { gte: qty } },\n    data:  { quantity: { decrement: qty } },\n  });\n  if (count === 0) throw new OutOfStockError(productId);\n  ```\n  Postgres evaluates the guard and the write atomically, so two concurrent checkouts for the last item cannot both succeed.\n- **`PaymentService` port + stub adapter** (`tech-stack.md` names the port; it has never been created). Stub marks payment `PENDING` and returns a placeholder reference — P3c swaps in Stripe behind the same interface.\n- **Guest + account checkout**, following `docs/ui-ref/CheckoutModal.tsx`'s structure (colours/constants translated through `design-system.md`'s token table, never copied — same rule as P3a).\n- **On-screen order confirmation** (the emailed one is P3c, with real payment).\n- **ADR-005 — Payments & multi-vendor money flow**, written alongside: single platform Stripe account with a Connect-ready seam, and the merchant-of-record posture that implies.\n\n## Decisions taken with the owner (2026-08-10)\n1. **Stock decrements at order creation**, not at payment success — oversell becomes structurally impossible. Cost: an abandoned checkout holds stock until released; **release on payment-failed / session-expired is P3c** and is deliberately recorded as a gap here so it can't be forgotten.\n2. **Delivery slots deferred to P4.** The reference has a slot picker, but slots done properly need per-vendor windows, capacity and cutoffs — otherwise 40 deliveries sell into one 2-hour window. P4 is where delivery is already the subject.\n3. **Card only — no Cash on Delivery.** Matches the roadmap. COD is a second order lifecycle (CONFIRMED but unpaid) plus cash reconciliation; if wanted it deserves its own proposal.\n\n## Explicitly NOT in this slice\n- Stripe, webhooks, emailed confirmation — **P3c**\n- \"Shop your list\" — **P3d**\n- Delivery slots/capacity — **P4**\n- Cash on Delivery — out of scope entirely\n- Order history / status transitions / staff updates — **P4**\n\n## Inherited from P3a\n- **The merge prompt must be forced to resolution before an order is created** (`specs/2026-08-09-p3a-cart-foundation/plan.md` open items) — an order must never be placed against a cart the shopper never confirmed.\n\n## Acceptance criteria\nNone here — per Gate 2 they live in `specs/<YYYY-MM-DD-p3b-checkout-order-core>/validation.md` once the spec is written.\n\n## Operational prerequisite\nStaging's `VendorConfig` delivery columns are still `NULL` (added in P3a's migration; values come from seed). A staging re-seed is needed before totals can be verified end-to-end.",
+        "number": 96,
+        "repository": "sriahead/aheed-online-store",
+        "title": "P3b — Checkout + order core (Address, Order/Payment, atomic stock decrement)",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/96"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg19M4M",
+      "labels": ["enhancement", "backend", "database"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P03 — Cart & checkout"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "P3b — Checkout + order core (Address, Order/Payment, atomic stock decrement)"
+    },
+    {
+      "content": {
+        "body": "Deferred from **P3a — cart foundation** (#93), recorded rather than left as a code comment.\n\nGuest carts are created lazily (only on a first add) and keyed by an opaque cookie token, but\n**nothing ever reaps them**. Volume is ~zero today, so this is not a P3a problem — but it is a real\nlong-term data-growth issue, and a guest cart is weakly personal data (it links a browser to a set\nof product interests).\n\nLikely home: **P7 — Compliance & hardening**, alongside the UK GDPR retention review, so the\nretention window is decided once for all weakly-personal data rather than ad hoc here.\n\nOptions to weigh at that point:\n- a scheduled reaper (Cloudflare Cron Trigger) deleting guest carts untouched for N days\n- a `Cart.updatedAt` sweep folded into an existing job\n- relying on cookie expiry alone (currently 30 days) — leaves orphaned rows, so probably not enough\n\nNot blocking anything.",
+        "number": 94,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Abandoned guest-cart retention & cleanup",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/94"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg19M5s",
+      "labels": ["enhancement", "database"],
+      "milestone": {
+        "description": "Make production deployable, recoverable and observable. Exit gate: production can be deployed, monitored, diagnosed, and rolled back or recovered.",
+        "dueOn": "",
+        "title": "P09.2 — Production infrastructure & reliability"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Backlog",
+      "title": "Abandoned guest-cart retention & cleanup"
+    },
+    {
+      "content": {
+        "body": "First slice of **P3 — Cart & checkout** (epic #86). Makes the currently-inert \"Add to Cart\" real.\n\n## Scope\n- `Cart` / `CartItem` Prisma models, **`vendorId`-scoped** per ADR-004 decision 2 (which explicitly\n  names `Cart` as a future tenant-scoped table). Per-vendor composite uniques, `vendorId`-leading indexes.\n- `lib/repositories/cart.ts` behind the existing repository seam — `getCurrentVendorId()` injected,\n  keeping the no-direct-Prisma ESLint guard green.\n- Cart identity for **both** guest and authenticated users (a guest cart must survive sign-in).\n- Real Add-to-Cart on product cards + product detail; live header count replacing the inert button.\n- Cart page: line items, quantity change, remove, subtotal.\n\n## Explicitly NOT in this slice\n- Checkout, addresses, `Order`/`Payment` models — **P3b**.\n- Stripe, webhooks, confirmation email — **P3c**.\n- \"Shop your list\" — **P3d**.\n- Delivery fee / minimum order (needs new `VendorConfig` fields + real values) — **P3b**.\n\n## Acceptance criteria\nNone here — per SDD Gate 2 they live in `specs/<YYYY-MM-DD-p3a-cart-foundation>/validation.md`\nonce the spec is written. Link to it; never copy it.\n\n## Context\n- Scope & sequencing: `specs/roadmap.md` (P3), epic #86.\n- Money is **integer pence**; carts hold no prices of their own — price is read from `Product` at\n  render time and only **snapshotted** at order creation (P3b), so a price change can't silently\n  rewrite an existing order.",
+        "number": 93,
+        "repository": "sriahead/aheed-online-store",
+        "title": "P3a — Cart foundation (vendor-scoped Cart/CartItem + real Add to Cart)",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/93"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg19M7g",
+      "labels": ["enhancement", "backend", "database"],
+      "linked pull requests": ["https://github.com/sriahead/aheed-online-store/pull/108"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P03 — Cart & checkout"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "P3a — Cart foundation (vendor-scoped Cart/CartItem + real Add to Cart)"
+    },
+    {
+      "content": {
+        "body": "`secrets/production.vars` currently contains **staging''s** `STRIPE_WEBHOOK_SECRET`, byte-identical to `secrets/staging.vars` (verified by hash). The production Cloudflare Worker has the **correct** per-endpoint value, set manually via the Cloudflare dashboard.\n\n**Why this is now live rather than latent:** before PR #109, `configure-env.mjs` did not know these keys and silently skipped them, so the stale file value was unreachable. #109 taught it to push them. Running `node scripts/configure-env.mjs production` now would overwrite the Worker''s correct secret with staging''s.\n\n**Failure mode if that happens is silent.** Every Stripe delivery to the production endpoint fails signature verification, the handler returns before doing anything, and orders never leave `PENDING_PAYMENT` — with their stock decremented and never released, because release happens on webhook events that are now all rejected.\n\n**Fix (owner action):** copy the signing secret for `https://aheedfoodcentre.nocaped.com/api/webhooks/stripe` from the Stripe dashboard into `secrets/production.vars`. The Stripe API does not return the signing secret for an already-created endpoint, so the dashboard is the only source.\n\nDocumented in `docs/env-setup.md` 1.7.0 (per-endpoint warning) and PR #110.",
+        "number": 111,
+        "repository": "sriahead/aheed-online-store",
+        "title": "secrets/production.vars holds staging's STRIPE_WEBHOOK_SECRET — configure-env production would clobber the correct value",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/111"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg1_pEQ",
+      "labels": ["devops"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P03 — Cart & checkout"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "secrets/production.vars holds staging's STRIPE_WEBHOOK_SECRET — configure-env production would clobber the correct value"
+    },
+    {
+      "content": {
+        "body": "PR #108 (`staging → main`) used `Closes #93, #96, #99, #106`. Only **#93** closed on merge. #96 and #99 shipped to production and stayed open until closed by hand; #106 closed separately, via the `Closes #106` in commit `aa39d67`''s own message reaching `main`.\n\nGitHub only honours the closing keyword for the **first** issue in a comma-separated list. Each issue needs its own keyword:\n\n```\ncloses #93, closes #96, closes #99, closes #106\n```\n\n**Why it matters here specifically:** this repo merges PRs into `staging`, which is not the default branch, so closing keywords never fire on a slice PR. Every issue closure is deferred to the `staging → main` promotion PR — which means promotion PRs routinely carry several `Closes` references at once, and are exactly where this bug bites. The board''s `Item closed → Done` workflow then never fires, so shipped work silently sits in the wrong status.\n\n**Fix:** add a line to `.claude/commands/ship.md` and the Ship section of `specs/sdd-workflow.md` requiring the keyword to be repeated per issue on promotion PRs.",
+        "number": 112,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Promotion PRs: a comma-separated 'Closes #a, #b, #c' only closes the first issue",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/112"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg1_pN4",
+      "labels": ["documentation"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P03 — Cart & checkout"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "Promotion PRs: a comma-separated 'Closes #a, #b, #c' only closes the first issue"
+    },
+    {
+      "content": {
+        "body": "Production currently runs Stripe in **test mode**. `secrets/production.vars` holds an `sk_test_…`\nsecret key and a `pk_test_…` publishable key that are **byte-identical to staging's** (verified by\nhash comparison — same Stripe account, same keys, two environments).\n\nThis is deliberate and correct for today: P3a/P3b/P3c were promoted to production ahead of the\nstorefront opening precisely so that no real money could move. It is recorded in `specs/roadmap.md`\nas prose in the P3-promotion change-log row.\n\n**Why this needs its own issue.** The other two launch blockers are tracked (#104 Resend verified\nsending domain, #103 payment-failure-path live verification). The live-key swap is named only inside\na roadmap paragraph, so it is the blocker most likely to be assumed as someone else's job. It is\nalso the one that cannot be discovered by testing — a test-mode production storefront takes\npayments that look successful and settle nothing.\n\n**Owner actions when the storefront is ready to open (all dashboard-only, no code change):**\n\n- [ ] Activate the live Stripe account (business details, bank account, verification).\n- [ ] Put the **live** `sk_live_…` / `pk_live_…` into `secrets/production.vars` — these must NOT\n      match staging; staging stays on test keys permanently.\n- [ ] Create a **live-mode** webhook endpoint for `https://aheedfoodcentre.nocaped.com/api/webhooks/stripe`\n      and copy its own signing secret into `STRIPE_WEBHOOK_SECRET`. Live and test endpoints have\n      **different** signing secrets — this is the same per-endpoint trap as #111.\n- [ ] `node scripts/configure-env.mjs production`, then redeploy the Worker.\n- [ ] Verify with one real low-value payment end-to-end, then refund it.\n\n**Do not do this before #104 is resolved** — a live order whose confirmation email cannot be\ndelivered is a real customer with no receipt.\n\nRelated: #104, #103, #111. Surfaced during `/orient` on 2026-08-10.\n",
+        "number": 113,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Production runs Stripe TEST keys — live-key swap before the storefront opens",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/113"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg1_u0I",
+      "labels": ["devops"],
+      "milestone": {
+        "description": "Make production deployable, recoverable and observable. Exit gate: production can be deployed, monitored, diagnosed, and rolled back or recovered.",
+        "dueOn": "",
+        "title": "P09.2 — Production infrastructure & reliability"
+      },
+      "phase": "P8",
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Backlog",
+      "title": "Production runs Stripe TEST keys — live-key swap before the storefront opens"
+    },
+    {
+      "content": {
+        "body": "**The last P3 slice.** P3a/P3b/P3c delivered cart → checkout → payment; P3's scope\n(`specs/roadmap.md`) also folds in **\"Shop your list\"** as a cart-entry path. P3 cannot close\nuntil this ships.\n\n## What it is\n\nA shopper pastes or types a shopping list, each line is matched against the vendor's catalogue,\nthey review the matches, and one click adds the confirmed lines to the existing cart.\n\n## Decisions taken at Propose (confirmed with the human)\n\n**1. Matching — token-AND on product name, no new infrastructure.**\nEach line is parsed for a leading/trailing quantity, the remainder is split into tokens, and a\nproduct must match **all** tokens in its `name` (Prisma `AND` of `contains`, insensitive). Ranked\nexact-name > all-tokens > partial.\n\nThe existing `ProductRepository.search()` is a single `contains` OR'd across `name`/`description` —\n`\"chicken breast\"` finds *Halal Chicken Breast*, but `\"2x chicken breast 500g\"` finds nothing. That\nis exactly the input this feature invites, so list matching needs its own repository method rather\nthan reusing `search()`.\n\n**Rejected: Postgres `pg_trgm` similarity.** It would handle typos (`bannanas` → *Bananas*), but\nquerying it requires `$queryRaw`, which `CLAUDE.md` forbids in application code, and P2 deliberately\ndeferred trigram search until the catalogue outgrows placeholder data. Not worth reversing two\nstanding decisions for one slice. **Typos are therefore explicitly out of scope** — a mistyped line\nreports as unmatched, which the review step makes visible rather than silent.\n\n**2. Stateless — no new tables, no migration.**\nPaste → match → review → add, in one pass. The cart *is* the persistence. A saved\n`ShoppingList` aggregate (reusable weekly lists) is a real feature but a retention one, closer to\nP5 than to P3's cart-entry path; it would add an aggregate, a migration, account-area UI and\nguest-vs-user ownership rules. P3d adds **zero schema change**, so it cannot collide with P4's\norder work.\n\n**3. Every line is reviewed before anything enters the cart.**\nMatched lines appear pre-selected with their parsed quantity, ambiguous lines show a chooser,\nunmatched lines are flagged — then one explicit \"Add N items\" action. Nothing is auto-added.\nAmbiguity is real in this catalogue, not hypothetical: `milk` matches both *Whole Milk* and\n*Coconut Milk*. A confidently-wrong silent add is only discovered at checkout, or at the door.\n\n## Prerequisites — verified present at `/orient`, not assumed\n\n- `features/cart/add-to-cart.ts` — server action; `addItem(identity, productId, qty)` already\n  takes a quantity, so bulk add reuses it rather than adding a parallel write path.\n- `lib/repositories/cart.ts` — vendor-scoped, guest-or-user identity (P3a).\n- `lib/cart-rules.ts` — `effectiveStock()` / `clampQuantity()`; out-of-stock and over-stock lines\n  must go through these, not re-derive the maths.\n- `lib/repositories/products.ts` — where the new list-matching method belongs (vendor scoping and\n  the `isActive` filter are already enforced there).\n\n## Scope boundaries\n\n**In:** list entry UI, line parsing (quantity + tokens), a vendor-scoped matching repository method,\nthe review screen (matched / ambiguous / unmatched / out-of-stock), bulk add to the existing cart.\n\n**Out:** saved lists, typo tolerance, trigram/fuzzy search, barcode or photo input, reordering from\na past order (that is P4, once order history exists), any schema change.\n\n## Gates\n\nSpec at `specs/2026-08-11-p3d-shop-your-list/` (plan + requirements + validation) before any code.\nLine parsing and ranking must be **pure and unit-tested** without a DB — same split as\n`lib/cart-rules.ts`, `lib/auth-origin.ts` and `lib/delivery.ts`. DB-touching validation runs under\n`npm run preview`, never `npm run dev`.\n\nCloses P3 once shipped and promoted.\n",
+        "number": 114,
+        "repository": "sriahead/aheed-online-store",
+        "title": "P3d — \"Shop your list\": paste a list, match to catalogue, review, add to cart",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/114"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg1_0YQ",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P03 — Cart & checkout"
+      },
+      "phase": "P3",
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "P3d — \"Shop your list\": paste a list, match to catalogue, review, add to cart"
+    },
+    {
+      "content": {
+        "body": "P3d (#114) matches a list line by **token-AND on product name**: a product must contain *every*\nterm the line produced. That makes `2x chicken breast` → *Halal Chicken Breast*, but it also makes\nthis unmatched:\n\n```\nchicken breast 500g   → no product name contains BOTH \"breast\" AND \"500g\"\n```\n\nThe shopper sees an explicit \"no match\", which is honest and by design — the review step exists so\nnothing wrong is silently added. But a line that names a real product **plus a size the catalogue\ndoes not carry in its name** is a plausible thing to type off a handwritten list, and reporting it\nas absent is not the most useful answer available.\n\n**Possible approach (not decided):** when a line has no all-terms match, fall back to the largest\nmatching term subset and offer those as an *ambiguous* line rather than `unmatched` — the shopper\nstill confirms, so nothing is auto-added. This deliberately was **not** built into P3d because it\ncontradicts R9 (`a product matches only when its name contains every term`), and quietly widening\nan approved spec mid-build is exactly what the SDD gates exist to prevent.\n\n**Related but distinct:** typo tolerance (`bannanas` → *Bananas*) is a different problem, needing\n`pg_trgm` and therefore `$queryRaw` — forbidden in application code by `CLAUDE.md`, and deferred at\nP2 until the catalogue outgrows placeholder data. That is not what this issue asks for; term-subset\nfallback needs no new extension and no raw SQL.\n\nAlso worth revisiting here: term matching is currently **substring, not word-boundary**, which is\nharmless at 16 seeded products but will produce odd matches as the catalogue grows.\n\nSurfaced during `/build` of P3d. Needs its own `/propose`.\n",
+        "number": 115,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Shop your list: no partial-match fallback — a line naming a real product plus an unknown size reports unmatched",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/115"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg2AE2w",
+      "labels": ["enhancement"],
+      "linked pull requests": ["https://github.com/sriahead/aheed-online-store/pull/321"],
+      "milestone": {
+        "description": "Phase tracked in specs/roadmap.md — scope lives there, not here.",
+        "dueOn": "",
+        "title": "P08 — Deployment & launch"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Done",
+      "title": "Shop your list: no partial-match fallback — a line naming a real product plus an unknown size reports unmatched"
+    },
+    {
+      "content": {
+        "body": "P3d (#114) shipped \"Shop your list\" as a **stateless** cart-entry path: paste → match → review →\nadd, in one pass. The cart is the persistence; the typed list itself is not stored anywhere.\n\nA shopper who buys roughly the same things every week retypes the list every week. Saving it would\nbe a genuine retention feature.\n\n**Why it was excluded from P3d** (recorded in `specs/2026-08-10-p3d-shop-your-list/plan.md`): it\nneeds a new `ShoppingList` / `ShoppingListItem` aggregate, a migration, account-area UI, and rules\nfor what happens to a guest's list when they sign in. That is a phase-sized feature sitting closer\nto **P5 (loyalty & discounts)** than to P3's cart-entry path, and P3d deliberately shipped with\n**zero schema change** so it could not collide with P4's order work.\n\n**When to reconsider:** P4 adds order history, which makes \"reorder my last order\" the more natural\nfirst version of this — it needs no new tables at all and probably supersedes half of what a saved\nlist is for. Worth sequencing that first and seeing what demand is left.\n\nNot scheduled. Needs its own `/propose` before any spec.\n",
+        "number": 116,
+        "repository": "sriahead/aheed-online-store",
+        "title": "Saved shopping lists (reusable weekly list) — deliberately excluded from P3d",
+        "type": "Issue",
+        "url": "https://github.com/sriahead/aheed-online-store/issues/116"
+      },
+      "id": "PVTI_lAHOEq1_r84Bf33nzg2AE3o",
+      "labels": ["enhancement"],
+      "milestone": {
+        "description": "Real engineering improvements that are not launch gates unless new evidence changes their risk. Absorbs the former P8.3 backlog plus P8.6 and P8.7.",
+        "dueOn": "",
+        "title": "P10 — Post-launch improvements"
+      },
+      "repository": "https://github.com/sriahead/aheed-online-store",
+      "status": "Backlog",
+      "title": "Saved shopping lists (reusable weekly list) — deliberately excluded from P3d"
+    }
+  ],
+  "totalCount": 238
+}
