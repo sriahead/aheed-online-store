@@ -20,6 +20,7 @@ const INPUT = {
   currency: "GBP",
   vendorId: "v-aheed",
   returnOrigin: "https://staging.aheedfoodcentre.nocaped.com",
+  confirmationToken: "6f1d1c2e-9b4a-4a7e-8f2b-0d3c5e7a9b11",
 };
 
 beforeEach(() => getEnvMock.mockReset());
@@ -111,11 +112,32 @@ describe("Stripe adapter — session payload", () => {
     });
     const body = bodyOf(fetchMock);
     expect(body.get("success_url")).toBe(
-      `https://srimart-staging.nocaped.com/checkout/${INPUT.orderNumber}`,
+      `https://srimart-staging.nocaped.com/checkout/${INPUT.orderNumber}?t=${INPUT.confirmationToken}`,
     );
     expect(body.get("cancel_url")).toBe(
-      `https://srimart-staging.nocaped.com/api/checkout/cancel?orderNumber=${INPUT.orderNumber}`,
+      `https://srimart-staging.nocaped.com/checkout/${INPUT.orderNumber}/cancel?t=${INPUT.confirmationToken}`,
     );
+  });
+
+  // P9.1 (#427/#428). The order number authorizes nothing on its own, so both
+  // return URLs have to carry the capability token — a shopper returning from
+  // Stripe without it is refused their own order.
+  it("carries the confirmation token on both return URLs", async () => {
+    const fetchMock = mockStripeOk();
+    await createStripePaymentService("sk_test_123").createPayment(INPUT);
+    const body = bodyOf(fetchMock);
+    expect(body.get("success_url")).toContain(`t=${INPUT.confirmationToken}`);
+    expect(body.get("cancel_url")).toContain(`t=${INPUT.confirmationToken}`);
+  });
+
+  // A GET that cancels is reachable by any prefetcher or scanner. The cancel URL
+  // must land on the confirmation PAGE, whose write sits behind a POST action.
+  it("points cancel_url at the /cancel page, not the removed API route", async () => {
+    const fetchMock = mockStripeOk();
+    await createStripePaymentService("sk_test_123").createPayment(INPUT);
+    const cancelUrl = new URL(bodyOf(fetchMock).get("cancel_url") as string);
+    expect(cancelUrl.pathname).toBe(`/checkout/${INPUT.orderNumber}/cancel`);
+    expect(cancelUrl.pathname.startsWith("/api/")).toBe(false);
   });
 
   it("authenticates with the secret key and sends form encoding", async () => {
