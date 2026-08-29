@@ -1,10 +1,45 @@
 # P9.1: Fail Closed on Missing Production Config (validation)
 
-| Req | How to verify |
-|-----|---------------|
-| R1  | `npx vitest run lib/config.test.ts` exits 0 (verifies production rejection for STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET). |
-| R2  | `npx vitest run lib/config.test.ts` exits 0 (verifies production rejection for RESEND_API_KEY/RESEND_FROM_EMAIL). |
-| R3  | `npx vitest run lib/config.test.ts` exits 0 (verifies dev allowance). |
-| R4  | `ls lib/config.test.ts` exits 0. |
-| R5  | `git diff origin/staging CHANGELOG.md` shows the P9.1 entry. |
-| R6  | `npm run lint && npm run typecheck && npm run test && npm run format:check` all exit 0. |
+> **Testing Strategy (Lean 80/20 Model)**
+> Provide enough testing to give confidence without creating unnecessary or duplicate tests. Avoid testing the same behaviour multiple times at different levels unless doing so provides additional confidence.
+> 
+> **The Main Principle:**
+> - **Build:** Did we build the component correctly?
+> - **Validate:** Does the feature work correctly in the real system?
+> - **Release:** Is the complete system safe, reliable, and ready for users?
+
+## Testing Areas
+
+Every feature should have appropriate **Unit** and **Integration** testing, followed by relevant validation testing. Broader testing mainly happens before release. However, testing is risk-based: features involving auth, payments, UI changes, performance-sensitive APIs, databases, or external dependencies require additional relevant testing earlier.
+
+1. **Unit Testing**
+   - *When needed:* Every feature.
+   - *Purpose:* Test isolated business logic, utilities, and components.
+2. **Integration Testing**
+   - *When needed:* Every feature. (Includes Contract testing).
+   - *Purpose:* Verify the component works with its immediate dependencies (e.g., database, external services).
+3. **System / End-to-End Testing**
+   - *When needed:* For critical user journeys and validation testing.
+   - *Purpose:* Validate that the feature works correctly in the real system.
+4. **Regression & Acceptance Testing**
+   - *When needed:* Mainly before release, or when changing core flows. (Includes Smoke and Sanity testing).
+   - *Purpose:* Ensure existing functionality remains unbroken and acceptance criteria are met.
+5. **Performance & Resilience Testing**
+   - *When needed:* Mainly before release, or for performance-sensitive APIs. (Includes Load, Stress, and Spike testing).
+   - *Purpose:* Ensure the system meets throughput/latency targets and degrades gracefully.
+6. **Security & Accessibility Testing**
+   - *When needed:* Mainly before release, or earlier for features involving auth, payments, or UI changes.
+   - *Purpose:* Ensure the system is safe and accessible to all users.
+
+---
+
+## Validation Steps
+
+| Req | Testing Area | How to verify |
+|-----|--------------|---------------|
+| R1  | Unit         | `npx vitest run lib/config.test.ts` exits 0 (verifies production rejection for STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET). |
+| R2  | Unit         | `npx vitest run lib/config.test.ts` exits 0 (verifies production rejection for RESEND_API_KEY/RESEND_FROM_EMAIL). |
+| R3  | Unit         | `npx vitest run lib/config.test.ts` exits 0 (verifies dev allowance). |
+| R4  | Integration  | `ls lib/config.test.ts` exits 0. |
+| R5  | Regression   | `git diff origin/staging CHANGELOG.md` shows the P9.1 entry. |
+| R6  | Regression   | `npm run lint && npm run typecheck && npm run test && npm run format:check` all exit 0. |
