@@ -100,7 +100,7 @@ export async function getAuth() {
     // (session handling, rate limiting, and anything a future plugin adds),
     // disable the feature this app never deliberately enabled.
     rateLimit: { enabled: false },
-    onRequest: async (req) => {
+    onRequest: async (req: Request) => {
       const sensitivePaths = [
         "/sign-in",
         "/sign-up",
