@@ -7,28 +7,52 @@ async function run() {
   let bad = 0;
 
   const inv = await prisma.inventory.count({ where: { quantity: { lt: 0 } } });
-  if (inv > 0) { console.error(`Found ${inv} Inventory rows with quantity < 0`); bad++; }
+  if (inv > 0) {
+    console.error(`Found ${inv} Inventory rows with quantity < 0`);
+    bad++;
+  }
 
   const prodBase = await prisma.product.count({ where: { basePrice: { lt: 0 } } });
-  if (prodBase > 0) { console.error(`Found ${prodBase} Product rows with basePrice < 0`); bad++; }
+  if (prodBase > 0) {
+    console.error(`Found ${prodBase} Product rows with basePrice < 0`);
+    bad++;
+  }
 
   const prodOrig = await prisma.product.count({ where: { originalPrice: { lt: 0 } } });
-  if (prodOrig > 0) { console.error(`Found ${prodOrig} Product rows with originalPrice < 0`); bad++; }
+  if (prodOrig > 0) {
+    console.error(`Found ${prodOrig} Product rows with originalPrice < 0`);
+    bad++;
+  }
 
   const pTierQty = await prisma.productPriceTier.count({ where: { groupQuantity: { lt: 2 } } });
-  if (pTierQty > 0) { console.error(`Found ${pTierQty} ProductPriceTier rows with groupQuantity < 2`); bad++; }
+  if (pTierQty > 0) {
+    console.error(`Found ${pTierQty} ProductPriceTier rows with groupQuantity < 2`);
+    bad++;
+  }
 
   const pTierPrice = await prisma.productPriceTier.count({ where: { groupPricePence: { lt: 0 } } });
-  if (pTierPrice > 0) { console.error(`Found ${pTierPrice} ProductPriceTier rows with groupPricePence < 0`); bad++; }
+  if (pTierPrice > 0) {
+    console.error(`Found ${pTierPrice} ProductPriceTier rows with groupPricePence < 0`);
+    bad++;
+  }
 
   const oiQty = await prisma.orderItem.count({ where: { quantity: { lte: 0 } } });
-  if (oiQty > 0) { console.error(`Found ${oiQty} OrderItem rows with quantity <= 0`); bad++; }
+  if (oiQty > 0) {
+    console.error(`Found ${oiQty} OrderItem rows with quantity <= 0`);
+    bad++;
+  }
 
   const oiPrice = await prisma.orderItem.count({ where: { unitPricePence: { lt: 0 } } });
-  if (oiPrice > 0) { console.error(`Found ${oiPrice} OrderItem rows with unitPricePence < 0`); bad++; }
+  if (oiPrice > 0) {
+    console.error(`Found ${oiPrice} OrderItem rows with unitPricePence < 0`);
+    bad++;
+  }
 
   const payAmt = await prisma.payment.count({ where: { amountPence: { lt: 0 } } });
-  if (payAmt > 0) { console.error(`Found ${payAmt} Payment rows with amountPence < 0`); bad++; }
+  if (payAmt > 0) {
+    console.error(`Found ${payAmt} Payment rows with amountPence < 0`);
+    bad++;
+  }
 
   // Check #432 Slice 1: Product -> Category cross-tenant
   const crossProdCats = await prisma.$queryRaw`
