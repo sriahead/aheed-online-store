@@ -60,6 +60,11 @@ every branch merges.
   **#450** (a `getForStaff` comment still describing the old rule).
 
 ### Documentation
+- **`CLAUDE.md` gains a note on `npm run preview`'s local observability query API**, found useful
+  while validating #429's live rows: `wrangler dev` captures every `console.*` line into a queryable
+  local store at `POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query`,
+  which is what actually proved a `binding-mismatch` refusal logs exactly once and an
+  `already-processed` duplicate logs nothing, rather than eyeballing an interleaved terminal.
 - **`/document` closeout for `#429`.** Reconciles `specs/roadmap.md` with what actually shipped: a
   new change-log row cites **PR #455**, merge `5f7e32e`, `staging`; records `gates` green (1m10s) and
   both `deploy-staging`/`deploy-docs-internal` completing successfully post-merge, with staging's
