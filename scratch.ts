@@ -1,1 +1,2 @@
-import { betterAuth } from "better-auth"; const a = betterAuth({ rateLimit: { enabled: true, storage: "database" } });
+import { betterAuth } from "better-auth";
+const a = betterAuth({ rateLimit: { enabled: true, storage: "database" } });
