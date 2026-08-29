@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getOrderRepository, getWebhookOrderService } from "@/lib/orders-service";
+import { getOrderCancelService, getOrderRepository } from "@/lib/orders-service";
 import { getCartRepository } from "@/lib/cart-service";
 import { getCartIdentity } from "@/lib/cart-identity";
 import { scopedToUser } from "@/features/cart/shared";
@@ -42,7 +42,14 @@ export async function cancelOrder(formData: FormData): Promise<void> {
   // left exactly as it is — the same guard the deleted route carried, and the
   // reason calling this twice cannot release the same stock twice.
   if (order && order.status === "PENDING_PAYMENT") {
-    await getWebhookOrderService().fail(orderNumber, "Shopper cancelled payment at checkout");
+    // Not the webhook's `fail` any more (P9.1, #429): that now requires a
+    // payment binding proving which Stripe session an event is about, and a
+    // shopper cancelling from their own browser has none. This path's credential
+    // is the capability token, already proved above.
+    await getOrderCancelService().cancelUnpaid(
+      orderNumber,
+      "Shopper cancelled payment at checkout",
+    );
 
     if (order.items.length > 0) {
       await getCartRepository().addItems(
