@@ -1,4 +1,4 @@
-import { getEnv } from "@/lib/config";
+import { getEnv, getPaymentEnv } from "@/lib/config";
 import {
   parseCheckoutEvent,
   verifyStripeSignature,
@@ -60,7 +60,7 @@ function reportRefusal(
   );
 }
 export async function POST(req: Request) {
-  const { STRIPE_WEBHOOK_SECRET } = getEnv();
+  const { STRIPE_WEBHOOK_SECRET } = getPaymentEnv();
   if (!STRIPE_WEBHOOK_SECRET) {
     console.error("stripe webhook received but STRIPE_WEBHOOK_SECRET is unset");
     return new Response("Webhook not configured", { status: 500 });

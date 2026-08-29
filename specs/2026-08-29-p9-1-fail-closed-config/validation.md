@@ -1,4 +1,4 @@
-# REPLACE ME — Feature Name (validation)
+# P9.1: Fail Closed on Missing Production Config (validation)
 
 > **Testing Strategy (Lean 80/20 Model)**
 > Provide enough testing to give confidence without creating unnecessary or duplicate tests. Avoid testing the same behaviour multiple times at different levels unless doing so provides additional confidence.
@@ -35,14 +35,12 @@ Every feature should have appropriate **Unit** and **Integration** testing, foll
 
 ## Validation Steps
 
-| Req | Testing Area | How to verify |
-|-----|--------------|---------------|
-| R1  | Unit         | The exact command/step, not a description of intent — e.g. `npm run kms:validate` exits 0 with `invalid front-matter (failing): 0`, not "validation passes". |
-| R2  | E2E          | ... |
-
-<!--
-  One row per requirement, same order as requirements.md. Delete this comment block once real
-  rows exist. If a requirement genuinely needs a DB-touching or Workers-runtime check, say
-  `npm run preview` explicitly — `npm run dev` cannot load @prisma/client/wasm and will silently
-  show a wrong result (see CLAUDE.md's Database section).
--->
+| Req | Testing Area           | How to verify |
+|-----|------------------------|---------------|
+| R1  | Unit                   | `npx vitest run lib/config.test.ts` exits 0 (verifies production rejection for STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET). |
+| R2  | Unit                   | `npx vitest run lib/config.test.ts` exits 0 (verifies production rejection for RESEND_API_KEY/RESEND_FROM_EMAIL). |
+| R3  | Unit                   | `npx vitest run lib/config.test.ts` exits 0 (verifies dev allowance). |
+| R4  | Integration            | `ls lib/config.test.ts` exits 0. |
+| R5  | Security / System (E2E)| Using `npm run preview` with `STRIPE_SECRET_KEY` stripped from `.dev.vars`, verify that submitting a cart to checkout causes a server crash (500) logging the Zod configuration error, rather than completing the checkout with a stub. |
+| R6  | Regression             | `git diff origin/staging CHANGELOG.md` shows the P9.1 entry. |
+| R7  | Regression             | `npm run lint && npm run typecheck && npm run test && npm run format:check` all exit 0. |

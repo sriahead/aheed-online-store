@@ -5,6 +5,10 @@ All notable changes to the Aheed Online Store are recorded here. Format based on
 every branch merges.
 
 ### Security
+- **`#430` — Fail closed when Stripe production configuration is missing or invalid.** (P9.1).
+  Previously, `getPaymentService()` and `getEmailService()` gracefully degraded to stub implementations if their respective API keys were missing. This allowed local development and CI to operate safely without real credentials, but posed a critical risk in production: a misconfigured environment would silently accept orders without ever processing a payment or sending an email.
+  Fixed by attaching `.superRefine()` validation to `schema` and `emailSchema` in `lib/config.ts`. If `process.env.NODE_ENV === "production"`, these schemas explicitly reject missing `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, and `RESEND_FROM_EMAIL`. A new test file `lib/config.test.ts` asserts that this strict enforcement only applies in production environments, fully preserving the mock capability for dev/test safely. `vi.stubEnv` was used to robustly isolate environment variables in the tests.
+
 - **`#429` — a verified Stripe signature no longer confirms or cancels an order on its own.** Second
   slice of **P9.1**. Signature verification is sound and untouched; the gap was downstream.
   `app/api/webhooks/stripe/route.ts` acted on `metadata.orderNumber` alone, and
