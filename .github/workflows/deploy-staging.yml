@@ -13,6 +13,17 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
 
+      - name: Quality Gates
+        run: |
+          npm run db:generate
+          npm run lint
+          npm run format:check
+          npm run typecheck
+          npm test
+
+      - name: Build (OpenNext)
+        run: npx opennextjs-cloudflare build
+
       - name: Apply migrations (direct connection)
         run: npx prisma migrate deploy
         env:
@@ -20,9 +31,8 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
 
-      - name: Build (OpenNext) & deploy to Workers
+      - name: Deploy to Workers
         run: |
-          npx opennextjs-cloudflare build
           echo "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID --env staging
           echo "${{ secrets.CLOUDFLARE_API_TOKEN }}" | npx wrangler secret put CLOUDFLARE_API_TOKEN --env staging
           npx wrangler deploy --env staging --var "GIT_COMMIT_SHA:$(git rev-parse --short HEAD)"

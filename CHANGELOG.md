@@ -6,6 +6,10 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+- **`#434`, `#435` — Production deployment safety and quality gates.** (P9.2).
+  Updated `.github/workflows/deploy-production.yml` and `.github/workflows/deploy-staging.yml` to apply Prisma migrations *after* the OpenNext build completes, preventing a failed build from leaving production on a newly migrated schema. Added release quality gates (`npm run lint`, `npm run format:check`, `npm run typecheck`, `npm test`) so a bad candidate halts before building or mutating the database.
+
 ### Security
 - **`#340` — Cross-tenant writes prevented in reviews repository.** (P9.1).
   Added `vendorId` enforcement to `upsertReview` and `deleteReview`. Previously, these functions implicitly relied on `productId` and `userId` ownership, which failed the explicit tenancy boundary requirement. The functions now strictly filter by `vendorId`, preventing cross-tenant manipulation. Callers in `lib/reviews-service.ts` supply the current tenant via request-scoped identity. Test exceptions for `reviews.ts` in `repository-vendor-scoping.test.ts` were removed.
