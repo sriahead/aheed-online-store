@@ -32,6 +32,21 @@ every branch merges.
   **#450** (a `getForStaff` comment still describing the old rule).
 
 ### Documentation
+- **`/document` closeout for `#427`, `#428`.** Reconciles `specs/roadmap.md` with what actually
+  shipped: a new change-log row cites **PR #451**, merge `221aea4`, `staging`; records `gates` green
+  (1m6s) and both `deploy-staging`/`deploy-docs-internal` completing successfully post-merge. Notes
+  P9.1 has six issues remaining (**#429**–**#433**, plus the pre-existing **#340**) of its eight.
+  **Live validation surfaced a stale assumption, not a code defect**: this slice's own
+  `validation.md` expected local preview to run the stub payment adapter (no `STRIPE_SECRET_KEY`
+  set) for its live rows, but this repo's `.dev.vars`/`.env` both carry a real Stripe test-mode key
+  by default, so checkout redirects to hosted Stripe Checkout locally the same as staging/production.
+  R29–R31 were validated instead by resolving the guest order's token directly against the dev
+  database and driving the confirmation/cancel pages by URL — the same authorization code the stub
+  path would have exercised. Recorded in `CLAUDE.md`'s Stripe section so the next slice's
+  `validation.md` doesn't repeat the assumption. **#427 and #428 moved to `In Review`** on
+  Project #2; **#450** (filed at Build, a stale docstring deliberately left out of scope) tagged
+  Phase `P8` per the board's known limitation, matching #427/#428. `ARTIFACT_INDEX.md`/`docs.ts`
+  rebuilt (114 artifacts); `npm run sdd:audit` re-run and exits 0.
 - **`/document` closeout for `#426`.** Reconciles `specs/roadmap.md`'s #426 row (written at Build,
   before the PR existed) with what actually shipped: cites **PR #447**, merge `7ab23c5`, `staging`;
   records `gates` green (1m18s on the merged commit) and both `deploy-staging`/`deploy-docs-internal`

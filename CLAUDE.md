@@ -568,6 +568,19 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `npm run preview` before treating a branding/token change as verified.
 
 ## Local Stripe webhook testing — learned the hard way
+- **This repo's `.dev.vars` and `.env` both carry a real `STRIPE_SECRET_KEY` (test-mode) by
+  default, so `npm run preview` does NOT run the stub payment adapter** — `lib/payments.ts` picks
+  the stub only when the key is unset, and here it never is. Any spec's `validation.md` that writes
+  "with no `STRIPE_SECRET_KEY` set, the stub adapter is active" (a reasonable-sounding default) is
+  describing a hypothetical, not this environment: checking out in local preview redirects to real
+  hosted Stripe Checkout, same as staging/production. Confirmed at P9.1's `/validate` (#427/#428,
+  2026-08-29) — the guest-order-authorization slice's own `validation.md` assumed the stub path for
+  its live rows; the actual redirect went to `checkout.stripe.com`. Where a live row needs the order
+  a real checkout produced but not the payment itself, resolve the order directly against the dev
+  database instead of relying on the stub's synchronous redirect — it exercises the same
+  post-checkout code either way. Where a row genuinely needs the stub adapter (e.g. asserting the
+  *fallback* URL shape itself, as opposed to what it leads to), that requires temporarily unsetting
+  `STRIPE_SECRET_KEY` and restarting `npm run preview` — `.dev.vars` is read at Worker boot.
 - **`stripe listen`'s webhook signing secret is per-invocation, not fixed** — it will differ from
   whatever is already sitting in `.dev.vars`'s `STRIPE_WEBHOOK_SECRET` (itself likely written down
   from a previous, different `stripe listen` session). A mismatch fails the webhook route's
