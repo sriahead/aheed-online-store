@@ -1,36 +1,18 @@
-# REPLACE ME — Feature Name (build notes)
-
-Written at the end of Build, **before** the Clear. This is the one artifact the Clear bets on:
-the validating context is fresh and has only the spec, the artifact, and this file.
-
-No front-matter — like `requirements.md` and `validation.md` this is slice-local, not a KMS
-artifact, and it does not get an `ARTIFACT_INDEX.md` entry.
-
-These four headings are required. `npm run sdd:preclear` checks for them by exact text, so keep
-them as-is; write "None." under one rather than deleting it. An empty section is information —
-a missing one is an unanswered question.
+# P9.1: Production Authentication Rate Limiting (build notes)
 
 ## What changed and why
-
-The files/modules touched and the reasoning behind the shape they took. Not a diff — the diff is
-in git. Write what a reader can't reconstruct from the code alone.
+- Modified `prisma/schema.prisma` to add an `AuthenticationAttempt` model mirroring `OrderLookupAttempt`.
+- Created `lib/repositories/auth-rate-limit.ts` providing `checkAuthRateLimit(prisma, vendorId, ip)`.
+- Modified `lib/auth.ts` to implement Better Auth's `onRequest` hook. It detects sensitive requests (`sign-in`, `sign-up`, `forget-password`, `reset-password`, `send-verification-email`), reads the current `vendorId` and client IP address, checks the rate limit against Postgres, and short-circuits with a `429 Too Many Requests` HTTP response if the limit is exceeded. 
+- Wrote `tests/repository-auth-rate-limit.test.ts` to verify the fixed-window rate limiter limits requests appropriately.
 
 ## Decisions taken during the build
-
-Anything the spec didn't dictate and you had to settle: a library choice, an error-handling shape,
-a naming convention, an ordering constraint. Say what you picked and what you rejected.
+- Used Better Auth's `onRequest` hook rather than wrapping Next.js API Routes manually. The request context from Next.js is naturally available when `getAuth()` runs, allowing us to safely `await import("@/lib/tenant")` and read `getCurrentVendorIdOrNull()`.
+- Used `cf-connecting-ip` and `x-forwarded-for` to derive the IP, falling back to `unknown`.
+- Explicitly bypassed Better Auth's failing `$transaction` store pattern and opted for the Postgres-backed fixed-window counter to adhere to the Workers-compatible architecture of Aheed Online Store.
 
 ## Deviations from the spec
-
-Anything that deliberately differs from `requirements.md`/`plan.md`, with the justification.
-Validation checks the artifact against the spec, so an unrecorded deviation surfaces there as a
-failure — record it here and it's a reviewed decision instead.
-
-Write "None." if there are none. Do not use this section to quietly widen scope; a gap you noticed
-but didn't build is a `/propose` candidate and belongs in a tracked issue, not here.
+None.
 
 ## Known-shaky areas
-
-Where you'd look first if something is wrong: the part with thin test coverage, the assumption
-that hasn't been exercised against real data, the path only reachable with credentials this
-environment doesn't have. Point validation at the risk rather than making it search.
+- Determining the exact behavior of IP resolution in non-Cloudflare local dev vs. the edge Worker environment. We check `cf-connecting-ip` first, then `x-forwarded-for`. If local dev doesn't set these, the fallback `unknown` is used. This is safe, though it groups all local traffic together. In production (the Cloudflare environment), these headers will always accurately identify the user.

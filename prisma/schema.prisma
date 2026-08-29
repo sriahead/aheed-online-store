@@ -124,39 +124,40 @@ enum VendorStatus {
 }
 
 model Vendor {
-  id              String               @id @default(uuid())
-  slug            String               @unique
-  name            String
-  status          VendorStatus         @default(ACTIVE)
-  customDomain    String?              @unique // used in slice 3 (host→tenant resolution)
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  branding        VendorBranding?
-  config          VendorConfig?
-  deliveryAreas   VendorDeliveryArea[]
-  categories      Category[]
-  products        Product[]
-  inventory       Inventory[]
-  reviews         Review[]
-  memberships     VendorMembership[]
-  domains         VendorDomain[]
-  carts           Cart[]
-  cartItems       CartItem[]
-  addresses       Address[]
-  orders          Order[]
-  orderItems      OrderItem[]
-  payments        Payment[]
-  orderEvents     OrderStatusEvent[]
-  loyaltyTiers    VendorLoyaltyTier[]
-  loyaltyAccounts LoyaltyAccount[]
-  loyaltyEntries  LoyaltyLedgerEntry[]
-  discountCodes   DiscountCode[]
-  discountUses    DiscountRedemption[]
-  roleAuditLogs   VendorRoleAuditLog[]
-  lookupAttempts  OrderLookupAttempt[]
-  campaigns       DepartmentCampaign[]
-  bundles         Bundle[]
-  priceTiers      ProductPriceTier[]
+  id                     String                  @id @default(uuid())
+  slug                   String                  @unique
+  name                   String
+  status                 VendorStatus            @default(ACTIVE)
+  customDomain           String?                 @unique // used in slice 3 (host→tenant resolution)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  branding               VendorBranding?
+  config                 VendorConfig?
+  deliveryAreas          VendorDeliveryArea[]
+  categories             Category[]
+  products               Product[]
+  inventory              Inventory[]
+  reviews                Review[]
+  memberships            VendorMembership[]
+  domains                VendorDomain[]
+  carts                  Cart[]
+  cartItems              CartItem[]
+  addresses              Address[]
+  orders                 Order[]
+  orderItems             OrderItem[]
+  payments               Payment[]
+  orderEvents            OrderStatusEvent[]
+  loyaltyTiers           VendorLoyaltyTier[]
+  loyaltyAccounts        LoyaltyAccount[]
+  loyaltyEntries         LoyaltyLedgerEntry[]
+  discountCodes          DiscountCode[]
+  discountUses           DiscountRedemption[]
+  roleAuditLogs          VendorRoleAuditLog[]
+  lookupAttempts         OrderLookupAttempt[]
+  campaigns              DepartmentCampaign[]
+  bundles                Bundle[]
+  priceTiers             ProductPriceTier[]
+  authenticationAttempts AuthenticationAttempt[]
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
@@ -385,18 +386,18 @@ model BundleItem {
 }
 
 model Product {
-  id               String         @id @default(uuid())
+  id               String            @id @default(uuid())
   vendorId         String
-  vendor           Vendor         @relation(fields: [vendorId], references: [id])
+  vendor           Vendor            @relation(fields: [vendorId], references: [id])
   slug             String
   name             String
   description      String
   categoryId       String
-  category         Category       @relation(fields: [categoryId], references: [id])
+  category         Category          @relation(fields: [categoryId], references: [id])
   basePrice        Int // pence
   unitLabel        String // "£2.40 / kg"
-  isActive         Boolean        @default(true)
-  createdAt        DateTime       @default(now())
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
   images           ProductImage[]
   inventory        Inventory?
   reviews          Review[]
@@ -404,22 +405,22 @@ model Product {
   orderItems       OrderItem[]
   bundleItems      BundleItem[]
   priceTier        ProductPriceTier?
-  averageRating    Float          @default(0) // denormalized, recomputed on every review write
-  reviewCount      Int            @default(0)
+  averageRating    Float             @default(0) // denormalized, recomputed on every review write
+  reviewCount      Int               @default(0)
   // P2.5b1 — visual redesign foundation (specs/2026-08-07-p2-5b1-visual-foundation/).
   // originalPrice, when set, is basePrice's pre-discount price — a discount badge is
   // derived from the difference at render time, not a separate boolean flag that could
   // drift out of sync with the actual prices.
   origin           String?
   originalPrice    Int? // pence, pre-discount price
-  isHalal          Boolean        @default(false)
-  isFresh          Boolean        @default(false)
-  isOrganic        Boolean        @default(false)
+  isHalal          Boolean           @default(false)
+  isFresh          Boolean           @default(false)
+  isOrganic        Boolean           @default(false)
   // #211 — vendor curation flag driving the homepage "Featured Products" rail.
   // Independent of originalPrice's discount-badge derivation: featured and
   // "on offer" are two separate concepts.
-  isFeatured       Boolean        @default(false)
-  imageNeedsReview Boolean        @default(false)
+  isFeatured       Boolean           @default(false)
+  imageNeedsReview Boolean           @default(false)
 
   @@unique([vendorId, slug])
   @@index([vendorId, categoryId, isActive])
@@ -623,39 +624,39 @@ model Address {
 // carries the full rationale. Consequence: `prisma migrate diff` may report drift
 // that is not drift, and `prisma migrate dev` may propose DROPPING them. Keep them.
 model Order {
-  id               String               @id @default(uuid())
-  vendorId         String
-  vendor           Vendor               @relation(fields: [vendorId], references: [id])
-  orderNumber      String               @unique
+  id                String               @id @default(uuid())
+  vendorId          String
+  vendor            Vendor               @relation(fields: [vendorId], references: [id])
+  orderNumber       String               @unique
   // P9.1 (#427/#428) — a guest order's actual credential. The order number is
   // NOT one: it appears in emails, shared links, browser history and support
   // threads, so knowing it must not return a name and a residential address.
   // Nullable because every order placed before this migration has none; those
   // guests fall back to /orders/lookup (order number + email). Never selected
   // into OrderSummary — see findOrderForViewer.
-  confirmationToken String?             @unique
-  userId           String?
-  user             User?                @relation(fields: [userId], references: [id])
-  guestEmail       String?
-  addressId        String
-  address          Address              @relation(fields: [addressId], references: [id])
-  status           OrderStatus          @default(PENDING_PAYMENT)
-  currency         String               @default("GBP")
-  subtotalPence    Int
+  confirmationToken String?              @unique
+  userId            String?
+  user              User?                @relation(fields: [userId], references: [id])
+  guestEmail        String?
+  addressId         String
+  address           Address              @relation(fields: [addressId], references: [id])
+  status            OrderStatus          @default(PENDING_PAYMENT)
+  currency          String               @default("GBP")
+  subtotalPence     Int
   // P5a (#135) — a GENERIC discount column, not a points-specific one: P5b's
   // discount codes reduce the same total and must not need a second column and a
   // second arithmetic rule. The order money identity is
   // subtotalPence - discountPence + deliveryFeePence = totalPence.
-  discountPence    Int                  @default(0)
-  deliveryFeePence Int
-  totalPence       Int
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
-  items            OrderItem[]
-  payment          Payment?
-  statusEvents     OrderStatusEvent[]
-  loyaltyEntries   LoyaltyLedgerEntry[]
-  discountUse      DiscountRedemption?
+  discountPence     Int                  @default(0)
+  deliveryFeePence  Int
+  totalPence        Int
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  items             OrderItem[]
+  payment           Payment?
+  statusEvents      OrderStatusEvent[]
+  loyaltyEntries    LoyaltyLedgerEntry[]
+  discountUse       DiscountRedemption?
 
   @@index([vendorId, createdAt])
   @@index([vendorId, status, createdAt])
@@ -897,6 +898,18 @@ model DiscountRedemption {
 // schedule — the table stays small because lookup traffic is inherently low
 // volume, and Order-scale retention machinery would be over-building this.
 model OrderLookupAttempt {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
+  // SHA-256 of the caller's IP, not the IP itself — this table exists purely as
+  // a counter, so there is no reason to persist raw IPs at rest.
+  ipHash    String
+  createdAt DateTime @default(now())
+
+  @@index([vendorId, ipHash, createdAt])
+}
+
+model AuthenticationAttempt {
   id        String   @id @default(uuid())
   vendorId  String
   vendor    Vendor   @relation(fields: [vendorId], references: [id])

@@ -100,6 +100,41 @@ export async function getAuth() {
     // (session handling, rate limiting, and anything a future plugin adds),
     // disable the feature this app never deliberately enabled.
     rateLimit: { enabled: false },
+    onRequest: async (req) => {
+      const sensitivePaths = [
+        "/sign-in",
+        "/sign-up",
+        "/forget-password",
+        "/reset-password",
+        "/send-verification-email",
+      ];
+      
+      const url = new URL(req.url);
+      const isSensitive = sensitivePaths.some((p) => url.pathname.endsWith(p));
+
+      if (isSensitive) {
+        // Next.js context is active because this runs inside app/api/auth/[...all]/route.ts
+        const { getCurrentVendorIdOrNull } = await import("./tenant");
+        const vendorId = await getCurrentVendorIdOrNull();
+        
+        if (vendorId) {
+          const ip =
+            req.headers.get("cf-connecting-ip") ??
+            req.headers.get("x-forwarded-for") ??
+            "unknown";
+            
+          const { checkAuthRateLimit } = await import("./repositories/auth-rate-limit");
+          const limit = await checkAuthRateLimit(getPrisma(), vendorId, ip);
+          
+          if (!limit.allowed) {
+            return new Response(JSON.stringify({ error: "Too many requests" }), {
+              status: 429,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+        }
+      }
+    },
     user: {
       additionalFields: {
         role: { type: "string", defaultValue: "CUSTOMER", input: false },
