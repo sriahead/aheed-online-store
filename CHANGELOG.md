@@ -6,6 +6,26 @@ every branch merges.
 
 ## [Unreleased]
 
+### Documentation
+- **`/document` closeout for `#434`, `#435`.** Reconciles `specs/roadmap.md` with what actually
+  shipped and, unlike most prior closeouts, with what actually reached production in the same
+  session: two new change-log rows cite **PR #474** (build, merge `1de4df2`, `staging`) and
+  **PR #475** (promotion, merge `d7a048f`, `staging -> main`). `gates` was green on both PRs
+  (`quality`/`docs-gates` as separate jobs on #474); `deploy-staging` completed in the new
+  build-before-migrate order, and `deploy-production` then ran for real — the first live exercise of
+  both fixes on the production path, with the new `quality` job passing all five checks before
+  `Build (OpenNext)` → `Apply migrations` → `Deploy to Workers` ran in order. **R10, the row proving
+  the ordering change does something rather than just that the YAML was edited, was exercised live**
+  at `/validate` on a scratch branch (`scratch/verify-434`, deleted after): a deliberate build
+  failure produced a real workflow run where `Build (OpenNext)` concluded `failure` and
+  `Apply migrations` concluded `skipped`, confirmed afterward that no migration reached staging.
+  PR #475 also carried **PR #471** (doc-encoding repair, KMS index gap, P9.1 row corrections) to
+  production, since `main` was seven commits behind `staging` after PRs #464/#465/#466 bypassed it
+  directly — noted in the roadmap row rather than left implicit. **`#434` and `#435` closed and
+  moved to `Done`** on Project #2, auto-triggered by the promotion merge with no manual
+  reconciliation needed. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt; `npm run sdd:audit` re-run and
+  exits 0.
+
 ### Added
 - **`#459` — Global 500 Error Boundary.**
   Added `app/global-error.tsx` and `app/error.tsx` to cleanly intercept unhandled application crashes (such as missing production configuration leading to a fail-closed crash). Instead of a raw browser 500 or generic Next.js fallback, users now see a branded, user-friendly "Something went wrong" UI that prevents leakage of sensitive error stack traces or Zod validation errors.
