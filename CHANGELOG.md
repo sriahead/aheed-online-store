@@ -6,6 +6,10 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+- **`#459` — Global 500 Error Boundary.**
+  Added `app/global-error.tsx` and `app/error.tsx` to cleanly intercept unhandled application crashes (such as missing production configuration leading to a fail-closed crash). Instead of a raw browser 500 or generic Next.js fallback, users now see a branded, user-friendly "Something went wrong" UI that prevents leakage of sensitive error stack traces or Zod validation errors.
+
 ### Security
 - **`#340` — Cross-tenant writes prevented in reviews repository.** (P9.1).
   Added `vendorId` enforcement to `upsertReview` and `deleteReview`. Previously, these functions implicitly relied on `productId` and `userId` ownership, which failed the explicit tenancy boundary requirement. The functions now strictly filter by `vendorId`, preventing cross-tenant manipulation. Callers in `lib/reviews-service.ts` supply the current tenant via request-scoped identity. Test exceptions for `reviews.ts` in `repository-vendor-scoping.test.ts` were removed.
