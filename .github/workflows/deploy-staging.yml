@@ -13,6 +13,17 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
 
+      # P9.2 (#434) — build BEFORE migrating, same ordering as deploy-production. #434 names
+      # only production, but staging carried the identical defect and is the rehearsal for
+      # production: leaving it inverted means the environment that would normally surface this
+      # can still end up migrated-but-not-built.
+      #
+      # Deliberately NO quality job here (#435 scopes those to production): `gates` already ran
+      # lint/format/typecheck/test on the PR that produced this merge, so re-running them would
+      # slow the staging loop for no added signal.
+      - name: Build (OpenNext)
+        run: npx opennextjs-cloudflare build
+
       - name: Apply migrations (direct connection)
         run: npx prisma migrate deploy
         env:
@@ -20,9 +31,8 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
 
-      - name: Build (OpenNext) & deploy to Workers
+      - name: Deploy to Workers
         run: |
-          npx opennextjs-cloudflare build
           echo "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID --env staging
           echo "${{ secrets.CLOUDFLARE_API_TOKEN }}" | npx wrangler secret put CLOUDFLARE_API_TOKEN --env staging
           npx wrangler deploy --env staging --var "GIT_COMMIT_SHA:$(git rev-parse --short HEAD)"

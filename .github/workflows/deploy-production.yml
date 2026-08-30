@@ -4,14 +4,34 @@ on:
     branches: [main]
 
 jobs:
+  # P9.2 (#435) — the production path runs the SAME checks a pull request runs.
+  # `gates` triggers on pull_request only, so before this job nothing quality-related
+  # ran on a push to main.
+  quality:
+    uses: ./.github/workflows/quality.yml
+
   deploy:
+    needs: quality
     runs-on: ubuntu-latest
-    environment: production # 'production' env has REQUIRED REVIEWERS -> manual approval gate
+    # NOTE: no approval gate is enforced on this environment. GitHub's reviewer-protection
+    # feature needs a paid plan for private repos and was rejected with a 422 on this repo's
+    # current plan, so `environment: production` here selects the production secret set and
+    # nothing more. PR review discipline is the real gate. (This comment previously asserted
+    # an approval gate that was never actually configured; corrected in P9.2.)
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+
+      # P9.2 (#434) — build BEFORE migrating. The build touches no database (the Prisma
+      # client is generated from prisma/schema.prisma, not from Postgres), and it is the
+      # step most likely to fail: a root proxy.ts once passed next build, lint, typecheck
+      # and every test, and failed only here. Migrating first meant such a failure left
+      # production on a newly migrated schema still serving the previous bundle.
+      - name: Build (OpenNext)
+        run: npx opennextjs-cloudflare build
 
       - name: Apply migrations (direct connection)
         run: npx prisma migrate deploy
@@ -19,9 +39,8 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
 
-      - name: Build (OpenNext) & deploy to Workers
+      - name: Deploy to Workers
         run: |
-          npx opennextjs-cloudflare build
           echo "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID --env production
           echo "${{ secrets.CLOUDFLARE_API_TOKEN }}" | npx wrangler secret put CLOUDFLARE_API_TOKEN --env production
           npx wrangler deploy --env production --var "GIT_COMMIT_SHA:$(git rev-parse --short HEAD)"

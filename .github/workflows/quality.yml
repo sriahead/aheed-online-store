@@ -1,0 +1,26 @@
+name: quality
+
+# Reusable quality checks (P9.2, #435). Called by BOTH `gates` (on pull_request) and
+# `deploy-production` (on push to main), so the production deploy path cannot be weaker
+# than the pull-request path. Adding a check here adds it to both — which is the point;
+# duplicating these steps into each caller is what allowed the two to drift apart.
+#
+# Deliberately does NOT include the KMS ARTIFACT_INDEX staleness check or the Gate 4
+# CHANGELOG diff: both need `github.base_ref`, which a push event does not have, so they
+# stay inline in `gates.yml`.
+on:
+  workflow_call:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run db:generate # generate Prisma client (no DB connection)
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm test
