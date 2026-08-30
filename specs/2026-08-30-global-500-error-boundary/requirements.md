@@ -34,6 +34,5 @@ Resolves #459. When production configuration is missing, the application fails c
 ### R3. Visual Consistency
 - The UI must use the existing design system (e.g., standard buttons, typography, `AlertTriangle` icon from `lucide-react`).
 
-## 4. Exclusions
-- Route-specific error boundaries (e.g., specific boundaries for the staff panel) are out of scope. These root boundaries will serve as the catch-all.
-- 404 (Not Found) pages are already handled separately; this is strictly for 500-level runtime exceptions.
+### R4. Complete Coverage
+- These two boundaries must act as the absolute catch-all for **all** unhandled runtime exceptions in the application. There are no exclusions for specific routes or layouts.
