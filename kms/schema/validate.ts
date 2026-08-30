@@ -11,7 +11,21 @@ import { ROOT, walk, relPath, normalize, readFrontMatter } from "./repo";
  * this repo's own frontmatter conventions uses — Claude Code slash commands use
  * `description:`, Nextra pages use `title:`). Those are a doc that was never opted
  * into this schema, not a broken KMS doc, so they're reported separately, not failed.
+ *
+ * THE ESCAPE HATCH DOES NOT APPLY UNDER `specs/` OR `docs/` (KMS_OWNED below).
+ * Those two trees are KMS-owned: a file there with a front-matter block is always
+ * *attempting* this schema, so a missing `visibility` is a broken KMS doc, never an
+ * opt-out. Without this carve-out the hatch silently swallows real breakage — all
+ * four files of `specs/2026-08-30-global-500-error-boundary/` shipped with
+ * `type: plan|requirements|validation|build-notes`, `status: active` and
+ * `audience: [frontend]` (none of which are in the enums) and no `visibility`, so
+ * every one was filed under "non-KMS … (skipped)" while this script still reported
+ * `invalid front-matter (failing): 0`. The slice never reached `ARTIFACT_INDEX.md`
+ * and `npm run sdd:audit` only caught it one stage later, after the slice had already
+ * merged to `main`. A skip line is not a pass — same lesson as `sdd:audit`'s own
+ * promotion-half skip when `gh` is unavailable.
  */
+const KMS_OWNED = /^(specs|docs)\//;
 
 function main() {
   const files = walk(ROOT);
@@ -29,7 +43,7 @@ function main() {
       continue;
     }
 
-    if (!("visibility" in data)) {
+    if (!("visibility" in data) && !KMS_OWNED.test(rel)) {
       nonKmsFrontMatter.push(rel);
       continue;
     }

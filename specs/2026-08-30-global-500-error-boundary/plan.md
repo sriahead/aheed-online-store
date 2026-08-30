@@ -1,11 +1,15 @@
 ---
 id: global-500-error-boundary-plan
 title: "Global 500 Error Boundary (Plan)"
-audience: [frontend]
-type: plan
-status: active
+audience: [dev]
+type: spec
+status: approved
 version: "1.0.0"
 updated: 2026-08-30
+visibility: internal
+summary: "Adds app/global-error.tsx and app/error.tsx so an unhandled runtime exception renders a branded recovery page instead of an unstyled Next.js fallback, giving the fail-closed config throw from #430 a surface to land on."
+tags: [frontend, error-handling, ux, resilience, p9]
+related: [roadmap]
 ---
 
 # Plan: Global 500 Error Boundary

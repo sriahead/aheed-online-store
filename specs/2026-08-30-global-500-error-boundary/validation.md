@@ -1,13 +1,3 @@
----
-id: global-500-error-boundary-validation
-title: "Global 500 Error Boundary (Validation)"
-audience: [frontend]
-type: validation
-status: active
-version: "1.0.0"
-updated: 2026-08-30
----
-
 # Validation: Global 500 Error Boundary
 
 ## 1. Automated Checks
