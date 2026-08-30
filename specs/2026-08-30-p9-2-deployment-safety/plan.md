@@ -109,7 +109,8 @@ workspace already persists within a job, so splitting buys nothing here.
   prevents a direct push to `main`, which is the mechanism by which PRs #464/#465/#466 bypassed
   `staging` on 2026-08-30. **This slice does not fix that** — it needs the same plan/visibility
   decision as the approval gate above — but the note should stop implying a control that is absent.
-  Raised for a decision rather than filed unilaterally.
+  **Filed as #472**, and CLAUDE.md's branch-strategy section was corrected on this branch to describe
+  the actual state rather than an implied one.
 - **#438** — tested production rollback procedure, which owns the residual window described above.
 - **#434's live proof on the production workflow specifically** cannot be run before merge:
   `deploy-production` triggers only on push to `main`, so exercising it requires either deploying to

@@ -179,12 +179,35 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
 
 ## Branch strategy & CI/CD
 - `feature/<slug>` → PR into **`staging`** (auto-deploys to `staging.aheedfoodcentre.nocaped.com`).
-- **`staging` → `main`** via PR; merging to `main` requires **manual approval** (GitHub `production`
-  environment) and deploys to `aheedfoodcentre.nocaped.com`. Never push directly to `main`/`staging`.
-- **Known gap:** GitHub's required-reviewers environment protection needs a paid plan for private
-  repos — rejected with a 422 on this repo's current (free) plan. `production` currently has no
-  enforced approval gate; treat PR review discipline as the real gate until this is resolved
-  (upgrade plan, make the repo public, or accept branch-protection-only review).
+- **`staging` → `main`** via PR, deploying to `aheedfoodcentre.nocaped.com`. Never push directly to
+  `main`/`staging`.
+- **Known gap — NOTHING MECHANICALLY ENFORCES ANY OF THE ABOVE.** Two separate controls are both
+  absent, and this line previously described the first as if it existed ("merging to `main` requires
+  manual approval") while implying the second was a live fallback:
+  1. **No environment approval gate.** GitHub's required-reviewers protection needs a paid plan for
+     private repos and was rejected with a 422 on this repo's current (free) plan. `environment:
+     production` in `deploy-production.yml` selects that environment's secret set and nothing more.
+  2. **No branch protection at all**, on either branch. Verified at P9.2 (2026-08-30) —
+     `gh api repos/sriahead/aheed-online-store/branches/main/protection` and the same for `staging`
+     both return **`404 Branch not protected`**. So "accept branch-protection-only review" was never
+     an available fallback; there is no required status check, no required review, and nothing
+     stopping a direct push to `main`.
+  This is not theoretical: **PRs #464, #465 and #466 all merged straight into `main` on 2026-08-30**,
+  bypassing `staging` entirely, and `deploy-production` ran on each. Treat PR review discipline as
+  the only real gate, and check the base branch of every PR you open. Resolving it needs a plan
+  upgrade, a public repo, or an explicit decision to accept the risk — a decision, not code.
+- **Quality checks live in `.github/workflows/quality.yml`** (`on: workflow_call`), added by P9.2
+  (#435). Both `gates.yml` and `deploy-production.yml` call it, so the production path runs exactly
+  what a PR runs. **Add a new check there, not to a caller** — duplicating the steps into each is
+  what let the production path drift to running none at all. The KMS `ARTIFACT_INDEX` staleness check
+  and the Gate 4 CHANGELOG diff deliberately stay inline in `gates.yml`'s `docs-gates` job: both need
+  `github.base_ref`, which a `push` event does not have.
+- **Both deploy workflows build BEFORE they migrate** (P9.2, #434). `prisma migrate deploy` used to
+  run first, so a build failure left the database migrated while the Worker still served the previous
+  bundle — and the adapter build is the step most likely to fail (a root `proxy.ts` once passed
+  `next build`, `lint`, `typecheck` and every test, failing only there). Do not reorder these back.
+  The window is narrowed, not closed: a `wrangler deploy` failure *after* a successful migrate still
+  leaves production migrated ahead of its code, which is #438's territory.
 - Both `staging` and `production` need their own GitHub environment secrets: `CLOUDFLARE_API_TOKEN`,
   `CLOUDFLARE_ACCOUNT_ID`, `DIRECT_URL` (used for `prisma migrate deploy` in CI). Separately, each
   Cloudflare Worker needs its own **runtime** secret set via `wrangler secret put NAME --env <env>`
