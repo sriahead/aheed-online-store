@@ -10,6 +10,37 @@ every branch merges.
 - **`#459` — Global 500 Error Boundary.**
   Added `app/global-error.tsx` and `app/error.tsx` to cleanly intercept unhandled application crashes (such as missing production configuration leading to a fail-closed crash). Instead of a raw browser 500 or generic Next.js fallback, users now see a branded, user-friendly "Something went wrong" UI that prevents leakage of sensitive error stack traces or Zod validation errors.
 
+### Changed
+- **`#434` — production and staging now build before they migrate.** (P9.2).
+  Both deploy workflows ran `npx prisma migrate deploy` *before*
+  `npx opennextjs-cloudflare build`, so a build failure left the database on a newly migrated schema
+  while the Worker continued serving the previous bundle. The adapter build is the step most likely
+  to fail — a root `proxy.ts` once passed `next build`, `lint`, `typecheck` and every test and failed
+  only there. Both workflows reorder to **build → migrate → deploy**; the old combined
+  "Build (OpenNext) & deploy to Workers" step is split so the migration can sit between them.
+  Building first is safe because the build touches no database: the Prisma client is generated from
+  `prisma/schema.prisma`. The window is narrowed, not closed — a `wrangler deploy` failure after a
+  successful migrate still leaves production migrated ahead of its code, which is #438's territory.
+- **`#435` — the production deploy path now runs the same checks a pull request runs.** (P9.2).
+  `deploy-production.yml` ran no lint, format, typecheck or test step, because `gates.yml` triggers
+  on `pull_request` only and nothing quality-related ran on a push to `main`. The five shared checks
+  move into a new reusable `.github/workflows/quality.yml` (`on: workflow_call`) that both
+  `gates.yml` and `deploy-production.yml` invoke, with the deploy job declaring `needs:` on it.
+  Chosen over duplicating the steps into each caller, which creates two definitions that drift the
+  moment a check is added to one and not the other. `gates.yml` becomes two jobs — `quality` and
+  `docs-gates` — because the KMS `ARTIFACT_INDEX` staleness check and the Gate 4 CHANGELOG diff both
+  need `github.base_ref`, which a push event does not have, so they cannot move into the shared
+  workflow. `deploy-staging` deliberately does not get the quality job: `gates` already ran those
+  checks on the PR that produced the merge.
+- **`deploy-production.yml`'s `environment: production` comment corrected.** It asserted a manual
+  approval gate via required reviewers that was never configured — that protection needs a paid plan
+  for private repos and was rejected with a 422 on this repo. Related: verified this slice that
+  **neither `main` nor `staging` has any branch protection at all** (both return
+  `404 Branch not protected`), so CLAUDE.md's suggestion to "accept branch-protection-only review"
+  described a fallback that does not exist. CLAUDE.md's branch-strategy section updated to say
+  plainly that nothing mechanically enforces the flow, citing PRs #464/#465/#466 merging straight to
+  `main` on 2026-08-30 as the live consequence.
+
 ### Fixed
 - **Roadmap, changelog and build-notes encoding corruption from PowerShell backtick escapes.**
   Five documentation lines across three files were written through a PowerShell double-quoted
