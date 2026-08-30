@@ -4,7 +4,15 @@ on:
     branches: [staging, main]
 
 jobs:
-  gates:
+  # The five shared checks live in quality.yml so `deploy-production` runs the exact
+  # same set (P9.2, #435). Do not re-add them here — two copies drift.
+  quality:
+    uses: ./.github/workflows/quality.yml
+
+  # PR-only gates. Both need `github.base_ref` to diff against, which a push event
+  # does not have, so these cannot move into the reusable workflow.
+  docs-gates:
+    needs: quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -12,11 +20,6 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
-      - run: npm run db:generate # generate Prisma client (no DB connection)
-      - run: npm run lint
-      - run: npm run format:check
-      - run: npm run typecheck
-      - run: npm test
       - name: KMS — front-matter validation
         run: npm run kms:validate
       - name: KMS — ARTIFACT_INDEX.md staleness check

@@ -10,6 +10,70 @@ every branch merges.
 - **`#459` — Global 500 Error Boundary.**
   Added `app/global-error.tsx` and `app/error.tsx` to cleanly intercept unhandled application crashes (such as missing production configuration leading to a fail-closed crash). Instead of a raw browser 500 or generic Next.js fallback, users now see a branded, user-friendly "Something went wrong" UI that prevents leakage of sensitive error stack traces or Zod validation errors.
 
+### Changed
+- **`#434` — production and staging now build before they migrate.** (P9.2).
+  Both deploy workflows ran `npx prisma migrate deploy` *before*
+  `npx opennextjs-cloudflare build`, so a build failure left the database on a newly migrated schema
+  while the Worker continued serving the previous bundle. The adapter build is the step most likely
+  to fail — a root `proxy.ts` once passed `next build`, `lint`, `typecheck` and every test and failed
+  only there. Both workflows reorder to **build → migrate → deploy**; the old combined
+  "Build (OpenNext) & deploy to Workers" step is split so the migration can sit between them.
+  Building first is safe because the build touches no database: the Prisma client is generated from
+  `prisma/schema.prisma`. The window is narrowed, not closed — a `wrangler deploy` failure after a
+  successful migrate still leaves production migrated ahead of its code, which is #438's territory.
+- **`#435` — the production deploy path now runs the same checks a pull request runs.** (P9.2).
+  `deploy-production.yml` ran no lint, format, typecheck or test step, because `gates.yml` triggers
+  on `pull_request` only and nothing quality-related ran on a push to `main`. The five shared checks
+  move into a new reusable `.github/workflows/quality.yml` (`on: workflow_call`) that both
+  `gates.yml` and `deploy-production.yml` invoke, with the deploy job declaring `needs:` on it.
+  Chosen over duplicating the steps into each caller, which creates two definitions that drift the
+  moment a check is added to one and not the other. `gates.yml` becomes two jobs — `quality` and
+  `docs-gates` — because the KMS `ARTIFACT_INDEX` staleness check and the Gate 4 CHANGELOG diff both
+  need `github.base_ref`, which a push event does not have, so they cannot move into the shared
+  workflow. `deploy-staging` deliberately does not get the quality job: `gates` already ran those
+  checks on the PR that produced the merge.
+- **`deploy-production.yml`'s `environment: production` comment corrected.** It asserted a manual
+  approval gate via required reviewers that was never configured — that protection needs a paid plan
+  for private repos and was rejected with a 422 on this repo. Related: verified this slice that
+  **neither `main` nor `staging` has any branch protection at all** (both return
+  `404 Branch not protected`), so CLAUDE.md's suggestion to "accept branch-protection-only review"
+  described a fallback that does not exist. CLAUDE.md's branch-strategy section updated to say
+  plainly that nothing mechanically enforces the flow, citing PRs #464/#465/#466 merging straight to
+  `main` on 2026-08-30 as the live consequence.
+
+### Fixed
+- **Roadmap, changelog and build-notes encoding corruption from PowerShell backtick escapes.**
+  Five documentation lines across three files were written through a PowerShell double-quoted
+  string, where the backtick is the escape character. Every backtick intended as a Markdown code
+  fence was consumed: `` `0 `` became a NUL byte, `` `a `` a BEL, `` `b `` a backspace and `` `f ``
+  a form feed, so `` `0334f6d` `` rendered as `334f6d` and `` `app/global-error.tsx` `` as
+  `pp/global-error.tsx`. One line additionally carried a raw `0x97` (cp1252 em-dash), which made
+  `specs/roadmap.md` invalid UTF-8 — `grep` reported the whole file as binary and `git diff` could
+  not show it as text. A sixth line, in
+  `specs/2026-08-29-p9-1-fail-closed-config/build-notes.md`, had a UTF-16LE fragment appended to a
+  UTF-8 file. All repaired at byte level and re-verified: zero control characters, valid UTF-8,
+  `prettier --check` clean. This is the exact trap CLAUDE.md's Windows section warns about.
+- **`specs/2026-08-30-global-500-error-boundary/` was invisible to the KMS index.** All four files
+  carried front-matter that fails the KMS schema (`type: plan|requirements|validation|build-notes`,
+  `status: active`, `audience: [frontend]` — none of which are in the enums — and no `visibility`).
+  Corrected to the repo's actual convention: `plan.md` carries the single KMS artifact per slice
+  (`type: spec`, `audience: [dev]`, `status: approved`, plus `visibility`/`summary`/`tags`), and the
+  other three carry no front-matter, matching every other slice. `ARTIFACT_INDEX.md` rebuilt —
+  118 → 119 artifacts — so `npm run sdd:audit` passes.
+- **`npm run kms:validate` silently skipped those four files instead of failing.** Its escape hatch
+  for non-KMS front-matter keys on the absence of `visibility`, which is exactly what a malformed
+  KMS doc also looks like, so it reported `invalid front-matter (failing): 0` while skipping real
+  breakage. The hatch no longer applies under `specs/` or `docs/`: those trees are KMS-owned, so a
+  front-matter block there is always an attempt at this schema. Verified by reintroducing the
+  original front-matter and confirming all four errors are now reported as a hard failure.
+- **Roadmap accuracy, found re-validating P9.1.** The #431 row claimed the limiter coordinates
+  "across Vercel/Cloudflare edge workers" — this project has never run on Vercel. The #433 row
+  described the new `CHECK` constraints as "strictly positive inventory/quantity"; `Inventory.quantity`
+  is `>= 0` (zero stock is legal and routine) and only `OrderItem.quantity` is `> 0`. The #459 row
+  claimed validation "on staging" proving "OpenNext Edge routing" was undisrupted — the slice merged
+  straight to `main`, `staging` was fast-forwarded onto it afterwards, and this app does not use
+  Next's edge runtime at all. All three corrected against the code and the merge history.
+
 ### Security
 - **`#340` — Cross-tenant writes prevented in reviews repository.** (P9.1).
   Added `vendorId` enforcement to `upsertReview` and `deleteReview`. Previously, these functions implicitly relied on `productId` and `userId` ownership, which failed the explicit tenancy boundary requirement. The functions now strictly filter by `vendorId`, preventing cross-tenant manipulation. Callers in `lib/reviews-service.ts` supply the current tenant via request-scoped identity. Test exceptions for `reviews.ts` in `repository-vendor-scoping.test.ts` were removed.
@@ -23,7 +87,7 @@ every branch merges.
   Added a Workers-compatible abuse-control mechanism to bound credential stuffing and password-reset abuse. Better Auth's default rate limiter relies on an in-memory store (ineffective across isolates) and a database increment operation that crashes on HTTP Prisma clients. This slice explicitly disables Better Auth's limiter and instead intercepts sensitive paths (`/sign-in`, `/sign-up`, `/forget-password`, `/reset-password`, `/send-verification-email`) via Better Auth's `onRequest` hook in `lib/auth.ts`. The check reuses the proven Postgres-backed fixed-window rate-limiting pattern introduced for order lookups, enforcing a maximum of 5 attempts per IP per minute via a new `AuthenticationAttempt` table.
 - **`#430` — Fail closed when Stripe production configuration is missing or invalid.** (P9.1).
   Previously, `getPaymentService()` and `getEmailService()` gracefully degraded to stub implementations if their respective API keys were missing. This allowed local development and CI to operate safely without real credentials, but posed a critical risk in production: a misconfigured environment would silently accept orders without ever processing a payment or sending an email.
-  Fixed by attaching `.superRefine()` validation to `schema` and `emailSchema` in `lib/config.ts`. If `process.env.NODE_ENV === "production"`, these schemas explicitly reject missing `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, and `RESEND_FROM_EMAIL`. A new test file `lib/config.test.ts` asserts that this strict enforcement only applies in production environments, fully preserving the mock capability for dev/test safely. `vi.stubEnv` was used to robustly isolate environment variables in the tests.
+  Fixed by attaching `.superRefine()` validation to `paymentSchema` and `emailSchema` in `lib/config.ts`. If `process.env.NODE_ENV === "production"`, these schemas explicitly reject missing `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, and `RESEND_FROM_EMAIL`. (This entry originally credited `schema` alongside `emailSchema`; `schema`'s `superRefine` is an empty no-op carrying only a comment, and the Stripe keys live on `paymentSchema` — corrected 2026-08-30. The dead no-op itself is tracked as `#470`.) A new test file `lib/config.test.ts` asserts that this strict enforcement only applies in production environments, fully preserving the mock capability for dev/test safely. `vi.stubEnv` was used to robustly isolate environment variables in the tests.
 
 - **`#429` — a verified Stripe signature no longer confirms or cancels an order on its own.** Second
   slice of **P9.1**. Signature verification is sound and untouched; the gap was downstream.
@@ -694,7 +758,7 @@ every branch merges.
 
 
 ### Changed
-- **Admin UI**: Unify admin Operations Portal layout with storefront theme. Removed custom PortalHeader in favor of standard <Header />, moved TierToggle to PanelNav, added horizontal scrolling to PanelNav tabs, and configured pp/(admin)/staff/page.tsx to read the tier cookie so Admin users can successfully preview the limited staff layout.
+- **Admin UI**: Unify admin Operations Portal layout with storefront theme. Removed custom PortalHeader in favor of standard `<Header />`, moved TierToggle to PanelNav, added horizontal scrolling to PanelNav tabs, and configured `app/(admin)/staff/page.tsx` to read the tier cookie so Admin users can successfully preview the limited staff layout.
 
 ### Fixed
 - **CI**: Injected missing Cloudflare AI secrets (CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN) into the production worker runtime in .github/workflows/deploy-production.yml.
