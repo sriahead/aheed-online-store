@@ -1,13 +1,3 @@
----
-id: global-500-error-boundary
-title: "Global 500 Error Boundary"
-audience: [frontend]
-type: requirements
-status: active
-version: "1.0.0"
-updated: 2026-08-30
----
-
 # Requirements: Global 500 Error Boundary
 
 ## 1. Context & Objective

@@ -10,6 +10,39 @@ every branch merges.
 - **`#459` — Global 500 Error Boundary.**
   Added `app/global-error.tsx` and `app/error.tsx` to cleanly intercept unhandled application crashes (such as missing production configuration leading to a fail-closed crash). Instead of a raw browser 500 or generic Next.js fallback, users now see a branded, user-friendly "Something went wrong" UI that prevents leakage of sensitive error stack traces or Zod validation errors.
 
+### Fixed
+- **Roadmap, changelog and build-notes encoding corruption from PowerShell backtick escapes.**
+  Five documentation lines across three files were written through a PowerShell double-quoted
+  string, where the backtick is the escape character. Every backtick intended as a Markdown code
+  fence was consumed: `` `0 `` became a NUL byte, `` `a `` a BEL, `` `b `` a backspace and `` `f ``
+  a form feed, so `` `0334f6d` `` rendered as `334f6d` and `` `app/global-error.tsx` `` as
+  `pp/global-error.tsx`. One line additionally carried a raw `0x97` (cp1252 em-dash), which made
+  `specs/roadmap.md` invalid UTF-8 — `grep` reported the whole file as binary and `git diff` could
+  not show it as text. A sixth line, in
+  `specs/2026-08-29-p9-1-fail-closed-config/build-notes.md`, had a UTF-16LE fragment appended to a
+  UTF-8 file. All repaired at byte level and re-verified: zero control characters, valid UTF-8,
+  `prettier --check` clean. This is the exact trap CLAUDE.md's Windows section warns about.
+- **`specs/2026-08-30-global-500-error-boundary/` was invisible to the KMS index.** All four files
+  carried front-matter that fails the KMS schema (`type: plan|requirements|validation|build-notes`,
+  `status: active`, `audience: [frontend]` — none of which are in the enums — and no `visibility`).
+  Corrected to the repo's actual convention: `plan.md` carries the single KMS artifact per slice
+  (`type: spec`, `audience: [dev]`, `status: approved`, plus `visibility`/`summary`/`tags`), and the
+  other three carry no front-matter, matching every other slice. `ARTIFACT_INDEX.md` rebuilt —
+  118 → 119 artifacts — so `npm run sdd:audit` passes.
+- **`npm run kms:validate` silently skipped those four files instead of failing.** Its escape hatch
+  for non-KMS front-matter keys on the absence of `visibility`, which is exactly what a malformed
+  KMS doc also looks like, so it reported `invalid front-matter (failing): 0` while skipping real
+  breakage. The hatch no longer applies under `specs/` or `docs/`: those trees are KMS-owned, so a
+  front-matter block there is always an attempt at this schema. Verified by reintroducing the
+  original front-matter and confirming all four errors are now reported as a hard failure.
+- **Roadmap accuracy, found re-validating P9.1.** The #431 row claimed the limiter coordinates
+  "across Vercel/Cloudflare edge workers" — this project has never run on Vercel. The #433 row
+  described the new `CHECK` constraints as "strictly positive inventory/quantity"; `Inventory.quantity`
+  is `>= 0` (zero stock is legal and routine) and only `OrderItem.quantity` is `> 0`. The #459 row
+  claimed validation "on staging" proving "OpenNext Edge routing" was undisrupted — the slice merged
+  straight to `main`, `staging` was fast-forwarded onto it afterwards, and this app does not use
+  Next's edge runtime at all. All three corrected against the code and the merge history.
+
 ### Security
 - **`#340` — Cross-tenant writes prevented in reviews repository.** (P9.1).
   Added `vendorId` enforcement to `upsertReview` and `deleteReview`. Previously, these functions implicitly relied on `productId` and `userId` ownership, which failed the explicit tenancy boundary requirement. The functions now strictly filter by `vendorId`, preventing cross-tenant manipulation. Callers in `lib/reviews-service.ts` supply the current tenant via request-scoped identity. Test exceptions for `reviews.ts` in `repository-vendor-scoping.test.ts` were removed.
@@ -23,7 +56,7 @@ every branch merges.
   Added a Workers-compatible abuse-control mechanism to bound credential stuffing and password-reset abuse. Better Auth's default rate limiter relies on an in-memory store (ineffective across isolates) and a database increment operation that crashes on HTTP Prisma clients. This slice explicitly disables Better Auth's limiter and instead intercepts sensitive paths (`/sign-in`, `/sign-up`, `/forget-password`, `/reset-password`, `/send-verification-email`) via Better Auth's `onRequest` hook in `lib/auth.ts`. The check reuses the proven Postgres-backed fixed-window rate-limiting pattern introduced for order lookups, enforcing a maximum of 5 attempts per IP per minute via a new `AuthenticationAttempt` table.
 - **`#430` — Fail closed when Stripe production configuration is missing or invalid.** (P9.1).
   Previously, `getPaymentService()` and `getEmailService()` gracefully degraded to stub implementations if their respective API keys were missing. This allowed local development and CI to operate safely without real credentials, but posed a critical risk in production: a misconfigured environment would silently accept orders without ever processing a payment or sending an email.
-  Fixed by attaching `.superRefine()` validation to `schema` and `emailSchema` in `lib/config.ts`. If `process.env.NODE_ENV === "production"`, these schemas explicitly reject missing `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, and `RESEND_FROM_EMAIL`. A new test file `lib/config.test.ts` asserts that this strict enforcement only applies in production environments, fully preserving the mock capability for dev/test safely. `vi.stubEnv` was used to robustly isolate environment variables in the tests.
+  Fixed by attaching `.superRefine()` validation to `paymentSchema` and `emailSchema` in `lib/config.ts`. If `process.env.NODE_ENV === "production"`, these schemas explicitly reject missing `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, and `RESEND_FROM_EMAIL`. (This entry originally credited `schema` alongside `emailSchema`; `schema`'s `superRefine` is an empty no-op carrying only a comment, and the Stripe keys live on `paymentSchema` — corrected 2026-08-30. The dead no-op itself is tracked as `#470`.) A new test file `lib/config.test.ts` asserts that this strict enforcement only applies in production environments, fully preserving the mock capability for dev/test safely. `vi.stubEnv` was used to robustly isolate environment variables in the tests.
 
 - **`#429` — a verified Stripe signature no longer confirms or cancels an order on its own.** Second
   slice of **P9.1**. Signature verification is sound and untouched; the gap was downstream.
@@ -694,7 +727,7 @@ every branch merges.
 
 
 ### Changed
-- **Admin UI**: Unify admin Operations Portal layout with storefront theme. Removed custom PortalHeader in favor of standard <Header />, moved TierToggle to PanelNav, added horizontal scrolling to PanelNav tabs, and configured pp/(admin)/staff/page.tsx to read the tier cookie so Admin users can successfully preview the limited staff layout.
+- **Admin UI**: Unify admin Operations Portal layout with storefront theme. Removed custom PortalHeader in favor of standard `<Header />`, moved TierToggle to PanelNav, added horizontal scrolling to PanelNav tabs, and configured `app/(admin)/staff/page.tsx` to read the tier cookie so Admin users can successfully preview the limited staff layout.
 
 ### Fixed
 - **CI**: Injected missing Cloudflare AI secrets (CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN) into the production worker runtime in .github/workflows/deploy-production.yml.

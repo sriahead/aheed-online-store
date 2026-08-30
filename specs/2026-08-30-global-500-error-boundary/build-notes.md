@@ -1,13 +1,3 @@
----
-id: global-500-error-boundary-build-notes
-title: "Global 500 Error Boundary (Build Notes)"
-audience: [dev]
-type: build-notes
-status: active
-version: "1.0.0"
-updated: 2026-08-30
----
-
 # Build Notes: Global 500 Error Boundary
 
 ## 1. Implementation Summary
