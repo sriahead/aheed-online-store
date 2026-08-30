@@ -1,0 +1,39 @@
+---
+id: global-500-error-boundary
+title: "Global 500 Error Boundary"
+audience: [frontend]
+type: requirements
+status: active
+version: "1.0.0"
+updated: 2026-08-30
+---
+
+# Requirements: Global 500 Error Boundary
+
+## 1. Context & Objective
+Resolves #459. When production configuration is missing, the application fails closed cleanly at the configuration boundary, but the user is presented with a generic browser 500 page or Next.js fallback because no root error boundary exists to catch the error. We need a branded error boundary to handle application crashes gracefully.
+
+## 2. Scope
+- `app/global-error.tsx`: The root boundary catching errors in `app/layout.tsx`.
+- `app/error.tsx`: The boundary catching errors in nested routes, preserving the site layout.
+
+## 3. Requirements
+
+### R1. Root Error Recovery (`global-error.tsx`)
+- Must define its own `<html>` and `<body>` elements, as it replaces the root layout.
+- Must present a clean, branded "Something went wrong" message.
+- Must provide a "Try Again" button that calls the provided `reset()` function.
+- Must *not* expose raw error messages or stack traces to the user.
+- Should log the raw error to `console.error` for observability.
+
+### R2. Nested Error Recovery (`error.tsx`)
+- Must present the same branded message and "Try Again" button.
+- Must render within the existing layout (does not define `<html>` or `<body>`).
+- Must *not* expose raw error messages to the user.
+
+### R3. Visual Consistency
+- The UI must use the existing design system (e.g., standard buttons, typography, `AlertTriangle` icon from `lucide-react`).
+
+## 4. Exclusions
+- Route-specific error boundaries (e.g., specific boundaries for the staff panel) are out of scope. These root boundaries will serve as the catch-all.
+- 404 (Not Found) pages are already handled separately; this is strictly for 500-level runtime exceptions.
