@@ -4,7 +4,7 @@ Written at the end of Build, before the Clear. Slice-local; no front-matter, no 
 
 Closes **#478**, **#479**, **#467**.
 
-## What was built
+## What changed and why
 
 | File | Change |
 |---|---|
@@ -16,7 +16,7 @@ Closes **#478**, **#479**, **#467**.
 | `tests/error-boundary.test.tsx` | **New.** 23 tests across all four boundaries. |
 | `specs/2026-08-30-global-500-error-boundary/{plan,build-notes}.md` | Two false claims corrected in place. |
 
-## Deviations from spec
+## Deviations from the spec
 
 **One, and it is an addition rather than a shortfall.** `requirements.md` R3 asked only for
 `app/(admin)/error.tsx` to exist alongside R2's storefront one; while writing it, it became clear the
@@ -28,7 +28,7 @@ saying so here is the honest version.
 
 Nothing else deviates. Every requirement R1–R11 is implemented as written.
 
-## Decisions worth keeping
+## Decisions taken during the build
 
 - **The root `app/error.tsx` was NOT deleted, and that is the whole design.** The obvious reading of
   #478 is "the root boundary is in the wrong place, move it down." That would have been wrong: a
@@ -57,7 +57,7 @@ Nothing else deviates. Every requirement R1–R11 is implemented as written.
   `--color-primary` on `--color-surface-muted` are all already-audited pairs (lines 84, 100, 103).
   Nothing new needed auditing, which is why no contrast test changed.
 
-## What is NOT proven yet
+## Known-shaky areas
 
 Everything in `validation.md`'s **live** section — L1 through L7. They need `npm run preview` and a
 deliberately thrown error, and they are the rows #459 never had. The automated rows (A1–A9) all
