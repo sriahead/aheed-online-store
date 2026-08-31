@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.24.0"
-updated: 2026-08-27
+version: "2.25.0"
+updated: 2026-08-31
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -499,6 +499,17 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   enough to tell the two apart — you never need a real credential to test this. Headless
   `node:http` calls with a session cookie remain the right tool for rows that don't specifically
   need a real browser (CORS, canvas/EXIF, on-screen rendering).
+- **A destructive full-database wipe (`npx prisma migrate reset --force`) can be blocked outright by
+  the coding agent's own sandbox, independent of whether the target is dev/staging/production.** Hit
+  at the catalogue-depth-and-scale slice's `/validate` (#489): the intended approach for proving an
+  exact-count requirement (R4's "18 Aheed products on a clean seed run") was to reset the dev branch
+  to empty and reseed, and the reset command was refused by the harness's own destructive-action
+  classifier before it ever reached the database. **This is not necessarily a wall** — if the slice's
+  own seed script has idempotent, additive toggles (here, `SEED_REMOVE_GENERATED=1` and
+  `SEED_SCALE_PRODUCTS`), exercising *those* against the existing seeded state proves the same
+  exact-count properties (remove → count at curated baseline → reseed → count at scale → reseed again
+  → count unchanged) without ever needing a wipe. Reach for the toggle-based sequence first; treat a
+  full reset as a last resort to ask the user about, not something to retry past a refusal.
 - CI (`gates`) is the real Gate 3 — don't report a slice done until it's actually green on GitHub,
   not "should be green based on local output."
 
@@ -529,6 +540,23 @@ Get validated work through the branch → PR → deploy chain deliberately. Not 
 named gates, but the part of this repo's actual history most prone to drift.
 
 - Branch off the freshly **fetched** base (`origin/staging`, not a stale local branch) for new work.
+- **A branch cut from the wrong base doesn't announce itself — `git log origin/staging..HEAD`
+  still looks reasonable even when the actual base was `origin/main`.** Found at the
+  catalogue-depth-and-scale slice's `/validate` (2026-08-31, #489): a promotion PR (#488, staging →
+  main) had merged between the previous Orient and this slice's `/build`, and the feature branch
+  ended up cut from `origin/main` at that promotion's merge commit rather than from `origin/staging`
+  — `git checkout -b` had resolved a stale-relative-to-`staging` starting point without either
+  branch name appearing wrong at a glance. Harmless *this time* only because `origin/staging` and
+  `origin/main` were content-identical (the promotion had nothing left to diverge on), confirmed
+  with `git diff origin/staging origin/main` returning empty — a real difference between the two
+  would have silently pulled unrelated, unreviewed `main`-only content into the PR's diff. Caught by
+  comparing `git merge-base HEAD origin/staging` against `git merge-base HEAD origin/main` — they
+  should be the same commit when the branch is cut correctly, and here they weren't. **Fixed at Ship
+  by rebasing onto `origin/staging` before pushing** (`git rebase origin/staging`), which is safe
+  and mechanical whenever the diff-emptiness check above holds — the rebase in this case had zero
+  conflicts and produced a byte-identical tree, confirmed with `git diff <old-HEAD> <new-HEAD>`
+  returning empty. **Run this merge-base comparison at Orient (right after `git fetch`) and again
+  before pushing at Ship** — it's a two-second check and the failure mode is silent otherwise.
 - Push everything for one logical unit as a complete commit (or set of commits) *before* opening
   the PR. Don't iterate live against CI on an already-open PR — merges here have landed within
   seconds of opening more than once, stranding a fast-follow commit outside the merge.

@@ -145,6 +145,24 @@ every branch merges.
 
 
 ### Documentation
+- **`/document` closeout for `#489`.** Reconciles `specs/roadmap.md` with what `/validate` and
+  `/ship` actually found: a new change-log row for **PR #492** (build, merge `a6ba350`, `staging`)
+  and a carry-forward row for **PR #488** (promotion, merge `5c6dca2`, `staging -> main`), which
+  `npm run sdd:audit` reported pending at Orient. `gates` (`quality`, `docs-gates`) green on PR
+  #492; `deploy-staging` and `deploy-docs-internal` both confirmed green post-merge. **Fresh-context
+  `/validate` exercised all 22 requirements live against the dev Neon branch**, not from code
+  review — removed the generated set (Aheed 18/SriMart 3, categories intact) → reseeded at
+  `SEED_SCALE_PRODUCTS=2000` (Aheed 2018, 27 distinct storage keys, 2000/2000 primary-image and
+  inventory counts, one generated image fetched live off the dev CDN) → reseeded a second time
+  (idempotent, unchanged) — `putObject` counts 21 → 48 → 21 confirmed the shared image pool and the
+  idempotent re-run. **One process note recorded in `specs/sdd-workflow.md`**: the feature branch
+  had been cut from `origin/main` (post-PR-#488) rather than `origin/staging` — harmless only
+  because the two were content-identical, caught by comparing `git merge-base HEAD origin/staging`
+  against `git merge-base HEAD origin/main`, fixed by rebasing before pushing. **Another recorded
+  there**: `prisma migrate reset --force` was refused by the coding agent's own sandbox during
+  `/validate`; the seed's own `SEED_REMOVE_GENERATED`/`SEED_SCALE_PRODUCTS` toggles proved the same
+  exact-count requirements without a full wipe. **`#489` moved to `In Review`** on Project #2;
+  `ARTIFACT_INDEX.md`/`docs.ts` rebuilt; `npm run sdd:audit` re-run and exits with zero gaps.
 - **`/document` closeout for `#434`, `#435`.** Reconciles `specs/roadmap.md` with what actually
   shipped and, unlike most prior closeouts, with what actually reached production in the same
   session: two new change-log rows cite **PR #474** (build, merge `1de4df2`, `staging`) and
