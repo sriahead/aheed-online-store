@@ -10,7 +10,11 @@ The implementation closely followed the spec. The core requirement—preventing 
 - **404 Behavior:** As noted during the build phase, Next.js handles 404s via `not-found.tsx` completely independently of `error.tsx`. The term "Complete Coverage" inside `requirements.md` correctly scopes to 500-level runtime exceptions, preserving the standard 404 behavior.
 
 ## 3. Deviations from Spec
-- None. The feature was built exactly as specified in the `plan.md` and `requirements.md`.
+- ~~None. The feature was built exactly as specified in the `plan.md` and `requirements.md`.~~
+- **CORRECTED 2026-08-31.** There were two, neither disclosed here at the time, both found by re-reading the artifact against the code at a later `/orient` rather than against these notes:
+  - **R3 was not met (#479).** Both files render the icon disc as `bg-red-100 text-red-600` — Tailwind's stock palette. R3 required the existing design system, which has `--color-danger` (`#c82d2d`) and `--color-danger-tint` (`#ffebee`) for exactly this. Those literals are audited by `tests/design-tokens-contrast.test.ts`; the stock pairing is not, and would not be caught if it regressed. `app/not-found.tsx`, the sibling these files were copied from, uses tokens.
+  - **R2's premise was false (#478).** `app/error.tsx` preserves neither the header/footer nor per-vendor branding, because both live below the root layout. See the correction in `plan.md` §2.
+- The lesson is the one `CLAUDE.md` already records about docstrings asserting unenforced invariants: "Deviations from Spec: None" is a claim, and writing it without walking each requirement against the built file is how a slice ships two unrecorded misses. Fixed in `specs/2026-08-31-error-boundary-gaps/`.
 
 ## 4. Quality Gates
 - **Tests:** All 740 unit tests continued to pass (0 regressions).
