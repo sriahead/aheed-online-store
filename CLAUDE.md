@@ -213,6 +213,17 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   Cloudflare Worker needs its own **runtime** secret set via `wrangler secret put NAME --env <env>`
   (`DATABASE_URL` at minimum) — the GitHub Actions secrets above do not populate these; they're two
   different secret stores.
+- **A `prisma migrate deploy` step failing with `P1001: Can't reach database server` in
+  `deploy-staging`/`deploy-production` is not necessarily a real outage** — before assuming Neon is
+  down and either blind-retrying or escalating, run `DIRECT_URL=<the same URL> npx prisma migrate
+  status` from a local machine against the identical `DIRECT_URL`. Hit at PR #485's `deploy-staging`
+  run (2026-08-31, run `33366365439`): the migrate step failed with `P1001` against staging's direct
+  endpoint, but a local `prisma migrate status` against that exact URL succeeded seconds later and
+  correctly reported the pending migration — proving the database was up and reachable, and the
+  failure was a transient GitHub Actions-runner-to-Neon network blip. `gh run rerun <id> --failed`
+  then succeeded on the first retry. The local check is what distinguishes this from a real outage
+  (where retrying would be pointless) or a genuine connection-string/firewall problem (where
+  retrying would just fail again) — don't skip straight to either conclusion.
 
 ## The four SDD gates (non-negotiable)
 1. **Propose before work** — open the issue + a spec proposal; wait for approval.
