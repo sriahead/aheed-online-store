@@ -28,7 +28,7 @@ export function BundleRow({ title, bundles, cdnBaseUrl }: BundleRowProps) {
       <div>
         <h2 className="text-xl font-bold text-primary">{title}</h2>
         <p className="mt-0.5 text-sm text-primary/70">
-          Everything for one meal, added to your basket in a single tap.
+          Curated sets, added to your basket in a single tap.
         </p>
       </div>
 

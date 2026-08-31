@@ -56,7 +56,7 @@ export default async function CategoriesPage() {
       {/* P8.5c (#347): after the departments, before the product rows — the
           shop page's merchandising slot. The landing page stays as P8.5f left
           it: hero and trust strip only. */}
-      <BundleRow title="Meal bundles" bundles={bundles} cdnBaseUrl={CDN_BASE_URL ?? ""} />
+      <BundleRow title="Value Bundles" bundles={bundles} cdnBaseUrl={CDN_BASE_URL ?? ""} />
 
       <ProductRow
         title="New Arrivals"

@@ -24,9 +24,25 @@ type SearchParams = {
   isFresh?: string;
   isOrganic?: string;
   cursor?: string;
+  /**
+   * #498 — the stack of cursors used to reach every PRIOR page, comma-joined,
+   * so "Previous" can navigate backwards without an OFFSET query (this app's
+   * pagination is keyset-only, per specs/architecture.md) or a second,
+   * separate COUNT query for absolute page numbers. Page 1 in the stack is
+   * represented as an empty segment (no cursor was used to reach it).
+   */
+  back?: string;
 };
 
-function nextPageHref(slug: string, params: SearchParams, cursor: string): string {
+function parseBack(back?: string): string[] {
+  return back ? back.split(",") : [];
+}
+
+function buildHref(
+  slug: string,
+  params: SearchParams,
+  overrides: { cursor?: string; back: string[] },
+): string {
   const qs = new URLSearchParams();
   if (params.minPrice) qs.set("minPrice", params.minPrice);
   if (params.maxPrice) qs.set("maxPrice", params.maxPrice);
@@ -34,8 +50,26 @@ function nextPageHref(slug: string, params: SearchParams, cursor: string): strin
   if (params.isHalal) qs.set("isHalal", params.isHalal);
   if (params.isFresh) qs.set("isFresh", params.isFresh);
   if (params.isOrganic) qs.set("isOrganic", params.isOrganic);
-  qs.set("cursor", cursor);
+  if (overrides.cursor) qs.set("cursor", overrides.cursor);
+  // A lone "" entry means "page 1 had no cursor" and nothing else — not worth
+  // a query param at all, so the very first "Next" click stays a clean URL.
+  const joinedBack = overrides.back.join(",");
+  if (joinedBack !== "") qs.set("back", joinedBack);
   return `/categories/${slug}?${qs.toString()}`;
+}
+
+function nextPageHref(slug: string, params: SearchParams, nextCursor: string): string {
+  const back = [...parseBack(params.back), params.cursor ?? ""];
+  return buildHref(slug, params, { cursor: nextCursor, back });
+}
+
+function prevPageHref(slug: string, params: SearchParams): string {
+  const back = parseBack(params.back);
+  const prevCursor = back[back.length - 1] ?? "";
+  return buildHref(slug, params, {
+    cursor: prevCursor || undefined,
+    back: back.slice(0, -1),
+  });
 }
 
 export default async function CategoryPage({
@@ -78,10 +112,22 @@ export default async function CategoryPage({
   const cartQuantities = await getRequestCartQuantities();
   const { CDN_BASE_URL } = getEnv();
 
+  // #498 — a subcategory has no children of its own (two-level cap), so its
+  // own tab row is its PARENT's children — its siblings, itself included —
+  // rather than nothing at all. A department (no parent) shows its own
+  // children, as before. `activeSlug` is whichever page is actually being
+  // viewed, so exactly one pill (or "All") is ever highlighted.
+  const tabParentSlug = category.parent?.slug ?? category.slug;
+  const tabs = category.parent?.children ?? category.children;
+  const scrollerActiveSlug = category.parent?.slug ?? category.slug;
+
+  const isFirstPage = !query.cursor;
+
   return (
     <main className="mx-auto max-w-7xl px-4 py-6">
-      {/* Departments: horizontal strip on top (arrow-scrolled). */}
-      <DepartmentScroller categories={allCategories} activeSlug={slug} />
+      {/* Departments: horizontal strip on top (arrow-scrolled). Highlights
+          the DEPARTMENT even when viewing one of its subcategories. */}
+      <DepartmentScroller categories={allCategories} activeSlug={scrollerActiveSlug} />
 
       <div className="mt-6 flex flex-col gap-6 md:flex-row">
         {/* Search & filters: vertical sidebar on the left. */}
@@ -94,7 +140,7 @@ export default async function CategoryPage({
 
         <section className="flex-1">
           <h1 className="mb-6 text-2xl font-semibold text-primary">{category.name}</h1>
-          <SubcategoryLinks subcategories={category.children} currentSlug={slug} />
+          <SubcategoryLinks tabs={tabs} parentSlug={tabParentSlug} activeSlug={slug} />
           <h2 className="sr-only">Products</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {items.map((product) => (
@@ -106,13 +152,25 @@ export default async function CategoryPage({
               />
             ))}
           </div>
-          {nextCursor && (
-            <Link
-              href={nextPageHref(slug, query, nextCursor)}
-              className="mt-6 inline-block rounded-full bg-action px-4 py-2 font-semibold text-white"
-            >
-              Next page
-            </Link>
+          {(nextCursor || !isFirstPage) && (
+            <div className="mt-6 flex gap-3">
+              {!isFirstPage && (
+                <Link
+                  href={prevPageHref(slug, query)}
+                  className="inline-block rounded-full border border-black/10 bg-white px-4 py-2 font-semibold text-primary hover:bg-surface-muted"
+                >
+                  Previous page
+                </Link>
+              )}
+              {nextCursor && (
+                <Link
+                  href={nextPageHref(slug, query, nextCursor)}
+                  className="inline-block rounded-full bg-action px-4 py-2 font-semibold text-white"
+                >
+                  Next page
+                </Link>
+              )}
+            </div>
           )}
         </section>
       </div>
