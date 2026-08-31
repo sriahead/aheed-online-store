@@ -51,6 +51,18 @@ every branch merges.
     `npm run dev`, where Next does not substitute it at all (the dev overlay owns the screen), so
     that step could never have observed what it claimed. This slice's `validation.md` uses
     `npm run preview` and forces real throws, per `CLAUDE.md`.
+  - **`/validate` found this slice's own R7 could not be true as written, and `/fix` corrected the
+    root cause.** R7 claimed a boundary's `console.error` gives `wrangler tail`/Workers Logs
+    visibility; it cannot, since `error.tsx`/`global-error.tsx` are Client Components and that call
+    runs inside a `useEffect`, which only ever executes in the browser after hydration — confirmed
+    live by forcing a throw under `npm run preview` and finding no boundary-naming line in the
+    Worker's own log store. Fixed by adding **`instrumentation.ts`** exporting `onRequestError`
+    (`tests/instrumentation.test.ts`, new), which Next.js calls server-side, once, per request that
+    throws, independent of which boundary displays the fallback — re-verified live, producing
+    exactly one `"Unhandled request error:", { path, routerKind, routeType, error }` line per throw.
+    Each boundary keeps its own `console.error` (Next's documented client-side pattern, and what
+    `tests/error-boundary.test.tsx` actually proves); `requirements.md`'s R7 and `validation.md`'s L7
+    are corrected to say which mechanism gives which guarantee.
 
 
 ### Documentation

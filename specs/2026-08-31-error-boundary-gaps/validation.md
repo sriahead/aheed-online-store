@@ -39,6 +39,7 @@ Every row names the requirement it proves and the command that proves it. Rows a
 |---|---|---|
 | A8 | — | `npm run lint`, `npm run format:check`, `npm run typecheck` and `npx vitest run` all pass, with no regression in the pre-existing suite. |
 | A9 | R5 | `tests/design-tokens-contrast.test.ts` still passes, i.e. the tokens these boundaries now consume are the audited ones. |
+| A10 | R7 | `tests/instrumentation.test.ts` asserts `instrumentation.ts`'s `onRequestError` calls `console.error` exactly once, passing the raw error object plus `{ path, routerKind, routeType }` from the request/context Next.js supplies. |
 
 ## Live rows — `npm run preview`
 
@@ -54,10 +55,19 @@ non-evidence #459 recorded.
 | L4 | R4 | Throw from `app/(storefront)/layout.tsx` itself. | The **root** `app/error.tsx` renders (no chrome — the layout is what failed), proving the group boundary cannot catch its own layout and the root fallback is not redundant. |
 | L5 | R9 | Throw from `app/layout.tsx`. | `global-error.tsx` renders a styled panel with its own `<html>`/`<body>` — styled, i.e. the `globals.css` import is doing its job. |
 | L6 | R6 | For each of L1–L5, read the served HTML. | The literal error string appears nowhere in the response body. |
-| L7 | R7 | For each of L1–L5, query the local Worker log store (`POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query`, `{"sql": "select * from logs where level = 'error'"}`). | Exactly one error line per throw, naming the boundary that caught it. |
+| L7 | R7 | Force a throw (any of L1/L3/L4/L5's segments), query the local Worker log store (`POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query`, `{"sql": "select * from logs where message like '%Unhandled request error%'"}`). | Exactly one line, from `instrumentation.ts`'s `onRequestError` — not from any boundary's own `console.error`, which cannot reach this log (see R7's corrected text). The line names the failing route (`path`), `routerKind` and `routeType`. |
 
-**Status: NOT YET RUN.** These belong to `/validate`, after the Clear. They are the rows #459 never
-had, so leaving them unexecuted here would repeat the defect this slice exists to close.
+**Status: RUN at `/validate` (2026-08-31), corrected at `/fix`.** L1, L3, L4, L5 confirmed via
+`npm run preview` (headless-Chrome full hydration for L1/L5; structural RSC-payload evidence plus a
+real staff sign-in for L3; structural RSC-payload evidence for L4). L6 confirmed clean across all
+four. **L7 as originally written could not pass — no boundary's `console.error` ever reaches the
+Worker log, by construction (see R7).** Fixed by adding `instrumentation.ts`; re-verified live
+against the dev preview: a forced throw at `/help` produced exactly one
+`"Unhandled request error:", { path: "/help", routerKind: "App Router", routeType: "render", error: { digest: ... } }`
+line in the Worker's local observability log. **L2 unverified** — the dev database has zero
+`VendorDomain` rows and only Aheed as an active vendor (SriMart seeding is opt-in via
+`SEED_SRIMART_HOST`, `docs/developer-portal/env-setup.md`); this is a missing environment fixture,
+not a code defect, and reseeding the dev DB was out of scope for this fix.
 
 ## Documentation rows
 

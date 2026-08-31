@@ -77,3 +77,45 @@ files, not observed), and the L2 two-host branding check.
   deployability on this adapter (`CLAUDE.md`, twice over: the `proxy.ts` case and the
   Turbopack/`@prisma/client/wasm` case). Adding files under `app/` is exactly the change class that
   has broken only at this step before.
+
+## Fix, after `/validate` (2026-08-31)
+
+`/validate` ran the live rows this slice's own notes above flagged as unproven. L1, L3, L4, L5, L6
+all confirmed clean under `npm run preview` (L1/L5 via headless-Chrome full hydration since
+`error.tsx`/`global-error.tsx` are Client Components and curl alone only sees the pre-hydration RSC
+payload; L3/L4 via structural RSC-payload evidence, L3 also requiring a real staff sign-in — the dev
+DB had no demo accounts, added via the project's own `npm run demo:accounts -- add`). L2 could not
+be run: the dev DB has zero `VendorDomain` rows (SriMart seeding is opt-in at `db:seed` time via
+`SEED_SRIMART_HOST`) — a missing environment fixture, not a code defect, left unverified rather than
+worked around by reseeding data outside this fix's scope.
+
+**L7 genuinely failed, and it was a code defect, not a validation-environment problem.** R7's own
+prose asserted a boundary's `console.error` would be visible via `wrangler tail`/Workers Logs. It
+cannot be: `error.tsx`/`global-error.tsx` are Client Components, and their `console.error` runs
+inside a `useEffect`, which only ever executes in the browser after hydration — this is true of
+every "use client" error boundary Next.js can produce, not a bug specific to this implementation.
+Confirmed live: forcing a throw and querying the Worker's local observability log store found no
+line naming any boundary, only Next's own generic per-request framework error log (present with or
+without this PR's code, carrying no route context).
+
+Fixed at the root cause — added `instrumentation.ts` exporting `onRequestError`
+(`tests/instrumentation.test.ts`, new), which Next.js calls **server-side**, once, for every request
+whose render/route/action throws, independent of which boundary later displays the fallback. This is
+Next's documented mechanism for exactly this ("integrate observability tools... track... errors to
+any custom provider" — `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/
+instrumentation.md`), and `@opennextjs/cloudflare` explicitly patches Next's build to wire it up
+(`node_modules/@opennextjs/cloudflare/dist/cli/build/patches/plugins/instrumentation.js`), so it
+runs under this stack. Re-verified live: a forced throw at `/help` produced exactly one
+`"Unhandled request error:", { path, routerKind, routeType, error }` line in the Worker's log.
+
+Each boundary's own `console.error` call was kept, not removed — it is Next's own documented
+client-side pattern (useful later for a RUM/browser-error tool), it is what the unit tests in
+`tests/error-boundary.test.tsx` actually prove, and removing it would trade a true, narrower
+guarantee for nothing. What changed is which claim it's allowed to make: `requirements.md`'s R7 is
+corrected in place to say plainly that a boundary's call cannot be the source of Worker-log
+visibility, and that `instrumentation.ts` is. `validation.md`'s L7 row and status line are corrected
+to match what was actually run and found.
+
+Gates re-run after the fix: `npm run lint`, `npm run typecheck`, `npm run format:check`,
+`npx vitest run` (**764 passed / 62 files** — +1 for `tests/instrumentation.test.ts`), all pass; the
+working tree is clean (every temporary throw used to force a boundary was reverted after use).

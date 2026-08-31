@@ -41,8 +41,21 @@ the kind of string that must not reach a shopper.
 
 ## R7 — The error is logged for observability
 
-Each boundary calls `console.error` exactly once per distinct error, passing the raw error object,
-so `wrangler tail` and Workers Logs can see what a user could not.
+Each boundary calls `console.error` exactly once per distinct error, passing the raw error object.
+**Corrected 2026-08-31 (`/validate`, `/fix`) — a boundary's own call cannot be the mechanism that
+gives `wrangler tail`/Workers Logs visibility, as originally written here.** `error.tsx` and
+`global-error.tsx` are Client Components, and each boundary's `console.error` runs inside a
+`useEffect` — which only ever executes in the visitor's browser after hydration. It structurally
+cannot reach the Worker's own console/log stream, no matter how the call is written. Confirmed live
+under `npm run preview`: forcing a throw and querying the Worker's local observability log store
+showed no line naming any boundary — only Next's own generic per-request framework error log, which
+this PR's code does not produce and cannot be relied on for context (it carries no route/router
+info). The actual `wrangler tail`/Workers Logs visibility this requirement wants comes from
+`instrumentation.ts`'s `onRequestError` export, which Next.js calls **server-side**, once, for every
+request whose render/route/action throws — independent of which boundary later displays the
+fallback client-side. Each boundary's own `console.error` stays (it's Next's own documented pattern
+for client-side error reporting, e.g. to a RUM tool later), but it satisfies a different, narrower
+claim than "Workers Logs can see it" — that claim is now `instrumentation.ts`'s to keep.
 
 ## R8 — `reset()` is wired
 
