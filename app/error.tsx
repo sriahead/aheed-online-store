@@ -1,9 +1,25 @@
 "use client";
 
 import { useEffect } from "react";
-import { AlertTriangle } from "lucide-react";
+import { ErrorPanel } from "@/components/errors/ErrorPanel";
 
-export default function ErrorPage({
+/**
+ * The outer in-layout fallback (#459, corrected in #478).
+ *
+ * This is NOT the boundary most page crashes reach. `app/(storefront)/error.tsx`
+ * and `app/(admin)/error.tsx` sit closer to their pages and keep the surrounding
+ * chrome; this one catches what they structurally cannot — a throw from a route
+ * group's own layout (e.g. `getCurrentVendorProfile()` failing in
+ * `app/(storefront)/layout.tsx`), since a boundary inside a layout cannot catch
+ * that layout's own error.
+ *
+ * So by the time this renders, the chrome genuinely could not be built, and the
+ * copy says so rather than pretending otherwise. #459's plan claimed this file
+ * rendered "inside the existing root layout, meaning the site navigation, header
+ * and footer will still be visible" — `app/layout.tsx` renders `{children}` and
+ * nothing else, so that was never true of any version of this file.
+ */
+export default function RootError({
   error,
   reset,
 }: {
@@ -11,24 +27,14 @@ export default function ErrorPage({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Caught by nested error boundary:", error);
+    console.error("Caught by root error boundary:", error);
   }, [error]);
 
   return (
-    <main className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center bg-surface-muted text-primary">
-      <div className="rounded-full bg-red-100 p-4 text-red-600">
-        <AlertTriangle className="h-8 w-8" aria-hidden="true" />
-      </div>
-      <h1 className="text-2xl font-bold tracking-tight">Something went wrong</h1>
-      <p className="max-w-md text-sm text-primary/70">
-        We encountered an unexpected error while trying to load this page.
-      </p>
-      <button
-        onClick={() => reset()}
-        className="mt-2 inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
-      >
-        Try again
-      </button>
-    </main>
+    <ErrorPanel
+      title="Something went wrong"
+      message="We couldn't load this page. Trying again may help; if it keeps happening, please contact support."
+      onRetry={reset}
+    />
   );
 }

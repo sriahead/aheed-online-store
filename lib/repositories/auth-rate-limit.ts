@@ -3,6 +3,14 @@ import type { getPrisma } from "@/lib/db";
 const WINDOW_MS = 60_000;
 const MAX_ATTEMPTS = 5;
 
+// #468 — this table had no retention sweep at all and grew without bound. Retention only
+// has to exceed WINDOW_MS; SWEEP_PROBABILITY is deliberately low so the sweep's extra
+// deleteMany doesn't add latency to every request. deleteMany is confirmed safe on the
+// HTTP adapter (getPrisma()) per CLAUDE.md — unlike updateMany/createMany — so no
+// getPrismaWs() is needed here.
+const RETENTION_MS = 60 * 60 * 1000;
+const SWEEP_PROBABILITY = 0.01;
+
 /** SHA-256 of the caller's IP — see AuthenticationAttempt's schema comment for why hashed, not raw. */
 async function hashIp(ip: string): Promise<string> {
   const bytes = new TextEncoder().encode(ip);
@@ -37,5 +45,12 @@ export async function checkAuthRateLimit(
   }
 
   await prisma.authenticationAttempt.create({ data: { vendorId, ipHash } });
+
+  if (Math.random() < SWEEP_PROBABILITY) {
+    await prisma.authenticationAttempt.deleteMany({
+      where: { createdAt: { lt: new Date(Date.now() - RETENTION_MS) } },
+    });
+  }
+
   return { allowed: true };
 }
