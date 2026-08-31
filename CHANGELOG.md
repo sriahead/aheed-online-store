@@ -6,6 +6,65 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+- **`#478`, `#479`, `#467` — the three gaps `#459`'s error-boundary slice left behind**
+  (`specs/2026-08-31-error-boundary-gaps/`). Found by re-reading that artifact against the code at
+  `/orient`, not against its own build notes, which recorded "Deviations from Spec: None."
+  - **`app/error.tsx` preserved neither site chrome nor vendor branding (#478)**, while `#459`'s
+    `plan.md` claimed it "is rendered *inside* the existing root layout, meaning the site
+    navigation, header, and footer will still be visible." `app/layout.tsx` renders
+    `<html><body>{children}</body></html>` and nothing else — the header and footer live one level
+    down in `app/(storefront)/layout.tsx` via `StorefrontChrome`, and `brandStyle()` (ADR-004 slice
+    4) is applied in exactly two places, `StorefrontChrome.tsx:30` and `app/(admin)/layout.tsx:41`.
+    A root `error.tsx` is a sibling of the root layout, so it replaced the whole route-group subtree
+    including both. **SriMart rendered Aheed's green on every 500**, and nothing in
+    `lint`/`typecheck`/`test` sees a second vendor's output. Fixed by adding
+    `app/(storefront)/error.tsx` and `app/(admin)/error.tsx`, which sit *inside* their group layouts
+    and so keep header, nav, footer and the vendor's injected primitives. The root `app/error.tsx`
+    is deliberately kept, not replaced: a boundary inside a layout cannot catch a throw *from* that
+    layout, so it remains the outer fallback for e.g. `getCurrentVendorProfile()` failing — which is
+    what makes the layering intentional rather than incidental.
+  - **Both boundaries used stock Tailwind red instead of the audited danger tokens (#479)**, so R3
+    ("must use the existing design system") was never met. `bg-red-100 text-red-600` became
+    `bg-danger-tint text-danger`. Those token literals are not cosmetic: P7 closeout (#251/#217)
+    darkened `--color-danger` off the raw brand red precisely because `#d32f2f` on the red tint
+    measured 4.36:1 and failed WCAG 2.2 AA at `text-sm`, and `tests/design-tokens-contrast.test.ts`
+    asserts that pair. The stock pairing sat outside that audit entirely. Every colour the new
+    shared panel uses is an already-audited pair. `app/not-found.tsx` — the sibling these files were
+    visibly copied from — had been using tokens all along.
+  - **Neither boundary had a test, and no validation row ever rendered one (#467).** The evidence
+    recorded for `#459` was a `200 OK` on a healthy page, which exercises no boundary at all: a
+    boundary only renders when something throws beneath it, so that `200` was equally consistent
+    with the files not existing. `tests/error-boundary.test.tsx` adds **23 tests** across all four
+    boundaries. The load-bearing ones assert that an `Error` carrying a config message, a `digest`
+    and a `stack` leaks none of the three into `textContent` **or** `innerHTML` — the surface
+    `#430`'s fail-closed throw actually lands on — plus one `console.error` per throw, `reset()`
+    wiring, and that no `red-<n>00` utility can come back.
+  - **New `components/errors/ErrorPanel.tsx`** holds the branded markup once, so the four boundaries
+    cannot drift apart the way the original two did. It is never passed the error object at all —
+    the structural half of the no-leak requirement, since a future "show details" toggle would have
+    to add a prop rather than arrive quietly.
+  - **`#459`'s own spec is corrected in place**, not left to be re-read as true: `plan.md` §2's
+    header/footer claim and `build-notes.md` §3's "Deviations from Spec: None" both now say what was
+    actually the case, pointing at this slice. **No schema change, no migration.**
+  - `#459`'s `validation.md` had also asked for `global-error.tsx` to be verified under
+    `npm run dev`, where Next does not substitute it at all (the dev overlay owns the screen), so
+    that step could never have observed what it claimed. This slice's `validation.md` uses
+    `npm run preview` and forces real throws, per `CLAUDE.md`.
+  - **`/validate` found this slice's own R7 could not be true as written, and `/fix` corrected the
+    root cause.** R7 claimed a boundary's `console.error` gives `wrangler tail`/Workers Logs
+    visibility; it cannot, since `error.tsx`/`global-error.tsx` are Client Components and that call
+    runs inside a `useEffect`, which only ever executes in the browser after hydration — confirmed
+    live by forcing a throw under `npm run preview` and finding no boundary-naming line in the
+    Worker's own log store. Fixed by adding **`instrumentation.ts`** exporting `onRequestError`
+    (`tests/instrumentation.test.ts`, new), which Next.js calls server-side, once, per request that
+    throws, independent of which boundary displays the fallback — re-verified live, producing
+    exactly one `"Unhandled request error:", { path, routerKind, routeType, error }` line per throw.
+    Each boundary keeps its own `console.error` (Next's documented client-side pattern, and what
+    `tests/error-boundary.test.tsx` actually proves); `requirements.md`'s R7 and `validation.md`'s L7
+    are corrected to say which mechanism gives which guarantee.
+
+
 ### Documentation
 - **`/document` closeout for `#434`, `#435`.** Reconciles `specs/roadmap.md` with what actually
   shipped and, unlike most prior closeouts, with what actually reached production in the same

@@ -1,9 +1,25 @@
 "use client";
 
 import { useEffect } from "react";
-import { AlertTriangle } from "lucide-react";
+import { ErrorPanel } from "@/components/errors/ErrorPanel";
 import "./globals.css";
 
+/**
+ * The outermost boundary (#459). Catches a throw in `app/layout.tsx` itself, so
+ * it REPLACES that layout and must supply its own `<html>`/`<body>` and its own
+ * stylesheet import.
+ *
+ * KNOWN LIMIT, not an oversight (#478): this page carries no per-vendor
+ * branding. `brandStyle()` runs in `StorefrontChrome` and `app/(admin)/
+ * layout.tsx`, both of which are below the root layout that just failed, so
+ * `--color-primary` and friends resolve to `tokens.css`'s `:root` defaults —
+ * Aheed's palette, for every vendor. Nothing can be done about that here: the
+ * element that would carry the vendor's custom properties is the one that
+ * threw. The three lower boundaries do keep their vendor's branding.
+ *
+ * The font is likewise absent — `--font-poppins` is injected by `next/font` on
+ * the root layout's `<html>`, so `--font-sans` falls back to its system stack.
+ */
 export default function GlobalError({
   error,
   reset,
@@ -18,22 +34,11 @@ export default function GlobalError({
   return (
     <html lang="en">
       <body>
-        <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center bg-surface-muted text-primary">
-          <div className="rounded-full bg-red-100 p-4 text-red-600">
-            <AlertTriangle className="h-8 w-8" aria-hidden="true" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">Something went wrong</h1>
-          <p className="max-w-md text-sm text-primary/70">
-            We encountered a critical error. Please try again or contact support if the problem
-            persists.
-          </p>
-          <button
-            onClick={() => reset()}
-            className="mt-2 inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
-          >
-            Try again
-          </button>
-        </main>
+        <ErrorPanel
+          title="Something went wrong"
+          message="We hit a problem loading the store. Trying again may help; if it keeps happening, please contact support."
+          onRetry={reset}
+        />
       </body>
     </html>
   );
