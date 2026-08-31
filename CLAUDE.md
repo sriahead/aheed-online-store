@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.10.0"
-updated: 2026-08-29
+version: "1.11.0"
+updated: 2026-08-31
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -545,7 +545,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   Before merging a slice that adds or edits either directory, a real check is `npm run
   kms:assemble:internal && (cd kms/site-internal && npx next build --webpack)` — not just the root
   `lint`/`build`.
-- **The same pipeline breaks on a bare `{...}` in prose, and this one has now cost a build twice.**
+- **The same pipeline breaks on a bare `{...}` in prose, and this has now cost a build THREE times.**
   MDX evaluates `{anything}` outside backticks as a **JSX expression**, so quoting a code fragment
   the natural way — `"Save {formatPrice(saving)}"` inside double quotes — compiles fine, passes every
   root gate, and then dies at *prerender* with `ReferenceError: formatPrice is not defined` naming
@@ -554,10 +554,16 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `` `bundles/{bundleId}/{uuid}.webp` `` is already safe *because* it is in backticks — the trap is
   the unbackticked case, not the braces themselves. First hit at P8.5e (PR #360, "escape bare
   curly-brace reference breaking `deploy-docs-internal`"); hit again at P8.5c's `/build-notes`,
-  caught before merge only because that slice actually ran the check above. **Run the two-command
-  check, and read its real exit status** — piping it through `tail` reports the pipe's success, not
-  the build's, which is how a `Next.js build worker exited with code: 1` can look like `exited with
-  code 0`.
+  caught before merge only because that slice actually ran the check above. **A third hit, in the
+  storefront-browsing-ux-fixes slice (#496, 2026-08-31), is the more instructive one**: it wasn't an
+  edit to an existing doc, it was a bare `"Shop {Department}"` written into a brand-new `plan.md`'s
+  *first draft*, describing a UI button's own label in prose. Writing fresh spec prose is exactly as
+  exposed as editing an existing one — there is no "this file is new, so it's fine" exemption. Caught
+  the same way as the second hit: the two-command check below, run before push, not discovered via a
+  failed `deploy-docs-internal` after merge. **Run the two-command check on every slice that adds or
+  edits a spec file, including the very first one you write for it, and read its real exit status** —
+  piping it through `tail` reports the pipe's success, not the build's, which is how a `Next.js build
+  worker exited with code: 1` can look like `exited with code 0`.
 - **A spec's front-matter `id` cannot contain a literal `.`** — `kms/schema/frontmatter.ts`'s `id`
   regex is `^[a-z0-9-]+$`. A phase name that already has a dot (`P8.1a`, `P7.5a`, `P6.5`, …) is easy
   to copy straight into `id:` when writing a new `plan.md` at `/spec`, and none of
