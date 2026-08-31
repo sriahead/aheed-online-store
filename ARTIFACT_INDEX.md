@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-31T09:40:06.264Z` · commit `7b85cc3` · `123` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-31T09:49:41.632Z` · commit `3e141b0` · `123` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -26,7 +26,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Product Requirements & Feature Workflows](docs/business-analysis/product-requirements.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for Business Analysts and Project Managers detailing the core business logic, feature requirements, and workflows. |
 | [UI/UX & Design Guidelines](docs/design-ux/ux-guidelines.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for UI/UX designers detailing the design system, storefront customization, and the role of the ui-ref prototype. |
 | [Architecture & System Design Overview](docs/developer-portal/architecture-overview.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A high-level map of the platform's architecture, system design, and database design, acting as a directory to the deeper technical specifications. |
-| [Environment Setup — Secrets & Config (staging / production / dev)](docs/developer-portal/env-setup.md) | doc | 1.8.0 | 2026-08-18 | approved | internal | How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier. |
+| [Environment Setup — Secrets & Config (staging / production / dev)](docs/developer-portal/env-setup.md) | doc | 1.9.0 | 2026-08-31 | approved | internal | How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier. |
 | [NFR Baseline — measured performance against the Gate-3 targets](docs/developer-portal/nfr-baseline.md) | doc | 1.2.0 | 2026-08-31 | approved | internal | Measurements against mission.md's LCP and API p95 targets, plus the index/query review behind them — including a 4.7x LCP breach from a 1.9 MB vendor logo — and, from 2026-08-31, a re-measurement of the query paths at roughly 2,000 products rather than 22. |
 | [Onboarding](docs/developer-portal/onboarding.md) | doc | 1.1.0 | 2026-08-06 | approved | internal | 5-minute start-here guide — where the project actually is, prerequisites, local setup, and how to get a new developer running, tested, and branching independently. |
 | [Manual Regression Test Register](docs/developer-portal/regression-tests.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Manual regression test cases for known critical issues — the hybrid Prisma client contract under Cloudflare Worker connection limits, and cart persistence across a cancelled Stripe checkout. |

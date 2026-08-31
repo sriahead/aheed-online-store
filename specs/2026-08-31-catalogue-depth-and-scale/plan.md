@@ -119,8 +119,16 @@ that resolved its own client through `lib/db` could not be measured this way at 
   resolves **`@neondatabase/serverless` 1.1.0** and **`@prisma/adapter-neon` 7.9.1** against
   `@prisma/client` 6.19.3 — a cross-major adapter/client pairing the guardrails never sanctioned.
   This slice writes bulk data through that exact adapter, so it is worth settling, but it is a
-  separate decision and needs its own issue and `/propose`. **Flagged to the human at `/spec`; not
-  resolved here.**
+  separate decision and needs its own issue and `/propose`. **Filed as #491.** Note the slice went
+  on to write ~2,000 rows through that stack with no failures, so this is a guardrail-versus-reality
+  mismatch rather than an observed defect.
+
+- **A refusal guard for the generated seed path, filed as #490 rather than built.**
+  `scripts/verify-repository-injection.ts` already refuses outright to run against a host named in
+  `secrets/staging.vars`/`secrets/production.vars`; R13's print-and-trust-a-human is the weaker
+  control, and `CLAUDE.md`'s P5a incident is precisely a human misreading a target. Deferred because
+  scoping the guard to the generated path — the curated seed is legitimately run against staging and
+  production — is a design decision rather than a build detail.
 - **Which Neon branch the generated rows land in.** The dev branch is the intended target. `CLAUDE.md`
   records that `.env` and `.dev.vars` have previously agreed with each other while both pointed at
   **production** (the P5a incident), so R13 and R19 make the resolved host an explicit, recorded
