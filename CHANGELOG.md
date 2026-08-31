@@ -6,6 +6,48 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **`#489` — a two-level category tree in the seed, and an env-gated ~2,000-product generated
+  catalogue, so the app can be measured at realistic row counts**
+  (`specs/2026-08-31-catalogue-depth-and-scale/`). `Category.parentId` has existed since P2a and
+  `lib/repositories/categories.ts` caps the tree at exactly two levels, but **no fixture had ever
+  created a single subcategory** — the capability was built and entirely unexercised. The seed now
+  creates 31 (27 Aheed, 4 SriMart) in their own pass keyed on the child's slug, so a database seeded
+  before this slice also gains them.
+  - `SEED_SCALE_PRODUCTS=2000` adds 2,000 deterministic generated products (seeded PRNG, not
+    `Math.random()`, so a recorded measurement is reproducible); `SEED_REMOVE_GENERATED=1` undoes it.
+    Aheed-only, so SriMart stays small and cross-vendor isolation checks stay fast.
+  - The generated path shares **one image object per subcategory instead of one per product** (27
+    uploads, not 2,000 — and `refreshProductImages` ran unconditionally on every seed run), and uses
+    `createMany` instead of 2,000 sequential nested creates. `createMany` is safe here specifically
+    because the seed runs in real Node on the WebSocket adapter, **not** the HTTP adapter `#382`
+    forbids it on. 2,000 products seed in ~22s.
+  - The generator lives in `prisma/generate-catalogue.ts`, not in `prisma/seed.ts`, because
+    `seed.ts` calls `main()` at module scope — a test importing it from there would have run the
+    whole seed against a real database as a side effect of `npx vitest run`.
+  - New `scripts/measure-catalogue-queries.ts` measures the Prisma read paths and prints a
+    catalogue-shape summary. Kept separate from `scripts/measure-nfr.ts`, which is deliberately
+    HTTP-only so it can run from a clean checkout (P7d R4/R6).
+  - **Removes the precondition that has blocked `#286` since P2** ("should not be built against seed
+    fixtures"), and with it the blocker on `#396`.
+
+### Changed
+
+- **`docs/developer-portal/nfr-baseline.md` gains a query re-measurement at catalogue scale
+  (`#489`).** Everything previously recorded was measured at `Product` = 22, where that document
+  itself concludes "none of them is index-sensitive yet" — so the headline `API p95 < 400ms` verdict
+  was measuring Neon's round-trip, not this app's queries. Re-measured on the dev branch at 2,018
+  products: **every path still meets the target**, worst 95.4 ms (4.2x margin), so **no remediation
+  issue was filed because there was no breach**. Product search is the only real signal (p95 75.1 ms
+  to 95.4 ms, +27%) and is the only path the review marks `scan`. `listProducts` came out *faster* at
+  ~100x the rows, recorded explicitly as evidence the figures remain round-trip dominated rather than
+  as an improvement. Existing tables untouched; `listOrdersForUser` recorded as not measurable (the
+  dev branch holds no orders with a `userId`).
+- **`docs/developer-portal/env-setup.md`** documents the two new seed vars and, for the first time, a
+  **dev** `SEED_AHEED_HOST`/`SEED_SRIMART_HOST` pair — only staging and production pairs were
+  documented, and neither var was set anywhere, so SriMart had never been seeded into the dev branch.
+
 ### Fixed
 - **`#468`, `#469`, `#481`, `#482`, `#483` — the P9.1 auth rate limiter has never functioned, for
   three independent, compounding reasons, since it shipped on 2026-08-29**

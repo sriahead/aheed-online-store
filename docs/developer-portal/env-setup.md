@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.8.0"
-updated: 2026-08-18
+version: "1.9.0"
+updated: 2026-08-31
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -71,6 +71,17 @@ SEED_SRIMART_HOST="srimart.nocaped.com" \
 DIRECT_URL="<prod-direct>" npm run db:seed
 ```
 
+For a **dev** database there is no deployed host, so use the local preview origin and a distinct
+subdomain for SriMart (reachable under `npm run preview` with a `Host:` header, the same way
+`CLAUDE.md` checks SriMart's branding):
+
+```bash
+# dev
+SEED_AHEED_HOST="localhost:8787" \
+SEED_SRIMART_HOST="srimart.localhost:8787" \
+npm run db:seed
+```
+
 - The SriMart demo vendor + its catalogue + its `VendorDomain` are seeded **only when both** vars are
   set — otherwise the DB could end up with 2 vendors but a missing host, which would send Aheed's own
   host to `/coming-soon`.
@@ -78,6 +89,32 @@ DIRECT_URL="<prod-direct>" npm run db:seed
   single vendor, an unmatched host falls back to it (transition safety).
 - The SriMart Worker custom domains (`srimart.nocaped.com`, `srimart-staging.nocaped.com`) are
   declared in `wrangler.toml` so `wrangler deploy` doesn't tear them down.
+
+### Generated catalogue for scale testing (#489)
+
+Two optional vars control a synthetic catalogue used to exercise the app at realistic row counts.
+**Both are opt-in and Aheed-only** — SriMart deliberately stays small so a slow query measured
+against Aheed is provably about row count rather than about multi-tenancy.
+
+```bash
+# add ~2,000 generated products to Aheed (dev databases only)
+SEED_AHEED_HOST="localhost:8787" SEED_SRIMART_HOST="srimart.localhost:8787" \
+SEED_SCALE_PRODUCTS=2000 npm run db:seed
+
+# undo it — removes exactly the generated set, leaving curated products and all categories
+SEED_AHEED_HOST="localhost:8787" SEED_SRIMART_HOST="srimart.localhost:8787" \
+SEED_REMOVE_GENERATED=1 npm run db:seed
+```
+
+- Generated products carry a `gen-` slug prefix; that prefix is what both the idempotency check and
+  the removal path key on. No curated fixture slug uses it.
+- Re-running with the same `SEED_SCALE_PRODUCTS` is a no-op, so it is safe in a loop.
+- Rows are **deterministic** — the same value always produces the same products — because the
+  figures in `nfr-baseline.md` are only meaningful if the catalogue behind them is reproducible.
+- Image objects are shared one-per-subcategory rather than one-per-product, so 2,000 products cost
+  27 uploads, not 2,000. The seed prints its total `putObject` count on completion.
+- **Use a dev database.** The seed prints the resolved host before the first generated write so it
+  can be eyeballed; making it *refuse* a staging/production host outright is tracked as **#490**.
 
 ### Per-vendor branding/config/delivery (ADR-004 slice 4)
 
