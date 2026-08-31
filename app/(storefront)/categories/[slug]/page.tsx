@@ -6,6 +6,7 @@ import { getRequestCartQuantities } from "@/lib/cart-summary";
 import { getEnv } from "@/lib/config";
 import { ProductCard } from "@/components/product/ProductCard";
 import { ProductFilterForm } from "@/components/product/ProductFilterForm";
+import { SubcategoryLinks } from "@/components/product/SubcategoryLinks";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
 
@@ -89,6 +90,7 @@ export default async function CategoryPage({
 
         <section className="flex-1">
           <h1 className="mb-6 text-2xl font-semibold text-primary">{category.name}</h1>
+          <SubcategoryLinks subcategories={category.children} />
           <h2 className="sr-only">Products</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {items.map((product) => (

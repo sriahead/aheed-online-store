@@ -8,6 +8,22 @@ every branch merges.
 
 ### Added
 
+- **`#494` — storefront subcategory navigation, so a subcategory (and anything assigned to it) is
+  actually reachable** (`specs/2026-08-31-storefront-subcategory-navigation/`).
+  `lib/repositories/categories.ts`'s `getCategoryBySlug` has always fetched a category's `children`
+  ("the only shape the storefront can render", per its own comment), but no page ever rendered them
+  and nothing linked to a subcategory's URL — found live on staging right after `#489` seeded 27
+  Aheed subcategories: `/categories/groceries` showed only its 2 directly-assigned products, none of
+  the products under its `rice-grains`/`lentils-pulses`/`cooking-oils` children, which were only
+  reachable by typing the URL directly or via search. New `components/product/SubcategoryLinks.tsx`
+  (a small presentational component, matching the existing `DepartmentScroller`/`DepartmentHero`
+  pattern) renders a category's children as clickable links above its product grid, and renders
+  nothing when there are none — which is always true for a subcategory itself, since the tree is
+  capped at two levels. No repository, service or schema change: the data was already fetched. The
+  admin side already worked (`components/staff/CategoryForm.tsx`'s parent picker), so anything
+  admin-created is now visible on the very next page load — the route is already `force-dynamic`
+  with no caching layer to invalidate.
+
 - **`#489` — a two-level category tree in the seed, and an env-gated ~2,000-product generated
   catalogue, so the app can be measured at realistic row counts**
   (`specs/2026-08-31-catalogue-depth-and-scale/`). `Category.parentId` has existed since P2a and
