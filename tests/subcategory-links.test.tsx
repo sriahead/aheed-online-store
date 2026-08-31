@@ -12,6 +12,11 @@ import type { CategorySummary } from "@/lib/repositories/categories";
  * array renders nothing at all (a subcategory has none of its own — the tree
  * is capped at two levels), and a non-empty one renders one real link per
  * entry.
+ *
+ * #496 — a parent category page now aggregates its own products with every
+ * child's (see `listProductsByCategory`'s array parameter), so the leading
+ * "All" pill exists to make that aggregation visually explicit rather than
+ * silent, and links back to the current page itself.
  */
 
 const SUBCATEGORIES: CategorySummary[] = [
@@ -24,12 +29,12 @@ afterEach(cleanup);
 
 describe("SubcategoryLinks", () => {
   it("renders nothing at all for an empty list (R1)", () => {
-    const { container } = render(<SubcategoryLinks subcategories={[]} />);
+    const { container } = render(<SubcategoryLinks subcategories={[]} currentSlug="groceries" />);
     expect(container.firstChild).toBeNull();
   });
 
   it("renders one link per subcategory, with the correct href and name (R2)", () => {
-    render(<SubcategoryLinks subcategories={SUBCATEGORIES} />);
+    render(<SubcategoryLinks subcategories={SUBCATEGORIES} currentSlug="groceries" />);
 
     for (const category of SUBCATEGORIES) {
       const link = screen.getByRole("link", { name: category.name });
@@ -37,8 +42,16 @@ describe("SubcategoryLinks", () => {
     }
   });
 
-  it("renders exactly as many links as subcategories, no more", () => {
-    render(<SubcategoryLinks subcategories={SUBCATEGORIES} />);
-    expect(screen.getAllByRole("link")).toHaveLength(SUBCATEGORIES.length);
+  it("renders an 'All' pill linking to the current page, marked as the current page (R3)", () => {
+    render(<SubcategoryLinks subcategories={SUBCATEGORIES} currentSlug="groceries" />);
+
+    const allLink = screen.getByRole("link", { name: "All" });
+    expect(allLink.getAttribute("href")).toBe("/categories/groceries");
+    expect(allLink.getAttribute("aria-current")).toBe("page");
+  });
+
+  it("renders exactly one link per subcategory plus the 'All' pill, no more", () => {
+    render(<SubcategoryLinks subcategories={SUBCATEGORIES} currentSlug="groceries" />);
+    expect(screen.getAllByRole("link")).toHaveLength(SUBCATEGORIES.length + 1);
   });
 });

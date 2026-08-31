@@ -8,6 +8,20 @@ every branch merges.
 
 ### Added
 
+- **`#496` — a department page now shows everything in it, four more top-level departments, a
+  persistent "Shop" link, and a bigger hero slider** (`specs/2026-08-31-storefront-browsing-ux-fixes/`).
+  Four related gaps found by live review right after `#494` shipped: (1) a department's own page
+  (`/categories/fruit-veg`) showed only its 2 directly-assigned curated products, none of the
+  products under its subcategories, because `listProductsByCategory` matched an exact `categoryId` —
+  it now takes an array and aggregates a department with every one of its children, and
+  `SubcategoryLinks` gained a leading "All" pill making that aggregation visible rather than a silent
+  behaviour change; (2) the top department scroller had only 9 items, not enough to overflow a
+  typical viewport and actually need its scroll arrows — four more real curated departments (Frozen
+  Foods, Health & Beauty, Baby & Kids, Pet Supplies) added to `prisma/seed.ts`; (3) the landing page
+  had no persistent link into `/categories` at all (its "Shop List" link is deliberately hidden
+  there) — a new "Shop" link in the header fixes that, visible on every non-portal route; (4) the
+  landing hero's department slider was capped at a fixed 28rem regardless of viewport — now an even
+  `lg:grid-cols-2` split.
 - **`#494` — storefront subcategory navigation, so a subcategory (and anything assigned to it) is
   actually reachable** (`specs/2026-08-31-storefront-subcategory-navigation/`).
   `lib/repositories/categories.ts`'s `getCategoryBySlug` has always fetched a category's `children`

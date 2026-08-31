@@ -119,7 +119,7 @@ export interface AvailableSpecialities {
 
 export interface ProductRepository {
   listByCategory(
-    categoryId: string,
+    categoryIds: string[],
     opts: { take: number; cursor?: string } & ProductFilters,
   ): Promise<ProductPage>;
   search(
@@ -254,16 +254,24 @@ async function findPage(
   };
 }
 
+/**
+ * #496 — takes an array, not a single id, so the storefront category page can
+ * aggregate a department's own products with every one of its subcategories'
+ * products in one query, rather than showing only the 2-3 products a
+ * department happens to hold directly. A single category still passes a
+ * one-element array; a subcategory (which has no children of its own, the
+ * tree being capped at two levels) always calls this with exactly its own id.
+ */
 export async function listProductsByCategory(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
-  categoryId: string,
+  categoryIds: string[],
   { take, cursor, ...filters }: { take: number; cursor?: string } & ProductFilters,
 ): Promise<ProductPage> {
   return findPage(
     prisma,
     vendorId,
-    { vendorId, categoryId, isActive: true, ...buildFilterWhere(filters) },
+    { vendorId, categoryId: { in: categoryIds }, isActive: true, ...buildFilterWhere(filters) },
     { take, cursor },
   );
 }
