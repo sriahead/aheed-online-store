@@ -121,6 +121,22 @@ every branch merges.
   moved to `Done`** on Project #2, auto-triggered by the promotion merge with no manual
   reconciliation needed. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt; `npm run sdd:audit` re-run and
   exits 0.
+- **`/document` closeout for `#478`, `#479`, `#467`, `#468`, `#469`, `#481`, `#482`, `#483`.**
+  Reconciles `specs/roadmap.md` with the two staging builds and the one promotion `sdd:audit`
+  reported as undocumented: **PR #480** (error boundary gaps, merge `c9170f4`, `staging`), **PR
+  #485** (P9.1 auth rate limiter fix, merge `8d2bbd4`, `staging`), and **PR #486** (promotion,
+  merge `b919650`, `staging -> main`) — plus **PR #477** (P9.2 closeout documentation, merge
+  `a9f178c`, `staging -> main`), which had also reached production undocumented. `gates` was green
+  on PR #480, PR #485 and PR #486; `deploy-staging`, `deploy-docs-internal` and `deploy-production`
+  all confirmed green, with production `/api/health` reporting commit `b919650` and `db.ok: true`
+  after the promotion. `deploy-staging`'s first attempt on PR #485 failed with a transient `P1001`
+  against staging's direct Neon endpoint — a local `prisma migrate status` against the identical
+  `DIRECT_URL` succeeded seconds later, confirming the database was reachable and the failure was a
+  CI-runner network blip rather than a real outage; `gh run rerun --failed` then succeeded.
+  Recorded in `CLAUDE.md`'s branch-strategy section so a future `P1001` there gets a local-check
+  first, not a blind retry. **All eight issues closed and moved to `Done`** on Project #2,
+  auto-triggered by the PR #486 promotion merge. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt;
+  `npm run sdd:audit` and `npm run kms:validate` both re-run and exit clean.
 
 ### Added
 - **`#459` — Global 500 Error Boundary.**
