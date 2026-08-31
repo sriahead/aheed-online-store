@@ -191,6 +191,23 @@ every branch merges.
 
 
 ### Documentation
+- **`/document` closeout for `#494`, `#496`, `#498`.** Reconciles `specs/roadmap.md` with three
+  staging builds `npm run sdd:audit` reported missing their change-log row: **PR #495**
+  (subcategory navigation, merge `4c64ea4`), **PR #497** (category aggregation, more departments, a
+  shop link, a bigger hero, merge `70c047b`), and **PR #499** (bundle card styling, a neutral
+  bundles heading, keyset "Previous" pagination, and subcategory tabs everywhere, merge `d2c242a`).
+  Each was a rapid live-review follow-on to the one before it — clicking through what the previous
+  slice actually shipped surfaced the next layer of gaps every time, rather than one pass covering
+  the whole storefront-browsing area. **A `CLAUDE.md` lesson strengthened**: the bare-`{...}`-in-MDX
+  trap (previously hit twice, both times editing an *existing* doc) recurred a third time inside
+  `#496`'s own brand-new `plan.md`, on its first draft — proof that writing fresh spec prose is
+  exactly as exposed as editing an existing file, with no "this is new" exemption. `gates` green on
+  all three PRs; `deploy-staging`/`deploy-docs-internal` confirmed green after each merge, and each
+  slice's live claims were re-verified directly against staging after deploy (not just under
+  `npm run preview`) — a full pagination round trip, the sibling tab row on a subcategory page, and
+  the bundle section's new heading and card styling all confirmed with real HTTP fetches against
+  `staging.aheedfoodcentre.nocaped.com`. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt; `npm run sdd:audit`
+  re-run and exits with zero gaps.
 - **`/document` closeout for `#489`.** Reconciles `specs/roadmap.md` with what `/validate` and
   `/ship` actually found: a new change-log row for **PR #492** (build, merge `a6ba350`, `staging`)
   and a carry-forward row for **PR #488** (promotion, merge `5c6dca2`, `staging -> main`), which
