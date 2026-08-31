@@ -8,6 +8,22 @@ every branch merges.
 
 ### Added
 
+- **`#498` — bundle cards match the product-card design language, a neutral bundles heading,
+  keyset-compatible "Previous page", and subcategory tabs on every subcategory page**
+  (`specs/2026-08-31-storefront-cards-pagination-tabs/`). Four more gaps found by live review right
+  after `#496` shipped: (1) `BundleCard` was the only card on the storefront with no hover/tilt
+  effect — it now shares `ProductCard`'s `.skew-card` treatment (`app/globals.css`, P8.5a/`#345`);
+  (2) the bundles section's hardcoded `"Meal bundles"` heading and "one meal" subtitle (wrong for
+  the seeded non-food "Kitchen Pack", and would be wrong for SriMart's electronics bundles entirely)
+  are now the neutral "Value Bundles"; (3) category-page pagination only ever had "Next" — a
+  `back` search param now carries the comma-joined stack of prior cursors so "Previous" works too,
+  with no `OFFSET` and no `COUNT` query anywhere (this app's pagination is keyset-only by
+  architectural decision) — absolute page numbers are deliberately not built, since a keyset page
+  never fetches the total count numbering them would need; (4) a subcategory's own page rendered no
+  tabs at all (its own `children` is always empty, the tree being capped at two levels) —
+  `getCategoryBySlug` now also selects the parent's own `children`, so the exact same sibling tab
+  row (department + every subcategory) renders whether you're on the department's page or one of
+  its subcategories', with only the active pill changing.
 - **`#496` — a department page now shows everything in it, four more top-level departments, a
   persistent "Shop" link, and a bigger hero slider** (`specs/2026-08-31-storefront-browsing-ux-fixes/`).
   Four related gaps found by live review right after `#494` shipped: (1) a department's own page

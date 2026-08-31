@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-31T19:59:19.495Z` · commit `68e844c` · `125` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-31T21:40:44.839Z` · commit `70c047b` · `126` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -122,6 +122,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Error boundary gaps — chrome, branding and design tokens (plan)](specs/2026-08-31-error-boundary-gaps/plan.md) | spec | 1.0.0 | 2026-08-31 | approved | internal | Closes three defects left by #459's error-boundary slice: a root error.tsx that preserves neither site chrome nor per-vendor branding despite its plan claiming both, off-system Tailwind red where the audited danger tokens belong, and no test or executed validation of either boundary. |
 | [Rate-limit hardening: retention sweep and fail-closed vendor resolution (plan)](specs/2026-08-31-rate-limit-hardening/plan.md) | spec | 1.0.0 | 2026-08-31 | approved | internal | Adds an opportunistic retention sweep to both Postgres-backed rate limiters, makes the auth throttle fail closed instead of silently skipping when no vendor resolves, fixes its sensitive-path list, adds the migration it never had, and wires its hook the way Better Auth actually invokes it — closing |
 | [Storefront browsing UX fixes: category aggregation, more departments, a shop link, a bigger hero slider (plan)](specs/2026-08-31-storefront-browsing-ux-fixes/plan.md) | spec | 1.0.0 | 2026-08-31 | draft | internal | Four related storefront browsing gaps found by live review after |
+| [Storefront cards, bundles heading, keyset pagination and subcategory tabs everywhere (plan)](specs/2026-08-31-storefront-cards-pagination-tabs/plan.md) | spec | 1.0.0 | 2026-08-31 | draft | internal | Four more storefront browsing gaps found by live review right after |
 | [Storefront subcategory navigation: making an admin-created subcategory reachable (plan)](specs/2026-08-31-storefront-subcategory-navigation/plan.md) | spec | 1.0.0 | 2026-08-31 | draft | internal | Renders a category's existing children (already fetched by getCategoryBySlug) as clickable subcategory links on its own storefront page, so subcategories and the products assigned to them — whether from |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.21.1 | 2026-08-27 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
