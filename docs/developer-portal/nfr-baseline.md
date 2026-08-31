@@ -4,12 +4,13 @@ title: NFR Baseline — measured performance against the Gate-3 targets
 audience: [dev]
 type: doc
 status: approved
-version: "1.1.0"
-updated: 2026-08-19
+version: "1.2.0"
+updated: 2026-08-31
 visibility: internal
-summary: The first real measurements of this app against mission.md's LCP and API p95 targets, plus the index/query review behind them — including a 4.7x LCP breach caused by a 1.9 MB vendor logo and a production logo that 404s.
-tags: [nfr, performance, observability, lcp, indexes, p7]
-related: [mission, architecture, tech-stack, gap-register-audit, p7d-observability-nfr-plan]
+summary: Measurements against mission.md's LCP and API p95 targets, plus the index/query review behind them — including a 4.7x LCP breach from a 1.9 MB vendor logo — and, from 2026-08-31, a re-measurement of the query paths at roughly 2,000 products rather than 22.
+tags: [nfr, performance, observability, lcp, indexes, p7, p9]
+related:
+  [mission, architecture, tech-stack, gap-register-audit, p7d-observability-nfr-plan, catalogue-depth-and-scale]
 ---
 
 # NFR Baseline
@@ -311,4 +312,71 @@ still open and need an environment that can reach Cloudflare's tail API or a hum
 | **#236** | Comment recording patterns A/B/C and what is left unattributed. Stays open. |
 | **#46** | Decision recorded: keep `<img>`. Transformations are unavailable, so a `next/image` loader would ship identical bytes. |
 | **GAP-011** | Root cause updated with P7d's raw-SQL ruling (see `CLAUDE.md`). |
+
+## Query re-measurement at catalogue scale — 2026-08-31 (#489)
+
+Everything above this heading was measured against **`Product` = 22**, and the "Index and query
+review" section says plainly what that meant: *"At these row counts the honest conclusion is that
+every query is dominated by the ~15 ms round-trip to Neon and none of them is index-sensitive yet."*
+So the headline `p95` verdict was a measurement of Neon's latency rather than of this application's
+queries. **#489** built a generated catalogue so the distinction becomes observable. Nothing above is
+restated or amended here — this section stands beside it.
+
+**Method.** `npx tsx scripts/measure-catalogue-queries.ts`, 15 samples per query after one discarded
+warm-up, client-observed wall-clock around each Prisma call, run from a developer machine over
+`DIRECT_URL`. Unlike `scripts/measure-nfr.ts` (HTTP-only, route TTFB) this harness calls the
+repository functions directly, which is possible only because each takes `prisma` and `vendorId` as
+explicit parameters. **Both runs were taken against the dev Neon branch,
+`ep-sparkling-paper-za3j7xza.c-2.eu-west-2.aws.neon.tech`** — neither the staging host
+(`ep-empty-scene-…`) nor the production host (`ep-young-glitter-…`).
+
+**Catalogue shape at each scale**, from the harness's own summary:
+
+| | Curated | Generated |
+|---|---|---|
+| Aheed products | 18 | 2,018 (2,000 generated) |
+| SriMart products | 3 | 3 (deliberately not scaled) |
+| Aheed categories | 9 top-level + 27 sub | 9 top-level + 27 sub |
+| Categories deeper than two levels | 0 | 0 |
+| Distinct image keys across generated products | — | 27 (one per subcategory, not one per product) |
+
+| Query | p50 (21 products) | p95 (21 products) | p50 (2,018) | p95 (2,018) |
+|---|---|---|---|---|
+| storefront catalogue listing (`listProducts`) | 59.9 ms | 75.2 ms | 47.9 ms | 61.0 ms |
+| category page products (`listProductsByCategory`) | 31.9 ms | 45.9 ms | 46.0 ms | 63.0 ms |
+| category page (`getCategoryBySlug`) | 32.0 ms | 34.2 ms | 31.7 ms | 48.9 ms |
+| product search (`searchProducts`) | 48.4 ms | 75.1 ms | 62.6 ms | **95.4 ms** |
+| speciality facets (`getAvailableSpecialities`) | 16.1 ms | 26.1 ms | 17.9 ms | 30.6 ms |
+| staff order list, no search (`listOrdersForStaff`) | 31.5 ms | 44.3 ms | 31.7 ms | 47.3 ms |
+| order history (`listOrdersForUser`) | not measurable | not measurable | not measurable | not measurable |
+| staff financials aggregate (`getFinancialsForStaff`) | 16.0 ms | 28.1 ms | 16.1 ms | 29.4 ms |
+
+### Verdict against the target
+
+**Every measured path meets `specs/mission.md`'s API `p95 under 400 ms` at roughly 2,000 products.**
+The worst is product search at **95.4 ms**, a 4.2x margin. **No issue was filed for a breach, because
+there was no breach** — remediation was explicitly out of scope for #489 (measure first, then file
+with evidence), and there is nothing to remediate yet.
+
+### What the numbers actually say, and what they do not
+
+- **Product search is the one real signal.** It is the largest mover — p95 75.1 ms to 95.4 ms, about
+  +27% — and it is the only path the review table above marks **`scan`** rather than `indexed`.
+  That is the expected shape: a substring `contains` over `name` and `description` has no serving
+  index, so it is the path that should degrade first as rows grow. It has 4.2x of headroom left, so
+  this is a thing to watch rather than a thing to fix, and it is the number to re-take when the
+  catalogue grows again or when **#286** adds trigram matching to the same path.
+- **`listProducts` got FASTER at roughly 100x the rows** (p95 75.2 ms to 61.0 ms). That is not a real
+  improvement, and reading it as one would be a mistake — it is the clearest evidence that these
+  figures are still substantially round-trip-and-autoscaling noise rather than query cost, exactly
+  the caveat the earlier tables carry. Keyset pagination means the listing reads a fixed page
+  regardless of table size, so flat-to-noisy is the correct expectation.
+- **The honest conclusion is narrower than "the app scales."** At 2,018 rows, six of seven measurable
+  paths are still round-trip dominated. What has changed since the 22-row baseline is that one path
+  now shows a signal above the noise. A catalogue an order of magnitude larger again, or a
+  concurrency dimension, would be the next thing to test — neither is claimed here.
+- **`listOrdersForUser` could not be measured at either scale**: the dev branch holds no `Order` rows
+  with a `userId`. Recorded as not measurable rather than omitted, so a future reader does not
+  mistake its absence for a pass. The staging figures in the review table above remain the only
+  measurement this path has.
 

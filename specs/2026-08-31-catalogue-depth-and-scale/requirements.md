@@ -86,8 +86,15 @@ R13. Before creating any generated product, the seed prints the **resolved datab
 R14. This slice adds **no migration and no schema change**: `git diff` against the base branch shows
      `prisma/schema.prisma` unmodified, and `prisma/migrations/` gains no new directory.
 
-R15. This slice changes **no application code**: `git diff --name-only` against the base branch lists
-     no file under `app/`, `components/`, `features/` or `lib/`.
+R15. This slice changes **no hand-written application code**: `git diff --name-only` against the base
+     branch lists no file under `app/`, `components/`, `features/` or `lib/`, with exactly one
+     permitted exception — **`app/(admin)/staff/runbook/docs.ts`**, which is *generated* by
+     `npm run kms:build-index` and must be regenerated whenever a spec is added, because the `gates`
+     workflow fails on a stale `ARTIFACT_INDEX.md`/`docs.ts` pair. **Amended at `/build`
+     (2026-08-31):** as originally written this requirement was unsatisfiable — adding this slice's
+     own `plan.md` makes it a countable artifact, so the index rebuild is mandatory, and the rebuild
+     writes into `app/`. The requirement's intent was "no application *logic* changes", which is
+     what makes the measure-do-not-fix posture checkable; a regenerated index does not weaken it.
 
 R16. `scripts/measure-catalogue-queries.ts` exists as a committed TypeScript file (not an
      `npx tsx -e` one-liner), builds its own `PrismaClient` from the bare `@prisma/client` specifier
