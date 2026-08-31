@@ -58,7 +58,11 @@ export default async function CategoryPage({
   }
 
   const products = getProductRepository();
-  const { items, nextCursor } = await products.listByCategory(category.id, {
+  // #496 — aggregate the department's own products with every one of its
+  // subcategories' (a subcategory itself has no children, so this is always
+  // exactly [category.id] there — the array collapses to the old behaviour).
+  const categoryIds = [category.id, ...category.children.map((child) => child.id)];
+  const { items, nextCursor } = await products.listByCategory(categoryIds, {
     take: PAGE_SIZE,
     cursor: query.cursor,
     minPricePence: parsePriceInput(query.minPrice ?? ""),
@@ -90,7 +94,7 @@ export default async function CategoryPage({
 
         <section className="flex-1">
           <h1 className="mb-6 text-2xl font-semibold text-primary">{category.name}</h1>
-          <SubcategoryLinks subcategories={category.children} />
+          <SubcategoryLinks subcategories={category.children} currentSlug={slug} />
           <h2 className="sr-only">Products</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {items.map((product) => (

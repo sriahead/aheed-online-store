@@ -607,6 +607,96 @@ const CATALOGUE: CatalogueCategory[] = [
       },
     ],
   },
+  // #496 — four more departments so the top scroller has enough rows to
+  // actually need scrolling on a typical viewport, not just the original
+  // nine (which nearly fill a 1280px screen on their own). No `children`:
+  // these aren't part of #489's generated-catalogue scale test, only real,
+  // small, curated departments like the original nine were before it.
+  {
+    category: { slug: "frozen-foods", name: "Frozen Foods" },
+    products: [
+      {
+        slug: "frozen-peas-1kg",
+        name: "Frozen Peas 1kg",
+        description: "Garden peas, frozen at the peak of freshness.",
+        basePrice: 149,
+        unitLabel: "£1.49 / kg",
+        quantity: 40,
+      },
+      {
+        slug: "frozen-chicken-nuggets",
+        name: "Chicken Nuggets 500g",
+        description: "Halal-certified breaded chicken nuggets.",
+        basePrice: 349,
+        unitLabel: "£6.98 / kg",
+        quantity: 22,
+        isHalal: true,
+      },
+    ],
+  },
+  {
+    category: { slug: "health-beauty", name: "Health & Beauty" },
+    products: [
+      {
+        slug: "shampoo-400ml",
+        name: "Shampoo 400ml",
+        description: "Everyday shampoo for all hair types.",
+        basePrice: 299,
+        unitLabel: "£7.48 / litre",
+        quantity: 30,
+      },
+      {
+        slug: "toothpaste-100ml",
+        name: "Toothpaste 100ml",
+        description: "Fluoride toothpaste, mint flavour.",
+        basePrice: 179,
+        unitLabel: "£1.79 / 100ml",
+        quantity: 45,
+      },
+    ],
+  },
+  {
+    category: { slug: "baby-kids", name: "Baby & Kids" },
+    products: [
+      {
+        slug: "baby-wipes-80pk",
+        name: "Baby Wipes, pack of 80",
+        description: "Fragrance-free, gentle on newborn skin.",
+        basePrice: 199,
+        unitLabel: "£1.99 / pack",
+        quantity: 36,
+      },
+      {
+        slug: "infant-formula-900g",
+        name: "Infant Formula 900g",
+        description: "Stage 1 infant formula milk powder.",
+        basePrice: 1499,
+        unitLabel: "£16.66 / kg",
+        quantity: 15,
+      },
+    ],
+  },
+  {
+    category: { slug: "pet-supplies", name: "Pet Supplies" },
+    products: [
+      {
+        slug: "dog-food-2kg",
+        name: "Dog Food 2kg",
+        description: "Complete dry dog food, chicken flavour.",
+        basePrice: 599,
+        unitLabel: "£2.99 / kg",
+        quantity: 20,
+      },
+      {
+        slug: "cat-litter-5kg",
+        name: "Cat Litter 5kg",
+        description: "Clumping cat litter, low dust.",
+        basePrice: 449,
+        unitLabel: "£0.90 / kg",
+        quantity: 18,
+      },
+    ],
+  },
 ];
 
 // Re-upload the (brand-neutral) product placeholder to every catalogue product's key.

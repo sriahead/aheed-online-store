@@ -204,7 +204,9 @@ async function main() {
   timings.push(
     await time("category page products (listProductsByCategory)", samples, async () => {
       if (!category) throw new Error("no subcategory found");
-      return listProductsByCategory(prisma as never, aheed.id, category.id, { take: PAGE_SIZE });
+      return listProductsByCategory(prisma as never, aheed.id, [category.id], {
+        take: PAGE_SIZE,
+      });
     }),
   );
   timings.push(
