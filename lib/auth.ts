@@ -54,6 +54,93 @@ export function buildSocialProviders(
   };
 }
 
+// #481 — the original list here was ["/sign-in", "/sign-up", "/forget-password", ...], which
+// never matched anything: Better Auth registers the real endpoints at /sign-in/email (not a bare
+// /sign-in) and this app's actual password-reset route is /request-password-reset, not
+// /forget-password (that name exists only inside the unused emailOTP plugin). Confirmed live —
+// 7 rapid wrong-password requests to the real endpoint all returned 401, never 429. These are the
+// real registered suffixes; endsWith (not startsWith) is deliberate, since authOnRequest checks the
+// full, unstripped pathname (see below), unlike Better Auth's own internal rate limiter, which
+// matches against a basePath-stripped path. /sign-in/social is deliberately excluded — it starts an
+// OAuth redirect, not a password check, so there is no credential to brute-force there.
+const SENSITIVE_AUTH_PATHS = [
+  "/sign-in/email",
+  "/sign-up/email",
+  "/request-password-reset",
+  "/reset-password",
+  "/send-verification-email",
+];
+
+/** Whether a request path is one of Better Auth's credential/token-issuing endpoints. */
+export function isSensitiveAuthPath(pathname: string): boolean {
+  return SENSITIVE_AUTH_PATHS.some((p) => pathname.endsWith(p));
+}
+
+/**
+ * Both refusal reasons below (#469) return this exact Response, so a caller cannot
+ * distinguish "no vendor resolved" from "rate limit exceeded" — a caller who could
+ * tell the two apart could use it to probe which Host values resolve to a vendor.
+ */
+function rateLimitRefusalResponse(): Response {
+  return new Response(JSON.stringify({ error: "Too many requests" }), {
+    status: 429,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+/**
+ * Better Auth's `onRequest` hook, hoisted out of `getAuth()`'s inline config
+ * (#469) so it's testable the same way `buildSocialProviders`/`authDb` already
+ * are — without a live Prisma/Workers context.
+ *
+ * Fails closed (#469): previously, when `getCurrentVendorIdOrNull()` returned
+ * `null` on a sensitive path, the rate-limit check was skipped entirely and the
+ * request proceeded unthrottled to Better Auth's real handler — a confirmed
+ * exploitable bypass, since `User.email` is globally unique and unscoped from
+ * tenant resolution. Now an unresolved vendor on a sensitive path is refused
+ * outright, matching #430's fail-closed precedent from the same phase.
+ */
+export async function authOnRequest(req: Request): Promise<Response | undefined> {
+  const url = new URL(req.url);
+  if (!isSensitiveAuthPath(url.pathname)) return;
+
+  // Next.js context is active because this runs inside app/api/auth/[...all]/route.ts
+  const { getCurrentVendorIdOrNull } = await import("./tenant");
+  const vendorId = await getCurrentVendorIdOrNull();
+
+  if (!vendorId) {
+    return rateLimitRefusalResponse();
+  }
+
+  const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "unknown";
+
+  const { checkAuthRateLimit } = await import("./repositories/auth-rate-limit");
+  const limit = await checkAuthRateLimit(getPrisma(), vendorId, ip);
+
+  if (!limit.allowed) {
+    return rateLimitRefusalResponse();
+  }
+}
+
+/**
+ * #482 (found live at `/build`, folded in from #469's own investigation) — a bare
+ * top-level `onRequest` key in `betterAuth({...})`'s config is silently never
+ * invoked. `router()` (`better-auth/dist/api/index.mjs`) always installs its OWN
+ * internal `onRequest` on the underlying `better-call` router, which only loops
+ * over `ctx.options.plugins[].onRequest` — it never reads a bare
+ * `ctx.options.onRequest`. Confirmed live: `authOnRequest` never ran at all (not
+ * even path-matching) until this was wrapped as a plugin. A plugin's `onRequest`
+ * returns `{ response }` to short-circuit (not a bare `Response`) — see
+ * `@better-auth/core`'s `BetterAuthPlugin` type.
+ */
+export const authRateLimitPlugin = {
+  id: "auth-rate-limit",
+  onRequest: async (request: Request) => {
+    const response = await authOnRequest(request);
+    return response ? { response } : undefined;
+  },
+};
+
 /**
  * Better Auth server instance (ADR-002). Constructed fresh on every call, NOT
  * cached across requests — it wraps whatever getPrisma() returns, and
@@ -100,39 +187,7 @@ export async function getAuth() {
     // (session handling, rate limiting, and anything a future plugin adds),
     // disable the feature this app never deliberately enabled.
     rateLimit: { enabled: false },
-    onRequest: async (req: Request) => {
-      const sensitivePaths = [
-        "/sign-in",
-        "/sign-up",
-        "/forget-password",
-        "/reset-password",
-        "/send-verification-email",
-      ];
-
-      const url = new URL(req.url);
-      const isSensitive = sensitivePaths.some((p) => url.pathname.endsWith(p));
-
-      if (isSensitive) {
-        // Next.js context is active because this runs inside app/api/auth/[...all]/route.ts
-        const { getCurrentVendorIdOrNull } = await import("./tenant");
-        const vendorId = await getCurrentVendorIdOrNull();
-
-        if (vendorId) {
-          const ip =
-            req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "unknown";
-
-          const { checkAuthRateLimit } = await import("./repositories/auth-rate-limit");
-          const limit = await checkAuthRateLimit(getPrisma(), vendorId, ip);
-
-          if (!limit.allowed) {
-            return new Response(JSON.stringify({ error: "Too many requests" }), {
-              status: 429,
-              headers: { "Content-Type": "application/json" },
-            });
-          }
-        }
-      }
-    },
+    plugins: [authRateLimitPlugin],
     user: {
       additionalFields: {
         role: { type: "string", defaultValue: "CUSTOMER", input: false },

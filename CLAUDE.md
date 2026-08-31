@@ -640,6 +640,53 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   error fires alongside either. `GET .../cdn-cgi/local/explorer/api/local/workers` lists the other
   endpoints the same Explorer API exposes (KV, D1, R2, Durable Objects, Workflows).
 
+## Better Auth (`lib/auth.ts`, ADR-002) — learned the hard way
+- **A bare top-level `onRequest` key in `betterAuth({...})`'s config is accepted by TypeScript and
+  never invoked at runtime.** `BetterAuthOptions`'s type carries an `onRequest` field, so
+  `betterAuth({ onRequest: myHandler, ... })` type-checks cleanly and looks correct on read — but
+  Better Auth's own `router()` (`node_modules/better-auth/dist/api/index.mjs`) always installs its
+  *own* internal `onRequest` on the underlying `better-call` router, and that internal
+  implementation only loops over `ctx.options.plugins[].onRequest`; it never reads a bare
+  `ctx.options.onRequest`. The only way to hook a request is a **plugin**: `{ id: "some-id",
+  onRequest: async (request, ctx) => {...} }` registered via `plugins: [...]`, and its return
+  contract also differs from what a bare handler would suggest — `{ response: Response }` to
+  short-circuit, `{ request: Request }` to continue with a modified request, or `void`/`undefined`
+  to continue unmodified (`@better-auth/core`'s `BetterAuthPlugin` type). A bare `Response` return
+  value, or nothing, is silently swallowed either way, because the code path that would have read it
+  never runs. Found live in **#483** (2026-08-31): P9.1's auth rate limiter (#431, `lib/auth.ts`)
+  had used a top-level `onRequest` key since it shipped on 2026-08-29 — confirmed with a temporary
+  diagnostic log that it never printed for any real request, at any point, regardless of path or
+  database state. **Any future request-level hook into Better Auth (rate limiting, logging,
+  header injection, request rewriting) must be a plugin, never a bare config key** — verify live
+  under `npm run preview` with a real request, not by reading the type or by `tsc --noEmit` passing,
+  since neither would have caught this.
+- **Confirm a Better Auth endpoint's real path from its own route registration
+  (`node_modules/better-auth/dist/api/routes/*.mjs`'s `createAuthEndpoint("/...")` calls), never
+  from the intuitive short form.** Email/password sign-in is `/sign-in/email`, not `/sign-in`;
+  sign-up is `/sign-up/email`; the password-reset request endpoint is `/request-password-reset`,
+  not `/forget-password` (that name exists only as an internal label inside the unused `emailOTP`
+  plugin). A path-matching check written against the short form silently never matches real traffic
+  — found live in **#481** (2026-08-31) the same way as #483 above: 7 wrong-password requests to the
+  real `/sign-in/email` endpoint all returned `401`, never `429`, because `endsWith("/sign-in")` is
+  false for a path that ends in `/email`. Better Auth's own internal default rate limiter
+  (`node_modules/better-auth/dist/api/rate-limiter/index.mjs`'s `getDefaultSpecialRules`) matches
+  the *stripped*, basePath-relative path with `startsWith` — not directly transferable to a hook
+  reading `new URL(req.url).pathname`, which is the full, unstripped path (`authOnRequest` in
+  `lib/auth.ts` reads `endsWith` against the real full-path suffixes instead; see the code comment
+  there for why `startsWith` would silently never match anything in that context).
+- **A model added to `prisma/schema.prisma` for a Better Auth–adjacent feature needs its own
+  migration checked in the same PR, and CI passing is not evidence one exists.** `#431` added the
+  `AuthenticationAttempt` model but no migration was ever generated or committed for it, in any
+  branch (**#482**, 2026-08-31) — `lint`/`typecheck`/`test`/`build` all stayed green throughout,
+  because none of them touch a live database. `prisma migrate status` reporting "up to date" is not
+  reassurance either: with no migration to be pending, there is nothing for it to flag. The table
+  did not exist in the dev database and, since `deploy-staging`/`deploy-production` both run
+  `prisma migrate deploy` from the same committed `prisma/migrations/` directory, almost certainly
+  never existed in staging or production either. After adding or changing a model this app's runtime
+  code depends on, confirm the migration exists (`ls prisma/migrations/`, not just `git diff
+  prisma/schema.prisma`) and — for anything security- or data-integrity-relevant — that a live query
+  against it actually succeeds under `npm run preview`, not just that the ORM call type-checks.
+
 ## React & Next.js Hooks — learned the hard way
 - **A `useEffect` that listens for `pathname` changes to auto-close a UI element (e.g. a drawer/modal) must NOT include its `open` state in its dependencies.** If `open` is included, the act of opening the drawer changes `open` to true, which triggers the effect immediately and closes the drawer right back. Hit in P8: a cart drawer instantly closed on open because the builder passed `open` and `close()` into the dependency array to satisfy the lint rule. The correct pattern is to call the closure function unconditionally (e.g., `close()`) inside the effect, leaving `open` out of the dependency array, and if needed, explicitly silencing the specific lint rule (e.g., `react-hooks/set-state-in-effect`) for that line rather than changing the dependency semantics.
 

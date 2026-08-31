@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-08-31T00:05:16.347Z` · commit `911162c` · `121` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-08-31T03:31:59.086Z` · commit `c9170f4` · `122` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -119,6 +119,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Global 500 Error Boundary (Plan)](specs/2026-08-30-global-500-error-boundary/plan.md) | spec | 1.0.0 | 2026-08-30 | approved | internal | Adds app/global-error.tsx and app/error.tsx so an unhandled runtime exception renders a branded recovery page instead of an unstyled Next.js fallback, giving the fail-closed config throw from #430 a surface to land on. |
 | [P9.2 — Production deployment safety (plan)](specs/2026-08-30-p9-2-deployment-safety/plan.md) | spec | 1.0.0 | 2026-08-30 | draft | internal | Stops a failed build from leaving production on a newly migrated schema, and makes the production deploy path run the same quality checks as a PR by extracting them into one reusable workflow both paths call. |
 | [Error boundary gaps — chrome, branding and design tokens (plan)](specs/2026-08-31-error-boundary-gaps/plan.md) | spec | 1.0.0 | 2026-08-31 | approved | internal | Closes three defects left by #459's error-boundary slice: a root error.tsx that preserves neither site chrome nor per-vendor branding despite its plan claiming both, off-system Tailwind red where the audited danger tokens belong, and no test or executed validation of either boundary. |
+| [Rate-limit hardening: retention sweep and fail-closed vendor resolution (plan)](specs/2026-08-31-rate-limit-hardening/plan.md) | spec | 1.0.0 | 2026-08-31 | approved | internal | Adds an opportunistic retention sweep to both Postgres-backed rate limiters, makes the auth throttle fail closed instead of silently skipping when no vendor resolves, fixes its sensitive-path list, adds the migration it never had, and wires its hook the way Better Auth actually invokes it — closing |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.21.1 | 2026-08-27 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

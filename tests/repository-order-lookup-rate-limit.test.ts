@@ -1,19 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { checkAuthRateLimit } from "@/lib/repositories/auth-rate-limit";
+import { checkOrderLookupRateLimit } from "@/lib/repositories/order-lookup-rate-limit";
+
+// No test previously existed for this function at all (#468) — mirrors
+// tests/repository-auth-rate-limit.test.ts's coverage for its sibling function.
 
 const count = vi.fn();
 const create = vi.fn();
 const deleteMany = vi.fn();
 
 const mockPrisma = {
-  authenticationAttempt: {
+  orderLookupAttempt: {
     count,
     create,
     deleteMany,
   },
 } as any;
 
-describe("checkAuthRateLimit", () => {
+describe("checkOrderLookupRateLimit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Above SWEEP_PROBABILITY (0.01) by default, so pre-existing behavior stays
@@ -28,13 +31,12 @@ describe("checkAuthRateLimit", () => {
   it("allows requests when under the limit", async () => {
     count.mockResolvedValue(4);
 
-    const result = await checkAuthRateLimit(mockPrisma, "vendor-1", "127.0.0.1");
+    const result = await checkOrderLookupRateLimit(mockPrisma, "vendor-1", "127.0.0.1");
 
     expect(result.allowed).toBe(true);
     expect(count).toHaveBeenCalledTimes(1);
     expect(create).toHaveBeenCalledTimes(1);
 
-    // Ensure IP was hashed (SHA-256 length is 64 hex characters)
     const callArgs = create.mock.calls[0][0];
     expect(callArgs.data.vendorId).toBe("vendor-1");
     expect(callArgs.data.ipHash).toHaveLength(64);
@@ -43,7 +45,7 @@ describe("checkAuthRateLimit", () => {
   it("blocks requests when limit is reached", async () => {
     count.mockResolvedValue(5);
 
-    const result = await checkAuthRateLimit(mockPrisma, "vendor-1", "127.0.0.1");
+    const result = await checkOrderLookupRateLimit(mockPrisma, "vendor-1", "127.0.0.1");
 
     expect(result.allowed).toBe(false);
     expect(count).toHaveBeenCalledTimes(1);
@@ -56,7 +58,7 @@ describe("checkAuthRateLimit", () => {
       count.mockResolvedValue(4);
       vi.spyOn(Math, "random").mockReturnValue(0);
 
-      await checkAuthRateLimit(mockPrisma, "vendor-1", "127.0.0.1");
+      await checkOrderLookupRateLimit(mockPrisma, "vendor-1", "127.0.0.1");
 
       expect(deleteMany).toHaveBeenCalledTimes(1);
       const where = deleteMany.mock.calls[0][0].where;
@@ -67,7 +69,7 @@ describe("checkAuthRateLimit", () => {
       count.mockResolvedValue(4);
       vi.spyOn(Math, "random").mockReturnValue(0.99);
 
-      await checkAuthRateLimit(mockPrisma, "vendor-1", "127.0.0.1");
+      await checkOrderLookupRateLimit(mockPrisma, "vendor-1", "127.0.0.1");
 
       expect(deleteMany).not.toHaveBeenCalled();
     });
@@ -76,7 +78,7 @@ describe("checkAuthRateLimit", () => {
       count.mockResolvedValue(5);
       vi.spyOn(Math, "random").mockReturnValue(0);
 
-      await checkAuthRateLimit(mockPrisma, "vendor-1", "127.0.0.1");
+      await checkOrderLookupRateLimit(mockPrisma, "vendor-1", "127.0.0.1");
 
       expect(deleteMany).not.toHaveBeenCalled();
     });

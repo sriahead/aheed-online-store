@@ -7,6 +7,43 @@ every branch merges.
 ## [Unreleased]
 
 ### Fixed
+- **`#468`, `#469`, `#481`, `#482`, `#483` — the P9.1 auth rate limiter has never functioned, for
+  three independent, compounding reasons, since it shipped on 2026-08-29**
+  (`specs/2026-08-31-rate-limit-hardening/`). Started as two narrow follow-ups from P9.1
+  re-validation (`#468`: `AuthenticationAttempt`/`OrderLookupAttempt` grow unbounded with no
+  retention sweep; `#469`: the throttle is skipped, not refused, when no vendor resolves — a
+  confirmed exploitable brute-force bypass, since `User.email` is globally unique and unscoped from
+  tenant resolution). Grew to five while live-verifying `#469`'s fix, each new defect found by
+  confirming the previous fix actually worked end to end:
+  - **`#481`** — the sensitive-path list matched with `endsWith` against placeholder strings
+    (`/sign-in`, `/forget-password`) that never equal Better Auth's real registered endpoints
+    (`/sign-in/email`, `/request-password-reset`). Confirmed live: 7 wrong-password attempts against
+    the real endpoint all returned `401`, never `429`. Fixed with the corrected literal suffixes —
+    deliberately still `endsWith`, not Better Auth's own internal `startsWith` convention, which
+    matches a basePath-*stripped* path `authOnRequest` never sees.
+  - **`#482`** — `AuthenticationAttempt` never had a migration in the first place. PR `#461` added
+    the model to `prisma/schema.prisma` but no migration was ever committed for it, in any branch —
+    confirmed the table didn't exist in the dev database, and since `deploy-staging`/
+    `deploy-production` both run `prisma migrate deploy` from the same committed migrations, almost
+    certainly missing in staging and production too. Fixed by generating and applying the missing
+    migration (`prisma migrate diff`, since `#378` blocks `migrate dev`).
+  - **`#483`** — the root cause making `#469` and `#481` moot even once fixed individually: a bare
+    top-level `onRequest` key in `betterAuth({...})`'s config is accepted by TypeScript but never
+    invoked at runtime. Better Auth's router always installs its own internal `onRequest`, which only
+    calls a *plugin's* `onRequest` — never a bare `ctx.options.onRequest`. Fixed by wrapping the
+    unchanged rate-limit logic in a minimal plugin (`authRateLimitPlugin`) registered via
+    `plugins: [...]`.
+  - **Verified live, end to end, after all three fixes together**: 5 rapid wrong-password
+    `POST /api/auth/sign-in/email` attempts against the real endpoint return `401`; a 6th and 7th
+    return `429` with `{"error":"Too many requests"}`; exactly 5 `AuthenticationAttempt` rows are
+    written (the blocked attempts write none, closing `#468` too — its opportunistic
+    `deleteMany` sweep, added to both `checkAuthRateLimit` and `checkOrderLookupRateLimit`, only
+    fires on allowed calls). `checkOrderLookupRateLimit` had zero prior test coverage of any kind;
+    its new test file covers the pre-existing allow/block behavior as well as the sweep.
+  - **Also removed, unrelated to any of the five issues**: `board.json` (616 lines, a stale
+    `gh project item-list` dump) and `scratch.ts` (a 2-line exploration snippet), both accidentally
+    committed by PR `#461`. No schema-language change — only the migration `#482` needed.
+
 - **`#478`, `#479`, `#467` — the three gaps `#459`'s error-boundary slice left behind**
   (`specs/2026-08-31-error-boundary-gaps/`). Found by re-reading that artifact against the code at
   `/orient`, not against its own build notes, which recorded "Deviations from Spec: None."
