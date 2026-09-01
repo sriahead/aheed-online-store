@@ -54,7 +54,8 @@ rather than shipping a link into an empty listing.
 
 ## The decision that shaped this, and the one it had to overturn
 
-`lib/products-service.ts`'s `ProductRepository.list` docstring records a decision from **`#211`**:
+The `ProductRepository.list` docstring in `lib/repositories/products.ts` records a decision from
+**`#211`**:
 `list()` was deliberately kept separate from `search()` rather than teaching `search()` to treat an
 empty string as "no text filter", and the docstring justifies that by asserting that on the
 `/search` page "an empty box means 'nothing searched yet', not 'browse everything'".
@@ -116,9 +117,9 @@ sync, and do nothing about the header's empty-submit dead end.
   grid at `lg`, so a scroller over them would have nothing to scroll; delivering the department
   strip's affordance would have meant widening the rows to roughly 12 products, which is a
   page-cost change `#501` never asked for. The rows stay grids at their current width, and this
-  slice therefore does **not** fully close `#501`. A follow-up issue is filed at `/build-notes`
-  carrying the row-versus-department-strip inconsistency, and the PR references it rather than
-  closing `#501` on a partial delivery.
+  slice therefore does **not** fully close `#501`. Filed as **`#511`**, carrying the
+  row-versus-department-strip inconsistency; the PR references it rather than closing `#501` on a
+  partial delivery.
 - **A "Featured" checkbox in the filter sidebar.** `featured` is URL-driven only. Adding a visible
   control is a filter-UI decision `#501` did not raise, and the sidebar's contents are already
   per-vendor (`availableSpecialities`) in a way a flat "featured" toggle would cut across.
@@ -132,17 +133,18 @@ sync, and do nothing about the header's empty-submit dead end.
 - **`ProductFilterForm`'s hardcoded `bg-[#2E7D32]` Apply button.** A raw hex where a design token
   belongs, noticed while reading the file. Untouched — it is a token-discipline defect unrelated to
   this slice's navigation work, and changing it would need checking against `brandStyle()`'s
-  per-vendor overrides (see `CLAUDE.md`'s design-tokens section).
+  per-vendor overrides (see `CLAUDE.md`'s design-tokens section). Filed as **`#512`**.
 - **Any repository or schema change.** No migration, no new function in `lib/repositories/*`.
   `list()`, `searchProducts` and `listActiveBundles` are all already in use; this slice only changes
   which of them a page calls and when.
 
 ## Open items carried forward
 
-- **`#501` stays open after this ships**, tracking its part 3 via the follow-up issue filed at
-  `/build-notes`.
+- **`#501` stays open after this ships**, tracking its part 3 via **`#511`** — the product and
+  bundle rows not sharing the department strip's scroller affordance, which needs the row width
+  decided before the component work is worth doing.
 - **The delivery board's `Phase` field offers only `M0` through `P8`** — no `P9`, `P9.1` to `P9.4`
   or `P10` — which is why this slice's issue reads `Phase: P8` while its GitHub milestone reads
   `P09.3`. Adding the options needs an `updateProjectV2Field` GraphQL mutation the `gh project`
   CLI does not expose. Board maintenance, not this slice; recorded so the mismatch is not read as
-  this slice mis-filing its own phase.
+  this slice mis-filing its own phase. Filed as **`#513`**.
