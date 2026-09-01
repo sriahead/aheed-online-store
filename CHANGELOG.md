@@ -8,6 +8,41 @@ every branch merges.
 
 ### Added
 
+- **`#501` (parts 1 and 2) — a browse mode for `/search`, working "View all" links, and a
+  `/bundles` page** (`specs/2026-09-01-storefront-browsing-affordances/`). Slice A of the three
+  approved at Gate 1 on 2026-09-01; slice B was `#502`, slice C is `#503`. Bare `/search` ran its
+  query inside `if (query)` and gated the grid on `query &&`, so it returned 200 with an empty
+  content column — and `app/(storefront)/categories/page.tsx` pointed the shop page's only "View
+  all" straight at it, as did the header's search box when submitted empty. The page now branches:
+  no `q` calls `products.list(...)`, a `q` calls `products.search(q, ...)`, both with identical
+  filter and cursor options, so price, stock and speciality filters plus keyset pagination work the
+  same either way. **`#211`'s `list()`/`search()` split is preserved literally** —
+  `searchProducts`'s empty-query guard is untouched and the two functions stay separate; only the
+  *page's* reading of an empty box changed, and the docstring in `lib/repositories/products.ts`
+  that asserted the opposite was rewritten rather than left contradicting the code beside it. A new
+  `featured` param (URL-driven, no sidebar control) gives Featured Products a real destination, and
+  `components/product/ProductFilterForm.tsx` carries it in a hidden field — it is a plain `GET`
+  form, so without one, pressing Apply from a featured listing silently dropped the filter.
+  `nextPageHref` moved to a pure, unit-tested `components/product/search-href.ts`, since a page
+  file cannot export a helper for a test to import. A zero-result empty state closes the same
+  blank-column dead end reached by a search that matches nothing. All three shop-page rows now
+  carry a working "View all" (`BundleRow` gained the prop it lacked), the third pointing at a new
+  `app/(storefront)/bundles/page.tsx` that shares `hasAvailableItems` with the row so the two
+  cannot disagree about which bundles render. `/search`'s hardcoded `metadata` title, which
+  rendered "Aheed Food Centre" under SriMart too (the `#239` defect class), is now derived from the
+  vendor.
+  **Found while writing the spec, and not mentioned in `#501`: nothing was ever featured.**
+  `Product.isFeatured` is `@default(false)` and `prisma/seed.ts` never set it, so `ProductRow`
+  returned `null` and the Featured Products row was absent from the shop page in every freshly
+  seeded environment — a "View all" would have led to an empty listing. `seedFeaturedProducts` is
+  its own idempotent pass (the pattern `seedSubcategories` already uses, so it reaches databases
+  seeded before this slice rather than only new ones), marking six Aheed and two SriMart products,
+  deliberately fewer than the 12-item page size so a featured listing is visibly a subset.
+  **Part 3 of `#501` — horizontal scrollers on the product and bundle rows — is deliberately not
+  built**, so this does not close `#501`: the rows hold four products in a four-column grid, so a
+  scroller would have nothing to scroll, and delivering the department strip's affordance would
+  have meant widening the rows, a page-cost change `#501` never asked for. Tracked in `#511`.
+
 - **`#508` — a database-backed error event log, independent of Cloudflare Workers Logs**
   (`specs/2026-09-01-error-event-log/`). A live incident showed the global error boundary's
   generic "Something went wrong" page working exactly as designed (it deliberately shows a visitor

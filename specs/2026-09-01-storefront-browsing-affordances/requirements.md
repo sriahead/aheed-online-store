@@ -13,9 +13,10 @@ R1. `app/(storefront)/search/page.tsx` resolves its products from `products.list
     the same `take`, `cursor`, `minPricePence`, `maxPricePence`, `inStockOnly`, `isHalal`,
     `isFresh` and `isOrganic` values.
 
-R2. `lib/repositories/products.ts`'s `searchProducts` is byte-for-byte unchanged by this slice,
-    including its empty-query guard, and `list()` and `search()` remain two separate functions on
-    the `ProductRepository` interface in `lib/products-service.ts`.
+R2. `lib/repositories/products.ts`'s `searchProducts` **function** is byte-for-byte unchanged by
+    this slice, including its empty-query guard, and `list()` and `search()` remain two separate
+    functions on the `ProductRepository` interface. That file's only change is the interface
+    docstring R18 requires — no executable line in it is modified.
 
 R3. `app/(storefront)/search/page.tsx` renders the product grid and the pagination control without
     gating either on the presence of `q` — the JSX contains no `query &&` guard around the grid.
@@ -77,10 +78,14 @@ R16. `app/(storefront)/bundles/page.tsx` filters its bundles with `hasAvailableI
 R17. `/bundles` returns HTTP 200 and its HTML contains a bundle card for every bundle rendered in
      `/categories`' Value Bundles row, and no bundle absent from that row.
 
-R18. `lib/products-service.ts`'s `list()` docstring no longer asserts that an empty box on the
-     `/search` page means "nothing searched yet" rather than "browse everything", and instead
+R18. The `list()` docstring on the `ProductRepository` interface no longer asserts that an empty box
+     on the `/search` page means "nothing searched yet" rather than "browse everything", and instead
      records that `/search` branches to `list()` for its browse mode while `search()`'s own
-     empty-query guard is retained.
+     empty-query guard is retained. **Corrected during Build:** this requirement originally named
+     `lib/products-service.ts`, but the `ProductRepository` interface and that docstring live in
+     `lib/repositories/products.ts` — `grep -rn "nothing searched yet" lib/` had exactly one hit and
+     it was there. A clerical path error in the spec, not a scope change; recorded rather than
+     silently retargeted.
 
 R19. This slice adds no function to `lib/repositories/*` and no Prisma migration: the diff against
      the base branch lists no file under `prisma/migrations/`, and

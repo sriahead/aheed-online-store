@@ -66,6 +66,7 @@ async function main() {
 
   await seedCatalogue(AHEED_VENDOR_ID, CATALOGUE);
   await seedSubcategories(AHEED_VENDOR_ID, CATALOGUE);
+  await seedFeaturedProducts(AHEED_VENDOR_ID, AHEED_FEATURED_SLUGS);
   await refreshProductImages(CATALOGUE);
   await upsertVendorSatellites(AHEED_VENDOR_ID, AHEED_SATELLITES);
   // After the catalogue: bundles resolve their constituents by product slug.
@@ -95,6 +96,7 @@ async function main() {
     });
     await seedCatalogue(SRIMART_VENDOR_ID, SRIMART_CATALOGUE);
     await seedSubcategories(SRIMART_VENDOR_ID, SRIMART_CATALOGUE);
+    await seedFeaturedProducts(SRIMART_VENDOR_ID, SRIMART_FEATURED_SLUGS);
     await refreshProductImages(SRIMART_CATALOGUE);
     await upsertVendorSatellites(SRIMART_VENDOR_ID, SRIMART_SATELLITES);
     await seedBundles(SRIMART_VENDOR_ID, SRIMART_BUNDLES);
@@ -844,6 +846,54 @@ async function seedSubcategories(vendorId: string, catalogue: CatalogueCategory[
     created === 0
       ? `all subcategories already exist for ${vendorId} — skipping`
       : `seeded ${created} subcategories for ${vendorId}`,
+  );
+}
+
+/**
+ * #501 — mark a few curated products as featured.
+ *
+ * `Product.isFeatured` is `@default(false)` and NOTHING in this seed had ever set it, so no
+ * product in any seeded environment was featured. `app/(storefront)/categories/page.tsx` asks for
+ * `list({ take: 4, isFeatured: true })` and `ProductRow` returns `null` on an empty list, which
+ * means the Featured Products row was absent from the shop page entirely — and the "View all"
+ * this slice points at `/search?featured=1` would have led to an empty listing. The row was never
+ * broken code; it was a row with no data behind it, the same class of gap #496 closed by adding
+ * real departments.
+ *
+ * ITS OWN PASS, called separately from `seedCatalogue`, for the reason `seedSubcategories`
+ * documents directly above: `seedCatalogue` returns early per category once it exists, so a
+ * database seeded before this slice would never gain the flag. An `updateMany` keyed on slug is
+ * idempotent and reaches those databases. (`updateMany` is safe here — this script runs in real
+ * Node on the WebSocket adapter, not the HTTP one that cannot execute the query compiler's
+ * internal transaction; see CLAUDE.md's #382 note.)
+ *
+ * DELIBERATELY FEWER THAN THE 12-ITEM `/search` PAGE SIZE, so a featured listing is visibly a
+ * strict subset of the catalogue rather than a full page that would prove nothing about whether
+ * the filter is applied at all.
+ */
+const AHEED_FEATURED_SLUGS = [
+  "halal-chicken-breast",
+  "basmati-rice-5kg",
+  "sourdough-loaf",
+  "free-range-eggs",
+  "mixed-nuts-500g",
+  "coconut-milk",
+];
+
+const SRIMART_FEATURED_SLUGS = ["sri-earbuds", "sri-desk-lamp"];
+
+async function seedFeaturedProducts(vendorId: string, slugs: string[]) {
+  if (slugs.length === 0) return;
+
+  const { count } = await prisma.product.updateMany({
+    where: { vendorId, slug: { in: slugs } },
+    data: { isFeatured: true },
+  });
+
+  console.log(
+    count === 0
+      ? `no products matched the featured slugs for ${vendorId} — none marked featured`
+      : `marked ${count} products featured for ${vendorId}`,
   );
 }
 
