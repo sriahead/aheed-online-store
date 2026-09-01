@@ -61,8 +61,8 @@ export function getProductRepository(): ProductRepository {
   const vendorId = () => (vendorIdPromise ??= getCurrentVendorId());
 
   return {
-    async listByCategory(categoryId, opts) {
-      return listProductsByCategory(prisma, await vendorId(), categoryId, opts);
+    async listByCategory(categoryIds, opts) {
+      return listProductsByCategory(prisma, await vendorId(), categoryIds, opts);
     },
 
     async list(opts) {

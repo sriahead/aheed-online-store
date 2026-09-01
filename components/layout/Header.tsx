@@ -10,6 +10,7 @@ import {
   UserCheck,
   LogOut,
   ShoppingBag,
+  Store,
   Clock,
 } from "lucide-react";
 import { getAuth } from "@/lib/auth";
@@ -248,6 +249,22 @@ export async function Header({
 
         {/* Action Controls & Navigation */}
         <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-2">
+          {/* #496 — the landing page's header had no path at all to the
+              catalogue: "Shop List" (below) is deliberately hidden there
+              (P8.5f), and the only other route in was the hero's rotating
+              per-department "Shop {Department}" button. Unlike "Shop List",
+              this stays visible on every non-portal route, landing included. */}
+          {!isPortal && (
+            <Link
+              href="/categories"
+              className="hidden lg:flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
+              title="Browse all departments"
+            >
+              <Store className="w-4 h-4 text-primary" />
+              <span>Shop</span>
+            </Link>
+          )}
+
           {/* P8.5f: hidden on the landing page (see the search slot above); the
               standing postcode answer takes this space instead. */}
           {!isPortal && !isLanding && (

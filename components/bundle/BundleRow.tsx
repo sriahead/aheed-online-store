@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { BundleCard } from "./BundleCard";
 import { hasAvailableItems } from "@/lib/bundle-pricing";
 import type { BundleWithItems } from "@/lib/repositories/bundles";
@@ -6,6 +8,13 @@ interface BundleRowProps {
   title: string;
   bundles: BundleWithItems[];
   cdnBaseUrl: string;
+  /**
+   * #501 — the row had no way to offer a "View all" at all, so Value Bundles was
+   * the one section on the shop page with no route to the rest. Optional, and
+   * rendered with the same element and classes `ProductRow` uses, so the three
+   * rows' links are indistinguishable.
+   */
+  viewAllLink?: string;
 }
 
 /**
@@ -19,17 +28,28 @@ interface BundleRowProps {
  * an empty card with a £0.00 total; `hasAvailableItems` is the single pure rule
  * deciding that, shared with the pricing math so the two cannot disagree.
  */
-export function BundleRow({ title, bundles, cdnBaseUrl }: BundleRowProps) {
+export function BundleRow({ title, bundles, cdnBaseUrl, viewAllLink }: BundleRowProps) {
   const renderable = bundles.filter((bundle) => hasAvailableItems(bundle.items));
   if (renderable.length === 0) return null;
 
   return (
     <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-      <div>
-        <h2 className="text-xl font-bold text-primary">{title}</h2>
-        <p className="mt-0.5 text-sm text-primary/70">
-          Everything for one meal, added to your basket in a single tap.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-primary">{title}</h2>
+          <p className="mt-0.5 text-sm text-primary/70">
+            Curated sets, added to your basket in a single tap.
+          </p>
+        </div>
+        {viewAllLink && (
+          <Link
+            href={viewAllLink}
+            className="flex items-center gap-1 text-sm font-semibold text-accent hover:text-accent-hover transition-colors"
+          >
+            View all
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        )}
       </div>
 
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -39,6 +39,12 @@ interface BundleCardProps {
  *
  * A form, not a client component: "Add all" is a plain progressive-enhancement
  * POST, so the whole card works with no JavaScript.
+ *
+ * #498 — shares `ProductCard`'s `.skew-card` treatment (`app/globals.css`)
+ * rather than a plain flat card, so the bundle rail reads as the same design
+ * language as every product grid on the site instead of a visually distinct
+ * component bolted on beside it. There's no bundle detail page to link to, so
+ * unlike `ProductCard` the skewed element is a `<div>`, not a `<Link>`.
  */
 export function BundleCard({
   id,
@@ -53,54 +59,63 @@ export function BundleCard({
   const totalPence = bundleTotalPence(items);
 
   return (
-    <li className="flex h-full flex-col overflow-hidden rounded-2xl border border-black/10 bg-white">
-      {/* An imageless bundle is a first-class state, not a broken one — it gets
-          a token-styled block, never an <img> with an empty src. */}
-      {imageKey && cdnBaseUrl ? (
-        <img
-          src={`${cdnBaseUrl}/${imageKey}`}
-          alt={altText ?? ""}
-          className="aspect-4/3 w-full shrink-0 object-cover"
-        />
-      ) : (
-        <div className="flex aspect-4/3 w-full shrink-0 items-center justify-center bg-surface-muted">
-          <Package className="h-10 w-10 text-primary/30" aria-hidden />
+    <li className="skew-card-wrap h-full">
+      <div className="skew-card group relative flex h-full flex-col overflow-hidden rounded-2xl border border-black/10 bg-white hover:border-action/50">
+        {/* Image container — matches ProductCard's aspect-4/3 + skew-card-inner
+            counter-skew, so an imageless bundle's placeholder block sits at
+            exactly the same size and position a product photo would. */}
+        <div className="relative aspect-4/3 w-full shrink-0 overflow-hidden bg-surface-muted">
+          <div className="skew-card-inner h-full w-full">
+            {imageKey && cdnBaseUrl ? (
+              <img
+                src={`${cdnBaseUrl}/${imageKey}`}
+                alt={altText ?? ""}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-surface-muted">
+                <Package className="h-10 w-10 text-primary/30" aria-hidden />
+              </div>
+            )}
+          </div>
         </div>
-      )}
 
-      <div className="flex flex-1 flex-col gap-3 p-4">
-        <div>
-          <h3 className="text-base font-bold text-primary">{name}</h3>
-          {tagline && <p className="mt-0.5 text-xs text-primary/70">{tagline}</p>}
-        </div>
-
-        {/* Constituents carry NO price of their own — see the note above on why
-            this card shows exactly one. */}
-        <ul className="flex-1 space-y-1 text-xs text-primary/80">
-          {available.map((item) => (
-            <li key={item.productId}>
-              <span className="font-semibold text-primary">{item.quantity} ×</span> {item.name}
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-auto flex items-center justify-between gap-2 border-t border-black/10 pt-3">
+        <div className="skew-card-inner flex flex-1 flex-col gap-3 p-3.5">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-primary/50">
-              {available.length} {available.length === 1 ? "item" : "items"}
-            </p>
-            <p className="text-lg font-bold text-primary">{formatPrice(totalPence)}</p>
+            <h3 className="text-sm leading-tight font-semibold text-black/90">{name}</h3>
+            {tagline && <p className="mt-0.5 text-xs text-black/60">{tagline}</p>}
           </div>
 
-          <form action={addBundleToCart}>
-            <input type="hidden" name="bundleId" value={id} />
-            <button
-              type="submit"
-              className="rounded-xl bg-action px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-action-hover"
-            >
-              Add all {available.length} to basket
-            </button>
-          </form>
+          {/* Constituents carry NO price of their own — see the note above on why
+              this card shows exactly one. */}
+          <ul className="flex-1 space-y-1 text-xs text-black/70">
+            {available.map((item) => (
+              <li key={item.productId}>
+                <span className="font-semibold text-primary">{item.quantity} ×</span> {item.name}
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-black/5 pt-2">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-black/50">
+                {available.length} {available.length === 1 ? "item" : "items"}
+              </p>
+              <p className="skew-card-price text-base font-bold text-primary">
+                {formatPrice(totalPence)}
+              </p>
+            </div>
+
+            <form action={addBundleToCart}>
+              <input type="hidden" name="bundleId" value={id} />
+              <button
+                type="submit"
+                className="rounded-xl bg-action px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-action-hover"
+              >
+                Add all {available.length} to basket
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </li>

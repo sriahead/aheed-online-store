@@ -10,6 +10,15 @@ export interface CategorySummary {
 
 export interface CategoryWithChildren extends CategorySummary {
   children: CategorySummary[];
+  /**
+   * #498 — non-null only when this category IS a subcategory (the tree is
+   * capped at two levels, so a top-level department's `parent` is always
+   * null). Carries the parent's OWN `children` — i.e. this category's
+   * siblings, itself included — so a subcategory's own page can render the
+   * same full tab row as its parent's page, rather than showing no
+   * navigation at all once you've clicked into one.
+   */
+  parent: (CategorySummary & { children: CategorySummary[] }) | null;
 }
 
 export interface CategoryRepository {
@@ -48,6 +57,18 @@ export async function getCategoryBySlug(
         where: { vendorId, isActive: true },
         orderBy: { sortOrder: "asc" },
         select: { id: true, slug: true, name: true },
+      },
+      parent: {
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          children: {
+            where: { vendorId, isActive: true },
+            orderBy: { sortOrder: "asc" },
+            select: { id: true, slug: true, name: true },
+          },
+        },
       },
     },
   });

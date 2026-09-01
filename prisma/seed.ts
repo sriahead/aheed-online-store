@@ -1,9 +1,11 @@
 import "dotenv/config"; // load .env in THIS process, regardless of how it's launched
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { getStorage } from "@/lib/storage";
+import { GENERATED_SLUG_PREFIX, generateProducts } from "./generate-catalogue";
 
 // Seed runs in Node (locally or CI) — prefers DIRECT_URL.
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
@@ -15,6 +17,31 @@ if (!connectionString) {
 console.log("seed connecting to:", connectionString.replace(/:[^:@/]+@/, ":****@")); // mask password
 
 const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString }) });
+
+/**
+ * #489 R13 — the HOST only, never the connection string. The masked log line above still carries
+ * user, host, database and query params; this is the one line an operator is asked to eyeball
+ * before ~2,000 rows are written, so it prints exactly the fact being checked and nothing else.
+ * `CLAUDE.md` records why: a grep for `BASE_URL` once printed a Neon password in full (#175).
+ */
+function resolvedDbHost(): string {
+  try {
+    return new URL(connectionString as string).host;
+  } catch {
+    return "(unparseable connection string)";
+  }
+}
+
+/**
+ * #489 R9 — every storage write goes through here so the seed can report how many objects it
+ * actually uploaded. The generated catalogue shares one key per subcategory rather than writing
+ * one object per product; without a counter that claim is unfalsifiable from the outside.
+ */
+let putObjectCount = 0;
+async function putTracked(key: string, body: string, contentType: string): Promise<void> {
+  await getStorage().putObject(key, body, contentType);
+  putObjectCount += 1;
+}
 
 // ADR-004 slice 1 — single tenant for now. Fixed UUID matches the migration's backfill so
 // a fresh `migrate deploy` + `db:seed` produces the same vendor as the backfilled envs.
@@ -38,6 +65,8 @@ async function main() {
   });
 
   await seedCatalogue(AHEED_VENDOR_ID, CATALOGUE);
+  await seedSubcategories(AHEED_VENDOR_ID, CATALOGUE);
+  await seedFeaturedProducts(AHEED_VENDOR_ID, AHEED_FEATURED_SLUGS);
   await refreshProductImages(CATALOGUE);
   await upsertVendorSatellites(AHEED_VENDOR_ID, AHEED_SATELLITES);
   // After the catalogue: bundles resolve their constituents by product slug.
@@ -66,6 +95,8 @@ async function main() {
       update: {},
     });
     await seedCatalogue(SRIMART_VENDOR_ID, SRIMART_CATALOGUE);
+    await seedSubcategories(SRIMART_VENDOR_ID, SRIMART_CATALOGUE);
+    await seedFeaturedProducts(SRIMART_VENDOR_ID, SRIMART_FEATURED_SLUGS);
     await refreshProductImages(SRIMART_CATALOGUE);
     await upsertVendorSatellites(SRIMART_VENDOR_ID, SRIMART_SATELLITES);
     await seedBundles(SRIMART_VENDOR_ID, SRIMART_BUNDLES);
@@ -86,6 +117,31 @@ async function main() {
         "         (alongside SEED_AHEED_HOST) if you meant to seed both vendors.",
     );
   }
+
+  // #489 — the generated catalogue, LAST, and Aheed-only.
+  //
+  // Aheed-only is deliberate: SriMart exists to prove host-to-tenant isolation, and keeping it
+  // small means a slow query measured against Aheed is provably about row count rather than about
+  // multi-tenancy. Last, because bundles and price tiers above resolve products by slug and have
+  // no business matching a generated row.
+  //
+  // Removal takes precedence over generation so a single command can undo a scale run without
+  // needing the count that produced it.
+  if (process.env.SEED_REMOVE_GENERATED?.trim()) {
+    await removeGeneratedCatalogue(AHEED_VENDOR_ID);
+  } else {
+    const raw = process.env.SEED_SCALE_PRODUCTS?.trim();
+    if (raw) {
+      const requested = Number.parseInt(raw, 10);
+      if (!Number.isFinite(requested) || requested < 0) {
+        throw new Error(`SEED_SCALE_PRODUCTS must be a non-negative integer — got "${raw}"`);
+      }
+      await seedGeneratedCatalogue(AHEED_VENDOR_ID, CATALOGUE, requested);
+    }
+  }
+
+  // #489 R9 — makes "the generated set shares a small image pool" checkable from the outside.
+  console.log(`total putObject calls this run: ${putObjectCount}`);
 }
 
 async function upsertVendorDomain(vendorId: string, host: string) {
@@ -286,6 +342,14 @@ type CatalogueProduct = {
 type CatalogueCategory = {
   category: { slug: string; name: string };
   products: CatalogueProduct[];
+  /**
+   * #489 — the second tier. `Category.parentId` has existed since P2a and
+   * `lib/repositories/categories.ts`'s `checkParent` caps the tree at exactly two levels, but no
+   * fixture had ever populated a single child, so every nav surface rendered one tier for want of
+   * data rather than schema. Children are created in their own pass keyed on the child's slug (not
+   * the parent's), so they also reach a database that was seeded before this field existed.
+   */
+  children?: { slug: string; name: string }[];
 };
 
 // P2a — placeholder catalogue data (specs/2026-08-07-p2a-catalogue-browsing/). Real
@@ -294,6 +358,11 @@ type CatalogueCategory = {
 const CATALOGUE: CatalogueCategory[] = [
   {
     category: { slug: "fruit-veg", name: "Fruit & Veg" },
+    children: [
+      { slug: "fresh-fruit", name: "Fresh Fruit" },
+      { slug: "fresh-vegetables", name: "Fresh Vegetables" },
+      { slug: "herbs-salads", name: "Herbs & Salads" },
+    ],
     products: [
       {
         slug: "apples",
@@ -315,6 +384,11 @@ const CATALOGUE: CatalogueCategory[] = [
   },
   {
     category: { slug: "bakery", name: "Bakery" },
+    children: [
+      { slug: "bread-loaves", name: "Bread & Loaves" },
+      { slug: "pastries", name: "Pastries" },
+      { slug: "cakes-desserts", name: "Cakes & Desserts" },
+    ],
     products: [
       {
         slug: "sourdough-loaf",
@@ -336,6 +410,11 @@ const CATALOGUE: CatalogueCategory[] = [
   },
   {
     category: { slug: "dairy-eggs", name: "Dairy & Eggs" },
+    children: [
+      { slug: "milk-cream", name: "Milk & Cream" },
+      { slug: "cheese-paneer", name: "Cheese & Paneer" },
+      { slug: "eggs-butter", name: "Eggs & Butter" },
+    ],
     products: [
       {
         slug: "whole-milk",
@@ -360,6 +439,11 @@ const CATALOGUE: CatalogueCategory[] = [
   // left untouched (already live in production).
   {
     category: { slug: "halal-meat", name: "Halal Meat" },
+    children: [
+      { slug: "lamb-mutton", name: "Lamb & Mutton" },
+      { slug: "chicken-poultry", name: "Chicken & Poultry" },
+      { slug: "beef-mince", name: "Beef & Mince" },
+    ],
     products: [
       {
         slug: "halal-chicken-breast",
@@ -387,6 +471,11 @@ const CATALOGUE: CatalogueCategory[] = [
   },
   {
     category: { slug: "groceries", name: "Groceries" },
+    children: [
+      { slug: "rice-grains", name: "Rice & Grains" },
+      { slug: "lentils-pulses", name: "Lentils & Pulses" },
+      { slug: "cooking-oils", name: "Cooking Oils" },
+    ],
     products: [
       {
         slug: "basmati-rice-5kg",
@@ -409,6 +498,11 @@ const CATALOGUE: CatalogueCategory[] = [
   },
   {
     category: { slug: "international", name: "International" },
+    children: [
+      { slug: "south-asian", name: "South Asian" },
+      { slug: "middle-eastern", name: "Middle Eastern" },
+      { slug: "african-caribbean", name: "African & Caribbean" },
+    ],
     products: [
       {
         slug: "coconut-milk",
@@ -432,6 +526,11 @@ const CATALOGUE: CatalogueCategory[] = [
   },
   {
     category: { slug: "beverages", name: "Beverages" },
+    children: [
+      { slug: "tea-coffee", name: "Tea & Coffee" },
+      { slug: "juices-soft-drinks", name: "Juices & Soft Drinks" },
+      { slug: "water-mixers", name: "Water & Mixers" },
+    ],
     products: [
       {
         slug: "orange-juice-1l",
@@ -456,6 +555,11 @@ const CATALOGUE: CatalogueCategory[] = [
   },
   {
     category: { slug: "snacks", name: "Snacks" },
+    children: [
+      { slug: "crisps-namkeen", name: "Crisps & Namkeen" },
+      { slug: "biscuits-sweets", name: "Biscuits & Sweets" },
+      { slug: "nuts-dried-fruit", name: "Nuts & Dried Fruit" },
+    ],
     products: [
       {
         slug: "mixed-nuts-500g",
@@ -481,6 +585,11 @@ const CATALOGUE: CatalogueCategory[] = [
   },
   {
     category: { slug: "household", name: "Household" },
+    children: [
+      { slug: "cleaning", name: "Cleaning" },
+      { slug: "kitchen-foil", name: "Kitchen & Foil" },
+      { slug: "paper-toiletries", name: "Paper & Toiletries" },
+    ],
     products: [
       {
         slug: "washing-up-liquid",
@@ -500,6 +609,96 @@ const CATALOGUE: CatalogueCategory[] = [
       },
     ],
   },
+  // #496 — four more departments so the top scroller has enough rows to
+  // actually need scrolling on a typical viewport, not just the original
+  // nine (which nearly fill a 1280px screen on their own). No `children`:
+  // these aren't part of #489's generated-catalogue scale test, only real,
+  // small, curated departments like the original nine were before it.
+  {
+    category: { slug: "frozen-foods", name: "Frozen Foods" },
+    products: [
+      {
+        slug: "frozen-peas-1kg",
+        name: "Frozen Peas 1kg",
+        description: "Garden peas, frozen at the peak of freshness.",
+        basePrice: 149,
+        unitLabel: "£1.49 / kg",
+        quantity: 40,
+      },
+      {
+        slug: "frozen-chicken-nuggets",
+        name: "Chicken Nuggets 500g",
+        description: "Halal-certified breaded chicken nuggets.",
+        basePrice: 349,
+        unitLabel: "£6.98 / kg",
+        quantity: 22,
+        isHalal: true,
+      },
+    ],
+  },
+  {
+    category: { slug: "health-beauty", name: "Health & Beauty" },
+    products: [
+      {
+        slug: "shampoo-400ml",
+        name: "Shampoo 400ml",
+        description: "Everyday shampoo for all hair types.",
+        basePrice: 299,
+        unitLabel: "£7.48 / litre",
+        quantity: 30,
+      },
+      {
+        slug: "toothpaste-100ml",
+        name: "Toothpaste 100ml",
+        description: "Fluoride toothpaste, mint flavour.",
+        basePrice: 179,
+        unitLabel: "£1.79 / 100ml",
+        quantity: 45,
+      },
+    ],
+  },
+  {
+    category: { slug: "baby-kids", name: "Baby & Kids" },
+    products: [
+      {
+        slug: "baby-wipes-80pk",
+        name: "Baby Wipes, pack of 80",
+        description: "Fragrance-free, gentle on newborn skin.",
+        basePrice: 199,
+        unitLabel: "£1.99 / pack",
+        quantity: 36,
+      },
+      {
+        slug: "infant-formula-900g",
+        name: "Infant Formula 900g",
+        description: "Stage 1 infant formula milk powder.",
+        basePrice: 1499,
+        unitLabel: "£16.66 / kg",
+        quantity: 15,
+      },
+    ],
+  },
+  {
+    category: { slug: "pet-supplies", name: "Pet Supplies" },
+    products: [
+      {
+        slug: "dog-food-2kg",
+        name: "Dog Food 2kg",
+        description: "Complete dry dog food, chicken flavour.",
+        basePrice: 599,
+        unitLabel: "£2.99 / kg",
+        quantity: 20,
+      },
+      {
+        slug: "cat-litter-5kg",
+        name: "Cat Litter 5kg",
+        description: "Clumping cat litter, low dust.",
+        basePrice: 449,
+        unitLabel: "£0.90 / kg",
+        quantity: 18,
+      },
+    ],
+  },
 ];
 
 // Re-upload the (brand-neutral) product placeholder to every catalogue product's key.
@@ -511,10 +710,12 @@ async function refreshProductImages(catalogue: CatalogueCategory[]) {
     join(import.meta.dirname, "seed-assets", "placeholder-product.svg"),
     "utf8",
   );
-  const storage = getStorage();
+  // #489 R9 — deliberately iterates only the CURATED fixture products. The generated set is not
+  // reachable from `catalogue` and must never be refreshed per-product: it shares one key per
+  // subcategory, so refreshing it means re-uploading that small pool, not 2,000 objects.
   const products = catalogue.flatMap((c) => c.products);
   for (const product of products) {
-    await storage.putObject(`products/${product.slug}/main.svg`, placeholderImage, "image/svg+xml");
+    await putTracked(`products/${product.slug}/main.svg`, placeholderImage, "image/svg+xml");
   }
   console.log(`refreshed ${products.length} placeholder product image(s)`);
 }
@@ -539,7 +740,6 @@ async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
     join(import.meta.dirname, "seed-assets", "placeholder-product.svg"),
     "utf8",
   );
-  const storage = getStorage();
 
   // Upload every image BEFORE writing anything to the DB, and write each category's
   // rows in one transaction — a mid-run failure (e.g. storage credentials wrong) must
@@ -549,8 +749,7 @@ async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
   // across vendors so keys don't collide.)
   for (const { products } of pending) {
     for (const product of products) {
-      const storageKey = `products/${product.slug}/main.svg`;
-      await storage.putObject(storageKey, placeholderImage, "image/svg+xml");
+      await putTracked(`products/${product.slug}/main.svg`, placeholderImage, "image/svg+xml");
     }
   }
 
@@ -593,6 +792,284 @@ async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
   console.log(
     `seeded ${pending.length} categories, ${pending.flatMap((c) => c.products).length} products for ${vendorId}`,
   );
+}
+
+/**
+ * #489 — create the second category tier.
+ *
+ * Its own pass, called separately from `seedCatalogue`, for two reasons. First, `seedCatalogue`
+ * returns early when every top-level category already exists, so folding children into it would
+ * mean a database seeded before this slice never gains them. Second, idempotency here is keyed on
+ * the CHILD's slug, not the parent's — the two questions ("does this department exist?" and "does
+ * this subcategory exist?") have different answers and need different checks.
+ *
+ * Depth is not enforced here because it does not need to be: every child names a parent drawn from
+ * the same fixture's top-level entries, which have `parentId: null` by construction. That keeps the
+ * seed consistent with `lib/repositories/categories.ts`'s `checkParent`, which caps the admin path
+ * at two levels.
+ */
+async function seedSubcategories(vendorId: string, catalogue: CatalogueCategory[]) {
+  const withChildren = catalogue.filter((c) => (c.children?.length ?? 0) > 0);
+  if (withChildren.length === 0) return;
+
+  const existing = new Set(
+    (await prisma.category.findMany({ where: { vendorId }, select: { slug: true } })).map(
+      (c) => c.slug,
+    ),
+  );
+
+  let created = 0;
+  for (const { category, children } of withChildren) {
+    const parent = await prisma.category.findFirst({
+      where: { vendorId, slug: category.slug },
+      select: { id: true },
+    });
+    // A parent can legitimately be absent (SriMart is only seeded when both host vars are set).
+    if (!parent) continue;
+
+    const missing = (children ?? []).filter((child) => !existing.has(child.slug));
+    if (missing.length === 0) continue;
+
+    await prisma.category.createMany({
+      data: missing.map((child, index) => ({
+        vendorId,
+        slug: child.slug,
+        name: child.name,
+        parentId: parent.id,
+        sortOrder: index,
+      })),
+    });
+    created += missing.length;
+  }
+
+  console.log(
+    created === 0
+      ? `all subcategories already exist for ${vendorId} — skipping`
+      : `seeded ${created} subcategories for ${vendorId}`,
+  );
+}
+
+/**
+ * #501 — mark a few curated products as featured.
+ *
+ * `Product.isFeatured` is `@default(false)` and NOTHING in this seed had ever set it, so no
+ * product in any seeded environment was featured. `app/(storefront)/categories/page.tsx` asks for
+ * `list({ take: 4, isFeatured: true })` and `ProductRow` returns `null` on an empty list, which
+ * means the Featured Products row was absent from the shop page entirely — and the "View all"
+ * this slice points at `/search?featured=1` would have led to an empty listing. The row was never
+ * broken code; it was a row with no data behind it, the same class of gap #496 closed by adding
+ * real departments.
+ *
+ * ITS OWN PASS, called separately from `seedCatalogue`, for the reason `seedSubcategories`
+ * documents directly above: `seedCatalogue` returns early per category once it exists, so a
+ * database seeded before this slice would never gain the flag. An `updateMany` keyed on slug is
+ * idempotent and reaches those databases. (`updateMany` is safe here — this script runs in real
+ * Node on the WebSocket adapter, not the HTTP one that cannot execute the query compiler's
+ * internal transaction; see CLAUDE.md's #382 note.)
+ *
+ * DELIBERATELY FEWER THAN THE 12-ITEM `/search` PAGE SIZE, so a featured listing is visibly a
+ * strict subset of the catalogue rather than a full page that would prove nothing about whether
+ * the filter is applied at all.
+ */
+const AHEED_FEATURED_SLUGS = [
+  "halal-chicken-breast",
+  "basmati-rice-5kg",
+  "sourdough-loaf",
+  "free-range-eggs",
+  "mixed-nuts-500g",
+  "coconut-milk",
+];
+
+const SRIMART_FEATURED_SLUGS = ["sri-earbuds", "sri-desk-lamp"];
+
+async function seedFeaturedProducts(vendorId: string, slugs: string[]) {
+  if (slugs.length === 0) return;
+
+  const { count } = await prisma.product.updateMany({
+    where: { vendorId, slug: { in: slugs } },
+    data: { isFeatured: true },
+  });
+
+  console.log(
+    count === 0
+      ? `no products matched the featured slugs for ${vendorId} — none marked featured`
+      : `marked ${count} products featured for ${vendorId}`,
+  );
+}
+
+/** Rows per `createMany` statement. 2,000 in one statement is a needlessly large single query;
+ *  500 keeps each round-trip modest while still being ~4 statements instead of ~2,000 inserts. */
+const GENERATED_BATCH = 500;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+/**
+ * #489 — the generated catalogue, for scale testing only.
+ *
+ * Three deliberate departures from `seedCatalogue`, each answering a specific way that function
+ * fails to survive 2,000 rows:
+ *
+ * 1. ONE IMAGE OBJECT PER SUBCATEGORY, not per product. `seedCatalogue` uploads the same
+ *    placeholder bytes once per product; at 2,000 that is 2,000 identical uploads on every run.
+ *    Keys stay relative and immutable per CLAUDE.md — nothing ever required a 1:1 product-to-object
+ *    mapping, and sharing one key across a category's products is invisible to every read path.
+ * 2. `createMany`, not a per-product `create`. This is safe HERE and specifically not safe in the
+ *    Worker: the seed runs in real Node on the WebSocket adapter (`PrismaNeon`), whereas #382
+ *    records that `createMany`/`updateMany` crash unconditionally through `getPrisma()`'s HTTP
+ *    adapter with "Transactions are not supported in HTTP mode".
+ * 3. ITS OWN IDEMPOTENCY CHECK, keyed on the generated slug prefix. `seedCatalogue`'s check is
+ *    keyed on category slug, so generated products hung under an existing category would be
+ *    skipped wholesale on a re-run.
+ */
+async function seedGeneratedCatalogue(
+  vendorId: string,
+  catalogue: CatalogueCategory[],
+  count: number,
+) {
+  if (count <= 0) return;
+
+  const childSlugs = catalogue.flatMap((c) => (c.children ?? []).map((child) => child.slug));
+  if (childSlugs.length === 0) {
+    throw new Error(
+      "seedGeneratedCatalogue: no subcategories in the fixture — run seedSubcategories first",
+    );
+  }
+
+  const categories = await prisma.category.findMany({
+    where: { vendorId, slug: { in: childSlugs } },
+    select: { id: true, slug: true },
+  });
+  const categoryIdBySlug = new Map(categories.map((c) => [c.slug, c.id]));
+  const usableSlugs = childSlugs.filter((slug) => categoryIdBySlug.has(slug));
+  if (usableSlugs.length === 0) {
+    throw new Error(
+      "seedGeneratedCatalogue: no subcategories found in the database for this vendor",
+    );
+  }
+
+  /*
+   * One shared object per subcategory (R8) — uploaded before any DB write, matching
+   * seedCatalogue's ordering rationale.
+   *
+   * #502: THIS RUNS BEFORE THE `existing >= count` GUARD BELOW, AND MUST STAY THERE.
+   * It used to sit after it, so the moment a database held the generated rows, no later
+   * seed run uploaded these objects into that environment's bucket. Rows and objects are
+   * written by this one function but the guard only ever consulted the rows, so the two
+   * diverged silently per environment: every `products/gen-<subcategory>/main.svg` key existed in the
+   * dev bucket and 404ed in staging's, while staging's pages went on referencing them.
+   * The uploads are idempotent (same key, same bytes), so running them on a re-run costs
+   * one PUT per subcategory and closes that gap.
+   */
+  const placeholderImage = readFileSync(
+    join(import.meta.dirname, "seed-assets", "placeholder-product.svg"),
+    "utf8",
+  );
+  const storageKeyBySlug = new Map<string, string>();
+  for (const slug of usableSlugs) {
+    const key = `products/${GENERATED_SLUG_PREFIX}${slug}/main.svg`;
+    await putTracked(key, placeholderImage, "image/svg+xml");
+    storageKeyBySlug.set(slug, key);
+  }
+  console.log(`refreshed ${storageKeyBySlug.size} generated placeholder image(s)`);
+
+  const existing = await prisma.product.count({
+    where: { vendorId, slug: { startsWith: GENERATED_SLUG_PREFIX } },
+  });
+  if (existing >= count) {
+    console.log(
+      `generated catalogue already holds ${existing} product(s) for ${vendorId} (>= ${count}) — skipping row creation`,
+    );
+    return;
+  }
+
+  // R13 — the operator's last chance to notice this is pointed at the wrong database, printed
+  // immediately before the first write rather than buried at process start.
+  console.log(
+    `\n>>> generating ${count} products for vendor ${vendorId} in database host: ${resolvedDbHost()}\n`,
+  );
+
+  const generated = generateProducts(count, usableSlugs);
+
+  // Ids are generated up front so images and inventory can be written with their own
+  // `createMany` rather than as nested creates, which `createMany` cannot express.
+  const rows = generated.map((product) => ({ id: randomUUID(), product }));
+
+  for (const batch of chunk(rows, GENERATED_BATCH)) {
+    await prisma.product.createMany({
+      data: batch.map(({ id, product }) => ({
+        id,
+        vendorId,
+        slug: product.slug,
+        name: product.name,
+        description: product.description,
+        categoryId: categoryIdBySlug.get(product.categorySlug) as string,
+        basePrice: product.basePrice,
+        unitLabel: product.unitLabel,
+        origin: product.origin,
+        isHalal: product.isHalal,
+        isFresh: product.isFresh,
+        isOrganic: product.isOrganic,
+      })),
+    });
+  }
+
+  for (const batch of chunk(rows, GENERATED_BATCH)) {
+    await prisma.productImage.createMany({
+      data: batch.map(({ id, product }) => ({
+        productId: id,
+        storageKey: storageKeyBySlug.get(product.categorySlug) as string,
+        alt: product.name,
+        isPrimary: true,
+      })),
+    });
+  }
+
+  for (const batch of chunk(rows, GENERATED_BATCH)) {
+    await prisma.inventory.createMany({
+      data: batch.map(({ id, product }) => ({
+        vendorId,
+        productId: id,
+        quantity: product.quantity,
+      })),
+    });
+  }
+
+  console.log(
+    `seeded ${generated.length} generated products across ${usableSlugs.length} subcategories for ${vendorId}`,
+  );
+}
+
+/**
+ * #489 R7 — remove exactly the generated set, leaving every curated product and every category
+ * intact. Children first: `ProductImage` and `Inventory` reference `Product` with the default
+ * restrictive FK behaviour, so deleting products first would fail.
+ */
+async function removeGeneratedCatalogue(vendorId: string) {
+  const doomed = await prisma.product.findMany({
+    where: { vendorId, slug: { startsWith: GENERATED_SLUG_PREFIX } },
+    select: { id: true },
+  });
+  if (doomed.length === 0) {
+    console.log(`no generated products to remove for ${vendorId}`);
+    return;
+  }
+  const ids = doomed.map((p) => p.id);
+
+  console.log(
+    `\n>>> removing ${ids.length} generated products for vendor ${vendorId} in database host: ${resolvedDbHost()}\n`,
+  );
+
+  for (const batch of chunk(ids, GENERATED_BATCH)) {
+    await prisma.productImage.deleteMany({ where: { productId: { in: batch } } });
+    await prisma.inventory.deleteMany({ where: { productId: { in: batch } } });
+    await prisma.product.deleteMany({ where: { id: { in: batch } } });
+  }
+
+  console.log(`removed ${ids.length} generated products for ${vendorId}`);
 }
 
 // ADR-004 slice 3b — SriMart, a real 2nd vendor with a deliberately DIFFERENT catalogue
@@ -852,6 +1329,10 @@ const SRIMART_PRICE_TIERS: PriceTierFixture[] = [
 const SRIMART_CATALOGUE: CatalogueCategory[] = [
   {
     category: { slug: "sri-electronics", name: "Electronics" },
+    children: [
+      { slug: "sri-audio", name: "Audio" },
+      { slug: "sri-chargers-cables", name: "Chargers & Cables" },
+    ],
     products: [
       {
         slug: "sri-phone-charger",
@@ -873,6 +1354,10 @@ const SRIMART_CATALOGUE: CatalogueCategory[] = [
   },
   {
     category: { slug: "sri-home", name: "Home & Living" },
+    children: [
+      { slug: "sri-lighting", name: "Lighting" },
+      { slug: "sri-storage", name: "Storage" },
+    ],
     products: [
       {
         slug: "sri-desk-lamp",

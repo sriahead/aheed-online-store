@@ -20,6 +20,7 @@ export function ProductFilterForm({
     isHalal?: string;
     isFresh?: string;
     isOrganic?: string;
+    featured?: string;
   };
   // Per-vendor filter visibility (ADR-004 follow-up): only offer a speciality
   // filter the vendor's catalogue actually uses. Defaults to none.
@@ -28,6 +29,17 @@ export function ProductFilterForm({
   const spec = specialities ?? { halal: false, fresh: false, organic: false };
   return (
     <form method="GET" className="flex flex-col gap-5">
+      {/*
+        #501 — a GET form submits ONLY the fields it contains, replacing the
+        whole query string. `featured` has no visible control (it is reached
+        from the shop page's "View all", not chosen here), so without this
+        hidden field pressing Apply from a featured listing would silently drop
+        the filter and dump the shopper into the full catalogue. `cursor` is
+        deliberately NOT carried the same way: a filter change should restart
+        pagination at page 1.
+      */}
+      {searchParams.featured === "1" && <input type="hidden" name="featured" value="1" />}
+
       {showQuery && (
         <label className="flex flex-col gap-1">
           <span className="text-sm font-semibold text-primary">Search</span>

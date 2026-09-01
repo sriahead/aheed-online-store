@@ -3,6 +3,7 @@ import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import { effectiveStock } from "@/lib/cart-rules";
 import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
+import { PLACEHOLDER_IMAGE_SUFFIX, isPlaceholderImageKey } from "@/lib/product-image";
 import type { ProductTier } from "@/lib/tier-pricing";
 import {
   deleteProductTier,
@@ -119,7 +120,7 @@ export interface AvailableSpecialities {
 
 export interface ProductRepository {
   listByCategory(
-    categoryId: string,
+    categoryIds: string[],
     opts: { take: number; cursor?: string } & ProductFilters,
   ): Promise<ProductPage>;
   search(
@@ -128,12 +129,20 @@ export interface ProductRepository {
   ): Promise<ProductPage>;
   /**
    * Filtered product listing with NO text query and no category constraint
-   * (#211) — for the homepage's "recent"/"featured" rows, which need "products
+   * (#211) — for the shop page's "recent"/"featured" rows, which need "products
    * matching these filters", not "products matching this search term". Kept
    * separate from search() rather than teaching it to treat "" as "no text
-   * filter": search()'s empty-query guard is correct for its real caller, the
-   * /search page, where an empty box means "nothing searched yet", not
-   * "browse everything".
+   * filter", and that separation still stands: searchProducts()'s empty-query
+   * guard is untouched and is correct for what search() means.
+   *
+   * #501 — this docstring used to justify the split by asserting that on the
+   * /search page "an empty box means 'nothing searched yet', not 'browse
+   * everything'". That is no longer true of the page, and leaving the sentence
+   * here would have left the doc contradicting the code beside it. Bare
+   * /search rendered no products at all, which made the shop page's "View all"
+   * a dead end, so `app/(storefront)/search/page.tsx` now BRANCHES to list()
+   * for its browse mode. The structural decision survives — two functions, the
+   * guard intact; only the page's reading of an empty box changed.
    */
   list(opts: { take: number; cursor?: string } & ProductFilters): Promise<ProductPage>;
   getBySlug(slug: string): Promise<ProductDetail | null>;
@@ -254,16 +263,24 @@ async function findPage(
   };
 }
 
+/**
+ * #496 — takes an array, not a single id, so the storefront category page can
+ * aggregate a department's own products with every one of its subcategories'
+ * products in one query, rather than showing only the 2-3 products a
+ * department happens to hold directly. A single category still passes a
+ * one-element array; a subcategory (which has no children of its own, the
+ * tree being capped at two levels) always calls this with exactly its own id.
+ */
 export async function listProductsByCategory(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
-  categoryId: string,
+  categoryIds: string[],
   { take, cursor, ...filters }: { take: number; cursor?: string } & ProductFilters,
 ): Promise<ProductPage> {
   return findPage(
     prisma,
     vendorId,
-    { vendorId, categoryId, isActive: true, ...buildFilterWhere(filters) },
+    { vendorId, categoryId: { in: categoryIds }, isActive: true, ...buildFilterWhere(filters) },
     { take, cursor },
   );
 }
@@ -1138,6 +1155,24 @@ export async function quickUpdateInventory(
   }
 }
 
+/**
+ * Attach a pipeline-generated image and make it the one the storefront shows
+ * (#502).
+ *
+ * `isPrimary: true`, NOT false. Every storefront read selects
+ * `images: { where: { isPrimary: true }, take: 1 }` (see `findPage` above), so
+ * the previous `isPrimary: false` meant a generated image uploaded, cost an AI
+ * call, and then never appeared on a single card — invisible, because the job
+ * that produced it could never match a product in the first place (see
+ * `getProductsWithoutImages`).
+ *
+ * The placeholder rows this replaces are DELETED rather than demoted. They are
+ * shared objects — every product in a subcategory points at the same
+ * `products/gen-{categorySlug}/main.svg` — so keeping one around as a secondary
+ * gallery image would put an identical "No image" tile in the gallery of every
+ * product that has ever been backfilled. Only placeholders are removed; a real
+ * image a vendor uploaded is demoted to non-primary and kept.
+ */
 export async function saveGeneratedProductImage(
   prisma: Db,
   vendorId: string,
@@ -1146,14 +1181,34 @@ export async function saveGeneratedProductImage(
   alt: string,
   needsReview: boolean,
 ): Promise<void> {
+  const existing = await prisma.productImage.findMany({
+    where: { productId },
+    select: { id: true, storageKey: true, isPrimary: true },
+  });
+
   await prisma.productImage.create({
     data: {
       productId,
       storageKey,
       alt,
-      isPrimary: false,
+      isPrimary: true,
     },
   });
+
+  for (const image of existing) {
+    if (isPlaceholderImageKey(image.storageKey)) {
+      await prisma.productImage.delete({ where: { id: image.id } });
+    } else if (image.isPrimary) {
+      // A real image the vendor uploaded keeps its place in the gallery, but
+      // only one row may claim primary. Singular `update`, not `updateMany` —
+      // #382: the HTTP adapter cannot run the transaction the query compiler
+      // wraps `updateMany` in.
+      await prisma.productImage.update({
+        where: { id: image.id },
+        data: { isPrimary: false },
+      });
+    }
+  }
 
   if (needsReview) {
     await prisma.product.update({
@@ -1163,12 +1218,36 @@ export async function saveGeneratedProductImage(
   }
 }
 
+/**
+ * Products the "Auto-fill Missing Images" job should act on (#502).
+ *
+ * This asked for `images: { none: {} }` — products with NO image row — and so
+ * matched NOTHING, ever: both seed paths give every product a placeholder row,
+ * measured at 0 for both vendors on the dev branch while thousands of cards
+ * rendered a grey "No image" box. The real condition is "has no image a
+ * customer would call an image", which covers a product with no rows at all AND
+ * a product still carrying only a seeded placeholder.
+ *
+ * Expressed as one query rather than an over-fetch-and-filter: Prisma's `every`
+ * on a relation is true for a product with no images at all, so a single
+ * `every: { storageKey: { endsWith: ... } }` covers both halves, and `take`
+ * still means the database returns exactly what the caller will act on. The
+ * suffix comes from `lib/product-image.ts`, the same constant
+ * `isPlaceholderImageKey` reads, so the SQL filter and the pure predicate
+ * cannot drift apart.
+ */
 export async function getProductsWithoutImages(prisma: Db, vendorId: string, limit: number) {
   return await prisma.product.findMany({
     where: {
       vendorId,
-      images: { none: {} },
+      images: { every: { storageKey: { endsWith: PLACEHOLDER_IMAGE_SUFFIX } } },
     },
+    // Newest first, so a bounded batch is deterministic rather than whatever
+    // order the planner happens to return. Two things follow from that, both
+    // wanted: `scripts/verify-repository-injection.ts` can assert on rows it
+    // just created, and a vendor's real catalogue — which is newer than the
+    // seeded demo set — is filled before the 2,000 generated products.
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limit,
     select: { id: true, name: true },
   });

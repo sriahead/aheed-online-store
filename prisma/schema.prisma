@@ -936,3 +936,25 @@ model VendorRoleAuditLog {
 
   @@index([vendorId, createdAt])
 }
+
+// Server-side capture of a thrown request error (#508), independent of Cloudflare Workers
+// Logs (#246, unconfirmed queryable) — written from instrumentation.ts's onRequestError, the
+// one place that still sees the real error before Next.js reduces it to a generic digest for
+// the client boundary (components/errors/ErrorPanel.tsx deliberately renders neither, #430/
+// #478/#479). No vendor relation — deliberately platform-wide like HealthCheck, since an error
+// boundary can fire before vendor context ever resolves (vendor resolution failing is itself
+// one thing that can throw), and resolving one here would risk a second DB read compounding
+// whatever already failed.
+model ErrorEvent {
+  id         String   @id @default(uuid())
+  digest     String?
+  message    String
+  stack      String?
+  path       String
+  method     String
+  routerKind String
+  routeType  String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}

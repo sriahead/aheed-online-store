@@ -79,9 +79,12 @@ export default async function HomePage() {
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Two columns once this vendor has departments to show; a single
-            column when they don't, so the hero never renders an empty well. */}
+            column when they don't, so the hero never renders an empty well.
+            #496: the department slider was capped at a fixed 28rem regardless
+            of viewport, making it a small corner element rather than a real
+            second half of the hero — now an even lg:grid-cols-2 split. */}
         <div
-          className={`relative z-10 gap-8 ${heroDepartments.length > 0 ? "lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:items-center" : ""}`}
+          className={`relative z-10 gap-8 ${heroDepartments.length > 0 ? "lg:grid lg:grid-cols-2 lg:items-center" : ""}`}
         >
           <div className="max-w-2xl space-y-4">
             <div className="inline-flex items-center gap-1.5 bg-black/20 border border-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">

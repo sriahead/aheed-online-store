@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.10.0"
-updated: 2026-08-29
+version: "1.11.0"
+updated: 2026-08-31
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -129,11 +129,44 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   that introduced it. What stays banned either way is raw SQL **at request time** in `app/`,
   `features/`, `components/` or `lib/repositories/*` — that is the portability and injection
   surface the rule was written for.
+- **The GAP-011 drift risk above is not hypothetical — it fired for real in #508 (2026-09-01).**
+  Adding a new model (`ErrorEvent`) with no relationship whatsoever to `Order` or `User` was enough
+  for `prisma migrate dev` to generate `DROP INDEX` for all three hand-authored `pg_trgm` indexes
+  from `20260820143949_p7_5de_order_search_trigram` — and that drop **executed** against the dev
+  database before it was caught by reading the generated `migration.sql`, not before applying it.
+  Recovery needed three separate steps, not just re-adding the `CREATE INDEX`: restoring the
+  indexes on the already-mutated database, rewriting the migration file to remove the erroneous
+  drops (so a fresh `migrate deploy` elsewhere never repeats them), and reconciling Prisma's own
+  `_prisma_migrations` checksum for that file (delete the stale row, `prisma migrate resolve
+  --applied <name>`) since editing an already-applied migration's contents leaves the recorded
+  checksum stale. **The transferable step this adds: read every `migrate dev`-generated
+  `migration.sql` before letting it apply — a `--create-only` run followed by a manual review would
+  have caught this before the drop ever touched a real database, which "keep them and re-assert
+  this migration" (the original migration's own comment) assumes you already know to do.**
 - Money = **integer pence** + explicit currency. No floats, no `money` type.
 - Images: store a **relative key** (e.g. `products/{productId}/{uuid}.webp`), **never a URL**.
   Keys are **immutable** — replacing an image writes a new key and repoints the row, so a CDN purge
   is never needed. (This line said `products/{sku}/main.webp` until P6b2; `Product` has no `sku`
   field and the seed writes `products/{slug}/main.svg`, so the example matched nothing in the repo.)
+- **A `ProductImage` row and the object it names are written by different systems, so a row can and
+  does outlive its object — treat "the row exists" as no evidence the image loads.** Found in #502
+  (2026-09-01): `prisma/seed.ts`'s `seedGeneratedCatalogue` wrote both, but guarded both behind a
+  **row-only** check (`if (existing >= count) return;`) placed *above* its own `putTracked` uploads.
+  So the moment a database held the generated products, no later seed run uploaded the objects into
+  that environment's bucket. The dev bucket had every `products/gen-<subcategory>/main.svg`; staging's
+  had none, and returned **404** for all of them while staging's pages went on referencing them —
+  invisible to `lint`/`typecheck`/`test`/`build`, and invisible locally, because dev's bucket was
+  complete. Production was untouched only by luck: it carries no generated products. **Two
+  transferable rules.** First, when one function writes both a row and its object, any idempotency
+  guard must be positioned so the storage write still happens on a re-run, or the two diverge
+  silently and per-environment. Second, **verify an image key against the CDN of the environment
+  that actually serves it** (`curl -I "${CDN_BASE_URL}/${key}"`) rather than against dev — the same
+  key legitimately returns 200 in one environment and 404 in another, which is exactly the case no
+  local check can see. `scripts/restore-placeholder-images.ts` repairs a database whose rows already
+  exist; the seed fix alone cannot, since it only helps databases seeded after it. Storefront cards
+  now degrade a missing object to the "no image" box (`components/product/ProductImage.tsx`) rather
+  than a broken-image icon, so this class of gap is no longer *visibly* broken — which makes
+  checking the CDN, not the page, the way to catch the next one.
 
 ## Storage (ADR-003)
 - Object storage via the **S3-compatible API only**, behind `lib/storage` (`StorageService` port).
@@ -176,6 +209,19 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   `# comment` or leading space has silently broken connection strings here).
 - Runtime secrets live in Cloudflare (`wrangler secret put NAME --env <env>`); CI secrets in GitHub
   environments. Never commit secrets; never read `DIRECT_URL` at runtime.
+- **`instrumentation.ts`'s `onRequestError` DOES have a working Cloudflare Workers request context
+  under this app's Next 16 / OpenNext / Workers stack** — `getCloudflareContext()`/`readEnv()`
+  resolve normally there, confirmed live in `#508` (2026-09-01): a forced throw under `npm run
+  preview` reached a plain, uncached `PrismaClient` constructed inside the hook, and it resolved
+  `DATABASE_URL` and wrote a real row on the first try. This was flagged as a genuinely unconfirmed
+  risk at that slice's `/propose` (this repo has a documented history of Next-on-Workers behaviour
+  not matching framework-documented semantics — `proxy.ts`, `edge` runtime, `@prisma/client/wasm`
+  resolution, all elsewhere in this file), so `getPrismaUncached()` was built deliberately *not*
+  wrapped in React's `cache()` to sidestep the question rather than gamble on it. The mitigation
+  turned out not to be needed for context availability itself, but keep using an uncached client
+  for any future `onRequestError` work anyway — `cache()`'s per-request de-dupe still isn't needed
+  for a handler that only ever runs once per throw, and reaching for it would reopen a question
+  that's now moot rather than genuinely require re-answering it.
 
 ## Branch strategy & CI/CD
 - `feature/<slug>` → PR into **`staging`** (auto-deploys to `staging.aheedfoodcentre.nocaped.com`).
@@ -545,7 +591,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   Before merging a slice that adds or edits either directory, a real check is `npm run
   kms:assemble:internal && (cd kms/site-internal && npx next build --webpack)` — not just the root
   `lint`/`build`.
-- **The same pipeline breaks on a bare `{...}` in prose, and this one has now cost a build twice.**
+- **The same pipeline breaks on a bare `{...}` in prose, and this has now cost a build THREE times.**
   MDX evaluates `{anything}` outside backticks as a **JSX expression**, so quoting a code fragment
   the natural way — `"Save {formatPrice(saving)}"` inside double quotes — compiles fine, passes every
   root gate, and then dies at *prerender* with `ReferenceError: formatPrice is not defined` naming
@@ -554,10 +600,16 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `` `bundles/{bundleId}/{uuid}.webp` `` is already safe *because* it is in backticks — the trap is
   the unbackticked case, not the braces themselves. First hit at P8.5e (PR #360, "escape bare
   curly-brace reference breaking `deploy-docs-internal`"); hit again at P8.5c's `/build-notes`,
-  caught before merge only because that slice actually ran the check above. **Run the two-command
-  check, and read its real exit status** — piping it through `tail` reports the pipe's success, not
-  the build's, which is how a `Next.js build worker exited with code: 1` can look like `exited with
-  code 0`.
+  caught before merge only because that slice actually ran the check above. **A third hit, in the
+  storefront-browsing-ux-fixes slice (#496, 2026-08-31), is the more instructive one**: it wasn't an
+  edit to an existing doc, it was a bare `"Shop {Department}"` written into a brand-new `plan.md`'s
+  *first draft*, describing a UI button's own label in prose. Writing fresh spec prose is exactly as
+  exposed as editing an existing one — there is no "this file is new, so it's fine" exemption. Caught
+  the same way as the second hit: the two-command check below, run before push, not discovered via a
+  failed `deploy-docs-internal` after merge. **Run the two-command check on every slice that adds or
+  edits a spec file, including the very first one you write for it, and read its real exit status** —
+  piping it through `tail` reports the pipe's success, not the build's, which is how a `Next.js build
+  worker exited with code: 1` can look like `exited with code 0`.
 - **A spec's front-matter `id` cannot contain a literal `.`** — `kms/schema/frontmatter.ts`'s `id`
   regex is `^[a-z0-9-]+$`. A phase name that already has a dot (`P8.1a`, `P7.5a`, `P6.5`, …) is easy
   to copy straight into `id:` when writing a new `plan.md` at `/spec`, and none of
@@ -600,6 +652,21 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `lint`/`typecheck`/`test` checks a second vendor's rendered output. Curl or otherwise fetch a page
   with `Host: srimart-staging.nocaped.com` (or `srimart.nocaped.com` in production) under
   `npm run preview` before treating a branding/token change as verified.
+- **A local `VendorDomain.host` value that includes a port can never resolve — seed it port-less,
+  always, even for local-only testing.** `lib/tenant.ts`'s `getCurrentVendorIdOrNull()` runs every
+  request host through `splitHostPort(...).hostname` before the `VendorDomain` lookup, which always
+  strips the port — deliberate and correct, since a real `Host` header on
+  `staging.aheedfoodcentre.nocaped.com`/`nocaped.com` never carries one. A row seeded with a port
+  (e.g. `SEED_SRIMART_HOST=srimart.localhost:8787`, the value a from-scratch local seed might
+  reasonably reach for) silently can never match, and the request falls through to `/coming-soon` —
+  indistinguishable from "this host genuinely isn't mapped," no error anywhere. The line above
+  already models the right convention (`srimart-staging.nocaped.com`, no port, reused as the local
+  `Host` header value even though nothing is actually listening on that domain — only the header
+  string matters to `getCurrentVendorIdOrNull()`, not where the TCP connection actually goes) but
+  didn't say why it has to be port-less until this was hit live: `/validate` for #501 slice A
+  (2026-09-01, `#514`) found a dev-DB row seeded as `srimart.localhost:8787` in an earlier session,
+  fixed by rewriting it port-less. Any `SEED_SRIMART_HOST`/`SEED_AHEED_HOST` value — local, staging,
+  or production — must never contain a port.
 
 ## Local Stripe webhook testing — learned the hard way
 - **This repo's `.dev.vars` and `.env` both carry a real `STRIPE_SECRET_KEY` (test-mode) by

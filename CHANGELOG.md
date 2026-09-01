@@ -6,6 +6,208 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **`#501` (parts 1 and 2) — a browse mode for `/search`, working "View all" links, and a
+  `/bundles` page** (`specs/2026-09-01-storefront-browsing-affordances/`). Slice A of the three
+  approved at Gate 1 on 2026-09-01; slice B was `#502`, slice C is `#503`. Bare `/search` ran its
+  query inside `if (query)` and gated the grid on `query &&`, so it returned 200 with an empty
+  content column — and `app/(storefront)/categories/page.tsx` pointed the shop page's only "View
+  all" straight at it, as did the header's search box when submitted empty. The page now branches:
+  no `q` calls `products.list(...)`, a `q` calls `products.search(q, ...)`, both with identical
+  filter and cursor options, so price, stock and speciality filters plus keyset pagination work the
+  same either way. **`#211`'s `list()`/`search()` split is preserved literally** —
+  `searchProducts`'s empty-query guard is untouched and the two functions stay separate; only the
+  *page's* reading of an empty box changed, and the docstring in `lib/repositories/products.ts`
+  that asserted the opposite was rewritten rather than left contradicting the code beside it. A new
+  `featured` param (URL-driven, no sidebar control) gives Featured Products a real destination, and
+  `components/product/ProductFilterForm.tsx` carries it in a hidden field — it is a plain `GET`
+  form, so without one, pressing Apply from a featured listing silently dropped the filter.
+  `nextPageHref` moved to a pure, unit-tested `components/product/search-href.ts`, since a page
+  file cannot export a helper for a test to import. A zero-result empty state closes the same
+  blank-column dead end reached by a search that matches nothing. All three shop-page rows now
+  carry a working "View all" (`BundleRow` gained the prop it lacked), the third pointing at a new
+  `app/(storefront)/bundles/page.tsx` that shares `hasAvailableItems` with the row so the two
+  cannot disagree about which bundles render. `/search`'s hardcoded `metadata` title, which
+  rendered "Aheed Food Centre" under SriMart too (the `#239` defect class), is now derived from the
+  vendor.
+  **Found while writing the spec, and not mentioned in `#501`: nothing was ever featured.**
+  `Product.isFeatured` is `@default(false)` and `prisma/seed.ts` never set it, so `ProductRow`
+  returned `null` and the Featured Products row was absent from the shop page in every freshly
+  seeded environment — a "View all" would have led to an empty listing. `seedFeaturedProducts` is
+  its own idempotent pass (the pattern `seedSubcategories` already uses, so it reaches databases
+  seeded before this slice rather than only new ones), marking six Aheed and two SriMart products,
+  deliberately fewer than the 12-item page size so a featured listing is visibly a subset.
+  **Part 3 of `#501` — horizontal scrollers on the product and bundle rows — is deliberately not
+  built**, so this does not close `#501`: the rows hold four products in a four-column grid, so a
+  scroller would have nothing to scroll, and delivering the department strip's affordance would
+  have meant widening the rows, a page-cost change `#501` never asked for. Tracked in `#511`.
+
+- **`#508` — a database-backed error event log, independent of Cloudflare Workers Logs**
+  (`specs/2026-09-01-error-event-log/`). A live incident showed the global error boundary's
+  generic "Something went wrong" page working exactly as designed (it deliberately shows a visitor
+  nothing about the error, not even the digest — `components/errors/ErrorPanel.tsx`, unchanged
+  here), but finding the real root cause afterward depended on `#246`, still unconfirmed whether
+  Cloudflare Workers Logs are even queryable from this team's environment. `instrumentation.ts`'s
+  `onRequestError` (`#480`) now also writes the real error — message, stack, digest, path, method,
+  router kind/type — to a new `ErrorEvent` table, via a second, deliberately uncached Prisma client
+  (`getPrismaUncached()` in `lib/db.ts`) rather than the memoized `getPrisma()`/`getPrismaWs()`,
+  since whether this hook runs inside a `cache()`-compatible request scope is unconfirmed and the
+  cost of guessing wrong is the exact cross-request-singleton bug this app has already hit once. The
+  write is wrapped so a failure (a database outage — plausibly the very thing that caused the
+  original error) degrades to today's `console.error` rather than compounding anything. A new
+  `/staff/errors` page lists the most recent 50 events, gated to **platform ADMIN only** — a
+  per-vendor store admin who'd otherwise pass `requireVendorRole("ADMIN")` is refused the same way a
+  non-admin is, since a stack trace can reveal internal file paths a vendor-scoped account has no
+  reason to see. No retention job was planned at `/propose`; added anyway during `/spec` after
+  finding `lib/repositories/order-lookup-rate-limit.ts` already carries the exact sweep pattern
+  needed (`#468`), so a 30-day probabilistic sweep runs on write rather than repeating that table's
+  original unbounded-growth mistake.
+
+### Documentation
+
+- **`/document` closeout for `#508`.** Reconciles `specs/roadmap.md` with what actually shipped: a
+  new change-log row cites **PR #509**, merge `d9076f9`, `staging`; records `gates` green
+  (`quality`, `docs-gates`) and both `deploy-staging`/`deploy-docs-internal` completing successfully
+  post-merge. Confirms the slice's one real open risk from `/propose` — whether `onRequestError` has
+  a working Cloudflare Workers request context for `getPrismaUncached()` to resolve `DATABASE_URL`
+  from — is resolved: a temporary throw under `npm run preview` wrote exactly one real `ErrorEvent`
+  row, live. Adds a `CLAUDE.md` lesson recording that finding for future `onRequestError` work.
+  `#508` moved to `In Review` on Project #2. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt; `npm run
+  sdd:audit` exits 0.
+
+- **`/document` closeout for `#501` (parts 1 and 2, slice A).** Reconciles `specs/roadmap.md` with
+  what actually shipped: a new change-log row cites **PR #515**, merge `38c9171`, `staging`, and
+  records that `/validate` found zero defects in the slice's own diff — every obstacle hit while
+  live-verifying traced to something outside it (a sandbox network timeout unrelated to the code, a
+  stale local `VendorDomain` row from an earlier session, and a shared dev database carrying ~2,000
+  leftover products from an unrelated earlier scale-seed). `#501` moved to `In Review` on Project #2
+  (stays open — part 3 remains deferred to `#511`). **`#514`, filed at `/validate` as a possible
+  `lib/tenant.ts` design gap, re-scoped smaller here**: `CLAUDE.md`'s existing SriMart branding note
+  already modeled the correct local convention (a port-less `Host` value); the actual root cause was
+  one earlier session's `VendorDomain` row using a port-inclusive value, not a gap in
+  `lib/tenant.ts` itself. Adds a `CLAUDE.md` lesson stating the port-less constraint explicitly
+  rather than leaving it implicit in one example. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt; `npm run
+  sdd:audit` exits 0.
+
+### Fixed
+
+- **`#502` — staging served 404s for every seeded product image, the button meant to fix that
+  matched nothing, and Open Food Facts repeated one wrong image without ever flagging it**
+  (`specs/2026-09-01-product-image-integrity/`). Four compounding defects, each confirmed against a
+  live environment: (1) `prisma/seed.ts`'s `seedGeneratedCatalogue` did its placeholder uploads
+  *after* its `existing >= count` early return, so once a database held the generated rows no later
+  seed run uploaded the objects into that environment's bucket — dev had all of them, staging none,
+  while staging's pages went on referencing them (production was unaffected: it carries no generated
+  products and its curated ones have real uploaded `.webp` images). The uploads now run before the
+  guard, and `scripts/restore-placeholder-images.ts` repairs databases whose rows already exist —
+  it reads rows and writes only storage, takes an explicit `--env-file`, and prints the resolved
+  host and bucket before acting (`#119`). (2) `getProductsWithoutImages` asked for
+  `images: { none: {} }`, matching **zero** products for either vendor because both seed paths give
+  every product a placeholder row; it now selects products whose images are all placeholders, which
+  covers the no-image case in the same clause since Prisma's `every` is vacuously true for an empty
+  relation — verified against a real database in `scripts/verify-repository-injection.ts`, not a
+  mock. (3) `saveGeneratedProductImage` wrote `isPrimary: false` while every storefront read selects
+  `where: { isPrimary: true }`, so a filled image would have uploaded, cost an AI call and never
+  displayed; it now claims primary and removes the shared placeholder it replaces. (4)
+  `lib/product-metadata.ts` returned Open Food Facts' top hit with no relevance check, so every
+  product whose name shared a keyword got one identical image — a pure `isRelevantMatch` floor now
+  rejects unrelated hits, `needsReview` is set on the Open Food Facts path as well as the AI one
+  (it was set only on AI, flagging the source *least* likely to be wrong), and the operator can
+  switch Open Food Facts off per run from a checkbox beside the Auto-fill button. Separately,
+  `ProductCard` now degrades a missing object to the same grey box a product with no image gets
+  rather than the browser's broken-image icon, which removes the failure mode rather than today's
+  instance. **Deliberately deferred:** the 10-per-click backfill cap stays (2,026 products would be
+  200+ clicks, but uncapped is an unbounded Workers AI spend from one button) — `#504`.
+
+### Added
+
+- **`#498` — bundle cards match the product-card design language, a neutral bundles heading,
+  keyset-compatible "Previous page", and subcategory tabs on every subcategory page**
+  (`specs/2026-08-31-storefront-cards-pagination-tabs/`). Four more gaps found by live review right
+  after `#496` shipped: (1) `BundleCard` was the only card on the storefront with no hover/tilt
+  effect — it now shares `ProductCard`'s `.skew-card` treatment (`app/globals.css`, P8.5a/`#345`);
+  (2) the bundles section's hardcoded `"Meal bundles"` heading and "one meal" subtitle (wrong for
+  the seeded non-food "Kitchen Pack", and would be wrong for SriMart's electronics bundles entirely)
+  are now the neutral "Value Bundles"; (3) category-page pagination only ever had "Next" — a
+  `back` search param now carries the comma-joined stack of prior cursors so "Previous" works too,
+  with no `OFFSET` and no `COUNT` query anywhere (this app's pagination is keyset-only by
+  architectural decision) — absolute page numbers are deliberately not built, since a keyset page
+  never fetches the total count numbering them would need; (4) a subcategory's own page rendered no
+  tabs at all (its own `children` is always empty, the tree being capped at two levels) —
+  `getCategoryBySlug` now also selects the parent's own `children`, so the exact same sibling tab
+  row (department + every subcategory) renders whether you're on the department's page or one of
+  its subcategories', with only the active pill changing.
+- **`#496` — a department page now shows everything in it, four more top-level departments, a
+  persistent "Shop" link, and a bigger hero slider** (`specs/2026-08-31-storefront-browsing-ux-fixes/`).
+  Four related gaps found by live review right after `#494` shipped: (1) a department's own page
+  (`/categories/fruit-veg`) showed only its 2 directly-assigned curated products, none of the
+  products under its subcategories, because `listProductsByCategory` matched an exact `categoryId` —
+  it now takes an array and aggregates a department with every one of its children, and
+  `SubcategoryLinks` gained a leading "All" pill making that aggregation visible rather than a silent
+  behaviour change; (2) the top department scroller had only 9 items, not enough to overflow a
+  typical viewport and actually need its scroll arrows — four more real curated departments (Frozen
+  Foods, Health & Beauty, Baby & Kids, Pet Supplies) added to `prisma/seed.ts`; (3) the landing page
+  had no persistent link into `/categories` at all (its "Shop List" link is deliberately hidden
+  there) — a new "Shop" link in the header fixes that, visible on every non-portal route; (4) the
+  landing hero's department slider was capped at a fixed 28rem regardless of viewport — now an even
+  `lg:grid-cols-2` split.
+- **`#494` — storefront subcategory navigation, so a subcategory (and anything assigned to it) is
+  actually reachable** (`specs/2026-08-31-storefront-subcategory-navigation/`).
+  `lib/repositories/categories.ts`'s `getCategoryBySlug` has always fetched a category's `children`
+  ("the only shape the storefront can render", per its own comment), but no page ever rendered them
+  and nothing linked to a subcategory's URL — found live on staging right after `#489` seeded 27
+  Aheed subcategories: `/categories/groceries` showed only its 2 directly-assigned products, none of
+  the products under its `rice-grains`/`lentils-pulses`/`cooking-oils` children, which were only
+  reachable by typing the URL directly or via search. New `components/product/SubcategoryLinks.tsx`
+  (a small presentational component, matching the existing `DepartmentScroller`/`DepartmentHero`
+  pattern) renders a category's children as clickable links above its product grid, and renders
+  nothing when there are none — which is always true for a subcategory itself, since the tree is
+  capped at two levels. No repository, service or schema change: the data was already fetched. The
+  admin side already worked (`components/staff/CategoryForm.tsx`'s parent picker), so anything
+  admin-created is now visible on the very next page load — the route is already `force-dynamic`
+  with no caching layer to invalidate.
+
+- **`#489` — a two-level category tree in the seed, and an env-gated ~2,000-product generated
+  catalogue, so the app can be measured at realistic row counts**
+  (`specs/2026-08-31-catalogue-depth-and-scale/`). `Category.parentId` has existed since P2a and
+  `lib/repositories/categories.ts` caps the tree at exactly two levels, but **no fixture had ever
+  created a single subcategory** — the capability was built and entirely unexercised. The seed now
+  creates 31 (27 Aheed, 4 SriMart) in their own pass keyed on the child's slug, so a database seeded
+  before this slice also gains them.
+  - `SEED_SCALE_PRODUCTS=2000` adds 2,000 deterministic generated products (seeded PRNG, not
+    `Math.random()`, so a recorded measurement is reproducible); `SEED_REMOVE_GENERATED=1` undoes it.
+    Aheed-only, so SriMart stays small and cross-vendor isolation checks stay fast.
+  - The generated path shares **one image object per subcategory instead of one per product** (27
+    uploads, not 2,000 — and `refreshProductImages` ran unconditionally on every seed run), and uses
+    `createMany` instead of 2,000 sequential nested creates. `createMany` is safe here specifically
+    because the seed runs in real Node on the WebSocket adapter, **not** the HTTP adapter `#382`
+    forbids it on. 2,000 products seed in ~22s.
+  - The generator lives in `prisma/generate-catalogue.ts`, not in `prisma/seed.ts`, because
+    `seed.ts` calls `main()` at module scope — a test importing it from there would have run the
+    whole seed against a real database as a side effect of `npx vitest run`.
+  - New `scripts/measure-catalogue-queries.ts` measures the Prisma read paths and prints a
+    catalogue-shape summary. Kept separate from `scripts/measure-nfr.ts`, which is deliberately
+    HTTP-only so it can run from a clean checkout (P7d R4/R6).
+  - **Removes the precondition that has blocked `#286` since P2** ("should not be built against seed
+    fixtures"), and with it the blocker on `#396`.
+
+### Changed
+
+- **`docs/developer-portal/nfr-baseline.md` gains a query re-measurement at catalogue scale
+  (`#489`).** Everything previously recorded was measured at `Product` = 22, where that document
+  itself concludes "none of them is index-sensitive yet" — so the headline `API p95 < 400ms` verdict
+  was measuring Neon's round-trip, not this app's queries. Re-measured on the dev branch at 2,018
+  products: **every path still meets the target**, worst 95.4 ms (4.2x margin), so **no remediation
+  issue was filed because there was no breach**. Product search is the only real signal (p95 75.1 ms
+  to 95.4 ms, +27%) and is the only path the review marks `scan`. `listProducts` came out *faster* at
+  ~100x the rows, recorded explicitly as evidence the figures remain round-trip dominated rather than
+  as an improvement. Existing tables untouched; `listOrdersForUser` recorded as not measurable (the
+  dev branch holds no orders with a `userId`).
+- **`docs/developer-portal/env-setup.md`** documents the two new seed vars and, for the first time, a
+  **dev** `SEED_AHEED_HOST`/`SEED_SRIMART_HOST` pair — only staging and production pairs were
+  documented, and neither var was set anywhere, so SriMart had never been seeded into the dev branch.
+
 ### Fixed
 - **`#468`, `#469`, `#481`, `#482`, `#483` — the P9.1 auth rate limiter has never functioned, for
   three independent, compounding reasons, since it shipped on 2026-08-29**
@@ -103,6 +305,41 @@ every branch merges.
 
 
 ### Documentation
+- **`/document` closeout for `#494`, `#496`, `#498`.** Reconciles `specs/roadmap.md` with three
+  staging builds `npm run sdd:audit` reported missing their change-log row: **PR #495**
+  (subcategory navigation, merge `4c64ea4`), **PR #497** (category aggregation, more departments, a
+  shop link, a bigger hero, merge `70c047b`), and **PR #499** (bundle card styling, a neutral
+  bundles heading, keyset "Previous" pagination, and subcategory tabs everywhere, merge `d2c242a`).
+  Each was a rapid live-review follow-on to the one before it — clicking through what the previous
+  slice actually shipped surfaced the next layer of gaps every time, rather than one pass covering
+  the whole storefront-browsing area. **A `CLAUDE.md` lesson strengthened**: the bare-`{...}`-in-MDX
+  trap (previously hit twice, both times editing an *existing* doc) recurred a third time inside
+  `#496`'s own brand-new `plan.md`, on its first draft — proof that writing fresh spec prose is
+  exactly as exposed as editing an existing file, with no "this is new" exemption. `gates` green on
+  all three PRs; `deploy-staging`/`deploy-docs-internal` confirmed green after each merge, and each
+  slice's live claims were re-verified directly against staging after deploy (not just under
+  `npm run preview`) — a full pagination round trip, the sibling tab row on a subcategory page, and
+  the bundle section's new heading and card styling all confirmed with real HTTP fetches against
+  `staging.aheedfoodcentre.nocaped.com`. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt; `npm run sdd:audit`
+  re-run and exits with zero gaps.
+- **`/document` closeout for `#489`.** Reconciles `specs/roadmap.md` with what `/validate` and
+  `/ship` actually found: a new change-log row for **PR #492** (build, merge `a6ba350`, `staging`)
+  and a carry-forward row for **PR #488** (promotion, merge `5c6dca2`, `staging -> main`), which
+  `npm run sdd:audit` reported pending at Orient. `gates` (`quality`, `docs-gates`) green on PR
+  #492; `deploy-staging` and `deploy-docs-internal` both confirmed green post-merge. **Fresh-context
+  `/validate` exercised all 22 requirements live against the dev Neon branch**, not from code
+  review — removed the generated set (Aheed 18/SriMart 3, categories intact) → reseeded at
+  `SEED_SCALE_PRODUCTS=2000` (Aheed 2018, 27 distinct storage keys, 2000/2000 primary-image and
+  inventory counts, one generated image fetched live off the dev CDN) → reseeded a second time
+  (idempotent, unchanged) — `putObject` counts 21 → 48 → 21 confirmed the shared image pool and the
+  idempotent re-run. **One process note recorded in `specs/sdd-workflow.md`**: the feature branch
+  had been cut from `origin/main` (post-PR-#488) rather than `origin/staging` — harmless only
+  because the two were content-identical, caught by comparing `git merge-base HEAD origin/staging`
+  against `git merge-base HEAD origin/main`, fixed by rebasing before pushing. **Another recorded
+  there**: `prisma migrate reset --force` was refused by the coding agent's own sandbox during
+  `/validate`; the seed's own `SEED_REMOVE_GENERATED`/`SEED_SCALE_PRODUCTS` toggles proved the same
+  exact-count requirements without a full wipe. **`#489` moved to `In Review`** on Project #2;
+  `ARTIFACT_INDEX.md`/`docs.ts` rebuilt; `npm run sdd:audit` re-run and exits with zero gaps.
 - **`/document` closeout for `#434`, `#435`.** Reconciles `specs/roadmap.md` with what actually
   shipped and, unlike most prior closeouts, with what actually reached production in the same
   session: two new change-log rows cite **PR #474** (build, merge `1de4df2`, `staging`) and

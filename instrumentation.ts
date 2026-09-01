@@ -1,4 +1,6 @@
 import type { Instrumentation } from "next";
+import { getPrismaUncached } from "@/lib/db";
+import { normalizeCaughtError, recordErrorEvent } from "@/lib/repositories/error-events";
 
 /**
  * Server-side error capture (#480 fix, R7). An error boundary's own `console.error`
@@ -16,4 +18,22 @@ export const onRequestError: Instrumentation.onRequestError = async (error, requ
     routeType: context.routeType,
     error,
   });
+
+  // #508 — a second, DB-backed capture path independent of Cloudflare Workers Logs (#246,
+  // unconfirmed queryable). Never allowed to affect the request: a failure here (missing config,
+  // a database outage — plausibly the very thing that caused the original error) is swallowed,
+  // not re-thrown, so this degrades to exactly the console.error above rather than compounding
+  // whatever already went wrong.
+  try {
+    const normalized = normalizeCaughtError(error);
+    await recordErrorEvent(getPrismaUncached(), {
+      ...normalized,
+      path: request.path,
+      method: request.method,
+      routerKind: context.routerKind,
+      routeType: context.routeType,
+    });
+  } catch (writeError) {
+    console.error("Failed to persist ErrorEvent:", writeError);
+  }
 };
