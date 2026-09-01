@@ -188,6 +188,32 @@ every branch merges.
 
 ### Fixed
 
+- **`#364` — image keys now carry the real file extension**
+  (`specs/2026-09-01-honest-image-key-extensions/`). `buildProductImageKey` and
+  `buildCampaignImageKey` both suffixed `.webp` unconditionally, while three server-side paths store
+  something else: `lib/product-image-pipeline.ts` (Workers AI returns PNG, Open Food Facts returns
+  whatever the remote sent), the campaign-banner generate route (PNG), and
+  `scripts/copy-product-images.ts` (the source object's type, verbatim). **Nothing ever rendered
+  wrong** — the object is stored with its true content type and the CDN answers on that — so the key
+  was the only thing lying, which is why it survived three slices unnoticed, including two this
+  session that propagated it. **The reasoning that had kept it does not hold.** `#364` recorded that
+  the suffix "has to keep passing `isCampaignImageKey`, which the browser-upload path enforces", and
+  framed the fix as a server-side transcode or a widening of validation that both upload paths
+  depend on. Reading the call sites showed those validators are called in exactly three places —
+  `features/admin/campaign-image.ts:89`, `features/admin/product-image.ts:124` and `:180` — **all on
+  the browser attach path**, which a server-generated key never touches. So the suffix was held
+  hostage by a check the AI path does not run, and both proposed options were larger than necessary.
+  A pure `imageExtensionForContentType` now maps the real type (tolerating parameters and case), and
+  both builders take an optional content type **defaulting to `IMAGE_CONTENT_TYPE`** — so every
+  browser-upload call site is unchanged, that path being WebP end to end (presigned PUT pinned to
+  `IMAGE_CONTENT_TYPE`, `headObject` content-type re-check on attach). An unknown type resolves to
+  **`.bin`, deliberately not `.webp`**: the obvious default would quietly recreate the defect for
+  exactly the inputs nobody anticipated. `isProductImageKey` and `isCampaignImageKey` stay
+  **WebP-only**, now saying so deliberately rather than by omission. Existing keys are not rewritten
+  and no migration is added — a PNG already stored under a `.webp` name keeps working, since keys are
+  immutable here by design. Also corrected `isPlaceholderImageKey`'s docstring, which justified
+  itself on the now-false claim that the builder "only ever emits `.webp`".
+
 - **`#507` and `#514` — a blocking admin alert, and a second local vendor unreachable by host**
   (`specs/2026-09-01-admin-alert-and-local-vendor-host/`). Two small fixes filed *from* earlier
   `/validate` passes, where each obstructed the verification rather than the feature.

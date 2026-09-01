@@ -233,8 +233,12 @@ async function main() {
 
       // A NEW key, minted from the DESTINATION product's id. Reusing the
       // source's key is the defect this script exists to avoid.
-      const destKey = buildProductImageKey(product.id);
-      await destStorage.putObject(destKey, bytes, head?.contentType ?? "image/webp");
+      //
+      // #364 — the key carries the copied bytes' real content type, so a PNG
+      // copied across does not land under a `.webp` key at the destination.
+      const copiedType = head?.contentType ?? "image/webp";
+      const destKey = buildProductImageKey(product.id, copiedType);
+      await destStorage.putObject(destKey, bytes, copiedType);
 
       // Reuses the repository function the AI pipeline already writes through,
       // so "claim primary, drop the placeholder it replaces" cannot drift

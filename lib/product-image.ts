@@ -35,7 +35,13 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 const SUFFIX = ".webp";
 
 /**
- * `products/{productId}/{uuid}.webp` — a NEW key every time.
+ * `products/{productId}/{uuid}.{ext}` — a NEW key every time.
+ *
+ * The extension follows the image's ACTUAL content type (#364). It defaults to
+ * `.webp` because the browser-upload path is WebP end to end (its presigned PUT
+ * is pinned to `IMAGE_CONTENT_TYPE` and attach re-checks `headObject`), so that
+ * path's keys are unchanged. The AI and cross-environment copy paths pass the
+ * real type, which is how a PNG stops being stored under a `.webp` key.
  *
  * Immutable by construction: replacing a product's image writes a new object and
  * repoints the row, so no CDN cache purge is ever needed. Overwriting at a fixed
@@ -44,8 +50,55 @@ const SUFFIX = ".webp";
  * port (ADR-003). Keyed on the product id rather than the slug because P6b1 made
  * slugs editable.
  */
-export function buildProductImageKey(productId: string): string {
-  return `products/${productId}/${crypto.randomUUID()}${SUFFIX}`;
+export function buildProductImageKey(
+  productId: string,
+  contentType: string = IMAGE_CONTENT_TYPE,
+): string {
+  return `products/${productId}/${crypto.randomUUID()}${imageExtensionForContentType(contentType)}`;
+}
+
+/**
+ * The file extension for an image's ACTUAL content type (#364).
+ *
+ * This exists because the key used to lie. `buildProductImageKey` and
+ * `buildCampaignImageKey` always suffixed `.webp`, but the AI paths store what
+ * Workers AI returns — PNG — and the Open Food Facts path stores whatever the
+ * remote server sent. The object was written with its real content type, so the
+ * CDN served it correctly and nothing was visibly broken; the key simply
+ * asserted a format the bytes were not. This repo's standing rule is that image
+ * keys are meaningful and immutable, and a meaningful key cannot also be wrong.
+ *
+ * DEFAULTS TO WEBP AT THE CALL SITE, NOT HERE. The browser-upload path pins its
+ * presigned PUT to `IMAGE_CONTENT_TYPE` and re-checks `headObject` on attach, so
+ * it is WebP end to end and its keys are unchanged by this. Only the server-side
+ * AI and copy paths pass anything else.
+ *
+ * An unrecognised type gets `.bin` rather than falling back to `.webp`, which
+ * would quietly reintroduce exactly the lie this function was written to remove.
+ * The extension is cosmetic to serving — the CDN answers on the stored content
+ * type — so an honest `.bin` costs nothing and is a visible signal that
+ * something unexpected arrived.
+ */
+export function imageExtensionForContentType(contentType: string | null | undefined): string {
+  // Strip any parameters (`image/jpeg; charset=binary`) and normalise case.
+  const type = (contentType ?? "").split(";")[0].trim().toLowerCase();
+  switch (type) {
+    case "image/webp":
+      return ".webp";
+    case "image/png":
+      return ".png";
+    case "image/jpeg":
+    case "image/jpg":
+      return ".jpg";
+    case "image/svg+xml":
+      return ".svg";
+    case "image/avif":
+      return ".avif";
+    case "image/gif":
+      return ".gif";
+    default:
+      return ".bin";
+  }
 }
 
 /**
@@ -57,6 +110,13 @@ export function buildProductImageKey(productId: string): string {
  * segment, a different suffix, an extra path segment, a leading slash — is
  * refused rather than normalised, because a key that needs normalising is a key
  * that was not generated here.
+ *
+ * DELIBERATELY STILL WEBP-ONLY after #364 let the builder emit other extensions.
+ * This guards exactly one path — the browser upload, whose presigned PUT is
+ * pinned to `IMAGE_CONTENT_TYPE` and whose attach step re-checks `headObject`'s
+ * content type — so it is WebP end to end. Server-generated keys never pass
+ * through here, so accepting other extensions would widen what a client may
+ * claim and buy nothing.
  */
 export function isProductImageKey(key: string, productId: string): boolean {
   const parts = key.split("/");
@@ -114,9 +174,12 @@ export const PLACEHOLDER_IMAGE_SUFFIX = "/main.svg";
  * rendered a grey "No image" box.
  *
  * Derived from the key's SHAPE rather than a database column, deliberately.
- * `buildProductImageKey` only ever emits `products/{productId}/{uuid}.webp`, so
- * a real upload can never end in `main.svg` and no migration is needed to tell
- * the two apart. Pure and exported for the same reason as everything else in
+ * `buildProductImageKey` always ends its filename with a UUID plus an
+ * extension, so a real image can never end in `main.svg` and no migration is
+ * needed to tell the two apart. (This said "only ever emits `.webp`" until
+ * #364, which let the extension follow the real content type — the reasoning is
+ * unchanged, because what distinguishes a placeholder is the `main` stem, not
+ * the extension.) Pure and exported for the same reason as everything else in
  * this file: the rule deciding what counts as "needs a real image" should be
  * checkable without a database.
  *
