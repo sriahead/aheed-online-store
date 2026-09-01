@@ -1,6 +1,10 @@
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { runProductImagePipeline } from "@/lib/product-image-pipeline";
-import { getProductsWithoutImages, saveGeneratedProductImage } from "@/lib/products-service";
+import {
+  getProductsWithoutImages,
+  recordImageAttemptFailure,
+  saveGeneratedProductImage,
+} from "@/lib/products-service";
 import { NextResponse } from "next/server";
 
 /**
@@ -59,6 +63,14 @@ export async function POST(request: Request) {
       }
     } catch (err) {
       console.error(`Failed to backfill image for product ${product.id}`, err);
+      // #523 — the button and the scheduled job must agree about giving up, or a
+      // product the pipeline can never fill stays selectable through one path
+      // while the other has written it off.
+      try {
+        await recordImageAttemptFailure(auth.vendorId, product.id);
+      } catch (recordErr) {
+        console.error(`Could not record image failure for product ${product.id}`, recordErr);
+      }
     }
   }
 

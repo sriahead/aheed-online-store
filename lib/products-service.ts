@@ -16,6 +16,7 @@ import {
   matchProductListTerms,
   promoteProductImage as promoteProductImageRepo,
   quickUpdateInventory as quickUpdateInventoryRepo,
+  recordImageAttemptFailure as recordImageAttemptFailureRepo,
   removeProductImage as removeProductImageRepo,
   reorderProductImages as reorderProductImagesRepo,
   saveGeneratedProductImage as saveGeneratedProductImageRepo,
@@ -133,6 +134,21 @@ export async function createProductForVendor(
   input: ProductWriteInput,
 ): Promise<CatalogueWriteResult> {
   return createProductForVendorRepo(getPrisma(), vendorId, input);
+}
+
+/**
+ * #523 — record one failed image-pipeline attempt, so the bounded selection can
+ * eventually give up on a product Workers AI permanently refuses.
+ *
+ * Wraps the repository function under its own name so the admin route and
+ * `scripts/fill-product-images.ts` call the same thing by the same name through
+ * their respective clients (#411/#412's convention).
+ */
+export async function recordImageAttemptFailure(
+  vendorId: string,
+  productId: string,
+): Promise<void> {
+  return recordImageAttemptFailureRepo(getPrisma(), vendorId, productId);
 }
 
 export async function saveGeneratedProductImage(
