@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, Star } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { CartQuantityStepper } from "@/components/cart/CartQuantityStepper";
+import { ProductImage } from "./ProductImage";
 import { composePublicUrl } from "@/lib/storage";
 import { tierThresholdQuantity } from "@/lib/tier-pricing";
 import { formatPrice } from "./format-price";
@@ -83,16 +84,14 @@ export function ProductCard({
         <div className="relative aspect-4/3 w-full shrink-0 overflow-hidden bg-surface-muted">
           <div className="skew-card-inner h-full w-full">
             {product.primaryImage ? (
-              // P7d (#218/#46): intrinsic dimensions so the browser can reserve the box before
-              // the bytes land. CSS still drives layout (w-full/h-full inside the aspect-4/3
-              // container) — these attributes only supply the aspect ratio.
-              <img
+              // #502: ProductImage is a thin client boundary that swaps to the
+              // no-image box below if the object turns out not to exist in this
+              // environment's bucket. Everything else about this card stays
+              // server-rendered.
+              <ProductImage
                 src={composePublicUrl(cdnBaseUrl, product.primaryImage.storageKey)}
                 alt={product.primaryImage.alt}
-                width={400}
-                height={300}
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                loading="lazy"
               />
             ) : (
               <div className="h-full w-full bg-surface-muted" />

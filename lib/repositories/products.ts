@@ -3,6 +3,7 @@ import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import { effectiveStock } from "@/lib/cart-rules";
 import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
+import { PLACEHOLDER_IMAGE_SUFFIX, isPlaceholderImageKey } from "@/lib/product-image";
 import type { ProductTier } from "@/lib/tier-pricing";
 import {
   deleteProductTier,
@@ -1146,6 +1147,24 @@ export async function quickUpdateInventory(
   }
 }
 
+/**
+ * Attach a pipeline-generated image and make it the one the storefront shows
+ * (#502).
+ *
+ * `isPrimary: true`, NOT false. Every storefront read selects
+ * `images: { where: { isPrimary: true }, take: 1 }` (see `findPage` above), so
+ * the previous `isPrimary: false` meant a generated image uploaded, cost an AI
+ * call, and then never appeared on a single card — invisible, because the job
+ * that produced it could never match a product in the first place (see
+ * `getProductsWithoutImages`).
+ *
+ * The placeholder rows this replaces are DELETED rather than demoted. They are
+ * shared objects — every product in a subcategory points at the same
+ * `products/gen-{categorySlug}/main.svg` — so keeping one around as a secondary
+ * gallery image would put an identical "No image" tile in the gallery of every
+ * product that has ever been backfilled. Only placeholders are removed; a real
+ * image a vendor uploaded is demoted to non-primary and kept.
+ */
 export async function saveGeneratedProductImage(
   prisma: Db,
   vendorId: string,
@@ -1154,14 +1173,34 @@ export async function saveGeneratedProductImage(
   alt: string,
   needsReview: boolean,
 ): Promise<void> {
+  const existing = await prisma.productImage.findMany({
+    where: { productId },
+    select: { id: true, storageKey: true, isPrimary: true },
+  });
+
   await prisma.productImage.create({
     data: {
       productId,
       storageKey,
       alt,
-      isPrimary: false,
+      isPrimary: true,
     },
   });
+
+  for (const image of existing) {
+    if (isPlaceholderImageKey(image.storageKey)) {
+      await prisma.productImage.delete({ where: { id: image.id } });
+    } else if (image.isPrimary) {
+      // A real image the vendor uploaded keeps its place in the gallery, but
+      // only one row may claim primary. Singular `update`, not `updateMany` —
+      // #382: the HTTP adapter cannot run the transaction the query compiler
+      // wraps `updateMany` in.
+      await prisma.productImage.update({
+        where: { id: image.id },
+        data: { isPrimary: false },
+      });
+    }
+  }
 
   if (needsReview) {
     await prisma.product.update({
@@ -1171,12 +1210,36 @@ export async function saveGeneratedProductImage(
   }
 }
 
+/**
+ * Products the "Auto-fill Missing Images" job should act on (#502).
+ *
+ * This asked for `images: { none: {} }` — products with NO image row — and so
+ * matched NOTHING, ever: both seed paths give every product a placeholder row,
+ * measured at 0 for both vendors on the dev branch while thousands of cards
+ * rendered a grey "No image" box. The real condition is "has no image a
+ * customer would call an image", which covers a product with no rows at all AND
+ * a product still carrying only a seeded placeholder.
+ *
+ * Expressed as one query rather than an over-fetch-and-filter: Prisma's `every`
+ * on a relation is true for a product with no images at all, so a single
+ * `every: { storageKey: { endsWith: ... } }` covers both halves, and `take`
+ * still means the database returns exactly what the caller will act on. The
+ * suffix comes from `lib/product-image.ts`, the same constant
+ * `isPlaceholderImageKey` reads, so the SQL filter and the pure predicate
+ * cannot drift apart.
+ */
 export async function getProductsWithoutImages(prisma: Db, vendorId: string, limit: number) {
   return await prisma.product.findMany({
     where: {
       vendorId,
-      images: { none: {} },
+      images: { every: { storageKey: { endsWith: PLACEHOLDER_IMAGE_SUFFIX } } },
     },
+    // Newest first, so a bounded batch is deterministic rather than whatever
+    // order the planner happens to return. Two things follow from that, both
+    // wanted: `scripts/verify-repository-injection.ts` can assert on rows it
+    // just created, and a vendor's real catalogue — which is newer than the
+    // seeded demo set — is filled before the 2,000 generated products.
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limit,
     select: { id: true, name: true },
   });

@@ -7,6 +7,7 @@ import {
   buildProductImageKey,
   fitWithinEdge,
   isProductImageKey,
+  isPlaceholderImageKey,
 } from "@/lib/product-image";
 
 /**
@@ -56,6 +57,36 @@ describe("buildProductImageKey", () => {
 
   it("round-trips through its own validator", () => {
     expect(isProductImageKey(buildProductImageKey(PRODUCT), PRODUCT)).toBe(true);
+  });
+});
+
+/**
+ * #502 — the rule that decides which products the "Auto-fill Missing Images"
+ * job acts on.
+ *
+ * It matters that this is derived from the key's SHAPE. The job's original
+ * predicate asked the database for products with no `ProductImage` row and so
+ * matched nothing at all, because both seed paths give every product a
+ * placeholder row. `lib/repositories/products.ts` uses the exported
+ * `PLACEHOLDER_IMAGE_SUFFIX` inside a Prisma `endsWith` filter and this
+ * predicate over already-fetched rows, so the two spellings of one rule are
+ * pinned to the same constant here.
+ */
+describe("isPlaceholderImageKey", () => {
+  it("accepts a curated product's seeded placeholder", () => {
+    expect(isPlaceholderImageKey("products/cat-litter-5kg/main.svg")).toBe(true);
+  });
+
+  it("accepts the generated catalogue's shared per-subcategory placeholder", () => {
+    expect(isPlaceholderImageKey("products/gen-south-asian/main.svg")).toBe(true);
+  });
+
+  it("rejects a real uploaded image", () => {
+    expect(isPlaceholderImageKey(buildProductImageKey(PRODUCT))).toBe(false);
+  });
+
+  it("rejects a key that merely contains the placeholder name mid-path", () => {
+    expect(isPlaceholderImageKey("products/main.svg/real.webp")).toBe(false);
   });
 });
 

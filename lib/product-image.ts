@@ -96,6 +96,40 @@ export function fitWithinEdge(
   };
 }
 
+/**
+ * The filename both seed paths write for a shared placeholder object:
+ * `products/{slug}/main.svg` for a curated product, and
+ * `products/gen-{categorySlug}/main.svg` for the generated catalogue, where a
+ * whole subcategory shares one object.
+ */
+export const PLACEHOLDER_IMAGE_SUFFIX = "/main.svg";
+
+/**
+ * Is this key a seeded placeholder rather than a real product image? (#502)
+ *
+ * The distinction the "Auto-fill Missing Images" job actually needs. Its
+ * original predicate asked for products with NO `ProductImage` row, which
+ * matched nothing at all: the seed gives every product a placeholder row, so
+ * `images: { none: {} }` returned 0 for both vendors while thousands of cards
+ * rendered a grey "No image" box.
+ *
+ * Derived from the key's SHAPE rather than a database column, deliberately.
+ * `buildProductImageKey` only ever emits `products/{productId}/{uuid}.webp`, so
+ * a real upload can never end in `main.svg` and no migration is needed to tell
+ * the two apart. Pure and exported for the same reason as everything else in
+ * this file: the rule deciding what counts as "needs a real image" should be
+ * checkable without a database.
+ *
+ * `PLACEHOLDER_IMAGE_SUFFIX` is exported alongside it because
+ * `lib/repositories/products.ts` needs the same rule inside a Prisma `where`
+ * (as an `endsWith` filter) rather than as a predicate over already-fetched
+ * rows. Both spellings read the one constant, so the SQL filter and the
+ * in-memory check cannot drift apart.
+ */
+export function isPlaceholderImageKey(key: string): boolean {
+  return key.endsWith(PLACEHOLDER_IMAGE_SUFFIX);
+}
+
 /** What `requestImageUpload` hands back on success. */
 export interface UploadTicket {
   /** Presigned, short-lived, single-key PUT URL. */

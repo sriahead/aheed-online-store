@@ -61,6 +61,7 @@ import {
 import {
   addProductImage,
   createProductForVendor,
+  getProductsWithoutImages,
   getProductForAdmin,
   listInventoryForStaff,
   listProductsForAdmin,
@@ -334,6 +335,81 @@ async function main() {
     },
   );
 
+  /*
+   * #502 — which products the "Auto-fill Missing Images" job acts on.
+   *
+   * Belongs in THIS script rather than the unit suite for the reason the file's
+   * header gives: the rule is half a Prisma `where` clause, and a hand-built
+   * mock would prove whatever its author assumed rather than what Postgres
+   * actually returns for `images: { every: ... }` on a product with no images
+   * at all. The predicate it replaced (`images: { none: {} }`) type-checked,
+   * read plausibly, and matched zero rows in production data for two vendors.
+   *
+   * Three rows, one per case, all newer than anything seeded — which is why
+   * getProductsWithoutImages orders newest-first.
+   */
+  const backfillIds: string[] = [];
+  await check("products.ts  getProductsWithoutImages(prisma, vendorId, limit)", async () => {
+    const category = await prisma.category.findFirst({
+      where: { vendorId: vendor.id },
+      select: { id: true },
+    });
+    if (!category) throw new Error("no Category rows for this vendor — seed first");
+
+    // Captured before the closure: TypeScript's narrowing of `vendor` and
+    // `category` from the guards above does not survive into a nested function.
+    const vendorId = vendor.id;
+    const categoryId = category.id;
+
+    async function makeProduct(suffix: string, storageKey: string | null): Promise<string> {
+      const row = await prisma.product.create({
+        data: {
+          vendorId,
+          name: `__verify ${STAMP} ${suffix}`,
+          slug: `__verify-${STAMP}-${suffix}`,
+          description: "Temporary row written by scripts/verify-repository-injection.ts",
+          categoryId,
+          basePrice: 100,
+          unitLabel: "each",
+          isActive: false,
+        },
+        select: { id: true },
+      });
+      backfillIds.push(row.id);
+      if (storageKey) {
+        await prisma.productImage.create({
+          data: { productId: row.id, storageKey, alt: "temp", isPrimary: true },
+        });
+      }
+      return row.id;
+    }
+
+    const noImages = await makeProduct("noimg", null);
+    const placeholderOnly = await makeProduct(
+      "placeholder",
+      `products/__verify-${STAMP}-placeholder/main.svg`,
+    );
+    const realImage = await makeProduct(
+      "real",
+      `products/__verify-${STAMP}-real/0f9c1d2e-0000-4000-a000-000000000001.webp`,
+    );
+
+    // The three rows above are the newest for this vendor, so a batch of 3 is
+    // exactly them — which is what makes the negative case assertable.
+    const found = await getProductsWithoutImages(prisma as never, vendor.id, 3);
+    const ids = new Set(found.map((p) => p.id));
+
+    if (!ids.has(noImages)) throw new Error("a product with NO images was not selected");
+    if (!ids.has(placeholderOnly)) {
+      throw new Error("a product whose only image is a placeholder was not selected");
+    }
+    if (ids.has(realImage)) {
+      throw new Error("a product with a real primary image was wrongly selected");
+    }
+
+    return `selected the no-image and placeholder-only rows, skipped the real-image row`;
+  });
+
   /* --- cleanup, then prove it worked -------------------------------------- */
 
   if (createdProductId) {
@@ -341,13 +417,17 @@ async function main() {
     await prisma.inventory.deleteMany({ where: { productId: createdProductId } });
     await prisma.product.delete({ where: { id: createdProductId } });
   }
+  for (const id of backfillIds) {
+    await prisma.productImage.deleteMany({ where: { productId: id } });
+    await prisma.product.delete({ where: { id } });
+  }
   if (createdCategoryId) {
     await prisma.category.delete({ where: { id: createdCategoryId } });
   }
 
   await check("cleanup  every row this run created is gone", async () => {
     const [products, categories, tiers, images] = await Promise.all([
-      prisma.product.count({ where: { slug: `__verify-${STAMP}` } }),
+      prisma.product.count({ where: { slug: { startsWith: `__verify-${STAMP}` } } }),
       prisma.category.count({ where: { slug: `__verify-${STAMP}` } }),
       prisma.vendorLoyaltyTier.count({ where: { key: `__VERIFY_${STAMP}` } }),
       prisma.productImage.count({ where: { storageKey: { contains: `__verify-${STAMP}` } } }),
