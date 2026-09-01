@@ -15,21 +15,52 @@ export function BackfillImagesButton() {
    * waiting for a deploy, which is what a config value would have cost.
    */
   const [useOpenFoodFacts, setUseOpenFoodFacts] = useState(true);
+  /**
+   * #507 — the run's outcome, rendered inline rather than through `alert()`.
+   *
+   * A native `alert()` blocks the whole tab until someone clicks it. For an
+   * operator that is a modal in the way of a background job's result; for
+   * browser automation it freezes the page outright — CDP calls, screenshots
+   * and even closing the tab all hang until a human dismisses it by hand, so
+   * this button could not be exercised end-to-end by any scripted check.
+   *
+   * This was the only `alert()` in the admin panel; every other action already
+   * reports inline, so this matches `BundleForm`'s `role="alert"` /
+   * `role="status"` pair rather than introducing a third convention.
+   */
+  const [result, setResult] = useState<{ tone: "ok" | "error"; message: string } | null>(null);
   const router = useRouter();
 
   const handleBackfill = async () => {
     setLoading(true);
+    setResult(null);
     try {
       const res = await fetch("/api/admin/jobs/backfill-images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ useOpenFoodFacts }),
       });
-      const data = (await res.json()) as any;
-      alert(data.message + (data.processed ? ` (${data.processed} generated)` : ""));
+      const data = (await res.json()) as { message?: string; error?: string; processed?: number };
+
+      if (!res.ok) {
+        // The route answers 401/403 with `error`, not `message` — reporting
+        // `undefined` here would tell an operator refused for the wrong role
+        // nothing at all.
+        setResult({
+          tone: "error",
+          message: data.error ?? `The backfill was refused (${res.status}).`,
+        });
+        return;
+      }
+
+      const processed = data.processed ?? 0;
+      setResult({
+        tone: "ok",
+        message: `${data.message ?? "Backfill complete"}${processed ? ` (${processed} generated)` : ""}`,
+      });
       router.refresh();
-    } catch (err) {
-      alert("Failed to start backfill");
+    } catch {
+      setResult({ tone: "error", message: "Failed to start backfill." });
     } finally {
       setLoading(false);
     }
@@ -55,6 +86,18 @@ export function BackfillImagesButton() {
         />
         Use Open Food Facts photos
       </label>
+      {result && (
+        <p
+          role={result.tone === "error" ? "alert" : "status"}
+          className={
+            result.tone === "error"
+              ? "rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger"
+              : "rounded-xl bg-action-tint px-4 py-3 text-sm font-medium text-primary"
+          }
+        >
+          {result.message}
+        </p>
+      )}
     </div>
   );
 }

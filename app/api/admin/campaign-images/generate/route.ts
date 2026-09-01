@@ -88,15 +88,18 @@ export async function POST(request: Request) {
     }
 
     /*
-     * Workers AI returns PNG/JPEG bytes, while `buildCampaignImageKey` always
-     * suffixes `.webp` — the same mismatch `lib/product-image-pipeline.ts`
-     * already accepts and documents. The suffix is kept so the key still passes
-     * `isCampaignImageKey` (which the upload path enforces), and the object is
-     * stored with its REAL content type, which is what the CDN serves on. Worth
-     * revisiting if a server-side transcode is ever added; noted in build-notes.
+     * #364 — Workers AI returns PNG bytes, and the key now says so.
+     *
+     * This used to suffix `.webp` regardless, on the reasoning that the key had
+     * to keep passing `isCampaignImageKey`. That reasoning did not hold:
+     * `isCampaignImageKey` guards the BROWSER-UPLOAD path only — a key generated
+     * here never passes through it — so the suffix was constrained by a check
+     * this code path never runs. The object is still stored with its real
+     * content type, which is what the CDN serves on; now the key agrees with it.
      */
-    const key = buildCampaignImageKey(categoryId);
-    await getStorage().putObject(key, image, "image/png");
+    const contentType = "image/png";
+    const key = buildCampaignImageKey(categoryId, contentType);
+    await getStorage().putObject(key, image, contentType);
 
     // The alt text the admin last saved for this campaign wins; otherwise one is
     // derived. R25: no path here writes an imageKey with an empty altText.

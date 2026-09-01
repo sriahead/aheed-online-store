@@ -62,11 +62,15 @@ export async function runProductImagePipeline(
     contentType = "image/png"; // Workers AI generally returns PNG or JPEG binary
   }
 
-  // 3. Upload to R2
-  // We use buildProductImageKey to comply with existing conventions.
-  // It appends .webp but the content type is what storage cares about.
-  // The app will serve it via CDN.
-  const key = buildProductImageKey(productId);
+  // 3. Upload to R2.
+  //
+  // #364 — the key now carries the image's REAL extension. It used to always
+  // suffix `.webp` while these bytes are whatever Workers AI returned (PNG) or
+  // whatever Open Food Facts served, so every generated key asserted a format
+  // its object was not. Nothing rendered wrong — the object is stored with its
+  // true content type and the CDN answers on that — but the key was a lie, and
+  // this repo's rule is that image keys are meaningful.
+  const key = buildProductImageKey(productId, contentType);
   await storage.putObject(key, imageBuffer, contentType);
 
   return {

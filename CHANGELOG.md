@@ -134,6 +134,17 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` closeout for `#519` and `#523`.** `npm run sdd:audit` reported four gaps — both
+  slices plus **PR #527** (`4328ea0`) and **PR #529** (`3872851`) — and now reports every slice and
+  promotion documented. Four `specs/roadmap.md` rows: **#519** (PR #526), recording that a wrong
+  `VendorDomain` deletion produces a **200** rather than an error, so the verification has to compare
+  page content and the last-canonical-host guard has to exist before the command is ever typed;
+  **PR #527**, its promotion; **#523** (PR #528), recording that the GAP-011 migration trap fired for
+  the **third** time and was **caught before anything executed** — `--create-only` plus reading the
+  generated SQL is the step added after `#508`, and this is the run where it paid for itself; and
+  **PR #529**, its promotion, carrying the first migration since `#517` and verified directly against
+  production afterwards.
+
 - **`/document` closeout for `#518`, `#521` and the two promotions.** `npm run sdd:audit` reported
   two gaps — **PR #517** (`8be2e8a`) and **PR #524** (`b3a046d`) had merged after the last roadmap
   edit — and now reports every slice and promotion documented. Four `specs/roadmap.md` change-log
@@ -176,6 +187,55 @@ every branch merges.
   sdd:audit` exits 0.
 
 ### Fixed
+
+- **`#364` — image keys now carry the real file extension**
+  (`specs/2026-09-01-honest-image-key-extensions/`). `buildProductImageKey` and
+  `buildCampaignImageKey` both suffixed `.webp` unconditionally, while three server-side paths store
+  something else: `lib/product-image-pipeline.ts` (Workers AI returns PNG, Open Food Facts returns
+  whatever the remote sent), the campaign-banner generate route (PNG), and
+  `scripts/copy-product-images.ts` (the source object's type, verbatim). **Nothing ever rendered
+  wrong** — the object is stored with its true content type and the CDN answers on that — so the key
+  was the only thing lying, which is why it survived three slices unnoticed, including two this
+  session that propagated it. **The reasoning that had kept it does not hold.** `#364` recorded that
+  the suffix "has to keep passing `isCampaignImageKey`, which the browser-upload path enforces", and
+  framed the fix as a server-side transcode or a widening of validation that both upload paths
+  depend on. Reading the call sites showed those validators are called in exactly three places —
+  `features/admin/campaign-image.ts:89`, `features/admin/product-image.ts:124` and `:180` — **all on
+  the browser attach path**, which a server-generated key never touches. So the suffix was held
+  hostage by a check the AI path does not run, and both proposed options were larger than necessary.
+  A pure `imageExtensionForContentType` now maps the real type (tolerating parameters and case), and
+  both builders take an optional content type **defaulting to `IMAGE_CONTENT_TYPE`** — so every
+  browser-upload call site is unchanged, that path being WebP end to end (presigned PUT pinned to
+  `IMAGE_CONTENT_TYPE`, `headObject` content-type re-check on attach). An unknown type resolves to
+  **`.bin`, deliberately not `.webp`**: the obvious default would quietly recreate the defect for
+  exactly the inputs nobody anticipated. `isProductImageKey` and `isCampaignImageKey` stay
+  **WebP-only**, now saying so deliberately rather than by omission. Existing keys are not rewritten
+  and no migration is added — a PNG already stored under a `.webp` name keeps working, since keys are
+  immutable here by design. Also corrected `isPlaceholderImageKey`'s docstring, which justified
+  itself on the now-false claim that the builder "only ever emits `.webp`".
+
+- **`#507` and `#514` — a blocking admin alert, and a second local vendor unreachable by host**
+  (`specs/2026-09-01-admin-alert-and-local-vendor-host/`). Two small fixes filed *from* earlier
+  `/validate` passes, where each obstructed the verification rather than the feature.
+  **`#507`:** `BackfillImagesButton` reported its result through a native `alert()` (present since
+  `#304`), which blocks the whole tab until dismissed — a modal in an operator's way, and for
+  browser automation a full freeze: CDP calls, screenshots and even closing the tab hang until a
+  human clicks it. So the one admin control that starts a paid, long-running job was the one control
+  no automated check could exercise end to end. It was also the **only** `alert()` in the admin
+  panel. Replaced with an inline result matching `BundleForm`'s existing `role="status"` /
+  `role="alert"` pair. A non-OK response now reads the route's **`error`** field rather than
+  `message`, because `requireVendorRole` answers 401/403 with `error` — the old code would have
+  alerted `undefined` to an operator refused for the wrong role. Every new test asserts `alert` was
+  never called, which is the assertion that matters: one checking only for rendered text would pass
+  with the `alert()` still in place.
+  **`#514`:** `getCurrentVendorIdOrNull` always stripped the port before looking up
+  `VendorDomain.host` — right for real deployments, which never carry one — so a row seeded as
+  `srimart.localhost:8787` under `npm run preview` could never match, and the request fell through
+  to `/coming-soon` with nothing to say why. A fallback lookup on the raw host now runs **only when
+  the raw host differs from the port-stripped one**, lower-cased to match how `upsertVendorDomain`
+  writes rows. The guard is the point: this function runs on **every request**, so the risk was cost
+  rather than correctness, and the test asserts a portless host issues exactly **one** query —
+  unchanged from before.
 
 - **`#523` — the image fill job now gives up on products it can never fill**
   (`specs/2026-09-01-image-fill-give-up/`). `@cf/black-forest-labs/flux-1-schnell` **permanently
