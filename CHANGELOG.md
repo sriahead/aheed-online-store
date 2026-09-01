@@ -8,6 +8,39 @@ every branch merges.
 
 ### Added
 
+- **`#521` — products behind every subcategory, for both vendors**
+  (`specs/2026-09-01-subcategory-products/`). Production's 31 subcategories were **all empty**,
+  while every top-level category had exactly 2 products — so the tier `#494` and `#498` built
+  navigation for had nothing behind it, and the gap was invisible from the home page. The cause was
+  structural and never production-specific: `prisma/seed.ts`'s `CATALOGUE` assigns every curated
+  product to a **top-level** category, and the only path that fills a subcategory,
+  `seedGeneratedCatalogue`, was called for Aheed alone. **That function was already fully
+  vendor-generic** — it takes `vendorId` and `catalogue` as parameters — so the defect was its
+  single call site, which meant SriMart's subcategories were empty in *every* environment, dev and
+  staging included, and no value of `SEED_SCALE_PRODUCTS` could ever have filled them. A
+  `maybeSeedGeneratedCatalogue(envVar, vendorId, catalogue)` helper now replaces the inline parsing
+  and is called once per vendor, the second reading a new **`SEED_SCALE_PRODUCTS_SRIMART`**. Both
+  are opt-in and unset by default, so no existing environment changes behaviour. Separate vars
+  rather than one shared count is deliberate: the catalogues are different sizes (27 subcategories
+  against 4), and `#489`'s recorded NFR baseline is defined by the *Aheed* count specifically, so
+  one value driving both would silently change what that measurement refers to.
+  **`SEED_REMOVE_GENERATED` was extended in the same commit** to remove both vendors' generated
+  rows — adding SriMart generation without it would have left the documented one-command undo
+  stranding half the set. `prisma/generate-catalogue.ts` is untouched (`GENERATOR_SEED` and the slug
+  prefix are load-bearing for `#489`'s reproducibility). Production was then seeded at 2 per
+  subcategory (54 Aheed, 8 SriMart) and every one of those 62 products given its own image via
+  `#518`'s `scripts/fill-product-images.ts`: **0 empty categories** across both vendors, 62
+  non-placeholder image rows with **62 distinct keys** (no shared objects), and sampled keys
+  returning 200 from production's CDN. **The accepted trade-off is recorded in `plan.md`:** these
+  are generated rows with deliberately generic names ("Everyday Rice"), which
+  `generate-catalogue.ts`'s own docstring warns must not be mistaken for vendor merchandising
+  (`#239`); they are in a live storefront to make the tier reviewable, and
+  `SEED_REMOVE_GENERATED=1` removes them. Two environment findings recorded for the next person:
+  IPv6 egress to R2 failed repeatedly (`UND_ERR_CONNECT_TIMEOUT`, fixed with
+  `NODE_OPTIONS=--dns-result-order=ipv4first`), and Workers AI rejected one generated product name
+  as NSFW (a false positive that a re-run cleared) — the first real evidence that `#518`'s
+  scheduled job will eventually need a give-up path for a permanently-rejected name.
+
 - **`#518` — production's real catalogue seeded, its eight missing images carried across from
   staging, and a scheduled job for the ones added later**
   (`specs/2026-09-01-production-catalogue-and-image-fills/`). Also answers **`#504`**, the

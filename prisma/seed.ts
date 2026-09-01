@@ -129,15 +129,16 @@ async function main() {
   // needing the count that produced it.
   if (process.env.SEED_REMOVE_GENERATED?.trim()) {
     await removeGeneratedCatalogue(AHEED_VENDOR_ID);
+    // #521 — SriMart can now hold generated rows too, so the undo has to reach both or
+    // `SEED_REMOVE_GENERATED` would silently leave half the generated set behind.
+    await removeGeneratedCatalogue(SRIMART_VENDOR_ID);
   } else {
-    const raw = process.env.SEED_SCALE_PRODUCTS?.trim();
-    if (raw) {
-      const requested = Number.parseInt(raw, 10);
-      if (!Number.isFinite(requested) || requested < 0) {
-        throw new Error(`SEED_SCALE_PRODUCTS must be a non-negative integer — got "${raw}"`);
-      }
-      await seedGeneratedCatalogue(AHEED_VENDOR_ID, CATALOGUE, requested);
-    }
+    await maybeSeedGeneratedCatalogue("SEED_SCALE_PRODUCTS", AHEED_VENDOR_ID, CATALOGUE);
+    await maybeSeedGeneratedCatalogue(
+      "SEED_SCALE_PRODUCTS_SRIMART",
+      SRIMART_VENDOR_ID,
+      SRIMART_CATALOGUE,
+    );
   }
 
   // #489 R9 — makes "the generated set shares a small image pool" checkable from the outside.
@@ -925,6 +926,34 @@ function chunk<T>(items: T[], size: number): T[][] {
  *    keyed on category slug, so generated products hung under an existing category would be
  *    skipped wholesale on a re-run.
  */
+/**
+ * #521 — read one vendor's generated-catalogue count from its own env var and seed it.
+ *
+ * `seedGeneratedCatalogue` was already vendor-generic; only its CALL SITE was
+ * Aheed-only, which is why every SriMart subcategory in every environment was
+ * empty. A separate var per vendor rather than one shared count: the two
+ * catalogues have very different sizes (13 subcategories vs 2), and #489's
+ * recorded NFR measurement is defined by the Aheed number specifically, so
+ * making one value drive both would silently change what that measurement
+ * means.
+ *
+ * Unset is the default and seeds nothing, so no existing environment changes
+ * behaviour by this function existing.
+ */
+async function maybeSeedGeneratedCatalogue(
+  envVar: string,
+  vendorId: string,
+  catalogue: CatalogueCategory[],
+) {
+  const raw = process.env[envVar]?.trim();
+  if (!raw) return;
+  const requested = Number.parseInt(raw, 10);
+  if (!Number.isFinite(requested) || requested < 0) {
+    throw new Error(`${envVar} must be a non-negative integer — got "${raw}"`);
+  }
+  await seedGeneratedCatalogue(vendorId, catalogue, requested);
+}
+
 async function seedGeneratedCatalogue(
   vendorId: string,
   catalogue: CatalogueCategory[],
