@@ -6,6 +6,29 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **`#508` — a database-backed error event log, independent of Cloudflare Workers Logs**
+  (`specs/2026-09-01-error-event-log/`). A live incident showed the global error boundary's
+  generic "Something went wrong" page working exactly as designed (it deliberately shows a visitor
+  nothing about the error, not even the digest — `components/errors/ErrorPanel.tsx`, unchanged
+  here), but finding the real root cause afterward depended on `#246`, still unconfirmed whether
+  Cloudflare Workers Logs are even queryable from this team's environment. `instrumentation.ts`'s
+  `onRequestError` (`#480`) now also writes the real error — message, stack, digest, path, method,
+  router kind/type — to a new `ErrorEvent` table, via a second, deliberately uncached Prisma client
+  (`getPrismaUncached()` in `lib/db.ts`) rather than the memoized `getPrisma()`/`getPrismaWs()`,
+  since whether this hook runs inside a `cache()`-compatible request scope is unconfirmed and the
+  cost of guessing wrong is the exact cross-request-singleton bug this app has already hit once. The
+  write is wrapped so a failure (a database outage — plausibly the very thing that caused the
+  original error) degrades to today's `console.error` rather than compounding anything. A new
+  `/staff/errors` page lists the most recent 50 events, gated to **platform ADMIN only** — a
+  per-vendor store admin who'd otherwise pass `requireVendorRole("ADMIN")` is refused the same way a
+  non-admin is, since a stack trace can reveal internal file paths a vendor-scoped account has no
+  reason to see. No retention job was planned at `/propose`; added anyway during `/spec` after
+  finding `lib/repositories/order-lookup-rate-limit.ts` already carries the exact sweep pattern
+  needed (`#468`), so a 30-day probabilistic sweep runs on write rather than repeating that table's
+  original unbounded-growth mistake.
+
 ### Fixed
 
 - **`#502` — staging served 404s for every seeded product image, the button meant to fix that

@@ -129,6 +129,20 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   that introduced it. What stays banned either way is raw SQL **at request time** in `app/`,
   `features/`, `components/` or `lib/repositories/*` — that is the portability and injection
   surface the rule was written for.
+- **The GAP-011 drift risk above is not hypothetical — it fired for real in #508 (2026-09-01).**
+  Adding a new model (`ErrorEvent`) with no relationship whatsoever to `Order` or `User` was enough
+  for `prisma migrate dev` to generate `DROP INDEX` for all three hand-authored `pg_trgm` indexes
+  from `20260820143949_p7_5de_order_search_trigram` — and that drop **executed** against the dev
+  database before it was caught by reading the generated `migration.sql`, not before applying it.
+  Recovery needed three separate steps, not just re-adding the `CREATE INDEX`: restoring the
+  indexes on the already-mutated database, rewriting the migration file to remove the erroneous
+  drops (so a fresh `migrate deploy` elsewhere never repeats them), and reconciling Prisma's own
+  `_prisma_migrations` checksum for that file (delete the stale row, `prisma migrate resolve
+  --applied <name>`) since editing an already-applied migration's contents leaves the recorded
+  checksum stale. **The transferable step this adds: read every `migrate dev`-generated
+  `migration.sql` before letting it apply — a `--create-only` run followed by a manual review would
+  have caught this before the drop ever touched a real database, which "keep them and re-assert
+  this migration" (the original migration's own comment) assumes you already know to do.**
 - Money = **integer pence** + explicit currency. No floats, no `money` type.
 - Images: store a **relative key** (e.g. `products/{productId}/{uuid}.webp`), **never a URL**.
   Keys are **immutable** — replacing an image writes a new key and repoints the row, so a CDN purge
