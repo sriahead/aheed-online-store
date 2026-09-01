@@ -2,10 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import {
   IMAGE_CONTENT_TYPE,
   IMAGE_QUALITY,
+  MAX_IMAGE_ATTEMPT_FAILURES,
   MAX_IMAGE_BYTES,
   MAX_IMAGE_EDGE_PX,
   buildProductImageKey,
   fitWithinEdge,
+  hasExhaustedImageAttempts,
   isProductImageKey,
   isPlaceholderImageKey,
 } from "@/lib/product-image";
@@ -191,5 +193,36 @@ describe('features/admin/product-image.ts is a valid "use server" module', () =>
       "reorderProductImages",
       "requestImageUpload",
     ]);
+  });
+});
+
+/**
+ * #523 — the give-up rule for products the image pipeline can never fill.
+ *
+ * Pure, so the threshold that governs a paid, scheduled job is checkable
+ * without a database or a live Workers AI call.
+ */
+describe("hasExhaustedImageAttempts", () => {
+  it("is false below the threshold, so a retryable product keeps being offered", () => {
+    expect(hasExhaustedImageAttempts(0)).toBe(false);
+    expect(hasExhaustedImageAttempts(MAX_IMAGE_ATTEMPT_FAILURES - 1)).toBe(false);
+  });
+
+  it("is true at and above the threshold", () => {
+    expect(hasExhaustedImageAttempts(MAX_IMAGE_ATTEMPT_FAILURES)).toBe(true);
+    expect(hasExhaustedImageAttempts(MAX_IMAGE_ATTEMPT_FAILURES + 5)).toBe(true);
+  });
+
+  it("allows more than one attempt, because the AI filter is flaky in both directions", () => {
+    // `Gulab Jamun 1kg` and `Extra Noodles 1L` were each refused once as NSFW and
+    // then accepted on a retry. A threshold of 1 would permanently give up on
+    // products that do in fact work.
+    expect(MAX_IMAGE_ATTEMPT_FAILURES).toBeGreaterThan(1);
+  });
+
+  it("stays small enough to bound spend on a product that never succeeds", () => {
+    // Every attempt that reaches AI generation is a paid call, repeated on every
+    // scheduled run until the product gives up.
+    expect(MAX_IMAGE_ATTEMPT_FAILURES).toBeLessThanOrEqual(5);
   });
 });

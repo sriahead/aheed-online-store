@@ -39,7 +39,13 @@
 import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
-import { getProductsWithoutImages, saveGeneratedProductImage } from "@/lib/repositories/products";
+import { MAX_IMAGE_ATTEMPT_FAILURES } from "@/lib/product-image";
+import {
+  countProductsWithExhaustedImageAttempts,
+  getProductsWithoutImages,
+  recordImageAttemptFailure,
+  saveGeneratedProductImage,
+} from "@/lib/repositories/products";
 
 /** Small on purpose — see "WHY THE LIMIT IS MANDATORY IN SPIRIT" above. */
 const DEFAULT_LIMIT = 10;
@@ -149,6 +155,9 @@ async function main() {
         try {
           const result = await runProductImagePipeline(product.id, product.name, null);
           if (!result) {
+            // No source found and nothing generated. Counts as an attempt —
+            // otherwise this product is re-selected forever (#523).
+            await recordImageAttemptFailure(prisma, vendor.id, product.id);
             console.log(`  no image source for ${product.name}`);
             failed++;
             remaining--;
@@ -169,13 +178,36 @@ async function main() {
           // scheduled job that stops at the first bad row silently stops
           // making progress forever.
           console.error(`  FAILED ${product.name}:`, err instanceof Error ? err.message : err);
+          // #523 — record it, so a product the pipeline can NEVER fill (Workers AI
+          // refuses some halal meat names as NSFW) eventually stops being selected
+          // instead of consuming a slot on every scheduled run.
+          try {
+            await recordImageAttemptFailure(prisma, vendor.id, product.id);
+          } catch (recordErr) {
+            console.error(
+              `    could not record the failure for ${product.name}:`,
+              recordErr instanceof Error ? recordErr.message : recordErr,
+            );
+          }
           failed++;
         }
         remaining--;
       }
     }
 
-    console.log(`\nfilled ${filled}, failed ${failed}`);
+    // #523 — say what is being skipped. A give-up rule that silently shrinks the
+    // work list is the same class of problem it was built to fix: the run would
+    // report "nothing to do" while products sat permanently unfilled and nothing
+    // pointed at them.
+    let exhausted = 0;
+    for (const vendor of vendors) {
+      exhausted += await countProductsWithExhaustedImageAttempts(prisma, vendor.id);
+    }
+    const skipNote =
+      exhausted > 0
+        ? `, ${exhausted} skipped after ${MAX_IMAGE_ATTEMPT_FAILURES} failed attempts (see #523)`
+        : "";
+    console.log(`\nfilled ${filled}, failed ${failed}${skipNote}`);
   } finally {
     await prisma.$disconnect();
   }

@@ -177,6 +177,34 @@ every branch merges.
 
 ### Fixed
 
+- **`#523` — the image fill job now gives up on products it can never fill**
+  (`specs/2026-09-01-image-fill-give-up/`). `@cf/black-forest-labs/flux-1-schnell` **permanently
+  refuses** some legitimate names: `Halal Chicken Thighs 1kg` returned
+  `AiError: Input prompt contains NSFW content` (code 8007) on **four attempts across three runs**.
+  That matters beyond one product — this store is a halal butcher, and `chicken-poultry`,
+  `beef-mince` and `lamb-mutton` are exactly the names most likely to trip a raw-meat filter — and
+  it would have **quietly stalled the scheduled job**: `getProductsWithoutImages` is newest-first
+  and **bounded**, so a product that can never succeed was re-selected on every run, consumed a
+  slot, failed, and left the genuinely fillable backlog untouched while the job reported success.
+  The per-product error handling was already correct; nothing **recorded** the failure, so nothing
+  could skip it next time. `Product.imageAttemptFailures` (new column, own migration) is
+  incremented by `recordImageAttemptFailure` — a singular `update`, never `updateMany` (`#382`),
+  scoped by `vendorId` in the `where` so a caller cannot touch another tenant's product — and
+  `getProductsWithoutImages` now excludes products at or past `MAX_IMAGE_ATTEMPT_FAILURES`.
+  **Three, not one:** the filter is flaky in *both* directions (`Gulab Jamun 1kg` and
+  `Extra Noodles 1L` were each refused once then accepted on retry), so one strike would abandon
+  products that do work. `saveGeneratedProductImage` resets the counter, so a product that later
+  loses its image is retried rather than excluded by historic failures. **Both** fill paths record
+  — the script and the admin route — since otherwise a product stays selectable through one while
+  the other has written it off. Every run now **reports how many products it skipped**: a give-up
+  rule that silently shrinks the work list is the same class of problem it was built to fix.
+  **The migration carried the GAP-011 trap and it fired**: `prisma migrate dev --create-only`
+  proposed `DROP INDEX` for all three hand-authored `pg_trgm` indexes alongside one unrelated column
+  on `Product`. They were removed before applying and the file records why — the **third** recorded
+  occurrence, and the first caught before anything executed (in `#508` the equivalent drops ran).
+  Verified live against dev: selected at 0 and 2 failures, excluded at 3, counter reset after a
+  successful save, a cross-tenant increment refused, and all three trigram indexes still present.
+
 - **`#519` — production's `VendorDomain` no longer maps staging hosts**
   (`specs/2026-09-01-stale-vendor-domains/`). Production held **four** rows where it should hold
   two — `staging.aheedfoodcentre.nocaped.com` and `srimart-staging.nocaped.com` alongside the two
