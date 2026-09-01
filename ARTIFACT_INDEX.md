@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-01T16:59:12.610Z` · commit `461e375` · `135` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-01T17:49:19.081Z` · commit `41b7e2c` · `136` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -130,6 +130,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [A give-up path for products the image pipeline can never fill (plan)](specs/2026-09-01-image-fill-give-up/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Workers AI permanently refuses some halal meat product names as NSFW; the bounded, newest-first fill selection would re-pick such a product on every scheduled run forever, so failed attempts are now counted and exhausted products are excluded and reported. |
 | [Product image integrity — staging placeholders, backfill detection, Open Food Facts control (plan)](specs/2026-09-01-product-image-integrity/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Staging 404s every seeded product image because the seed returns before its own uploads; the button meant to fix that matches nothing and would write a non-primary row anyway; and Open Food Facts repeats one wrong image for similar names without flagging it. |
 | [Production catalogue seed, cross-environment image copy, and scheduled image fills (plan)](specs/2026-09-01-production-catalogue-and-image-fills/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Seed production's real catalogue, carry the eight already-generated images across from staging instead of paying to regenerate them, and add a scheduled job that fills images for products added later. |
+| [One horizontal-scroll affordance across the shop page (plan)](specs/2026-09-01-shop-row-scrollers/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | The shop page had one row that scrolled and three wrapping grids; the department strip's scroller is extracted and shared, and the product rows widen from 4 to 8 items so there is something to scroll. |
 | [Remove staging hosts from production's VendorDomain (plan)](specs/2026-09-01-stale-vendor-domains/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Production's VendorDomain held two staging hosts alongside the two correct ones, giving each vendor two canonical hosts; they are removed with a guarded, explicit-target script. |
 | [Storefront browsing affordances — a browse mode for /search, working View all links, a /bundles page (plan)](specs/2026-09-01-storefront-browsing-affordances/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Bare /search renders nothing because the whole grid is gated on a query, so the shop page's only View all is a dead end; this gives /search a browse mode, wires a View all onto every row, and adds the /bundles page one of them needs. |
 | [Products in every subcategory, for both vendors (plan)](specs/2026-09-01-subcategory-products/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Every one of production's 31 subcategories was empty because the curated fixture assigns all its products to top-level categories; both vendors' second tier is now filled with curated, category-appropriate products and their own images. |

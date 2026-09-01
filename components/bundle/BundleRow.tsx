@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { BundleCard } from "./BundleCard";
+import { HorizontalScroller } from "@/components/layout/HorizontalScroller";
 import { hasAvailableItems } from "@/lib/bundle-pricing";
 import type { BundleWithItems } from "@/lib/repositories/bundles";
 
@@ -52,7 +53,18 @@ export function BundleRow({ title, bundles, cdnBaseUrl, viewAllLink }: BundleRow
         )}
       </div>
 
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/*
+        #511 — `as="ul"` because `BundleCard` renders an `<li>`: the scroll
+        container and the items' parent must be the same element, so this cannot
+        be a `<ul>` nested inside a scrolling `<div>`.
+      */}
+      <HorizontalScroller
+        // The row's own title, matching ProductRow — see its note on why a
+        // generic label is not enough on a page holding several scrollers.
+        itemLabel={title.toLowerCase()}
+        as="ul"
+        itemWidthClassName="[&>*]:w-72 [&>*]:shrink-0 sm:[&>*]:w-80"
+      >
         {renderable.map((bundle) => (
           <BundleCard
             key={bundle.id}
@@ -65,7 +77,7 @@ export function BundleRow({ title, bundles, cdnBaseUrl, viewAllLink }: BundleRow
             cdnBaseUrl={cdnBaseUrl}
           />
         ))}
-      </ul>
+      </HorizontalScroller>
     </section>
   );
 }

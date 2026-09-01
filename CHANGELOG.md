@@ -8,6 +8,30 @@ every branch merges.
 
 ### Added
 
+- **`#511` — one horizontal-scroll affordance across the shop page**
+  (`specs/2026-09-01-shop-row-scrollers/`). `/categories` showed one row that scrolled (the
+  department strip) and three wrapping grids, so it read as two designs meeting.
+  `components/layout/HorizontalScroller.tsx` (new) lifts the behaviour out of `DepartmentScroller` —
+  arrows driving `scrollBy`, hidden scrollbar, native touch/trackpad scroll as the no-JS fallback —
+  and `ProductRow`, `BundleRow` and `DepartmentScroller` all render through it, so **no second
+  scroller implementation remains**. It takes `as: "div" | "ul"` because `BundleCard` renders an
+  `<li>` and the scroll container must be the items' own parent; item width is applied by the track,
+  so `ProductCard` and `BundleCard` are untouched. `DepartmentScroller` passes its original
+  `step={260}` and arrow placement, so the extraction changed nothing about how the strip feels.
+  **The rows widened from `take: 4` to `take: 8`** — a scroller over four items in a four-column grid
+  has nothing to scroll, so the affordance required a page-cost decision, these queries running on
+  every shop-page render. `#511` recorded 12 as discussed but not settled; **8 was chosen
+  deliberately**, still overflowing a desktop grid at half the added fetch.
+  **A live render caught what the unit tests could not.** `tests/horizontal-scroller.test.tsx`
+  passed — including a case named "names its arrows after what they scroll" — while the real page
+  emitted `Scroll products left`/`right` **twice**, once for New Arrivals and once for Featured
+  Products, because both rows passed a fixed label. Two identically-named arrow pairs are
+  indistinguishable to a screen reader, and that is precisely the ambiguity the required `itemLabel`
+  prop exists to prevent. A per-component test renders one instance and structurally cannot see a
+  collision between two on a page. Fixed by deriving the label from each row's title; re-verified
+  live, all eight distinct (`departments`, `value bundles`, `new arrivals`, `featured products`),
+  four scrollable tracks, exactly one of them a `<ul>`, and 8 cards in the New Arrivals row.
+
 - **`#521` — two curated products behind every subcategory, for both vendors**
   (`specs/2026-09-01-subcategory-products/`). Production's 31 subcategories were **all empty**
   while every top-level category had exactly 2 products — so the tier `#494` and `#498` built

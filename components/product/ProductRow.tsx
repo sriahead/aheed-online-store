@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ProductCard } from "./ProductCard";
+import { HorizontalScroller } from "@/components/layout/HorizontalScroller";
 import type { ProductSummary } from "@/lib/repositories/products";
 
 interface ProductRowProps {
@@ -41,7 +42,21 @@ export function ProductRow({
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {/*
+        #511 — a horizontal scroller rather than a wrapping grid, so this row
+        carries the same affordance as the department strip. Card width lives
+        here on the track's direct children, so `ProductCard` needs no width of
+        its own and is unchanged.
+      */}
+      <HorizontalScroller
+        // The row's own title, not a generic "products": `/categories` renders
+        // TWO ProductRows, so a fixed label gave both an identically-named pair
+        // of arrows — indistinguishable to a screen reader, and exactly the
+        // ambiguity `itemLabel` exists to prevent. Caught by reading the live
+        // rendered markup, not by a test.
+        itemLabel={title.toLowerCase()}
+        itemWidthClassName="[&>*]:w-40 [&>*]:shrink-0 sm:[&>*]:w-44 lg:[&>*]:w-52"
+      >
         {products.map((product) => (
           <ProductCard
             key={product.id}
@@ -50,7 +65,7 @@ export function ProductRow({
             cartQuantity={cartQuantities?.get(product.id) ?? 0}
           />
         ))}
-      </div>
+      </HorizontalScroller>
     </section>
   );
 }
