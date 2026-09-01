@@ -8,6 +8,40 @@ every branch merges.
 
 ### Added
 
+- **`#518` — production's real catalogue seeded, its eight missing images carried across from
+  staging, and a scheduled job for the ones added later**
+  (`specs/2026-09-01-production-catalogue-and-image-fills/`). Also answers **`#504`**, the
+  batching-and-spend decision deferred from `#502`: the decision is **the real curated catalogue
+  only** — the ~2,000 `gen-*` scale products stay out of production and keep their shared
+  placeholder. Measuring both databases first changed the design twice. Production was neither
+  empty nor broken (21 products, all with real images, none awaiting a placeholder); what it
+  lacked was 4 Aheed categories, the 8 products in them, and all 31 subcategories. And **a
+  bucket-to-bucket copy would have written rows pointing at objects production does not hold**:
+  seeded placeholders are slug-derived (`products/{slug}/main.svg`, identical everywhere) but
+  generated images are `products/{productId}/{uuid}.webp`, and product ids are generated per
+  environment — so `scripts/copy-product-images.ts` matches products across environments on
+  `(vendorId, slug)` and mints a **new** destination key from the destination's own product id.
+  The copy is driven by the **destination's** need ("which products here still have only a
+  placeholder?") rather than the source's contents, which is a correctness property, not a style
+  choice: staging holds `p5b-validation-fixture`, a P5b validation artifact absent from the seed's
+  `CATALOGUE`, and enumerating the source would have pushed it into a live store. It reuses
+  `saveGeneratedProductImage`, so "claim primary, drop the placeholder it replaces" cannot drift
+  from the AI path. `lib/storage.ts`'s `StorageService` gained `getObject` — the port had no read
+  primitive at all — returning `null` on a 404 to match `headObject`'s posture, with the
+  200/404/error decision extracted to a pure, unit-tested `readGetObjectResponse`.
+  `scripts/fill-product-images.ts` plus `.github/workflows/fill-product-images.yml` cover products
+  added later: **a Cloudflare cron trigger is not possible here** — `@opennextjs/cloudflare@1.20.2`
+  generates a worker exporting `fetch` only, with `scheduled` appearing nowhere in the package, so
+  a `[triggers]` block would fire into a Worker with no handler — but no Worker is needed, because
+  `lib/image-generation.ts` calls the Cloudflare REST API rather than a Workers AI binding, so the
+  pipeline runs on a plain Node runner. The script builds its own client from the bare
+  `@prisma/client` specifier and passes it explicitly, since `lib/db`'s `@prisma/client/wasm`
+  cannot load in Node. `prisma/seed.ts` is unchanged. **Two things are deliberately not done here:**
+  the workflow cannot run until six S3/CDN secrets are added to the `production` GitHub environment
+  (it currently holds only `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` and `DIRECT_URL`), and
+  **`#519`** was filed for two stale staging hosts found in production's `VendorDomain` — inert
+  today, pre-existing, and not touched by this slice.
+
 - **`#501` (parts 1 and 2) — a browse mode for `/search`, working "View all" links, and a
   `/bundles` page** (`specs/2026-09-01-storefront-browsing-affordances/`). Slice A of the three
   approved at Gate 1 on 2026-09-01; slice B was `#502`, slice C is `#503`. Bare `/search` ran its
