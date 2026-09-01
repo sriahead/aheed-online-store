@@ -177,6 +177,29 @@ every branch merges.
 
 ### Fixed
 
+- **`#519` — production's `VendorDomain` no longer maps staging hosts**
+  (`specs/2026-09-01-stale-vendor-domains/`). Production held **four** rows where it should hold
+  two — `staging.aheedfoodcentre.nocaped.com` and `srimart-staging.nocaped.com` alongside the two
+  correct production hosts, **all four marked `isCanonical: true`**, so each vendor had two
+  canonical hosts. Found while verifying `#518`'s production seed; almost certainly written by an
+  earlier seed run pointed at production while carrying staging's `SEED_*_HOST` values, the same
+  class of confusion as `#119`. They were inert in normal operation — staging's Worker resolves
+  against staging's database — but `lib/tenant.ts` treats a `VendorDomain` match as authoritative,
+  so they were a silent mis-tenanting waiting for anything else to resolve a host against
+  production's data (a restore, a diagnostic, a preview environment). The reverse direction was
+  checked before assuming it was one-way: staging holds only its own hosts plus `localhost`.
+  `scripts/remove-vendor-domains.ts` (new) takes explicit `--remove <host>` values rather than a
+  pattern — "delete anything containing `staging`" is the kind of rule that eventually deletes a
+  legitimate row in an environment nobody had in mind — and is a **dry run unless `--apply`** is
+  passed. Its load-bearing safety check refuses to leave any vendor without a canonical host:
+  removing the last one does not corrupt anything visibly, it makes the vendor serve
+  `/coming-soon` **with a 200**, so a typo in the removal list would be a live outage that looks
+  like a successful run. That guard was exercised, not assumed (exit 1). After the removal both
+  live sites were confirmed serving their **own** tenant by comparing page titles, not status
+  codes. `prisma/seed.ts` and `lib/tenant.ts` untouched; a seed-side guard rejecting a host that
+  does not match the connected environment stays in `#519`'s discussion, since the seed has no
+  reliable way to know which environment it is pointed at.
+
 - **`#502` — staging served 404s for every seeded product image, the button meant to fix that
   matched nothing, and Open Food Facts repeated one wrong image without ever flagging it**
   (`specs/2026-09-01-product-image-integrity/`). Four compounding defects, each confirmed against a
