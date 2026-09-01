@@ -6,6 +6,36 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`#502` — staging served 404s for every seeded product image, the button meant to fix that
+  matched nothing, and Open Food Facts repeated one wrong image without ever flagging it**
+  (`specs/2026-09-01-product-image-integrity/`). Four compounding defects, each confirmed against a
+  live environment: (1) `prisma/seed.ts`'s `seedGeneratedCatalogue` did its placeholder uploads
+  *after* its `existing >= count` early return, so once a database held the generated rows no later
+  seed run uploaded the objects into that environment's bucket — dev had all of them, staging none,
+  while staging's pages went on referencing them (production was unaffected: it carries no generated
+  products and its curated ones have real uploaded `.webp` images). The uploads now run before the
+  guard, and `scripts/restore-placeholder-images.ts` repairs databases whose rows already exist —
+  it reads rows and writes only storage, takes an explicit `--env-file`, and prints the resolved
+  host and bucket before acting (`#119`). (2) `getProductsWithoutImages` asked for
+  `images: { none: {} }`, matching **zero** products for either vendor because both seed paths give
+  every product a placeholder row; it now selects products whose images are all placeholders, which
+  covers the no-image case in the same clause since Prisma's `every` is vacuously true for an empty
+  relation — verified against a real database in `scripts/verify-repository-injection.ts`, not a
+  mock. (3) `saveGeneratedProductImage` wrote `isPrimary: false` while every storefront read selects
+  `where: { isPrimary: true }`, so a filled image would have uploaded, cost an AI call and never
+  displayed; it now claims primary and removes the shared placeholder it replaces. (4)
+  `lib/product-metadata.ts` returned Open Food Facts' top hit with no relevance check, so every
+  product whose name shared a keyword got one identical image — a pure `isRelevantMatch` floor now
+  rejects unrelated hits, `needsReview` is set on the Open Food Facts path as well as the AI one
+  (it was set only on AI, flagging the source *least* likely to be wrong), and the operator can
+  switch Open Food Facts off per run from a checkbox beside the Auto-fill button. Separately,
+  `ProductCard` now degrades a missing object to the same grey box a product with no image gets
+  rather than the browser's broken-image icon, which removes the failure mode rather than today's
+  instance. **Deliberately deferred:** the 10-per-click backfill cap stays (2,026 products would be
+  200+ clicks, but uncapped is an unbounded Workers AI spend from one button) — `#504`.
+
 ### Added
 
 - **`#498` — bundle cards match the product-card design language, a neutral bundles heading,

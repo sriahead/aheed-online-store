@@ -134,6 +134,25 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   Keys are **immutable** — replacing an image writes a new key and repoints the row, so a CDN purge
   is never needed. (This line said `products/{sku}/main.webp` until P6b2; `Product` has no `sku`
   field and the seed writes `products/{slug}/main.svg`, so the example matched nothing in the repo.)
+- **A `ProductImage` row and the object it names are written by different systems, so a row can and
+  does outlive its object — treat "the row exists" as no evidence the image loads.** Found in #502
+  (2026-09-01): `prisma/seed.ts`'s `seedGeneratedCatalogue` wrote both, but guarded both behind a
+  **row-only** check (`if (existing >= count) return;`) placed *above* its own `putTracked` uploads.
+  So the moment a database held the generated products, no later seed run uploaded the objects into
+  that environment's bucket. The dev bucket had every `products/gen-<subcategory>/main.svg`; staging's
+  had none, and returned **404** for all of them while staging's pages went on referencing them —
+  invisible to `lint`/`typecheck`/`test`/`build`, and invisible locally, because dev's bucket was
+  complete. Production was untouched only by luck: it carries no generated products. **Two
+  transferable rules.** First, when one function writes both a row and its object, any idempotency
+  guard must be positioned so the storage write still happens on a re-run, or the two diverge
+  silently and per-environment. Second, **verify an image key against the CDN of the environment
+  that actually serves it** (`curl -I "${CDN_BASE_URL}/${key}"`) rather than against dev — the same
+  key legitimately returns 200 in one environment and 404 in another, which is exactly the case no
+  local check can see. `scripts/restore-placeholder-images.ts` repairs a database whose rows already
+  exist; the seed fix alone cannot, since it only helps databases seeded after it. Storefront cards
+  now degrade a missing object to the "no image" box (`components/product/ProductImage.tsx`) rather
+  than a broken-image icon, so this class of gap is no longer *visibly* broken — which makes
+  checking the CDN, not the page, the way to catch the next one.
 
 ## Storage (ADR-003)
 - Object storage via the **S3-compatible API only**, behind `lib/storage` (`StorageService` port).

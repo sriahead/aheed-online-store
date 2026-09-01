@@ -143,10 +143,8 @@ vendor's stored settings — and it would cost a migration to express something 
 
 ## Open items carried forward
 
-- **Draining 2,026 products 10 at a time is impractical.** Needs its own decision about batching,
-  cost ceiling and whether the demo catalogue deserves real images at all. To be filed as a
-  follow-up issue at `/build-notes` rather than absorbed here.
+- **Draining 2,026 products 10 at a time is impractical** — tracked as **#504**. Needs its own
+  decision about batching, cost ceiling and whether the demo catalogue deserves real images at all.
 - **`.env` violates `CLAUDE.md`'s own env-format rule** — spaces around `=` and trailing
   `# comment`s on the same line as values, including on `DATABASE_URL`. It happens to parse today.
-  Noticed while checking which database this slice's script would target; out of scope, to be filed
-  as a follow-up.
+  Tracked as **#505**; it is why this slice's script carries a hand-rolled `parseEnvFile`.
