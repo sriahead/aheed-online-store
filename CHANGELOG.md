@@ -8,6 +8,74 @@ every branch merges.
 
 ### Added
 
+- **`#521` — two curated products behind every subcategory, for both vendors**
+  (`specs/2026-09-01-subcategory-products/`). Production's 31 subcategories were **all empty**
+  while every top-level category had exactly 2 products — so the tier `#494` and `#498` built
+  navigation for had nothing behind it, and the gap was invisible from the home page. The cause was
+  structural and never production-specific: `prisma/seed.ts`'s `CATALOGUE` assigns every curated
+  product to a **top-level** category, and the only path that fills a subcategory,
+  `seedGeneratedCatalogue`, was called for Aheed alone — so SriMart's subcategories were empty in
+  *every* environment, dev and staging included. `AHEED_SUBCATEGORY_PRODUCTS` (27 keys) and
+  `SRIMART_SUBCATEGORY_PRODUCTS` (4 keys) now hold two real products each, keyed on the
+  subcategory's slug, with genuine names, pence prices, unit labels and halal/fresh flags —
+  SriMart's being electronics and homeware. `seedSubcategoryProducts` creates them in its own pass,
+  idempotent per **product** slug, uploading each placeholder object before its row (`#502`) and
+  skipping any key with no matching category so one vendor's fixture is inert in the other's run.
+  `SEED_REMOVE_GENERATED` now removes **both** vendors' generated rows.
+  **The first implementation of this slice was wrong and reached production before it was caught by
+  looking at the site.** It filled the tier with `generateProducts` output, which draws a noun from
+  one global pool and assigns it to a **random** subcategory ("Everyday Rice" under `cleaning`), and
+  whose pool is **groceries-only**, so SriMart — an electronics vendor — got "Value Lentils" under
+  `sri-chargers-cables`. Both faults are inherent to `generate-catalogue.ts`, whose own docstring
+  says its vocabulary deliberately does not resemble real vendor product; it exists to make queries
+  work harder for `#489`. It is left untouched (`GENERATOR_SEED` is load-bearing for that
+  measurement) and `SEED_SCALE_PRODUCTS_SRIMART` was removed. **The transferable lesson: a fixture
+  built to exercise query cost is not a fixture for looking at, and nothing mechanical separates
+  them** — every generated row was schema-valid, correctly related and correctly imaged, and every
+  local check plus the slice's own original spec passed. A second, quieter defect came from the fix
+  itself: `orange-juice-1l` collided with an existing top-level product, and because slugs are
+  unique per vendor and pending products are filtered by existing slug, the collision **silently
+  seeded one fewer row** rather than failing — `juices-soft-drinks` went live with a single product
+  until it was found by counting. Production now has 2 curated products in all 31 subcategories
+  across both vendors and **0** `gen-` rows. **One tracked exception: `#523`** — Workers AI refuses
+  `Halal Chicken Thighs 1kg` as NSFW on every attempt (code 8007), so it keeps its placeholder and
+  renders as the "no image" box; that issue also records why a permanently-refused product will
+  otherwise consume a slot on every scheduled run of `#518`'s fill job forever.
+
+- **`#518` — production's real catalogue seeded, its eight missing images carried across from
+  staging, and a scheduled job for the ones added later**
+  (`specs/2026-09-01-production-catalogue-and-image-fills/`). Also answers **`#504`**, the
+  batching-and-spend decision deferred from `#502`: the decision is **the real curated catalogue
+  only** — the ~2,000 `gen-*` scale products stay out of production and keep their shared
+  placeholder. Measuring both databases first changed the design twice. Production was neither
+  empty nor broken (21 products, all with real images, none awaiting a placeholder); what it
+  lacked was 4 Aheed categories, the 8 products in them, and all 31 subcategories. And **a
+  bucket-to-bucket copy would have written rows pointing at objects production does not hold**:
+  seeded placeholders are slug-derived (`products/{slug}/main.svg`, identical everywhere) but
+  generated images are `products/{productId}/{uuid}.webp`, and product ids are generated per
+  environment — so `scripts/copy-product-images.ts` matches products across environments on
+  `(vendorId, slug)` and mints a **new** destination key from the destination's own product id.
+  The copy is driven by the **destination's** need ("which products here still have only a
+  placeholder?") rather than the source's contents, which is a correctness property, not a style
+  choice: staging holds `p5b-validation-fixture`, a P5b validation artifact absent from the seed's
+  `CATALOGUE`, and enumerating the source would have pushed it into a live store. It reuses
+  `saveGeneratedProductImage`, so "claim primary, drop the placeholder it replaces" cannot drift
+  from the AI path. `lib/storage.ts`'s `StorageService` gained `getObject` — the port had no read
+  primitive at all — returning `null` on a 404 to match `headObject`'s posture, with the
+  200/404/error decision extracted to a pure, unit-tested `readGetObjectResponse`.
+  `scripts/fill-product-images.ts` plus `.github/workflows/fill-product-images.yml` cover products
+  added later: **a Cloudflare cron trigger is not possible here** — `@opennextjs/cloudflare@1.20.2`
+  generates a worker exporting `fetch` only, with `scheduled` appearing nowhere in the package, so
+  a `[triggers]` block would fire into a Worker with no handler — but no Worker is needed, because
+  `lib/image-generation.ts` calls the Cloudflare REST API rather than a Workers AI binding, so the
+  pipeline runs on a plain Node runner. The script builds its own client from the bare
+  `@prisma/client` specifier and passes it explicitly, since `lib/db`'s `@prisma/client/wasm`
+  cannot load in Node. `prisma/seed.ts` is unchanged. **Two things are deliberately not done here:**
+  the workflow cannot run until six S3/CDN secrets are added to the `production` GitHub environment
+  (it currently holds only `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` and `DIRECT_URL`), and
+  **`#519`** was filed for two stale staging hosts found in production's `VendorDomain` — inert
+  today, pre-existing, and not touched by this slice.
+
 - **`#501` (parts 1 and 2) — a browse mode for `/search`, working "View all" links, and a
   `/bundles` page** (`specs/2026-09-01-storefront-browsing-affordances/`). Slice A of the three
   approved at Gate 1 on 2026-09-01; slice B was `#502`, slice C is `#503`. Bare `/search` ran its
