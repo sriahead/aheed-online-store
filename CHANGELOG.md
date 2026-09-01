@@ -158,6 +158,20 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` closeout for `#507`, `#514`, `#364` and `#511`.** `npm run sdd:audit` reported five
+  gaps — three slices plus **PR #533** (`af17005`) and **PR #535** (`881792b`) — and now reports every
+  slice and promotion documented. Five `specs/roadmap.md` rows, each carrying the lesson rather than
+  just the outcome: **#507/#514** (PR #531), where the guard rather than the fallback was the work,
+  since `getCurrentVendorIdOrNull` runs on every request; **#364** (PR #532), recording that **an
+  issue's own account of why something was deferred is a claim, not a constraint** — the `.webp`
+  suffix was held hostage by a validator the AI code path never runs; **PR #533**, their promotion;
+  **#511** (PR #534), recording that **a per-component test renders one instance and structurally
+  cannot see a collision between two on a page**, which is why two rows shipped identically-named
+  scroll arrows past a passing test suite; and **PR #535**, closing out the backlog carried through
+  the session. The last row also records the one item that cannot be closed in code: the six S3/CDN
+  secrets missing from the `production` GitHub environment, without which the now-armed
+  `fill-product-images.yml` cron fails on its first run.
+
 - **`/document` closeout for `#519` and `#523`.** `npm run sdd:audit` reported four gaps — both
   slices plus **PR #527** (`4328ea0`) and **PR #529** (`3872851`) — and now reports every slice and
   promotion documented. Four `specs/roadmap.md` rows: **#519** (PR #526), recording that a wrong
