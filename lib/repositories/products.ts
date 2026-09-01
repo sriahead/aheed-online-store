@@ -3,7 +3,11 @@ import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import { effectiveStock } from "@/lib/cart-rules";
 import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
-import { PLACEHOLDER_IMAGE_SUFFIX, isPlaceholderImageKey } from "@/lib/product-image";
+import {
+  MAX_IMAGE_ATTEMPT_FAILURES,
+  PLACEHOLDER_IMAGE_SUFFIX,
+  isPlaceholderImageKey,
+} from "@/lib/product-image";
 import type { ProductTier } from "@/lib/tier-pricing";
 import {
   deleteProductTier,
@@ -1210,12 +1214,15 @@ export async function saveGeneratedProductImage(
     }
   }
 
-  if (needsReview) {
-    await prisma.product.update({
-      where: { id: productId, vendorId },
-      data: { imageNeedsReview: true },
-    });
-  }
+  // #523 — an image landed, so any historic failures are no longer relevant.
+  // Reset unconditionally rather than only when the counter is non-zero: if this
+  // product later loses its image it should be retried from scratch, not
+  // excluded by attempts that predate an image it once had. Merged into the
+  // `needsReview` update when both apply, so this stays one write either way.
+  await prisma.product.update({
+    where: { id: productId, vendorId },
+    data: { imageAttemptFailures: 0, ...(needsReview ? { imageNeedsReview: true } : {}) },
+  });
 }
 
 /**
@@ -1236,11 +1243,64 @@ export async function saveGeneratedProductImage(
  * `isPlaceholderImageKey` reads, so the SQL filter and the pure predicate
  * cannot drift apart.
  */
+/**
+ * Record one failed image-pipeline attempt for a product (#523).
+ *
+ * Singular `update`, not `updateMany` — CLAUDE.md's #382 note: Prisma's client
+ * query compiler wraps `updateMany` in a transaction the HTTP adapter cannot
+ * execute, and this is called from the admin route, which runs on `getPrisma()`.
+ *
+ * Scoped by `vendorId` in the `where` so a caller cannot increment a counter on
+ * another tenant's product by passing an id it happened to learn.
+ *
+ * Failures are counted, never reset here; `saveGeneratedProductImage` clears the
+ * counter when an image finally lands, so a product that later loses its image
+ * is retried rather than being excluded forever by a historic failure.
+ */
+export async function recordImageAttemptFailure(
+  prisma: Db,
+  vendorId: string,
+  productId: string,
+): Promise<void> {
+  await prisma.product.update({
+    where: { id: productId, vendorId },
+    data: { imageAttemptFailures: { increment: 1 } },
+  });
+}
+
+/**
+ * How many products are excluded from automatic filling because they have
+ * exhausted their attempts (#523).
+ *
+ * Exists so a run can SAY it is skipping them. A give-up rule that silently
+ * shrinks the work list is the same class of problem it was built to fix: the
+ * job would report "nothing to do" while products sat permanently unfilled and
+ * nothing pointed at them.
+ */
+export async function countProductsWithExhaustedImageAttempts(
+  prisma: Db,
+  vendorId: string,
+): Promise<number> {
+  return await prisma.product.count({
+    where: {
+      vendorId,
+      images: { every: { storageKey: { endsWith: PLACEHOLDER_IMAGE_SUFFIX } } },
+      imageAttemptFailures: { gte: MAX_IMAGE_ATTEMPT_FAILURES },
+    },
+  });
+}
+
 export async function getProductsWithoutImages(prisma: Db, vendorId: string, limit: number) {
   return await prisma.product.findMany({
     where: {
       vendorId,
       images: { every: { storageKey: { endsWith: PLACEHOLDER_IMAGE_SUFFIX } } },
+      // #523 — exclude products the pipeline has already failed on
+      // MAX_IMAGE_ATTEMPT_FAILURES times. This selection is newest-first and
+      // BOUNDED, so a product that can never succeed would otherwise be
+      // re-selected on every scheduled run, consume a slot, fail, and leave the
+      // fillable backlog behind it untouched while the job reported success.
+      imageAttemptFailures: { lt: MAX_IMAGE_ATTEMPT_FAILURES },
     },
     // Newest first, so a bounded batch is deterministic rather than whatever
     // order the planner happens to return. Two things follow from that, both

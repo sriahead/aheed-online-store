@@ -130,6 +130,35 @@ export function isPlaceholderImageKey(key: string): boolean {
   return key.endsWith(PLACEHOLDER_IMAGE_SUFFIX);
 }
 
+/**
+ * How many failed pipeline attempts before a product stops being offered for
+ * automatic image filling (#523).
+ *
+ * Some products can never succeed. Workers AI returns
+ * `AiError: Input prompt contains NSFW content` for `Halal Chicken Thighs 1kg`
+ * on every attempt — a false positive on a raw-meat name, and this store is a
+ * halal butcher, so the names most exposed to it are exactly its defining
+ * department. `getProductsWithoutImages` is newest-first and BOUNDED, so
+ * without a give-up rule one such product is re-selected on every scheduled
+ * run, consumes a slot, fails, and the genuinely fillable backlog behind it is
+ * never reached — while the job reports success.
+ *
+ * Three rather than one because the same filter is demonstrably flaky in both
+ * directions: `Gulab Jamun 1kg` and `Extra Noodles 1L` were each refused once
+ * and then accepted on a retry. One strike would give up on products that do
+ * work; a large number would defeat the purpose.
+ *
+ * Lives here, pure, so the threshold is testable without a database — and so
+ * the repository filter and any future admin surface read one constant rather
+ * than two literals that can drift.
+ */
+export const MAX_IMAGE_ATTEMPT_FAILURES = 3;
+
+/** Has this product exhausted its automatic image-fill attempts? (#523) */
+export function hasExhaustedImageAttempts(failures: number): boolean {
+  return failures >= MAX_IMAGE_ATTEMPT_FAILURES;
+}
+
 /** What `requestImageUpload` hands back on success. */
 export interface UploadTicket {
   /** Presigned, short-lived, single-key PUT URL. */

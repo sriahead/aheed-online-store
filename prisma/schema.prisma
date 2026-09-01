@@ -387,41 +387,53 @@ model BundleItem {
 }
 
 model Product {
-  id               String            @id @default(uuid())
-  vendorId         String
-  vendor           Vendor            @relation(fields: [vendorId], references: [id])
-  slug             String
-  name             String
-  description      String
-  categoryId       String
-  category         Category          @relation(fields: [categoryId, vendorId], references: [id, vendorId])
-  basePrice        Int // pence
-  unitLabel        String // "£2.40 / kg"
-  isActive         Boolean           @default(true)
-  createdAt        DateTime          @default(now())
-  images           ProductImage[]
-  inventory        Inventory?
-  reviews          Review[]
-  cartItems        CartItem[]
-  orderItems       OrderItem[]
-  bundleItems      BundleItem[]
-  priceTier        ProductPriceTier?
-  averageRating    Float             @default(0) // denormalized, recomputed on every review write
-  reviewCount      Int               @default(0)
+  id                   String            @id @default(uuid())
+  vendorId             String
+  vendor               Vendor            @relation(fields: [vendorId], references: [id])
+  slug                 String
+  name                 String
+  description          String
+  categoryId           String
+  category             Category          @relation(fields: [categoryId, vendorId], references: [id, vendorId])
+  basePrice            Int // pence
+  unitLabel            String // "£2.40 / kg"
+  isActive             Boolean           @default(true)
+  createdAt            DateTime          @default(now())
+  images               ProductImage[]
+  inventory            Inventory?
+  reviews              Review[]
+  cartItems            CartItem[]
+  orderItems           OrderItem[]
+  bundleItems          BundleItem[]
+  priceTier            ProductPriceTier?
+  averageRating        Float             @default(0) // denormalized, recomputed on every review write
+  reviewCount          Int               @default(0)
   // P2.5b1 — visual redesign foundation (specs/2026-08-07-p2-5b1-visual-foundation/).
   // originalPrice, when set, is basePrice's pre-discount price — a discount badge is
   // derived from the difference at render time, not a separate boolean flag that could
   // drift out of sync with the actual prices.
-  origin           String?
-  originalPrice    Int? // pence, pre-discount price
-  isHalal          Boolean           @default(false)
-  isFresh          Boolean           @default(false)
-  isOrganic        Boolean           @default(false)
+  origin               String?
+  originalPrice        Int? // pence, pre-discount price
+  isHalal              Boolean           @default(false)
+  isFresh              Boolean           @default(false)
+  isOrganic            Boolean           @default(false)
   // #211 — vendor curation flag driving the homepage "Featured Products" rail.
   // Independent of originalPrice's discount-badge derivation: featured and
   // "on offer" are two separate concepts.
-  isFeatured       Boolean           @default(false)
-  imageNeedsReview Boolean           @default(false)
+  isFeatured           Boolean           @default(false)
+  imageNeedsReview     Boolean           @default(false)
+  // #523 — how many times the image pipeline has tried this product and failed.
+  //
+  // Workers AI permanently refuses some legitimate names: `Halal Chicken Thighs 1kg`
+  // returned `AiError: Input prompt contains NSFW content` on every attempt. Without a
+  // record of that, `getProductsWithoutImages` — newest-first and BOUNDED — re-selects
+  // the same doomed product on every scheduled run, consumes one of the run's slots,
+  // fails, and never reaches the products that could actually have been filled, while
+  // the job still reports success. The counter is what lets the selection give up.
+  //
+  // Reset to 0 whenever an image is successfully saved, so a product that later loses
+  // its image is retried rather than being permanently excluded by a historic failure.
+  imageAttemptFailures Int               @default(0)
 
   @@unique([vendorId, slug])
   @@index([vendorId, categoryId, isActive])

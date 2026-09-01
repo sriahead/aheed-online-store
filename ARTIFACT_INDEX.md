@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-01T14:45:04.598Z` · commit `da4d961` · `132` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-01T15:33:49.038Z` · commit `a79cef2` · `133` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -125,6 +125,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Storefront cards, bundles heading, keyset pagination and subcategory tabs everywhere (plan)](specs/2026-08-31-storefront-cards-pagination-tabs/plan.md) | spec | 1.0.0 | 2026-08-31 | draft | internal | Four more storefront browsing gaps found by live review right after |
 | [Storefront subcategory navigation: making an admin-created subcategory reachable (plan)](specs/2026-08-31-storefront-subcategory-navigation/plan.md) | spec | 1.0.0 | 2026-08-31 | draft | internal | Renders a category's existing children (already fetched by getCategoryBySlug) as clickable subcategory links on its own storefront page, so subcategories and the products assigned to them — whether from |
 | [Database-backed error event log for the global error boundary (plan)](specs/2026-09-01-error-event-log/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | A platform-ADMIN-only staff page and a new ErrorEvent table give operations a queryable root cause for any thrown error, independent of Cloudflare Workers Logs — closes #508. |
+| [A give-up path for products the image pipeline can never fill (plan)](specs/2026-09-01-image-fill-give-up/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Workers AI permanently refuses some halal meat product names as NSFW; the bounded, newest-first fill selection would re-pick such a product on every scheduled run forever, so failed attempts are now counted and exhausted products are excluded and reported. |
 | [Product image integrity — staging placeholders, backfill detection, Open Food Facts control (plan)](specs/2026-09-01-product-image-integrity/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Staging 404s every seeded product image because the seed returns before its own uploads; the button meant to fix that matches nothing and would write a non-primary row anyway; and Open Food Facts repeats one wrong image for similar names without flagging it. |
 | [Production catalogue seed, cross-environment image copy, and scheduled image fills (plan)](specs/2026-09-01-production-catalogue-and-image-fills/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Seed production's real catalogue, carry the eight already-generated images across from staging instead of paying to regenerate them, and add a scheduled job that fills images for products added later. |
 | [Remove staging hosts from production's VendorDomain (plan)](specs/2026-09-01-stale-vendor-domains/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Production's VendorDomain held two staging hosts alongside the two correct ones, giving each vendor two canonical hosts; they are removed with a guarded, explicit-target script. |
