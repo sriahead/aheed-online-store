@@ -129,12 +129,20 @@ export interface ProductRepository {
   ): Promise<ProductPage>;
   /**
    * Filtered product listing with NO text query and no category constraint
-   * (#211) — for the homepage's "recent"/"featured" rows, which need "products
+   * (#211) — for the shop page's "recent"/"featured" rows, which need "products
    * matching these filters", not "products matching this search term". Kept
    * separate from search() rather than teaching it to treat "" as "no text
-   * filter": search()'s empty-query guard is correct for its real caller, the
-   * /search page, where an empty box means "nothing searched yet", not
-   * "browse everything".
+   * filter", and that separation still stands: searchProducts()'s empty-query
+   * guard is untouched and is correct for what search() means.
+   *
+   * #501 — this docstring used to justify the split by asserting that on the
+   * /search page "an empty box means 'nothing searched yet', not 'browse
+   * everything'". That is no longer true of the page, and leaving the sentence
+   * here would have left the doc contradicting the code beside it. Bare
+   * /search rendered no products at all, which made the shop page's "View all"
+   * a dead end, so `app/(storefront)/search/page.tsx` now BRANCHES to list()
+   * for its browse mode. The structural decision survives — two functions, the
+   * guard intact; only the page's reading of an empty box changed.
    */
   list(opts: { take: number; cursor?: string } & ProductFilters): Promise<ProductPage>;
   getBySlug(slug: string): Promise<ProductDetail | null>;

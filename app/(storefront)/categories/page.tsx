@@ -56,7 +56,12 @@ export default async function CategoriesPage() {
       {/* P8.5c (#347): after the departments, before the product rows — the
           shop page's merchandising slot. The landing page stays as P8.5f left
           it: hero and trust strip only. */}
-      <BundleRow title="Value Bundles" bundles={bundles} cdnBaseUrl={CDN_BASE_URL ?? ""} />
+      <BundleRow
+        title="Value Bundles"
+        bundles={bundles}
+        cdnBaseUrl={CDN_BASE_URL ?? ""}
+        viewAllLink="/bundles"
+      />
 
       <ProductRow
         title="New Arrivals"
@@ -69,6 +74,7 @@ export default async function CategoriesPage() {
         title="Featured Products"
         products={featuredPage.items}
         cdnBaseUrl={CDN_BASE_URL ?? ""}
+        viewAllLink="/search?featured=1"
         cartQuantities={cartQuantities}
       />
     </main>
