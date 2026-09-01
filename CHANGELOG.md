@@ -134,6 +134,23 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` closeout for `#518`, `#521` and the two promotions.** `npm run sdd:audit` reported
+  two gaps — **PR #517** (`8be2e8a`) and **PR #524** (`b3a046d`) had merged after the last roadmap
+  edit — and now reports every slice and promotion documented. Four `specs/roadmap.md` change-log
+  rows added: PR #517 promoting seven accumulated slices with one additive migration; **#518**
+  (**PR #520**, `358cd32`), recording why measuring both databases before designing turned a
+  "copy the bucket" task into a slug-keyed row migration and an assumed thousands-of-images job
+  into eight, and why a Cloudflare cron trigger is impossible on this adapter; **#521**
+  (**PR #522**, `4421c71`), recording that the slice's **first implementation was wrong and reached
+  production** — `generateProducts` files a groceries-only vocabulary under random subcategories, so
+  an electronics vendor got "Value Lentils" under `sri-chargers-cables` — and carrying the lesson
+  that **a fixture built to exercise query cost is not a fixture for looking at, and nothing
+  mechanical separates them**; and PR #524, recording why that promotion was not deferred (a GitHub
+  Actions `schedule:` only fires from the default branch, so the fill workflow could not run while
+  it sat on `staging`). Two issues filed by this work remain open and are named in the rows:
+  **#519** (stale staging hosts in production's `VendorDomain`) and **#523** (Workers AI refusing
+  halal meat product names as NSFW, and the scheduled job retrying them forever).
+
 - **`/document` closeout for `#508`.** Reconciles `specs/roadmap.md` with what actually shipped: a
   new change-log row cites **PR #509**, merge `d9076f9`, `staging`; records `gates` green
   (`quality`, `docs-gates`) and both `deploy-staging`/`deploy-docs-internal` completing successfully
@@ -159,6 +176,29 @@ every branch merges.
   sdd:audit` exits 0.
 
 ### Fixed
+
+- **`#519` — production's `VendorDomain` no longer maps staging hosts**
+  (`specs/2026-09-01-stale-vendor-domains/`). Production held **four** rows where it should hold
+  two — `staging.aheedfoodcentre.nocaped.com` and `srimart-staging.nocaped.com` alongside the two
+  correct production hosts, **all four marked `isCanonical: true`**, so each vendor had two
+  canonical hosts. Found while verifying `#518`'s production seed; almost certainly written by an
+  earlier seed run pointed at production while carrying staging's `SEED_*_HOST` values, the same
+  class of confusion as `#119`. They were inert in normal operation — staging's Worker resolves
+  against staging's database — but `lib/tenant.ts` treats a `VendorDomain` match as authoritative,
+  so they were a silent mis-tenanting waiting for anything else to resolve a host against
+  production's data (a restore, a diagnostic, a preview environment). The reverse direction was
+  checked before assuming it was one-way: staging holds only its own hosts plus `localhost`.
+  `scripts/remove-vendor-domains.ts` (new) takes explicit `--remove <host>` values rather than a
+  pattern — "delete anything containing `staging`" is the kind of rule that eventually deletes a
+  legitimate row in an environment nobody had in mind — and is a **dry run unless `--apply`** is
+  passed. Its load-bearing safety check refuses to leave any vendor without a canonical host:
+  removing the last one does not corrupt anything visibly, it makes the vendor serve
+  `/coming-soon` **with a 200**, so a typo in the removal list would be a live outage that looks
+  like a successful run. That guard was exercised, not assumed (exit 1). After the removal both
+  live sites were confirmed serving their **own** tenant by comparing page titles, not status
+  codes. `prisma/seed.ts` and `lib/tenant.ts` untouched; a seed-side guard rejecting a host that
+  does not match the connected environment stays in `#519`'s discussion, since the seed has no
+  reliable way to know which environment it is pointed at.
 
 - **`#502` — staging served 404s for every seeded product image, the button meant to fix that
   matched nothing, and Open Food Facts repeated one wrong image without ever flagging it**
