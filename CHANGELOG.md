@@ -134,6 +134,23 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` closeout for `#518`, `#521` and the two promotions.** `npm run sdd:audit` reported
+  two gaps — **PR #517** (`8be2e8a`) and **PR #524** (`b3a046d`) had merged after the last roadmap
+  edit — and now reports every slice and promotion documented. Four `specs/roadmap.md` change-log
+  rows added: PR #517 promoting seven accumulated slices with one additive migration; **#518**
+  (**PR #520**, `358cd32`), recording why measuring both databases before designing turned a
+  "copy the bucket" task into a slug-keyed row migration and an assumed thousands-of-images job
+  into eight, and why a Cloudflare cron trigger is impossible on this adapter; **#521**
+  (**PR #522**, `4421c71`), recording that the slice's **first implementation was wrong and reached
+  production** — `generateProducts` files a groceries-only vocabulary under random subcategories, so
+  an electronics vendor got "Value Lentils" under `sri-chargers-cables` — and carrying the lesson
+  that **a fixture built to exercise query cost is not a fixture for looking at, and nothing
+  mechanical separates them**; and PR #524, recording why that promotion was not deferred (a GitHub
+  Actions `schedule:` only fires from the default branch, so the fill workflow could not run while
+  it sat on `staging`). Two issues filed by this work remain open and are named in the rows:
+  **#519** (stale staging hosts in production's `VendorDomain`) and **#523** (Workers AI refusing
+  halal meat product names as NSFW, and the scheduled job retrying them forever).
+
 - **`/document` closeout for `#508`.** Reconciles `specs/roadmap.md` with what actually shipped: a
   new change-log row cites **PR #509**, merge `d9076f9`, `staging`; records `gates` green
   (`quality`, `docs-gates`) and both `deploy-staging`/`deploy-docs-internal` completing successfully
