@@ -7,6 +7,7 @@ import {
   MAX_IMAGE_EDGE_PX,
   buildProductImageKey,
   fitWithinEdge,
+  imageExtensionForContentType,
   hasExhaustedImageAttempts,
   isProductImageKey,
   isPlaceholderImageKey,
@@ -45,6 +46,61 @@ import * as imageActions from "@/features/admin/product-image";
 
 const PRODUCT = "3f2a1b4c-0000-4000-8000-000000000001";
 const OTHER = "3f2a1b4c-0000-4000-8000-000000000002";
+
+/**
+ * #364 — the key used to lie. Both builders always suffixed `.webp`, while the
+ * AI paths store what Workers AI returns (PNG) and the Open Food Facts path
+ * stores whatever the remote server sent. Nothing rendered wrong — the object
+ * carries its true content type and the CDN answers on that — but the key
+ * asserted a format its bytes were not, against a standing rule that image keys
+ * are meaningful.
+ */
+describe("imageExtensionForContentType", () => {
+  it("maps the types this app actually stores", () => {
+    expect(imageExtensionForContentType("image/webp")).toBe(".webp");
+    expect(imageExtensionForContentType("image/png")).toBe(".png");
+    expect(imageExtensionForContentType("image/jpeg")).toBe(".jpg");
+    expect(imageExtensionForContentType("image/svg+xml")).toBe(".svg");
+  });
+
+  it("ignores parameters and case, as a real Content-Type header carries them", () => {
+    expect(imageExtensionForContentType("IMAGE/PNG")).toBe(".png");
+    expect(imageExtensionForContentType("image/jpeg; charset=binary")).toBe(".jpg");
+    expect(imageExtensionForContentType("  image/webp  ")).toBe(".webp");
+  });
+
+  it("does NOT fall back to .webp for an unknown or missing type", () => {
+    // Falling back to .webp would quietly reintroduce exactly the lie this
+    // function exists to remove.
+    expect(imageExtensionForContentType("application/octet-stream")).toBe(".bin");
+    expect(imageExtensionForContentType(null)).toBe(".bin");
+    expect(imageExtensionForContentType(undefined)).toBe(".bin");
+    expect(imageExtensionForContentType("")).toBe(".bin");
+  });
+});
+
+describe("buildProductImageKey — extension follows the real content type (#364)", () => {
+  it("defaults to .webp, so the browser-upload path is unchanged", () => {
+    expect(buildProductImageKey(PRODUCT)).toMatch(/\.webp$/);
+  });
+
+  it("uses the actual type when one is given", () => {
+    expect(buildProductImageKey(PRODUCT, "image/png")).toMatch(/\.png$/);
+    expect(buildProductImageKey(PRODUCT, "image/jpeg")).toMatch(/\.jpg$/);
+  });
+
+  it("still refuses a non-webp key on the browser-upload path it guards", () => {
+    // isProductImageKey deliberately stays WebP-only: it guards the presigned
+    // upload, which is pinned to IMAGE_CONTENT_TYPE end to end. A server-built
+    // PNG key never passes through it.
+    expect(isProductImageKey(buildProductImageKey(PRODUCT, "image/png"), PRODUCT)).toBe(false);
+    expect(isProductImageKey(buildProductImageKey(PRODUCT), PRODUCT)).toBe(true);
+  });
+
+  it("keeps a PNG key distinguishable from a seeded placeholder", () => {
+    expect(isPlaceholderImageKey(buildProductImageKey(PRODUCT, "image/png"))).toBe(false);
+  });
+});
 
 describe("buildProductImageKey", () => {
   it("produces products/{productId}/{uuid}.webp", () => {
