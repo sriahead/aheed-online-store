@@ -33,6 +33,32 @@ export async function getCurrentVendorIdOrNull(): Promise<string | null> {
       select: { vendorId: true },
     });
     if (domain) return domain.vendorId;
+
+    /**
+     * #514 — fall back to the host WITH its port, for local preview only.
+     *
+     * The lookup above compares the port-stripped hostname, which is right for
+     * every real deployment: `staging.nocaped.com` and `nocaped.com` never carry
+     * a port, so stripping it is what makes the match work. But under
+     * `npm run preview` a second vendor is reached at `srimart.localhost:8787`,
+     * and seeding that literal string — the natural thing to do, since it is
+     * exactly what the browser sends as `Host` — could never match. The request
+     * fell through to the "no match, 2+ vendors" branch and redirected to
+     * `/coming-soon`, with nothing to indicate why.
+     *
+     * Guarded on `rawHost !== host` so this costs a real deployment nothing: a
+     * host with no port takes exactly the one query it always did. Second, not
+     * first, so the existing port-stripped convention keeps winning wherever
+     * both rows somehow exist.
+     */
+    const rawHostLower = rawHost.toLowerCase();
+    if (rawHostLower !== host) {
+      const portedDomain = await prisma.vendorDomain.findUnique({
+        where: { host: rawHostLower },
+        select: { vendorId: true },
+      });
+      if (portedDomain) return portedDomain.vendorId;
+    }
   }
 
   // No host match — fall back only when there is a single active vendor.

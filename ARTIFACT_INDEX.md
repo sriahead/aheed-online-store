@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-01T15:33:49.038Z` · commit `a79cef2` · `133` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-01T16:19:16.330Z` · commit `92771a7` · `134` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -124,6 +124,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Storefront browsing UX fixes: category aggregation, more departments, a shop link, a bigger hero slider (plan)](specs/2026-08-31-storefront-browsing-ux-fixes/plan.md) | spec | 1.0.0 | 2026-08-31 | draft | internal | Four related storefront browsing gaps found by live review after |
 | [Storefront cards, bundles heading, keyset pagination and subcategory tabs everywhere (plan)](specs/2026-08-31-storefront-cards-pagination-tabs/plan.md) | spec | 1.0.0 | 2026-08-31 | draft | internal | Four more storefront browsing gaps found by live review right after |
 | [Storefront subcategory navigation: making an admin-created subcategory reachable (plan)](specs/2026-08-31-storefront-subcategory-navigation/plan.md) | spec | 1.0.0 | 2026-08-31 | draft | internal | Renders a category's existing children (already fetched by getCategoryBySlug) as clickable subcategory links on its own storefront page, so subcategories and the products assigned to them — whether from |
+| [A blocking admin alert, and a second local vendor unreachable by host (plan)](specs/2026-09-01-admin-alert-and-local-vendor-host/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Two small fixes filed from earlier validation passes — the admin backfill button reported through a native alert() that froze the tab, and a VendorDomain row carrying a port could never resolve under local preview. |
 | [Database-backed error event log for the global error boundary (plan)](specs/2026-09-01-error-event-log/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | A platform-ADMIN-only staff page and a new ErrorEvent table give operations a queryable root cause for any thrown error, independent of Cloudflare Workers Logs — closes #508. |
 | [A give-up path for products the image pipeline can never fill (plan)](specs/2026-09-01-image-fill-give-up/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Workers AI permanently refuses some halal meat product names as NSFW; the bounded, newest-first fill selection would re-pick such a product on every scheduled run forever, so failed attempts are now counted and exhausted products are excluded and reported. |
 | [Product image integrity — staging placeholders, backfill detection, Open Food Facts control (plan)](specs/2026-09-01-product-image-integrity/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Staging 404s every seeded product image because the seed returns before its own uploads; the button meant to fix that matches nothing and would write a non-primary row anyway; and Open Food Facts repeats one wrong image for similar names without flagging it. |

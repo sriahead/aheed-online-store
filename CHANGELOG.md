@@ -188,6 +188,29 @@ every branch merges.
 
 ### Fixed
 
+- **`#507` and `#514` — a blocking admin alert, and a second local vendor unreachable by host**
+  (`specs/2026-09-01-admin-alert-and-local-vendor-host/`). Two small fixes filed *from* earlier
+  `/validate` passes, where each obstructed the verification rather than the feature.
+  **`#507`:** `BackfillImagesButton` reported its result through a native `alert()` (present since
+  `#304`), which blocks the whole tab until dismissed — a modal in an operator's way, and for
+  browser automation a full freeze: CDP calls, screenshots and even closing the tab hang until a
+  human clicks it. So the one admin control that starts a paid, long-running job was the one control
+  no automated check could exercise end to end. It was also the **only** `alert()` in the admin
+  panel. Replaced with an inline result matching `BundleForm`'s existing `role="status"` /
+  `role="alert"` pair. A non-OK response now reads the route's **`error`** field rather than
+  `message`, because `requireVendorRole` answers 401/403 with `error` — the old code would have
+  alerted `undefined` to an operator refused for the wrong role. Every new test asserts `alert` was
+  never called, which is the assertion that matters: one checking only for rendered text would pass
+  with the `alert()` still in place.
+  **`#514`:** `getCurrentVendorIdOrNull` always stripped the port before looking up
+  `VendorDomain.host` — right for real deployments, which never carry one — so a row seeded as
+  `srimart.localhost:8787` under `npm run preview` could never match, and the request fell through
+  to `/coming-soon` with nothing to say why. A fallback lookup on the raw host now runs **only when
+  the raw host differs from the port-stripped one**, lower-cased to match how `upsertVendorDomain`
+  writes rows. The guard is the point: this function runs on **every request**, so the risk was cost
+  rather than correctness, and the test asserts a portless host issues exactly **one** query —
+  unchanged from before.
+
 - **`#523` — the image fill job now gives up on products it can never fill**
   (`specs/2026-09-01-image-fill-give-up/`). `@cf/black-forest-labs/flux-1-schnell` **permanently
   refuses** some legitimate names: `Halal Chicken Thighs 1kg` returned

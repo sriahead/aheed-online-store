@@ -35,6 +35,50 @@ describe("getCurrentVendorIdOrNull", () => {
     });
   });
 
+  /**
+   * #514 — a second vendor under `npm run preview` is reached at
+   * `srimart.localhost:8787`, and seeding that literal string (exactly what the
+   * browser sends as `Host`) could never match, because the lookup always
+   * stripped the port first. The request fell through to `/coming-soon` with
+   * nothing to say why.
+   */
+  it("resolves a VendorDomain row whose host includes a port (local preview)", async () => {
+    currentHost = "srimart.localhost:8787";
+    // First lookup (port stripped) misses; the ported fallback hits.
+    findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({ vendorId: "v-srimart" });
+    const { getCurrentVendorIdOrNull } = await import("@/lib/tenant");
+
+    expect(await getCurrentVendorIdOrNull()).toBe("v-srimart");
+    expect(findUnique).toHaveBeenNthCalledWith(1, {
+      where: { host: "srimart.localhost" },
+      select: { vendorId: true },
+    });
+    expect(findUnique).toHaveBeenNthCalledWith(2, {
+      where: { host: "srimart.localhost:8787" },
+      select: { vendorId: true },
+    });
+  });
+
+  it("keeps the port-stripped row winning when both could match", async () => {
+    currentHost = "srimart.localhost:8787";
+    findUnique.mockResolvedValue({ vendorId: "v-stripped" });
+    const { getCurrentVendorIdOrNull } = await import("@/lib/tenant");
+
+    expect(await getCurrentVendorIdOrNull()).toBe("v-stripped");
+    expect(findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  it("costs a portless host no extra query, so real deployments are unaffected", async () => {
+    currentHost = "srimart.nocaped.com";
+    findUnique.mockResolvedValue(null);
+    findMany.mockResolvedValue([{ id: "a" }, { id: "b" }]);
+    const { getCurrentVendorIdOrNull } = await import("@/lib/tenant");
+
+    expect(await getCurrentVendorIdOrNull()).toBeNull();
+    // One lookup only: the ported fallback must not fire when there is no port.
+    expect(findUnique).toHaveBeenCalledTimes(1);
+  });
+
   it("falls back to the sole active vendor when the host doesn't match", async () => {
     currentHost = "unknown.example.com";
     findUnique.mockResolvedValue(null);
