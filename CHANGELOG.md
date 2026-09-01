@@ -29,6 +29,18 @@ every branch merges.
   needed (`#468`), so a 30-day probabilistic sweep runs on write rather than repeating that table's
   original unbounded-growth mistake.
 
+### Documentation
+
+- **`/document` closeout for `#508`.** Reconciles `specs/roadmap.md` with what actually shipped: a
+  new change-log row cites **PR #509**, merge `d9076f9`, `staging`; records `gates` green
+  (`quality`, `docs-gates`) and both `deploy-staging`/`deploy-docs-internal` completing successfully
+  post-merge. Confirms the slice's one real open risk from `/propose` — whether `onRequestError` has
+  a working Cloudflare Workers request context for `getPrismaUncached()` to resolve `DATABASE_URL`
+  from — is resolved: a temporary throw under `npm run preview` wrote exactly one real `ErrorEvent`
+  row, live. Adds a `CLAUDE.md` lesson recording that finding for future `onRequestError` work.
+  `#508` moved to `In Review` on Project #2. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt; `npm run
+  sdd:audit` exits 0.
+
 ### Fixed
 
 - **`#502` — staging served 404s for every seeded product image, the button meant to fix that

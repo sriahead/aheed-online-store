@@ -209,6 +209,19 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   `# comment` or leading space has silently broken connection strings here).
 - Runtime secrets live in Cloudflare (`wrangler secret put NAME --env <env>`); CI secrets in GitHub
   environments. Never commit secrets; never read `DIRECT_URL` at runtime.
+- **`instrumentation.ts`'s `onRequestError` DOES have a working Cloudflare Workers request context
+  under this app's Next 16 / OpenNext / Workers stack** — `getCloudflareContext()`/`readEnv()`
+  resolve normally there, confirmed live in `#508` (2026-09-01): a forced throw under `npm run
+  preview` reached a plain, uncached `PrismaClient` constructed inside the hook, and it resolved
+  `DATABASE_URL` and wrote a real row on the first try. This was flagged as a genuinely unconfirmed
+  risk at that slice's `/propose` (this repo has a documented history of Next-on-Workers behaviour
+  not matching framework-documented semantics — `proxy.ts`, `edge` runtime, `@prisma/client/wasm`
+  resolution, all elsewhere in this file), so `getPrismaUncached()` was built deliberately *not*
+  wrapped in React's `cache()` to sidestep the question rather than gamble on it. The mitigation
+  turned out not to be needed for context availability itself, but keep using an uncached client
+  for any future `onRequestError` work anyway — `cache()`'s per-request de-dupe still isn't needed
+  for a handler that only ever runs once per throw, and reaching for it would reopen a question
+  that's now moot rather than genuinely require re-answering it.
 
 ## Branch strategy & CI/CD
 - `feature/<slug>` → PR into **`staging`** (auto-deploys to `staging.aheedfoodcentre.nocaped.com`).
