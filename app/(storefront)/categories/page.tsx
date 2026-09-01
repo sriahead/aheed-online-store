@@ -35,8 +35,8 @@ export default async function CategoriesPage() {
   const productsRepo = getProductRepository();
   const [categories, newArrivalsPage, featuredPage, bundles] = await Promise.all([
     getCategoryRepository().listTopLevel(),
-    productsRepo.list({ take: 4 }), // recent products
-    productsRepo.list({ take: 4, isFeatured: true }), // vendor-curated featured products
+    productsRepo.list({ take: 8 }), // recent products (#511 — 8, not 4: a scroller over 4 has nothing to scroll)
+    productsRepo.list({ take: 8, isFeatured: true }), // vendor-curated featured products (#511)
     // P8.5c (#347): one nested query for every bundle and its constituents —
     // adding a fourth bundle adds no query.
     getBundlesForStorefront(),
