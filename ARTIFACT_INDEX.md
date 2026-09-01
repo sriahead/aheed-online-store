@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-01T03:35:49.288Z` · commit `38e6959` · `127` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-01T04:38:38.695Z` · commit `1d7245d` · `128` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -124,6 +124,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Storefront browsing UX fixes: category aggregation, more departments, a shop link, a bigger hero slider (plan)](specs/2026-08-31-storefront-browsing-ux-fixes/plan.md) | spec | 1.0.0 | 2026-08-31 | draft | internal | Four related storefront browsing gaps found by live review after |
 | [Storefront cards, bundles heading, keyset pagination and subcategory tabs everywhere (plan)](specs/2026-08-31-storefront-cards-pagination-tabs/plan.md) | spec | 1.0.0 | 2026-08-31 | draft | internal | Four more storefront browsing gaps found by live review right after |
 | [Storefront subcategory navigation: making an admin-created subcategory reachable (plan)](specs/2026-08-31-storefront-subcategory-navigation/plan.md) | spec | 1.0.0 | 2026-08-31 | draft | internal | Renders a category's existing children (already fetched by getCategoryBySlug) as clickable subcategory links on its own storefront page, so subcategories and the products assigned to them — whether from |
+| [Database-backed error event log for the global error boundary (plan)](specs/2026-09-01-error-event-log/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | A platform-ADMIN-only staff page and a new ErrorEvent table give operations a queryable root cause for any thrown error, independent of Cloudflare Workers Logs — closes #508. |
 | [Product image integrity — staging placeholders, backfill detection, Open Food Facts control (plan)](specs/2026-09-01-product-image-integrity/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Staging 404s every seeded product image because the seed returns before its own uploads; the button meant to fix that matches nothing and would write a non-primary row anyway; and Open Food Facts repeats one wrong image for similar names without flagging it. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.21.1 | 2026-08-27 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
