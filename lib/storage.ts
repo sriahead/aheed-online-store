@@ -38,6 +38,21 @@ export interface StorageService {
    */
   headObject(key: string): Promise<StoredObjectHead | null>;
   /**
+   * `GetObject` (#518) — read an object's bytes back, or null if it isn't there.
+   *
+   * The port had no read primitive at all until this slice: the app composes a
+   * public CDN URL for display (`publicUrl`) and never needed the bytes
+   * server-side. Copying an image between environments does — and it cannot go
+   * through the CDN instead, because both zones enforce hotlink/referer
+   * protection (see CLAUDE.md), so the bytes have to come from the S3 API.
+   *
+   * Returns null on 404 rather than throwing, matching `headObject`'s posture:
+   * a missing object is a legitimate answer to "is this key backed by
+   * anything?", and a row outliving its object is a case this repo has already
+   * hit for real (#502).
+   */
+  getObject(key: string): Promise<ArrayBuffer | null>;
+  /**
    * `DeleteObject` (#211) — decided as an inline delete over a scheduled sweep:
    * simpler, no new infra (wrangler.toml still has no cron triggers). Covers
    * superseded/removed images; does NOT cover an abandoned upload (an object
@@ -52,6 +67,20 @@ export interface StorageService {
 /** Pure helper (unit-tested): compose a public URL from a base + relative key. */
 export function composePublicUrl(cdnBase: string, key: string): string {
   return `${cdnBase.replace(/\/+$/, "")}/${key.replace(/^\/+/, "")}`;
+}
+
+/**
+ * Pure helper (unit-tested): how a `GetObject` response becomes bytes-or-null.
+ *
+ * Extracted for the same reason `composePublicUrl` is. The decision callers
+ * actually depend on — "a missing object is null, any other failure throws" —
+ * is the part worth pinning, and pulling it out is what lets a test reach it
+ * with no credentials, no network and no Worker request context.
+ */
+export async function readGetObjectResponse(res: Response): Promise<ArrayBuffer | null> {
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`storage getObject failed: ${res.status}`);
+  return await res.arrayBuffer();
 }
 
 export function getStorage(): StorageService {
@@ -109,6 +138,10 @@ export function getStorage(): StorageService {
         contentType: res.headers.get("content-type"),
         contentLength: length === null ? null : Number(length),
       };
+    },
+
+    async getObject(key) {
+      return readGetObjectResponse(await client.fetch(objectUrl(key), { method: "GET" }));
     },
 
     async deleteObject(key) {

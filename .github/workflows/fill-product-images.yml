@@ -1,0 +1,76 @@
+name: fill-product-images
+
+# #518 (answering #504) — fill real images for products that still carry only a
+# placeholder, a bounded number at a time.
+#
+# WHY THIS IS A GITHUB ACTIONS SCHEDULE AND NOT A CLOUDFLARE CRON TRIGGER.
+# `@opennextjs/cloudflare@1.20.2` generates a worker that exports `fetch` and
+# nothing else — `scheduled` appears nowhere in the package — so a `[triggers]`
+# block in wrangler.toml would fire into a Worker with no handler to receive it.
+# A Worker is not needed regardless: lib/image-generation.ts calls the
+# Cloudflare REST API with an account id and token, not a Workers AI binding,
+# so the pipeline runs fine on a plain Node runner.
+#
+# SIZED FOR THE ONGOING TRICKLE, NOT FOR DRAINING A CATALOGUE. Every fill that
+# falls through to AI generation is a paid Workers AI call. The limit below is
+# deliberately small: this exists so a product added by staff on Tuesday has an
+# image by Wednesday, not to fill thousands of rows unattended.
+
+on:
+  schedule:
+    # 03:00 UTC daily — quiet hours, and a day is well inside the tolerance for
+    # "a newly added product has no photo yet".
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Maximum products to fill in this run"
+        required: false
+        default: "10"
+
+jobs:
+  fill:
+    runs-on: ubuntu-latest
+    environment: production # uses GitHub 'production' environment secrets
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx prisma generate
+
+      # The script takes an explicit --env-file rather than reading ambient env,
+      # because naming the target file is what makes the environment impossible
+      # to get wrong by accident (CLAUDE.md, #119 and P5a). CI has no secrets
+      # file, so one is materialised from the GitHub environment's secrets and
+      # removed again in the same job.
+      #
+      # Quoted values: CLAUDE.md's env-format rule — an unquoted connection
+      # string with a trailing character has silently broken parsing here.
+      - name: Materialise the environment file
+        run: |
+          umask 077
+          cat > "$RUNNER_TEMP/target.vars" <<VARS
+          DIRECT_URL="${{ secrets.DIRECT_URL }}"
+          DATABASE_URL="${{ secrets.DIRECT_URL }}"
+          S3_ENDPOINT="${{ secrets.S3_ENDPOINT }}"
+          S3_BUCKET="${{ secrets.S3_BUCKET }}"
+          S3_ACCESS_KEY="${{ secrets.S3_ACCESS_KEY }}"
+          S3_SECRET_KEY="${{ secrets.S3_SECRET_KEY }}"
+          S3_REGION="${{ secrets.S3_REGION }}"
+          CDN_BASE_URL="${{ secrets.CDN_BASE_URL }}"
+          CLOUDFLARE_ACCOUNT_ID="${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+          CLOUDFLARE_API_TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
+          VARS
+
+      - name: Fill product images
+        run: |
+          npx tsx scripts/fill-product-images.ts \
+            --env-file "$RUNNER_TEMP/target.vars" \
+            --limit "${{ inputs.limit || '10' }}"
+
+      # `always()` so an interrupted or failed run never leaves a file holding
+      # real credentials behind on the runner.
+      - name: Remove the environment file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/target.vars"
