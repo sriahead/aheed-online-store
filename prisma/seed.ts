@@ -882,16 +882,6 @@ async function seedGeneratedCatalogue(
 ) {
   if (count <= 0) return;
 
-  const existing = await prisma.product.count({
-    where: { vendorId, slug: { startsWith: GENERATED_SLUG_PREFIX } },
-  });
-  if (existing >= count) {
-    console.log(
-      `generated catalogue already holds ${existing} product(s) for ${vendorId} (>= ${count}) — skipping`,
-    );
-    return;
-  }
-
   const childSlugs = catalogue.flatMap((c) => (c.children ?? []).map((child) => child.slug));
   if (childSlugs.length === 0) {
     throw new Error(
@@ -911,14 +901,19 @@ async function seedGeneratedCatalogue(
     );
   }
 
-  // R13 — the operator's last chance to notice this is pointed at the wrong database, printed
-  // immediately before the first write rather than buried at process start.
-  console.log(
-    `\n>>> generating ${count} products for vendor ${vendorId} in database host: ${resolvedDbHost()}\n`,
-  );
-
-  // One shared object per subcategory (R8) — uploaded before any DB write, matching
-  // seedCatalogue's ordering rationale.
+  /*
+   * One shared object per subcategory (R8) — uploaded before any DB write, matching
+   * seedCatalogue's ordering rationale.
+   *
+   * #502: THIS RUNS BEFORE THE `existing >= count` GUARD BELOW, AND MUST STAY THERE.
+   * It used to sit after it, so the moment a database held the generated rows, no later
+   * seed run uploaded these objects into that environment's bucket. Rows and objects are
+   * written by this one function but the guard only ever consulted the rows, so the two
+   * diverged silently per environment: every `products/gen-<subcategory>/main.svg` key existed in the
+   * dev bucket and 404ed in staging's, while staging's pages went on referencing them.
+   * The uploads are idempotent (same key, same bytes), so running them on a re-run costs
+   * one PUT per subcategory and closes that gap.
+   */
   const placeholderImage = readFileSync(
     join(import.meta.dirname, "seed-assets", "placeholder-product.svg"),
     "utf8",
@@ -929,6 +924,23 @@ async function seedGeneratedCatalogue(
     await putTracked(key, placeholderImage, "image/svg+xml");
     storageKeyBySlug.set(slug, key);
   }
+  console.log(`refreshed ${storageKeyBySlug.size} generated placeholder image(s)`);
+
+  const existing = await prisma.product.count({
+    where: { vendorId, slug: { startsWith: GENERATED_SLUG_PREFIX } },
+  });
+  if (existing >= count) {
+    console.log(
+      `generated catalogue already holds ${existing} product(s) for ${vendorId} (>= ${count}) — skipping row creation`,
+    );
+    return;
+  }
+
+  // R13 — the operator's last chance to notice this is pointed at the wrong database, printed
+  // immediately before the first write rather than buried at process start.
+  console.log(
+    `\n>>> generating ${count} products for vendor ${vendorId} in database host: ${resolvedDbHost()}\n`,
+  );
 
   const generated = generateProducts(count, usableSlugs);
 
