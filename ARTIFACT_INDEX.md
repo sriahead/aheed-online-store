@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-01T12:50:00.904Z` · commit `08a8c81` · `130` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-01T13:57:48.677Z` · commit `0a1b5ab` · `131` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -128,6 +128,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Product image integrity — staging placeholders, backfill detection, Open Food Facts control (plan)](specs/2026-09-01-product-image-integrity/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Staging 404s every seeded product image because the seed returns before its own uploads; the button meant to fix that matches nothing and would write a non-primary row anyway; and Open Food Facts repeats one wrong image for similar names without flagging it. |
 | [Production catalogue seed, cross-environment image copy, and scheduled image fills (plan)](specs/2026-09-01-production-catalogue-and-image-fills/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Seed production's real catalogue, carry the eight already-generated images across from staging instead of paying to regenerate them, and add a scheduled job that fills images for products added later. |
 | [Storefront browsing affordances — a browse mode for /search, working View all links, a /bundles page (plan)](specs/2026-09-01-storefront-browsing-affordances/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Bare /search renders nothing because the whole grid is gated on a query, so the shop page's only View all is a dead end; this gives /search a browse mode, wires a View all onto every row, and adds the /bundles page one of them needs. |
+| [Products in every subcategory, for both vendors (plan)](specs/2026-09-01-subcategory-products/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Every one of production's 31 subcategories was empty because the curated fixture assigns all its products to top-level categories; both vendors' second tier is now filled with curated, category-appropriate products and their own images. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.21.1 | 2026-08-27 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
