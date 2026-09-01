@@ -134,6 +134,17 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` closeout for `#519` and `#523`.** `npm run sdd:audit` reported four gaps — both
+  slices plus **PR #527** (`4328ea0`) and **PR #529** (`3872851`) — and now reports every slice and
+  promotion documented. Four `specs/roadmap.md` rows: **#519** (PR #526), recording that a wrong
+  `VendorDomain` deletion produces a **200** rather than an error, so the verification has to compare
+  page content and the last-canonical-host guard has to exist before the command is ever typed;
+  **PR #527**, its promotion; **#523** (PR #528), recording that the GAP-011 migration trap fired for
+  the **third** time and was **caught before anything executed** — `--create-only` plus reading the
+  generated SQL is the step added after `#508`, and this is the run where it paid for itself; and
+  **PR #529**, its promotion, carrying the first migration since `#517` and verified directly against
+  production afterwards.
+
 - **`/document` closeout for `#518`, `#521` and the two promotions.** `npm run sdd:audit` reported
   two gaps — **PR #517** (`8be2e8a`) and **PR #524** (`b3a046d`) had merged after the last roadmap
   edit — and now reports every slice and promotion documented. Four `specs/roadmap.md` change-log
