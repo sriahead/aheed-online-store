@@ -7,7 +7,7 @@ status: draft
 version: "1.0.0"
 updated: 2026-09-01
 visibility: internal
-summary: Every one of production's 31 subcategories was empty because the curated fixture assigns all its products to top-level categories; generation is extended to SriMart and both vendors' second tier is populated and given real images.
+summary: Every one of production's 31 subcategories was empty because the curated fixture assigns all its products to top-level categories; both vendors' second tier is now filled with curated, category-appropriate products and their own images.
 tags: [seed, catalogue, images, production, multi-tenant]
 related: [roadmap, architecture]
 ---
@@ -46,44 +46,61 @@ dev and staging, and no amount of `SEED_SCALE_PRODUCTS` could fill them.
 
 ## Scope (this slice)
 
-**`prisma/seed.ts`** — a `maybeSeedGeneratedCatalogue(envVar, vendorId, catalogue)` helper replaces
-the inline `SEED_SCALE_PRODUCTS` parsing, and is called twice: once for Aheed with
-`SEED_SCALE_PRODUCTS`, once for SriMart with a new `SEED_SCALE_PRODUCTS_SRIMART`. Both are
-opt-in and unset by default, so no existing environment changes behaviour by this existing.
+**`prisma/seed.ts`** is the only file changed.
 
-**Separate vars per vendor, deliberately.** One shared count would be simpler, and is wrong here
-for two reasons. The catalogues are different sizes (27 subcategories against 4), so one number
-cannot mean "about two each" for both. And `#489`'s recorded NFR baseline is defined by the Aheed
-row count specifically — letting a single value drive both would silently change what that
-measurement refers to.
+**Curated products, keyed on subcategory slug.** `AHEED_SUBCATEGORY_PRODUCTS` (27 keys) and
+`SRIMART_SUBCATEGORY_PRODUCTS` (4 keys) each hold two real products per subcategory, with genuine
+names, prices in pence, unit labels, descriptions and the halal/fresh flags where they apply.
+SriMart's are electronics and homeware; Aheed's are groceries appropriate to their department.
+`seedSubcategoryProducts(vendorId, map)` creates them, uploading each placeholder object before
+writing its row (#502's ordering rule) and skipping any key with no matching category — which is
+what lets one vendor's fixture sit harmlessly in a run that seeds only the other.
 
-**`SEED_REMOVE_GENERATED` now removes both vendors' generated rows.** It called
-`removeGeneratedCatalogue(AHEED_VENDOR_ID)` only. Left alone, the documented undo would have
-silently stranded SriMart's generated products, which is worse than not having the feature.
+**A flat record rather than nesting products inside `CATALOGUE`'s `children`.** The subcategory
+tree already lives there; duplicating it would create two places that must agree. Keying on the
+child slug means the map is resolved against the database, not against the fixture's shape.
 
-**Production is seeded and its images filled** — `SEED_SCALE_PRODUCTS=54` (2 per Aheed
-subcategory) and `SEED_SCALE_PRODUCTS_SRIMART=8` (2 per SriMart subcategory), then
-`scripts/fill-product-images.ts` over the 62 new rows so each carries its own image rather than
-the single shared placeholder per subcategory that `seedGeneratedCatalogue` writes.
+**`seedGeneratedCatalogue` stays Aheed-only, and `SEED_SCALE_PRODUCTS_SRIMART` does not exist.**
 
-## The trade-off this slice accepts, explicitly
+**`SEED_REMOVE_GENERATED` removes both vendors' generated rows.** It called
+`removeGeneratedCatalogue(AHEED_VENDOR_ID)` alone; production had SriMart generated rows to undo,
+and a documented one-command undo that silently strands half the set is worse than none.
 
-`prisma/generate-catalogue.ts` produces deliberately generic names — "Everyday Rice", "Value
-Chickpeas" — and its own docstring states that a generated row reading like genuine vendor
-merchandising is "exactly the confusion `#239` was filed over". **These rows are therefore not real
-merchandising, and they are now in a live production storefront.**
+## The first implementation was wrong, and why
 
-That is accepted here because the purpose is to see what a populated storefront looks like, and
-because the undo is one command (`SEED_REMOVE_GENERATED=1`, now covering both vendors). Whether the
-second tier eventually gets curated real products is a content decision this slice does not make
-and does not foreclose.
+This slice initially filled the second tier with `generateProducts` output. That was wrong in two
+ways, both inherent to that generator rather than settings on it:
+
+1. **It relates a product to nothing.** It draws a noun from one global pool and assigns it to a
+   random subcategory, so production briefly showed "Everyday Rice" under `cleaning` and "Premium
+   Chickpeas" under `paper-toiletries`. Its own docstring says the pools are "deliberately generic
+   grocery vocabulary rather than anything resembling a real Aheed or SriMart product" — it exists
+   to make queries work harder.
+2. **That pool is groceries-only**, so pointing it at SriMart, an electronics vendor, produced
+   "Value Lentils" under `sri-chargers-cables`.
+
+The lesson worth keeping: a fixture built to exercise query cost is not a fixture for looking at,
+and the two requirements are not close enough to substitute. `generate-catalogue.ts` is untouched;
+its `GENERATOR_SEED` is load-bearing for #489's reproducible measurement.
+
+**A second, quieter defect surfaced from the fix itself.** `orange-juice-1l` in the new fixture
+collided with an existing top-level Beverages product. Product slugs are unique per vendor and
+`seedSubcategoryProducts` filters pending products by existing slug, so the collision **silently
+seeded one fewer row** instead of failing — `juices-soft-drinks` shipped with a single product until
+it was noticed by counting. It is now `apple-juice-1l`, a genuinely different product, with a
+comment saying why.
 
 ## Deliberately excluded
 
-- **Curating real products for 31 subcategories.** That is content authoring, not this slice.
+- **More than two products per subcategory.** Two is enough to see the tier render and to prove the
+  navigation resolves; a fuller catalogue is merchandising work with a different owner.
 - **Any change to `generate-catalogue.ts`** — its `GENERATOR_SEED`, slug prefix, and word pools are
   untouched. Changing the seed value invalidates `#489`'s recorded NFR measurement.
 - **Raising or removing the top-level fixture's product counts.** The top tier was already correct.
+- **A give-up path for products the image pipeline can never fill (`#523`).** One product,
+  `Halal Chicken Thighs 1kg`, is refused by Workers AI as NSFW on every attempt and keeps its
+  placeholder. Fixing that — and stopping the scheduled job from retrying such products forever —
+  is its own slice.
 - **`#519`** (stale staging hosts in production's `VendorDomain`) and **`#364`** (PNG bytes under a
   `.webp` key), both filed and both out of scope.
 

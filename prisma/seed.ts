@@ -66,6 +66,7 @@ async function main() {
 
   await seedCatalogue(AHEED_VENDOR_ID, CATALOGUE);
   await seedSubcategories(AHEED_VENDOR_ID, CATALOGUE);
+  await seedSubcategoryProducts(AHEED_VENDOR_ID, AHEED_SUBCATEGORY_PRODUCTS);
   await seedFeaturedProducts(AHEED_VENDOR_ID, AHEED_FEATURED_SLUGS);
   await refreshProductImages(CATALOGUE);
   await upsertVendorSatellites(AHEED_VENDOR_ID, AHEED_SATELLITES);
@@ -96,6 +97,7 @@ async function main() {
     });
     await seedCatalogue(SRIMART_VENDOR_ID, SRIMART_CATALOGUE);
     await seedSubcategories(SRIMART_VENDOR_ID, SRIMART_CATALOGUE);
+    await seedSubcategoryProducts(SRIMART_VENDOR_ID, SRIMART_SUBCATEGORY_PRODUCTS);
     await seedFeaturedProducts(SRIMART_VENDOR_ID, SRIMART_FEATURED_SLUGS);
     await refreshProductImages(SRIMART_CATALOGUE);
     await upsertVendorSatellites(SRIMART_VENDOR_ID, SRIMART_SATELLITES);
@@ -133,12 +135,13 @@ async function main() {
     // `SEED_REMOVE_GENERATED` would silently leave half the generated set behind.
     await removeGeneratedCatalogue(SRIMART_VENDOR_ID);
   } else {
+    // Aheed only, deliberately. #521's first attempt also generated for SriMart and the result was
+    // "Value Lentils" filed under `sri-chargers-cables`: `generate-catalogue.ts` draws from a
+    // single groceries-only word pool, so it can never produce sensible rows for an electronics
+    // vendor. SriMart's second tier is curated in `SRIMART_SUBCATEGORY_PRODUCTS` instead, and
+    // SriMart is meant to stay small anyway (see `seedGeneratedCatalogue`'s note on why scale
+    // measurement is Aheed-only).
     await maybeSeedGeneratedCatalogue("SEED_SCALE_PRODUCTS", AHEED_VENDOR_ID, CATALOGUE);
-    await maybeSeedGeneratedCatalogue(
-      "SEED_SCALE_PRODUCTS_SRIMART",
-      SRIMART_VENDOR_ID,
-      SRIMART_CATALOGUE,
-    );
   }
 
   // #489 R9 — makes "the generated set shares a small image pool" checkable from the outside.
@@ -1399,6 +1402,710 @@ const SRIMART_CATALOGUE: CatalogueCategory[] = [
     ],
   },
 ];
+
+/**
+ * #521 — two real products for every subcategory, keyed by the subcategory's own slug.
+ *
+ * WHY THIS EXISTS RATHER THAN `seedGeneratedCatalogue`.
+ * The first attempt at #521 filled the second tier with `generateProducts` output. That was wrong
+ * twice over, and both faults are inherent to that generator rather than fixable settings on it:
+ *
+ *  1. It assigns a random noun from one global grocery pool to a random subcategory, so "Everyday
+ *     Rice" landed under `cleaning` and "Premium Chickpeas" under `paper-toiletries`. Its own
+ *     docstring says the pools are "deliberately generic grocery vocabulary rather than anything
+ *     resembling a real Aheed or SriMart product" — it exists to make queries work harder, and
+ *     nothing in it ever related a product to the category it was filed under.
+ *  2. That single pool is groceries-only, so pointing it at SriMart — an ELECTRONICS vendor —
+ *     produced "Value Lentils" under `sri-chargers-cables`.
+ *
+ * `generate-catalogue.ts` is therefore left entirely alone (its `GENERATOR_SEED` is load-bearing
+ * for #489's reproducible measurement) and the storefront's second tier is curated here instead.
+ *
+ * A FLAT RECORD KEYED ON SUBCATEGORY SLUG, not nested inside `CATALOGUE`. The subcategory list
+ * already lives there under `children`; duplicating the tree would create two places that must
+ * agree about it. Keying on the child slug means this map is checked against the database, not
+ * against the fixture's shape — and `seedSubcategoryProducts` skips any key with no matching
+ * category, which is what lets SriMart's entries sit in the same structure harmlessly when only
+ * Aheed is seeded.
+ */
+const AHEED_SUBCATEGORY_PRODUCTS: Record<string, CatalogueProduct[]> = {
+  "fresh-fruit": [
+    {
+      slug: "bananas-1kg",
+      name: "Bananas 1kg",
+      description: "Ripe Fairtrade bananas, sold loose by the kilo.",
+      basePrice: 119,
+      unitLabel: "£1.19 / kg",
+      quantity: 80,
+      isFresh: true,
+    },
+    {
+      slug: "royal-gala-apples-6pk",
+      name: "Royal Gala Apples 6 pack",
+      description: "Crisp, sweet Royal Gala apples.",
+      basePrice: 189,
+      unitLabel: "£1.89 / 6 pack",
+      quantity: 60,
+      isFresh: true,
+    },
+  ],
+  "fresh-vegetables": [
+    {
+      slug: "brown-onions-2kg",
+      name: "Brown Onions 2kg",
+      description: "Everyday brown onions, the base of most curries.",
+      basePrice: 179,
+      unitLabel: "£1.79 / 2kg",
+      quantity: 70,
+      isFresh: true,
+    },
+    {
+      slug: "vine-tomatoes-500g",
+      name: "Vine Tomatoes 500g",
+      description: "Ripened-on-the-vine salad tomatoes.",
+      basePrice: 149,
+      unitLabel: "£1.49 / 500g",
+      quantity: 55,
+      isFresh: true,
+    },
+  ],
+  "herbs-salads": [
+    {
+      slug: "fresh-coriander-100g",
+      name: "Fresh Coriander 100g",
+      description: "Large bunch of fresh coriander.",
+      basePrice: 89,
+      unitLabel: "£0.89 / bunch",
+      quantity: 45,
+      isFresh: true,
+    },
+    {
+      slug: "baby-spinach-200g",
+      name: "Baby Spinach 200g",
+      description: "Washed and ready-to-eat baby spinach leaves.",
+      basePrice: 139,
+      unitLabel: "£1.39 / 200g",
+      quantity: 40,
+      isFresh: true,
+    },
+  ],
+  "bread-loaves": [
+    {
+      slug: "white-farmhouse-loaf-800g",
+      name: "White Farmhouse Loaf 800g",
+      description: "Thick-sliced soft white farmhouse loaf.",
+      basePrice: 135,
+      unitLabel: "£1.35 / loaf",
+      quantity: 40,
+    },
+    {
+      slug: "wholemeal-bloomer-800g",
+      name: "Wholemeal Bloomer 800g",
+      description: "Stoneground wholemeal bloomer, baked daily.",
+      basePrice: 155,
+      unitLabel: "£1.55 / loaf",
+      quantity: 35,
+    },
+  ],
+  pastries: [
+    {
+      slug: "butter-croissants-4pk",
+      name: "Butter Croissants 4 pack",
+      description: "All-butter croissants, baked in store.",
+      basePrice: 199,
+      unitLabel: "£1.99 / 4 pack",
+      quantity: 30,
+    },
+    {
+      slug: "pain-au-chocolat-4pk",
+      name: "Pain au Chocolat 4 pack",
+      description: "Flaky pastry with dark chocolate batons.",
+      basePrice: 225,
+      unitLabel: "£2.25 / 4 pack",
+      quantity: 28,
+    },
+  ],
+  "cakes-desserts": [
+    {
+      slug: "victoria-sponge-cake",
+      name: "Victoria Sponge Cake",
+      description: "Classic sponge layered with jam and buttercream.",
+      basePrice: 549,
+      unitLabel: "£5.49 each",
+      quantity: 15,
+    },
+    {
+      slug: "chocolate-fudge-cake",
+      name: "Chocolate Fudge Cake",
+      description: "Rich chocolate sponge with fudge icing.",
+      basePrice: 599,
+      unitLabel: "£5.99 each",
+      quantity: 15,
+    },
+  ],
+  "milk-cream": [
+    {
+      slug: "whole-milk-2l",
+      name: "Whole Milk 2L",
+      description: "Fresh British whole milk.",
+      basePrice: 145,
+      unitLabel: "£1.45 / 2L",
+      quantity: 60,
+      isFresh: true,
+    },
+    {
+      slug: "double-cream-300ml",
+      name: "Double Cream 300ml",
+      description: "Thick double cream for cooking and desserts.",
+      basePrice: 125,
+      unitLabel: "£1.25 / 300ml",
+      quantity: 40,
+      isFresh: true,
+    },
+  ],
+  "cheese-paneer": [
+    {
+      slug: "mild-cheddar-400g",
+      name: "Mild Cheddar 400g",
+      description: "Creamy mild cheddar block.",
+      basePrice: 289,
+      unitLabel: "£2.89 / 400g",
+      quantity: 35,
+    },
+    {
+      slug: "fresh-paneer-226g",
+      name: "Fresh Paneer 226g",
+      description: "Firm Indian cheese, ideal for curries and grilling.",
+      basePrice: 275,
+      unitLabel: "£2.75 / 226g",
+      quantity: 30,
+      isHalal: true,
+    },
+  ],
+  "eggs-butter": [
+    {
+      slug: "large-free-range-eggs-12pk",
+      name: "Large Free Range Eggs 12 pack",
+      description: "British free range eggs, box of twelve.",
+      basePrice: 315,
+      unitLabel: "£3.15 / dozen",
+      quantity: 45,
+      isFresh: true,
+    },
+    {
+      slug: "salted-butter-250g",
+      name: "Salted Butter 250g",
+      description: "Traditional churned salted butter.",
+      basePrice: 219,
+      unitLabel: "£2.19 / 250g",
+      quantity: 40,
+    },
+  ],
+  "lamb-mutton": [
+    {
+      slug: "halal-lamb-shoulder-1kg",
+      name: "Halal Lamb Shoulder 1kg",
+      description: "Bone-in lamb shoulder, HMC certified.",
+      basePrice: 1099,
+      unitLabel: "£10.99 / kg",
+      quantity: 20,
+      isHalal: true,
+      isFresh: true,
+    },
+    {
+      slug: "halal-mutton-curry-cut-1kg",
+      name: "Halal Mutton Curry Cut 1kg",
+      description: "Bone-in mutton pieces cut for slow curries.",
+      basePrice: 949,
+      unitLabel: "£9.49 / kg",
+      quantity: 20,
+      isHalal: true,
+      isFresh: true,
+    },
+  ],
+  "chicken-poultry": [
+    {
+      slug: "halal-chicken-thighs-1kg",
+      name: "Halal Chicken Thighs 1kg",
+      description: "Skin-on bone-in chicken thighs, HMC certified.",
+      basePrice: 499,
+      unitLabel: "£4.99 / kg",
+      quantity: 30,
+      isHalal: true,
+      isFresh: true,
+    },
+    {
+      slug: "halal-whole-chicken-1-5kg",
+      name: "Halal Whole Chicken 1.5kg",
+      description: "Whole fresh chicken, HMC certified.",
+      basePrice: 649,
+      unitLabel: "£6.49 each",
+      quantity: 25,
+      isHalal: true,
+      isFresh: true,
+    },
+  ],
+  "beef-mince": [
+    {
+      slug: "halal-beef-mince-500g",
+      name: "Halal Beef Mince 500g",
+      description: "Lean 12% fat beef mince, HMC certified.",
+      basePrice: 449,
+      unitLabel: "£4.49 / 500g",
+      quantity: 30,
+      isHalal: true,
+      isFresh: true,
+    },
+    {
+      slug: "halal-beef-curry-cubes-500g",
+      name: "Halal Beef Curry Cubes 500g",
+      description: "Diced braising beef for curries and stews.",
+      basePrice: 529,
+      unitLabel: "£5.29 / 500g",
+      quantity: 25,
+      isHalal: true,
+      isFresh: true,
+    },
+  ],
+  "rice-grains": [
+    {
+      slug: "basmati-rice-10kg",
+      name: "Basmati Rice 10kg",
+      description: "Aged extra-long grain basmati, catering sack.",
+      basePrice: 1899,
+      unitLabel: "£18.99 / 10kg",
+      quantity: 25,
+      origin: "India",
+    },
+    {
+      slug: "chapatti-atta-5kg",
+      name: "Chapatti Atta 5kg",
+      description: "Fine wholemeal flour for chapatti and roti.",
+      basePrice: 649,
+      unitLabel: "£6.49 / 5kg",
+      quantity: 30,
+    },
+  ],
+  "lentils-pulses": [
+    {
+      slug: "red-split-lentils-2kg",
+      name: "Red Split Lentils 2kg",
+      description: "Masoor dal, quick cooking.",
+      basePrice: 399,
+      unitLabel: "£3.99 / 2kg",
+      quantity: 40,
+    },
+    {
+      slug: "chana-dal-2kg",
+      name: "Chana Dal 2kg",
+      description: "Split Bengal gram, a South Asian staple.",
+      basePrice: 429,
+      unitLabel: "£4.29 / 2kg",
+      quantity: 35,
+    },
+  ],
+  "cooking-oils": [
+    {
+      slug: "sunflower-oil-3l",
+      name: "Sunflower Oil 3L",
+      description: "Everyday sunflower oil for frying.",
+      basePrice: 749,
+      unitLabel: "£7.49 / 3L",
+      quantity: 30,
+    },
+    {
+      slug: "extra-virgin-olive-oil-1l",
+      name: "Extra Virgin Olive Oil 1L",
+      description: "Cold-pressed extra virgin olive oil.",
+      basePrice: 899,
+      unitLabel: "£8.99 / L",
+      quantity: 25,
+    },
+  ],
+  "south-asian": [
+    {
+      slug: "pure-ghee-1kg",
+      name: "Pure Ghee 1kg",
+      description: "Clarified butter for traditional cooking.",
+      basePrice: 1149,
+      unitLabel: "£11.49 / kg",
+      quantity: 20,
+    },
+    {
+      slug: "mango-pickle-400g",
+      name: "Mango Pickle 400g",
+      description: "Hot and tangy mango pickle in oil.",
+      basePrice: 259,
+      unitLabel: "£2.59 / 400g",
+      quantity: 30,
+    },
+  ],
+  "middle-eastern": [
+    {
+      slug: "medjool-dates-500g",
+      name: "Medjool Dates 500g",
+      description: "Large soft Medjool dates.",
+      basePrice: 549,
+      unitLabel: "£5.49 / 500g",
+      quantity: 25,
+      origin: "Jordan",
+    },
+    {
+      slug: "tahini-paste-300g",
+      name: "Tahini Paste 300g",
+      description: "Smooth sesame paste for hummus and dressings.",
+      basePrice: 329,
+      unitLabel: "£3.29 / 300g",
+      quantity: 25,
+    },
+  ],
+  "african-caribbean": [
+    {
+      slug: "scotch-bonnet-chillies-100g",
+      name: "Scotch Bonnet Chillies 100g",
+      description: "Fiery Scotch bonnet peppers.",
+      basePrice: 129,
+      unitLabel: "£1.29 / 100g",
+      quantity: 30,
+      isFresh: true,
+    },
+    {
+      slug: "plantain-3pk",
+      name: "Plantain 3 pack",
+      description: "Ripe plantain, ideal for frying.",
+      basePrice: 175,
+      unitLabel: "£1.75 / 3 pack",
+      quantity: 30,
+      isFresh: true,
+    },
+  ],
+  "tea-coffee": [
+    {
+      slug: "kenyan-loose-tea-1kg",
+      name: "Kenyan Loose Tea 1kg",
+      description: "Strong loose-leaf tea for masala chai.",
+      basePrice: 899,
+      unitLabel: "£8.99 / kg",
+      quantity: 25,
+      origin: "Kenya",
+    },
+    {
+      slug: "ground-coffee-500g",
+      name: "Ground Coffee 500g",
+      description: "Medium roast ground coffee.",
+      basePrice: 649,
+      unitLabel: "£6.49 / 500g",
+      quantity: 20,
+    },
+  ],
+  "juices-soft-drinks": [
+    {
+      // NOT "orange-juice-1l" — that slug is already a top-level Beverages product. Product
+      // slugs are unique per vendor, so a collision here silently seeds one fewer row rather
+      // than failing, which is how this subcategory first came out with a single product.
+      slug: "apple-juice-1l",
+      name: "Apple Juice 1L",
+      description: "Pressed apple juice, not from concentrate.",
+      basePrice: 179,
+      unitLabel: "£1.79 / L",
+      quantity: 40,
+    },
+    {
+      slug: "cola-6x330ml",
+      name: "Cola 6 x 330ml",
+      description: "Six-pack of classic cola cans.",
+      basePrice: 329,
+      unitLabel: "£3.29 / 6 pack",
+      quantity: 35,
+    },
+  ],
+  "water-mixers": [
+    {
+      slug: "still-water-6x1-5l",
+      name: "Still Water 6 x 1.5L",
+      description: "Still natural mineral water, multipack.",
+      basePrice: 289,
+      unitLabel: "£2.89 / 6 pack",
+      quantity: 40,
+    },
+    {
+      slug: "sparkling-water-6x1l",
+      name: "Sparkling Water 6 x 1L",
+      description: "Carbonated spring water, multipack.",
+      basePrice: 279,
+      unitLabel: "£2.79 / 6 pack",
+      quantity: 35,
+    },
+  ],
+  "crisps-namkeen": [
+    {
+      slug: "bombay-mix-400g",
+      name: "Bombay Mix 400g",
+      description: "Crunchy spiced savoury snack mix.",
+      basePrice: 199,
+      unitLabel: "£1.99 / 400g",
+      quantity: 40,
+    },
+    {
+      slug: "salted-crisps-6pk",
+      name: "Salted Crisps 6 pack",
+      description: "Ready salted potato crisps, six bags.",
+      basePrice: 179,
+      unitLabel: "£1.79 / 6 pack",
+      quantity: 45,
+    },
+  ],
+  "biscuits-sweets": [
+    {
+      slug: "digestive-biscuits-400g",
+      name: "Digestive Biscuits 400g",
+      description: "Wheatmeal digestive biscuits.",
+      basePrice: 129,
+      unitLabel: "£1.29 / 400g",
+      quantity: 45,
+    },
+    {
+      slug: "gulab-jamun-1kg",
+      name: "Gulab Jamun 1kg",
+      description: "Soft milk dumplings in rose syrup.",
+      basePrice: 599,
+      unitLabel: "£5.99 / kg",
+      quantity: 20,
+    },
+  ],
+  "nuts-dried-fruit": [
+    {
+      slug: "whole-almonds-500g",
+      name: "Whole Almonds 500g",
+      description: "Natural whole almonds.",
+      basePrice: 549,
+      unitLabel: "£5.49 / 500g",
+      quantity: 30,
+    },
+    {
+      slug: "sultanas-500g",
+      name: "Sultanas 500g",
+      description: "Soft golden sultanas for baking and snacking.",
+      basePrice: 239,
+      unitLabel: "£2.39 / 500g",
+      quantity: 30,
+    },
+  ],
+  cleaning: [
+    {
+      slug: "washing-up-liquid-900ml",
+      name: "Washing Up Liquid 900ml",
+      description: "Concentrated washing up liquid.",
+      basePrice: 189,
+      unitLabel: "£1.89 / 900ml",
+      quantity: 40,
+    },
+    {
+      slug: "multi-surface-spray-750ml",
+      name: "Multi-Surface Spray 750ml",
+      description: "Antibacterial cleaner for kitchen surfaces.",
+      basePrice: 165,
+      unitLabel: "£1.65 / 750ml",
+      quantity: 40,
+    },
+  ],
+  "kitchen-foil": [
+    {
+      slug: "aluminium-foil-30m",
+      name: "Aluminium Foil 30m",
+      description: "Catering-width kitchen foil.",
+      basePrice: 249,
+      unitLabel: "£2.49 / 30m",
+      quantity: 35,
+    },
+    {
+      slug: "cling-film-30m",
+      name: "Cling Film 30m",
+      description: "Food-safe cling film with cutter.",
+      basePrice: 199,
+      unitLabel: "£1.99 / 30m",
+      quantity: 35,
+    },
+  ],
+  "paper-toiletries": [
+    {
+      slug: "kitchen-roll-4pk",
+      name: "Kitchen Roll 4 pack",
+      description: "Absorbent two-ply kitchen towels.",
+      basePrice: 329,
+      unitLabel: "£3.29 / 4 pack",
+      quantity: 40,
+    },
+    {
+      slug: "toilet-tissue-9pk",
+      name: "Toilet Tissue 9 pack",
+      description: "Soft three-ply toilet tissue.",
+      basePrice: 429,
+      unitLabel: "£4.29 / 9 pack",
+      quantity: 35,
+    },
+  ],
+};
+
+/** SriMart sells electronics and homeware — see the note above about why the generated pool
+ *  produced groceries here and must never be used for this vendor. */
+const SRIMART_SUBCATEGORY_PRODUCTS: Record<string, CatalogueProduct[]> = {
+  "sri-audio": [
+    {
+      slug: "sri-over-ear-headphones",
+      name: "Over-Ear Headphones",
+      description: "Wireless over-ear headphones with active noise cancelling.",
+      basePrice: 5999,
+      unitLabel: "£59.99 each",
+      quantity: 12,
+    },
+    {
+      slug: "sri-bluetooth-speaker",
+      name: "Portable Bluetooth Speaker",
+      description: "Water-resistant speaker with 12-hour battery life.",
+      basePrice: 3499,
+      unitLabel: "£34.99 each",
+      quantity: 18,
+    },
+  ],
+  "sri-chargers-cables": [
+    {
+      slug: "sri-usb-c-cable-2m",
+      name: "USB-C Braided Cable 2m",
+      description: "Nylon-braided USB-C to USB-C cable, 100W rated.",
+      basePrice: 999,
+      unitLabel: "£9.99 each",
+      quantity: 40,
+    },
+    {
+      slug: "sri-gan-charger-65w",
+      name: "65W GaN Wall Charger",
+      description: "Compact three-port GaN charger for laptops and phones.",
+      basePrice: 2999,
+      unitLabel: "£29.99 each",
+      quantity: 22,
+    },
+  ],
+  "sri-lighting": [
+    {
+      slug: "sri-smart-led-bulb",
+      name: "Smart LED Bulb",
+      description: "Colour-changing Wi-Fi bulb, B22 fitting.",
+      basePrice: 1299,
+      unitLabel: "£12.99 each",
+      quantity: 30,
+    },
+    {
+      slug: "sri-led-strip-5m",
+      name: "LED Strip Light 5m",
+      description: "Adhesive colour LED strip with remote.",
+      basePrice: 1799,
+      unitLabel: "£17.99 / 5m",
+      quantity: 25,
+    },
+  ],
+  "sri-storage": [
+    {
+      slug: "sri-portable-ssd-1tb",
+      name: "Portable SSD 1TB",
+      description: "USB 3.2 external solid state drive.",
+      basePrice: 8999,
+      unitLabel: "£89.99 each",
+      quantity: 10,
+    },
+    {
+      slug: "sri-microsd-128gb",
+      name: "microSD Card 128GB",
+      description: "Class 10 microSD card with SD adapter.",
+      basePrice: 1499,
+      unitLabel: "£14.99 each",
+      quantity: 35,
+    },
+  ],
+};
+
+/**
+ * Create the curated subcategory products above, keyed on the SUBCATEGORY's slug.
+ *
+ * Its own pass, for the same reason `seedSubcategories` and `seedFeaturedProducts` are: every
+ * other path returns early once a category exists, so a database seeded before this map existed
+ * would never gain these rows. Idempotency is per PRODUCT slug rather than per category, so a
+ * later addition to one subcategory reaches a database that already holds the other.
+ *
+ * Uploads each product's placeholder object BEFORE writing rows, matching `seedCatalogue`'s
+ * ordering and #502's rule that a row and the object it names must not be written such that one
+ * can exist without the other.
+ */
+async function seedSubcategoryProducts(vendorId: string, map: Record<string, CatalogueProduct[]>) {
+  const subSlugs = Object.keys(map);
+  if (subSlugs.length === 0) return;
+
+  const categories = await prisma.category.findMany({
+    where: { vendorId, slug: { in: subSlugs } },
+    select: { id: true, slug: true },
+  });
+  const categoryIdBySlug = new Map(categories.map((c) => [c.slug, c.id]));
+
+  const existing = new Set(
+    (await prisma.product.findMany({ where: { vendorId }, select: { slug: true } })).map(
+      (p) => p.slug,
+    ),
+  );
+
+  const placeholderImage = readFileSync(
+    join(import.meta.dirname, "seed-assets", "placeholder-product.svg"),
+    "utf8",
+  );
+
+  let created = 0;
+  for (const [subSlug, products] of Object.entries(map)) {
+    const categoryId = categoryIdBySlug.get(subSlug);
+    // A subcategory can legitimately be absent — SriMart is only seeded when both host vars are
+    // set, and this map is shared across vendors that do not have each other's categories.
+    if (!categoryId) continue;
+
+    const pending = products.filter((p) => !existing.has(p.slug));
+    if (pending.length === 0) continue;
+
+    for (const product of pending) {
+      await putTracked(`products/${product.slug}/main.svg`, placeholderImage, "image/svg+xml");
+    }
+
+    for (const product of pending) {
+      await prisma.product.create({
+        data: {
+          vendorId,
+          slug: product.slug,
+          name: product.name,
+          description: product.description,
+          categoryId,
+          basePrice: product.basePrice,
+          unitLabel: product.unitLabel,
+          origin: product.origin,
+          originalPrice: product.originalPrice,
+          isHalal: product.isHalal ?? false,
+          isFresh: product.isFresh ?? false,
+          isOrganic: product.isOrganic ?? false,
+          images: {
+            create: {
+              storageKey: `products/${product.slug}/main.svg`,
+              alt: product.name,
+              isPrimary: true,
+            },
+          },
+          inventory: { create: { vendorId, quantity: product.quantity } },
+        },
+      });
+      created++;
+    }
+  }
+
+  console.log(
+    created === 0
+      ? `all subcategory products already exist for ${vendorId} — skipping`
+      : `seeded ${created} subcategory products for ${vendorId}`,
+  );
+}
 
 main()
   .catch((e) => {

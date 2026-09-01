@@ -8,38 +8,39 @@ every branch merges.
 
 ### Added
 
-- **`#521` — products behind every subcategory, for both vendors**
-  (`specs/2026-09-01-subcategory-products/`). Production's 31 subcategories were **all empty**,
+- **`#521` — two curated products behind every subcategory, for both vendors**
+  (`specs/2026-09-01-subcategory-products/`). Production's 31 subcategories were **all empty**
   while every top-level category had exactly 2 products — so the tier `#494` and `#498` built
   navigation for had nothing behind it, and the gap was invisible from the home page. The cause was
   structural and never production-specific: `prisma/seed.ts`'s `CATALOGUE` assigns every curated
   product to a **top-level** category, and the only path that fills a subcategory,
-  `seedGeneratedCatalogue`, was called for Aheed alone. **That function was already fully
-  vendor-generic** — it takes `vendorId` and `catalogue` as parameters — so the defect was its
-  single call site, which meant SriMart's subcategories were empty in *every* environment, dev and
-  staging included, and no value of `SEED_SCALE_PRODUCTS` could ever have filled them. A
-  `maybeSeedGeneratedCatalogue(envVar, vendorId, catalogue)` helper now replaces the inline parsing
-  and is called once per vendor, the second reading a new **`SEED_SCALE_PRODUCTS_SRIMART`**. Both
-  are opt-in and unset by default, so no existing environment changes behaviour. Separate vars
-  rather than one shared count is deliberate: the catalogues are different sizes (27 subcategories
-  against 4), and `#489`'s recorded NFR baseline is defined by the *Aheed* count specifically, so
-  one value driving both would silently change what that measurement refers to.
-  **`SEED_REMOVE_GENERATED` was extended in the same commit** to remove both vendors' generated
-  rows — adding SriMart generation without it would have left the documented one-command undo
-  stranding half the set. `prisma/generate-catalogue.ts` is untouched (`GENERATOR_SEED` and the slug
-  prefix are load-bearing for `#489`'s reproducibility). Production was then seeded at 2 per
-  subcategory (54 Aheed, 8 SriMart) and every one of those 62 products given its own image via
-  `#518`'s `scripts/fill-product-images.ts`: **0 empty categories** across both vendors, 62
-  non-placeholder image rows with **62 distinct keys** (no shared objects), and sampled keys
-  returning 200 from production's CDN. **The accepted trade-off is recorded in `plan.md`:** these
-  are generated rows with deliberately generic names ("Everyday Rice"), which
-  `generate-catalogue.ts`'s own docstring warns must not be mistaken for vendor merchandising
-  (`#239`); they are in a live storefront to make the tier reviewable, and
-  `SEED_REMOVE_GENERATED=1` removes them. Two environment findings recorded for the next person:
-  IPv6 egress to R2 failed repeatedly (`UND_ERR_CONNECT_TIMEOUT`, fixed with
-  `NODE_OPTIONS=--dns-result-order=ipv4first`), and Workers AI rejected one generated product name
-  as NSFW (a false positive that a re-run cleared) — the first real evidence that `#518`'s
-  scheduled job will eventually need a give-up path for a permanently-rejected name.
+  `seedGeneratedCatalogue`, was called for Aheed alone — so SriMart's subcategories were empty in
+  *every* environment, dev and staging included. `AHEED_SUBCATEGORY_PRODUCTS` (27 keys) and
+  `SRIMART_SUBCATEGORY_PRODUCTS` (4 keys) now hold two real products each, keyed on the
+  subcategory's slug, with genuine names, pence prices, unit labels and halal/fresh flags —
+  SriMart's being electronics and homeware. `seedSubcategoryProducts` creates them in its own pass,
+  idempotent per **product** slug, uploading each placeholder object before its row (`#502`) and
+  skipping any key with no matching category so one vendor's fixture is inert in the other's run.
+  `SEED_REMOVE_GENERATED` now removes **both** vendors' generated rows.
+  **The first implementation of this slice was wrong and reached production before it was caught by
+  looking at the site.** It filled the tier with `generateProducts` output, which draws a noun from
+  one global pool and assigns it to a **random** subcategory ("Everyday Rice" under `cleaning`), and
+  whose pool is **groceries-only**, so SriMart — an electronics vendor — got "Value Lentils" under
+  `sri-chargers-cables`. Both faults are inherent to `generate-catalogue.ts`, whose own docstring
+  says its vocabulary deliberately does not resemble real vendor product; it exists to make queries
+  work harder for `#489`. It is left untouched (`GENERATOR_SEED` is load-bearing for that
+  measurement) and `SEED_SCALE_PRODUCTS_SRIMART` was removed. **The transferable lesson: a fixture
+  built to exercise query cost is not a fixture for looking at, and nothing mechanical separates
+  them** — every generated row was schema-valid, correctly related and correctly imaged, and every
+  local check plus the slice's own original spec passed. A second, quieter defect came from the fix
+  itself: `orange-juice-1l` collided with an existing top-level product, and because slugs are
+  unique per vendor and pending products are filtered by existing slug, the collision **silently
+  seeded one fewer row** rather than failing — `juices-soft-drinks` went live with a single product
+  until it was found by counting. Production now has 2 curated products in all 31 subcategories
+  across both vendors and **0** `gen-` rows. **One tracked exception: `#523`** — Workers AI refuses
+  `Halal Chicken Thighs 1kg` as NSFW on every attempt (code 8007), so it keeps its placeholder and
+  renders as the "no image" box; that issue also records why a permanently-refused product will
+  otherwise consume a slot on every scheduled run of `#518`'s fill job forever.
 
 - **`#518` — production's real catalogue seeded, its eight missing images carried across from
   staging, and a scheduled job for the ones added later**
