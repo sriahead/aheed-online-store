@@ -652,6 +652,21 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `lint`/`typecheck`/`test` checks a second vendor's rendered output. Curl or otherwise fetch a page
   with `Host: srimart-staging.nocaped.com` (or `srimart.nocaped.com` in production) under
   `npm run preview` before treating a branding/token change as verified.
+- **A local `VendorDomain.host` value that includes a port can never resolve — seed it port-less,
+  always, even for local-only testing.** `lib/tenant.ts`'s `getCurrentVendorIdOrNull()` runs every
+  request host through `splitHostPort(...).hostname` before the `VendorDomain` lookup, which always
+  strips the port — deliberate and correct, since a real `Host` header on
+  `staging.aheedfoodcentre.nocaped.com`/`nocaped.com` never carries one. A row seeded with a port
+  (e.g. `SEED_SRIMART_HOST=srimart.localhost:8787`, the value a from-scratch local seed might
+  reasonably reach for) silently can never match, and the request falls through to `/coming-soon` —
+  indistinguishable from "this host genuinely isn't mapped," no error anywhere. The line above
+  already models the right convention (`srimart-staging.nocaped.com`, no port, reused as the local
+  `Host` header value even though nothing is actually listening on that domain — only the header
+  string matters to `getCurrentVendorIdOrNull()`, not where the TCP connection actually goes) but
+  didn't say why it has to be port-less until this was hit live: `/validate` for #501 slice A
+  (2026-09-01, `#514`) found a dev-DB row seeded as `srimart.localhost:8787` in an earlier session,
+  fixed by rewriting it port-less. Any `SEED_SRIMART_HOST`/`SEED_AHEED_HOST` value — local, staging,
+  or production — must never contain a port.
 
 ## Local Stripe webhook testing — learned the hard way
 - **This repo's `.dev.vars` and `.env` both carry a real `STRIPE_SECRET_KEY` (test-mode) by

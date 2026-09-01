@@ -76,6 +76,20 @@ every branch merges.
   `#508` moved to `In Review` on Project #2. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt; `npm run
   sdd:audit` exits 0.
 
+- **`/document` closeout for `#501` (parts 1 and 2, slice A).** Reconciles `specs/roadmap.md` with
+  what actually shipped: a new change-log row cites **PR #515**, merge `38c9171`, `staging`, and
+  records that `/validate` found zero defects in the slice's own diff — every obstacle hit while
+  live-verifying traced to something outside it (a sandbox network timeout unrelated to the code, a
+  stale local `VendorDomain` row from an earlier session, and a shared dev database carrying ~2,000
+  leftover products from an unrelated earlier scale-seed). `#501` moved to `In Review` on Project #2
+  (stays open — part 3 remains deferred to `#511`). **`#514`, filed at `/validate` as a possible
+  `lib/tenant.ts` design gap, re-scoped smaller here**: `CLAUDE.md`'s existing SriMart branding note
+  already modeled the correct local convention (a port-less `Host` value); the actual root cause was
+  one earlier session's `VendorDomain` row using a port-inclusive value, not a gap in
+  `lib/tenant.ts` itself. Adds a `CLAUDE.md` lesson stating the port-less constraint explicitly
+  rather than leaving it implicit in one example. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt; `npm run
+  sdd:audit` exits 0.
+
 ### Fixed
 
 - **`#502` — staging served 404s for every seeded product image, the button meant to fix that
