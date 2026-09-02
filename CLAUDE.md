@@ -430,6 +430,20 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   by hand before the real (untruncated) run could be trusted. **Redirect to a file and `Read` it, or
   let it print in full** — never truncate a script's stdout with a command that can close the pipe
   before the writer's own exit path runs.
+- **Never run `npx vitest run` concurrently with another heavy build on this machine — vitest
+  reports `exit 0` while whole test files silently never execute.** Under load its forks pool fails
+  to start workers (`Error: [vitest-pool]: Failed to start forks worker for test files ...` /
+  `[vitest-pool-runner]: Timeout waiting for worker to respond`), and those files are counted as
+  **unhandled errors, not failures** — so the process still exits 0 and a casual reading of the
+  summary looks like a pass. Hit 2026-09-02 during #539's Build: the suite was launched alongside
+  `next build --webpack` for `kms/site-internal` and reported **`Test Files 64 passed (64)` /
+  `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
+  gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
+  file count, not the exit code**: know what the suite's file/test totals should be (currently
+  74/874) and treat any shortfall as a non-result to re-run, not a pass. This is distinct from
+  **#538**, which is a genuine 5000ms timeout on `tests/repository-transaction-safety.test.ts` under
+  full-suite load (2.69s green in isolation) and reports as a real *failure*; CI's Linux runners are
+  the authority for both.
 
 ## Dependency & version discipline (learned the hard way)
 - **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their

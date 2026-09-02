@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.25.0"
-updated: 2026-08-31
+version: "2.26.0"
+updated: 2026-09-02
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -251,6 +251,20 @@ not present.
   pattern, scope its text to the surface that's actually checked** — a requirement broader than its
   own validation row is a requirement two readers can satisfy differently, which is the same defect
   this stage exists to prevent everywhere else.
+- **A fourth instance (#539, 2026-09-02) adds the wrinkle that makes this trap hard to see coming:
+  the string you are asserting is absent propagates into *generated* files.** R9 required that no
+  file in the repository still claim `deploy-staging` deliberately runs no quality job, verified by
+  a repo-wide `grep`. A correct implementation returns **four** matches — the slice's own `plan.md`
+  quotes the removed comment verbatim as historical context (which is the whole point of the
+  narrative file), that quotation is embedded into `app/(admin)/staff/runbook/docs.ts` by
+  `kms:build-index`, it is copied again into `kms/site-internal/content/` by
+  `kms:assemble:internal`, and `validation.md` contains the search string itself. So the count is
+  not merely "one more than expected" — **one authored sentence becomes three or four matches**, and
+  scrubbing the rationale would not even fix it while the generator still runs. **Scope an
+  absence-grep to the directory that would actually hold the defect** (`.github/`, `lib/`, `app/`),
+  never the repo root, and remember that anything you write in a spec is machine-copied into at
+  least two other places. Amended mid-build and committed separately, matching how #537 corrected
+  its own R2 for the same class of reason.
 - If the slice also changes a **standing decision** (architecture, tech choice, design tokens), also
   write or update the relevant **persistent doc** (`specs/architecture.md`, `tech-stack.md`,
   `design-system.md`, ...) — the dated folder is the one-time slice, the persistent doc is what
