@@ -96,6 +96,10 @@ const ALLOWED = new Map<string, string>([
     "orders.ts:confirmPayment",
     "Same webhook path as findOrderForWebhook — keyed by order number arriving from the payment provider, with no vendor in the request.",
   ],
+  [
+    "payment-binding-refusals.ts:recordPaymentBindingRefusal",
+    "Same webhook path as findOrderForWebhook and confirmPayment (#454): this records a REFUSED binding, so it runs on the one code path that by definition has no vendor — the event arrives from the payment provider with an order number and no host, and the refusal reasons it exists to record include `not-found`, where no order and therefore no vendor exists at all. It resolves the vendor from the order when there is one and stores it on the row, which is what makes the staff-facing reads (listBindingRefusalsForVendor, findBindingRefusalForVendor, recordRefusalResolution — all vendor-scoped, none exempt) safe. The webhook route is its only caller; nothing reachable from unauthenticated user input may call it.",
+  ],
 ]);
 
 /** A parameter that carries a tenant id, whatever it is called. */

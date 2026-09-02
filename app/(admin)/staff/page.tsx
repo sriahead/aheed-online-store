@@ -13,6 +13,7 @@ import {
   BookOpen,
   TrendingUp,
   Users,
+  ShieldAlert,
 } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
@@ -85,6 +86,17 @@ export default async function StaffHomePage() {
           <p className="font-semibold text-primary">Orders</p>
           <p className="mt-1 text-sm text-primary/80">
             Work the queue, search past orders, and open one for its full history.
+          </p>
+        </Link>
+
+        <Link
+          href="/staff/payments"
+          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+        >
+          <ShieldAlert className="mb-3 h-6 w-6 text-action" aria-hidden />
+          <p className="font-semibold text-primary">Payment Issues</p>
+          <p className="mt-1 text-sm text-primary/80">
+            Payment events that were refused, and the orders they may have left stranded.
           </p>
         </Link>
 
