@@ -45,8 +45,36 @@ export interface CreatePaymentResult {
   redirectUrl: string | null;
 }
 
+/**
+ * What the provider says about a session we already created (#454).
+ *
+ * Every field is nullable except `id` because this is read back from a remote
+ * API and a caller must not be able to treat an absent field as a zero. The
+ * recovery path in `features/payments/` compares all three of `paymentStatus`,
+ * `amountTotal` and `currency` before it will build a binding from this.
+ */
+export interface RetrievedSession {
+  id: string;
+  /** Stripe's `payment_status` — only the literal `"paid"` authorizes a recovery. */
+  paymentStatus: string | null;
+  /** Stripe's session `status` (`open` / `complete` / `expired`), for display. */
+  status: string | null;
+  amountTotal: number | null;
+  currency: string | null;
+}
+
 export interface PaymentService {
   createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult>;
+  /**
+   * Reads back a session by id (#454). Added so a refused webhook binding can be
+   * confirmed or overturned against the provider's OWN record rather than by
+   * re-driving an event that may have been refused correctly.
+   *
+   * A read, deliberately: nothing here can move money or change an order. The
+   * only thing that acts on the result is `confirmPayment`, unchanged, via the
+   * same compare-and-set predicate #429 installed.
+   */
+  retrieveSession(sessionId: string): Promise<RetrievedSession>;
 }
 
 export const STUB_PAYMENT_PROVIDER = "stub";
@@ -76,6 +104,18 @@ export function createStubPaymentService(): PaymentService {
         status: "PENDING",
         providerReference: null,
         redirectUrl: null,
+      };
+    },
+    // Never "paid", for the same reason createPayment has no SUCCEEDED path: a
+    // stub that reported a payment as settled would let the #454 recovery path
+    // confirm an order no money was ever taken for.
+    async retrieveSession(sessionId) {
+      return {
+        id: sessionId,
+        paymentStatus: "unpaid",
+        status: "open",
+        amountTotal: null,
+        currency: null,
       };
     },
   };
@@ -140,6 +180,39 @@ export function createStripePaymentService(secretKey: string): PaymentService {
         status: "PENDING",
         providerReference: session.id,
         redirectUrl: session.url,
+      };
+    },
+
+    async retrieveSession(sessionId) {
+      // Raw fetch, no `stripe` npm SDK — same Worker-bundle-size reason as
+      // createPayment above. Path-encoded because the id lands in the URL.
+      const response = await fetch(`${STRIPE_SESSIONS_URL}/${encodeURIComponent(sessionId)}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${secretKey}` },
+      });
+
+      if (!response.ok) {
+        throw new PaymentProviderError(
+          `Stripe session retrieval failed: ${response.status} ${await response.text()}`,
+        );
+      }
+
+      const session = (await response.json()) as {
+        id?: string;
+        payment_status?: string;
+        status?: string;
+        amount_total?: number;
+        currency?: string;
+      };
+
+      return {
+        id: session.id ?? sessionId,
+        paymentStatus: session.payment_status ?? null,
+        status: session.status ?? null,
+        // `?? null` rather than `|| null` — a legitimately zero amount_total is
+        // not the same as an absent one, and only the absent case may be null.
+        amountTotal: session.amount_total ?? null,
+        currency: session.currency ?? null,
       };
     },
   };

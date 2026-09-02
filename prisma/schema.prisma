@@ -158,6 +158,7 @@ model Vendor {
   bundles                Bundle[]
   priceTiers             ProductPriceTier[]
   authenticationAttempts AuthenticationAttempt[]
+  bindingRefusals        PaymentBindingRefusal[]
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
@@ -637,39 +638,40 @@ model Address {
 // carries the full rationale. Consequence: `prisma migrate diff` may report drift
 // that is not drift, and `prisma migrate dev` may propose DROPPING them. Keep them.
 model Order {
-  id                String               @id @default(uuid())
+  id                String                  @id @default(uuid())
   vendorId          String
-  vendor            Vendor               @relation(fields: [vendorId], references: [id])
-  orderNumber       String               @unique
+  vendor            Vendor                  @relation(fields: [vendorId], references: [id])
+  orderNumber       String                  @unique
   // P9.1 (#427/#428) — a guest order's actual credential. The order number is
   // NOT one: it appears in emails, shared links, browser history and support
   // threads, so knowing it must not return a name and a residential address.
   // Nullable because every order placed before this migration has none; those
   // guests fall back to /orders/lookup (order number + email). Never selected
   // into OrderSummary — see findOrderForViewer.
-  confirmationToken String?              @unique
+  confirmationToken String?                 @unique
   userId            String?
-  user              User?                @relation(fields: [userId], references: [id])
+  user              User?                   @relation(fields: [userId], references: [id])
   guestEmail        String?
   addressId         String
-  address           Address              @relation(fields: [addressId], references: [id])
-  status            OrderStatus          @default(PENDING_PAYMENT)
-  currency          String               @default("GBP")
+  address           Address                 @relation(fields: [addressId], references: [id])
+  status            OrderStatus             @default(PENDING_PAYMENT)
+  currency          String                  @default("GBP")
   subtotalPence     Int
   // P5a (#135) — a GENERIC discount column, not a points-specific one: P5b's
   // discount codes reduce the same total and must not need a second column and a
   // second arithmetic rule. The order money identity is
   // subtotalPence - discountPence + deliveryFeePence = totalPence.
-  discountPence     Int                  @default(0)
+  discountPence     Int                     @default(0)
   deliveryFeePence  Int
   totalPence        Int
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
   items             OrderItem[]
   payment           Payment?
   statusEvents      OrderStatusEvent[]
   loyaltyEntries    LoyaltyLedgerEntry[]
   discountUse       DiscountRedemption?
+  bindingRefusals   PaymentBindingRefusal[]
 
   @@index([vendorId, createdAt])
   @@index([vendorId, status, createdAt])
@@ -968,5 +970,49 @@ model ErrorEvent {
   routeType  String
   createdAt  DateTime @default(now())
 
+  @@index([createdAt])
+}
+
+// Payment binding refusals (#454, P9.2) — the durable record of every LOUD refusal from
+// app/api/webhooks/stripe/route.ts. #429 made that route fail closed, correctly; the cost is
+// that a refusal against a GENUINE payment leaves a charged shopper's order stuck
+// PENDING_PAYMENT. That route returns 200 and nothing throws, so onRequestError never fires and
+// no ErrorEvent row is written — the only other trace is a console.error line whose retention is
+// still #246.
+//
+// vendorId and orderId are NULLABLE by necessity, not by looseness: `not-found` names an order
+// that does not exist, and `unbindable` refuses before the lookup happens, so neither can carry
+// either. orderNumber is always present — the route returns early on a falsy event.orderNumber
+// before any transition is attempted. Refusals resolving to no vendor are recorded for forensics
+// and read from the database directly; /staff/payments is a vendor-scoped recovery worklist, and
+// by construction a `not-found` refusal strands no order.
+//
+// The claimed* fields are what the EVENT asserted; the stored* fields are the snapshot of the
+// order's own Payment row at refusal time. Keeping both is what lets a reader see the mismatch
+// after the fact without re-deriving it. `already-processed` is never recorded: Stripe retries
+// aggressively and a duplicate delivery is the system working.
+model PaymentBindingRefusal {
+  id                       String    @id @default(uuid())
+  vendorId                 String?
+  vendor                   Vendor?   @relation(fields: [vendorId], references: [id])
+  orderId                  String?
+  order                    Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderNumber              String
+  reason                   String
+  provider                 String
+  claimedProviderReference String?
+  claimedAmountPence       Int?
+  claimedCurrency          String?
+  storedProviderReference  String?
+  storedAmountPence        Int?
+  storedCurrency           String?
+  // Written by the staff reconciliation action (#454): what Stripe said about the order's OWN
+  // stored session, never about the session id the refused event claimed.
+  resolution               String?
+  resolutionDetail         String?
+  resolvedAt               DateTime?
+  createdAt                DateTime  @default(now())
+
+  @@index([vendorId, createdAt])
   @@index([createdAt])
 }
