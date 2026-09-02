@@ -336,12 +336,18 @@ Still on you, because no script can judge them:
       undiscoverable one directory down. Nothing mechanical catches a missing worktree reference; this
       is a judgment check, same as the other items in this list.
 - [ ] **`npm run kms:build-index` has been run and the result committed.** Every slice adds a
-      front-mattered `plan.md`, so every slice makes `ARTIFACT_INDEX.md` stale — and CI's `gates`
-      job fails on exactly that. Nothing before CI catches it: `sdd:preclear` doesn't check it, and
-      it isn't in Validate's local pre-flight (`lint`/`format:check`/`typecheck`/`test`/`build`), so
-      a slice can pass every local gate and still fail its first CI run. P4a remembered by hand;
-      P4b didn't and burned a red CI run plus a fix commit (**#132** tracks teaching `sdd:preclear`
-      to check this so it stops depending on memory).
+      front-mattered `plan.md`, so every slice makes the generated artefacts stale — and CI fails on
+      exactly that. `sdd:preclear` now checks it (#132), as does the `kms` job in `quality.yml`.
+      P4a remembered by hand; P4b didn't and burned a red CI run plus a fix commit.
+      **`kms:build-index` writes TWO files, and they go stale under different conditions** (#537):
+      `ARTIFACT_INDEX.md` renders **front-matter only**, while `app/(admin)/staff/runbook/docs.ts`
+      embeds each document's **full body**. So editing a doc's *content* without touching its
+      front-matter — appending a roadmap change-log row, correcting a paragraph in `CLAUDE.md` —
+      leaves the index byte-identical and `docs.ts` different. Every check watched only the index
+      until 2026-09-02, which is how a stale `/staff/runbook` article reached production with CI
+      green. **`npm run kms:check-generated` is the command that answers "are they current?"**; it
+      derives its file list from the generator's own `GENERATED_ARTIFACTS` export, so it cannot fall
+      behind a new output.
       **Run it LAST — after every front-matter edit, immediately before `git add`.** The index
       embeds each artifact's `version`/`updated`, so bumping any front-matter *after* the rebuild
       re-stales it, and "I ran `kms:build-index`" is not the same claim as "the index matches the

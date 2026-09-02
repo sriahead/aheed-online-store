@@ -9,6 +9,13 @@ jobs:
   # ran on a push to main.
   quality:
     uses: ./.github/workflows/quality.yml
+    # The KMS checks run here but do not block the deploy (#537, resolving #473). On a push
+    # to main the content has already merged: failing the deploy cannot un-merge a stale
+    # generated artefact or a bad front-matter block, it only withholds whatever fix this
+    # push carries. The failure still surfaces as a red `kms` job and `::error::`
+    # annotations. Everything in the `quality` job itself stays blocking.
+    with:
+      kms_blocking: false
 
   deploy:
     needs: quality

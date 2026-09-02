@@ -233,21 +233,52 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   1. **No environment approval gate.** GitHub's required-reviewers protection needs a paid plan for
      private repos and was rejected with a 422 on this repo's current (free) plan. `environment:
      production` in `deploy-production.yml` selects that environment's secret set and nothing more.
-  2. **No branch protection at all**, on either branch. Verified at P9.2 (2026-08-30) —
-     `gh api repos/sriahead/aheed-online-store/branches/main/protection` and the same for `staging`
-     both return **`404 Branch not protected`**. So "accept branch-protection-only review" was never
-     an available fallback; there is no required status check, no required review, and nothing
-     stopping a direct push to `main`.
-  This is not theoretical: **PRs #464, #465 and #466 all merged straight into `main` on 2026-08-30**,
-  bypassing `staging` entirely, and `deploy-production` ran on each. Treat PR review discipline as
-  the only real gate, and check the base branch of every PR you open. Resolving it needs a plan
-  upgrade, a public repo, or an explicit decision to accept the risk — a decision, not code.
+  2. **No required review and no required status check on either branch** — but `main` IS covered
+     by a **repository ruleset**, and this line said "No branch protection at all, on either branch"
+     until 2026-09-02 (#537). **The check it cited cannot see rulesets.**
+     `gh api repos/sriahead/aheed-online-store/branches/main/protection` queries *classic* branch
+     protection and returns **`404 Branch not protected`** whether or not a ruleset is active, so
+     P9.2's verification was structurally incapable of finding the thing it concluded was absent.
+     **Use `gh api repos/sriahead/aheed-online-store/rulesets` instead** (add
+     `/<id>` for the rules). Actual state, confirmed 2026-09-02: an **active** ruleset
+     `protect-main` whose condition is `~DEFAULT_BRANCH` — so **`main` only, `staging` is not
+     covered at all**. It carries `pull_request` (a PR is required, so a **direct push to `main`
+     is blocked**), `non_fast_forward` and `deletion`. It carries
+     **`required_approving_review_count: 0`**, **no `required_status_checks` rule**, and **no
+     bypass actors**.
+  So the substance of the warning survives, narrowed: a PR into `main` can be opened and merged by
+  its own author with every check red, and nothing constrains its source branch. This is not
+  theoretical — **PRs #464, #465 and #466 all merged straight into `main` on 2026-08-30**, bypassing
+  `staging` entirely, and `deploy-production` ran on each; the ruleset would not have stopped any of
+  them. Treat PR review discipline as the only real gate, and check the base branch of every PR you
+  open. Requiring reviews or status checks needs a plan upgrade, a public repo, or an explicit
+  decision to accept the risk — a decision, not code (#472).
 - **Quality checks live in `.github/workflows/quality.yml`** (`on: workflow_call`), added by P9.2
   (#435). Both `gates.yml` and `deploy-production.yml` call it, so the production path runs exactly
   what a PR runs. **Add a new check there, not to a caller** — duplicating the steps into each is
-  what let the production path drift to running none at all. The KMS `ARTIFACT_INDEX` staleness check
-  and the Gate 4 CHANGELOG diff deliberately stay inline in `gates.yml`'s `docs-gates` job: both need
-  `github.base_ref`, which a `push` event does not have.
+  what let the production path drift to running none at all. **Only the Gate 4 CHANGELOG diff stays
+  inline in `gates.yml`'s `docs-gates` job**, because it genuinely needs `github.base_ref`, which a
+  `push` event does not have.
+- **Both KMS checks (`kms:validate` and `kms:check-generated`) live in `quality.yml`'s own `kms`
+  job**, moved there 2026-09-02 (#537, resolving #473). Until then this file, `gates.yml` and
+  `quality.yml` all claimed the `ARTIFACT_INDEX` staleness check *also* needed `github.base_ref`;
+  it never did — it copied a file, regenerated, and diffed. That untrue sentence, repeated in three
+  places, is the whole reason the production deploy path ran **no** KMS checks at all. The `kms` job
+  is separate from `quality` because `continue-on-error` is per-job: it is **blocking on the
+  pull-request path and non-blocking on the production path** (`kms_blocking: false` from
+  `deploy-production.yml`). The PR is the gate; on `main` the same check is a drift tripwire, and
+  failing a deploy cannot un-merge drift that already landed — it only withholds the fix.
+- **`npm run kms:build-index` writes TWO files** — `ARTIFACT_INDEX.md` and
+  `app/(admin)/staff/runbook/docs.ts` — and they go stale under **different** conditions, which is
+  what made a one-file check look adequate for so long. The index renders **front-matter only**;
+  `docs.ts` embeds each document's **full body**. So editing a doc's content without touching its
+  front-matter rebuilds the index byte-identically and `docs.ts` differently. Commit `122609c` did
+  exactly that (five roadmap change-log rows, front-matter untouched) and shipped a stale
+  `/staff/runbook` article to production with every check green. **Never enumerate the generated
+  files by hand** — `kms/scripts/build-index.ts` exports `GENERATED_ARTIFACTS`, and both
+  `kms/scripts/check-generated.ts` and `scripts/sdd-check.ts` derive their coverage from it, so a
+  third output is covered the moment it is added. `npm run kms:check-generated` is the one command
+  that answers "are the generated artefacts current?".
 - **Both deploy workflows build BEFORE they migrate** (P9.2, #434). `prisma migrate deploy` used to
   run first, so a build failure left the database migrated while the Worker still served the previous
   bundle — and the adapter build is the step most likely to fail (a root `proxy.ts` once passed

@@ -92,10 +92,16 @@ not that the row is worth reading.
 
 ### `sdd:preclear` — exact mechanics (this repo)
 
-1. Rebuilds `ARTIFACT_INDEX.md` in memory and diffs it (with the timestamp/commit footer stripped)
-   against what's on disk. Stale index = failure. If the only difference *was* the footer, it
-   restores the original bytes so a footer-only rebuild doesn't masquerade as real uncommitted work
-   in the clean-tree check below.
+1. Shells out to `npm run kms:check-generated`, which rebuilds **every** file
+   `kms:build-index` writes and diffs each against what's on disk. Any stale artefact = failure,
+   and it names all of them rather than stopping at the first. `ARTIFACT_INDEX.md` is compared with
+   its timestamp/commit footer stripped; `app/(admin)/staff/runbook/docs.ts` is compared exactly,
+   having no footer. Where the only difference *was* normalised away it restores the original bytes,
+   so a footer-only rebuild doesn't masquerade as real uncommitted work in the clean-tree check
+   below; genuine drift is left regenerated, because committing it is the fix.
+   Until 2026-09-02 this step rebuilt both files but only ever *checked and restored* the index
+   (#537) — so a stale `docs.ts` was silently regenerated and left dirty, showing up as an
+   unexplained modified file with nothing connecting it to the index.
 2. Resolves a base ref: `origin/staging`, else `origin/main`, else "offline, don't block."
 3. Diffs `HEAD` against that merge-base to find every `specs/YYYY-MM-DD-slug/` directory touched
    (committed *or* still dirty) on this branch.
@@ -159,12 +165,21 @@ below exist to do.
 
 ## CI ("gates") — what actually runs, and what it does not
 
-**In this repo**, `.github/workflows/gates.yml` runs on every PR into `staging` or `main`: `npm ci`
-→ `db:generate` (schema-only, no DB connection) → `lint` → `format:check` → `typecheck` → `test` →
-KMS front-matter validation → an ARTIFACT_INDEX staleness re-check (same diff-and-strip-footer logic
-as `sdd:preclear`, run independently in CI so a local skip still gets caught) → the Gate 4 CHANGELOG
-diff check (against `origin/base-branch`, fetched fresh in CI — this is why a moved PR base can make
-a diff that existed locally vanish in CI).
+**In this repo**, `.github/workflows/gates.yml` runs on every PR into `staging` or `main`. It calls
+the reusable `quality.yml`, which holds two jobs: `quality` (`npm ci` → `db:generate`, schema-only,
+no DB connection → `lint` → `format:check` → `typecheck` → `test`) and `kms` (KMS front-matter
+validation → `kms:check-generated`, the same check `sdd:preclear` runs, executed independently in CI
+so a local skip still gets caught). `gates.yml` itself then adds the Gate 4 CHANGELOG diff check
+(against `origin/base-branch`, fetched fresh in CI — this is why a moved PR base can make a diff
+that existed locally vanish in CI).
+
+`deploy-production.yml` calls the same `quality.yml` on every push to `main`, passing
+`kms_blocking: false` (#537, resolving #473). So the KMS checks run on the production path but do
+not block the deploy: by then the content has already merged, and failing the deploy cannot
+un-merge a stale artefact — it only withholds whatever fix that push carries. The failure still
+shows as a red `kms` job with `::error::` annotations. Everything in the `quality` job stays
+blocking on both paths. Before this, `deploy-production` ran **no** KMS checks at all, on the
+strength of a claim that the staleness check needed `github.base_ref`; it never did.
 
 **What it deliberately does not run**, because it would slow down every PR for something only a
 minority touch: the internal docs site build (`kms:assemble:internal` + a real Next build in
