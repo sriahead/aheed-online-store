@@ -6,6 +6,36 @@ every branch merges.
 
 ## [Unreleased]
 
+### Documentation
+
+- **`/document` closeout for `#539`.** PR #544 merged to `staging` (`06b5fb1`) and PR #545 promoted
+  to `main` (`061e389`); both deploys confirmed complete and both environments' `/api/health`
+  checked live. `specs/roadmap.md` gained **three** change-log rows — the slice itself plus the two
+  promotions that were pending carry-forward (**PR #543**, the #537/#473 promotion, and **PR #545**)
+  — and `npm run sdd:audit` now reports zero gaps. **`#539` closed and moved to `Done`** on Project
+  #2; the board carries nothing in `In Progress` or `In Review`.
+  **R15 is the row worth recording, because it could not pass before merge and did not have to be
+  taken on trust.** `deploy-staging` triggers only on a push to `staging`, so the first run of the
+  modified workflow is the one the merge produces. Both deploy paths then showed the gate actually
+  gating, on timestamps rather than inspection: staging run `33613070598` has `quality` completing
+  at `09:16:31Z` and `deploy` starting at `09:16:34Z`; production run `33614955500` has `09:36:57Z`
+  and `09:37:00Z`. Three seconds apart, in order, twice.
+  Two new issues filed from what Ship surfaced, both on the board: **`#546`** — `CLAUDE.md`'s gates
+  section requires every PR to carry `phase:P_` and `gate:_` labels, and `gh label list` shows those
+  labels have **never existed**, so the instruction is unsatisfiable rather than merely unobserved
+  (the last four PRs carry no labels at all). **`#547`** — a Project #2 automation moves items to
+  `In Progress` when a PR referencing them opens, silently undoing the `In Review` state that the
+  `Done`-means-production semantics depend on; observed live when opening PR #543 flipped #537 and
+  #473 out of `In Review`.
+  Two traps recorded while cheap. `CLAUDE.md` (Windows section): **`npx vitest run` exits 0 while
+  whole test files never execute** when run concurrently with another heavy build — the forks pool
+  times out starting workers and those files count as *unhandled errors*, not failures. Measured on
+  this slice: `64 files / 784 tests, 10 errors, exit 0` concurrently versus `74 / 874` alone. The
+  tell is the file count, not the exit code. `specs/sdd-workflow.md` (Spec section): a fourth
+  instance of the absence-grep trap, whose new wrinkle is that **one authored sentence becomes three
+  or four grep matches** once `kms:build-index` and `kms:assemble:internal` copy a spec's prose into
+  generated files — so an absence-grep must be scoped to the directory that would hold the defect.
+
 ### Fixed
 
 - **`#539` — the staging deploy path is gated, and its own comment becomes true**
