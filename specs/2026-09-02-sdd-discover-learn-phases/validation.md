@@ -28,7 +28,7 @@
 | R11 | Read `.claude/commands/orient.md`; confirm a numbered step names `docs/research/discovery-log.md`. |
 | R12 | Read the block added to `CLAUDE.md` after the workflow paragraph; confirm it names both commands, states Discover runs first at milestone close, and states neither is a gate. |
 | R13 | Read `CLAUDE.md`'s "The four SDD gates (non-negotiable)" section; confirm four numbered items, wording unchanged (`git diff` shows no edit inside that section). |
-| R14 | Read `docs/research/discovery-log.md`; count three `###` findings under the dated pass, each ending in a single `**Next action:**` line whose value is one of the five permitted. |
+| R14 | Read `docs/research/discovery-log.md`; count three `###` findings under the dated pass, each ending in a single `**Next action:**` line whose value is one of the five permitted. Note `grep -c` for that string returns **four** — the entry template at the top of the file carries one too, and that is correct, not a fourth finding. |
 | R15 | `gh issue list --limit 20 --state all` shows `#550` and `#551` as the only issues created today for this work; `grep -n "order adjustment\|analytics instrumentation\|capacity ceiling" specs/roadmap.md` returns nothing. |
 | R16 | Read `docs/research/milestone-retrospectives.md`; confirm a template block, no milestone entry, and the paragraph stating P8 is deliberately not backfilled. |
 | R17 | `git diff --stat origin/staging -- scripts/sdd-check.ts package.json` returns no changes. |
