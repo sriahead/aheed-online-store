@@ -40,10 +40,15 @@ R8. Within `.github/workflows/deploy-staging.yml`'s `deploy` job, the step runni
     `npx opennextjs-cloudflare build` appears before the step running `npx prisma migrate deploy`,
     which appears before the step running `npx wrangler deploy` (the #434 ordering, unchanged).
 
-R9. No file in the repository states that `deploy-staging` deliberately runs no quality job. The
+R9. No file under `.github/` states that `deploy-staging` deliberately runs no quality job. The
     comment in `.github/workflows/deploy-staging.yml` that formerly said so instead names the
     `protect-staging` ruleset as what makes a pull request mandatory, and states that this workflow
-    also runs `quality.yml`.
+    also runs `quality.yml`. (Scoped to `.github/` deliberately: this slice's own `plan.md` quotes
+    the removed comment verbatim as historical context, and that quotation propagates into the
+    generated `app/(admin)/staff/runbook/docs.ts` and the assembled internal-docs MDX. A
+    repository-wide grep therefore returns matches for a correct implementation — the same
+    false-positive shape #537's R2 hit when it grepped a file whose doc comment legitimately named
+    the paths it was asserting were absent.)
 
 R10. `CLAUDE.md`'s "Branch strategy & CI/CD" section states that `staging` is covered by an active
      repository ruleset named `protect-staging` requiring a pull request with zero approving
