@@ -8,6 +8,25 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` closeout for `#550`.** PR #552 merged to `staging` (`6de0131`) and PR #553 promoted
+  to `main` (`1819c0e`); `deploy-staging`, `deploy-docs-internal` and `deploy-production` all
+  completed success, and both environments' `/api/health` were checked live — production serving
+  `1819c0e` with `db.ok: true`. `specs/roadmap.md` 1.64.0 gained **three** change-log rows: the slice
+  itself, its promotion, and **PR #549** — the previous closeout's own promotion, which was pending
+  carry-forward because a closeout's promotion is always one loop behind the work it documents.
+  `#550` closed and moved to **Done** on Project #2.
+  **`#551` correctly stayed open**, verified before the merge rather than after:
+  `gh pr view 553 --json closingIssuesReferences` returned exactly `[550]`. That check ran because a
+  promotion PR is precisely where the `#174` closing-keyword accident fired, and a branch scan for
+  `close`/`fix`/`resolve` adjacent to `#551` ran over both the commit messages and the tracked files
+  first — the commit-message surface being the one `closingIssuesReferences` cannot see.
+  **The board's Phase field still cannot express P9** (`#267`), so both issues sit with Phase unset;
+  and `#546` stands — the `phase:P_` / `gate:_` labels `CLAUDE.md` requires have never existed, so
+  neither PR could carry them.
+  **Nothing here has been exercised yet.** Both phases are written and unrun; the first real
+  milestone close is P9's, which is also the point at which `#551`'s deferred `sdd:audit` matcher
+  becomes writable against an actual entry.
+
 - **Two new strategic phases added to the SDD workflow: `/discover` and `/learn`** (`#550`). Both sit
   **outside** the per-slice delivery loop and run on the **milestone**: invocable at any time, and
   automatic at milestone close in the order Discover then Learn, so the retrospective can react to
