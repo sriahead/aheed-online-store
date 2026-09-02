@@ -20,6 +20,7 @@
     "sdd:audit": "tsx scripts/sdd-check.ts audit",
     "kms:validate": "tsx kms/schema/validate.ts",
     "kms:build-index": "tsx kms/scripts/build-index.ts",
+    "kms:check-generated": "tsx kms/scripts/check-generated.ts",
     "kms:assemble:internal": "tsx kms/scripts/assemble.ts --visibility internal",
     "kms:assemble:public": "tsx kms/scripts/assemble.ts --visibility public",
     "lint": "eslint .",
