@@ -8,6 +8,40 @@ every branch merges.
 
 ### Documentation
 
+- **Two new strategic phases added to the SDD workflow: `/discover` and `/learn`** (`#550`). Both sit
+  **outside** the per-slice delivery loop and run on the **milestone**: invocable at any time, and
+  automatic at milestone close in the order Discover then Learn, so the retrospective can react to
+  what discovery surfaced rather than re-derive it. **Discover** is forward-looking — unowned
+  customer problems, opportunities, UX friction, operational gaps, risks, assumptions, market
+  observations and technical constraints — and its defining step is classifying every candidate as
+  *already implemented* (cite the file), *already tracked* (cite the issue and phase, including
+  deliberate deferrals), or *genuinely unowned*, because presenting a filed issue as a discovery is
+  what would discredit the log. **Learn** is the retrospective — delivered versus promised,
+  assumptions held or disproved or **still untested**, what emerged that nobody planned for, and
+  what would have found it earlier — with the standing rule that where no measurable evidence
+  exists it says so rather than reaching a conclusion anyway.
+  New: `specs/sdd-workflow.md` 2.27.0 (the two stages, the milestone-close sequence, and a second
+  diagram for the phases outside the loop), `.claude/commands/discover.md`,
+  `.claude/commands/learn.md`, and three KMS-registered artifacts under `docs/research/` —
+  `README.md` (what belongs here and, more usefully, what belongs in the roadmap, an ADR or the
+  design system instead), `discovery-log.md` (seeded with the first pass's three genuinely unowned
+  findings) and `milestone-retrospectives.md` (template only; **P8 is deliberately not backfilled**,
+  since a retrospective reconstructed from the change log months later is exactly what the template
+  forbids). Edited: `/document` step 8 and `/orient` step 7 wire the phases into the existing loop,
+  and `CLAUDE.md` records them alongside the four gates.
+  **Neither phase is a gate, and that is deliberate** — evidence a merge depends on gets written to
+  pass rather than to be true. Nothing either phase produces is approved scope; findings reach the
+  roadmap through `/propose` and code through `/spec`. The one rule carried over from this repo's
+  own history: **a lesson recorded only in the retrospective has not been promoted** — durable
+  lessons go to `CLAUDE.md`, the workflow doc, a test or a CI check, and the entry must name where.
+  **Gate 1 was applied retroactively** — the human directed the change, the implementation was
+  written, and `#550` plus `specs/2026-09-02-sdd-discover-learn-phases/` were then written against
+  the built artifact. Disclosed in the plan and the build notes rather than back-dated, since a spec
+  that reads as though it preceded its implementation is its own hazard. **`#551` records the one
+  deliberately deferred piece**: extending `npm run sdd:audit` to report a closed milestone with no
+  retrospective entry, held until the milestone-close process has actually run once, so the matcher
+  is written against a real entry rather than a template.
+
 - **`/document` closeout for `#539`.** PR #544 merged to `staging` (`06b5fb1`) and PR #545 promoted
   to `main` (`061e389`); both deploys confirmed complete and both environments' `/api/health`
   checked live. `specs/roadmap.md` gained **three** change-log rows — the slice itself plus the two

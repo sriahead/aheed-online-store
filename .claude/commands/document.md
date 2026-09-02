@@ -33,6 +33,12 @@ should never have merged — say so.
 7. Later phases (P7 compliance, P8 handover) need compliance reports / a handover pack per their own
    specs — call that out explicitly in that phase's `requirements.md` rather than assuming this
    stage covers it by default.
+8. **If this slice closed out a milestone, the loop is not finished here.** Run `/discover`, then
+   `/learn`, before the model switch and `/clear` — see **Milestone close** in
+   `specs/sdd-workflow.md`. The roadmap closure row you just wrote records *what* closed; those two
+   phases are what turn the milestone into durable knowledge (`docs/research/discovery-log.md` and
+   `docs/research/milestone-retrospectives.md`) instead of context that dies at the next `/clear`.
+   Neither produces implementation scope — findings reach the roadmap through `/propose`.
 
 **Carry-forward rule:** doc changes made after the slice's PR merged land on the **next** slice's
 branch, not a PR of their own. Gate 4 requires a CHANGELOG diff on every branch, so a doc-only PR
