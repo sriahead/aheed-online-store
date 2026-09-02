@@ -12,6 +12,37 @@ import { ROOT, walk, relPath, normalize, readFrontMatter, readDoc } from "../sch
  * kms:validate's job to report, not this generator's.
  */
 
+const ARTIFACT_INDEX = "ARTIFACT_INDEX.md";
+const RUNBOOK_DOCS = "app/(admin)/staff/runbook/docs.ts";
+
+/**
+ * Every file `main()` writes, repo-relative — the single source of truth for what
+ * "the generated artefacts" means (#537).
+ *
+ * This exists because there were two outputs and only one was ever checked. The two go
+ * stale under DIFFERENT conditions, which is what made that invisible rather than merely
+ * narrow: ARTIFACT_INDEX.md renders front-matter only, while docs.ts embeds each
+ * document's full body. So a content-only edit — a change-log row appended to
+ * specs/roadmap.md without touching its front-matter, exactly what commit 122609c did —
+ * rebuilds the index byte-identically and docs.ts differently. The staleness check passed
+ * on the file that had not drifted, and /staff/runbook served a stale Roadmap article in
+ * production with CI green throughout.
+ *
+ * `kms/scripts/check-generated.ts` and `scripts/sdd-check.ts` both derive their file list
+ * from here rather than restating it, so a third output added to `main()` is covered the
+ * moment it is added. Adding the missing path to each checker instead would have
+ * reproduced the same defect one level up: two lists that must be remembered together.
+ */
+export const GENERATED_ARTIFACTS = [ARTIFACT_INDEX, RUNBOOK_DOCS] as const;
+
+/**
+ * ARTIFACT_INDEX.md carries a build timestamp and commit SHA; docs.ts does not (it is a
+ * plain JSON.stringify). So only the index needs its footer normalised away before a
+ * staleness comparison — for docs.ts an exact compare is correct, and normalising it would
+ * only widen what a check can miss.
+ */
+export const NEEDS_FOOTER_NORMALISATION: readonly string[] = [ARTIFACT_INDEX];
+
 const TRACK_TITLES: Record<Track, string> = {
   "internal-eng": "Track 1 — Internal / Engineering (`internal-eng`)  ·  audience: dev",
   "staff-ops": "Track 2 — Staff / Operations (`staff-ops`)  ·  audience: staff",
@@ -101,14 +132,18 @@ Visibility: \`internal\` (dev/staff site, behind Access) · \`public\` (help cen
 ${sections.join("\n\n")}
 `;
 
-  writeFileSync(join(ROOT, "ARTIFACT_INDEX.md"), content);
+  writeFileSync(join(ROOT, ARTIFACT_INDEX), content);
   writeFileSync(
-    join(ROOT, "app/(admin)/staff/runbook/docs.ts"),
+    join(ROOT, RUNBOOK_DOCS),
     `export const DOC_ARTICLES: any[] = ${JSON.stringify(allDocs, null, 2)};\n`,
   );
   console.log(
-    `build-index — wrote ARTIFACT_INDEX.md and docs.ts (${total} artifact(s) from ${files.length} scanned file(s))`,
+    `build-index — wrote ${GENERATED_ARTIFACTS.join(" and ")} (${total} artifact(s) from ${files.length} scanned file(s))`,
   );
 }
 
-main();
+// Only build when run directly. `check-generated.ts`, `scripts/sdd-check.ts` and the test
+// import GENERATED_ARTIFACTS from this module; without this guard, importing the constant
+// would rewrite both artefacts as a side effect of the import — a checker that mutates the
+// thing it is about to inspect can never report drift.
+if (require.main === module) main();

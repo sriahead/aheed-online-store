@@ -9,8 +9,14 @@ jobs:
   quality:
     uses: ./.github/workflows/quality.yml
 
-  # PR-only gates. Both need `github.base_ref` to diff against, which a push event
-  # does not have, so these cannot move into the reusable workflow.
+  # PR-only gate. Gate 4 needs `github.base_ref` to diff against, which a push event does
+  # not have, so it cannot move into the reusable workflow.
+  #
+  # The two KMS checks that used to live here moved into `quality.yml` in #537/#473. The
+  # reason they were kept out — that the ARTIFACT_INDEX.md staleness check also needed
+  # `github.base_ref` — was simply untrue: it copied a file, regenerated, and diffed,
+  # reading no base ref at all. That false claim was written here, in `quality.yml` and in
+  # CLAUDE.md, and it is why the production deploy path ran no KMS checks whatsoever.
   docs-gates:
     needs: quality
     runs-on: ubuntu-latest
@@ -20,19 +26,6 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
-      - name: KMS — front-matter validation
-        run: npm run kms:validate
-      - name: KMS — ARTIFACT_INDEX.md staleness check
-        run: |
-          cp ARTIFACT_INDEX.md /tmp/artifact-index-before.md
-          npm run kms:build-index
-          normalize() { sed -E 's/Last build: `[^`]+`/Last build: TS/; s/commit `[^`]+`/commit SHA/' "$1"; }
-          if ! diff <(normalize /tmp/artifact-index-before.md) <(normalize ARTIFACT_INDEX.md) > /tmp/artifact-index.diff; then
-            echo "::error::ARTIFACT_INDEX.md is stale — run 'npm run kms:build-index' and commit the result."
-            cat /tmp/artifact-index.diff
-            exit 1
-          fi
-          echo "ARTIFACT_INDEX.md is current ✓"
       - name: Gate 4 — CHANGELOG updated on this branch
         run: |
           git fetch origin "${{ github.base_ref }}" --depth=1

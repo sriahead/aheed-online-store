@@ -6,6 +6,74 @@ every branch merges.
 
 ## [Unreleased]
 
+### Documentation
+
+- **`/document` closeout for `#537` and `#473`.** PR #540 merged to `staging`; `deploy-staging`
+  confirmed complete, and `gates` (`docs-gates`, `quality`, `kms`) confirmed green via the run API,
+  not just `gh pr checks`. `specs/roadmap.md` gained a change-log row and `npm run sdd:audit` now
+  reports zero gaps. Both issues moved to **In Review** on Project #2 — they close only on promotion
+  to `main`. One new item deferred and filed as **`#541`**: the `kms` job's
+  `continue-on-error: ${{ !inputs.kms_blocking }}` has only ever been evaluated at its blocking
+  (`true`) default, since `gates.yml` never sets `kms_blocking`; the non-blocking branch is
+  unexercised until the first `deploy-production` run after promotion. The failure direction is
+  safe — a broken expression stays blocking rather than silently passing — but unverified is not the
+  same claim as verified.
+
+### Fixed
+
+- **`#537` (and `#473`) — every generated KMS artefact is now checked, on both CI paths**
+  (`specs/2026-09-02-kms-generated-artifact-coverage/`). `kms/scripts/build-index.ts` ends with two
+  `writeFileSync` calls two lines apart — `ARTIFACT_INDEX.md` and
+  `app/(admin)/staff/runbook/docs.ts` — and **every** mechanism enforcing their freshness read back
+  only the first: `gates.yml`'s staleness step and `scripts/sdd-check.ts`'s
+  `checkArtifactIndexStale()`.
+  **The two go stale under different conditions, which is what made the gap invisible rather than
+  merely narrow.** The index renders **front-matter only**; `docs.ts` embeds each document's **full
+  body**. So a content-only edit rebuilds the index byte-identically and `docs.ts` differently — the
+  check passes on the file that did not drift. Commit `122609c` appended five change-log rows to
+  `specs/roadmap.md` without touching its front-matter (`version: "1.61.0"`, `updated: 2026-08-31`);
+  `gates` passed on PR #536, it merged, and `/staff/runbook` — which imports `DOC_ARTICLES` from
+  that file — served a five-rows-stale Roadmap article **in production**, with CI green throughout.
+  **The fix is not "add the second file to both checks", which would rebuild the same defect one
+  level up as two lists that must be remembered together.** `build-index.ts` now exports
+  `GENERATED_ARTIFACTS` and writes exactly those paths; the new `kms/scripts/check-generated.ts`
+  (`npm run kms:check-generated`) derives what it checks from that array, so a third output is
+  covered the moment it is added. Same shape as `#411`/`#412` unscoping
+  `tests/repository-client-injection.test.ts` from a hardcoded file list.
+  `scripts/sdd-check.ts` now calls that shared checker, which fixes a second live defect: it ran
+  `kms:build-index` (rewriting **both** files) and restored only the index, so a stale `docs.ts` was
+  silently regenerated and **left modified** with nothing tying it to the index — the origin of the
+  unexplained dirty file this slice inherited. `main()` is now guarded by `require.main === module`,
+  since a checker that regenerates the artefacts as an import side effect can never report drift.
+  The pending `docs.ts` regeneration is committed, repairing the live stale article.
+
+### Changed
+
+- **`#473` resolved — both KMS checks moved into `.github/workflows/quality.yml`**, as a `kms` job
+  separate from `quality` (`continue-on-error` is per-job, so folding them in would have made
+  `lint`, `typecheck` and `test` non-blocking on the production path too). It is **blocking on the
+  pull-request path and non-blocking on the production path**, via a `kms_blocking` `workflow_call`
+  input that `deploy-production.yml` sets to `false`. The rationale `#473` lacked: **the pull
+  request is the gate; on `main` the same check is a drift tripwire, and failing a deploy cannot
+  un-merge drift that already landed** — it only withholds the fix. Annotations still surface.
+  **`#473`'s stated blocker was simply untrue.** It scoped itself around "the two steps that
+  genuinely cannot move (the `ARTIFACT_INDEX.md` staleness check and the Gate 4 CHANGELOG diff both
+  need `github.base_ref`)". The staleness check read no `base_ref` at all — it copied a file,
+  regenerated, and diffed. That false sentence was written in `gates.yml`, `quality.yml`, `CLAUDE.md`
+  and `#473` itself, and is why the production deploy path ran **zero** KMS checks. All three
+  repository copies are corrected; only Gate 4 genuinely needs `base_ref`.
+- **`CLAUDE.md`'s branch-strategy section corrected: `main` IS protected, by a ruleset.** It said
+  "**No branch protection at all**, on either branch", citing
+  `gh api .../branches/main/protection` returning `404 Branch not protected`. **That command queries
+  classic branch protection and cannot see rulesets**, so P9.2's verification was structurally
+  incapable of finding what it concluded was absent — the same failure shape as the `base_ref` claim
+  above. `main` carries an **active** ruleset `protect-main`: a PR is required (direct pushes to
+  `main` are **blocked**), force-push and deletion blocked, but
+  **`required_approving_review_count: 0`**, **no required status checks**, **no bypass actors**, and
+  its `~DEFAULT_BRANCH` condition means **`staging` is not covered**. The warning's substance
+  survives, narrowed: a PR into `main` can still be self-merged with every check red, and nothing
+  constrains its source branch, so the `#464`/`#465`/`#466` pattern remains available.
+
 ### Added
 
 - **`#511` — one horizontal-scroll affordance across the shop page**
@@ -157,6 +225,20 @@ every branch merges.
   original unbounded-growth mistake.
 
 ### Documentation
+
+- **`/document` closeout for `#507`, `#514`, `#364` and `#511`.** `npm run sdd:audit` reported five
+  gaps — three slices plus **PR #533** (`af17005`) and **PR #535** (`881792b`) — and now reports every
+  slice and promotion documented. Five `specs/roadmap.md` rows, each carrying the lesson rather than
+  just the outcome: **#507/#514** (PR #531), where the guard rather than the fallback was the work,
+  since `getCurrentVendorIdOrNull` runs on every request; **#364** (PR #532), recording that **an
+  issue's own account of why something was deferred is a claim, not a constraint** — the `.webp`
+  suffix was held hostage by a validator the AI code path never runs; **PR #533**, their promotion;
+  **#511** (PR #534), recording that **a per-component test renders one instance and structurally
+  cannot see a collision between two on a page**, which is why two rows shipped identically-named
+  scroll arrows past a passing test suite; and **PR #535**, closing out the backlog carried through
+  the session. The last row also records the one item that cannot be closed in code: the six S3/CDN
+  secrets missing from the `production` GitHub environment, without which the now-armed
+  `fill-product-images.yml` cron fails on its first run.
 
 - **`/document` closeout for `#519` and `#523`.** `npm run sdd:audit` reported four gaps — both
   slices plus **PR #527** (`4328ea0`) and **PR #529** (`3872851`) — and now reports every slice and
