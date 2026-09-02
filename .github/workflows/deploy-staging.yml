@@ -4,7 +4,31 @@ on:
     branches: [staging]
 
 jobs:
+  # #539 — the staging deploy path runs the same checks a pull request runs.
+  #
+  # This job used to be absent, on the reasoning that `gates` had already run lint, format,
+  # typecheck and test on the PR that produced the merge. That reasoning was sound and its
+  # premise was unenforced: `gates` triggers `on: pull_request`, and until #539 no ruleset
+  # covered `staging` at all (`protect-main`'s condition is `~DEFAULT_BRANCH`, which is `main`
+  # and nothing else). A commit pushed straight to `staging` therefore reached build, migrate
+  # and deploy having run no check of any kind.
+  #
+  # Both halves of that are now closed. The `protect-staging` repository ruleset requires a
+  # pull request into `staging`, so `gates` cannot be skipped; this job additionally catches
+  # the case a ruleset cannot — a PR whose checks went red and was merged anyway. Neither
+  # subsumes the other.
+  quality:
+    uses: ./.github/workflows/quality.yml
+    # Same split `deploy-production.yml` uses, for the same reason: by the time this runs the
+    # content has already merged, so failing the deploy cannot un-merge a stale generated
+    # artefact — it only withholds whatever fix this push carries. The failure still surfaces
+    # as a red `kms` job and `::error::` annotations. The `quality` job itself stays blocking,
+    # so lint, format, typecheck and tests do gate the deploy.
+    with:
+      kms_blocking: false
+
   deploy:
+    needs: quality
     runs-on: ubuntu-latest
     environment: staging # uses GitHub 'staging' environment secrets
     steps:
@@ -17,10 +41,6 @@ jobs:
       # only production, but staging carried the identical defect and is the rehearsal for
       # production: leaving it inverted means the environment that would normally surface this
       # can still end up migrated-but-not-built.
-      #
-      # Deliberately NO quality job here (#435 scopes those to production): `gates` already ran
-      # lint/format/typecheck/test on the PR that produced this merge, so re-running them would
-      # slow the staging loop for no added signal.
       - name: Build (OpenNext)
         run: npx opennextjs-cloudflare build
 
