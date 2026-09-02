@@ -6,6 +6,19 @@ every branch merges.
 
 ## [Unreleased]
 
+### Documentation
+
+- **`/document` closeout for `#537` and `#473`.** PR #540 merged to `staging`; `deploy-staging`
+  confirmed complete, and `gates` (`docs-gates`, `quality`, `kms`) confirmed green via the run API,
+  not just `gh pr checks`. `specs/roadmap.md` gained a change-log row and `npm run sdd:audit` now
+  reports zero gaps. Both issues moved to **In Review** on Project #2 — they close only on promotion
+  to `main`. One new item deferred and filed as **`#541`**: the `kms` job's
+  `continue-on-error: ${{ !inputs.kms_blocking }}` has only ever been evaluated at its blocking
+  (`true`) default, since `gates.yml` never sets `kms_blocking`; the non-blocking branch is
+  unexercised until the first `deploy-production` run after promotion. The failure direction is
+  safe — a broken expression stays blocking rather than silently passing — but unverified is not the
+  same claim as verified.
+
 ### Fixed
 
 - **`#537` (and `#473`) — every generated KMS artefact is now checked, on both CI paths**
