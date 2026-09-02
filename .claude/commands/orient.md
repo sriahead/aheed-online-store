@@ -23,7 +23,10 @@ Follow the **Orient** stage of `specs/sdd-workflow.md` (read it if not already i
 6. Check the delivery board for the status layer
    (`gh project item-list 2 --owner sriahead --format json`). Scope comes from `specs/` and the
    filesystem, never the board — if they disagree, the board needs reconciling.
-7. Report a short grounding summary: what you found to be true vs. what the docs/roadmap assumed,
+7. **Read `docs/research/discovery-log.md`** for any open finding touching this area. A finding
+   there is evidence, not scope — but starting a slice while an unread finding contradicts its
+   premise is exactly the waste the Discover phase exists to prevent.
+8. Report a short grounding summary: what you found to be true vs. what the docs/roadmap assumed,
    and any discrepancy worth flagging before moving to `/propose`.
 
 Do not start implementing. This is a read-only grounding pass.

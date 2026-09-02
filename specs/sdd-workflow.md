@@ -4,10 +4,10 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.26.0"
+version: "2.27.0"
 updated: 2026-09-02
 visibility: internal
-summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets so validation runs against the spec, not the memory of building it. Each stage is also a Claude Code slash command.
+summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets, plus the Discover and Learn phases that run on milestone close. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
 ---
 
@@ -36,6 +36,25 @@ ORIENT → PROPOSE → SPEC → BUILD → DOCUMENT (build notes)
                                         ↓
                                      CLEAR  ← switch to Opus 5 → back to ORIENT
 ```
+
+Two further phases sit **outside** that per-slice loop and run on the milestone, not the slice:
+
+```
+   ... last slice of a milestone ships and is documented ...
+                        ↓
+                    DISCOVER   (forward-looking: what should we consider next?)
+                        ↓
+                     LEARN     (backward-looking: what did this milestone teach us?)
+                        ↓
+             findings land in docs/research/ + promoted lessons
+                        ↓
+              back to ORIENT for the next milestone
+```
+
+Both are **independently invocable at any time** (`/discover`, `/learn`) and both run
+**automatically at milestone close**, in that order — Discover before Learn, so the retrospective
+can react to what discovery just surfaced rather than the other way round. Neither is a gate:
+neither can block a merge, and neither produces approved scope. Their output is evidence.
 
 **Why the switch sits after Document, not before.** Document (final) is reconciliation work —
 roadmap row, KMS rebuild, board sync — against a branch the current Sonnet 5 session already has
@@ -708,6 +727,10 @@ verified reality. **Runs on the same model as Ship (Sonnet 5), not a freshly-swi
 - Later phases (P7 compliance, P8 handover) need compliance reports / a handover pack per their own
   specs when the time comes — call that out explicitly in that phase's `requirements.md`, don't
   assume this stage covers it by default.
+- **If this slice closed out a milestone, run `/discover` then `/learn` before the model switch and
+  the Clear** — see **Milestone close (Discover, then Learn)** below. The closure row records what
+  ended; those two phases are what stop the milestone's forward-looking findings and its lessons
+  from dying with the conversation that held them.
 
 **Carry-forward rule:** doc changes made after the slice's PR merged land on the *next* slice's
 branch, not a PR of their own. Gate 4 requires a CHANGELOG diff on every branch, so a doc-only PR
@@ -732,3 +755,105 @@ changes, noted for the next branch):
 
 Then return to **Orient** for the next slice, already on Opus 5 — which, coming out of a Clear,
 means reading the repo rather than resuming a conversation.
+
+## Discover
+
+**Forward-looking. Independently invocable (`/discover`); automatic at milestone close, before
+Learn.** Discover asks what the product and the project should be considering next, and answers it
+from the repo's actual state rather than from a feature list someone supplies.
+
+**What it investigates:** new customer problems, business opportunities, UX friction, operational
+gaps, risks, unexamined assumptions, market or competitor observations, technical constraints, and
+areas that may deserve future attention but currently have no owner.
+
+**The classification step is the whole point.** Every finding must be placed in one of three
+buckets before it is written down:
+
+- **Already implemented** — cite the file or schema field. It is not a discovery.
+- **Already tracked** — cite the issue number and its roadmap phase, including if it was
+  *deliberately* deferred or ruled out by an ADR. It is not a discovery either, and re-proposing it
+  as one destroys trust in the whole log.
+- **Genuinely unowned** — no issue, no spec, no schema support. Only these are findings.
+
+Grounding sources, in order of authority: the schema and code; `specs/roadmap.md` and the open
+issues; the ADRs; `CLAUDE.md`; then anything external. **Actual implementation reality outranks any
+document that describes it** — this repo has repeatedly found docs asserting properties the code did
+not have.
+
+**Separate observation from interpretation from recommendation, always.** An observation cites a
+line. An interpretation is labelled as one. A confidence level (Known / Inferred / Needs
+validation) is stated. An assumption presented as evidence is the failure mode this phase exists to
+prevent.
+
+**Discover may challenge an approved plan** — wrong sequencing, a gate nobody noticed, a simpler
+alternative, a grocery-behaviour conflict — and it should, rather than quietly agreeing. What it
+must never do is **change** approved scope. A challenge is written as a finding with a next action,
+and it goes through `/propose` like anything else.
+
+**Output:** one entry per finding appended to `docs/research/discovery-log.md`, each ending in
+exactly one next action: `RESEARCH MORE`, `PROPOSE`, `ADD TO ROADMAP/BACKLOG`, `READY FOR SPEC`, or
+`DO NOT PURSUE`. Findings that warrant action become GitHub issues; a finding that stays a hypothesis
+stays in the log and nowhere else.
+
+**Discover writes no code and opens no PR of its own.** It is a read-and-write-docs pass.
+
+## Learn
+
+**Backward-looking. Independently invocable (`/learn`); automatic at milestone close, immediately
+after Discover.** Learn evaluates the milestone that just completed.
+
+**What it evaluates:** what was actually delivered against what the milestone said it would deliver;
+what worked and what did not; which assumptions were validated and which were disproved; what
+emerged that nobody planned for; which decisions and approaches should be repeated or avoided; and
+which lessons should change how future work is done.
+
+**Evidence discipline is the hard part.** Where measurable evidence exists — merged PRs, roadmap
+change-log rows, issue outcomes, CI run ids, live queries — use it and cite it. Where it does not,
+**state that no evidence is available and stop**. A retrospective that fills its gaps with plausible
+narrative is worse than one with holes in it, because the next reader cannot tell which rows were
+measured. "Still untested" is a legitimate and common outcome, especially for a milestone that
+shipped before any instrumentation existed.
+
+**Promotion is what makes a lesson durable, and the log is not promotion.** A lesson that changes
+how every future session works belongs in `CLAUDE.md`; one that changes the process belongs in this
+file; one that can be mechanically enforced belongs in a test or a CI check. This repo has paid
+repeatedly for rulings that lived only in a document nobody opens at decision time — the
+retrospective records the lesson, and the promotion is a separate, explicit act that the entry must
+name.
+
+**Learn also closes the research loop.** For any hypothesis that entered the milestone from
+`docs/research/discovery-log.md`, return to it and ask whether the behaviour it predicted actually
+changed. Record the answer — including "we still cannot tell" — and recommend iteration, rollback or
+abandonment. Defending a shipped idea against its own evidence is the anti-pattern.
+
+**Output:** one entry appended to `docs/research/milestone-retrospectives.md`, plus whatever
+promotions it names, plus any issues filed.
+
+## Milestone close (Discover, then Learn)
+
+A milestone closes when its last slice has been shipped, promoted to `main`, and documented — the
+same moment `specs/roadmap.md` gains its phase-closure change-log row.
+
+At that moment, **run `/discover` then `/learn`**, and treat the pair as part of closing the
+milestone rather than optional extra work:
+
+1. `/document` (final) completes as it always has — KMS index, roadmap closure row, board
+   reconciliation, `npm run sdd:audit` clean.
+2. **`/discover`** — findings appended to `docs/research/discovery-log.md`, issues filed for
+   anything with a next action beyond `RESEARCH MORE`.
+3. **`/learn`** — retrospective appended to `docs/research/milestone-retrospectives.md`, lessons
+   promoted to `CLAUDE.md` / this file / a test, and hypotheses from the last cycle answered.
+4. Both files' front-matter `version` and `updated` bumped, then `npm run kms:validate` and
+   `npm run kms:build-index` re-run — these are KMS artifacts and go stale like any other.
+5. Only then the model switch and `/clear`.
+
+**Why Discover runs first.** Learn should be able to react to what Discover surfaced; a
+retrospective written first will re-derive half of it and miss the rest.
+
+**Why neither is a gate.** Both write evidence, and evidence that a merge depends on gets written to
+pass rather than to be true. The four SDD gates stay exactly as they are.
+
+**These two phases produce no implementation scope by themselves.** Everything they surface reaches
+the roadmap through `/propose`, and reaches code through `/spec`. That is not a formality here — it
+is the only thing keeping a research phase from becoming an unbounded backlog of work nobody agreed
+to do.

@@ -336,6 +336,18 @@ Most stages are slash commands (`/orient`, `/propose`, `/spec`, `/build`, `/buil
 `/validate`, `/fix`, `/ship`, `/document`). For detailed procedures on each stage, read the corresponding markdown file in `.claude/commands/`. Use them; that doc carries lessons already paid for
 (stale-doc traps, CI-vs-local-Windows drift, PR merge races) that are easy to relearn the hard way.
 
+**Two further phases sit outside that per-slice loop and run on the MILESTONE, not the slice:**
+**`/discover`** (forward-looking — unowned customer problems, opportunities, friction, operational
+gaps, risks, assumptions, constraints) and **`/learn`** (retrospective — what a completed milestone
+actually delivered, which assumptions held, what emerged, which lessons get promoted). Both are
+invocable at any time, and both run **automatically at milestone close, Discover first**, as part of
+the final `/document` and before the model switch and second `/clear`. Their output is evidence, not
+scope: findings append to `docs/research/discovery-log.md` and
+`docs/research/milestone-retrospectives.md`, and reach the roadmap only through `/propose`. **Neither
+is a gate** — evidence a merge depends on gets written to pass rather than to be true, so the four
+gates above are unchanged. **A lesson recorded only in the retrospective has not been promoted**;
+anything that should change every future session belongs in this file.
+
 Two rules the assistant **cannot** enforce for itself, so it must ask:
 - **`/clear` is user-invoked.** Before either Clear, everything load-bearing must be committed — a
   Clear destroys anything living only in the conversation. `/build-notes` exists to get it on disk.
