@@ -233,29 +233,41 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   1. **No environment approval gate.** GitHub's required-reviewers protection needs a paid plan for
      private repos and was rejected with a 422 on this repo's current (free) plan. `environment:
      production` in `deploy-production.yml` selects that environment's secret set and nothing more.
-  2. **No required review and no required status check on either branch** — but `main` IS covered
-     by a **repository ruleset**, and this line said "No branch protection at all, on either branch"
-     until 2026-09-02 (#537). **The check it cited cannot see rulesets.**
+  2. **No required status check on either branch** — but **both branches ARE covered by repository
+     rulesets**, and this line said "No branch protection at all, on either branch" until
+     2026-09-02 (#537). **The check it cited cannot see rulesets.**
      `gh api repos/sriahead/aheed-online-store/branches/main/protection` queries *classic* branch
      protection and returns **`404 Branch not protected`** whether or not a ruleset is active, so
      P9.2's verification was structurally incapable of finding the thing it concluded was absent.
-     **Use `gh api repos/sriahead/aheed-online-store/rulesets` instead** (add
-     `/<id>` for the rules). Actual state, confirmed 2026-09-02: an **active** ruleset
-     `protect-main` whose condition is `~DEFAULT_BRANCH` — so **`main` only, `staging` is not
-     covered at all**. It carries `pull_request` (a PR is required, so a **direct push to `main`
-     is blocked**), `non_fast_forward` and `deletion`. It carries
-     **`required_approving_review_count: 0`**, **no `required_status_checks` rule**, and **no
-     bypass actors**.
-  So the substance of the warning survives, narrowed: a PR into `main` can be opened and merged by
-  its own author with every check red, and nothing constrains its source branch. This is not
-  theoretical — **PRs #464, #465 and #466 all merged straight into `main` on 2026-08-30**, bypassing
-  `staging` entirely, and `deploy-production` ran on each; the ruleset would not have stopped any of
-  them. Treat PR review discipline as the only real gate, and check the base branch of every PR you
-  open. Requiring reviews or status checks needs a plan upgrade, a public repo, or an explicit
-  decision to accept the risk — a decision, not code (#472).
+     **Use `gh api repos/sriahead/aheed-online-store/rulesets` instead** (add `/<id>` for the
+     rules), and **`gh api repos/sriahead/aheed-online-store/rules/branches/<branch>` to ask what
+     actually applies to a branch** — that second endpoint is the one that catches a ruleset
+     created successfully with a ref condition matching nothing, which a reading of the
+     declaration alone cannot.
+     Actual state, confirmed 2026-09-02: two **active** rulesets, each carrying `pull_request`
+     (so a **direct push to either branch is blocked**), `non_fast_forward` and `deletion`, each
+     with **`required_approving_review_count: 0`**, **no `required_status_checks` rule** and **no
+     bypass actors**. `protect-main`'s condition is `~DEFAULT_BRANCH` (`main` only);
+     **`protect-staging`** (added by #539) is scoped to `refs/heads/staging`.
+  So the substance of the warning survives, narrowed further: **a PR into either branch can still be
+  opened and merged by its own author with every check red** — that is #472's territory, and adding
+  a `required_status_checks` rule was deliberately left out of #539 because whether it is available
+  on this plan is unverified and a misnamed required check blocks every merge. What is no longer
+  possible is reaching either branch *without* a PR at all. Note the paid-plan 422 recorded above
+  is about **required reviewers specifically**, not about rulesets — reading it as "branch
+  protection is unavailable here" is what kept `staging` uncovered for so long.
+  The historical warning still stands as written for a different reason: **PRs #464, #465 and #466
+  all merged straight into `main` on 2026-08-30**, bypassing `staging` entirely, and
+  `deploy-production` ran on each; **neither ruleset would have stopped any of them**, since each
+  was a genuine PR and nothing constrains a PR's *source* branch. Treat PR review discipline as the
+  only real gate for that, and check the base branch of every PR you open.
 - **Quality checks live in `.github/workflows/quality.yml`** (`on: workflow_call`), added by P9.2
-  (#435). Both `gates.yml` and `deploy-production.yml` call it, so the production path runs exactly
-  what a PR runs. **Add a new check there, not to a caller** — duplicating the steps into each is
+  (#435). **All three of `gates.yml`, `deploy-staging.yml` and `deploy-production.yml` call it**, so
+  neither deploy path runs a weaker set than a PR runs. (`deploy-staging.yml` was the last to get it,
+  in #539; it previously ran **no** checks, justified by a comment asserting that `gates` had already
+  run on the PR that produced the merge — true only once a ruleset made a PR mandatory, which is why
+  #539 added `protect-staging` in the same slice rather than the workflow job alone.)
+  **Add a new check there, not to a caller** — duplicating the steps into each is
   what let the production path drift to running none at all. **Only the Gate 4 CHANGELOG diff stays
   inline in `gates.yml`'s `docs-gates` job**, because it genuinely needs `github.base_ref`, which a
   `push` event does not have.
@@ -265,9 +277,14 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   it never did — it copied a file, regenerated, and diffed. That untrue sentence, repeated in three
   places, is the whole reason the production deploy path ran **no** KMS checks at all. The `kms` job
   is separate from `quality` because `continue-on-error` is per-job: it is **blocking on the
-  pull-request path and non-blocking on the production path** (`kms_blocking: false` from
-  `deploy-production.yml`). The PR is the gate; on `main` the same check is a drift tripwire, and
-  failing a deploy cannot un-merge drift that already landed — it only withholds the fix.
+  pull-request path and non-blocking on both deploy paths** (`kms_blocking: false` from
+  `deploy-production.yml` and, since #539, from `deploy-staging.yml`). The PR is the gate; on a
+  branch the same check is a drift tripwire, and failing a deploy cannot un-merge drift that already
+  landed — it only withholds the fix. **Whether the non-blocking branch actually resolves as
+  intended is still unverified (#541)** — `continue-on-error` is inert on a *passing* job, so the
+  first post-promotion `deploy-production` run (`33606818256`, 2026-09-02) proved nothing despite
+  being the run everyone was waiting for. The failure direction is safe: a broken expression stays
+  blocking.
 - **`npm run kms:build-index` writes TWO files** — `ARTIFACT_INDEX.md` and
   `app/(admin)/staff/runbook/docs.ts` — and they go stale under **different** conditions, which is
   what made a one-file check look adequate for so long. The index renders **front-matter only**;
