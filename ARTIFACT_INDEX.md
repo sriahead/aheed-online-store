@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-02T01:26:20.623Z` · commit `3e52fae` · `137` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-02T08:42:39.203Z` · commit `0883249` · `138` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -135,6 +135,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Storefront browsing affordances — a browse mode for /search, working View all links, a /bundles page (plan)](specs/2026-09-01-storefront-browsing-affordances/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Bare /search renders nothing because the whole grid is gated on a query, so the shop page's only View all is a dead end; this gives /search a browse mode, wires a View all onto every row, and adds the /bundles page one of them needs. |
 | [Products in every subcategory, for both vendors (plan)](specs/2026-09-01-subcategory-products/plan.md) | spec | 1.0.0 | 2026-09-01 | draft | internal | Every one of production's 31 subcategories was empty because the curated fixture assigns all its products to top-level categories; both vendors' second tier is now filled with curated, category-appropriate products and their own images. |
 | [Every generated KMS artefact is checked, on both CI paths (plan)](specs/2026-09-02-kms-generated-artifact-coverage/plan.md) | spec | 1.0.0 | 2026-09-02 | draft | internal | kms:build-index writes two files but every staleness check watched only one, so a stale staff runbook reached production while CI stayed green. The output list becomes the single source of truth, and both KMS checks move to the shared quality workflow. |
+| [The staging deploy path is gated, and its own comment becomes true (plan)](specs/2026-09-02-staging-deploy-gates/plan.md) | spec | 1.0.0 | 2026-09-02 | draft | internal | deploy-staging runs no checks, justified by a comment asserting that gates already ran on the PR — a premise nothing enforces, because no ruleset covers staging. This adds the ruleset that makes the claim true and the quality job that catches the case it misses. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.21.1 | 2026-08-27 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

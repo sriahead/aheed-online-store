@@ -6,6 +6,42 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`#539` — the staging deploy path is gated, and its own comment becomes true**
+  (`specs/2026-09-02-staging-deploy-gates/`). `.github/workflows/deploy-staging.yml` ran **no** lint,
+  typecheck, test, format or KMS check: on a push to `staging` it went straight to build, migrate and
+  deploy. That was deliberate, and the file said so — its justification was that `gates` had already
+  run those checks on the pull request that produced the merge.
+  **The reasoning was sound and its premise was unenforced.** `gates` triggers `on: pull_request`, so
+  a commit reaching `staging` without a PR never runs it — and nothing stopped one. The
+  `protect-main` ruleset's condition is `~DEFAULT_BRANCH`, which resolves to `main` and nothing else;
+  there was no ruleset and no classic protection on `staging` at all. A direct push therefore
+  deployed to `staging.aheedfoodcentre.nocaped.com`, running migrations against the staging database
+  along the way, having executed no check of any kind.
+  **Both halves are now closed, because neither subsumes the other.** A new **`protect-staging`**
+  repository ruleset (`refs/heads/staging`, `pull_request` with zero required approvals,
+  `non_fast_forward`, `deletion`, no bypass actors, `active`) makes a PR mandatory, so `gates`
+  cannot be skipped — this is the half that makes the workflow's own comment a checkable claim
+  rather than an assumption. `deploy-staging.yml` additionally gained a `quality` job calling
+  `quality.yml` with `kms_blocking: false`, with `deploy` declaring `needs: quality` — the half that
+  catches what a ruleset cannot, a PR whose checks went red and was merged regardless.
+  **The ruleset half was affordable, which had to be checked rather than assumed.** `CLAUDE.md`
+  recorded that required-reviewer protection "needs a paid plan for private repos and was rejected
+  with a 422", which reads as "branch protection is unavailable here" and is how `staging` stayed
+  uncovered. Reading `protect-main`'s actual payload showed it uses
+  `required_approving_review_count: 0`, no `required_status_checks` rule and no bypass actors — no
+  paid feature — so an exact mirror was creatable, and was.
+  **Verification distinguishes a ruleset being *declared* from being *applied*.** The failure mode a
+  ruleset has is being created successfully with a ref condition that matches nothing, so the spec
+  checks `gh api .../rules/branches/staging` (returns `pull_request`), `.../rules/branches/main`
+  (unchanged), and the feature branch (returns `[]`, proving the condition does not over-match) —
+  never `/branches/staging/protection`, which returns `404 Branch not protected` whether or not a
+  ruleset is active. Deliberately **not** in scope: a `required_status_checks` rule on either branch,
+  which stays **#472** — a red PR remains mergeable into both branches, and `CLAUDE.md` still says
+  so. `deploy-docs-internal.yml` still runs no checks of its own; the ruleset removes its
+  direct-push exposure on `staging` as a side effect.
+
 ### Documentation
 
 - **`/document` closeout for `#537` and `#473`.** PR #540 merged to `staging`; `deploy-staging`
