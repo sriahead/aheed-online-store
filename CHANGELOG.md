@@ -6,6 +6,34 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **A refused Stripe payment binding is now recorded, discoverable and recoverable** (`#454`,
+  P9.2). `#429` made the webhook fail closed, correctly — but a refusal against a *genuine* payment
+  leaves a charged shopper's order stuck `PENDING_PAYMENT`, and the only trace was a
+  `console.error`. That route returns 200 and nothing throws, so `onRequestError` never fires and
+  **no `ErrorEvent` row is written** — `/staff/errors` could never have shown one.
+  New **`PaymentBindingRefusal`** model records one row per loud refusal with both what the event
+  claimed and what the order stored; `already-processed` stays silent, as a duplicate delivery is
+  Stripe working as intended. This is a table rather than a query over existing state because
+  `PENDING_PAYMENT` plus a non-null `providerReference` cannot separate an abandoned checkout from a
+  never-arrived webhook (`#101`) from a refused binding, and only the last must **not** be re-driven.
+  New vendor-scoped **`/staff/payments`** lists them with two actions. Reconciliation asks the
+  provider about the order's **own stored** session — never the id the refused event claimed, which
+  is the value under suspicion. Recovery builds a binding from the provider's response and calls the
+  **unchanged** `confirmPayment`, so it introduces **no second path to `CONFIRMED`** and a refusal
+  that was correct cannot be confirmed away by a staff click.
+  `lib/repositories/orders.ts` is **byte-identical** — persistence sits in the
+  `getWebhookOrderService()` facade and never rethrows, since failing the webhook to record a
+  forensic row would make Stripe retry an event that can never succeed.
+  `PaymentService` gains **`retrieveSession()`**, its first read method (raw `fetch`, no `stripe`
+  SDK); the stub never reports a session paid. ADR-005 → 1.7.0 records why recovery reuses the
+  existing binding, and that **refunds and the capture method remain undecided**.
+  **The generated migration proposed `DROP INDEX` for all three hand-authored `pg_trgm` indexes** —
+  the `#508` drift, triggered by a model with no relationship to `Order` or `User`. `--create-only`
+  plus reading the SQL caught it before it applied; the drops were removed and all three indexes
+  verified still present on the dev branch.
+
 ### Documentation
 
 - **`/document` closeout for `#550`.** PR #552 merged to `staging` (`6de0131`) and PR #553 promoted
