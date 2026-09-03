@@ -9,6 +9,7 @@ import { ProductFilterForm } from "@/components/product/ProductFilterForm";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
 import { searchPageHref } from "@/components/product/search-href";
+import { SearchTruncationNotice } from "@/components/product/SearchTruncationNotice";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
 // can't load during next build's Node-based static prerendering.
@@ -82,6 +83,10 @@ export default async function SearchPage({
   const result = query ? await products.search(query, options) : await products.list(options);
   const items = result.items;
   const nextCursor = result.nextCursor;
+  // #564 — the repository decides this, not the page: it is the only layer that
+  // knows whether more matches existed than it was willing to rank. `list()`
+  // always reports false, so browse mode never shows the notice.
+  const truncated = result.truncated;
 
   const specialities = await products.availableSpecialities();
   // P8.5a (#345): request-memoised, shared with the header's cart read.
@@ -107,6 +112,8 @@ export default async function SearchPage({
 
         <div className="flex-1">
           <h1 className="mb-6 text-2xl font-semibold text-primary">{heading}</h1>
+
+          <SearchTruncationNotice truncated={truncated} />
 
           {items.length === 0 ? (
             /*

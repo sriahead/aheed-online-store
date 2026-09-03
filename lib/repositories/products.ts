@@ -3,6 +3,8 @@ import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import { effectiveStock } from "@/lib/cart-rules";
 import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
+import { parseSearchQuery } from "@/lib/search-query";
+import { rankSearchCandidates } from "@/lib/search-ranking";
 import {
   MAX_IMAGE_ATTEMPT_FAILURES,
   PLACEHOLDER_IMAGE_SUFFIX,
@@ -87,6 +89,22 @@ export interface ProductDetail extends ProductSummary {
 export interface ProductPage {
   items: ProductSummary[];
   nextCursor: string | null;
+  /**
+   * P2.6 slice 1 (#564) — true when and only when MORE results exist than
+   * `searchProducts` was willing to rank, so the page can say so rather than
+   * presenting a partial set as if it were complete.
+   *
+   * Set by a SENTINEL ROW, not by the cap being reached: the fetch asks for
+   * `SEARCH_CANDIDATE_LIMIT + 1` rows and this is `rows.length > limit`.
+   * Defining it as "the cap was reached" would make it LIE when the catalogue
+   * holds exactly `SEARCH_CANDIDATE_LIMIT` matches — nothing would be missing,
+   * yet the shopper would be told the list is incomplete. One extra row buys a
+   * flag that means what it says.
+   *
+   * Always `false` for the keyset-paginated paths (`listProducts`,
+   * `listProductsByCategory`), which are not capped at all.
+   */
+  truncated: boolean;
 }
 
 /** Shared filter shape for listByCategory(), search() and list() — one definition, not three. */
@@ -178,7 +196,14 @@ const adminProductImageSelect = {
   sortOrder: true,
 } as const;
 
-function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereInput {
+/**
+ * Exported for `tests/search-repository.test.ts` (#564, R8), which asserts that
+ * `searchProducts`'s composed `where` still contains every filter by comparing
+ * against this helper's own output rather than against a hand-written copy of
+ * it. A hand-written expectation is what lets a filter silently stop being
+ * applied: it drifts from the helper and the test keeps passing.
+ */
+export function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereInput {
   const where: Prisma.ProductWhereInput = {};
   if (filters.minPricePence !== undefined || filters.maxPricePence !== undefined) {
     where.basePrice = {
@@ -197,6 +222,64 @@ function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereInput {
 }
 
 /**
+ * The columns every storefront ProductSummary is built from. One definition, so
+ * the keyset path and the ranked search path cannot select different shapes and
+ * drift into returning different fields (#564, R18).
+ */
+const productSummarySelect = {
+  id: true,
+  slug: true,
+  name: true,
+  basePrice: true,
+  unitLabel: true,
+  origin: true,
+  originalPrice: true,
+  isHalal: true,
+  isFresh: true,
+  isOrganic: true,
+  averageRating: true,
+  reviewCount: true,
+  images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
+  inventory: { select: { quantity: true, lowStockThreshold: true } },
+} as const;
+
+/** A row as selected by `productSummarySelect`. */
+type ProductSummaryRow = Prisma.ProductGetPayload<{ select: typeof productSummarySelect }>;
+
+/**
+ * Row to ProductSummary. Shared by `findPage` and `searchProducts` (#564, R18):
+ * this mapping used to be inline in `findPage`, so the ranked search path would
+ * have needed a second copy, and two copies of a fifteen-field mapping is how
+ * one storefront surface quietly starts rendering a field the other does not.
+ *
+ * `tier` is a parameter because the two paths resolve tiers at different points
+ * — `findPage` after slicing its keyset page, search after slicing its RANKED
+ * page — but both look them up for at most `take` products, never for the whole
+ * candidate set.
+ */
+function toProductSummary(row: ProductSummaryRow, tier: ProductTier | null): ProductSummary {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    basePrice: row.basePrice,
+    unitLabel: row.unitLabel,
+    origin: row.origin,
+    originalPrice: row.originalPrice,
+    isHalal: row.isHalal,
+    isFresh: row.isFresh,
+    isOrganic: row.isOrganic,
+    averageRating: row.averageRating,
+    reviewCount: row.reviewCount,
+    primaryImage: row.images[0] ?? null,
+    inStock: (row.inventory?.quantity ?? 0) > 0,
+    stockQuantity: effectiveStock(row.inventory?.quantity),
+    lowStockThreshold: row.inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
+    tier,
+  };
+}
+
+/**
  * Storefront product reads (#252). Every one takes `prisma` and `vendorId` as
  * explicit arguments and reads no request context — the request-scoped facade
  * that resolves both lives in `lib/products-service.ts`.
@@ -210,27 +293,17 @@ async function findPage(
   // Keyset (cursor) pagination on (createdAt, id) — never OFFSET, per
   // specs/architecture.md's pagination strategy. Over-fetch by one to
   // know whether a next page exists without a separate count query.
+  //
+  // #564 amended that rule for `searchProducts` ALONE, which cannot use this
+  // function because its sort key is computed rather than stored. Nothing here
+  // changed: this is still keyset, and it is still what every browse and
+  // category listing uses.
   const rows = await prisma.product.findMany({
     where,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: take + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      basePrice: true,
-      unitLabel: true,
-      origin: true,
-      originalPrice: true,
-      isHalal: true,
-      isFresh: true,
-      isOrganic: true,
-      averageRating: true,
-      reviewCount: true,
-      images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
-      inventory: { select: { quantity: true, lowStockThreshold: true } },
-    },
+    select: productSummarySelect,
   });
 
   const hasMore = rows.length > take;
@@ -244,26 +317,10 @@ async function findPage(
   );
 
   return {
-    items: page.map((p) => ({
-      id: p.id,
-      slug: p.slug,
-      name: p.name,
-      basePrice: p.basePrice,
-      unitLabel: p.unitLabel,
-      origin: p.origin,
-      originalPrice: p.originalPrice,
-      isHalal: p.isHalal,
-      isFresh: p.isFresh,
-      isOrganic: p.isOrganic,
-      averageRating: p.averageRating,
-      reviewCount: p.reviewCount,
-      primaryImage: p.images[0] ?? null,
-      inStock: (p.inventory?.quantity ?? 0) > 0,
-      stockQuantity: effectiveStock(p.inventory?.quantity),
-      lowStockThreshold: p.inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
-      tier: tiers.get(p.id) ?? null,
-    })),
+    items: page.map((p) => toProductSummary(p, tiers.get(p.id) ?? null)),
     nextCursor: hasMore ? page[page.length - 1].id : null,
+    // Never capped — this path pages through everything by keyset.
+    truncated: false,
   };
 }
 
@@ -356,29 +413,117 @@ export async function listProducts(
   );
 }
 
+/**
+ * How many matching rows search is willing to RANK (#564).
+ *
+ * Exported so tests assert against the constant rather than a literal, and so
+ * `scripts/verify-search-slice.ts` can decide whether a live query is even
+ * capable of exceeding it.
+ *
+ * The cap exists because relevance is computed in JavaScript
+ * (`lib/search-ranking.ts` explains why it cannot be computed in SQL here), and
+ * an uncapped fetch would make the cost of a broad single-word query
+ * proportional to the catalogue. What it costs is stated plainly rather than
+ * hidden: a query matching more than this cannot reach the products beyond it,
+ * WHICH of them are ranked is decided by the fetch's own `createdAt desc,
+ * id desc` order rather than by relevance, and `ProductPage.truncated` tells the
+ * page to say so. Raising it needs an index that can serve ranking, or #286.
+ */
+export const SEARCH_CANDIDATE_LIMIT = 200;
+
+/**
+ * The search cursor is an OFFSET into the ranked candidate array, not a keyset
+ * id (see `specs/architecture.md`'s scoped exception). Parsed defensively:
+ * anything that is not a non-negative integer is page zero rather than an
+ * error, because a cursor arrives straight from a URL a shopper may have
+ * edited, bookmarked or truncated.
+ */
+function parseSearchOffset(cursor: string | undefined): number {
+  if (cursor === undefined) return 0;
+  const parsed = Number(cursor);
+  if (!Number.isInteger(parsed) || parsed < 0) return 0;
+  return parsed;
+}
+
+/**
+ * Storefront search (#564).
+ *
+ * Two things changed here and nowhere else. First, the query is TOKENISED: the
+ * predicate is an AND over the parsed terms, each satisfied by a
+ * case-insensitive `contains` on name OR description. It previously passed the
+ * whole query to one `contains`, so `basmati rice` matched only that exact
+ * substring in that exact order and any multi-word search returned nothing.
+ * Recall at the SQL level is deliberately unchanged — a term may still be
+ * satisfied by the description; what changed is that EVERY term must be
+ * satisfied by something.
+ *
+ * Second, results are RANKED rather than ordered by recency, which is why this
+ * no longer uses `findPage`: the sort key is computed, so keyset pagination on
+ * (createdAt, id) cannot express it. It fetches a bounded candidate set, ranks
+ * it purely, slices the requested page, and only THEN looks up tier pricing —
+ * for the twelve rows being rendered, not for all two hundred candidates.
+ */
 export async function searchProducts(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
   query: string,
   { take, cursor, ...filters }: { take: number; cursor?: string } & ProductFilters,
 ): Promise<ProductPage> {
-  const trimmed = query.trim();
-  if (!trimmed) return { items: [], nextCursor: null };
+  const terms = parseSearchQuery(query);
+  // Guard retained from the original (#211's split): search() means "match this
+  // text", and an empty box is the PAGE's decision to browse instead — see
+  // ProductRepository.list's docstring. Returns before touching the client at
+  // all, which is what `tests/search-repository.test.ts` asserts with spies.
+  if (terms.length === 0) return { items: [], nextCursor: null, truncated: false };
 
-  return findPage(
-    prisma,
-    vendorId,
-    {
+  const rows = await prisma.product.findMany({
+    where: {
       vendorId,
       isActive: true,
       ...buildFilterWhere(filters),
-      OR: [
-        { name: { contains: trimmed, mode: "insensitive" } },
-        { description: { contains: trimmed, mode: "insensitive" } },
-      ],
+      // One AND clause per term, each satisfied by name OR description.
+      AND: terms.map((term) => ({
+        OR: [
+          { name: { contains: term, mode: "insensitive" as const } },
+          { description: { contains: term, mode: "insensitive" as const } },
+        ],
+      })),
     },
-    { take, cursor },
+    // A TOTAL order, so which rows land inside the cap is deterministic even
+    // when createdAt ties right at the boundary. Without `id`, two products
+    // sharing a timestamp could swap across the cap between identical requests.
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    // The +1 row is a truncation sentinel and nothing else: it is never ranked
+    // and never rendered. See ProductPage.truncated for why the flag is not
+    // simply "the cap was reached".
+    take: SEARCH_CANDIDATE_LIMIT + 1,
+    select: productSummarySelect,
+  });
+
+  const truncated = rows.length > SEARCH_CANDIDATE_LIMIT;
+  const candidates = rows
+    .slice(0, SEARCH_CANDIDATE_LIMIT)
+    .map((row) => toProductSummary(row, null));
+
+  const ranked = rankSearchCandidates(candidates, terms);
+  const offset = parseSearchOffset(cursor);
+  // An offset at or beyond the ranked count yields an honest empty page rather
+  // than bouncing back to page one, which would loop a shopper who followed a
+  // stale deep link. `truncated` is still the real value — the fetch happened.
+  const page = ranked.slice(offset, offset + take);
+
+  const tiers = await listActiveTiersForProducts(
+    prisma,
+    vendorId,
+    page.map((p) => p.id),
   );
+
+  const nextOffset = offset + take;
+  return {
+    items: page.map((p) => (tiers.has(p.id) ? { ...p, tier: tiers.get(p.id) ?? null } : p)),
+    nextCursor: nextOffset < ranked.length ? String(nextOffset) : null,
+    truncated,
+  };
 }
 
 export async function getProductBySlug(

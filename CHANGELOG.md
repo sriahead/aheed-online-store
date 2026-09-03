@@ -6,6 +6,75 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Storefront search now matches multi-word queries, and ranks results by relevance instead of
+  recency** (`#564`, P2.6). `searchProducts` passed the whole trimmed query to a single `contains`,
+  so `basmati rice` matched only that exact substring in that exact order — every multi-word or
+  out-of-order query returned **nothing**, before typos or synonyms entered the picture. Confirmed
+  live in both directions against the dev catalogue: the old predicate returns 0 rows for
+  `rice basmati`, the new one finds *Basmati Rice 5kg*.
+  New **`lib/search-query.ts`** tokenises (capped at 10 terms so a pasted paragraph cannot build an
+  unbounded predicate) and the query becomes an `AND` of one clause per term, each satisfied by
+  `name` **or** `description`. SQL-level recall is deliberately unchanged; what changed is that
+  *every* term must now be satisfied by something. Kept separate from `lib/shopping-list.ts` — they
+  must differ on leading quantities (`5kg basmati rice` is one product, `2 apples` is two) — with a
+  test pinning them together on every quantity-free input.
+  New **`lib/search-ranking.ts`** ranks over five tiers. **Relevance dominates availability
+  deliberately:** an out-of-stock product whose name matches every term outranks an in-stock one
+  that matched only through its description, because burying an out-of-stock staple reads to a
+  grocery shopper as "they do not sell this", and `inStockOnly` is a filter they already have.
+  `searchProducts` no longer uses `findPage`: a keyset cursor's ordering key has to *be* the sort
+  key, and relevance is computed rather than stored. It fetches a bounded candidate set, ranks it
+  purely, slices the page, and only then looks up tier pricing — for the twelve rows rendered, not
+  all two hundred candidates. `findPage` is unchanged and still serves every browse and category
+  listing. **`specs/architecture.md` (1.22.0) carries the one scoped exception** to the keyset rule,
+  argued from that rule's own rationale — `OFFSET` is banned because it degrades linearly, and a
+  bounded query does not — and explicitly forbids citing itself for offset pagination over an
+  unbounded query.
+  `ProductPage` gains **`truncated`**, set by a **sentinel row** (fetch 201, rank 200), not by the
+  cap being reached: "cap reached" would **lie** when the catalogue holds exactly 200 matches —
+  nothing missing, yet the shopper told the list is incomplete. A test asserts the exactly-200 case
+  specifically, since it is the only one that distinguishes the two semantics.
+  The row-to-summary mapping is extracted to a shared `toProductSummary`, so the keyset and ranked
+  paths cannot drift into returning different fields.
+  Search p95 re-measured at **67.6 ms** against a 400 ms target and recorded in `nfr-baseline.md`
+  (1.3.0) beside the previous figure — **not** as evidence the new query is faster: four untouched
+  paths moved in the same run and one got slower by more than search got faster.
+  Two spec errors were corrected at Build from real measurement: `plan.md` guessed that a broad word
+  such as `chicken` could exceed the candidate cap (it matches **3** products; `e` matches 2,026),
+  and `validation.md`'s optional row named `chicken` directly — so a validator following it
+  literally would have recorded the truncation notice as unreachable when it is not. Low-information
+  terms are tracked as **`#572`**.
+
+### Changed
+
+- **The DB dependency pins are now exact, and `CLAUDE.md` finally describes the ones actually
+  running** (`#491`, P9.2). Filed as *drift*; it was not. Both pins moved in one deliberate commit —
+  `ac3f0d6` (2026-08-14), the Cloudflare connection-exhaustion fix that introduced `lib/db.ts`'s
+  hybrid `getPrisma()`/`getPrismaWs()` strategy — which updated `CLAUDE.md`'s hybrid-driver section
+  but **not** its pin paragraph. So the lockfile was current and the doc was stale for three weeks,
+  and because both became **caret** ranges, `npm install` could have moved them again at any point.
+  Ratified rather than reverted: reverting would have undone the dependency half of a real
+  production fix. `@neondatabase/serverless` **1.1.0**, `@prisma/adapter-neon` **7.9.1** and
+  `@prisma/client` **6.19.3** are now declared with no range operator. **No runtime code changed** —
+  these are the versions already installed.
+  New **`tests/dependency-pins.test.ts`** asserts the installed version *and* the absence of a range
+  operator, because checking only the version passes right through a re-loosened pin that still
+  resolves correctly today — precisely the state the repo was in. Proven non-vacuous by mutation.
+  `CLAUDE.md`'s paragraph carried **four** false claims, not one: both pins; `@cloudflare/workers-types`
+  "must match wrangler's major (v5)" (false in both halves — types are `5.20260804.1` against
+  wrangler `4.119.0`, now recorded as an observed pairing rather than an asserted rule); and the
+  suite size `74/874`, measured at **77/903**. That last one mattered most: the file count is taught
+  as *the tell* for the silent worker-startup trap, so a stale number **disabled the detection it
+  exists to provide**.
+  `@prisma/adapter-neon` remains a full major ahead of `@prisma/client`; that straddle is deliberate,
+  now recorded, and tracked by `#560`. Nothing in the toolchain can warn about it — adapter-neon@7
+  declares **no `peerDependencies` at all**, so npm has nothing to check the client against.
+  The lockfile **had** to be re-synced: it mirrors declared specifiers, all eight workflows run
+  `npm ci`, and `npm ci` refuses to install when manifest and lockfile disagree. Verified with a
+  real clean install; zero resolved versions moved anywhere in the tree.
+
 ### Added
 
 - **A refused Stripe payment binding is now recorded, discoverable and recoverable** (`#454`,
@@ -36,6 +105,29 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` closeout for `#564`.** PR #573 merged to `staging` (`5a79675`); `deploy-staging` and
+  `deploy-docs-internal` both completed success. `specs/roadmap.md` 1.68.0 gains this slice's own
+  build/merge row, a new **P2.6 — Search & AI shopping** phase entry (six slices, `#564`–`#569`,
+  sequenced ahead of `P9.2`–`P9.4` by decision at `/propose`), and a **board-limitation note**: the
+  delivery board's Phase field predates P2.6 in its fixed option list, so P2.6 items park on Phase
+  `P2.5` rather than reuse the "stays on `P8`" convention every later inserted phase already uses.
+  `npm run sdd:audit` reports zero gaps. `#564` moved to **In Review** on Project #2; **P2.6 does not
+  close on this merge** — five slices remain (`#565`–`#569`), all on the board at `Backlog`. No
+  correction to `build-notes.md` was needed — everything it recorded held up live at `/validate`,
+  including the one row (`R19a`'s optional system-level check) it had flagged as not walked at Build.
+- **`/document` closeout for `#491`, plus the outstanding `#454` promotion carry-forward.**
+  PR #562 merged to `staging` (`1564009`); `deploy-staging` completed success. `/validate` ran from
+  a fresh context and confirmed all 20 requirements live, including reproducing the exact 169-line
+  post-`npm ci` typecheck failure the build notes described (resolved by `db:generate`) and the
+  mutation check's real fail-then-pass cycle. `specs/roadmap.md` 1.67.0 gained this slice's own
+  build/merge row **and** the still-missing row for **PR #559** (`staging -> main`, merge `6801879`,
+  closing `#454`) — `npm run sdd:audit` now reports zero gaps, where before this closeout it had not
+  yet been run against that promotion. `#491` moved to **In Review** on Project #2; `#454` was
+  already **Done**, auto-closed on the `main` merge. **`specs/sdd-workflow.md` 2.27.1 records a
+  seventh instance of the `validation.md`-row-stricter-than-its-requirement trap**: R12a demanded a
+  doc section literally never contain two old numbers, when the paired requirement (mirroring a
+  sibling's own historical-citation carve-out) only asked that the section state the *current* one —
+  the doc content was correct throughout, the row's wording was not.
 - **`/document` closeout for `#454`.** PR #557 merged to `staging` (`656b8e6`); `deploy-staging` and
   `deploy-docs-internal` both completed success, and staging's `/api/health` confirmed serving
   `656b8e6`. `/validate` regained live browser access mid-session and re-ran every row that could be
