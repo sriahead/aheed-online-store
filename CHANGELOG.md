@@ -105,6 +105,15 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` closeout for the `#491`/`#564` promotion to production.** PR #575 promoted
+  `staging` to `main` (merge `3ef85a3`), carrying `#491`'s and `#564`'s already-merged feature
+  branches and their own, already-completed Document (final) closeouts — neither carries a
+  migration. `deploy-production` and `deploy-docs-internal` both completed success; production
+  `/api/health` confirmed serving `3ef85a3` with `db.ok: true`. `#491` and `#564` both closed on the
+  `main` merge, their Project #2 items auto-moving to **Done**. `specs/roadmap.md` 1.69.0 gains the
+  promotion's own row. This closeout has no accompanying slice — `#564`'s own Document (final) had
+  already merged before this promotion existed, so there was no next slice's branch to carry the
+  row forward onto; recorded via its own doc-only PR instead.
 - **`/document` closeout for `#564`.** PR #573 merged to `staging` (`5a79675`); `deploy-staging` and
   `deploy-docs-internal` both completed success. `specs/roadmap.md` 1.68.0 gains this slice's own
   build/merge row, a new **P2.6 — Search & AI shopping** phase entry (six slices, `#564`–`#569`,
