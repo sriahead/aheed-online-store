@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.27.0"
-updated: 2026-09-02
+version: "2.27.1"
+updated: 2026-09-03
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets, plus the Discover and Learn phases that run on milestone close. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -475,6 +475,19 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   not pass for *any* slice, not just this one. Neither was a code defect; both were caught by
   checking what the generator actually emits and what the requirement's prose actually claims,
   rather than trusting either check's literal exit code.
+  **A seventh instance, #491's `/validate` (2026-09-03):** a row demanded a doc section "must no
+  longer contain" two specific numbers at all, when the paired requirement's own text only asked
+  that the section state the *current* value, explicitly modeled on a sibling requirement one row up
+  that permits a historical citation (`0.10.4`, the pre-fix version) alongside the corrected current
+  one. The doc content was and remained correct — it cited the old, wrong number once, clearly
+  labeled as the very thing that had been stale — but the row as literally written would have failed
+  it. Caught by reading the paired requirement's prose rather than running the row's grep as a
+  pass/fail gate; the row's wording should have mirrored its sibling's historical-citation carve-out
+  and didn't. **The general lesson these seven instances point to: a `validation.md` row is a proxy
+  for its requirement, not the requirement itself — when a row's literal command and its own
+  requirement's prose disagree, the prose wins**, and the disagreement is the finding worth recording
+  (fix the row's wording next time it's touched; don't force the artifact to satisfy an
+  over-literal check).
 - UI changes: verify against rendered output (compiled CSS, rendered HTML, browser screenshot), not
   code review alone. DB-touching code: `npm run preview`, never `npm run dev` (see `CLAUDE.md`).
 - **Server actions can be driven headlessly against `npm run preview`** — no browser needed. Next
