@@ -174,3 +174,71 @@ describe("Stripe adapter — session payload", () => {
     );
   });
 });
+
+describe("Stripe adapter — retrieveSession (#454)", () => {
+  function mockRetrieveOk(body: Record<string, unknown>) {
+    const fetchMock = vi.fn(async () => Response.json(body));
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  it("GETs the session by id with the secret key as a bearer token", async () => {
+    const fetchMock = mockRetrieveOk({ id: "cs_test_1", payment_status: "paid" });
+    await createStripePaymentService("sk_test_x").retrieveSession("cs_test_1");
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url.endsWith("/v1/checkout/sessions/cs_test_1")).toBe(true);
+    expect(init.method).toBe("GET");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer sk_test_x");
+  });
+
+  it("maps Stripe's snake_case session fields onto the port's shape", async () => {
+    mockRetrieveOk({
+      id: "cs_test_1",
+      payment_status: "paid",
+      status: "complete",
+      amount_total: 2346,
+      currency: "gbp",
+    });
+    const session = await createStripePaymentService("sk_test_x").retrieveSession("cs_test_1");
+    expect(session).toEqual({
+      id: "cs_test_1",
+      paymentStatus: "paid",
+      status: "complete",
+      amountTotal: 2346,
+      currency: "gbp",
+    });
+  });
+
+  it("distinguishes a zero amount_total from an absent one", async () => {
+    mockRetrieveOk({ id: "cs_test_1", amount_total: 0 });
+    const session = await createStripePaymentService("sk_test_x").retrieveSession("cs_test_1");
+    expect(session.amountTotal).toBe(0);
+  });
+
+  it("nulls the fields Stripe omitted rather than inventing them", async () => {
+    mockRetrieveOk({ id: "cs_test_1" });
+    const session = await createStripePaymentService("sk_test_x").retrieveSession("cs_test_1");
+    expect(session.paymentStatus).toBeNull();
+    expect(session.status).toBeNull();
+    expect(session.amountTotal).toBeNull();
+    expect(session.currency).toBeNull();
+  });
+
+  it("throws PaymentProviderError on a non-OK response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("no such session", { status: 404 })),
+    );
+    await expect(
+      createStripePaymentService("sk_test_x").retrieveSession("cs_missing"),
+    ).rejects.toBeInstanceOf(PaymentProviderError);
+  });
+});
+
+describe("stub adapter — retrieveSession (#454)", () => {
+  it("never reports a session as paid", async () => {
+    const session = await createStubPaymentService().retrieveSession("anything");
+    expect(session.paymentStatus).not.toBe("paid");
+  });
+});

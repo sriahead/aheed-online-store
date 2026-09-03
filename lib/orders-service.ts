@@ -18,7 +18,9 @@ import {
   placeOrder,
   type OrderRepository,
   type PaymentBinding,
+  type PaymentTransitionRefusal,
 } from "@/lib/repositories/orders";
+import { recordPaymentBindingRefusal } from "@/lib/repositories/payment-binding-refusals";
 
 /**
  * Request-scoped wrappers around `lib/repositories/orders.ts` (#252) — the three
@@ -107,15 +109,86 @@ export function getOrderRepository(): OrderRepository {
  * also pass what the event claims about the payment. This wrapper forwards it
  * unchanged and makes no decision about it — the whole point is that the
  * comparison happens in the repository's `where` clause, against Postgres.
+ *
+ * #454 adds refusal PERSISTENCE here, deliberately at this layer rather than
+ * inside `confirmPayment`/`failPayment`: those two are the security-critical
+ * functions #429 installed and this slice does not modify them. A refusal is an
+ * event about them, not part of them.
  */
 export function getWebhookOrderService() {
+  const prisma = getPrismaWs();
+
+  /**
+   * Persists a LOUD refusal, mirroring `reportRefusal`'s rule in the route
+   * exactly: `already-processed` is normal — Stripe retries aggressively and a
+   * duplicate delivery is the system working — so it is never recorded.
+   *
+   * Never rethrows. A refusal is already the failure path; making the webhook's
+   * own response depend on our ability to write a forensic row would turn a
+   * recorded anomaly into an unrecorded one, and Stripe would retry an event
+   * that will never succeed. The write failing is itself logged instead.
+   */
+  const persistRefusal = async (
+    orderNumber: string,
+    reason: PaymentTransitionRefusal,
+    binding: PaymentBinding,
+  ): Promise<void> => {
+    if (reason === "already-processed") return;
+    try {
+      await recordPaymentBindingRefusal(prisma, {
+        orderNumber,
+        reason,
+        provider: binding.provider,
+        claimedProviderReference: binding.providerReference,
+        claimedAmountPence: binding.amountPence,
+        claimedCurrency: binding.currency,
+      });
+    } catch (error) {
+      console.error(
+        `failed to persist payment binding refusal: order=${orderNumber} reason=${reason}`,
+        error,
+      );
+    }
+  };
+
+  return {
+    findOrder: (orderNumber: string) => findOrderForWebhook(prisma, orderNumber),
+    confirm: async (orderNumber: string, binding: PaymentBinding) => {
+      const result = await confirmPayment(prisma, orderNumber, binding);
+      if (!result.ok) await persistRefusal(orderNumber, result.reason, binding);
+      return result;
+    },
+    fail: async (orderNumber: string, binding: PaymentBinding, reason: string) => {
+      const result = await failPayment(prisma, orderNumber, binding, reason);
+      if (!result.ok) await persistRefusal(orderNumber, result.reason, binding);
+      return result;
+    },
+  };
+}
+
+/**
+ * The staff recovery path for an order stranded by a refused binding (#454).
+ *
+ * Separate from `getWebhookOrderService()` for two reasons. It does NOT persist
+ * a refusal on failure — a staff recovery attempt that legitimately fails
+ * (because Stripe says the session really was not paid) is the control working,
+ * not a new webhook anomaly, and recording one per click would bury the real
+ * rows. And its caller has already proved vendor ownership by resolving the
+ * refusal row through `getBindingRefusalService()`, which scopes by vendor; the
+ * order number handed here comes off that row, never off a form field.
+ *
+ * `confirmPayment` is reached UNCHANGED and with a binding built from Stripe's
+ * own response. That is the whole security argument for this feature: recovery
+ * introduces no second path to CONFIRMED, because it has to satisfy the same
+ * compare-and-set predicate #429 installed. A refusal that was correct cannot be
+ * confirmed away by a staff click.
+ */
+export function getOrderRecoveryService() {
   const prisma = getPrismaWs();
   return {
     findOrder: (orderNumber: string) => findOrderForWebhook(prisma, orderNumber),
     confirm: (orderNumber: string, binding: PaymentBinding) =>
       confirmPayment(prisma, orderNumber, binding),
-    fail: (orderNumber: string, binding: PaymentBinding, reason: string) =>
-      failPayment(prisma, orderNumber, binding, reason),
   };
 }
 

@@ -792,6 +792,42 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   error fires alongside either. `GET .../cdn-cgi/local/explorer/api/local/workers` lists the other
   endpoints the same Explorer API exposes (KV, D1, R2, Durable Objects, Workflows).
 
+## Live-testing staff panel server actions without a browser — learned the hard way
+- **A plain progressive-enhancement server-action form (`<form action={someServerAction}>`, no
+  client component) can be submitted with `curl`, with no browser and no JS runtime at all** —
+  that is the entire point of building it that way. The rendered HTML carries the target as a
+  hidden field named `$ACTION_ID_<hash>` (empty value) inside a `multipart/form-data` form whose
+  own `action` attribute is empty (posts to the current page URL). Fetch the page once, grep for
+  `\$ACTION_ID_[a-f0-9]*` paired with the row's other hidden fields (e.g. `refusalId`), then
+  `curl -X POST <page-url> -H "Cookie: <session>" -H "Origin: <same-origin>" -F '$ACTION_ID_<hash>=' -F 'refusalId=<id>'`
+  reproduces exactly what a no-JS browser submit would send. Used this way to drive
+  `/staff/payments`'s reconcile/recover actions end-to-end against a real dev database and a real
+  Stripe test-mode session for `#454`'s `/validate` and `/ship`, with no Chrome extension
+  available for part of that session.
+- **`npm run preview`'s `next build` step type-checks every `.ts` file its tsconfig includes —
+  which, by default, means the repo root — so a type error in a scratch validation script placed
+  at the repo root (rather than under `lib/`, `app/`, etc.) fails the WHOLE build**, not just that
+  script. `npx tsx path/to/scratch.ts` alone won't catch this, because `tsx` only type-checks (or
+  rather doesn't type-check at all, by default) the file it runs — the failure only surfaces on
+  the next `next build`/`npm run preview`, wasting a full OpenNext build cycle. Run `npx tsc
+  --noEmit` once after writing a repo-root scratch script and before relying on it inside a
+  preview cycle.
+- **Better Auth's session validation is bound to the Host/Origin a request declares, not just to
+  a valid session cookie** — replaying a genuine session cookie (captured signing in at
+  `127.0.0.1:8787`) against the same server with a spoofed `Host: srimart.localhost:8787` header
+  (to simulate reaching a second local vendor domain without a second real hostname) is correctly
+  rejected with `401`/`Invalid origin`, not silently accepted. This is Better Auth's own
+  cross-origin protection firing, not a bug in this app's vendor-scoping. **Signing in fresh under
+  the spoofed host doesn't work either** — Better Auth's `trustedOrigins` only lists this
+  project's real dev/staging/production hosts, so a made-up local alias is rejected outright with
+  `Invalid origin` at sign-in. Cross-tenant **write** scoping can still be proven without ever
+  switching hosts: submit the action against a row belonging to a *different* vendor while signed
+  in and already on your own vendor's host — the scoping lives in the query's `where` clause, not
+  in which host served the page, so this exercises the exact same guard a real cross-tenant attack
+  would hit. Cross-tenant **read/list** scoping (a page never showing another vendor's rows) is
+  provable the same way, from one side only: confirm your own vendor's list excludes a row you
+  know belongs to someone else, rather than trying to view the other vendor's own list.
+
 ## Better Auth (`lib/auth.ts`, ADR-002) — learned the hard way
 - **A bare top-level `onRequest` key in `betterAuth({...})`'s config is accepted by TypeScript and
   never invoked at runtime.** `BetterAuthOptions`'s type carries an `onRequest` field, so

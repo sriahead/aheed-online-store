@@ -6,7 +6,51 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **A refused Stripe payment binding is now recorded, discoverable and recoverable** (`#454`,
+  P9.2). `#429` made the webhook fail closed, correctly — but a refusal against a *genuine* payment
+  leaves a charged shopper's order stuck `PENDING_PAYMENT`, and the only trace was a
+  `console.error`. That route returns 200 and nothing throws, so `onRequestError` never fires and
+  **no `ErrorEvent` row is written** — `/staff/errors` could never have shown one.
+  New **`PaymentBindingRefusal`** model records one row per loud refusal with both what the event
+  claimed and what the order stored; `already-processed` stays silent, as a duplicate delivery is
+  Stripe working as intended. This is a table rather than a query over existing state because
+  `PENDING_PAYMENT` plus a non-null `providerReference` cannot separate an abandoned checkout from a
+  never-arrived webhook (`#101`) from a refused binding, and only the last must **not** be re-driven.
+  New vendor-scoped **`/staff/payments`** lists them with two actions. Reconciliation asks the
+  provider about the order's **own stored** session — never the id the refused event claimed, which
+  is the value under suspicion. Recovery builds a binding from the provider's response and calls the
+  **unchanged** `confirmPayment`, so it introduces **no second path to `CONFIRMED`** and a refusal
+  that was correct cannot be confirmed away by a staff click.
+  `lib/repositories/orders.ts` is **byte-identical** — persistence sits in the
+  `getWebhookOrderService()` facade and never rethrows, since failing the webhook to record a
+  forensic row would make Stripe retry an event that can never succeed.
+  `PaymentService` gains **`retrieveSession()`**, its first read method (raw `fetch`, no `stripe`
+  SDK); the stub never reports a session paid. ADR-005 → 1.7.0 records why recovery reuses the
+  existing binding, and that **refunds and the capture method remain undecided**.
+  **The generated migration proposed `DROP INDEX` for all three hand-authored `pg_trgm` indexes** —
+  the `#508` drift, triggered by a model with no relationship to `Order` or `User`. `--create-only`
+  plus reading the SQL caught it before it applied; the drops were removed and all three indexes
+  verified still present on the dev branch.
+
 ### Documentation
+
+- **`/document` closeout for `#454`.** PR #557 merged to `staging` (`656b8e6`); `deploy-staging` and
+  `deploy-docs-internal` both completed success, and staging's `/api/health` confirmed serving
+  `656b8e6`. `/validate` regained live browser access mid-session and re-ran every row that could be
+  exercised live against the real dev Neon branch and a real Stripe test-mode account rather than
+  mocks — including the hardest row, `R15 (positive)`: a second fixture order paid with a real test
+  card through hosted Checkout, with no webhook listener running, correctly reconciled and recovered
+  to `CONFIRMED` with exactly one new `OrderStatusEvent` and one confirmation-email attempt. A forged
+  cross-tenant refusal id performed no read and no write. One planned live check (replaying a session
+  under a spoofed `Host` header to simulate a second local vendor domain) was correctly rejected by
+  Better Auth's own origin validation before it could reach the app's vendor-scoping at all; the same
+  scoping guarantee was confirmed live a different way instead. `specs/roadmap.md` 1.66.0 gained the
+  build/merge row citing `PR #557`; `npm run sdd:audit` reports zero gaps. `#454` moved to
+  **In Review** on Project #2. **New `CLAUDE.md` section records two reusable techniques**: driving
+  a no-JS server-action form via `curl` with its `$ACTION_ID_<hash>` hidden field, and why a
+  repo-root scratch script's type error fails the whole `npm run preview` build.
 
 - **`/document` closeout for `#550`.** PR #552 merged to `staging` (`6de0131`) and PR #553 promoted
   to `main` (`1819c0e`); `deploy-staging`, `deploy-docs-internal` and `deploy-production` all

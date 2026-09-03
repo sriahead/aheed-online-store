@@ -4,8 +4,8 @@ title: "ADR-005 — Payments & multi-vendor money flow"
 audience: [dev]
 type: adr
 status: approved
-version: "1.6.0"
-updated: 2026-08-29
+version: "1.7.0"
+updated: 2026-09-02
 visibility: internal
 summary: Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite.
 tags: [adr, payments, stripe, multi-tenancy, compliance]
@@ -229,6 +229,40 @@ tracked as **#454**, since #101 covers webhooks that never *arrive*, not ones th
 refused. Second, the P7.5b note above says the confirmation email is sent "after the webhook's
 `confirm` returned true"; `confirmPayment` now returns a result union rather than a boolean, and the
 email is keyed on `{ ok: true }`. The behaviour is the same — the wording predates the type.
+
+## Implementation note (P9.2, 2026-09-02, #454)
+
+**The `PaymentService` port now carries a READ method.** `retrieveSession(sessionId)` returns what
+the provider says about a session we already created — `paymentStatus`, `status`, `amountTotal`,
+`currency`. It is the first method on this port that is not a write, and it exists because the P9.1
+note above left a real gap: a binding refusal fails closed, which is correct, but if it ever fires
+against a genuine payment the shopper has been charged and their order is stranded. Deciding whether
+a given refusal was correct is not answerable from our own data — it requires asking the provider.
+
+**Recovery deliberately introduces no second path to `CONFIRMED`.** The staff action reads the
+session, and when the provider reports it paid it calls the **unchanged** `confirmPayment` with a
+`PaymentBinding` built from the provider's own response. That binding still has to satisfy the same
+compare-and-set predicate `#429` installed, evaluated by Postgres in the same statement that performs
+the transition. So a refusal that was correct cannot be confirmed away by a staff click, and the
+security property of the P9.1 note is preserved rather than carved out. The alternative — letting
+staff force a status change — was rejected for exactly that reason.
+
+**It asks about the order's own stored session, never the one the refused event claimed.** The
+claimed session id is the value under suspicion; asking the provider about it would confirm nothing
+about whether *this order* was paid.
+
+**Refusals are recorded, not just logged.** `PaymentBindingRefusal` holds one row per loud refusal
+with both the claimed and the stored session/amount/currency. This is a schema change rather than a
+query over existing state because `PENDING_PAYMENT` plus a non-null `providerReference` cannot
+separate an abandoned checkout from a never-arrived webhook (**#101**) from a refused binding, and
+the three have three different remediations — only the refused one must **not** be re-driven.
+
+**Still undecided, and deliberately not decided here: refunds and the capture method.**
+`lib/payments.ts` pins no `capture_method`, so payment is captured immediately, and no code path
+writes `PaymentStatus.REFUNDED`. The consequences section above already records that a paid order's
+discount-code use cannot be reversed (**#151**) and neither can earned points (**#137**). Reducing,
+substituting or refunding a paid order needs that decision, it is entangled with **#399**'s variant
+and weight model, and it remains this ADR's open territory.
 
 ## Deferred upgrade — Stripe Connect
 
