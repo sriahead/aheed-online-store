@@ -71,6 +71,34 @@ Keeping it internal means `recovery` is the only new thing any caller has to und
 
 No other known deviations.
 
+## Fix pass (post-/validate)
+
+`/validate` (fresh context, 2026-09-03) found three gaps, none of them requiring a redesign — the
+underlying requirements already held by inspection, the check proving them didn't exist or didn't
+run:
+
+- **Blocking**: `plan.md`'s front-matter `summary` was 363 characters, over
+  `kms/schema/frontmatter.ts`'s 300-char max (`npm run kms:validate` failed). Invisible to
+  `lint`/`typecheck`/`test`/`build`, would have failed CI's `quality/kms` job on push (see
+  `CLAUDE.md`'s "KMS docs" section — this is that same trap, just the front-matter-length variant
+  rather than the MDX-parse one). Trimmed to 295 characters, same content, dropped only the trailing
+  "promoted into #566's synonym dictionary" clause. `ARTIFACT_INDEX.md`/`docs.ts` rebuilt afterward
+  (`npm run kms:build-index`) since the front-matter changed.
+- **R7's validation.md row** asked for a dedicated unit test asserting `listProducts`/
+  `listProductsByCategory` return `directResultCount: 0, recovery: null` — didn't exist (
+  `listProductsByCategory` had zero direct test coverage of any kind, a pre-existing gap this slice
+  inherited rather than introduced). Added both assertions to `tests/search-repository.test.ts`.
+- **R20's unit-test half was previously misreported as done** — the line below claiming "the unit
+  half... is tested" was checked against `tests/search-repository.test.ts`'s R15 pagination tests,
+  which prove the ladder is stable across pages, not that `getProductRepository().search()` itself
+  guards the log write on `cursor`. No test anywhere called `getProductRepository()` with a mocked
+  `recordSearchQuery`. Added `tests/products-service.test.ts`, mocking `@/lib/db`/`@/lib/tenant`/
+  `next/headers` at the module boundary (same shape as `tests/roles.test.ts`/`tests/tenant.test.ts`)
+  and leaving `@/lib/repositories/products` real, so the actual wiring in `lib/products-service.ts`
+  is what's under test, not a re-assertion of the repository's own already-tested logic.
+
+No observable application behaviour changed — CHANGELOG.md is untouched.
+
 ## Known-shaky areas
 
 - **No live-database exercise of the ladder at all.** Every ladder-specific test (R6, R9–R15) runs
@@ -86,9 +114,10 @@ No other known deviations.
   the O(terms × tokens) Levenshtein scan stays comfortably inside the 400ms p95 budget on the real
   catalogue size is unverified. If it doesn't hold up, `plan.md` already names the fallback (degrade
   rung 1 to a no-op, let the ladder start at identity) — this wasn't reached.
-- **R20's live/Explorer-API half was not run.** The unit half (log fires on cursor-less calls only)
-  is tested; a real `npm run preview` search plus a real "Next page" click, checked against actual
-  `SearchQueryLog` rows in the dev database, has not been done.
+- **R20's live/Explorer-API half still hasn't been run.** The unit half (log fires on cursor-less
+  calls only, and not at all on a "Next page" click) is now genuinely tested — see "Fix pass" above.
+  A real `npm run preview` search plus a real "Next page" click, checked against actual
+  `SearchQueryLog` rows in the dev database, has still not been done.
 - **The migration was applied only to the dev database.** Staging/production apply it via `prisma
   migrate deploy` on promotion, from the same (already-corrected) `migration.sql` — the `#508`
   `DROP INDEX` risk is fixed at the file level, so it should not recur per-environment, but that

@@ -4,6 +4,7 @@ import {
   buildFilterWhere,
   listProductNameTokens,
   listProducts,
+  listProductsByCategory,
   searchProducts,
   type ProductFilters,
 } from "@/lib/repositories/products";
@@ -156,6 +157,22 @@ describe("filters, vendor scoping and active-only survive tokenisation (R8)", ()
     for (const [key, value] of Object.entries(expected)) {
       expect(where[key as keyof typeof where]).toEqual(value);
     }
+  });
+});
+
+describe("ProductPage shape on findPage-backed paths (R7)", () => {
+  it("listProducts always reports directResultCount: 0, recovery: null — no ladder outside search()", async () => {
+    const { client } = makeStub([row(1)]);
+    const page = await listProducts(client, VENDOR, { take: 12 });
+    expect(page.directResultCount).toBe(0);
+    expect(page.recovery).toBeNull();
+  });
+
+  it("listProductsByCategory always reports directResultCount: 0, recovery: null", async () => {
+    const { client } = makeStub([row(1)]);
+    const page = await listProductsByCategory(client, VENDOR, ["cat-1"], { take: 12 });
+    expect(page.directResultCount).toBe(0);
+    expect(page.recovery).toBeNull();
   });
 });
 

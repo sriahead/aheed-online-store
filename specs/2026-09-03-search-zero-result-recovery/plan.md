@@ -7,7 +7,7 @@ status: draft
 version: "1.0.0"
 updated: 2026-09-03
 visibility: internal
-summary: A search that would otherwise show "No products found" first tries deterministic typo correction, then a looser identity-field match, then a broad match, before falling back to category and single-term suggestions — and every direct-search miss is logged (vendor-scoped, no user link) so recurring gaps can be reviewed and promoted into #566's synonym dictionary.
+summary: A search that would otherwise show "No products found" first tries deterministic typo correction, then a looser identity-field match, then a broad match, before falling back to category and single-term suggestions, and every direct-search miss is logged (vendor-scoped, no user link) for review.
 tags: [search, catalogue, p2-6, zero-result, analytics]
 related: [architecture, roadmap, nfr-baseline, p2-6-search-tokenised-matching-and-ranking-plan]
 ---
