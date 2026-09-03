@@ -4,10 +4,10 @@ title: NFR Baseline — measured performance against the Gate-3 targets
 audience: [dev]
 type: doc
 status: approved
-version: "1.2.0"
-updated: 2026-08-31
+version: "1.3.0"
+updated: 2026-09-03
 visibility: internal
-summary: Measurements against mission.md's LCP and API p95 targets, plus the index/query review behind them — including a 4.7x LCP breach from a 1.9 MB vendor logo — and, from 2026-08-31, a re-measurement of the query paths at roughly 2,000 products rather than 22.
+summary: Measurements against mission.md's LCP and API p95 targets, plus the index/query review behind them — including a 4.7x LCP breach from a 1.9 MB vendor logo — a re-measurement of the query paths at roughly 2,000 products rather than 22, and a further re-measurement of storefront search after #564 tokenised it.
 tags: [nfr, performance, observability, lcp, indexes, p7, p9]
 related:
   [mission, architecture, tech-stack, gap-register-audit, p7d-observability-nfr-plan, catalogue-depth-and-scale]
@@ -350,6 +350,37 @@ explicit parameters. **Both runs were taken against the dev Neon branch,
 | staff order list, no search (`listOrdersForStaff`) | 31.5 ms | 44.3 ms | 31.7 ms | 47.3 ms |
 | order history (`listOrdersForUser`) | not measurable | not measurable | not measurable | not measurable |
 | staff financials aggregate (`getFinancialsForStaff`) | 16.0 ms | 28.1 ms | 16.1 ms | 29.4 ms |
+
+### Re-measurement after #564 (tokenised search and relevance ranking), 2026-09-03
+
+P2.6 slice 1 changed what `searchProducts` does to the database: it now issues an `AND` of one
+`contains` pair per term instead of a single `contains`, and it fetches up to
+`SEARCH_CANDIDATE_LIMIT + 1` (201) rows per query instead of `take + 1` (13), ranking them in
+memory. Both changes push in the direction of *more* work per search, so the path was re-measured
+rather than assumed unchanged. Same harness, same dev catalogue, same 15 samples after a discarded
+warm-up.
+
+| Query | p95 before (#489) | p95 after (#564) |
+|---|---|---|
+| storefront catalogue listing (`listProducts`) | 61.0 ms | 54.0 ms |
+| category page products (`listProductsByCategory`) | 63.0 ms | 59.8 ms |
+| category page (`getCategoryBySlug`) | 48.9 ms | 61.7 ms |
+| product search (`searchProducts`) | **95.4 ms** | **67.6 ms** |
+| speciality facets (`getAvailableSpecialities`) | 30.6 ms | 24.3 ms |
+| staff order list, no search (`listOrdersForStaff`) | 47.3 ms | 43.9 ms |
+| staff financials aggregate (`getFinancialsForStaff`) | 29.4 ms | 26.2 ms |
+
+**Search remains far inside the target — 67.6 ms against `under 400 ms`, a 5.9x margin.** That is
+the only claim these figures support.
+
+**It is NOT evidence that the new query is faster than the old one, and reading it that way would
+repeat a mistake this document already records.** Every path moved, including four that this slice
+did not touch at all, and one (`getCategoryBySlug`) got *slower* by more than search got faster.
+That is the same round-trip-and-autoscaling noise the section above identifies — the reason
+`listProducts` appeared to speed up 100x-ing its rows. The defensible reading is that fetching 201
+rows instead of 13 and ranking them in JavaScript **did not move this path out of the noise floor**,
+which is the question worth asking before shipping it. A real before/after would need both variants
+measured in one session against one database, which #564 did not do.
 
 ### Verdict against the target
 

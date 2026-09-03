@@ -4,7 +4,7 @@ title: "P2.6 slice 1 — Tokenised search matching and relevance ranking (plan)"
 audience: [dev]
 type: spec
 status: draft
-version: "1.1.0"
+version: "1.2.0"
 updated: 2026-09-03
 visibility: internal
 summary: Storefront search matches every term in a multi-word query independently instead of treating the whole query as one substring, and orders results by relevance and availability instead of by recency. First slice of P2.6.
@@ -18,6 +18,13 @@ Issue **#564**. First slice of **P2.6 — Search & AI shopping**, and the only o
 that fixes a defect rather than adding a capability. No schema change, no migration, no AI, no raw
 SQL.
 
+> **Corrected at Build, 2026-09-03 (1.1.0 to 1.2.0).** This plan asserted that a broad word such as
+> `chicken` could plausibly exceed the candidate cap on the dev catalogue. Measured, it matches
+> **3** products. The cap is reachable, but by short terms matching through descriptions rather than
+> by department words — see "The honest cost of the cap". `validation.md`'s R19a row was corrected in
+> the same commit, because a validator following it literally would have counted `chicken`, found 3,
+> and recorded the notice as unreachable when it is not.
+>
 > **Revised at review, 2026-09-03 (1.0.0 to 1.1.0).** `truncated` was defined as "the candidate cap
 > was reached", which is a lie when the catalogue holds exactly 200 matches — the shopper would be
 > told the list is incomplete when it is complete. It now uses a **sentinel fetch** and means "more
@@ -151,8 +158,12 @@ occur. What is given up is different and is stated plainly below.
 
 **The honest cost of the cap.** A query matching more than 200 products cannot reach the products
 beyond the cap, and which 200 are ranked is decided by the fetch's own `createdAt desc, id desc`
-order, not by relevance. On a 2,000-product catalogue a broad single word such as `chicken` can plausibly exceed
-it. This slice does not hide that: when more than 200 matches provably exist, the results page says so
+order, not by relevance. **Measured at Build against the dev catalogue** (`scripts/verify-search-slice.ts`,
+2026-09-03): the cap is reachable, but not by the words this plan first guessed. `chicken` matches
+**3** products and `rice` **98** — both well under the cap — while a single letter matching almost
+everything through the description does exceed it (`e` matches 2,026 of roughly 2,000 products,
+`a` 2,024). So the honest characterisation is that truncation is driven by **short, low-information
+terms hitting descriptions**, not by broad department words. This slice does not hide that: when more than 200 matches provably exist, the results page says so
 and invites the shopper to narrow the search, rather than silently presenting a partial set as if it
 were complete. A small presentational component owns that notice so it can be tested with the flag
 forced both ways, rather than only when the dev catalogue happens to contain a broad enough query.
