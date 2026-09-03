@@ -6,7 +6,54 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **A curated search synonym dictionary, so shoppers find the shelf using the word they actually
+  use** (`#566`, closing `#396`, P2.6). New vendor-scoped `SearchSynonym` model, staff-editable at
+  **`/staff/search-synonyms`**, seeded with the Desi/transliteration keyword set — bhindi/okra,
+  haldi/turmeric, keema and qeema/minced meat, atta/chapati flour, dhania, jeera, mirch, chana,
+  aloo, baingan, methi, karela.
+  **Expansion, never replacement.** A query becomes term *groups* (`lib/search-expansion.ts`) —
+  `{ term, variants }` with the shopper's own word always at `variants[0]` — and a group is
+  satisfied by any variant. That makes the guarantee a property of the type rather than a promise
+  in a comment, and `@@unique([vendorId, alias])` bounds a group at two variants, so the predicate's
+  size is a function of the query rather than of how large the dictionary grows. Ranking
+  (`lib/search-ranking.ts`) computes tiers over groups too, so an alias-matched product ranks as a
+  name match instead of falling to a description-only tier; tier 0 still uses the original typed
+  query. With an empty dictionary the `where` is byte-identical to the one `#564` built.
+  **AI proposes, humans approve.** A store admin can ask the model to read this shop's own failing
+  searches and suggest mappings; every suggestion lands `PENDING` and reaches a shopper only once
+  approved. The call is staff-triggered and offline — never on the public `/search` path (`#571`),
+  over the same Cloudflare REST transport the image pipeline already uses, with no new credential,
+  degrading to a message when unconfigured. The **"Shop your list"** matcher reads the same
+  dictionary, so an approved alias works identically in both.
+
 ### Fixed
+
+- **Search recovery now fires on a thin result, not only an empty one** (`#580`, P2.6). `#565`'s
+  ladder ran only when a search returned *zero* candidates, so a one-word query such as `haldi` that
+  happens to appear in one unrelated product's description returned exactly one tangential result
+  and no recovery at all — which reads as "they do not stock this" just as firmly as an empty page,
+  while consuming the one mechanism built to prevent that conclusion.
+  A result is now **thin** when candidates came back but none matched on *name*
+  (`hasNameTierCandidate`, exported from the ranking module so recovery and ordering share one
+  definition of "relevant"). Such a result **keeps every product it found** and gains suggestions
+  beside them — the dictionary's canonical term, the typo correction, and the departments. The
+  zero-result ladder replaces a result set, which is right for nothing-found and wrong for
+  found-something-tangential; recovery must never subtract. `SearchQueryLog` gains
+  `directNameMatch`, because `directResultCount` and `recoveryRung` together could not tell a thin
+  result from a good one — and those are the rows the synonym proposals read.
+- **Single characters and bare punctuation are no longer search terms** (`#572`, P2.6). Measured on
+  the dev catalogue, `e` matched **2,026** of roughly 2,000 products and `a` matched 2,024, because
+  every term is satisfied by name *or* description and a one-letter substring appears in nearly
+  every description — so the query returned the whole catalogue in an arbitrary order, and was also
+  the only thing that reliably triggered the truncation notice. A bare `-` likewise survived
+  tokenisation, so `rice - basmati` demanded a product whose text contained a literal hyphen.
+  `parseSearchQuery` now drops tokens shorter than two characters and tokens carrying no letter or
+  digit; a query that parses to nothing tells the shopper it is too short rather than claiming the
+  catalogue holds no match. `lib/search-query.ts` and `lib/shopping-list.ts` now diverge here
+  deliberately — a search term is a recall instrument, a list line is something the shopper wrote
+  and which passes a review step — and the test pinning them together is narrowed to say so.
 
 - **Storefront search now matches multi-word queries, and ranks results by relevance instead of
   recency** (`#564`, P2.6). `searchProducts` passed the whole trimmed query to a single `contains`,
