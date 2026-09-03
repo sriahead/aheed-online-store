@@ -159,6 +159,7 @@ model Vendor {
   priceTiers             ProductPriceTier[]
   authenticationAttempts AuthenticationAttempt[]
   bindingRefusals        PaymentBindingRefusal[]
+  searchQueryLogs        SearchQueryLog[]
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
@@ -1015,4 +1016,30 @@ model PaymentBindingRefusal {
 
   @@index([vendorId, createdAt])
   @@index([createdAt])
+}
+
+// Search query log (#565, P2.6 slice 2) — every storefront search submission's outcome, so staff
+// can find recurring zero-result queries worth promoting into #566's synonym dictionary.
+//
+// NO USER LINK, deliberately (#570): a search history tied to a signed-in user is personal data,
+// which would put it in lib/repositories/data-rights.ts's export/erasure scope. vendorId + a
+// hashed IP — never the raw address — is the same shape as OrderLookupAttempt and
+// AuthenticationAttempt, which serves the curation purpose (which queries recur) without raising
+// the compliance question at all.
+//
+// directResultCount is the DIRECT (#564) search's own candidate count, captured before any
+// zero-result-ladder rung runs. recoveryRung is null when the direct search already succeeded,
+// and "typo"/"identity"/"broad"/"none" when the ladder had to run — "none" meaning every rung was
+// tried and none found anything, the queries most worth a human look.
+model SearchQueryLog {
+  id                String   @id @default(uuid())
+  vendorId          String
+  vendor            Vendor   @relation(fields: [vendorId], references: [id])
+  query             String
+  directResultCount Int
+  recoveryRung      String?
+  ipHash            String
+  createdAt         DateTime @default(now())
+
+  @@index([vendorId, directResultCount, createdAt])
 }
