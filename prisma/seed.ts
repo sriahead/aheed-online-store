@@ -73,6 +73,7 @@ async function main() {
   // After the catalogue: bundles resolve their constituents by product slug.
   await seedBundles(AHEED_VENDOR_ID, AHEED_BUNDLES);
   await seedPriceTiers(AHEED_VENDOR_ID, AHEED_PRICE_TIERS);
+  await seedSearchSynonyms(AHEED_VENDOR_ID);
 
   // ADR-004 slice 3b — host→tenant mapping. Hosts are per-environment (staging & prod are
   // separate DBs), sourced from env vars. SriMart (a 2nd vendor) is only seeded when BOTH
@@ -103,6 +104,7 @@ async function main() {
     await upsertVendorSatellites(SRIMART_VENDOR_ID, SRIMART_SATELLITES);
     await seedBundles(SRIMART_VENDOR_ID, SRIMART_BUNDLES);
     await seedPriceTiers(SRIMART_VENDOR_ID, SRIMART_PRICE_TIERS);
+    await seedSearchSynonyms(SRIMART_VENDOR_ID);
     await upsertVendorDomain(SRIMART_VENDOR_ID, srimartHost);
   } else if (srimartHost && !aheedHost) {
     console.log("SEED_SRIMART_HOST set but SEED_AHEED_HOST is not — skipping SriMart to stay safe");
@@ -1297,6 +1299,55 @@ interface PriceTierFixture {
  * both the tidy case and the one where a per-unit price could not have been
  * exact.
  */
+/**
+ * The starting search dictionary (P2.6 slice 3, #566) — the keyword set from the issue.
+ *
+ * Seeded APPROVED, because these are not guesses: they are the words this shop's customers use.
+ * The dictionary is meant to grow from real traffic (#565's query log feeding the staff-approved AI
+ * proposals), and a feature that starts from a blank page and someone's imagination is the usual
+ * way a curated table dies — so it ships useful on day one.
+ *
+ * Idempotent by ALIAS, not by row count. A count check would stop re-runs from repairing a
+ * partially-seeded dictionary, and #502's lesson is that an idempotency guard placed to skip work
+ * wholesale is how two things that should agree silently diverge per environment.
+ */
+async function seedSearchSynonyms(vendorId: string) {
+  // alias -> the word this catalogue actually uses. Several aliases may share a canonical term
+  // (keema/qeema, atta mapping alongside other flour words); one alias may not have two canonicals,
+  // which is what @@unique([vendorId, alias]) enforces and what bounds the expanded query.
+  const pairs: [string, string][] = [
+    ["bhindi", "okra"],
+    ["karela", "bitter gourd"],
+    ["haldi", "turmeric"],
+    ["keema", "minced meat"],
+    ["qeema", "minced meat"],
+    ["atta", "chapati flour"],
+    ["dhania", "coriander"],
+    ["jeera", "cumin"],
+    ["mirch", "chilli"],
+    ["chana", "chickpeas"],
+    ["aloo", "potato"],
+    ["baingan", "aubergine"],
+    ["methi", "fenugreek"],
+  ];
+
+  let created = 0;
+  for (const [alias, canonical] of pairs) {
+    const existing = await prisma.searchSynonym.findFirst({
+      where: { vendorId, alias },
+      select: { id: true },
+    });
+    if (existing) continue;
+
+    await prisma.searchSynonym.create({
+      data: { vendorId, alias, canonical, status: "APPROVED", source: "SEED" },
+    });
+    created += 1;
+  }
+
+  console.log(`search synonyms for ${vendorId}: ${created} created, ${pairs.length} total`);
+}
+
 async function seedPriceTiers(vendorId: string, fixtures: PriceTierFixture[]) {
   const products = await prisma.product.findMany({
     where: { vendorId, slug: { in: fixtures.map((f) => f.productSlug) } },

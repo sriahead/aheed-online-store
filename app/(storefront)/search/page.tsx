@@ -163,7 +163,7 @@ export default async function SearchPage({
                 terms={searchTerms}
                 categories={allCategories}
               />
-              <SearchSuggestionsNotice suggestions={suggestions} />
+              <SearchSuggestionsNotice suggestions={suggestions} categories={allCategories} />
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {items.map((product) => (
                   <ProductCard

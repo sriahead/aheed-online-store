@@ -52,7 +52,7 @@ function row(i: number, over: Partial<{ name: string; quantity: number | null }>
  * that is what makes R7's "no query at all" checkable rather than merely "no
  * findMany".
  */
-function makeStub(rows: Row[]) {
+function makeStub(rows: Row[], aliases: { alias: string; canonical: string }[] = []) {
   const spies = {
     // Typed to ACCEPT an argument so `mock.calls[0][0]` is a real value rather
     // than an empty tuple — the captured args are what most of this file
@@ -63,6 +63,10 @@ function makeStub(rows: Row[]) {
     productCreate: vi.fn(async (_args: unknown) => null),
     productUpdate: vi.fn(async (_args: unknown) => null),
     tierFindMany: vi.fn(async (_args: unknown) => [] as unknown[]),
+    // P2.6 slice 3 (#566) — searchProducts now reads the approved dictionary before searching.
+    // Defaults to empty, which is what keeps every pre-existing case below asserting #564's
+    // unchanged behaviour rather than quietly testing an expanded predicate.
+    synonymFindMany: vi.fn(async (_args: unknown) => aliases),
   };
 
   const client = {
@@ -74,6 +78,7 @@ function makeStub(rows: Row[]) {
       update: spies.productUpdate,
     },
     productPriceTier: { findMany: spies.tierFindMany },
+    searchSynonym: { findMany: spies.synonymFindMany },
   };
 
   return { client: client as never, spies };
@@ -93,7 +98,16 @@ function capturedWhere(spies: Spies) {
   return capturedArgs(spies).where as unknown as AnyRecord;
 }
 
-describe("searchProducts predicate (R6)", () => {
+/**
+ * R6, and P2.6 slice 3's R11.
+ *
+ * This case now carries a second job. #566 turned the predicate builder from a flat term list into
+ * term GROUPS; R11 requires that with NO approved synonyms the `where` is structurally identical to
+ * the one #564 built. That is exactly what this assertion says, so it is left byte-for-byte as
+ * written and the stub simply returns an empty dictionary — a shape change here would be the
+ * regression R11 is about.
+ */
+describe("searchProducts predicate (R6, R11)", () => {
   it("ANDs one clause per term, each matching name OR description", async () => {
     const { client, spies } = makeStub([row(1)]);
     await searchProducts(client, VENDOR, "basmati rice", { take: 12 });
@@ -123,6 +137,8 @@ describe("empty-query guard (R7)", () => {
       truncated: false,
       directResultCount: 0,
       recovery: null,
+      directNameMatch: false,
+      suggestions: null,
     });
     // The assertion that actually proves the requirement.
     for (const [name, spy] of Object.entries(spies)) {
@@ -336,9 +352,14 @@ function makeLadderStub(searchResponses: Row[][], tokenNames: string[] = []) {
   });
   const tierFindMany = vi.fn(async (_args: unknown) => [] as unknown[]);
 
+  // #566 — the dictionary read. Empty for every pre-existing ladder case, so each still exercises
+  // the unexpanded predicate it was written against.
+  const synonymFindMany = vi.fn(async (_args: unknown) => [] as unknown[]);
+
   const client = {
     product: { findMany: productFindMany },
     productPriceTier: { findMany: tierFindMany },
+    searchSynonym: { findMany: synonymFindMany },
   };
 
   return { client: client as never, spies: { productFindMany, tierFindMany } };
@@ -495,5 +516,85 @@ describe("pagination is stable across the ladder (R15)", () => {
     const firstIds = first.items.map((p) => p.id);
     const secondIds = second.items.map((p) => p.id);
     expect(new Set([...firstIds, ...secondIds]).size).toBe(firstIds.length + secondIds.length);
+  });
+});
+
+/** P2.6 slice 3 (#566) — R11 and the expansion half of the predicate. */
+describe("synonym expansion widens the direct predicate (R11)", () => {
+  it("adds the canonical term to the shopper's own term, in one OR group", async () => {
+    const { client, spies } = makeStub([row(1)], [{ alias: "haldi", canonical: "turmeric" }]);
+    await searchProducts(client, VENDOR, "haldi", { take: 12 });
+
+    const where = capturedWhere(spies);
+    // ONE group, not two clauses: an AND of "haldi" and "turmeric" would demand both words.
+    expect(where.AND).toHaveLength(1);
+    expect(where.AND[0]).toEqual({
+      OR: [
+        { name: { contains: "haldi", mode: "insensitive" } },
+        { description: { contains: "haldi", mode: "insensitive" } },
+        { name: { contains: "turmeric", mode: "insensitive" } },
+        { description: { contains: "turmeric", mode: "insensitive" } },
+      ],
+    });
+  });
+
+  it("reads the dictionary vendor-scoped and APPROVED-only", async () => {
+    const { client, spies } = makeStub([row(1)]);
+    await searchProducts(client, VENDOR, "rice", { take: 12 });
+
+    const args = spies.synonymFindMany.mock.calls[0][0] as { where: Record<string, unknown> };
+    expect(args.where).toMatchObject({ vendorId: VENDOR, status: "APPROVED" });
+  });
+});
+
+/**
+ * P2.6 slice 3 (#580) — R30, R32. A THIN result keeps every product it found.
+ *
+ * The damaging case #580 exists for: a query returning one tangential product, matched because a
+ * term appears in some unrelated item's description prose. #565's ladder never runs (the result is
+ * not zero), so before this the shopper saw one irrelevant product and no way out.
+ */
+describe("thin results get suggestions, never a replaced result set (R30, R32)", () => {
+  it("returns the direct products AND suggestions when nothing matched on name", async () => {
+    // The candidate's name shares no term with the query, so it can only have matched through its
+    // description — exactly a thin result.
+    const { client } = makeStub([row(1, { name: "Pilau Seasoning" })]);
+    const page = await searchProducts(client, VENDOR, "haldi", { take: 12 });
+
+    expect(page.items.map((item) => item.id)).toEqual(["p001"]);
+    expect(page.directNameMatch).toBe(false);
+    // Non-null even though there is no alias and no in-budget correction to offer: the notice
+    // still has to tell the shopper these results are loose. Both fields being null is the
+    // commonest thin result before the dictionary is populated.
+    expect(page.suggestions).toEqual({ canonicalQuery: null, correctedQuery: null });
+    // The ladder did NOT run — this is a direct result, kept whole.
+    expect(page.recovery).toBeNull();
+  });
+
+  it("offers the canonical term when an approved alias covers the query", async () => {
+    const { client } = makeStub(
+      [row(1, { name: "Pilau Seasoning" })],
+      [{ alias: "haldi", canonical: "turmeric" }],
+    );
+    const page = await searchProducts(client, VENDOR, "haldi", { take: 12 });
+
+    expect(page.suggestions?.canonicalQuery).toBe("turmeric");
+  });
+
+  it("renders no suggestions when a candidate DID match on name (R32)", async () => {
+    const { client } = makeStub([row(1, { name: "Basmati Rice 5kg" })]);
+    const page = await searchProducts(client, VENDOR, "basmati rice", { take: 12 });
+
+    expect(page.directNameMatch).toBe(true);
+    expect(page.suggestions).toBeNull();
+  });
+
+  it("reports directNameMatch false with no suggestions when the query found nothing at all", async () => {
+    // Zero results are the LADDER's territory, not the thin-result path's; both must not fire.
+    const { client } = makeStub([]);
+    const page = await searchProducts(client, VENDOR, "zzzznothing", { take: 12 });
+
+    expect(page.recovery?.rung).toBe("none");
+    expect(page.suggestions).toBeNull();
   });
 });

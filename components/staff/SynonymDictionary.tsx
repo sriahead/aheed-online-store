@@ -29,13 +29,7 @@ const statusStyles: Record<SearchSynonymRow["status"], string> = {
   REJECTED: "bg-surface-muted text-primary/60",
 };
 
-function FormMessage({
-  error,
-  notice,
-}: {
-  error: string | null;
-  notice: string | null;
-}) {
+function FormMessage({ error, notice }: { error: string | null; notice: string | null }) {
   if (error) {
     return (
       <p role="alert" className="mt-2 text-sm text-danger">

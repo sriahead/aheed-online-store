@@ -154,8 +154,11 @@ export interface ProductPage {
 }
 
 /**
- * Ways out of a thin result (P2.6 slice 3, #580), each rendered as a link to that search. Both
- * fields are independently nullable; the notice renders when at least one is set.
+ * Ways out of a thin result (P2.6 slice 3, #580), each rendered as a link to that search.
+ *
+ * Both fields are independently nullable, and BOTH being null is a meaningful, common state rather
+ * than an empty result: the notice still renders, because telling a shopper their results are only
+ * loosely related is the substance of #580 even when nothing better can be named.
  */
 export interface SearchSuggestions {
   /**
@@ -796,7 +799,7 @@ async function buildThinResultSuggestions(
   vendorId: string,
   terms: readonly string[],
   groups: readonly SearchTermGroup[],
-): Promise<SearchSuggestions | null> {
+): Promise<SearchSuggestions> {
   // The canonical rewrite needs no query — the expansion already resolved it.
   const expanded = groups.some((group) => group.variants.length > 1);
   const canonicalQuery = expanded
@@ -809,7 +812,12 @@ async function buildThinResultSuggestions(
   // A "correction" identical to what was typed is not a suggestion.
   const correctedQuery = correction.corrected && corrected !== terms.join(" ") ? corrected : null;
 
-  if (canonicalQuery === null && correctedQuery === null) return null;
+  // Deliberately returns an object even when BOTH suggestions are null. A thin result with no
+  // approved alias and no in-budget correction is the commonest case before the dictionary is
+  // populated, and it is precisely #580's complaint: the shopper sees one tangential product and
+  // nothing to tell them it is tangential. The notice still renders — saying these are loose
+  // matches, and offering the department links — rather than leaving them to conclude the shop
+  // does not stock what they asked for.
   return { canonicalQuery, correctedQuery };
 }
 

@@ -35,8 +35,7 @@ export interface SynonymProposal {
 }
 
 export type ProposalResult =
-  | { ok: true; proposals: SynonymProposal[] }
-  | { ok: false; error: string };
+  { ok: true; proposals: SynonymProposal[] } | { ok: false; error: string };
 
 function buildPrompt(queries: readonly string[], vocabulary: readonly string[]): string {
   return [

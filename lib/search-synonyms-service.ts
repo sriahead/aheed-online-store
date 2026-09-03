@@ -12,10 +12,7 @@ import {
 } from "@/lib/repositories/search-synonyms";
 import { listCurationCandidateQueries } from "@/lib/repositories/search-query-log";
 import { listProductNameTokens } from "@/lib/repositories/products";
-import {
-  PROPOSAL_QUERY_LIMIT,
-  proposeSynonyms,
-} from "@/lib/search-synonym-proposals";
+import { PROPOSAL_QUERY_LIMIT, proposeSynonyms } from "@/lib/search-synonym-proposals";
 
 /**
  * Request-scoped wrapper around `lib/repositories/search-synonyms.ts` (P2.6 slice 3, #566) —

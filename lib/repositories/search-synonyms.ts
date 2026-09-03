@@ -87,8 +87,7 @@ export async function listSynonymsForVendor(
 }
 
 export type SynonymWriteResult =
-  | { ok: true }
-  | { ok: false; error: string; field: "alias" | "canonical" | null };
+  { ok: true } | { ok: false; error: string; field: "alias" | "canonical" | null };
 
 /**
  * Add one synonym.
@@ -135,7 +134,8 @@ export function validateSynonymPair(
   alias: string,
   canonical: string,
 ): { ok: false; error: string; field: "alias" | "canonical" | null } | null {
-  if (alias.length === 0) return { ok: false, error: "Enter the word shoppers type.", field: "alias" };
+  if (alias.length === 0)
+    return { ok: false, error: "Enter the word shoppers type.", field: "alias" };
   if (canonical.length === 0) {
     return { ok: false, error: "Enter the word your catalogue uses.", field: "canonical" };
   }
@@ -162,7 +162,10 @@ export async function updateSynonym(
   const invalid = validateSynonymPair(alias, canonical);
   if (invalid) return invalid;
 
-  const existing = await prisma.searchSynonym.findFirst({ where: { id, vendorId }, select: { id: true } });
+  const existing = await prisma.searchSynonym.findFirst({
+    where: { id, vendorId },
+    select: { id: true },
+  });
   if (!existing) return { ok: false, error: "That entry no longer exists.", field: null };
 
   try {
@@ -183,7 +186,10 @@ export async function setSynonymStatus(
   id: string,
   status: SynonymStatus,
 ): Promise<SynonymWriteResult> {
-  const existing = await prisma.searchSynonym.findFirst({ where: { id, vendorId }, select: { id: true } });
+  const existing = await prisma.searchSynonym.findFirst({
+    where: { id, vendorId },
+    select: { id: true },
+  });
   if (!existing) return { ok: false, error: "That entry no longer exists.", field: null };
 
   await prisma.searchSynonym.update({ where: { id }, data: { status } });
@@ -195,7 +201,10 @@ export async function deleteSynonym(
   vendorId: string,
   id: string,
 ): Promise<SynonymWriteResult> {
-  const existing = await prisma.searchSynonym.findFirst({ where: { id, vendorId }, select: { id: true } });
+  const existing = await prisma.searchSynonym.findFirst({
+    where: { id, vendorId },
+    select: { id: true },
+  });
   if (!existing) return { ok: false, error: "That entry no longer exists.", field: null };
 
   await prisma.searchSynonym.delete({ where: { id } });
