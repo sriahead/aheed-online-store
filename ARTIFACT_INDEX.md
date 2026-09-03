@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-03T00:00:05.204Z` · commit `fbaf0ef` · `143` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-03T03:49:31.013Z` · commit `3eced79` · `144` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -141,6 +141,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Recovery path for an order stranded by a refused webhook binding (plan)](specs/2026-09-02-payment-binding-refusal-recovery/plan.md) | spec | 1.0.0 | 2026-09-02 | draft | internal | A refused Stripe webhook binding leaves only a console.error line and an order stuck PENDING_PAYMENT. This persists every refusal, surfaces the stranded orders to staff, and resolves one against Stripe's own record rather than by re-driving the refused event — closes #454. |
 | [DISCOVER and LEARN — milestone-level SDD phases (plan)](specs/2026-09-02-sdd-discover-learn-phases/plan.md) | spec | 1.0.0 | 2026-09-02 | draft | internal | Adds two strategic phases outside the per-slice SDD loop — Discover (forward-looking research) and Learn (milestone retrospective) — with three KMS-registered homes under docs/research/ and a milestone-close sequence wired into /document. |
 | [The staging deploy path is gated, and its own comment becomes true (plan)](specs/2026-09-02-staging-deploy-gates/plan.md) | spec | 1.0.0 | 2026-09-02 | draft | internal | deploy-staging runs no checks, justified by a comment asserting that gates already ran on the PR — a premise nothing enforces, because no ruleset covers staging. This adds the ruleset that makes the claim true and the quality job that catches the case it misses. |
+| [Dependency pin ratification — make CLAUDE.md describe the pins that are actually running (plan)](specs/2026-09-03-dependency-pin-ratification/plan.md) | spec | 1.0.0 | 2026-09-03 | draft | internal | Ratifies the Neon/Prisma adapter versions that have run in production since 2026-08-14, re-pins them exactly so npm cannot move them again, corrects three stale claims in CLAUDE.md's dependency-discipline paragraph, and adds a machine check so the rule stops being honour-system. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.21.1 | 2026-08-27 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

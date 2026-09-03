@@ -6,6 +6,34 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **The DB dependency pins are now exact, and `CLAUDE.md` finally describes the ones actually
+  running** (`#491`, P9.2). Filed as *drift*; it was not. Both pins moved in one deliberate commit —
+  `ac3f0d6` (2026-08-14), the Cloudflare connection-exhaustion fix that introduced `lib/db.ts`'s
+  hybrid `getPrisma()`/`getPrismaWs()` strategy — which updated `CLAUDE.md`'s hybrid-driver section
+  but **not** its pin paragraph. So the lockfile was current and the doc was stale for three weeks,
+  and because both became **caret** ranges, `npm install` could have moved them again at any point.
+  Ratified rather than reverted: reverting would have undone the dependency half of a real
+  production fix. `@neondatabase/serverless` **1.1.0**, `@prisma/adapter-neon` **7.9.1** and
+  `@prisma/client` **6.19.3** are now declared with no range operator. **No runtime code changed** —
+  these are the versions already installed.
+  New **`tests/dependency-pins.test.ts`** asserts the installed version *and* the absence of a range
+  operator, because checking only the version passes right through a re-loosened pin that still
+  resolves correctly today — precisely the state the repo was in. Proven non-vacuous by mutation.
+  `CLAUDE.md`'s paragraph carried **four** false claims, not one: both pins; `@cloudflare/workers-types`
+  "must match wrangler's major (v5)" (false in both halves — types are `5.20260804.1` against
+  wrangler `4.119.0`, now recorded as an observed pairing rather than an asserted rule); and the
+  suite size `74/874`, measured at **77/903**. That last one mattered most: the file count is taught
+  as *the tell* for the silent worker-startup trap, so a stale number **disabled the detection it
+  exists to provide**.
+  `@prisma/adapter-neon` remains a full major ahead of `@prisma/client`; that straddle is deliberate,
+  now recorded, and tracked by `#560`. Nothing in the toolchain can warn about it — adapter-neon@7
+  declares **no `peerDependencies` at all**, so npm has nothing to check the client against.
+  The lockfile **had** to be re-synced: it mirrors declared specifiers, all eight workflows run
+  `npm ci`, and `npm ci` refuses to install when manifest and lockfile disagree. Verified with a
+  real clean install; zero resolved versions moved anywhere in the tree.
+
 ### Added
 
 - **A refused Stripe payment binding is now recorded, discoverable and recoverable** (`#454`,
