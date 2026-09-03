@@ -4,8 +4,8 @@ title: "Discovery log"
 audience: [dev, product]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-09-02
+version: "1.1.0"
+updated: 2026-09-03
 visibility: internal
 summary: "Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action."
 tags: [research, discovery, opportunities, risk, sdd]
@@ -35,6 +35,208 @@ milestone close). Nothing here is approved scope — see `docs/research/README.m
 
 **Next action:** RESEARCH MORE | PROPOSE | ADD TO ROADMAP/BACKLOG | READY FOR SPEC | DO NOT PURSUE
 ```
+
+---
+
+## 2026-09-03 — second Discover pass (P2.6 search & AI shopping, at /propose)
+
+Five findings from a pass over the search path, the shop-list matcher, the data-rights machinery and
+the six slice issues filed for P2.6 the same day (**#564** to **#569**). Everything else the pass
+surfaced was **already owned**: fuzzy ranking is `#286`, synonyms `#396`, facets `#397`, pack size
+`#398`, saved lists `#116`, stock badges `#400`, the mega-menu `#394`, and the filter-form token
+`#512`. The landing page having a postcode checker where every other route has a search box is
+**already implemented deliberately** (P8.5f, `components/layout/Header.tsx`) and is not a gap.
+
+Two of these are filed as issues; three are constraints on slices already filed and are recorded
+here plus as comments on those issues, because a near-duplicate issue for a rule that belongs in an
+unwritten spec is noise rather than tracking.
+
+### 2026-09-03 — a search query log is personal data and nothing connects it to data rights
+
+**Trigger:** explicit /discover on P2.6.
+**Status of the area:** genuinely unowned — `#565` proposes the log and does not mention data rights.
+
+**Observed (verifiable today):** `lib/repositories/data-rights.ts` exports exactly ten model sets
+(`user`, `account`, `session`, `address`, `order`, `review`, `cart`, `loyaltyAccount`,
+`loyaltyLedgerEntry`, `discountRedemption`) and its erasure path deletes reviews, carts and loyalty
+accounts, tombstones orders and deletes the user. That function's own comment warns that "a partial
+erasure leaves a user half-deleted with no way to tell where it stopped". `#565` proposes a
+vendor-scoped search query log recording queries and zero-result queries; its body says nothing
+about export or erasure. `ErrorEvent` (`prisma/schema.prisma:962`) is absent from both paths too,
+but carries no user link, so it raises the question rather than answering it.
+
+**Interpretation:** a search history tied to a signed-in user is personal data under UK GDPR, and P7
+built the data-subject-rights machinery precisely so that new personal data has somewhere to go. A
+log added without wiring is a silent compliance regression of exactly the shape this repo has
+already paid for elsewhere.
+
+**Confidence:** the code facts are Known. Whether the log will carry a user link at all is **Needs
+validation** — it is an open design choice in `#565`'s unwritten spec, and the cheapest resolution
+is to decide it never does.
+
+**Why it matters commercially:** a data-subject access request that silently omits a category of
+personal data is a regulatory exposure, and search history is unusually revealing — dietary,
+religious and health inferences all fall out of grocery queries.
+
+**Options considered:** record no user link at all, storing vendor plus a hashed IP exactly as
+`OrderLookupAttempt` and `AuthenticationAttempt` already do ("SHA-256 of the caller's IP, not the IP
+itself — this table exists purely as a counter"), which removes the problem at the root and still
+serves the curation purpose the log exists for; link to the user and wire the model into both export
+and erasure; link and accept the gap, which is not defensible.
+
+**Cost of delay:** after launch this becomes a migration over live rows plus a decision about
+backfilling or discarding history already collected.
+
+**Next action:** PROPOSE
+
+### 2026-09-03 — the zero-result AI call is an unmetered, attacker-controlled cost path
+
+**Trigger:** explicit /discover on P2.6.
+**Status of the area:** genuinely unowned — `#565` specifies the AI call and no limit on it.
+
+**Observed (verifiable today):** `/search` is public and unauthenticated, and `#565` attaches a
+Cloudflare AI call to any query returning zero results — a condition fully controlled by the caller
+through the `q` parameter. **There is no middleware layer to limit it centrally:** no `proxy.ts` or
+`middleware.ts` exists, and `CLAUDE.md` records that none can ship on this stack at all, because
+Next 16 forbids the edge runtime for a Proxy file while `@opennextjs/cloudflare` 1.20.2 exits the
+build on a Node-runtime one. Rate limiting therefore exists only per route, in two places:
+`lib/auth.ts` (and only as a **plugin** — a bare `onRequest` config key silently never runs, `#483`)
+and guest order lookup. Both are backed by the same model shape, `vendorId` plus `ipHash` plus
+`createdAt` with a matching index (`OrderLookupAttempt`, `AuthenticationAttempt`).
+`lib/image-generation.ts:44` already carries a 429 retry loop with 2s and 4s backoff because
+Workers AI rate-limits this account in practice.
+
+**Interpretation:** a trivial script issuing random queries converts each request into a paid
+inference. The account's AI quota is **shared with the product image pipeline**, so the failure is
+not only a bill — exhausting it also stalls image generation, which `#523` already showed is a
+fragile, bounded, scheduled job.
+
+**Confidence:** Known. Every element is a verified code or configuration fact.
+
+**Why it matters commercially:** unbudgeted spend on an endpoint no one is watching, plus a
+shared-quota outage in an unrelated subsystem, and neither has an alert behind it — `#437`
+(critical production alerting) is still open.
+
+**Options considered:** a per-route limiter reusing the existing counter-model shape, which is a
+known-good pattern here; a cheap pre-filter so AI is reached only after the deterministic rungs fail
+and only for queries that look like plausible product terms; caching corrections by normalised query
+so a repeated attack costs nothing after the first hit; doing nothing, which is only tenable if the
+AI rung is never reached by anonymous traffic.
+
+**Cost of delay:** designing the limiter alongside `#565` is nearly free; adding it after an
+unexpected bill or a stalled image job means doing it under pressure.
+
+**Next action:** PROPOSE
+
+### 2026-09-03 — the recovery ladder fires on zero results, but the damaging case is one bad result
+
+**Trigger:** explicit /discover on P2.6.
+**Status of the area:** genuinely unowned — a design gap between `#564` and `#565` as filed.
+
+**Observed (verifiable today):** `searchProducts` (`lib/repositories/products.ts:359`) ORs `name`
+with `description`, so a term hitting prose in an unrelated product's description is a match. P3d
+deliberately excluded `description` from **list** matching and recorded why: "A term matching prose
+in a description produces a confident-looking wrong match, which is precisely what the review step
+exists to prevent." The two paths therefore already disagree, and the storefront takes the looser
+one. `#565`'s ladder is specified to run when a search yields no products; `#564` leaves whether
+`description` stays in the match set as an open question for its spec.
+
+**Interpretation:** a one-word query such as `haldi` that happens to appear in a single product's
+description returns exactly one result, so the correction and synonym rungs never run. The shopper
+sees one tangential product instead of the turmeric shelf — worse than zero results, because zero at
+least triggers recovery. The trigger should be a relevance or confidence threshold, not a count
+of zero.
+
+**Confidence:** the code facts and the P3d ruling are Known. That this pattern occurs in the live
+catalogue is **Needs validation** — and it becomes directly measurable from `#565`'s own query log
+once that exists, which is an argument for shipping the log before tuning the trigger.
+
+**Why it matters commercially:** grocery staples carry many near-synonyms and shoppers type one
+word. A single irrelevant result reads as "they do not stock this" just as firmly as an empty page,
+while consuming the one mechanism built to prevent that conclusion.
+
+**Options considered:** fire the ladder on a relevance threshold rather than a result count; drop
+`description` from search matching so the storefront agrees with the list matcher; keep
+`description` but rank name matches above it and offer a "did you mean" alongside thin results
+rather than only in place of empty ones.
+
+**Cost of delay:** `#564` and `#565` are being specced now. The trigger condition is cheap to get
+right before staff begin curating synonyms against it and awkward afterwards.
+
+**Next action:** PROPOSE
+
+### 2026-09-03 — the AI shop list accepts pack sizes it has no model to resolve
+
+**Trigger:** explicit /discover on P2.6.
+**Status of the area:** genuinely unowned as a **sequencing** question; the underlying unit model is
+tracked as `#398`.
+
+**Observed (verifiable today):** `#567` accepts pack sizes as input and requires that "quantities and
+specified pack sizes are retained wherever possible". `Product` carries no pack-size field, and
+`unitLabel` is free text of the form "GBP 2.40 per kg", unusable as a facet or a comparison. `#569`
+avoids this by **excluding** pack size and deferring to `#398`; `#567` cannot, because pack size is
+part of its input. `#398`'s unit-price half sits in **P9.3** and its variant and unit-of-measure
+model in **P10** — both *after* P2.6, which was sequenced ahead of P9 on 2026-09-03.
+
+**Interpretation:** "2kg atta" against a catalogue holding 1kg, 5kg and 10kg bags has no defined
+resolution — two of the small bag, the nearest single pack, or a refusal are all defensible, and
+they are not equivalent to the shopper. Without a unit model the AI will pick one confidently, which
+is precisely the "materially different product" outcome the requirement forbids. This is a
+dependency inversion created by the sequencing decision, not a defect in any single issue.
+
+**Confidence:** Known.
+
+**Why it matters commercially:** weight-denominated staples — atta, rice, keema, dal — are exactly
+the vocabulary the Desi shop-list feature exists to serve, so this is the centre of the use case
+rather than an edge of it.
+
+**Options considered:** constrain `#567` to count quantities and route weight-denominated lines to
+the review step flagged as needing a choice, which is the smallest change, keeps the
+never-substitute guarantee intact and needs no unit model; pull `#398`'s unit derivation forward
+ahead of `#567`, which reopens the sequencing decision; resolve to the nearest single pack and show
+the size prominently in review, which is guessing with a disclosure.
+
+**Cost of delay:** if `#567` is built before this is settled, its matcher encodes a guess that
+`#398` then has to unpick, in the one place where a wrong answer charges the customer for the wrong
+weight of food.
+
+**Next action:** PROPOSE
+
+### 2026-09-03 — ranking in-stock first can hide that the shop stocks the item at all
+
+**Trigger:** explicit /discover on P2.6; a challenge to `#564` as filed.
+**Status of the area:** partly tracked — `#400` (smart stock badges with expected restock date) is
+filed and sits in P10.
+
+**Observed (verifiable today):** `#564` will rank in-stock products ahead of out-of-stock ones.
+An `inStockOnly` filter **already exists** as an explicit opt-in
+(`buildFilterWhere`, `lib/repositories/products.ts:189`, setting the inventory quantity predicate to
+greater than zero), so the shopper already has a control for "only show me what I can buy today".
+Ordering is currently `createdAt desc, id desc` for every listing including search.
+
+**Interpretation:** making availability the default *ordering* removes the signal that the store
+carries the item at all, and the customer already had a way to ask for that behaviour when they
+wanted it. In grocery, stock volatility on fresh and chilled lines is routine rather than
+exceptional, and the shopper is a weekly returner: "out of stock, back Thursday" retains them,
+while a result set that looks empty of their staple sends them to a competitor permanently.
+
+**Confidence:** the code facts are Known. The retention claim is **Inferred** — and it cannot
+currently be measured, because no analytics instrumentation exists (see the 2026-09-02 entry on
+that, still unresolved).
+
+**Why it matters commercially:** the cost of getting this wrong is asymmetric. Burying an
+out-of-stock staple risks losing a weekly shopper outright; showing it with an honest availability
+badge costs one line of a result page.
+
+**Options considered:** rank in-stock first but guarantee an exact name match is always visible
+regardless of stock, which preserves both signals; keep recency ordering and rely on availability
+badges to carry the message; expose ordering as an explicit sort control and default it to
+relevance rather than availability.
+
+**Cost of delay:** low in code terms — this is a rule in one spec — but it is much easier to state
+now than to revisit once `#568`'s autocomplete inherits the same ranking.
+
+**Next action:** PROPOSE
 
 ---
 

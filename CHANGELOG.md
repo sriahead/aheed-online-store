@@ -6,6 +6,47 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Storefront search now matches multi-word queries, and ranks results by relevance instead of
+  recency** (`#564`, P2.6). `searchProducts` passed the whole trimmed query to a single `contains`,
+  so `basmati rice` matched only that exact substring in that exact order — every multi-word or
+  out-of-order query returned **nothing**, before typos or synonyms entered the picture. Confirmed
+  live in both directions against the dev catalogue: the old predicate returns 0 rows for
+  `rice basmati`, the new one finds *Basmati Rice 5kg*.
+  New **`lib/search-query.ts`** tokenises (capped at 10 terms so a pasted paragraph cannot build an
+  unbounded predicate) and the query becomes an `AND` of one clause per term, each satisfied by
+  `name` **or** `description`. SQL-level recall is deliberately unchanged; what changed is that
+  *every* term must now be satisfied by something. Kept separate from `lib/shopping-list.ts` — they
+  must differ on leading quantities (`5kg basmati rice` is one product, `2 apples` is two) — with a
+  test pinning them together on every quantity-free input.
+  New **`lib/search-ranking.ts`** ranks over five tiers. **Relevance dominates availability
+  deliberately:** an out-of-stock product whose name matches every term outranks an in-stock one
+  that matched only through its description, because burying an out-of-stock staple reads to a
+  grocery shopper as "they do not sell this", and `inStockOnly` is a filter they already have.
+  `searchProducts` no longer uses `findPage`: a keyset cursor's ordering key has to *be* the sort
+  key, and relevance is computed rather than stored. It fetches a bounded candidate set, ranks it
+  purely, slices the page, and only then looks up tier pricing — for the twelve rows rendered, not
+  all two hundred candidates. `findPage` is unchanged and still serves every browse and category
+  listing. **`specs/architecture.md` (1.22.0) carries the one scoped exception** to the keyset rule,
+  argued from that rule's own rationale — `OFFSET` is banned because it degrades linearly, and a
+  bounded query does not — and explicitly forbids citing itself for offset pagination over an
+  unbounded query.
+  `ProductPage` gains **`truncated`**, set by a **sentinel row** (fetch 201, rank 200), not by the
+  cap being reached: "cap reached" would **lie** when the catalogue holds exactly 200 matches —
+  nothing missing, yet the shopper told the list is incomplete. A test asserts the exactly-200 case
+  specifically, since it is the only one that distinguishes the two semantics.
+  The row-to-summary mapping is extracted to a shared `toProductSummary`, so the keyset and ranked
+  paths cannot drift into returning different fields.
+  Search p95 re-measured at **67.6 ms** against a 400 ms target and recorded in `nfr-baseline.md`
+  (1.3.0) beside the previous figure — **not** as evidence the new query is faster: four untouched
+  paths moved in the same run and one got slower by more than search got faster.
+  Two spec errors were corrected at Build from real measurement: `plan.md` guessed that a broad word
+  such as `chicken` could exceed the candidate cap (it matches **3** products; `e` matches 2,026),
+  and `validation.md`'s optional row named `chicken` directly — so a validator following it
+  literally would have recorded the truncation notice as unreachable when it is not. Low-information
+  terms are tracked as **`#572`**.
+
 ### Changed
 
 - **The DB dependency pins are now exact, and `CLAUDE.md` finally describes the ones actually

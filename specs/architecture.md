@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.21.1"
-updated: 2026-08-27
+version: "1.22.0"
+updated: 2026-09-03
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -389,6 +389,32 @@ partial/trigram index for name search only when the catalogue grows.
 **Pagination.** **Keyset (cursor) pagination** on `(createdAt, id)` everywhere lists can grow
 (product grids, order history, admin tables). Never `OFFSET` — it degrades linearly and is the
 classic mobile-scroll performance trap. Prisma `cursor` + `take` implements this directly.
+
+**One scoped exception: ranked storefront search** (P2.6 slice 1, `#564`). `searchProducts` in
+`lib/repositories/products.ts` fetches at most `SEARCH_CANDIDATE_LIMIT + 1` (201) matching rows —
+the extra row is a truncation sentinel, discarded before ranking — ranks at most
+`SEARCH_CANDIDATE_LIMIT` (200) of them in pure code (`lib/search-ranking.ts`), and paginates by
+**slicing that ranked array** — its
+cursor is a non-negative integer offset into the candidate set, not a row id. Every other list,
+including `listProducts` and this same page's browse mode, is unchanged.
+
+The reason keyset cannot serve it: a cursor's ordering key has to *be* the sort key, and relevance is
+not a stored column. Prisma cannot express the ranking in `orderBy`, and computing it in SQL would
+need `$queryRaw`, which `CLAUDE.md` forbids in `lib/repositories/*`.
+
+**This does not reopen `OFFSET`.** The prohibition above exists because `OFFSET` degrades linearly:
+page ten reads and discards nine pages of rows. Here the database query is **bounded and identical
+for every page** — it always fetches at most 201 rows and the slicing happens in memory — so page ten
+costs exactly what page one costs. The rule's stated rationale is not engaged.
+
+What *is* given up, and is not hidden: a query matching more than 200 products cannot reach the rest,
+and which 200 are ranked is decided by the fetch's own `createdAt desc, id desc` order rather than
+by relevance. `ProductPage.truncated` carries that fact to the UI so the shopper is told the list is
+partial — set from a **sentinel row** (the fetch asks for one more than the cap) so it means "more
+matches provably exist", not merely "the cap was reached", which would misreport a catalogue holding
+exactly 200 matches. Raising the cap needs either an index that can serve ranking or the `pg_trgm` work in
+`#286`; until then the bound is deliberate, and this exception must not be cited to justify offset
+pagination over an **unbounded** query anywhere else.
 
 **Query optimization.** Explicit `select`/`include` (never over-fetch); batch relations to kill
 N+1; per-request memoization with React `cache()`; wrap order creation in a single
