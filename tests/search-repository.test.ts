@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   SEARCH_CANDIDATE_LIMIT,
   buildFilterWhere,
+  listProductNameTokens,
   listProducts,
   searchProducts,
   type ProductFilters,
@@ -115,7 +116,13 @@ describe("empty-query guard (R7)", () => {
 
     const result = await searchProducts(client, VENDOR, query, { take: 12 });
 
-    expect(result).toEqual({ items: [], nextCursor: null, truncated: false });
+    expect(result).toEqual({
+      items: [],
+      nextCursor: null,
+      truncated: false,
+      directResultCount: 0,
+      recovery: null,
+    });
     // The assertion that actually proves the requirement.
     for (const [name, spy] of Object.entries(spies)) {
       expect(spy, `${name} should not have been called`).toHaveBeenCalledTimes(0);
@@ -290,5 +297,186 @@ describe("item shape and the truncated flag (R18)", () => {
     const { client } = makeStub(rows);
     const page = await searchProducts(client, VENDOR, "rice", { take: 12 });
     expect(page.truncated).toBe(true);
+  });
+});
+
+/**
+ * P2.6 slice 2 (#565) — the zero-result ladder.
+ *
+ * `makeLadderStub` distinguishes the token-vocabulary query (`listProductNameTokens`, which
+ * carries no `orderBy`) from a ranked candidate fetch (direct/typo/identity/broad, which always
+ * does), and hands successive candidate fetches their responses from `searchResponses` in call
+ * order — the ladder's own rung order is what determines how many of those actually get consumed.
+ */
+function makeLadderStub(searchResponses: Row[][], tokenNames: string[] = []) {
+  let searchCallIndex = 0;
+  const productFindMany = vi.fn(async (args: unknown) => {
+    const a = args as { orderBy?: unknown };
+    if (!a.orderBy) return tokenNames.map((name) => ({ name }));
+    const response = searchResponses[searchCallIndex] ?? [];
+    searchCallIndex += 1;
+    return response;
+  });
+  const tierFindMany = vi.fn(async (_args: unknown) => [] as unknown[]);
+
+  const client = {
+    product: { findMany: productFindMany },
+    productPriceTier: { findMany: tierFindMany },
+  };
+
+  return { client: client as never, spies: { productFindMany, tierFindMany } };
+}
+
+function onlySearchCalls(spies: ReturnType<typeof makeLadderStub>["spies"]) {
+  return spies.productFindMany.mock.calls.filter(
+    (call) => (call[0] as { orderBy?: unknown }).orderBy,
+  );
+}
+
+describe("listProductNameTokens (R6)", () => {
+  it("tokenises active product NAMES only, vendor-scoped, deduplicated", async () => {
+    const productFindMany = vi.fn(async (args: unknown) => {
+      expect(args).toEqual({ where: { vendorId: VENDOR, isActive: true }, select: { name: true } });
+      return [{ name: "Basmati Rice" }, { name: "Basmati Lentils" }];
+    });
+    const client = { product: { findMany: productFindMany } };
+
+    const tokens = await listProductNameTokens(client as never, VENDOR);
+
+    expect(tokens).toEqual(new Set(["basmati", "rice", "lentils"]));
+  });
+});
+
+describe("direct search succeeds: the ladder never runs (R9)", () => {
+  it("sets directResultCount from the direct fetch and issues no further query", async () => {
+    const matches = [row(1), row(2), row(3)];
+    const { client, spies } = makeLadderStub([matches]);
+
+    const page = await searchProducts(client, VENDOR, "rice", { take: 12 });
+
+    expect(page.directResultCount).toBe(3);
+    expect(page.recovery).toBeNull();
+    expect(onlySearchCalls(spies)).toHaveLength(1);
+  });
+});
+
+describe("rung 1: typo correction (R10)", () => {
+  it("re-queries the direct predicate shape with the corrected term and ranks against it", async () => {
+    const matches = [row(1, { name: "Basmati Rice 1" })];
+    const { client, spies } = makeLadderStub([[], matches], ["rice", "basmati"]);
+
+    const page = await searchProducts(client, VENDOR, "ricd", { take: 12 });
+
+    expect(page.directResultCount).toBe(0);
+    expect(page.recovery).toEqual({ rung: "typo", correctedTerms: ["rice"] });
+    expect(page.items).toHaveLength(1);
+
+    const calls = onlySearchCalls(spies);
+    expect(calls).toHaveLength(2);
+    const secondWhere = (calls[1][0] as { where: { AND: unknown[] } }).where;
+    expect(secondWhere.AND[0]).toEqual({
+      OR: [
+        { name: { contains: "rice", mode: "insensitive" } },
+        { description: { contains: "rice", mode: "insensitive" } },
+      ],
+    });
+  });
+
+  it("skips the re-query entirely when nothing is correctable", async () => {
+    const { client, spies } = makeLadderStub([[], [row(1)]], []);
+
+    await searchProducts(client, VENDOR, "xyz", { take: 12 });
+
+    // direct + identity only — no typo re-query, since correctTerms found nothing to correct.
+    // (identity finds a match here, so the ladder stops before reaching the broad rung too.)
+    expect(onlySearchCalls(spies)).toHaveLength(2);
+  });
+});
+
+describe("rung 3: identity match — name or category name (R11)", () => {
+  it("loosens AND-of-terms to OR-of-terms across name/category.name when typo doesn't apply", async () => {
+    const matches = [row(1)];
+    const { client, spies } = makeLadderStub([[], matches], []);
+
+    const page = await searchProducts(client, VENDOR, "xyz", { take: 12 });
+
+    expect(page.recovery).toEqual({ rung: "identity" });
+    const calls = onlySearchCalls(spies);
+    expect(calls).toHaveLength(2);
+    const where = (calls[1][0] as { where: { OR: unknown[] } }).where;
+    expect(where.OR).toContainEqual({ name: { contains: "xyz", mode: "insensitive" } });
+    expect(where.OR).toContainEqual({
+      category: { name: { contains: "xyz", mode: "insensitive" } },
+    });
+  });
+});
+
+describe("rung 4: broad match — name or description (R12)", () => {
+  it("falls through to the widest OR when identity also finds nothing", async () => {
+    const matches = [row(1)];
+    const { client, spies } = makeLadderStub([[], [], matches], []);
+
+    const page = await searchProducts(client, VENDOR, "xyz", { take: 12 });
+
+    expect(page.recovery).toEqual({ rung: "broad" });
+    const calls = onlySearchCalls(spies);
+    expect(calls).toHaveLength(3);
+    const where = (calls[2][0] as { where: { OR: unknown[] } }).where;
+    expect(where.OR).toContainEqual({ name: { contains: "xyz", mode: "insensitive" } });
+    expect(where.OR).toContainEqual({ description: { contains: "xyz", mode: "insensitive" } });
+  });
+});
+
+describe("ladder exhausted (R13)", () => {
+  it("tries all four attempts — including a genuinely correctable typo — and reports rung 'none'", async () => {
+    const { client, spies } = makeLadderStub([[], [], [], []], ["rice"]);
+
+    const page = await searchProducts(client, VENDOR, "ricd", { take: 12 });
+
+    expect(page.items).toEqual([]);
+    expect(page.directResultCount).toBe(0);
+    expect(page.recovery).toEqual({ rung: "none" });
+    expect(onlySearchCalls(spies)).toHaveLength(4);
+  });
+});
+
+describe("every rung shares the same fetch/cap/sentinel shape (R14)", () => {
+  it("carries the same take/orderBy regardless of which rung supplied results, and truncated reflects it", async () => {
+    const rows = Array.from({ length: SEARCH_CANDIDATE_LIMIT + 1 }, (_, i) => row(i));
+    const { client, spies } = makeLadderStub([[], rows], []);
+
+    const page = await searchProducts(client, VENDOR, "xyz", { take: 12 });
+
+    expect(page.recovery).toEqual({ rung: "identity" });
+    expect(page.truncated).toBe(true);
+    for (const call of onlySearchCalls(spies)) {
+      const args = call[0] as { take: number; orderBy: unknown };
+      expect(args.take).toBe(SEARCH_CANDIDATE_LIMIT + 1);
+      expect(args.orderBy).toEqual([{ createdAt: "desc" }, { id: "desc" }]);
+    }
+  });
+});
+
+describe("pagination is stable across the ladder (R15)", () => {
+  it("page 2 re-derives the same rung and slices the same ranked set as page 1", async () => {
+    const matches = Array.from({ length: 20 }, (_, i) => row(i, { name: `Basmati Rice ${i}` }));
+
+    const { client: firstClient, spies: firstSpies } = makeLadderStub([[], matches], ["rice"]);
+    const first = await searchProducts(firstClient, VENDOR, "ricd", { take: 12 });
+    expect(first.recovery).toEqual({ rung: "typo", correctedTerms: ["rice"] });
+
+    const { client: secondClient, spies: secondSpies } = makeLadderStub([[], matches], ["rice"]);
+    const second = await searchProducts(secondClient, VENDOR, "ricd", {
+      take: 12,
+      cursor: first.nextCursor ?? undefined,
+    });
+
+    const firstTypoWhere = onlySearchCalls(firstSpies)[1][0] as { where: unknown };
+    const secondTypoWhere = onlySearchCalls(secondSpies)[1][0] as { where: unknown };
+    expect(secondTypoWhere.where).toEqual(firstTypoWhere.where);
+
+    const firstIds = first.items.map((p) => p.id);
+    const secondIds = second.items.map((p) => p.id);
+    expect(new Set([...firstIds, ...secondIds]).size).toBe(firstIds.length + secondIds.length);
   });
 });

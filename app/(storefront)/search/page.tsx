@@ -10,6 +10,8 @@ import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
 import { searchPageHref } from "@/components/product/search-href";
 import { SearchTruncationNotice } from "@/components/product/SearchTruncationNotice";
+import { SearchRecoveryNotice } from "@/components/product/SearchRecoveryNotice";
+import { parseSearchQuery } from "@/lib/search-query";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
 // can't load during next build's Node-based static prerendering.
@@ -87,6 +89,10 @@ export default async function SearchPage({
   // knows whether more matches existed than it was willing to rank. `list()`
   // always reports false, so browse mode never shows the notice.
   const truncated = result.truncated;
+  // #565 — same reasoning for the zero-result ladder's outcome. `list()` always
+  // returns `null`, so browse mode never shows a recovery notice either.
+  const recovery = result.recovery;
+  const searchTerms = parseSearchQuery(query);
 
   const specialities = await products.availableSpecialities();
   // P8.5a (#345): request-memoised, shared with the header's cart read.
@@ -116,25 +122,42 @@ export default async function SearchPage({
           <SearchTruncationNotice truncated={truncated} />
 
           {items.length === 0 ? (
-            /*
-             * #501 — without this, a search with no matches (or an over-narrow
-             * price filter) still renders the same blank content column this
-             * slice exists to remove, just reached by a different route.
-             */
-            <p className="text-primary/70">
-              No products match. Try a different search or clear your filters.
-            </p>
+            recovery?.rung === "none" ? (
+              // #565 — the zero-result ladder ran and still found nothing: relevant
+              // categories plus one link per search term, rather than a dead end.
+              <SearchRecoveryNotice
+                recovery={recovery}
+                terms={searchTerms}
+                categories={allCategories}
+              />
+            ) : (
+              /*
+               * #501 — without this, a search with no matches (or an over-narrow
+               * price filter) still renders the same blank content column this
+               * slice exists to remove, just reached by a different route.
+               */
+              <p className="text-primary/70">
+                No products match. Try a different search or clear your filters.
+              </p>
+            )
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {items.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  cdnBaseUrl={CDN_BASE_URL ?? ""}
-                  cartQuantity={cartQuantities.get(product.id) ?? 0}
-                />
-              ))}
-            </div>
+            <>
+              <SearchRecoveryNotice
+                recovery={recovery}
+                terms={searchTerms}
+                categories={allCategories}
+              />
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {items.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    cdnBaseUrl={CDN_BASE_URL ?? ""}
+                    cartQuantity={cartQuantities.get(product.id) ?? 0}
+                  />
+                ))}
+              </div>
+            </>
           )}
 
           {nextCursor && (

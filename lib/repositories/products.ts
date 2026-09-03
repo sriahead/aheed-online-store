@@ -5,6 +5,7 @@ import { effectiveStock } from "@/lib/cart-rules";
 import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
 import { parseSearchQuery } from "@/lib/search-query";
 import { rankSearchCandidates } from "@/lib/search-ranking";
+import { correctTerms } from "@/lib/search-typo-correction";
 import {
   MAX_IMAGE_ATTEMPT_FAILURES,
   PLACEHOLDER_IMAGE_SUFFIX,
@@ -105,6 +106,33 @@ export interface ProductPage {
    * `listProductsByCategory`), which are not capped at all.
    */
   truncated: boolean;
+  /**
+   * P2.6 slice 2 (#565) — the DIRECT (#564) search's own candidate count, captured before any
+   * zero-result-ladder rung runs (capped at `SEARCH_CANDIDATE_LIMIT`, same as `truncated`'s
+   * source count). Exists so `lib/products-service.ts`'s query-log write can log a real count
+   * without a second query to re-derive one. Always `0` for `listProducts`/`listProductsByCategory`
+   * — meaningless there, present only so every `ProductPage` has the same shape.
+   */
+  directResultCount: number;
+  /**
+   * P2.6 slice 2 (#565) — `null` when the direct search already found something (the ladder never
+   * ran). `{ rung: "none" }` means every rung was tried and none found anything. Always `null` for
+   * `listProducts`/`listProductsByCategory`.
+   */
+  recovery: SearchRecoveryInfo | null;
+}
+
+/**
+ * See `ProductPage.recovery`. The ladder has three rungs — "typo", "identity", "broad" — tried in
+ * that order; "none" means all three ran and found nothing. #566's synonym rung sits between
+ * "typo" and "identity" when it ships; it does not exist in this slice (see plan.md).
+ */
+export type SearchRecoveryRung = "typo" | "identity" | "broad" | "none";
+
+export interface SearchRecoveryInfo {
+  rung: SearchRecoveryRung;
+  /** Only set when `rung === "typo"`. */
+  correctedTerms?: string[];
 }
 
 /** Shared filter shape for listByCategory(), search() and list() — one definition, not three. */
@@ -321,6 +349,9 @@ async function findPage(
     nextCursor: hasMore ? page[page.length - 1].id : null,
     // Never capped — this path pages through everything by keyset.
     truncated: false,
+    // No zero-result ladder outside searchProducts() — see ProductPage's docstring.
+    directResultCount: 0,
+    recovery: null,
   };
 }
 
@@ -446,48 +477,22 @@ function parseSearchOffset(cursor: string | undefined): number {
 }
 
 /**
- * Storefront search (#564).
- *
- * Two things changed here and nowhere else. First, the query is TOKENISED: the
- * predicate is an AND over the parsed terms, each satisfied by a
- * case-insensitive `contains` on name OR description. It previously passed the
- * whole query to one `contains`, so `basmati rice` matched only that exact
- * substring in that exact order and any multi-word search returned nothing.
- * Recall at the SQL level is deliberately unchanged — a term may still be
- * satisfied by the description; what changed is that EVERY term must be
- * satisfied by something.
- *
- * Second, results are RANKED rather than ordered by recency, which is why this
- * no longer uses `findPage`: the sort key is computed, so keyset pagination on
- * (createdAt, id) cannot express it. It fetches a bounded candidate set, ranks
- * it purely, slices the requested page, and only THEN looks up tier pricing —
- * for the twelve rows being rendered, not for all two hundred candidates.
+ * One fetch/cap/rank-input-shape, shared by the direct search and every zero-result-ladder rung
+ * (#565) — the query SHAPE (the `predicate` argument) changes per rung, the sentinel/cap machinery
+ * does not. Mirrors exactly what `searchProducts` fetched inline before this slice.
  */
-export async function searchProducts(
+async function fetchSearchCandidates(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
-  query: string,
-  { take, cursor, ...filters }: { take: number; cursor?: string } & ProductFilters,
-): Promise<ProductPage> {
-  const terms = parseSearchQuery(query);
-  // Guard retained from the original (#211's split): search() means "match this
-  // text", and an empty box is the PAGE's decision to browse instead — see
-  // ProductRepository.list's docstring. Returns before touching the client at
-  // all, which is what `tests/search-repository.test.ts` asserts with spies.
-  if (terms.length === 0) return { items: [], nextCursor: null, truncated: false };
-
+  filters: ProductFilters,
+  predicate: Prisma.ProductWhereInput,
+): Promise<{ truncated: boolean; candidates: ProductSummary[] }> {
   const rows = await prisma.product.findMany({
     where: {
       vendorId,
       isActive: true,
       ...buildFilterWhere(filters),
-      // One AND clause per term, each satisfied by name OR description.
-      AND: terms.map((term) => ({
-        OR: [
-          { name: { contains: term, mode: "insensitive" as const } },
-          { description: { contains: term, mode: "insensitive" as const } },
-        ],
-      })),
+      ...predicate,
     },
     // A TOTAL order, so which rows land inside the cap is deterministic even
     // when createdAt ties right at the boundary. Without `id`, two products
@@ -504,8 +509,168 @@ export async function searchProducts(
   const candidates = rows
     .slice(0, SEARCH_CANDIDATE_LIMIT)
     .map((row) => toProductSummary(row, null));
+  return { truncated, candidates };
+}
 
-  const ranked = rankSearchCandidates(candidates, terms);
+/** The direct (#564) predicate: every term required, each satisfied by `name` OR `description`. */
+function directSearchPredicate(terms: readonly string[]): Prisma.ProductWhereInput {
+  return {
+    AND: terms.map((term) => ({
+      OR: [
+        { name: { contains: term, mode: "insensitive" as const } },
+        { description: { contains: term, mode: "insensitive" as const } },
+      ],
+    })),
+  };
+}
+
+/**
+ * Ladder rung "identity" (#565): loosens the direct predicate's `AND` to an `OR`, and narrows the
+ * fields to `name`/category `name` (drops `description` — a term hitting prose is a much weaker
+ * signal once every-term-required has already been given up).
+ */
+function identitySearchPredicate(terms: readonly string[]): Prisma.ProductWhereInput {
+  return {
+    OR: terms.flatMap((term) => [
+      { name: { contains: term, mode: "insensitive" as const } },
+      { category: { name: { contains: term, mode: "insensitive" as const } } },
+    ]),
+  };
+}
+
+/** Ladder rung "broad" (#565): the widest net — `OR` across terms, `name` or `description`. */
+function broadSearchPredicate(terms: readonly string[]): Prisma.ProductWhereInput {
+  return {
+    OR: terms.flatMap((term) => [
+      { name: { contains: term, mode: "insensitive" as const } },
+      { description: { contains: term, mode: "insensitive" as const } },
+    ]),
+  };
+}
+
+/**
+ * The vendor's deduplicated product-**name** vocabulary (#565) — `description` is deliberately
+ * excluded, a token from prose being a much weaker signal of what a shopper meant to type. Feeds
+ * the zero-result ladder's typo-correction rung (`lib/search-typo-correction.ts`).
+ *
+ * Takes `prisma` and `vendorId` as explicit parameters and reads no request context (#252).
+ */
+export async function listProductNameTokens(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+): Promise<Set<string>> {
+  const rows = await prisma.product.findMany({
+    where: { vendorId, isActive: true },
+    select: { name: true },
+  });
+
+  const tokens = new Set<string>();
+  for (const row of rows) {
+    for (const token of parseSearchQuery(row.name)) tokens.add(token);
+  }
+  return tokens;
+}
+
+/**
+ * Storefront search (#564, #565).
+ *
+ * The query is TOKENISED: the predicate is an AND over the parsed terms, each satisfied by a
+ * case-insensitive `contains` on name OR description — every term must be satisfied by something.
+ * Results are RANKED rather than ordered by recency, which is why this doesn't use `findPage`: the
+ * sort key is computed, so keyset pagination on (createdAt, id) cannot express it. It fetches a
+ * bounded candidate set, ranks it purely, slices the requested page, and only THEN looks up tier
+ * pricing — for the rows being rendered, not for all the candidates.
+ *
+ * ZERO-RESULT LADDER (#565): when the direct predicate above finds nothing, up to three further
+ * attempts run in order, stopping at the first that yields a result — typo correction (re-runs the
+ * SAME direct predicate shape with each uncorrectable-as-typed term replaced by its nearest token
+ * in the vendor's own product-name vocabulary), then a loosened identity-field match, then the
+ * broadest name-or-description match. `recovery` on the returned page tells the caller which rung
+ * (if any) supplied the results, or that all three were tried and none did. See `plan.md` in
+ * `specs/2026-09-03-search-zero-result-recovery/` for the full rationale — in particular why a
+ * term already in the vendor's vocabulary is never "corrected" into something else.
+ */
+export async function searchProducts(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  query: string,
+  { take, cursor, ...filters }: { take: number; cursor?: string } & ProductFilters,
+): Promise<ProductPage> {
+  const terms = parseSearchQuery(query);
+  // Guard retained from the original (#211's split): search() means "match this
+  // text", and an empty box is the PAGE's decision to browse instead — see
+  // ProductRepository.list's docstring. Returns before touching the client at
+  // all, which is what `tests/search-repository.test.ts` asserts with spies.
+  if (terms.length === 0) {
+    return { items: [], nextCursor: null, truncated: false, directResultCount: 0, recovery: null };
+  }
+
+  let { truncated, candidates } = await fetchSearchCandidates(
+    prisma,
+    vendorId,
+    filters,
+    directSearchPredicate(terms),
+  );
+  // Captured BEFORE any ladder rung runs, regardless of what happens next — this is what the
+  // search query log (lib/products-service.ts) reports as the direct search's own outcome.
+  const directResultCount = candidates.length;
+  let rankingTerms = terms;
+  let recovery: SearchRecoveryInfo | null = null;
+
+  if (candidates.length === 0) {
+    const tokens = await listProductNameTokens(prisma, vendorId);
+    const correction = correctTerms(terms, tokens);
+    // Skip the re-query entirely when nothing was correctable — re-running the identical direct
+    // predicate would just reproduce the zero result already known from above.
+    if (correction.corrected) {
+      const typoResult = await fetchSearchCandidates(
+        prisma,
+        vendorId,
+        filters,
+        directSearchPredicate(correction.terms),
+      );
+      if (typoResult.candidates.length > 0) {
+        candidates = typoResult.candidates;
+        truncated = typoResult.truncated;
+        rankingTerms = correction.terms;
+        recovery = { rung: "typo", correctedTerms: correction.terms };
+      }
+    }
+  }
+
+  if (candidates.length === 0) {
+    const identityResult = await fetchSearchCandidates(
+      prisma,
+      vendorId,
+      filters,
+      identitySearchPredicate(terms),
+    );
+    if (identityResult.candidates.length > 0) {
+      candidates = identityResult.candidates;
+      truncated = identityResult.truncated;
+      recovery = { rung: "identity" };
+    }
+  }
+
+  if (candidates.length === 0) {
+    const broadResult = await fetchSearchCandidates(
+      prisma,
+      vendorId,
+      filters,
+      broadSearchPredicate(terms),
+    );
+    if (broadResult.candidates.length > 0) {
+      candidates = broadResult.candidates;
+      truncated = broadResult.truncated;
+      recovery = { rung: "broad" };
+    }
+  }
+
+  if (candidates.length === 0) {
+    recovery = { rung: "none" };
+  }
+
+  const ranked = rankSearchCandidates(candidates, rankingTerms);
   const offset = parseSearchOffset(cursor);
   // An offset at or beyond the ranked count yields an honest empty page rather
   // than bouncing back to page one, which would loop a shopper who followed a
@@ -523,6 +688,8 @@ export async function searchProducts(
     items: page.map((p) => (tiers.has(p.id) ? { ...p, tier: tiers.get(p.id) ?? null } : p)),
     nextCursor: nextOffset < ranked.length ? String(nextOffset) : null,
     truncated,
+    directResultCount,
+    recovery,
   };
 }
 
