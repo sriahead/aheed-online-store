@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.11.0"
-updated: 2026-08-31
+version: "1.12.0"
+updated: 2026-09-03
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -734,6 +734,17 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   kms:validate` locally after writing or editing any spec's front-matter — it's fast and catches
   this before a push, unlike the `<1%` MDX trap above which needs the heavier
   `kms:assemble:internal` build.
+- **`kms/schema/frontmatter.ts`'s `summary` field is capped at 300 characters
+  (`z.string().min(20).max(300)`), and nothing in `lint`/`typecheck`/`test`/`format:check`/`build`
+  checks it either** — same invisibility class as the two traps above, just a length limit instead
+  of an MDX-parse failure. A `plan.md` written with a full narrative summary (the style this file's
+  own prose encourages) can overrun it easily. First hit at `#565`'s `/validate` (2026-09-03,
+  PR #577): a 363-character `summary` failed only `npm run kms:validate`, which runs in CI's
+  `quality/kms` job — so this would have failed on push, not locally, exactly like the `id` regex
+  trap above. Fixed by trimming to the load-bearing sentence rather than dropping detail from the
+  file's actual prose. `npm run kms:validate` (the same command that catches the `id` regex issue)
+  catches this too — run it after writing any spec's front-matter, not just when the `id` looks
+  unusual.
 
 ## Design tokens & per-vendor branding (`design-system/tokens/tokens.css`, `lib/vendor-theme.ts`) — learned the hard way
 - **A jsdom test that parses `tokens.css` directly proves the file is right — it proves nothing

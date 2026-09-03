@@ -138,6 +138,19 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` closeout for `#565`.** PR #577 merged to `staging` (`0d0d10c`); `deploy-staging`
+  and `deploy-docs-internal` both completed success. `specs/roadmap.md` 1.70.0 gains this slice's
+  own build/merge row. `npm run sdd:audit` reports zero gaps. `#565` moved to **In Review** on
+  Project #2; **P2.6 does not close on this merge** — four slices remain (`#566`–`#569`).
+  `build-notes.md` needed a correction, not just confirmation: the previous `/validate` had found
+  the row claiming R20's unit-test half was already covered was itself wrong (it pointed at a test
+  proving something else), alongside a real, CI-blocking defect (`plan.md`'s front-matter `summary`
+  over the KMS schema's 300-character cap) invisible to `lint`/`typecheck`/`test`/`build`. Both are
+  fixed on the merged branch; the length-cap trap is now recorded in `CLAUDE.md` (1.12.0) alongside
+  its sibling front-matter traps. Filed **#578** to track the live-database verification `build-
+  notes.md` still discloses as not done (the ladder's rungs, the search-log write, the typo-
+  correction cost budget against the real catalogue), added to Project #2 at Phase `P2.5`/Backlog.
+
 - **`/document` closeout for the `#491`/`#564` promotion to production.** PR #575 promoted
   `staging` to `main` (merge `3ef85a3`), carrying `#491`'s and `#564`'s already-merged feature
   branches and their own, already-completed Document (final) closeouts — neither carries a
