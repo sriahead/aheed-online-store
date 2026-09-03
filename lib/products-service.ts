@@ -1,5 +1,7 @@
+import { headers } from "next/headers";
 import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
+import { recordSearchQuery } from "@/lib/repositories/search-query-log";
 import {
   addProductImage as addProductImageRepo,
   approveProductImageRow as approveProductImageRowRepo,
@@ -31,6 +33,17 @@ import {
   type RemoveImageResult,
   type StaffInventoryPage,
 } from "@/lib/repositories/products";
+
+/**
+ * Same extraction as `app/(storefront)/orders/lookup/page.tsx`'s `resolveClientIp()`, duplicated
+ * rather than shared — matching that file's own reasoning (Cloudflare always sets
+ * `cf-connecting-ip` on a real request; `x-forwarded-for` is the local-dev fallback) and this
+ * repo's existing convention of a few duplicated lines over a new shared helper nobody asked for.
+ */
+async function resolveClientIp(): Promise<string> {
+  const h = await headers();
+  return h.get("cf-connecting-ip") ?? h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
 
 /**
  * Request-scoped wrapper around `lib/repositories/products.ts`'s pure reads
@@ -71,7 +84,21 @@ export function getProductRepository(): ProductRepository {
     },
 
     async search(query, opts) {
-      return searchProducts(prisma, await vendorId(), query, opts);
+      const result = await searchProducts(prisma, await vendorId(), query, opts);
+      // #565 — logged only for the FIRST page of a search submission, not a "Next page" click:
+      // the ladder is recomputed identically on every call regardless, but a shopper paginating
+      // an already-successful search is not a gap worth counting toward the query log's purpose.
+      if (opts.cursor === undefined) {
+        await recordSearchQuery(
+          prisma,
+          await vendorId(),
+          await resolveClientIp(),
+          query,
+          result.directResultCount,
+          result.recovery?.rung ?? null,
+        );
+      }
+      return result;
     },
 
     async getBySlug(slug) {

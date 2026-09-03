@@ -77,6 +77,39 @@ every branch merges.
 
 ### Added
 
+- **A search that finds nothing now tries three further, deterministic attempts before giving up,
+  and every search submission is logged** (`#565`, P2.6 slice 2). `searchProducts` required every
+  parsed term to match `name` **or** `description` (`#564`'s tokenised `AND`) — correct recall for a
+  well-formed query, and no help at all for a typo, an over-specific query, or a term the catalogue
+  genuinely doesn't have.
+  When the direct fetch returns zero candidates, up to three rungs now run in order, stopping at the
+  first that yields a result: **typo correction** (re-runs the identical direct predicate with each
+  uncorrectable-as-typed term replaced by its nearest token in the vendor's own product-**name**
+  vocabulary, by Levenshtein distance within a length-scaled budget — `0` at length ≤3, `1` at 4–6,
+  `2` at 7+); **identity match** (loosens `AND` to `OR`, narrowed to `name`/category `name`,
+  `description` dropped); **broad match** (`OR` across `name`/`description`, the widest net this
+  codebase can express without `pg_trgm`/raw SQL). A term already in the vendor's vocabulary is
+  **never** "corrected" — that is what stops a correctly spelled term with simply no matching
+  product from being silently turned into a different word. All three rungs share one fetch/cap/
+  sentinel helper with the direct search, so `truncated` means the same thing regardless of which
+  rung supplied the results. New **`lib/search-typo-correction.ts`** (pure, no I/O).
+  If all three rungs come up empty, `app/(storefront)/search/page.tsx` shows relevant categories
+  plus one link per individual search term instead of a bare "No products found". `ProductPage`
+  gains **`directResultCount`** and **`recovery`**, additive, always `0`/`null` outside `search()`.
+  New **`SearchQueryLog`** model records every search submission — vendor-scoped, hashed IP,
+  **no user link by deliberate decision** (`#570`): a search history tied to a signed-in user is
+  personal data that would put it in `lib/repositories/data-rights.ts`'s export/erasure scope, and
+  the curation purpose (which queries recur) doesn't need one. 90-day retention sweep, same
+  low-probability piggyback as `error-events.ts`/`order-lookup-rate-limit.ts`. Logged only on the
+  **first page** of a search — a shopper paginating an already-successful search isn't a gap.
+  **No AI on the request path** — ruled out at a second `/propose` (`#571`): `/search` is public and
+  unauthenticated with no middleware layer on this stack to rate-limit it, and the AI quota is
+  shared with the product-image pipeline. AI stays staff-triggered and offline, in `#566`.
+  **The generated migration proposed `DROP INDEX` for all three hand-authored `pg_trgm` indexes
+  again** — the same `#508` drift a new, unrelated model has now triggered twice. `--create-only`
+  plus reading the SQL caught it before it applied; verified live against the dev database that all
+  three indexes and the new table both exist.
+
 - **A refused Stripe payment binding is now recorded, discoverable and recoverable** (`#454`,
   P9.2). `#429` made the webhook fail closed, correctly — but a refusal against a *genuine* payment
   leaves a charged shopper's order stuck `PENDING_PAYMENT`, and the only trace was a
@@ -105,6 +138,28 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` closeout for `#565`.** PR #577 merged to `staging` (`0d0d10c`); `deploy-staging`
+  and `deploy-docs-internal` both completed success. `specs/roadmap.md` 1.70.0 gains this slice's
+  own build/merge row. `npm run sdd:audit` reports zero gaps. `#565` moved to **In Review** on
+  Project #2; **P2.6 does not close on this merge** — four slices remain (`#566`–`#569`).
+  `build-notes.md` needed a correction, not just confirmation: the previous `/validate` had found
+  the row claiming R20's unit-test half was already covered was itself wrong (it pointed at a test
+  proving something else), alongside a real, CI-blocking defect (`plan.md`'s front-matter `summary`
+  over the KMS schema's 300-character cap) invisible to `lint`/`typecheck`/`test`/`build`. Both are
+  fixed on the merged branch; the length-cap trap is now recorded in `CLAUDE.md` (1.12.0) alongside
+  its sibling front-matter traps. Filed **#578** to track the live-database verification `build-
+  notes.md` still discloses as not done (the ladder's rungs, the search-log write, the typo-
+  correction cost budget against the real catalogue), added to Project #2 at Phase `P2.5`/Backlog.
+
+- **`/document` closeout for the `#491`/`#564` promotion to production.** PR #575 promoted
+  `staging` to `main` (merge `3ef85a3`), carrying `#491`'s and `#564`'s already-merged feature
+  branches and their own, already-completed Document (final) closeouts — neither carries a
+  migration. `deploy-production` and `deploy-docs-internal` both completed success; production
+  `/api/health` confirmed serving `3ef85a3` with `db.ok: true`. `#491` and `#564` both closed on the
+  `main` merge, their Project #2 items auto-moving to **Done**. `specs/roadmap.md` 1.69.0 gains the
+  promotion's own row. This closeout has no accompanying slice — `#564`'s own Document (final) had
+  already merged before this promotion existed, so there was no next slice's branch to carry the
+  row forward onto; recorded via its own doc-only PR instead.
 - **`/document` closeout for `#564`.** PR #573 merged to `staging` (`5a79675`); `deploy-staging` and
   `deploy-docs-internal` both completed success. `specs/roadmap.md` 1.68.0 gains this slice's own
   build/merge row, a new **P2.6 — Search & AI shopping** phase entry (six slices, `#564`–`#569`,
