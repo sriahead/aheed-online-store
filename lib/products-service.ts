@@ -96,6 +96,7 @@ export function getProductRepository(): ProductRepository {
           query,
           result.directResultCount,
           result.recovery?.rung ?? null,
+          result.directNameMatch,
         );
       }
       return result;

@@ -39,12 +39,39 @@ export const MAX_SEARCH_TERMS = 10;
 const SURROUNDING_PUNCTUATION = /^[\s,.;:!?'"“”‘’()[\]]+|[\s,.;:!?'"“”‘’()[\]]+$/g;
 
 /**
+ * Shortest token that carries enough information to be a search term (#572).
+ *
+ * Measured against the dev catalogue at `#564`'s Build: `e` matched 2,026 of
+ * roughly 2,000 products and `a` matched 2,024, because every term is satisfied
+ * by `name` OR `description` and a one-letter substring appears in nearly every
+ * description. A one-character query is not a search — it is the whole catalogue
+ * in an arbitrary order. It was also the only thing that reliably triggered the
+ * truncation notice, which exists to explain a genuinely incomplete result set.
+ */
+const MIN_TERM_LENGTH = 2;
+
+/** At least one letter or digit, so a bare `-`, `&` or `--` is not a term (#572). */
+const CARRIES_INFORMATION = /[\p{L}\p{N}]/u;
+
+/**
  * A raw search box value → the terms every result must satisfy.
  *
  * Lowercases, splits on whitespace, strips surrounding punctuation from each
- * token, drops what is left empty, and caps the result at `MAX_SEARCH_TERMS`.
- * Returns `[]` for a query that is empty or holds nothing usable, which is what
- * `searchProducts`'s empty-query guard tests.
+ * token, DROPS LOW-INFORMATION TOKENS (#572), and caps the result at
+ * `MAX_SEARCH_TERMS`. Returns `[]` for a query that is empty or holds nothing
+ * usable, which is what `searchProducts`'s empty-query guard tests — and, since
+ * `#572`, also what `/search` renders its "too short" message from rather than
+ * claiming the catalogue holds no match.
+ *
+ * WHERE THIS NOW DIVERGES FROM `lib/shopping-list.ts`, AND WHY.
+ * The two tokenisers already differ on a leading quantity (see the module
+ * docstring). Since `#572` they also differ on low-information tokens, and
+ * `tests/search-query.test.ts`'s agreement test is scoped to say so. A search
+ * term is a RECALL instrument, where a one-character token or a bare hyphen is
+ * pure noise that matches most of the catalogue; a list line is something the
+ * shopper wrote deliberately and which passes through a review step before
+ * anything reaches a basket. Applying this filter to `parseListLine` too would
+ * change "Shop your list" behaviour for no stated benefit.
  */
 export function parseSearchQuery(raw: string): string[] {
   return raw
@@ -52,6 +79,6 @@ export function parseSearchQuery(raw: string): string[] {
     .toLowerCase()
     .split(/\s+/)
     .map((token) => token.replace(SURROUNDING_PUNCTUATION, ""))
-    .filter((token) => token.length > 0)
+    .filter((token) => token.length >= MIN_TERM_LENGTH && CARRIES_INFORMATION.test(token))
     .slice(0, MAX_SEARCH_TERMS);
 }

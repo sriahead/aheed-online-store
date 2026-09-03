@@ -11,6 +11,7 @@ import { parsePriceInput } from "@/components/product/parse-price-input";
 import { searchPageHref } from "@/components/product/search-href";
 import { SearchTruncationNotice } from "@/components/product/SearchTruncationNotice";
 import { SearchRecoveryNotice } from "@/components/product/SearchRecoveryNotice";
+import { SearchSuggestionsNotice } from "@/components/product/SearchSuggestionsNotice";
 import { parseSearchQuery } from "@/lib/search-query";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
@@ -92,7 +93,18 @@ export default async function SearchPage({
   // #565 — same reasoning for the zero-result ladder's outcome. `list()` always
   // returns `null`, so browse mode never shows a recovery notice either.
   const recovery = result.recovery;
+  // #580 — set only when the direct search found products but none matched on NAME. Rendered
+  // beside those products, never in place of them.
+  const suggestions = result.suggestions;
   const searchTerms = parseSearchQuery(query);
+  /*
+   * #572 — a query the shopper typed that parses to NO terms at all: single characters and bare
+   * punctuation are no longer search terms, because `e` matched 2,026 of roughly 2,000 products
+   * through their descriptions. Saying "No products match" here would be a lie about the
+   * catalogue, so the page says what actually happened instead. `searchProducts` has already
+   * returned early without issuing a query.
+   */
+  const queryTooShort = query !== "" && searchTerms.length === 0;
 
   const specialities = await products.availableSpecialities();
   // P8.5a (#345): request-memoised, shared with the header's cart read.
@@ -121,7 +133,11 @@ export default async function SearchPage({
 
           <SearchTruncationNotice truncated={truncated} />
 
-          {items.length === 0 ? (
+          {queryTooShort ? (
+            <p className="text-primary/70">
+              That search is too short. Try at least two characters, like “rice” or “atta”.
+            </p>
+          ) : items.length === 0 ? (
             recovery?.rung === "none" ? (
               // #565 — the zero-result ladder ran and still found nothing: relevant
               // categories plus one link per search term, rather than a dead end.
@@ -147,6 +163,7 @@ export default async function SearchPage({
                 terms={searchTerms}
                 categories={allCategories}
               />
+              <SearchSuggestionsNotice suggestions={suggestions} />
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {items.map((product) => (
                   <ProductCard

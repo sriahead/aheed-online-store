@@ -24,6 +24,11 @@ async function hashIp(ip: string): Promise<string> {
  * search already succeeded, or which rung (if any) rescued a zero-result query, including
  * `"none"` for one the whole ladder couldn't rescue — see `ProductPage.recovery`.
  *
+ * `directNameMatch` (P2.6 slice 3, #580) is what makes a THIN result visible here. Without it a
+ * query returning one tangential description hit logs `directResultCount: 1, recoveryRung: null`,
+ * byte-identical to a query that worked — and those rows are exactly the ones #566's synonym
+ * proposal step most needs to read.
+ *
  * Takes `prisma` and `vendorId` as explicit parameters and reads no request context (#252); the
  * request-scoped caller (`lib/products-service.ts`) resolves the raw IP and passes it straight
  * through — hashing happens here, not there, matching
@@ -36,6 +41,7 @@ export async function recordSearchQuery(
   query: string,
   directResultCount: number,
   recoveryRung: string | null,
+  directNameMatch: boolean,
 ): Promise<void> {
   const ipHash = await hashIp(ip);
 
@@ -45,6 +51,7 @@ export async function recordSearchQuery(
       query: query.trim().toLowerCase().slice(0, QUERY_MAX),
       directResultCount,
       recoveryRung,
+      directNameMatch,
       ipHash,
     },
   });
@@ -54,4 +61,36 @@ export async function recordSearchQuery(
       where: { createdAt: { lt: new Date(Date.now() - RETENTION_MS) } },
     });
   }
+}
+
+/**
+ * The queries worth proposing synonyms for (P2.6 slice 3, #566) — the ones that found NOTHING, and
+ * the ones that found only description-prose matches (#580's thin results).
+ *
+ * Thin rows matter as much as empty ones here: a shopper searching `haldi` who gets one tangential
+ * product has told us just as clearly that a word is missing from the dictionary as one who got
+ * zero results. Before `directNameMatch` existed those two outcomes were indistinguishable in this
+ * table. `directNameMatch: false` is matched explicitly rather than "not true", so rows written
+ * before that column existed (`null` — genuinely unknown) are excluded rather than assumed thin.
+ *
+ * Deduplicated by query text in the caller's language rather than SQL's: `distinct` on a Prisma
+ * `findMany` is expressible, and keeps the AI prompt free of the same term repeated fifty times.
+ */
+export async function listCurationCandidateQueries(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  limit: number,
+): Promise<string[]> {
+  const rows = await prisma.searchQueryLog.findMany({
+    where: {
+      vendorId,
+      OR: [{ directResultCount: 0 }, { directNameMatch: false }],
+    },
+    select: { query: true },
+    distinct: ["query"],
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+
+  return rows.map((row) => row.query);
 }
