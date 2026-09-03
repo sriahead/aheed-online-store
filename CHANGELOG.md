@@ -36,6 +36,22 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` closeout for `#454`.** PR #557 merged to `staging` (`656b8e6`); `deploy-staging` and
+  `deploy-docs-internal` both completed success, and staging's `/api/health` confirmed serving
+  `656b8e6`. `/validate` regained live browser access mid-session and re-ran every row that could be
+  exercised live against the real dev Neon branch and a real Stripe test-mode account rather than
+  mocks — including the hardest row, `R15 (positive)`: a second fixture order paid with a real test
+  card through hosted Checkout, with no webhook listener running, correctly reconciled and recovered
+  to `CONFIRMED` with exactly one new `OrderStatusEvent` and one confirmation-email attempt. A forged
+  cross-tenant refusal id performed no read and no write. One planned live check (replaying a session
+  under a spoofed `Host` header to simulate a second local vendor domain) was correctly rejected by
+  Better Auth's own origin validation before it could reach the app's vendor-scoping at all; the same
+  scoping guarantee was confirmed live a different way instead. `specs/roadmap.md` 1.66.0 gained the
+  build/merge row citing `PR #557`; `npm run sdd:audit` reports zero gaps. `#454` moved to
+  **In Review** on Project #2. **New `CLAUDE.md` section records two reusable techniques**: driving
+  a no-JS server-action form via `curl` with its `$ACTION_ID_<hash>` hidden field, and why a
+  repo-root scratch script's type error fails the whole `npm run preview` build.
+
 - **`/document` closeout for `#550`.** PR #552 merged to `staging` (`6de0131`) and PR #553 promoted
   to `main` (`1819c0e`); `deploy-staging`, `deploy-docs-internal` and `deploy-production` all
   completed success, and both environments' `/api/health` were checked live — production serving
