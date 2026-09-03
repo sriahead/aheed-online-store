@@ -64,6 +64,19 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` closeout for `#491`, plus the outstanding `#454` promotion carry-forward.**
+  PR #562 merged to `staging` (`1564009`); `deploy-staging` completed success. `/validate` ran from
+  a fresh context and confirmed all 20 requirements live, including reproducing the exact 169-line
+  post-`npm ci` typecheck failure the build notes described (resolved by `db:generate`) and the
+  mutation check's real fail-then-pass cycle. `specs/roadmap.md` 1.67.0 gained this slice's own
+  build/merge row **and** the still-missing row for **PR #559** (`staging -> main`, merge `6801879`,
+  closing `#454`) — `npm run sdd:audit` now reports zero gaps, where before this closeout it had not
+  yet been run against that promotion. `#491` moved to **In Review** on Project #2; `#454` was
+  already **Done**, auto-closed on the `main` merge. **`specs/sdd-workflow.md` 2.27.1 records a
+  seventh instance of the `validation.md`-row-stricter-than-its-requirement trap**: R12a demanded a
+  doc section literally never contain two old numbers, when the paired requirement (mirroring a
+  sibling's own historical-citation carve-out) only asked that the section state the *current* one —
+  the doc content was correct throughout, the row's wording was not.
 - **`/document` closeout for `#454`.** PR #557 merged to `staging` (`656b8e6`); `deploy-staging` and
   `deploy-docs-internal` both completed success, and staging's `/api/health` confirmed serving
   `656b8e6`. `/validate` regained live browser access mid-session and re-ran every row that could be
