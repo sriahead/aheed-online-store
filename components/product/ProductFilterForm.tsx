@@ -21,6 +21,7 @@ export function ProductFilterForm({
     isFresh?: string;
     isOrganic?: string;
     featured?: string;
+    category?: string;
   };
   // Per-vendor filter visibility (ADR-004 follow-up): only offer a speciality
   // filter the vendor's catalogue actually uses. Defaults to none.
@@ -39,6 +40,17 @@ export function ProductFilterForm({
         pagination at page 1.
       */}
       {searchParams.featured === "1" && <input type="hidden" name="featured" value="1" />}
+
+      {/*
+        #568 — `category` needs the identical passthrough for the identical reason. Drill-down is
+        chosen from a link beside the results, not from a control in this form, so without this
+        hidden field pressing Apply would silently drop the category and widen the shopper back to
+        the whole catalogue — the exact failure #501 fixed for `featured`. Like `featured` and
+        unlike `cursor`, it is a filter rather than a position, so it IS carried across a submit.
+      */}
+      {searchParams.category && (
+        <input type="hidden" name="category" value={searchParams.category} />
+      )}
 
       {showQuery && (
         <label className="flex flex-col gap-1">
@@ -125,9 +137,17 @@ export function ProductFilterForm({
         )}
       </fieldset>
 
+      {/*
+        #512 — this was a hardcoded `bg-[#2E7D32] hover:bg-[#1b5e20]`. Two things were wrong with
+        that, and only the first is cosmetic. The literal bypasses `brandStyle()`'s per-vendor
+        override entirely (CLAUDE.md's design-token section), so SriMart rendered Aheed's green on
+        this one button; and the hover literal was not even the token's own hover shade
+        (`--color-action-hover` is `#276a2b`, the value P7 closeout darkened for WCAG AA), so the
+        button also reverted an audited contrast fix on hover.
+      */}
       <button
         type="submit"
-        className="w-full rounded-full bg-[#2E7D32] hover:bg-[#1b5e20] transition-colors px-4 py-2 font-semibold text-white"
+        className="w-full rounded-full bg-action hover:bg-action-hover transition-colors px-4 py-2 font-semibold text-white"
       >
         Apply
       </button>

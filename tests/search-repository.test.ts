@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   SEARCH_CANDIDATE_LIMIT,
+  buildDirectSearchWhere,
   buildFilterWhere,
   listProductNameTokens,
   listProducts,
@@ -8,6 +9,7 @@ import {
   searchProducts,
   type ProductFilters,
 } from "@/lib/repositories/products";
+import { toUnexpandedGroups } from "@/lib/search-expansion";
 
 /**
  * P2.6 slice 1 (#564), R6/R7/R8/R15/R16/R17/R18.
@@ -596,5 +598,78 @@ describe("thin results get suggestions, never a replaced result set (R30, R32)",
 
     expect(page.recovery?.rung).toBe("none");
     expect(page.suggestions).toBeNull();
+  });
+});
+
+/**
+ * P2.6 slice 5 (#568), R11/R12/R20 — the category predicate.
+ *
+ * The ordering case below is the one worth understanding. `listProductsByCategory` composes its
+ * `where` by spreading `buildFilterWhere(filters)` alongside its own explicit `categoryId`. Once
+ * that helper could ALSO emit `categoryId`, whichever key spread last would silently win — and if
+ * the filter won, a `?category=` parameter in the URL would override the category the route is
+ * actually displaying. That is a URL parameter replacing a page's own subject, and nothing about
+ * the composed object's shape makes it visible on read, which is why it is pinned by a test.
+ */
+describe("category predicate (R11, R12)", () => {
+  it("emits categoryId for a non-empty categoryIds", () => {
+    expect(buildFilterWhere({ categoryIds: ["a", "b"] })).toEqual({
+      categoryId: { in: ["a", "b"] },
+    });
+  });
+
+  it("emits no categoryId key when absent or empty", () => {
+    // Empty must mean "no predicate", NOT "match nothing": an unknown slug resolves to no ids, and
+    // narrowing on that would empty the catalogue instead of showing unfiltered results.
+    expect(buildFilterWhere({})).not.toHaveProperty("categoryId");
+    expect(buildFilterWhere({ categoryIds: [] })).not.toHaveProperty("categoryId");
+  });
+
+  it("still composes alongside the other filters", () => {
+    expect(buildFilterWhere({ categoryIds: ["a"], isHalal: true, inStockOnly: true })).toEqual({
+      categoryId: { in: ["a"] },
+      isHalal: true,
+      inventory: { quantity: { gt: 0 } },
+    });
+  });
+
+  it("searchProducts applies the category predicate (R13, R14)", async () => {
+    const { client, spies } = makeStub([row(1)]);
+    await searchProducts(client, VENDOR, "rice", { take: 12, categoryIds: ["cat-1"] });
+
+    expect(capturedWhere(spies)).toMatchObject({ categoryId: { in: ["cat-1"] } });
+  });
+
+  it("listProducts applies it in browse mode too (R13)", async () => {
+    const { client, spies } = makeStub([row(1)]);
+    await listProducts(client, VENDOR, { take: 12, categoryIds: ["cat-1"] });
+
+    expect(capturedWhere(spies)).toMatchObject({ categoryId: { in: ["cat-1"] } });
+  });
+
+  it("listProductsByCategory's own category wins over one passed in filters (R12)", async () => {
+    const { client, spies } = makeStub([row(1)]);
+    await listProductsByCategory(client, VENDOR, ["page-category"], {
+      take: 12,
+      categoryIds: ["url-supplied"],
+    } as ProductFilters & { take: number });
+
+    expect(capturedWhere(spies).categoryId).toEqual({ in: ["page-category"] });
+  });
+});
+
+/**
+ * R20 — the facet probe and the search itself must compose the SAME term predicate. Exported so
+ * both call one function; a second hand-written copy of this shape would drift the moment either
+ * changed, and the failure would be silent (the toggle offered simply stops corresponding to the
+ * result set it describes).
+ */
+describe("buildDirectSearchWhere is the shared term predicate (R20)", () => {
+  it("is what searchProducts composes its where from", async () => {
+    const { client, spies } = makeStub([row(1)]);
+    await searchProducts(client, VENDOR, "basmati rice", { take: 12 });
+
+    const groups = toUnexpandedGroups(["basmati", "rice"]);
+    expect(capturedWhere(spies).AND).toEqual(buildDirectSearchWhere(groups).AND);
   });
 });
