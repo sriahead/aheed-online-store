@@ -808,6 +808,35 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   fixed by rewriting it port-less. Any `SEED_SRIMART_HOST`/`SEED_AHEED_HOST` value — local, staging,
   or production — must never contain a port.
 
+## Workers AI (Cloudflare REST API calls) — learned the hard way
+- **`result.response` from `POST /accounts/<id>/ai/run/<model>` is NOT reliably a string — for
+  `@cf/meta/llama-3.1-8b-instruct` it comes back as an ALREADY-PARSED JSON value (an array, when
+  the model's reply is JSON) when the reply parses as such, with the string form of the same
+  content sitting separately at `result.choices[0].message.content`.** Both
+  `lib/search-synonym-proposals.ts` (#566) and `lib/list-normalisation.ts` (#567) were written with
+  `typeof payload.result?.response === "string" ? payload.result.response : ""`, and both were
+  built and unit-tested entirely against a stubbed `fetch` that only ever returns `response` as a
+  string — because that is what the code assumed, so that is what the test double encoded, and the
+  double proved nothing about what Cloudflare's own endpoint actually returns. Confirmed live for
+  the first time at `#567`'s `/validate` (2026-09-04): a real call with real
+  `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` succeeded (200, valid JSON body) and the pre-pass
+  still silently extracted zero items on every single call, because `typeof response !== "string"`
+  made the extraction fall through to `""` every time — no error, no failed request, nothing in any
+  log to suggest anything was wrong; the feature just never worked. **This is the same failure
+  shape this file already records for Prisma driver error codes** (`isUniqueViolation()` checking
+  only `P2002` when the HTTP adapter throws `23505`): a hand-constructed test double reproduces
+  whichever shape its author assumed, not the shape the real service actually returns, and the only
+  way to find the gap is a live call. Fixed in `lib/list-normalisation.ts` via an `extractReplyText`
+  helper that accepts `response` as a string (used directly), as a non-string non-null value
+  (re-serialised with `JSON.stringify` so the same bracket-and-`JSON.parse` parser still runs
+  unmodified), or falls back to `choices[0].message.content` when `response` is absent entirely.
+  **`lib/search-synonym-proposals.ts` still has the unfixed assumption** — flagged on `#583` but not
+  fixed there, since that module was out of this slice's scope. **Any code calling Workers AI's REST
+  endpoint and expecting a string reply must widen its extraction the same way, and must verify it
+  against a real call under `npm run preview`** (`.dev.vars` needs `CLOUDFLARE_ACCOUNT_ID`/
+  `CLOUDFLARE_API_TOKEN` — see the Config section above for precedence) — a green unit suite proves
+  nothing here, exactly as it didn't for the Prisma error-code case.
+
 ## Local Stripe webhook testing — learned the hard way
 - **This repo's `.dev.vars` and `.env` both carry a real `STRIPE_SECRET_KEY` (test-mode) by
   default, so `npm run preview` does NOT run the stub payment adapter** — `lib/payments.ts` picks

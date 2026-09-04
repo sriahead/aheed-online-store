@@ -8,6 +8,20 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` (final) closeout for P2.6 slice 4** (`#567`; PR #592 merged to `staging`, PR #593
+  promoted to `main`). `specs/roadmap.md` (1.72.0) gains the slice's build/merge row and its
+  promotion row, recording the post-`/validate` fix (the AI pre-pass never actually enriched
+  anything live, because Cloudflare's real reply shape didn't match the `typeof response ===
+  "string"` assumption) and the live verification performed against `npm run preview` with real
+  Workers AI credentials. `CLAUDE.md` (1.14.0) gains a new "Workers AI" section recording that
+  shape mismatch as a transferable lesson — the same failure class already recorded there for
+  Prisma driver error codes — and flags that `lib/search-synonym-proposals.ts` (`#566`) likely
+  carries the identical unfixed assumption, tracked on `#583`. `#588`–`#591` (this slice's deferred
+  follow-ups) assigned the `P02.6` milestone, which they were missing. `npm run sdd:audit` reports
+  zero gaps. Delivery board reconciled: `#567` is **Done**. `ARTIFACT_INDEX.md` /
+  `app/(admin)/staff/runbook/docs.ts` regenerated to match. No runtime code, no schema change,
+  nothing for `prisma migrate deploy` to apply.
+
 - **`/document` (final) closeout for P2.6 slice 3** (`#566`, `#396`, `#580`, `#572`, `#578`; PR #585
   merged to `staging`, PR #586 promoted to `main`). `specs/roadmap.md` (1.71.0) gains the slice's
   build/merge row and its promotion row, recording both `/fix` passes (a real "Shop your list"
