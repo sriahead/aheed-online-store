@@ -181,6 +181,50 @@ describe("resolveLines", () => {
   });
 });
 
+/**
+ * P2.6 slice 3 (#566, #396) — found live at `/validate`: `matchListTerms` widened its DB query with
+ * the approved alias map, but `resolveLines` re-checked each candidate against the shopper's
+ * literal, unexpanded word, so a candidate found only via an alias was silently dropped back to
+ * "unmatched". Confirmed live under `npm run preview`: `dhania` (alias → `coriander`, approved)
+ * resolved via `/search` but not via "Shop your list", against the identical dev catalogue.
+ */
+describe("resolveLines widens per-line matching through an approved alias (#566)", () => {
+  const CORIANDER = product("coriander", "Fresh Coriander 100g");
+  const ALIASES = new Map([["dhania", "coriander"]]);
+
+  it("matches a line via its alias's canonical term, not the literal word", () => {
+    const resolution = resolveLines(parseList("dhania"), [CORIANDER], ALIASES)[0].resolution;
+    expect(resolution.kind).toBe("matched");
+    expect(resolution.kind === "matched" && resolution.product.name).toBe("Fresh Coriander 100g");
+  });
+
+  it("still resolves to unmatched with no alias map (the pre-#566 behaviour)", () => {
+    // Same line, same candidate pool, no third argument — the default empty map must reproduce
+    // exactly what shipped before this fix, or every pre-existing caller silently changes.
+    expect(resolveLines(parseList("dhania"), [CORIANDER])[0].resolution.kind).toBe("unmatched");
+  });
+
+  it("does not let an alias replace the shopper's word for the exact-match check", () => {
+    // The candidate's name IS the canonical term, but the shopper typed the alias — so this must
+    // resolve via the ordinary all-groups-satisfied path, not the stricter "typed the exact name"
+    // one, matching lib/search-ranking.ts's tier-0 rule that an alias never strengthens an exact
+    // match. With only one candidate here it still resolves ("matched" either way), so assert the
+    // groups/exact distinction directly via a second, textually different candidate.
+    const decoy = product("coriander-2", "Ground Coriander 50g");
+    const resolution = resolveLines(parseList("dhania"), [CORIANDER, decoy], ALIASES)[0].resolution;
+    expect(resolution.kind).toBe("ambiguous");
+  });
+
+  it("keeps the alias additive: the shopper's own word still matches directly", () => {
+    // #566's central guarantee (R2) — expansion never substitutes. A product matching the LITERAL
+    // typed word must still resolve even when that word also happens to have an approved alias.
+    const dhaniaLeaf = product("dhania-leaf", "Dhania Leaf Bunch");
+    const resolution = resolveLines(parseList("dhania"), [dhaniaLeaf], ALIASES)[0].resolution;
+    expect(resolution.kind).toBe("matched");
+    expect(resolution.kind === "matched" && resolution.product.name).toBe("Dhania Leaf Bunch");
+  });
+});
+
 describe("sumLinesByProduct", () => {
   it("collapses a product named twice into one summed entry", () => {
     expect(

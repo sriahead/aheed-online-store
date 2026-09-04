@@ -160,6 +160,7 @@ model Vendor {
   authenticationAttempts AuthenticationAttempt[]
   bindingRefusals        PaymentBindingRefusal[]
   searchQueryLogs        SearchQueryLog[]
+  searchSynonyms         SearchSynonym[]
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
@@ -1038,8 +1039,64 @@ model SearchQueryLog {
   query             String
   directResultCount Int
   recoveryRung      String?
+  /// P2.6 slice 3 (#580). Did the DIRECT search match anything on NAME (ranking tier 0-2), as
+  /// opposed to only through some product's description prose? directResultCount and recoveryRung
+  /// together cannot express this: a query returning one tangential description hit logs
+  /// `directResultCount: 1, recoveryRung: null` — byte-identical to a query that worked perfectly —
+  /// so the rows most worth a human look were invisible. Nullable because rows written before this
+  /// column existed genuinely do not know, and "unknown" must not read as "thin": #566's proposal
+  /// step selects `false`, never `null`.
+  directNameMatch   Boolean?
   ipHash            String
   createdAt         DateTime @default(now())
 
   @@index([vendorId, directResultCount, createdAt])
+  @@index([vendorId, directNameMatch, createdAt])
+}
+
+enum SearchSynonymStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SearchSynonymSource {
+  SEED
+  STAFF
+  AI
+}
+
+/// P2.6 slice 3 (#566, closing #396) — a vendor's curated search alias dictionary, so a shopper
+/// typing the word they actually use ("bhindi", "haldi", "keema") reaches the shelf.
+///
+/// CURATED RATHER THAN AI-PER-QUERY. A table is deterministic, costs nothing per query, adds no
+/// latency to the hottest read path and is reproducible in tests. AI expansion on every search would
+/// put a paid, non-deterministic call in front of every shopper — and, on a public unauthenticated
+/// endpoint with no middleware layer available on this stack, an attacker-controlled one (#571).
+/// AI here only ever PROPOSES rows for a human to approve, offline, triggered by a store admin.
+///
+/// EXPANSION, NEVER REPLACEMENT. An approved row widens what a query matches; the shopper's own
+/// word always stays in the search. See lib/search-expansion.ts, where that invariant lives in the
+/// SearchTermGroup type rather than in a comment.
+///
+/// @@unique([vendorId, alias]) does more than prevent duplicates: it is what bounds the expanded
+/// predicate. One alias resolves to at most one canonical term, so a term group holds at most two
+/// variants however large the dictionary grows. Many aliases MAY share a canonical term (qeema and
+/// keema both mean minced meat) — that direction is deliberately unconstrained.
+model SearchSynonym {
+  id        String              @id @default(uuid())
+  vendorId  String
+  vendor    Vendor              @relation(fields: [vendorId], references: [id])
+  /// The word a shopper types. Stored lowercased on write; lib/search-expansion.ts also
+  /// lowercases on read, since a row predating that rule cannot be fixed retroactively.
+  alias     String
+  /// The catalogue's own word, added to the query alongside the alias — never in place of it.
+  canonical String
+  status    SearchSynonymStatus @default(PENDING)
+  source    SearchSynonymSource @default(STAFF)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@unique([vendorId, alias])
+  @@index([vendorId, status])
 }

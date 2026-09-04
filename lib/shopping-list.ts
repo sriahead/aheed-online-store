@@ -1,12 +1,15 @@
 /**
  * "Shop your list" parsing and matching (P3d, #114) — pure, no I/O, so the
  * whole of it is unit-testable without a database (same split as
- * lib/cart-rules.ts, lib/auth-origin.ts and lib/delivery.ts).
+ * lib/cart-rules.ts, lib/auth-origin.ts and lib/delivery.ts, and the same
+ * split lib/search-expansion.ts and lib/search-ranking.ts already use).
  *
  * The repository fetches candidate products in ONE query for the whole list;
  * every per-line decision after that happens here. A 100-line list must not
  * become 100 queries.
  */
+
+import { expandSearchTerms, type SearchTermGroup } from "@/lib/search-expansion";
 
 /** A list is capped so one paste can't fan out into an unbounded query. */
 export const MAX_LIST_LINES = 100;
@@ -163,26 +166,45 @@ function rankCandidates(a: ListCandidate, b: ListCandidate): number {
   return a.name.localeCompare(b.name);
 }
 
-function matchesAllTerms(candidate: ListCandidate, terms: string[]): boolean {
+/**
+ * A candidate satisfies a group when its name contains ANY of that group's variants — same rule
+ * `lib/search-ranking.ts`'s `tierOf` applies to search. With no approved alias for a term, its
+ * group holds only that term, so this behaves exactly like the old literal-term check.
+ */
+function matchesAllGroups(candidate: ListCandidate, groups: readonly SearchTermGroup[]): boolean {
   const name = normaliseName(candidate.name);
-  return terms.every((term) => name.includes(term));
+  return groups.every((group) => group.variants.some((variant) => name.includes(variant)));
 }
 
 /**
- * Resolve every line against the one candidate set. A product matches a line
- * only when its name contains EVERY term — matching any single term would
- * offer confident-looking wrong products, which the review step exists to
- * prevent.
+ * Resolve every line against the one candidate set. A product matches a line only when its name
+ * contains a variant of EVERY group — matching any single term would offer confident-looking wrong
+ * products, which the review step exists to prevent.
+ *
+ * P2.6 slice 3 (#566, #396) — `aliases` widens each line's terms into groups here, mirroring what
+ * `matchListTerms` already did to build the candidate pool. Without this, a candidate found ONLY
+ * via an alias (`dhania` → a product named "Fresh Coriander") reached the pool but was silently
+ * re-rejected as unmatched, because this function used to re-check the candidate's name against the
+ * shopper's literal, unexpanded word — the same query, expanded on the DB side and not on this one.
+ * Defaults to an empty map so every existing no-alias caller and test is unaffected: an empty map
+ * yields single-variant groups, identical to the old per-term check.
  */
-export function resolveLines(lines: ParsedLine[], candidates: ListCandidate[]): ResolvedLine[] {
+export function resolveLines(
+  lines: ParsedLine[],
+  candidates: ListCandidate[],
+  aliases: ReadonlyMap<string, string> = new Map(),
+): ResolvedLine[] {
   return lines.map((line) => {
-    const fullMatches = candidates.filter((candidate) => matchesAllTerms(candidate, line.terms));
+    const groups = expandSearchTerms(line.terms, aliases);
+    const fullMatches = candidates.filter((candidate) => matchesAllGroups(candidate, groups));
 
     if (fullMatches.length === 0) {
       let maxScore = 0;
       const scored = candidates.map((candidate) => {
         const name = normaliseName(candidate.name);
-        const score = line.terms.filter((term) => name.includes(term)).length;
+        const score = groups.filter((group) =>
+          group.variants.some((variant) => name.includes(variant)),
+        ).length;
         if (score > maxScore) maxScore = score;
         return { candidate, score };
       });
@@ -205,7 +227,10 @@ export function resolveLines(lines: ParsedLine[], candidates: ListCandidate[]): 
     const matching = fullMatches;
 
     // An exact name match resolves the line outright, even when other products
-    // also contain every term ("milk" → Milk, not Milk + Whole Milk).
+    // also contain every term ("milk" → Milk, not Milk + Whole Milk). Compares
+    // against the ORIGINAL terms, never an expanded variant — same rule as
+    // search's tier 0: an alias cannot make "this is exactly what I typed" more
+    // true than it is.
     const joined = line.terms.join(" ");
     const exact = matching.filter((candidate) => normaliseName(candidate.name) === joined);
     if (exact.length === 1) return { ...line, resolution: { kind: "matched", product: exact[0] } };
