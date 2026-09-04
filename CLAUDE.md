@@ -452,12 +452,15 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  86 files / 1023 tests**, measured 2026-09-04 at `#566`'s `/fix`) and treat any shortfall as a
-  non-result to re-run, not a pass. **This number has now been stale twice, and moved a third time
-  within the same slice** — `74/874` until `#491` corrected it to `77/903`, `77/903` until `#566`
-  found the real figure was `86/1019` after three P2.6 slices added tests, and `86/1019` itself
-  moved to `86/1023` a few hours later in the same slice's own `/fix`, which added four tests to an
-  *existing* file (`tests/shopping-list.test.ts`) rather than a new one. Each time, the staleness
+  87 files / 1025 tests**, measured 2026-09-04 at `#566`'s second `/fix`) and treat any shortfall as
+  a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third and
+  fourth time within the same slice** — `74/874` until `#491` corrected it to `77/903`, `77/903`
+  until `#566` found the real figure was `86/1019` after three P2.6 slices added tests, `86/1019`
+  moved to `86/1023` a few hours later in the same slice's own `/fix` (four tests added to an
+  *existing* file, `tests/shopping-list.test.ts`), and `86/1023` moved again to `87/1025` in the
+  same slice's `/validate` → `/fix` round trip that followed, which added one new file
+  (`tests/search-synonyms-repository.test.ts`, R18's missing coverage) carrying two tests. Each time,
+  the staleness
   quietly *disabled* the detection it exists to provide: a validator believing `77` would read
   `#566`'s genuine ten-file shortfall as roughly right. **The rule this last move corrects: it is
   the TEST total that drifts fastest, not the file total** — "a slice that adds or removes a test

@@ -167,6 +167,28 @@ that turned out not to be defects at all:
     for normal text. Focus state: `focus-visible:ring-2 focus-visible:ring-action
     focus-visible:ring-offset-2` is present on every suggestion/department link. No defect found.
 
+## Fix pass 2 (post-second /validate)
+
+A second `/validate` (fresh context, 2026-09-04) ran the pre-flight suite, then walked every
+requirement — including extensive live verification against `npm run preview` and the dev Neon
+branch (demo-account sign-in, real headless server-action submissions for add/edit/remove/
+approve/reject/duplicate-alias/missing-credentials, and the exact R30–R32/R38 queries this file
+already recorded, cross-checked against real `SearchQueryLog` rows). Every requirement it could
+check live passed. It found exactly one gap:
+
+- **R18 had no test.** `validation.md`'s own row requires "a unit test asserts the constant is
+  applied to the query," and while `SYNONYM_LOAD_LIMIT` genuinely is a named constant passed as
+  `take` in both `listApprovedAliasMap` and `listSynonymsForVendor`
+  (`lib/repositories/search-synonyms.ts`), no test file anywhere referenced `search-synonyms`,
+  `SYNONYM_LOAD_LIMIT`, or a mocked `prisma.searchSynonym` call — confirmed by an exhaustive grep
+  across `tests/`. Not a bad-check trap (the requirement's own prose, not just the validation row,
+  asks for a test); a genuinely missing artifact. Fixed by adding
+  `tests/search-synonyms-repository.test.ts`, asserting `take === SYNONYM_LOAD_LIMIT` against a
+  stub client for both functions the constant bounds. No production code changed and no observable
+  behaviour changed, so no `CHANGELOG.md` entry.
+- **CLAUDE.md's vitest baseline moved again**, 86/1023 → 87/1025 (one new file, two new tests) —
+  corrected on this branch, continuing the pattern `#584` already tracks.
+
 ## Known-shaky areas
 
 - **The real AI call has never executed.** Neither `CLOUDFLARE_ACCOUNT_ID` nor
