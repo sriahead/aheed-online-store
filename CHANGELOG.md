@@ -6,6 +6,21 @@ every branch merges.
 
 ## [Unreleased]
 
+### Documentation
+
+- **`/document` (final) closeout for P2.6 slice 3** (`#566`, `#396`, `#580`, `#572`, `#578`; PR #585
+  merged to `staging`, PR #586 promoted to `main`). `specs/roadmap.md` (1.71.0) gains the slice's
+  build/merge row and its promotion row, recording both `/fix` passes (a real "Shop your list"
+  alias-blindness bug, and a missing unit test for `SYNONYM_LOAD_LIMIT`) and the live verification
+  performed against `npm run preview` and the dev Neon branch. `CLAUDE.md` (1.13.0) gains a new
+  bullet on its headless-server-action-testing section: a `useActionState`-bound form carries a
+  different hidden-field shape (`$ACTION_REF_N`/`$ACTION_N:0/1`/`$ACTION_KEY`) than the plain
+  progressive-enhancement pattern already documented there, discovered driving
+  `/staff/search-synonyms` end-to-end with no browser. `npm run sdd:audit` reports zero gaps.
+  Delivery board reconciled: `#566`/`#396`/`#580`/`#572`/`#578` are **Done**. `ARTIFACT_INDEX.md` /
+  `app/(admin)/staff/runbook/docs.ts` regenerated to match. No runtime code, no schema change,
+  nothing for `prisma migrate deploy` to apply.
+
 ### Added
 
 - **A curated search synonym dictionary, so shoppers find the shelf using the word they actually

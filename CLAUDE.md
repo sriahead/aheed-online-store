@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.12.0"
-updated: 2026-09-03
+version: "1.13.0"
+updated: 2026-09-04
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -864,6 +864,18 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `/staff/payments`'s reconcile/recover actions end-to-end against a real dev database and a real
   Stripe test-mode session for `#454`'s `/validate` and `/ship`, with no Chrome extension
   available for part of that session.
+- **A `useActionState`-bound form (still a real `<form action={...}>`, but wrapped in a client
+  component so a field error can render from the action's return value) is ALSO curl-drivable, but
+  carries a different hidden-field shape than the plain progressive-enhancement pattern above —
+  grepping for `\$ACTION_ID_` on one finds nothing.** Instead of a single `$ACTION_ID_<hash>` field,
+  React renders `$ACTION_REF_<N>` (empty value), `$ACTION_<N>:0` (JSON `{"id":"<action-hash>",
+  "bound":"$@1"}`), `$ACTION_<N>:1` (JSON-encoded previous state, e.g.
+  `[{"error":null,"field":null,"notice":null}]`), and `$ACTION_KEY` (a per-row nonce that changes
+  every render, so it must be re-read from a fresh page fetch before each submission, not reused
+  across requests). Confirmed live in P2.6 slice 3 (#566) driving `/staff/search-synonyms`'s
+  add/edit/remove/approve/reject forms end-to-end with no Chrome extension available — same
+  `curl -F` approach as the plain-form case, just with these four fields instead of one, plus the
+  named fields the action actually reads (e.g. `alias`, `canonical`, `intent`).
 - **`npm run preview`'s `next build` step type-checks every `.ts` file its tsconfig includes —
   which, by default, means the repo root — so a type error in a scratch validation script placed
   at the repo root (rather than under `lib/`, `app/`, etc.) fails the WHOLE build**, not just that
