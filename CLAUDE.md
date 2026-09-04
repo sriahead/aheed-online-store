@@ -4,7 +4,7 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.13.0"
+version: "1.14.0"
 updated: 2026-09-04
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
@@ -452,14 +452,20 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  87 files / 1025 tests**, measured 2026-09-04 at `#566`'s second `/fix`) and treat any shortfall as
-  a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third and
-  fourth time within the same slice** — `74/874` until `#491` corrected it to `77/903`, `77/903`
-  until `#566` found the real figure was `86/1019` after three P2.6 slices added tests, `86/1019`
-  moved to `86/1023` a few hours later in the same slice's own `/fix` (four tests added to an
-  *existing* file, `tests/shopping-list.test.ts`), and `86/1023` moved again to `87/1025` in the
+  89 files / 1076 tests**, measured 2026-09-04 at `#567`'s Fix) and treat any shortfall as
+  a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
+  fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
+  `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
+  `86/1019` moved to `86/1023` a few hours later in the same slice's own `/fix` (four tests added to
+  an *existing* file, `tests/shopping-list.test.ts`), and `86/1023` moved again to `87/1025` in the
   same slice's `/validate` → `/fix` round trip that followed, which added one new file
-  (`tests/search-synonyms-repository.test.ts`, R18's missing coverage) carrying two tests. Each time,
+  (`tests/search-synonyms-repository.test.ts`, R18's missing coverage) carrying two tests, and
+  `87/1025` moved to `89/1072` the next day at `#567`'s Build (two new files plus five tests added
+  to `tests/shopping-list.test.ts`) — a fifth move, updated at Build rather than left for
+  `/document`, because a Clear sits between the two and the measured number would not survive it —
+  and `89/1072` moved to `89/1076` the same day at `#567`'s own `/fix`: no new file, four tests
+  added to an *existing* one (`tests/list-normalisation.test.ts`), covering the response-shape bug
+  `/validate` found live plus the R15 hang-timeout case that had been missing since Build. Each time,
   the staleness
   quietly *disabled* the detection it exists to provide: a validator believing `77` would read
   `#566`'s genuine ten-file shortfall as roughly right. **The rule this last move corrects: it is

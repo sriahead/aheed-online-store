@@ -28,6 +28,19 @@ export interface ParsedLine {
   original: string;
   quantity: number;
   terms: string[];
+  /**
+   * P2.6 slice 4 (#567). The pack size or weight the shopper asked for, as they wrote it
+   * ("2kg", "500g"), or null. Only the AI pre-pass in `lib/list-normalisation.ts` ever sets it:
+   * the deterministic parser cannot tell a measure from a search term, which is precisely the gap
+   * that slice exists to close. Optional, so every pre-slice construction site still type-checks
+   * and behaves identically.
+   */
+  measure?: string | null;
+  /**
+   * P2.6 slice 4 (#567). The brand the shopper named, or null. Retained for display only — it is
+   * deliberately never folded into `terms`; see `mergeNormalisedItems`'s docstring for why.
+   */
+  brand?: string | null;
 }
 
 /** The product shape the review step needs. Deliberately smaller than ProductSummary. */
@@ -225,6 +238,33 @@ export function resolveLines(
     }
 
     const matching = fullMatches;
+
+    // P2.6 slice 4 (#567) — the pack-size rule.
+    //
+    // A line asking for a measure the catalogue cannot satisfy exactly has NO defined resolution:
+    // "2kg atta" against 1kg, 5kg and 10kg bags could defensibly mean two small bags, the nearest
+    // single pack, or nothing, and those are not equivalent to the shopper. `Product` carries no
+    // pack-size field and `unitLabel` is free text ("GBP 2.40 per kg"), so nothing here can do the
+    // arithmetic — that model is #398, which sits after P2.6.
+    //
+    // So this does not choose. When a measure is present and no candidate's NAME carries it, the
+    // line is forced to `ambiguous` and the shopper picks the pack in the review step that already
+    // exists for exactly this purpose. Never `matched`: silently resolving would charge someone for
+    // the wrong weight of food, which is the one outcome this feature's requirements forbid.
+    //
+    // "5kg basmati rice" still resolves outright, because *Basmati Rice 5kg* does contain "5kg" —
+    // preserving the behaviour LEADING_COUNT was written to protect, now that a measure is
+    // extracted explicitly rather than left to look like a search term.
+    const measure = line.measure?.trim().toLowerCase() ?? "";
+    if (measure !== "" && !matching.some((c) => normaliseName(c.name).includes(measure))) {
+      return {
+        ...line,
+        resolution: {
+          kind: "ambiguous",
+          candidates: [...matching].sort(rankCandidates).slice(0, MAX_CANDIDATES_PER_LINE),
+        },
+      };
+    }
 
     // An exact name match resolves the line outright, even when other products
     // also contain every term ("milk" → Milk, not Milk + Whole Milk). Compares

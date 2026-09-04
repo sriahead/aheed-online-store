@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-04T14:32:25.388Z` · commit `a708387` · `147` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-04T20:52:17.179Z` · commit `28f072a` · `148` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -22,7 +22,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
-| [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 1.13.0 | 2026-09-04 | approved | internal | AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow. |
+| [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 1.14.0 | 2026-09-04 | approved | internal | AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow. |
 | [Product Requirements & Feature Workflows](docs/business-analysis/product-requirements.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for Business Analysts and Project Managers detailing the core business logic, feature requirements, and workflows. |
 | [UI/UX & Design Guidelines](docs/design-ux/ux-guidelines.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for UI/UX designers detailing the design system, storefront customization, and the role of the ui-ref prototype. |
 | [Architecture & System Design Overview](docs/developer-portal/architecture-overview.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A high-level map of the platform's architecture, system design, and database design, acting as a directory to the deeper technical specifications. |
@@ -145,7 +145,8 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P2.6 slice 3 — Synonym dictionary, relevance-triggered recovery and tokeniser hygiene (plan)](specs/2026-09-03-search-synonyms-and-relevance-recovery/plan.md) | spec | 1.0.0 | 2026-09-04 | draft | internal | A curated vendor-scoped synonym dictionary expands search queries rather than replacing them, staff approve AI-proposed aliases drawn from the query log, recovery fires on thin results rather than only empty ones, and low-information tokens stop matching the whole catalogue. |
 | [P2.6 slice 1 — Tokenised search matching and relevance ranking (plan)](specs/2026-09-03-search-tokenised-matching-and-ranking/plan.md) | spec | 1.2.0 | 2026-09-03 | draft | internal | Storefront search matches every term in a multi-word query independently instead of treating the whole query as one substring, and orders results by relevance and availability instead of by recency. First slice of P2.6. |
 | [P2.6 slice 2 — Zero-result ladder and search query log (plan)](specs/2026-09-03-search-zero-result-recovery/plan.md) | spec | 1.0.0 | 2026-09-03 | draft | internal | A search that would otherwise show "No products found" first tries deterministic typo correction, then a looser identity-field match, then a broad match, before falling back to category and single-term suggestions, and every direct-search miss is logged (vendor-scoped, no user link) for review. |
-| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.23.0 | 2026-09-04 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
+| [P2.6 slice 4 — AI Shop List normalisation over the existing matcher (plan)](specs/2026-09-04-ai-shop-list-normalisation/plan.md) | spec | 1.0.0 | 2026-09-04 | draft | internal | An AI pre-pass turns pasted shop-list text into structured items before the existing deterministic matcher runs. Matching is unchanged; the AI only interprets input, is rate-limited per caller, and degrades to today's behaviour on any failure. |
+| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.24.0 | 2026-09-04 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
 | [ADR-003 — Object Storage Abstraction (S3-compatible)](specs/decisions/ADR-003-storage-abstraction.md) | adr | 1.2.0 | 2026-08-17 | approved | internal | Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time. |

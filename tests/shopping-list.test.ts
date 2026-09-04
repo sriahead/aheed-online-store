@@ -247,3 +247,75 @@ describe("sumLinesByProduct", () => {
     ]);
   });
 });
+
+/**
+ * P2.6 slice 4 (#567) — the pack-size rule.
+ *
+ * `measure` is only ever set by the AI pre-pass in lib/list-normalisation.ts; the deterministic
+ * parser cannot tell a measure from a search term, so with AI unavailable none of these lines
+ * carry one and this whole rule is inert. That is the intended degradation, and the last test in
+ * this block pins it.
+ */
+describe("resolveLines — a pack size the shop cannot fill exactly is the shopper's choice", () => {
+  const ATTA: ListCandidate[] = [
+    product("atta-1kg", "Chapati Atta 1kg"),
+    product("atta-5kg", "Chapati Atta 5kg"),
+    product("atta-10kg", "Chapati Atta 10kg"),
+  ];
+
+  it("refuses to resolve 2kg against a shop stocking 1kg, 5kg and 10kg", () => {
+    const [line] = resolveLines(
+      [{ original: "2kg atta", quantity: 1, terms: ["chapati", "atta"], measure: "2kg" }],
+      ATTA,
+    );
+
+    expect(line.resolution.kind).toBe("ambiguous");
+    if (line.resolution.kind !== "ambiguous") throw new Error("unreachable");
+    expect(line.resolution.candidates).toHaveLength(3);
+  });
+
+  it("never silently substitutes, even when exactly one product matches the name", () => {
+    // The dangerous case: one candidate, so the old code would have called it `matched` and
+    // charged the shopper for a 5kg bag they did not ask for.
+    const [line] = resolveLines(
+      [{ original: "2kg atta", quantity: 1, terms: ["chapati", "atta"], measure: "2kg" }],
+      [product("atta-5kg", "Chapati Atta 5kg")],
+    );
+
+    expect(line.resolution.kind).toBe("ambiguous");
+  });
+
+  it("resolves outright when a product's name carries the measure asked for", () => {
+    const [line] = resolveLines(
+      [{ original: "5kg basmati rice", quantity: 1, terms: ["basmati", "rice"], measure: "5kg" }],
+      CATALOGUE,
+    );
+
+    expect(line.resolution.kind).toBe("matched");
+    if (line.resolution.kind !== "matched") throw new Error("unreachable");
+    expect(line.resolution.product.name).toBe("Basmati Rice 5kg");
+  });
+
+  it("matches the measure case-insensitively", () => {
+    const [line] = resolveLines(
+      [{ original: "5KG basmati rice", quantity: 1, terms: ["basmati", "rice"], measure: "5KG" }],
+      CATALOGUE,
+    );
+
+    expect(line.resolution.kind).toBe("matched");
+  });
+
+  it("is inert when no measure was extracted — today's behaviour, unchanged", () => {
+    const withMeasure = resolveLines(
+      [{ original: "basmati rice", quantity: 1, terms: ["basmati", "rice"], measure: null }],
+      CATALOGUE,
+    );
+    const without = resolveLines(
+      [{ original: "basmati rice", quantity: 1, terms: ["basmati", "rice"] }],
+      CATALOGUE,
+    );
+
+    expect(withMeasure[0].resolution).toEqual(without[0].resolution);
+    expect(without[0].resolution.kind).toBe("matched");
+  });
+});
