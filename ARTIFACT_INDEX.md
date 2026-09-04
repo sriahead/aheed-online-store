@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-04T14:32:25.388Z` · commit `a708387` · `147` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-04T18:32:11.410Z` · commit `770d5bf` · `148` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -145,6 +145,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P2.6 slice 3 — Synonym dictionary, relevance-triggered recovery and tokeniser hygiene (plan)](specs/2026-09-03-search-synonyms-and-relevance-recovery/plan.md) | spec | 1.0.0 | 2026-09-04 | draft | internal | A curated vendor-scoped synonym dictionary expands search queries rather than replacing them, staff approve AI-proposed aliases drawn from the query log, recovery fires on thin results rather than only empty ones, and low-information tokens stop matching the whole catalogue. |
 | [P2.6 slice 1 — Tokenised search matching and relevance ranking (plan)](specs/2026-09-03-search-tokenised-matching-and-ranking/plan.md) | spec | 1.2.0 | 2026-09-03 | draft | internal | Storefront search matches every term in a multi-word query independently instead of treating the whole query as one substring, and orders results by relevance and availability instead of by recency. First slice of P2.6. |
 | [P2.6 slice 2 — Zero-result ladder and search query log (plan)](specs/2026-09-03-search-zero-result-recovery/plan.md) | spec | 1.0.0 | 2026-09-03 | draft | internal | A search that would otherwise show "No products found" first tries deterministic typo correction, then a looser identity-field match, then a broad match, before falling back to category and single-term suggestions, and every direct-search miss is logged (vendor-scoped, no user link) for review. |
+| [P2.6 slice 4 — AI Shop List normalisation over the existing matcher (plan)](specs/2026-09-04-ai-shop-list-normalisation/plan.md) | spec | 1.0.0 | 2026-09-04 | draft | internal | An AI pre-pass turns pasted shop-list text into structured items before the existing deterministic matcher runs. Matching is unchanged; the AI only interprets input, is rate-limited per caller, and degrades to today's behaviour on any failure. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.23.0 | 2026-09-04 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

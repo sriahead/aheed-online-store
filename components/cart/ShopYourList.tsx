@@ -114,11 +114,24 @@ export function ShopYourList() {
                   <div className="mt-1.5">
                     <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-accent">
                       <CircleHelp className="h-4 w-4" aria-hidden />
-                      Which one did you mean?
+                      {/*
+                        P2.6 slice 4 (#567). A line asking for a pack size this shop doesn't stock
+                        is a different question from an ambiguous name, and asking the generic one
+                        would read as though we hadn't understood. We did — we just can't fill it
+                        exactly, and picking a size on the shopper's behalf is the one thing this
+                        step exists to prevent.
+                      */}
+                      {line.measure
+                        ? `We don't stock a ${line.measure} pack — choose a size`
+                        : "Which one did you mean?"}
                     </p>
                     <select
                       name="productId"
-                      aria-label={`Choose a product for "${line.original}"`}
+                      aria-label={
+                        line.measure
+                          ? `Choose a pack size for "${line.original}"`
+                          : `Choose a product for "${line.original}"`
+                      }
                       value={choices[index] ?? ""}
                       onChange={(event) =>
                         setChoices((prev) => ({ ...prev, [index]: event.target.value }))
