@@ -1,0 +1,95 @@
+# P2.6 slice 3 — Synonym dictionary, relevance-triggered recovery and tokeniser hygiene (validation)
+
+> **Testing Strategy (Lean 80/20 Model)**
+> Provide enough testing to give confidence without creating unnecessary or duplicate tests. Avoid
+> testing the same behaviour multiple times at different levels unless doing so provides additional
+> confidence.
+>
+> **The Main Principle:**
+>
+> - **Build:** Did we build the component correctly?
+> - **Validate:** Does the feature work correctly in the real system?
+> - **Release:** Is the complete system safe, reliable, and ready for users?
+
+## Testing Areas
+
+This slice touches a database schema, a public read path, an authenticated staff write path, an
+external AI call and rendered UI, so it needs unit, integration, E2E and security/accessibility
+coverage rather than unit tests alone. The pure modules (`search-expansion`, `search-ranking`,
+`search-query`) are exhaustively unit-testable with no database and belong there; anything touching
+Prisma is proven under `npm run preview`, never `npm run dev` — plain `next dev` cannot load
+`@prisma/client/wasm` and renders a silent error state instead of failing.
+
+1. **Unit** — the pure expansion, ranking and tokenising rules.
+2. **Integration** — repository functions against the dev Neon database; the migration.
+3. **System / E2E** — `/search` and `/staff/search-synonyms` under `npm run preview`.
+4. **Regression & Acceptance** — the no-dictionary path must behave exactly as `#564`/`#565` left it.
+5. **Performance** — search latency with the dictionary read and typo correction on the path.
+6. **Security & Accessibility** — AI reachable only by an authenticated admin; the refusal branch;
+   contrast and focus on the new markup.
+
+**Environment notes a validator must not skip.**
+
+- Before any live-database row, confirm which Neon project `.env` and `.dev.vars` point at, and diff
+  both against `secrets/staging.vars` and `secrets/production.vars`. Two files agreeing on the wrong
+  target is a recorded failure here, and a staging-sounding filename is not evidence — only the host
+  is.
+- Never pipe a live-writing script through `head`; redirect to a file and read it.
+- Write any scratch script under `scripts/`, never `npx tsx -e`, and run `npx tsc --noEmit` once
+  before relying on it inside a preview cycle.
+- If `npx vitest run` reports fewer files or tests than the current baseline, treat it as a
+  non-result and re-run it alone rather than reading it as a pass.
+- **Build must record, in `build-notes.md`, the concrete dev-catalogue queries used for the thin-result
+  (R30–R32) and per-rung (R38) rows.** Those rows cannot be executed by a fresh context without a
+  query known to produce the condition on this catalogue.
+
+---
+
+## Validation Steps
+
+| Req | Testing Area  | How to verify                                                                                                                                                                                                                                                                                                                        |
+| --- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| R1  | Unit          | `npx vitest run tests/search-expansion.test.ts` passes a case asserting `expandSearchTerms(["rice","haldi"], map)` returns two groups in that order, each of shape `{ term, variants }`.                                                                                                                                              |
+| R2  | Unit          | Same file: a case asserting `variants[0] === term` for every group returned, including for a term that does have an alias.                                                                                                                                                                                                            |
+| R3  | Unit          | Same file: `expandSearchTerms(["rice"], new Map())` deep-equals `[{ term: "rice", variants: ["rice"] }]`.                                                                                                                                                                                                                             |
+| R4  | Unit          | Same file: a map built with the alias key `Haldi` expands the parsed term `haldi` to include `turmeric`.                                                                                                                                                                                                                              |
+| R5  | Unit          | Same file: with a map holding `a` to `b` and `b` to `c`, the group for `a` deep-equals `{ term: "a", variants: ["a","b"] }` — `c` absent.                                                                                                                                                                                             |
+| R6  | Unit          | Same file: a property-style case over a map with many aliases asserts no returned group has `variants.length > 2`.                                                                                                                                                                                                                    |
+| R7  | Unit          | `grep -n "^import" lib/search-expansion.ts` lists no `@/lib/db` and no `next/headers`; the test file above constructs its map inline and runs with no database.                                                                                                                                                                        |
+| R8  | Unit          | `npx vitest run tests/search-ranking.test.ts` passes a case where a product named `Turmeric Powder`, matched only via the `haldi` variant, lands in tier 1 (in stock) rather than tier 3.                                                                                                                                              |
+| R9  | Unit          | Same file: a candidate whose name equals the joined **original** query is tier 0; the same candidate is not tier 0 when the match came only from an expanded variant.                                                                                                                                                                  |
+| R10 | Unit          | Same file: `hasNameTierCandidate` returns `true` for a set containing one name-tier candidate and `false` for a set whose candidates all matched through `description` only.                                                                                                                                                           |
+| R11 | Regression    | `npx vitest run tests/search-repository.test.ts` passes a case that captures the `where` argument passed to a stub `findMany` for a two-term query with an empty dictionary, and asserts it deep-equals the `AND`-of-per-term-`OR`s shape `#564` built.                                                                                |
+| R12 | Integration   | `grep -n "model SearchSynonym" -A 20 prisma/schema.prisma` shows the fields and `@@unique([vendorId, alias])`; `grep -n "enum SearchSynonymStatus\|enum SearchSynonymSource" prisma/schema.prisma` shows both enums declared.                                                                                                          |
+| R13 | Integration   | `grep -n "model SearchQueryLog" -A 15 prisma/schema.prisma` shows the new name-tier field. Under `npm run preview`, run a thin query and a good query, then read both rows back: the field differs between them.                                                                                                                       |
+| R14 | Integration   | `ls prisma/migrations/` shows the new directory; `grep -c "^DROP INDEX" prisma/migrations/<dir>/migration.sql` returns `0`; the file contains both the `CREATE TABLE` and the `ALTER TABLE ... ADD COLUMN`. Anchor the pattern — the migration's own comment explains which drops were removed and why, and an unanchored grep matches that explanation, rewarding its deletion. |
+| R15 | Unit          | `npx vitest run tests/repository-purity.test.ts tests/repository-client-injection.test.ts` passes — both walk every file in `lib/repositories/` from the filesystem, so the new file is covered automatically.                                                                                                                         |
+| R16 | Unit          | `ls lib/search-synonyms-service.ts` succeeds, and reading it shows the Prisma client and `getCurrentVendorId` resolved there and nowhere else for this feature.                                                                                                                                                                        |
+| R17 | Integration   | Under `npm run preview`, add alias `zzalias` to `rice` and leave it `PENDING`; search `zzalias` on `/search` and confirm no rice product appears. Approve it, search again, and confirm they do.                                                                                                                                       |
+| R18 | Unit          | Reading the loader in `lib/repositories/search-synonyms.ts` shows a named constant passed as `take`; a unit test asserts the constant is applied to the query.                                                                                                                                                                         |
+| R19 | Unit          | `npx vitest run tests/repository-transaction-safety.test.ts` passes with the new file's bulk writes covered by it.                                                                                                                                                                                                                    |
+| R20 | E2E           | Under `npm run preview`, signed in as a store admin, submit an alias that already exists for the vendor. The page renders a field-level error, the Worker logs no uncaught exception, and the response is not a 500. This must be a **real** duplicate submission — a hand-constructed error object proves nothing about either adapter. |
+| R21 | Security      | Under `npm run preview`, sign in as a non-staff account and open `/staff/search-synonyms`: the "admins only" `PanelRefusal` copy renders, not a blank content area. Signed out, the route redirects to `/login`.                                                                                                                        |
+| R22 | E2E           | Under `npm run preview` as a store admin: add `bhindi` to `okra`, edit its canonical term, then remove it, confirming each change after a reload. `grep -n "^export" features/admin/search-synonyms.ts` shows only `async function` exports.                                                                                            |
+| R23 | E2E           | Under `npm run preview`: approve one `PENDING` row and reject another; the approved alias changes `/search` results for its term and the rejected one does not.                                                                                                                                                                        |
+| R24 | Security      | `grep -rn "generateSynonymProposals" app lib features components` — every match is an import, the definition, or the staff feature module; nothing under `app/(storefront)`. Reading the action shows `requireVendorRole("ADMIN")` before any `fetch`.                                                                                  |
+| R25 | Integration   | Comment out `CLOUDFLARE_API_TOKEN` in `.dev.vars`, restart `npm run preview` (the file is read at Worker boot), press the propose button: an operator-facing message renders and the `SearchSynonym` row count is unchanged. Restore the value and restart.                                                                             |
+| R26 | Integration   | After a real proposal run against the dev database, every row created has `status = 'PENDING'` and `source = 'AI'`; reading the module shows the named cap on query-log rows read per run.                                                                                                                                             |
+| R27 | Integration   | Reading the proposal query shows it selects rows that found nothing **or** were thin per R13. Confirm live: a thin query run beforehand appears among the proposal run's inputs.                                                                                                                                                       |
+| R28 | Integration   | Run the seed twice against the dev database, then confirm `SearchSynonym` holds exactly one row per seeded alias with `status = 'APPROVED'` and `source = 'SEED'`, and that the second run added none.                                                                                                                                 |
+| R29 | E2E           | Under `npm run preview` with `bhindi` to `okra` approved, paste `bhindi` into "Shop your list": the review step offers the okra product. `grep -rn "expandSearchTerms" lib/` shows both `searchProducts` and `matchProductListTerms` calling it.                                                                                        |
+| R30 | E2E           | Using the thin-result query Build recorded, request `/search?q=<that query>` under `npm run preview`. Every product id the direct search returns is present in the HTML **and** a suggestions block renders. Compare the product ids against the same query run before this slice's change.                                             |
+| R31 | E2E           | For that query the suggestions block links to the canonical term when an approved alias covers it; for a second, misspelled query it links to the typo-correction suggestion. Verify both cases separately.                                                                                                                            |
+| R32 | E2E           | Under `npm run preview`, search a term with a real name match (`rice`): results render and the suggestions block is absent from the HTML.                                                                                                                                                                                              |
+| R33 | Regression    | `npx vitest run tests/search-repository.test.ts` passes, including `#565`'s pre-existing ladder cases, with their rung and product-id assertions unchanged.                                                                                                                                                                            |
+| R34 | Unit          | `npx vitest run tests/search-query.test.ts` asserts `parseSearchQuery("e")` equals `[]` and `parseSearchQuery("a rice")` equals `["rice"]`.                                                                                                                                                                                            |
+| R35 | Unit          | Same file: `parseSearchQuery("rice - basmati")` equals `["rice","basmati"]`. The pre-slice test asserting the hyphen survives is replaced rather than silently deleted, and its replacement records why the behaviour changed.                                                                                                         |
+| R36 | E2E           | Under `npm run preview`, request `/search?q=e`: the page states the query is too short. Confirm via the local Workers Explorer API (`POST /cdn-cgi/local/explorer/api/local/observability/query`) that no product search ran for it.                                                                                                    |
+| R37 | Unit          | `npx vitest run tests/search-query.test.ts` passes, and reading the agreement `describe` block shows its input list excludes low-information tokens and carries a comment naming the divergence and its reason.                                                                                                                        |
+| R38 | Integration   | Under `npm run preview` against the dev Neon branch, run the three per-rung queries Build recorded and confirm the rendered notice names the expected rung each time. The identity rung — whose category relation filter has never run against real Postgres — must be one of the three actually observed.                              |
+| R39 | Performance   | With a committed script under `scripts/`, time repeated `/search` requests under `npm run preview` on the dev catalogue for a zero-result query (the worst case: dictionary read, token fetch and Levenshtein scan all on the path). Record the p95 in `build-notes.md` against the 400 ms target.                                      |
+| R40 | Integration   | Count this vendor's `SearchQueryLog` rows, perform a first-page `/search`, re-count (+1), click "Next page", re-count (+0). Query the real table, not the unit-level guard.                                                                                                                                                            |
+| R41 | Accessibility | Inspect the recovery and suggestion markup under `npm run preview`: links have a visible focus state and their colour against `bg-surface-muted` meets WCAG AA. Record the result in `build-notes.md`; file an issue for any defect not fixed here.                                                                                     |
+| R42 | Acceptance    | `npm run sdd:audit` no longer reports PR #581 as pending, and `grep -n "PR #581" specs/roadmap.md` returns the new change-log row.                                                                                                                                                                                                     |
+| R43 | Acceptance    | `git diff origin/staging -- CHANGELOG.md` is non-empty and describes this slice.                                                                                                                                                                                                                                                      |
+| R44 | Acceptance    | `npm run lint`, `npm run typecheck`, `npx vitest run`, `npm run format:check` and `npm run kms:validate` each exit 0. Confirm vitest's reported file/test totals are at or above the current baseline — a shortfall with `Failed to start forks worker` in the output is the known worker-startup trap, not a pass.                     |

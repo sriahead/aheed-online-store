@@ -4,8 +4,15 @@ import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import { effectiveStock } from "@/lib/cart-rules";
 import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
 import { parseSearchQuery } from "@/lib/search-query";
-import { rankSearchCandidates } from "@/lib/search-ranking";
+import { hasNameTierCandidate, rankSearchCandidates } from "@/lib/search-ranking";
 import { correctTerms } from "@/lib/search-typo-correction";
+import {
+  expandSearchTerms,
+  flattenVariants,
+  toUnexpandedGroups,
+  type SearchTermGroup,
+} from "@/lib/search-expansion";
+import { listApprovedAliasMap } from "@/lib/repositories/search-synonyms";
 import {
   MAX_IMAGE_ATTEMPT_FAILURES,
   PLACEHOLDER_IMAGE_SUFFIX,
@@ -120,12 +127,60 @@ export interface ProductPage {
    * `listProducts`/`listProductsByCategory`.
    */
   recovery: SearchRecoveryInfo | null;
+  /**
+   * P2.6 slice 3 (#580) — did the DIRECT search match anything on NAME (ranking tier 0-2), rather
+   * than only through some product's description prose?
+   *
+   * `directResultCount` cannot express this: a query returning one tangential description hit and a
+   * query that worked perfectly both report a positive count. This is what
+   * `lib/products-service.ts` writes to `SearchQueryLog.directNameMatch`, and what the thin-result
+   * suggestions below are triggered by. Always `false` for `listProducts`/`listProductsByCategory`,
+   * where it is meaningless.
+   */
+  directNameMatch: boolean;
+  /**
+   * P2.6 slice 3 (#580) — set when the direct search returned candidates but NONE of them matched
+   * on name, so the shopper is looking at results that are probably not what they asked for.
+   *
+   * This is deliberately NOT a ladder rung. The ladder REPLACES the result set, which is right for
+   * a query that found nothing and wrong for one that found something tangential: a shopper with
+   * fifty description-only matches must not have all fifty swapped out. Recovery must never
+   * subtract. So the page renders every direct result AND these suggestions beside them.
+   *
+   * `null` when the direct search found a name match, when it found nothing at all (the ladder
+   * handles that case), or on the non-search paths.
+   */
+  suggestions: SearchSuggestions | null;
+}
+
+/**
+ * Ways out of a thin result (P2.6 slice 3, #580), each rendered as a link to that search.
+ *
+ * Both fields are independently nullable, and BOTH being null is a meaningful, common state rather
+ * than an empty result: the notice still renders, because telling a shopper their results are only
+ * loosely related is the substance of #580 even when nothing better can be named.
+ */
+export interface SearchSuggestions {
+  /**
+   * The query rewritten in the catalogue's own vocabulary, when an approved synonym covers one of
+   * its terms — "haldi" offered as "turmeric".
+   */
+  canonicalQuery: string | null;
+  /**
+   * The query with each correctable term replaced by its nearest product-name token, when one is
+   * within the edit-distance budget. Same deterministic machinery as the ladder's typo rung.
+   */
+  correctedQuery: string | null;
 }
 
 /**
  * See `ProductPage.recovery`. The ladder has three rungs — "typo", "identity", "broad" — tried in
- * that order; "none" means all three ran and found nothing. #566's synonym rung sits between
- * "typo" and "identity" when it ships; it does not exist in this slice (see plan.md).
+ * that order; "none" means all three ran and found nothing.
+ *
+ * #566 did NOT add a synonym rung, which an earlier version of this comment predicted it would.
+ * Synonyms widen the DIRECT predicate instead (`directSearchPredicate` over term groups), so an
+ * alias-matched product is a first-class result ranked on its merits rather than a consolation
+ * prize reached only after the direct search had already failed.
  */
 export type SearchRecoveryRung = "typo" | "identity" | "broad" | "none";
 
@@ -206,6 +261,17 @@ export interface ProductRepository {
    * per-line all-terms decision to lib/shopping-list.ts.
    */
   matchListTerms(terms: string[]): Promise<ListCandidate[]>;
+  /**
+   * P2.6 slice 3 (#566, #396) — the SAME approved alias map `matchListTerms` (and `searchProducts`)
+   * already widens its own query with, exposed so `lib/shopping-list.ts`'s `resolveLines` can widen
+   * its per-LINE decision the same way. `matchListTerms` fetches ONE candidate pool across every
+   * distinct term in the whole list; `resolveLines` then re-checks each candidate against its own
+   * line's terms — a step this repository has no visibility into, so it cannot make that re-check
+   * alias-aware on its own. Without this, a candidate found only via an alias (`dhania` → a product
+   * named "Fresh Coriander") reaches the pool but is silently re-rejected as unmatched, because the
+   * re-check compares the candidate's name against the shopper's literal, unexpanded word.
+   */
+  synonymAliasMap(): Promise<Map<string, string>>;
   /**
    * P8.5b (#346) — one headline product per department for the homepage hero,
    * in a single query. Keyed by category id.
@@ -352,6 +418,10 @@ async function findPage(
     // No zero-result ladder outside searchProducts() — see ProductPage's docstring.
     directResultCount: 0,
     recovery: null,
+    // Relevance is not computed on the browse paths, so there is no name-tier notion to report
+    // and no thin-result case to rescue (#580).
+    directNameMatch: false,
+    suggestions: null,
   };
 }
 
@@ -512,14 +582,21 @@ async function fetchSearchCandidates(
   return { truncated, candidates };
 }
 
-/** The direct (#564) predicate: every term required, each satisfied by `name` OR `description`. */
-function directSearchPredicate(terms: readonly string[]): Prisma.ProductWhereInput {
+/**
+ * The direct predicate: every term group required, each satisfied by `name` OR `description` for
+ * ANY of that group's variants (#564, extended to groups by #566).
+ *
+ * With no approved synonyms every group holds exactly one variant, so this builds the identical
+ * `AND` of per-term `OR`s that `#564` shipped — which is what makes an empty dictionary a no-op
+ * rather than a behaviour change. `tests/search-repository.test.ts` pins that shape.
+ */
+function directSearchPredicate(groups: readonly SearchTermGroup[]): Prisma.ProductWhereInput {
   return {
-    AND: terms.map((term) => ({
-      OR: [
-        { name: { contains: term, mode: "insensitive" as const } },
-        { description: { contains: term, mode: "insensitive" as const } },
-      ],
+    AND: groups.map((group) => ({
+      OR: group.variants.flatMap((variant) => [
+        { name: { contains: variant, mode: "insensitive" as const } },
+        { description: { contains: variant, mode: "insensitive" as const } },
+      ]),
     })),
   };
 }
@@ -529,21 +606,21 @@ function directSearchPredicate(terms: readonly string[]): Prisma.ProductWhereInp
  * fields to `name`/category `name` (drops `description` — a term hitting prose is a much weaker
  * signal once every-term-required has already been given up).
  */
-function identitySearchPredicate(terms: readonly string[]): Prisma.ProductWhereInput {
+function identitySearchPredicate(groups: readonly SearchTermGroup[]): Prisma.ProductWhereInput {
   return {
-    OR: terms.flatMap((term) => [
-      { name: { contains: term, mode: "insensitive" as const } },
-      { category: { name: { contains: term, mode: "insensitive" as const } } },
+    OR: flattenVariants(groups).flatMap((variant) => [
+      { name: { contains: variant, mode: "insensitive" as const } },
+      { category: { name: { contains: variant, mode: "insensitive" as const } } },
     ]),
   };
 }
 
 /** Ladder rung "broad" (#565): the widest net — `OR` across terms, `name` or `description`. */
-function broadSearchPredicate(terms: readonly string[]): Prisma.ProductWhereInput {
+function broadSearchPredicate(groups: readonly SearchTermGroup[]): Prisma.ProductWhereInput {
   return {
-    OR: terms.flatMap((term) => [
-      { name: { contains: term, mode: "insensitive" as const } },
-      { description: { contains: term, mode: "insensitive" as const } },
+    OR: flattenVariants(groups).flatMap((variant) => [
+      { name: { contains: variant, mode: "insensitive" as const } },
+      { description: { contains: variant, mode: "insensitive" as const } },
     ]),
   };
 }
@@ -601,21 +678,40 @@ export async function searchProducts(
   // text", and an empty box is the PAGE's decision to browse instead — see
   // ProductRepository.list's docstring. Returns before touching the client at
   // all, which is what `tests/search-repository.test.ts` asserts with spies.
+  //
+  // Since #572 this also covers a query made ENTIRELY of low-information tokens ("e", "-"), which
+  // now parse to nothing. `/search` renders "too short" for that rather than claiming the
+  // catalogue holds no match — and, as before, no query is issued.
   if (terms.length === 0) {
-    return { items: [], nextCursor: null, truncated: false, directResultCount: 0, recovery: null };
+    return {
+      items: [],
+      nextCursor: null,
+      truncated: false,
+      directResultCount: 0,
+      recovery: null,
+      directNameMatch: false,
+      suggestions: null,
+    };
   }
+
+  // #566 — one read, before the search itself, turning the flat term list into groups. An empty
+  // dictionary yields single-variant groups and therefore #564's exact predicate.
+  const aliases = await listApprovedAliasMap(prisma, vendorId);
+  const groups = expandSearchTerms(terms, aliases);
 
   let { truncated, candidates } = await fetchSearchCandidates(
     prisma,
     vendorId,
     filters,
-    directSearchPredicate(terms),
+    directSearchPredicate(groups),
   );
   // Captured BEFORE any ladder rung runs, regardless of what happens next — this is what the
   // search query log (lib/products-service.ts) reports as the direct search's own outcome.
   const directResultCount = candidates.length;
-  let rankingTerms = terms;
+  const directNameMatch = hasNameTierCandidate(candidates, groups);
+  let rankingGroups = groups;
   let recovery: SearchRecoveryInfo | null = null;
+  let suggestions: SearchSuggestions | null = null;
 
   if (candidates.length === 0) {
     const tokens = await listProductNameTokens(prisma, vendorId);
@@ -623,16 +719,17 @@ export async function searchProducts(
     // Skip the re-query entirely when nothing was correctable — re-running the identical direct
     // predicate would just reproduce the zero result already known from above.
     if (correction.corrected) {
+      const correctedGroups = expandSearchTerms(correction.terms, aliases);
       const typoResult = await fetchSearchCandidates(
         prisma,
         vendorId,
         filters,
-        directSearchPredicate(correction.terms),
+        directSearchPredicate(correctedGroups),
       );
       if (typoResult.candidates.length > 0) {
         candidates = typoResult.candidates;
         truncated = typoResult.truncated;
-        rankingTerms = correction.terms;
+        rankingGroups = correctedGroups;
         recovery = { rung: "typo", correctedTerms: correction.terms };
       }
     }
@@ -643,7 +740,7 @@ export async function searchProducts(
       prisma,
       vendorId,
       filters,
-      identitySearchPredicate(terms),
+      identitySearchPredicate(groups),
     );
     if (identityResult.candidates.length > 0) {
       candidates = identityResult.candidates;
@@ -657,7 +754,7 @@ export async function searchProducts(
       prisma,
       vendorId,
       filters,
-      broadSearchPredicate(terms),
+      broadSearchPredicate(groups),
     );
     if (broadResult.candidates.length > 0) {
       candidates = broadResult.candidates;
@@ -668,9 +765,15 @@ export async function searchProducts(
 
   if (candidates.length === 0) {
     recovery = { rung: "none" };
+  } else if (!directNameMatch && recovery === null) {
+    // THIN RESULT (#580): the direct search found something, but only through description prose.
+    // Nothing is removed or re-queried — the shopper keeps every product they had, and gets ways
+    // out beside them. Guarded on `recovery === null` so a set the ladder already rescued (which
+    // is by definition not a direct result at all) never also renders suggestions.
+    suggestions = await buildThinResultSuggestions(prisma, vendorId, terms, groups);
   }
 
-  const ranked = rankSearchCandidates(candidates, rankingTerms);
+  const ranked = rankSearchCandidates(candidates, rankingGroups);
   const offset = parseSearchOffset(cursor);
   // An offset at or beyond the ranked count yields an honest empty page rather
   // than bouncing back to page one, which would loop a shopper who followed a
@@ -690,7 +793,43 @@ export async function searchProducts(
     truncated,
     directResultCount,
     recovery,
+    directNameMatch,
+    suggestions,
   };
+}
+
+/**
+ * The two ways out offered beside a thin result (#580).
+ *
+ * Runs ONLY on the thin path, so the extra token fetch it needs is not on the hot path of a
+ * search that worked. Returns `null` when neither suggestion is available, so the page renders
+ * nothing rather than an empty notice.
+ */
+async function buildThinResultSuggestions(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  terms: readonly string[],
+  groups: readonly SearchTermGroup[],
+): Promise<SearchSuggestions> {
+  // The canonical rewrite needs no query — the expansion already resolved it.
+  const expanded = groups.some((group) => group.variants.length > 1);
+  const canonicalQuery = expanded
+    ? groups.map((group) => group.variants[group.variants.length - 1]).join(" ")
+    : null;
+
+  const tokens = await listProductNameTokens(prisma, vendorId);
+  const correction = correctTerms([...terms], tokens);
+  const corrected = correction.terms.join(" ");
+  // A "correction" identical to what was typed is not a suggestion.
+  const correctedQuery = correction.corrected && corrected !== terms.join(" ") ? corrected : null;
+
+  // Deliberately returns an object even when BOTH suggestions are null. A thin result with no
+  // approved alias and no in-budget correction is the commonest case before the dictionary is
+  // populated, and it is precisely #580's complaint: the shopper sees one tangential product and
+  // nothing to tell them it is tangential. The notice still renders — saying these are loose
+  // matches, and offering the department links — rather than leaving them to conclude the shop
+  // does not stock what they asked for.
+  return { canonicalQuery, correctedQuery };
 }
 
 export async function getProductBySlug(
@@ -746,6 +885,15 @@ export async function getAvailableSpecialities(
   return { halal: halal !== null, fresh: fresh !== null, organic: organic !== null };
 }
 
+/**
+ * P2.6 slice 3 (#566) — "Shop your list" reads the SAME approved dictionary the storefront search
+ * does. A synonym that works in one path and not the other is the defect the shared
+ * `expandSearchTerms` exists to design out, so this widens its `OR` with each term's variants.
+ *
+ * `description` stays excluded here, unchanged: P3d's ruling is that a term matching prose produces
+ * a confident-looking wrong match, which is precisely what this path's review step exists to
+ * prevent. Expansion adds APPROVED aliases only, so it widens recall without weakening that.
+ */
 export async function matchProductListTerms(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
@@ -753,12 +901,15 @@ export async function matchProductListTerms(
 ): Promise<ListCandidate[]> {
   if (terms.length === 0) return [];
 
+  const aliases = await listApprovedAliasMap(prisma, vendorId);
+  const variants = flattenVariants(expandSearchTerms(terms, aliases));
+
   const rows = await prisma.product.findMany({
     where: {
       vendorId,
       isActive: true,
-      OR: terms.map((term) => ({
-        name: { contains: term, mode: "insensitive" as const },
+      OR: variants.map((variant) => ({
+        name: { contains: variant, mode: "insensitive" as const },
       })),
     },
     take: CANDIDATE_QUERY_LIMIT,

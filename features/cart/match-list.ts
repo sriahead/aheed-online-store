@@ -26,6 +26,15 @@ export async function matchList(
     return { lines: null, error: "Add at least one item to your list." };
   }
 
-  const candidates = await getProductRepository().matchListTerms(distinctTerms(parsed));
-  return { lines: resolveLines(parsed, candidates) };
+  const repo = getProductRepository();
+  const terms = distinctTerms(parsed);
+  // P2.6 slice 3 (#566, #396) — the alias map has to reach resolveLines() too, not just the
+  // candidate query: matchListTerms already widens its OR with approved aliases, but the
+  // per-line re-check resolveLines does afterwards is a separate, alias-blind step unless this
+  // is passed through — see synonymAliasMap()'s docstring in lib/repositories/products.ts.
+  const [candidates, aliases] = await Promise.all([
+    repo.matchListTerms(terms),
+    repo.synonymAliasMap(),
+  ]);
+  return { lines: resolveLines(parsed, candidates, aliases) };
 }

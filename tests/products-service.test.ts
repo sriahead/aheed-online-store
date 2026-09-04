@@ -32,6 +32,7 @@ function row(i: number) {
 
 const productFindMany = vi.fn(async (_args: unknown) => [row(1)]);
 const tierFindMany = vi.fn(async (_args: unknown) => [] as unknown[]);
+const synonymFindMany = vi.fn(async (_args: unknown) => [] as unknown[]);
 const recordSearchQuery = vi.fn(async (..._args: unknown[]) => undefined);
 
 vi.mock("@/lib/tenant", () => ({ getCurrentVendorId: vi.fn(async () => "vendor-1") }));
@@ -39,6 +40,9 @@ vi.mock("@/lib/db", () => ({
   getPrisma: () => ({
     product: { findMany: productFindMany },
     productPriceTier: { findMany: tierFindMany },
+    // #566 — searchProducts reads the approved dictionary before searching. Empty here: this file
+    // is about the query-log guard, not about expansion.
+    searchSynonym: { findMany: synonymFindMany },
   }),
   getPrismaWs: () => ({}),
 }));

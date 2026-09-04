@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.22.0"
-updated: 2026-09-03
+version: "1.23.0"
+updated: 2026-09-04
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -530,6 +530,15 @@ S3 API rather than an R2-specific SDK.
   balance derived by `SUM()` cannot be guarded that way, which is why the counter exists alongside
   its ledger rather than instead of it.
 - **Webhooks are idempotent.** Verify Stripe signatures; key side effects on the event id.
+- **AI never sits on a public request path.** Established by `#571` (P2.6) and first implemented in
+  slice 3 (`#566`). A model call reachable from an unauthenticated route — `/search` being the case
+  that raised it — is attacker-controlled cost: it is paid, non-deterministic, shares a Workers AI
+  quota with the product-image pipeline, and this stack has **no middleware layer available to
+  rate-limit it centrally** (see `CLAUDE.md` on why no `proxy.ts` can ship here). So AI runs only
+  behind an authenticated staff action or a scheduled job, and its output is **proposed, never
+  applied**: `lib/search-synonym-proposals.ts` writes `PENDING` rows a human approves, exactly as
+  the image pipeline writes rows an admin reviews. What a shopper's request touches stays
+  deterministic and free.
 - **Every list is keyset-paginated; every hot query has an index** shipped in the same migration.
 - **SDD gates still apply.** Spec before code, tests + `validation.md` before done, changelog
   before merge. NFR targets in §3.4 are Gate-3 acceptance criteria.
