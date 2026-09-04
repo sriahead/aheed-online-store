@@ -181,6 +181,31 @@ export function parseNormalisationResponse(raw: string, lineCount: number): Norm
   return items;
 }
 
+/**
+ * Cloudflare's response shape here is not `result.response: string` as originally assumed —
+ * confirmed live against the real `@cf/meta/llama-3.1-8b-instruct` endpoint at `/validate` (#567):
+ * `result.response` comes back as an ALREADY-PARSED array when the model's reply is JSON, with the
+ * raw string form sitting instead at `result.choices[0].message.content`. Treating `response` as
+ * "string or nothing" made every real call resolve to a text of `""`, so `parseNormalisationResponse`
+ * ran on empty input every time and the pre-pass silently never enriched anything — degrading safely,
+ * but doing so on every submission, not just a failure. This reconciles both shapes without touching
+ * `parseNormalisationResponse` itself, which is unit-tested against the string contract it's actually
+ * built for: a non-string `response` is re-serialised back to text so the same bracket-and-JSON.parse
+ * path still runs, and `choices[0].message.content` is the fallback when `response` is absent
+ * entirely.
+ */
+function extractReplyText(payload: { result?: { response?: unknown; choices?: unknown } }): string {
+  const response = payload.result?.response;
+  if (typeof response === "string") return response;
+  if (response !== undefined && response !== null) return JSON.stringify(response);
+
+  const choices = payload.result?.choices;
+  const content = Array.isArray(choices)
+    ? (choices[0] as { message?: { content?: unknown } } | undefined)?.message?.content
+    : undefined;
+  return typeof content === "string" ? content : "";
+}
+
 /** Same clamp the deterministic parser applies, reused so both paths agree. */
 function clampQuantity(value: number): number {
   if (!Number.isFinite(value) || value < 1) return 1;
@@ -276,13 +301,12 @@ export async function normaliseList(lines: ParsedLine[]): Promise<NormalisedItem
 
   // Unlike lib/search-synonym-proposals.ts, this parse is guarded: a 200 carrying a non-JSON body
   // is exactly the kind of upstream hiccup that must degrade rather than throw on the request path.
-  let payload: { result?: { response?: unknown } };
+  let payload: { result?: { response?: unknown; choices?: unknown } };
   try {
-    payload = (await response.json()) as { result?: { response?: unknown } };
+    payload = (await response.json()) as { result?: { response?: unknown; choices?: unknown } };
   } catch {
     return null;
   }
 
-  const text = typeof payload.result?.response === "string" ? payload.result.response : "";
-  return parseNormalisationResponse(text, lines.length);
+  return parseNormalisationResponse(extractReplyText(payload), lines.length);
 }

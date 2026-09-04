@@ -298,6 +298,88 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
     expect(items).toHaveLength(1);
     expect(items?.[0].measure).toBe("2kg");
   });
+
+  /**
+   * Found live at /validate (#567), not from a stub: the real `@cf/meta/llama-3.1-8b-instruct`
+   * endpoint returns `result.response` as an ALREADY-PARSED array, not a string — the string form
+   * of the same content sits at `result.choices[0].message.content` instead. The original
+   * `typeof response === "string"` check made every real call resolve to an empty text and every
+   * real submission silently degrade, passing every test here because this describe block's own
+   * stub always returned `response` as a string. These three cases pin the real shape.
+   */
+  it("parses items when the model's reply arrives as an already-parsed array, not a string", async () => {
+    stubFetch(
+      async () =>
+        ({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            result: {
+              response: [
+                { index: 0, name: "chapati flour", quantity: 1, measure: "2kg", brand: null },
+              ],
+            },
+          }),
+        }) as unknown as Response,
+    );
+    const items = await normaliseList(THREE_LINES);
+    expect(items).toHaveLength(1);
+    expect(items?.[0].measure).toBe("2kg");
+  });
+
+  it("falls back to choices[0].message.content when result.response is absent", async () => {
+    stubFetch(
+      async () =>
+        ({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            result: {
+              choices: [
+                {
+                  message: {
+                    content:
+                      '[{"index":0,"name":"chapati flour","quantity":1,"measure":"2kg","brand":null}]',
+                  },
+                },
+              ],
+            },
+          }),
+        }) as unknown as Response,
+    );
+    const items = await normaliseList(THREE_LINES);
+    expect(items).toHaveLength(1);
+    expect(items?.[0].measure).toBe("2kg");
+  });
+
+  it("returns [] rather than throwing when neither response nor choices carries usable content", async () => {
+    stubFetch(
+      async () => ({ ok: true, status: 200, json: async () => ({ result: {} }) }) as Response,
+    );
+    const items = await normaliseList(THREE_LINES);
+    expect(items).toEqual([]);
+  });
+
+  it(
+    "resolves to null rather than hang when the upstream fetch never settles",
+    { timeout: NORMALISATION_TIMEOUT_MS + 3000 },
+    async () => {
+      calls = [];
+      globalThis.fetch = vi.fn((_url: unknown, init: unknown) => {
+        calls.push({ url: String(_url), init: init as RequestInit });
+        return new Promise<Response>((_resolve, reject) => {
+          const signal = (init as RequestInit).signal;
+          signal?.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          );
+        });
+      }) as unknown as typeof fetch;
+
+      const result = await normaliseList(THREE_LINES);
+      expect(result).toBeNull();
+      expect(calls[0].init.signal?.aborted).toBe(true);
+    },
+  );
 });
 
 describe("buildNormalisationPrompt", () => {

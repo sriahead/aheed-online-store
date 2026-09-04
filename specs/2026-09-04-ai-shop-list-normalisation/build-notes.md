@@ -101,21 +101,59 @@ describes: a ruling nobody can reconcile with the repo.
   it, not that it does. Filed as `#590` rather than widened into this slice.
 - No other deviation. Requirements R1–R33 were built as written.
 
+## Fix (post-Validate, #567)
+
+**The "no live AI call has ever run" risk below fired, exactly as flagged.** `/validate`'s live
+check against the real `@cf/meta/llama-3.1-8b-instruct` endpoint found that `normaliseList` never
+extracted a single item from a real reply: `payload.result?.response` comes back as an
+**already-parsed JSON array**, not a string, when the model's output is JSON — the string form of
+the same content sits instead at `payload.result.choices[0].message.content`. The original
+`typeof response === "string"` check made every real call resolve `text` to `""`, so
+`parseNormalisationResponse` ran on empty input every time. The `fetch` genuinely succeeded (200,
+parseable, a `ListNormalisationAttempt` row written), so nothing in the logs or rate-limit
+behaviour looked wrong — the pre-pass just silently enriched nothing, ever, on every real
+submission. Confirmed live before and after the fix: `2kg atta` at `/shop-your-list` rendered the
+plain "Which one did you mean?" ambiguous text pre-fix, and "We don't stock a 2kg pack — choose a
+size" (with its `aria-label`) post-fix, against the same running Worker.
+
+Fixed by widening extraction (`extractReplyText` in `lib/list-normalisation.ts`) to: use `response`
+directly when it's a string (unchanged path), `JSON.stringify` it back to text when it's a non-null
+non-string value so the same bracket-and-`JSON.parse` logic in `parseNormalisationResponse` still
+runs unmodified, and fall back to `choices[0].message.content` when `response` is absent entirely.
+`parseNormalisationResponse` itself — the part covered by R2–R9's unit tests — is untouched; the fix
+is entirely in what text gets handed to it. This is the same class of correction as
+`isUniqueViolation()` in `lib/repositories/prisma-errors.ts` (`CLAUDE.md`): a driver/API's real
+output shape didn't match what was assumed, and a hand-constructed test double couldn't have caught
+it because the double encoded the same wrong assumption as the code.
+
+Also added at Fix: the R15 test `validation.md` called for but which didn't exist — a stub `fetch`
+that only rejects when the real `AbortSignal.timeout(6000)` actually fires, proving
+`normaliseList` resolves to `null` rather than hanging (real ~6s wall-clock test, not faked). Three
+more `normaliseList` tests pin the corrected extraction: response as an array, response absent with
+`choices[0].message.content` as fallback, and neither present.
+
+No CHANGELOG change: the existing `[Unreleased]` entry already describes the AI-enriched behaviour
+this fix makes real; it was never accurate for the code as first built, and now it is.
+
 ## Known-shaky areas
 
-- **No live AI call has ever run.** This is the big one. Every assertion about `normaliseList` in
-  `tests/list-normalisation.test.ts` is against a stubbed `fetch`, and the harness uses a
-  hard-coded reply. `/orient` put real credentials in `.dev.vars`, so `npm run preview` can now
-  exercise the real thing for the first time — **do that before trusting any of it.** What has
-  never been observed: the model's actual reply shape from `@cf/meta/llama-3.1-8b-instruct` for
-  this prompt (does it honour `index`? does it return JSON without prose?), real latency against
-  the 6s deadline, and whether the interpretation is any good. `CLAUDE.md` is emphatic that a
-  hand-constructed double proves nothing about what a real adapter returns — that lesson was
-  learned on Prisma error codes and applies exactly here.
+- ~~**No live AI call has ever run.**~~ **Now has, at Fix — see above.** Every assertion about
+  `normaliseList` in `tests/list-normalisation.test.ts` was against a stubbed `fetch` using a
+  hard-coded reply, which is exactly how the response-shape bug above survived Build. What's now
+  been observed and is no longer shaky: the model's actual reply shape (an already-parsed
+  `result.response` array, not a string — see Fix section), that it reliably honours `index` and
+  extracts `measure` from real UK-grocery-list-shaped prompts, and that a real submission completes
+  well inside the 6s deadline. What's still genuinely unobserved: real latency under load, and
+  interpretation quality across a broader range of inputs than the two or three phrases tried live
+  — `CLAUDE.md`'s point that a hand-constructed double proves nothing about what a real adapter
+  returns is exactly what happened here, and is worth remembering the next time this module's
+  prompt or parsing changes.
 - **The pack-size rule is inert without AI**, because only the pre-pass ever sets `measure`. So on
-  a degraded path `2kg atta` behaves as it does today (`2kg` stays a search term and the line goes
-  unmatched). That is intended and pinned by a test, but it means the protection is only as
-  available as the AI is. Filed as `#591`.
+  a degraded path (no credential, rate-limited, over the character cap) `2kg atta` behaves as it
+  does today (`2kg` stays a search term and the line goes unmatched or ambiguous by the old rule).
+  That is intended and pinned by a test, but it means the protection is only as available as the AI
+  is — and, unlike at Build, this is no longer a hypothetical: it was exercised live and behaves as
+  intended, confirmed via `#591`'s degrade paths in the same live session that found the fix above.
 - **`checkListNormalisationAllowed()` is called on every submission that reaches it**, so
   `/shop-your-list` now writes a row per matched list. Worth confirming under `npm run preview`
   that the count moves exactly once per submission and not once per line — and that it does *not*
