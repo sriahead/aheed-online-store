@@ -23,6 +23,27 @@ every branch merges.
 
 ### Added
 
+- **"Shop your list" now understands how people actually write a shopping list** (`#567`, P2.6
+  slice 4). An AI pre-pass turns pasted free text into structured items — name, quantity, pack
+  size, brand — which are handed to the **existing, unchanged** matcher, expanded through `#566`'s
+  synonym dictionary. Spelling mistakes, Desi and transliterated terms and brand names now reach a
+  product; `2kg atta` no longer finds nothing.
+  **The AI interprets words; it never picks a product.** Every candidate still comes from the same
+  single vendor-scoped catalogue query against real rows, so a model that invents a product name
+  can at worst fail to match — it cannot produce a match. The model's reply is validated rather
+  than trusted: each item must claim a line the shopper actually wrote, and any line it doesn't
+  claim keeps its deterministic parse, so a broken reply degrades line by line.
+  **A pack size we can't fill exactly is now the shopper's choice, not ours.** `2kg atta` against a
+  shop stocking 1kg, 5kg and 10kg bags asks which size rather than resolving — including when only
+  one product matches the name, which previously would have added a 5kg bag silently. `5kg basmati
+  rice` still resolves outright. No unit model is invented (`#398` is untouched).
+  **It degrades instead of failing.** Missing credential, throttled caller, oversized submission,
+  upstream error or a 6-second timeout all fall back to exactly the matcher this feature shipped
+  with, never to an error page. Cost is bounded per caller (a new `ListNormalisationAttempt`
+  counter, hashed IP, the same shape as the order-lookup throttle), per submission, and per call.
+  `specs/architecture.md` (1.24.0) records why this is a deliberate, conditioned exception to
+  "AI never sits on a public request path" (`#571`) rather than a relaxation of it.
+
 - **A curated search synonym dictionary, so shoppers find the shelf using the word they actually
   use** (`#566`, closing `#396`, P2.6). New vendor-scoped `SearchSynonym` model, staff-editable at
   **`/staff/search-synonyms`**, seeded with the Desi/transliteration keyword set — bhindi/okra,

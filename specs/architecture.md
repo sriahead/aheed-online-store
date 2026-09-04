@@ -4,7 +4,7 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.23.0"
+version: "1.24.0"
 updated: 2026-09-04
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
@@ -530,15 +530,40 @@ S3 API rather than an R2-specific SDK.
   balance derived by `SUM()` cannot be guarded that way, which is why the counter exists alongside
   its ledger rather than instead of it.
 - **Webhooks are idempotent.** Verify Stripe signatures; key side effects on the event id.
-- **AI never sits on a public request path.** Established by `#571` (P2.6) and first implemented in
-  slice 3 (`#566`). A model call reachable from an unauthenticated route — `/search` being the case
-  that raised it — is attacker-controlled cost: it is paid, non-deterministic, shares a Workers AI
-  quota with the product-image pipeline, and this stack has **no middleware layer available to
-  rate-limit it centrally** (see `CLAUDE.md` on why no `proxy.ts` can ship here). So AI runs only
-  behind an authenticated staff action or a scheduled job, and its output is **proposed, never
-  applied**: `lib/search-synonym-proposals.ts` writes `PENDING` rows a human approves, exactly as
-  the image pipeline writes rows an admin reviews. What a shopper's request touches stays
-  deterministic and free.
+- **AI does not sit on a public request path unless it is bounded, optional and argued.** The
+  default established by `#571` (P2.6) and first implemented in slice 3 (`#566`) stands: a model
+  call reachable from an unauthenticated route — `/search` being the case that raised it — is
+  attacker-controlled cost, being paid, non-deterministic, sharing a Workers AI quota with the
+  product-image pipeline, on a stack with **no middleware layer available to rate-limit it
+  centrally** (see `CLAUDE.md` on why no `proxy.ts` can ship here). So AI normally runs only behind
+  an authenticated staff action or a scheduled job, and its output is **proposed, never applied**:
+  `lib/search-synonym-proposals.ts` writes `PENDING` rows a human approves, exactly as the image
+  pipeline writes rows an admin reviews.
+
+  **This line read "AI never sits on a public request path" until 2026-09-04, and P2.6 slice 4
+  (`#567`) made that false** — `/shop-your-list`'s normalisation pre-pass
+  (`lib/list-normalisation.ts`) is a model call on a public, unauthenticated route, by design.
+  `#571`'s resolution could not transfer: interpreting the pasted list **is** the feature and the
+  shopper is waiting on it, so there was no offline place to move it to. It was allowed because it
+  satisfies all four of the following, which is the test a future exception has to meet — not
+  because the rule was relaxed:
+  1. **The feature degrades rather than fails without it.** The deterministic matcher it enriches
+     shipped in P3d and still works; every failure path — no credential, throttled, oversized,
+     non-OK, timeout, unparseable — returns the pre-AI result. A limit here never produces an error
+     page, which is what makes limiting it affordable.
+  2. **Cost is bounded in every direction**: per caller (`ListNormalisationAttempt`, the
+     `OrderLookupAttempt` shape), per submission (`MAX_AI_INPUT_CHARS` alongside `MAX_LIST_LINES`),
+     and per call (an abort deadline, so a hung upstream cannot hang a form submit). One `fetch`
+     per submission regardless of list length.
+  3. **The model cannot decide anything a shopper receives.** It rewrites the shopper's words into
+     search terms; the catalogue match stays deterministic against real vendor-scoped rows, so its
+     output is still *proposed, never applied* — the guarantee is preserved, just enforced by the
+     matcher instead of by a staff queue.
+  4. **Its output is validated, not trusted.** Indices are range- and duplicate-checked so a reply
+     cannot move an item onto a line the shopper did not write; anything unclaimed keeps its
+     deterministic parse.
+
+  A proposed AI call on a public path that cannot answer all four belongs offline, as `#571` said.
 - **Every list is keyset-paginated; every hot query has an index** shipped in the same migration.
 - **SDD gates still apply.** Spec before code, tests + `validation.md` before done, changelog
   before merge. NFR targets in §3.4 are Gate-3 acceptance criteria.
