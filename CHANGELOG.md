@@ -54,6 +54,14 @@ every branch merges.
   catalogue holds no match. `lib/search-query.ts` and `lib/shopping-list.ts` now diverge here
   deliberately — a search term is a recall instrument, a list line is something the shopper wrote
   and which passes a review step — and the test pinning them together is narrowed to say so.
+- **"Shop your list" now finds a product through an approved alias, not only through the shopper's
+  literal word** (`#566`, found live at `/validate`). The candidate query already widened itself
+  with the alias dictionary, but the separate per-line matching step that decides `matched` /
+  `ambiguous` / `unmatched` re-checked each candidate against the unexpanded word, so a line whose
+  only match came from an alias (`dhania`, approved to `coriander`) was silently reported as
+  unmatched even though the identical term on `/search` found the product. `resolveLines` now
+  widens each line's terms into the same term groups search uses before matching, so both surfaces
+  read the dictionary identically, as this same changelog entry already claimed above it did.
 
 - **Storefront search now matches multi-word queries, and ranks results by relevance instead of
   recency** (`#564`, P2.6). `searchProducts` passed the whole trimmed query to a single `contains`,

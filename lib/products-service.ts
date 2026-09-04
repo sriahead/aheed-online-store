@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import { recordSearchQuery } from "@/lib/repositories/search-query-log";
+import { listApprovedAliasMap } from "@/lib/repositories/search-synonyms";
 import {
   addProductImage as addProductImageRepo,
   approveProductImageRow as approveProductImageRowRepo,
@@ -112,6 +113,10 @@ export function getProductRepository(): ProductRepository {
 
     async matchListTerms(terms) {
       return matchProductListTerms(prisma, await vendorId(), terms);
+    },
+
+    async synonymAliasMap() {
+      return listApprovedAliasMap(prisma, await vendorId());
     },
 
     async categorySpotlights(categoryIds) {

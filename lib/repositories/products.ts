@@ -262,6 +262,17 @@ export interface ProductRepository {
    */
   matchListTerms(terms: string[]): Promise<ListCandidate[]>;
   /**
+   * P2.6 slice 3 (#566, #396) — the SAME approved alias map `matchListTerms` (and `searchProducts`)
+   * already widens its own query with, exposed so `lib/shopping-list.ts`'s `resolveLines` can widen
+   * its per-LINE decision the same way. `matchListTerms` fetches ONE candidate pool across every
+   * distinct term in the whole list; `resolveLines` then re-checks each candidate against its own
+   * line's terms — a step this repository has no visibility into, so it cannot make that re-check
+   * alias-aware on its own. Without this, a candidate found only via an alias (`dhania` → a product
+   * named "Fresh Coriander") reaches the pool but is silently re-rejected as unmatched, because the
+   * re-check compares the candidate's name against the shopper's literal, unexpanded word.
+   */
+  synonymAliasMap(): Promise<Map<string, string>>;
+  /**
    * P8.5b (#346) — one headline product per department for the homepage hero,
    * in a single query. Keyed by category id.
    */

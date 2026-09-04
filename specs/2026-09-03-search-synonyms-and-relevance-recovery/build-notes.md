@@ -94,6 +94,79 @@ checking R31 will find the canonical and typo suggestions exactly as specified, 
 
 Nothing else deviates.
 
+## Fix pass (post-/validate)
+
+`/validate` (fresh context, 2026-09-04) found one real defect and two measurement/recording gaps
+that turned out not to be defects at all:
+
+- **Blocking, real bug: R29 was false.** Closing the "no live check" gap this file already flagged
+  below found that `matchProductListTerms` widens its own SQL predicate with the approved alias map
+  (correct), but `lib/shopping-list.ts`'s `resolveLines` — the separate, pure step that re-checks
+  each returned candidate against a line's terms — had no knowledge of that map at all. It re-ran
+  the check against the shopper's literal, unexpanded word, so a candidate found ONLY via an alias
+  was fetched into the pool and then silently re-rejected as `"unmatched"`. Confirmed live under
+  `npm run preview`, same dev catalogue, same term: `/search?q=dhania` finds *Fresh Coriander 100g*
+  (via the seeded `dhania` → `coriander` alias); "Shop your list" with `dhania` resolved
+  `"unmatched"`. Root-caused and fixed by threading the alias map through, not by loosening
+  `resolveLines`'s contract: `ProductRepository` gains `synonymAliasMap()` (docstring on the
+  interface explains why the map — not just the candidate pool — has to reach this second step);
+  `matchList` fetches it alongside `matchListTerms` and passes it into `resolveLines`, which now
+  expands each line's terms into groups via the SAME pure `expandSearchTerms` search already uses,
+  and matches a candidate when every group is satisfied by any variant — identical rule to
+  `search-ranking.ts`'s `tierOf`. The exact-match tier still compares against the ORIGINAL joined
+  terms, never an expanded variant, mirroring R9's "an alias cannot make an exact match more true"
+  rule. `aliases` defaults to an empty map, so every pre-existing caller and the 23 existing
+  `resolveLines` tests are unaffected byte-for-byte — confirmed by running them unchanged before
+  writing new coverage. Four new tests in `tests/shopping-list.test.ts` cover: resolving via the
+  alias, the pre-fix behaviour reproduced exactly by omitting the third argument, the exact-match
+  tier staying original-terms-only, and the alias staying additive (the literal word still matches
+  directly). **Observable behaviour changed** (a list line whose word only matches through an
+  approved alias now resolves instead of reporting unmatched, and can legitimately come back
+  `"ambiguous"` when the canonical term has several products — e.g. `chana` → `chickpeas` now offers
+  *Chana Dal 2kg* alongside four generated Chickpeas products, all correctly found via the same
+  alias `/search` already used), so `CHANGELOG.md` is updated.
+- **Not a bug — a bad measurement: R39.** `/validate`'s first pass measured a 50-request p95 of
+  ~448ms for the worst-case zero-result query and reported it as over the 400ms target, with the
+  fallback (`plan.md`'s "degrade the typo rung to a no-op, start the ladder at identity") named as
+  the apparent next step. Before applying it, direct per-query timing (a Node script hitting the
+  real dev database, bypassing the Worker) showed every individual query the ladder issues costs
+  ~20–30ms — nowhere near enough to explain that number even across five sequential round trips.
+  The 448ms sample had been taken while several other DB scratch scripts and admin-action POSTs were
+  running concurrently in the same session — the same class of contamination `CLAUDE.md` already
+  documents for `vitest` under concurrent load, just for HTTP latency instead of test execution. Two
+  clean, isolated re-measurements (30 then 50 requests, nothing else running) gave p95 ≈ 319ms and
+  ≈ 326ms respectively, comfortably under target; baseline (a direct-hit query with no ladder at
+  all) sits at p95 ≈ 249ms, so the ladder's own incremental cost is only ~70–80ms at p95. **Applying
+  the fallback would have been the wrong fix for a measurement artifact, and would have broken R33**
+  (same three rungs, same order — the fallback removes the typo rung entirely), which is exactly the
+  "know when a fix is really a redesign" case: the correct fix here was re-measuring cleanly, not
+  changing the ladder. No code changed. Recorded number: **p95 ≈ 326ms** (50 requests, isolated,
+  `npm run preview` against the dev catalogue, query `xyzzy999notreal`), under the 400ms target — R39
+  passes as originally specified.
+- **Recording gaps, not defects.** `validation.md`'s own environment note required Build to record
+  concrete dev-catalogue queries for R30–R32 and R38, and an accessibility-check result for R41;
+  none had been recorded. `/validate` found and confirmed all of them live — recorded here so a
+  future fresh context doesn't have to re-derive them:
+  - **Thin result (R30–R32):** `masoor` — one description-only match (*Red Split Lentils 2kg*, via
+    "Masoor dal" in its description), no approved alias, no in-budget correction → suggestions block
+    renders with department links only (the no-suggestions case R31's own deviation note describes).
+    `aloo` — approved alias to `potato` (description-only match) → suggestions block offers
+    "potato". `flavour` — no alias, but within typo budget of `flour` (a real name token) → offers
+    "flour" as the typo suggestion. `rice` — real name-tier match → no suggestions block at all
+    (R32).
+  - **Ladder rungs (R38):** `ricee` → typo rung, corrects to `rice`. `fruit xyzzy999` → identity
+    rung, via the `category.name` relation filter matching "Fruit & Veg" (this is the case
+    `build-notes.md` had flagged as never run against real Postgres — confirmed live here for the
+    first time). `xyzzy999 masoor` → broad rung, via `masoor` matching *Red Split Lentils*'s
+    description once the AND-across-terms direct predicate and the name/category-only identity rung
+    both fail.
+  - **Accessibility (R41):** link colour is `--color-action` (Aheed's live-rendered vendor branding
+    is `#108020`, not the `tokens.css` default `#2e7d32` — `brandStyle()`'s inline override wins, so
+    the LIVE rendered value is what was checked) against both `bg-surface-muted` (`#f5f5f0`, contrast
+    4.65:1) and the actual `bg-white` pill the links render on (5.08:1) — both clear WCAG AA's 4.5:1
+    for normal text. Focus state: `focus-visible:ring-2 focus-visible:ring-action
+    focus-visible:ring-offset-2` is present on every suggestion/department link. No defect found.
+
 ## Known-shaky areas
 
 - **The real AI call has never executed.** Neither `CLOUDFLARE_ACCOUNT_ID` nor
@@ -118,8 +191,10 @@ Nothing else deviates.
   `DROP INDEX`, so **R14's grep must stay anchored** (`^DROP INDEX`) — validation.md was corrected
   during Build for exactly this reason. An unanchored grep matches the explanation and would reward
   deleting it.
-- **`matchProductListTerms` expansion (R29) has no live check.** It is unit-covered and shares the
-  expansion function with search, but the "Shop your list" path was not driven end-to-end.
+- **`matchProductListTerms` expansion (R29) — RESOLVED at the Fix pass above.** The live end-to-end
+  check this line originally flagged as missing is what found the real bug: `resolveLines` was
+  alias-blind. See "Fix pass" for the defect, the fix and the new test coverage. Left here, struck
+  through in spirit rather than deleted, so the history of how this was found stays legible.
 - **Thin-result detection depends on `hasNameTierCandidate` over the DIRECT candidate set only.** If
   a filter (price, in-stock) narrows results to description-only matches, the notice fires — which
   is intended, but is the case most likely to look surprising in live use.
