@@ -44,6 +44,19 @@ every branch merges.
 
 ### Documentation
 
+- **`/learn` retrospective on P2.6's close** (`docs/research/milestone-retrospectives.md` 1.1.0) —
+  the first entry written under the Discover/Learn phases. All six slices (`#564`–`#569`) shipped
+  and promoted as proposed, none reverted; the one significant scope change (moving AI off the
+  public zero-result search path, per `#570`/`#571`) was caught and reversed pre-ship, a genuine
+  SDD-loop success. The milestone's own commercial hypothesis — that better search/discovery
+  converts more shoppers — remains **unmeasurable**: no analytics instrumentation exists (`#607`).
+  The Workers AI response-shape assumption (`typeof response === "string"`) was disproved twice in
+  this milestone, the second instance (`lib/search-synonym-proposals.ts`, `#583`/`#589`) still
+  unfixed at close. Query latency stayed measured and on-budget throughout (p95 75.1ms → 102.1ms,
+  always under the 400ms target). Filed **`#610`**: no mechanical check currently catches a
+  Discover finding tagged `PROPOSE` that never gets an issue, which is exactly what happened to two
+  2026-09-02 findings this pass had to backfill.
+
 - **`/discover` pass at P2.6's milestone close** (`docs/research/discovery-log.md` 1.2.0). One
   genuinely new finding: six of `#569`'s seven new facet fields (vegetarian, gluten free, HMC,
   brand) never reach a product card or detail page — the filter half of the facet feature works,
