@@ -8,6 +8,23 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` (final) closeout for P2.6 slice 5** (`#568`; PR #597 merged to `staging`, PR #598
+  promoted to `main`). `specs/roadmap.md` (1.73.0) gains the slice's build/merge row and its
+  promotion row, recording the post-`/validate` fix (a chip rendered for a category slug that never
+  resolved, because the page conditioned the query's `categoryIds` on resolution but not the value
+  handed to the chip row) and a post-promotion live finding: `/api/search/suggest`'s
+  `Cache-Control: public, max-age=60` header does not actually get the route cached at Cloudflare's
+  edge — six requests across two vendor hosts on staging never once returned a `cf-cache-status` or
+  `Age` header — filed as `#599` rather than patched as a hotfix, since the requirement's actual
+  security concern (cross-tenant leakage) does not occur. `CLAUDE.md` (1.15.0) gains a new
+  "Cloudflare edge caching of Worker routes" section recording that as a transferable lesson.
+  `specs/sdd-workflow.md` (2.27.2) records a recurring `validation.md` trap — five rows in this one
+  slice failed their literal `grep` only because a file's own explanatory comment contained the
+  string the grep was told to treat as evidence, all confirmed absent from real code by mechanism.
+  `npm run sdd:audit` reports zero gaps. Delivery board reconciled: `#567`/`#568` are **Done**, `#599`
+  filed at Backlog/`P2.5`. `ARTIFACT_INDEX.md` / `app/(admin)/staff/runbook/docs.ts` regenerated to
+  match. No runtime code, no schema change, nothing for `prisma migrate deploy` to apply.
+
 - **`/document` (final) closeout for P2.6 slice 4** (`#567`; PR #592 merged to `staging`, PR #593
   promoted to `main`). `specs/roadmap.md` (1.72.0) gains the slice's build/merge row and its
   promotion row, recording the post-`/validate` fix (the AI pre-pass never actually enriched

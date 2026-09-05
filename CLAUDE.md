@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.14.0"
-updated: 2026-09-04
+version: "1.15.0"
+updated: 2026-09-05
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -184,6 +184,24 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   zone-level, not host-specific, and the dev zone carries the identical rule. Walk image-load rows
   in `validation.md` against a real deployed environment, not local preview; see
   `specs/2026-08-13-p6.6-p0-ui-overhaul/validation.md` for the pattern this line generalizes.
+
+## Cloudflare edge caching of Worker routes — learned the hard way
+- **A `Cache-Control: public, max-age=N` header on a Worker route's response does NOT make
+  Cloudflare cache it at the edge — that needs an explicit zone-level Cache Rule or the Worker
+  calling the Cache API (`caches.default.put()`/`.match()`) itself, neither of which exists anywhere
+  in this repo.** Confirmed live in P2.6 slice 5 (#568, #599, 2026-09-05): `/api/search/suggest`
+  emits exactly that header, but six requests against two vendor hosts on staging — including four
+  rapid repeats against one host — never once returned a `cf-cache-status` or `Age` header. Every
+  request reached the Worker fresh. This is the CDN-caches-static-assets rule from the Storage
+  section above running in reverse: that section is about a real cache (hotlink protection firing at
+  the edge, before the app sees the request) blocking something that should load; this is about an
+  *assumed* cache (a route designed to lean on edge caching for cost control) never actually forming
+  at all, silently. Neither failure mode is visible from `lint`/`typecheck`/`test`/`build`, and
+  neither is visible from a single request either — the tell here specifically was the *absence* of
+  a cache-status header across repeats, not an error. **Before designing a cost or isolation
+  argument around "Cloudflare will cache this by default," check a real deployed response's headers
+  for `cf-cache-status`/`Age` across repeated requests** — a `Cache-Control` header alone proves the
+  route is willing to be cached, never that anything upstream of the Worker actually will.
 
 ## Config & secrets
 - All config through validated **`lib/config`** (zod). Precedence is the **Cloudflare request context
