@@ -44,6 +44,17 @@ every branch merges.
 
 ### Documentation
 
+- **`/discover` pass at P2.6's milestone close** (`docs/research/discovery-log.md` 1.2.0). One
+  genuinely new finding: six of `#569`'s seven new facet fields (vegetarian, gluten free, HMC,
+  brand) never reach a product card or detail page — the filter half of the facet feature works,
+  but nothing shows a shopper why a product matched, and the HMC certificate reference/verified
+  date the admin form requires is never surfaced to the shopper the `#239` provenance requirement
+  exists to protect. Filed as `#608`. Also corrects a process gap: two 2026-09-02 findings (a paid
+  order cannot be reduced/substituted/refunded; no analytics instrumentation exists) had carried
+  `PROPOSE` for three days with no issue filed — re-verified still current and filed as `#606` and
+  `#607`. Also fixed a milestone-bookkeeping gap while grounding: `#582`, `#583`, `#599`, `#601` and
+  `#602` had never been assigned the `P02.6` milestone.
+
 - **`/document` (final) closeout for P2.6 slice 6 — P2.6 CLOSED** (`#569`; PR #603 merged to
   `staging`, PR #604 promoted to `main`). `specs/roadmap.md` (1.74.0) gains the slice's build/merge
   row and its promotion row, recording a fully clean fresh-context `/validate` (every row checked

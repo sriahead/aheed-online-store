@@ -4,8 +4,8 @@ title: "Discovery log"
 audience: [dev, product]
 type: doc
 status: approved
-version: "1.1.0"
-updated: 2026-09-03
+version: "1.2.0"
+updated: 2026-09-05
 visibility: internal
 summary: "Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action."
 tags: [research, discovery, opportunities, risk, sdd]
@@ -35,6 +35,77 @@ milestone close). Nothing here is approved scope — see `docs/research/README.m
 
 **Next action:** RESEARCH MORE | PROPOSE | ADD TO ROADMAP/BACKLOG | READY FOR SPEC | DO NOT PURSUE
 ```
+
+---
+
+## 2026-09-05 — third Discover pass (P2.6 milestone close)
+
+Run automatically at milestone close, per `specs/sdd-workflow.md`, immediately after `#569`
+(P2.6's sixth and final slice) shipped and promoted. One genuinely new finding, plus a
+process correction: two 2026-09-02 findings below had carried `PROPOSE` for three days with no
+issue filed — an instruction-8 gap in the pass that wrote them, now fixed (filed as **#606** and
+**#607**, addenda added in place below rather than duplicating the research). Everything else this
+pass surfaced was already owned: the missing brand mega-menu/thumbnails are `#394`; pack size is
+`#398`; the three filter-key-list/staff-hub-link gaps found during `#569`'s own Build are `#601`/
+`#602`; the AI synonym proposal response-shape risk is `#583`.
+
+### 2026-09-05 — six of `#569`'s seven new facet fields never reach a product card or detail page
+
+**Trigger:** milestone-close Discover, grounding in the code that just shipped (`#569`).
+**Status of the area:** genuinely unowned — not required by `#569`'s own requirements (`R20`–`R23`
+scoped the filter *controls*, not what a matched product then displays) and not covered by any
+other filed issue.
+
+**Observed (verifiable today):** `lib/repositories/products.ts:420`'s `productSummarySelect` — the
+one shape every storefront card, list and detail page is built from (`ProductDetail extends
+ProductSummary`, line 92) — selects `isHalal`, `isFresh`, `isOrganic`, `origin` and
+`originalPrice`, and nothing else from `#569`. It was not touched by `#569`. `ProductCard.tsx`
+renders a badge for `isHalal` (line 65) and `isFresh` (line 71) and shows `origin` as plain text
+(line 119) — all three pre-existing. There is no badge, label or any rendering anywhere in
+`app/(storefront)/` or `components/product/` for `isVegetarian`, `isGlutenFree`, `isHmcCertified`,
+`brandId`/`Brand.name`, `hmcReference` or `hmcVerifiedAt`. A shopper can filter `/search` to
+"Vegetarian" or "Brand: Shan" or "HMC certified" and get a correctly narrowed result set (confirmed
+live at this slice's own `/validate`), but nothing on the resulting product cards or detail pages
+confirms *why* a product matched, or shows the brand name, or shows the HMC certificate reference
+and verified date the admin form requires before the flag can even be ticked.
+
+**Interpretation:** the filter half of this facet feature is complete; the display half — showing a
+shopper the fact that made a product match, which is also how a shopper who is just browsing
+(not filtering) discovers these attributes at all — was not built. For three of the six facets
+(vegetarian, gluten-free, brand) this is a lost merchandising signal: no badge, no
+brand-recognition cue anywhere a shopper is actually looking at a product. For HMC certification
+specifically it is sharper than a missing badge: `#569`'s own stated reason for requiring
+`hmcReference`/`hmcVerifiedAt` before the flag can be ticked is `#239` — a real incident of this
+codebase asserting HMC certification with no basis for it. Storing that provenance but never
+showing it to the shopper relying on the claim leaves the shopper in exactly the position `#239`
+was about: taking a certification claim on faith, with the safeguard existing only in the database
+and the admin form, never reaching the person who needs to trust it.
+
+**Confidence:** the code facts (the shared select, the badge code, the absence everywhere else) are
+Known — grepped directly, not inferred. That this is a genuine shopper-trust gap for HMC
+specifically, rather than a cosmetic one for the other five fields, is Inferred from `#569`'s own
+stated rationale for the provenance requirement.
+
+**Why it matters commercially:** brand and dietary badges are a scan-speed and trust signal in
+grocery browsing — a shopper does not read filter chips while scrolling a result grid, they read
+badges on the card. For HMC, the gap is closer to a compliance/reputational one: the codebase now
+argues internally (in the schema, in the admin form's validation, in this slice's own commit
+history) that an HMC claim needs evidence, while showing the shopper no more evidence than existed
+before this slice shipped.
+
+**Options considered:** extend `productSummarySelect` and `ProductCard.tsx`/the detail page with
+badges for the three new booleans plus a brand name/link, matching the existing `isHalal`/`isFresh`
+pattern exactly (smallest change, reuses an established pattern); do the same but additionally
+surface `hmcReference`/`hmcVerifiedAt` only on the product detail page (not the card, where space is
+tight) as a small "Certified — ref. X, verified DD/MM/YYYY" line, which is the part that actually
+closes the `#239` gap rather than just adding cosmetic parity; leave it as-is, accepting that this
+slice's facets are filter-only until a future slice's own display work happens to cover them.
+
+**Cost of delay:** low technically (the shape and the badge pattern both already exist to copy), but
+every day live is a day the HMC provenance the schema now enforces is invisible to the shopper it
+exists to protect.
+
+**Next action:** PROPOSE — filed as **#608**.
 
 ---
 
@@ -281,6 +352,11 @@ Deciding it once serves both; deciding it after launch means deciding it while l
 
 **Next action:** PROPOSE
 
+**Update 2026-09-05 (P2.6 milestone-close Discover pass):** this finding carried `PROPOSE` for
+three days with no issue filed — an instruction-8 gap in the pass that wrote it. Re-verified still
+current (the `REFUNDED` enum value still has no writer, `ADR-005`'s own text still calls this "open
+territory") and filed as **#606**.
+
 ### 2026-09-02 — there is no analytics instrumentation of any kind
 
 **Trigger:** first Discover pass.
@@ -308,6 +384,10 @@ basket, begin checkout, purchase — vendor-scoped, no third party, no consent b
 retrospectively.
 
 **Next action:** PROPOSE
+
+**Update 2026-09-05 (P2.6 milestone-close Discover pass):** also carried `PROPOSE` with no issue for
+three days. Re-verified still current and filed as **#607** — this gap is now doubly relevant, since
+the 2026-09-03 "ranking in-stock first" finding below explicitly cannot be validated without it.
 
 ### 2026-09-02 — an order carries no delivery date, slot or capacity ceiling
 
