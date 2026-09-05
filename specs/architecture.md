@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.25.0"
-updated: 2026-09-04
+version: "1.26.0"
+updated: 2026-09-05
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -401,6 +401,35 @@ including `listProducts` and this same page's browse mode, is unchanged.
 The reason keyset cannot serve it: a cursor's ordering key has to *be* the sort key, and relevance is
 not a stored column. Prisma cannot express the ranking in `orderBy`, and computing it in SQL would
 need `$queryRaw`, which `CLAUDE.md` forbids in `lib/repositories/*`.
+
+### Composing `where` fragments: never emit a bare top-level `OR` from a filter
+
+**A filter predicate must not put `OR` (or `AND`) at the top level of the object it returns.** Added
+1.26.0 (P2.6 slice 6, `#569`), from a defect caught in review rather than in production.
+
+`lib/repositories/products.ts` composes a product query from independent fragments — the vendor and
+active scope, `buildFilterWhere(filters)`, and a search predicate. Three of those fragments already
+emit a compound key: `buildDirectSearchWhere` returns `AND`, and the zero-result ladder's
+`identitySearchPredicate` and `broadSearchPredicate` (`#565`) each return `OR`. While fragments were
+merged with an object spread, any two sharing a key meant **the later one silently won**.
+
+The "on offer" facet was the first filter that needed a compound key. Written the obvious way, as
+`where.OR = [...]`, it would have been dropped on exactly the two ladder rungs — handing a shopper
+products that are not on offer while the applied-filter chip still said the filter was active. Both
+objects are valid `Prisma.ProductWhereInput`, so `lint`, `typecheck`, `test` and `build` would all
+have stayed green, and the failure only appears for a shopper who has a facet applied *and* whose
+query falls through to recovery.
+
+Two rules follow, and the second is the one that generalises:
+
+1. A filter fragment nests a compound clause under `AND`, never at the top level.
+2. **Fragments are combined with `combineWhere`, not with a spread.** It nests into `AND` only when
+   two fragments actually share a key, so a query with no collision keeps exactly the shape it had
+   before — but a collision can no longer silently discard half a predicate.
+
+This is the same failure shape as `#568`'s `categoryId`-ordering trap in the same function, and the
+reason to write it here rather than only in that slice's `plan.md`: the next person to add a filter
+will read this file, not a dated spec folder.
 
 **This does not reopen `OFFSET`.** The prohibition above exists because `OFFSET` degrades linearly:
 page ten reads and discards nine pages of rows. Here the database query is **bounded and identical

@@ -6,7 +6,60 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Catalogue filter facets — brand, dietary flags, country of origin and offers** (`#569`,
+  P2.6 slice 6 of 6, `specs/2026-09-05-catalogue-filter-facets/`). Shoppers can now narrow
+  `/search` and any category listing by country of origin, dietary suitability (vegetarian, gluten
+  free, HMC certified), brand, and whether a product is on offer. Each facet renders only when the
+  current result context actually contains matching products, and each is individually removable as
+  a chip. No client JavaScript: both new controls are `select` elements inside the existing
+  `method="GET"` form, so the no-JS filter path is unchanged.
+- **`/staff/brands`** — store admins can create brands, rename them, and set a brand's relative
+  image key. A brand is a model rather than a free-text column so `#394`'s mega-menu thumbnails
+  have a stable id and an image key to attach to; nothing renders a brand image yet, and this slice
+  adds no upload pipeline. Product edit pages gain a brand picker, dietary checkboxes and an HMC
+  certification section.
+- **HMC certification carries provenance.** `isHmcCertified` cannot be saved without a certificate
+  reference and a verified date, and unticking it clears both. HMC is a named third-party
+  certifying body, and `#239` was a real incident of this codebase asserting certification with no
+  basis for it; a bare tickable boolean would have re-created that exposure one product at a time.
+
+### Fixed
+
+- **A filter predicate emitting a top-level `OR` was silently dropped on the zero-result recovery
+  rungs.** `fetchSearchCandidates` merged the filter fragment and the search predicate with an
+  object spread, and the `#565` ladder's identity and broad rungs each emit their own top-level
+  `OR` — spread second, so they won. The "on offer" facet is the first filter needing a compound
+  key, and written the obvious way it would have served products that are not on offer while the
+  applied-filter chip still said the filter was active. Fragments now compose through
+  `combineWhere`, which nests into `AND` only on a real key collision, so every non-colliding query
+  keeps exactly the shape it had before. Recorded in `specs/architecture.md` (1.26.0) as a standing
+  rule rather than only a slice note.
+- **The seed's new catalogue fields never reached an already-seeded database.** `seedCatalogue`
+  returns early once a vendor's categories exist, so columns added to the fixture would have
+  reached a from-scratch database and no other — leaving each environment with a different facet
+  set, and a missing facet reading as "no stock" rather than as a bug. Brands and the new facet
+  fields are now applied before that early return. Same failure shape as `#502`.
+
 ### Documentation
+
+- **`/document` (final) closeout for P2.6 slice 5** (`#568`; PR #597 merged to `staging`, PR #598
+  promoted to `main`). `specs/roadmap.md` (1.73.0) gains the slice's build/merge row and its
+  promotion row, recording the post-`/validate` fix (a chip rendered for a category slug that never
+  resolved, because the page conditioned the query's `categoryIds` on resolution but not the value
+  handed to the chip row) and a post-promotion live finding: `/api/search/suggest`'s
+  `Cache-Control: public, max-age=60` header does not actually get the route cached at Cloudflare's
+  edge — six requests across two vendor hosts on staging never once returned a `cf-cache-status` or
+  `Age` header — filed as `#599` rather than patched as a hotfix, since the requirement's actual
+  security concern (cross-tenant leakage) does not occur. `CLAUDE.md` (1.15.0) gains a new
+  "Cloudflare edge caching of Worker routes" section recording that as a transferable lesson.
+  `specs/sdd-workflow.md` (2.27.2) records a recurring `validation.md` trap — five rows in this one
+  slice failed their literal `grep` only because a file's own explanatory comment contained the
+  string the grep was told to treat as evidence, all confirmed absent from real code by mechanism.
+  `npm run sdd:audit` reports zero gaps. Delivery board reconciled: `#567`/`#568` are **Done**, `#599`
+  filed at Backlog/`P2.5`. `ARTIFACT_INDEX.md` / `app/(admin)/staff/runbook/docs.ts` regenerated to
+  match. No runtime code, no schema change, nothing for `prisma migrate deploy` to apply.
 
 - **`/document` (final) closeout for P2.6 slice 4** (`#567`; PR #592 merged to `staging`, PR #593
   promoted to `main`). `specs/roadmap.md` (1.72.0) gains the slice's build/merge row and its

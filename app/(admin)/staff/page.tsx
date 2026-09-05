@@ -3,17 +3,18 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  BookOpen,
   ClipboardList,
   Contact,
   FolderTree,
-  Package,
-  Sparkles,
-  TicketPercent,
   Layers,
-  BookOpen,
+  Package,
+  ShieldAlert,
+  Sparkles,
+  Tag,
+  TicketPercent,
   TrendingUp,
   Users,
-  ShieldAlert,
 } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
@@ -132,6 +133,17 @@ export default async function StaffHomePage() {
               <p className="font-semibold text-primary">Categories</p>
               <p className="mt-1 text-sm text-primary/80">
                 The departments shoppers browse by, and how they&apos;re ordered.
+              </p>
+            </Link>
+
+            <Link
+              href="/staff/brands"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Tag className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Brands</p>
+              <p className="mt-1 text-sm text-primary/80">
+                The brands shoppers can filter by, and which products carry them.
               </p>
             </Link>
 

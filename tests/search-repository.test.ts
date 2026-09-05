@@ -673,3 +673,81 @@ describe("buildDirectSearchWhere is the shared term predicate (R20)", () => {
     expect(capturedWhere(spies).AND).toEqual(buildDirectSearchWhere(groups).AND);
   });
 });
+
+/**
+ * P2.6 slice 6 (#569), R8-R13 — the facet predicates, and the collision the offers filter would
+ * otherwise introduce.
+ *
+ * R11 and R12 are the load-bearing ones. `buildFilterWhere` and the #565 ladder rungs both compose
+ * into the same `where`, and before this slice they were merged by object spread. Offers is the
+ * first filter that emits a compound key (`AND`/`OR`), so a spread would silently drop whichever
+ * fragment came first — handing a shopper products that are not on offer while the chip still says
+ * the filter is applied. Both objects are valid `Prisma.ProductWhereInput`, so nothing in lint,
+ * typecheck or build would notice. These tests are the only thing that would.
+ */
+describe("#569 facet predicates", () => {
+  it("emits each dietary flag only when set (R8)", () => {
+    expect(buildFilterWhere({ isVegetarian: true })).toMatchObject({ isVegetarian: true });
+    expect(buildFilterWhere({ isGlutenFree: true })).toMatchObject({ isGlutenFree: true });
+    expect(buildFilterWhere({ isHmcCertified: true })).toMatchObject({ isHmcCertified: true });
+    expect(buildFilterWhere({})).not.toHaveProperty("isVegetarian");
+    expect(buildFilterWhere({})).not.toHaveProperty("isGlutenFree");
+    expect(buildFilterWhere({})).not.toHaveProperty("isHmcCertified");
+  });
+
+  it("matches origin exactly, and ignores an empty value (R9)", () => {
+    expect(buildFilterWhere({ origin: "Morocco" })).toMatchObject({ origin: "Morocco" });
+    expect(buildFilterWhere({ origin: "" })).not.toHaveProperty("origin");
+  });
+
+  it("narrows by brandId, and ignores an empty value (R10)", () => {
+    expect(buildFilterWhere({ brandId: "brand-1" })).toMatchObject({ brandId: "brand-1" });
+    expect(buildFilterWhere({ brandId: "" })).not.toHaveProperty("brandId");
+  });
+
+  it("nests the offers clause under AND and never emits a top-level OR (R11)", () => {
+    const where = buildFilterWhere({ onOffer: true });
+
+    // The whole point: a bare `OR` here is silently overwritten by the ladder rungs' own `OR`.
+    expect(Object.keys(where)).not.toContain("OR");
+
+    const and = where.AND as { OR: unknown[] }[];
+    expect(and).toHaveLength(1);
+    expect(and[0].OR).toEqual([{ originalPrice: { not: null } }, { priceTier: { isNot: null } }]);
+  });
+
+  it("leaves an unfiltered query completely unchanged (R13)", () => {
+    expect(buildFilterWhere({})).toEqual({});
+  });
+
+  it("keeps BOTH the offers clause and each rung's own OR on all three search paths (R12)", async () => {
+    // No rows, so the direct search finds nothing and the identity and broad rungs both run.
+    const { client, spies } = makeStub([]);
+    await searchProducts(client, VENDOR, "basmati rice", {
+      take: 12,
+      onOffer: true,
+    } as ProductFilters & { take: number });
+
+    // The typo rung reads the vendor's whole name vocabulary with NO term predicate, so it is not
+    // a candidate fetch and carries no filters — selecting on the search term is what separates the
+    // three rung queries from it.
+    const wheres = spies.productFindMany.mock.calls
+      .map((call) => (call[0] as { where?: unknown }).where)
+      .filter(
+        (where): where is Record<string, unknown> => typeof where === "object" && where !== null,
+      )
+      .filter((where) => JSON.stringify(where).includes('"basmati"'));
+
+    // Direct + identity + broad.
+    expect(wheres).toHaveLength(3);
+
+    for (const where of wheres) {
+      const serialised = JSON.stringify(where);
+      // The offers clause survived...
+      expect(serialised).toContain('"originalPrice"');
+      expect(serialised).toContain('"priceTier"');
+      // ...alongside that rung's own term predicate, rather than one overwriting the other.
+      expect(serialised).toContain('"rice"');
+    }
+  });
+});

@@ -303,3 +303,86 @@ describe("parseCategoryForm", () => {
     expect(accepted(parseCategoryForm(categoryForm({ parentId: "cat-9" }))).parentId).toBe("cat-9");
   });
 });
+
+/**
+ * P2.6 slice 6 (#569), R34/R35 — HMC certification never travels without its provenance.
+ *
+ * HMC is a named third-party certifying body, and #239 was a real incident where this codebase
+ * asserted "100% Certified HMC Halal" for a vendor with no basis for it. A bare tickable boolean
+ * would re-create that exposure one product at a time, so the parser makes the flag and its
+ * evidence a single unit: ticked requires both fields, unticked nulls both.
+ */
+describe("parseProductForm — HMC certification (R34, R35)", () => {
+  it("rejects a ticked flag with no certificate reference (R34)", () => {
+    const field = rejectedField(
+      parseProductForm(
+        productForm({ isHmcCertified: "on", hmcReference: "", hmcVerifiedAt: "2026-07-14" }),
+      ),
+    );
+    expect(field).toBe("hmcReference");
+  });
+
+  it("rejects a ticked flag with no verified date (R34)", () => {
+    const field = rejectedField(
+      parseProductForm(
+        productForm({ isHmcCertified: "on", hmcReference: "HMC/2026/1", hmcVerifiedAt: "" }),
+      ),
+    );
+    expect(field).toBe("hmcVerifiedAt");
+  });
+
+  it("rejects an unparseable verified date (R34)", () => {
+    const field = rejectedField(
+      parseProductForm(
+        productForm({
+          isHmcCertified: "on",
+          hmcReference: "HMC/2026/1",
+          hmcVerifiedAt: "nonsense",
+        }),
+      ),
+    );
+    expect(field).toBe("hmcVerifiedAt");
+  });
+
+  it("accepts a ticked flag carrying both fields, reading the date as UTC midnight (R34)", () => {
+    const value = accepted(
+      parseProductForm(
+        productForm({
+          isHmcCertified: "on",
+          hmcReference: "HMC/2026/1",
+          hmcVerifiedAt: "2026-07-14",
+        }),
+      ),
+    );
+
+    expect(value.isHmcCertified).toBe(true);
+    expect(value.hmcReference).toBe("HMC/2026/1");
+    // A date-only input has no timezone ambiguity — unlike datetime-local, which is why
+    // lib/local-datetime.ts exists. Asserted as an exact instant so a future switch to a
+    // wall-clock-parsing input cannot pass silently.
+    expect(value.hmcVerifiedAt?.toISOString()).toBe("2026-07-14T00:00:00.000Z");
+  });
+
+  it("nulls both provenance fields when the flag is unticked, whatever was typed (R35)", () => {
+    const value = accepted(
+      parseProductForm(productForm({ hmcReference: "HMC/2026/1", hmcVerifiedAt: "2026-07-14" })),
+    );
+
+    expect(value.isHmcCertified).toBe(false);
+    // Stale evidence left behind by an untick would read to a later reader as still-current.
+    expect(value.hmcReference).toBeNull();
+    expect(value.hmcVerifiedAt).toBeNull();
+  });
+
+  it("carries the dietary flags and brand through (R28 support)", () => {
+    const value = accepted(
+      parseProductForm(productForm({ isVegetarian: "on", isGlutenFree: "on", brandId: "brand-1" })),
+    );
+
+    expect(value.isVegetarian).toBe(true);
+    expect(value.isGlutenFree).toBe(true);
+    expect(value.brandId).toBe("brand-1");
+    // "No brand" is the empty option, and must reach the repository as null rather than "".
+    expect(accepted(parseProductForm(productForm({ brandId: "" }))).brandId).toBeNull();
+  });
+});

@@ -6,6 +6,7 @@ import { getRequestCartQuantities } from "@/lib/cart-summary";
 import { getEnv } from "@/lib/config";
 import { ProductCard } from "@/components/product/ProductCard";
 import { FilterPanel } from "@/components/product/FilterPanel";
+import { getBrandRepository } from "@/lib/brands-service";
 import { FilterChips } from "@/components/product/FilterChips";
 import { SubcategoryLinks } from "@/components/product/SubcategoryLinks";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
@@ -24,6 +25,14 @@ type SearchParams = {
   isHalal?: string;
   isFresh?: string;
   isOrganic?: string;
+  /** #569 — dietary, offers, origin and brand facets. */
+  isVegetarian?: string;
+  isGlutenFree?: string;
+  isHmcCertified?: string;
+  onOffer?: string;
+  origin?: string;
+  /** #569 — a brand SLUG; an unknown value applies no predicate and renders no chip. */
+  brand?: string;
   cursor?: string;
   /**
    * #498 — the stack of cursors used to reach every PRIOR page, comma-joined,
@@ -51,6 +60,19 @@ function buildHref(
   if (params.isHalal) qs.set("isHalal", params.isHalal);
   if (params.isFresh) qs.set("isFresh", params.isFresh);
   if (params.isOrganic) qs.set("isOrganic", params.isOrganic);
+  /*
+   * #569 — the six new facets. THIS IS THE THIRD PLACE a filter key must be registered, after
+   * `filter-chips.ts`'s REMOVABLE and `search-href.ts`'s CARRIED, and it is the one most easily
+   * missed because it is a hand-written chain rather than a list. Omit a key here and the facet is
+   * silently dropped the moment a shopper clicks "Next" on a category listing, leaving them on a
+   * wider result set than the chips above claim is applied.
+   */
+  if (params.isVegetarian) qs.set("isVegetarian", params.isVegetarian);
+  if (params.isGlutenFree) qs.set("isGlutenFree", params.isGlutenFree);
+  if (params.isHmcCertified) qs.set("isHmcCertified", params.isHmcCertified);
+  if (params.onOffer) qs.set("onOffer", params.onOffer);
+  if (params.origin) qs.set("origin", params.origin);
+  if (params.brand) qs.set("brand", params.brand);
   if (overrides.cursor) qs.set("cursor", overrides.cursor);
   // A lone "" entry means "page 1 had no cursor" and nothing else — not worth
   // a query param at all, so the very first "Next" click stays a clean URL.
@@ -97,6 +119,9 @@ export default async function CategoryPage({
   // subcategories' (a subcategory itself has no children, so this is always
   // exactly [category.id] there — the array collapses to the old behaviour).
   const categoryIds = [category.id, ...category.children.map((child) => child.id)];
+  // #569 — resolve the brand slug to an id before the query, mirroring /search.
+  const selectedBrand = query.brand ? await getBrandRepository().getBySlug(query.brand) : null;
+
   const { items, nextCursor } = await products.listByCategory(categoryIds, {
     take: PAGE_SIZE,
     cursor: query.cursor,
@@ -106,14 +131,20 @@ export default async function CategoryPage({
     isHalal: query.isHalal === "1",
     isFresh: query.isFresh === "1",
     isOrganic: query.isOrganic === "1",
+    isVegetarian: query.isVegetarian === "1",
+    isGlutenFree: query.isGlutenFree === "1",
+    isHmcCertified: query.isHmcCertified === "1",
+    onOffer: query.onOffer === "1",
+    origin: query.origin || undefined,
+    brandId: selectedBrand?.id,
   });
   /*
    * #568 — facets narrow to this category's own products (and its subcategories'), so a department
    * with no organic stock does not offer an Organic toggle that would return nothing. The three
-   * speciality flags are deliberately not passed; see `getAvailableSpecialities` for why each
+   * speciality flags are deliberately not passed; see `getAvailableFacets` for why each
    * probe must exclude all of them rather than only its own.
    */
-  const specialities = await products.availableSpecialities({
+  const facets = await products.availableFacets({
     categoryIds,
     minPricePence: parsePriceInput(query.minPrice ?? ""),
     maxPricePence: parsePriceInput(query.maxPrice ?? ""),
@@ -143,7 +174,7 @@ export default async function CategoryPage({
 
       <div className="mt-6 flex flex-col gap-6 md:flex-row">
         {/* #568 — sidebar at md+, a `details` disclosure below it. Both render the same form. */}
-        <FilterPanel heading="Filters" searchParams={query} specialities={specialities} />
+        <FilterPanel heading="Filters" searchParams={query} facets={facets} />
 
         <section className="flex-1">
           <h1 className="mb-6 text-2xl font-semibold text-primary">{category.name}</h1>
@@ -153,7 +184,12 @@ export default async function CategoryPage({
             removing it would have to mean navigating somewhere else entirely. `SubcategoryLinks`
             above is how you change it.
           */}
-          <FilterChips basePath={`/categories/${slug}`} params={query} />
+          <FilterChips
+            basePath={`/categories/${slug}`}
+            // #569 — an unresolved brand slug applies no predicate, so it must not render a chip.
+            params={{ ...query, brand: selectedBrand ? query.brand : undefined }}
+            brandLabel={selectedBrand?.name}
+          />
           <h2 className="sr-only">Products</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {items.map((product) => (

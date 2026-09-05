@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.27.1"
-updated: 2026-09-03
+version: "2.27.2"
+updated: 2026-09-05
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets, plus the Discover and Learn phases that run on milestone close. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -487,7 +487,17 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   for its requirement, not the requirement itself — when a row's literal command and its own
   requirement's prose disagree, the prose wins**, and the disagreement is the finding worth recording
   (fix the row's wording next time it's touched; don't force the artifact to satisfy an
-  over-literal check).
+  over-literal check). **An eighth instance, P2.6 slice 5 (#568), is five occurrences of one specific
+  shape in a single slice rather than a new shape**: `grep`-based rows for "no `"use client"`
+  directive," "no `aria-modal`/`usePathname`/`Escape`," "no `export const runtime`," and "no raw hex
+  literal" all "failed" because the file's own explanatory comment — written to say *why* the thing
+  is absent — contains the very string the grep was told to treat as evidence it wasn't. Each was
+  confirmed absent from real code by reading the mechanism (a directive only as the file's first
+  statement, an attribute only as a JSX prop, a hex literal only in a `className`) rather than by the
+  literal command. Five in one slice, all the same bare-word-in-prose shape this section already
+  named at P8.1a/#334, is itself the finding: a source-text grep in a hygiene-style
+  `validation.md` row should be assumed to trip on its own justifying comment by default, not treated
+  as a surprise worth re-diagnosing each time it happens.
 - UI changes: verify against rendered output (compiled CSS, rendered HTML, browser screenshot), not
   code review alone. DB-touching code: `npm run preview`, never `npm run dev` (see `CLAUDE.md`).
 - **Server actions can be driven headlessly against `npm run preview`** — no browser needed. Next

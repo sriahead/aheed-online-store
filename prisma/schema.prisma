@@ -162,6 +162,37 @@ model Vendor {
   searchQueryLogs           SearchQueryLog[]
   searchSynonyms            SearchSynonym[]
   listNormalisationAttempts ListNormalisationAttempt[]
+  brands                    Brand[]
+}
+
+// P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
+// `Product.brand` string.
+//
+// TWO REASONS IT IS A MODEL. #394's mega-menu wants brand thumbnails, which needs an
+// `imageKey` and a stable id that a free-text column cannot carry; and free text drifts
+// into near-duplicate spellings ("Shan", "shan ", "SHAN") the moment two staff members
+// type it, which would fork the very facet this exists to provide.
+//
+// Vendor-scoped like every other catalogue model here. `Product.brandId` is NULLABLE by
+// design: roughly 2,000 products already exist and this slice deliberately ships no
+// backfill (see the slice's plan.md), so a brand is something a product may have, never
+// something it must.
+model Brand {
+  id       String  @id @default(uuid())
+  vendorId String
+  vendor   Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  name     String
+  slug     String
+  /// A RELATIVE storage key (e.g. `brands/{brandId}/{uuid}.webp`), never a URL — the
+  /// same rule as ProductImage.storageKey and DepartmentCampaign.imageKey. Nothing
+  /// renders it yet; it exists so #394 has somewhere to put a thumbnail. This slice
+  /// adds no upload pipeline, only the ability to set the key.
+  imageKey String?
+
+  products Product[]
+
+  @@unique([vendorId, slug])
+  @@index([vendorId, name])
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on
@@ -421,6 +452,22 @@ model Product {
   isHalal              Boolean           @default(false)
   isFresh              Boolean           @default(false)
   isOrganic            Boolean           @default(false)
+  // P2.6 slice 6 (#569) — dietary facets, deliberately the same boolean shape as the
+  // three flags above rather than a generic attribute model. An attribute table would
+  // make every facet an EXISTS join, harder to index, and would fork the codebase so
+  // isHalal and isVegetarian are queried two different ways for no gain a shopper sees.
+  isVegetarian         Boolean           @default(false)
+  isGlutenFree         Boolean           @default(false)
+  // HMC is a NAMED THIRD-PARTY CERTIFYING BODY, not a synonym for isHalal, and #239 was
+  // a real incident where this codebase asserted "100% Certified HMC Halal" for a vendor
+  // with no basis for it. So the flag never travels alone: lib/catalogue-form.ts requires
+  // both fields below when it is ticked, and nulls both when it is not. A certification
+  // claim with no provenance behind it is exactly what that rule exists to prevent.
+  isHmcCertified       Boolean           @default(false)
+  hmcReference         String?
+  hmcVerifiedAt        DateTime?
+  brandId              String?
+  brand                Brand?            @relation(fields: [brandId], references: [id], onDelete: SetNull)
   // #211 — vendor curation flag driving the homepage "Featured Products" rail.
   // Independent of originalPrice's discount-badge derivation: featured and
   // "on offer" are two separate concepts.
@@ -443,6 +490,11 @@ model Product {
   @@index([vendorId, categoryId, isActive])
   @@index([vendorId, isActive, basePrice]) // catalogue filter + sort
   @@index([vendorId, isActive, isFeatured]) // homepage featured rail
+  // #569 — the two new HIGH-cardinality facet predicates. The dietary booleans get no
+  // index of their own, matching isHalal/isFresh/isOrganic: a boolean splits the table
+  // roughly in half, so an index earns little and costs on every write.
+  @@index([vendorId, isActive, brandId])
+  @@index([vendorId, isActive, origin])
 }
 
 // ---- P8.5d — Multi-buy tier pricing (#348) ----------------------------------

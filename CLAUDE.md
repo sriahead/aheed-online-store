@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.14.0"
-updated: 2026-09-04
+version: "1.16.0"
+updated: 2026-09-05
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -129,7 +129,11 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   that introduced it. What stays banned either way is raw SQL **at request time** in `app/`,
   `features/`, `components/` or `lib/repositories/*` — that is the portability and injection
   surface the rule was written for.
-- **The GAP-011 drift risk above is not hypothetical — it fired for real in #508 (2026-09-01).**
+- **The GAP-011 drift risk above is not hypothetical — it fired for real in #508 (2026-09-01), and
+  has now fired on EVERY migration this project has generated since.** By `#569` (2026-09-05) that
+  is six occurrences: `#508`, then once per P2.6 slice carrying a migration (`#565`, `#566`, `#567`)
+  and again at `#569`. Treat it as certain rather than possible — `--create-only` followed by
+  reading the generated SQL is not a precaution here, it is the procedure.
   Adding a new model (`ErrorEvent`) with no relationship whatsoever to `Order` or `User` was enough
   for `prisma migrate dev` to generate `DROP INDEX` for all three hand-authored `pg_trgm` indexes
   from `20260820143949_p7_5de_order_search_trigram` — and that drop **executed** against the dev
@@ -184,6 +188,24 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   zone-level, not host-specific, and the dev zone carries the identical rule. Walk image-load rows
   in `validation.md` against a real deployed environment, not local preview; see
   `specs/2026-08-13-p6.6-p0-ui-overhaul/validation.md` for the pattern this line generalizes.
+
+## Cloudflare edge caching of Worker routes — learned the hard way
+- **A `Cache-Control: public, max-age=N` header on a Worker route's response does NOT make
+  Cloudflare cache it at the edge — that needs an explicit zone-level Cache Rule or the Worker
+  calling the Cache API (`caches.default.put()`/`.match()`) itself, neither of which exists anywhere
+  in this repo.** Confirmed live in P2.6 slice 5 (#568, #599, 2026-09-05): `/api/search/suggest`
+  emits exactly that header, but six requests against two vendor hosts on staging — including four
+  rapid repeats against one host — never once returned a `cf-cache-status` or `Age` header. Every
+  request reached the Worker fresh. This is the CDN-caches-static-assets rule from the Storage
+  section above running in reverse: that section is about a real cache (hotlink protection firing at
+  the edge, before the app sees the request) blocking something that should load; this is about an
+  *assumed* cache (a route designed to lean on edge caching for cost control) never actually forming
+  at all, silently. Neither failure mode is visible from `lint`/`typecheck`/`test`/`build`, and
+  neither is visible from a single request either — the tell here specifically was the *absence* of
+  a cache-status header across repeats, not an error. **Before designing a cost or isolation
+  argument around "Cloudflare will cache this by default," check a real deployed response's headers
+  for `cf-cache-status`/`Age` across repeated requests** — a `Cache-Control` header alone proves the
+  route is willing to be cached, never that anything upstream of the Worker actually will.
 
 ## Config & secrets
 - All config through validated **`lib/config`** (zod). Precedence is the **Cloudflare request context
@@ -452,7 +474,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  94 files / 1126 tests**, measured 2026-09-05 at `#568`'s Build) and treat any shortfall as
+  94 files / 1144 tests**, measured 2026-09-05 at `#569`'s Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -465,7 +487,9 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `/document`, because a Clear sits between the two and the measured number would not survive it —
   and `89/1072` moved to `89/1076` the same day at `#567`'s own `/fix`: no new file, four tests
   added to an *existing* one (`tests/list-normalisation.test.ts`), covering the response-shape bug
-  `/validate` found live plus the R15 hang-timeout case that had been missing since Build. Each time,
+  `/validate` found live plus the R15 hang-timeout case that had been missing since Build, and
+  `94/1126` moved to **`94/1144`** at `#569`'s Build — eighteen tests across five *existing* files,
+  no new file at all, which is the cleanest demonstration yet of the refinement below. Each time,
   the staleness
   quietly *disabled* the detection it exists to provide: a validator believing `77` would read
   `#566`'s genuine ten-file shortfall as roughly right. **The rule this last move corrects: it is

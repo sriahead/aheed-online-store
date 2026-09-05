@@ -16,13 +16,16 @@ export function FilterChips({
   basePath,
   params,
   categoryLabel,
+  brandLabel,
 }: {
   basePath: string;
   params: FilterChipParams;
   /** Resolved category NAME, so the chip reads "Rice and Grains" rather than "rice-and-grains". */
   categoryLabel?: string;
+  /** Resolved brand NAME (#569), so the chip reads "Shan" rather than "shan". */
+  brandLabel?: string;
 }) {
-  const chips = activeFilterChips(basePath, params, categoryLabel);
+  const chips = activeFilterChips(basePath, params, categoryLabel, brandLabel);
   if (chips.length === 0) return null;
 
   return (
