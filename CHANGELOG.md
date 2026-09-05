@@ -8,6 +8,20 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` (final) closeout for P2.6 slice 4** (`#567`; PR #592 merged to `staging`, PR #593
+  promoted to `main`). `specs/roadmap.md` (1.72.0) gains the slice's build/merge row and its
+  promotion row, recording the post-`/validate` fix (the AI pre-pass never actually enriched
+  anything live, because Cloudflare's real reply shape didn't match the `typeof response ===
+  "string"` assumption) and the live verification performed against `npm run preview` with real
+  Workers AI credentials. `CLAUDE.md` (1.14.0) gains a new "Workers AI" section recording that
+  shape mismatch as a transferable lesson — the same failure class already recorded there for
+  Prisma driver error codes — and flags that `lib/search-synonym-proposals.ts` (`#566`) likely
+  carries the identical unfixed assumption, tracked on `#583`. `#588`–`#591` (this slice's deferred
+  follow-ups) assigned the `P02.6` milestone, which they were missing. `npm run sdd:audit` reports
+  zero gaps. Delivery board reconciled: `#567` is **Done**. `ARTIFACT_INDEX.md` /
+  `app/(admin)/staff/runbook/docs.ts` regenerated to match. No runtime code, no schema change,
+  nothing for `prisma migrate deploy` to apply.
+
 - **`/document` (final) closeout for P2.6 slice 3** (`#566`, `#396`, `#580`, `#572`, `#578`; PR #585
   merged to `staging`, PR #586 promoted to `main`). `specs/roadmap.md` (1.71.0) gains the slice's
   build/merge row and its promotion row, recording both `/fix` passes (a real "Shop your list"
@@ -22,6 +36,29 @@ every branch merges.
   nothing for `prisma migrate deploy` to apply.
 
 ### Added
+
+- **Search suggestions as you type, and a filter surface a shopper can steer** (`#568`, `#512`,
+  P2.6 slice 5). Typing in the header search box now suggests matching products, departments and
+  approved synonym terms, ordered by the same relevance-and-availability ranking the results page
+  uses (`#564`). Applied filters are shown as chips above the results and can be removed one at a
+  time or cleared in one action, on both `/search` and `/categories/[slug]`. Search results can be
+  narrowed to a department **without losing the query** — `/search?q=rice&category=world-foods`
+  applies both, where previously drilling into a category meant navigating away and starting the
+  search again. On a narrow viewport the filters collapse into a disclosure panel instead of
+  pushing the products down the page.
+  **Filter toggles now reflect the current results**, not just the vendor: a speciality that no
+  product in the current search or department carries is not offered. Each toggle is computed with
+  every speciality filter excluded, so ticking one never hides the others — and an active filter
+  can always be unticked.
+  **Everything here still works with JavaScript disabled.** The filter panel is a native
+  disclosure rather than a scripted drawer, chips and drill-down are plain links, and the search
+  box remains a normal form that submits; suggestions are strictly additive. The suggestion
+  endpoint is bounded by a minimum query length, a hard result cap, a client-side debounce and a
+  short edge-cacheable response rather than a per-request throttle row, and it reaches no AI and
+  writes no search-query log row.
+  Also fixes the Apply button rendering a hardcoded green (`#512`) — it ignored per-vendor
+  branding, so SriMart showed Aheed's colour, and its hover shade pre-dated the WCAG AA contrast
+  darkening. No schema change and no migration.
 
 - **"Shop your list" now understands how people actually write a shopping list** (`#567`, P2.6
   slice 4). An AI pre-pass turns pasted free text into structured items — name, quantity, pack

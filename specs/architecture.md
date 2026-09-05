@@ -4,7 +4,7 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.24.0"
+version: "1.25.0"
 updated: 2026-09-04
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
@@ -564,6 +564,23 @@ S3 API rather than an R2-specific SDK.
      deterministic parse.
 
   A proposed AI call on a public path that cannot answer all four belongs offline, as `#571` said.
+- **A public unauthenticated read endpoint is bounded by its inputs and its cache, not by a
+  per-request throttle row.** Established by P2.6 slice 5 (`#568`) for
+  `app/api/search/suggest/route.ts`, the first public JSON route this storefront serves. The three
+  throttles that existed before it — `order-lookup-rate-limit`, `list-normalisation-rate-limit`,
+  `auth-rate-limit` — each write a row per attempt, which is right for a *write* path reached once
+  per submission and wrong for a *read* path reached once per keystroke: the guard would be a
+  heavier write than the read it guards. So a hot public read is bounded instead by a minimum input
+  length (`parseSearchQuery` already drops sub-two-character tokens, so the cheapest abusive query
+  never reaches the database), hard `take` caps bound to a named constant, a client-side debounce,
+  and a short public `Cache-Control` so repeats are served at Cloudflare's edge.
+
+  **The multi-tenancy of that cache is an assumption to verify per environment, not a given.**
+  Cloudflare's cache key includes the hostname by default, which is the only thing keeping one
+  vendor's suggestions out of another's response. `#502` is the standing precedent that a key can
+  legitimately behave differently in dev, staging and production, so per-host isolation on any
+  edge-cached vendor-scoped response is verified against a **deployed** environment carrying both
+  vendor hosts — never against local preview, which has no edge in front of it at all.
 - **Every list is keyset-paginated; every hot query has an index** shipped in the same migration.
 - **SDD gates still apply.** Spec before code, tests + `validation.md` before done, changelog
   before merge. NFR targets in §3.4 are Gate-3 acceptance criteria.

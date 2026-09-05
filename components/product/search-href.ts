@@ -21,6 +21,7 @@ export type SearchHrefParams = {
   isFresh?: string;
   isOrganic?: string;
   featured?: string;
+  category?: string;
 };
 
 const CARRIED: (keyof SearchHrefParams)[] = [
@@ -32,6 +33,10 @@ const CARRIED: (keyof SearchHrefParams)[] = [
   "isFresh",
   "isOrganic",
   "featured",
+  // #568 — category drill-down is a filter like any other here, so it must survive pagination for
+  // the same reason every key above does: dropping it one click into "Next page" silently widens
+  // the result set back to the whole catalogue.
+  "category",
 ];
 
 export function searchPageHref(params: SearchHrefParams, cursor: string): string {
@@ -41,5 +46,24 @@ export function searchPageHref(params: SearchHrefParams, cursor: string): string
     if (value) qs.set(key, value);
   }
   qs.set("cursor", cursor);
+  return `/search?${qs.toString()}`;
+}
+
+/**
+ * #568 — the href for selecting a department from within results: every active filter and the
+ * shopper's query are preserved, `category` is replaced, and `cursor` is dropped.
+ *
+ * Dropping the cursor is not optional. It is an OFFSET into a ranked array (see
+ * `parseSearchOffset`), so carrying it into a differently-sized result set would land the shopper
+ * at an arbitrary point in the new results, or past the end of them.
+ */
+export function categoryFilterHref(params: SearchHrefParams, categorySlug: string): string {
+  const qs = new URLSearchParams();
+  for (const key of CARRIED) {
+    if (key === "category") continue;
+    const value = params[key];
+    if (value) qs.set(key, value);
+  }
+  qs.set("category", categorySlug);
   return `/search?${qs.toString()}`;
 }

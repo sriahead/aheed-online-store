@@ -24,6 +24,7 @@ import { DELIVERY_POSTCODE_COOKIE } from "@/lib/delivery-cookie";
 import { CartDrawerShell } from "@/components/cart/CartDrawerShell";
 import { CartContents } from "@/components/cart/CartContents";
 import { PostcodeChecker } from "./PostcodeChecker";
+import { SearchSuggest } from "./SearchSuggest";
 import { ViewSwitcher } from "./ViewSwitcher";
 
 /**
@@ -32,22 +33,15 @@ import { ViewSwitcher } from "./ViewSwitcher";
  * progressive-enhancement pattern used everywhere since P2a.
  */
 
+/**
+ * #568 — the form itself is unchanged: still `method="GET" action="/search"`, so with JavaScript
+ * off it submits and navigates exactly as before. `SearchSuggest` is a client island that owns only
+ * the input and its suggestion listbox; the enhancement is additive, never load-bearing.
+ */
 function SearchForm({ className = "", placeholder }: { className?: string; placeholder: string }) {
   return (
     <form method="GET" action="/search" className={className}>
-      <div className="relative">
-        <Search
-          className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40"
-          aria-hidden
-        />
-        <input
-          type="text"
-          name="q"
-          placeholder={placeholder}
-          aria-label="Search products"
-          className="w-full bg-surface-muted hover:bg-black/5 focus:bg-white pl-10 pr-4 py-2 rounded-xl text-sm border border-black/10 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition"
-        />
-      </div>
+      <SearchSuggest placeholder={placeholder} />
     </form>
   );
 }

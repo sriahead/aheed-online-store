@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.9.0"
-updated: 2026-08-24
+version: "1.10.0"
+updated: 2026-09-04
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -155,6 +155,7 @@ To ensure compliance with WCAG AA standards (minimum 4.5:1 contrast ratio for te
 - **Heading Hierarchy:** Component heading levels (`h1`, `h2`, `h3`) must not skip ranks in the document flow. Where a visual heading is absent but semantically required (e.g., a "Products" wrapper for `h3` product cards following a category `h1`), inject a visually hidden `<h2 className="sr-only">` to satisfy the hierarchy.
 - **Interactive Elements:** Icon-only buttons (such as quantity increment/decrement controls) must carry explicit `aria-label`s, with inner icons marked `aria-hidden="true"`.
 - **Modal surfaces:** A component that overlays the page (the cart drawer) must carry `role="dialog"`, `aria-modal="true"` and an `aria-labelledby` naming its own heading; move focus into itself on open, trap `Tab`/`Shift+Tab` within itself while open, restore focus to the opener on close, and close on `Escape`. A non-blocking banner (the cookie banner) must **not** trap focus — trapping there would be a defect, not compliance.
+- **Disclosure surfaces** (added P2.6 slice 5, #568). A surface that reveals content **in place**, without blocking the page behind it, is a native `details` disclosure — not a dialog. It must **not** carry `role="dialog"`, `aria-modal`, a focus trap or an `Escape` handler; adding them there is the same category error as trapping focus in the cookie banner, just in the other direction. Two things follow from choosing `details` rather than a client-controlled panel, and both are the point rather than a side effect: it works with **no client JavaScript**, and because every interaction inside this storefront's filter surfaces is a real navigation, the next page arrives with the disclosure closed on its own — no `usePathname` effect, and so no exposure to the dependency-array trap `CLAUDE.md` records for the cart drawer. **The deciding question is not "does it slide in?" but "can the shopper still do this with JavaScript off?"** `#568`'s mobile filter panel looks exactly like a drawer and is a disclosure, because the filters it holds are reachable today at every viewport without JavaScript, and putting them behind a JS-only opener would have removed a capability rather than added one. The cart drawer is legitimately a dialog by the same test: `/cart` is a real page behind it, so nothing is lost when its JavaScript does not run.
 - **Motion** (added P8.5a, #345). Three rules, all learned from defects rather than chosen:
   1. **A transition names its properties.** Never `transition-all`, and never a global
      element-selector transition rule. A global rule caused the page-refresh layout thrashing

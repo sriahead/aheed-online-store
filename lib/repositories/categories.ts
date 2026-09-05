@@ -24,6 +24,8 @@ export interface CategoryWithChildren extends CategorySummary {
 export interface CategoryRepository {
   listTopLevel(): Promise<CategorySummary[]>;
   getBySlug(slug: string): Promise<CategoryWithChildren | null>;
+  /** Autocomplete category suggestions (#568) — see `suggestCategories`. */
+  suggest(terms: readonly string[], limit: number): Promise<CategorySummary[]>;
 }
 
 /**
@@ -38,6 +40,37 @@ export async function listTopLevelCategories(
   return prisma.category.findMany({
     where: { vendorId, parentId: null, isActive: true },
     orderBy: { sortOrder: "asc" },
+    select: { id: true, slug: true, name: true },
+  });
+}
+
+/**
+ * Autocomplete category suggestions (#568).
+ *
+ * `OR` across terms rather than `AND`, unlike the product suggestions beside it, and the asymmetry
+ * is deliberate: a category name is one or two words, so requiring every term of a multi-word query
+ * to appear in it would mean a shopper typing "basmati rice" is offered no category at all — while
+ * "Rice" is exactly the useful thing to offer them. Products stay `AND` because there the extra
+ * terms are how a shopper narrows to the one item they want.
+ *
+ * Includes subcategories (no `parentId` filter): drilling straight to "Lentils and Pulses" is the
+ * more useful destination when the shopper has already typed enough to name it.
+ */
+export async function suggestCategories(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  terms: readonly string[],
+  limit: number,
+): Promise<CategorySummary[]> {
+  if (terms.length === 0) return [];
+  return prisma.category.findMany({
+    where: {
+      vendorId,
+      isActive: true,
+      OR: terms.map((term) => ({ name: { contains: term, mode: "insensitive" as const } })),
+    },
+    orderBy: { sortOrder: "asc" },
+    take: limit,
     select: { id: true, slug: true, name: true },
   });
 }
