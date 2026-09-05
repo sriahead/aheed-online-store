@@ -173,7 +173,18 @@ export default async function SearchPage({
             activeSlug={selectedCategory?.slug ?? null}
           />
 
-          <FilterChips basePath="/search" params={params} categoryLabel={selectedCategory?.name} />
+          {/*
+            #568 fix (R15) — `category` must not reach the chip row unless it actually resolved.
+            `params.category` is the raw, unvalidated query value; passing it straight through made
+            an unknown/inactive slug render a removable chip for a filter that was never applied
+            (the predicate was already correctly skipped via `categoryIds` above — only the chip
+            display lagged behind). Every other filter key still comes from `params` unmodified.
+          */}
+          <FilterChips
+            basePath="/search"
+            params={{ ...params, category: selectedCategory ? params.category : undefined }}
+            categoryLabel={selectedCategory?.name}
+          />
 
           <SearchTruncationNotice truncated={truncated} />
 

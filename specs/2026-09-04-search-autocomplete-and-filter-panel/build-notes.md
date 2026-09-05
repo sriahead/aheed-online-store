@@ -176,3 +176,38 @@ which one was actually run.
 one leaves the previous results rendered for up to one debounce interval. This is a normal debounce
 artifact and I judged it acceptable rather than clearing on fetch start (which would reintroduce the
 setState-in-effect problem), but it is visible behaviour a validator may reasonably question.
+
+## Fix (post-Validate)
+
+**R15 failed at `/validate` against a real `npm run preview`, and it is exactly the gap the
+"never run against a real database" note above predicted.** `/search?category=<unknown-slug>`
+correctly applied no predicate (product count matched unfiltered `/search`), but still rendered a
+removable chip labelled with the raw, unresolved slug — `aria-label="Remove filter:
+definitely-not-a-real-slug"`. `app/(storefront)/search/page.tsx`'s own comment above
+`selectedCategory` said "An unknown or inactive slug resolves to `null` and is then IGNORED
+entirely: no predicate, no chip" — the predicate half was true (`categoryIds` is correctly
+`undefined` when `selectedCategory` is `null`), the chip half was not: `<FilterChips>` was handed
+the raw `params` object, whose `category` key is the unvalidated query string, not the resolution
+result. `activeFilterChips` (`components/product/filter-chips.ts`) has no way to know a value
+didn't resolve — it only checks truthiness — so it isn't the pure function that needed fixing.
+
+**Root cause, and why it's a one-line correction rather than a redesign:** the page had two
+category-shaped values in scope — `params.category` (raw, always present when the query string has
+one) and `selectedCategory` (resolved, `null` when the slug doesn't exist) — and used the resolved
+one everywhere except the one call site that renders the chip row. The fix conditions the `category`
+key handed to `<FilterChips>` on `selectedCategory` the same way `categoryIds` already is:
+
+```
+params={{ ...params, category: selectedCategory ? params.category : undefined }}
+```
+
+No change to `filter-chips.ts`, `FilterChips.tsx`, or any other requirement's behaviour — confirmed
+live post-fix: the chip for an unknown slug is gone (`grep -c "Remove filter"` → `0`), a *valid*
+category (`fruit-veg`) still renders its chip correctly (R17), and R2/R9/R10/R13/R14/R16/R21 were
+all re-checked live against the same `npm run preview` session with no change in behaviour.
+
+**Left alone, deliberately:** the hidden `category` passthrough in `ProductFilterForm` and the
+pagination "Next page" href both still carry the raw, unresolved slug forward verbatim. Both are
+correct as-is — neither renders a user-facing filter claim, they only preserve current URL state
+across a same-page action (Apply, Next), and the slug they carry continues to resolve to no
+predicate on the next request regardless of whether it's real.
