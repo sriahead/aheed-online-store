@@ -44,6 +44,27 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` (final) closeout for P2.6 slice 6 — P2.6 CLOSED** (`#569`; PR #603 merged to
+  `staging`, PR #604 promoted to `main`). `specs/roadmap.md` (1.74.0) gains the slice's build/merge
+  row and its promotion row, recording a fully clean fresh-context `/validate` (every row checked
+  and passed, no `/fix` round needed) — including a first-ever live end-to-end drive of
+  `/staff/brands`'s create/rename/set-image-key actions and the duplicate-name unique-violation
+  path, and a re-measurement showing the roughly-tripled facet probe set still comfortably under the
+  400ms API target. Marks **P2.6 — Search & AI shopping as CLOSED**: all six slices (#564–#569)
+  shipped and promoted; the milestone's eleven remaining open follow-ups (two pre-existing/adjacent,
+  nine filed across slices 3–6) stay open, tracked individually rather than blocking the close — see
+  `specs/roadmap.md`'s closing row for the full accounting. Also found and fixed a milestone
+  bookkeeping gap: five of those follow-ups (`#582`, `#583`, `#599`, `#601`, `#602`) had never been
+  assigned the `P02.6` milestone at all. `CLAUDE.md` (1.17.0)
+  gains a new Windows-shell entry: a `gh` string argument starting with `/`, run from Git Bash, gets
+  silently rewritten to a Windows path by MSYS's path conversion before `gh` ever sees it — caught
+  because it had already corrupted `#602`'s own title (`/staff/search-synonyms…` became `C:/Program
+  Files/Git/staff/search-synonyms…`), fixed via `gh issue edit` with `MSYS_NO_PATHCONV=1`.
+  `npm run sdd:audit` reports zero gaps. Delivery board reconciled: `#569` is **Done**; `#582`,
+  `#583`, `#599`, `#601`, `#602` confirmed at Backlog/`P2.5`. `ARTIFACT_INDEX.md` /
+  `app/(admin)/staff/runbook/docs.ts` regenerated to match. No runtime code, no schema change,
+  nothing for `prisma migrate deploy` to apply.
+
 - **`/document` (final) closeout for P2.6 slice 5** (`#568`; PR #597 merged to `staging`, PR #598
   promoted to `main`). `specs/roadmap.md` (1.73.0) gains the slice's build/merge row and its
   promotion row, recording the post-`/validate` fix (a chip rendered for a category slug that never
