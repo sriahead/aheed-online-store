@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-05T16:17:11.830Z` · commit `c752a6e` · `150` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-05T20:09:35.193Z` · commit `aa370b9` · `150` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -36,7 +36,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Marketing & Analytics Data Guide](docs/marketing-analytics/marketing-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for marketing analysts on how to track user behavior, promotions, and campaign performance. |
 | [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
 | [Research & retrospectives — what lives here](docs/research/README.md) | doc | 1.0.0 | 2026-09-02 | approved | internal | Explains what the Discover and Learn phases write into this directory, what belongs in a canonical project document instead, and the rule that nothing here is approved scope until it passes through /propose. |
-| [Discovery log](docs/research/discovery-log.md) | doc | 1.1.0 | 2026-09-03 | approved | internal | Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action. |
+| [Discovery log](docs/research/discovery-log.md) | doc | 1.2.0 | 2026-09-05 | approved | internal | Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action. |
 | [Milestone retrospectives](docs/research/milestone-retrospectives.md) | doc | 1.0.0 | 2026-09-02 | approved | internal | Append-only record of Learn-phase retrospectives — what each completed milestone actually delivered, which assumptions held or failed, what emerged unexpectedly, and which lessons were promoted into CLAUDE.md or the workflow. |
 | [M0 — Walking Skeleton (plan)](specs/2026-08-05-m0-walking-skeleton/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for the smallest possible end-to-end app (Next.js on Workers, Neon, CI/CD) proving the Cloudflare + Neon pipeline before any feature work begins. |
 | [P0 — Design-System Tokens (plan)](specs/2026-08-06-design-system/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for installing Tailwind CSS v4 and encoding the Aheed brand kit as design tokens, closing the last item deferred from P0's first slice. |
