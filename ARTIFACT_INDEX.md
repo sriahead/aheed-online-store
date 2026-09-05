@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-05T20:09:35.193Z` · commit `aa370b9` · `150` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-05T21:17:07.445Z` · commit `01b6886` · `150` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -37,7 +37,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
 | [Research & retrospectives — what lives here](docs/research/README.md) | doc | 1.0.0 | 2026-09-02 | approved | internal | Explains what the Discover and Learn phases write into this directory, what belongs in a canonical project document instead, and the rule that nothing here is approved scope until it passes through /propose. |
 | [Discovery log](docs/research/discovery-log.md) | doc | 1.2.0 | 2026-09-05 | approved | internal | Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action. |
-| [Milestone retrospectives](docs/research/milestone-retrospectives.md) | doc | 1.0.0 | 2026-09-02 | approved | internal | Append-only record of Learn-phase retrospectives — what each completed milestone actually delivered, which assumptions held or failed, what emerged unexpectedly, and which lessons were promoted into CLAUDE.md or the workflow. |
+| [Milestone retrospectives](docs/research/milestone-retrospectives.md) | doc | 1.1.0 | 2026-09-05 | approved | internal | Append-only record of Learn-phase retrospectives — what each completed milestone actually delivered, which assumptions held or failed, what emerged unexpectedly, and which lessons were promoted into CLAUDE.md or the workflow. |
 | [M0 — Walking Skeleton (plan)](specs/2026-08-05-m0-walking-skeleton/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for the smallest possible end-to-end app (Next.js on Workers, Neon, CI/CD) proving the Cloudflare + Neon pipeline before any feature work begins. |
 | [P0 — Design-System Tokens (plan)](specs/2026-08-06-design-system/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for installing Tailwind CSS v4 and encoding the Aheed brand kit as design tokens, closing the last item deferred from P0's first slice. |
 | [Aheed KMS — Design (structure, deployment, schema)](specs/2026-08-06-kms/plan.md) | spec | 0.1.0 | 2026-08-06 | draft | internal | Folder structure, deployment plan, and front-matter schema for the Aheed knowledge system — phased to M0 reality, with a generated index and an internal/public publication split. |
