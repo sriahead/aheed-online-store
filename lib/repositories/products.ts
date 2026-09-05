@@ -178,7 +178,7 @@ export interface SearchSuggestions {
  * that order; "none" means all three ran and found nothing.
  *
  * #566 did NOT add a synonym rung, which an earlier version of this comment predicted it would.
- * Synonyms widen the DIRECT predicate instead (`directSearchPredicate` over term groups), so an
+ * Synonyms widen the DIRECT predicate instead (`buildDirectSearchWhere` over term groups), so an
  * alias-matched product is a first-class result ranked on its merits rather than a consolation
  * prize reached only after the direct search had already failed.
  */
@@ -199,6 +199,16 @@ export interface ProductFilters {
   isFresh?: boolean;
   isOrganic?: boolean;
   isFeatured?: boolean;
+  /**
+   * P2.6 slice 5 (#568) — category drill-down from within search results. Ids rather than a slug
+   * so this stays a pure predicate: resolving a slug (and expanding it to its children) needs a
+   * second query, which belongs to the caller that already holds a category repository.
+   *
+   * Absent or empty means "no category predicate" — NOT "match nothing". An unknown slug is
+   * ignored by the page rather than 404ing, so an empty array reaching here is the normal
+   * expression of that, and narrowing on it would silently empty the catalogue instead.
+   */
+  categoryIds?: readonly string[];
 }
 
 /**
@@ -251,8 +261,18 @@ export interface ProductRepository {
    */
   list(opts: { take: number; cursor?: string } & ProductFilters): Promise<ProductPage>;
   getBySlug(slug: string): Promise<ProductDetail | null>;
-  /** Drives per-vendor filter visibility — a food vendor shows Halal/Fresh/Organic; a tech one shows none. */
-  availableSpecialities(): Promise<AvailableSpecialities>;
+  /**
+   * Drives per-vendor filter visibility — a food vendor shows Halal/Fresh/Organic; a tech one
+   * shows none. Since #568 it also narrows to the CURRENT result context (search terms, category,
+   * price, in-stock), so a toggle that would return nothing is not offered. Omit the argument for
+   * the vendor-wide answer, which is the pre-#568 behaviour.
+   */
+  availableSpecialities(context?: SpecialityContext): Promise<AvailableSpecialities>;
+  /**
+   * Autocomplete product suggestions (#568). `candidateLimit` is passed in rather than fixed here
+   * so the bound lives with the public route that owns the exposure — see `suggestProducts`.
+   */
+  suggestProducts(query: string, candidateLimit: number): Promise<ProductSuggestion[]>;
   /**
    * Candidate products for a whole "Shop your list" paste (P3d, #114), in ONE
    * query for the entire list rather than one per line. Deliberately separate
@@ -312,6 +332,12 @@ export function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereIn
   if (filters.isFresh) where.isFresh = true;
   if (filters.isOrganic) where.isOrganic = true;
   if (filters.isFeatured) where.isFeatured = true;
+  // #568 — an empty array emits NOTHING, deliberately. See ProductFilters.categoryIds: an unknown
+  // slug resolves to no ids, and `categoryId: { in: [] }` would match zero rows rather than
+  // leaving the catalogue unfiltered.
+  if (filters.categoryIds && filters.categoryIds.length > 0) {
+    where.categoryId = { in: [...filters.categoryIds] };
+  }
   return where;
 }
 
@@ -442,7 +468,14 @@ export async function listProductsByCategory(
   return findPage(
     prisma,
     vendorId,
-    { vendorId, categoryId: { in: categoryIds }, isActive: true, ...buildFilterWhere(filters) },
+    /*
+     * #568 — the explicit `categoryId` MUST stay after the `buildFilterWhere` spread. Since that
+     * helper can now emit `categoryId` too (ProductFilters.categoryIds), spreading it last would
+     * let a `categoryIds` value in `filters` override the category this page is actually
+     * displaying — i.e. a URL parameter silently replacing the route's own subject. The page's
+     * category always wins; `tests/search-repository.test.ts` pins this order.
+     */
+    { vendorId, isActive: true, ...buildFilterWhere(filters), categoryId: { in: categoryIds } },
     { take, cursor },
   );
 }
@@ -589,8 +622,15 @@ async function fetchSearchCandidates(
  * With no approved synonyms every group holds exactly one variant, so this builds the identical
  * `AND` of per-term `OR`s that `#564` shipped — which is what makes an empty dictionary a no-op
  * rather than a behaviour change. `tests/search-repository.test.ts` pins that shape.
+ *
+ * EXPORTED since #568 (and renamed from `directSearchPredicate`, pairing with `buildFilterWhere`)
+ * because `getAvailableSpecialities` must probe against the SAME predicate the search itself runs.
+ * A facet computed from a second, hand-written copy of this shape drifts the moment either changes,
+ * and the failure is silent: the toggle offered would simply stop corresponding to the result set.
  */
-function directSearchPredicate(groups: readonly SearchTermGroup[]): Prisma.ProductWhereInput {
+export function buildDirectSearchWhere(
+  groups: readonly SearchTermGroup[],
+): Prisma.ProductWhereInput {
   return {
     AND: groups.map((group) => ({
       OR: group.variants.flatMap((variant) => [
@@ -703,7 +743,7 @@ export async function searchProducts(
     prisma,
     vendorId,
     filters,
-    directSearchPredicate(groups),
+    buildDirectSearchWhere(groups),
   );
   // Captured BEFORE any ladder rung runs, regardless of what happens next — this is what the
   // search query log (lib/products-service.ts) reports as the direct search's own outcome.
@@ -724,7 +764,7 @@ export async function searchProducts(
         prisma,
         vendorId,
         filters,
-        directSearchPredicate(correctedGroups),
+        buildDirectSearchWhere(correctedGroups),
       );
       if (typoResult.candidates.length > 0) {
         candidates = typoResult.candidates;
@@ -872,17 +912,121 @@ export async function getProductBySlug(
   };
 }
 
+/**
+ * The result context a facet probe is computed against (#568). Deliberately NOT `ProductFilters`:
+ * the three speciality flags are excluded by TYPE rather than by a runtime `delete`, so a caller
+ * cannot accidentally pass them in and reintroduce the trap described below.
+ */
+export interface SpecialityContext {
+  groups?: readonly SearchTermGroup[];
+  categoryIds?: readonly string[];
+  minPricePence?: number;
+  maxPricePence?: number;
+  inStockOnly?: boolean;
+}
+
+/**
+ * Which speciality toggles to offer for the CURRENT result context (#568) — a toggle that would
+ * return nothing is worse than absent, because it reads as "we have no organic stock" when it
+ * really means "not in these results".
+ *
+ * THE TRAP THIS AVOIDS, stated because it is easy to reintroduce: each probe excludes ALL THREE
+ * speciality filters, not just its own. Computing a facet against the full current filter state
+ * looks obviously right and is wrong twice over — ticking "Halal" would hide "Organic" the moment
+ * no product is both, and worse, an active facet could hide the very checkbox needed to untick it,
+ * stranding the shopper in a filter they cannot see or remove. Excluding all three means an active
+ * speciality is ALWAYS reported available, because its own filter never enters its own probe.
+ *
+ * The term predicate comes from `buildDirectSearchWhere` — the same function `searchProducts` runs
+ * — so the facets cannot drift from the result set they describe.
+ */
 export async function getAvailableSpecialities(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
+  context: SpecialityContext = {},
 ): Promise<AvailableSpecialities> {
-  const base = { vendorId, isActive: true };
+  const { groups, ...filters } = context;
+  const base: Prisma.ProductWhereInput = {
+    vendorId,
+    isActive: true,
+    ...buildFilterWhere(filters),
+    ...(groups && groups.length > 0 ? buildDirectSearchWhere(groups) : {}),
+  };
   const [halal, fresh, organic] = await Promise.all([
     prisma.product.findFirst({ where: { ...base, isHalal: true }, select: { id: true } }),
     prisma.product.findFirst({ where: { ...base, isFresh: true }, select: { id: true } }),
     prisma.product.findFirst({ where: { ...base, isOrganic: true }, select: { id: true } }),
   ]);
   return { halal: halal !== null, fresh: fresh !== null, organic: organic !== null };
+}
+
+/** One autocomplete product suggestion — the smallest shape a suggestion row can render from. */
+export interface ProductSuggestion {
+  id: string;
+  slug: string;
+  name: string;
+  inStock: boolean;
+}
+
+/**
+ * Autocomplete product suggestions (#568). Deliberately NOT `searchProducts`.
+ *
+ * What it does not do is the point. No zero-result ladder, no 200-candidate window, no tier-price
+ * lookup, no `SearchQueryLog` write. That last one is not a performance nicety: this runs once per
+ * keystroke, so logging here would flood the exact table `#566`'s synonym proposals read — a
+ * feature silently corrupting its neighbour's input.
+ *
+ * `name` only, never `description`. A suggestion matching prose reads as a confident wrong answer,
+ * the same ruling that already keeps `matchProductListTerms` name-only — and it matters more here,
+ * because a suggestion is offered before the shopper has committed to anything.
+ *
+ * Ranked by the same `rankSearchCandidates` the results page uses, so what is suggested first is
+ * ordered the way what is found first will be.
+ *
+ * `candidateLimit` is a required parameter rather than a module constant: the bound belongs to the
+ * public endpoint that is exposed to one request per keystroke, so it is declared and owned there
+ * (`app/api/search/suggest/route.ts`) where anyone reading the route can see what it costs.
+ */
+export async function suggestProducts(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  query: string,
+  candidateLimit: number,
+): Promise<ProductSuggestion[]> {
+  const terms = parseSearchQuery(query);
+  // Same guard as searchProducts: no terms means no query is issued at all, which is what keeps
+  // the cheapest abusive request (a single character) from reaching the database.
+  if (terms.length === 0) return [];
+
+  const aliases = await listApprovedAliasMap(prisma, vendorId);
+  const groups = expandSearchTerms(terms, aliases);
+
+  const rows = await prisma.product.findMany({
+    where: {
+      vendorId,
+      isActive: true,
+      AND: groups.map((group) => ({
+        OR: group.variants.map((variant) => ({
+          name: { contains: variant, mode: "insensitive" as const },
+        })),
+      })),
+    },
+    take: candidateLimit,
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      inventory: { select: { quantity: true } },
+    },
+  });
+
+  const candidates = rows.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    inStock: (row.inventory?.quantity ?? 0) > 0,
+  }));
+  return rankSearchCandidates(candidates, groups);
 }
 
 /**

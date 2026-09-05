@@ -25,6 +25,7 @@ import {
   saveGeneratedProductImage as saveGeneratedProductImageRepo,
   searchProducts,
   setPrimaryProductImage as setPrimaryProductImageRepo,
+  suggestProducts as suggestProductsRepo,
   updateProductForVendor as updateProductForVendorRepo,
   type AdminProductDetail,
   type AdminProductPage,
@@ -107,8 +108,12 @@ export function getProductRepository(): ProductRepository {
       return getProductBySlug(prisma, await vendorId(), slug);
     },
 
-    async availableSpecialities() {
-      return getAvailableSpecialities(prisma, await vendorId());
+    async availableSpecialities(context) {
+      return getAvailableSpecialities(prisma, await vendorId(), context);
+    },
+
+    async suggestProducts(query, candidateLimit) {
+      return suggestProductsRepo(prisma, await vendorId(), query, candidateLimit);
     },
 
     async matchListTerms(terms) {

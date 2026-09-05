@@ -5,7 +5,8 @@ import { getProductRepository } from "@/lib/products-service";
 import { getRequestCartQuantities } from "@/lib/cart-summary";
 import { getEnv } from "@/lib/config";
 import { ProductCard } from "@/components/product/ProductCard";
-import { ProductFilterForm } from "@/components/product/ProductFilterForm";
+import { FilterPanel } from "@/components/product/FilterPanel";
+import { FilterChips } from "@/components/product/FilterChips";
 import { SubcategoryLinks } from "@/components/product/SubcategoryLinks";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
@@ -106,7 +107,18 @@ export default async function CategoryPage({
     isFresh: query.isFresh === "1",
     isOrganic: query.isOrganic === "1",
   });
-  const specialities = await products.availableSpecialities();
+  /*
+   * #568 — facets narrow to this category's own products (and its subcategories'), so a department
+   * with no organic stock does not offer an Organic toggle that would return nothing. The three
+   * speciality flags are deliberately not passed; see `getAvailableSpecialities` for why each
+   * probe must exclude all of them rather than only its own.
+   */
+  const specialities = await products.availableSpecialities({
+    categoryIds,
+    minPricePence: parsePriceInput(query.minPrice ?? ""),
+    maxPricePence: parsePriceInput(query.maxPrice ?? ""),
+    inStockOnly: query.inStock === "1",
+  });
   // P8.5a (#345): request-memoised, so this shares the header's cart read
   // rather than issuing a second identical query.
   const cartQuantities = await getRequestCartQuantities();
@@ -130,17 +142,18 @@ export default async function CategoryPage({
       <DepartmentScroller categories={allCategories} activeSlug={scrollerActiveSlug} />
 
       <div className="mt-6 flex flex-col gap-6 md:flex-row">
-        {/* Search & filters: vertical sidebar on the left. */}
-        <aside className="shrink-0 md:w-60">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary">
-            Filters
-          </h2>
-          <ProductFilterForm searchParams={query} specialities={specialities} />
-        </aside>
+        {/* #568 — sidebar at md+, a `details` disclosure below it. Both render the same form. */}
+        <FilterPanel heading="Filters" searchParams={query} specialities={specialities} />
 
         <section className="flex-1">
           <h1 className="mb-6 text-2xl font-semibold text-primary">{category.name}</h1>
           <SubcategoryLinks tabs={tabs} parentSlug={tabParentSlug} activeSlug={slug} />
+          {/*
+            #568 — the category itself is NOT a chip here: it is the route, not a filter, and
+            removing it would have to mean navigating somewhere else entirely. `SubcategoryLinks`
+            above is how you change it.
+          */}
+          <FilterChips basePath={`/categories/${slug}`} params={query} />
           <h2 className="sr-only">Products</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {items.map((product) => (

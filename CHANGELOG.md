@@ -37,6 +37,29 @@ every branch merges.
 
 ### Added
 
+- **Search suggestions as you type, and a filter surface a shopper can steer** (`#568`, `#512`,
+  P2.6 slice 5). Typing in the header search box now suggests matching products, departments and
+  approved synonym terms, ordered by the same relevance-and-availability ranking the results page
+  uses (`#564`). Applied filters are shown as chips above the results and can be removed one at a
+  time or cleared in one action, on both `/search` and `/categories/[slug]`. Search results can be
+  narrowed to a department **without losing the query** — `/search?q=rice&category=world-foods`
+  applies both, where previously drilling into a category meant navigating away and starting the
+  search again. On a narrow viewport the filters collapse into a disclosure panel instead of
+  pushing the products down the page.
+  **Filter toggles now reflect the current results**, not just the vendor: a speciality that no
+  product in the current search or department carries is not offered. Each toggle is computed with
+  every speciality filter excluded, so ticking one never hides the others — and an active filter
+  can always be unticked.
+  **Everything here still works with JavaScript disabled.** The filter panel is a native
+  disclosure rather than a scripted drawer, chips and drill-down are plain links, and the search
+  box remains a normal form that submits; suggestions are strictly additive. The suggestion
+  endpoint is bounded by a minimum query length, a hard result cap, a client-side debounce and a
+  short edge-cacheable response rather than a per-request throttle row, and it reaches no AI and
+  writes no search-query log row.
+  Also fixes the Apply button rendering a hardcoded green (`#512`) — it ignored per-vendor
+  branding, so SriMart showed Aheed's colour, and its hover shade pre-dated the WCAG AA contrast
+  darkening. No schema change and no migration.
+
 - **"Shop your list" now understands how people actually write a shopping list** (`#567`, P2.6
   slice 4). An AI pre-pass turns pasted free text into structured items — name, quantity, pack
   size, brand — which are handed to the **existing, unchanged** matcher, expanded through `#566`'s
