@@ -20,11 +20,17 @@ export type SearchHrefParams = {
   isHalal?: string;
   isFresh?: string;
   isOrganic?: string;
+  isVegetarian?: string;
+  isGlutenFree?: string;
+  isHmcCertified?: string;
+  onOffer?: string;
+  origin?: string;
+  brand?: string;
   featured?: string;
   category?: string;
 };
 
-const CARRIED: (keyof SearchHrefParams)[] = [
+export const CARRIED: (keyof SearchHrefParams)[] = [
   "q",
   "minPrice",
   "maxPrice",
@@ -32,6 +38,16 @@ const CARRIED: (keyof SearchHrefParams)[] = [
   "isHalal",
   "isFresh",
   "isOrganic",
+  // #569 — six new facets. Each MUST be here: this list is what survives a "Next page" click, and
+  // a key present in the chips but missing here is dropped one click into pagination, leaving the
+  // shopper on a wider result set than the chips claim. Exactly the bug #501 fixed for `featured`
+  // and #568 for `category`. `tests/filter-chips.test.ts` pins this list against REMOVABLE.
+  "isVegetarian",
+  "isGlutenFree",
+  "isHmcCertified",
+  "onOffer",
+  "origin",
+  "brand",
   "featured",
   // #568 — category drill-down is a filter like any other here, so it must survive pagination for
   // the same reason every key above does: dropping it one click into "Next page" silently widens

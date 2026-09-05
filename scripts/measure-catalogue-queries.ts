@@ -31,7 +31,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { performance } from "node:perf_hooks";
 import {
-  getAvailableSpecialities,
+  getAvailableFacets,
   listProducts,
   listProductsByCategory,
   searchProducts,
@@ -221,8 +221,28 @@ async function main() {
     ),
   );
   timings.push(
-    await time("speciality facets (getAvailableSpecialities)", samples, () =>
-      getAvailableSpecialities(prisma as never, aheed.id),
+    await time("facets (getAvailableFacets)", samples, () =>
+      getAvailableFacets(prisma as never, aheed.id),
+    ),
+  );
+  // #569 — the same function under a NARROWED context, which is what a shopper who has already
+  // ticked something actually pays. The probe count roughly tripled in that slice (nine parallel
+  // queries, up from three), so measuring only the unfiltered call would miss the case where every
+  // probe carries extra predicates.
+  timings.push(
+    await time("facets, filtered context (getAvailableFacets)", samples, () =>
+      getAvailableFacets(prisma as never, aheed.id, {
+        minPricePence: 100,
+        maxPricePence: 2000,
+        inStockOnly: true,
+      }),
+    ),
+  );
+  // #569 — a search with an offers facet active: the path where buildFilterWhere and the search
+  // predicate must compose rather than collide, and the most expensive shape this slice adds.
+  timings.push(
+    await time("search + offers facet (searchProducts)", samples, () =>
+      searchProducts(prisma as never, aheed.id, "rice", { take: PAGE_SIZE, onOffer: true }),
     ),
   );
   timings.push(

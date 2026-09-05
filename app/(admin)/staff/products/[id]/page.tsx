@@ -5,6 +5,7 @@ import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
 import { getProductForAdmin } from "@/lib/products-service";
 import { listCategoriesForAdmin } from "@/lib/categories-service";
+import { getBrandRepository } from "@/lib/brands-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { ProductForm } from "@/components/staff/ProductForm";
 
@@ -41,9 +42,10 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     );
   }
 
-  const [product, categories] = await Promise.all([
+  const [product, categories, brands] = await Promise.all([
     getProductForAdmin(auth.vendorId, id),
     listCategoriesForAdmin(auth.vendorId),
+    getBrandRepository().listSummaries(),
   ]);
   if (!product) notFound();
 
@@ -61,7 +63,12 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       <p className="mb-6 text-sm text-primary/60">
         Changes apply to the shop immediately. Past orders keep the price they were charged.
       </p>
-      <ProductForm product={product} categories={categories} imageUrls={imageUrls} />
+      <ProductForm
+        product={product}
+        categories={categories}
+        brands={brands}
+        imageUrls={imageUrls}
+      />
     </main>
   );
 }

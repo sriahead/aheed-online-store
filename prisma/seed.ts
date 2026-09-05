@@ -343,6 +343,14 @@ type CatalogueProduct = {
   isHalal?: boolean;
   isFresh?: boolean;
   isOrganic?: boolean;
+  /** #569 — dietary facets, HMC provenance and brand, so every new filter is reachable. */
+  isVegetarian?: boolean;
+  isGlutenFree?: boolean;
+  isHmcCertified?: boolean;
+  hmcReference?: string;
+  hmcVerifiedAt?: string;
+  /** A brand SLUG; resolved to an id at write time. */
+  brand?: string;
 };
 
 type CatalogueCategory = {
@@ -461,6 +469,13 @@ const CATALOGUE: CatalogueCategory[] = [
         origin: "United Kingdom",
         isHalal: true,
         isFresh: true,
+        // #569 — the flag never travels without its provenance, in fixture data exactly as the
+        // admin form enforces at write time. A demo reference, but a demo reference in the right
+        // SHAPE: certification is a claim about a third party, and #239 is why it carries evidence.
+        isHmcCertified: true,
+        hmcReference: "HMC/DEMO/00417",
+        hmcVerifiedAt: "2026-07-14",
+        brand: "shan",
       },
       {
         slug: "halal-lamb-mince",
@@ -556,6 +571,8 @@ const CATALOGUE: CatalogueCategory[] = [
         unitLabel: "£2.79 / box",
         quantity: 45,
         origin: "Morocco",
+        isVegetarian: true,
+        brand: "trs",
       },
     ],
   },
@@ -586,6 +603,9 @@ const CATALOGUE: CatalogueCategory[] = [
         quantity: 33,
         origin: "United Arab Emirates",
         isOrganic: true,
+        isVegetarian: true,
+        isGlutenFree: true,
+        brand: "east-end",
       },
     ],
   },
@@ -726,7 +746,98 @@ async function refreshProductImages(catalogue: CatalogueCategory[]) {
   console.log(`refreshed ${products.length} placeholder product image(s)`);
 }
 
+/**
+ * #569 — the brands the fixture catalogue references.
+ *
+ * Seeded with `upsert` and OUTSIDE the per-category idempotency check below, deliberately. That
+ * check returns early once a vendor's categories exist, so anything placed after it never runs
+ * again for an already-seeded database — which is exactly how #502's product images ended up
+ * present in dev and absent in staging. Brands must be able to appear in a database seeded before
+ * this slice existed.
+ */
+const CATALOGUE_BRANDS: { slug: string; name: string }[] = [
+  { slug: "shan", name: "Shan" },
+  { slug: "east-end", name: "East End" },
+  { slug: "trs", name: "TRS" },
+];
+
+async function seedBrands(vendorId: string): Promise<Map<string, string>> {
+  const ids = new Map<string, string>();
+  for (const brand of CATALOGUE_BRANDS) {
+    const row = await prisma.brand.upsert({
+      where: { vendorId_slug: { vendorId, slug: brand.slug } },
+      create: { vendorId, slug: brand.slug, name: brand.name },
+      update: { name: brand.name },
+      select: { id: true },
+    });
+    ids.set(brand.slug, row.id);
+  }
+  console.log(`seeded ${CATALOGUE_BRANDS.length} brands for ${vendorId}`);
+  return ids;
+}
+
+/**
+ * #569 — apply the fixture's facet fields to products that ALREADY EXIST.
+ *
+ * WHY THIS IS SEPARATE FROM THE CREATE PATH, and why it runs before the early return below.
+ * `seedCatalogue` skips any category already present for the vendor, so everything after that check
+ * only ever runs against a from-scratch database. New columns added to the fixture would therefore
+ * reach a fresh dev database and NEVER reach an already-seeded one — dev, staging and production
+ * would each show a different set of facets, and a filter with no qualifying row simply does not
+ * render, so the gap looks like "this vendor has no vegetarian stock" rather than like a bug.
+ *
+ * That is precisely #502: a row-only idempotency guard placed above the work it guards, leaving two
+ * environments silently divergent. Here the cost of getting it wrong is a facet that can never be
+ * validated anywhere except a database nobody has.
+ *
+ * Idempotent and narrow: it writes only the columns this slice added, only for fixture products
+ * that actually declare them, and only where the product already exists.
+ */
+async function applyFacetFields(
+  vendorId: string,
+  catalogue: CatalogueCategory[],
+  brandIds: Map<string, string>,
+) {
+  let updated = 0;
+  for (const product of catalogue.flatMap((c) => c.products)) {
+    const brandId = product.brand ? (brandIds.get(product.brand) ?? null) : null;
+    const hasFacetData =
+      product.isVegetarian !== undefined ||
+      product.isGlutenFree !== undefined ||
+      product.isHmcCertified !== undefined ||
+      brandId !== null;
+    if (!hasFacetData) continue;
+
+    const existing = await prisma.product.findFirst({
+      where: { vendorId, slug: product.slug },
+      select: { id: true },
+    });
+    if (!existing) continue;
+
+    await prisma.product.update({
+      where: { id: existing.id },
+      data: {
+        isVegetarian: product.isVegetarian ?? false,
+        isGlutenFree: product.isGlutenFree ?? false,
+        isHmcCertified: product.isHmcCertified ?? false,
+        hmcReference: product.hmcReference ?? null,
+        hmcVerifiedAt: product.hmcVerifiedAt
+          ? new Date(`${product.hmcVerifiedAt}T00:00:00.000Z`)
+          : null,
+        brandId,
+      },
+    });
+    updated += 1;
+  }
+  if (updated > 0) console.log(`applied #569 facet fields to ${updated} existing product(s)`);
+}
+
 async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
+  // #569 — both before the early return below, so brands and facet fields reach a database that was
+  // seeded before this slice existed. See applyFacetFields for why that positioning matters.
+  const brandIds = await seedBrands(vendorId);
+  await applyFacetFields(vendorId, catalogue, brandIds);
+
   // Idempotency is PER-VENDOR now (slugs are per-vendor unique, ADR-004): only skip a
   // category already present for THIS vendor.
   const existingSlugs = new Set(
@@ -780,6 +891,16 @@ async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
             isHalal: product.isHalal ?? false,
             isFresh: product.isFresh ?? false,
             isOrganic: product.isOrganic ?? false,
+            isVegetarian: product.isVegetarian ?? false,
+            isGlutenFree: product.isGlutenFree ?? false,
+            // The HMC invariant lib/catalogue-form.ts enforces holds in fixture data too: the flag
+            // is never true without both provenance fields behind it (#569, R43).
+            isHmcCertified: product.isHmcCertified ?? false,
+            hmcReference: product.hmcReference ?? null,
+            hmcVerifiedAt: product.hmcVerifiedAt
+              ? new Date(`${product.hmcVerifiedAt}T00:00:00.000Z`)
+              : null,
+            brandId: product.brand ? (brandIds.get(product.brand) ?? null) : null,
             images: {
               create: {
                 storageKey: `products/${product.slug}/main.svg`,

@@ -17,12 +17,20 @@ import { FilterPanel } from "@/components/product/FilterPanel";
 
 afterEach(cleanup);
 
-const NO_SPECIALITIES = { halal: false, fresh: false, organic: false };
+const NO_FACETS = {
+  halal: false,
+  fresh: false,
+  organic: false,
+  vegetarian: false,
+  glutenFree: false,
+  hmcCertified: false,
+  onOffer: false,
+  origins: [],
+  brands: [],
+};
 
 function renderPanel() {
-  return render(
-    <FilterPanel heading="Search & filters" searchParams={{}} specialities={NO_SPECIALITIES} />,
-  );
+  return render(<FilterPanel heading="Search & filters" searchParams={{}} facets={NO_FACETS} />);
 }
 
 describe("FilterPanel structure (R1)", () => {

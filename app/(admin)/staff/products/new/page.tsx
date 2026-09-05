@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { listCategoriesForAdmin } from "@/lib/categories-service";
+import { getBrandRepository } from "@/lib/brands-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { ProductForm } from "@/components/staff/ProductForm";
 
@@ -35,6 +36,8 @@ export default async function NewProductPage() {
 
   const categories = await listCategoriesForAdmin(auth.vendorId);
 
+  const brands = await getBrandRepository().listSummaries();
+
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">New product</h1>
@@ -55,7 +58,7 @@ export default async function NewProductPage() {
           </Link>
         </div>
       ) : (
-        <ProductForm product={null} categories={categories} imageUrls={[]} />
+        <ProductForm product={null} categories={categories} brands={brands} imageUrls={[]} />
       )}
     </main>
   );
