@@ -4,7 +4,7 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.15.0"
+version: "1.16.0"
 updated: 2026-09-05
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
@@ -129,7 +129,11 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   that introduced it. What stays banned either way is raw SQL **at request time** in `app/`,
   `features/`, `components/` or `lib/repositories/*` — that is the portability and injection
   surface the rule was written for.
-- **The GAP-011 drift risk above is not hypothetical — it fired for real in #508 (2026-09-01).**
+- **The GAP-011 drift risk above is not hypothetical — it fired for real in #508 (2026-09-01), and
+  has now fired on EVERY migration this project has generated since.** By `#569` (2026-09-05) that
+  is six occurrences: `#508`, then once per P2.6 slice carrying a migration (`#565`, `#566`, `#567`)
+  and again at `#569`. Treat it as certain rather than possible — `--create-only` followed by
+  reading the generated SQL is not a precaution here, it is the procedure.
   Adding a new model (`ErrorEvent`) with no relationship whatsoever to `Order` or `User` was enough
   for `prisma migrate dev` to generate `DROP INDEX` for all three hand-authored `pg_trgm` indexes
   from `20260820143949_p7_5de_order_search_trigram` — and that drop **executed** against the dev
@@ -470,7 +474,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  94 files / 1126 tests**, measured 2026-09-05 at `#568`'s Build) and treat any shortfall as
+  94 files / 1144 tests**, measured 2026-09-05 at `#569`'s Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -483,7 +487,9 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `/document`, because a Clear sits between the two and the measured number would not survive it —
   and `89/1072` moved to `89/1076` the same day at `#567`'s own `/fix`: no new file, four tests
   added to an *existing* one (`tests/list-normalisation.test.ts`), covering the response-shape bug
-  `/validate` found live plus the R15 hang-timeout case that had been missing since Build. Each time,
+  `/validate` found live plus the R15 hang-timeout case that had been missing since Build, and
+  `94/1126` moved to **`94/1144`** at `#569`'s Build — eighteen tests across five *existing* files,
+  no new file at all, which is the cleanest demonstration yet of the refinement below. Each time,
   the staleness
   quietly *disabled* the detection it exists to provide: a validator believing `77` would read
   `#566`'s genuine ten-file shortfall as roughly right. **The rule this last move corrects: it is
