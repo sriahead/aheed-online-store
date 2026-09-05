@@ -29,7 +29,7 @@ import { describe, expect, it } from "vitest";
  * `fs.readFileSync`). Node cannot load that build's WASM query compiler. Measured
  * 2026-08-27 against the dev Neon branch:
  *
- *   getAvailableSpecialities(prisma, vendorId)  -> PASS  (client injected)
+ *   getAvailableFacets(prisma, vendorId)  -> PASS  (client injected)
  *   getVendorConfig(vendorId)                   -> FAIL  ERR_UNKNOWN_FILE_EXTENSION
  *                                                        query_compiler_bg.wasm
  *   the same query via the script's own client  -> PASS

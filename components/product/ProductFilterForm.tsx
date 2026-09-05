@@ -1,3 +1,5 @@
+import type { AvailableFacets } from "@/lib/repositories/products";
+
 /**
  * Plain <form method="GET"> — no client-side JS. Submitting it is a real page
  * navigation that replaces the query string, so a filter change naturally
@@ -9,7 +11,7 @@
 export function ProductFilterForm({
   showQuery,
   searchParams,
-  specialities,
+  facets,
 }: {
   showQuery?: boolean;
   searchParams: {
@@ -20,14 +22,30 @@ export function ProductFilterForm({
     isHalal?: string;
     isFresh?: string;
     isOrganic?: string;
+    isVegetarian?: string;
+    isGlutenFree?: string;
+    isHmcCertified?: string;
+    onOffer?: string;
+    origin?: string;
+    brand?: string;
     featured?: string;
     category?: string;
   };
-  // Per-vendor filter visibility (ADR-004 follow-up): only offer a speciality
-  // filter the vendor's catalogue actually uses. Defaults to none.
-  specialities?: { halal: boolean; fresh: boolean; organic: boolean };
+  // Per-vendor filter visibility (ADR-004 follow-up): only offer a filter the vendor's catalogue
+  // actually uses, narrowed since #568 to the current result context. Defaults to none.
+  facets?: AvailableFacets;
 }) {
-  const spec = specialities ?? { halal: false, fresh: false, organic: false };
+  const spec: AvailableFacets = facets ?? {
+    halal: false,
+    fresh: false,
+    organic: false,
+    vegetarian: false,
+    glutenFree: false,
+    hmcCertified: false,
+    onOffer: false,
+    origins: [],
+    brands: [],
+  };
   return (
     <form method="GET" className="flex flex-col gap-5">
       {/*
@@ -135,7 +153,101 @@ export function ProductFilterForm({
             <span className="text-sm text-primary">Organic</span>
           </label>
         )}
+        {/* #569 — dietary facets, same conditional-visibility rule as the three above. */}
+        {spec.vegetarian && (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="isVegetarian"
+              value="1"
+              defaultChecked={searchParams.isVegetarian === "1"}
+            />
+            <span className="text-sm text-primary">Vegetarian</span>
+          </label>
+        )}
+        {spec.glutenFree && (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="isGlutenFree"
+              value="1"
+              defaultChecked={searchParams.isGlutenFree === "1"}
+            />
+            <span className="text-sm text-primary">Gluten free</span>
+          </label>
+        )}
+        {spec.hmcCertified && (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="isHmcCertified"
+              value="1"
+              defaultChecked={searchParams.isHmcCertified === "1"}
+            />
+            <span className="text-sm text-primary">HMC certified</span>
+          </label>
+        )}
+        {spec.onOffer && (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="onOffer"
+              value="1"
+              defaultChecked={searchParams.onOffer === "1"}
+            />
+            <span className="text-sm text-primary">On offer</span>
+          </label>
+        )}
       </fieldset>
+
+      {/*
+        #569 — origin and brand are DISTINCT-VALUE facets, not booleans, so they are selects rather
+        than checkboxes: a real catalogue carries more brands than a checkbox list can hold without
+        dominating the panel. Single-select, which is what makes one removable chip per facet the
+        correct chip model. Each renders only when its facet has values in the current context, so
+        an empty option list is never offered.
+
+        The first option carries an EMPTY value deliberately: a GET form submits every control it
+        contains, so selecting it submits `origin=` (empty), which the page reads as "no filter" —
+        the same way an unticked checkbox is simply absent.
+      */}
+      {spec.origins.length > 0 && (
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-semibold text-primary">Country of origin</span>
+          <select
+            name="origin"
+            defaultValue={searchParams.origin ?? ""}
+            className="w-full rounded-sm border border-black/20 px-3 py-2"
+          >
+            <option value="">Any origin</option>
+            {spec.origins.map((origin) => (
+              <option key={origin} value={origin}>
+                {origin}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      {spec.brands.length > 0 && (
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-semibold text-primary">Brand</span>
+          <select
+            name="brand"
+            defaultValue={searchParams.brand ?? ""}
+            className="w-full rounded-sm border border-black/20 px-3 py-2"
+          >
+            <option value="">Any brand</option>
+            {/* Value is the SLUG, not the id: it is what appears in a shopper's URL, and a slug
+                survives being shared or bookmarked in a way an opaque uuid does not. */}
+            {spec.brands.map((brand) => (
+              <option key={brand.id} value={brand.slug}>
+                {brand.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       {/*
         #512 — this was a hardcoded `bg-[#2E7D32] hover:bg-[#1b5e20]`. Two things were wrong with

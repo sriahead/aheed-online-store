@@ -4,10 +4,10 @@ title: NFR Baseline — measured performance against the Gate-3 targets
 audience: [dev]
 type: doc
 status: approved
-version: "1.3.0"
-updated: 2026-09-03
+version: "1.4.0"
+updated: 2026-09-05
 visibility: internal
-summary: Measurements against mission.md's LCP and API p95 targets, plus the index/query review behind them — including a 4.7x LCP breach from a 1.9 MB vendor logo — a re-measurement of the query paths at roughly 2,000 products rather than 22, and a further re-measurement of storefront search after #564 tokenised it.
+summary: Measurements against mission.md's LCP and API p95 targets, plus the index/query review behind them — including a 4.7x LCP breach from a 1.9 MB vendor logo — a re-measurement of the query paths at roughly 2,000 products rather than 22, and a further re-measurement of storefront search after #564 tokenised it and after #569 roughly tripled the facet probe count.
 tags: [nfr, performance, observability, lcp, indexes, p7, p9]
 related:
   [mission, architecture, tech-stack, gap-register-audit, p7d-observability-nfr-plan, catalogue-depth-and-scale]
@@ -411,3 +411,49 @@ with evidence), and there is nothing to remediate yet.
   mistake its absence for a pass. The staging figures in the review table above remain the only
   measurement this path has.
 
+
+### Re-measurement after #569 (catalogue filter facets), 2026-09-05
+
+P2.6 slice 6 added four facets — country of origin, dietary flags, brand and offers — and with them
+a schema change (`Brand`, three dietary booleans, HMC provenance, two new indexes) and a materially
+wider facet probe. `getAvailableFacets` (renamed from `getAvailableSpecialities`, since it no longer
+reports only specialities) went from **three probes to nine**: six dietary and speciality booleans,
+an offers probe, and two distinct-value queries for origins and brands. That is the change most
+likely to move a number here, so the path was measured rather than assumed.
+
+All nine run inside one `Promise.all`, so the cost is the slowest probe rather than the sum — which
+is the property the numbers below actually confirm.
+
+Same harness (`scripts/measure-catalogue-queries.ts`), same dev branch
+(`ep-sparkling-paper-za3j7xza`), 15 samples after a discarded warm-up. Catalogue at measurement:
+**2,080 Aheed products** (2,000 generated), 13 top-level categories, 27 subcategories.
+
+| Query | p50 | p95 | vs. previous |
+|---|---|---|---|
+| storefront catalogue listing (`listProducts`) | 46.2 ms | 52.4 ms | improved from 61.0 ms |
+| category page products (`listProductsByCategory`) | 47.6 ms | 70.4 ms | broadly flat |
+| category page (`getCategoryBySlug`) | 48.2 ms | 64.3 ms | broadly flat |
+| product search (`searchProducts`) | 75.6 ms | **102.1 ms** | from 95.4 ms |
+| facets, unfiltered (`getAvailableFacets`) | 39.9 ms | **77.7 ms** | from 30.6 ms at three probes |
+| facets, filtered context (`getAvailableFacets`) | 56.7 ms | 62.6 ms | new in this slice |
+| search + offers facet (`searchProducts`) | 77.4 ms | **114.3 ms** | new in this slice |
+| staff order list, no search (`listOrdersForStaff`) | 32.3 ms | 43.1 ms | broadly flat |
+| staff financials aggregate (`getFinancialsForStaff`) | 29.2 ms | 144.7 ms | noisy; see caveat below |
+
+**Verdict: the 400 ms API target holds with a 3.5x margin on the worst catalogue path.** The most
+expensive shape this slice adds — a tokenised search with the offers facet active, which is where
+`buildFilterWhere` and the search predicate must compose rather than collide — is **114.3 ms p95**.
+
+What the numbers say about the facet widening specifically: tripling the probe count moved facet
+p95 from 30.6 ms to 77.7 ms, roughly 2.5x rather than the 3x a sequential implementation would have
+cost, and the *filtered* context is cheaper (62.6 ms) than the unfiltered one because each probe
+scans fewer rows. Two indexes were added for the two high-cardinality facets
+(`@@index([vendorId, isActive, brandId])` and `@@index([vendorId, isActive, origin])`); the dietary
+booleans deliberately get none, matching the existing `isHalal`/`isFresh`/`isOrganic` treatment,
+since a boolean splits the table roughly in half and an index earns little against its write cost.
+
+**Caveat, unchanged from earlier rounds:** these are client-observed wall-clock times around the
+Prisma call from a UK developer machine to a `eu-west-2` Neon branch, so they include the network
+hop and are dominated by it at this scale. The `getFinancialsForStaff` p95 of 144.7 ms against a
+29.2 ms p50 is a single outlier in fifteen samples, not a regression — the same measurement noise
+this document already records for small sample counts.

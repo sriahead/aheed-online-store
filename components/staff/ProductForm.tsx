@@ -9,6 +9,7 @@ import { ProductImageUploader } from "@/components/staff/ProductImageUploader";
 import { ProductImageManager } from "@/components/staff/ProductImageManager";
 import type { AdminProductDetail } from "@/lib/repositories/products";
 import type { AdminCategoryRow } from "@/lib/repositories/categories";
+import type { BrandSummary } from "@/lib/repositories/brands";
 
 /**
  * Product create/edit form (P6b1, #159).
@@ -38,6 +39,8 @@ function poundsValue(pence: number | null | undefined): string {
 export interface ProductFormProps {
   product: AdminProductDetail | null;
   categories: AdminCategoryRow[];
+  /** #569 — the vendor's brands, for the picker. Empty until staff create one at /staff/brands. */
+  brands: BrandSummary[];
   /**
    * Public URLs composed by the PAGE, not here. `composePublicUrl` lives in
    * lib/storage.ts beside the aws4fetch client, so importing it from a
@@ -48,7 +51,7 @@ export interface ProductFormProps {
   imageUrls: { id: string; url: string; alt: string; isPrimary: boolean }[];
 }
 
-export function ProductForm({ product, categories, imageUrls }: ProductFormProps) {
+export function ProductForm({ product, categories, brands, imageUrls }: ProductFormProps) {
   const [state, action, saving] = useActionState(saveProduct, initialCatalogueState);
   const isNew = product === null;
 
@@ -208,6 +211,25 @@ export function ProductForm({ product, categories, imageUrls }: ProductFormProps
             </div>
 
             <div>
+              <label className={labelClass} htmlFor="brandId">
+                Brand (optional)
+              </label>
+              <select
+                id="brandId"
+                name="brandId"
+                defaultValue={product?.brandId ?? ""}
+                className={fieldClass("brandId")}
+              >
+                <option value="">No brand</option>
+                {brands.map((brand) => (
+                  <option key={brand.id} value={brand.id}>
+                    {brand.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label className={labelClass} htmlFor="quantity">
                 Stock
               </label>
@@ -311,6 +333,16 @@ export function ProductForm({ product, categories, imageUrls }: ProductFormProps
               defaultChecked={product?.isOrganic ?? false}
             />
             <Checkbox
+              name="isVegetarian"
+              label="Vegetarian"
+              defaultChecked={product?.isVegetarian ?? false}
+            />
+            <Checkbox
+              name="isGlutenFree"
+              label="Gluten free"
+              defaultChecked={product?.isGlutenFree ?? false}
+            />
+            <Checkbox
               name="isFeatured"
               label="Featured on homepage"
               defaultChecked={product?.isFeatured ?? false}
@@ -320,6 +352,61 @@ export function ProductForm({ product, categories, imageUrls }: ProductFormProps
               label="Visible in the shop"
               defaultChecked={product?.isActive ?? true}
             />
+          </div>
+        </section>
+
+        {/*
+          #569 — HMC certification is its OWN section, not another checkbox in "Labels & visibility",
+          because it is a claim about a third party rather than a description of the product. #239
+          was a real incident of asserting "100% Certified HMC Halal" with no basis; the reference
+          and verified date are what stop this being the same thing one product at a time.
+          lib/catalogue-form.ts rejects the save if the box is ticked and either field is blank, and
+          nulls both when it is unticked.
+        */}
+        <section className="space-y-3 rounded-2xl border border-black/10 bg-white p-5">
+          <h2 className="text-sm font-bold text-primary">HMC certification</h2>
+          <p className="text-xs text-primary/70">
+            Only tick this when you hold a current HMC certificate for the product. Both fields
+            below are required when it is ticked.
+          </p>
+          <Checkbox
+            name="isHmcCertified"
+            label="HMC certified"
+            defaultChecked={product?.isHmcCertified ?? false}
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelClass} htmlFor="hmcReference">
+                Certificate reference
+              </label>
+              <input
+                id="hmcReference"
+                name="hmcReference"
+                placeholder="HMC/2026/01234"
+                defaultValue={product?.hmcReference ?? ""}
+                className={fieldClass("hmcReference")}
+              />
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="hmcVerifiedAt">
+                Verified on
+              </label>
+              {/*
+                `type="date"`, NOT datetime-local: a date-only ISO value has no timezone ambiguity,
+                so this needs none of lib/local-datetime.ts's machinery. See parseHmcFields.
+              */}
+              <input
+                id="hmcVerifiedAt"
+                name="hmcVerifiedAt"
+                type="date"
+                defaultValue={
+                  product?.hmcVerifiedAt
+                    ? new Date(product.hmcVerifiedAt).toISOString().slice(0, 10)
+                    : ""
+                }
+                className={fieldClass("hmcVerifiedAt")}
+              />
+            </div>
           </div>
         </section>
 

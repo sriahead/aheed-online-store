@@ -37,6 +37,23 @@ export interface ProductFormValues {
   isHalal: boolean;
   isFresh: boolean;
   isOrganic: boolean;
+  /** P2.6 slice 6 (#569) — dietary facets. */
+  isVegetarian: boolean;
+  isGlutenFree: boolean;
+  /**
+   * #569 — HMC certification, and the two fields that substantiate it.
+   *
+   * The INVARIANT this parser enforces: `isHmcCertified` is true only when BOTH `hmcReference` and
+   * `hmcVerifiedAt` are present, and both are null whenever it is false. HMC is a named
+   * third-party certifying body, and #239 was a real incident where this codebase asserted
+   * "100% Certified HMC Halal" for a vendor with no basis for it — a bare tickable boolean would
+   * re-create that exposure one product at a time.
+   */
+  isHmcCertified: boolean;
+  hmcReference: string | null;
+  hmcVerifiedAt: Date | null;
+  /** #569 — the chosen brand's id, or null for "no brand". */
+  brandId: string | null;
   isFeatured: boolean;
   isActive: boolean;
   quantity: number;
@@ -238,6 +255,9 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
   const tier = parseTierFields(raw, basePrice);
   if (!tier.ok) return tier;
 
+  const hmc = parseHmcFields(raw);
+  if (!hmc.ok) return hmc;
+
   return {
     ok: true,
     value: {
@@ -251,6 +271,12 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
       unitLabel: unitLabel.value,
       origin: optionalText(raw, "origin"),
       isHalal: checkbox(raw, "isHalal"),
+      isVegetarian: checkbox(raw, "isVegetarian"),
+      isGlutenFree: checkbox(raw, "isGlutenFree"),
+      isHmcCertified: hmc.value.isHmcCertified,
+      hmcReference: hmc.value.hmcReference,
+      hmcVerifiedAt: hmc.value.hmcVerifiedAt,
+      brandId: optionalText(raw, "brandId"),
       isFresh: checkbox(raw, "isFresh"),
       isOrganic: checkbox(raw, "isOrganic"),
       isFeatured: checkbox(raw, "isFeatured"),
@@ -259,6 +285,68 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
       lowStockThreshold: lowStockThreshold.value,
       tier: tier.value,
     },
+  };
+}
+
+/**
+ * #569 — HMC certification and its provenance, parsed as one unit because they are one claim.
+ *
+ * Ticked means BOTH fields are required: a certification asserted with nothing recording who
+ * verified it or when is exactly what #239 made expensive. Unticked NULLS BOTH regardless of what
+ * was typed, so a flag that gets switched off cannot leave a stale reference behind to be read as
+ * still-current by a later reader.
+ *
+ * `hmcVerifiedAt` comes from an `input type="date"`, which submits a DATE-ONLY ISO string
+ * ("2026-09-05"). That is deliberately not `datetime-local`: a `datetime-local` value is a naked
+ * wall-clock string that ECMAScript interprets in the runtime's own zone, which is the whole reason
+ * `lib/local-datetime.ts` exists (a Worker and a UK laptop disagreed by the summer offset). A
+ * date-only form has no such ambiguity — the spec fixes it to UTC — so this needs no timezone
+ * machinery, and reaching for that helper here would add complexity for a problem this input shape
+ * does not have.
+ */
+function parseHmcFields(raw: RawForm): ParseResult<{
+  isHmcCertified: boolean;
+  hmcReference: string | null;
+  hmcVerifiedAt: Date | null;
+}> {
+  const isHmcCertified = checkbox(raw, "isHmcCertified");
+  if (!isHmcCertified) {
+    return { ok: true, value: { isHmcCertified: false, hmcReference: null, hmcVerifiedAt: null } };
+  }
+
+  const reference = optionalText(raw, "hmcReference");
+  if (reference === null) {
+    return {
+      ok: false,
+      error: {
+        field: "hmcReference",
+        message: "Enter the HMC certificate reference, or untick HMC certified.",
+      },
+    };
+  }
+
+  const verifiedRaw = text(raw, "hmcVerifiedAt");
+  if (verifiedRaw === "") {
+    return {
+      ok: false,
+      error: {
+        field: "hmcVerifiedAt",
+        message: "Enter the date the HMC certificate was verified, or untick HMC certified.",
+      },
+    };
+  }
+
+  const verifiedAt = new Date(`${verifiedRaw}T00:00:00.000Z`);
+  if (Number.isNaN(verifiedAt.getTime())) {
+    return {
+      ok: false,
+      error: { field: "hmcVerifiedAt", message: "Enter a valid date, like 2026-09-05." },
+    };
+  }
+
+  return {
+    ok: true,
+    value: { isHmcCertified: true, hmcReference: reference, hmcVerifiedAt: verifiedAt },
   };
 }
 
@@ -393,6 +481,14 @@ export const PRODUCT_FIELDS = [
   "isHalal",
   "isFresh",
   "isOrganic",
+  // #569 — a field absent from THIS list is never read out of the FormData at all, however
+  // correctly the form renders it and the parser handles it.
+  "isVegetarian",
+  "isGlutenFree",
+  "isHmcCertified",
+  "hmcReference",
+  "hmcVerifiedAt",
+  "brandId",
   "isFeatured",
   "isActive",
   "quantity",

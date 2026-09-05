@@ -199,6 +199,29 @@ export interface ProductFilters {
   isFresh?: boolean;
   isOrganic?: boolean;
   isFeatured?: boolean;
+  /** P2.6 slice 6 (#569) — dietary facets, same boolean shape as the three flags above. */
+  isVegetarian?: boolean;
+  isGlutenFree?: boolean;
+  isHmcCertified?: boolean;
+  /**
+   * #569 — "on offer": a single-unit markdown OR a multi-buy tier. One toggle, because both are
+   * genuine savings and a shopper filtering for offers wants "3 for GBP 10" as much as a
+   * struck-through price. See `buildFilterWhere` for why this one cannot be a top-level `OR`.
+   */
+  onOffer?: boolean;
+  /**
+   * #569 — country of origin, matched exactly against `Product.origin`. A raw string, NOT resolved
+   * against a taxonomy: unlike `categoryIds` there is nothing to resolve, so an unrecognised value
+   * legitimately matches nothing, exactly as an over-narrow price range does.
+   */
+  origin?: string;
+  /**
+   * #569 — brand, as an ID rather than a slug, for the identical reason `categoryIds` is:
+   * resolving a slug needs a second query, which belongs to the caller that already holds a
+   * repository. An unresolvable slug therefore reaches here as `undefined` — no predicate — rather
+   * than as a value that would silently empty the catalogue.
+   */
+  brandId?: string;
   /**
    * P2.6 slice 5 (#568) — category drill-down from within search results. Ids rather than a slug
    * so this stays a pure predicate: resolving a slug (and expanding it to its children) needs a
@@ -227,10 +250,27 @@ export interface CategorySpotlight {
 }
 
 /** Which speciality attributes the current vendor actually uses (≥1 active product). */
-export interface AvailableSpecialities {
+/**
+ * Which facet controls to offer for the current result context.
+ *
+ * RENAMED from `AvailableSpecialities` in #569: it no longer reports only specialities. Same
+ * precedent as #568 renaming `directSearchPredicate` to `buildDirectSearchWhere` — a helper whose
+ * role widens gets a name that still describes it, rather than one that quietly misleads at every
+ * call site.
+ */
+export interface AvailableFacets {
   halal: boolean;
   fresh: boolean;
   organic: boolean;
+  vegetarian: boolean;
+  glutenFree: boolean;
+  hmcCertified: boolean;
+  /** At least one product in this context is marked down or carries a multi-buy tier. */
+  onOffer: boolean;
+  /** Distinct non-null `Product.origin` values in this context, alphabetical. */
+  origins: string[];
+  /** Distinct brands with at least one product in this context, by name. */
+  brands: { id: string; name: string; slug: string }[];
 }
 
 export interface ProductRepository {
@@ -264,10 +304,13 @@ export interface ProductRepository {
   /**
    * Drives per-vendor filter visibility — a food vendor shows Halal/Fresh/Organic; a tech one
    * shows none. Since #568 it also narrows to the CURRENT result context (search terms, category,
-   * price, in-stock), so a toggle that would return nothing is not offered. Omit the argument for
+   * price, in-stock), so a control that would return nothing is not offered. Omit the argument for
    * the vendor-wide answer, which is the pre-#568 behaviour.
+   *
+   * #569 widened it beyond specialities to dietary flags, offers, origins and brands, hence the
+   * rename from `availableSpecialities`.
    */
-  availableSpecialities(context?: SpecialityContext): Promise<AvailableSpecialities>;
+  availableFacets(context?: FacetContext): Promise<AvailableFacets>;
   /**
    * Autocomplete product suggestions (#568). `candidateLimit` is passed in rather than fixed here
    * so the bound lives with the public route that owns the exposure — see `suggestProducts`.
@@ -332,6 +375,34 @@ export function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereIn
   if (filters.isFresh) where.isFresh = true;
   if (filters.isOrganic) where.isOrganic = true;
   if (filters.isFeatured) where.isFeatured = true;
+  // #569 — dietary facets.
+  if (filters.isVegetarian) where.isVegetarian = true;
+  if (filters.isGlutenFree) where.isGlutenFree = true;
+  if (filters.isHmcCertified) where.isHmcCertified = true;
+  if (filters.origin) where.origin = filters.origin;
+  if (filters.brandId) where.brandId = filters.brandId;
+  /*
+   * #569 — "on offer", and THE ONE FILTER THAT MUST NOT BE WRITTEN THE OBVIOUS WAY.
+   *
+   * The natural expression is `where.OR = [...]`. It would be silently wrong. `fetchSearchCandidates`
+   * composes its query as `{ ...buildFilterWhere(filters), ...predicate }`, and the #565 zero-result
+   * ladder's `identitySearchPredicate` and `broadSearchPredicate` BOTH return a top-level `OR` —
+   * spread second, so theirs would overwrite this one outright. The offers filter would then
+   * silently stop applying on exactly the two recovery rungs, handing the shopper products that
+   * are not on offer while the chip still reported the filter as active. Both objects are valid
+   * `Prisma.ProductWhereInput`, so nothing in lint, typecheck, test or build would say a word.
+   *
+   * Nesting under `AND` composes instead of colliding: Prisma ANDs the top-level keys together, so
+   * this clause and a rung's own `OR` coexist. `tests/search-repository.test.ts` pins both halves —
+   * that no top-level `OR` key is emitted, and that all three search paths retain both predicates.
+   *
+   * `originalPrice: { not: null }` is EXACT, not an approximation: lib/catalogue-form.ts already
+   * rejects a was-price at or below the current price, so a non-null value always means a real
+   * markdown. That matters because Prisma cannot compare two columns in a `where` at all.
+   */
+  if (filters.onOffer) {
+    where.AND = [{ OR: [{ originalPrice: { not: null } }, { priceTier: { isNot: null } }] }];
+  }
   // #568 — an empty array emits NOTHING, deliberately. See ProductFilters.categoryIds: an unknown
   // slug resolves to no ids, and `categoryId: { in: [] }` would match zero rows rather than
   // leaving the catalogue unfiltered.
@@ -580,6 +651,49 @@ function parseSearchOffset(cursor: string | undefined): number {
 }
 
 /**
+ * Combine independent `where` fragments so that NEITHER CAN OVERWRITE THE OTHER (#569).
+ *
+ * The obvious composition — `{ ...a, ...b }` — is safe only while no two fragments share a key.
+ * That held until this slice: `buildFilterWhere`'s offers clause and `buildDirectSearchWhere` both
+ * emit `AND`, and the #565 ladder's `identitySearchPredicate`/`broadSearchPredicate` both emit `OR`,
+ * so spreading silently drops whichever fragment came first. The failure is invisible — both sides
+ * are valid `Prisma.ProductWhereInput`, so lint, typecheck, test and build all stay green while the
+ * shopper receives products that do not match a filter their chips say is applied.
+ *
+ * Wrapping in `AND` composes instead: Prisma intersects the array's entries, so a filter clause and
+ * a search-rung clause coexist however many keys they happen to share. Empty fragments are dropped
+ * so an unfiltered query stays byte-identical to what it was before this slice.
+ */
+function combineWhere(
+  ...parts: (Prisma.ProductWhereInput | undefined)[]
+): Prisma.ProductWhereInput {
+  const present = parts.filter(
+    (part): part is Prisma.ProductWhereInput => part !== undefined && Object.keys(part).length > 0,
+  );
+  if (present.length === 0) return {};
+  if (present.length === 1) return present[0];
+
+  // Nest ONLY when two fragments actually share a key. Wrapping unconditionally would change the
+  // shape of every query in the app — including the ones that never had a collision — and several
+  // tests rightly assert those shapes verbatim. So the common case stays a plain spread, byte-
+  // identical to what it was before this slice, and `AND` appears only where it is load-bearing.
+  const seen = new Set<string>();
+  let collides = false;
+  for (const part of present) {
+    for (const key of Object.keys(part)) {
+      if (seen.has(key)) {
+        collides = true;
+        break;
+      }
+      seen.add(key);
+    }
+    if (collides) break;
+  }
+
+  return collides ? { AND: present } : Object.assign({}, ...present);
+}
+
+/**
  * One fetch/cap/rank-input-shape, shared by the direct search and every zero-result-ladder rung
  * (#565) — the query SHAPE (the `predicate` argument) changes per rung, the sentinel/cap machinery
  * does not. Mirrors exactly what `searchProducts` fetched inline before this slice.
@@ -591,12 +705,9 @@ async function fetchSearchCandidates(
   predicate: Prisma.ProductWhereInput,
 ): Promise<{ truncated: boolean; candidates: ProductSummary[] }> {
   const rows = await prisma.product.findMany({
-    where: {
-      vendorId,
-      isActive: true,
-      ...buildFilterWhere(filters),
-      ...predicate,
-    },
+    // #569 — combineWhere, NOT a spread: the filters and the rung predicate can both carry `AND`
+    // or both carry `OR`, and a spread would silently drop one of them.
+    where: combineWhere({ vendorId, isActive: true }, buildFilterWhere(filters), predicate),
     // A TOTAL order, so which rows land inside the cap is deterministic even
     // when createdAt ties right at the boundary. Without `id`, two products
     // sharing a timestamp could swap across the cap between identical requests.
@@ -624,7 +735,7 @@ async function fetchSearchCandidates(
  * rather than a behaviour change. `tests/search-repository.test.ts` pins that shape.
  *
  * EXPORTED since #568 (and renamed from `directSearchPredicate`, pairing with `buildFilterWhere`)
- * because `getAvailableSpecialities` must probe against the SAME predicate the search itself runs.
+ * because `getAvailableFacets` must probe against the SAME predicate the search itself runs.
  * A facet computed from a second, hand-written copy of this shape drifts the moment either changes,
  * and the failure is silent: the toggle offered would simply stop corresponding to the result set.
  */
@@ -913,11 +1024,14 @@ export async function getProductBySlug(
 }
 
 /**
- * The result context a facet probe is computed against (#568). Deliberately NOT `ProductFilters`:
- * the three speciality flags are excluded by TYPE rather than by a runtime `delete`, so a caller
- * cannot accidentally pass them in and reintroduce the trap described below.
+ * The result context a facet probe is computed against (#568, widened by #569). Deliberately NOT
+ * `ProductFilters`: EVERY field a facet control can set is excluded by TYPE rather than by a
+ * runtime `delete`, so a caller cannot accidentally pass one in and reintroduce the trap below.
+ *
+ * That exclusion list is now nine fields, not three — the six dietary/speciality booleans plus
+ * `onOffer`, `origin` and `brandId`. Renamed from `SpecialityContext` with the function itself.
  */
-export interface SpecialityContext {
+export interface FacetContext {
   groups?: readonly SearchTermGroup[];
   categoryIds?: readonly string[];
   minPricePence?: number;
@@ -926,38 +1040,88 @@ export interface SpecialityContext {
 }
 
 /**
- * Which speciality toggles to offer for the CURRENT result context (#568) — a toggle that would
- * return nothing is worse than absent, because it reads as "we have no organic stock" when it
- * really means "not in these results".
+ * Which facet controls to offer for the CURRENT result context (#568, widened by #569) — a control
+ * that would return nothing is worse than absent, because it reads as "we have no organic stock"
+ * when it really means "not in these results".
  *
- * THE TRAP THIS AVOIDS, stated because it is easy to reintroduce: each probe excludes ALL THREE
- * speciality filters, not just its own. Computing a facet against the full current filter state
- * looks obviously right and is wrong twice over — ticking "Halal" would hide "Organic" the moment
- * no product is both, and worse, an active facet could hide the very checkbox needed to untick it,
- * stranding the shopper in a filter they cannot see or remove. Excluding all three means an active
- * speciality is ALWAYS reported available, because its own filter never enters its own probe.
+ * THE TRAP THIS AVOIDS, stated because it is easy to reintroduce: each probe excludes ALL facet
+ * filters, not just its own. Computing a facet against the full current filter state looks
+ * obviously right and is wrong twice over — ticking "Halal" would hide "Organic" the moment no
+ * product is both, and worse, an active facet could hide the very control needed to untick it,
+ * stranding the shopper in a filter they cannot see or remove. Excluding all of them means an
+ * active facet is ALWAYS reported available, because its own filter never enters its own probe.
+ * `FacetContext` enforces that by type; this function never has the fields to leak in the first
+ * place.
  *
  * The term predicate comes from `buildDirectSearchWhere` — the same function `searchProducts` runs
  * — so the facets cannot drift from the result set they describe.
+ *
+ * ONE `Promise.all` (#569, R19). The probe count roughly tripled in this slice, so the cost of
+ * adding a facet must stay one round trip of latency rather than one each.
  */
-export async function getAvailableSpecialities(
+export async function getAvailableFacets(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
-  context: SpecialityContext = {},
-): Promise<AvailableSpecialities> {
+  context: FacetContext = {},
+): Promise<AvailableFacets> {
   const { groups, ...filters } = context;
-  const base: Prisma.ProductWhereInput = {
-    vendorId,
-    isActive: true,
-    ...buildFilterWhere(filters),
-    ...(groups && groups.length > 0 ? buildDirectSearchWhere(groups) : {}),
-  };
-  const [halal, fresh, organic] = await Promise.all([
-    prisma.product.findFirst({ where: { ...base, isHalal: true }, select: { id: true } }),
-    prisma.product.findFirst({ where: { ...base, isFresh: true }, select: { id: true } }),
-    prisma.product.findFirst({ where: { ...base, isOrganic: true }, select: { id: true } }),
+  const base = combineWhere(
+    { vendorId, isActive: true },
+    buildFilterWhere(filters),
+    groups && groups.length > 0 ? buildDirectSearchWhere(groups) : undefined,
+  );
+  const flagProbe = (flag: Prisma.ProductWhereInput) =>
+    prisma.product.findFirst({ where: combineWhere(base, flag), select: { id: true } });
+
+  const [
+    halal,
+    fresh,
+    organic,
+    vegetarian,
+    glutenFree,
+    hmcCertified,
+    onOffer,
+    originRows,
+    brandRows,
+  ] = await Promise.all([
+    flagProbe({ isHalal: true }),
+    flagProbe({ isFresh: true }),
+    flagProbe({ isOrganic: true }),
+    flagProbe({ isVegetarian: true }),
+    flagProbe({ isGlutenFree: true }),
+    flagProbe({ isHmcCertified: true }),
+    flagProbe({ OR: [{ originalPrice: { not: null } }, { priceTier: { isNot: null } }] }),
+    // `distinct` rather than a groupBy: the facet needs the VALUES, not counts, and a count
+    // would be a second promise nobody renders.
+    prisma.product.findMany({
+      where: combineWhere(base, { origin: { not: null } }),
+      select: { origin: true },
+      distinct: ["origin"],
+      orderBy: { origin: "asc" },
+    }),
+    prisma.product.findMany({
+      where: combineWhere(base, { brandId: { not: null } }),
+      select: { brand: { select: { id: true, name: true, slug: true } } },
+      distinct: ["brandId"],
+      orderBy: { brand: { name: "asc" } },
+    }),
   ]);
-  return { halal: halal !== null, fresh: fresh !== null, organic: organic !== null };
+
+  return {
+    halal: halal !== null,
+    fresh: fresh !== null,
+    organic: organic !== null,
+    vegetarian: vegetarian !== null,
+    glutenFree: glutenFree !== null,
+    hmcCertified: hmcCertified !== null,
+    onOffer: onOffer !== null,
+    origins: originRows
+      .map((row) => row.origin)
+      .filter((origin): origin is string => origin !== null),
+    brands: brandRows
+      .map((row) => row.brand)
+      .filter((brand): brand is { id: string; name: string; slug: string } => brand !== null),
+  };
 }
 
 /** One autocomplete product suggestion — the smallest shape a suggestion row can render from. */
@@ -1140,6 +1304,13 @@ export interface AdminProductDetail {
   isHalal: boolean;
   isFresh: boolean;
   isOrganic: boolean;
+  /** #569 — dietary facets and HMC provenance. */
+  isVegetarian: boolean;
+  isGlutenFree: boolean;
+  isHmcCertified: boolean;
+  hmcReference: string | null;
+  hmcVerifiedAt: Date | null;
+  brandId: string | null;
   isFeatured: boolean;
   isActive: boolean;
   quantity: number;
@@ -1164,6 +1335,13 @@ export interface ProductWriteInput {
   isHalal: boolean;
   isFresh: boolean;
   isOrganic: boolean;
+  /** #569 — dietary facets, HMC provenance and brand. */
+  isVegetarian: boolean;
+  isGlutenFree: boolean;
+  isHmcCertified: boolean;
+  hmcReference: string | null;
+  hmcVerifiedAt: Date | null;
+  brandId: string | null;
   isFeatured: boolean;
   isActive: boolean;
   quantity: number;
@@ -1327,6 +1505,12 @@ export async function getProductForAdmin(
       isHalal: true,
       isFresh: true,
       isOrganic: true,
+      isVegetarian: true,
+      isGlutenFree: true,
+      isHmcCertified: true,
+      hmcReference: true,
+      hmcVerifiedAt: true,
+      brandId: true,
       isFeatured: true,
       isActive: true,
       imageNeedsReview: true,
@@ -1404,6 +1588,12 @@ export async function createProductForVendor(
         originalPrice: input.originalPrice,
         unitLabel: input.unitLabel,
         origin: input.origin,
+        isVegetarian: input.isVegetarian,
+        isGlutenFree: input.isGlutenFree,
+        isHmcCertified: input.isHmcCertified,
+        hmcReference: input.hmcReference,
+        hmcVerifiedAt: input.hmcVerifiedAt,
+        brandId: input.brandId,
         isHalal: input.isHalal,
         isFresh: input.isFresh,
         isOrganic: input.isOrganic,
@@ -1468,6 +1658,12 @@ export async function updateProductForVendor(
           originalPrice: input.originalPrice,
           unitLabel: input.unitLabel,
           origin: input.origin,
+          isVegetarian: input.isVegetarian,
+          isGlutenFree: input.isGlutenFree,
+          isHmcCertified: input.isHmcCertified,
+          hmcReference: input.hmcReference,
+          hmcVerifiedAt: input.hmcVerifiedAt,
+          brandId: input.brandId,
           isHalal: input.isHalal,
           isFresh: input.isFresh,
           isOrganic: input.isOrganic,

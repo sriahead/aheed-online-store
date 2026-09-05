@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getProductRepository } from "@/lib/products-service";
 import { getRequestCartQuantities } from "@/lib/cart-summary";
 import { getCategoryRepository } from "@/lib/categories-service";
+import { getBrandRepository } from "@/lib/brands-service";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getEnv } from "@/lib/config";
 import { ProductCard } from "@/components/product/ProductCard";
@@ -43,6 +44,14 @@ type SearchParams = {
   isHalal?: string;
   isFresh?: string;
   isOrganic?: string;
+  /** #569 — dietary, offers, origin and brand facets. */
+  isVegetarian?: string;
+  isGlutenFree?: string;
+  isHmcCertified?: string;
+  onOffer?: string;
+  origin?: string;
+  /** #569 — a brand SLUG; unknown values are ignored, exactly as `category` is. */
+  brand?: string;
   featured?: string;
   cursor?: string;
   /** #568 — category drill-down from within results. A slug; unknown values are ignored. */
@@ -76,6 +85,15 @@ export default async function SearchPage({
   const products = getProductRepository();
 
   /*
+   * #569 — resolve the brand slug to an id, mirroring the category resolution above. Ids rather
+   * than slugs keep `buildFilterWhere` a pure predicate, and an unknown slug resolving to `null`
+   * is what lets the page apply NO predicate and render NO chip, rather than narrowing to a brand
+   * that matches nothing. `#568`'s R15 fix is the precedent: the predicate and the chip must be
+   * conditioned on the SAME resolution, or the chip claims a filter that never ran.
+   */
+  const selectedBrand = params.brand ? await getBrandRepository().getBySlug(params.brand) : null;
+
+  /*
    * #501 — BROWSE MODE. This page used to run its query inside `if (query)` and
    * gate the grid on `query &&`, so a bare `/search` returned 200 with an empty
    * content column. That made the shop page's only "View all" (a bare
@@ -97,6 +115,14 @@ export default async function SearchPage({
     isHalal: params.isHalal === "1",
     isFresh: params.isFresh === "1",
     isOrganic: params.isOrganic === "1",
+    isVegetarian: params.isVegetarian === "1",
+    isGlutenFree: params.isGlutenFree === "1",
+    isHmcCertified: params.isHmcCertified === "1",
+    onOffer: params.onOffer === "1",
+    // An exact column match, so a value matching nothing legitimately returns nothing — unlike an
+    // unresolved category or brand slug, which apply no predicate at all.
+    origin: params.origin || undefined,
+    brandId: selectedBrand?.id,
     // Only the exact value "1" enables it — an absent or any other value leaves
     // the filter off, so a stray `?featured=0` browses the full catalogue.
     isFeatured: params.featured === "1",
@@ -130,9 +156,9 @@ export default async function SearchPage({
    * #568 — facets narrow to the CURRENT result context, so a toggle that would return nothing is
    * not offered. The three speciality flags are deliberately NOT passed: each probe excludes all
    * of them, so ticking one never hides the others, and an active filter can always be unticked.
-   * `getAvailableSpecialities` explains the trap in full.
+   * `getAvailableFacets` explains the trap in full.
    */
-  const specialities = await products.availableSpecialities({
+  const facets = await products.availableFacets({
     groups:
       searchTerms.length > 0
         ? expandSearchTerms(searchTerms, await products.synonymAliasMap())
@@ -156,12 +182,7 @@ export default async function SearchPage({
 
       <div className="mt-6 flex flex-col gap-6 md:flex-row">
         {/* #568 — sidebar at md+, a `details` disclosure below it. Both render the same form. */}
-        <FilterPanel
-          heading="Search & filters"
-          showQuery
-          searchParams={params}
-          specialities={specialities}
-        />
+        <FilterPanel heading="Search & filters" showQuery searchParams={params} facets={facets} />
 
         <div className="flex-1">
           <h1 className="mb-6 text-2xl font-semibold text-primary">{heading}</h1>
@@ -182,8 +203,15 @@ export default async function SearchPage({
           */}
           <FilterChips
             basePath="/search"
-            params={{ ...params, category: selectedCategory ? params.category : undefined }}
+            params={{
+              ...params,
+              category: selectedCategory ? params.category : undefined,
+              // #569 — same guard as `category` above, for the same reason: an unresolved brand
+              // slug applies no predicate, so it must not render a removable chip either.
+              brand: selectedBrand ? params.brand : undefined,
+            }}
             categoryLabel={selectedCategory?.name}
+            brandLabel={selectedBrand?.name}
           />
 
           <SearchTruncationNotice truncated={truncated} />

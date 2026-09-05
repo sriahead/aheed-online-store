@@ -7,7 +7,7 @@ import {
   addProductImage as addProductImageRepo,
   approveProductImageRow as approveProductImageRowRepo,
   createProductForVendor as createProductForVendorRepo,
-  getAvailableSpecialities,
+  getAvailableFacets,
   getProductBySlug,
   getProductForAdmin as getProductForAdminRepo,
   getProductsWithoutImages as getProductsWithoutImagesRepo,
@@ -108,8 +108,8 @@ export function getProductRepository(): ProductRepository {
       return getProductBySlug(prisma, await vendorId(), slug);
     },
 
-    async availableSpecialities(context) {
-      return getAvailableSpecialities(prisma, await vendorId(), context);
+    async availableFacets(context) {
+      return getAvailableFacets(prisma, await vendorId(), context);
     },
 
     async suggestProducts(query, candidateLimit) {

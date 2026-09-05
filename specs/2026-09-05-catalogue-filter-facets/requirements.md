@@ -61,10 +61,15 @@ R13. A unit test asserts `buildFilterWhere({})` produces an object carrying no `
 
 R14. `getAvailableSpecialities`, `AvailableSpecialities`, `SpecialityContext` and
      `ProductRepository.availableSpecialities` are renamed to `getAvailableFacets`,
-     `AvailableFacets`, `FacetContext` and `availableFacets`; none of the four former identifiers
-     appears anywhere in `lib/`, `app/`, `components/`, `scripts/` or `tests/` afterwards. The
-     function no longer returns only specialities, and `#568` set the precedent of renaming when a
-     helper's role widens (`directSearchPredicate` became `buildDirectSearchWhere`).
+     `AvailableFacets`, `FacetContext` and `availableFacets`. None of the four former identifiers
+     appears **in code** — no import, declaration, call site, type annotation or object key — in
+     `lib/`, `app/`, `components/`, `scripts/` or `tests/`. Occurrences inside comments that
+     document the rename itself are expected and permitted; this requirement is about what the
+     compiler sees, not what a `grep` matches. (Corrected during Build: as first written it said
+     "anywhere", which would have forbidden explaining the rename in the very file that performs
+     it — the same comment-versus-code confusion `#568` hit five times.) The function no longer
+     returns only specialities, and `#568` set the precedent of renaming when a helper's role
+     widens (`directSearchPredicate` became `buildDirectSearchWhere`).
 
 R15. `FacetContext` excludes, by TypeScript type rather than a runtime delete, every field a facet
      control can set: `isHalal`, `isFresh`, `isOrganic`, `isVegetarian`, `isGlutenFree`,

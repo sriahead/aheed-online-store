@@ -31,6 +31,12 @@ export type FilterChipParams = {
   isHalal?: string;
   isFresh?: string;
   isOrganic?: string;
+  isVegetarian?: string;
+  isGlutenFree?: string;
+  isHmcCertified?: string;
+  onOffer?: string;
+  origin?: string;
+  brand?: string;
   featured?: string;
   category?: string;
   cursor?: string;
@@ -48,12 +54,18 @@ export type FilterChip = {
  * Every removable filter key, in the order chips render. `q`, `cursor` and `back` are deliberately
  * absent: the first is not a filter (ruling 2 above), the other two are pagination (ruling 1).
  */
-const REMOVABLE: (keyof FilterChipParams)[] = [
+export const REMOVABLE: (keyof FilterChipParams)[] = [
   "category",
+  "brand",
+  "origin",
   "inStock",
+  "onOffer",
   "isHalal",
   "isFresh",
   "isOrganic",
+  "isVegetarian",
+  "isGlutenFree",
+  "isHmcCertified",
   "featured",
   "minPrice",
   "maxPrice",
@@ -98,6 +110,7 @@ function labelFor(
   key: keyof FilterChipParams,
   value: string,
   categoryLabel?: string,
+  brandLabel?: string,
 ): string | null {
   switch (key) {
     case "category":
@@ -112,6 +125,29 @@ function labelFor(
       return "Fresh";
     case "isOrganic":
       return "Organic";
+    case "isVegetarian":
+      return "Vegetarian";
+    case "isGlutenFree":
+      return "Gluten free";
+    case "isHmcCertified":
+      return "HMC certified";
+    case "onOffer":
+      return "On offer";
+    case "origin":
+      /*
+       * #569 — the raw value IS the label, and a value matching no product still gets a chip.
+       * That differs from `category` above ON PURPOSE: an unresolved category slug applies no
+       * predicate, so a chip would claim a filter that is not running. `origin` is an exact match
+       * on a column, so `?origin=Atlantis` genuinely filters — to nothing — and without a chip the
+       * shopper would be stranded in an empty result set with no visible way out.
+       */
+      return value;
+    case "brand":
+      // The resolved NAME, never the slug. Like `category`, the page has already looked the brand
+      // up to build the predicate, so passing the name costs no extra query. The fallback is never
+      // reached for a rendered chip: an unresolvable brand applies no predicate, and the page
+      // withholds the key entirely rather than letting a raw slug render as a label (#568's R15).
+      return brandLabel ?? value;
     case "featured":
       return "Featured";
     case "minPrice": {
@@ -131,19 +167,20 @@ function labelFor(
  * One chip per active filter. Each `href` is the current URL minus that one filter, preserving `q`
  * and every other active filter, and dropping pagination.
  *
- * `categoryLabel` is the resolved category NAME — the caller has already looked the category up to
- * build the predicate, so passing the name avoids a second query just to render a chip.
+ * `categoryLabel` and `brandLabel` are the resolved NAMES — the caller has already looked each up
+ * to build the predicate, so passing the name avoids a second query just to render a chip.
  */
 export function activeFilterChips(
   basePath: string,
   params: FilterChipParams,
   categoryLabel?: string,
+  brandLabel?: string,
 ): FilterChip[] {
   const chips: FilterChip[] = [];
   for (const key of REMOVABLE) {
     const value = params[key];
     if (!value) continue;
-    const label = labelFor(key, value, categoryLabel);
+    const label = labelFor(key, value, categoryLabel, brandLabel);
     if (label === null) continue;
     chips.push({
       key,
