@@ -4,7 +4,7 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.16.0"
+version: "1.17.0"
 updated: 2026-09-05
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
@@ -431,6 +431,17 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `SEED_`, and prefer printing keys over lines.
 - `gh` args containing double quotes break native argument parsing in PS 5.1 (`accepts 1 arg(s),
   received 8`). Write the body to a file and use `--body-file`.
+- **In Git Bash specifically (not PowerShell), a `gh` string argument that starts with `/` gets
+  silently rewritten to a Windows path before `gh` ever sees it** — MSYS's automatic POSIX-path
+  conversion fires on any argument that merely looks path-shaped, with no way to tell from the
+  argument alone that it was meant as literal text. Hit live in P2.6 slice 6's `/document`
+  (2026-09-05): `gh issue create --title "/staff/search-synonyms is unlinked from the staff hub…"`
+  (filed as `#602`) shipped with a title of `C:/Program Files/Git/staff/search-synonyms is
+  unlinked…` — silently wrong, no error, and easy to miss since only the leading segment changes.
+  Prefix the command with `MSYS_NO_PATHCONV=1` (as already used elsewhere in this repo's own
+  scripts) to suppress the conversion, and always read back a filed issue/PR's title after creating
+  it from Git Bash if it starts with `/`. Fixed after the fact via `gh issue edit`, same env-var
+  prefix.
 - **`npx tsx -e "<multi-line script>"` fails silently on this Windows setup the moment the script
   imports an installed package (e.g. `@prisma/client`) — no stdout, no stderr, exit 0, even with an
   explicit `.catch()`/`.finally()` around every promise.** It isn't a working-directory problem
