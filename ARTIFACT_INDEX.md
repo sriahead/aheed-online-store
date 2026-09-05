@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-05T14:05:00.388Z` · commit `fbcf996` · `150` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-05T14:59:18.731Z` · commit `d2c443f` · `150` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -22,7 +22,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
-| [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 1.15.0 | 2026-09-05 | approved | internal | AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow. |
+| [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 1.16.0 | 2026-09-05 | approved | internal | AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow. |
 | [Product Requirements & Feature Workflows](docs/business-analysis/product-requirements.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for Business Analysts and Project Managers detailing the core business logic, feature requirements, and workflows. |
 | [UI/UX & Design Guidelines](docs/design-ux/ux-guidelines.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for UI/UX designers detailing the design system, storefront customization, and the role of the ui-ref prototype. |
 | [Architecture & System Design Overview](docs/developer-portal/architecture-overview.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A high-level map of the platform's architecture, system design, and database design, acting as a directory to the deeper technical specifications. |
