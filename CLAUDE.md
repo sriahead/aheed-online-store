@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.17.0"
-updated: 2026-09-05
+version: "1.18.0"
+updated: 2026-09-06
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -485,7 +485,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  97 files / 1200 tests**, measured 2026-09-06 at `#612`'s Build) and treat any shortfall as
+  100 files / 1221 tests**, measured 2026-09-06 at `#618`'s Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -501,9 +501,11 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `/validate` found live plus the R15 hang-timeout case that had been missing since Build, and
   `94/1126` moved to `94/1144` at `#569`'s Build — eighteen tests across five *existing* files,
   no new file at all, which is the cleanest demonstration yet of the refinement below — and
-  `94/1144` moved to **`97/1200`** at `#612`'s Build, three new files carrying fifty-six tests.
-  That last move is the ordinary case the rule was originally written for, and it is recorded here
-  mainly to show the count staying current rather than to add a new lesson. Each time,
+  `94/1144` moved to `97/1200` at `#612`'s Build, three new files carrying fifty-six tests, and
+  `97/1200` moved to **`100/1221`** at `#618`'s Build — three new files carrying eighteen tests
+  plus three added to two existing files, the mixed case both halves of this rule describe at once.
+  Those last two moves are the ordinary case the rule was originally written for, and they are
+  recorded here mainly to show the count staying current rather than to add a new lesson. Each time,
   the staleness
   quietly *disabled* the detection it exists to provide: a validator believing `77` would read
   `#566`'s genuine ten-file shortfall as roughly right. **The rule this last move corrects: it is
@@ -972,6 +974,22 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   add/edit/remove/approve/reject forms end-to-end with no Chrome extension available — same
   `curl -F` approach as the plain-form case, just with these four fields instead of one, plus the
   named fields the action actually reads (e.g. `alias`, `canonical`, `intent`).
+- **A server action a client component calls directly (`await someAction(arg1, arg2)`, e.g.
+  `addToCart`) rather than binding to a `<form action={...}>` is ALSO curl-drivable, but as a
+  wholly different wire protocol — neither `$ACTION_ID_<hash>` nor the `useActionState` four-field
+  shape appears anywhere in the HTML, because there is no form for React to render one into.** Next
+  ships these as a POST to the current page URL carrying a `Next-Action: <action-id>` header (the
+  action's id — the same stable build-time hash `.next/server/server-reference-manifest.json` maps
+  to a `filename`/`exportedName`, per the existing entry below) with a plain-text body that is a
+  JSON **array** of the call's positional arguments, in order — `["<productId>", 1]` for
+  `addToCart(productId, delta)`. No cookie-derived nonce, no per-render key: `curl -b <cookies>
+  -X POST <page-url> -H "Next-Action: <id>" -H "Content-Type: text/plain;charset=UTF-8" --data-raw
+  '["<arg1>", <arg2>]'` reproduces the call exactly, and the response is the page's normal RSC
+  payload (parse it for the effect, e.g. re-fetch the affected page rather than trying to read a
+  return value out of the stream). Used this way in `#612`'s `/validate` to add a real product to a
+  guest cart (`features/cart/add-to-cart.ts`'s `addToCart`) with no browser and no client JS, so
+  `features/checkout/place-order.ts`'s delivery-postcode refusal (R24) could be driven end-to-end
+  against a real cart rather than stopping at the cheaper storefront-header signal (R23).
 - **`npm run preview`'s `next build` step type-checks every `.ts` file its tsconfig includes —
   which, by default, means the repo root — so a type error in a scratch validation script placed
   at the repo root (rather than under `lib/`, `app/`, etc.) fails the WHOLE build**, not just that

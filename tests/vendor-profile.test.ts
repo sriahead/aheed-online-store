@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   fetchVendorProfile,
+  listActiveVendorIds,
   DEFAULT_BRAND_PRIMITIVES,
   DEFAULT_SENDER_NAME,
   DEFAULT_SEARCH_PLACEHOLDER,
@@ -77,5 +78,26 @@ describe("fetchVendorProfile", () => {
     expect(p.senderName).toBe(DEFAULT_SENDER_NAME);
     expect(p.searchPlaceholder).toBe(DEFAULT_SEARCH_PLACEHOLDER);
     expect(p.deliveryPrefixes).toEqual([]);
+  });
+});
+
+/* ---- Scheduled sweep vendor enumeration (P9.2, #618) --------------------- */
+
+describe("listActiveVendorIds", () => {
+  const findMany = vi.fn();
+  const client = { vendor: { findMany } } as unknown as Parameters<typeof listActiveVendorIds>[0];
+
+  beforeEach(() => findMany.mockReset());
+
+  it("returns only ACTIVE vendors' ids", async () => {
+    findMany.mockResolvedValue([{ id: "v-aheed" }, { id: "v-srimart" }]);
+
+    const ids = await listActiveVendorIds(client);
+
+    // A SUSPENDED store's stranded orders are deliberately left alone: quietly
+    // cancelling its customers' orders, or emailing confirmations on its behalf,
+    // is a worse default than leaving them for whoever resolves the suspension.
+    expect(findMany.mock.calls[0][0].where).toEqual({ status: "ACTIVE" });
+    expect(ids).toEqual(["v-aheed", "v-srimart"]);
   });
 });

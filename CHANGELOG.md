@@ -8,6 +8,23 @@ every branch merges.
 
 ### Added
 
+- **Scheduled sweep for stranded payments** (`#618`, P9.2,
+  `specs/2026-09-06-stranded-payment-sweep/`), absorbing `#101` and `#94`. An order whose Stripe
+  webhook never arrived was stranded in `PENDING_PAYMENT` forever, holding its inventory, its
+  discount-code use and its loyalty redemption: `lib/order-status.ts` gives that state no outbound
+  staff transition, and `/staff/payments` reads binding-refusal rows, which a webhook that never
+  arrived never wrote. A new minimal Worker (`workers/scheduler/`) carries a Cron Trigger and calls
+  an authenticated job route every 15 minutes; the route asks Stripe about each stale order's own
+  stored session and confirms, releases, or leaves it alone. `#101` and `#94` are one slice because
+  a timeout that cancels stale orders without asking the provider first would cancel and restock
+  orders that were genuinely paid. **Release is gated on the session's own state, never on elapsed
+  time**, which is what makes a 30-minute cutoff safe while still rescuing a charged shopper within
+  the hour. **No schema change and no migration** — `@@index([vendorId, status, createdAt])`
+  already existed — and no body in the payment transition path was modified: `confirmPayment`,
+  `failPayment` and `releaseOrder` are `#429`'s machinery and this adds a caller, not a change to
+  them. Needs a new `JOB_INVOCATION_TOKEN` runtime secret, set with the same value on **both**
+  Workers per environment. The job route fails closed with a clean `503` — not a crash — when
+  that secret or `STRIPE_SECRET_KEY` is unset, confirmed live at `/validate`.
 - **`/staff/delivery-areas`** (`#612`, P9.2, `specs/2026-09-06-delivery-areas-admin/`). Store admins
   can add and remove the postcode areas their shop delivers to. These rows are a hard checkout gate
   — `features/checkout/place-order.ts` refuses an order outright when no prefix matches the
@@ -73,6 +90,19 @@ every branch merges.
   fields are now applied before that early return. Same failure shape as `#502`.
 
 ### Documentation
+
+- **`/document` (final) closeout for delivery areas admin & staff nav reconciliation** (`#612`; PR
+  #615 merged to `staging`, PR #616 promoted to `main`). `specs/roadmap.md` (1.75.0) gains the
+  slice's build/merge row and its promotion row — the promotion also carried two docs-only P2.6
+  milestone-close merges (`/discover` PR #609, `/learn` PR #611) that had reached `staging` but not
+  yet `main`. `CLAUDE.md` (1.18.0) gains a new headless-testing entry: a server action a client
+  component calls directly (`await addToCart(...)`) rather than binding to a `<form>` is curl-drivable
+  too, but as a third, distinct wire shape — a `Next-Action: <id>` header plus a JSON-array body —
+  neither of the two already-documented `$ACTION_ID_<hash>`/`useActionState` shapes apply, since
+  there is no form for either to render into. `npm run sdd:audit` reports zero gaps. Delivery board
+  reconciled: `#612` is **Done**. `ARTIFACT_INDEX.md` / `app/(admin)/staff/runbook/docs.ts`
+  regenerated to match. No runtime code, no schema change, nothing for `prisma migrate deploy` to
+  apply.
 
 - **`/learn` retrospective on P2.6's close** (`docs/research/milestone-retrospectives.md` 1.1.0) —
   the first entry written under the Discover/Learn phases. All six slices (`#564`–`#569`) shipped

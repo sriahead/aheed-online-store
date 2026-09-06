@@ -239,3 +239,26 @@ export async function updateVendorStorefrontConfig(
     }
   });
 }
+
+/**
+ * Every ACTIVE vendor's id (P9.2, #618).
+ *
+ * The scheduled payment sweep has no request host and therefore no current
+ * vendor, but its candidate query is vendor-scoped by design, so it needs the
+ * set to iterate. `Vendor` carries no `vendorId` column of its own, so this is
+ * not a tenant-scoped read and needs no vendor parameter — it enumerates the
+ * tenants rather than reading inside one.
+ *
+ * SUSPENDED vendors are deliberately excluded. A suspended store is one whose
+ * disposition nobody has decided yet, and quietly cancelling its customers'
+ * orders — or confirming them and sending confirmation emails on its behalf —
+ * is a worse default than leaving them for whoever resolves the suspension.
+ */
+export async function listActiveVendorIds(prisma: ReturnType<typeof getPrisma>): Promise<string[]> {
+  const rows = await prisma.vendor.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  return rows.map((row) => row.id);
+}
