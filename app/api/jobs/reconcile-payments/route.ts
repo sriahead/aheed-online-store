@@ -21,8 +21,26 @@ export const dynamic = "force-dynamic";
 
 const JOB_TOKEN_HEADER = "x-job-token";
 
+/**
+ * `getJobsEnv()`/`getPaymentEnv()` THROW rather than returning an empty value
+ * when their field is absent and `NODE_ENV === "production"` — and `NODE_ENV`
+ * is unconditionally `"production"` in every BUILT Worker this route ever
+ * actually runs in (`npm run preview`, staging, production alike; `next build`
+ * bakes it in regardless of the deploy target). Without this, that throw fires
+ * before either `if (!X)` check below ever runs, so the exact misconfiguration
+ * those checks exist to answer with a clean 503 instead crashes as an uncaught
+ * `ZodError` — a bare 500. Confirmed live at `/validate` (#618).
+ */
+function readOptional<T>(read: () => T): T | undefined {
+  try {
+    return read();
+  } catch {
+    return undefined;
+  }
+}
+
 export async function POST(request: Request) {
-  const { JOB_INVOCATION_TOKEN } = getJobsEnv();
+  const JOB_INVOCATION_TOKEN = readOptional(getJobsEnv)?.JOB_INVOCATION_TOKEN;
 
   // Fail closed. An unset token in a deployed environment is a misconfiguration,
   // and running an unauthenticated sweep would be a worse answer than not
@@ -52,7 +70,7 @@ export async function POST(request: Request) {
    * never actually trigger a release, since the stub reports `open`. Relying on
    * that coincidence would be fragile, so the run is refused outright as well.
    */
-  const { STRIPE_SECRET_KEY } = getPaymentEnv();
+  const STRIPE_SECRET_KEY = readOptional(getPaymentEnv)?.STRIPE_SECRET_KEY;
   if (!STRIPE_SECRET_KEY) {
     console.error("payment sweep refused: the stub payment adapter is active");
     return Response.json(

@@ -23,7 +23,8 @@ every branch merges.
   already existed — and no body in the payment transition path was modified: `confirmPayment`,
   `failPayment` and `releaseOrder` are `#429`'s machinery and this adds a caller, not a change to
   them. Needs a new `JOB_INVOCATION_TOKEN` runtime secret, set with the same value on **both**
-  Workers per environment.
+  Workers per environment. The job route fails closed with a clean `503` — not a crash — when
+  that secret or `STRIPE_SECRET_KEY` is unset, confirmed live at `/validate`.
 - **`/staff/delivery-areas`** (`#612`, P9.2, `specs/2026-09-06-delivery-areas-admin/`). Store admins
   can add and remove the postcode areas their shop delivers to. These rows are a hard checkout gate
   — `features/checkout/place-order.ts` refuses an order outright when no prefix matches the

@@ -170,3 +170,36 @@ sits inside the root tsconfig's `include`, so the app build type-checks it; that
 Workers with the same value. Until a human sets it, the route returns 503 in staging and
 production and the sweep does nothing. A mismatch between the two is silent from the outside —
 every invocation simply 401s and orders quietly stop being reconciled.
+
+## Fixed at `/fix`, after `/validate` (2026-09-06)
+
+One finding from the first `/validate` pass, closed before re-running from the top.
+
+**R10 and R23 both failed literally — live, not just on paper.** `getJobsEnv()`/`getPaymentEnv()`
+(the second pre-existing) THROW a `ZodError` rather than returning an empty value whenever their
+field is absent and `NODE_ENV === "production"` — and `NODE_ENV` is unconditionally `"production"`
+in every BUILT Worker this route runs in, `npm run preview` included: `next build` bakes it in
+regardless of deploy target. The route's own `if (!JOB_INVOCATION_TOKEN)` / `if (!STRIPE_SECRET_KEY)`
+checks assumed the accessor would return a falsy value to check, never that it would throw first —
+so both of the route's own documented fail-closed 503s were dead code in every real environment.
+Confirmed live: commenting out `JOB_INVOCATION_TOKEN` in `.dev.vars` and restarting `npm run
+preview` returned a bare **500** (an uncaught `ZodError`, logged twice — once as an "Unhandled
+request error" and once as the raw zod issues array), never the 503 both `requirements.md` and this
+file's own "Known-shaky areas" section above claimed. Same result for `STRIPE_SECRET_KEY`, though
+proving it needed unsetting the key in **both** `.env` and `.dev.vars` — `.env`'s value alone
+survives into the built Worker's `process.env` (baked in at `next build` time) and `readEnv()` falls
+back to it whenever the Cloudflare-context value is absent, so `.dev.vars` alone wasn't sufficient
+to simulate "unset in the app environment."
+
+This was a real design gap, not a wording problem: R10/R23 weren't wrong, the route just hadn't
+been shaped to survive the accessor's own documented throw (`getJobsEnv`'s R13 contract, which is
+correct and untouched — something calling it for a hard production guarantee elsewhere still gets
+one). Fixed by adding a small `readOptional()` wrapper in the route that catches the throw and
+treats it the same as an absent value, so the route's own two `if (!X)` checks actually run. No
+change to `lib/config.ts`, no change to any requirement — `tests/config-jobs.test.ts` (R13) is
+unaffected, and both 503 rows now pass live against the same commented-out-secret repro that
+first found them.
+
+**Not fixed here, filed instead: `app/api/webhooks/stripe/route.ts` has the identical latent
+defect** (`getPaymentEnv()` throws before its own `if (!STRIPE_WEBHOOK_SECRET)` check), pre-existing
+and out of this slice's `requirements.md`. Tracked as **#621**.
