@@ -800,6 +800,28 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   own `auth.via === "platform-admin"` check) and `/staff/search-synonyms` (#602's open work). If you
   add a page and the parity test fails, add it to the other surface — do not add it to the exclusion
   list, which exists for routes that genuinely cannot appear on both.
+- **As of #633 there are THREE surfaces, not two: a new `/staff/*` page must also be DOCUMENTED, and
+  `tests/operator-doc-coverage.test.ts` fails until it is.** That test enumerates route directories
+  from the filesystem — no hardcoded list — and requires each to carry exactly one section in one of
+  the three operator guides (`docs/staff-playbook/staff-tabs-guide.md`,
+  `docs/store-admin-guide/admin-tabs-guide.md`, `docs/platform-admin-guide/platform-admin-guide.md`),
+  with seven labelled parts and a `Who can access` line that **matches the page's own
+  `requireVendorRole` arguments** (an `auth.via !== "platform-admin"` refusal counts as
+  platform-admin-only). Two consequences worth knowing before you hit them: the section lives in the
+  guide matching the page's gate, not wherever is convenient; and a `####` heading *inside* a section
+  terminates it as far as the parser is concerned, so keep sub-structure to bold labels and lists.
+  Note also that this test's own test COUNT grows by four per staff page added, which moves the
+  vitest baseline recorded above on a change that touches no test file at all.
+- **The parity and coverage tests pin structure and permissions; NOTHING mechanically checks whether
+  a documented capability exists.** `docs/store-admin-guide/admin-tabs-guide.md` shipped `approved`
+  for weeks telling store admins they could issue Stripe refunds, invite staff members, and grant the
+  Store Admin role. All three were false (**#629**), and a **fourth** — that the delivery fee, free
+  delivery threshold and minimum order are editable — was found only at `#633`'s Build by tracing
+  each claim to a real control, and filed as **#634** (those three `VendorConfig` fields are written
+  by `prisma/seed.ts` and by nothing else in the panel). **When you add or edit an operator-guide
+  section, trace every capability sentence to a form, link or action import on that page** — a
+  capability that reads plausibly and matches a schema field is not evidence of a control, and this
+  is the one class of documentation error no test in this repo can catch.
 - **`isAdmin` in the hub is NOT the same question as "may this person open the page".** It is true
   for a vendor `ADMIN` as well as a platform admin, and it is additionally downgraded by the
   `admin-tier` cookie's "view as staff" simulation. `/staff/errors` refuses anyone whose

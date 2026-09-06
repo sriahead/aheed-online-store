@@ -53,6 +53,36 @@ every branch merges.
 
 ### Documentation
 
+- **Operator documentation: runbook role delivery repaired, guides corrected, every menu item
+  documented** (`#633`, P9.2, `specs/2026-09-06-operator-documentation/`), absorbing `#625` and
+  `#629` and folding in `#626`. `/staff/runbook` was filtering twice against two different audience
+  vocabularies — the page admitted `staff`/`store-admin`, then `RunbookClient` re-filtered for
+  `staff`/`admin` — and since `Array.includes` is exact-element matching, **one of 152 articles
+  rendered** and the UI's own "Admin" tab could never match anything. The approved Store Admin
+  Management Guide reached nobody. Fixed at the root cause rather than the mismatched string: the
+  client's audience filter is gone entirely and the tab list is **derived** from the audiences the
+  delivered documents carry, so a tab exists only when it has documents behind it. The vocabulary
+  now lives once in `lib/runbook-audiences.ts`. Platform-admin material is admitted only when
+  `auth.via === "platform-admin"` (the `#508` pattern), which also gives `/staff/errors` somewhere
+  correct to be documented. **All 18 Admin/Staff menu items now have a per-menu-item section** —
+  Purpose, Who can access it, What you can do, Typical workflow, Important fields and filters,
+  Common mistakes and limitations, and What happens after changes are saved — placed by each page's
+  own gate across the staff playbook, the store admin guide and the platform admin guide.
+  `tests/operator-doc-coverage.test.ts` enumerates routes from the **filesystem** and compares each
+  section's documented permission against the page's real `requireVendorRole` arguments, so a guide
+  that misstates who may open a page fails the suite and a new `/staff` page fails it until
+  documented.
+
+- **Three false capability claims removed from the store admin guide** (`#629`). It told operators
+  they could issue Stripe refunds and invite staff members — neither has ever existed — and that a
+  store admin can assign the Store Admin role, which `lib/repositories/roles.ts` refuses
+  (`Only a platform-admin can grant the Store Admin role`) and the form does not even offer. The
+  guide now states the real process: refunds are issued in the payment provider's own dashboard, and
+  a colleague registers their own account before being granted the Staff role by email. A **fourth**
+  false claim was found during the build and filed as `#634` — delivery fee, free-delivery threshold
+  and minimum order are documented as editable but are written only by `prisma/seed.ts`, the same
+  operability gap `#612` closed for delivery areas.
+
 - **`/document` (final) closeout for the stranded payment sweep** (`#618`; PR #622 merged to
   `staging`, PR #623 promoted to `main`). `specs/roadmap.md` (1.76.0) gains the slice's build/merge
   row and its promotion row (the promotion also carried the pending delivery-areas `/document`
@@ -97,6 +127,16 @@ every branch merges.
   nobody enumerated.
 
 ### Fixed
+
+- **`/staff/payments` restored to the staff navigation** (`#626`, folded into `#633`). The page
+  admits STAFF and the hub renders its card to them, but `components/staff/PanelNav.tsx`'s staff-tier
+  branch omitted the link — so it vanished the moment a staff member navigated off the hub, on the
+  page where a shopper's stranded payment gets resolved. `tests/staff-nav-parity.test.ts` could not
+  see this: it compares whole-file href sets, which is the **admin** view, and the staff tier was
+  never compared against anything. It now also derives the expected staff-tier set from the pages'
+  own `requireVendorRole` gates, so a future reallocation between the tiers is self-verifying. That
+  file's docstring, which asserted the staff branch's contents without drawing the conclusion, was
+  corrected to name which surface each block covers.
 
 - **A filter predicate emitting a top-level `OR` was silently dropped on the zero-result recovery
   rungs.** `fetchSearchCandidates` merged the filter fragment and the search predicate with an
