@@ -53,6 +53,22 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` (final) closeout for operator documentation** (`#633`; PR #635 merged to
+  `staging`). Docs only — no runtime code, no schema change, nothing for `prisma migrate deploy` to
+  apply.
+  - `specs/roadmap.md` (1.77.0) gains the slice's build/merge row (PR #635, including its
+    post-`/validate` fix commit) and adds `#633` — absorbing `#625` and `#629`, folding in
+    `#626` — to P9.2's scope list, which had never carried it.
+  - `CLAUDE.md` (1.20.0) gains a live-testing lesson: a `grep` pattern matched against a page's
+    real rendered HTML can false-negative on a literal `&`/`<`/`>`/`"`/`'` that the renderer
+    escapes, and `validation.md`'s own example command is not exempt — found live when the spec's
+    suggested `grep -c 'Platform & Technical Admin Guide'` printed `0` for both the correct and
+    incorrect case, because the rendered page always carries `&amp;`.
+  - `#625`, `#626` and `#629` moved to `In Review` on Project #2 alongside `#633`, rather than
+    closed — this repo's `#174`/`#214`/`#231` R40 lesson is that absorbed issues aren't closed by
+    keyword, so they track and close together with `#633` on promotion to `main`.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 - **Operator documentation: runbook role delivery repaired, guides corrected, every menu item
   documented** (`#633`, P9.2, `specs/2026-09-06-operator-documentation/`), absorbing `#625` and
   `#629` and folding in `#626`. `/staff/runbook` was filtering twice against two different audience
