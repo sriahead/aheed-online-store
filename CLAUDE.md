@@ -4,7 +4,7 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.18.0"
+version: "1.20.0"
 updated: 2026-09-06
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
@@ -217,6 +217,40 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   `lib/config.ts` was written and was corrected during P4a's validation, where it mattered — see
   **#119**, where `.env` and `.dev.vars` point at *different Neon projects*, so a fixture script and
   the app under `preview` silently read different databases. Check both before trusting a live result.
+- **The precedence above is per-key, not per-environment, and that distinction matters when you're
+  deliberately trying to simulate a secret being unset.** `readEnv(key)`'s actual body falls through
+  to `process.env[key]` whenever the Cloudflare-context value for *that key* isn't a non-empty
+  string — not only when `getCloudflareContext()` itself throws. So commenting a secret out of
+  `.dev.vars` alone does **not** simulate "unset" if `.env` still carries a real value for the same
+  key: `next build` bakes `.env` into the built Worker's own `process.env` regardless of Cloudflare
+  context, and `readEnv` silently prefers that leftover value the moment `.dev.vars`'s copy goes
+  missing. Confirmed live at `#618`'s `/validate` (2026-09-06): commenting out `STRIPE_SECRET_KEY`
+  in `.dev.vars` only, restarting `npm run preview`, and calling a route gated on
+  `getPaymentEnv().STRIPE_SECRET_KEY` still ran as if the key were set — because `.env` still had
+  it. The fix is to comment the secret out of **both** files before restarting; a single-file edit
+  proves nothing here. This is a real deployed environment's behaviour too, not a local-only quirk —
+  staging and production have no `.env` file at all, so this fallback path is dormant there, but
+  local preview always has one and will use it the moment `.dev.vars` stops naming a key.
+- **A `lib/config.ts` accessor that THROWS when its field is required-in-production (the
+  `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`JOB_INVOCATION_TOKEN` pattern: a zod `superRefine`
+  that adds an issue when `process.env.NODE_ENV === "production"` and the value is absent) makes
+  that condition UNREACHABLE as a plain falsy check in any caller, because `NODE_ENV` is
+  unconditionally `"production"` in every BUILT Worker this app ever runs in** — `npm run preview`
+  included, not just staging/production — since `next build` sets it regardless of deploy target.
+  A route written as `const { X } = getXEnv(); if (!X) { ...graceful handling... }` never reaches
+  its own `if`: the accessor throws first, and the graceful branch is dead code that only "works"
+  under `next dev` or a plain Node script, neither of which this class of route actually runs under.
+  Found live at `#618`'s `/validate` (2026-09-06): `app/api/jobs/reconcile-payments/route.ts`'s own
+  documented 503-on-missing-secret behaviour (R10, R23) was unreachable this way, reproducing as an
+  uncaught `ZodError` (a bare 500) instead — and `app/api/webhooks/stripe/route.ts` has the
+  identical latent defect for `STRIPE_WEBHOOK_SECRET`, pre-existing and unfixed (**#621**). **Any
+  route that wants to treat "this required-in-production secret happens to be absent right now" as
+  its own recoverable case — rather than the hard failure the accessor is designed to be — must
+  catch the accessor's throw itself**, e.g. a small `readOptional(() => getXEnv())` wrapper, rather
+  than assuming the accessor can hand back an empty value to check. Verify any such route's
+  fail-closed branch live, under `npm run preview` with the secret genuinely unset in both `.env`
+  and `.dev.vars` (see the bullet above) — a unit test against the schema alone proves the schema
+  throws, never that the route calling it actually survives the throw.
 - **Checking `.env` against `.dev.vars` is necessary but NOT sufficient — diff both against
   `secrets/staging.vars` and `secrets/production.vars` before any live-DB work.** Two files drift
   into agreement on the *wrong* target as easily as they drift apart from each other. At P5a's
@@ -485,7 +519,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  100 files / 1221 tests**, measured 2026-09-06 at `#618`'s Build) and treat any shortfall as
+  102 files / 1316 tests**, measured 2026-09-06 at `#633`'s Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -502,9 +536,14 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `94/1126` moved to `94/1144` at `#569`'s Build — eighteen tests across five *existing* files,
   no new file at all, which is the cleanest demonstration yet of the refinement below — and
   `94/1144` moved to `97/1200` at `#612`'s Build, three new files carrying fifty-six tests, and
-  `97/1200` moved to **`100/1221`** at `#618`'s Build — three new files carrying eighteen tests
-  plus three added to two existing files, the mixed case both halves of this rule describe at once.
-  Those last two moves are the ordinary case the rule was originally written for, and they are
+  `97/1200` moved to `100/1221` at `#618`'s Build — three new files carrying eighteen tests
+  plus three added to two existing files, the mixed case both halves of this rule describe at once —
+  and `100/1221` moved to **`102/1316`** at `#633`'s Build: two new files carrying ninety-two tests
+  plus three added to `tests/staff-nav-parity.test.ts`. That jump is unusually large for two files
+  because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
+  filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that
+  moves on a change to `app/`, with no test file touched at all. Those last three moves are the
+  ordinary case the rule was originally written for, and they are
   recorded here mainly to show the count staying current rather than to add a new lesson. Each time,
   the staleness
   quietly *disabled* the detection it exists to provide: a validator believing `77` would read
@@ -761,6 +800,28 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   own `auth.via === "platform-admin"` check) and `/staff/search-synonyms` (#602's open work). If you
   add a page and the parity test fails, add it to the other surface — do not add it to the exclusion
   list, which exists for routes that genuinely cannot appear on both.
+- **As of #633 there are THREE surfaces, not two: a new `/staff/*` page must also be DOCUMENTED, and
+  `tests/operator-doc-coverage.test.ts` fails until it is.** That test enumerates route directories
+  from the filesystem — no hardcoded list — and requires each to carry exactly one section in one of
+  the three operator guides (`docs/staff-playbook/staff-tabs-guide.md`,
+  `docs/store-admin-guide/admin-tabs-guide.md`, `docs/platform-admin-guide/platform-admin-guide.md`),
+  with seven labelled parts and a `Who can access` line that **matches the page's own
+  `requireVendorRole` arguments** (an `auth.via !== "platform-admin"` refusal counts as
+  platform-admin-only). Two consequences worth knowing before you hit them: the section lives in the
+  guide matching the page's gate, not wherever is convenient; and a `####` heading *inside* a section
+  terminates it as far as the parser is concerned, so keep sub-structure to bold labels and lists.
+  Note also that this test's own test COUNT grows by four per staff page added, which moves the
+  vitest baseline recorded above on a change that touches no test file at all.
+- **The parity and coverage tests pin structure and permissions; NOTHING mechanically checks whether
+  a documented capability exists.** `docs/store-admin-guide/admin-tabs-guide.md` shipped `approved`
+  for weeks telling store admins they could issue Stripe refunds, invite staff members, and grant the
+  Store Admin role. All three were false (**#629**), and a **fourth** — that the delivery fee, free
+  delivery threshold and minimum order are editable — was found only at `#633`'s Build by tracing
+  each claim to a real control, and filed as **#634** (those three `VendorConfig` fields are written
+  by `prisma/seed.ts` and by nothing else in the panel). **When you add or edit an operator-guide
+  section, trace every capability sentence to a form, link or action import on that page** — a
+  capability that reads plausibly and matches a schema field is not evidence of a control, and this
+  is the one class of documentation error no test in this repo can catch.
 - **`isAdmin` in the hub is NOT the same question as "may this person open the page".** It is true
   for a vendor `ADMIN` as well as a platform admin, and it is additionally downgraded by the
   `admin-tier` cookie's "view as staff" simulation. `/staff/errors` refuses anyone whose
@@ -1013,6 +1074,20 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   would hit. Cross-tenant **read/list** scoping (a page never showing another vendor's rows) is
   provable the same way, from one side only: confirm your own vendor's list excludes a row you
   know belongs to someone else, rather than trying to view the other vendor's own list.
+- **A `grep` pattern written against a literal string (e.g. a doc title containing `&`) can silently
+  false-negative against a page's real, rendered HTML, because HTML-escapes it as `&amp;` — and a
+  `validation.md` row's own example command is not exempt from this.** Hit at `#633`'s `/validate`
+  (2026-09-06): the spec's own suggested check, `grep -c 'Platform & Technical Admin Guide'
+  runbook-admin.html` / `runbook-platform.html`, was meant to print `0` then a non-zero count,
+  proving the platform-admin guide is withheld from a vendor admin and shown to a platform admin.
+  Run literally, it printed `0` for **both** files — not because the feature was broken, but because
+  Next's rendered output always carries `Platform &amp; Technical Admin Guide`, so the unescaped
+  pattern never matches the positive case either. Confirmed the feature actually worked by re-running
+  with the escaped string; the code was correct, the validation doc's example command was not.
+  **Before treating a grep-against-live-HTML row as failed (or as passed) on the strength of a
+  zero/non-zero count, check whether the literal string being matched contains `&`, `<`, `>`, `"`, or
+  `'`** — any of which a browser or React's server renderer will escape — and grep for the escaped
+  form instead of assuming the spec's literal example command is already correct.
 
 ## Better Auth (`lib/auth.ts`, ADR-002) — learned the hard way
 - **A bare top-level `onRequest` key in `betterAuth({...})`'s config is accepted by TypeScript and

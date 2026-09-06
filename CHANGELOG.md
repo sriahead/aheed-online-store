@@ -51,6 +51,80 @@ every branch merges.
   certifying body, and `#239` was a real incident of this codebase asserting certification with no
   basis for it; a bare tickable boolean would have re-created that exposure one product at a time.
 
+### Documentation
+
+- **`/document` (final) closeout for operator documentation** (`#633`; PR #635 merged to
+  `staging`). Docs only — no runtime code, no schema change, nothing for `prisma migrate deploy` to
+  apply.
+  - `specs/roadmap.md` (1.77.0) gains the slice's build/merge row (PR #635, including its
+    post-`/validate` fix commit) and adds `#633` — absorbing `#625` and `#629`, folding in
+    `#626` — to P9.2's scope list, which had never carried it.
+  - `CLAUDE.md` (1.20.0) gains a live-testing lesson: a `grep` pattern matched against a page's
+    real rendered HTML can false-negative on a literal `&`/`<`/`>`/`"`/`'` that the renderer
+    escapes, and `validation.md`'s own example command is not exempt — found live when the spec's
+    suggested `grep -c 'Platform & Technical Admin Guide'` printed `0` for both the correct and
+    incorrect case, because the rendered page always carries `&amp;`.
+  - `#625`, `#626` and `#629` moved to `In Review` on Project #2 alongside `#633`, rather than
+    closed — this repo's `#174`/`#214`/`#231` R40 lesson is that absorbed issues aren't closed by
+    keyword, so they track and close together with `#633` on promotion to `main`.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
+- **Operator documentation: runbook role delivery repaired, guides corrected, every menu item
+  documented** (`#633`, P9.2, `specs/2026-09-06-operator-documentation/`), absorbing `#625` and
+  `#629` and folding in `#626`. `/staff/runbook` was filtering twice against two different audience
+  vocabularies — the page admitted `staff`/`store-admin`, then `RunbookClient` re-filtered for
+  `staff`/`admin` — and since `Array.includes` is exact-element matching, **one of 152 articles
+  rendered** and the UI's own "Admin" tab could never match anything. The approved Store Admin
+  Management Guide reached nobody. Fixed at the root cause rather than the mismatched string: the
+  client's audience filter is gone entirely and the tab list is **derived** from the audiences the
+  delivered documents carry, so a tab exists only when it has documents behind it. The vocabulary
+  now lives once in `lib/runbook-audiences.ts`. Platform-admin material is admitted only when
+  `auth.via === "platform-admin"` (the `#508` pattern), which also gives `/staff/errors` somewhere
+  correct to be documented. **All 18 Admin/Staff menu items now have a per-menu-item section** —
+  Purpose, Who can access it, What you can do, Typical workflow, Important fields and filters,
+  Common mistakes and limitations, and What happens after changes are saved — placed by each page's
+  own gate across the staff playbook, the store admin guide and the platform admin guide.
+  `tests/operator-doc-coverage.test.ts` enumerates routes from the **filesystem** and compares each
+  section's documented permission against the page's real `requireVendorRole` arguments, so a guide
+  that misstates who may open a page fails the suite and a new `/staff` page fails it until
+  documented.
+
+- **Three false capability claims removed from the store admin guide** (`#629`). It told operators
+  they could issue Stripe refunds and invite staff members — neither has ever existed — and that a
+  store admin can assign the Store Admin role, which `lib/repositories/roles.ts` refuses
+  (`Only a platform-admin can grant the Store Admin role`) and the form does not even offer. The
+  guide now states the real process: refunds are issued in the payment provider's own dashboard, and
+  a colleague registers their own account before being granted the Staff role by email. A **fourth**
+  false claim was found during the build and filed as `#634` — delivery fee, free-delivery threshold
+  and minimum order are documented as editable but are written only by `prisma/seed.ts`, the same
+  operability gap `#612` closed for delivery areas. A **fifth** false claim was found at `/validate`:
+  the Bundles section said a store admin sets a bundle's price by hand and that it does not follow a
+  product's own price changes — backwards from reality. `Bundle` has no price column at all; the
+  price shown to a shopper is always the live sum of its products' current prices, exactly as
+  `BundleForm.tsx`'s own on-page copy already said. Corrected to state that, with nothing to set.
+
+- **`/document` (final) closeout for the stranded payment sweep** (`#618`; PR #622 merged to
+  `staging`, PR #623 promoted to `main`). `specs/roadmap.md` (1.76.0) gains the slice's build/merge
+  row and its promotion row (the promotion also carried the pending delivery-areas `/document`
+  (final) closeout, PR #617, still waiting on `staging`). `CLAUDE.md` (1.19.0) gains two config
+  lessons live-found at this slice's `/validate`: `readEnv()`'s fallback to `process.env` is
+  per-key, not per-Cloudflare-context, so simulating a secret as "unset" requires clearing it from
+  both `.env` and `.dev.vars`, not `.dev.vars` alone; and a `lib/config.ts` accessor that throws on
+  a missing required-in-production secret makes a caller's own graceful `if (!X)` check unreachable
+  in every built Worker, since `NODE_ENV` is unconditionally `"production"` there — the transferable
+  half of the fix this slice needed for its own R10/R23. `specs/sdd-workflow.md` (2.28.0) gains a
+  Propose-stage lesson: a slice's plan claiming to "absorb" an existing issue number needs that
+  number's actual title checked before it is cited anywhere, found here after `#94` had been
+  mis-cited as "abandoned checkout handling" eight times across three months of roadmap history —
+  the real #94 is unrelated guest-cart retention, and no correctly-numbered issue for the real
+  concern ever existed; corrected going forward, with a comment left on #94 and historical
+  change-log rows left as written. Two Build-time follow-up issues (`#619` batch-cap vendor
+  starvation, `#620` a sweep confirmation being indistinguishable from a webhook one) cross-referenced
+  into `build-notes.md` after turning up unfiled there despite being properly filed and boarded.
+  `npm run sdd:audit` reports zero gaps. Delivery board reconciled: `#618` is **Done**.
+  `ARTIFACT_INDEX.md` / `app/(admin)/staff/runbook/docs.ts` regenerated to match. No runtime code,
+  no schema change, nothing for `prisma migrate deploy` to apply.
+
 ### Changed
 
 - **The staff panel's two navigation surfaces now list the same pages.**
@@ -73,6 +147,16 @@ every branch merges.
   nobody enumerated.
 
 ### Fixed
+
+- **`/staff/payments` restored to the staff navigation** (`#626`, folded into `#633`). The page
+  admits STAFF and the hub renders its card to them, but `components/staff/PanelNav.tsx`'s staff-tier
+  branch omitted the link — so it vanished the moment a staff member navigated off the hub, on the
+  page where a shopper's stranded payment gets resolved. `tests/staff-nav-parity.test.ts` could not
+  see this: it compares whole-file href sets, which is the **admin** view, and the staff tier was
+  never compared against anything. It now also derives the expected staff-tier set from the pages'
+  own `requireVendorRole` gates, so a future reallocation between the tiers is self-verifying. That
+  file's docstring, which asserted the staff branch's contents without drawing the conclusion, was
+  corrected to name which surface each block covers.
 
 - **A filter predicate emitting a top-level `OR` was silently dropped on the zero-result recovery
   rungs.** `fetchSearchCandidates` merged the filter fragment and the search predicate with an

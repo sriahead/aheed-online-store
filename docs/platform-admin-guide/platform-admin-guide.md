@@ -4,8 +4,8 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.0.0"
-updated: 2026-08-22
+version: "1.1.0"
+updated: "2026-09-06"
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
 tags: ["admin", "platform", "technical", "multi-tenancy"]
@@ -32,4 +32,32 @@ The platform is designed to host multiple independent store fronts (vendors) fro
 
 ## Store Impersonation (Dev/Support)
 For support and debugging, Platform Admins can use the View Switcher to impersonate specific vendors and view the platform exactly as a Store Admin or Staff member of that vendor would see it.
+
+## Error events — `/staff/errors`
+
+**Purpose:** The most recent server-side errors across the whole platform, so a fault can be seen
+without opening the hosting provider's logs.
+
+**Who can access:** Platform admins only
+
+**What you can do:** Read the 50 most recent errors, newest first. The page has no controls and
+nothing to edit.
+
+**Typical workflow:** A vendor reports that something failed. Open this page and look for an error
+whose time and path match what they describe, then use the message and digest to investigate.
+
+**Important fields and filters:** Each row carries when it happened, the HTTP method and path, which
+router raised it, the error type and message, and a digest that groups repeats of the same fault.
+There is no filter or search — the list is the 50 newest, and nothing else.
+
+**Common mistakes and limitations:** **This page is deliberately closed to store admins, even though
+they hold an admin role.** An error message or path can reveal internal implementation details that a
+vendor-scoped account has no reason to see, so the page refuses anyone who is not a platform admin.
+It is also **not** a complete error record: it captures server-side errors that were actually thrown,
+so a request that failed quietly by returning an error response without raising anything will not
+appear. It is independent of the hosting provider's own logs and does not replace them. Rows are not
+scoped to one vendor, which is the other reason store admins cannot open it.
+
+**What happens after changes are saved:** Nothing is editable. New errors appear as they occur;
+reload to see them.
 
