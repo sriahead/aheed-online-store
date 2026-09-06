@@ -81,7 +81,11 @@ every branch merges.
   a colleague registers their own account before being granted the Staff role by email. A **fourth**
   false claim was found during the build and filed as `#634` — delivery fee, free-delivery threshold
   and minimum order are documented as editable but are written only by `prisma/seed.ts`, the same
-  operability gap `#612` closed for delivery areas.
+  operability gap `#612` closed for delivery areas. A **fifth** false claim was found at `/validate`:
+  the Bundles section said a store admin sets a bundle's price by hand and that it does not follow a
+  product's own price changes — backwards from reality. `Bundle` has no price column at all; the
+  price shown to a shopper is always the live sum of its products' current prices, exactly as
+  `BundleForm.tsx`'s own on-page copy already said. Corrected to state that, with nothing to set.
 
 - **`/document` (final) closeout for the stranded payment sweep** (`#618`; PR #622 merged to
   `staging`, PR #623 promoted to `main`). `specs/roadmap.md` (1.76.0) gains the slice's build/merge

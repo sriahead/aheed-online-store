@@ -112,18 +112,20 @@ straight away, and appears as a shopper-facing filter once a product carries it.
 **Who can access:** Store admins only
 
 **What you can do:** Create a bundle, give it a name and tagline, choose the products and quantities
-inside it, set its price, upload an image, and control the order bundles appear in.
+inside it, upload an image, and control the order bundles appear in.
 
 **Typical workflow:** You decide to promote a weekly box. Create the bundle, add each product with
-the quantity a customer receives, set the price, add an image, and save.
+the quantity a customer receives, add an image, and save.
 
 **Important fields and filters:** Every product in a bundle must already exist in your catalogue. The
-quantity is how many of that product the customer gets, not a stock figure.
+quantity is how many of that product the customer gets, not a stock figure. **There is no price field
+to set** — the price shown to a shopper is always the live sum of the products' own current prices,
+recalculated on every view.
 
-**Common mistakes and limitations:** A bundle's price is set by you and is not calculated from its
-contents, so if you change a product's price the bundle does not follow — revisit the bundle to keep
-the saving honest. Removing a product from the catalogue that a bundle still references will leave
-that bundle incomplete.
+**Common mistakes and limitations:** Because the price is always live, changing a product's own price
+changes every bundle containing it immediately, with nothing to review or re-save on the bundle
+itself. Removing a product from the catalogue that a bundle still references will leave that bundle
+incomplete, and a product going out of stock drops it from the bundle until it returns.
 
 **What happens after changes are saved:** The bundle appears in the shop's bundle listing
 immediately.

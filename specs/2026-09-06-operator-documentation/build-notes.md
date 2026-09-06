@@ -150,6 +150,23 @@ re-verified after `#634` and is now believed accurate (`VendorLogoUploader` plus
 the ones whose capabilities were described from a form component rather than from the page itself:
 **Bundles** and **Promotions**. Treat a claim in either as unverified until traced to a control.
 
+**Update at `/fix`: the Bundles re-check this note called for found a fifth false claim, and it was
+backwards rather than merely absent.** `/validate`'s R21 sweep found the Bundles section saying a
+store admin can "set its price" and warning that "if you change a product's price the bundle does
+not follow — revisit the bundle to keep the saving honest." Both sentences are the **opposite** of
+how bundles actually work: `Bundle` has no price column in `prisma/schema.prisma` at all, and
+`lib/bundle-pricing.ts` states outright "A bundle has NO stored price. Its total is summed here from
+its constituents'..." — `BundleForm.tsx`'s own on-page copy already told the admin "there is nothing
+to type." The false prose was written without opening `BundleForm.tsx`, which is exactly the gap
+this section flagged as a risk. Fixed by rewriting "What you can do," "Important fields and
+filters," and "Common mistakes and limitations" to state that price has no field, is always the live
+sum of constituent prices, and changing a product's price changes every bundle containing it
+immediately with nothing to revisit. No code changed — this was prose-only, verified by re-reading
+`BundleForm.tsx` and `lib/bundle-pricing.ts` directly rather than by memory. **Promotions was
+re-checked at the same time and remains accurate** (`CampaignForm.tsx`'s fields — `headline`,
+`subtitle`, `linkUrl`, `startsAt`, `endsAt` — match the section, and the top-level-department
+restriction matches `app/(admin)/staff/promotions/page.tsx`'s own filter).
+
 **The Reports section makes a claim about a *relationship between two pages*.** It says the Orders
 page's default view is narrower than the Reports revenue figure, so the two will not match. That is
 `#628`'s territory and is true by reading (`REVENUE_STATUSES` is three statuses,
