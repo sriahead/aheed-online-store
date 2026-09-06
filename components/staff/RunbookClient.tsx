@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import Markdown from "react-markdown";
+import {
+  audienceLabel,
+  deriveAudienceTabs,
+  docsWithAudience,
+  type RunbookAudience,
+} from "@/lib/runbook-audiences";
 
 type DocArticle = {
   id: string;
@@ -14,33 +20,57 @@ type DocArticle = {
   content: string;
 };
 
+/**
+ * The runbook reader (#633).
+ *
+ * THIS COMPONENT DOES NOT FILTER BY AUDIENCE. `app/(admin)/staff/runbook/page.tsx` has already
+ * decided what this viewer may see; a second filter here is what produced #625, where the page
+ * admitted `staff`/`store-admin` and this component re-filtered for `staff`/`admin`, silently
+ * dropping the Store Admin Management Guide and leaving a permanently empty "Admin" tab.
+ *
+ * The tab list is derived from the audiences the delivered documents actually carry
+ * (`deriveAudienceTabs`), so a tab exists only when it has something behind it. See
+ * `lib/runbook-audiences.ts` for the full reasoning.
+ */
 export function RunbookClient({ docs }: { docs: DocArticle[] }) {
-  const staffAdminDocs = docs.filter(
-    (d) => d.audience.includes("staff") || d.audience.includes("admin"),
-  );
+  const tabs = deriveAudienceTabs(docs);
 
-  const [filter, setFilter] = useState<"all" | "staff" | "admin">("all");
-  const filteredDocs =
-    filter === "all" ? staffAdminDocs : staffAdminDocs.filter((d) => d.audience.includes(filter));
+  // `null` is the "All" tab. Not a member of RunbookAudience — "all" is not an audience, and
+  // modelling it as one is how the old hardcoded list came to include a value nothing matched.
+  const [filter, setFilter] = useState<RunbookAudience | null>(null);
+  const filteredDocs = filter === null ? docs : docsWithAudience(docs, filter);
 
-  const [selectedDoc, setSelectedDoc] = useState<DocArticle>(staffAdminDocs[0] || null);
+  const [selectedDoc, setSelectedDoc] = useState<DocArticle>(docs[0] || null);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       <div className="lg:col-span-4 space-y-4">
         <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-xl">
-          {(["all", "staff", "admin"] as const).map((aud) => (
+          <button
+            type="button"
+            onClick={() => setFilter(null)}
+            aria-pressed={filter === null}
+            className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition ${
+              filter === null
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            All
+          </button>
+          {tabs.map((audience) => (
             <button
-              key={aud}
+              key={audience}
               type="button"
-              onClick={() => setFilter(aud)}
-              className={`flex-1 py-1.5 rounded-lg text-sm font-medium capitalize transition ${
-                filter === aud
+              onClick={() => setFilter(audience)}
+              aria-pressed={filter === audience}
+              className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition ${
+                filter === audience
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              {aud}
+              {audienceLabel(audience)}
             </button>
           ))}
         </div>

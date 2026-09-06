@@ -62,6 +62,14 @@ function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: 
  * Two pages are deliberately excluded from that parity set, not forgotten:
  * `/staff/errors` is platform-admin-only (this nav's `currentTier` cannot express that, so the hub
  * carries it behind its own check), and `/staff/search-synonyms` is #602's open work.
+ *
+ * THE PARITY TEST ABOVE IS TIER-BLIND, AND THAT COST US ONE LINK (#626, fixed in #633). It collects
+ * every href in each file and compares the two sets, so the staff-tier branch below was never
+ * compared against anything — it omitted `/staff/payments` for months even though that page admits
+ * STAFF (`requireVendorRole("STAFF", "ADMIN")`) and the hub renders its card to them, so the link
+ * vanished the moment a staff member navigated off the hub. `tests/staff-nav-parity.test.ts` now
+ * additionally derives the expected staff-tier set from the pages' OWN gates, so a future
+ * reallocation between the tiers is self-verifying rather than trusted.
  */
 export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -96,6 +104,7 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
                 label="Live Inventory & Availability"
               />
               <NavLink href="/staff/orders" icon={ClipboardList} label="Fulfillment & Orders" />
+              <NavLink href="/staff/payments" icon={ShieldAlert} label="Payment Issues" />
               <NavLink href="/staff/runbook" icon={BookOpen} label="Internal Operational Runbook" />
             </>
           ) : (
