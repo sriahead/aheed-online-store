@@ -74,6 +74,19 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` (final) closeout for delivery areas admin & staff nav reconciliation** (`#612`; PR
+  #615 merged to `staging`, PR #616 promoted to `main`). `specs/roadmap.md` (1.75.0) gains the
+  slice's build/merge row and its promotion row — the promotion also carried two docs-only P2.6
+  milestone-close merges (`/discover` PR #609, `/learn` PR #611) that had reached `staging` but not
+  yet `main`. `CLAUDE.md` (1.18.0) gains a new headless-testing entry: a server action a client
+  component calls directly (`await addToCart(...)`) rather than binding to a `<form>` is curl-drivable
+  too, but as a third, distinct wire shape — a `Next-Action: <id>` header plus a JSON-array body —
+  neither of the two already-documented `$ACTION_ID_<hash>`/`useActionState` shapes apply, since
+  there is no form for either to render into. `npm run sdd:audit` reports zero gaps. Delivery board
+  reconciled: `#612` is **Done**. `ARTIFACT_INDEX.md` / `app/(admin)/staff/runbook/docs.ts`
+  regenerated to match. No runtime code, no schema change, nothing for `prisma migrate deploy` to
+  apply.
+
 - **`/learn` retrospective on P2.6's close** (`docs/research/milestone-retrospectives.md` 1.1.0) —
   the first entry written under the Discover/Learn phases. All six slices (`#564`–`#569`) shipped
   and promoted as proposed, none reverted; the one significant scope change (moving AI off the
