@@ -8,6 +8,15 @@ every branch merges.
 
 ### Added
 
+- **`/staff/delivery-areas`** (`#612`, P9.2, `specs/2026-09-06-delivery-areas-admin/`). Store admins
+  can add and remove the postcode areas their shop delivers to. These rows are a hard checkout gate
+  — `features/checkout/place-order.ts` refuses an order outright when no prefix matches the
+  shopper's postcode — and until now their only writer anywhere in the repository was
+  `prisma/seed.ts`, so changing where the shop delivers required a developer with production
+  database access. No schema change: `VendorDeliveryArea` already carried the unique constraint this
+  needed. Removing a vendor's **last** remaining area is refused inside a `Serializable`
+  transaction, mirroring the last-admin guard in `lib/repositories/roles.ts` — an empty prefix list
+  makes every postcode undeliverable, so it would stop checkout for every customer of that store.
 - **Catalogue filter facets — brand, dietary flags, country of origin and offers** (`#569`,
   P2.6 slice 6 of 6, `specs/2026-09-05-catalogue-filter-facets/`). Shoppers can now narrow
   `/search` and any category listing by country of origin, dietary suitability (vegetarian, gluten
@@ -24,6 +33,27 @@ every branch merges.
   reference and a verified date, and unticking it clears both. HMC is a named third-party
   certifying body, and `#239` was a real incident of this codebase asserting certification with no
   basis for it; a bare tickable boolean would have re-created that exposure one product at a time.
+
+### Changed
+
+- **The staff panel's two navigation surfaces now list the same pages.**
+  `components/staff/PanelNav.tsx` omitted brands, customers and payments while the hub at
+  `app/(admin)/staff/page.tsx` omitted bundles, promotions and storefront, so three pages vanished
+  from the chrome the moment a user navigated off the hub and three more were unreachable from it.
+  Each file was individually correct; the defect existed only in the relationship between them, so
+  `tests/staff-nav-parity.test.ts` now pins the two together. `/staff/errors` is reachable from the
+  hub for the first time, gated on `auth.via === "platform-admin"` directly rather than on the
+  page's broader `isAdmin` flag — that flag is true for vendor admins too, who cannot open the page.
+
+### Security
+
+- **A postcode prefix can no longer reach `lib/delivery.ts`'s `RegExp` constructor unvalidated.**
+  That module interpolates the stored prefix straight into `new RegExp(...)`, which was safe only
+  while a hand-authored seed file was the column's sole writer. Making prefixes admin-writable
+  without this would have let a stored metacharacter throw a `SyntaxError` on the checkout path for
+  every shopper of that vendor. `lib/delivery-area-form.ts` validates against an allow-list
+  (`^[A-Z]{1,2}$`) rather than a metacharacter deny-list, so it cannot be outflanked by a character
+  nobody enumerated.
 
 ### Fixed
 
