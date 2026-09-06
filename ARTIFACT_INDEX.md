@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-06T14:41:58.003Z` · commit `3809c08` · `152` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-06T19:43:58.226Z` · commit `620895d` · `153` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -149,6 +149,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P2.6 slice 5 — search autocomplete and filter panel with chips and drill-down (plan)](specs/2026-09-04-search-autocomplete-and-filter-panel/plan.md) | spec | 1.0.0 | 2026-09-04 | draft | internal | Search autocomplete behind a new bounded JSON route, plus a mobile filter disclosure with removable chips, clear-all, context-aware facets and category drill-down that composes with the query. No migration; every form stays no-JS. |
 | [P2.6 slice 6 — catalogue filter facets: brand, dietary flags, country of origin, offers (plan)](specs/2026-09-05-catalogue-filter-facets/plan.md) | spec | 1.0.0 | 2026-09-05 | draft | internal | Four new catalogue filter facets over a new Brand model, three dietary booleans, the existing origin column and an offers predicate, with HMC certification carrying provenance rather than shipping as a bare boolean. |
 | [P9.2 — Delivery areas admin & staff navigation reconciliation (plan)](specs/2026-09-06-delivery-areas-admin/plan.md) | spec | 1.0.0 | 2026-09-06 | draft | internal | A vendor's delivery postcode prefixes are seed-only yet hard-gate checkout. Adds a validated staff admin page for them, and reconciles the two staff navigation surfaces that disagree about what the panel contains. No schema change. |
+| [Operator documentation — runbook role delivery, guide accuracy, per-menu-item coverage (plan)](specs/2026-09-06-operator-documentation/plan.md) | spec | 1.0.0 | 2026-09-06 | draft | internal | Repairs the staff runbook's audience routing so operator guides actually render, corrects three false capability claims in the store admin guide, and documents all 18 Admin/Staff menu items with a mechanical coverage and permissions check. |
 | [Stranded payment sweep — scheduled reconciliation of lost webhooks and abandoned checkouts (plan)](specs/2026-09-06-stranded-payment-sweep/plan.md) | spec | 1.0.0 | 2026-09-06 | draft | internal | A scheduled sweep resolving PENDING_PAYMENT orders stranded by a lost Stripe webhook or an abandoned checkout, asking the provider before it acts. Adds a cron Worker and an authenticated job route; changes no existing payment transition logic. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.26.0 | 2026-09-05 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
