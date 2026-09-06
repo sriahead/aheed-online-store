@@ -53,6 +53,26 @@ every branch merges.
 
 ### Documentation
 
+- **`/discover` pass on the Admin/Staff portal usability brief** (`docs/research/discovery-log.md`
+  1.3.0). Seven findings, each filed: the staff runbook renders **1 of its 152 articles**, because
+  `app/(admin)/staff/runbook/page.tsx` filters for `staff`/`store-admin` and
+  `components/staff/RunbookClient.tsx` then re-filters the result for `staff`/`admin`, so the
+  approved Store Admin Management Guide reaches nobody and the UI's own "Admin" tab is permanently
+  empty (`#625`); that guide also documents Stripe refunds and staff invitations, neither of which
+  exists anywhere in the code (`#629`); `PanelNav`'s staff tier omits `/staff/payments` even though
+  the page admits STAFF and the hub shows them its card, which `tests/staff-nav-parity.test.ts`
+  cannot see because it compares whole-file href sets (`#626`); `listCategoriesForAdmin` orders
+  globally by `sortOrder` with no `parentId` grouping, so departments and first-children interleave
+  by name and there is no contiguous run of children for an expand/collapse to reveal (`#627`); the
+  report tiles count `REVENUE_STATUSES` while `parseStaffOrdersQuery` can express only the default
+  queue, `all`, or one single status, so a drill-down would contradict its own totals (`#628`);
+  `ProductForm`'s single flat category select cannot express direct-to-department assignment, which
+  both seed paths actively use (`#630`); and three Tailwind arbitrary-value literals hardcode
+  Aheed's brand primitives into shared staff pages, so SriMart staff see the wrong palette
+  (`#631`). Two of the brief's six items — Brand sample data and reduced-motion support — were found
+  **already implemented** and are recorded as such rather than as findings. No runtime code, no
+  schema change.
+
 - **`/document` (final) closeout for the stranded payment sweep** (`#618`; PR #622 merged to
   `staging`, PR #623 promoted to `main`). `specs/roadmap.md` (1.76.0) gains the slice's build/merge
   row and its promotion row (the promotion also carried the pending delivery-areas `/document`
