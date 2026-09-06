@@ -4,7 +4,7 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.19.0"
+version: "1.20.0"
 updated: 2026-09-06
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
@@ -1074,6 +1074,20 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   would hit. Cross-tenant **read/list** scoping (a page never showing another vendor's rows) is
   provable the same way, from one side only: confirm your own vendor's list excludes a row you
   know belongs to someone else, rather than trying to view the other vendor's own list.
+- **A `grep` pattern written against a literal string (e.g. a doc title containing `&`) can silently
+  false-negative against a page's real, rendered HTML, because HTML-escapes it as `&amp;` — and a
+  `validation.md` row's own example command is not exempt from this.** Hit at `#633`'s `/validate`
+  (2026-09-06): the spec's own suggested check, `grep -c 'Platform & Technical Admin Guide'
+  runbook-admin.html` / `runbook-platform.html`, was meant to print `0` then a non-zero count,
+  proving the platform-admin guide is withheld from a vendor admin and shown to a platform admin.
+  Run literally, it printed `0` for **both** files — not because the feature was broken, but because
+  Next's rendered output always carries `Platform &amp; Technical Admin Guide`, so the unescaped
+  pattern never matches the positive case either. Confirmed the feature actually worked by re-running
+  with the escaped string; the code was correct, the validation doc's example command was not.
+  **Before treating a grep-against-live-HTML row as failed (or as passed) on the strength of a
+  zero/non-zero count, check whether the literal string being matched contains `&`, `<`, `>`, `"`, or
+  `'`** — any of which a browser or React's server renderer will escape — and grep for the escaped
+  form instead of assuming the spec's literal example command is already correct.
 
 ## Better Auth (`lib/auth.ts`, ADR-002) — learned the hard way
 - **A bare top-level `onRequest` key in `betterAuth({...})`'s config is accepted by TypeScript and
