@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.17.0"
-updated: 2026-09-05
+version: "1.18.0"
+updated: 2026-09-06
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -972,6 +972,22 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   add/edit/remove/approve/reject forms end-to-end with no Chrome extension available — same
   `curl -F` approach as the plain-form case, just with these four fields instead of one, plus the
   named fields the action actually reads (e.g. `alias`, `canonical`, `intent`).
+- **A server action a client component calls directly (`await someAction(arg1, arg2)`, e.g.
+  `addToCart`) rather than binding to a `<form action={...}>` is ALSO curl-drivable, but as a
+  wholly different wire protocol — neither `$ACTION_ID_<hash>` nor the `useActionState` four-field
+  shape appears anywhere in the HTML, because there is no form for React to render one into.** Next
+  ships these as a POST to the current page URL carrying a `Next-Action: <action-id>` header (the
+  action's id — the same stable build-time hash `.next/server/server-reference-manifest.json` maps
+  to a `filename`/`exportedName`, per the existing entry below) with a plain-text body that is a
+  JSON **array** of the call's positional arguments, in order — `["<productId>", 1]` for
+  `addToCart(productId, delta)`. No cookie-derived nonce, no per-render key: `curl -b <cookies>
+  -X POST <page-url> -H "Next-Action: <id>" -H "Content-Type: text/plain;charset=UTF-8" --data-raw
+  '["<arg1>", <arg2>]'` reproduces the call exactly, and the response is the page's normal RSC
+  payload (parse it for the effect, e.g. re-fetch the affected page rather than trying to read a
+  return value out of the stream). Used this way in `#612`'s `/validate` to add a real product to a
+  guest cart (`features/cart/add-to-cart.ts`'s `addToCart`) with no browser and no client JS, so
+  `features/checkout/place-order.ts`'s delivery-postcode refusal (R24) could be driven end-to-end
+  against a real cart rather than stopping at the cheaper storefront-header signal (R23).
 - **`npm run preview`'s `next build` step type-checks every `.ts` file its tsconfig includes —
   which, by default, means the repo root — so a type error in a scratch validation script placed
   at the repo root (rather than under `lib/`, `app/`, etc.) fails the WHOLE build**, not just that
