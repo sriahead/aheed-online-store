@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-06T22:23:39.962Z` · commit `91bfb7c` · `154` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-06T22:43:47.936Z` · commit `1547efc` · `154` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -22,7 +22,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
-| [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 1.20.0 | 2026-09-06 | approved | internal | AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow. |
+| [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 1.21.0 | 2026-09-06 | approved | internal | AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow. |
 | [Product Requirements & Feature Workflows](docs/business-analysis/product-requirements.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for Business Analysts and Project Managers detailing the core business logic, feature requirements, and workflows. |
 | [UI/UX & Design Guidelines](docs/design-ux/ux-guidelines.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for UI/UX designers detailing the design system, storefront customization, and the role of the ui-ref prototype. |
 | [Architecture & System Design Overview](docs/developer-portal/architecture-overview.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A high-level map of the platform's architecture, system design, and database design, acting as a directory to the deeper technical specifications. |
@@ -36,7 +36,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Marketing & Analytics Data Guide](docs/marketing-analytics/marketing-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for marketing analysts on how to track user behavior, promotions, and campaign performance. |
 | [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.1.0 | 2026-09-06 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
 | [Research & retrospectives — what lives here](docs/research/README.md) | doc | 1.0.0 | 2026-09-02 | approved | internal | Explains what the Discover and Learn phases write into this directory, what belongs in a canonical project document instead, and the rule that nothing here is approved scope until it passes through /propose. |
-| [Discovery log](docs/research/discovery-log.md) | doc | 1.3.0 | 2026-09-06 | approved | internal | Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action. |
+| [Discovery log](docs/research/discovery-log.md) | doc | 1.4.0 | 2026-09-06 | approved | internal | Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action. |
 | [Milestone retrospectives](docs/research/milestone-retrospectives.md) | doc | 1.1.0 | 2026-09-05 | approved | internal | Append-only record of Learn-phase retrospectives — what each completed milestone actually delivered, which assumptions held or failed, what emerged unexpectedly, and which lessons were promoted into CLAUDE.md or the workflow. |
 | [M0 — Walking Skeleton (plan)](specs/2026-08-05-m0-walking-skeleton/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for the smallest possible end-to-end app (Next.js on Workers, Neon, CI/CD) proving the Cloudflare + Neon pipeline before any feature work begins. |
 | [P0 — Design-System Tokens (plan)](specs/2026-08-06-design-system/plan.md) | spec | 1.0.0 | 2026-08-06 | approved | internal | Plan for installing Tailwind CSS v4 and encoding the Aheed brand kit as design tokens, closing the last item deferred from P0's first slice. |
@@ -175,7 +175,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Phase 6.5 Validation & Test Results](docs/developer-portal/sdd/self-review/VALIDATION-RESULTS.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Verification log of test runs, build checks, and validation evidence for Phase 6.5 audit loop. |
 | [Operations & Fulfillment Procedures](docs/operations-research/operations-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for operations teams detailing the fulfillment lifecycle, stock management, and exception handling. |
 | [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.0.0 | 2026-09-06 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, keeping stock honest, clearing stranded payments, and finding the guides. One section per menu item. |
-| [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.0.0 | 2026-09-06 | approved | internal | How to use every owner-only page in the Store Admin Panel: catalogue, categories, brands, bundles, promotions, discounts, loyalty, storefront, delivery areas, reports, customers, search dictionary and team access. |
+| [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.1.0 | 2026-09-06 | approved | internal | How to use every owner-only page in the Store Admin Panel: catalogue, categories, brands, bundles, promotions, discounts, loyalty, storefront, delivery areas, reports, customers, search dictionary and team access. |
 | [Phase 6.5 — Autonomous Application Self-Review, Gap Detection & Hardening Plan](specs/2026-08-13-p6.5-self-review-hardening/plan.md) | spec | 1.0.0 | 2026-08-13 | approved | internal | Plan for Phase 6.5 autonomous self-review and hardening audit loop prior to Phase 7. |
 | [Phase 7a Implementation & Execution Plan](specs/2026-08-13-p7a-compliance-hardening/plan.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Step-by-step implementation plan for Phase 7a operational closure, UK compliance, security headers, and user-experience gaps. |
 | [Phase 7a — Compliance, Operational Closure & Application Hardening Requirements](specs/2026-08-13-p7a-compliance-hardening/requirements.md) | spec | 1.1.0 | 2026-08-13 | approved | internal | Spec and requirements for closing Phase 6 gaps, completing UK GDPR/PECR compliance, matching UI reference look-and-feel (docs/ui-ref), and de-risking operational launch prerequisites before Phase 8. |

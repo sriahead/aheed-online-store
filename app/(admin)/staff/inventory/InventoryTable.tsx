@@ -128,7 +128,7 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
         </span>
       </td>
       <td className="px-6 py-4">
-        <p className="font-bold text-[#2e7d32]">£{(item.basePrice / 100).toFixed(2)}</p>
+        <p className="font-bold text-action">£{(item.basePrice / 100).toFixed(2)}</p>
         <p className="text-xs text-black/40">({item.basePrice}p)</p>
       </td>
       <td className="px-6 py-4">
@@ -156,7 +156,7 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
           disabled={isUpdating}
           className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
             optimisticActive
-              ? "bg-[#e8f5e9] text-[#2e7d32] hover:bg-[#c8e6c9]"
+              ? "bg-action-tint text-action hover:bg-action/20"
               : "bg-red-100 text-red-700 hover:bg-red-200"
           }`}
         >

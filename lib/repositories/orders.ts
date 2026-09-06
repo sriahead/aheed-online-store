@@ -854,6 +854,8 @@ export interface OrderRepository {
   ): Promise<AdvanceBulkResult>;
   /** High-level financial reporting (P6.6c). */
   getFinancialsForStaff(): Promise<{ totalRevenuePence: number; totalOrders: number }>;
+  /** Per-status breakdown of the same orders getFinancialsForStaff counts (#628). */
+  getRevenueStatusBreakdown(): Promise<RevenueStatusCount[]>;
 }
 
 /**
@@ -1144,6 +1146,51 @@ export async function getFinancialsForStaff(
     totalRevenuePence: aggregate._sum.totalPence ?? 0,
     totalOrders: aggregate._count.id,
   };
+}
+
+/** One revenue status and how many of this vendor's orders currently hold it. */
+export interface RevenueStatusCount {
+  status: OrderStatusValue;
+  orderCount: number;
+  revenuePence: number;
+}
+
+/**
+ * Per-status breakdown of exactly the orders `getFinancialsForStaff` counts
+ * (#628).
+ *
+ * ONE `groupBy` over the SAME `where` clause as that function — not N counts,
+ * and not a widened status set. That is the whole point: the reports page's
+ * Total Orders tile and this breakdown must reconcile, and the only way to be
+ * sure they do is for both to be filtered by the same predicate rather than by
+ * two predicates a reader has to compare by eye.
+ *
+ * A status with no orders is returned with a zero count rather than omitted, so
+ * the page renders a stable three-row table instead of one that changes shape
+ * with the data. `groupBy` returns only statuses that HAVE rows, so the zero
+ * fill happens here.
+ */
+export async function getRevenueStatusBreakdown(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+): Promise<RevenueStatusCount[]> {
+  const grouped = await prisma.order.groupBy({
+    by: ["status"],
+    where: { vendorId, status: { in: [...REVENUE_STATUSES] } },
+    _count: { id: true },
+    _sum: { totalPence: true },
+  });
+
+  const byStatus = new Map(grouped.map((row) => [row.status, row]));
+
+  return REVENUE_STATUSES.map((status) => {
+    const row = byStatus.get(status);
+    return {
+      status,
+      orderCount: row?._count.id ?? 0,
+      revenuePence: row?._sum.totalPence ?? 0,
+    };
+  });
 }
 
 // ---- Staff transitions (P4b, #125) ----------------------------------------

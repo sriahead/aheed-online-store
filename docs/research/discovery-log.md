@@ -4,7 +4,7 @@ title: "Discovery log"
 audience: [dev, product]
 type: doc
 status: approved
-version: "1.3.0"
+version: "1.4.0"
 updated: 2026-09-06
 visibility: internal
 summary: "Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action."
@@ -108,6 +108,8 @@ item 5's whole deliverable would land in a directory whose contents do not reach
 
 **Next action:** PROPOSE — filed as **#625**.
 
+**Update 2026-09-06 (post-`#633`):** RESOLVED. Fixed by `#633` (`specs/2026-09-06-operator-documentation/`, PR #635), promoted to production in PR #637; the issue is closed. Recorded here so this finding is not read as open work.
+
 ---
 
 ### 2026-09-06 — a STAFF user loses the Payment Issues link the moment they leave the hub
@@ -155,6 +157,8 @@ recurs); do nothing.
 add more staff-visible items on top of an unchecked surface.
 
 **Next action:** PROPOSE — filed as **#626**.
+
+**Update 2026-09-06 (post-`#633`):** RESOLVED. Fixed by `#633` (`specs/2026-09-06-operator-documentation/`, PR #635), promoted to production in PR #637; the issue is closed. Recorded here so this finding is not read as open work.
 
 ---
 
@@ -210,6 +214,8 @@ own slice, where it will be discovered mid-Build rather than at Spec.
 
 **Next action:** PROPOSE — filed as **#627**.
 
+**Update 2026-09-06 (post-`#633`):** RESOLVED. Fixed by the combined admin-panel slice (`specs/2026-09-06-admin-panel-operability/`). Recorded here so this finding is not read as open work.
+
 ---
 
 ### 2026-09-06 — the report tiles and the order list count different things, so a naive drill-down would disagree with itself
@@ -263,6 +269,8 @@ feature whose stated acceptance criterion is unmeetable.
 
 **Next action:** PROPOSE — filed as **#628**.
 
+**Update 2026-09-06 (post-`#633`):** RESOLVED. Fixed by the combined admin-panel slice (`specs/2026-09-06-admin-panel-operability/`). Recorded here so this finding is not read as open work.
+
 ---
 
 ### 2026-09-06 — the store admin guide documents two capabilities that do not exist
@@ -315,6 +323,8 @@ filter is fixed. Sequence the correction before or with that fix, not after.
 
 **Next action:** PROPOSE — filed as **#629**.
 
+**Update 2026-09-06 (post-`#633`):** RESOLVED. Fixed by `#633` (`specs/2026-09-06-operator-documentation/`, PR #635), promoted to production in PR #637; the issue is closed. Recorded here so this finding is not read as open work.
+
 ---
 
 ### 2026-09-06 — Aheed's brand colours are hardcoded into shared staff pages, so SriMart renders the wrong palette
@@ -360,6 +370,8 @@ style.
 
 **Next action:** ADD TO ROADMAP/BACKLOG — filed as **#631**.
 
+**Update 2026-09-06 (post-`#633`):** RESOLVED. Fixed by the combined admin-panel slice (`specs/2026-09-06-admin-panel-operability/`). Recorded here so this finding is not read as open work.
+
 ---
 
 ### 2026-09-06 — the product form's single flat category select cannot express what the data model allows
@@ -404,6 +416,8 @@ finding above.
 **Cost of delay:** none accruing.
 
 **Next action:** PROPOSE — filed as **#630**.
+
+**Update 2026-09-06 (post-`#633`):** RESOLVED. Fixed by the combined admin-panel slice (`specs/2026-09-06-admin-panel-operability/`). Recorded here so this finding is not read as open work.
 
 ---
 

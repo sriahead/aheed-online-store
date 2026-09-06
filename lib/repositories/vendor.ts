@@ -183,8 +183,23 @@ export async function updateVendorLogoKey(
  * writing that colour, silently.
  */
 export interface VendorStorefrontConfigInput {
-  bannerNote: string | null;
-  heroSubtitle: string | null;
+  /**
+   * `null` clears the line (which HIDES its element — see the model comment);
+   * `undefined` leaves the stored value alone, which is what lets the
+   * delivery-rules form (#634) save without touching copy it does not own.
+   * Prisma reads `undefined` in an `update` as "no change", so this needs no
+   * conditional spread.
+   */
+  bannerNote?: string | null;
+  heroSubtitle?: string | null;
+  /**
+   * #634 — the three delivery rules. Optional as a group: the branding half of
+   * this form submits without them, and omitting them must leave the stored
+   * values alone rather than reset them to a default.
+   */
+  deliveryFeePence?: number;
+  freeDeliveryThresholdPence?: number | null;
+  minimumOrderPence?: number;
   brandGreenDark?: string;
   brandGreen?: string;
   brandOrange?: string;
@@ -222,6 +237,17 @@ export async function updateVendorStorefrontConfig(
       data: {
         bannerNote: data.bannerNote,
         heroSubtitle: data.heroSubtitle,
+        // #634 — written only when supplied. `freeDeliveryThresholdPence` is
+        // explicitly nullable, so `undefined` (absent) and `null` (free
+        // delivery never offered) must stay distinguishable here; spreading a
+        // conditional object is what keeps Prisma from seeing a key at all.
+        ...(data.deliveryFeePence !== undefined ? { deliveryFeePence: data.deliveryFeePence } : {}),
+        ...(data.freeDeliveryThresholdPence !== undefined
+          ? { freeDeliveryThresholdPence: data.freeDeliveryThresholdPence }
+          : {}),
+        ...(data.minimumOrderPence !== undefined
+          ? { minimumOrderPence: data.minimumOrderPence }
+          : {}),
       },
     });
 

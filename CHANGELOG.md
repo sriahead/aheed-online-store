@@ -8,6 +8,60 @@ every branch merges.
 
 ### Added
 
+- **Admin panel operability: category hierarchy, report drill-down, delivery rules and per-vendor
+  panel colours** (`#627`, `#628`, `#630`, `#631`, `#634`, P9.2,
+  `specs/2026-09-06-admin-panel-operability/`), landing the `/discover` pass that filed them
+  (`#632`). **No schema change and no migration** — every column involved already existed.
+  - **`#627`** — `listCategoriesForAdmin` ordered by `(sortOrder, name)` as a single **global**
+    ordering with no `parentId` grouping. `prisma/seed.ts` gives top-level categories no
+    `sortOrder`, so all 13 take the schema default of `0` while children get `0,1,2` **within** each
+    parent — putting every department and every first-child in one bucket sorted by name alone, so
+    an indented Household subcategory rendered directly beneath Beverages. Grouped in the
+    **repository** via a pure, exported `groupCategoryRowsByParent`, so `ProductForm`'s picker (fed
+    by the same function) is fixed by the same change rather than separately. A child whose parent
+    is missing is treated as top-level rather than dropped: an unselectable category is a worse
+    failure than an oddly-placed one.
+  - **`#630`** — the product form rendered **one flat select** over every tier. Both tiers are
+    genuinely assignable and both seed paths use them (`prisma/seed.ts` assigns hand-curated
+    products to a department, `seedGeneratedCatalogue` to subcategories), so it is now one
+    `optgroup` per department **with the department itself as the first selectable option inside
+    it**. A "pick category, then subcategory" cascade would have read more naturally and silently
+    removed direct-to-department assignment — the exact regression `#630` was filed to prevent.
+  - **`#628`** — `/staff/reports`' tiles aggregate over `REVENUE_STATUSES`, a set the URL could not
+    express: `parseStaffOrdersQuery` resolved a status to the default queue, `all`, or one single
+    status. So `?status=all` overcounted the tile and the bare queue undercounted it, and any
+    drill-down would have contradicted the number it was reached from — re-opening the credibility
+    problem `#238` already repaired once. Adds a `STATUS_REVENUE` sentinel alongside `STATUS_ALL`,
+    an **Orders by status** tier built from **one `groupBy` over the same `where` clause** the tiles
+    use (so the rows sum to Total Orders by construction, not coincidence), and a Total Orders tile
+    that links to precisely its own dataset. The orders filter gains a matching option, so arriving
+    from the tile does not show "Awaiting action" selected over a different list.
+  - **`#631`** — six Tailwind arbitrary-value literals hardcoded **Aheed's** brand primitives into
+    pages every vendor's staff open, so SriMart staff saw Aheed's green on their own store's
+    screens. `#631` named three; a panel-wide grep found six (`staff/team/page.tsx` and
+    `AssignRoleForm.tsx` carried the others). All now read `text-action`, `bg-action-tint`,
+    `bg-surface-muted` and `text-danger`, which `brandStyle()` re-declares per vendor.
+    `tests/panel-token-purity.test.ts` walks the panel from the filesystem and fails on any new
+    arbitrary hex, excluding the **generated** `runbook/docs.ts` via `build-index.ts`'s own
+    `GENERATED_ARTIFACTS` rather than a hand-written path.
+  - **`#634`** — `deliveryFeePence`, `freeDeliveryThresholdPence` and `minimumOrderPence` were
+    written by `prisma/seed.ts` and nothing else, so changing a delivery fee needed a developer with
+    database access — the same operability gap `#612` closed for delivery *areas*. They are now
+    editable on `/staff/storefront` as their own form with its own state, because these three reach
+    real money arithmetic on the checkout path (`lib/order-totals.ts`) and a silently-rejected save
+    would be indistinguishable from a successful one. `lib/delivery-rules-form.ts` accepts only
+    `^\d+(\.\d{1,2})?$` and converts by **integer arithmetic on the digit strings**, so no binary
+    float touches a money value and `2.999` is refused rather than quietly rounded to `£3.00` —
+    which is why `parsePriceInput` was not reused. Blank threshold stores SQL `NULL` (never
+    offered), deliberately distinct from `0` (every order qualifies).
+  - **Incidental:** `/staff/storefront`'s refusal branch was `return null`, so a refused user got a
+    `200` with the portal shell and an empty content area. Now renders `PanelRefusal` like every
+    other `/staff/*` page.
+  - `docs/store-admin-guide/admin-tabs-guide.md` (2.1.0) regains a delivery-rules capability
+    sentence — the **fourth** false claim `#633` removed — in the same change that makes it true.
+  - `docs/research/discovery-log.md` (1.4.0) lands via PR #632's stranded commit, with all seven
+    findings reconciled to their real state rather than left presenting closed defects as open.
+
 - **Scheduled sweep for stranded payments** (`#618`, P9.2,
   `specs/2026-09-06-stranded-payment-sweep/`), absorbing `#101` and `#94`. An order whose Stripe
   webhook never arrived was stranded in `PENDING_PAYMENT` forever, holding its inventory, its

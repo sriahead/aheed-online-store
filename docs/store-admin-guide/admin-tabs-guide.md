@@ -4,7 +4,7 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.0.0"
+version: "2.1.0"
 updated: "2026-09-06"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: catalogue, categories, brands, bundles, promotions, discounts, loyalty, storefront, delivery areas, reports, customers, search dictionary and team access."
@@ -205,27 +205,41 @@ the redemption value applies to every existing balance.
 
 ## Storefront — `/staff/storefront`
 
-**Purpose:** Your shop's own identity — its branding colours, logo and homepage copy.
+**Purpose:** Your shop's own identity — its branding colours, logo and homepage copy — and the
+delivery rules every order is charged by.
 
 **Who can access:** Store admins only
 
-**What you can do:** Set your brand colours, upload your logo, and edit the homepage hero subtitle
-and the notice in the header banner.
+**What you can do:** Set your brand colours, upload your logo, edit the homepage hero subtitle and
+the notice in the header banner, and set your delivery fee, your free delivery threshold and your
+minimum order value.
 
-**Typical workflow:** You do this at setup and when your branding changes. Upload the logo, set the
-colours, write the banner note, and check the shop's homepage afterwards.
+**Typical workflow:** You do the branding at setup and when it changes. Upload the logo, set the
+colours, write the banner note, and check the shop's homepage afterwards. Delivery rules are their
+own form lower down the page with its own Save button — changing your delivery fee does not require
+touching your branding, and saving one does not save the other.
 
 **Important fields and filters:** Colours are applied across the whole shop, so change one and check
 a product page as well as the homepage. The banner note is a short line in the site header — a good
-place for opening hours over a bank holiday.
+place for opening hours over a bank holiday. The three delivery amounts are entered in pounds:
+**Delivery fee** is what a shopper pays for delivery; **Free delivery over** is the basket value at
+which that fee is waived, and leaving it **blank** means free delivery is never offered — which is
+not the same as entering `0`, because `0` would make every order qualify; **Minimum order** is the
+basket value below which a shopper cannot check out, so enter `0.00` if you do not want one.
 
 **Common mistakes and limitations:** Colour choices affect the readability of text sitting on them.
 After changing a brand colour, look at a real page rather than only the colour swatch. Because your
 branding is applied on top of the site's defaults, a very light or very dark choice can reduce
-contrast for shoppers.
+contrast for shoppers. For delivery, the two mistakes worth naming are entering `0` in the free
+delivery field when you meant to leave it blank, and setting a minimum order above what a typical
+basket comes to — that refuses shoppers at checkout rather than warning them earlier. Amounts are
+pounds and pence with at most two decimal places; anything else is refused with the field marked,
+and nothing is saved until every value is valid.
 
 **What happens after changes are saved:** Applied across the shop immediately. An uploaded logo may
-take a short time to appear everywhere because images are cached.
+take a short time to appear everywhere because images are cached. New delivery rules apply to the
+next basket calculated — a shopper already partway through checkout may still see the previous fee
+until their basket recalculates.
 
 ## Delivery areas — `/staff/delivery-areas`
 
