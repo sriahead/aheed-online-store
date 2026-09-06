@@ -149,6 +149,10 @@ filed, and called out in `build-notes.md` as a deviation from the five approved 
   live Cron Trigger**. `#618`'s sweep is therefore inert, and its route's config accessor throws
   rather than returning empty (the `#621` shape). This slice cannot fix it: the secret must be set
   by a human with the credentials. Flagged, not invented.
-- **`#634`'s sibling gap** — the six brand primitives `VendorBranding` carries that
-  `StorefrontConfigForm` renders no input for. Same "seed-only" class this slice closes for delivery
-  rules.
+- **`#634`'s sibling gap — filed as `#639`.** The six brand primitives `VendorBranding` carries
+  that `StorefrontConfigForm` renders no input for, plus that component's `initialConfig: any` /
+  `initialBranding: any` props. Same "seed-only" class this slice closes for delivery rules, and
+  the two halves are one piece of work: typing the props properly pulls in the six unused fields.
+- **Expand/collapse on `/staff/categories` — filed as `#638`.** `#627` was titled as the thing
+  blocking it; this slice ships the ordering prerequisite, so the disclosure interaction is now a
+  UI-only slice. `components/product/FilterPanel.tsx` has a keyboard-accessible pattern to copy.
