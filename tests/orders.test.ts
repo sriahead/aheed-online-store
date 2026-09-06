@@ -1294,3 +1294,54 @@ describe("confirmPayment / failPayment — payment binding (#429)", () => {
     });
   });
 });
+
+/* ---- Stranded payment sweep candidate query (P9.2, #618) ----------------- */
+
+const { listStalePendingOrders } = await import("@/lib/repositories/orders");
+
+describe("listStalePendingOrders", () => {
+  const findMany = vi.fn();
+  // Passed in as an argument, like tests/vendor-profile.test.ts — the function
+  // takes its client explicitly, so no module mock is needed to substitute one.
+  const stub = { order: { findMany } } as unknown as Parameters<typeof listStalePendingOrders>[0];
+
+  beforeEach(() => findMany.mockReset());
+
+  it("scopes to the vendor, to PENDING_PAYMENT, and to orders older than the cutoff", async () => {
+    findMany.mockResolvedValue([]);
+    const cutoff = new Date("2026-09-06T11:30:00.000Z");
+
+    await listStalePendingOrders(stub, "v-aheed", cutoff, 50);
+
+    const args = findMany.mock.calls[0][0];
+    expect(args.where).toMatchObject({
+      vendorId: "v-aheed",
+      status: "PENDING_PAYMENT",
+      createdAt: { lt: cutoff },
+    });
+    // Matches @@index([vendorId, status, createdAt]) — the reason this slice
+    // needed no migration.
+    expect(args.take).toBe(50);
+    // Oldest first, so a backlog larger than the cap drains deterministically
+    // instead of the oldest rows starving behind newer ones.
+    expect(args.orderBy).toEqual({ createdAt: "asc" });
+  });
+
+  it("flattens the payment's provider reference, preserving a null", async () => {
+    const createdAt = new Date("2026-09-01T00:00:00.000Z");
+    findMany.mockResolvedValue([
+      { orderNumber: "AH-1", createdAt, payment: { providerReference: "cs_live_1" } },
+      { orderNumber: "AH-2", createdAt, payment: { providerReference: null } },
+      // No Payment row at all — Order.payment is optional in the schema.
+      { orderNumber: "AH-3", createdAt, payment: null },
+    ]);
+
+    const rows = await listStalePendingOrders(stub, "v-aheed", new Date(), 50);
+
+    expect(rows).toEqual([
+      { orderNumber: "AH-1", createdAt, providerReference: "cs_live_1" },
+      { orderNumber: "AH-2", createdAt, providerReference: null },
+      { orderNumber: "AH-3", createdAt, providerReference: null },
+    ]);
+  });
+});

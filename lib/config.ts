@@ -158,3 +158,37 @@ export function getAiEnv(): AiEnv {
     CLOUDFLARE_API_TOKEN: readEnv("CLOUDFLARE_API_TOKEN"),
   });
 }
+
+/**
+ * Shared secret authorising an unattended job invocation (P9.2, #618).
+ *
+ * The scheduled Worker has no session, so `requireVendorRole` — the gate on
+ * `app/api/admin/jobs/backfill-images/route.ts` — cannot apply to a cron-driven
+ * route. This is the credential that stands in its place, and the route fails
+ * closed (503) when it is absent rather than running the sweep unauthenticated.
+ *
+ * Required in production for the same reason STRIPE_SECRET_KEY is: an absent
+ * value there is a misconfiguration that would silently disable payment
+ * recovery, not a degraded mode worth supporting.
+ */
+const jobsSchema = z
+  .object({
+    JOB_INVOCATION_TOKEN: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (process.env.NODE_ENV === "production" && !data.JOB_INVOCATION_TOKEN) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "JOB_INVOCATION_TOKEN is required in production",
+        path: ["JOB_INVOCATION_TOKEN"],
+      });
+    }
+  });
+
+export type JobsEnv = z.infer<typeof jobsSchema>;
+
+export function getJobsEnv(): JobsEnv {
+  return jobsSchema.parse({
+    JOB_INVOCATION_TOKEN: readEnv("JOB_INVOCATION_TOKEN"),
+  });
+}
