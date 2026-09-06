@@ -4,16 +4,21 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   BookOpen,
+  Boxes,
+  Bug,
   ClipboardList,
   Contact,
   FolderTree,
   Layers,
+  Megaphone,
   Package,
   ShieldAlert,
   Sparkles,
+  Store,
   Tag,
   TicketPercent,
   TrendingUp,
+  Truck,
   Users,
 } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
@@ -148,6 +153,50 @@ export default async function StaffHomePage() {
             </Link>
 
             <Link
+              href="/staff/promotions"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Megaphone className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Promotions</p>
+              <p className="mt-1 text-sm text-primary/80">
+                Department campaigns and the banners that front them.
+              </p>
+            </Link>
+
+            <Link
+              href="/staff/bundles"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Boxes className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Bundles</p>
+              <p className="mt-1 text-sm text-primary/80">
+                Multi-product deals, their pricing and what they contain.
+              </p>
+            </Link>
+
+            <Link
+              href="/staff/storefront"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Store className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Storefront</p>
+              <p className="mt-1 text-sm text-primary/80">
+                This store&apos;s branding, logo and shopfront configuration.
+              </p>
+            </Link>
+
+            <Link
+              href="/staff/delivery-areas"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Truck className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Delivery areas</p>
+              <p className="mt-1 text-sm text-primary/80">
+                The postcode areas this store delivers to. A customer outside them cannot check out.
+              </p>
+            </Link>
+
+            <Link
               href="/staff/loyalty"
               className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
             >
@@ -202,6 +251,35 @@ export default async function StaffHomePage() {
               </p>
             </Link>
           </>
+        )}
+
+        {/*
+         * Platform admins only, and checked against `auth.via` directly rather than reusing
+         * `isAdmin` above — that flag is true for a VENDOR admin too, whereas
+         * /staff/errors refuses anyone whose `auth.via !== "platform-admin"` because a stack trace
+         * can reveal internal paths a vendor-scoped account has no reason to see (#508). Reusing
+         * `isAdmin` would render a link that every store admin could see and none of them could
+         * open.
+         *
+         * This is also why the card is here and not in `components/staff/PanelNav.tsx`: that nav is
+         * vendor-scoped chrome and its `currentTier` prop has no way to express "platform admin".
+         * `tests/staff-nav-parity.test.ts` excludes this route from its parity set for the same
+         * reason.
+         *
+         * Deliberately NOT gated on the `admin-tier` cookie: that cookie simulates what a STAFF
+         * member of this vendor sees, and this page is not a vendor page at all.
+         */}
+        {auth.via === "platform-admin" && (
+          <Link
+            href="/staff/errors"
+            className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+          >
+            <Bug className="mb-3 h-6 w-6 text-danger" aria-hidden />
+            <p className="font-semibold text-primary">Error events</p>
+            <p className="mt-1 text-sm text-primary/80">
+              Recent server-side errors across the platform. Platform admins only.
+            </p>
+          </Link>
         )}
       </div>
     </main>

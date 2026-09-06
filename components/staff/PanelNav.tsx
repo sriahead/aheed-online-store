@@ -18,6 +18,10 @@ import {
   Store,
   Megaphone,
   Boxes,
+  Tag,
+  Contact,
+  ShieldAlert,
+  Truck,
 } from "lucide-react";
 
 export interface PanelNavProps {
@@ -45,6 +49,20 @@ function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: 
   );
 }
 
+/**
+ * The persistent admin-panel nav.
+ *
+ * THIS IS ONE OF TWO NAVIGATION SURFACES, and they must list the same pages. The other is the hub
+ * at `app/(admin)/staff/page.tsx`. Before P9.2 (#612) neither was a superset of the other — this
+ * nav omitted brands, customers and payments while the hub omitted bundles, promotions and
+ * storefront, so three pages vanished from the chrome the moment a user navigated off the hub and
+ * three more were unreachable from it. `tests/staff-nav-parity.test.ts` now pins the two together:
+ * add a link here and the test fails until the hub gains it too.
+ *
+ * Two pages are deliberately excluded from that parity set, not forgotten:
+ * `/staff/errors` is platform-admin-only (this nav's `currentTier` cannot express that, so the hub
+ * carries it behind its own check), and `/staff/search-synonyms` is #602's open work.
+ */
 export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -89,14 +107,18 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
                 label="Live Inventory & Availability"
               />
               <NavLink href="/staff/orders" icon={ClipboardList} label="Orders" />
+              <NavLink href="/staff/payments" icon={ShieldAlert} label="Payment Issues" />
               <NavLink href="/staff/products" icon={Package} label="Catalogue" />
               <NavLink href="/staff/categories" icon={LayoutDashboard} label="Categories" />
+              <NavLink href="/staff/brands" icon={Tag} label="Brands" />
               <NavLink href="/staff/promotions" icon={Megaphone} label="Promotions" />
               <NavLink href="/staff/bundles" icon={Boxes} label="Bundles" />
               <NavLink href="/staff/storefront" icon={Store} label="Storefront" />
+              <NavLink href="/staff/delivery-areas" icon={Truck} label="Delivery areas" />
               <NavLink href="/staff/loyalty" icon={Sparkles} label="Loyalty" />
               <NavLink href="/staff/discounts" icon={TicketPercent} label="Discounts" />
               <NavLink href="/staff/reports" icon={TrendingUp} label="Reports" />
+              <NavLink href="/staff/customers" icon={Contact} label="Customers" />
               <NavLink href="/staff/team" icon={Users} label="Team" />
               <NavLink href="/staff/runbook" icon={BookOpen} label="Runbook" />
             </>

@@ -8,6 +8,15 @@ every branch merges.
 
 ### Added
 
+- **`/staff/delivery-areas`** (`#612`, P9.2, `specs/2026-09-06-delivery-areas-admin/`). Store admins
+  can add and remove the postcode areas their shop delivers to. These rows are a hard checkout gate
+  — `features/checkout/place-order.ts` refuses an order outright when no prefix matches the
+  shopper's postcode — and until now their only writer anywhere in the repository was
+  `prisma/seed.ts`, so changing where the shop delivers required a developer with production
+  database access. No schema change: `VendorDeliveryArea` already carried the unique constraint this
+  needed. Removing a vendor's **last** remaining area is refused inside a `Serializable`
+  transaction, mirroring the last-admin guard in `lib/repositories/roles.ts` — an empty prefix list
+  makes every postcode undeliverable, so it would stop checkout for every customer of that store.
 - **Catalogue filter facets — brand, dietary flags, country of origin and offers** (`#569`,
   P2.6 slice 6 of 6, `specs/2026-09-05-catalogue-filter-facets/`). Shoppers can now narrow
   `/search` and any category listing by country of origin, dietary suitability (vegetarian, gluten
@@ -24,6 +33,27 @@ every branch merges.
   reference and a verified date, and unticking it clears both. HMC is a named third-party
   certifying body, and `#239` was a real incident of this codebase asserting certification with no
   basis for it; a bare tickable boolean would have re-created that exposure one product at a time.
+
+### Changed
+
+- **The staff panel's two navigation surfaces now list the same pages.**
+  `components/staff/PanelNav.tsx` omitted brands, customers and payments while the hub at
+  `app/(admin)/staff/page.tsx` omitted bundles, promotions and storefront, so three pages vanished
+  from the chrome the moment a user navigated off the hub and three more were unreachable from it.
+  Each file was individually correct; the defect existed only in the relationship between them, so
+  `tests/staff-nav-parity.test.ts` now pins the two together. `/staff/errors` is reachable from the
+  hub for the first time, gated on `auth.via === "platform-admin"` directly rather than on the
+  page's broader `isAdmin` flag — that flag is true for vendor admins too, who cannot open the page.
+
+### Security
+
+- **A postcode prefix can no longer reach `lib/delivery.ts`'s `RegExp` constructor unvalidated.**
+  That module interpolates the stored prefix straight into `new RegExp(...)`, which was safe only
+  while a hand-authored seed file was the column's sole writer. Making prefixes admin-writable
+  without this would have let a stored metacharacter throw a `SyntaxError` on the checkout path for
+  every shopper of that vendor. `lib/delivery-area-form.ts` validates against an allow-list
+  (`^[A-Z]{1,2}$`) rather than a metacharacter deny-list, so it cannot be outflanked by a character
+  nobody enumerated.
 
 ### Fixed
 
@@ -43,6 +73,51 @@ every branch merges.
   fields are now applied before that early return. Same failure shape as `#502`.
 
 ### Documentation
+
+- **`/learn` retrospective on P2.6's close** (`docs/research/milestone-retrospectives.md` 1.1.0) —
+  the first entry written under the Discover/Learn phases. All six slices (`#564`–`#569`) shipped
+  and promoted as proposed, none reverted; the one significant scope change (moving AI off the
+  public zero-result search path, per `#570`/`#571`) was caught and reversed pre-ship, a genuine
+  SDD-loop success. The milestone's own commercial hypothesis — that better search/discovery
+  converts more shoppers — remains **unmeasurable**: no analytics instrumentation exists (`#607`).
+  The Workers AI response-shape assumption (`typeof response === "string"`) was disproved twice in
+  this milestone, the second instance (`lib/search-synonym-proposals.ts`, `#583`/`#589`) still
+  unfixed at close. Query latency stayed measured and on-budget throughout (p95 75.1ms → 102.1ms,
+  always under the 400ms target). Filed **`#610`**: no mechanical check currently catches a
+  Discover finding tagged `PROPOSE` that never gets an issue, which is exactly what happened to two
+  2026-09-02 findings this pass had to backfill.
+
+- **`/discover` pass at P2.6's milestone close** (`docs/research/discovery-log.md` 1.2.0). One
+  genuinely new finding: six of `#569`'s seven new facet fields (vegetarian, gluten free, HMC,
+  brand) never reach a product card or detail page — the filter half of the facet feature works,
+  but nothing shows a shopper why a product matched, and the HMC certificate reference/verified
+  date the admin form requires is never surfaced to the shopper the `#239` provenance requirement
+  exists to protect. Filed as `#608`. Also corrects a process gap: two 2026-09-02 findings (a paid
+  order cannot be reduced/substituted/refunded; no analytics instrumentation exists) had carried
+  `PROPOSE` for three days with no issue filed — re-verified still current and filed as `#606` and
+  `#607`. Also fixed a milestone-bookkeeping gap while grounding: `#582`, `#583`, `#599`, `#601` and
+  `#602` had never been assigned the `P02.6` milestone.
+
+- **`/document` (final) closeout for P2.6 slice 6 — P2.6 CLOSED** (`#569`; PR #603 merged to
+  `staging`, PR #604 promoted to `main`). `specs/roadmap.md` (1.74.0) gains the slice's build/merge
+  row and its promotion row, recording a fully clean fresh-context `/validate` (every row checked
+  and passed, no `/fix` round needed) — including a first-ever live end-to-end drive of
+  `/staff/brands`'s create/rename/set-image-key actions and the duplicate-name unique-violation
+  path, and a re-measurement showing the roughly-tripled facet probe set still comfortably under the
+  400ms API target. Marks **P2.6 — Search & AI shopping as CLOSED**: all six slices (#564–#569)
+  shipped and promoted; the milestone's eleven remaining open follow-ups (two pre-existing/adjacent,
+  nine filed across slices 3–6) stay open, tracked individually rather than blocking the close — see
+  `specs/roadmap.md`'s closing row for the full accounting. Also found and fixed a milestone
+  bookkeeping gap: five of those follow-ups (`#582`, `#583`, `#599`, `#601`, `#602`) had never been
+  assigned the `P02.6` milestone at all. `CLAUDE.md` (1.17.0)
+  gains a new Windows-shell entry: a `gh` string argument starting with `/`, run from Git Bash, gets
+  silently rewritten to a Windows path by MSYS's path conversion before `gh` ever sees it — caught
+  because it had already corrupted `#602`'s own title (`/staff/search-synonyms…` became `C:/Program
+  Files/Git/staff/search-synonyms…`), fixed via `gh issue edit` with `MSYS_NO_PATHCONV=1`.
+  `npm run sdd:audit` reports zero gaps. Delivery board reconciled: `#569` is **Done**; `#582`,
+  `#583`, `#599`, `#601`, `#602` confirmed at Backlog/`P2.5`. `ARTIFACT_INDEX.md` /
+  `app/(admin)/staff/runbook/docs.ts` regenerated to match. No runtime code, no schema change,
+  nothing for `prisma migrate deploy` to apply.
 
 - **`/document` (final) closeout for P2.6 slice 5** (`#568`; PR #597 merged to `staging`, PR #598
   promoted to `main`). `specs/roadmap.md` (1.73.0) gains the slice's build/merge row and its

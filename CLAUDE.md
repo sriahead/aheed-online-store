@@ -4,7 +4,7 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.16.0"
+version: "1.17.0"
 updated: 2026-09-05
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
@@ -431,6 +431,17 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `SEED_`, and prefer printing keys over lines.
 - `gh` args containing double quotes break native argument parsing in PS 5.1 (`accepts 1 arg(s),
   received 8`). Write the body to a file and use `--body-file`.
+- **In Git Bash specifically (not PowerShell), a `gh` string argument that starts with `/` gets
+  silently rewritten to a Windows path before `gh` ever sees it** — MSYS's automatic POSIX-path
+  conversion fires on any argument that merely looks path-shaped, with no way to tell from the
+  argument alone that it was meant as literal text. Hit live in P2.6 slice 6's `/document`
+  (2026-09-05): `gh issue create --title "/staff/search-synonyms is unlinked from the staff hub…"`
+  (filed as `#602`) shipped with a title of `C:/Program Files/Git/staff/search-synonyms is
+  unlinked…` — silently wrong, no error, and easy to miss since only the leading segment changes.
+  Prefix the command with `MSYS_NO_PATHCONV=1` (as already used elsewhere in this repo's own
+  scripts) to suppress the conversion, and always read back a filed issue/PR's title after creating
+  it from Git Bash if it starts with `/`. Fixed after the fact via `gh issue edit`, same env-var
+  prefix.
 - **`npx tsx -e "<multi-line script>"` fails silently on this Windows setup the moment the script
   imports an installed package (e.g. `@prisma/client`) — no stdout, no stderr, exit 0, even with an
   explicit `.catch()`/`.finally()` around every promise.** It isn't a working-directory problem
@@ -474,7 +485,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  94 files / 1144 tests**, measured 2026-09-05 at `#569`'s Build) and treat any shortfall as
+  97 files / 1200 tests**, measured 2026-09-06 at `#612`'s Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -488,8 +499,11 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   and `89/1072` moved to `89/1076` the same day at `#567`'s own `/fix`: no new file, four tests
   added to an *existing* one (`tests/list-normalisation.test.ts`), covering the response-shape bug
   `/validate` found live plus the R15 hang-timeout case that had been missing since Build, and
-  `94/1126` moved to **`94/1144`** at `#569`'s Build — eighteen tests across five *existing* files,
-  no new file at all, which is the cleanest demonstration yet of the refinement below. Each time,
+  `94/1126` moved to `94/1144` at `#569`'s Build — eighteen tests across five *existing* files,
+  no new file at all, which is the cleanest demonstration yet of the refinement below — and
+  `94/1144` moved to **`97/1200`** at `#612`'s Build, three new files carrying fifty-six tests.
+  That last move is the ordinary case the rule was originally written for, and it is recorded here
+  mainly to show the count staying current rather than to add a new lesson. Each time,
   the staleness
   quietly *disabled* the detection it exists to provide: a validator believing `77` would read
   `#566`'s genuine ten-file shortfall as roughly right. **The rule this last move corrects: it is
@@ -728,6 +742,29 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   returning `null`, so it was a consistency defect rather than a live one, and it was converted in
   P7.5d+e (#136) while that slice was editing the page anyway. When adding a new `/staff/*` page,
   copy an existing one's refusal branch rather than writing a bare `if (!auth.ok) return null`.
+- **There are TWO navigation surfaces and a new page must be added to BOTH** —
+  `components/staff/PanelNav.tsx` (the persistent nav) and `app/(admin)/staff/page.tsx` (the hub's
+  cards). Until P9.2 (#612) neither was a superset of the other: the nav omitted `brands`,
+  `customers` and `payments` while the hub omitted `bundles`, `promotions` and `storefront`, so
+  three pages vanished from the chrome the moment a user navigated off the hub and three more were
+  unreachable from it. **Nothing detected that for months because each file is individually
+  correct** — the defect existed only in the *relationship* between them, which is the class of
+  thing a per-file review structurally cannot catch, and which is why the fix was a test rather than
+  an edit. `tests/staff-nav-parity.test.ts` now pins the two together and fails if either surface
+  gains or loses a link the other lacks; it parses the literal hrefs out of both files rather than
+  rendering them, because each gates part of its list behind a role check and rendering would test
+  one viewer's slice rather than the full declared set. Three routes are excluded **by name, each
+  for a stated reason**: `/staff` (the hub cannot link to itself), `/staff/errors` (platform-admin
+  only — `PanelNav`'s `currentTier` prop cannot express that, so the hub carries it alone behind its
+  own `auth.via === "platform-admin"` check) and `/staff/search-synonyms` (#602's open work). If you
+  add a page and the parity test fails, add it to the other surface — do not add it to the exclusion
+  list, which exists for routes that genuinely cannot appear on both.
+- **`isAdmin` in the hub is NOT the same question as "may this person open the page".** It is true
+  for a vendor `ADMIN` as well as a platform admin, and it is additionally downgraded by the
+  `admin-tier` cookie's "view as staff" simulation. `/staff/errors` refuses anyone whose
+  `auth.via !== "platform-admin"` (#508 — a stack trace can reveal internal paths a vendor-scoped
+  account has no reason to see), so gating its card on `isAdmin` would render a link every store
+  admin can see and none of them can open. Gate a platform-admin-only card on `auth.via` directly.
 
 ## KMS docs (`docs/*.md`, `specs/*.md`) — learned the hard way
 - **A GFM table cell (or any prose) containing a bare `<` immediately followed by a digit breaks
