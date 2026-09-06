@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.27.2"
-updated: 2026-09-05
+version: "2.28.0"
+updated: 2026-09-06
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets, plus the Discover and Learn phases that run on milestone close. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -222,6 +222,18 @@ Gate 1. Calibrate the ceremony to the size of the fork.
   every later stage — ten issues (#93–#106) were filed after the board was provisioned and none of
   them were added, until a sync caught it.
 - **Assign a milestone**: Every issue must be explicitly associated with its relevant roadmap milestone (e.g., `gh issue edit <number> -m "P6 — Admin & staff panel"`). This ensures the GitHub issue matches the project board's phase.
+- **When a slice's plan claims it "absorbs" or "closes" an existing issue number, open that issue
+  and check its actual title/body match the claimed scope before citing it anywhere.** A wrong
+  number is invisible once written down: every downstream artifact (`plan.md`, `requirements.md`,
+  `CHANGELOG.md`, the PR body, `specs/roadmap.md`) trusts the citation rather than re-opening the
+  source, so it propagates silently. Found at `#618`'s `/document` (2026-09-06): `#94` had been
+  cited across `specs/roadmap.md` as "abandoned checkout handling" since this phase's original
+  2026-08-19 insertion — **eight** separate mentions across three months — but the real issue #94
+  is "Abandoned guest-cart retention & cleanup," an unrelated data-hygiene concern. No issue for the
+  real "abandoned checkout handling" concept had ever existed; `#618` itself was the first artifact
+  to actually specify it, under a citation that happened to point at the wrong number the entire
+  time. A one-line `gh issue view <N> --json title` at the moment a slice's plan first names the
+  number it claims to absorb would have caught this before it was ever written down once.
 - Wait for explicit approval on non-trivial work before Spec/Build. A prior approval does not carry
   forward to a new, unrelated decision.
 

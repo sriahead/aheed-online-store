@@ -153,7 +153,16 @@ the point of validation here, not a formality.** In particular:
 batch means later vendors are never queried on that tick. That is intended — the next tick picks
 them up — but it means **a single high-volume vendor can starve another vendor's orders** for as
 long as it keeps saturating the cap. Not a correctness bug and not in scope to fix, but worth
-knowing before the counts in a live run are read as "nothing to do for vendor two."
+knowing before the counts in a live run are read as "nothing to do for vendor two." Filed as
+**#619** (P10) at Build; cross-referenced here at `/document` after it turned up unreferenced in
+this file despite being filed.
+
+**A sweep-driven confirmation is indistinguishable from a webhook-driven one in an order's own
+audit trail**, exactly as `plan.md`'s "What this slice deliberately does not touch" section
+predicted: `confirmPayment` writes a fixed `note: "Payment confirmed."`, with no parameter for the
+sweep to distinguish itself by, and widening a security-critical payment function's signature to
+improve an audit string was rejected as a poor trade inside a payments slice. Filed as **#620**
+(P10) at Build; same cross-reference gap as #619 above.
 
 **The stub-adapter refusal (R23) is the safety property most worth exercising for real.** It is
 belt-and-braces over the `status === "open"` rule, and the reasoning for it is inverted from

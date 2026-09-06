@@ -4,7 +4,7 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.18.0"
+version: "1.19.0"
 updated: 2026-09-06
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
@@ -217,6 +217,40 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   `lib/config.ts` was written and was corrected during P4a's validation, where it mattered — see
   **#119**, where `.env` and `.dev.vars` point at *different Neon projects*, so a fixture script and
   the app under `preview` silently read different databases. Check both before trusting a live result.
+- **The precedence above is per-key, not per-environment, and that distinction matters when you're
+  deliberately trying to simulate a secret being unset.** `readEnv(key)`'s actual body falls through
+  to `process.env[key]` whenever the Cloudflare-context value for *that key* isn't a non-empty
+  string — not only when `getCloudflareContext()` itself throws. So commenting a secret out of
+  `.dev.vars` alone does **not** simulate "unset" if `.env` still carries a real value for the same
+  key: `next build` bakes `.env` into the built Worker's own `process.env` regardless of Cloudflare
+  context, and `readEnv` silently prefers that leftover value the moment `.dev.vars`'s copy goes
+  missing. Confirmed live at `#618`'s `/validate` (2026-09-06): commenting out `STRIPE_SECRET_KEY`
+  in `.dev.vars` only, restarting `npm run preview`, and calling a route gated on
+  `getPaymentEnv().STRIPE_SECRET_KEY` still ran as if the key were set — because `.env` still had
+  it. The fix is to comment the secret out of **both** files before restarting; a single-file edit
+  proves nothing here. This is a real deployed environment's behaviour too, not a local-only quirk —
+  staging and production have no `.env` file at all, so this fallback path is dormant there, but
+  local preview always has one and will use it the moment `.dev.vars` stops naming a key.
+- **A `lib/config.ts` accessor that THROWS when its field is required-in-production (the
+  `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`JOB_INVOCATION_TOKEN` pattern: a zod `superRefine`
+  that adds an issue when `process.env.NODE_ENV === "production"` and the value is absent) makes
+  that condition UNREACHABLE as a plain falsy check in any caller, because `NODE_ENV` is
+  unconditionally `"production"` in every BUILT Worker this app ever runs in** — `npm run preview`
+  included, not just staging/production — since `next build` sets it regardless of deploy target.
+  A route written as `const { X } = getXEnv(); if (!X) { ...graceful handling... }` never reaches
+  its own `if`: the accessor throws first, and the graceful branch is dead code that only "works"
+  under `next dev` or a plain Node script, neither of which this class of route actually runs under.
+  Found live at `#618`'s `/validate` (2026-09-06): `app/api/jobs/reconcile-payments/route.ts`'s own
+  documented 503-on-missing-secret behaviour (R10, R23) was unreachable this way, reproducing as an
+  uncaught `ZodError` (a bare 500) instead — and `app/api/webhooks/stripe/route.ts` has the
+  identical latent defect for `STRIPE_WEBHOOK_SECRET`, pre-existing and unfixed (**#621**). **Any
+  route that wants to treat "this required-in-production secret happens to be absent right now" as
+  its own recoverable case — rather than the hard failure the accessor is designed to be — must
+  catch the accessor's throw itself**, e.g. a small `readOptional(() => getXEnv())` wrapper, rather
+  than assuming the accessor can hand back an empty value to check. Verify any such route's
+  fail-closed branch live, under `npm run preview` with the secret genuinely unset in both `.env`
+  and `.dev.vars` (see the bullet above) — a unit test against the schema alone proves the schema
+  throws, never that the route calling it actually survives the throw.
 - **Checking `.env` against `.dev.vars` is necessary but NOT sufficient — diff both against
   `secrets/staging.vars` and `secrets/production.vars` before any live-DB work.** Two files drift
   into agreement on the *wrong* target as easily as they drift apart from each other. At P5a's
