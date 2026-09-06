@@ -8,6 +8,22 @@ every branch merges.
 
 ### Added
 
+- **Scheduled sweep for stranded payments** (`#618`, P9.2,
+  `specs/2026-09-06-stranded-payment-sweep/`), absorbing `#101` and `#94`. An order whose Stripe
+  webhook never arrived was stranded in `PENDING_PAYMENT` forever, holding its inventory, its
+  discount-code use and its loyalty redemption: `lib/order-status.ts` gives that state no outbound
+  staff transition, and `/staff/payments` reads binding-refusal rows, which a webhook that never
+  arrived never wrote. A new minimal Worker (`workers/scheduler/`) carries a Cron Trigger and calls
+  an authenticated job route every 15 minutes; the route asks Stripe about each stale order's own
+  stored session and confirms, releases, or leaves it alone. `#101` and `#94` are one slice because
+  a timeout that cancels stale orders without asking the provider first would cancel and restock
+  orders that were genuinely paid. **Release is gated on the session's own state, never on elapsed
+  time**, which is what makes a 30-minute cutoff safe while still rescuing a charged shopper within
+  the hour. **No schema change and no migration** — `@@index([vendorId, status, createdAt])`
+  already existed — and no body in the payment transition path was modified: `confirmPayment`,
+  `failPayment` and `releaseOrder` are `#429`'s machinery and this adds a caller, not a change to
+  them. Needs a new `JOB_INVOCATION_TOKEN` runtime secret, set with the same value on **both**
+  Workers per environment.
 - **`/staff/delivery-areas`** (`#612`, P9.2, `specs/2026-09-06-delivery-areas-admin/`). Store admins
   can add and remove the postcode areas their shop delivers to. These rows are a hard checkout gate
   — `features/checkout/place-order.ts` refuses an order outright when no prefix matches the
