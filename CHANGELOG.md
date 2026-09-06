@@ -51,6 +51,30 @@ every branch merges.
   certifying body, and `#239` was a real incident of this codebase asserting certification with no
   basis for it; a bare tickable boolean would have re-created that exposure one product at a time.
 
+### Documentation
+
+- **`/document` (final) closeout for the stranded payment sweep** (`#618`; PR #622 merged to
+  `staging`, PR #623 promoted to `main`). `specs/roadmap.md` (1.76.0) gains the slice's build/merge
+  row and its promotion row (the promotion also carried the pending delivery-areas `/document`
+  (final) closeout, PR #617, still waiting on `staging`). `CLAUDE.md` (1.19.0) gains two config
+  lessons live-found at this slice's `/validate`: `readEnv()`'s fallback to `process.env` is
+  per-key, not per-Cloudflare-context, so simulating a secret as "unset" requires clearing it from
+  both `.env` and `.dev.vars`, not `.dev.vars` alone; and a `lib/config.ts` accessor that throws on
+  a missing required-in-production secret makes a caller's own graceful `if (!X)` check unreachable
+  in every built Worker, since `NODE_ENV` is unconditionally `"production"` there — the transferable
+  half of the fix this slice needed for its own R10/R23. `specs/sdd-workflow.md` (2.28.0) gains a
+  Propose-stage lesson: a slice's plan claiming to "absorb" an existing issue number needs that
+  number's actual title checked before it is cited anywhere, found here after `#94` had been
+  mis-cited as "abandoned checkout handling" eight times across three months of roadmap history —
+  the real #94 is unrelated guest-cart retention, and no correctly-numbered issue for the real
+  concern ever existed; corrected going forward, with a comment left on #94 and historical
+  change-log rows left as written. Two Build-time follow-up issues (`#619` batch-cap vendor
+  starvation, `#620` a sweep confirmation being indistinguishable from a webhook one) cross-referenced
+  into `build-notes.md` after turning up unfiled there despite being properly filed and boarded.
+  `npm run sdd:audit` reports zero gaps. Delivery board reconciled: `#618` is **Done**.
+  `ARTIFACT_INDEX.md` / `app/(admin)/staff/runbook/docs.ts` regenerated to match. No runtime code,
+  no schema change, nothing for `prisma migrate deploy` to apply.
+
 ### Changed
 
 - **The staff panel's two navigation surfaces now list the same pages.**
