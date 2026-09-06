@@ -1710,3 +1710,67 @@ export async function findOrderForGuestLookup(
  * `findOrderForGuestLookup` above is unchanged and still takes both explicitly,
  * which is what lets a `tsx` script prove the order-number/email credential
  * pair is enforced at the query level. */
+
+/* ---- Stranded payment sweep (P9.2, #618) --------------------------------- */
+
+/**
+ * One stranded order, in the shape the sweep needs to decide what to do with it.
+ *
+ * `providerReference` comes off the `Payment` row rather than the order, and is
+ * nullable there — an order can carry no session id at all when the provider
+ * call failed after the order transaction had already committed. The sweep
+ * treats that as its own case rather than as an error: there is nothing to ask
+ * the provider about, so no `PaymentBinding` is constructible and only the
+ * no-binding cancellation path can ever resolve it.
+ */
+export interface StalePendingOrder {
+  orderNumber: string;
+  createdAt: Date;
+  providerReference: string | null;
+}
+
+/**
+ * Orders still awaiting payment that are older than `olderThan` (#618).
+ *
+ * Vendor-scoped deliberately, and the sweep loops over vendors rather than
+ * issuing one global query. An un-scoped read would need a new entry in
+ * `tests/repository-vendor-scoping.test.ts`'s ALLOWED map, and the
+ * justification would be weak: the exemptions already there — `findOrderForWebhook`,
+ * `confirmPayment` — exist because a payment-provider webhook genuinely arrives
+ * with no host to resolve a vendor from. A sweep is initiated by us and can
+ * enumerate vendors perfectly well, so it gets no such exemption.
+ *
+ * The `where` matches `@@index([vendorId, status, createdAt])` exactly, which is
+ * why this slice needed no migration.
+ *
+ * Ordered oldest first so a backlog larger than `limit` drains deterministically
+ * across successive scheduled runs instead of the same newest rows being
+ * re-examined while the oldest starve.
+ */
+export async function listStalePendingOrders(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  olderThan: Date,
+  limit: number,
+): Promise<StalePendingOrder[]> {
+  const rows = await prisma.order.findMany({
+    where: {
+      vendorId,
+      status: "PENDING_PAYMENT",
+      createdAt: { lt: olderThan },
+    },
+    orderBy: { createdAt: "asc" },
+    take: limit,
+    select: {
+      orderNumber: true,
+      createdAt: true,
+      payment: { select: { providerReference: true } },
+    },
+  });
+
+  return rows.map((row) => ({
+    orderNumber: row.orderNumber,
+    createdAt: row.createdAt,
+    providerReference: row.payment?.providerReference ?? null,
+  }));
+}

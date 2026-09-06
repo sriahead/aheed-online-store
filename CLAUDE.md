@@ -485,7 +485,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  97 files / 1200 tests**, measured 2026-09-06 at `#612`'s Build) and treat any shortfall as
+  100 files / 1221 tests**, measured 2026-09-06 at `#618`'s Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -501,9 +501,11 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `/validate` found live plus the R15 hang-timeout case that had been missing since Build, and
   `94/1126` moved to `94/1144` at `#569`'s Build — eighteen tests across five *existing* files,
   no new file at all, which is the cleanest demonstration yet of the refinement below — and
-  `94/1144` moved to **`97/1200`** at `#612`'s Build, three new files carrying fifty-six tests.
-  That last move is the ordinary case the rule was originally written for, and it is recorded here
-  mainly to show the count staying current rather than to add a new lesson. Each time,
+  `94/1144` moved to `97/1200` at `#612`'s Build, three new files carrying fifty-six tests, and
+  `97/1200` moved to **`100/1221`** at `#618`'s Build — three new files carrying eighteen tests
+  plus three added to two existing files, the mixed case both halves of this rule describe at once.
+  Those last two moves are the ordinary case the rule was originally written for, and they are
+  recorded here mainly to show the count staying current rather than to add a new lesson. Each time,
   the staleness
   quietly *disabled* the detection it exists to provide: a validator believing `77` would read
   `#566`'s genuine ten-file shortfall as roughly right. **The rule this last move corrects: it is

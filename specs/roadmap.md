@@ -364,6 +364,26 @@ are structurally protected; critical commercial invariants are protected.
   webhook/payment failures, database availability, critical health failures.
 - **#438** — production rollback procedure, with the important path actually tested.
 
+**Added to this phase after #426's original redistribution, and absent from the list above until
+2026-09-06 (#618's `/orient` found the drift).** The list above is what #426 moved here from P8.2;
+these arrived later and the section was never updated, so the phase's own scope list undercounted
+its milestone by four. Recorded here rather than silently appended, because "the roadmap is
+authoritative for scope" is only true if the roadmap is actually maintained:
+
+- **#612** — delivery areas admin & staff nav reconciliation. **Shipped and promoted 2026-09-06**
+  (PRs #615, #616); it is in the change log below but was never in this list.
+- **#618** — the stranded payment sweep, absorbing **#101** and **#94** above. Those two remain
+  listed in their own right for continuity; they are one slice, not two, because a timeout that
+  cancels stale orders without first asking the provider would cancel orders that were genuinely
+  paid.
+- **#472** — nothing mechanically enforces the branch strategy. Partly closed by #539's
+  `protect-staging` ruleset; what remains is a required status check, deliberately deferred there
+  because a misnamed one blocks every merge.
+- **#505** — `.env` violates this repo's own env-format rule (spaces around `=`, trailing same-line
+  comments), the format `CLAUDE.md` records as having silently broken connection strings here.
+- **#541** — whether the `kms` job's `continue-on-error` actually resolves non-blocking on the
+  deploy paths is still unverified; a passing job proves nothing either way.
+
 **Exit gate.** Production can be deployed, monitored, diagnosed, and rolled back or recovered.
 
 ### P9.3 — Launch quality validation

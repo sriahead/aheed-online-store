@@ -4,8 +4,8 @@ title: "ADR-005 — Payments & multi-vendor money flow"
 audience: [dev]
 type: adr
 status: approved
-version: "1.7.0"
-updated: 2026-09-02
+version: "1.8.0"
+updated: 2026-09-06
 visibility: internal
 summary: Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite.
 tags: [adr, payments, stripe, multi-tenancy, compliance]
@@ -263,6 +263,43 @@ writes `PaymentStatus.REFUNDED`. The consequences section above already records 
 discount-code use cannot be reversed (**#151**) and neither can earned points (**#137**). Reducing,
 substituting or refunding a paid order needs that decision, it is entangled with **#399**'s variant
 and weight model, and it remains this ADR's open territory.
+
+## Implementation note (P9.2, 2026-09-06, #618)
+
+**An order's payment state can now also be moved by an unattended scheduled sweep, not only by the
+webhook.** The Decision's "confirm via a signature-verified, idempotent webhook" is unchanged and no
+numbered decision is reopened — the webhook remains the primary path and its binding is untouched.
+What is new is a second caller of the same bound compare-and-set.
+
+The P9.1 note above ends by saying a fail-closed refusal "would leave a real shopper charged with no
+confirmation and their stock held, needing manual reconciliation — tracked as **#454**, since #101
+covers webhooks that never *arrive*". This note closes that second reference. `#454` gave a human a
+worklist; `#618` removes the requirement that a human be looking, for the case where no webhook ever
+arrived and therefore no worklist row was ever written.
+
+**The sweep decides nothing from our own data.** For each order still `PENDING_PAYMENT` past a short
+cutoff it retrieves that order's OWN stored session — never a session id supplied by anything else —
+and acts only on a definitive answer: `paid` confirms, an `expired` session releases, an `open`
+session is left alone because the shopper can still pay, and a `retrieveSession` that throws
+transitions nothing. A provider outage is not an answer, and specifically is not the answer
+"unpaid", which is the one that would authorize cancelling an order and restocking it.
+
+**Release is gated on the session's own state, never on elapsed time.** This is what allows the
+candidate cutoff to be as short as 30 minutes without any risk of cancelling a live checkout, and it
+is the reason the sweep is safe to run frequently.
+
+**Two cases the provider cannot answer directly** share one 7-day backstop: an order whose
+`Payment.providerReference` is null (no session was ever stored, so no `PaymentBinding` is
+constructible and only the no-binding `cancelUnpaidOrder` path can resolve it), and a session left
+`complete` and `unpaid` by an asynchronous payment method whose outcome webhook was itself lost.
+Stripe's default session expiry is 24 hours and this app sets no `expires_at`, so nothing behind
+that cutoff can still be paid.
+
+**Consequential detail for future readers.** The stub payment adapter reports `paymentStatus:
+"unpaid"` unconditionally. That is correct for `#454`, whose risk is confirming an order nobody paid
+for. It is *hazardous* here, because this path's risk runs the opposite way — "unpaid" is what
+authorizes cancellation — so the job route refuses to run at all when `STRIPE_SECRET_KEY` is unset.
+A safety property that holds in one direction on this port does not automatically hold in the other.
 
 ## Deferred upgrade — Stripe Connect
 

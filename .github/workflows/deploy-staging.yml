@@ -59,3 +59,19 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # P9.2 (#618) — the job scheduler is a SECOND Worker with its own config and
+      # its own Cron Trigger. It exists because the OpenNext-generated application
+      # entry exports only `fetch`, so a Cron Trigger has nothing to attach to.
+      #
+      # Ordered AFTER the application deploy deliberately: the scheduler's only
+      # job is to call routes on the app, so deploying it first would schedule
+      # calls against a bundle that does not serve them yet.
+      #
+      # JOB_INVOCATION_TOKEN is NOT set here — it is a runtime secret held on both
+      # Workers and rotated with `wrangler secret put`, never through CI.
+      - name: Deploy job scheduler
+        run: npx wrangler deploy --config workers/scheduler/wrangler.toml --env staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
