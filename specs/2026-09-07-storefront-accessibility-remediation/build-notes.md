@@ -148,3 +148,26 @@ Everything else matches the spec as written.
 7. **Not shaky, and worth stating so validation does not go looking:** `ProductCard.tsx`'s diff is
    **one line** and `app/globals.css`'s diff contains **zero non-comment lines** — verified with
    `git diff --numstat` and a comment-stripped diff. The card motion is byte-identical.
+
+## Addendum (`/document`, 2026-09-07) — corrections `/validate` found and this stage fixed
+
+Validate confirmed all 30 requirements live and found three wording defects, none of them code
+defects. `requirements.md` and `validation.md` were corrected in place — both merged, so this
+supersedes what shipped in the `db82421`/`ffec38c` commits above:
+
+- **R7's own two clauses were mutually inconsistent.** Its general clause (`text-black/[1-5]0`
+  returns zero matches) already required converting `/40`, but its specific arithmetic clause
+  ("`/60` rises by exactly the pre-slice `/50` count") was written as if only `/50` were in scope —
+  itself downstream of `plan.md`'s inventory table missing `/40`'s 5 sites (deviation #1 above). The
+  artifact was correct throughout — the code always satisfied the general clause. Corrected the
+  specific clause to state the real, internally-consistent number: `/60` rises by 15 (the combined
+  `/50` + `/40` pre-slice count), confirmed live against the merged `staging` tree (21 → 36).
+- **R10's and R13's validation.md commands were script false-positives**, not defects in
+  `lib/form-classes.ts` or the sweep. `grep -c "use server" lib/form-classes.ts` returns 1 because
+  the file's own doc comment explains it is *not* a `"use server"` file — the explanation contains
+  the phrase being searched for. And R13's `--include=*.ts` (added to reach `lib/form-classes.ts`)
+  collaterally re-includes the generated `runbook/docs.ts` bundle, which legitimately quotes this
+  spec's own prose. Both rows corrected with a command that isolates the real claim.
+
+No code changed as a result of any of the three. `sdd:audit` and the delivery board were reconciled
+separately at `/document`; see the roadmap change log for the closure entry.
