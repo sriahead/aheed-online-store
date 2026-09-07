@@ -283,13 +283,33 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
 - `feature/<slug>` → PR into **`staging`** (auto-deploys to `staging.aheedfoodcentre.nocaped.com`).
 - **`staging` → `main`** via PR, deploying to `aheedfoodcentre.nocaped.com`. Never push directly to
   `main`/`staging`.
-- **Known gap — NOTHING MECHANICALLY ENFORCES ANY OF THE ABOVE.** Two separate controls are both
-  absent, and this line previously described the first as if it existed ("merging to `main` requires
-  manual approval") while implying the second was a live fallback:
-  1. **No environment approval gate.** GitHub's required-reviewers protection needs a paid plan for
-     private repos and was rejected with a 422 on this repo's current (free) plan. `environment:
-     production` in `deploy-production.yml` selects that environment's secret set and nothing more.
-  2. **No required status check on either branch** — but **both branches ARE covered by repository
+- **THIS REPOSITORY IS PUBLIC** — `gh api repos/sriahead/aheed-online-store --jq .visibility`
+  returns `"public"`, confirmed 2026-09-07 (#644). That matters because this section spent weeks
+  asserting a **private-repo, free-plan** limitation as a current constraint on what protection is
+  available here, and it is not one: the paid-plan restriction on required reviewers applies to
+  *private* repositories. **Nobody rechecked the premise after the repo's visibility changed** —
+  the same shape as the GAP-011 ruling that sat deferred behind a question already answered one
+  document over. Before citing a plan limitation as a reason something cannot be enforced, re-read
+  `.visibility`.
+- **Partially closed gap — a PR can no longer be merged with red checks, but the branch strategy is
+  still not fully enforced.** Two separate controls; the second is now in place:
+  1. **No environment approval gate.** Required reviewers were rejected with a 422 when this repo
+     was private. It is public now, so this is likely available — but it was **deliberately not
+     adopted** at #644: as sole maintainer the user would be approving their own deploys, which
+     adds a click and no independent check. `environment: production` in `deploy-production.yml`
+     selects that environment's secret set and nothing more. Revisit if a second maintainer joins.
+  2. **Required status checks ARE now configured on both branches** (#644, 2026-09-07), closing the
+     half of #472 that mattered most. Each ruleset carries a `required_status_checks` rule naming
+     exactly three contexts — **`docs-gates`, `quality / kms`, `quality / quality`** — with
+     `strict_required_status_checks_policy: false` (a PR need not be rebased first; the goal is
+     "red cannot merge", not "must be up to date"). **The context strings were read from the check
+     names a real completed run actually reported** (PRs #640 and #643), never guessed: a
+     `required_status_checks` rule naming a context nothing reports blocks every merge on that
+     branch permanently, which is precisely why #539 deferred adding one. If you add a workflow
+     job and want it required, read its reported name from a finished run first. **`deploy` is
+     deliberately NOT required** — it runs on `push`, not `pull_request`, so requiring it would
+     block every PR forever.
+     Note **both branches ARE covered by repository
      rulesets**, and this line said "No branch protection at all, on either branch" until
      2026-09-02 (#537). **The check it cited cannot see rulesets.**
      `gh api repos/sriahead/aheed-online-store/branches/main/protection` queries *classic* branch
@@ -300,18 +320,17 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
      actually applies to a branch** — that second endpoint is the one that catches a ruleset
      created successfully with a ref condition matching nothing, which a reading of the
      declaration alone cannot.
-     Actual state, confirmed 2026-09-02: two **active** rulesets, each carrying `pull_request`
-     (so a **direct push to either branch is blocked**), `non_fast_forward` and `deletion`, each
-     with **`required_approving_review_count: 0`**, **no `required_status_checks` rule** and **no
+     Actual state, confirmed 2026-09-07: two **active** rulesets, each carrying `pull_request`
+     (so a **direct push to either branch is blocked**), `non_fast_forward`, `deletion` and — since
+     #644 — `required_status_checks`, each with **`required_approving_review_count: 0`** and **no
      bypass actors**. `protect-main`'s condition is `~DEFAULT_BRANCH` (`main` only);
      **`protect-staging`** (added by #539) is scoped to `refs/heads/staging`.
-  So the substance of the warning survives, narrowed further: **a PR into either branch can still be
-  opened and merged by its own author with every check red** — that is #472's territory, and adding
-  a `required_status_checks` rule was deliberately left out of #539 because whether it is available
-  on this plan is unverified and a misnamed required check blocks every merge. What is no longer
-  possible is reaching either branch *without* a PR at all. Note the paid-plan 422 recorded above
-  is about **required reviewers specifically**, not about rulesets — reading it as "branch
-  protection is unavailable here" is what kept `staging` uncovered for so long.
+  So the substance of the warning is narrower again: **a PR into either branch can still be opened
+  and merged by its own author** — with `required_approving_review_count: 0`, self-merge remains
+  possible — but **no longer with red checks**, and no longer without a PR at all. Note the
+  paid-plan 422 recorded above is about **required reviewers specifically**, not about rulesets —
+  reading it as "branch protection is unavailable here" is what kept `staging` uncovered for so
+  long, and later kept required status checks unattempted for longer still.
   The historical warning still stands as written for a different reason: **PRs #464, #465 and #466
   all merged straight into `main` on 2026-08-30**, bypassing `staging` entirely, and
   `deploy-production` ran on each; **neither ruleset would have stopped any of them**, since each
@@ -337,10 +356,18 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   `deploy-production.yml` and, since #539, from `deploy-staging.yml`). The PR is the gate; on a
   branch the same check is a drift tripwire, and failing a deploy cannot un-merge drift that already
   landed — it only withholds the fix. **Whether the non-blocking branch actually resolves as
-  intended is still unverified (#541)** — `continue-on-error` is inert on a *passing* job, so the
-  first post-promotion `deploy-production` run (`33606818256`, 2026-09-02) proved nothing despite
-  being the run everyone was waiting for. The failure direction is safe: a broken expression stays
-  blocking.
+  intended was never verified, and #541 is now CLOSED as an accepted risk rather than left open
+  indefinitely (#644, 2026-09-07).** `continue-on-error` is inert on a *passing* job, so the first
+  post-promotion `deploy-production` run (`33606818256`, 2026-09-02) proved nothing despite being
+  the run everyone was waiting for — and neither did `34103597181` on 2026-09-07, for exactly the
+  same reason. That is not bad luck: **the only way to observe the false branch is to deliberately
+  push a broken KMS artefact to `main`**, i.e. to ship a known-bad artefact through the production
+  deploy path to watch what happens. That price is not worth the information, because **the failure
+  direction is safe**: if the expression does not resolve as intended the job stays *blocking*, so
+  a stale artefact would stop a production deploy rather than pass silently — loud and wrong, not
+  quiet and wrong. Recorded here rather than carried as a permanently-open issue nobody can close.
+  If a KMS check ever does fail on a deploy branch, that run is the free observation; note what it
+  did.
 - **`npm run kms:build-index` writes TWO files** — `ARTIFACT_INDEX.md` and
   `app/(admin)/staff/runbook/docs.ts` — and they go stale under **different** conditions, which is
   what made a one-file check look adequate for so long. The index renders **front-matter only**;
@@ -519,7 +546,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  105 files / 1411 tests**, measured 2026-09-06 at the admin-panel-operability Build) and treat any shortfall as
+  107 files / 1431 tests**, measured 2026-09-07 at the P9.2 non-operational-gaps Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -545,6 +572,15 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   new files, `tests/panel-token-purity.test.ts`, is `it.each` over panel files discovered from
   the **filesystem**, so like `operator-doc-coverage` its count moves whenever a `.tsx`/`.ts`
   file is added under `app/(admin)/` or `components/staff/` — with no test file touched at all.
+  Then `105/1411` moved to **`107/1431`** at `#644`'s Build: two new files
+  (`tests/guest-cart-reaper.test.ts`, `tests/error-rate.test.ts`) carrying eighteen tests, four
+  added to `tests/config-jobs.test.ts`, and — the part worth noting — a **net −2** in
+  `tests/scheduler.test.ts`, which gained a test but lost the two that had hardcoded
+  `toHaveBeenCalledTimes(1)` against a one-entry `JOBS` array while its own comment claimed to be
+  independent of how many jobs were registered. Adding two scheduled jobs broke them. **A count
+  can move DOWN as well as up, and a suite that fails because you registered a new job is a test
+  asserting arithmetic it did not mean to assert** — fix the test's shape rather than bumping its
+  constant.
   That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that

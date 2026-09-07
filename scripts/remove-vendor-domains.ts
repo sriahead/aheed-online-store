@@ -35,29 +35,9 @@
  * refuses to do that, whatever was passed on the command line.
  */
 
-import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
-
-/** Same hand-rolled parser as the sibling scripts — see restore-placeholder-images.ts for why. */
-function parseEnvFile(path: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
-    const match = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
-    if (!match) continue;
-    const [, key, rest] = match;
-    const quote = rest[0];
-    if (quote === '"' || quote === "'") {
-      const end = rest.indexOf(quote, 1);
-      if (end > 0) {
-        out[key] = rest.slice(1, end);
-        continue;
-      }
-    }
-    out[key] = rest.split("#")[0].trim();
-  }
-  return out;
-}
+import { parseEnvFile } from "./lib/env-file";
 
 function hostOf(connectionString: string): string {
   try {

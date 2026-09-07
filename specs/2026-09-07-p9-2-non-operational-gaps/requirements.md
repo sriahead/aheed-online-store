@@ -32,9 +32,19 @@ R5. With `STRIPE_WEBHOOK_SECRET` restored in both files, a `POST` to `/api/webho
 
 ## `#94` — reap abandoned guest carts
 
-R6. `lib/repositories/cart.ts` exports `deleteAbandonedGuestCarts(prisma, olderThan, limit)`, taking
-    its Prisma client as its first parameter, and `tests/repository-client-injection.test.ts` and
-    `tests/repository-purity.test.ts` both still pass.
+R6. `lib/repositories/cart.ts` exports `deleteAbandonedGuestCarts(prisma, vendorId, olderThan, limit)`,
+    taking its Prisma client as its first parameter, and `tests/repository-client-injection.test.ts`,
+    `tests/repository-purity.test.ts` and `tests/repository-vendor-scoping.test.ts` all still pass.
+
+    > **Amended during Build, 2026-09-07.** This requirement originally specified
+    > `deleteAbandonedGuestCarts(prisma, olderThan, limit)` — with no `vendorId`. That signature is
+    > unbuildable without weakening a repo invariant: `Cart` is a vendor-scoped model, so an exported
+    > repository function issuing `deleteMany` against it while taking no vendor id fails
+    > `tests/repository-vendor-scoping.test.ts`, whose only escape is an `ALLOWED` entry reserved for
+    > deliberate cross-tenant exceptions recorded in ADR-004. A guest-cart reaper is not one. The
+    > sweep therefore takes a vendor id and the service iterates active vendors, which is precisely
+    > what `lib/payment-sweep-service.ts` already does with `listActiveVendorIds`. Amended here, in
+    > the spec, rather than built around — see `build-notes.md`.
 
 R7. `deleteAbandonedGuestCarts` deletes a cart only when its `guestToken` is non-null **and** its
     `updatedAt` is strictly older than `olderThan`; a cart with a non-null `userId` is never deleted
@@ -44,7 +54,9 @@ R8. The retention window is a single named constant equal to 30 days, carrying a
     `lib/cart-identity.ts`'s cookie `maxAge` as the reason for that value.
 
 R9. `lib/guest-cart-reaper-service.ts` exists, resolves its Prisma client inside the call rather
-    than at module scope, and is the only new module importing `@/lib/db` for this feature.
+    than at module scope, iterates the vendors returned by `listActiveVendorIds` and calls the
+    repository function once per vendor, and is the only new module importing `@/lib/db` for this
+    feature.
 
 R10. `app/api/jobs/reap-guest-carts/route.ts` responds: `503` when `JOB_INVOCATION_TOKEN` is unset;
      `401` when the `x-job-token` header is absent or does not match; `405` to a `GET`; and `200`

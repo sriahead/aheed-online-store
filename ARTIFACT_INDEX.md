@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-07T08:14:27.006Z` · commit `1d19462` · `154` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-07T10:13:38.086Z` · commit `a4fde12` · `155` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -152,6 +152,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P9.2 — Delivery areas admin & staff navigation reconciliation (plan)](specs/2026-09-06-delivery-areas-admin/plan.md) | spec | 1.0.0 | 2026-09-06 | draft | internal | A vendor's delivery postcode prefixes are seed-only yet hard-gate checkout. Adds a validated staff admin page for them, and reconciles the two staff navigation surfaces that disagree about what the panel contains. No schema change. |
 | [Operator documentation — runbook role delivery, guide accuracy, per-menu-item coverage (plan)](specs/2026-09-06-operator-documentation/plan.md) | spec | 1.0.0 | 2026-09-06 | draft | internal | Repairs the staff runbook's audience routing so operator guides actually render, corrects three false capability claims in the store admin guide, and documents all 18 Admin/Staff menu items with a mechanical coverage and permissions check. |
 | [Stranded payment sweep — scheduled reconciliation of lost webhooks and abandoned checkouts (plan)](specs/2026-09-06-stranded-payment-sweep/plan.md) | spec | 1.0.0 | 2026-09-06 | draft | internal | A scheduled sweep resolving PENDING_PAYMENT orders stranded by a lost Stripe webhook or an abandoned checkout, asking the provider before it acts. Adds a cron Worker and an authenticated job route; changes no existing payment transition logic. |
+| [P9.2 — Remaining non-operational gaps (plan)](specs/2026-09-07-p9-2-non-operational-gaps/plan.md) | spec | 1.0.0 | 2026-09-07 | draft | internal | Closes every remaining P9.2 item that repo work can close — a guest-cart reaper, the webhook's unreachable unset-secret branch, a readable ErrorEvent signal, one shared env-file parser, and required status checks on both branch rulesets. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.26.0 | 2026-09-05 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

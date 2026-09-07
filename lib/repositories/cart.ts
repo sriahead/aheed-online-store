@@ -476,3 +476,75 @@ export async function getCartId(
   const cart = await findCart(prisma, vendorId, identity.userId, identity.guestToken);
   return cart?.id ?? null;
 }
+
+/**
+ * Retention window for abandoned guest carts (P9.2, #94).
+ *
+ * NOT a tuned constant. It is exactly `lib/cart-identity.ts`'s `CART_COOKIE`
+ * `maxAge` (`60 * 60 * 24 * 30`), and the equality is the whole argument: the
+ * guest token naming a cart exists in precisely one place, that cookie. Once it
+ * expires the row is unreachable by everyone, the shopper included — there is no
+ * other index into it. Reaping at the cookie's own lifetime therefore deletes
+ * rows that have already stopped being carts, rather than picking an arbitrary
+ * age at which to destroy something a shopper could still have come back to.
+ *
+ * If the cookie lifetime changes, this must change with it; that is why the two
+ * are stated in the same units and cross-referenced rather than left to match by
+ * coincidence.
+ */
+export const ABANDONED_GUEST_CART_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Deletes this vendor's guest carts left untouched since `olderThan` (#94).
+ *
+ * Guest carts are created lazily on a first add and keyed by an opaque cookie
+ * token; before this, nothing ever reaped them. A guest cart is weakly personal
+ * data — it links a browser to a set of product interests — so this is a
+ * retention control, not only a data-growth one.
+ *
+ * TAKES `vendorId` BECAUSE `Cart` IS VENDOR-SCOPED. A cross-tenant sweep would
+ * need an `ALLOWED` entry in `tests/repository-vendor-scoping.test.ts`, which is
+ * reserved for paths that genuinely have no vendor (the webhook refusal
+ * recorder). This one has one, so the caller iterates vendors instead — the same
+ * shape `lib/payment-sweep-service.ts` uses via `listActiveVendorIds`.
+ *
+ * NEVER DELETES A SIGNED-IN SHOPPER'S CART. `userId: null` and `guestToken: {
+ * not: null }` are both asserted, not just one: a user cart has no cookie
+ * dependency and no expiry, so age tells you nothing about whether it is still
+ * live state its owner can reach.
+ *
+ * TWO STATEMENTS, NOT ONE, BECAUSE `deleteMany` HAS NO `take`. The candidate ids
+ * are selected under `limit` first so a single tick can never delete an
+ * unbounded number of rows. `CartItem` declares `onDelete: Cascade` on its
+ * `cart` relation, so removing the `Cart` rows removes their items — no second
+ * delete, and no orphans if this is interrupted between the two statements.
+ *
+ * `deleteMany` is safe on the HTTP adapter `getPrisma()` returns, unlike
+ * `updateMany`/`createMany` which crash there outright (#382), so this needs no
+ * WebSocket client.
+ */
+export async function deleteAbandonedGuestCarts(
+  prisma: Db,
+  vendorId: string,
+  olderThan: Date,
+  limit: number,
+): Promise<number> {
+  const stale = await prisma.cart.findMany({
+    where: {
+      vendorId,
+      userId: null,
+      guestToken: { not: null },
+      updatedAt: { lt: olderThan },
+    },
+    select: { id: true },
+    take: limit,
+  });
+
+  if (stale.length === 0) return 0;
+
+  const { count } = await prisma.cart.deleteMany({
+    where: { vendorId, id: { in: stale.map((cart) => cart.id) } },
+  });
+
+  return count;
+}
