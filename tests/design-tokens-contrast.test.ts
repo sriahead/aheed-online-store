@@ -101,7 +101,33 @@ const PAIRS: ReadonlyArray<readonly [string, string]> = [
   // text on the muted surface
   [INK, "--color-surface-muted"],
   ["--color-primary", "--color-surface-muted"],
+  // #649 — the muted TEXT token, on every surface it renders on. These replaced
+  // 263 `text-primary/{80,70,60}` alpha modifiers, which composited the clamped
+  // token back below the floor at paint time where no test could see it.
+  ["--color-primary-muted", WHITE],
+  ["--color-primary-muted", "--color-surface-muted"],
+  ["--color-primary-muted", "--color-action-tint"],
+  ["--color-primary-muted", "--color-accent-tint"],
+  ["--color-primary-muted", "--color-danger-tint"],
 ];
+
+/**
+ * #649 — `--color-primary-subtle` is held to WCAG SC 1.4.11 (non-text contrast,
+ * 3:1), NOT to 4.5:1, because it is only ever applied to decorative
+ * `aria-hidden` graphics. It gets its own table rather than joining PAIRS above,
+ * so the 4.5:1 assertion there stays literally true of everything it holds — a
+ * mixed table with a per-row threshold is how a weaker bar quietly becomes the
+ * default for its neighbours.
+ */
+const NON_TEXT_PAIRS: ReadonlyArray<readonly [string, string]> = [
+  ["--color-primary-subtle", WHITE],
+  ["--color-primary-subtle", "--color-surface-muted"],
+  ["--color-primary-subtle", "--color-action-tint"],
+  ["--color-primary-subtle", "--color-accent-tint"],
+  ["--color-primary-subtle", "--color-danger-tint"],
+];
+
+const AA_NON_TEXT = 3;
 
 const AA_NORMAL_TEXT = 4.5;
 
@@ -109,8 +135,9 @@ describe("design token contrast (WCAG 2.2 AA)", () => {
   const tokens = readRawTokens(readFileSync(TOKENS_PATH, "utf8"));
   const asHex = (value: string) => (value.startsWith("--") ? resolve(tokens, value) : value);
 
-  it("declares at least 17 pairs, so the suite cannot pass vacuously", () => {
-    expect(PAIRS.length).toBeGreaterThanOrEqual(17);
+  it("declares at least 22 pairs, so the suite cannot pass vacuously", () => {
+    expect(PAIRS.length).toBeGreaterThanOrEqual(22);
+    expect(NON_TEXT_PAIRS.length).toBeGreaterThanOrEqual(5);
   });
 
   it("keeps the brand primitives at their exact brand-kit values", () => {
@@ -128,5 +155,11 @@ describe("design token contrast (WCAG 2.2 AA)", () => {
       ratio,
       `${foreground} on ${background} is ${ratio.toFixed(2)}:1, below the ${AA_NORMAL_TEXT}:1 AA threshold`,
     ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+  });
+  it.each(NON_TEXT_PAIRS)("%s on %s meets 3:1 (non-text)", (foreground, background) => {
+    expect(
+      contrastRatio(asHex(foreground), asHex(background)),
+      `${foreground} on ${background} is decorative-graphic only and must clear 3:1`,
+    ).toBeGreaterThanOrEqual(AA_NON_TEXT);
   });
 });

@@ -8,6 +8,57 @@ every branch merges.
 
 ### Added
 
+- **Storefront & panel accessibility remediation** (`#649`, `#650`, `#651`, `#652`,
+  `specs/2026-09-07-storefront-accessibility-remediation/`). Four WCAG 2.2 AA defects found by the
+  2026-09-07 Discover pass, fixed as one slice because #649 and #650 lived in the same eleven
+  duplicated style constants. **No schema change and no migration.**
+  - **`#649`** — **299 alpha-modified colour utilities across 83 files failed AA**, and the reason
+    no test could see it is the point: `brandStyle()` passes every semantic foreground through
+    `clampForContrast`, and **a Tailwind alpha modifier composites that clamped value back below
+    the floor at paint time**, while `tests/design-tokens-contrast.test.ts` reads token *values*. So
+    the better the clamp works, the worse `/70` renders. `text-primary/80` is the row that shows
+    why a percentage floor could never have expressed this — 4.80:1 on white, **4.41:1 on Aheed's
+    tints**, and passing on both for SriMart. Replaced by two tokens derived through a new
+    `mutedForeground()` (composite at the old alpha, then clamp — the same derive-then-clamp shape
+    `darkenForHover` already used): `--color-primary-muted` (4.5:1, text) and
+    `--color-primary-subtle` (3:1, decorative `aria-hidden` graphics), both re-declared per vendor
+    in `brandStyle()` because a token declared only in `tokens.css` renders the default palette on
+    every real page. Aheed resolves to `#49784e`/`#77917a`, SriMart to `#4369a7`/`#7287aa`.
+    Collapsing `/80`, `/70` and `/60` onto one tone was the slice's main visual risk, so the
+    resulting ladder is pinned rather than assumed: three ordered steps, each at least 1.4:1 from
+    its neighbour, asserted for both vendors.
+  - **`#650`** — `focus:outline-none` at **27 sites with 2 replacements**; the rest indicated focus
+    by a 1px border-colour change, which fails SC 2.4.11's indicator-area requirement and
+    **disappears entirely in forced-colors mode**, where author border colours are overridden and
+    the suppressed system outline is not there to fall back on. One `focus-visible` ring now serves
+    all of them. The four staff forms' `fieldClass(name)` became `fieldProps(name)`, returning the
+    className **and** `aria-invalid`/`aria-describedby` together, so a field cannot be styled
+    invalid without being announced invalid — a red border alone satisfies neither SC 1.4.1 nor
+    SC 3.3.1.
+  - **`#651`** — `app/globals.css`'s reduced-motion block is **class-scoped**, and `transform` is
+    not inherited, so `transform: none` on `.skew-card-inner` never reached the
+    `group-hover:scale-105` on the product photo inside it: under
+    `prefers-reduced-motion: reduce` the card correctly stopped skewing and lifting and **still ran
+    a 500ms image zoom**. Fixed with `motion-reduce:` at all 24 utility-transform sites.
+    **Widening the CSS block to a global selector was considered and rejected** — it would remove
+    the `box-shadow`/`border-color` transitions that block deliberately keeps (hover would stop
+    being perceivable at all), and any blanket `transform: none` would break the seven **static**
+    `-translate-y-1/2` centring transforms in this repo, detaching search icons from their inputs
+    for reduced-motion users only.
+  - **`#652`** — six pages (`/login`, `/register`, `/forgot-password`, `/reset-password`,
+    `/account`, `/account/data`) rendered `mx-auto max-w-sm` with **no padding at all**, and
+    nothing upstream supplied a gutter — so below 384px the sign-in and registration forms ran
+    edge-to-edge. The container-width inconsistency behind it stays with `#656`.
+  - **Enforcement is the deliverable.** All three rules had existed as prose in
+    `specs/design-system.md` and reached 299, 27 and 24 sites anyway.
+    `tests/token-alpha-purity.test.ts` and `tests/motion-reduce-coverage.test.ts` are new, both
+    walking the filesystem so a new file is covered the moment it exists; the motion one caught a
+    `hover:scale-105` in `CartDrawerShell` that the sweep's literal patterns had missed.
+  - **The product-card motion is untouched.** `ProductCard.tsx`'s entire diff is **one line** (the
+    `motion-reduce:` variant); `.skew-card*`'s transforms, durations and easings are byte-identical.
+  - Scoped out and filed: `#657` (`text-white/NN` over vendor-uploaded campaign imagery — needs a
+    scrim, not a token, since the background is an arbitrary photograph).
+
 - **P9.2 remaining non-operational gaps** (`#644`, absorbing `#94`, `#621`, `#437` code tail,
   `#505` code half and `#472` in part, `specs/2026-09-07-p9-2-non-operational-gaps/`). Closes every
   remaining P9.2 item a repository change can close, leaving only the operational set (`#113`,

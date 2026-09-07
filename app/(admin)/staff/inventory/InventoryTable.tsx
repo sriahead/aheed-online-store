@@ -35,20 +35,20 @@ export function InventoryTable({
     <div className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden mt-6">
       <div className="p-4 border-b border-black/10">
         <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/60" />
           <input
             type="text"
             placeholder="Filter inventory by name..."
             defaultValue={searchParams.get("q") ?? ""}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-full rounded-xl border border-black/20 py-2 pl-9 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full rounded-xl border border-black/20 py-2 pl-9 pr-4 text-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
           />
         </div>
       </div>
 
       <div className="flex items-center justify-between px-6 py-3 bg-surface-muted/30 border-b border-black/10">
         <p className="text-sm font-semibold text-black/80">Showing {initialItems.length} Items</p>
-        <p className="text-sm font-bold italic text-primary/80">
+        <p className="text-sm font-bold italic text-primary-muted">
           Shop-Floor Staff: Toggle live product availability honestly when sold out.
         </p>
       </div>
@@ -70,7 +70,7 @@ export function InventoryTable({
             ))}
             {initialItems.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-black/50">
+                <td colSpan={5} className="px-6 py-8 text-center text-black/60">
                   No products found.
                 </td>
               </tr>
@@ -118,7 +118,7 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
           />
           <div>
             <p className="font-bold text-black/90">{item.name}</p>
-            <p className="text-xs text-black/50">{item.unitLabel}</p>
+            <p className="text-xs text-black/60">{item.unitLabel}</p>
           </div>
         </div>
       </td>
@@ -129,7 +129,7 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
       </td>
       <td className="px-6 py-4">
         <p className="font-bold text-action">£{(item.basePrice / 100).toFixed(2)}</p>
-        <p className="text-xs text-black/40">({item.basePrice}p)</p>
+        <p className="text-xs text-black/60">({item.basePrice}p)</p>
       </td>
       <td className="px-6 py-4">
         <div className="flex items-center gap-3">

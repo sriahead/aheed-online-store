@@ -30,7 +30,7 @@ export function SearchRecoveryNotice({
     return (
       <div
         role="status"
-        className="mb-6 rounded-xl bg-surface-muted px-4 py-4 text-sm text-primary/80"
+        className="mb-6 rounded-xl bg-surface-muted px-4 py-4 text-sm text-primary-muted"
       >
         <p className="mb-3">No products match. Try one of these instead:</p>
         {terms.length > 1 && (
@@ -71,7 +71,10 @@ export function SearchRecoveryNotice({
       : "No exact matches. Showing related products instead.";
 
   return (
-    <p role="status" className="mb-4 rounded-xl bg-surface-muted px-4 py-3 text-sm text-primary/80">
+    <p
+      role="status"
+      className="mb-4 rounded-xl bg-surface-muted px-4 py-3 text-sm text-primary-muted"
+    >
       {message}
     </p>
   );

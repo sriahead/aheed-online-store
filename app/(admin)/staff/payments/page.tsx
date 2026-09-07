@@ -54,7 +54,7 @@ export default async function StaffPaymentsPage() {
         <ShieldAlert className="h-6 w-6 text-action" aria-hidden />
         Payment issues
       </h1>
-      <p className="mb-6 max-w-3xl text-sm text-primary/70">
+      <p className="mb-6 max-w-3xl text-sm text-primary-muted">
         Payment events that were refused because they could not be proved to belong to the order
         they named. The expected number here is zero. A row whose order is still awaiting payment
         may mean a real customer was charged and their order never completed — check with the
@@ -62,7 +62,7 @@ export default async function StaffPaymentsPage() {
       </p>
 
       {refusals.length === 0 ? (
-        <p className="rounded-2xl border border-black/10 bg-white px-4 py-8 text-center text-sm text-primary/60">
+        <p className="rounded-2xl border border-black/10 bg-white px-4 py-8 text-center text-sm text-primary-muted">
           No refused payment events recorded.
         </p>
       ) : (
@@ -77,16 +77,16 @@ export default async function StaffPaymentsPage() {
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="font-semibold text-primary">
                     Order {refusal.orderNumber}
-                    <span className="ml-2 text-sm font-normal text-primary/60">
+                    <span className="ml-2 text-sm font-normal text-primary-muted">
                       {refusal.orderStatus ?? "no matching order"}
                     </span>
                   </p>
-                  <p className="text-sm text-primary/60">
+                  <p className="text-sm text-primary-muted">
                     {refusal.createdAt.toLocaleString("en-GB")}
                   </p>
                 </div>
 
-                <p className="mt-1 text-sm text-primary/80">
+                <p className="mt-1 text-sm text-primary-muted">
                   Refused as <span className="font-medium">{refusal.reason}</span> by{" "}
                   {refusal.provider}.
                   {stranded
@@ -97,7 +97,7 @@ export default async function StaffPaymentsPage() {
                 <dl className="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                   <div>
                     <dt className="font-medium text-primary">Claimed by the event</dt>
-                    <dd className="text-primary/70 break-all">
+                    <dd className="text-primary-muted break-all">
                       {refusal.claimedProviderReference ?? "no session id"}
                       {refusal.claimedAmountPence !== null && (
                         <> · {formatPrice(refusal.claimedAmountPence)}</>
@@ -107,7 +107,7 @@ export default async function StaffPaymentsPage() {
                   </div>
                   <div>
                     <dt className="font-medium text-primary">Stored on the order</dt>
-                    <dd className="text-primary/70 break-all">
+                    <dd className="text-primary-muted break-all">
                       {refusal.storedProviderReference ?? "no session id"}
                       {refusal.storedAmountPence !== null && (
                         <> · {formatPrice(refusal.storedAmountPence)}</>
@@ -118,16 +118,16 @@ export default async function StaffPaymentsPage() {
                 </dl>
 
                 {refusal.resolution && (
-                  <p className="mt-4 rounded-xl bg-surface-muted px-3 py-2 text-sm text-primary/80">
+                  <p className="mt-4 rounded-xl bg-surface-muted px-3 py-2 text-sm text-primary-muted">
                     <span className="font-medium">{refusal.resolution}</span>
                     {refusal.resolvedAt && (
-                      <span className="text-primary/60">
+                      <span className="text-primary-muted">
                         {" "}
                         · {refusal.resolvedAt.toLocaleString("en-GB")}
                       </span>
                     )}
                     {refusal.resolutionDetail && (
-                      <span className="mt-1 block break-all text-primary/70">
+                      <span className="mt-1 block break-all text-primary-muted">
                         {refusal.resolutionDetail}
                       </span>
                     )}

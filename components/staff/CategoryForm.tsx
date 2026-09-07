@@ -6,6 +6,7 @@ import { Save } from "lucide-react";
 import { saveCategory } from "@/features/admin/catalogue";
 import { initialCatalogueState } from "@/lib/catalogue-form";
 import type { AdminCategoryDetail, AdminCategoryRow } from "@/lib/repositories/categories";
+import { errorInputClass, inputClass, labelClass } from "@/lib/form-classes";
 
 /**
  * Category create/edit form (P6b1, #159).
@@ -22,11 +23,6 @@ import type { AdminCategoryDetail, AdminCategoryRow } from "@/lib/repositories/c
  * Colours are semantic tokens per design-system.md, never raw hex.
  */
 
-const inputClass =
-  "w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none";
-const labelClass = "mb-1 block text-xs font-medium text-primary/70";
-const errorInputClass = "border-danger bg-danger-tint";
-
 export interface CategoryFormProps {
   category: AdminCategoryDetail | null;
   /** Every category for this vendor — filtered to legal parents below. */
@@ -41,8 +37,23 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
     (row) => row.parentId === null && row.id !== category?.id,
   );
 
-  const fieldClass = (name: string) =>
-    `${inputClass} ${state.field === name ? errorInputClass : ""}`;
+  /**
+   * #650 — the className AND the ARIA pair, from one call, so a field cannot be
+   * styled as invalid without also being announced as invalid. `errorInputClass`
+   * is a border and a background tint: on its own it tells a sighted mouse user
+   * which field is wrong and a screen-reader user nothing at all (WCAG SC 1.4.1
+   * Use of Colour, SC 3.3.1 Error Identification). Returning both together is why
+   * this is `fieldProps` rather than the old `fieldClass` — a future field added
+   * to this form gets the association by construction instead of by remembering.
+   */
+  const fieldProps = (name: string) => {
+    const invalid = state.field === name;
+    return {
+      className: `${inputClass} ${invalid ? errorInputClass : ""}`,
+      "aria-invalid": invalid || undefined,
+      "aria-describedby": invalid ? "category-form-error" : undefined,
+    };
+  };
 
   return (
     <form action={action} className="space-y-6">
@@ -51,6 +62,7 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
       {state.error && (
         <p
           role="alert"
+          id="category-form-error"
           className="rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger"
         >
           {state.error}
@@ -75,7 +87,7 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
             name="name"
             required
             defaultValue={category?.name ?? ""}
-            className={fieldClass("name")}
+            {...fieldProps("name")}
           />
         </div>
 
@@ -90,7 +102,7 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
             spellCheck={false}
             placeholder="rice-grains"
             defaultValue={category?.slug ?? ""}
-            className={fieldClass("slug")}
+            {...fieldProps("slug")}
           />
         </div>
 
@@ -102,7 +114,7 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
             id="parentId"
             name="parentId"
             defaultValue={category?.parentId ?? ""}
-            className={fieldClass("parentId")}
+            {...fieldProps("parentId")}
           >
             <option value="">None (top level)</option>
             {parentOptions.map((option) => (
@@ -112,7 +124,7 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-primary/60">
+          <p className="mt-1 text-xs text-primary-muted">
             Categories go two levels deep, so a sub-category can&apos;t have children of its own.
           </p>
         </div>
@@ -130,7 +142,7 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
             step={1}
             required
             defaultValue={category?.sortOrder ?? 0}
-            className={fieldClass("sortOrder")}
+            {...fieldProps("sortOrder")}
           />
         </div>
 
@@ -149,14 +161,14 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
         <button
           type="submit"
           disabled={saving}
-          className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Save className="h-4 w-4" aria-hidden />
           {saving ? "Saving…" : isNew ? "Create category" : "Save changes"}
         </button>
         <Link
           href="/staff/categories"
-          className="text-sm font-semibold text-primary/70 hover:underline"
+          className="text-sm font-semibold text-primary-muted hover:underline"
         >
           Back to categories
         </Link>

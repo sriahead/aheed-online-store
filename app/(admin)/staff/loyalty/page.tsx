@@ -37,7 +37,7 @@ export default async function StaffLoyaltyPage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Loyalty config</h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         How this store&apos;s customers earn and spend points. Changes apply to future orders only —
         points already earned keep the rate they were earned at.
       </p>

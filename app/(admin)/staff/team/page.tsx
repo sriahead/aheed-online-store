@@ -29,7 +29,7 @@ export default async function TeamPage() {
 
       <div className="mb-10 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-primary">Grant Access</h2>
-        <p className="mb-4 text-sm text-primary/80">
+        <p className="mb-4 text-sm text-primary-muted">
           Search for an existing registered customer by email to upgrade them to Staff or Admin.
         </p>
         <AssignRoleForm currentAuthVia={auth.via} />
@@ -51,9 +51,9 @@ export default async function TeamPage() {
             {team.map((member) => (
               <tr key={member.id} className="hover:bg-black/5">
                 <td className="px-4 py-3 text-primary">{member.name}</td>
-                <td className="px-4 py-3 text-primary/80">{member.email}</td>
+                <td className="px-4 py-3 text-primary-muted">{member.email}</td>
                 <td className="px-4 py-3 font-medium text-action">{member.vendorRole}</td>
-                <td className="px-4 py-3 text-primary/60">
+                <td className="px-4 py-3 text-primary-muted">
                   {member.platformRole === "ADMIN" ? (
                     <span className="rounded bg-black/10 px-2 py-0.5 text-xs font-semibold text-primary">
                       Platform Admin
@@ -62,14 +62,14 @@ export default async function TeamPage() {
                     "User"
                   )}
                 </td>
-                <td className="px-4 py-3 text-primary/60">
+                <td className="px-4 py-3 text-primary-muted">
                   {new Date(member.createdAt).toLocaleDateString("en-GB")}
                 </td>
               </tr>
             ))}
             {team.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-primary/60">
+                <td colSpan={5} className="px-4 py-8 text-center text-primary-muted">
                   No staff members found.
                 </td>
               </tr>

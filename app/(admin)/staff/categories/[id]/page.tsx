@@ -41,7 +41,7 @@ export default async function EditCategoryPage({ params }: { params: Promise<{ i
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">{category.name}</h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         Hiding a category needs its products and sub-categories hidden or moved first.
       </p>
       <CategoryForm category={category} categories={categories} />

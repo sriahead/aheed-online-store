@@ -31,7 +31,7 @@ export function CookieBanner() {
       className="fixed bottom-0 inset-x-0 z-50 p-4 bg-white/95 backdrop-blur border-t border-black/10 shadow-lg text-primary transition duration-300"
     >
       <div className="mx-auto flex max-w-5xl flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="text-xs sm:text-sm text-primary/80 max-w-2xl leading-relaxed">
+        <div className="text-xs sm:text-sm text-primary-muted max-w-2xl leading-relaxed">
           <p className="font-semibold text-primary mb-1">We value your privacy</p>
           We use essential cookies to manage your cart, authentication, and store preferences.
           Optional cookies help us improve site experience. Read our{" "}
@@ -54,14 +54,14 @@ export function CookieBanner() {
           <button
             type="button"
             onClick={() => saveConsent("essential")}
-            className="rounded-lg border border-primary/20 bg-white px-3 py-1.5 text-xs font-semibold text-primary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="rounded-lg border border-primary/20 bg-white px-3 py-1.5 text-xs font-semibold text-primary hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
           >
             Essential Only
           </button>
           <button
             type="button"
             onClick={() => saveConsent("accepted")}
-            className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
           >
             Accept All
           </button>

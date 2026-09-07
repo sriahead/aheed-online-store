@@ -5,6 +5,7 @@ import { Plus, Save } from "lucide-react";
 import { createBrand, renameBrand, setBrandImage } from "@/features/admin/brands";
 import { initialCatalogueState } from "@/lib/catalogue-form";
 import type { AdminBrandRow } from "@/lib/repositories/brands";
+import { buttonClass, inputClass, labelClass } from "@/lib/form-classes";
 
 /**
  * Brand admin forms (P2.6 slice 6, #569).
@@ -21,12 +22,6 @@ import type { AdminBrandRow } from "@/lib/repositories/brands";
  * Colours are semantic tokens per design-system.md, never raw hex.
  */
 
-const inputClass =
-  "w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none";
-const labelClass = "mb-1 block text-xs font-medium text-primary/70";
-const buttonClass =
-  "inline-flex items-center gap-2 rounded-full bg-action px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-action-hover disabled:opacity-60";
-
 function Feedback({ state }: { state: typeof initialCatalogueState }) {
   if (state.error) {
     return (
@@ -36,7 +31,7 @@ function Feedback({ state }: { state: typeof initialCatalogueState }) {
     );
   }
   if (state.saved) {
-    return <p className="mt-2 text-sm text-primary/70">Saved.</p>;
+    return <p className="mt-2 text-sm text-primary-muted">Saved.</p>;
   }
   return null;
 }
@@ -84,7 +79,7 @@ export function BrandRowForms({ brand }: { brand: AdminBrandRow }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="font-semibold text-primary">{brand.name}</p>
-        <p className="text-xs text-primary/60">
+        <p className="text-xs text-primary-muted">
           <code>{brand.slug}</code> · {brand.productCount}{" "}
           {brand.productCount === 1 ? "product" : "products"}
         </p>
@@ -124,7 +119,7 @@ export function BrandRowForms({ brand }: { brand: AdminBrandRow }) {
             defaultValue={brand.imageKey ?? ""}
             className={inputClass}
           />
-          <p className="mt-1 text-xs text-primary/60">
+          <p className="mt-1 text-xs text-primary-muted">
             A relative storage key, never a URL. Nothing displays it yet — it is here so brand
             thumbnails have somewhere to live. Leave blank to clear.
           </p>

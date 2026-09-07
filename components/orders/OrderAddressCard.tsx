@@ -20,7 +20,7 @@ export function OrderAddressCard({ address }: { address: OrderAddress }) {
   return (
     <section className="mb-6 rounded-2xl border border-black/10 bg-white p-5">
       <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-primary">Delivering to</h2>
-      <address className="text-sm not-italic leading-relaxed text-primary/80">
+      <address className="text-sm not-italic leading-relaxed text-primary-muted">
         {address.recipientName}
         <br />
         {address.line1}
@@ -35,9 +35,9 @@ export function OrderAddressCard({ address }: { address: OrderAddress }) {
         <br />
         {address.postcode}
         <br />
-        <span className="text-primary/60">{address.phone}</span>
+        <span className="text-primary-muted">{address.phone}</span>
       </address>
-      {address.notes && <p className="mt-2 text-xs text-primary/60">Notes: {address.notes}</p>}
+      {address.notes && <p className="mt-2 text-xs text-primary-muted">Notes: {address.notes}</p>}
     </section>
   );
 }

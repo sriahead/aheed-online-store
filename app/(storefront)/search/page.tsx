@@ -217,7 +217,7 @@ export default async function SearchPage({
           <SearchTruncationNotice truncated={truncated} />
 
           {queryTooShort ? (
-            <p className="text-primary/70">
+            <p className="text-primary-muted">
               That search is too short. Try at least two characters, like “rice” or “atta”.
             </p>
           ) : items.length === 0 ? (
@@ -235,7 +235,7 @@ export default async function SearchPage({
                * price filter) still renders the same blank content column this
                * slice exists to remove, just reached by a different route.
                */
-              <p className="text-primary/70">
+              <p className="text-primary-muted">
                 No products match. Try a different search or clear your filters.
               </p>
             )

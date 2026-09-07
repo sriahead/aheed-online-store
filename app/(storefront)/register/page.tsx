@@ -15,12 +15,12 @@ export default function RegisterPage() {
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 
   return (
-    <main className="mx-auto max-w-sm">
+    <main className="mx-auto max-w-sm px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold text-primary">Create account</h1>
       <RegisterForm />
       {googleEnabled && (
         <>
-          <p className="my-4 text-center text-sm text-black/50">or</p>
+          <p className="my-4 text-center text-sm text-black/60">or</p>
           <GoogleSignInButton />
         </>
       )}

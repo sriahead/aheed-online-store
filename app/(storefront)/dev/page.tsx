@@ -31,7 +31,7 @@ export default async function DevPage() {
     return (
       <main className="mx-auto max-w-md px-4 py-16 text-center">
         <h1 className="text-2xl font-semibold text-primary">Administrators only</h1>
-        <p className="mt-3 text-primary/70">
+        <p className="mt-3 text-primary-muted">
           This area is restricted to admin accounts. You&apos;re signed in, but your role
           doesn&apos;t have access.
         </p>
@@ -46,27 +46,27 @@ export default async function DevPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Developer diagnostics</h1>
-      <p className="mb-8 text-sm text-primary/60">
+      <p className="mb-8 text-sm text-primary-muted">
         Admin-only. Non-secret environment info — never shows secret values.
       </p>
 
       <div className="grid gap-6 sm:grid-cols-2">
         {/* Environment */}
         <section className="rounded-md border border-black/10 p-5">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary/60">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
             Environment
           </h2>
           <dl className="flex flex-col gap-2 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-primary/70">Environment</dt>
+              <dt className="text-primary-muted">Environment</dt>
               <dd className="font-semibold text-primary">{environmentName(host)}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-primary/70">Host</dt>
+              <dt className="text-primary-muted">Host</dt>
               <dd className="font-mono text-primary">{host || "—"}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-primary/70">Deployed commit</dt>
+              <dt className="text-primary-muted">Deployed commit</dt>
               <dd className="font-mono text-primary">{diagnostics.commit ?? "— (local)"}</dd>
             </div>
           </dl>
@@ -74,20 +74,20 @@ export default async function DevPage() {
 
         {/* Session */}
         <section className="rounded-md border border-black/10 p-5">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary/60">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
             Your session
           </h2>
           <dl className="flex flex-col gap-2 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-primary/70">Role</dt>
+              <dt className="text-primary-muted">Role</dt>
               <dd className="font-semibold text-primary">{user.role}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-primary/70">Email</dt>
+              <dt className="text-primary-muted">Email</dt>
               <dd className="text-primary">{user.email}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-primary/70">User ID</dt>
+              <dt className="text-primary-muted">User ID</dt>
               <dd className="truncate font-mono text-primary" title={user.id}>
                 {user.id}
               </dd>
@@ -97,13 +97,13 @@ export default async function DevPage() {
 
         {/* Integrations */}
         <section className="rounded-md border border-black/10 p-5 sm:col-span-2">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary/60">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
             Integrations (configured for this environment)
           </h2>
           <ul className="flex flex-col gap-2 text-sm">
             {Object.entries(diagnostics.integrations).map(([key, on]) => (
               <li key={key} className="flex items-center justify-between gap-4">
-                <span className="text-primary/80">{INTEGRATION_LABELS[key] ?? key}</span>
+                <span className="text-primary-muted">{INTEGRATION_LABELS[key] ?? key}</span>
                 {on ? (
                   <span className="inline-flex items-center gap-1 font-semibold text-primary">
                     <Check className="h-4 w-4 text-action" aria-hidden /> Configured
@@ -120,7 +120,7 @@ export default async function DevPage() {
 
         {/* KMS */}
         <section className="rounded-md border border-black/10 p-5 sm:col-span-2">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary/60">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
             Knowledge Management System (internal docs)
           </h2>
           {diagnostics.kmsUrl ? (
@@ -134,7 +134,7 @@ export default async function DevPage() {
               <ExternalLink className="h-4 w-4" aria-hidden />
             </a>
           ) : (
-            <p className="text-sm text-primary/60">
+            <p className="text-sm text-primary-muted">
               KMS link pending setup — set <code className="font-mono">KMS_INTERNAL_URL</code> once
               the internal docs site has a DNS record and a Cloudflare Access gate (see{" "}
               <code className="font-mono">kms/site-internal/wrangler.toml</code>).

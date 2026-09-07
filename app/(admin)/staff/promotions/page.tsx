@@ -18,13 +18,13 @@ function statusLabel(
   now: Date,
 ): { text: string; className: string } {
   if (!campaign) {
-    return { text: "No campaign", className: "bg-surface-muted text-primary/60" };
+    return { text: "No campaign", className: "bg-surface-muted text-primary-muted" };
   }
   if (isCampaignLive(campaign, now)) {
     return { text: "Live", className: "bg-action-tint text-primary" };
   }
   if (!campaign.isActive) {
-    return { text: "Inactive", className: "bg-surface-muted text-primary/60" };
+    return { text: "Inactive", className: "bg-surface-muted text-primary-muted" };
   }
   if (campaign.startsAt && campaign.startsAt > now) {
     return { text: "Scheduled", className: "bg-accent-tint text-accent" };
@@ -62,15 +62,15 @@ export default async function StaffPromotionsPage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Promotions</h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         A photo and headline for the homepage hero, per department. The real price shown alongside
         it always comes from your catalogue — the headline is the only part you write.
       </p>
 
       {departments.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <Megaphone className="mx-auto mb-3 h-8 w-8 text-primary/40" aria-hidden />
-          <p className="text-sm text-primary/70">
+          <Megaphone className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+          <p className="text-sm text-primary-muted">
             No departments yet. Create a top-level category before adding a campaign.
           </p>
         </div>

@@ -14,7 +14,10 @@ export function SearchTruncationNotice({ truncated }: { truncated: boolean }) {
   if (!truncated) return null;
 
   return (
-    <p role="status" className="mb-4 rounded-xl bg-surface-muted px-4 py-3 text-sm text-primary/80">
+    <p
+      role="status"
+      className="mb-4 rounded-xl bg-surface-muted px-4 py-3 text-sm text-primary-muted"
+    >
       There are more matches than we can show at once. Add another word to your search — a brand, a
       size or a department — to narrow it down.
     </p>

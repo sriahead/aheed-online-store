@@ -83,7 +83,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 text-primary">
-      <nav className="mb-6 text-xs text-primary/60">
+      <nav className="mb-6 text-xs text-primary-muted">
         <Link href="/" className="hover:underline">
           Home
         </Link>{" "}
@@ -113,7 +113,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                 defaultValue={orderNumber}
                 placeholder="e.g. AHE-20260813-K4M2XQ"
                 required
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
               />
             </div>
             <div>
@@ -127,7 +127,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                 defaultValue={email}
                 placeholder="shopper@example.com"
                 required
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
               />
             </div>
           </div>

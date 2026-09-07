@@ -59,7 +59,7 @@ export default async function CancelOrderPage({
         <AlertCircle className="h-8 w-8 shrink-0 text-accent" aria-hidden />
         <div>
           <h1 className="text-xl font-bold text-primary">Cancel this order?</h1>
-          <p className="text-sm text-primary/70">
+          <p className="text-sm text-primary-muted">
             Order <span className="font-semibold text-primary">{order.orderNumber}</span> has not
             been paid for.
           </p>
@@ -68,7 +68,7 @@ export default async function CancelOrderPage({
 
       <div className="rounded-2xl border border-black/10 bg-surface-muted p-4">
         <h2 className="text-xs font-bold text-primary">What happens if you cancel</h2>
-        <ul className="mt-2 space-y-1 text-xs leading-relaxed text-primary/80">
+        <ul className="mt-2 space-y-1 text-xs leading-relaxed text-primary-muted">
           <li>The order is cancelled and nothing is charged.</li>
           <li>
             Its {order.items.length === 1 ? "item goes" : "items go"} back into your basket, so you

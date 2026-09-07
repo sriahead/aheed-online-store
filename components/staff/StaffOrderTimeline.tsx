@@ -33,15 +33,15 @@ export function StaffOrderTimeline({ timeline }: { timeline: StaffTimelineEntry[
               />
               <div className="min-w-0">
                 <p
-                  className={`text-sm ${isCurrent ? "font-bold text-primary" : "text-primary/70"}`}
+                  className={`text-sm ${isCurrent ? "font-bold text-primary" : "text-primary-muted"}`}
                 >
                   {entry.label}
                 </p>
-                <p className="text-xs text-primary/50">
+                <p className="text-xs text-primary-muted">
                   {formatOrderDateTime(entry.at)}
                   {entry.actorName ? ` · ${entry.actorName}` : ""}
                 </p>
-                {entry.note && <p className="mt-1 text-xs text-primary/70">{entry.note}</p>}
+                {entry.note && <p className="mt-1 text-xs text-primary-muted">{entry.note}</p>}
               </div>
             </li>
           );

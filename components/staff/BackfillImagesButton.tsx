@@ -76,7 +76,7 @@ export function BackfillImagesButton() {
         <Sparkles className="h-4 w-4" aria-hidden />
         {loading ? "Generating..." : "Auto-fill Missing Images"}
       </button>
-      <label className="flex items-center gap-2 text-xs font-medium text-primary/70">
+      <label className="flex items-center gap-2 text-xs font-medium text-primary-muted">
         <input
           type="checkbox"
           checked={useOpenFoodFacts}

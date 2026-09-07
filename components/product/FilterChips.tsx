@@ -42,7 +42,7 @@ export function FilterChips({
           className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-surface-muted px-3 py-1 text-sm text-primary transition-colors hover:bg-black/5"
         >
           {chip.label}
-          <X className="h-3.5 w-3.5 text-primary/60" aria-hidden />
+          <X className="h-3.5 w-3.5 text-primary-muted" aria-hidden />
         </Link>
       ))}
       <Link

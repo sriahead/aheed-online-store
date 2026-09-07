@@ -40,8 +40,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <ProductImageGallery images={product.images} cdnBaseUrl={CDN_BASE_URL ?? ""} />
       <div className="flex flex-col gap-3">
         <h1 className="text-2xl font-semibold text-primary">{product.name}</h1>
-        <p className="text-primary/80">{product.description}</p>
-        <p className="text-sm text-primary/70">{product.unitLabel}</p>
+        <p className="text-primary-muted">{product.description}</p>
+        <p className="text-sm text-primary-muted">{product.unitLabel}</p>
         <p className="text-xl font-semibold text-action">{formatPrice(product.basePrice)}</p>
         <p className={product.inStock ? "text-action" : "text-danger"}>
           {product.inStock ? "In stock" : "Out of stock"}
@@ -56,7 +56,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         {session?.user ? (
           <ReviewForm productId={product.id} productSlug={slug} existingReview={existingReview} />
         ) : (
-          <p className="text-primary/70">
+          <p className="text-primary-muted">
             <Link href="/login" className="font-semibold text-action">
               Log in
             </Link>{" "}
@@ -81,7 +81,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   </form>
                 )}
               </div>
-              {review.comment && <p className="text-primary/80">{review.comment}</p>}
+              {review.comment && <p className="text-primary-muted">{review.comment}</p>}
             </li>
           ))}
         </ul>

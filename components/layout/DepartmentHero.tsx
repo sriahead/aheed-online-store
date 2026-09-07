@@ -234,7 +234,7 @@ export function DepartmentHero({
                     <Link
                       href={ctaHref}
                       tabIndex={isCurrent ? undefined : -1}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-sm font-bold text-primary shadow-sm transition-transform hover:bg-surface-muted active:scale-95"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-sm font-bold text-primary shadow-sm transition-transform hover:bg-surface-muted active:scale-95 motion-reduce:active:scale-100"
                     >
                       {/* CTA label is always data-derived, never campaign copy
                           (R11) — one fewer free-text a11y surface than the

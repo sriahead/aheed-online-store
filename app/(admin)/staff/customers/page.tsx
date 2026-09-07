@@ -57,7 +57,7 @@ export default async function StaffCustomersPage({
     <main className="mx-auto w-full max-w-3xl px-4 py-8">
       <div className="mb-6">
         <h1 className="mb-1 text-2xl font-semibold text-primary">Customers</h1>
-        <p className="text-sm text-primary/60">
+        <p className="text-sm text-primary-muted">
           Everyone who has placed a paid order with this store, highest spend first. Abandoned and
           cancelled orders don&apos;t count towards spend.
         </p>
@@ -65,8 +65,8 @@ export default async function StaffCustomersPage({
 
       {items.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <Users className="mx-auto mb-3 h-8 w-8 text-primary/40" aria-hidden />
-          <p className="text-sm text-primary/70">
+          <Users className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+          <p className="text-sm text-primary-muted">
             No customers yet. They appear here once an order has been paid for.
           </p>
         </div>
@@ -88,18 +88,18 @@ export default async function StaffCustomersPage({
                           : "Erased customers"}
                     </span>
                     {customer.kind === "GUEST" && (
-                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary/60">
+                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-muted">
                         Guest
                       </span>
                     )}
                     {customer.kind === "ERASED" && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary/60">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-muted">
                         <UserX className="h-3 w-3" aria-hidden />
                         Erased
                       </span>
                     )}
                   </p>
-                  <p className="mt-0.5 truncate text-xs text-primary/60">
+                  <p className="mt-0.5 truncate text-xs text-primary-muted">
                     {customer.kind === "ACCOUNT" && customer.email
                       ? customer.email
                       : customer.kind === "ERASED"
@@ -107,14 +107,14 @@ export default async function StaffCustomersPage({
                         : "No account — ordered as a guest."}
                   </p>
                   {customer.loyaltyPoints !== null && (
-                    <p className="mt-1 text-xs text-primary/60">
+                    <p className="mt-1 text-xs text-primary-muted">
                       {customer.loyaltyPoints.toLocaleString("en-GB")} loyalty points
                     </p>
                   )}
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="font-bold text-primary">{formatPrice(customer.totalSpendPence)}</p>
-                  <p className="text-xs text-primary/60">
+                  <p className="text-xs text-primary-muted">
                     {customer.orderCount} {customer.orderCount === 1 ? "order" : "orders"}
                   </p>
                 </div>

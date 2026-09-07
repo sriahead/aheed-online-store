@@ -218,7 +218,7 @@ export function ProductImageManager({
       )}
 
       {images.length === 0 ? (
-        <p className="text-sm text-primary/60">No image yet.</p>
+        <p className="text-sm text-primary-muted">No image yet.</p>
       ) : (
         <ul className="flex flex-wrap gap-3">
           {images.map((image, index) => (
@@ -247,7 +247,7 @@ export function ProductImageManager({
                   disabled={pending || index === 0}
                   onClick={() => move(index, -1)}
                   aria-label="Move earlier"
-                  className="rounded-lg p-1 text-primary/70 hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-30"
+                  className="rounded-lg p-1 text-primary-muted hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   <ChevronUp className="h-4 w-4" aria-hidden />
                 </button>
@@ -256,7 +256,7 @@ export function ProductImageManager({
                   disabled={pending || index === images.length - 1}
                   onClick={() => move(index, 1)}
                   aria-label="Move later"
-                  className="rounded-lg p-1 text-primary/70 hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-30"
+                  className="rounded-lg p-1 text-primary-muted hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   <ChevronDown className="h-4 w-4" aria-hidden />
                 </button>
@@ -286,7 +286,7 @@ export function ProductImageManager({
       )}
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-primary/70" htmlFor="addImageFile">
+        <label className="mb-1 block text-xs font-medium text-primary-muted" htmlFor="addImageFile">
           Add another image — resized to {MAX_IMAGE_EDGE_PX}px and converted to WebP before
           uploading
         </label>
@@ -295,7 +295,7 @@ export function ProductImageManager({
           ref={fileRef}
           type="file"
           accept={ACCEPTED_INPUT}
-          className="w-full text-sm text-primary/80 file:mr-3 file:rounded-xl file:border-0 file:bg-surface-muted file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary"
+          className="w-full text-sm text-primary-muted file:mr-3 file:rounded-xl file:border-0 file:bg-surface-muted file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary"
         />
       </div>
       <div className="flex flex-wrap items-center gap-3">
@@ -303,7 +303,7 @@ export function ProductImageManager({
           type="button"
           onClick={addAnother}
           disabled={pending || generating}
-          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-white px-4 py-3 text-sm font-bold text-primary shadow-sm transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-white px-4 py-3 text-sm font-bold text-primary shadow-sm transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <ImageUp className="h-4 w-4" aria-hidden />
           {pending ? "Working…" : "Add another image"}
@@ -312,7 +312,7 @@ export function ProductImageManager({
           type="button"
           onClick={autoGenerateImage}
           disabled={pending || generating}
-          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-action/30 bg-action/10 px-4 py-3 text-sm font-bold text-action shadow-sm transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-action/30 bg-action/10 px-4 py-3 text-sm font-bold text-action shadow-sm transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Sparkles className="h-4 w-4" aria-hidden />
           {generating ? "Generating…" : "✨ Auto-Generate Image"}

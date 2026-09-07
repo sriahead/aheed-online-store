@@ -50,21 +50,21 @@ export default async function LoyaltyPage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Loyalty points</h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         Earn points on every order you pay for, then spend them at checkout.
       </p>
 
       <section className="mb-6 rounded-2xl border border-black/10 bg-action-tint p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-primary/70">
+            <p className="text-xs font-bold uppercase tracking-wide text-primary-muted">
               Your balance
             </p>
             <p className="mt-1 text-3xl font-extrabold text-primary">
               {balance.balancePoints}{" "}
-              <span className="text-base font-medium text-primary/70">points</span>
+              <span className="text-base font-medium text-primary-muted">points</span>
             </p>
-            <p className="mt-1 text-sm text-primary/70">
+            <p className="mt-1 text-sm text-primary-muted">
               Worth {formatPrice(balance.balancePoints * config.pencePerPointRedeemed)} off your
               next order
             </p>
@@ -74,11 +74,11 @@ export default async function LoyaltyPage() {
 
         <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-black/10 pt-4 text-sm">
           <div>
-            <dt className="text-primary/60">Lifetime points earned</dt>
+            <dt className="text-primary-muted">Lifetime points earned</dt>
             <dd className="font-bold text-primary">{balance.lifetimePoints}</dd>
           </div>
           <div>
-            <dt className="text-primary/60">Current tier</dt>
+            <dt className="text-primary-muted">Current tier</dt>
             <dd className="font-bold text-primary">{tier ? tier.name : "No tier yet"}</dd>
           </div>
         </dl>
@@ -91,7 +91,7 @@ export default async function LoyaltyPage() {
         )}
 
         {nextTier && (
-          <p className="mt-4 text-xs text-primary/70">
+          <p className="mt-4 text-xs text-primary-muted">
             Spend {formatPrice(nextTier.thresholdPence - windowSpend)} more in the next{" "}
             {config.tierWindowDays} days to reach <strong>{nextTier.name}</strong> and earn{" "}
             {(nextTier.multiplierBps / 10000).toFixed(2)}× points.
@@ -102,7 +102,7 @@ export default async function LoyaltyPage() {
       <section className="rounded-2xl border border-black/10 bg-white p-5">
         <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-primary">History</h2>
         {ledger.length === 0 ? (
-          <p className="text-sm text-primary/70">
+          <p className="text-sm text-primary-muted">
             No points activity yet — your first paid order will start it off.
           </p>
         ) : (
@@ -111,13 +111,13 @@ export default async function LoyaltyPage() {
               <li key={index} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-primary">{LEDGER_LABELS[entry.kind]}</p>
-                  <p className="text-xs text-primary/60">
+                  <p className="text-xs text-primary-muted">
                     {entry.orderNumber} · {formatOrderDate(entry.createdAt)}
                   </p>
                 </div>
                 <span
                   className={`shrink-0 text-sm font-bold ${
-                    entry.points >= 0 ? "text-action" : "text-primary/70"
+                    entry.points >= 0 ? "text-action" : "text-primary-muted"
                   }`}
                 >
                   {entry.points >= 0 ? "+" : "−"}

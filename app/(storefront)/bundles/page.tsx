@@ -42,12 +42,12 @@ export default async function BundlesPage() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-6">
       <h1 className="text-2xl font-semibold text-primary">Value Bundles</h1>
-      <p className="mt-1 text-sm text-primary/70">
+      <p className="mt-1 text-sm text-primary-muted">
         Curated sets, added to your basket in a single tap.
       </p>
 
       {renderable.length === 0 ? (
-        <p className="mt-6 text-primary/70">No bundles are available right now.</p>
+        <p className="mt-6 text-primary-muted">No bundles are available right now.</p>
       ) : (
         <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {renderable.map((bundle) => (

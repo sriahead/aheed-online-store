@@ -47,7 +47,7 @@ export function GuestEraseForm({ orderNumber, email }: GuestEraseFormProps) {
       </summary>
 
       <div className="mt-3 space-y-3">
-        <p className="text-xs leading-relaxed text-primary/80">
+        <p className="text-xs leading-relaxed text-primary-muted">
           This removes the delivery name, address and phone number from{" "}
           <strong>this one order</strong> and unlinks your email. The order itself is kept as an
           anonymised financial record, which the law requires. It cannot be undone, and it does not
@@ -69,7 +69,7 @@ export function GuestEraseForm({ orderNumber, email }: GuestEraseFormProps) {
               autoComplete="off"
               required
               aria-describedby={state.error ? "guest-erase-error" : undefined}
-              className="w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-sm text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-xl border border-black/15 bg-white px-3 py-2 text-sm text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
             />
           </div>
 

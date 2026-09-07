@@ -171,7 +171,7 @@ export function SearchSuggest({
   return (
     <div className={`relative ${className}`}>
       <Search
-        className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40"
+        className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/60"
         aria-hidden
       />
       <input
@@ -196,7 +196,7 @@ export function SearchSuggest({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         aria-label="Search products"
-        className="w-full bg-surface-muted hover:bg-black/5 focus:bg-white pl-10 pr-4 py-2 rounded-xl text-sm border border-black/10 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition"
+        className="w-full bg-surface-muted hover:bg-black/5 focus-visible:bg-white pl-10 pr-4 py-2 rounded-xl text-sm border border-black/10 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 transition"
       />
 
       <ul
@@ -219,7 +219,7 @@ export function SearchSuggest({
             }`}
           >
             <span className="truncate text-primary">{option.label}</span>
-            <span className="shrink-0 text-xs text-primary/50">
+            <span className="shrink-0 text-xs text-primary-muted">
               {option.note ?? (option.kind === "category" ? "Department" : undefined)}
             </span>
           </li>

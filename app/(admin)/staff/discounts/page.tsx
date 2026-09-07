@@ -24,7 +24,7 @@ export default async function StaffDiscountsPage() {
     return (
       <main className="mx-auto max-w-md px-4 py-16 text-center">
         <h1 className="text-2xl font-semibold text-primary">Store admins only</h1>
-        <p className="mt-3 text-primary/70">
+        <p className="mt-3 text-primary-muted">
           You&apos;re signed in, but your account doesn&apos;t have permission to manage this
           store&apos;s discount codes.
         </p>
@@ -37,7 +37,7 @@ export default async function StaffDiscountsPage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Discount codes</h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         Codes apply to future orders only. A code can be deactivated but not edited — orders that
         already used it keep the discount they were given.
       </p>
