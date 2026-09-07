@@ -20,7 +20,7 @@ export function ReviewForm({
       // review's identity forces a remount whenever it actually changes.
       key={existingReview ? `${existingReview.rating}:${existingReview.comment ?? ""}` : "new"}
       action={submitReview}
-      className="flex flex-col gap-3 rounded-md border border-black/10 p-4"
+      className="flex flex-col gap-3 rounded-2xl border border-black/10 p-4"
     >
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="productSlug" value={productSlug} />
@@ -30,7 +30,7 @@ export function ReviewForm({
           name="rating"
           required
           defaultValue={existingReview?.rating ?? ""}
-          className="w-24 rounded-sm border border-black/20 px-3 py-2"
+          className="w-24 rounded-lg border border-black/20 px-3 py-2"
         >
           <option value="" disabled>
             Select
@@ -48,7 +48,7 @@ export function ReviewForm({
           name="comment"
           defaultValue={existingReview?.comment ?? ""}
           rows={3}
-          className="rounded-sm border border-black/20 px-3 py-2"
+          className="rounded-lg border border-black/20 px-3 py-2"
         />
       </label>
       <button

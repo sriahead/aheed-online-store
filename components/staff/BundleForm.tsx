@@ -6,7 +6,8 @@ import { saveBundle } from "@/features/admin/bundles";
 import { initialBundleFormState } from "@/lib/bundle-form";
 import { BundleImageUploader } from "@/components/staff/BundleImageUploader";
 import type { BundleWithItems } from "@/lib/repositories/bundles";
-import { errorInputClass, inputClass, labelClass } from "@/lib/form-classes";
+import { inputClass, labelClass } from "@/lib/form-classes";
+import { FormField } from "@/components/ui/FormField";
 
 /**
  * Curated bundle edit form (P8.5c, #347) — modelled on `CampaignForm.tsx`'s
@@ -58,23 +59,13 @@ export function BundleForm({
   const [rows, setRows] = useState<ItemRow[]>(() => initialRows(bundle));
   const [nextKey, setNextKey] = useState(rows.length);
 
-  /**
-   * #650 — the className AND the ARIA pair, from one call, so a field cannot be
-   * styled as invalid without also being announced as invalid. `errorInputClass`
-   * is a border and a background tint: on its own it tells a sighted mouse user
-   * which field is wrong and a screen-reader user nothing at all (WCAG SC 1.4.1
-   * Use of Colour, SC 3.3.1 Error Identification). Returning both together is why
-   * this is `fieldProps` rather than the old `fieldClass` — a future field added
-   * to this form gets the association by construction instead of by remembering.
-   */
-  const fieldProps = (name: string) => {
-    const invalid = state.field === name;
-    return {
-      className: `${inputClass} ${invalid ? errorInputClass : ""}`,
-      "aria-invalid": invalid || undefined,
-      "aria-describedby": invalid ? "bundle-form-error" : undefined,
-    };
-  };
+  // #650/#656 — `FormField` carries the className-and-ARIA pairing that used
+  // to be this file's own `fieldProps` closure for the top-level fields
+  // below; a field cannot be styled as invalid without also being announced
+  // as invalid (R8). The per-row product/quantity controls stay plain
+  // `inputClass`-styled elements — they're local array state, not an
+  // action-reported field name `FormField`'s `error` prop can key on.
+  const isInvalid = (name: string) => state.field === name;
 
   function addRow() {
     setRows((current) => [...current, { key: `row-${nextKey}`, productId: "", quantity: "1" }]);
@@ -113,58 +104,48 @@ export function BundleForm({
         )}
 
         <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
-          <div>
-            <label className={labelClass} htmlFor="name">
-              Name
-            </label>
-            <input
-              id="name"
-              name="name"
-              defaultValue={bundle?.name ?? ""}
-              {...fieldProps("name")}
-              required
-            />
-          </div>
+          <FormField
+            name="name"
+            label="Name"
+            defaultValue={bundle?.name ?? ""}
+            error={isInvalid("name")}
+            errorId="bundle-form-error"
+            required
+          />
 
-          <div>
-            <label className={labelClass} htmlFor="slug">
-              Web address
-            </label>
-            <input
-              id="slug"
-              name="slug"
-              defaultValue={bundle?.slug ?? ""}
-              placeholder="weekly-meat-box"
-              {...fieldProps("slug")}
-              required
-            />
-          </div>
+          <FormField
+            name="slug"
+            label="Web address"
+            defaultValue={bundle?.slug ?? ""}
+            placeholder="weekly-meat-box"
+            error={isInvalid("slug")}
+            errorId="bundle-form-error"
+            required
+          />
 
-          <div>
-            <label className={labelClass} htmlFor="tagline">
-              Tagline <span className="text-primary-muted">(optional)</span>
-            </label>
-            <input
-              id="tagline"
-              name="tagline"
-              defaultValue={bundle?.tagline ?? ""}
-              {...fieldProps("tagline")}
-            />
-          </div>
+          <FormField
+            name="tagline"
+            label={
+              <>
+                Tagline <span className="text-primary-muted">(optional)</span>
+              </>
+            }
+            defaultValue={bundle?.tagline ?? ""}
+            error={isInvalid("tagline")}
+            errorId="bundle-form-error"
+          />
 
           <div className="flex items-end gap-4">
             <div className="w-32">
-              <label className={labelClass} htmlFor="sortOrder">
-                Display order
-              </label>
-              <input
-                id="sortOrder"
+              <FormField
                 name="sortOrder"
+                label="Display order"
                 type="number"
                 min={0}
                 step={1}
                 defaultValue={bundle?.sortOrder ?? 0}
-                {...fieldProps("sortOrder")}
+                error={isInvalid("sortOrder")}
+                errorId="bundle-form-error"
               />
             </div>
             <label className="flex items-center gap-2 pb-2 text-sm text-primary">

@@ -29,7 +29,7 @@ export function ForgotPasswordForm() {
 
   if (submitted) {
     return (
-      <p className="rounded-md border border-black/10 bg-surface-muted p-5">
+      <p className="rounded-2xl border border-black/10 bg-surface-muted p-5">
         If an account exists for <strong>{email}</strong>, a reset link has been sent.
       </p>
     );
@@ -44,7 +44,7 @@ export function ForgotPasswordForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded-sm border border-black/20 px-3 py-2"
+          className="rounded-lg border border-black/20 px-3 py-2"
         />
       </label>
       {error && (

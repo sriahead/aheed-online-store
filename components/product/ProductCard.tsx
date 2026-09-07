@@ -2,10 +2,12 @@ import Link from "next/link";
 import { AlertTriangle, Star } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { CartQuantityStepper } from "@/components/cart/CartQuantityStepper";
+import { Card } from "@/components/ui/Card";
 import { ProductImage } from "./ProductImage";
 import { composePublicUrl } from "@/lib/storage";
 import { tierThresholdQuantity } from "@/lib/tier-pricing";
 import { formatPrice } from "./format-price";
+import { deriveUnitPriceLabel } from "./unit-price";
 import type { ProductSummary } from "@/lib/repositories/products";
 
 /**
@@ -19,6 +21,21 @@ import type { ProductSummary } from "@/lib/repositories/products";
  * `cartQuantity` comes from the page's request-memoised cart read
  * (`lib/cart-summary.ts`), so a grid of these costs no extra query — the header
  * on the same page already resolved the cart.
+ *
+ * #351/#656 — STRETCHED LINK, NOT A CARD-WIDE ANCHOR. `AddToCartButton` and
+ * `CartQuantityStepper` render real `<button>` elements, and HTML forbids
+ * interactive content inside `<a>`. The card used to wrap everything in one
+ * `<Link>` and rely on every handler calling `preventDefault()`/
+ * `stopPropagation()` to stop the click reaching the anchor — correctness
+ * resting entirely on that discipline never lapsing. `Card`'s `variant="product"`
+ * now carries `.skew-card` + `group` on a plain `<div>` (exactly the shape
+ * `components/bundle/BundleCard.tsx` already uses in production), the title
+ * is the only `<Link>` and covers the whole card via `after:absolute
+ * after:inset-0` against `Card`'s `position: relative`, and the price/cart
+ * controls are a SIBLING of that link carrying `relative z-10` so their
+ * clicks land instead of being swallowed by the link's overlay — the standard
+ * stretched-link technique. No JavaScript stopPropagation needed any more
+ * (R13; `AddToCartButton`/`CartQuantityStepper` no longer call it).
  */
 export function ProductCard({
   product,
@@ -53,13 +70,20 @@ export function ProductCard({
     product.inStock &&
     product.stockQuantity > 0 &&
     product.stockQuantity <= product.lowStockThreshold;
+  // #398 (derivation half), R34 — the derived unit price where a product HAS net content,
+  // computed at render time (never from the stored sort-key column, R32); unitLabel unchanged
+  // otherwise. `product.netContentAmount`/`netContentUnit` are both null or both set.
+  const unitDisplay =
+    product.netContentAmount !== null && product.netContentUnit !== null
+      ? (deriveUnitPriceLabel(product.basePrice, {
+          amount: product.netContentAmount,
+          unit: product.netContentUnit,
+        }) ?? product.unitLabel)
+      : product.unitLabel;
 
   return (
     <div className="skew-card-wrap h-full">
-      <Link
-        href={`/products/${product.slug}`}
-        className="skew-card group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-black/10 bg-white hover:border-action/50"
-      >
+      <Card variant="product">
         {/* Top badges */}
         <div className="absolute top-2.5 left-2.5 z-10 flex flex-wrap gap-1">
           {product.isHalal && (
@@ -123,12 +147,20 @@ export function ProductCard({
               )}
             </div>
 
-            {/* Title */}
+            {/* Title — the card's one stretched link (R11/R12). `after:absolute
+                after:inset-0` sizes against Card's `position: relative`, not
+                this anchor's own box, so it covers the whole card while
+                staying a plain single-element `<Link>`. */}
             <h3 className="line-clamp-2 text-sm leading-tight font-semibold text-black/90 transition-colors group-hover:text-primary">
-              {product.name}
+              <Link
+                href={`/products/${product.slug}`}
+                className="after:absolute after:inset-0 after:content-['']"
+              >
+                {product.name}
+              </Link>
             </h3>
 
-            <p className="mt-0.5 text-xs text-black/60">{product.unitLabel}</p>
+            <p className="mt-0.5 text-xs text-black/60">{unitDisplay}</p>
 
             {isLowStock && (
               <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-danger">
@@ -138,8 +170,11 @@ export function ProductCard({
             )}
           </div>
 
-          {/* Price & cart controls */}
-          <div className="mt-3 flex flex-col gap-2 border-t border-black/5 pt-2">
+          {/* Price & cart controls — a SIBLING of the title's stretched link,
+              not a descendant of it (R11). `relative z-10` lifts this above
+              the link's `after:inset-0` overlay so a click on the stepper or
+              add-to-cart button registers instead of navigating. */}
+          <div className="relative z-10 mt-3 flex flex-col gap-2 border-t border-black/5 pt-2">
             <div className="skew-card-price flex flex-wrap items-baseline gap-1.5">
               <span className="text-base font-bold text-primary">
                 {formatPrice(product.basePrice)}
@@ -179,7 +214,7 @@ export function ProductCard({
             )}
           </div>
         </div>
-      </Link>
+      </Card>
     </div>
   );
 }

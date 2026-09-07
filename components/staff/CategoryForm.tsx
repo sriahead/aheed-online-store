@@ -6,7 +6,8 @@ import { Save } from "lucide-react";
 import { saveCategory } from "@/features/admin/catalogue";
 import { initialCatalogueState } from "@/lib/catalogue-form";
 import type { AdminCategoryDetail, AdminCategoryRow } from "@/lib/repositories/categories";
-import { errorInputClass, inputClass, labelClass } from "@/lib/form-classes";
+import { FormField } from "@/components/ui/FormField";
+import { Button } from "@/components/ui/Button";
 
 /**
  * Category create/edit form (P6b1, #159).
@@ -37,23 +38,12 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
     (row) => row.parentId === null && row.id !== category?.id,
   );
 
-  /**
-   * #650 — the className AND the ARIA pair, from one call, so a field cannot be
-   * styled as invalid without also being announced as invalid. `errorInputClass`
-   * is a border and a background tint: on its own it tells a sighted mouse user
-   * which field is wrong and a screen-reader user nothing at all (WCAG SC 1.4.1
-   * Use of Colour, SC 3.3.1 Error Identification). Returning both together is why
-   * this is `fieldProps` rather than the old `fieldClass` — a future field added
-   * to this form gets the association by construction instead of by remembering.
-   */
-  const fieldProps = (name: string) => {
-    const invalid = state.field === name;
-    return {
-      className: `${inputClass} ${invalid ? errorInputClass : ""}`,
-      "aria-invalid": invalid || undefined,
-      "aria-describedby": invalid ? "category-form-error" : undefined,
-    };
-  };
+  // #650/#656 — `FormField` carries the className-and-ARIA pairing that used
+  // to be this file's own `fieldProps` closure: a field cannot be styled as
+  // invalid without also being announced as invalid (R8). Every field here
+  // points at the same shared banner id, matching the pre-existing
+  // `fieldProps` convention.
+  const isInvalid = (name: string) => state.field === name;
 
   return (
     <form action={action} className="space-y-6">
@@ -78,73 +68,56 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
       )}
 
       <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
-        <div>
-          <label className={labelClass} htmlFor="name">
-            Name
-          </label>
-          <input
-            id="name"
-            name="name"
-            required
-            defaultValue={category?.name ?? ""}
-            {...fieldProps("name")}
-          />
-        </div>
+        <FormField
+          name="name"
+          label="Name"
+          required
+          defaultValue={category?.name ?? ""}
+          error={isInvalid("name")}
+          errorId="category-form-error"
+        />
 
-        <div>
-          <label className={labelClass} htmlFor="slug">
-            Web address {isNew && "(leave blank to build it from the name)"}
-          </label>
-          <input
-            id="slug"
-            name="slug"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="rice-grains"
-            defaultValue={category?.slug ?? ""}
-            {...fieldProps("slug")}
-          />
-        </div>
+        <FormField
+          name="slug"
+          label={`Web address ${isNew ? "(leave blank to build it from the name)" : ""}`}
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="rice-grains"
+          defaultValue={category?.slug ?? ""}
+          error={isInvalid("slug")}
+          errorId="category-form-error"
+        />
 
-        <div>
-          <label className={labelClass} htmlFor="parentId">
-            Parent category — blank makes this a top-level department
-          </label>
-          <select
-            id="parentId"
-            name="parentId"
-            defaultValue={category?.parentId ?? ""}
-            {...fieldProps("parentId")}
-          >
-            <option value="">None (top level)</option>
-            {parentOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name}
-                {!option.isActive && " (inactive)"}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-primary-muted">
-            Categories go two levels deep, so a sub-category can&apos;t have children of its own.
-          </p>
-        </div>
+        <FormField
+          name="parentId"
+          as="select"
+          label="Parent category — blank makes this a top-level department"
+          defaultValue={category?.parentId ?? ""}
+          error={isInvalid("parentId")}
+          errorId="category-form-error"
+          hint="Categories go two levels deep, so a sub-category can't have children of its own."
+        >
+          <option value="">None (top level)</option>
+          {parentOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
+              {!option.isActive && " (inactive)"}
+            </option>
+          ))}
+        </FormField>
 
-        <div>
-          <label className={labelClass} htmlFor="sortOrder">
-            Sort order — lower numbers appear first
-          </label>
-          <input
-            id="sortOrder"
-            name="sortOrder"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
-            required
-            defaultValue={category?.sortOrder ?? 0}
-            {...fieldProps("sortOrder")}
-          />
-        </div>
+        <FormField
+          name="sortOrder"
+          label="Sort order — lower numbers appear first"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={1}
+          required
+          defaultValue={category?.sortOrder ?? 0}
+          error={isInvalid("sortOrder")}
+          errorId="category-form-error"
+        />
 
         <label className="flex items-center gap-2 text-sm text-primary">
           <input
@@ -158,14 +131,10 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
       </section>
 
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={saving}
-          className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <Button variant="primary" disabled={saving}>
           <Save className="h-4 w-4" aria-hidden />
           {saving ? "Saving…" : isNew ? "Create category" : "Save changes"}
-        </button>
+        </Button>
         <Link
           href="/staff/categories"
           className="text-sm font-semibold text-primary-muted hover:underline"

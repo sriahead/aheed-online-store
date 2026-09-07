@@ -26,7 +26,7 @@ export default async function AccountPage() {
   return (
     <main className="mx-auto max-w-sm px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold text-primary">Your account</h1>
-      <div className="mb-6 rounded-md border border-black/10 bg-surface-muted p-5">
+      <div className="mb-6 rounded-2xl border border-black/10 bg-surface-muted p-5">
         <p>
           <strong>Name:</strong> {name}
         </p>
@@ -39,7 +39,7 @@ export default async function AccountPage() {
       </div>
       <Link
         href="/account/orders"
-        className="mb-3 flex items-center justify-between rounded-md border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
+        className="mb-3 flex items-center justify-between rounded-2xl border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
       >
         <span className="font-semibold text-primary">Your orders</span>
         <ChevronRight className="h-5 w-5 text-primary-subtle" aria-hidden />
@@ -49,7 +49,7 @@ export default async function AccountPage() {
       {loyaltyEnabled && (
         <Link
           href="/account/loyalty"
-          className="mb-3 flex items-center justify-between rounded-md border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
+          className="mb-3 flex items-center justify-between rounded-2xl border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
         >
           <span className="font-semibold text-primary">Loyalty points</span>
           <ChevronRight className="h-5 w-5 text-primary-subtle" aria-hidden />
@@ -60,7 +60,7 @@ export default async function AccountPage() {
           rights it exercises are not conditional on a vendor feature flag. */}
       <Link
         href="/account/data"
-        className="mb-6 flex items-center justify-between rounded-md border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
+        className="mb-6 flex items-center justify-between rounded-2xl border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
       >
         <span className="font-semibold text-primary">Your data</span>
         <ChevronRight className="h-5 w-5 text-primary-subtle" aria-hidden />

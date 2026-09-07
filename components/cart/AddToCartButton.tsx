@@ -19,9 +19,13 @@ export function AddToCartButton({
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
 
+  // #351/#656: this control is a sibling of ProductCard's stretched-link
+  // title now, not a descendant of an <a> — see ProductCard.tsx's doc
+  // comment. There is no ancestor anchor for a click here to reach any more,
+  // so nothing needs swallowing on its way up; preventDefault() still guards
+  // `type="button"` from any enclosing <form>'s default submit.
   function onClickAdd(e: React.MouseEvent) {
     e.preventDefault();
-    e.stopPropagation();
     if (disabled || pending) return;
     startTransition(async () => {
       await addToCart(productId, qty);
@@ -33,13 +37,11 @@ export function AddToCartButton({
 
   function onClickMinus(e: React.MouseEvent) {
     e.preventDefault();
-    e.stopPropagation();
     if (qty > 1) setQty((q) => q - 1);
   }
 
   function onClickPlus(e: React.MouseEvent) {
     e.preventDefault();
-    e.stopPropagation();
     if (qty < 99) setQty((q) => q + 1);
   }
 

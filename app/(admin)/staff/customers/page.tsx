@@ -6,6 +6,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { listCustomersForVendor } from "@/lib/customers-service";
 import { formatPrice } from "@/components/product/format-price";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
+import { Card } from "@/components/ui/Card";
 
 // Reads the session and this vendor's live order history — must render per-request.
 export const dynamic = "force-dynamic";
@@ -73,10 +74,7 @@ export default async function StaffCustomersPage({
       ) : (
         <ul className="space-y-3">
           {items.map((customer) => (
-            <li
-              key={customer.userId ?? customer.email ?? "erased"}
-              className="rounded-2xl border border-black/10 bg-white p-5"
-            >
+            <Card as="li" key={customer.userId ?? customer.email ?? "erased"}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-2">
@@ -119,7 +117,7 @@ export default async function StaffCustomersPage({
                   </p>
                 </div>
               </div>
-            </li>
+            </Card>
           ))}
         </ul>
       )}

@@ -292,6 +292,8 @@ async function main() {
         basePrice: 123,
         originalPrice: null,
         unitLabel: "each",
+        netContentAmount: null,
+        netContentUnit: null,
         origin: null,
         isVegetarian: false,
         isGlutenFree: false,

@@ -8,6 +8,61 @@ every branch merges.
 
 ### Added
 
+- **Deferred-abstraction sweep** (`#662`, closing `#656`, `#653`, `#351`, `#639`, `#75` and the
+  derivation half of `#398`; `specs/2026-09-07-deferred-abstraction-sweep/`). Four abstractions this
+  repo deferred as speculative, built now that each deferral's own stated precondition has been met.
+  **Two migrations, no data rewrite.**
+  - **`#653` — the radius scale was ambiguous, and the fix is a retirement, not a re-style.**
+    Tailwind v4's `@theme` *merges* with its default scale, so overriding only `sm` and `md` made
+    `rounded-sm` identical to `rounded-lg` and `rounded-md` identical to `rounded-2xl`, while the
+    two most-used radii (`rounded-2xl` at 141 uses, `rounded-xl` at 94) named no token at all.
+    Breaking the tie by picking new values would have restyled real screens days before UAT, so the
+    37 `rounded-sm`/`rounded-md` call sites were rewritten to their **identical-rendering** twins
+    instead and those two tokens retired. **No corner radius changed anywhere.**
+    `tests/radius-scale.test.ts` now fails if any two distinct `rounded-*` utilities in use ever
+    resolve to the same value. Bare `rounded` is declared too — it registers `themeKeys: ["--radius"]`
+    and would otherwise have been the one radius still riding an un-overridden Tailwind default.
+  - **`#656` — the UI primitive layer, arriving with its deferral's expiry finally reached.**
+    `specs/design-system.md` had deferred `components/` because "nothing consumes tokens yet…
+    building these now would be speculative" — written before P1, still quoted after P9.2. The
+    evidence it was waiting for is that `#649` and `#650` each reached double-digit failing sites
+    from a *single* author decision copied into 11 and 15 files. `Card`, `Button` and `FormField`
+    are server components composing `lib/form-classes.ts`'s existing strings rather than
+    re-declaring them; `FormField` emits `aria-invalid` and `aria-describedby` together or not at
+    all. Adoption is deliberately partial — 87 card-surface lines and 24 button sites across 17
+    distinct geometry combinations remain, and a single sweep would be an unreviewable diff.
+  - **`#351` — the product card stopped nesting buttons inside a link.** The card-wide `<Link>`
+    contained `AddToCartButton` and `CartQuantityStepper`, which HTML forbids, and correctness
+    rested on every handler calling `stopPropagation()`. Now a stretched link on the title, with the
+    controls as siblings; both `stopPropagation()` calls are gone. **`BundleCard` already carried
+    `.skew-card` and `group` on a plain `<div>` in production**, so this converged on a shape that
+    already worked and needed **no CSS change at all**.
+  - **`#639`/`#75` — a vendor can set its whole palette, and pick a theme to start from.**
+    `StorefrontConfigForm` rendered 2 of `VendorBranding`'s 8 brand primitives while the repository's
+    `BRAND_FIELDS` loop had always written all 8 — the write path was built and unused, and the
+    `initialConfig: any`/`initialBranding: any` props are what hid it. All 8 are now editable and
+    typed. The new `Theme` catalogue **copies** its 8 values onto the vendor's row; `brandStyle()` is
+    untouched and performs no join, so a theme is a starting point a vendor can then edit, and every
+    existing contrast clamp applies unchanged. **`Theme` deliberately carries no `vendorId`** — the
+    first stated exception to ADR-004 decision 2, recorded in the ADR and in the schema so an
+    un-scoped table in a row-scoped schema reads as a ruling rather than a defect.
+  - **`#398` (derivation half) — a unit price that cannot drift from the price charged.**
+    `unitLabel` was free text, hand-typed, validated only for non-emptiness and parsed by nothing —
+    a UK Price Marking Order exposure rather than a UX gap. `Product` gains a nullable net-content
+    amount and unit, and **two** derived values doing different jobs: the **displayed** price is
+    computed exactly at render time from `basePrice`, while a denormalised whole-pence column is an
+    indexed **sort key** that is never displayed. `#398` framed these as either/or; taking both is
+    what stops a rounding artefact in the sort key reaching a price a shopper reads. `unitLabel`
+    stays as the fallback where no net content is set. **The variant model stays out** — it needs
+    its own `/propose`, and multi-weight products remain separate rows.
+  - **No storefront sort control**, deliberately: `findPage` is hardcoded to keyset pagination on
+    `(createdAt, id)` and `specs/architecture.md` requires a cursor's ordering key to *be* the sort
+    key, so a user-facing sort means changing every listing's cursor. The column is proven sortable
+    by a real indexed query instead.
+  - Both migrations hit the `pg_trgm` trigram-drop trap — the **seventh and eighth** consecutive
+    occurrences — caught by `--create-only` and read before applying, as CLAUDE.md now treats as
+    certain rather than possible.
+
 - **Storefront & panel accessibility remediation** (`#649`, `#650`, `#651`, `#652`,
   `specs/2026-09-07-storefront-accessibility-remediation/`). Four WCAG 2.2 AA defects found by the
   2026-09-07 Discover pass, fixed as one slice because #649 and #650 lived in the same eleven

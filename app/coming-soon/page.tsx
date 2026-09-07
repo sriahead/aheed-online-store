@@ -23,7 +23,7 @@ export default async function ComingSoonPage() {
       {host ? (
         <a
           href={`https://${host}`}
-          className="mt-2 inline-block rounded-md border border-gray-300 px-4 py-2 font-medium underline-offset-4 hover:underline"
+          className="mt-2 inline-block rounded-2xl border border-gray-300 px-4 py-2 font-medium underline-offset-4 hover:underline"
         >
           Visit our store →
         </a>

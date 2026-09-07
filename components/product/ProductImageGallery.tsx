@@ -9,7 +9,7 @@ export function ProductImageGallery({
   cdnBaseUrl: string;
 }) {
   if (images.length === 0) {
-    return <div className="aspect-square w-full rounded-md bg-surface-muted" />;
+    return <div className="aspect-square w-full rounded-2xl bg-surface-muted" />;
   }
 
   return (
@@ -26,7 +26,7 @@ export function ProductImageGallery({
           height={800}
           loading={index === 0 ? "eager" : "lazy"}
           fetchPriority={index === 0 ? "high" : undefined}
-          className="aspect-square w-full rounded-md object-cover"
+          className="aspect-square w-full rounded-2xl object-cover"
         />
       ))}
     </div>
