@@ -49,14 +49,20 @@ R6. Searching the app source for the pattern
     returns **zero** matches. (This covers `placeholder:text-primary/30`, whose
     `text-primary/30` substring matches the pattern.)
 
-R7. Searching the app source for `text-black/[1-5]0` returns **zero** matches. The count of
-    `text-black/60` **increases by exactly the pre-slice `text-black/50` count** (each of those ten
-    sites is bumped one step, to a measured 5.74:1), and the counts of `text-black/70`,
-    `text-black/80` and `text-black/90` are unchanged. Those survivors are 5.74:1 or better already,
-    and `black` is not a themed token — no vendor varies it, so no clamp is involved and none is
-    being discarded. `validation.md` re-derives all counts from both branches rather than quoting
-    absolute numbers here, so an unrelated edit landing between spec and validation cannot make this
-    row falsely fail.
+R7. Searching the app source for `text-black/[1-5]0` returns **zero** matches. **Corrected at
+    `/document`, 2026-09-07** — this requirement originally also claimed the `text-black/60` count
+    "increases by exactly the pre-slice `text-black/50` count," which conflicted with its own first
+    clause: the `[1-5]0` range already covers `text-black/40`, so a zero-match result requires
+    converting those sites too, not just `/50`'s. Live validation found the real rise was 15 (10
+    from `/50` plus 5 from `/40` that `plan.md`'s inventory table had undercounted), not 10 — the
+    artifact was correct throughout; only this sentence's arithmetic was wrong. The corrected
+    claim: the count of `text-black/60` **increases by exactly the combined pre-slice count of
+    `text-black/50` and `text-black/40`** (each of those fifteen sites is bumped one step, to a
+    measured 5.74:1), and the counts of `text-black/70`, `text-black/80` and `text-black/90` are
+    unchanged. Those survivors are 5.74:1 or better already, and `black` is not a themed token — no
+    vendor varies it, so no clamp is involved and none is being discarded. `validation.md`
+    re-derives all counts from both branches rather than quoting absolute numbers here, so an
+    unrelated edit landing between spec and validation cannot make this row falsely fail.
 
 R8. Every site formerly carrying `text-primary/{80,70,60}` now carries `text-primary-muted`. Every
     site formerly carrying `text-primary/{50,40,30,20}` now carries `text-primary-muted` when the
