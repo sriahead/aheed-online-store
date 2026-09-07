@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { Save } from "lucide-react";
 import { updateMyName } from "@/features/account/data-rights";
 import { initialDataRightsState } from "@/lib/data-rights-form";
+import { inputClass } from "@/lib/form-classes";
 
 /**
  * Art. 16 rectification (P7b, #216) — correct your own display name.
@@ -16,16 +17,13 @@ import { initialDataRightsState } from "@/lib/data-rights-form";
  * Colours are semantic tokens per design-system.md, never raw hex.
  */
 
-const inputClass =
-  "w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none";
-
 export function NameForm({ currentName }: { currentName: string }) {
   const [state, action, saving] = useActionState(updateMyName, initialDataRightsState);
 
   return (
     <form action={action} className="space-y-3">
       <div>
-        <label className="mb-1 block text-xs font-medium text-primary/70" htmlFor="name">
+        <label className="mb-1 block text-xs font-medium text-primary-muted" htmlFor="name">
           Your name
         </label>
         <input
@@ -57,7 +55,7 @@ export function NameForm({ currentName }: { currentName: string }) {
       <button
         type="submit"
         disabled={saving}
-        className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Save className="h-4 w-4" aria-hidden />
         {saving ? "Saving…" : "Save name"}

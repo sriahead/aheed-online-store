@@ -546,7 +546,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  107 files / 1431 tests**, measured 2026-09-07 at the P9.2 non-operational-gaps Build) and treat any shortfall as
+  109 files / 1456 tests**, measured 2026-09-07 at the storefront-accessibility-remediation Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -581,6 +581,16 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   can move DOWN as well as up, and a suite that fails because you registered a new job is a test
   asserting arithmetic it did not mean to assert** — fix the test's shape rather than bumping its
   constant.
+  Then `107/1431` moved to **`109/1456`** at the storefront-accessibility-remediation Build
+  (`#649`/`#650`/`#651`/`#652`): two new files (`tests/token-alpha-purity.test.ts`,
+  `tests/motion-reduce-coverage.test.ts`) carrying six tests, and **nineteen** more spread across
+  three existing files — which is the largest existing-file contribution recorded here and is worth
+  understanding rather than just counting. Only four of the nineteen were hand-written; the rest came
+  from `it.each` tables growing: `tests/design-tokens-contrast.test.ts` gained ten because five
+  colour pairs were added to `PAIRS` and five to a new `NON_TEXT_PAIRS`, and
+  `tests/vendor-theme.test.ts` gained five because two of its three new tests are `it.each` over
+  both seeded vendors. **A single new row in a `PAIRS`-style table is a new test**, so a slice that
+  adds no test file and writes only a handful of `it` blocks can still move this number by twenty.
   That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that
@@ -973,6 +983,22 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   (2026-09-01, `#514`) found a dev-DB row seeded as `srimart.localhost:8787` in an earlier session,
   fixed by rewriting it port-less. Any `SEED_SRIMART_HOST`/`SEED_AHEED_HOST` value — local, staging,
   or production — must never contain a port.
+- **Don't assume a local Worker's `VendorDomain` rows use the `nocaped.com` staging convention this
+  file's own bullets above model — query the connected database before writing (or trusting)
+  `curl -H "Host: ..."` commands against `npm run preview`.** A mandatory two-vendor check written
+  into `validation.md` (accessibility remediation, 2026-09-07, `#649`) hardcoded
+  `aheedfoodcentre.nocaped.com`/`srimart-staging.nocaped.com` as the local `Host` header values, on
+  the assumption every developer's local dev DB is seeded that way. The session that actually ran
+  `/validate` had a dev DB seeded instead with `localhost:8787` (Aheed) and `srimart.localhost`
+  (SriMart) — both requests to the documented hostnames silently redirected to `/coming-soon` (0 or
+  2+ vendors, no host match — `lib/tenant.ts`'s documented fallback), with no error and no hint
+  which of "wrong host" or "feature broken" was true. Resolved by connecting Prisma directly
+  (`prisma.vendor.findMany()` / `prisma.vendorDomain.findMany()`) against the same `DATABASE_URL`
+  `npm run preview` uses, reading the real seeded `host` values, and re-running with those instead —
+  which then passed cleanly. **Before trusting any hardcoded `Host` header in a spec or a memory of
+  a previous session, query `VendorDomain` in the environment actually under test** — which
+  hostnames resolve which vendor is a property of that specific database's seed history, not a
+  platform-wide constant.
 - **A `grep` for a retired hex literal against a page's SAVED, rendered HTML can match even when the
   literal has been correctly removed from every component's own source, because `brandStyle()` must
   legitimately re-embed that exact hex string as a CSS custom-property VALUE for whichever vendor's
@@ -1150,6 +1176,24 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   zero/non-zero count, check whether the literal string being matched contains `&`, `<`, `>`, `"`, or
   `'`** — any of which a browser or React's server renderer will escape — and grep for the escaped
   form instead of assuming the spec's literal example command is already correct.
+- **The same failure shape recurs without any HTML escaping involved — a `grep` command in
+  `validation.md` can false-positive on its own explanatory prose or its own file-inclusion flags,
+  not just on rendered output.** Hit twice in the same slice's `/validate` (accessibility
+  remediation, 2026-09-07, `#649`/`#650`). First: a row asserting `lib/form-classes.ts` carries no
+  `"use server"` **directive** used `grep -c "use server" lib/form-classes.ts`, expecting `0` — it
+  returned `1`, because the file's own doc comment *explains* it is not a `"use server"` file, and
+  that sentence contains the phrase being searched for. Second: a row asserting zero
+  `focus:outline-none` occurrences added `--include=*.ts` (needed to reach `lib/form-classes.ts`,
+  which isn't `.tsx`) and collaterally re-included `app/(admin)/staff/runbook/docs.ts` — the
+  generated KMS bundle the same file's own "Before you start" section had already said to exclude,
+  which legitimately quotes this very spec's prose discussing the phrase. Neither was a real
+  violation; both were confirmed by hand (`grep -n '^"use server"'` for the first; adding
+  `| grep -v "runbook/docs.ts"` for the second) and the `validation.md` rows corrected at
+  `/document` rather than left to mislead the next reader. **A grep-based validation row proves
+  what it claims only when the pattern can't also match a comment, docstring, or generated bundle
+  explaining or quoting the very thing being searched for** — anchor to a directive's actual
+  position (`^"use server"`, not a bare substring) or explicitly exclude the generated artefact,
+  the same way the `&`-escaping case above requires checking the pattern before trusting the count.
 
 ## Better Auth (`lib/auth.ts`, ADR-002) — learned the hard way
 - **A bare top-level `onRequest` key in `betterAuth({...})`'s config is accepted by TypeScript and

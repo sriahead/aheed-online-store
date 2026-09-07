@@ -61,9 +61,9 @@ export function CartContents({
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {summary.lines.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-            <ShoppingBag className="mb-3 h-16 w-16 text-primary/20" aria-hidden />
+            <ShoppingBag className="mb-3 h-16 w-16 text-primary-subtle" aria-hidden />
             <h3 className="text-sm font-bold text-primary">Your cart is empty</h3>
-            <p className="mt-1 max-w-xs text-xs text-primary/60">
+            <p className="mt-1 max-w-xs text-xs text-primary-muted">
               Browse the aisles and add something you fancy.
             </p>
             <Link
@@ -99,7 +99,7 @@ export function CartContents({
                 >
                   {line.name}
                 </Link>
-                <p className="mt-0.5 text-[11px] text-primary/60">
+                <p className="mt-0.5 text-[11px] text-primary-muted">
                   {formatPrice(line.unitPricePence)} · {line.unitLabel}
                 </p>
 
@@ -120,7 +120,7 @@ export function CartContents({
                       <button
                         type="submit"
                         aria-label={`Decrease quantity of ${line.name}`}
-                        className="p-1 text-primary/70 hover:text-primary"
+                        className="p-1 text-primary-muted hover:text-primary"
                       >
                         <Minus className="h-3 w-3" aria-hidden />
                       </button>
@@ -136,7 +136,7 @@ export function CartContents({
                         type="submit"
                         disabled={!line.available || line.quantity >= line.stock}
                         aria-label={`Increase quantity of ${line.name}`}
-                        className="p-1 text-primary/70 hover:text-primary disabled:opacity-30"
+                        className="p-1 text-primary-muted hover:text-primary disabled:opacity-30"
                       >
                         <Plus className="h-3 w-3" aria-hidden />
                       </button>
@@ -152,7 +152,7 @@ export function CartContents({
                     <button
                       type="submit"
                       aria-label={`Remove ${line.name}`}
-                      className="p-1 text-primary/40 transition-colors hover:text-danger"
+                      className="p-1 text-primary-subtle transition-colors hover:text-danger"
                     >
                       <Trash2 className="h-3.5 w-3.5" aria-hidden />
                     </button>
@@ -162,7 +162,7 @@ export function CartContents({
 
               <div className="flex flex-col items-end">
                 <span
-                  className={`text-sm font-extrabold ${line.available ? "text-primary" : "text-primary/30 line-through"}`}
+                  className={`text-sm font-extrabold ${line.available ? "text-primary" : "text-primary-muted line-through"}`}
                 >
                   {formatPrice(line.lineTotalPence)}
                 </span>
@@ -185,7 +185,7 @@ export function CartContents({
       {summary.lines.length > 0 && (
         <div className="space-y-3 border-t border-black/10 bg-surface-muted p-4">
           <div className="flex justify-between text-sm">
-            <span className="text-primary/70">Subtotal</span>
+            <span className="text-primary-muted">Subtotal</span>
             <span className="font-bold text-primary">{formatPrice(summary.subtotalPence)}</span>
           </div>
           {/* The cart deliberately stops at a subtotal — delivery fee and total are

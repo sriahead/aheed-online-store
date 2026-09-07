@@ -115,7 +115,7 @@ export function BundleImageUploader({
     <div className="flex flex-col gap-4 rounded-2xl border border-black/10 bg-surface-muted p-5">
       <div>
         <h2 className="text-sm font-bold text-primary">Bundle photo</h2>
-        <p className="mt-0.5 text-xs text-primary/60">
+        <p className="mt-0.5 text-xs text-primary-muted">
           Optional — a bundle with no photo shows a plain card, not a broken image.
         </p>
       </div>
@@ -127,7 +127,7 @@ export function BundleImageUploader({
       )}
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="bundle-alt" className="text-xs font-medium text-primary/70">
+        <label htmlFor="bundle-alt" className="text-xs font-medium text-primary-muted">
           Photo description (alt text)
         </label>
         <input
@@ -136,13 +136,13 @@ export function BundleImageUploader({
           value={altText}
           onChange={(event) => setAltText(event.target.value)}
           placeholder="e.g. A box of fresh halal lamb, chicken and beef mince"
-          className="rounded-xl border border-black/15 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          className="rounded-xl border border-black/15 bg-white px-3 py-2 text-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
         />
 
-        <label htmlFor="bundle-upload" className="mt-2 text-xs font-medium text-primary/70">
+        <label htmlFor="bundle-upload" className="mt-2 text-xs font-medium text-primary-muted">
           {displayUrl ? "Replace photo" : "Upload photo"}
         </label>
-        <p className="text-xs text-primary/60">
+        <p className="text-xs text-primary-muted">
           Resized to {MAX_IMAGE_EDGE_PX}px and converted to WebP before uploading.
         </p>
         <div className="flex items-center gap-3">

@@ -36,14 +36,14 @@ export default async function StaffCategoriesPage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Categories</h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         Departments shoppers browse by. Two levels deep, top level first.
       </p>
 
       {categories.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <FolderTree className="mx-auto mb-3 h-8 w-8 text-primary/40" aria-hidden />
-          <p className="text-sm text-primary/70">
+          <FolderTree className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+          <p className="text-sm text-primary-muted">
             No categories yet. Create one before adding products.
           </p>
         </div>
@@ -66,17 +66,17 @@ export default async function StaffCategoriesPage() {
                       {category.name}
                     </Link>
                     {!category.isActive && (
-                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary/60">
+                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-muted">
                         Hidden
                       </span>
                     )}
                   </p>
-                  <p className="mt-0.5 truncate text-xs text-primary/60">
+                  <p className="mt-0.5 truncate text-xs text-primary-muted">
                     {category.parentName ? `in ${category.parentName} · ` : ""}
                     {category.slug}
                   </p>
                 </div>
-                <p className="shrink-0 text-xs text-primary/60">
+                <p className="shrink-0 text-xs text-primary-muted">
                   {category.productCount} {category.productCount === 1 ? "product" : "products"}
                 </p>
               </div>

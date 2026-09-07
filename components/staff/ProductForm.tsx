@@ -10,6 +10,7 @@ import { ProductImageManager } from "@/components/staff/ProductImageManager";
 import type { AdminProductDetail } from "@/lib/repositories/products";
 import type { AdminCategoryRow } from "@/lib/repositories/categories";
 import type { BrandSummary } from "@/lib/repositories/brands";
+import { errorInputClass, inputClass, labelClass } from "@/lib/form-classes";
 
 /**
  * Product create/edit form (P6b1, #159).
@@ -25,11 +26,6 @@ import type { BrandSummary } from "@/lib/repositories/brands";
  *
  * Colours are semantic tokens per design-system.md, never raw hex.
  */
-
-const inputClass =
-  "w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none";
-const labelClass = "mb-1 block text-xs font-medium text-primary/70";
-const errorInputClass = "border-danger bg-danger-tint";
 
 /** Pounds, for a form — the DB stores integer pence and formatPrice() adds the symbol. */
 function poundsValue(pence: number | null | undefined): string {
@@ -55,8 +51,23 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
   const [state, action, saving] = useActionState(saveProduct, initialCatalogueState);
   const isNew = product === null;
 
-  const fieldClass = (name: string) =>
-    `${inputClass} ${state.field === name ? errorInputClass : ""}`;
+  /**
+   * #650 — the className AND the ARIA pair, from one call, so a field cannot be
+   * styled as invalid without also being announced as invalid. `errorInputClass`
+   * is a border and a background tint: on its own it tells a sighted mouse user
+   * which field is wrong and a screen-reader user nothing at all (WCAG SC 1.4.1
+   * Use of Colour, SC 3.3.1 Error Identification). Returning both together is why
+   * this is `fieldProps` rather than the old `fieldClass` — a future field added
+   * to this form gets the association by construction instead of by remembering.
+   */
+  const fieldProps = (name: string) => {
+    const invalid = state.field === name;
+    return {
+      className: `${inputClass} ${invalid ? errorInputClass : ""}`,
+      "aria-invalid": invalid || undefined,
+      "aria-describedby": invalid ? "product-form-error" : undefined,
+    };
+  };
 
   return (
     <>
@@ -66,6 +77,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
         {state.error && (
           <p
             role="alert"
+            id="product-form-error"
             className="rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger"
           >
             {state.error}
@@ -92,7 +104,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
               name="name"
               required
               defaultValue={product?.name ?? ""}
-              className={fieldClass("name")}
+              {...fieldProps("name")}
             />
           </div>
 
@@ -107,7 +119,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
               spellCheck={false}
               placeholder="basmati-rice-5kg"
               defaultValue={product?.slug ?? ""}
-              className={fieldClass("slug")}
+              {...fieldProps("slug")}
             />
           </div>
 
@@ -120,7 +132,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
               name="description"
               rows={4}
               defaultValue={product?.description ?? ""}
-              className={fieldClass("description")}
+              {...fieldProps("description")}
             />
           </div>
 
@@ -133,7 +145,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
               name="categoryId"
               required
               defaultValue={product?.categoryId ?? ""}
-              className={fieldClass("categoryId")}
+              {...fieldProps("categoryId")}
             >
               <option value="" disabled>
                 Choose a category
@@ -176,7 +188,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
                 required
                 placeholder="2.40"
                 defaultValue={poundsValue(product?.basePrice)}
-                className={fieldClass("basePrice")}
+                {...fieldProps("basePrice")}
               />
             </div>
 
@@ -190,7 +202,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
                 inputMode="decimal"
                 placeholder="3.00"
                 defaultValue={poundsValue(product?.originalPrice)}
-                className={fieldClass("originalPrice")}
+                {...fieldProps("originalPrice")}
               />
             </div>
 
@@ -204,7 +216,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
                 required
                 placeholder="£2.40 / kg"
                 defaultValue={product?.unitLabel ?? ""}
-                className={fieldClass("unitLabel")}
+                {...fieldProps("unitLabel")}
               />
             </div>
 
@@ -217,7 +229,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
                 name="origin"
                 placeholder="India"
                 defaultValue={product?.origin ?? ""}
-                className={fieldClass("origin")}
+                {...fieldProps("origin")}
               />
             </div>
 
@@ -229,7 +241,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
                 id="brandId"
                 name="brandId"
                 defaultValue={product?.brandId ?? ""}
-                className={fieldClass("brandId")}
+                {...fieldProps("brandId")}
               >
                 <option value="">No brand</option>
                 {brands.map((brand) => (
@@ -253,7 +265,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
                 step={1}
                 required
                 defaultValue={product?.quantity ?? 0}
-                className={fieldClass("quantity")}
+                {...fieldProps("quantity")}
               />
             </div>
 
@@ -270,7 +282,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
                 step={1}
                 required
                 defaultValue={product?.lowStockThreshold ?? 3}
-                className={fieldClass("lowStockThreshold")}
+                {...fieldProps("lowStockThreshold")}
               />
             </div>
           </div>
@@ -307,7 +319,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
                 step={1}
                 placeholder="3"
                 defaultValue={product?.tier?.groupQuantity ?? ""}
-                className={fieldClass("tierGroupQuantity")}
+                {...fieldProps("tierGroupQuantity")}
               />
             </div>
 
@@ -321,7 +333,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
                 inputMode="decimal"
                 placeholder="10.00"
                 defaultValue={poundsValue(product?.tier?.groupPricePence)}
-                className={fieldClass("tierGroupPrice")}
+                {...fieldProps("tierGroupPrice")}
               />
             </div>
           </div>
@@ -376,7 +388,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
         */}
         <section className="space-y-3 rounded-2xl border border-black/10 bg-white p-5">
           <h2 className="text-sm font-bold text-primary">HMC certification</h2>
-          <p className="text-xs text-primary/70">
+          <p className="text-xs text-primary-muted">
             Only tick this when you hold a current HMC certificate for the product. Both fields
             below are required when it is ticked.
           </p>
@@ -395,7 +407,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
                 name="hmcReference"
                 placeholder="HMC/2026/01234"
                 defaultValue={product?.hmcReference ?? ""}
-                className={fieldClass("hmcReference")}
+                {...fieldProps("hmcReference")}
               />
             </div>
             <div>
@@ -415,7 +427,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
                     ? new Date(product.hmcVerifiedAt).toISOString().slice(0, 10)
                     : ""
                 }
-                className={fieldClass("hmcVerifiedAt")}
+                {...fieldProps("hmcVerifiedAt")}
               />
             </div>
           </div>
@@ -425,14 +437,14 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Save className="h-4 w-4" aria-hidden />
             {saving ? "Saving…" : isNew ? "Create product" : "Save changes"}
           </button>
           <Link
             href="/staff/products"
-            className="text-sm font-semibold text-primary/70 hover:underline"
+            className="text-sm font-semibold text-primary-muted hover:underline"
           >
             Back to products
           </Link>
@@ -457,7 +469,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
             imageNeedsReview={product.imageNeedsReview}
           />
           <div className="border-t border-black/10 pt-4">
-            <p className="mb-1 text-xs font-medium text-primary/70">
+            <p className="mb-1 text-xs font-medium text-primary-muted">
               Replace the primary image (uploads directly over it, keeping its position)
             </p>
             <ProductImageUploader productId={product.id} productName={product.name} />

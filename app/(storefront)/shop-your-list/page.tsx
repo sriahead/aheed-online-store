@@ -18,7 +18,7 @@ export default function ShopYourListPage() {
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
       <h1 className="text-xl font-bold text-primary">Shop your list</h1>
-      <p className="mt-1 mb-5 text-sm text-primary/60">
+      <p className="mt-1 mb-5 text-sm text-primary-muted">
         Paste your shopping list and we&apos;ll find each item. Nothing goes in your cart until you
         say so.
       </p>

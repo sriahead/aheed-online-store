@@ -117,7 +117,7 @@ export default async function HelpPage() {
 
         <section className="bg-white rounded-2xl p-6 border border-black/10">
           <div className="flex items-center gap-3 mb-4">
-            <Lock className="w-5 h-5 text-black/50" />
+            <Lock className="w-5 h-5 text-black/60" />
             <h2 className="font-bold text-lg">Privacy & Data Rights</h2>
           </div>
           <div className="space-y-3 text-sm text-black/70">

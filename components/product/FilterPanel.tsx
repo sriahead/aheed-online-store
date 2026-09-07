@@ -47,7 +47,7 @@ export function FilterPanel({ heading, ...formProps }: FilterPanelProps) {
 
       {/* md and above: the static sidebar, unchanged from before this slice. */}
       <aside className="hidden md:block shrink-0 md:w-60">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary/60">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
           {heading}
         </h2>
         <ProductFilterForm {...formProps} />

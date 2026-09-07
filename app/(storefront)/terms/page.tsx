@@ -19,7 +19,7 @@ export default async function TermsPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 text-primary">
-      <nav className="mb-6 text-xs text-primary/60">
+      <nav className="mb-6 text-xs text-primary-muted">
         <Link href="/" className="hover:underline">
           Home
         </Link>{" "}
@@ -29,12 +29,12 @@ export default async function TermsPage() {
       <article className="prose prose-sm max-w-none space-y-6">
         <header className="border-b border-black/10 pb-4">
           <h1 className="text-2xl font-bold tracking-tight">{vendorName} — Terms of Service</h1>
-          <p className="text-xs text-primary/60 mt-1">Last updated: August 13, 2026</p>
+          <p className="text-xs text-primary-muted mt-1">Last updated: August 13, 2026</p>
         </header>
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">1. Overview</h2>
-          <p className="text-sm text-primary/80 leading-relaxed">
+          <p className="text-sm text-primary-muted leading-relaxed">
             Welcome to {vendorName}. These terms and conditions govern your use of our website,
             catalogue browsing, cart reservation, checkout, and home delivery services within our
             supported delivery areas.
@@ -43,7 +43,7 @@ export default async function TermsPage() {
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">2. Pricing and Availability</h2>
-          <p className="text-sm text-primary/80 leading-relaxed">
+          <p className="text-sm text-primary-muted leading-relaxed">
             All prices displayed on our website are in Pound Sterling (GBP) inclusive of applicable
             VAT. Product availability is updated dynamically. In the unlikely event an item becomes
             unavailable after order placement, we will issue a full refund for the unavailable item.
@@ -52,7 +52,7 @@ export default async function TermsPage() {
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">3. Delivery Terms</h2>
-          <p className="text-sm text-primary/80 leading-relaxed">
+          <p className="text-sm text-primary-muted leading-relaxed">
             Deliveries are made to supported postcode areas. Minimum order values and delivery fees
             apply as stated at checkout. You must ensure someone is available at the delivery
             address to receive your order.
@@ -61,7 +61,7 @@ export default async function TermsPage() {
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">4. Order Cancellations & Refunds</h2>
-          <p className="text-sm text-primary/80 leading-relaxed">
+          <p className="text-sm text-primary-muted leading-relaxed">
             Orders can be cancelled before picking commences by contacting customer support. For
             fresh or perishable grocery items, cancellations after processing are subject to
             verification under UK Consumer Rights Law.
@@ -70,7 +70,7 @@ export default async function TermsPage() {
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">5. Governing Law</h2>
-          <p className="text-sm text-primary/80 leading-relaxed">
+          <p className="text-sm text-primary-muted leading-relaxed">
             These terms are governed by and construed in accordance with the laws of England and
             Wales.
           </p>

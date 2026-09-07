@@ -41,7 +41,7 @@ export default async function StaffBrandsPage() {
         <Tag className="h-5 w-5" aria-hidden="true" />
         Brands
       </h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         Brands a shopper can filter the catalogue by. Assign one to a product on its own edit page.
       </p>
 
@@ -54,7 +54,7 @@ export default async function StaffBrandsPage() {
         {brands.length === 0 ? "No brands yet" : `${brands.length} brands`}
       </h2>
       {brands.length === 0 ? (
-        <p className="text-sm text-primary/70">
+        <p className="text-sm text-primary-muted">
           Add a brand above. Until one exists, the storefront offers no brand filter — a control
           with nothing behind it is worse than no control at all.
         </p>

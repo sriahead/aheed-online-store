@@ -70,11 +70,11 @@ export function BundleCard({
               <img
                 src={`${cdnBaseUrl}/${imageKey}`}
                 alt={altText ?? ""}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-surface-muted">
-                <Package className="h-10 w-10 text-primary/30" aria-hidden />
+                <Package className="h-10 w-10 text-primary-subtle" aria-hidden />
               </div>
             )}
           </div>
@@ -98,7 +98,7 @@ export function BundleCard({
 
           <div className="mt-auto flex items-center justify-between gap-2 border-t border-black/5 pt-2">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-black/50">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-black/60">
                 {available.length} {available.length === 1 ? "item" : "items"}
               </p>
               <p className="skew-card-price text-base font-bold text-primary">

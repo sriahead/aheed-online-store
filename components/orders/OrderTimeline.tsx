@@ -25,11 +25,11 @@ export function OrderTimeline({ timeline }: { timeline: TimelineEntry[] }) {
               />
               <div className="min-w-0">
                 <p
-                  className={`text-sm ${isCurrent ? "font-bold text-primary" : "text-primary/70"}`}
+                  className={`text-sm ${isCurrent ? "font-bold text-primary" : "text-primary-muted"}`}
                 >
                   {entry.label}
                 </p>
-                <p className="text-xs text-primary/50">{formatOrderDateTime(entry.at)}</p>
+                <p className="text-xs text-primary-muted">{formatOrderDateTime(entry.at)}</p>
               </div>
             </li>
           );

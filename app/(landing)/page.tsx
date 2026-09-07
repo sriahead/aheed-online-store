@@ -164,40 +164,40 @@ export default async function HomePage() {
           of them names a trade. */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-10 h-10 rounded-xl bg-action-tint text-primary flex items-center justify-center font-bold shrink-0 group-hover:scale-110 transition-transform">
+          <div className="w-10 h-10 rounded-xl bg-action-tint text-primary flex items-center justify-center font-bold shrink-0 group-hover:scale-110 motion-reduce:group-hover:scale-100 transition-transform">
             <Truck className="w-5 h-5 text-primary" />
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
               Local Delivery
             </h4>
-            <p className="text-[11px] text-black/50 leading-tight">
+            <p className="text-[11px] text-black/60 leading-tight">
               Delivered across {localityName}
             </p>
           </div>
         </div>
 
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-10 h-10 rounded-xl bg-accent-tint text-accent flex items-center justify-center font-bold shrink-0 group-hover:scale-110 transition-transform">
+          <div className="w-10 h-10 rounded-xl bg-accent-tint text-accent flex items-center justify-center font-bold shrink-0 group-hover:scale-110 motion-reduce:group-hover:scale-100 transition-transform">
             <CreditCard className="w-5 h-5 text-accent" />
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
               Secure Checkout
             </h4>
-            <p className="text-[11px] text-black/50 leading-tight">Card payments by Stripe</p>
+            <p className="text-[11px] text-black/60 leading-tight">Card payments by Stripe</p>
           </div>
         </div>
 
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-10 h-10 rounded-xl bg-danger-tint text-danger flex items-center justify-center font-bold shrink-0 group-hover:scale-110 transition-transform">
+          <div className="w-10 h-10 rounded-xl bg-danger-tint text-danger flex items-center justify-center font-bold shrink-0 group-hover:scale-110 motion-reduce:group-hover:scale-100 transition-transform">
             <BellRing className="w-5 h-5 text-danger" />
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
               Order Updates
             </h4>
-            <p className="text-[11px] text-black/50 leading-tight">Status changes by email</p>
+            <p className="text-[11px] text-black/60 leading-tight">Status changes by email</p>
           </div>
         </div>
       </section>

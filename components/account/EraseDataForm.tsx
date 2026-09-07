@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { Trash2 } from "lucide-react";
 import { eraseMyData } from "@/features/account/data-rights";
 import { initialDataRightsState, type EraseConfirmationMode } from "@/lib/data-rights-form";
+import { inputClass } from "@/lib/form-classes";
 
 /**
  * Art. 17 erasure (P7b, #216).
@@ -20,9 +21,6 @@ import { initialDataRightsState, type EraseConfirmationMode } from "@/lib/data-r
  * Colours are semantic tokens per design-system.md, never raw hex.
  */
 
-const inputClass =
-  "w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none";
-
 export interface EraseDataFormProps {
   mode: EraseConfirmationMode;
   accountEmail: string;
@@ -35,7 +33,7 @@ export function EraseDataForm({ mode, accountEmail, blockedReason }: EraseDataFo
 
   if (blockedReason) {
     return (
-      <p className="rounded-xl bg-surface-muted px-4 py-3 text-sm text-primary/80">
+      <p className="rounded-xl bg-surface-muted px-4 py-3 text-sm text-primary-muted">
         {blockedReason}
       </p>
     );
@@ -59,7 +57,7 @@ export function EraseDataForm({ mode, accountEmail, blockedReason }: EraseDataFo
       <div>
         {mode === "password" ? (
           <>
-            <label className="mb-1 block text-xs font-medium text-primary/70" htmlFor="password">
+            <label className="mb-1 block text-xs font-medium text-primary-muted" htmlFor="password">
               Confirm with your password
             </label>
             <input
@@ -73,7 +71,7 @@ export function EraseDataForm({ mode, accountEmail, blockedReason }: EraseDataFo
         ) : (
           <>
             <label
-              className="mb-1 block text-xs font-medium text-primary/70"
+              className="mb-1 block text-xs font-medium text-primary-muted"
               htmlFor="confirmEmail"
             >
               Type <span className="font-semibold">{accountEmail}</span> to confirm
@@ -101,7 +99,7 @@ export function EraseDataForm({ mode, accountEmail, blockedReason }: EraseDataFo
       <button
         type="submit"
         disabled={working}
-        className="flex items-center justify-center gap-2 rounded-2xl bg-danger px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex items-center justify-center gap-2 rounded-2xl bg-danger px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Trash2 className="h-4 w-4" aria-hidden />
         {working ? "Erasing…" : "Erase my data"}

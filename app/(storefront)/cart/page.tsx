@@ -63,7 +63,7 @@ export default async function CartPage({
               <li key={name}>{name}</li>
             ))}
           </ul>
-          <p className="mt-1 text-primary/70">Everything else has been added to your cart.</p>
+          <p className="mt-1 text-primary-muted">Everything else has been added to your cart.</p>
         </div>
       )}
 

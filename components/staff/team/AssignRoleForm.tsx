@@ -41,7 +41,7 @@ export function AssignRoleForm({
             name="email"
             required
             placeholder="email@example.com"
-            className="w-full rounded-md border border-black/20 bg-white px-3 py-2 text-primary focus:border-action focus:outline-none focus:ring-1 focus:ring-action"
+            className="w-full rounded-md border border-black/20 bg-white px-3 py-2 text-primary focus-visible:border-action focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
           />
         </div>
         <div className="w-full sm:w-48">
@@ -52,7 +52,7 @@ export function AssignRoleForm({
             id="role"
             name="role"
             required
-            className="w-full rounded-md border border-black/20 bg-white px-3 py-2 text-primary focus:border-action focus:outline-none focus:ring-1 focus:ring-action"
+            className="w-full rounded-md border border-black/20 bg-white px-3 py-2 text-primary focus-visible:border-action focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
           >
             <option value="STAFF">Staff</option>
             {canGrantAdmin && <option value="ADMIN">Store Admin</option>}

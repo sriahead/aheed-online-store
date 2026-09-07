@@ -49,9 +49,9 @@ export function OrderItemsCard({
       <ul className="space-y-2">
         {items.map((item, index) => (
           <li key={index} className="flex justify-between gap-3 text-sm">
-            <span className="min-w-0 text-primary/80">
+            <span className="min-w-0 text-primary-muted">
               {item.quantity} × {item.productName}
-              <span className="ml-1 text-xs text-primary/50">
+              <span className="ml-1 text-xs text-primary-muted">
                 ({formatPrice(item.unitPricePence)} each)
               </span>
             </span>
@@ -64,7 +64,7 @@ export function OrderItemsCard({
 
       <dl className="mt-4 space-y-1.5 border-t border-black/10 pt-3 text-sm">
         <div className="flex justify-between">
-          <dt className="text-primary/70">Subtotal</dt>
+          <dt className="text-primary-muted">Subtotal</dt>
           <dd className="font-medium text-primary">{formatPrice(subtotalPence)}</dd>
         </div>
         {/* Each source gets its own row and its own amount (P7.5b, #150). The two
@@ -72,7 +72,7 @@ export function OrderItemsCard({
             still reconciles line by line. */}
         {codePence > 0 && discountCode && (
           <div className="flex justify-between">
-            <dt className="text-primary/70">
+            <dt className="text-primary-muted">
               Code <span className="font-semibold text-primary">{discountCode.code}</span>
             </dt>
             <dd className="font-medium text-action">−{formatPrice(codePence)}</dd>
@@ -80,12 +80,12 @@ export function OrderItemsCard({
         )}
         {loyaltyPence > 0 && (
           <div className="flex justify-between">
-            <dt className="text-primary/70">Loyalty points</dt>
+            <dt className="text-primary-muted">Loyalty points</dt>
             <dd className="font-medium text-action">−{formatPrice(loyaltyPence)}</dd>
           </div>
         )}
         <div className="flex justify-between">
-          <dt className="text-primary/70">Delivery</dt>
+          <dt className="text-primary-muted">Delivery</dt>
           <dd className="font-medium text-primary">
             {deliveryFeePence === 0 ? "FREE" : formatPrice(deliveryFeePence)}
           </dd>

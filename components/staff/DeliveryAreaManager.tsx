@@ -5,6 +5,7 @@ import { MapPin, Plus, Trash2 } from "lucide-react";
 import { addDeliveryArea, removeDeliveryArea } from "@/features/admin/delivery-areas";
 import { initialDeliveryAreaState, type DeliveryAreaFormState } from "@/lib/delivery-area-form";
 import type { DeliveryAreaRow } from "@/lib/repositories/delivery-areas";
+import { buttonClass, labelClass, uppercaseInputClass as inputClass } from "@/lib/form-classes";
 
 /**
  * Delivery-area admin forms (P9.2, #612).
@@ -21,12 +22,6 @@ import type { DeliveryAreaRow } from "@/lib/repositories/delivery-areas";
  * Colours are semantic tokens per design-system.md, never raw hex.
  */
 
-const inputClass =
-  "w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm uppercase focus:border-primary focus:bg-white focus:outline-none";
-const labelClass = "mb-1 block text-xs font-medium text-primary/70";
-const buttonClass =
-  "inline-flex items-center gap-2 rounded-full bg-action px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-action-hover disabled:opacity-60";
-
 function Feedback({ state }: { state: DeliveryAreaFormState }) {
   if (state.error) {
     return (
@@ -36,7 +31,7 @@ function Feedback({ state }: { state: DeliveryAreaFormState }) {
     );
   }
   if (state.saved) {
-    return <p className="mt-2 text-sm text-primary/70">Saved.</p>;
+    return <p className="mt-2 text-sm text-primary-muted">Saved.</p>;
   }
   return null;
 }
@@ -58,7 +53,7 @@ export function AddDeliveryAreaForm() {
           className={inputClass}
           required
         />
-        <p className="mt-1 text-xs text-primary/60">
+        <p className="mt-1 text-xs text-primary-muted">
           One or two letters — the area, not the district. Adding <strong>MK</strong> covers every
           MK district, from MK1 to MK19.
         </p>
@@ -87,7 +82,7 @@ export function DeliveryAreaRowForm({ area }: { area: DeliveryAreaRow }) {
     <li className="flex flex-col gap-2 border-b border-black/5 py-3 last:border-b-0">
       <div className="flex items-center justify-between gap-4">
         <span className="inline-flex items-center gap-2 font-semibold text-primary">
-          <MapPin className="h-4 w-4 text-primary/50" aria-hidden="true" />
+          <MapPin className="h-4 w-4 text-primary-subtle" aria-hidden="true" />
           {area.prefix}
         </span>
         <form action={action}>

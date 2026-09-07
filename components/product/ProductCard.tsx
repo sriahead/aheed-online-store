@@ -91,7 +91,7 @@ export function ProductCard({
               <ProductImage
                 src={composePublicUrl(cdnBaseUrl, product.primaryImage.storageKey)}
                 alt={product.primaryImage.alt}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
               />
             ) : (
               <div className="h-full w-full bg-surface-muted" />

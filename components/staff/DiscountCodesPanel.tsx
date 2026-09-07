@@ -8,6 +8,7 @@ import {
   type DiscountCodeState,
 } from "@/features/admin/discount-codes";
 import type { CodeListRow } from "@/lib/repositories/discounts";
+import { inputClass, labelClass } from "@/lib/form-classes";
 
 /**
  * Discount codes panel (P5b, #145) — create, list and deactivate, on the
@@ -22,10 +23,6 @@ import type { CodeListRow } from "@/lib/repositories/discounts";
  */
 
 const initialState: DiscountCodeState = { error: null, saved: false };
-
-const inputClass =
-  "w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none";
-const labelClass = "mb-1 block text-xs font-medium text-primary/70";
 
 function formatValue(row: CodeListRow): string {
   return row.kind === "PERCENTAGE"
@@ -67,7 +64,7 @@ export function DiscountCodesPanel({ codes }: { codes: CodeListRow[] }) {
       <section className="rounded-2xl border border-black/10 bg-white p-5">
         <h2 className="mb-4 text-sm font-bold text-primary">Existing codes</h2>
         {codes.length === 0 ? (
-          <p className="text-sm text-primary/60">
+          <p className="text-sm text-primary-muted">
             No discount codes yet. Create one below — until then, no code will be accepted at
             checkout.
           </p>
@@ -79,12 +76,12 @@ export function DiscountCodesPanel({ codes }: { codes: CodeListRow[] }) {
                   <p className="flex items-center gap-2 text-sm font-semibold text-primary">
                     <span className="font-mono">{row.code}</span>
                     {!row.isActive && (
-                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary/60">
+                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-muted">
                         Inactive
                       </span>
                     )}
                   </p>
-                  <p className="mt-0.5 text-xs text-primary/60">
+                  <p className="mt-0.5 text-xs text-primary-muted">
                     {formatValue(row)} · {formatUses(row)}
                     {row.maxPerCustomer !== null && ` · max ${row.maxPerCustomer} per customer`}
                     {row.minSubtotalPence > 0 &&
@@ -96,7 +93,7 @@ export function DiscountCodesPanel({ codes }: { codes: CodeListRow[] }) {
                     <input type="hidden" name="codeId" value={row.id} />
                     <button
                       type="submit"
-                      className="flex shrink-0 items-center gap-1.5 rounded-xl border border-black/15 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-surface-muted active:scale-95"
+                      className="flex shrink-0 items-center gap-1.5 rounded-xl border border-black/15 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-surface-muted active:scale-95 motion-reduce:active:scale-100"
                     >
                       <Ban className="h-3.5 w-3.5" aria-hidden />
                       Deactivate
@@ -223,7 +220,7 @@ export function DiscountCodesPanel({ codes }: { codes: CodeListRow[] }) {
         <button
           type="submit"
           disabled={creating}
-          className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Plus className="h-4 w-4" aria-hidden />
           {creating ? "Creating…" : "Create code"}

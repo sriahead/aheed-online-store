@@ -42,7 +42,7 @@ export function ErrorPanel({
         <AlertTriangle className="h-8 w-8" aria-hidden="true" />
       </div>
       <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-      <p className="max-w-md text-sm text-primary/70">{message}</p>
+      <p className="max-w-md text-sm text-primary-muted">{message}</p>
       <button
         type="button"
         onClick={onRetry}

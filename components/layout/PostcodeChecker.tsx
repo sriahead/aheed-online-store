@@ -63,7 +63,7 @@ export function PostcodeChecker({
       <form action={setDeliveryPostcode} className="flex items-center">
         <div className="relative flex items-center">
           <MapPin
-            className="pointer-events-none absolute left-3 h-4 w-4 text-black/40"
+            className="pointer-events-none absolute left-3 h-4 w-4 text-black/60"
             aria-hidden
           />
           <input
@@ -72,7 +72,7 @@ export function PostcodeChecker({
             defaultValue={postcode ?? ""}
             aria-label="Delivery postcode"
             placeholder={prefixes.length ? `e.g. ${prefixes[0]}1 1AA` : "Enter postcode"}
-            className="w-40 rounded-l-xl border border-r-0 border-black/10 bg-surface-muted py-2 pl-9 pr-3 text-sm font-semibold text-black transition focus:border-primary focus:bg-white focus:outline-none"
+            className="w-40 rounded-l-xl border border-r-0 border-black/10 bg-surface-muted py-2 pl-9 pr-3 text-sm font-semibold text-black transition focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:bg-white"
           />
         </div>
         <button

@@ -44,7 +44,7 @@ export default async function StaffDeliveryAreasPage() {
         <Truck className="h-5 w-5" aria-hidden="true" />
         Delivery areas
       </h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         The postcode areas this store delivers to. A customer whose postcode falls outside every
         area listed here cannot complete checkout, so keep this list current before turning away an
         order.

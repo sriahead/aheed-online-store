@@ -6,6 +6,7 @@ import { saveBundle } from "@/features/admin/bundles";
 import { initialBundleFormState } from "@/lib/bundle-form";
 import { BundleImageUploader } from "@/components/staff/BundleImageUploader";
 import type { BundleWithItems } from "@/lib/repositories/bundles";
+import { errorInputClass, inputClass, labelClass } from "@/lib/form-classes";
 
 /**
  * Curated bundle edit form (P8.5c, #347) — modelled on `CampaignForm.tsx`'s
@@ -21,11 +22,6 @@ import type { BundleWithItems } from "@/lib/repositories/bundles";
  * and the reason the parser treats a blank `productId` as a skipped row rather
  * than an error.
  */
-
-const inputClass =
-  "w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none";
-const labelClass = "mb-1 block text-xs font-medium text-primary/70";
-const errorInputClass = "border-danger bg-danger-tint";
 
 interface ProductOption {
   id: string;
@@ -62,8 +58,23 @@ export function BundleForm({
   const [rows, setRows] = useState<ItemRow[]>(() => initialRows(bundle));
   const [nextKey, setNextKey] = useState(rows.length);
 
-  const fieldClass = (name: string) =>
-    `${inputClass} ${state.field === name ? errorInputClass : ""}`;
+  /**
+   * #650 — the className AND the ARIA pair, from one call, so a field cannot be
+   * styled as invalid without also being announced as invalid. `errorInputClass`
+   * is a border and a background tint: on its own it tells a sighted mouse user
+   * which field is wrong and a screen-reader user nothing at all (WCAG SC 1.4.1
+   * Use of Colour, SC 3.3.1 Error Identification). Returning both together is why
+   * this is `fieldProps` rather than the old `fieldClass` — a future field added
+   * to this form gets the association by construction instead of by remembering.
+   */
+  const fieldProps = (name: string) => {
+    const invalid = state.field === name;
+    return {
+      className: `${inputClass} ${invalid ? errorInputClass : ""}`,
+      "aria-invalid": invalid || undefined,
+      "aria-describedby": invalid ? "bundle-form-error" : undefined,
+    };
+  };
 
   function addRow() {
     setRows((current) => [...current, { key: `row-${nextKey}`, productId: "", quantity: "1" }]);
@@ -86,6 +97,7 @@ export function BundleForm({
         {state.error && (
           <p
             role="alert"
+            id="bundle-form-error"
             className="rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger"
           >
             {state.error}
@@ -109,7 +121,7 @@ export function BundleForm({
               id="name"
               name="name"
               defaultValue={bundle?.name ?? ""}
-              className={fieldClass("name")}
+              {...fieldProps("name")}
               required
             />
           </div>
@@ -123,20 +135,20 @@ export function BundleForm({
               name="slug"
               defaultValue={bundle?.slug ?? ""}
               placeholder="weekly-meat-box"
-              className={fieldClass("slug")}
+              {...fieldProps("slug")}
               required
             />
           </div>
 
           <div>
             <label className={labelClass} htmlFor="tagline">
-              Tagline <span className="text-primary/40">(optional)</span>
+              Tagline <span className="text-primary-muted">(optional)</span>
             </label>
             <input
               id="tagline"
               name="tagline"
               defaultValue={bundle?.tagline ?? ""}
-              className={fieldClass("tagline")}
+              {...fieldProps("tagline")}
             />
           </div>
 
@@ -152,7 +164,7 @@ export function BundleForm({
                 min={0}
                 step={1}
                 defaultValue={bundle?.sortOrder ?? 0}
-                className={fieldClass("sortOrder")}
+                {...fieldProps("sortOrder")}
               />
             </div>
             <label className="flex items-center gap-2 pb-2 text-sm text-primary">
@@ -170,7 +182,7 @@ export function BundleForm({
         <section className="space-y-3 rounded-2xl border border-black/10 bg-white p-5">
           <div>
             <h2 className="text-sm font-bold text-primary">What&apos;s in the bundle</h2>
-            <p className="mt-0.5 text-xs text-primary/60">
+            <p className="mt-0.5 text-xs text-primary-muted">
               The price shoppers see is added up from these products&apos; live prices — there is
               nothing to type. A product that goes out of stock drops off the bundle until it
               returns.
@@ -217,7 +229,7 @@ export function BundleForm({
                 <button
                   type="button"
                   onClick={() => removeRow(row.key)}
-                  className="mb-1 rounded-xl border border-black/15 p-2 text-primary/60 hover:border-danger hover:text-danger"
+                  className="mb-1 rounded-xl border border-black/15 p-2 text-primary-muted hover:border-danger hover:text-danger"
                   aria-label="Remove this product from the bundle"
                 >
                   <Trash2 className="h-4 w-4" aria-hidden />

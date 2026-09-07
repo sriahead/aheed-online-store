@@ -60,7 +60,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">{product.name}</h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         Changes apply to the shop immediately. Past orders keep the price they were charged.
       </p>
       <ProductForm

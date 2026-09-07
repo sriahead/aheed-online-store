@@ -77,7 +77,7 @@ export default async function EditBundlePage({
           </form>
         )}
       </div>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         <Link href="/staff/bundles" className="hover:underline">
           Back to bundles
         </Link>

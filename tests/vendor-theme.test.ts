@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { brandStyle } from "@/lib/vendor-theme";
-import { contrastRatio, hexToOklch } from "@/lib/color-contrast";
+import { contrastRatio, hexToOklch, relativeLuminance } from "@/lib/color-contrast";
 import type { BrandPrimitives } from "@/lib/repositories/vendor";
 
 /**
@@ -78,6 +78,8 @@ describe("brandStyle", () => {
       "--color-brand-orange-tint",
       "--color-brand-red-tint",
       "--color-primary",
+      "--color-primary-muted",
+      "--color-primary-subtle",
       "--color-action",
       "--color-accent",
       "--color-danger",
@@ -178,4 +180,46 @@ describe("brandStyle", () => {
       );
     },
   );
+  // R4/R8b (#649) — the muted foregrounds clear their floor on EVERY surface
+  // they render on, not just white. `text-primary/80` was the row that made
+  // this necessary: 4.80:1 on white and 4.41:1 on Aheed's tints, so a
+  // white-only check would have called the defect compliant.
+  it.each(VENDORS)("%s's muted foregrounds meet their floor on all five surfaces", (_name, p) => {
+    const style = brandStyle(p) as Record<string, string>;
+    const surfaces = [WHITE, p.cream, p["green-tint"], p["orange-tint"], p["red-tint"]];
+    for (const surface of surfaces) {
+      expect(contrastRatio(style["--color-primary-muted"], surface)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(style["--color-primary-subtle"], surface)).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  // R8a (#649) — the slice's main VISUAL risk, not its contrast risk.
+  // Collapsing text-primary/{80,70,60} (263 sites) onto one tone could pass
+  // every AA floor and still read flat, so the ladder itself is pinned: three
+  // ordered steps, each perceptible. Measured at build: Aheed 1.53:1 and
+  // 1.50:1, SriMart 1.57:1 and 1.51:1.
+  it.each(VENDORS)("%s keeps a legible three-step text hierarchy", (_name, primitives) => {
+    const style = brandStyle(primitives) as Record<string, string>;
+    const [primary, muted, subtle] = [
+      style["--color-primary"],
+      style["--color-primary-muted"],
+      style["--color-primary-subtle"],
+    ];
+    // Ordered: each step is lighter than the one before it.
+    expect(relativeLuminance(muted)).toBeGreaterThan(relativeLuminance(primary));
+    expect(relativeLuminance(subtle)).toBeGreaterThan(relativeLuminance(muted));
+    // And perceptibly so — a merged ladder is a fail even at full AA compliance.
+    expect(contrastRatio(primary, muted)).toBeGreaterThanOrEqual(1.4);
+    expect(contrastRatio(muted, subtle)).toBeGreaterThanOrEqual(1.4);
+  });
+
+  // Same reasoning as R31 above: prove the per-vendor derivation actually ran.
+  // If brandStyle() ever stops emitting these, the page falls back to
+  // tokens.css's Aheed-shaped defaults and SriMart renders a green-grey.
+  it("derives the muted foregrounds per vendor rather than emitting a constant", () => {
+    const aheed = brandStyle(AHEED_PRIMITIVES) as Record<string, string>;
+    const srimart = brandStyle(SRIMART_PRIMITIVES) as Record<string, string>;
+    expect(aheed["--color-primary-muted"]).not.toBe(srimart["--color-primary-muted"]);
+    expect(aheed["--color-primary-subtle"]).not.toBe(srimart["--color-primary-subtle"]);
+  });
 });

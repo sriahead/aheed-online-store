@@ -55,7 +55,7 @@ export default async function ReportsPage() {
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-4 text-primary/60">
+            <div className="flex items-center gap-2 mb-4 text-primary-muted">
               <Banknote className="h-4 w-4" />
               <h3 className="text-sm font-semibold uppercase tracking-wider">Total Revenue</h3>
             </div>
@@ -71,7 +71,7 @@ export default async function ReportsPage() {
             href={`/staff/orders?status=${STATUS_REVENUE}`}
             className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm transition-colors hover:border-primary/30 hover:bg-surface-muted"
           >
-            <div className="flex items-center gap-2 mb-4 text-primary/60">
+            <div className="flex items-center gap-2 mb-4 text-primary-muted">
               <ShoppingBag className="h-4 w-4" />
               <h3 className="text-sm font-semibold uppercase tracking-wider">Total Orders</h3>
             </div>
@@ -80,7 +80,7 @@ export default async function ReportsPage() {
           </Link>
 
           <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-4 text-primary/60">
+            <div className="flex items-center gap-2 mb-4 text-primary-muted">
               <TrendingUp className="h-4 w-4" />
               <h3 className="text-sm font-semibold uppercase tracking-wider">Avg Basket Value</h3>
             </div>
@@ -94,12 +94,12 @@ export default async function ReportsPage() {
           Orders by construction rather than by coincidence. Each row links to
           its single status, which ?status= already expressed correctly. */}
       <section className="mt-8">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary/60">
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary-muted">
           Orders by status
         </h3>
         <div className="overflow-x-auto rounded-2xl border border-black/10 bg-white">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-black/10 text-xs uppercase tracking-wider text-primary/60">
+            <thead className="border-b border-black/10 text-xs uppercase tracking-wider text-primary-muted">
               <tr>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold">Orders</th>
@@ -117,14 +117,14 @@ export default async function ReportsPage() {
                       {orderStatusLabel(row.status)}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-primary/70">{row.orderCount}</td>
-                  <td className="px-4 py-3 text-primary/70">{formatMoney(row.revenuePence)}</td>
+                  <td className="px-4 py-3 text-primary-muted">{row.orderCount}</td>
+                  <td className="px-4 py-3 text-primary-muted">{formatMoney(row.revenuePence)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-primary/60">
+        <p className="mt-2 text-xs text-primary-muted">
           These are the statuses counted as revenue — an order that was paid for and not given back.
           Abandoned and cancelled orders are excluded, so these rows add up to Total Orders above.
         </p>
@@ -154,7 +154,7 @@ export default async function ReportsPage() {
             tone={catalogue.lowStock > 0 ? "warn" : "normal"}
           />
         </div>
-        <p className="mt-2 text-xs text-primary/60">
+        <p className="mt-2 text-xs text-primary-muted">
           Low stock counts products at or below their own threshold. Out-of-stock products are
           counted once, not in both figures.
         </p>
@@ -173,7 +173,7 @@ export default async function ReportsPage() {
           <StatTile label="If all redeemed" value={formatMoney(loyalty.liabilityPence)} />
           <StatTile label="Accounts in credit" value={String(loyalty.accountsWithBalance)} />
         </div>
-        <p className="mt-2 text-xs text-primary/60">
+        <p className="mt-2 text-xs text-primary-muted">
           Expired points are excluded — a balance lapses when an account goes quiet for longer than
           this store&apos;s expiry setting.
           {loyalty.lapsedAccounts > 0 && (
@@ -193,13 +193,13 @@ export default async function ReportsPage() {
           <h2 className="text-lg font-semibold text-primary">Discount codes</h2>
         </div>
         {discountCodes.length === 0 ? (
-          <div className="rounded-2xl border border-black/10 bg-surface-muted p-6 text-center text-sm text-primary/70">
+          <div className="rounded-2xl border border-black/10 bg-surface-muted p-6 text-center text-sm text-primary-muted">
             No discount codes configured for this store.
           </div>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-black/10 bg-white">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-black/10 text-xs uppercase tracking-wider text-primary/60">
+              <thead className="border-b border-black/10 text-xs uppercase tracking-wider text-primary-muted">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Code</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
@@ -211,11 +211,11 @@ export default async function ReportsPage() {
                 {discountCodes.map((code) => (
                   <tr key={code.id} className="border-b border-black/5 last:border-0">
                     <td className="px-4 py-3 font-semibold text-primary">{code.code}</td>
-                    <td className="px-4 py-3 text-primary/70">
+                    <td className="px-4 py-3 text-primary-muted">
                       {code.isActive ? "Active" : "Inactive"}
                     </td>
-                    <td className="px-4 py-3 text-primary/70">{code.redemptionCount}</td>
-                    <td className="px-4 py-3 text-primary/70">
+                    <td className="px-4 py-3 text-primary-muted">{code.redemptionCount}</td>
+                    <td className="px-4 py-3 text-primary-muted">
                       {code.remainingRedemptions === null ? "Unlimited" : code.remainingRedemptions}
                     </td>
                   </tr>
@@ -242,7 +242,9 @@ function StatTile({
     tone === "danger" ? "text-danger" : tone === "warn" ? "text-accent" : "text-primary";
   return (
     <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary/60">{label}</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary-muted">
+        {label}
+      </p>
       <p className={`text-3xl font-bold ${valueClass}`}>{value}</p>
     </div>
   );

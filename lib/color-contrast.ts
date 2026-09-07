@@ -225,3 +225,46 @@ export function darkenForHover(
   const darker = oklchToHex({ ...base, l: Math.max(0, base.l - delta) });
   return clampForContrast(darker, backgrounds, minRatio);
 }
+
+/**
+ * A LIGHTER companion for a base colour — the muted/secondary foreground.
+ * Same two-step shape as `darkenForHover` above: derive, then clamp, so the
+ * derived value can never be the thing on the page that fails.
+ *
+ * WHY THE DERIVATION IS AN ALPHA COMPOSITE RATHER THAN AN OKLCH LIGHTNESS STEP.
+ * This function exists to replace 263 call sites that literally wrote
+ * `text-primary/70` and `text-primary/60`, so compositing the primitive over
+ * white at that same alpha reproduces the appearance those sites were reaching
+ * for. The clamp then pulls it back to the contrast floor. Picking an arbitrary
+ * OKLCH delta instead would have been a new visual decision dressed up as a
+ * refactor.
+ *
+ * WHY IT COMPOSITES OVER WHITE SPECIFICALLY, not over each background. One
+ * token has to serve every surface, and white is the lightest surface in the
+ * list — the worst case for a light foreground. Compositing over white and then
+ * clamping against ALL the backgrounds yields a single value that clears the
+ * floor everywhere, which is the property `--color-primary-muted` needs.
+ *
+ * The alpha modifiers this replaces are now banned outright: an alpha modifier
+ * is applied by the browser at paint time, so it composites a clamped token
+ * back BELOW the floor and no unit test that reads token values can see it.
+ * `tests/token-alpha-purity.test.ts` enforces the ban; `specs/design-system.md`
+ * carries the rule.
+ */
+export function mutedForeground(
+  hex: string,
+  backgrounds: readonly string[],
+  alpha: number,
+  minRatio: number,
+): string {
+  const softened = compositeOverWhite(hex, alpha);
+  return clampForContrast(softened, backgrounds, minRatio);
+}
+
+/** `hex` at `alpha` over white, as an opaque hex — the composite a browser paints. */
+function compositeOverWhite(hex: string, alpha: number): string {
+  const [r, g, b] = parseHex(hex);
+  // parseHex/toHex both work in 0..1, so white is 1 on every channel.
+  const mix = (channel: number) => alpha * channel + (1 - alpha);
+  return toHex(mix(r), mix(g), mix(b));
+}

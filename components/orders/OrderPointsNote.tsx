@@ -47,8 +47,8 @@ export function OrderPointsNote({
 
   if (status === "PENDING_PAYMENT") {
     return (
-      <p className="mb-5 flex items-center gap-2 rounded-2xl bg-surface-muted px-4 py-3 text-sm text-primary/80">
-        <Sparkles className="h-4 w-4 shrink-0 text-primary/50" aria-hidden />
+      <p className="mb-5 flex items-center gap-2 rounded-2xl bg-surface-muted px-4 py-3 text-sm text-primary-muted">
+        <Sparkles className="h-4 w-4 shrink-0 text-primary-subtle" aria-hidden />
         {/* Deliberately carries no number — see the component note. */}
         <span>Your loyalty points are added once payment clears.</span>
       </p>
