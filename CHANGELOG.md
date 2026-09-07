@@ -209,6 +209,26 @@ every branch merges.
     by Better Auth's `trustedOrigins` (`403 Invalid origin`, matching `#454`).
   - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
 
+- **`/document` (final) closeout for P9.2 remaining non-operational gaps** (`#644`, absorbing `#94`,
+  `#621`, `#437` code tail, `#505` code half and `#472` in part; PRs #646, #647 merged to `staging`
+  and promoted to `main`). Docs only — no runtime code, no schema change, nothing for
+  `prisma migrate deploy` to apply.
+  - `specs/roadmap.md` (1.79.0) gains this slice's build/merge row (PR #646) and its promotion row
+    (PR #647), a new `#644` P9.2 scope-list bullet, updated `#94`/`#101`/`#437`/`#472`/`#505`/`#541`
+    bullets reflecting their (full or partial) closure, and a backfilled row for **PR #643** — the
+    `#627`/`#628`/`#630`/`#631`/`#634` promotion to `main` — whose own row was never written and was
+    found missing by `npm run sdd:audit` at this stage.
+  - No new `CLAUDE.md` lesson: this Ship + Document pass surfaced two validation-row wording gaps
+    (R21's grep expecting an absolute-looking import path the code correctly uses a relative one
+    for; R2's reference to route-level tests that don't exist as dedicated files), both the same
+    "a validation row is a proxy for its requirement, not the requirement itself" class
+    `specs/sdd-workflow.md` already documents at length — recorded on the roadmap row as an
+    instance, not promoted as a new rule.
+  - **#644**, **#94** and **#621** closed on the `main` merge; **#627**, **#628**, **#630**,
+    **#631** and **#634** (from the prior slice, its own promotion previously undocumented) also
+    closed. All auto-moved to `Done` on Project #2 with no manual reconciliation needed.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 - **Operator documentation: runbook role delivery repaired, guides corrected, every menu item
   documented** (`#633`, P9.2, `specs/2026-09-06-operator-documentation/`), absorbing `#625` and
   `#629` and folding in `#626`. `/staff/runbook` was filtering twice against two different audience
