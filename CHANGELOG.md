@@ -280,6 +280,36 @@ every branch merges.
     closed. All auto-moved to `Done` on Project #2 with no manual reconciliation needed.
   - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
 
+- **`/document` (final) closeout for storefront & panel accessibility remediation** (`#649`, `#650`,
+  `#651`, `#652`; PR #659 merged to `staging`). Docs only — no runtime code, no schema change,
+  nothing for `prisma migrate deploy` to apply.
+  - `specs/roadmap.md` (1.79.0 → 1.80.0) gains this slice's build/merge row (PR #659) and annotates
+    the **#442** P9.3 bullet with what shipped ahead of it, so accessibility launch validation
+    validates a candidate rather than rediscovering a launch-severity backlog — which is that
+    issue's own stated intent.
+  - **Three wording defects `/validate` found are corrected in the spec, not the code** — the
+    artifact was correct in all three cases. `requirements.md` **R7**'s two clauses were mutually
+    inconsistent: its general clause (`text-black/[1-5]0` returns zero matches) always covered
+    `/40`, while its arithmetic clause was written as if only `/50` were in scope, downstream of
+    `plan.md`'s inventory table undercounting by 5 sites. The real `text-black/60` rise is **15**
+    (21 → 36), not 10. `validation.md` **R10** and **R13** carried grep commands that
+    false-positive on their own subject matter — `grep -c "use server" lib/form-classes.ts` returns
+    1 because the file's doc comment *explains* it is not a `"use server"` file, and R13's
+    `--include=*.ts` (needed to reach `lib/form-classes.ts`) collaterally re-included the generated
+    `runbook/docs.ts` bundle, which quotes this spec's own prose. `build-notes.md` gains an
+    addendum recording all three.
+  - **Two lessons promoted to `CLAUDE.md`**, both from the live `/validate` pass. First: query
+    `VendorDomain` in the environment actually under test before trusting a hardcoded `Host` header
+    — this slice's mandatory two-vendor check hardcoded the `nocaped.com` hostnames, while the dev
+    DB was seeded `localhost:8787` / `srimart.localhost`, so both requests silently redirected to
+    `/coming-soon` with no signal distinguishing "wrong host" from "feature broken". Second: a
+    grep-based validation row proves its claim only when the pattern cannot also match a comment,
+    docstring or generated bundle quoting the very thing being searched for — the same shape as the
+    already-recorded `&`-escaping trap, minus the escaping.
+  - **#649**, **#650**, **#651** and **#652** are `In Review` on Project #2; they close to `Done`
+    only on promotion to `main`.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 - **Operator documentation: runbook role delivery repaired, guides corrected, every menu item
   documented** (`#633`, P9.2, `specs/2026-09-06-operator-documentation/`), absorbing `#625` and
   `#629` and folding in `#626`. `/staff/runbook` was filtering twice against two different audience
