@@ -123,6 +123,28 @@ every branch merges.
     keyword, so they track and close together with `#633` on promotion to `main`.
   - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
 
+- **`/document` (final) closeout for admin panel operability** (`#627`, `#628`, `#630`, `#631`,
+  `#634`; PR #640 merged to `staging`). Docs only — no runtime code, no schema change, nothing for
+  `prisma migrate deploy` to apply.
+  - `specs/roadmap.md` (1.78.0) gains the slice's build/merge row (PR #640) and a new P9.2
+    scope-list bullet for `#627`/`#628`/`#630`/`#631`/`#634`, absent from that list until now, plus
+    a backfilled row for **PR #637** — the `#633` promotion to `main` — whose own row was never
+    written and was found missing by `npm run sdd:audit` at this slice's `/orient`.
+  - `CLAUDE.md` (1.22.0) gains a live-testing lesson from `/validate`'s R22b: a `grep` for a retired
+    hex literal against a page's saved, rendered HTML can match even when the literal is genuinely
+    gone from every component's source, because `brandStyle()` must legitimately re-embed that exact
+    hex string as a CSS custom-property value for whichever vendor's own primitive happens to equal
+    it — confirmed here for Aheed's `#e8f5e9`/`#f5f5f0`, the same class this file already records
+    for `<1%` and unescaped `&` in rendered HTML.
+  - `#627`, `#628`, `#630`, `#631` and `#634` moved to `In Review` on Project #2; they close to
+    `Done` only on promotion to `main`.
+  - Filed **#641** (P10, non-blocking): the `hover:bg-action/20` replacement for
+    `hover:bg-[#c8e6c9]` is the one colour in `#631` that is not a 1:1 token equivalent, and its
+    render against a genuinely different vendor palette (e.g. SriMart) is still unverified — R22c
+    could not be exercised locally, since a fresh sign-in under a spoofed host is correctly refused
+    by Better Auth's `trustedOrigins` (`403 Invalid origin`, matching `#454`).
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 - **Operator documentation: runbook role delivery repaired, guides corrected, every menu item
   documented** (`#633`, P9.2, `specs/2026-09-06-operator-documentation/`), absorbing `#625` and
   `#629` and folding in `#626`. `/staff/runbook` was filtering twice against two different audience
