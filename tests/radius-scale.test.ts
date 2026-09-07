@@ -122,7 +122,15 @@ function stepsInUse(files: string[]): Map<string, string> {
  * both halves of the resolution agree on one name for it.
  */
 function declaredTokens(): Record<string, string> {
-  const css = readFileSync("design-system/tokens/tokens.css", "utf8");
+  const raw = readFileSync("design-system/tokens/tokens.css", "utf8");
+  // Strip /* ... */ comments FIRST. Without this, a comment explaining a token in prose (e.g.
+  // "Tailwind's own default theme sets `--radius: 0.25rem`") is itself valid input to the regex
+  // below: it matches "--radius:" inside the comment, then greedily captures everything up to the
+  // next ";" — which is the REAL declaration's own terminator — corrupting that token's parsed
+  // value into the comment's trailing prose instead of "0.25rem". Confirmed live at `/validate`
+  // (#662, 2026-09-08): this silently defeated the DEFAULT-token collision check specifically,
+  // because that is the one step whose own justifying comment happens to quote its value verbatim.
+  const css = raw.replace(/\/\*[\s\S]*?\*\//g, "");
   const tokens: Record<string, string> = {};
   const re = /--radius(?:-(xs|sm|md|lg|xl|2xl|3xl|4xl|full))?:\s*([^;]+);/g;
   let m: RegExpExecArray | null;

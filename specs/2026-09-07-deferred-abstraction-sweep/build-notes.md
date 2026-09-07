@@ -34,6 +34,26 @@ added to `tokens.css` at its current value so nothing moved. **This is the CLAUD
 docstring laundering an unenforced claim, recurring**: the test's own assertion was sound, but its
 prose opined on a neighbouring fact it had got backwards.
 
+**`/fix` (2026-09-08) — `declaredTokens()` itself had a second, more serious defect: it parsed
+`tokens.css` without stripping comments first.** The explanatory comment added above the token
+declarations (the previous paragraph's fix) quotes the literal string `` `--radius: 0.25rem` `` in
+prose — the regex `/--radius(?:-...)?:\s*([^;]+);/g` matched that occurrence *inside the comment*,
+then greedily captured everything up to the next `;`, which is the real declaration's own
+terminator. The `DEFAULT` (bare `rounded`) token's parsed value was silently corrupted into a
+garbage multi-line string instead of `"0.25rem"`, which meant the collision check could never see a
+collision on that step — confirmed at `/validate`: reintroducing `rounded-sm` into
+`components/product/ProductCard.tsx` (which now falls to Tailwind's un-overridden default of
+`0.25rem`, genuinely colliding with bare `rounded`) left the test's 3 assertions all green. This is
+the reverse of the CLAUDE.md/`sdd-workflow.md` "grep bites its own explanatory comment" trap
+recorded throughout this repo (which causes a false FAILURE) — here an unrelated parser silently
+absorbed the comment as if it were code, causing a false PASS on a real, provable defect. Fixed by
+stripping `/\*[\s\S]*?\*\//g` before running the token regex in `declaredTokens()`. Re-verified the
+same way `/validate` found the bug: reintroduce `rounded-sm`, confirm the test now fails naming the
+`rounded`/`rounded-sm` pair, revert. `validation.md`'s own R4 row was also corrected in the same
+commit — it named `rounded-md` as the probe, which no longer collides with anything post-fix (`md`
+is no longer overridden at all, so it falls to Tailwind's default `0.375rem`); `rounded-sm` is the
+probe that actually demonstrates a live collision, and is now what the row says.
+
 **#656 — `lib/form-classes.ts` is the floor this builds on, not a thing to redo.** That module
 shipped hours earlier (#649/#650) and had already deduplicated `inputClass`, `labelClass`,
 `errorInputClass`, `buttonClass` and `uppercaseInputClass`; its own doc comment names #656 as the
