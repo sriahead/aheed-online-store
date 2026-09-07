@@ -1,4 +1,4 @@
-import { getEnv, getPaymentEnv } from "@/lib/config";
+import { getPaymentEnv, readOptional } from "@/lib/config";
 import {
   parseCheckoutEvent,
   verifyStripeSignature,
@@ -60,7 +60,12 @@ function reportRefusal(
   );
 }
 export async function POST(req: Request) {
-  const { STRIPE_WEBHOOK_SECRET } = getPaymentEnv();
+  // Read through `readOptional`, never bare (#621). The accessor throws a
+  // ZodError when STRIPE_WEBHOOK_SECRET is absent, because NODE_ENV is always
+  // "production" in a built Worker — so a bare call would make the check below
+  // dead code and turn this route's own considered 500 into an uncaught one
+  // with no body. Same defect and same fix as #618's reconcile-payments route.
+  const STRIPE_WEBHOOK_SECRET = readOptional(getPaymentEnv)?.STRIPE_WEBHOOK_SECRET;
   if (!STRIPE_WEBHOOK_SECRET) {
     console.error("stripe webhook received but STRIPE_WEBHOOK_SECRET is unset");
     return new Response("Webhook not configured", { status: 500 });

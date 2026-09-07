@@ -192,3 +192,38 @@ export function getJobsEnv(): JobsEnv {
     JOB_INVOCATION_TOKEN: readEnv("JOB_INVOCATION_TOKEN"),
   });
 }
+
+/**
+ * Calls `read` and returns its result, or `undefined` if it threw (P9.2, #621).
+ *
+ * WHY THIS EXISTS. The accessors above are deliberately fail-hard: each one's
+ * zod `superRefine` adds an issue when its field is absent and
+ * `process.env.NODE_ENV === "production"`, so `getPaymentEnv()`/`getJobsEnv()`
+ * THROW rather than handing back an empty value. That is the right default —
+ * a missing payment secret in production is a misconfiguration, not a mode.
+ *
+ * But `NODE_ENV` is unconditionally `"production"` in every BUILT Worker this
+ * app runs in — `npm run preview`, staging and production alike, because
+ * `next build` bakes it in regardless of deploy target. So a caller written as
+ * `const { X } = getXEnv(); if (!X) { ...handle it... }` never reaches its own
+ * `if`: the accessor throws first and the handled branch is dead code that only
+ * "works" under `next dev` or a plain Node script, neither of which these routes
+ * ever run under. The observable result is an uncaught `ZodError` — a bare 500
+ * with no body — in place of whatever considered response the route intended.
+ *
+ * A route that wants to treat "this required-in-production secret happens to be
+ * absent right now" as its own recoverable case must therefore catch the throw,
+ * which is all this does. Confirmed live at #618's /validate for
+ * `app/api/jobs/reconcile-payments/route.ts` (its documented 503 was
+ * unreachable), and it lived there as a local helper until #621 found
+ * `app/api/webhooks/stripe/route.ts` had the identical latent defect. It is
+ * exported from here rather than copied a second time precisely because one
+ * private copy is how the first instance stopped being findable.
+ */
+export function readOptional<T>(read: () => T): T | undefined {
+  try {
+    return read();
+  } catch {
+    return undefined;
+  }
+}

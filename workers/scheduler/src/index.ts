@@ -31,7 +31,16 @@ interface Env {
 }
 
 /** Every path invoked on each tick, in order. */
-const JOBS: readonly string[] = ["/api/jobs/reconcile-payments"];
+const JOBS: readonly string[] = [
+  "/api/jobs/reconcile-payments",
+  // P9.2, #94 — deletes guest carts untouched for longer than the cart cookie's
+  // own lifetime, after which the row is unreachable by anyone.
+  "/api/jobs/reap-guest-carts",
+  // P9.2, #437 (code tail) — counts ErrorEvent rows in the last tick's window
+  // and logs a structured line when the threshold is breached. Ordered last
+  // because it observes; the two above it act.
+  "/api/jobs/check-error-rate",
+];
 
 const JOB_TOKEN_HEADER = "x-job-token";
 

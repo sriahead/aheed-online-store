@@ -8,6 +8,43 @@ every branch merges.
 
 ### Added
 
+- **P9.2 remaining non-operational gaps** (`#644`, absorbing `#94`, `#621`, `#437` code tail,
+  `#505` code half and `#472` in part, `specs/2026-09-07-p9-2-non-operational-gaps/`). Closes every
+  remaining P9.2 item a repository change can close, leaving only the operational set (`#113`,
+  `#104`, `#227`, `#175`, `#219`, `#246`, `#436`, `#438`). **No schema change and no migration.**
+  - **`#94`** — guest carts were created lazily, keyed by an opaque cookie token, and **nothing had
+    ever reaped them**. `deleteAbandonedGuestCarts` now deletes carts untouched for 30 days, which
+    is exactly `lib/cart-identity.ts`'s `CART_COOKIE` `maxAge`: past that the guest token exists
+    nowhere, so the row is unreachable by everyone including the shopper — a derived retention
+    position rather than an arbitrary age. Never touches a cart carrying a `userId`, which has no
+    cookie dependency and no expiry. Takes `vendorId` explicitly (`Cart` is vendor-scoped) with the
+    service iterating `listActiveVendorIds`, matching `lib/payment-sweep-service.ts`; capped
+    **per vendor** rather than per tick, so one vendor's backlog cannot starve another (`#619`).
+    Verified against the real dev database — cascade included — by
+    `scripts/verify-guest-cart-reaper.ts`.
+  - **`#621`** — `app/api/webhooks/stripe/route.ts` read `STRIPE_WEBHOOK_SECRET` through a bare
+    `getPaymentEnv()`, whose zod `superRefine` throws when the value is absent and `NODE_ENV` is
+    `"production"` — unconditionally true in every **built** Worker. Its own
+    `Webhook not configured` 500 was therefore dead code and an unset secret produced an uncaught
+    `ZodError` instead. `readOptional` moves out of `app/api/jobs/reconcile-payments/route.ts`,
+    where `#618` left it as a **private** helper — which is why this second instance went unnoticed
+    — into `lib/config.ts`, and both routes import it. The route's contract is unchanged; only its
+    reachability is.
+  - **`#437` (code tail only)** — `ErrorEvent` rows have been written by `instrumentation.ts` since
+    `#508` and read by nothing but `/staff/errors`, so a spike was visible only to whoever happened
+    to look. Adds `countRecentErrorEvents`, a pure `evaluateErrorRate` (no imports, so it is
+    testable with no stubs), and `/api/jobs/check-error-rate`, which logs one structured line when
+    the threshold is breached and none when it is not. The window is **derived** from the
+    scheduler's 15-minute cron so ticks neither double-count nor leave a gap; the threshold is a
+    named constant recording that it awaits `#246`. **No delivery channel is chosen** — `#104`
+    leaves Resend's sending domain unverified, so an email alert would look delivered and never
+    fire.
+  - **`#505` (code half)** — `parseEnvFile` existed as **four** private copies, three byte-identical
+    and the fourth differing by one comment. Consolidated to `scripts/lib/env-file.ts`. The parser
+    is **kept** rather than replaced by `dotenv`: `secrets/*.vars` are gitignored, hand-maintained
+    and will never be seen by a linter, so tolerating their formatting is a requirement. Normalising
+    the files themselves is local-only and stays open on `#505`.
+
 - **Admin panel operability: category hierarchy, report drill-down, delivery rules and per-vendor
   panel colours** (`#627`, `#628`, `#630`, `#631`, `#634`, P9.2,
   `specs/2026-09-06-admin-panel-operability/`), landing the `/discover` pass that filed them
@@ -104,6 +141,33 @@ every branch merges.
   reference and a verified date, and unticking it clears both. HMC is a named third-party
   certifying body, and `#239` was a real incident of this codebase asserting certification with no
   basis for it; a bare tickable boolean would have re-created that exposure one product at a time.
+
+### Changed
+
+- **Required status checks now enforced on `main` and `staging`** (`#472`, partial). Both rulesets
+  gain a `required_status_checks` rule naming `docs-gates`, `quality / kms` and
+  `quality / quality`, closing the gap that let PRs `#464`, `#465` and `#466` reach `main` with
+  nothing able to reject them. **The premise blocking this was false and unchecked**: `#472` and
+  `CLAUDE.md` both recorded a paid-plan limitation for *private* repos, but this repository is
+  **public** — the recorded 422 applied only to environment reviewers, never to rulesets. Context
+  strings were read from the names real completed runs reported, never guessed, since a rule naming
+  a context nothing reports blocks every merge permanently (`#539`'s reason for deferring).
+  `deploy` is deliberately excluded — it runs on `push`, not `pull_request`. Approval gates are
+  deliberately **not** adopted: as sole maintainer that would mean approving one's own deploys.
+- `specs/tech-stack.md` (1.5.0) no longer says branch protection is "prepared for later".
+- `CLAUDE.md` — corrects the public-vs-private premise, describes the new rule, records `#541`'s
+  closure reasoning, and moves the vitest baseline to **107 files / 1431 tests**, noting for the
+  first time that the count can move **down**: `tests/scheduler.test.ts` lost two tests that had
+  hardcoded call counts against a one-entry `JOBS` array while claiming independence from it.
+
+### Removed
+
+- **`#541` closed as accepted risk** — `continue-on-error` is inert on a passing job, so no
+  `deploy-production` run can settle it (`33606818256` and `34103597181` both proved nothing). The
+  only way to observe the false branch is to deliberately ship a broken KMS artefact to `main`, and
+  the failure direction is safe: a mis-resolved expression leaves the job **blocking**.
+- **`#101` closed as delivered** by `#618`'s `app/api/jobs/reconcile-payments/route.ts`; only the
+  operational `JOB_INVOCATION_TOKEN` remains.
 
 ### Documentation
 
