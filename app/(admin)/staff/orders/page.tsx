@@ -5,7 +5,12 @@ import { ClipboardList, Search } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
 import { ORDER_STATUSES, formatOrderDate, nextStatus, orderStatusLabel } from "@/lib/order-status";
-import { STATUS_ALL, parseStaffOrdersQuery, staffOrdersHref } from "@/lib/staff-orders-query";
+import {
+  STATUS_ALL,
+  STATUS_REVENUE,
+  parseStaffOrdersQuery,
+  staffOrdersHref,
+} from "@/lib/staff-orders-query";
 import { formatPrice } from "@/components/product/format-price";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
@@ -80,6 +85,10 @@ export default async function StaffOrdersPage({
           >
             <option value="">Awaiting action</option>
             <option value={STATUS_ALL}>All statuses</option>
+            {/* #628 — the selection /staff/reports' Total Orders tile links to.
+                Without an option carrying this value the control would show
+                "Awaiting action" while the list showed something else. */}
+            <option value={STATUS_REVENUE}>Counted as revenue</option>
             {ORDER_STATUSES.map((value) => (
               <option key={value} value={value}>
                 {orderStatusLabel(value)}

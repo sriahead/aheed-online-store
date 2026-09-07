@@ -46,7 +46,7 @@ export default async function ErrorEventsPage() {
 
       <div className="overflow-x-auto rounded-2xl border border-black/10 bg-white shadow-sm">
         <table className="w-full text-left text-sm whitespace-nowrap">
-          <thead className="bg-[#f5f5f0] text-primary">
+          <thead className="bg-surface-muted text-primary">
             <tr>
               <th className="px-4 py-3 font-semibold">When</th>
               <th className="px-4 py-3 font-semibold">Method</th>

@@ -499,3 +499,67 @@ export const PRODUCT_FIELDS = [
 ] as const;
 
 export const CATEGORY_FIELDS = ["name", "slug", "parentId", "sortOrder", "isActive"] as const;
+
+/* ------------------------------------------------------------------------- *
+ * Category picker grouping (#630)
+ * ------------------------------------------------------------------------- */
+
+/** The shape of an `AdminCategoryRow` this module needs, so no repository
+ *  module is pulled into the client bundle just for a type. */
+export interface CategoryOption {
+  id: string;
+  name: string;
+  parentId: string | null;
+  isActive: boolean;
+}
+
+export interface CategoryOptionGroup {
+  /** The department itself — selectable in its own right, never a label only. */
+  parent: CategoryOption;
+  children: CategoryOption[];
+}
+
+/**
+ * Group categories into one `optgroup` per department for the product form
+ * (#630).
+ *
+ * The form previously rendered ONE flat select over every tier, labelled
+ * "Parent → Child" for children, in the globally-interleaved order #627
+ * describes. Both tiers are genuinely assignable and both are genuinely in use:
+ * `prisma/seed.ts` assigns hand-curated products to a TOP-LEVEL category, while
+ * `seedGeneratedCatalogue` assigns generated ones to subcategories, and
+ * `prisma/schema.prisma` constrains neither.
+ *
+ * So the department stays selectable inside its own group rather than becoming
+ * a label. A "pick a category, then pick a subcategory" cascade would have read
+ * more naturally and silently removed the direct-to-department capability —
+ * which is exactly the failure #630 was filed to prevent.
+ *
+ * Ordering is not re-derived here: `listCategoriesForAdmin` already returns
+ * parents immediately followed by their own children (#627). This walk only
+ * reshapes. A child whose parent is absent becomes its own group, for the same
+ * reason the repository keeps it: an unselectable category is worse than an
+ * oddly-placed one.
+ */
+export function toCategoryOptionGroups(
+  categories: readonly CategoryOption[],
+): CategoryOptionGroup[] {
+  const groups: CategoryOptionGroup[] = [];
+  const byParentId = new Map<string, CategoryOptionGroup>();
+
+  const topLevelIds = new Set(categories.filter((c) => c.parentId === null).map((c) => c.id));
+
+  for (const category of categories) {
+    const isTopLevel = category.parentId === null || !topLevelIds.has(category.parentId);
+
+    if (isTopLevel) {
+      const group: CategoryOptionGroup = { parent: category, children: [] };
+      groups.push(group);
+      byParentId.set(category.id, group);
+    } else {
+      byParentId.get(category.parentId!)?.children.push(category);
+    }
+  }
+
+  return groups;
+}

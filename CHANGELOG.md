@@ -8,6 +8,60 @@ every branch merges.
 
 ### Added
 
+- **Admin panel operability: category hierarchy, report drill-down, delivery rules and per-vendor
+  panel colours** (`#627`, `#628`, `#630`, `#631`, `#634`, P9.2,
+  `specs/2026-09-06-admin-panel-operability/`), landing the `/discover` pass that filed them
+  (`#632`). **No schema change and no migration** — every column involved already existed.
+  - **`#627`** — `listCategoriesForAdmin` ordered by `(sortOrder, name)` as a single **global**
+    ordering with no `parentId` grouping. `prisma/seed.ts` gives top-level categories no
+    `sortOrder`, so all 13 take the schema default of `0` while children get `0,1,2` **within** each
+    parent — putting every department and every first-child in one bucket sorted by name alone, so
+    an indented Household subcategory rendered directly beneath Beverages. Grouped in the
+    **repository** via a pure, exported `groupCategoryRowsByParent`, so `ProductForm`'s picker (fed
+    by the same function) is fixed by the same change rather than separately. A child whose parent
+    is missing is treated as top-level rather than dropped: an unselectable category is a worse
+    failure than an oddly-placed one.
+  - **`#630`** — the product form rendered **one flat select** over every tier. Both tiers are
+    genuinely assignable and both seed paths use them (`prisma/seed.ts` assigns hand-curated
+    products to a department, `seedGeneratedCatalogue` to subcategories), so it is now one
+    `optgroup` per department **with the department itself as the first selectable option inside
+    it**. A "pick category, then subcategory" cascade would have read more naturally and silently
+    removed direct-to-department assignment — the exact regression `#630` was filed to prevent.
+  - **`#628`** — `/staff/reports`' tiles aggregate over `REVENUE_STATUSES`, a set the URL could not
+    express: `parseStaffOrdersQuery` resolved a status to the default queue, `all`, or one single
+    status. So `?status=all` overcounted the tile and the bare queue undercounted it, and any
+    drill-down would have contradicted the number it was reached from — re-opening the credibility
+    problem `#238` already repaired once. Adds a `STATUS_REVENUE` sentinel alongside `STATUS_ALL`,
+    an **Orders by status** tier built from **one `groupBy` over the same `where` clause** the tiles
+    use (so the rows sum to Total Orders by construction, not coincidence), and a Total Orders tile
+    that links to precisely its own dataset. The orders filter gains a matching option, so arriving
+    from the tile does not show "Awaiting action" selected over a different list.
+  - **`#631`** — six Tailwind arbitrary-value literals hardcoded **Aheed's** brand primitives into
+    pages every vendor's staff open, so SriMart staff saw Aheed's green on their own store's
+    screens. `#631` named three; a panel-wide grep found six (`staff/team/page.tsx` and
+    `AssignRoleForm.tsx` carried the others). All now read `text-action`, `bg-action-tint`,
+    `bg-surface-muted` and `text-danger`, which `brandStyle()` re-declares per vendor.
+    `tests/panel-token-purity.test.ts` walks the panel from the filesystem and fails on any new
+    arbitrary hex, excluding the **generated** `runbook/docs.ts` via `build-index.ts`'s own
+    `GENERATED_ARTIFACTS` rather than a hand-written path.
+  - **`#634`** — `deliveryFeePence`, `freeDeliveryThresholdPence` and `minimumOrderPence` were
+    written by `prisma/seed.ts` and nothing else, so changing a delivery fee needed a developer with
+    database access — the same operability gap `#612` closed for delivery *areas*. They are now
+    editable on `/staff/storefront` as their own form with its own state, because these three reach
+    real money arithmetic on the checkout path (`lib/order-totals.ts`) and a silently-rejected save
+    would be indistinguishable from a successful one. `lib/delivery-rules-form.ts` accepts only
+    `^\d+(\.\d{1,2})?$` and converts by **integer arithmetic on the digit strings**, so no binary
+    float touches a money value and `2.999` is refused rather than quietly rounded to `£3.00` —
+    which is why `parsePriceInput` was not reused. Blank threshold stores SQL `NULL` (never
+    offered), deliberately distinct from `0` (every order qualifies).
+  - **Incidental:** `/staff/storefront`'s refusal branch was `return null`, so a refused user got a
+    `200` with the portal shell and an empty content area. Now renders `PanelRefusal` like every
+    other `/staff/*` page.
+  - `docs/store-admin-guide/admin-tabs-guide.md` (2.1.0) regains a delivery-rules capability
+    sentence — the **fourth** false claim `#633` removed — in the same change that makes it true.
+  - `docs/research/discovery-log.md` (1.4.0) lands via PR #632's stranded commit, with all seven
+    findings reconciled to their real state rather than left presenting closed defects as open.
+
 - **Scheduled sweep for stranded payments** (`#618`, P9.2,
   `specs/2026-09-06-stranded-payment-sweep/`), absorbing `#101` and `#94`. An order whose Stripe
   webhook never arrived was stranded in `PENDING_PAYMENT` forever, holding its inventory, its
@@ -69,6 +123,28 @@ every branch merges.
     keyword, so they track and close together with `#633` on promotion to `main`.
   - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
 
+- **`/document` (final) closeout for admin panel operability** (`#627`, `#628`, `#630`, `#631`,
+  `#634`; PR #640 merged to `staging`). Docs only — no runtime code, no schema change, nothing for
+  `prisma migrate deploy` to apply.
+  - `specs/roadmap.md` (1.78.0) gains the slice's build/merge row (PR #640) and a new P9.2
+    scope-list bullet for `#627`/`#628`/`#630`/`#631`/`#634`, absent from that list until now, plus
+    a backfilled row for **PR #637** — the `#633` promotion to `main` — whose own row was never
+    written and was found missing by `npm run sdd:audit` at this slice's `/orient`.
+  - `CLAUDE.md` (1.22.0) gains a live-testing lesson from `/validate`'s R22b: a `grep` for a retired
+    hex literal against a page's saved, rendered HTML can match even when the literal is genuinely
+    gone from every component's source, because `brandStyle()` must legitimately re-embed that exact
+    hex string as a CSS custom-property value for whichever vendor's own primitive happens to equal
+    it — confirmed here for Aheed's `#e8f5e9`/`#f5f5f0`, the same class this file already records
+    for `<1%` and unescaped `&` in rendered HTML.
+  - `#627`, `#628`, `#630`, `#631` and `#634` moved to `In Review` on Project #2; they close to
+    `Done` only on promotion to `main`.
+  - Filed **#641** (P10, non-blocking): the `hover:bg-action/20` replacement for
+    `hover:bg-[#c8e6c9]` is the one colour in `#631` that is not a 1:1 token equivalent, and its
+    render against a genuinely different vendor palette (e.g. SriMart) is still unverified — R22c
+    could not be exercised locally, since a fresh sign-in under a spoofed host is correctly refused
+    by Better Auth's `trustedOrigins` (`403 Invalid origin`, matching `#454`).
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 - **Operator documentation: runbook role delivery repaired, guides corrected, every menu item
   documented** (`#633`, P9.2, `specs/2026-09-06-operator-documentation/`), absorbing `#625` and
   `#629` and folding in `#626`. `/staff/runbook` was filtering twice against two different audience
@@ -102,6 +178,26 @@ every branch merges.
   product's own price changes — backwards from reality. `Bundle` has no price column at all; the
   price shown to a shopper is always the live sum of its products' current prices, exactly as
   `BundleForm.tsx`'s own on-page copy already said. Corrected to state that, with nothing to set.
+
+- **`/discover` pass on the Admin/Staff portal usability brief** (`docs/research/discovery-log.md`
+  1.3.0). Seven findings, each filed: the staff runbook renders **1 of its 152 articles**, because
+  `app/(admin)/staff/runbook/page.tsx` filters for `staff`/`store-admin` and
+  `components/staff/RunbookClient.tsx` then re-filters the result for `staff`/`admin`, so the
+  approved Store Admin Management Guide reaches nobody and the UI's own "Admin" tab is permanently
+  empty (`#625`); that guide also documents Stripe refunds and staff invitations, neither of which
+  exists anywhere in the code (`#629`); `PanelNav`'s staff tier omits `/staff/payments` even though
+  the page admits STAFF and the hub shows them its card, which `tests/staff-nav-parity.test.ts`
+  cannot see because it compares whole-file href sets (`#626`); `listCategoriesForAdmin` orders
+  globally by `sortOrder` with no `parentId` grouping, so departments and first-children interleave
+  by name and there is no contiguous run of children for an expand/collapse to reveal (`#627`); the
+  report tiles count `REVENUE_STATUSES` while `parseStaffOrdersQuery` can express only the default
+  queue, `all`, or one single status, so a drill-down would contradict its own totals (`#628`);
+  `ProductForm`'s single flat category select cannot express direct-to-department assignment, which
+  both seed paths actively use (`#630`); and three Tailwind arbitrary-value literals hardcode
+  Aheed's brand primitives into shared staff pages, so SriMart staff see the wrong palette
+  (`#631`). Two of the brief's six items — Brand sample data and reduced-motion support — were found
+  **already implemented** and are recorded as such rather than as findings. No runtime code, no
+  schema change.
 
 - **`/document` (final) closeout for the stranded payment sweep** (`#618`; PR #622 merged to
   `staging`, PR #623 promoted to `main`). `specs/roadmap.md` (1.76.0) gains the slice's build/merge

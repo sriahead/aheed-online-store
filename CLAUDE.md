@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.20.0"
-updated: 2026-09-06
+version: "1.22.0"
+updated: 2026-09-07
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -519,7 +519,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  102 files / 1316 tests**, measured 2026-09-06 at `#633`'s Build) and treat any shortfall as
+  105 files / 1411 tests**, measured 2026-09-06 at the admin-panel-operability Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -539,7 +539,13 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `97/1200` moved to `100/1221` at `#618`'s Build — three new files carrying eighteen tests
   plus three added to two existing files, the mixed case both halves of this rule describe at once —
   and `100/1221` moved to **`102/1316`** at `#633`'s Build: two new files carrying ninety-two tests
-  plus three added to `tests/staff-nav-parity.test.ts`. That jump is unusually large for two files
+  plus three added to `tests/staff-nav-parity.test.ts`, and `102/1316` moved to **`105/1411`**
+  at the admin-panel-operability Build (`#627`/`#628`/`#630`/`#631`/`#634`) — three new files
+  carrying ninety-one tests plus four added to `tests/staff-orders-query.test.ts`. One of those
+  new files, `tests/panel-token-purity.test.ts`, is `it.each` over panel files discovered from
+  the **filesystem**, so like `operator-doc-coverage` its count moves whenever a `.tsx`/`.ts`
+  file is added under `app/(admin)/` or `components/staff/` — with no test file touched at all.
+  That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that
   moves on a change to `app/`, with no test file touched at all. Those last three moves are the
@@ -931,6 +937,26 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   (2026-09-01, `#514`) found a dev-DB row seeded as `srimart.localhost:8787` in an earlier session,
   fixed by rewriting it port-less. Any `SEED_SRIMART_HOST`/`SEED_AHEED_HOST` value — local, staging,
   or production — must never contain a port.
+- **A `grep` for a retired hex literal against a page's SAVED, rendered HTML can match even when the
+  literal has been correctly removed from every component's own source, because `brandStyle()` must
+  legitimately re-embed that exact hex string as a CSS custom-property VALUE for whichever vendor's
+  primitive happens to equal it.** Hit at P9.2's admin-panel-operability `/validate` (2026-09-06,
+  R22b, `#631`): the retired literals `#e8f5e9`/`#f5f5f0` were removed from every `.tsx` file (proven
+  by a source-level AST/regex sweep with zero matches), yet `grep -E '#(2e7d32|e8f5e9|c8e6c9|f5f5f0)'`
+  against `/staff/inventory`'s saved HTML still matched four times — both inside the rendered
+  `style="--color-action-tint:#e8f5e9;--color-surface-muted:#f5f5f0;..."` attribute and again inside
+  the page's own RSC hydration payload carrying the identical string as JSON, because Aheed's own
+  brand-tint and cream primitives are numerically identical to the hex codes the components used to
+  hardcode. This is the same class this file already records for `<1%` and unescaped `&` in rendered
+  HTML — an absence-check against live output can false-positive on the exact mechanism proving the
+  fix works, not just false-negative on an escaped character. **A live-HTML grep for a retired colour
+  literal is only meaningful against a *second* vendor whose primitives differ from the value being
+  retired** (SriMart's `#1e88e5`/`#8e24aa`/`#c62828`, per the bullet above) — checked against the
+  vendor whose primitive happens to coincide with the old hardcoded value, it cannot distinguish "the
+  literal is gone from the page" from "the literal is still exactly what this vendor's own brand
+  colour resolves to." Confirm the real claim (no literal in component source) with the source-level
+  test instead, and treat a live-HTML hex match as inconclusive rather than a failure until checked
+  against a vendor it should NOT match.
 
 ## Workers AI (Cloudflare REST API calls) — learned the hard way
 - **`result.response` from `POST /accounts/<id>/ai/run/<model>` is NOT reliably a string — for

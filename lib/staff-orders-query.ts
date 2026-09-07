@@ -1,5 +1,6 @@
 import {
   ORDER_STATUSES,
+  REVENUE_STATUSES,
   STAFF_QUEUE_STATUSES,
   isOrderStatus,
   type OrderStatusValue,
@@ -22,6 +23,25 @@ import {
 
 /** The sentinel that widens the list to every status. Not an OrderStatus. */
 export const STATUS_ALL = "all";
+
+/**
+ * The sentinel that narrows the list to the statuses `REVENUE_STATUSES` counts
+ * (#628). Not an OrderStatus.
+ *
+ * `/staff/reports`'s Total Orders tile aggregates over `REVENUE_STATUSES`
+ * (`CONFIRMED`, `OUT_FOR_DELIVERY`, `DELIVERED`), and before this existed the
+ * URL had no way to say that: `?status=all` shows a LARGER count than the tile
+ * (it adds abandoned and cancelled orders) and bare `/staff/orders` shows a
+ * SMALLER one (the packing queue omits `DELIVERED`). Neither list is wrong, and
+ * both contradict the tile they were reached from — which is precisely the
+ * credibility problem `#238` already had to repair once.
+ *
+ * Deliberately a THIRD named selection rather than a general multi-status
+ * parser: `?status=CONFIRMED,DELIVERED` would let a URL express sets that
+ * correspond to no figure shown anywhere, which is a wider surface than the one
+ * question this needs to answer.
+ */
+export const STATUS_REVENUE = "revenue";
 
 export interface StaffOrdersQuery {
   /**
@@ -64,6 +84,9 @@ export function parseStaffOrdersQuery(input: { status?: string; q?: string }): S
   if (rawStatus === STATUS_ALL) {
     status = STATUS_ALL;
     statuses = ORDER_STATUSES;
+  } else if (rawStatus === STATUS_REVENUE) {
+    status = STATUS_REVENUE;
+    statuses = REVENUE_STATUSES;
   } else if (isOrderStatus(rawStatus)) {
     status = rawStatus;
     statuses = [rawStatus];

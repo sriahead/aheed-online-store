@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { orderStatusLabel } from "@/lib/order-status";
+import { STATUS_REVENUE } from "@/lib/staff-orders-query";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
 import { getDiscountRepository } from "@/lib/discounts-service";
@@ -27,14 +30,14 @@ export default async function ReportsPage() {
     );
   }
 
-  const [{ totalRevenuePence, totalOrders }, catalogue, loyalty, discountCodes] = await Promise.all(
-    [
+  const [{ totalRevenuePence, totalOrders }, revenueByStatus, catalogue, loyalty, discountCodes] =
+    await Promise.all([
       getOrderRepository().getFinancialsForStaff(),
+      getOrderRepository().getRevenueStatusBreakdown(),
       getCatalogueHealthForVendor(auth.vendorId),
       getLoyaltyLiabilityForVendor(auth.vendorId),
       getDiscountRepository().list(),
-    ],
-  );
+    ]);
 
   const avgBasketPence = totalOrders > 0 ? Math.round(totalRevenuePence / totalOrders) : 0;
 
@@ -59,13 +62,22 @@ export default async function ReportsPage() {
             <p className="text-4xl font-bold text-primary">{formatMoney(totalRevenuePence)}</p>
           </div>
 
-          <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+          {/* #628 — the tile links to EXACTLY the dataset it counts. Before
+              STATUS_REVENUE existed, `?status=all` overcounted (it adds
+              abandoned and cancelled orders) and bare /staff/orders
+              undercounted (the packing queue omits DELIVERED), so any link
+              here would have contradicted the number above it. */}
+          <Link
+            href={`/staff/orders?status=${STATUS_REVENUE}`}
+            className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm transition-colors hover:border-primary/30 hover:bg-surface-muted"
+          >
             <div className="flex items-center gap-2 mb-4 text-primary/60">
               <ShoppingBag className="h-4 w-4" />
               <h3 className="text-sm font-semibold uppercase tracking-wider">Total Orders</h3>
             </div>
             <p className="text-4xl font-bold text-primary">{totalOrders}</p>
-          </div>
+            <p className="mt-1 text-xs font-medium text-action">View these orders</p>
+          </Link>
 
           <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4 text-primary/60">
@@ -75,6 +87,47 @@ export default async function ReportsPage() {
             <p className="text-4xl font-bold text-primary">{formatMoney(avgBasketPence)}</p>
           </div>
         </div>
+      </section>
+
+      {/* #628 — the intermediate tier a drill-down needs. One groupBy over the
+          SAME where clause as the tiles above, so these counts sum to Total
+          Orders by construction rather than by coincidence. Each row links to
+          its single status, which ?status= already expressed correctly. */}
+      <section className="mt-8">
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary/60">
+          Orders by status
+        </h3>
+        <div className="overflow-x-auto rounded-2xl border border-black/10 bg-white">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-black/10 text-xs uppercase tracking-wider text-primary/60">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Orders</th>
+                <th className="px-4 py-3 font-semibold">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {revenueByStatus.map((row) => (
+                <tr key={row.status} className="border-b border-black/5 last:border-0">
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/staff/orders?status=${row.status}`}
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      {orderStatusLabel(row.status)}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-primary/70">{row.orderCount}</td>
+                  <td className="px-4 py-3 text-primary/70">{formatMoney(row.revenuePence)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2 text-xs text-primary/60">
+          These are the statuses counted as revenue — an order that was paid for and not given back.
+          Abandoned and cancelled orders are excluded, so these rows add up to Total Orders above.
+        </p>
       </section>
 
       {/* Non-sales reporting (P7.5d+e, #161). Sales analytics is deliberately
