@@ -1,4 +1,4 @@
-import { getJobsEnv, getPaymentEnv } from "@/lib/config";
+import { getJobsEnv, getPaymentEnv, readOptional } from "@/lib/config";
 import { timingSafeEqual } from "@/lib/stripe-webhook";
 import { getPaymentSweepService } from "@/lib/payment-sweep-service";
 
@@ -22,22 +22,15 @@ export const dynamic = "force-dynamic";
 const JOB_TOKEN_HEADER = "x-job-token";
 
 /**
+ * `readOptional` is why the two `if (!X)` checks below are reachable at all:
  * `getJobsEnv()`/`getPaymentEnv()` THROW rather than returning an empty value
- * when their field is absent and `NODE_ENV === "production"` — and `NODE_ENV`
- * is unconditionally `"production"` in every BUILT Worker this route ever
- * actually runs in (`npm run preview`, staging, production alike; `next build`
- * bakes it in regardless of the deploy target). Without this, that throw fires
- * before either `if (!X)` check below ever runs, so the exact misconfiguration
- * those checks exist to answer with a clean 503 instead crashes as an uncaught
- * `ZodError` — a bare 500. Confirmed live at `/validate` (#618).
+ * when their field is absent, so without it the exact misconfiguration those
+ * checks answer with a clean 503 would instead crash as an uncaught `ZodError`.
+ * Confirmed live at `/validate` (#618). It moved from a local helper here to
+ * `@/lib/config` in #621, which found `app/api/webhooks/stripe/route.ts`
+ * carrying the identical latent defect — see its docstring there for the full
+ * reasoning.
  */
-function readOptional<T>(read: () => T): T | undefined {
-  try {
-    return read();
-  } catch {
-    return undefined;
-  }
-}
 
 export async function POST(request: Request) {
   const JOB_INVOCATION_TOKEN = readOptional(getJobsEnv)?.JOB_INVOCATION_TOKEN;

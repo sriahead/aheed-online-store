@@ -85,3 +85,24 @@ export async function listRecentErrorEvents(prisma: ReturnType<typeof getPrisma>
     take: limit,
   });
 }
+
+/**
+ * Counts errors recorded since `since` (P9.2, #437 — the detection half).
+ *
+ * The read side of a table that, until now, was only ever written to and
+ * rendered a page at a time. `evaluateErrorRate` in `lib/error-rate.ts` turns
+ * this number into a decision; this function knows nothing about thresholds.
+ *
+ * Deliberately unscoped by vendor, matching the rest of this module: the
+ * `ErrorEvent` model carries no vendor relation at all (see `plan.md` for #508's
+ * reasoning — an unhandled request error may occur before a vendor has been
+ * resolved, so there is often no correct value to record).
+ */
+export async function countRecentErrorEvents(
+  prisma: ReturnType<typeof getPrisma>,
+  since: Date,
+): Promise<number> {
+  return prisma.errorEvent.count({
+    where: { createdAt: { gte: since } },
+  });
+}

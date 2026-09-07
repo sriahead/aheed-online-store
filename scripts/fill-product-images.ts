@@ -36,7 +36,6 @@
  * products, not for draining a catalogue.
  */
 
-import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { MAX_IMAGE_ATTEMPT_FAILURES } from "@/lib/product-image";
@@ -46,28 +45,10 @@ import {
   recordImageAttemptFailure,
   saveGeneratedProductImage,
 } from "@/lib/repositories/products";
+import { parseEnvFile } from "./lib/env-file";
 
 /** Small on purpose — see "WHY THE LIMIT IS MANDATORY IN SPIRIT" above. */
 const DEFAULT_LIMIT = 10;
-
-function parseEnvFile(path: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
-    const match = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
-    if (!match) continue;
-    const [, key, rest] = match;
-    const quote = rest[0];
-    if (quote === '"' || quote === "'") {
-      const end = rest.indexOf(quote, 1);
-      if (end > 0) {
-        out[key] = rest.slice(1, end);
-        continue;
-      }
-    }
-    out[key] = rest.split("#")[0].trim();
-  }
-  return out;
-}
 
 function hostOf(connectionString: string): string {
   try {

@@ -4,8 +4,8 @@ title: Tech Stack
 audience: [dev]
 type: doc
 status: approved
-version: "1.4.0"
-updated: 2026-08-19
+version: "1.5.0"
+updated: 2026-09-07
 visibility: internal
 summary: Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal.
 tags: [tech-stack, guardrails]
@@ -138,7 +138,14 @@ pages require final review by Aheed's solicitor.
 - **ESLint** + **Prettier** — linting and formatting; a lint rule bans raw hex/px in components and
   raw SQL / `Json` domain columns in review.
 - **Husky** git hooks via `core.hooksPath hooks` — local gate enforcement.
-- **GitHub** for source control; **GitHub Actions** CI + branch protection prepared for later.
+- **GitHub** for source control; **GitHub Actions** CI. **Branch protection is live, not "prepared
+  for later"** (that phrasing stood here until `#644`, 2026-09-07): two active repository rulesets,
+  `protect-main` and `protect-staging`, each carrying `pull_request`, `non_fast_forward`, `deletion`
+  and `required_status_checks` (requiring `docs-gates`, `quality / kms`, `quality / quality`). Both
+  still set `required_approving_review_count: 0`, so an author can self-merge — but no longer with
+  red checks, and no longer without a PR. Query rulesets with
+  `gh api repos/sriahead/aheed-online-store/rulesets`; the classic
+  `/branches/<b>/protection` endpoint returns `404` regardless and cannot see them.
 
 ## Conventions
 

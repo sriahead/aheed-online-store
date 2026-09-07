@@ -37,35 +37,7 @@ import { join } from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PLACEHOLDER_IMAGE_SUFFIX } from "@/lib/product-image";
-
-/**
- * Parse a `KEY=value` env file into a plain record.
- *
- * Hand-rolled rather than reusing `dotenv`, because these files are not all
- * dotenv-clean: this repo's own `.env` has spaces around `=` and trailing
- * `# comment`s on the same line as values, which `CLAUDE.md`'s env-format rule
- * warns has silently broken connection strings here before. Quoted values are
- * taken verbatim up to the closing quote, so a `#` inside a URL survives.
- */
-function parseEnvFile(path: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
-    const match = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
-    if (!match) continue;
-    const [, key, rest] = match;
-    const quote = rest[0];
-    if (quote === '"' || quote === "'") {
-      const end = rest.indexOf(quote, 1);
-      if (end > 0) {
-        out[key] = rest.slice(1, end);
-        continue;
-      }
-    }
-    // Unquoted: a trailing comment is whatever follows the first `#`.
-    out[key] = rest.split("#")[0].trim();
-  }
-  return out;
-}
+import { parseEnvFile } from "./lib/env-file";
 
 function hostOf(connectionString: string): string {
   try {
