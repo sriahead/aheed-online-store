@@ -47,8 +47,8 @@ export default async function OrdersPage({
 
       {items.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <Package className="mx-auto mb-3 h-8 w-8 text-primary/40" aria-hidden />
-          <p className="mb-4 text-sm text-primary/70">
+          <Package className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+          <p className="mb-4 text-sm text-primary-muted">
             You haven&apos;t placed any orders with us yet.
           </p>
           <Link
@@ -69,12 +69,12 @@ export default async function OrdersPage({
                 <div className="mb-2 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-semibold text-primary">{order.orderNumber}</p>
-                    <p className="text-xs text-primary/60">{formatOrderDate(order.createdAt)}</p>
+                    <p className="text-xs text-primary-muted">{formatOrderDate(order.createdAt)}</p>
                   </div>
                   <OrderStatusBadge status={order.status} />
                 </div>
 
-                <p className="mb-2 truncate text-sm text-primary/70">
+                <p className="mb-2 truncate text-sm text-primary-muted">
                   {order.previewItems
                     .map((item) => `${item.quantity} × ${item.productName}`)
                     .join(", ")}
@@ -83,7 +83,7 @@ export default async function OrdersPage({
                 </p>
 
                 <div className="flex justify-between text-sm">
-                  <span className="text-primary/60">
+                  <span className="text-primary-muted">
                     {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
                   </span>
                   <span className="font-bold text-primary">{formatPrice(order.totalPence)}</span>

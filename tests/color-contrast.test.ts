@@ -4,7 +4,9 @@ import {
   contrastRatio,
   darkenForHover,
   hexToOklch,
+  mutedForeground,
   oklchToHex,
+  relativeLuminance,
 } from "@/lib/color-contrast";
 
 /**
@@ -123,4 +125,46 @@ describe("darkenForHover", () => {
       expect(contrastRatio(hover, WHITE)).toBeGreaterThanOrEqual(4.5);
     },
   );
+});
+
+/**
+ * #649 — `mutedForeground` is the derive-then-clamp helper the two muted tokens
+ * are built from. These are the exact values `design-system/tokens/tokens.css`
+ * ships as platform defaults and `specs/design-system.md` tabulates, so a change
+ * to the OKLCH search or the compositing maths fails here rather than silently
+ * shipping a different palette to every page.
+ */
+describe("mutedForeground", () => {
+  const AHEED = ["#ffffff", "#f5f5f0", "#e8f5e9", "#fff3e0", "#ffebee"];
+  const SRIMART = ["#ffffff", "#eef2f8", "#e3f2fd", "#f3e5f5", "#ffebee"];
+
+  it("derives Aheed's documented platform defaults", () => {
+    expect(mutedForeground("#1b5e20", AHEED, 0.7, 4.5)).toBe("#49784e");
+    expect(mutedForeground("#1b5e20", AHEED, 0.4, 3)).toBe("#77917a");
+  });
+
+  it("derives SriMart's, proving the result tracks the primitive", () => {
+    expect(mutedForeground("#0d47a1", SRIMART, 0.7, 4.5)).toBe("#4369a7");
+    expect(mutedForeground("#0d47a1", SRIMART, 0.4, 3)).toBe("#7287aa");
+  });
+
+  it("returns a LIGHTER colour than the primitive it derives from", () => {
+    // The whole point: this is the muted companion. A regression that dragged it
+    // back to the base would flatten the text hierarchy while still passing
+    // every contrast assertion in the suite.
+    for (const [primitive, surfaces] of [
+      ["#1b5e20", AHEED],
+      ["#0d47a1", SRIMART],
+    ] as const) {
+      const muted = mutedForeground(primitive, surfaces, 0.7, 4.5);
+      expect(relativeLuminance(muted)).toBeGreaterThan(relativeLuminance(primitive));
+    }
+  });
+
+  it("clamps back up when the composite lands under the floor", () => {
+    // 0.4 over white is nowhere near 4.5:1 on its own, so asking for 4.5 must
+    // pull it back rather than hand over the raw composite.
+    const clamped = mutedForeground("#1b5e20", ["#ffffff"], 0.4, 4.5);
+    expect(contrastRatio(clamped, "#ffffff")).toBeGreaterThanOrEqual(4.5);
+  });
 });

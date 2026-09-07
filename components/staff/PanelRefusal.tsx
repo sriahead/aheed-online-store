@@ -11,7 +11,7 @@ export function PanelRefusal({ title, message }: { title: string; message: strin
   return (
     <main className="mx-auto max-w-md px-4 py-16 text-center">
       <h1 className="text-2xl font-semibold text-primary">{title}</h1>
-      <p className="mt-3 text-primary/70">{message}</p>
+      <p className="mt-3 text-primary-muted">{message}</p>
     </main>
   );
 }

@@ -4,8 +4,8 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.10.0"
-updated: 2026-08-28
+version: "1.11.0"
+updated: 2026-09-07
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
@@ -224,6 +224,28 @@ Land before P3, as independently-validatable slices:
 - **Rule of thumb (post-ADR):** if onboarding a vendor or changing its branding/locality/delivery
   area/custom domain requires editing anything **outside the database and the UI/config layer**, the
   abstraction has been violated.
+
+## Implementation note — two muted foregrounds joined the clamp list (2026-09-07, #649)
+
+**Decision 5 is unchanged.** Branding is still data delivered as CSS variables, and the
+primitive-to-semantic seam it relies on is untouched. This records only that `brandStyle()`'s
+clamped-foreground list grew from five entries to seven: `--color-primary-muted` (4.5:1, secondary
+text) and `--color-primary-subtle` (3:1, decorative `aria-hidden` graphics) now sit alongside
+`--color-primary`, `--color-action`, `--color-accent`, `--color-danger` and the two hover shades.
+
+Both are derived from the vendor's own `green-dark` primitive through `mutedForeground()` —
+composite over white at the alpha the replaced call sites used, then `clampForContrast` — so they
+are per-vendor by construction, exactly like everything else in that list. Aheed resolves to
+`#49784e`/`#77917a`, SriMart to `#4369a7`/`#7287aa`.
+
+**Why it is worth a note at all.** The 2026-08-20 amendment above settled that a semantic value
+*derived through the clamp* is how per-vendor colour is delivered, while a *raw* brand hex in the
+semantic layer stays forbidden. These two tokens are the first additions made under that settled
+rule rather than as part of establishing it, and they close a gap the rule did not anticipate: the
+clamp guaranteed the token, and **a Tailwind alpha modifier at the call site then composited the
+guaranteed value back below the floor** — 299 times, across 83 files, invisible to a test that reads
+token values. The abstraction was sound and was being bypassed one layer down.
+`tests/token-alpha-purity.test.ts` now enforces the layer boundary the ADR assumed.
 
 ## Implementation note — auth cookie scoping (slice 3c, 2026-08-09, #74)
 

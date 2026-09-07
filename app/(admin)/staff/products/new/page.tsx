@@ -41,13 +41,13 @@ export default async function NewProductPage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">New product</h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         It goes live as soon as it&apos;s visible and has stock.
       </p>
 
       {categories.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <p className="text-sm text-primary/70">
+          <p className="text-sm text-primary-muted">
             Every product belongs to a category, and this store doesn&apos;t have one yet.
           </p>
           <Link

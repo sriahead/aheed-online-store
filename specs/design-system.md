@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.10.0"
-updated: 2026-09-04
+version: "1.11.0"
+updated: 2026-09-07
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -59,6 +59,17 @@ palette revision only touches the primitive → semantic mapping, not every comp
 | `--color-brand-orange` | `#F57C00` | `--color-accent` | **`#A85400`** | CTA highlights, secondary emphasis |
 | `--color-brand-red` | `#D32F2F` | `--color-danger` | **`#C82D2D`** | Alerts; may double as a "sale" badge color |
 | `--color-brand-cream` | `#F5F5F0` | `--color-surface-muted` | = primitive | Page/section background, off-white |
+| (derived from `green-dark`) | — | `--color-primary-muted` | **`#49784E`** | Secondary/supporting **text** — clamped 4.5:1 |
+| (derived from `green-dark`) | — | `--color-primary-subtle` | **`#77917A`** | Decorative `aria-hidden` **graphics** only — clamped 3:1 |
+
+**The two muted foregrounds are DERIVED, not brand-kit values** (added 2026-09-07, #649). Each is
+`mutedForeground(primitive, surfaces, alpha, ratio)` in `lib/color-contrast.ts`: the vendor's
+`green-dark` composited over white at the alpha the old call sites used (0.7 for text, 0.4 for
+graphics), then passed through `clampForContrast` against white, cream and all three tints. That
+two-step shape — derive, then clamp — is the same one `darkenForHover` already uses, and it is why
+the replacement preserves the appearance the 263 `text-primary/70`-style sites were reaching for
+while guaranteeing the floor they missed. Both are re-declared per vendor in `brandStyle()`; a
+token declared only here renders the default palette on every real page.
 
 **Three semantic values deliberately diverge from their primitive** (P7 closeout, #251/#217). The
 primitives still carry the exact brand-kit hex and are unchanged; only the semantic layer moved, so
@@ -149,7 +160,9 @@ Spacing scale and breakpoints are **not brand-derived** — Tailwind v4's defaul
 
 To ensure compliance with WCAG AA standards (minimum 4.5:1 contrast ratio for text) and robust screen reader support across all multi-tenant brands, the following design constraints are strictly enforced:
 
-- **Opacity Minimums:** Never use opacity layers below `80%` (e.g. `text-primary/70` or `text-black/50`) for functional text or links against light backgrounds (white or `--color-surface-muted`), as they mathematically fall below the 4.5:1 contrast threshold. 
+- **NO ALPHA MODIFIER ON A THEMED FOREGROUND TOKEN — EVER, AT ANY PERCENTAGE.** Not `text-primary/80`, not `/70`, not `/60`. Use `text-primary-muted` (secondary text, clamped 4.5:1) or `text-primary-subtle` (decorative `aria-hidden` graphics only, clamped 3:1). **This rule replaced an "opacity minimums / never below 80%" rule on 2026-09-07 (#649), and the reason the old wording failed is the important part.** It named a threshold, which invited the reading that `/80` was safe — and `/80` was the row that actually mattered: for Aheed it measures **4.80:1 on white and 4.41:1 on the tints**, passing and failing depending on which surface it lands on, while SriMart passes both. A per-vendor, per-surface failure cannot be expressed as a percentage floor. More fundamentally: `brandStyle()` passes every semantic foreground through `clampForContrast`, and **an alpha modifier composites that clamped value straight back below the floor** — so the better the clamp works, the worse the modifier renders. The rule was also unenforced prose for the entire life of the project and reached **299 sites across 83 files**. It is now `tests/token-alpha-purity.test.ts`, which walks the filesystem and fails the build. Alpha modifiers in **background, border and ring** positions are out of scope and remain legal — they are surfaces and boundaries, not text (`#641` tracks one open question there). `text-black/60` and above also remain legal: `black` is not a themed token, no vendor varies it, and 5.74:1 is verified once rather than per vendor.
+- **Focus is `focus-visible:`, with a ring — never `focus:outline-none` alone.** The standard treatment is `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2`, carried by `inputClass`/`buttonClass` in `lib/form-classes.ts`. Two things it fixes (#650): `focus:` fires on mouse click as well as keyboard, and a 1px border-colour change — the previous replacement at 27 sites — fails WCAG 2.2 SC 2.4.11's indicator-area requirement **and disappears entirely in forced-colors mode**, where the user's own setting overrides author border colours and the suppressed system outline is not there to fall back on.
+- **An invalid field needs `aria-invalid` and `aria-describedby`, not just a red border.** `errorInputClass` is colour and border only; alone it satisfies neither SC 1.4.1 (Use of Colour) nor SC 3.3.1 (Error Identification). The four staff forms return both from one `fieldProps(name)` helper so a field cannot be styled invalid without being announced invalid.
 - **Button Contrast:** Primary and action buttons must use highly contrasting text colors (e.g., solid `bg-primary` or darker action variants) rather than standard brand greens, which often fail contrast requirements against white text. **Resolved at the token layer in P7 closeout (#251)** — `--color-action`, `--color-accent` and `--color-danger` now hold AA-passing values, so `bg-action` is safe with white text and this rule no longer has to be remembered per call site. `tests/design-tokens-contrast.test.ts` enforces it.
 - **Semantic Landmarks:** All top-level navigation groups must be wrapped in a `<nav aria-label="...">` landmark.
 - **Heading Hierarchy:** Component heading levels (`h1`, `h2`, `h3`) must not skip ranks in the document flow. Where a visual heading is absent but semantically required (e.g., a "Products" wrapper for `h3` product cards following a category `h1`), inject a visually hidden `<h2 className="sr-only">` to satisfy the hierarchy.
@@ -166,9 +179,29 @@ To ensure compliance with WCAG AA standards (minimum 4.5:1 contrast ratio for te
   3. **Every motion effect has a reduced-motion opt-out.** CSS effects use
      `@media (prefers-reduced-motion: reduce)`; a JS-driven timer (an auto-rotating carousel)
      checks `matchMedia` and does not start. `app/globals.css`'s `.skew-card` block and
-     `components/layout/PromoCarousel.tsx` are the respective reference implementations.
-     **No lint rule checks any of this**, and WCAG SC 2.2.2 in particular (moving content lasting
-     more than five seconds needs a pause/stop/hide mechanism) is only ever verified in a browser.
+     `components/layout/DepartmentHero.tsx` are the respective reference implementations.
+     (This line named the since-deleted promo-carousel component until 2026-09-07; it was
+     replaced by `DepartmentHero.tsx` in P8.5b and the pointer went stale in both this doc and
+     `app/globals.css` — corrected in #651. The dead name is deliberately not repeated here, so a
+     future reader grepping for it finds only real references.)
+     WCAG SC 2.2.2 in particular (moving content lasting more than five seconds needs a
+     pause/stop/hide mechanism) is only ever verified in a browser.
+  4. **A transform written as a Tailwind utility carries its own `motion-reduce:` variant**
+     (added #651). Rule 3's CSS block is **class-scoped** and reaches only the classes it names;
+     `transform` is not inherited, so `transform: none` on `.skew-card-inner` does nothing for a
+     `group-hover:scale-105` on the image inside it. That exact gap shipped on the product card and
+     survived for a full milestone — under `prefers-reduced-motion: reduce` the card correctly
+     stopped skewing and lifting, and still ran a 500ms image zoom.
+     **Do not "fix" this by widening the CSS block to a global selector.** It was considered and
+     rejected on two counts: a blanket `transition-duration` override also removes the
+     `box-shadow`/`border-color` transitions rule 3's block deliberately keeps (hover would stop
+     being perceivable at all), and a blanket `transform: none` breaks the seven **static**
+     `-translate-y-1/2` centring transforms in this repo — search icons detach from their inputs,
+     carousel controls mis-position — for reduced-motion users only. This is the same reasoning
+     behind rules 1 and 2: a rule declared where it cannot see which properties will change must
+     not be allowed to govern `all` of them.
+     `tests/motion-reduce-coverage.test.ts` enforces it — so unlike rules 1-3, **this one is
+     checked**.
 
 > **These rules predate their enforcement, and that gap cost something.** Every constraint in this
 > section was written before P6.6 — yet `components/cart/CartDrawer.tsx`, added afterwards, broke

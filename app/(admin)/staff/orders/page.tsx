@@ -67,7 +67,7 @@ export default async function StaffOrdersPage({
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Orders</h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         {query.status === "" && query.search === null
           ? "Orders awaiting action. Delivered and cancelled orders aren't shown — filter to see them."
           : "Filtered view. Clear the filters to return to the action queue."}
@@ -119,8 +119,8 @@ export default async function StaffOrdersPage({
 
       {items.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <ClipboardList className="mx-auto mb-3 h-8 w-8 text-primary/40" aria-hidden />
-          <p className="text-sm text-primary/70">No orders match this view.</p>
+          <ClipboardList className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+          <p className="text-sm text-primary-muted">No orders match this view.</p>
         </div>
       ) : (
         <>
@@ -166,7 +166,7 @@ export default async function StaffOrdersPage({
                         >
                           {order.orderNumber}
                         </Link>
-                        <p className="text-xs text-primary/60">
+                        <p className="text-xs text-primary-muted">
                           {formatOrderDate(order.createdAt)}
                         </p>
                       </div>
@@ -174,7 +174,7 @@ export default async function StaffOrdersPage({
                     <OrderStatusBadge status={order.status} />
                   </div>
 
-                  <p className="mb-2 truncate text-sm text-primary/70">
+                  <p className="mb-2 truncate text-sm text-primary-muted">
                     {order.previewItems
                       .map((item) => `${item.quantity} × ${item.productName}`)
                       .join(", ")}
@@ -183,7 +183,7 @@ export default async function StaffOrdersPage({
                   </p>
 
                   <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-primary/60">
+                    <span className="text-primary-muted">
                       {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
                     </span>
                     <span className="font-bold text-primary">{formatPrice(order.totalPence)}</span>

@@ -162,7 +162,7 @@ export function ProductImageUploader({ productId, productName }: ProductImageUpl
       )}
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-primary/70" htmlFor="imageFile">
+        <label className="mb-1 block text-xs font-medium text-primary-muted" htmlFor="imageFile">
           New image — resized to {MAX_IMAGE_EDGE_PX}px and converted to WebP before uploading
         </label>
         <input
@@ -170,12 +170,12 @@ export function ProductImageUploader({ productId, productName }: ProductImageUpl
           ref={fileRef}
           type="file"
           accept={ACCEPTED_INPUT}
-          className="w-full text-sm text-primary/80 file:mr-3 file:rounded-xl file:border-0 file:bg-surface-muted file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary"
+          className="w-full text-sm text-primary-muted file:mr-3 file:rounded-xl file:border-0 file:bg-surface-muted file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary"
         />
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-primary/70" htmlFor="imageAlt">
+        <label className="mb-1 block text-xs font-medium text-primary-muted" htmlFor="imageAlt">
           Description for screen readers — blank uses the product name
         </label>
         <input
@@ -183,7 +183,7 @@ export function ProductImageUploader({ productId, productName }: ProductImageUpl
           value={alt}
           onChange={(event) => setAlt(event.target.value)}
           placeholder={productName}
-          className="w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none"
+          className="w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:bg-white"
         />
       </div>
 
@@ -196,7 +196,7 @@ export function ProductImageUploader({ productId, productName }: ProductImageUpl
         type="button"
         onClick={upload}
         disabled={pending}
-        className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <ImageUp className="h-4 w-4" aria-hidden />
         {pending ? "Uploading…" : "Upload image"}

@@ -51,7 +51,7 @@ export default async function EditCampaignPage({
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">{category.name}</h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         Shown in the homepage hero when active. Leave inactive to fall back to the department&apos;s
         icon and real-price panel.
       </p>

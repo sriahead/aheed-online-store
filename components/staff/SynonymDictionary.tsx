@@ -26,7 +26,7 @@ import type { SearchSynonymRow } from "@/lib/repositories/search-synonyms";
 const statusStyles: Record<SearchSynonymRow["status"], string> = {
   APPROVED: "bg-action-tint text-primary",
   PENDING: "bg-accent-tint text-accent",
-  REJECTED: "bg-surface-muted text-primary/60",
+  REJECTED: "bg-surface-muted text-primary-muted",
 };
 
 function FormMessage({ error, notice }: { error: string | null; notice: string | null }) {
@@ -39,7 +39,7 @@ function FormMessage({ error, notice }: { error: string | null; notice: string |
   }
   if (notice) {
     return (
-      <p role="status" className="mt-2 text-sm text-primary/70">
+      <p role="status" className="mt-2 text-sm text-primary-muted">
         {notice}
       </p>
     );
@@ -91,7 +91,7 @@ export function ProposeSynonymsForm() {
 
   return (
     <form action={action} className="rounded-2xl border border-black/10 bg-surface-muted p-4">
-      <p className="mb-3 text-sm text-primary/70">
+      <p className="mb-3 text-sm text-primary-muted">
         Read this store&apos;s recent searches that found nothing — or found only loosely related
         products — and suggest new entries. Suggestions arrive unapproved; nothing reaches shoppers
         until you approve it.
@@ -120,7 +120,7 @@ export function SynonymRowForm({ row }: { row: SearchSynonymRow }) {
         >
           {row.status.toLowerCase()}
         </span>
-        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-primary/60">
+        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-primary-muted">
           {row.source.toLowerCase()}
         </span>
       </div>
@@ -174,7 +174,7 @@ export function SynonymRowForm({ row }: { row: SearchSynonymRow }) {
               name="intent"
               value="reject"
               disabled={pending}
-              className="rounded-full border border-black/15 px-3 py-1.5 text-sm font-semibold text-primary/70 disabled:opacity-60"
+              className="rounded-full border border-black/15 px-3 py-1.5 text-sm font-semibold text-primary-muted disabled:opacity-60"
             >
               Reject
             </button>

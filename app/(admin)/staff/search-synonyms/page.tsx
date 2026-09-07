@@ -43,7 +43,7 @@ export default async function StaffSearchSynonymsPage() {
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Search dictionary</h1>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         Words your shoppers use that your product names don&apos;t. An entry widens the search — the
         word they typed still counts, so this can only add results, never swap one product for
         another.
@@ -56,7 +56,7 @@ export default async function StaffSearchSynonymsPage() {
 
       {pending.length > 0 && (
         <section className="mb-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary/60">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
             Awaiting your approval ({pending.length})
           </h2>
           <ul className="space-y-3">
@@ -70,13 +70,13 @@ export default async function StaffSearchSynonymsPage() {
       )}
 
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary/60">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
           Dictionary ({settled.length})
         </h2>
         {settled.length === 0 ? (
           <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-            <BookA className="mx-auto mb-3 h-8 w-8 text-primary/40" aria-hidden />
-            <p className="text-sm text-primary/70">
+            <BookA className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+            <p className="text-sm text-primary-muted">
               No entries yet. Add one above, or let recent searches suggest some.
             </p>
           </div>

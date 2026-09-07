@@ -38,7 +38,7 @@ export default async function AccountOrderPage({
       <div className="mb-4 flex items-center justify-between">
         <Link
           href="/account/orders"
-          className="inline-flex items-center gap-1 text-sm text-primary/70 hover:text-primary"
+          className="inline-flex items-center gap-1 text-sm text-primary-muted hover:text-primary"
         >
           <ChevronLeft className="h-4 w-4" aria-hidden />
           All orders
@@ -58,7 +58,7 @@ export default async function AccountOrderPage({
       <div className="mb-6 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-xl font-bold text-primary">Order {order.orderNumber}</h1>
-          <p className="text-sm text-primary/70">Placed {formatOrderDate(order.createdAt)}</p>
+          <p className="text-sm text-primary-muted">Placed {formatOrderDate(order.createdAt)}</p>
         </div>
         <OrderStatusBadge status={order.status} />
       </div>

@@ -51,7 +51,7 @@ export function AddToCartButton({
         <button
           type="button"
           disabled
-          className="flex w-full items-center justify-center rounded-xl bg-surface-muted px-4 py-2 text-xs font-bold text-black/40 cursor-not-allowed"
+          className="flex w-full items-center justify-center rounded-xl bg-surface-muted px-4 py-2 text-xs font-bold text-black/60 cursor-not-allowed"
         >
           Out of stock
         </button>
@@ -83,7 +83,7 @@ export function AddToCartButton({
           type="button"
           onClick={onClickAdd}
           disabled={pending}
-          className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl bg-primary text-white text-xs font-bold transition hover:bg-primary/90 active:scale-95 shadow-sm"
+          className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl bg-primary text-white text-xs font-bold transition hover:bg-primary/90 active:scale-95 motion-reduce:active:scale-100 shadow-sm"
         >
           <Icon className={`w-3.5 h-3.5 ${pending ? "animate-spin" : ""}`} />
           {added ? "Added" : "Add"}
@@ -99,7 +99,7 @@ export function AddToCartButton({
         onClick={onClickAdd}
         disabled={disabled || pending}
         aria-label={disabled ? "Out of stock" : label}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Icon className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} aria-hidden />
         <span>{disabled ? "Out of stock" : added ? "Added" : label}</span>
@@ -113,7 +113,7 @@ export function AddToCartButton({
       onClick={onClickAdd}
       disabled={disabled || pending}
       aria-label={disabled ? "Out of stock" : label}
-      className="flex items-center justify-center rounded-full bg-primary p-2 text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+      className="flex items-center justify-center rounded-full bg-primary p-2 text-white transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-40"
     >
       <Icon className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} aria-hidden />
     </button>

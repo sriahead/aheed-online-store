@@ -46,9 +46,9 @@ export function ShopYourList() {
           name="list"
           rows={8}
           placeholder={PLACEHOLDER}
-          className="w-full rounded-2xl border border-black/10 bg-white p-3 text-sm text-primary placeholder:text-primary/30 focus:border-primary focus:outline-none"
+          className="w-full rounded-2xl border border-black/10 bg-white p-3 text-sm text-primary placeholder:text-primary-muted focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
         />
-        <p className="text-xs text-primary/60">
+        <p className="text-xs text-primary-muted">
           Quantities are understood — <span className="font-semibold">2x apples</span>,{" "}
           <span className="font-semibold">3 apples</span> or{" "}
           <span className="font-semibold">apples x3</span>. Up to {MAX_LIST_LINES} lines.
@@ -79,7 +79,7 @@ export function ShopYourList() {
                 className="rounded-2xl border border-black/10 bg-white p-3"
               >
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="truncate text-xs font-semibold text-primary/70">
+                  <span className="truncate text-xs font-semibold text-primary-muted">
                     {line.original}
                   </span>
                   <span className="shrink-0 text-[11px] font-bold text-primary">
@@ -94,7 +94,7 @@ export function ShopYourList() {
                         <p className="text-sm font-bold text-primary">
                           {line.resolution.product.name}
                         </p>
-                        <p className="text-[11px] text-primary/60">
+                        <p className="text-[11px] text-primary-muted">
                           {formatPrice(line.resolution.product.basePrice)} ·{" "}
                           {line.resolution.product.unitLabel}
                         </p>
@@ -155,7 +155,7 @@ export function ShopYourList() {
                 )}
 
                 {line.resolution.kind === "unmatched" && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-primary/50">
+                  <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-primary-muted">
                     <CircleAlert className="h-4 w-4" aria-hidden />
                     No match in this shop — check the spelling or search for it
                   </p>

@@ -46,7 +46,7 @@ export function MergePrompt({
       <h2 id="merge-prompt-heading" className="text-sm font-bold text-primary">
         You have two carts
       </h2>
-      <p className="mt-1 text-xs text-primary/70">
+      <p className="mt-1 text-xs text-primary-muted">
         Your account has a saved cart with{" "}
         <strong className="font-semibold">
           {savedItemCount} item{savedItemCount === 1 ? "" : "s"}
@@ -77,7 +77,7 @@ export function MergePrompt({
             >
               <span className="text-xs font-bold">{option.title}</span>
               <span
-                className={`text-[11px] ${option.primary ? "text-white/80" : "text-primary/60"}`}
+                className={`text-[11px] ${option.primary ? "text-white/80" : "text-primary-muted"}`}
               >
                 {option.detail}
               </span>

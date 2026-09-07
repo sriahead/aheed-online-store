@@ -42,6 +42,29 @@
   --color-action-hover: #276a2b;
   --color-accent-hover: #8f4700;
 
+  /*
+   * Muted foregrounds — the audited platform default, overridden per vendor by
+   * brandStyle() (lib/vendor-theme.ts) exactly like the semantic colours above.
+   *
+   * These replace 263 `text-primary/70`-style ALPHA MODIFIERS, which were the
+   * single largest accessibility defect in the repo. An alpha modifier is
+   * applied by the browser at paint time, so it composites an already-clamped
+   * token back BELOW the contrast floor — and tests/design-tokens-contrast.test.ts
+   * reads token VALUES, so it can never see that happen. Aheed's own
+   * `text-primary/70` measured 3.54:1 against its tints. Both values below are
+   * `mutedForeground(primitive, surfaces, alpha, ratio)` — the primitive
+   * composited over white at the old alpha, then clamped back to the floor, so
+   * the appearance the old sites were reaching for survives and the guarantee
+   * holds.
+   *
+   * Never re-introduce an alpha modifier on a themed foreground token; use these.
+   * tests/token-alpha-purity.test.ts fails the build if one comes back.
+   */
+  /* secondary/supporting TEXT — clamped to 4.5:1 (WCAG AA, normal text) */
+  --color-primary-muted: #49784e;
+  /* decorative aria-hidden GRAPHICS only — clamped to 3:1 (WCAG SC 1.4.11) */
+  --color-primary-subtle: #77917a;
+
   /* tint primitives — exact brand-kit hex, light backgrounds for badges/banners */
   --color-brand-green-tint: #e8f5e9;
   --color-brand-orange-tint: #fff3e0;

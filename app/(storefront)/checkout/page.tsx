@@ -75,7 +75,7 @@ export default async function CheckoutPage() {
           <ul className="mb-3 space-y-2">
             {summary.lines.map((line) => (
               <li key={line.productId} className="flex justify-between gap-3 text-xs">
-                <span className="min-w-0 truncate text-primary/70">
+                <span className="min-w-0 truncate text-primary-muted">
                   {line.quantity} × {line.name}
                 </span>
                 <span className="shrink-0 font-medium text-primary">
@@ -86,11 +86,11 @@ export default async function CheckoutPage() {
           </ul>
           <dl className="space-y-1.5 border-t border-black/10 pt-3 text-xs">
             <div className="flex justify-between">
-              <dt className="text-primary/70">Subtotal</dt>
+              <dt className="text-primary-muted">Subtotal</dt>
               <dd className="font-medium text-primary">{formatPrice(totals.subtotalPence)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-primary/70">Delivery</dt>
+              <dt className="text-primary-muted">Delivery</dt>
               <dd className="font-medium text-primary">
                 {totals.deliveryFeePence === 0 ? "FREE" : formatPrice(totals.deliveryFeePence)}
               </dd>

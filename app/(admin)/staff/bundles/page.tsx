@@ -46,15 +46,15 @@ export default async function StaffBundlesPage() {
           New bundle
         </Link>
       </div>
-      <p className="mb-6 text-sm text-primary/60">
+      <p className="mb-6 text-sm text-primary-muted">
         A named group of products shoppers can add in one tap. The price is added up from the
         products&apos; live prices, so there is nothing to keep in step by hand.
       </p>
 
       {bundles.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <Package className="mx-auto mb-3 h-8 w-8 text-primary/40" aria-hidden />
-          <p className="text-sm text-primary/70">
+          <Package className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+          <p className="text-sm text-primary-muted">
             No bundles yet. Create one to merchandise a set of products together.
           </p>
         </div>
@@ -70,7 +70,7 @@ export default async function StaffBundlesPage() {
                   >
                     {bundle.name}
                   </Link>
-                  <p className="text-xs text-primary/60">
+                  <p className="text-xs text-primary-muted">
                     {bundle.itemCount} {bundle.itemCount === 1 ? "product" : "products"}
                   </p>
                 </div>
@@ -78,7 +78,7 @@ export default async function StaffBundlesPage() {
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
                     bundle.isActive
                       ? "bg-action-tint text-primary"
-                      : "bg-surface-muted text-primary/60"
+                      : "bg-surface-muted text-primary-muted"
                   }`}
                 >
                   {bundle.isActive ? "Live" : "Hidden"}

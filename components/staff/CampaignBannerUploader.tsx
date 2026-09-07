@@ -166,7 +166,7 @@ export function CampaignBannerUploader({
           value={altText}
           onChange={(event) => setAltText(event.target.value)}
           placeholder="e.g. Fresh halal lamb cuts on a butcher's counter"
-          className="rounded-lg border border-black/15 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          className="rounded-lg border border-black/15 bg-white px-3 py-2 text-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
         />
 
         <label htmlFor="banner-upload" className="mt-2 text-sm font-bold text-black/60">

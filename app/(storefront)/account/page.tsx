@@ -24,7 +24,7 @@ export default async function AccountPage() {
   const { loyaltyEnabled } = await getLoyaltyRepository().config();
 
   return (
-    <main className="mx-auto max-w-sm">
+    <main className="mx-auto max-w-sm px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold text-primary">Your account</h1>
       <div className="mb-6 rounded-md border border-black/10 bg-surface-muted p-5">
         <p>
@@ -42,7 +42,7 @@ export default async function AccountPage() {
         className="mb-3 flex items-center justify-between rounded-md border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
       >
         <span className="font-semibold text-primary">Your orders</span>
-        <ChevronRight className="h-5 w-5 text-primary/50" aria-hidden />
+        <ChevronRight className="h-5 w-5 text-primary-subtle" aria-hidden />
       </Link>
       {/* Only where this vendor actually runs a scheme — /account/loyalty 404s
           otherwise, and a link to a 404 is worse than no link (P5a, #135). */}
@@ -52,7 +52,7 @@ export default async function AccountPage() {
           className="mb-3 flex items-center justify-between rounded-md border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
         >
           <span className="font-semibold text-primary">Loyalty points</span>
-          <ChevronRight className="h-5 w-5 text-primary/50" aria-hidden />
+          <ChevronRight className="h-5 w-5 text-primary-subtle" aria-hidden />
         </Link>
       )}
 
@@ -63,7 +63,7 @@ export default async function AccountPage() {
         className="mb-6 flex items-center justify-between rounded-md border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
       >
         <span className="font-semibold text-primary">Your data</span>
-        <ChevronRight className="h-5 w-5 text-primary/50" aria-hidden />
+        <ChevronRight className="h-5 w-5 text-primary-subtle" aria-hidden />
       </Link>
 
       <LogoutButton />

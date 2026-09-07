@@ -39,7 +39,7 @@ export function SearchSuggestionsNotice({
   return (
     <div
       role="status"
-      className="mb-6 rounded-xl bg-surface-muted px-4 py-4 text-sm text-primary/80"
+      className="mb-6 rounded-xl bg-surface-muted px-4 py-4 text-sm text-primary-muted"
     >
       <p className="mb-3">
         These are loosely related — nothing matched that name exactly.
@@ -52,7 +52,7 @@ export function SearchSuggestionsNotice({
             <li key={option}>
               <Link
                 href={`/search?q=${encodeURIComponent(option)}`}
-                className="inline-block rounded-full bg-white px-3 py-1 font-medium text-action underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+                className="inline-block rounded-full bg-white px-3 py-1 font-medium text-action underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
               >
                 {option}
               </Link>
@@ -67,7 +67,7 @@ export function SearchSuggestionsNotice({
             <li key={category.id}>
               <Link
                 href={`/categories/${category.slug}`}
-                className="inline-block rounded-full bg-white px-3 py-1 font-medium text-action underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+                className="inline-block rounded-full bg-white px-3 py-1 font-medium text-action underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
               >
                 {category.name}
               </Link>

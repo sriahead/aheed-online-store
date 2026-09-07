@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import type { BrandPrimitives } from "@/lib/repositories/vendor";
-import { clampForContrast, darkenForHover } from "@/lib/color-contrast";
+import { clampForContrast, darkenForHover, mutedForeground } from "@/lib/color-contrast";
 
 /**
  * The per-vendor brand CSS custom properties (ADR-004 decision 5).
@@ -95,6 +95,9 @@ import { clampForContrast, darkenForHover } from "@/lib/color-contrast";
 /** WCAG 2.2 AA for normal text. */
 const AA_NORMAL = 4.5;
 
+/** WCAG 2.2 SC 1.4.11 — non-text contrast, for decorative/UI graphics. */
+const AA_NON_TEXT = 3;
+
 const WHITE = "#ffffff";
 
 export function brandStyle(primitives: BrandPrimitives): CSSProperties {
@@ -138,6 +141,16 @@ export function brandStyle(primitives: BrandPrimitives): CSSProperties {
     "--color-danger": danger,
     "--color-action-hover": darkenForHover(action, surfaces, AA_NORMAL),
     "--color-accent-hover": darkenForHover(accent, surfaces, AA_NORMAL),
+    // Muted foregrounds — same clamp discipline as the four above, and they are
+    // here for the same reason everything else is: a token declared only in
+    // tokens.css renders the DEFAULT palette on every real page, because this
+    // function's return value is an inline style that outranks a `:root` rule.
+    // Clamped against `primarySurfaces` (white, cream and all three tints)
+    // rather than `surfaces`, because muted body copy renders on tint panels
+    // too — the trust strip's `bg-action-tint` is the case that made
+    // `text-primary/80` fail for Aheed at 4.41:1 while passing on white.
+    "--color-primary-muted": mutedForeground(p["green-dark"], primarySurfaces, 0.7, AA_NORMAL),
+    "--color-primary-subtle": mutedForeground(p["green-dark"], primarySurfaces, 0.4, AA_NON_TEXT),
     // semantic BACKGROUNDS — plain per-vendor aliases, deliberately unclamped
     "--color-surface-muted": p.cream,
     "--color-action-tint": p["green-tint"],

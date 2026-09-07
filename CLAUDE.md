@@ -546,7 +546,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  107 files / 1431 tests**, measured 2026-09-07 at the P9.2 non-operational-gaps Build) and treat any shortfall as
+  109 files / 1456 tests**, measured 2026-09-07 at the storefront-accessibility-remediation Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -581,6 +581,16 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   can move DOWN as well as up, and a suite that fails because you registered a new job is a test
   asserting arithmetic it did not mean to assert** — fix the test's shape rather than bumping its
   constant.
+  Then `107/1431` moved to **`109/1456`** at the storefront-accessibility-remediation Build
+  (`#649`/`#650`/`#651`/`#652`): two new files (`tests/token-alpha-purity.test.ts`,
+  `tests/motion-reduce-coverage.test.ts`) carrying six tests, and **nineteen** more spread across
+  three existing files — which is the largest existing-file contribution recorded here and is worth
+  understanding rather than just counting. Only four of the nineteen were hand-written; the rest came
+  from `it.each` tables growing: `tests/design-tokens-contrast.test.ts` gained ten because five
+  colour pairs were added to `PAIRS` and five to a new `NON_TEXT_PAIRS`, and
+  `tests/vendor-theme.test.ts` gained five because two of its three new tests are `it.each` over
+  both seeded vendors. **A single new row in a `PAIRS`-style table is a new test**, so a slice that
+  adds no test file and writes only a handful of `it` blocks can still move this number by twenty.
   That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that

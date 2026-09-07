@@ -204,7 +204,7 @@ export async function Header({
                 </div>
                 <div>
                   <div className="flex items-baseline gap-1">
-                    <span className="font-bold text-xl text-primary tracking-tight group-hover:text-primary/80 transition-colors">
+                    <span className="font-bold text-xl text-primary tracking-tight group-hover:text-primary-muted transition-colors">
                       {name.split(" ")[0]}
                     </span>
                     <span className="font-semibold text-xs text-accent uppercase tracking-wider">
@@ -215,7 +215,7 @@ export async function Header({
                       "Reading Groceries" under SriMart's wordmark. Only shown
                       in the logo fallback (a vendor with no logoStorageKey), so
                       it was easy to miss — the locality alone names no trade. */}
-                  <p className="text-[10px] text-black/50 font-medium tracking-wide uppercase">
+                  <p className="text-[10px] text-black/60 font-medium tracking-wide uppercase">
                     {localityName}
                   </p>
                 </div>

@@ -3,6 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { MapPin, ShieldCheck, Sparkles, Tag, User } from "lucide-react";
 import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-order";
+import { inputClass, labelClass } from "@/lib/form-classes";
 
 /**
  * Checkout form (P3b, #96), following docs/ui-ref/CheckoutModal.tsx's structure —
@@ -18,10 +19,6 @@ import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-
  */
 
 const initialState: CheckoutState = { error: null };
-
-const inputClass =
-  "w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none";
-const labelClass = "mb-1 block text-xs font-medium text-primary/70";
 
 export function CheckoutForm({
   signedInEmail,
@@ -164,7 +161,7 @@ export function CheckoutForm({
             <Sparkles className="h-4 w-4" aria-hidden />
             3. Loyalty points
           </h2>
-          <p className="text-xs text-primary/70">
+          <p className="text-xs text-primary-muted">
             You have <strong className="text-primary">{redeemable.balancePoints} points</strong>{" "}
             worth {redeemable.valueLabel}. Spend as many as you like — we&apos;ll cap it at what
             this order can take.
@@ -218,7 +215,7 @@ export function CheckoutForm({
       <button
         type="submit"
         disabled={pending}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <ShieldCheck className="h-4 w-4" aria-hidden />
         {pending ? "Placing order…" : "Place order"}

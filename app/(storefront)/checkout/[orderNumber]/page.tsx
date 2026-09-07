@@ -65,7 +65,7 @@ export default async function OrderConfirmationPage({
             {order.status === "CANCELLED" && "This order was not completed"}
             {!["CONFIRMED", "PENDING_PAYMENT", "CANCELLED"].includes(order.status) && "Your order"}
           </h1>
-          <p className="text-sm text-primary/70">
+          <p className="text-sm text-primary-muted">
             Order <span className="font-semibold text-primary">{order.orderNumber}</span>
           </p>
         </div>

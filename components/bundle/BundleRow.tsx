@@ -38,7 +38,7 @@ export function BundleRow({ title, bundles, cdnBaseUrl, viewAllLink }: BundleRow
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-primary">{title}</h2>
-          <p className="mt-0.5 text-sm text-primary/70">
+          <p className="mt-0.5 text-sm text-primary-muted">
             Curated sets, added to your basket in a single tap.
           </p>
         </div>

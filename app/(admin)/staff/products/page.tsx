@@ -65,7 +65,7 @@ export default async function StaffProductsPage({
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="mb-1 text-2xl font-semibold text-primary">Products</h1>
-          <p className="text-sm text-primary/60">
+          <p className="text-sm text-primary-muted">
             Everything this store sells, including items hidden from shoppers.
           </p>
         </div>
@@ -119,8 +119,8 @@ export default async function StaffProductsPage({
 
       {items.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <Package className="mx-auto mb-3 h-8 w-8 text-primary/40" aria-hidden />
-          <p className="text-sm text-primary/70">
+          <Package className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+          <p className="text-sm text-primary-muted">
             {isFiltered
               ? "No products match this view. Clear the filters to see the whole catalogue."
               : "No products yet. Create a category first, then add your first product."}
@@ -140,7 +140,7 @@ export default async function StaffProductsPage({
                       {product.name}
                     </Link>
                     {!product.isActive && (
-                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary/60">
+                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-muted">
                         Hidden
                       </span>
                     )}
@@ -155,13 +155,13 @@ export default async function StaffProductsPage({
                       </span>
                     )}
                   </p>
-                  <p className="mt-0.5 truncate text-xs text-primary/60">
+                  <p className="mt-0.5 truncate text-xs text-primary-muted">
                     {product.categoryName} · {product.slug}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="font-bold text-primary">{formatPrice(product.basePrice)}</p>
-                  <p className="text-xs text-primary/60">{product.quantity} in stock</p>
+                  <p className="text-xs text-primary-muted">{product.quantity} in stock</p>
                 </div>
               </div>
             </li>

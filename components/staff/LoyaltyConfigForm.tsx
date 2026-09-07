@@ -10,6 +10,7 @@ import {
 } from "@/features/admin/loyalty-config";
 import type { LoyaltyConfig } from "@/lib/repositories/loyalty";
 import type { LoyaltyTier } from "@/lib/loyalty";
+import { inputClass, labelClass } from "@/lib/form-classes";
 
 /**
  * Loyalty config form (P5a, #135), following docs/ui-ref/StaffAdminPanel.tsx's
@@ -31,10 +32,6 @@ import type { LoyaltyTier } from "@/lib/loyalty";
  */
 
 const initialState: LoyaltyConfigState = { error: null, saved: false };
-
-const inputClass =
-  "w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none";
-const labelClass = "mb-1 block text-xs font-medium text-primary/70";
 
 export function LoyaltyConfigForm({
   config,
@@ -79,7 +76,7 @@ export function LoyaltyConfigForm({
               Run a loyalty scheme at this store
             </span>
           </label>
-          <p className="text-xs text-primary/60">
+          <p className="text-xs text-primary-muted">
             Turning this off hides points from checkout and the account area. Existing balances are
             kept, not deleted.
           </p>
@@ -117,7 +114,7 @@ export function LoyaltyConfigForm({
               />
             </div>
           </div>
-          <p className="text-xs text-primary/60">
+          <p className="text-xs text-primary-muted">
             Points are earned on the goods total only — never on delivery, and never on the part of
             an order paid for with points.
           </p>
@@ -175,7 +172,7 @@ export function LoyaltyConfigForm({
           </div>
 
           {tiers.length === 0 ? (
-            <p className="text-xs text-primary/60">
+            <p className="text-xs text-primary-muted">
               No tiers configured for this store. Every order earns at the base rate.
             </p>
           ) : (
@@ -188,7 +185,8 @@ export function LoyaltyConfigForm({
                   <input type="hidden" name="tierKey" value={tier.key} />
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-primary">
-                      {tier.name} <span className="font-normal text-primary/50">({tier.key})</span>
+                      {tier.name}{" "}
+                      <span className="font-normal text-primary-muted">({tier.key})</span>
                     </p>
                     {/* Bound to the delete form by id, NOT by nesting — this button
                       is a DOM descendant of the config form above. Its own
@@ -244,7 +242,7 @@ export function LoyaltyConfigForm({
         <button
           type="submit"
           disabled={pending}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Save className="h-4 w-4" aria-hidden />
           {pending ? "Saving…" : "Save loyalty settings"}
@@ -355,7 +353,7 @@ export function LoyaltyConfigForm({
           </div>
         </div>
 
-        <p className="text-xs text-primary/60">
+        <p className="text-xs text-primary-muted">
           The key is permanent — it is stamped onto every order that earns at this tier, so the
           history stays readable even after the tier changes or is removed.
         </p>
@@ -363,7 +361,7 @@ export function LoyaltyConfigForm({
         <button
           type="submit"
           disabled={creating}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-action px-4 py-3 text-sm font-bold text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-action px-4 py-3 text-sm font-bold text-white transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Plus className="h-4 w-4" aria-hidden />
           {creating ? "Adding…" : "Add tier"}

@@ -8,6 +8,7 @@ import { initialCampaignFormState } from "@/lib/campaign-form";
 import { formatLocalInput } from "@/lib/local-datetime";
 import { CampaignBannerUploader } from "@/components/staff/CampaignBannerUploader";
 import type { CampaignRow } from "@/lib/repositories/campaigns";
+import { errorInputClass, inputClass, labelClass } from "@/lib/form-classes";
 
 /**
  * Department campaign edit form (P8.5e, #356) — modelled on
@@ -20,11 +21,6 @@ import type { CampaignRow } from "@/lib/repositories/campaigns";
  * campaign has no separate "new" URL — every top-level department always has
  * exactly one editable slot).
  */
-
-const inputClass =
-  "w-full rounded-xl border border-black/15 bg-surface-muted px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none";
-const labelClass = "mb-1 block text-xs font-medium text-primary/70";
-const errorInputClass = "border-danger bg-danger-tint";
 
 export function CampaignForm({
   categoryId,
@@ -39,8 +35,23 @@ export function CampaignForm({
 }) {
   const [state, action, saving] = useActionState(saveCampaign, initialCampaignFormState);
 
-  const fieldClass = (name: string) =>
-    `${inputClass} ${state.field === name ? errorInputClass : ""}`;
+  /**
+   * #650 — the className AND the ARIA pair, from one call, so a field cannot be
+   * styled as invalid without also being announced as invalid. `errorInputClass`
+   * is a border and a background tint: on its own it tells a sighted mouse user
+   * which field is wrong and a screen-reader user nothing at all (WCAG SC 1.4.1
+   * Use of Colour, SC 3.3.1 Error Identification). Returning both together is why
+   * this is `fieldProps` rather than the old `fieldClass` — a future field added
+   * to this form gets the association by construction instead of by remembering.
+   */
+  const fieldProps = (name: string) => {
+    const invalid = state.field === name;
+    return {
+      className: `${inputClass} ${invalid ? errorInputClass : ""}`,
+      "aria-invalid": invalid || undefined,
+      "aria-describedby": invalid ? "campaign-form-error" : undefined,
+    };
+  };
 
   return (
     <div className="space-y-6">
@@ -50,6 +61,7 @@ export function CampaignForm({
         {state.error && (
           <p
             role="alert"
+            id="campaign-form-error"
             className="rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger"
           >
             {state.error}
@@ -75,7 +87,7 @@ export function CampaignForm({
               required
               placeholder={categoryName}
               defaultValue={campaign?.headline ?? ""}
-              className={fieldClass("headline")}
+              {...fieldProps("headline")}
             />
           </div>
 
@@ -87,7 +99,7 @@ export function CampaignForm({
               id="subtitle"
               name="subtitle"
               defaultValue={campaign?.subtitle ?? ""}
-              className={fieldClass("subtitle")}
+              {...fieldProps("subtitle")}
             />
           </div>
 
@@ -100,7 +112,7 @@ export function CampaignForm({
               name="linkUrl"
               placeholder={`/categories/...`}
               defaultValue={campaign?.linkUrl ?? ""}
-              className={fieldClass("linkUrl")}
+              {...fieldProps("linkUrl")}
             />
           </div>
 
@@ -114,7 +126,7 @@ export function CampaignForm({
                 name="startsAt"
                 type="datetime-local"
                 defaultValue={formatLocalInput(campaign?.startsAt ?? null)}
-                className={fieldClass("startsAt")}
+                {...fieldProps("startsAt")}
               />
             </div>
             <div>
@@ -126,7 +138,7 @@ export function CampaignForm({
                 name="endsAt"
                 type="datetime-local"
                 defaultValue={formatLocalInput(campaign?.endsAt ?? null)}
-                className={fieldClass("endsAt")}
+                {...fieldProps("endsAt")}
               />
             </div>
           </div>
@@ -146,14 +158,14 @@ export function CampaignForm({
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Save className="h-4 w-4" aria-hidden />
             {saving ? "Saving…" : campaign ? "Save changes" : "Create campaign"}
           </button>
           <Link
             href="/staff/promotions"
-            className="text-sm font-semibold text-primary/70 hover:underline"
+            className="text-sm font-semibold text-primary-muted hover:underline"
           >
             Back to campaigns
           </Link>

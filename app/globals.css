@@ -90,11 +90,27 @@ body {
 }
 
 /*
- * The repo's FIRST CSS reduced-motion block. PromoCarousel.tsx handles the
+ * The repo's FIRST CSS reduced-motion block. DepartmentHero.tsx handles the
  * preference in JS (matchMedia) because it governs an auto-rotating timer;
  * this one governs a purely CSS effect, so it belongs here. Both the skew and
  * the hover lift are removed — the card keeps its hover shadow and border, so
  * hover is still perceivable without motion.
+ *
+ * THIS BLOCK IS CLASS-SCOPED, AND THAT IS A REAL LIMIT, NOT AN OVERSIGHT (#651).
+ * It can only reach the `.skew-card*` classes named below. A transform written
+ * as a Tailwind utility — `group-hover:scale-105` on the card's own image, or
+ * `active:scale-95` on a submit button — is NOT in that family, and `transform`
+ * is not an inherited property, so `transform: none` here does nothing for a
+ * descendant carrying its own. Those 24 sites use the `motion-reduce:` variant
+ * at the call site instead, pinned by tests/motion-reduce-coverage.test.ts.
+ *
+ * WIDENING THIS TO A GLOBAL SELECTOR WAS CONSIDERED AND REJECTED. Two reasons,
+ * both load-bearing: a blanket `transition-duration: 0.01ms` would also remove
+ * the box-shadow and border-color transitions this block deliberately KEEPS
+ * (that is what "hover is still perceivable" above depends on); and any blanket
+ * `transform: none` would break the seven STATIC `-translate-y-1/2` centring
+ * transforms in this repo — search icons would detach from their inputs and the
+ * carousel controls would mis-position, for reduced-motion users only.
  */
 @media (prefers-reduced-motion: reduce) {
   .skew-card,

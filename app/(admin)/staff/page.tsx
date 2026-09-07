@@ -66,7 +66,7 @@ export default async function StaffHomePage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Store admin</h1>
-      <p className="mb-6 text-sm text-primary/80">
+      <p className="mb-6 text-sm text-primary-muted">
         {awaitingAction === 0
           ? "No orders are awaiting action."
           : `${awaitingAction} ${awaitingAction === 1 ? "order is" : "orders are"} awaiting action.`}
@@ -79,7 +79,7 @@ export default async function StaffHomePage() {
         >
           <Layers className="mb-3 h-6 w-6 text-action" aria-hidden />
           <p className="font-semibold text-primary">Live Inventory & Availability</p>
-          <p className="mt-1 text-sm text-primary/80">
+          <p className="mt-1 text-sm text-primary-muted">
             Quickly adjust stock levels and toggle product availability.
           </p>
         </Link>
@@ -90,7 +90,7 @@ export default async function StaffHomePage() {
         >
           <ClipboardList className="mb-3 h-6 w-6 text-action" aria-hidden />
           <p className="font-semibold text-primary">Orders</p>
-          <p className="mt-1 text-sm text-primary/80">
+          <p className="mt-1 text-sm text-primary-muted">
             Work the queue, search past orders, and open one for its full history.
           </p>
         </Link>
@@ -101,7 +101,7 @@ export default async function StaffHomePage() {
         >
           <ShieldAlert className="mb-3 h-6 w-6 text-action" aria-hidden />
           <p className="font-semibold text-primary">Payment Issues</p>
-          <p className="mt-1 text-sm text-primary/80">
+          <p className="mt-1 text-sm text-primary-muted">
             Payment events that were refused, and the orders they may have left stranded.
           </p>
         </Link>
@@ -112,7 +112,7 @@ export default async function StaffHomePage() {
         >
           <BookOpen className="mb-3 h-6 w-6 text-action" aria-hidden />
           <p className="font-semibold text-primary">Internal Operational Runbook</p>
-          <p className="mt-1 text-sm text-primary/80">
+          <p className="mt-1 text-sm text-primary-muted">
             Zero-trust guide to store operations and procedures.
           </p>
         </Link>
@@ -125,7 +125,7 @@ export default async function StaffHomePage() {
             >
               <Package className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Products</p>
-              <p className="mt-1 text-sm text-primary/80">
+              <p className="mt-1 text-sm text-primary-muted">
                 Add products, correct prices, and set what&apos;s in stock.
               </p>
             </Link>
@@ -136,7 +136,7 @@ export default async function StaffHomePage() {
             >
               <FolderTree className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Categories</p>
-              <p className="mt-1 text-sm text-primary/80">
+              <p className="mt-1 text-sm text-primary-muted">
                 The departments shoppers browse by, and how they&apos;re ordered.
               </p>
             </Link>
@@ -147,7 +147,7 @@ export default async function StaffHomePage() {
             >
               <Tag className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Brands</p>
-              <p className="mt-1 text-sm text-primary/80">
+              <p className="mt-1 text-sm text-primary-muted">
                 The brands shoppers can filter by, and which products carry them.
               </p>
             </Link>
@@ -158,7 +158,7 @@ export default async function StaffHomePage() {
             >
               <Megaphone className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Promotions</p>
-              <p className="mt-1 text-sm text-primary/80">
+              <p className="mt-1 text-sm text-primary-muted">
                 Department campaigns and the banners that front them.
               </p>
             </Link>
@@ -169,7 +169,7 @@ export default async function StaffHomePage() {
             >
               <Boxes className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Bundles</p>
-              <p className="mt-1 text-sm text-primary/80">
+              <p className="mt-1 text-sm text-primary-muted">
                 Multi-product deals, their pricing and what they contain.
               </p>
             </Link>
@@ -180,7 +180,7 @@ export default async function StaffHomePage() {
             >
               <Store className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Storefront</p>
-              <p className="mt-1 text-sm text-primary/80">
+              <p className="mt-1 text-sm text-primary-muted">
                 This store&apos;s branding, logo and shopfront configuration.
               </p>
             </Link>
@@ -191,7 +191,7 @@ export default async function StaffHomePage() {
             >
               <Truck className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Delivery areas</p>
-              <p className="mt-1 text-sm text-primary/80">
+              <p className="mt-1 text-sm text-primary-muted">
                 The postcode areas this store delivers to. A customer outside them cannot check out.
               </p>
             </Link>
@@ -202,7 +202,7 @@ export default async function StaffHomePage() {
             >
               <Sparkles className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Loyalty</p>
-              <p className="mt-1 text-sm text-primary/80">
+              <p className="mt-1 text-sm text-primary-muted">
                 Earn and redemption rates, tier thresholds and multipliers.
               </p>
             </Link>
@@ -213,7 +213,7 @@ export default async function StaffHomePage() {
             >
               <TicketPercent className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Discount codes</p>
-              <p className="mt-1 text-sm text-primary/80">
+              <p className="mt-1 text-sm text-primary-muted">
                 Create, review and deactivate this store&apos;s codes.
               </p>
             </Link>
@@ -224,7 +224,7 @@ export default async function StaffHomePage() {
             >
               <TrendingUp className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Reports</p>
-              <p className="mt-1 text-sm text-primary/80">
+              <p className="mt-1 text-sm text-primary-muted">
                 Sales, total orders, and average basket value financials.
               </p>
             </Link>
@@ -235,7 +235,7 @@ export default async function StaffHomePage() {
             >
               <Contact className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Customers</p>
-              <p className="mt-1 text-sm text-primary/80">
+              <p className="mt-1 text-sm text-primary-muted">
                 Who buys from this store, what they spend, and their loyalty standing.
               </p>
             </Link>
@@ -246,7 +246,7 @@ export default async function StaffHomePage() {
             >
               <Users className="mb-3 h-6 w-6 text-accent" aria-hidden />
               <p className="font-semibold text-primary">Team & Access</p>
-              <p className="mt-1 text-sm text-primary/80">
+              <p className="mt-1 text-sm text-primary-muted">
                 Manage staff access, roles, and administrative privileges.
               </p>
             </Link>
@@ -276,7 +276,7 @@ export default async function StaffHomePage() {
           >
             <Bug className="mb-3 h-6 w-6 text-danger" aria-hidden />
             <p className="font-semibold text-primary">Error events</p>
-            <p className="mt-1 text-sm text-primary/80">
+            <p className="mt-1 text-sm text-primary-muted">
               Recent server-side errors across the platform. Platform admins only.
             </p>
           </Link>

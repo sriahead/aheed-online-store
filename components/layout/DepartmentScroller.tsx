@@ -40,7 +40,7 @@ export function DepartmentScroller({
             className="group flex w-20 shrink-0 flex-col items-center gap-2 text-center"
           >
             <div
-              className={`flex h-16 w-16 items-center justify-center rounded-full bg-action-tint transition duration-300 group-hover:scale-110 group-hover:-translate-y-1 group-hover:ring-2 group-hover:ring-action/40 group-hover:shadow-lg ${
+              className={`flex h-16 w-16 items-center justify-center rounded-full bg-action-tint transition duration-300 group-hover:scale-110 motion-reduce:group-hover:scale-100 group-hover:-translate-y-1 group-hover:ring-2 group-hover:ring-action/40 group-hover:shadow-lg ${
                 isActive ? "ring-2 ring-action/60" : ""
               }`}
             >

@@ -95,7 +95,7 @@ export function ProductFilterForm({
             defaultValue={searchParams.minPrice ?? ""}
             className="w-full rounded-sm border border-black/20 px-3 py-2"
           />
-          <span className="text-primary/50">–</span>
+          <span className="text-primary-muted">–</span>
           <input
             type="number"
             name="maxPrice"
