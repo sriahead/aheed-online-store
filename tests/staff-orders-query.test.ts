@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ORDER_STATUSES, STAFF_QUEUE_STATUSES } from "@/lib/order-status";
-import { STATUS_ALL, parseStaffOrdersQuery, staffOrdersHref } from "@/lib/staff-orders-query";
+import { ORDER_STATUSES, REVENUE_STATUSES, STAFF_QUEUE_STATUSES } from "@/lib/order-status";
+import {
+  STATUS_ALL,
+  STATUS_REVENUE,
+  parseStaffOrdersQuery,
+  staffOrdersHref,
+} from "@/lib/staff-orders-query";
 
 /**
  * P6a (#158) — the staff dashboard's filter rules, unit-tested with no database.
@@ -85,5 +90,41 @@ describe("staffOrdersHref", () => {
   it("url-encodes a search term with reserved characters", () => {
     const query = parseStaffOrdersQuery({ q: "a&b c" });
     expect(staffOrdersHref(query)).toBe("/staff/orders?q=a%26b+c");
+  });
+});
+
+/**
+ * #628 — the report tiles aggregate over REVENUE_STATUSES, a set the URL could
+ * not express. `?status=all` overcounts it and the bare queue undercounts it,
+ * so a Total Orders drill-down contradicted the number it was reached from.
+ */
+describe("parseStaffOrdersQuery — the revenue selection (#628)", () => {
+  it("resolves ?status=revenue to exactly REVENUE_STATUSES", () => {
+    const query = parseStaffOrdersQuery({ status: STATUS_REVENUE });
+    expect(query.statuses).toEqual(REVENUE_STATUSES);
+    expect(query.status).toBe(STATUS_REVENUE);
+  });
+
+  it("is narrower than 'all' and wider than the packing queue", () => {
+    const revenue = parseStaffOrdersQuery({ status: STATUS_REVENUE }).statuses;
+
+    // The two wrong links the issue describes, pinned so neither becomes the
+    // tile's target by accident later.
+    expect(revenue.length).toBeLessThan(ORDER_STATUSES.length);
+    expect(revenue.length).toBeGreaterThan(STAFF_QUEUE_STATUSES.length);
+    expect(revenue).toContain("DELIVERED");
+    expect(revenue).not.toContain("CANCELLED");
+    expect(revenue).not.toContain("PENDING_PAYMENT");
+  });
+
+  it("carries the revenue selection into a pagination href", () => {
+    const query = parseStaffOrdersQuery({ status: STATUS_REVENUE });
+    expect(staffOrdersHref(query, "cursor-id")).toContain("status=revenue");
+  });
+
+  it("is case-sensitive, so a near-miss still falls back to the queue", () => {
+    const query = parseStaffOrdersQuery({ status: "Revenue" });
+    expect(query.statuses).toEqual(STAFF_QUEUE_STATUSES);
+    expect(query.status).toBe("");
   });
 });

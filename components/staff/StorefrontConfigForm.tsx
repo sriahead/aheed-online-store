@@ -1,8 +1,15 @@
 ﻿"use client";
 
-import { useTransition } from "react";
+import { useActionState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateStorefrontConfig } from "@/features/admin/storefront";
+import { updateDeliveryRules, updateStorefrontConfig } from "@/features/admin/storefront";
+import {
+  DELIVERY_FEE_FIELD,
+  FREE_DELIVERY_THRESHOLD_FIELD,
+  MINIMUM_ORDER_FIELD,
+  initialDeliveryRulesState,
+  penceToPoundsValue,
+} from "@/lib/delivery-rules-form";
 import { VendorLogoUploader } from "@/components/staff/VendorLogoUploader";
 
 export function StorefrontConfigForm({
@@ -16,6 +23,16 @@ export function StorefrontConfigForm({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+
+  // #634 — its own form and its own state. The branding form above is
+  // fire-and-forget; these three need a field-level error rendered against the
+  // input that caused it, because they reach real money arithmetic on the
+  // checkout path (lib/order-totals.ts) and a silently-rejected save would be
+  // indistinguishable from a successful one.
+  const [deliveryState, saveDeliveryRules, deliveryPending] = useActionState(
+    updateDeliveryRules,
+    initialDeliveryRulesState,
+  );
 
   async function action(formData: FormData) {
     const bannerNote = formData.get("bannerNote") as string;
@@ -103,6 +120,94 @@ export function StorefrontConfigForm({
           {pending ? "Saving…" : "Save Config"}
         </button>
       </form>
+
+      {/* #634 — until this shipped, changing a delivery fee needed a developer
+          with database access: VendorConfig carried all three columns and
+          prisma/seed.ts was their only writer. A sibling <form>, never nested —
+          HTML forbids that, and the two save independently. */}
+      <form action={saveDeliveryRules} className="flex flex-col gap-6">
+        <div>
+          <h2 className="font-bold text-black">Delivery rules</h2>
+          <p className="mt-1 text-sm text-black/60">
+            What delivery costs and when it is free. These apply to every order at checkout.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="deliveryFee" className="font-bold text-black">
+            Delivery fee (£)
+          </label>
+          <input
+            id="deliveryFee"
+            name="deliveryFee"
+            type="text"
+            inputMode="decimal"
+            defaultValue={penceToPoundsValue(initialConfig.deliveryFeePence)}
+            className={fieldClass(deliveryState.field === DELIVERY_FEE_FIELD)}
+            placeholder="e.g. 3.49"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="freeDeliveryThreshold" className="font-bold text-black">
+            Free delivery over (£)
+          </label>
+          <input
+            id="freeDeliveryThreshold"
+            name="freeDeliveryThreshold"
+            type="text"
+            inputMode="decimal"
+            defaultValue={penceToPoundsValue(initialConfig.freeDeliveryThresholdPence)}
+            className={fieldClass(deliveryState.field === FREE_DELIVERY_THRESHOLD_FIELD)}
+            placeholder="e.g. 30.00"
+          />
+          <p className="text-xs text-black/60">
+            Leave blank to never offer free delivery. Zero would make every order qualify.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="minimumOrder" className="font-bold text-black">
+            Minimum order (£)
+          </label>
+          <input
+            id="minimumOrder"
+            name="minimumOrder"
+            type="text"
+            inputMode="decimal"
+            defaultValue={penceToPoundsValue(initialConfig.minimumOrderPence)}
+            className={fieldClass(deliveryState.field === MINIMUM_ORDER_FIELD)}
+            placeholder="e.g. 0.00"
+          />
+          <p className="text-xs text-black/60">
+            Enter 0.00 for no minimum. A shopper below this cannot check out.
+          </p>
+        </div>
+
+        {deliveryState.error && (
+          <p className="rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger">
+            {deliveryState.error}
+          </p>
+        )}
+        {deliveryState.saved && !deliveryState.error && (
+          <p className="rounded-xl bg-action-tint px-4 py-3 text-sm font-medium text-primary">
+            Delivery rules saved.
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={deliveryPending}
+          className="rounded-full bg-primary py-3 font-bold text-white hover:bg-primary/90 disabled:opacity-50"
+        >
+          {deliveryPending ? "Saving…" : "Save Delivery Rules"}
+        </button>
+      </form>
     </div>
   );
+}
+
+/** Delivery-rule input styling, with the offending field outlined on a refusal. */
+function fieldClass(hasError: boolean): string {
+  return `rounded-lg border p-3 ${hasError ? "border-danger bg-danger-tint" : "border-black/20"}`;
 }

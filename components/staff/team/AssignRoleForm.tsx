@@ -62,9 +62,9 @@ export function AssignRoleForm({
         <SubmitButton />
       </div>
 
-      {state?.error && <p className="text-sm font-medium text-[#d32f2f]">{state.error}</p>}
+      {state?.error && <p className="text-sm font-medium text-danger">{state.error}</p>}
       {state?.success && (
-        <p className="text-sm font-medium text-[#2e7d32]">Role updated successfully.</p>
+        <p className="text-sm font-medium text-action">Role updated successfully.</p>
       )}
     </form>
   );

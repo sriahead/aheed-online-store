@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { Save } from "lucide-react";
 import { saveProduct } from "@/features/admin/catalogue";
-import { initialCatalogueState } from "@/lib/catalogue-form";
+import { initialCatalogueState, toCategoryOptionGroups } from "@/lib/catalogue-form";
 import { ProductImageUploader } from "@/components/staff/ProductImageUploader";
 import { ProductImageManager } from "@/components/staff/ProductImageManager";
 import type { AdminProductDetail } from "@/lib/repositories/products";
@@ -138,13 +138,24 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
               <option value="" disabled>
                 Choose a category
               </option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.parentName
-                    ? `${category.parentName} → ${category.name}`
-                    : category.name}
-                  {!category.isActive && " (inactive)"}
-                </option>
+              {/* #630 — one optgroup per department, with the department itself
+                  as the first selectable option inside it. Both tiers are
+                  assignable and both seed paths use them, so the department
+                  must stay pickable; a cascade would have removed that
+                  silently. */}
+              {toCategoryOptionGroups(categories).map((group) => (
+                <optgroup key={group.parent.id} label={group.parent.name}>
+                  <option value={group.parent.id}>
+                    {group.parent.name} — directly in this department
+                    {!group.parent.isActive && " (inactive)"}
+                  </option>
+                  {group.children.map((child) => (
+                    <option key={child.id} value={child.id}>
+                      {child.name}
+                      {!child.isActive && " (inactive)"}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>

@@ -13,6 +13,7 @@ import {
   findOrderForViewer,
   findOrderForWebhook,
   getFinancialsForStaff,
+  getRevenueStatusBreakdown,
   listOrdersForStaff,
   listOrdersForUser,
   placeOrder,
@@ -86,6 +87,10 @@ export function getOrderRepository(): OrderRepository {
 
     async getFinancialsForStaff() {
       return getFinancialsForStaff(prisma, await vendorId());
+    },
+
+    async getRevenueStatusBreakdown() {
+      return getRevenueStatusBreakdown(prisma, await vendorId());
     },
   };
 }

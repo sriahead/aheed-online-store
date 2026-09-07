@@ -153,12 +153,64 @@ export interface CategoryWriteInput {
 }
 
 /**
- * Every category for this vendor, active or not, parents before children.
+ * Order `AdminCategoryRow[]` so each parent is immediately followed by its own
+ * children (#627).
+ *
+ * Pure and exported so it can be unit-tested without a database — the ordering
+ * IS the requirement here, and proving it against a live query would prove only
+ * that one fixture happens to come back right.
+ *
+ * Why this exists at all: the query below orders by `(sortOrder, name)` as a
+ * single GLOBAL ordering. `prisma/seed.ts` gives top-level categories no
+ * `sortOrder`, so all 13 take the schema default of `0`, while children get
+ * `0,1,2` WITHIN each parent. The `sortOrder: 0` bucket therefore held every
+ * department plus every first-child, sorted by name alone, and the page indents
+ * any row carrying a `parentId` — so an indented Household subcategory rendered
+ * directly beneath Beverages. Sorting in the page would have fixed the list and
+ * left `ProductForm`'s picker, fed by the same function, still interleaved.
+ *
+ * A row whose `parentId` names a category absent from `rows` is treated as
+ * top-level rather than dropped. That cannot happen through the schema (the FK
+ * and the two-level cap both hold), but silently losing a category from the
+ * admin list is a far worse failure than showing one un-nested, and the cost of
+ * being certain is one lookup.
+ */
+export function groupCategoryRowsByParent(rows: readonly AdminCategoryRow[]): AdminCategoryRow[] {
+  const byPosition = (a: AdminCategoryRow, b: AdminCategoryRow) =>
+    a.sortOrder - b.sortOrder || a.name.localeCompare(b.name);
+
+  const topLevelIds = new Set(rows.filter((row) => row.parentId === null).map((row) => row.id));
+  const isTopLevel = (row: AdminCategoryRow) =>
+    row.parentId === null || !topLevelIds.has(row.parentId);
+
+  const childrenByParent = new Map<string, AdminCategoryRow[]>();
+  for (const row of rows) {
+    if (isTopLevel(row)) continue;
+    const siblings = childrenByParent.get(row.parentId!);
+    if (siblings) siblings.push(row);
+    else childrenByParent.set(row.parentId!, [row]);
+  }
+
+  const ordered: AdminCategoryRow[] = [];
+  for (const parent of rows.filter(isTopLevel).sort(byPosition)) {
+    ordered.push(parent);
+    const children = childrenByParent.get(parent.id);
+    if (children) ordered.push(...children.sort(byPosition));
+  }
+
+  return ordered;
+}
+
+/**
+ * Every category for this vendor, active or not, each parent immediately
+ * followed by its own children (#627 — this said "parents before children"
+ * while returning them globally interleaved).
  *
  * Deliberately unpaginated: the two-level cap plus a real grocery department
  * list keeps this in the dozens, and the parent picker on the form needs the
  * whole set anyway. If that ever stops being true it becomes the same keyset
- * problem the product list already solves.
+ * problem the product list already solves. That cap is also what makes the
+ * in-memory regroup below honest rather than a hidden scaling problem.
  */
 export async function listCategoriesForAdmin(
   prisma: ReturnType<typeof getPrisma>,
@@ -179,16 +231,18 @@ export async function listCategoriesForAdmin(
     },
   });
 
-  return rows.map((row) => ({
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    parentId: row.parentId,
-    parentName: row.parent?.name ?? null,
-    sortOrder: row.sortOrder,
-    isActive: row.isActive,
-    productCount: row._count.products,
-  }));
+  return groupCategoryRowsByParent(
+    rows.map((row) => ({
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      parentId: row.parentId,
+      parentName: row.parent?.name ?? null,
+      sortOrder: row.sortOrder,
+      isActive: row.isActive,
+      productCount: row._count.products,
+    })),
+  );
 }
 
 export async function getCategoryForAdmin(

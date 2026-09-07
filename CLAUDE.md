@@ -4,7 +4,7 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.20.0"
+version: "1.21.0"
 updated: 2026-09-06
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
@@ -519,7 +519,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  102 files / 1316 tests**, measured 2026-09-06 at `#633`'s Build) and treat any shortfall as
+  105 files / 1411 tests**, measured 2026-09-06 at the admin-panel-operability Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -539,7 +539,13 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `97/1200` moved to `100/1221` at `#618`'s Build — three new files carrying eighteen tests
   plus three added to two existing files, the mixed case both halves of this rule describe at once —
   and `100/1221` moved to **`102/1316`** at `#633`'s Build: two new files carrying ninety-two tests
-  plus three added to `tests/staff-nav-parity.test.ts`. That jump is unusually large for two files
+  plus three added to `tests/staff-nav-parity.test.ts`, and `102/1316` moved to **`105/1411`**
+  at the admin-panel-operability Build (`#627`/`#628`/`#630`/`#631`/`#634`) — three new files
+  carrying ninety-one tests plus four added to `tests/staff-orders-query.test.ts`. One of those
+  new files, `tests/panel-token-purity.test.ts`, is `it.each` over panel files discovered from
+  the **filesystem**, so like `operator-doc-coverage` its count moves whenever a `.tsx`/`.ts`
+  file is added under `app/(admin)/` or `components/staff/` — with no test file touched at all.
+  That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that
   moves on a change to `app/`, with no test file touched at all. Those last three moves are the
