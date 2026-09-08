@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.26.0"
-updated: 2026-09-05
+version: "1.27.0"
+updated: 2026-09-08
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -125,7 +125,13 @@ No layer skips inward; components never touch Prisma or the S3 client directly.
 - **Strict relational / 3NF.** Every entity is a typed table with explicit foreign keys. **No
   `Json` columns, no document blobs, no key-value bags** for domain data.
 - **No raw SQL in application code.** All access goes through Prisma's typed query API. (DDL for
-  indexes lives in migrations, which is standard portable SQL, not application queries.)
+  indexes lives in migrations, which is standard portable SQL, not application queries.) **One
+  documented exception exists**, added by #674 (2026-09-08): the parameterised INSERT in
+  `lib/error-event-fallback.ts`, reachable only from `instrumentation.ts`'s error handler. The
+  ordinary recorder writes through a freshly constructed Prisma client and therefore a fresh WASM
+  query compiler, so it cannot record a failure that originated in that constructor; the fallback
+  is `fetch`-based and shares none of that machinery. Scope and reasoning are in `CLAUDE.md`'s
+  schema rules and `specs/2026-09-08-error-event-fallback-capture/plan.md`.
 - **Provider-neutral types only.** Integers, `text`/`varchar`, `boolean`, `timestamptz`, `numeric`,
   Prisma enums (compile to standard Postgres enums), `uuid`. **No** `money`, no Neon/RDS-specific
   extensions in the hot path. `citext`/`pg_trgm` are optional and only via portable migrations.
@@ -532,6 +538,9 @@ S3 API rather than an R2-specific SDK.
   `CDN_BASE_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
 - **Storage keys, never URLs, in the DB.** Compose URLs at read time only.
 - **No raw SQL, no `Json` columns** for domain data. If you reach for either, revisit the model.
+  The single permitted exception is `lib/error-event-fallback.ts`'s parameterised INSERT (#674) —
+  diagnostic, not domain data, and the only way to record a failure in Prisma's own query-compiler
+  construction. See section 3.1.
 - **Money is integer pence + explicit currency.** Never floats. Loyalty points are integers and
   tier multipliers are basis points, for the same reason.
 - **An order's money identity is `subtotal − discount + delivery = total`** (P5a, #135; P5b, #145).

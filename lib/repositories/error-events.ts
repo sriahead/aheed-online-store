@@ -56,20 +56,38 @@ export interface RecordErrorEventInput {
   routeType: string;
 }
 
+/** The stored column values for one row: truncated, query-stripped, ready to insert. */
+export type ErrorEventRow = RecordErrorEventInput;
+
+/**
+ * Turns a caught error's fields into the values actually stored (#674).
+ *
+ * Pure and exported because there are now TWO write paths — this module's
+ * Prisma `create`, and `lib/error-event-fallback.ts`'s fetch-based insert for
+ * when Prisma itself is the thing that failed. They must truncate and strip
+ * identically or the same error is recorded differently depending on which path
+ * happened to survive, so `MESSAGE_MAX`, `STACK_MAX` and `stripQuery` stay
+ * declared here, once, and the fallback calls this rather than re-implementing
+ * them.
+ */
+export function buildErrorEventRow(input: RecordErrorEventInput): ErrorEventRow {
+  return {
+    message: truncate(input.message, MESSAGE_MAX),
+    stack: input.stack === null ? null : truncate(input.stack, STACK_MAX),
+    digest: input.digest,
+    path: stripQuery(input.path),
+    method: input.method,
+    routerKind: input.routerKind,
+    routeType: input.routeType,
+  };
+}
+
 export async function recordErrorEvent(
   prisma: ReturnType<typeof getPrisma>,
   input: RecordErrorEventInput,
 ): Promise<void> {
   await prisma.errorEvent.create({
-    data: {
-      message: truncate(input.message, MESSAGE_MAX),
-      stack: input.stack === null ? null : truncate(input.stack, STACK_MAX),
-      digest: input.digest,
-      path: stripQuery(input.path),
-      method: input.method,
-      routerKind: input.routerKind,
-      routeType: input.routeType,
-    },
+    data: buildErrorEventRow(input),
   });
 
   if (Math.random() < SWEEP_PROBABILITY) {
