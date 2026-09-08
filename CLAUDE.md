@@ -129,6 +129,23 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   that introduced it. What stays banned either way is raw SQL **at request time** in `app/`,
   `features/`, `components/` or `lib/repositories/*` — that is the portability and injection
   surface the rule was written for.
+- **There is exactly ONE permitted raw SQL statement in application code: the parameterised INSERT
+  in `lib/error-event-fallback.ts` (#674, 2026-09-08).** Its scope is the whole of the exception —
+  one statement, one table (`ErrorEvent`, which carries no vendor relation), reachable only from
+  `instrumentation.ts`'s `onRequestError` fallback branch, with every value passed as a numbered
+  placeholder through `sql.query(text, params)` and nothing interpolated. **It exists because the
+  ordinary recorder cannot record this class of failure at all**: `onRequestError` writes through
+  `getPrismaUncached()`, which builds a fresh `PrismaClient` and therefore a fresh WASM
+  `QueryCompiler`, so an error originating in that constructor — which is what `#674` was, confirmed
+  by mapping the production stack onto `node_modules/.prisma/client/query_compiler_bg.js` — makes
+  the recorder re-enter the code path that just threw. `@neondatabase/serverless`'s `neon()` is
+  `fetch`-based and loads no WASM, which is the only reason it is a fallback rather than a retry.
+  The rule's purpose survives intact: the model is still declared in `schema.prisma`, the migration
+  still creates the table, and the statement names only columns Prisma already describes. **Do not
+  widen this into a general-purpose raw-SQL helper** — a second raw statement needs its own
+  argument at `/propose`, not this file's precedent. Note also what it is NOT: `architecture.md`'s
+  compare-and-set rule ("which raw SQL is not permitted to rescue") is about contended hot-path
+  writes and is untouched.
 - **The GAP-011 drift risk above is not hypothetical — it fired for real in #508 (2026-09-01), and
   has now fired on EVERY migration this project has generated since.** By `#569` (2026-09-05) that
   is six occurrences: `#508`, then once per P2.6 slice carrying a migration (`#565`, `#566`, `#567`)
@@ -546,7 +563,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  114 files / 1495 tests**, measured 2026-09-08 at the panel-refusal/category-filter Build) and treat any shortfall as
+  115 files / 1516 tests**, measured 2026-09-08 at the ErrorEvent-fallback Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -608,6 +625,9 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `it.each`-driven moved; all seventeen are hand-written `it` blocks. `#538` did **not** reproduce
   on this run, which is worth recording precisely because the entry above says to expect it: it is
   a load-dependent timeout, so a green run is not evidence it is fixed.
+  Then `114/1495` moved to **`115/1516`** at the ErrorEvent-fallback Build (`#674`): one new file
+  (`tests/error-event-fallback.test.ts`) carrying sixteen tests, plus five added to the existing
+  `tests/instrumentation.test.ts`. Nothing `it.each`-driven moved. `#538` again did not reproduce.
   That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that
