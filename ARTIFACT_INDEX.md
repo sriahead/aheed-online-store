@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-08T08:59:29.095Z` · commit `b80ecc7` · `157` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-08T10:03:18.817Z` · commit `598fb2c` · `158` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -155,6 +155,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Deferred-abstraction sweep — UI primitives, radius scale, theme catalogue and sortable unit pricing (plan)](specs/2026-09-07-deferred-abstraction-sweep/plan.md) | spec | 1.0.0 | 2026-09-07 | draft | internal | Builds the four layers this repo deferred as speculative — a UI primitive layer, a usable radius scale, a named theme catalogue and a derived sortable unit price — now that each deferral's own stated precondition has been met, and fixes the product card's invalid content model in the same edit. |
 | [P9.2 — Remaining non-operational gaps (plan)](specs/2026-09-07-p9-2-non-operational-gaps/plan.md) | spec | 1.0.0 | 2026-09-07 | draft | internal | Closes every remaining P9.2 item that repo work can close — a guest-cart reaper, the webhook's unreachable unset-secret branch, a readable ErrorEvent signal, one shared env-file parser, and required status checks on both branch rulesets. |
 | [Storefront & panel accessibility remediation (plan)](specs/2026-09-07-storefront-accessibility-remediation/plan.md) | spec | 1.0.0 | 2026-09-07 | draft | internal | Two contrast-clamped foreground tokens replace 299 alpha-modified colour utilities that silently discard brandStyle's WCAG clamp, plus a shared focus-visible ring, per-field error association, reduced-motion coverage and the missing mobile gutter. |
+| [P9.3 — Panel refusal enforcement & admin catalogue category filter (plan)](specs/2026-09-08-panel-refusal-and-catalogue-category-filter/plan.md) | spec | 1.0.0 | 2026-09-08 | draft | internal | Closes #350 by replacing a hand-maintained prose list with a filesystem-walking test and converting the fourth refusal instance, and #503 part 1 by adding a hierarchy-aware category filter to the admin product list. No schema change. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.26.0 | 2026-09-05 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
