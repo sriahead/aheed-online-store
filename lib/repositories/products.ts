@@ -1489,6 +1489,7 @@ export async function listProductsForAdmin(
     cursor,
     search,
     isActive,
+    categoryIds,
   }: {
     take: number;
     cursor?: string;
@@ -1496,6 +1497,15 @@ export async function listProductsForAdmin(
     search?: string | null;
     /** undefined applies no filter, preserving P6b1's "show everything" default (#169). */
     isActive?: boolean;
+    /**
+     * Categories to restrict to (#503). undefined applies no filter.
+     *
+     * A LIST rather than a single id because selecting a department means "this
+     * department and its subcategories" — the expansion is decided by
+     * parseStaffProductsQuery against the vendor's real category list, so this
+     * layer stays a plain `in` and needs no hierarchy knowledge of its own.
+     */
+    categoryIds?: readonly string[];
   },
 ): Promise<AdminProductPage> {
   const rows = await prisma.product.findMany({
@@ -1507,6 +1517,10 @@ export async function listProductsForAdmin(
       // a description match would bury the exact-name hit they came for.
       ...(search ? { name: { contains: search, mode: "insensitive" as const } } : {}),
       ...(isActive === undefined ? {} : { isActive }),
+      // An empty array is treated as "no filter", not "match nothing" — the
+      // caller never produces one (see StaffProductsQuery.categoryIds), and a
+      // silently-empty result set is the worse failure of the two.
+      ...(categoryIds && categoryIds.length > 0 ? { categoryId: { in: [...categoryIds] } } : {}),
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: take + 1,
