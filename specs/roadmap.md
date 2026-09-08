@@ -4,7 +4,7 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.81.0"
+version: "1.82.0"
 updated: 2026-09-08
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P10, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is now a historical record; launch work lives in P9 and post-launch work in P10.
@@ -458,8 +458,18 @@ authoritative for scope" is only true if the roadmap is actually maintained:
   backlog.
 - **#174** — production and orphan image lifecycle cleanup. Do not turn this into a media-platform
   rewrite.
-- **#350** — `/staff/storefront` returns `null` on refusal instead of `PanelRefusal`; the last such
-  instance. Still open.
+- **#350 — CLOSED, shipped 2026-09-08** (see the change log). It was **not** "the last such
+  instance", and finding that out is what the slice actually delivered. The `/staff/storefront`
+  code fix had already landed on 2026-09-06 in `e3c9642` — the `#627`/`#628`/`#630`/`#631`/`#634`
+  slice fixed the refusal branch in passing while editing that page for per-vendor panel colours,
+  and nobody closed the issue; this line said "Still open" for two days afterwards. Walking all 25
+  `app/(admin)` pages at `/propose` then found a **fourth** instance the issue never mentions:
+  `/staff/discounts` hand-rolled markup byte-identical to `PanelRefusal`'s output, a consistency
+  defect rather than a live one, and the one page no list had ever named. So the deliverable became
+  the enforcement rather than the fix: `tests/panel-refusal-coverage.test.ts` walks the directory
+  with no allowlist and matches JSX on the parsed AST rather than text, because these pages carry
+  comments that satisfy any substring check on their own. `specs/2026-09-08-panel-refusal-and-
+  catalogue-category-filter/`.
 - **#351 — CLOSED, shipped and promoted 2026-09-08** (see the change log). The product card no
   longer nests interactive controls inside an `<a>`: a stretched link on the title now covers the
   card, with `AddToCartButton`/`CartQuantityStepper` as siblings rather than descendants, so #442
