@@ -277,6 +277,23 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` (final) closeout for the deferred-abstraction sweep** (`#662`, `#656`, `#653`,
+  `#351`, `#639`, `#75`; PR #666 merged to `staging`, PR #667 promoted to `main`, merge `14200cc`).
+  Docs only — no runtime code, no schema change beyond what PR #666 already carried.
+  - `specs/roadmap.md` (1.81.0) gains the staging-merge and promotion rows, updates P9.3's own
+    bullets to reflect `#351` and `#398`'s derivation half as shipped rather than pending, and moves
+    `#75` out of P10's tracked-issues list (shipped) while adding `#663`/`#664`/`#665` (this slice's
+    own filed follow-ons) into it.
+  - **Milestones assigned to close a Propose-stage gap**: `#662`, `#656`, `#653` and `#639` had
+    carried no GitHub milestone since filing — assigned `P09.3` to match `#351`/`#398`/`#649`–`#652`,
+    which shipped in the same window for the same reason (a stated deferral precondition had
+    genuinely expired). `#663`, `#664`, `#665` and `#398`'s remaining variant/unit-of-measure scope
+    assigned `P10`, matching `plan.md`'s own stated sequencing and the Discover finding that
+    originally recommended deferring full primitive adoption there.
+  - Production `/api/health` confirmed serving `14200cc` with `db.ok: true`; staging confirmed
+    serving `b80ecc7` the same way.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 - **`/document` (final) closeout for operator documentation** (`#633`; PR #635 merged to
   `staging`). Docs only — no runtime code, no schema change, nothing for `prisma migrate deploy` to
   apply.
