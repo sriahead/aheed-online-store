@@ -332,6 +332,23 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` (final) closeout for the Prisma-free `ErrorEvent` fallback capture** (`#674`;
+  PR #677 merged to `staging`, merge `cb2b1d6`; not yet promoted to `main`). Docs only — no
+  runtime code, no schema change.
+  - `specs/roadmap.md` (1.85.0) gains the staging-merge row for this slice, records the two rows
+    Build flagged as never run (`R15`/`R16`, a real insert/read-back/delete against the dev
+    database) as confirmed at `/validate`, and adds `#676` to the P10 tracked-issue list (it had a
+    GitHub milestone but no roadmap mention).
+  - **A spec/check mismatch found at `/validate`, left as a flagged deviation rather than
+    patched.** R17 required `CLAUDE.md` to state the exception's file name and the words "raw SQL"
+    on one literal physical line, checked by a same-line grep; the bullet states both correctly
+    but wraps across two source lines under this file's own hard-wrap convention. The requirement's
+    intent was met; the literal check was over-strict against the file's formatting style.
+    `specs/sdd-workflow.md`'s grep-trap list (2.30.0 → 2.31.0) now records this as a fifth
+    instance, with the generalised fix: word a same-line requirement as "same bullet/paragraph"
+    when the target file hard-wraps, or check line adjacency instead of exact line identity.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 - **`/document` (final) closeout for panel refusal enforcement & the admin catalogue category
   filter** (`#350`, `#503` part 1; PR #671 merged to `staging`, PR #672 promoted to `main`, merge
   `364103c`). Docs only — no runtime code, no schema change.

@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.30.0"
+version: "2.31.0"
 updated: 2026-09-08
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets, plus the Discover and Learn phases that run on milestone close. Each stage is also a Claude Code slash command.
@@ -296,6 +296,20 @@ not present.
   never the repo root, and remember that anything you write in a spec is machine-copied into at
   least two other places. Amended mid-build and committed separately, matching how #537 corrected
   its own R2 for the same class of reason.
+- **A fifth instance (#674, 2026-09-08) is about literal same-physical-line requirements against a
+  file that hard-wraps its own prose.** R17 required `CLAUDE.md` to state a permitted-exception
+  file's name and the words `raw SQL` **on one line**, checked with `grep -n '<file>' CLAUDE.md`
+  piped through a second grep for `raw SQL` — a same-line co-occurrence check. The bullet that
+  satisfies R17's substance reads as one continuous sentence but is written across two physical
+  source lines, because every bullet in `CLAUDE.md` is hard-wrapped at roughly 100 columns — the
+  same convention this very sentence follows. The literal grep failed; the requirement's actual
+  intent (both facts stated together, with the exception's scope) was met. Caught at `/validate`
+  and reported as a spec/check mismatch rather than silently passed or silently patched — reflowing
+  one bullet to satisfy a same-line technicality against the file's own formatting style would have
+  been validating around the check, not fixing anything real. **A requirement asking for
+  co-occurrence "on one line" in a document that hard-wraps needs to mean "in the same
+  bullet/paragraph," not "on the same physical source line"** — word it that way, or check
+  adjacency (matches within N lines of each other) instead of exact line identity.
 - If the slice also changes a **standing decision** (architecture, tech choice, design tokens), also
   write or update the relevant **persistent doc** (`specs/architecture.md`, `tech-stack.md`,
   `design-system.md`, ...) — the dated folder is the one-time slice, the persistent doc is what
