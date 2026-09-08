@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.29.0"
+version: "2.30.0"
 updated: 2026-09-08
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets, plus the Discover and Learn phases that run on milestone close. Each stage is also a Claude Code slash command.
@@ -730,6 +730,19 @@ named gates, but the part of this repo's actual history most prone to drift.
   covers one of those surfaces; the only fully reliable check is reading every commit message in the
   set before it merges, or checking actual issue state immediately after — which is why that
   post-promotion check belongs in the routine, not just as a recovery step.
+  **This rule fired a second time on the panel-refusal/category-filter slice's own promotion
+  (PR #672, 2026-09-08)** — the exact "sentence whose entire point is that the issue shouldn't
+  close" case this bullet already named, not a new variant. Two commits already on `staging`
+  (Build's `43b5057`, Spec's `6b84c93`) each carried a caution phrased as a colon-separated list —
+  the keyword, a colon, a space, then the first issue's number — naming three issues (one of them
+  `#670`) that had to stay open. No quotation marks this time, and the words plainly meant "do not
+  do this." GitHub closed only the first-listed issue on merge, consistent with the
+  first-in-a-list rule two bullets up — caught and reversed the same way as `#174`. **The
+  practical fix, since the general rule alone survived from #214 to here unread at the moment it
+  mattered:** don't write the caution as prose containing the keyword at all — list the issue
+  numbers as bare digits with no `close`/`fix`/`resolve` word anywhere in the sentence (e.g. "carry
+  #670, #513, #439 forward, unstarted" reads the same to a human and matches nothing to GitHub's
+  scanner).
 - **A squash-merged promotion PR breaks every regular-merge promotion that comes after it, with a
   spurious content conflict in whatever files both promotions touch.** First flagged as "worth
   knowing" when PR #275 squash-merged P7.5b into `main` (leaving `origin/main` without P7.5b's
