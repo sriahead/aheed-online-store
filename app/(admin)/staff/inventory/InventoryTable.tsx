@@ -136,7 +136,7 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
           <button
             onClick={() => updateQuantity(-1)}
             disabled={isUpdating || optimisticQuantity <= 0}
-            className="flex h-6 w-6 items-center justify-center rounded-md bg-black/5 hover:bg-black/10 disabled:opacity-50"
+            className="flex h-6 w-6 items-center justify-center rounded-2xl bg-black/5 hover:bg-black/10 disabled:opacity-50"
           >
             <Minus className="h-3 w-3" />
           </button>
@@ -144,7 +144,7 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
           <button
             onClick={() => updateQuantity(1)}
             disabled={isUpdating}
-            className="flex h-6 w-6 items-center justify-center rounded-md bg-black/5 hover:bg-black/10 disabled:opacity-50"
+            className="flex h-6 w-6 items-center justify-center rounded-2xl bg-black/5 hover:bg-black/10 disabled:opacity-50"
           >
             <Plus className="h-3 w-3" />
           </button>

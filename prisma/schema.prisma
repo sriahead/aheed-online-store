@@ -225,6 +225,39 @@ model VendorMembership {
   @@index([vendorId])
 }
 
+// #75 — a platform-level palette catalogue a vendor may apply to their VendorBranding
+// (see VendorBranding.themeId below).
+//
+// DELIBERATELY NOT VENDOR-SCOPED: no vendorId column, no Vendor relation. This is a
+// stated exception to ADR-004 decision 2's row-level tenancy
+// (specs/decisions/ADR-004-multi-tenancy.md carries the dated implementation note), not
+// an oversight — a theme is curated for reuse ACROSS vendors and holds no tenant data,
+// so there is nothing here for a tenant boundary to protect. Selecting a theme COPIES
+// its eight values onto the vendor's own VendorBranding row (features/admin/storefront.ts's
+// applyStorefrontTheme, via lib/repositories/vendor.ts's applyThemeToVendor);
+// lib/vendor-theme.ts's brandStyle() keeps reading only VendorBranding's own columns and
+// performs no join to Theme, so themeId records provenance, not authority — a vendor may
+// edit any colour afterwards and diverge from the theme freely.
+model Theme {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  // Same eight brand primitives as VendorBranding below, explicit String columns
+  // (never Json — CLAUDE.md's schema rules) so a theme is exactly as typed as the
+  // row it gets copied onto.
+  brandGreenDark  String
+  brandGreen      String
+  brandOrange     String
+  brandRed        String
+  brandCream      String
+  brandGreenTint  String
+  brandOrangeTint String
+  brandRedTint    String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  vendorBrandings VendorBranding[]
+}
+
 // Satellite config/branding tables ship EMPTY in slice 1 — their values (and the code that
 // reads them) arrive in slice 4. Explicit columns only, never a Json column (CLAUDE.md).
 model VendorBranding {
@@ -244,6 +277,12 @@ model VendorBranding {
   brandGreenTint  String
   brandOrangeTint String
   brandRedTint    String
+  // #75 — which Theme (if any) this vendor's colours were last copied from. Nullable:
+  // most rows never selected a theme, and picking one is a one-time copy, not a live
+  // binding (see the Theme model doc comment above). onDelete: SetNull so retiring a
+  // theme from the catalogue never cascades into deleting a vendor's own branding.
+  themeId         String?
+  theme           Theme?   @relation(fields: [themeId], references: [id], onDelete: SetNull)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -421,58 +460,84 @@ model BundleItem {
   @@index([bundleId, sortOrder])
 }
 
+// #398 (derivation half, P9.3) — Product.netContentUnit. Covers mass, volume and countable
+// items; a product with no unit here simply keeps rendering unitLabel as free text, exactly as
+// every existing product does today.
+enum NetContentUnit {
+  GRAM
+  KILOGRAM
+  MILLILITRE
+  LITRE
+  EACH
+}
+
 model Product {
-  id                   String            @id @default(uuid())
-  vendorId             String
-  vendor               Vendor            @relation(fields: [vendorId], references: [id])
-  slug                 String
-  name                 String
-  description          String
-  categoryId           String
-  category             Category          @relation(fields: [categoryId, vendorId], references: [id, vendorId])
-  basePrice            Int // pence
-  unitLabel            String // "£2.40 / kg"
-  isActive             Boolean           @default(true)
-  createdAt            DateTime          @default(now())
-  images               ProductImage[]
-  inventory            Inventory?
-  reviews              Review[]
-  cartItems            CartItem[]
-  orderItems           OrderItem[]
-  bundleItems          BundleItem[]
-  priceTier            ProductPriceTier?
-  averageRating        Float             @default(0) // denormalized, recomputed on every review write
-  reviewCount          Int               @default(0)
+  id                        String            @id @default(uuid())
+  vendorId                  String
+  vendor                    Vendor            @relation(fields: [vendorId], references: [id])
+  slug                      String
+  name                      String
+  description               String
+  categoryId                String
+  category                  Category          @relation(fields: [categoryId, vendorId], references: [id, vendorId])
+  basePrice                 Int // pence
+  unitLabel                 String // "£2.40 / kg"
+  // #398 (derivation half, P9.3) — net content, so unitLabel's implied price can be CHECKED
+  // rather than typed freehand (UK Price Marking Order exposure). Both nullable: most existing
+  // products carry neither and must keep working on unitLabel alone (R34). The amount is a WHOLE
+  // NUMBER in netContentUnit's own unit (e.g. netContentAmount=500, netContentUnit=GRAM for
+  // "500g") rather than a fractional amount in a coarser one — a half-kilogram product is entered
+  // as 500 GRAM, never 0.5 KILOGRAM, so no float is ever stored here either.
+  netContentAmount          Int?
+  netContentUnit            NetContentUnit?
+  // THE DENORMALISED SORT KEY ONLY (R30/R32) — recomputed by lib/repositories/products.ts on
+  // every create/update from basePrice and the two columns above, via
+  // components/product/unit-price.ts's deriveUnitPricePenceForSort(). NEVER read for display:
+  // the customer-facing unit price is computed fresh at render time by the same file's
+  // deriveUnitPriceLabel(), directly from basePrice and net content, so a rounding artefact in
+  // this column can never reach a price a shopper actually reads. Null whenever net content is.
+  unitPricePencePerBaseUnit Int?
+  isActive                  Boolean           @default(true)
+  createdAt                 DateTime          @default(now())
+  images                    ProductImage[]
+  inventory                 Inventory?
+  reviews                   Review[]
+  cartItems                 CartItem[]
+  orderItems                OrderItem[]
+  bundleItems               BundleItem[]
+  priceTier                 ProductPriceTier?
+  averageRating             Float             @default(0) // denormalized, recomputed on every review write
+  reviewCount               Int               @default(0)
   // P2.5b1 — visual redesign foundation (specs/2026-08-07-p2-5b1-visual-foundation/).
   // originalPrice, when set, is basePrice's pre-discount price — a discount badge is
   // derived from the difference at render time, not a separate boolean flag that could
   // drift out of sync with the actual prices.
-  origin               String?
-  originalPrice        Int? // pence, pre-discount price
-  isHalal              Boolean           @default(false)
-  isFresh              Boolean           @default(false)
-  isOrganic            Boolean           @default(false)
+  origin                    String?
+  originalPrice             Int? // pence, pre-discount price
+  isHalal                   Boolean           @default(false)
+  isFresh                   Boolean           @default(false)
+  isOrganic                 Boolean           @default(false)
   // P2.6 slice 6 (#569) — dietary facets, deliberately the same boolean shape as the
   // three flags above rather than a generic attribute model. An attribute table would
   // make every facet an EXISTS join, harder to index, and would fork the codebase so
   // isHalal and isVegetarian are queried two different ways for no gain a shopper sees.
-  isVegetarian         Boolean           @default(false)
-  isGlutenFree         Boolean           @default(false)
+  isVegetarian              Boolean           @default(false)
+  isGlutenFree              Boolean           @default(false)
   // HMC is a NAMED THIRD-PARTY CERTIFYING BODY, not a synonym for isHalal, and #239 was
   // a real incident where this codebase asserted "100% Certified HMC Halal" for a vendor
   // with no basis for it. So the flag never travels alone: lib/catalogue-form.ts requires
   // both fields below when it is ticked, and nulls both when it is not. A certification
   // claim with no provenance behind it is exactly what that rule exists to prevent.
-  isHmcCertified       Boolean           @default(false)
-  hmcReference         String?
-  hmcVerifiedAt        DateTime?
-  brandId              String?
-  brand                Brand?            @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  isHmcCertified            Boolean           @default(false)
+  hmcReference              String?
+  hmcVerifiedAt             DateTime?
+  brandId                   String?
+  brand                     Brand?            @relation(fields: [brandId], references: [id], onDelete: SetNull)
   // #211 — vendor curation flag driving the homepage "Featured Products" rail.
   // Independent of originalPrice's discount-badge derivation: featured and
   // "on offer" are two separate concepts.
-  isFeatured           Boolean           @default(false)
-  imageNeedsReview     Boolean           @default(false)
+  isFeatured                Boolean           @default(false)
+  imageNeedsReview          Boolean           @default(false)
   // #523 — how many times the image pipeline has tried this product and failed.
   //
   // Workers AI permanently refuses some legitimate names: `Halal Chicken Thighs 1kg`
@@ -484,12 +549,16 @@ model Product {
   //
   // Reset to 0 whenever an image is successfully saved, so a product that later loses
   // its image is retried rather than being permanently excluded by a historic failure.
-  imageAttemptFailures Int               @default(0)
+  imageAttemptFailures      Int               @default(0)
 
   @@unique([vendorId, slug])
   @@index([vendorId, categoryId, isActive])
   @@index([vendorId, isActive, basePrice]) // catalogue filter + sort
   @@index([vendorId, isActive, isFeatured]) // homepage featured rail
+  // #398 (derivation half) — the derived unit-price sort key (R30/R37). No storefront sort
+  // control reads it yet (plan.md step 4 leaves that to P10's cursor work); this is what makes
+  // it genuinely queryable, proven by scripts/verify-unit-price-sort.ts.
+  @@index([vendorId, isActive, unitPricePencePerBaseUnit])
   // #569 — the two new HIGH-cardinality facet predicates. The dietary booleans get no
   // index of their own, matching isHalal/isFresh/isOrganic: a boolean splits the table
   // roughly in half, so an index earns little and costs on every write.

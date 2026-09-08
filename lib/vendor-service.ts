@@ -3,9 +3,11 @@ import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorIdOrNull } from "@/lib/tenant";
 import {
   DEFAULT_SENDER_NAME,
+  applyThemeToVendor as applyThemeToVendorRepo,
   fetchVendorProfile as fetchVendorProfileRepo,
   getVendorBranding as getVendorBrandingRepo,
   getVendorConfig as getVendorConfigRepo,
+  listThemes as listThemesRepo,
   updateVendorLogoKey as updateVendorLogoKeyRepo,
   updateVendorStorefrontConfig as updateVendorStorefrontConfigRepo,
   type VendorProfile,
@@ -86,4 +88,14 @@ export async function updateVendorStorefrontConfig(
   data: VendorStorefrontConfigInput,
 ) {
   return updateVendorStorefrontConfigRepo(getPrismaWs(), vendorId, data);
+}
+
+/** The seeded theme catalogue (#75), for the `/staff/storefront` picker. */
+export async function listThemes() {
+  return listThemesRepo(getPrisma());
+}
+
+/** Copies a theme's eight brand primitives onto a vendor's `VendorBranding` row (#75). */
+export async function applyVendorTheme(vendorId: string, themeId: string) {
+  return applyThemeToVendorRepo(getPrisma(), vendorId, themeId);
 }

@@ -1,6 +1,11 @@
 import type { Prisma } from "@prisma/client";
 import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
+import {
+  deriveUnitPricePenceForSort,
+  type NetContent,
+  type NetContentUnit,
+} from "@/components/product/unit-price";
 import { effectiveStock } from "@/lib/cart-rules";
 import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
 import { parseSearchQuery } from "@/lib/search-query";
@@ -48,6 +53,9 @@ export interface ProductSummary {
   name: string;
   basePrice: number;
   unitLabel: string;
+  /** #398 (derivation half) — see components/product/unit-price.ts. Both null or both set. */
+  netContentAmount: number | null;
+  netContentUnit: NetContentUnit | null;
   primaryImage: ProductImageSummary | null;
   origin: string | null;
   originalPrice: number | null;
@@ -423,6 +431,8 @@ const productSummarySelect = {
   name: true,
   basePrice: true,
   unitLabel: true,
+  netContentAmount: true,
+  netContentUnit: true,
   origin: true,
   originalPrice: true,
   isHalal: true,
@@ -455,6 +465,8 @@ function toProductSummary(row: ProductSummaryRow, tier: ProductTier | null): Pro
     name: row.name,
     basePrice: row.basePrice,
     unitLabel: row.unitLabel,
+    netContentAmount: row.netContentAmount,
+    netContentUnit: row.netContentUnit,
     origin: row.origin,
     originalPrice: row.originalPrice,
     isHalal: row.isHalal,
@@ -520,6 +532,39 @@ async function findPage(
     directNameMatch: false,
     suggestions: null,
   };
+}
+
+/**
+ * #398 (derivation half), R37 — proves `Product.unitPricePencePerBaseUnit` (the derived sort key,
+ * R30) is genuinely queryable in the database, ahead of any sort CONTROL — deliberately not built
+ * in this slice (plan.md step 4: `findPage`'s keyset cursor is hardcoded to `(createdAt, id)`, and
+ * a user-facing sort means changing that cursor's ordering key everywhere it's used, which is P10's
+ * work). This is not wired into `findPage`/`listProducts`/`listProductsByCategory` for that reason.
+ *
+ * Ordered ascending (cheapest per base unit first) with NULLs excluded — a product with no net
+ * content has nothing to rank by, and `ORDER BY ... ASC` would otherwise surface every null-priced
+ * row before any real value under Postgres's default NULLS LAST-for-DESC/FIRST-for-ASC behaviour.
+ * `scripts/verify-unit-price-sort.ts` runs this against a real database and prints the ordering.
+ */
+export async function listProductsByUnitPrice(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  take: number,
+): Promise<ProductSummary[]> {
+  const rows = await prisma.product.findMany({
+    where: { vendorId, isActive: true, unitPricePencePerBaseUnit: { not: null } },
+    orderBy: { unitPricePencePerBaseUnit: "asc" },
+    take,
+    select: productSummarySelect,
+  });
+
+  const tiers = await listActiveTiersForProducts(
+    prisma,
+    vendorId,
+    rows.map((r) => r.id),
+  );
+
+  return rows.map((r) => toProductSummary(r, tiers.get(r.id) ?? null));
 }
 
 /**
@@ -997,6 +1042,8 @@ export async function getProductBySlug(
       description: true,
       basePrice: true,
       unitLabel: true,
+      netContentAmount: true,
+      netContentUnit: true,
       origin: true,
       originalPrice: true,
       isHalal: true,
@@ -1300,6 +1347,9 @@ export interface AdminProductDetail {
   basePrice: number;
   originalPrice: number | null;
   unitLabel: string;
+  /** #398 (derivation half) — see components/product/unit-price.ts. Both null or both set. */
+  netContentAmount: number | null;
+  netContentUnit: NetContentUnit | null;
   origin: string | null;
   isHalal: boolean;
   isFresh: boolean;
@@ -1331,6 +1381,14 @@ export interface ProductWriteInput {
   basePrice: number;
   originalPrice: number | null;
   unitLabel: string;
+  /**
+   * #398 (derivation half) — never accepted as a stored SORT-KEY value from a caller
+   * (`unitPricePencePerBaseUnit` isn't part of this type at all): `createProductForVendor`/
+   * `updateProductForVendor` recompute it themselves from these two fields plus `basePrice`, so it
+   * cannot be supplied stale (R31).
+   */
+  netContentAmount: number | null;
+  netContentUnit: NetContentUnit | null;
   origin: string | null;
   isHalal: boolean;
   isFresh: boolean;
@@ -1501,6 +1559,8 @@ export async function getProductForAdmin(
       basePrice: true,
       originalPrice: true,
       unitLabel: true,
+      netContentAmount: true,
+      netContentUnit: true,
       origin: true,
       isHalal: true,
       isFresh: true,
@@ -1565,6 +1625,19 @@ const DUPLICATE_SLUG = {
   field: "slug",
 };
 
+/**
+ * #398 (derivation half), R31 — the two net-content fields to a `NetContent | null`, so
+ * `deriveUnitPricePenceForSort` (components/product/unit-price.ts) can be called identically
+ * from both the create and update paths below.
+ */
+function toNetContent(
+  input: Pick<ProductWriteInput, "netContentAmount" | "netContentUnit">,
+): NetContent | null {
+  return input.netContentAmount !== null && input.netContentUnit !== null
+    ? { amount: input.netContentAmount, unit: input.netContentUnit }
+    : null;
+}
+
 export async function createProductForVendor(
   prisma: Db,
   vendorId: string,
@@ -1572,6 +1645,14 @@ export async function createProductForVendor(
 ): Promise<CatalogueWriteResult> {
   try {
     if (!(await assertOwnCategory(prisma, vendorId, input.categoryId))) return WRONG_CATEGORY;
+
+    // #398 (derivation half), R31 — computed HERE, from this write's own basePrice and net
+    // content, never accepted from the caller (ProductWriteInput has no such field), so it can
+    // never be supplied stale.
+    const unitPricePencePerBaseUnit = deriveUnitPricePenceForSort(
+      input.basePrice,
+      toNetContent(input),
+    );
 
     // The Inventory row is a NESTED create, so it commits in the same implicit
     // transaction as the Product. Two sequential calls could leave a product
@@ -1587,6 +1668,9 @@ export async function createProductForVendor(
         basePrice: input.basePrice,
         originalPrice: input.originalPrice,
         unitLabel: input.unitLabel,
+        netContentAmount: input.netContentAmount,
+        netContentUnit: input.netContentUnit,
+        unitPricePencePerBaseUnit,
         origin: input.origin,
         isVegetarian: input.isVegetarian,
         isGlutenFree: input.isGlutenFree,
@@ -1647,6 +1731,13 @@ export async function updateProductForVendor(
 
       if (!(await assertOwnCategory(tx, vendorId, input.categoryId))) return WRONG_CATEGORY;
 
+      // #398 (derivation half), R31 — same computation as createProductForVendor, from this
+      // write's own basePrice and net content, never from a caller-supplied value.
+      const unitPricePencePerBaseUnit = deriveUnitPricePenceForSort(
+        input.basePrice,
+        toNetContent(input),
+      );
+
       await tx.product.update({
         where: { id, vendorId },
         data: {
@@ -1657,6 +1748,9 @@ export async function updateProductForVendor(
           basePrice: input.basePrice,
           originalPrice: input.originalPrice,
           unitLabel: input.unitLabel,
+          netContentAmount: input.netContentAmount,
+          netContentUnit: input.netContentUnit,
+          unitPricePencePerBaseUnit,
           origin: input.origin,
           isVegetarian: input.isVegetarian,
           isGlutenFree: input.isGlutenFree,

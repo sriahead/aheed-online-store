@@ -11,6 +11,7 @@ import type { AdminProductDetail } from "@/lib/repositories/products";
 import type { AdminCategoryRow } from "@/lib/repositories/categories";
 import type { BrandSummary } from "@/lib/repositories/brands";
 import { errorInputClass, inputClass, labelClass } from "@/lib/form-classes";
+import { NET_CONTENT_UNIT_LABELS, NET_CONTENT_UNITS } from "@/components/product/unit-price";
 
 /**
  * Product create/edit form (P6b1, #159).
@@ -218,6 +219,42 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
                 defaultValue={product?.unitLabel ?? ""}
                 {...fieldProps("unitLabel")}
               />
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="netContentAmount">
+                Net content amount (optional)
+              </label>
+              <input
+                id="netContentAmount"
+                name="netContentAmount"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                step={1}
+                placeholder="500"
+                defaultValue={product?.netContentAmount ?? ""}
+                {...fieldProps("netContentAmount")}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="netContentUnit">
+                Net content unit — enables a real unit price (Price Marking Order)
+              </label>
+              <select
+                id="netContentUnit"
+                name="netContentUnit"
+                defaultValue={product?.netContentUnit ?? ""}
+                {...fieldProps("netContentUnit")}
+              >
+                <option value="">No net content set — unit label stays free text</option>
+                {NET_CONTENT_UNITS.map((unit) => (
+                  <option key={unit} value={unit}>
+                    {NET_CONTENT_UNIT_LABELS[unit]}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

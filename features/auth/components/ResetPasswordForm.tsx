@@ -41,7 +41,7 @@ export function ResetPasswordForm() {
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded-sm border border-black/20 px-3 py-2"
+          className="rounded-lg border border-black/20 px-3 py-2"
         />
       </label>
       {error && (

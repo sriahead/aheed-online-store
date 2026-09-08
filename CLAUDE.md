@@ -546,7 +546,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  109 files / 1456 tests**, measured 2026-09-07 at the storefront-accessibility-remediation Build) and treat any shortfall as
+  113 files / 1478 tests**, measured 2026-09-07 at the deferred-abstraction-sweep Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -591,6 +591,16 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `tests/vendor-theme.test.ts` gained five because two of its three new tests are `it.each` over
   both seeded vendors. **A single new row in a `PAIRS`-style table is a new test**, so a slice that
   adds no test file and writes only a handful of `it` blocks can still move this number by twenty.
+  Then `109/1456` moved to **`113/1478`** at the deferred-abstraction-sweep Build
+  (`#662`: `#656`/`#653`/`#351`/`#639`/`#75`/`#398`): four new files
+  (`tests/radius-scale.test.ts`, `tests/form-field-aria.test.tsx`,
+  `tests/product-card-stretched-link.test.tsx`, `tests/unit-price.test.ts`) carrying all 22 of the
+  new tests, with **no** existing file's count moving at all. That is the plainest case in this
+  list and is recorded to show the count staying current rather than to add a lesson. Worth noting
+  separately: the same run reproduced **`#538`** — `tests/repository-transaction-safety.test.ts`
+  times out at 5000ms under full-suite load and passes in 1.8s alone. That test parses every file
+  in `lib/repositories/`, and this slice added exports to two of them, so expect it to keep
+  creeping; the fix is a per-test timeout, not a re-run.
   That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that

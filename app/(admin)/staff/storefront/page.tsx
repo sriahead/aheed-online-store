@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getVendorConfig, getVendorBranding } from "@/lib/vendor-service";
+import { getVendorConfig, getVendorBranding, listThemes } from "@/lib/vendor-service";
 import { StorefrontConfigForm } from "@/components/staff/StorefrontConfigForm";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { getStorage } from "@/lib/storage";
@@ -25,6 +25,7 @@ export default async function StorefrontAdminPage() {
 
   const config = await getVendorConfig(auth.vendorId);
   const branding = await getVendorBranding(auth.vendorId);
+  const themes = await listThemes();
 
   if (!config || !branding) {
     return <div className="p-8">Vendor config or branding not found.</div>;
@@ -35,7 +36,12 @@ export default async function StorefrontAdminPage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <h1 className="mb-8 text-3xl font-extrabold text-black">Storefront Branding</h1>
-      <StorefrontConfigForm initialConfig={config} initialBranding={branding} logoUrl={logoUrl} />
+      <StorefrontConfigForm
+        initialConfig={config}
+        initialBranding={branding}
+        themes={themes}
+        logoUrl={logoUrl}
+      />
     </main>
   );
 }

@@ -77,7 +77,7 @@ export function ProductFilterForm({
             type="text"
             name="q"
             defaultValue={searchParams.q ?? ""}
-            className="w-full rounded-sm border border-black/20 px-3 py-2"
+            className="w-full rounded-lg border border-black/20 px-3 py-2"
           />
         </label>
       )}
@@ -93,7 +93,7 @@ export function ProductFilterForm({
             aria-label="Minimum price"
             placeholder="Min"
             defaultValue={searchParams.minPrice ?? ""}
-            className="w-full rounded-sm border border-black/20 px-3 py-2"
+            className="w-full rounded-lg border border-black/20 px-3 py-2"
           />
           <span className="text-primary-muted">–</span>
           <input
@@ -104,7 +104,7 @@ export function ProductFilterForm({
             aria-label="Maximum price"
             placeholder="Max"
             defaultValue={searchParams.maxPrice ?? ""}
-            className="w-full rounded-sm border border-black/20 px-3 py-2"
+            className="w-full rounded-lg border border-black/20 px-3 py-2"
           />
         </div>
       </fieldset>
@@ -217,7 +217,7 @@ export function ProductFilterForm({
           <select
             name="origin"
             defaultValue={searchParams.origin ?? ""}
-            className="w-full rounded-sm border border-black/20 px-3 py-2"
+            className="w-full rounded-lg border border-black/20 px-3 py-2"
           >
             <option value="">Any origin</option>
             {spec.origins.map((origin) => (
@@ -235,7 +235,7 @@ export function ProductFilterForm({
           <select
             name="brand"
             defaultValue={searchParams.brand ?? ""}
-            className="w-full rounded-sm border border-black/20 px-3 py-2"
+            className="w-full rounded-lg border border-black/20 px-3 py-2"
           >
             <option value="">Any brand</option>
             {/* Value is the SLUG, not the id: it is what appears in a shopper's URL, and a slug

@@ -4,7 +4,7 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.11.0"
+version: "1.12.0"
 updated: 2026-09-07
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
@@ -49,8 +49,14 @@ palette revision only touches the primitive → semantic mapping, not every comp
 > `#4caf50` and `#f57c00` measure 2.78:1 and 2.70:1 — the worst in the repo); a **value derived from
 > it through the clamp** is how per-vendor colour is delivered. `tokens.css`'s audited literals
 > remain the platform default for any request with no vendor branding, and
-> `tests/design-tokens-contrast.test.ts` still guards them. A named theme *catalogue* stays deferred
-> (#75), now additive convenience rather than the guarantee.
+> `tests/design-tokens-contrast.test.ts` still guards them.
+>
+> **A named theme catalogue was built on 2026-09-07 (#75), and it changes nothing above.** `Theme`
+> is a platform-level table of eight brand primitives; selecting one **copies** its values onto the
+> vendor's `VendorBranding` row. `brandStyle()` still reads that row and performs no join, so every
+> clamp described here applies unchanged — a theme is a starting point a vendor can then edit, not
+> a second source of truth. It is additive convenience exactly as this line predicted, which is why
+> the mechanism needed no revision to accommodate it.
 
 | Primitive | Hex | Semantic | Semantic value | Role |
 |---|---|---|---|---|
@@ -145,14 +151,32 @@ component, no hand-rolled SVG set.
 
 ## Shape
 
-Inferred from the brand kit's UI-elements panel (pill buttons/search, ~12–16px rounded cards,
-circular icon buttons) — **not pixel-measured**, safe to revise once real UI comps exist:
+Originally inferred from the brand kit's UI-elements panel (pill buttons/search, ~12–16px rounded
+cards, circular icon buttons). **Rewritten 2026-09-07 (#653) to describe the scale the application
+actually uses.** Every token below is set to the value that utility already rendered — the slice
+that wrote this table changed no corner anywhere:
 
-| Token | Value | Use |
-|---|---|---|
-| `--radius-sm` | `0.5rem` | Small controls, inputs |
-| `--radius-md` | `1rem` | Cards |
-| `--radius-full` | `9999px` | Pills, circular icon buttons |
+| Token | Utility | Value | Use |
+|---|---|---|---|
+| `--radius` | `rounded` | `0.25rem` | Small inline chips and swatches |
+| `--radius-lg` | `rounded-lg` | `0.5rem` | Small controls, badges |
+| `--radius-xl` | `rounded-xl` | `0.75rem` | Form inputs and most buttons |
+| `--radius-2xl` | `rounded-2xl` | `1rem` | Cards and panels — the dominant surface radius |
+| `--radius-3xl` | `rounded-3xl` | `1.5rem` | Large feature panels |
+| `--radius-full` | `rounded-full` | `9999px` | Pills, circular icon buttons |
+
+**Every step in use is declared, and no step is declared twice.** Tailwind v4's `@theme` *merges*
+with its default scale rather than replacing it, so a partial override produces silent aliases
+between a token-backed utility and an un-overridden default one. That is what this table previously
+described: overriding only `sm` and `md` made `rounded-sm` identical to `rounded-lg` and
+`rounded-md` identical to `rounded-2xl`, while the two most-used radii named no token at all.
+`rounded-sm` and `rounded-md` are therefore **retired** — their call sites were rewritten to the
+identical-rendering `rounded-lg` and `rounded-2xl` — and `tests/radius-scale.test.ts` fails if any
+two distinct `rounded-*` utilities in use ever resolve to the same value again.
+
+Note `--radius` (bare `rounded`) is genuinely theme-backed and belongs in this table: the rounded
+family registers `themeKeys: ["--radius"]`, so leaving it undeclared would make it the one radius
+in use still depending on a Tailwind default.
 
 Spacing scale and breakpoints are **not brand-derived** — Tailwind v4's defaults are used as-is.
 
@@ -212,6 +236,38 @@ To ensure compliance with WCAG AA standards (minimum 4.5:1 contrast ratio for te
 > `tests/design-tokens-contrast.test.ts` asserts the contrast ones, and `eslint.config.mjs` runs
 > `jsx-a11y`'s recommended set at `error` rather than as warnings nobody reads.
 
+## Primitives (`components/ui/`, #656, 2026-09-07)
+
+`Card`, `Button` and `FormField`. Three rules govern them, and each exists because of a specific
+defect rather than a preference:
+
+1. **They are server components, and must stay that way.** No `"use client"`. Progressive
+   enhancement is load-bearing here — server-rendered forms post to server actions and work with no
+   JavaScript. A primitive that needed client JS to render a field would remove a capability, not
+   add an abstraction.
+2. **They compose `lib/form-classes.ts`, they do not re-declare it.** That module already holds
+   `inputClass`, `labelClass`, `errorInputClass`, `buttonClass` and `uppercaseInputClass` as shared
+   strings. The primitives add *markup* on top; duplicating the strings would recreate exactly the
+   divergence both layers exist to prevent.
+3. **`FormField` emits `aria-invalid` and `aria-describedby` together or not at all.** A field
+   cannot be styled invalid without also being announced invalid. This generalises the `fieldProps`
+   pattern the staff forms adopted in #650.
+
+**Why this layer arrived when it did.** `#649` (299 alpha-modified colour utilities failing AA) and
+`#650` (27 suppressed focus outlines) each reached double-digit site counts from a *single* author
+decision, copied into 11 and 15 files. That is what a missing control-geometry layer costs, and it
+is the evidence the original deferral was waiting for. Colour and motion were already systematised;
+shape, control geometry and interaction states were not.
+
+**Adoption is incremental and deliberately unfinished.** The primitives have a handful of call sites
+each; 87 card-surface lines and 24 button sites spanning 17 distinct geometry combinations remain
+un-migrated. Migrating a route group at a time and verifying after each is the intended shape of the
+follow-on work — a single sweep would be an unreviewable diff.
+
+**Not built, and not for lack of a complete-looking set:** `Toast` and `Skeleton`. Nothing in the app
+dispatches a toast and there are zero `loading.tsx` files. Building a primitive because the list has
+a gap is the same speculative reasoning retired above, and it is still wrong for those two.
+
 ## Storefront components (P2.5b2)
 
 The first real storefront UI built against these tokens, matching the AI Studio mockup
@@ -269,8 +325,16 @@ copied literally:
 
 ## What's deliberately not here yet
 
-- **`components/`, `design-system/{components,patterns,pages,guidelines}/`.** Nothing consumes
-  tokens yet — first real usage is P1+ feature UI. Building these now would be speculative.
+- **`design-system/{components,patterns,pages,guidelines}/`.** Still empty, still deliberate. The
+  UI primitives live in `components/ui/` beside the code that uses them; a second parallel
+  component tree under `design-system/` would need a reason neither #656 nor this slice found.
+  `design-system/tokens/` remains the one populated subdirectory.
+
+  **The `components/` half of this bullet was retired on 2026-09-07 (#656).** It read "Nothing
+  consumes tokens yet — first real usage is P1+ feature UI. Building these now would be
+  speculative," and it was correct when written, before P1. It stopped being correct somewhere
+  around P7 and nobody noticed, because the deferral had no stated expiry — the evidence that the
+  patterns had stabilised was the copy-paste itself. See the Primitives section below.
 - **Dark mode.** No requirement yet; add when one exists.
 - **Lint rule banning raw hex/px** (`specs/tech-stack.md`'s testing section, `docs/repo-structure.md`
   tags it P6) — deliberately deferred, not part of this slice.

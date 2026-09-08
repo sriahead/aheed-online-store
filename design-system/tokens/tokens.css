@@ -75,8 +75,34 @@
   --color-accent-tint: var(--color-brand-orange-tint);
   --color-danger-tint: var(--color-brand-red-tint);
 
-  --radius-sm: 0.5rem;
-  --radius-md: 1rem;
+  /*
+   * #653 — Tailwind v4's @theme MERGES with its default radius scale rather
+   * than replacing it. Overriding only sm/md (as this block used to) left two
+   * silent aliases: rounded-sm/rounded-lg both resolved to 0.5rem, and
+   * rounded-md/rounded-2xl both resolved to 1rem, while rounded-xl (94 uses)
+   * and rounded-2xl (141 uses) named no token at all.
+   *
+   * Fixed by RETIRING the redundant utility, not by changing a value: every
+   * rounded-sm/rounded-md call site was rewritten to the identical-rendering
+   * rounded-lg/rounded-2xl (tests/radius-scale.test.ts#653), so sm and md are
+   * no longer used and no longer declared here. The five tokens below name
+   * every step still in use, each set to exactly what Tailwind's own default
+   * scale already computes it to (node_modules/tailwindcss/theme.css) — this
+   * makes the scale explicit, it does not change a single rendered radius.
+   * Bare `rounded` (8 uses) IS theme-backed and so is declared here too: the
+   * whole rounded family registers `themeKeys: ["--radius"]` (tailwindcss/
+   * dist/lib.js) and Tailwind's own default theme sets `--radius: 0.25rem`
+   * (theme.css:508). Left undeclared it would be the one radius in use still
+   * depending on an un-overridden default — the exact condition this block
+   * exists to remove. Declared at its current value, so nothing moves.
+   * `--radius-full` needs its own token for a different reason: Tailwind's
+   * default for it is calc(infinity * 1px), not a fixed length.
+   */
+  --radius: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
   --radius-full: 9999px;
 
   --font-sans: var(--font-poppins), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

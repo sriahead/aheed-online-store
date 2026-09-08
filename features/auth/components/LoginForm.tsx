@@ -36,7 +36,7 @@ export function LoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded-sm border border-black/20 px-3 py-2"
+          className="rounded-lg border border-black/20 px-3 py-2"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -46,7 +46,7 @@ export function LoginForm() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded-sm border border-black/20 px-3 py-2"
+          className="rounded-lg border border-black/20 px-3 py-2"
         />
       </label>
       {error && (

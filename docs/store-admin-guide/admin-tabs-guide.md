@@ -33,25 +33,33 @@ edited. This is the record of the product; the day-to-day stock figure lives und
 
 **Who can access:** Store admins only
 
-**What you can do:** Add a product, edit its name, description, price and unit label, set its
-department, choose its brand, mark dietary and provenance flags, feature it on the homepage, and
-manage its photographs.
+**What you can do:** Add a product, edit its name, description, price and unit label, record its net
+content so the shop can work out a real price per kilo or litre, set its department, choose its
+brand, mark dietary and provenance flags, feature it on the homepage, and manage its photographs.
 
 **Typical workflow:** A new line arrives. Create the product, fill in name, price and unit label,
-choose the department it belongs in, upload a photo, then set its opening stock. After that, staff
-keep the stock figure current from the Inventory page and you only return here when something about
-the product itself changes.
+add the net content if the item is sold by weight or volume, choose the department it belongs in,
+upload a photo, then set its opening stock. After that, staff keep the stock figure current from the
+Inventory page and you only return here when something about the product itself changes.
 
 **Important fields and filters:** Price is entered in pounds and pence. The unit label is what the
-shopper sees next to the price, so make it match how you actually sell the item. **Unlike the shop
-itself, this list shows switched-off products too** — that is deliberate, because otherwise you could
-never find a product to switch back on.
+shopper sees next to the price, so make it match how you actually sell the item. **Net content
+amount** and **Net content unit** are the pair that matter for pricing law: fill both in — for
+example `500` and `Grams` — and the shop works out the price per kilogram itself and shows that
+instead of your unit label, so it can never drift from the price you charge. Leave them empty and
+nothing changes: the product goes on showing the unit label you typed. The amount is a whole number
+in the unit you pick, so enter half a kilo as `500` grams rather than `0.5` kilograms. **Unlike the
+shop itself, this list shows switched-off products too** — that is deliberate, because otherwise you
+could never find a product to switch back on.
 
 **Common mistakes and limitations:** A product must be assigned to a department, and it can sit in a
 top-level department or in one of its subcategories. Both are valid, so check you have picked the one
 shoppers will browse. Marking a product as HMC certified requires the certificate reference and
-verification date; the flag cannot be set without them, and that is intentional. Switching a product
-off hides it from shoppers but does not delete it or affect orders already placed.
+verification date; the flag cannot be set without them, and that is intentional. Net content is
+all-or-nothing — an amount with no unit, or a unit with no amount, is refused with the field marked,
+because neither half prices anything on its own. It also describes **one** pack: a 1kg bag and a 5kg
+bag are two separate products here, not two sizes of one. Switching a product off hides it from
+shoppers but does not delete it or affect orders already placed.
 
 **What happens after changes are saved:** The change is live immediately — the storefront, the
 department listing and the product's own page all update. Existing orders are unaffected: they keep
@@ -210,18 +218,24 @@ delivery rules every order is charged by.
 
 **Who can access:** Store admins only
 
-**What you can do:** Set your brand colours, upload your logo, edit the homepage hero subtitle and
-the notice in the header banner, and set your delivery fee, your free delivery threshold and your
-minimum order value.
+**What you can do:** Pick a ready-made colour theme, set all eight of your brand colours
+individually, upload your logo, edit the homepage hero subtitle and the notice in the header banner,
+and set your delivery fee, your free delivery threshold and your minimum order value.
 
-**Typical workflow:** You do the branding at setup and when it changes. Upload the logo, set the
-colours, write the banner note, and check the shop's homepage afterwards. Delivery rules are their
-own form lower down the page with its own Save button — changing your delivery fee does not require
-touching your branding, and saving one does not save the other.
+**Typical workflow:** You do the branding at setup and when it changes. The quickest start is to
+choose a theme from the **Select a theme** list and press **Apply Theme** — that fills all eight
+colour fields for you, and you can then adjust any of them before saving. Otherwise set the colours
+yourself, upload the logo, write the banner note, and check the shop's homepage afterwards.
+Delivery rules are their own form lower down the page with its own Save button — changing your
+delivery fee does not require touching your branding, and saving one does not save the other.
 
 **Important fields and filters:** Colours are applied across the whole shop, so change one and check
-a product page as well as the homepage. The banner note is a short line in the site header — a good
-place for opening hours over a bank holiday. The three delivery amounts are entered in pounds:
+a product page as well as the homepage. There are eight of them and they do different jobs: the two
+**primary** colours carry headings and text, **accent** and **danger** carry buttons and alerts,
+**cream** is the page background, and the three **tint** colours are the pale backgrounds behind
+badges and notices. Applying a theme overwrites all eight at once. The banner note is a short line
+in the site header — a good place for opening hours over a bank holiday. The three delivery amounts
+are entered in pounds:
 **Delivery fee** is what a shopper pays for delivery; **Free delivery over** is the basket value at
 which that fee is waived, and leaving it **blank** means free delivery is never offered — which is
 not the same as entering `0`, because `0` would make every order qualify; **Minimum order** is the
@@ -230,7 +244,11 @@ basket value below which a shopper cannot check out, so enter `0.00` if you do n
 **Common mistakes and limitations:** Colour choices affect the readability of text sitting on them.
 After changing a brand colour, look at a real page rather than only the colour swatch. Because your
 branding is applied on top of the site's defaults, a very light or very dark choice can reduce
-contrast for shoppers. For delivery, the two mistakes worth naming are entering `0` in the free
+contrast for shoppers. Two things about themes are worth knowing: **Apply Theme** replaces all
+eight colours immediately, so anything you had typed in those fields is lost — apply the theme
+first, then adjust. And a theme is only a starting point: once applied, your colours are your own
+and editing one does not "break" the theme or switch you back to it. For delivery, the two mistakes
+worth naming are entering `0` in the free
 delivery field when you meant to leave it blank, and setting a minimum order above what a typical
 basket comes to — that refuses shoppers at checkout rather than warning them earlier. Amounts are
 pounds and pence with at most two decimal places; anything else is refused with the field marked,

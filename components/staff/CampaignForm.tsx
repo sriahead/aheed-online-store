@@ -8,7 +8,8 @@ import { initialCampaignFormState } from "@/lib/campaign-form";
 import { formatLocalInput } from "@/lib/local-datetime";
 import { CampaignBannerUploader } from "@/components/staff/CampaignBannerUploader";
 import type { CampaignRow } from "@/lib/repositories/campaigns";
-import { errorInputClass, inputClass, labelClass } from "@/lib/form-classes";
+import { FormField } from "@/components/ui/FormField";
+import { Button } from "@/components/ui/Button";
 
 /**
  * Department campaign edit form (P8.5e, #356) — modelled on
@@ -35,23 +36,12 @@ export function CampaignForm({
 }) {
   const [state, action, saving] = useActionState(saveCampaign, initialCampaignFormState);
 
-  /**
-   * #650 — the className AND the ARIA pair, from one call, so a field cannot be
-   * styled as invalid without also being announced as invalid. `errorInputClass`
-   * is a border and a background tint: on its own it tells a sighted mouse user
-   * which field is wrong and a screen-reader user nothing at all (WCAG SC 1.4.1
-   * Use of Colour, SC 3.3.1 Error Identification). Returning both together is why
-   * this is `fieldProps` rather than the old `fieldClass` — a future field added
-   * to this form gets the association by construction instead of by remembering.
-   */
-  const fieldProps = (name: string) => {
-    const invalid = state.field === name;
-    return {
-      className: `${inputClass} ${invalid ? errorInputClass : ""}`,
-      "aria-invalid": invalid || undefined,
-      "aria-describedby": invalid ? "campaign-form-error" : undefined,
-    };
-  };
+  // #650/#656 — `FormField` carries the className-and-ARIA pairing that used
+  // to be this file's own `fieldProps` closure: a field cannot be styled as
+  // invalid without also being announced as invalid (R8). Every field here
+  // points at the same shared banner id, matching the pre-existing
+  // `fieldProps` convention.
+  const isInvalid = (name: string) => state.field === name;
 
   return (
     <div className="space-y-6">
@@ -77,70 +67,50 @@ export function CampaignForm({
         )}
 
         <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
-          <div>
-            <label className={labelClass} htmlFor="headline">
-              Headline
-            </label>
-            <input
-              id="headline"
-              name="headline"
-              required
-              placeholder={categoryName}
-              defaultValue={campaign?.headline ?? ""}
-              {...fieldProps("headline")}
-            />
-          </div>
+          <FormField
+            name="headline"
+            label="Headline"
+            required
+            placeholder={categoryName}
+            defaultValue={campaign?.headline ?? ""}
+            error={isInvalid("headline")}
+            errorId="campaign-form-error"
+          />
 
-          <div>
-            <label className={labelClass} htmlFor="subtitle">
-              Subtitle (optional)
-            </label>
-            <input
-              id="subtitle"
-              name="subtitle"
-              defaultValue={campaign?.subtitle ?? ""}
-              {...fieldProps("subtitle")}
-            />
-          </div>
+          <FormField
+            name="subtitle"
+            label="Subtitle (optional)"
+            defaultValue={campaign?.subtitle ?? ""}
+            error={isInvalid("subtitle")}
+            errorId="campaign-form-error"
+          />
 
-          <div>
-            <label className={labelClass} htmlFor="linkUrl">
-              Link (optional — defaults to this department&apos;s own page)
-            </label>
-            <input
-              id="linkUrl"
-              name="linkUrl"
-              placeholder={`/categories/...`}
-              defaultValue={campaign?.linkUrl ?? ""}
-              {...fieldProps("linkUrl")}
-            />
-          </div>
+          <FormField
+            name="linkUrl"
+            label="Link (optional — defaults to this department's own page)"
+            placeholder="/categories/..."
+            defaultValue={campaign?.linkUrl ?? ""}
+            error={isInvalid("linkUrl")}
+            errorId="campaign-form-error"
+          />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className={labelClass} htmlFor="startsAt">
-                Starts (optional)
-              </label>
-              <input
-                id="startsAt"
-                name="startsAt"
-                type="datetime-local"
-                defaultValue={formatLocalInput(campaign?.startsAt ?? null)}
-                {...fieldProps("startsAt")}
-              />
-            </div>
-            <div>
-              <label className={labelClass} htmlFor="endsAt">
-                Ends (optional)
-              </label>
-              <input
-                id="endsAt"
-                name="endsAt"
-                type="datetime-local"
-                defaultValue={formatLocalInput(campaign?.endsAt ?? null)}
-                {...fieldProps("endsAt")}
-              />
-            </div>
+            <FormField
+              name="startsAt"
+              label="Starts (optional)"
+              type="datetime-local"
+              defaultValue={formatLocalInput(campaign?.startsAt ?? null)}
+              error={isInvalid("startsAt")}
+              errorId="campaign-form-error"
+            />
+            <FormField
+              name="endsAt"
+              label="Ends (optional)"
+              type="datetime-local"
+              defaultValue={formatLocalInput(campaign?.endsAt ?? null)}
+              error={isInvalid("endsAt")}
+              errorId="campaign-form-error"
+            />
           </div>
 
           <label className="flex items-center gap-2 text-sm text-primary">
@@ -155,14 +125,10 @@ export function CampaignForm({
         </section>
 
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <Button variant="primary" disabled={saving}>
             <Save className="h-4 w-4" aria-hidden />
             {saving ? "Saving…" : campaign ? "Save changes" : "Create campaign"}
-          </button>
+          </Button>
           <Link
             href="/staff/promotions"
             className="text-sm font-semibold text-primary-muted hover:underline"

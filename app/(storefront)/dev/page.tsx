@@ -52,7 +52,7 @@ export default async function DevPage() {
 
       <div className="grid gap-6 sm:grid-cols-2">
         {/* Environment */}
-        <section className="rounded-md border border-black/10 p-5">
+        <section className="rounded-2xl border border-black/10 p-5">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
             Environment
           </h2>
@@ -73,7 +73,7 @@ export default async function DevPage() {
         </section>
 
         {/* Session */}
-        <section className="rounded-md border border-black/10 p-5">
+        <section className="rounded-2xl border border-black/10 p-5">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
             Your session
           </h2>
@@ -96,7 +96,7 @@ export default async function DevPage() {
         </section>
 
         {/* Integrations */}
-        <section className="rounded-md border border-black/10 p-5 sm:col-span-2">
+        <section className="rounded-2xl border border-black/10 p-5 sm:col-span-2">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
             Integrations (configured for this environment)
           </h2>
@@ -119,7 +119,7 @@ export default async function DevPage() {
         </section>
 
         {/* KMS */}
-        <section className="rounded-md border border-black/10 p-5 sm:col-span-2">
+        <section className="rounded-2xl border border-black/10 p-5 sm:col-span-2">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
             Knowledge Management System (internal docs)
           </h2>

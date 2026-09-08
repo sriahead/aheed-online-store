@@ -28,7 +28,7 @@ export function RegisterForm() {
 
   if (submitted) {
     return (
-      <p className="rounded-md border border-black/10 bg-surface-muted p-5">
+      <p className="rounded-2xl border border-black/10 bg-surface-muted p-5">
         Check <strong>{email}</strong> for a verification link before signing in.
       </p>
     );
@@ -42,7 +42,7 @@ export function RegisterForm() {
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="rounded-sm border border-black/20 px-3 py-2"
+          className="rounded-lg border border-black/20 px-3 py-2"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -52,7 +52,7 @@ export function RegisterForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded-sm border border-black/20 px-3 py-2"
+          className="rounded-lg border border-black/20 px-3 py-2"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -63,7 +63,7 @@ export function RegisterForm() {
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded-sm border border-black/20 px-3 py-2"
+          className="rounded-lg border border-black/20 px-3 py-2"
         />
       </label>
       {error && (
