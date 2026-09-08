@@ -155,7 +155,13 @@ export async function listInventoryForStaff(
 
 export async function listProductsForAdmin(
   vendorId: string,
-  options: { take: number; cursor?: string; search?: string | null; isActive?: boolean },
+  options: {
+    take: number;
+    cursor?: string;
+    search?: string | null;
+    isActive?: boolean;
+    categoryIds?: readonly string[];
+  },
 ): Promise<AdminProductPage> {
   return listProductsForAdminRepo(getPrisma(), vendorId, options);
 }

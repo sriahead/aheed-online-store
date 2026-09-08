@@ -546,7 +546,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  113 files / 1478 tests**, measured 2026-09-07 at the deferred-abstraction-sweep Build) and treat any shortfall as
+  114 files / 1495 tests**, measured 2026-09-08 at the panel-refusal/category-filter Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -601,6 +601,13 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   times out at 5000ms under full-suite load and passes in 1.8s alone. That test parses every file
   in `lib/repositories/`, and this slice added exports to two of them, so expect it to keep
   creeping; the fix is a per-test timeout, not a re-run.
+  Then `113/1478` moved to **`114/1495`** at the panel-refusal/category-filter Build
+  (`#350`/`#503`): one new file (`tests/panel-refusal-coverage.test.ts`) carrying three tests, plus
+  **fourteen** added to the existing `tests/staff-products-query.test.ts` — the mixed case, and the
+  first time the existing-file half has outweighed the new-file half by more than 4x. Nothing
+  `it.each`-driven moved; all seventeen are hand-written `it` blocks. `#538` did **not** reproduce
+  on this run, which is worth recording precisely because the entry above says to expect it: it is
+  a load-dependent timeout, so a green run is not evidence it is fixed.
   That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that
@@ -836,15 +843,28 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   message, easy to mistake for a loading state rather than a real refusal. (This line said
   `app/(admin)/staff/layout.tsx` until P7.5d+e; **no such file has ever existed** — the shell is one
   segment up, at the route group. The rule's substance was unaffected, but the path a reader would
-  open to check it was wrong, which is the same failure mode as a ruling nobody can find.) All other
-  `/staff/*` pages (`categories`, `inventory`, `orders`, `products`, `reports`, `team`, `customers`,
-  `staff/page.tsx`) use `<PanelRefusal title="..." message="..." />`; `runbook/page.tsx` didn't,
-  until #231's `/validate` fired the exact signed-in-non-staff case its own `validation.md` had
-  flagged as never exercised and found it. Fixed at `/fix` to match the established pattern.
-  **`loyalty/page.tsx` was a second instance** — it hand-rolled equivalent markup rather than
-  returning `null`, so it was a consistency defect rather than a live one, and it was converted in
-  P7.5d+e (#136) while that slice was editing the page anyway. When adding a new `/staff/*` page,
-  copy an existing one's refusal branch rather than writing a bare `if (!auth.ok) return null`.
+  open to check it was wrong, which is the same failure mode as a ruling nobody can find.)
+  **`tests/panel-refusal-coverage.test.ts` (#350, 2026-09-08) now enforces this mechanically**, so
+  the paragraph below is history rather than the enforcement. It walks `app/(admin)/` on the
+  filesystem, has **no allowlist**, and fails a page that calls `requireVendorRole(` without
+  rendering `<PanelRefusal>` — or that returns `null` from an `auth`-conditioned branch. It matches
+  **JSX element names on the parsed TypeScript AST, not text**, because several of these pages carry
+  a comment saying the refusal branch renders `<PanelRefusal>` and never returns `null`, which
+  satisfies any substring check on its own. Do not reintroduce a hand-maintained list.
+  **The history is the reason the test exists.** This rule was enforced by the prose list that used
+  to sit here — naming `categories`, `inventory`, `orders`, `products`, `reports`, `team`,
+  `customers` and `staff/page.tsx` as compliant, plus `runbook` and `loyalty` as fixed — and by the
+  time anyone checked it against the filesystem it was wrong in **two directions at once**. It never
+  mentioned `storefront` (**#350**, the live `return null` instance, found while scoping P8.5b and
+  fixed incidentally in `e3c9642` by a slice editing that page for something else) and never
+  mentioned `discounts` (**the fourth instance**, hand-rolled markup, found only by walking all 25
+  pages at #350's own `/propose` on 2026-09-08); meanwhile `components/staff/PanelRefusal.tsx`'s
+  docstring still claimed `loyalty` kept a private copy three phases after **#136** converted it.
+  Four instances (`runbook` #231, `loyalty` #136, `storefront` #350, `discounts` #350) across five
+  phases, two of them invisible to the list that existed to prevent them. **#231's was the only one
+  a user could have hit** — it fired at `/validate` on the exact signed-in-non-staff case that
+  slice's own `validation.md` had flagged as never exercised. When adding a new `/staff/*` page,
+  copy an existing one's refusal branch; the test will tell you if you forgot.
 - **There are TWO navigation surfaces and a new page must be added to BOTH** —
   `components/staff/PanelNav.tsx` (the persistent nav) and `app/(admin)/staff/page.tsx` (the hub's
   cards). Until P9.2 (#612) neither was a superset of the other: the nav omitted `brands`,

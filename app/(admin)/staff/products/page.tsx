@@ -4,7 +4,10 @@ import { redirect } from "next/navigation";
 import { Package, Plus, Search } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { listProductsForAdmin } from "@/lib/products-service";
+import { listCategoriesForAdmin } from "@/lib/categories-service";
+import { toCategoryOptionGroups } from "@/lib/catalogue-form";
 import {
+  CATEGORY_ALL,
   PRODUCT_STATUS_ALL,
   parseStaffProductsQuery,
   staffProductsHref,
@@ -35,9 +38,9 @@ const PAGE_SIZE = 25;
 export default async function StaffProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cursor?: string; status?: string; q?: string }>;
+  searchParams: Promise<{ cursor?: string; status?: string; q?: string; category?: string }>;
 }) {
-  const { cursor, status, q } = await searchParams;
+  const { cursor, status, q, category } = await searchParams;
   const auth = await requireVendorRole("ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
@@ -49,16 +52,28 @@ export default async function StaffProductsPage({
     );
   }
 
-  const query = parseStaffProductsQuery({ status, q });
+  // Categories are fetched BEFORE the product query, not alongside it — the two
+  // are not independent (#503). Validating the selected id and expanding a
+  // department to its subcategories both need this vendor's real category list,
+  // and the product `where` depends on the result, so the calls are ordered.
+  // The cost is one extra round-trip on this admin page; the alternative was
+  // pushing expansion into a Prisma relation filter, which would move the one
+  // rule worth testing out of a pure function and into a query shape that needs
+  // a database to assert — and would still not supply the forged-id guard.
+  // Round-trip economics on this app are #670's subject.
+  const categories = await listCategoriesForAdmin(auth.vendorId);
+  const query = parseStaffProductsQuery({ status, q, category }, categories);
 
   const { items, nextCursor } = await listProductsForAdmin(auth.vendorId, {
     take: PAGE_SIZE,
     cursor,
     search: query.search,
     isActive: query.isActive,
+    categoryIds: query.categoryIds,
   });
 
-  const isFiltered = query.search !== null || query.status !== PRODUCT_STATUS_ALL;
+  const isFiltered =
+    query.search !== null || query.status !== PRODUCT_STATUS_ALL || query.category !== CATEGORY_ALL;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8">
@@ -94,6 +109,32 @@ export default async function StaffProductsPage({
             <option value={PRODUCT_STATUS_ALL}>All products</option>
             <option value="active">Visible to shoppers</option>
             <option value="inactive">Hidden</option>
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wide text-primary">
+          Category
+          <select
+            name="category"
+            defaultValue={query.category}
+            className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-primary"
+          >
+            <option value={CATEGORY_ALL}>All categories</option>
+            {/* Same optgroup shape as the product form's picker (#630), reused
+                rather than rebuilt. The department option's wording differs on
+                purpose: on the form it means "assign directly here", but as a
+                FILTER it means the department and everything beneath it. */}
+            {toCategoryOptionGroups(categories).map((group) => (
+              <optgroup key={group.parent.id} label={group.parent.name}>
+                <option value={group.parent.id}>All of {group.parent.name}</option>
+                {group.children.map((child) => (
+                  <option key={child.id} value={child.id}>
+                    {child.name}
+                    {!child.isActive && " (inactive)"}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
           </select>
         </label>
 
