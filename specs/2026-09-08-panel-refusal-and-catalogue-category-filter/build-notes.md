@@ -152,3 +152,18 @@ Otherwise: **none.** R1–R22 were built as written.
   than before** (`#503` measured Neon at roughly 69 ms each). Deliberate and reasoned above;
   round-trip economics are `#670`'s subject. If the page feels slower at validation, that is the
   expected cost, not a defect.
+
+## Fix round (post-`/validate`)
+
+**R7 failed on first `/validate`.** R7 requires CLAUDE.md's "Staff panel pages" section to list
+both `storefront` and `discounts` among the pages using `<PanelRefusal>`, and validation.md's own
+check greps for the page name and "PanelRefusal"/"refusal" **on the same line**. The paragraph this
+slice wrote about `#350`'s history named both pages, but only in the context of the *old* prose
+list never mentioning them — it never actually asserted, as a plain present-tense fact, that either
+page renders `<PanelRefusal>` now. Root cause was the doc content itself, not the check: the
+history was true and worth keeping, but the section still lacked the direct compliance statement
+R7 asks for. Fixed by adding one sentence to the same bullet — "`storefront` and `discounts` now
+both render `<PanelRefusal>` on refusal, same as every other page in this section" — kept on one
+line so it satisfies the same-line grep, immediately before the existing "copy an existing page"
+guidance. No code changed; this is a `CLAUDE.md` documentation fix only, so `CHANGELOG.md` is
+unaffected (no observable behaviour changed).

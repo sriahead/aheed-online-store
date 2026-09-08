@@ -863,8 +863,11 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   Four instances (`runbook` #231, `loyalty` #136, `storefront` #350, `discounts` #350) across five
   phases, two of them invisible to the list that existed to prevent them. **#231's was the only one
   a user could have hit** — it fired at `/validate` on the exact signed-in-non-staff case that
-  slice's own `validation.md` had flagged as never exercised. When adding a new `/staff/*` page,
-  copy an existing one's refusal branch; the test will tell you if you forgot.
+  slice's own `validation.md` had flagged as never exercised.
+  **`storefront` and `discounts` now both render `<PanelRefusal>` on refusal, same as every other
+  page in this section** — that is what closed #350, and `tests/panel-refusal-coverage.test.ts` is
+  what keeps it true from here, not a prose list. When adding a new `/staff/*` page, copy an
+  existing one's refusal branch; the test will tell you if you forgot.
 - **There are TWO navigation surfaces and a new page must be added to BOTH** —
   `components/staff/PanelNav.tsx` (the persistent nav) and `app/(admin)/staff/page.tsx` (the hub's
   cards). Until P9.2 (#612) neither was a superset of the other: the nav omitted `brands`,
