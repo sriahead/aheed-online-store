@@ -310,6 +310,26 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` (final) closeout for panel refusal enforcement & the admin catalogue category
+  filter** (`#350`, `#503` part 1; PR #671 merged to `staging`, PR #672 promoted to `main`, merge
+  `364103c`). Docs only — no runtime code, no schema change.
+  - `specs/roadmap.md` (1.83.0) gains a `#503` bullet in P9.3 (previously undocumented there),
+    the staging-merge and promotion rows for this slice, and a backfilled row for PR #669 (the
+    prior slice's own Document-final promotion) that `sdd:audit` reported pending carry-forward.
+  - **A closing-keyword incident, caught and reversed within the same session.** Two commits
+    already on `staging` carried a caution phrased as a colon-separated issue list — structurally
+    identical to GitHub's `close: #NNN` syntax — and PR #672's merge auto-closed the first-listed
+    issue (`#670`) despite `closingIssuesReferences` showing only `#350`/`#503` beforehand. This is
+    the same class this repo already hit once at `#214`; caught within seconds via the immediate
+    post-merge issue-state check, reopened with an explanatory comment, board status corrected
+    from the auto-triggered `Done` back to `Backlog`. `specs/sdd-workflow.md`'s existing bullet on
+    this trap (2.29.0 → 2.30.0) now records the second occurrence and a concrete phrasing fix:
+    state issue numbers to keep open as bare digits, with no `close`/`fix`/`resolve` word anywhere
+    in the sentence.
+  - Production `/api/health` confirmed serving `364103c` with `db.ok: true`; staging confirmed
+    serving `2bec567` the same way.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 - **`/document` (final) closeout for the deferred-abstraction sweep** (`#662`, `#656`, `#653`,
   `#351`, `#639`, `#75`; PR #666 merged to `staging`, PR #667 promoted to `main`, merge `14200cc`).
   Docs only — no runtime code, no schema change beyond what PR #666 already carried.
