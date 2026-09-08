@@ -5,7 +5,8 @@ import { Plus, Save } from "lucide-react";
 import { createBrand, renameBrand, setBrandImage } from "@/features/admin/brands";
 import { initialCatalogueState } from "@/lib/catalogue-form";
 import type { AdminBrandRow } from "@/lib/repositories/brands";
-import { buttonClass, inputClass, labelClass } from "@/lib/form-classes";
+import { inputClass, labelClass } from "@/lib/form-classes";
+import { Button } from "@/components/ui/Button";
 
 /**
  * Brand admin forms (P2.6 slice 6, #569).
@@ -47,10 +48,10 @@ export function AddBrandForm() {
         </label>
         <input id="new-brand-name" name="name" placeholder="Shan" className={inputClass} required />
       </div>
-      <button type="submit" className={buttonClass} disabled={pending}>
+      <Button disabled={pending}>
         <Plus className="h-4 w-4" aria-hidden="true" />
         {pending ? "Adding…" : "Add brand"}
-      </button>
+      </Button>
       <div className="sm:sr-only">
         <Feedback state={state} />
       </div>
@@ -99,10 +100,10 @@ export function BrandRowForms({ brand }: { brand: AdminBrandRow }) {
             required
           />
         </div>
-        <button type="submit" className={buttonClass} disabled={renaming}>
+        <Button disabled={renaming}>
           <Save className="h-4 w-4" aria-hidden="true" />
           {renaming ? "Saving…" : "Rename"}
-        </button>
+        </Button>
       </form>
       <Feedback state={renameState} />
 
@@ -124,10 +125,10 @@ export function BrandRowForms({ brand }: { brand: AdminBrandRow }) {
             thumbnails have somewhere to live. Leave blank to clear.
           </p>
         </div>
-        <button type="submit" className={buttonClass} disabled={savingImage}>
+        <Button disabled={savingImage}>
           <Save className="h-4 w-4" aria-hidden="true" />
           {savingImage ? "Saving…" : "Save key"}
-        </button>
+        </Button>
       </form>
       <Feedback state={imageState} />
     </div>

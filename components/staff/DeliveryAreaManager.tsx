@@ -5,7 +5,8 @@ import { MapPin, Plus, Trash2 } from "lucide-react";
 import { addDeliveryArea, removeDeliveryArea } from "@/features/admin/delivery-areas";
 import { initialDeliveryAreaState, type DeliveryAreaFormState } from "@/lib/delivery-area-form";
 import type { DeliveryAreaRow } from "@/lib/repositories/delivery-areas";
-import { buttonClass, labelClass, uppercaseInputClass as inputClass } from "@/lib/form-classes";
+import { labelClass, uppercaseInputClass as inputClass } from "@/lib/form-classes";
+import { Button } from "@/components/ui/Button";
 
 /**
  * Delivery-area admin forms (P9.2, #612).
@@ -58,10 +59,10 @@ export function AddDeliveryAreaForm() {
           MK district, from MK1 to MK19.
         </p>
       </div>
-      <button type="submit" className={buttonClass} disabled={pending}>
+      <Button disabled={pending}>
         <Plus className="h-4 w-4" aria-hidden="true" />
         {pending ? "Adding…" : "Add area"}
-      </button>
+      </Button>
       <div className="sm:sr-only">
         <Feedback state={state} />
       </div>

@@ -1,4 +1,5 @@
 import { parsePriceInput } from "@/components/product/parse-price-input";
+import { isNetContentUnit, type NetContentUnit } from "@/components/product/unit-price";
 
 /**
  * Catalogue admin field rules (P6b1, #159) — pure, DB-free, unit-tested.
@@ -33,6 +34,14 @@ export interface ProductFormValues {
   basePrice: number;
   originalPrice: number | null;
   unitLabel: string;
+  /**
+   * #398 (derivation half, P9.3) — net content, so `components/product/unit-price.ts` can
+   * derive a real unit price instead of trusting `unitLabel`'s free text. Both null or both set —
+   * `parseNetContentFields` below enforces that half-typed pairing is rejected, matching
+   * `tier`'s own both-or-neither shape a few fields down.
+   */
+  netContentAmount: number | null;
+  netContentUnit: NetContentUnit | null;
   origin: string | null;
   isHalal: boolean;
   isFresh: boolean;
@@ -252,6 +261,9 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
   const lowStockThreshold = wholeNumber(raw, "lowStockThreshold", "Low-stock threshold", 0);
   if (!lowStockThreshold.ok) return lowStockThreshold;
 
+  const netContent = parseNetContentFields(raw);
+  if (!netContent.ok) return netContent;
+
   const tier = parseTierFields(raw, basePrice);
   if (!tier.ok) return tier;
 
@@ -269,6 +281,8 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
       basePrice,
       originalPrice,
       unitLabel: unitLabel.value,
+      netContentAmount: netContent.value.netContentAmount,
+      netContentUnit: netContent.value.netContentUnit,
       origin: optionalText(raw, "origin"),
       isHalal: checkbox(raw, "isHalal"),
       isVegetarian: checkbox(raw, "isVegetarian"),
@@ -348,6 +362,60 @@ function parseHmcFields(raw: RawForm): ParseResult<{
     ok: true,
     value: { isHmcCertified: true, hmcReference: reference, hmcVerifiedAt: verifiedAt },
   };
+}
+
+/**
+ * #398 (derivation half, P9.3) — net content, parsed as one unit for the same reason the HMC
+ * fields above are: a half-typed pair (an amount with no unit, or a unit with no amount) is not a
+ * usable net content and must be refused with the empty field named, matching the multi-buy
+ * tier's own both-or-neither shape below. Both blank means "no net content", which is the
+ * majority of existing products (R34's `unitLabel`-only fallback) and is not an error.
+ *
+ * `netContentAmount` is a WHOLE NUMBER (`wholeNumber`, min 1) in the chosen unit's own scale —
+ * see the schema comment on `Product.netContentAmount` for why a fractional amount in a coarser
+ * unit (e.g. "0.5 KILOGRAM") is never accepted; a half-kilogram product is typed as 500 GRAM.
+ */
+function parseNetContentFields(
+  raw: RawForm,
+): ParseResult<{ netContentAmount: number | null; netContentUnit: NetContentUnit | null }> {
+  const amountRaw = text(raw, "netContentAmount");
+  const unitRaw = text(raw, "netContentUnit");
+
+  if (amountRaw === "" && unitRaw === "") {
+    return { ok: true, value: { netContentAmount: null, netContentUnit: null } };
+  }
+
+  if (unitRaw === "") {
+    return {
+      ok: false,
+      error: {
+        field: "netContentUnit",
+        message: "Choose a unit of measure, or clear the net content amount.",
+      },
+    };
+  }
+  if (!isNetContentUnit(unitRaw)) {
+    return {
+      ok: false,
+      error: { field: "netContentUnit", message: "Choose a valid unit of measure." },
+    };
+  }
+
+  if (amountRaw === "") {
+    return {
+      ok: false,
+      error: {
+        field: "netContentAmount",
+        message: "Enter the net content amount, or clear the unit of measure.",
+      },
+    };
+  }
+  // wholeNumber() rejects "", non-integers and negatives identically — a non-numeric amount
+  // re-renders with THIS field named rather than throwing (R33).
+  const amount = wholeNumber(raw, "netContentAmount", "Net content amount", 1);
+  if (!amount.ok) return amount;
+
+  return { ok: true, value: { netContentAmount: amount.value, netContentUnit: unitRaw } };
 }
 
 /** The smallest group a multi-buy can have. See MIN_TIER_GROUP_QUANTITY's note. */
@@ -477,6 +545,10 @@ export const PRODUCT_FIELDS = [
   "basePrice",
   "originalPrice",
   "unitLabel",
+  // #398 (derivation half) — a field missing from this list is invisible to readForm() no
+  // matter how correctly the form renders it or parseNetContentFields handles it.
+  "netContentAmount",
+  "netContentUnit",
   "origin",
   "isHalal",
   "isFresh",

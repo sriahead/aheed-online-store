@@ -6,6 +6,7 @@ import { getReviewRepository } from "@/lib/reviews-service";
 import { getAuth } from "@/lib/auth";
 import { getEnv } from "@/lib/config";
 import { formatPrice } from "@/components/product/format-price";
+import { deriveUnitPriceLabel } from "@/components/product/unit-price";
 import { ProductImageGallery } from "@/components/product/ProductImageGallery";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { ReviewForm } from "@/features/reviews/components/ReviewForm";
@@ -24,6 +25,17 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     notFound();
   }
 
+  // #398 (derivation half), R34 — the derived unit price where the product HAS net content,
+  // computed at render time (never from the stored sort-key column, R32); unitLabel unchanged
+  // otherwise. Same fallback shape as components/product/ProductCard.tsx.
+  const unitDisplay =
+    product.netContentAmount !== null && product.netContentUnit !== null
+      ? (deriveUnitPriceLabel(product.basePrice, {
+          amount: product.netContentAmount,
+          unit: product.netContentUnit,
+        }) ?? product.unitLabel)
+      : product.unitLabel;
+
   const { CDN_BASE_URL } = getEnv();
   const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const reviewRepo = getReviewRepository();
@@ -41,7 +53,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <div className="flex flex-col gap-3">
         <h1 className="text-2xl font-semibold text-primary">{product.name}</h1>
         <p className="text-primary-muted">{product.description}</p>
-        <p className="text-sm text-primary-muted">{product.unitLabel}</p>
+        <p className="text-sm text-primary-muted">{unitDisplay}</p>
         <p className="text-xl font-semibold text-action">{formatPrice(product.basePrice)}</p>
         <p className={product.inStock ? "text-action" : "text-danger"}>
           {product.inStock ? "In stock" : "Out of stock"}
@@ -66,7 +78,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
         <ul className="flex flex-col gap-3">
           {reviews.map((review) => (
-            <li key={review.id} className="rounded-md border border-black/10 p-3">
+            <li key={review.id} className="rounded-2xl border border-black/10 p-3">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-primary">
                   {review.reviewerName} — {review.rating}/5

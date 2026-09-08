@@ -4,7 +4,7 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.11.0"
+version: "1.12.0"
 updated: 2026-09-07
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
@@ -224,6 +224,32 @@ Land before P3, as independently-validatable slices:
 - **Rule of thumb (post-ADR):** if onboarding a vendor or changing its branding/locality/delivery
   area/custom domain requires editing anything **outside the database and the UI/config layer**, the
   abstraction has been violated.
+
+## Implementation note — the `Theme` catalogue, and why it carries no `vendorId` (2026-09-07, #75)
+
+**Decision 5 is unchanged, and Decision 2 gains its first stated exception.**
+
+`#75` adds a `Theme` table: a display name plus the same eight brand primitives `VendorBranding`
+holds, as explicit `String` columns. `VendorBranding` gains a nullable `themeId` with
+`onDelete: SetNull`. Selecting a theme in `/staff/storefront` **copies** its eight values onto the
+vendor's own `VendorBranding` row; `lib/vendor-theme.ts` is untouched and `brandStyle()` performs no
+join. So `themeId` records provenance, not authority, and a vendor may edit any colour afterwards
+and diverge from the theme freely. Resolving through the FK at render time was the alternative, and
+it was rejected on both counts it would have traded: a join on every request's hot path, bought in
+exchange for making divergence *harder* — the opposite of what a starting-point catalogue is for.
+
+**`Theme` is deliberately NOT vendor-scoped.** It carries no `vendorId` column and no `Vendor`
+relation, which makes it the first table in this schema outside Decision 2's row-level tenancy rule.
+That rule exists so a missed `vendorId` filter cannot leak one tenant's rows to another; a theme is
+curated *for* cross-vendor reuse and holds no tenant data, so there is nothing for the filter to
+protect. The reason this is written down rather than left to the reader: an un-scoped table in a
+row-scoped schema looks exactly like the defect Decision 2 forbids, and the next person to audit
+`tests/repository-vendor-scoping.test.ts`'s coverage should find a ruling here instead of an
+anomaly. If `Theme` ever gains per-vendor rows — a vendor's own saved palette — that is the point at
+which it needs `vendorId` and this exception ends.
+
+The schema comment on the model says the same thing, so the ruling is reachable from the code as
+well as from here.
 
 ## Implementation note — two muted foregrounds joined the clamp list (2026-09-07, #649)
 

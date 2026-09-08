@@ -40,7 +40,7 @@ export default async function AccountDataPage() {
     <main className="mx-auto max-w-sm px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold text-primary">Your data</h1>
 
-      <section className="mb-6 rounded-md border border-black/10 bg-surface-muted p-5">
+      <section className="mb-6 rounded-2xl border border-black/10 bg-surface-muted p-5">
         <h2 className="mb-2 text-lg font-semibold text-primary">Download your data</h2>
         <p className="mb-4 text-sm text-primary-muted">
           A JSON file containing everything this store holds about you — your account details,
@@ -56,7 +56,7 @@ export default async function AccountDataPage() {
         </Link>
       </section>
 
-      <section className="mb-6 rounded-md border border-black/10 bg-surface-muted p-5">
+      <section className="mb-6 rounded-2xl border border-black/10 bg-surface-muted p-5">
         <h2 className="mb-2 text-lg font-semibold text-primary">Correct your details</h2>
         <p className="mb-4 text-sm text-primary-muted">
           Your email address can&apos;t be changed here yet. Contact us if it needs correcting.
@@ -64,7 +64,7 @@ export default async function AccountDataPage() {
         <NameForm currentName={user.name} />
       </section>
 
-      <section className="mb-6 rounded-md border border-danger/30 bg-surface-muted p-5">
+      <section className="mb-6 rounded-2xl border border-danger/30 bg-surface-muted p-5">
         <h2 className="mb-2 text-lg font-semibold text-primary">Erase your data</h2>
         <p className="mb-2 text-sm text-primary-muted">
           This removes your name, contact details, addresses, reviews, basket and loyalty points

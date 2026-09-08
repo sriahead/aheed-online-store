@@ -1,6 +1,14 @@
 import type { getPrisma, getPrismaWs } from "@/lib/db";
 
 /**
+ * Re-exported so the app/UI/feature layers can type a prop against the real
+ * Prisma row shape (#639, R19) without importing `@prisma/client` directly —
+ * `eslint.config.mjs`'s `no-restricted-imports` blocks that import (type-only
+ * included) outside `lib/repositories/*`, so this repository is the seam.
+ */
+export type { VendorConfig, VendorBranding, Theme } from "@prisma/client";
+
+/**
  * Per-vendor branding/config/delivery read path (ADR-004 slice 4). The ONLY
  * DB-access path for vendor branding — layouts/components/pages reach it through
  * `lib/vendor-service.ts` (slice-2 no-direct-Prisma guard).
@@ -264,6 +272,50 @@ export async function updateVendorStorefrontConfig(
       });
     }
   });
+}
+
+/**
+ * The seeded theme catalogue (#75), listed by name for the `/staff/storefront` picker.
+ * `Theme` is a platform-level model with no `vendorId` (see the schema doc comment), so
+ * this takes no vendor parameter — it is not a tenant-scoped read.
+ */
+export async function listThemes(prisma: ReturnType<typeof getPrisma>) {
+  return prisma.theme.findMany({ orderBy: { name: "asc" } });
+}
+
+/**
+ * Apply a theme to a vendor's branding (#75) — COPIES the theme's eight brand
+ * primitives onto `VendorBranding` and records `themeId` for provenance only.
+ * `lib/vendor-theme.ts`'s `brandStyle()` never joins `Theme`, so this one-time copy is
+ * the entire mechanism; a vendor may edit any colour afterwards and diverge freely.
+ *
+ * A plain read-then-write, not wrapped in `$transaction` — neither call is an
+ * `updateMany`/`createMany` (the only operations that require the WebSocket client,
+ * #382), so the caller may pass either `getPrisma()` or `getPrismaWs()`.
+ */
+export async function applyThemeToVendor(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  themeId: string,
+): Promise<{ ok: true } | { ok: false }> {
+  const theme = await prisma.theme.findUnique({ where: { id: themeId } });
+  if (!theme) return { ok: false };
+
+  await prisma.vendorBranding.update({
+    where: { vendorId },
+    data: {
+      themeId: theme.id,
+      brandGreenDark: theme.brandGreenDark,
+      brandGreen: theme.brandGreen,
+      brandOrange: theme.brandOrange,
+      brandRed: theme.brandRed,
+      brandCream: theme.brandCream,
+      brandGreenTint: theme.brandGreenTint,
+      brandOrangeTint: theme.brandOrangeTint,
+      brandRedTint: theme.brandRedTint,
+    },
+  });
+  return { ok: true };
 }
 
 /**

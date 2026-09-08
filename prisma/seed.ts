@@ -56,6 +56,10 @@ async function main() {
     console.log(`HealthCheck already has ${count} row(s) — skipping`);
   }
 
+  // #75 — the platform-level Theme catalogue. Independent of any vendor (see the
+  // schema's doc comment on Theme), so it is seeded once here rather than per-vendor.
+  await seedThemes();
+
   // The migration already creates the Aheed vendor; upsert keeps a from-scratch seed
   // (e.g. after `migrate reset`) idempotent and self-sufficient.
   await prisma.vendor.upsert({
@@ -148,6 +152,58 @@ async function main() {
 
   // #489 R9 — makes "the generated set shares a small image pool" checkable from the outside.
   console.log(`total putObject calls this run: ${putObjectCount}`);
+}
+
+// #75 — the seeded theme catalogue `/staff/storefront`'s picker lists. Platform-level
+// (no vendorId — see the schema's doc comment on Theme), so upserted by NAME (the
+// model's own @@unique) rather than by any vendor-scoped key. Two named themes,
+// deliberately distinct from either seeded vendor's own primitives (Aheed's greens,
+// SriMart's blue/purple/red) so a live check can tell "the picker applied a theme"
+// apart from "this vendor's own colour already happened to match".
+const THEMES: {
+  name: string;
+  brandGreenDark: string;
+  brandGreen: string;
+  brandOrange: string;
+  brandRed: string;
+  brandCream: string;
+  brandGreenTint: string;
+  brandOrangeTint: string;
+  brandRedTint: string;
+}[] = [
+  {
+    name: "Forest Green",
+    brandGreenDark: "#1b4332",
+    brandGreen: "#40916c",
+    brandOrange: "#e07a1f",
+    brandRed: "#c1121f",
+    brandCream: "#f4f6f0",
+    brandGreenTint: "#e6f4ea",
+    brandOrangeTint: "#fdebd3",
+    brandRedTint: "#fbe4e4",
+  },
+  {
+    name: "Berry Bold",
+    brandGreenDark: "#4a148c",
+    brandGreen: "#7b1fa2",
+    brandOrange: "#ff6f00",
+    brandRed: "#b71c1c",
+    brandCream: "#f6f0f5",
+    brandGreenTint: "#f1e3f4",
+    brandOrangeTint: "#ffe4c4",
+    brandRedTint: "#fadada",
+  },
+];
+
+async function seedThemes() {
+  for (const theme of THEMES) {
+    await prisma.theme.upsert({
+      where: { name: theme.name },
+      create: theme,
+      update: theme,
+    });
+  }
+  console.log(`seeded ${THEMES.length} Theme rows`);
 }
 
 async function upsertVendorDomain(vendorId: string, host: string) {

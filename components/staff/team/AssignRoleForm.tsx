@@ -10,7 +10,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-md bg-action px-6 py-2 font-semibold text-white transition-opacity hover:opacity-90 active:opacity-100 disabled:opacity-50"
+      className="rounded-2xl bg-action px-6 py-2 font-semibold text-white transition-opacity hover:opacity-90 active:opacity-100 disabled:opacity-50"
     >
       {pending ? "Applying..." : "Apply"}
     </button>
@@ -41,7 +41,7 @@ export function AssignRoleForm({
             name="email"
             required
             placeholder="email@example.com"
-            className="w-full rounded-md border border-black/20 bg-white px-3 py-2 text-primary focus-visible:border-action focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+            className="w-full rounded-2xl border border-black/20 bg-white px-3 py-2 text-primary focus-visible:border-action focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
           />
         </div>
         <div className="w-full sm:w-48">
@@ -52,7 +52,7 @@ export function AssignRoleForm({
             id="role"
             name="role"
             required
-            className="w-full rounded-md border border-black/20 bg-white px-3 py-2 text-primary focus-visible:border-action focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+            className="w-full rounded-2xl border border-black/20 bg-white px-3 py-2 text-primary focus-visible:border-action focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
           >
             <option value="STAFF">Staff</option>
             {canGrantAdmin && <option value="ADMIN">Store Admin</option>}

@@ -1,8 +1,13 @@
 ﻿"use client";
 
-import { useActionState, useTransition } from "react";
+import { useState, useActionState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateDeliveryRules, updateStorefrontConfig } from "@/features/admin/storefront";
+import type { Theme, VendorBranding, VendorConfig } from "@/lib/repositories/vendor";
+import {
+  applyStorefrontTheme,
+  updateDeliveryRules,
+  updateStorefrontConfig,
+} from "@/features/admin/storefront";
 import {
   DELIVERY_FEE_FIELD,
   FREE_DELIVERY_THRESHOLD_FIELD,
@@ -12,17 +17,44 @@ import {
 } from "@/lib/delivery-rules-form";
 import { VendorLogoUploader } from "@/components/staff/VendorLogoUploader";
 
+/** The eight `VendorBranding` brand primitives — every column that is a hex string. */
+type BrandColorFieldName =
+  | "brandGreenDark"
+  | "brandGreen"
+  | "brandOrange"
+  | "brandRed"
+  | "brandCream"
+  | "brandGreenTint"
+  | "brandOrangeTint"
+  | "brandRedTint";
+
+/** #639 — all eight, in the order the form presents them (previously only the first two). */
+const BRAND_COLOR_FIELDS = [
+  { name: "brandGreenDark", label: "Primary Brand Color (Dark)", placeholder: "e.g. #2e4d26" },
+  { name: "brandGreen", label: "Primary Brand Color", placeholder: "e.g. #467339" },
+  { name: "brandOrange", label: "Accent Brand Color (Orange)", placeholder: "e.g. #f57c00" },
+  { name: "brandRed", label: "Danger Brand Color (Red)", placeholder: "e.g. #d32f2f" },
+  { name: "brandCream", label: "Surface Brand Color (Cream)", placeholder: "e.g. #f5f5f0" },
+  { name: "brandGreenTint", label: "Primary Tint", placeholder: "e.g. #e8f5e9" },
+  { name: "brandOrangeTint", label: "Accent Tint", placeholder: "e.g. #fff3e0" },
+  { name: "brandRedTint", label: "Danger Tint", placeholder: "e.g. #ffebee" },
+] as const satisfies readonly { name: BrandColorFieldName; label: string; placeholder: string }[];
+
 export function StorefrontConfigForm({
   initialConfig,
   initialBranding,
+  themes,
   logoUrl,
 }: {
-  initialConfig: any;
-  initialBranding: any;
+  initialConfig: VendorConfig;
+  initialBranding: VendorBranding;
+  themes: Theme[];
   logoUrl: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [themePending, startThemeTransition] = useTransition();
+  const [selectedThemeId, setSelectedThemeId] = useState(initialBranding.themeId ?? "");
 
   // #634 — its own form and its own state. The branding form above is
   // fire-and-forget; these three need a field-level error rendered against the
@@ -39,6 +71,12 @@ export function StorefrontConfigForm({
     const heroSubtitle = formData.get("heroSubtitle") as string;
     const brandGreenDark = formData.get("brandGreenDark") as string;
     const brandGreen = formData.get("brandGreen") as string;
+    const brandOrange = formData.get("brandOrange") as string;
+    const brandRed = formData.get("brandRed") as string;
+    const brandCream = formData.get("brandCream") as string;
+    const brandGreenTint = formData.get("brandGreenTint") as string;
+    const brandOrangeTint = formData.get("brandOrangeTint") as string;
+    const brandRedTint = formData.get("brandRedTint") as string;
 
     startTransition(async () => {
       await updateStorefrontConfig({
@@ -46,7 +84,21 @@ export function StorefrontConfigForm({
         heroSubtitle: heroSubtitle || null,
         brandGreenDark: brandGreenDark || undefined,
         brandGreen: brandGreen || undefined,
+        brandOrange: brandOrange || undefined,
+        brandRed: brandRed || undefined,
+        brandCream: brandCream || undefined,
+        brandGreenTint: brandGreenTint || undefined,
+        brandOrangeTint: brandOrangeTint || undefined,
+        brandRedTint: brandRedTint || undefined,
       });
+      router.refresh();
+    });
+  }
+
+  function applyTheme() {
+    if (!selectedThemeId) return;
+    startThemeTransition(async () => {
+      await applyStorefrontTheme(selectedThemeId);
       router.refresh();
     });
   }
@@ -54,6 +106,44 @@ export function StorefrontConfigForm({
   return (
     <div className="flex max-w-2xl flex-col gap-8">
       <VendorLogoUploader currentLogoUrl={logoUrl} />
+
+      {/* #75 — selecting a theme COPIES its eight values onto the fields below;
+          it does not bind them, so any colour may still be edited afterwards. */}
+      {themes.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-2xl border border-black/10 p-4">
+          <label htmlFor="themeId" className="font-bold text-black">
+            Apply a theme
+          </label>
+          <p className="text-sm text-black/60">
+            Choosing a theme copies its colours onto the fields below. You can still adjust any of
+            them afterwards.
+          </p>
+          <div className="flex gap-3">
+            <select
+              id="themeId"
+              name="themeId"
+              value={selectedThemeId}
+              onChange={(event) => setSelectedThemeId(event.target.value)}
+              className="rounded-lg border border-black/20 p-3"
+            >
+              <option value="">Select a theme…</option>
+              {themes.map((theme) => (
+                <option key={theme.id} value={theme.id}>
+                  {theme.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={applyTheme}
+              disabled={themePending || !selectedThemeId}
+              className="rounded-full bg-primary px-6 py-3 font-bold text-white hover:bg-primary/90 disabled:opacity-50"
+            >
+              {themePending ? "Applying…" : "Apply Theme"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <form action={action} className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
@@ -84,33 +174,21 @@ export function StorefrontConfigForm({
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="brandGreenDark" className="font-bold text-black">
-            Primary Brand Color (Dark)
-          </label>
-          <input
-            id="brandGreenDark"
-            name="brandGreenDark"
-            type="text"
-            defaultValue={initialBranding.brandGreenDark || ""}
-            className="rounded-lg border border-black/20 p-3 font-mono"
-            placeholder="e.g. #2e4d26"
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label htmlFor="brandGreen" className="font-bold text-black">
-            Primary Brand Color
-          </label>
-          <input
-            id="brandGreen"
-            name="brandGreen"
-            type="text"
-            defaultValue={initialBranding.brandGreen || ""}
-            className="rounded-lg border border-black/20 p-3 font-mono"
-            placeholder="e.g. #467339"
-          />
-        </div>
+        {BRAND_COLOR_FIELDS.map((field) => (
+          <div key={field.name} className="flex flex-col gap-2">
+            <label htmlFor={field.name} className="font-bold text-black">
+              {field.label}
+            </label>
+            <input
+              id={field.name}
+              name={field.name}
+              type="text"
+              defaultValue={initialBranding[field.name] || ""}
+              className="rounded-lg border border-black/20 p-3 font-mono"
+              placeholder={field.placeholder}
+            />
+          </div>
+        ))}
 
         <button
           type="submit"

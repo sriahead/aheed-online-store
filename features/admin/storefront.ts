@@ -9,7 +9,11 @@ import {
   type ImageActionResult,
   type UploadTicket,
 } from "@/lib/product-image";
-import { updateVendorLogoKey, updateVendorStorefrontConfig } from "@/lib/vendor-service";
+import {
+  applyVendorTheme,
+  updateVendorLogoKey,
+  updateVendorStorefrontConfig,
+} from "@/lib/vendor-service";
 import type { VendorStorefrontConfigInput } from "@/lib/repositories/vendor";
 import { parseDeliveryRules, type DeliveryRulesFormState } from "@/lib/delivery-rules-form";
 import crypto from "crypto";
@@ -80,6 +84,25 @@ export async function updateStorefrontConfig(
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   await updateVendorStorefrontConfig(auth.vendorId, data);
+
+  revalidatePath("/staff/storefront");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/**
+ * Apply a seeded theme (#75) — copies its eight brand primitives onto this vendor's
+ * `VendorBranding` row. The vendor comes from the session, never from the submission,
+ * same as every other action in this file.
+ */
+export async function applyStorefrontTheme(
+  themeId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  const result = await applyVendorTheme(auth.vendorId, themeId);
+  if (!result.ok) return { ok: false, error: "That theme could not be found." };
 
   revalidatePath("/staff/storefront");
   revalidatePath("/", "layout");

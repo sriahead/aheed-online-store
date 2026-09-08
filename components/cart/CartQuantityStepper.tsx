@@ -22,11 +22,12 @@ import { createQuantityCoalescer, type QuantityCoalescer } from "./quantity-coal
  * On failure the display reverts to the last server-confirmed value (R10)
  * rather than stranding an optimistic number the cart does not actually hold.
  *
- * The buttons stop propagation because the whole card is a `<Link>` — the same
- * approach `AddToCartButton` already takes. Handling it per-button rather than
- * on a wrapping div is deliberate: a div with a click handler is a
- * `jsx-a11y/no-static-element-interactions` error, and the buttons are the only
- * things that actually need to swallow the click.
+ * #351/#656: this control is a sibling of ProductCard's stretched-link title
+ * now, not a descendant of an `<a>` — see `ProductCard.tsx`'s doc comment.
+ * There is no ancestor anchor for a click here to reach any more, so the
+ * buttons no longer swallow the event on its way up; `preventDefault()`
+ * alone still guards `type="button"` from any enclosing `<form>`'s default
+ * submit.
  */
 
 /**
@@ -99,9 +100,10 @@ export function CartQuantityStepper({
   }, [productId]);
 
   function step(event: React.MouseEvent, delta: 1 | -1) {
-    // The card is a link; a stepper click must not navigate.
+    // `type="button"`, so this guards only against a hypothetical enclosing
+    // <form>'s default submit — there is no longer an ancestor anchor for
+    // the click to reach.
     event.preventDefault();
-    event.stopPropagation();
 
     // Decrementing past 1 means removal, which clampQuantity deliberately
     // refuses to express (it never lands on 0 by decrement), so it is handled
