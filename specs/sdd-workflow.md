@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.28.0"
-updated: 2026-09-06
+version: "2.29.0"
+updated: 2026-09-08
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets, plus the Discover and Learn phases that run on milestone close. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -510,6 +510,28 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   named at P8.1a/#334, is itself the finding: a source-text grep in a hygiene-style
   `validation.md` row should be assumed to trip on its own justifying comment by default, not treated
   as a surprise worth re-diagnosing each time it happens.
+  **A ninth instance, deferred-abstraction sweep (#662, 2026-09-08), is the same mechanism running in
+  reverse — a false PASS on a real defect, not a false FAILURE on a correct build.** All eight prior
+  instances are a `validation.md` row's grep, written by a spec author and run manually, tripping on
+  a comment it shouldn't have. This one is a shipped TEST FILE's own internal parser:
+  `tests/radius-scale.test.ts`'s `declaredTokens()` read `design-system/tokens/tokens.css` with a
+  regex that didn't strip comments first, and the explanatory comment above the token declarations
+  quotes `` `--radius: 0.25rem` `` in prose (to explain why bare `rounded` needs its own token). The
+  regex matched that occurrence *inside the comment*, then greedily captured through to the real
+  declaration's own terminating `;`, silently corrupting the parsed value for exactly the one token
+  the comment was written to justify. The test still passed 3/3 on every rebuild — the bug produced
+  no failure to notice, only a permanently blind collision check for that one step. Found only at
+  `/validate` by deliberately reintroducing a real collision (`rounded-sm` against bare `rounded`,
+  both `0.25rem`) and observing the test *stay green* — the same "prove it bites" step
+  `validation.md`'s own R4 row already prescribed for exactly this reason. **The transferable
+  distinction**: the eight prior instances are a reason to doubt a validation row that *fails* against
+  a plausibly-correct build; this is a reason to doubt a filesystem/source-parsing TEST that *passes*
+  with unusual ease, when that test's own subject matter is code carrying an explanatory comment. A
+  test that parses a source file for structured data (tokens, declarations, exported names) and
+  doesn't strip comments first is exposed to this the moment anyone writes a comment that quotes the
+  syntax being parsed — which good comments do constantly, since that's what they're for. Strip
+  comments before parsing, or anchor the parse to a construct a comment can't produce (line start, a
+  specific delimiter a comment's prose won't contain).
 - UI changes: verify against rendered output (compiled CSS, rendered HTML, browser screenshot), not
   code review alone. DB-touching code: `npm run preview`, never `npm run dev` (see `CLAUDE.md`).
 - **Server actions can be driven headlessly against `npm run preview`** — no browser needed. Next
