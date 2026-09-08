@@ -8,6 +8,39 @@ every branch merges.
 
 ### Added
 
+- **Panel refusal enforcement and an admin catalogue category filter** (`#350`, `#503` part 1;
+  `specs/2026-09-08-panel-refusal-and-catalogue-category-filter/`). Two independent P9.3 tail
+  items sharing no code. **No schema change, no migration.**
+  - **`#350` — the deliverable is the enforcement, because the fix had already shipped.**
+    `/staff/storefront`'s bare `return null` was fixed incidentally on 2026-09-06 in `e3c9642` by
+    a slice editing that page for something else, and nobody closed the issue. Walking all 25
+    `app/(admin)` pages then found a **fourth** instance the issue never mentions:
+    `/staff/discounts` hand-rolled markup byte-identical to `PanelRefusal`'s output — a
+    consistency defect, a deliberate P6a deferral, and the only page no list had ever named. By
+    then `PanelRefusal`'s own docstring was wrong about `loyalty` (converted three phases earlier)
+    while `CLAUDE.md`'s list mentioned neither `storefront` nor `discounts`. So the prose list is
+    gone: `tests/panel-refusal-coverage.test.ts` walks the directory with **no allowlist** and
+    fails any page that gates on `requireVendorRole(` without rendering `<PanelRefusal>`, or that
+    returns `null` from an `auth`-conditioned branch. **It matches JSX on the parsed TypeScript
+    AST, not text** — several of these pages carry a comment stating the rule, which satisfies any
+    substring check on its own; the same comment-unaware-parser defect fixed a week earlier in
+    `82dbb1d`. Nothing a user sees changed.
+  - **`#503` part 1 — the admin product list can be filtered by category.** With 2,026 products
+    and `PAGE_SIZE = 25`, reaching a product by category meant walking up to 81 cursor pages.
+    Reuses `listCategoriesForAdmin` (`#627` ordering) and `toCategoryOptionGroups` (`#630`) rather
+    than rebuilding either. **Selecting a department includes its subcategories; a subcategory is
+    exact** — both tiers are genuinely in use (`seed.ts` assigns curated products to a top-level
+    category, `seedGeneratedCatalogue` assigns generated ones to subcategories), so exact-match on
+    a department would have hidden every generated product beneath it. `parseStaffProductsQuery`
+    takes the vendor's categories as a **required** argument and stays pure, so the whole rule
+    surface is unit-testable with no database; an unknown, blank or cross-vendor id normalises to
+    `CATEGORY_ALL` rather than riding the pagination href into the next page, and `categoryIds` is
+    never `[]` (`in: []` matches nothing, which on screen is indistinguishable from a working
+    filter over an empty category). Categories are fetched **before** the product query, not
+    alongside it — the two are not independent, since expansion and validation both need the real
+    id list. `#503`'s parts 2 and 3 (vendor-resolution memoisation, the ordered
+    `(vendorId, createdAt, id)` index) are split to **`#670`**, sequenced behind `#439`.
+
 - **Deferred-abstraction sweep** (`#662`, closing `#656`, `#653`, `#351`, `#639`, `#75` and the
   derivation half of `#398`; `specs/2026-09-07-deferred-abstraction-sweep/`). Four abstractions this
   repo deferred as speculative, built now that each deferral's own stated precondition has been met.
