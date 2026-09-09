@@ -8,6 +8,28 @@ every branch merges.
 
 ### Added
 
+- **A Prisma-free fallback so an unhandled request error can still be recorded** (`#674`;
+  `specs/2026-09-08-error-event-fallback-capture/`). **No schema change, no migration.**
+  `instrumentation.ts`'s `onRequestError` wrote its `ErrorEvent` row through
+  `getPrismaUncached()`, which builds a fresh `PrismaClient` and therefore a fresh WASM
+  `QueryCompiler` — so an error originating in that constructor made the recorder re-enter the
+  code path that had just thrown. It could never succeed. That is what happened in production on
+  2026-09-08: one request 500'd and the recorder failed with an identical stack, leaving no row,
+  and `#437`'s error-rate alerting counts rows in that same table. The stack was mapped
+  frame-by-frame onto `node_modules/.prisma/client/query_compiler_bg.js` to establish it was the
+  constructor rather than a query. The Prisma write stays the normal path; when it throws,
+  `lib/error-event-fallback.ts` inserts the row through `@neondatabase/serverless`'s `fetch`-based
+  `neon()` client, which loads no WASM and shares none of the failed machinery. `onRequestError`
+  still never rejects, and now logs a distinct line when the fallback also fails. Truncation is
+  shared rather than duplicated — `buildErrorEventRow` is exported from
+  `lib/repositories/error-events.ts` and both paths use it, so the 2000/8000 caps stay declared
+  once. **This is the codebase's only raw SQL in application code**, a deliberately narrow
+  exception (one parameterised INSERT, one vendor-less table, error path only) recorded in
+  `CLAUDE.md` and both places `specs/architecture.md` states the rule; `#676` tracks making that
+  boundary mechanical rather than prose. `scripts/verify-error-event-fallback.ts` proves the
+  statement against real Postgres from plain Node, which no unit test can do — the `id` column has
+  no database default and `createdAt` does, and getting either backwards passes every unit test.
+  Nothing a user sees changed.
 - **Panel refusal enforcement and an admin catalogue category filter** (`#350`, `#503` part 1;
   `specs/2026-09-08-panel-refusal-and-catalogue-category-filter/`). Two independent P9.3 tail
   items sharing no code. **No schema change, no migration.**
@@ -309,6 +331,23 @@ every branch merges.
   operational `JOB_INVOCATION_TOKEN` remains.
 
 ### Documentation
+
+- **`/document` (final) closeout for the Prisma-free `ErrorEvent` fallback capture** (`#674`;
+  PR #677 merged to `staging`, merge `cb2b1d6`; not yet promoted to `main`). Docs only — no
+  runtime code, no schema change.
+  - `specs/roadmap.md` (1.85.0) gains the staging-merge row for this slice, records the two rows
+    Build flagged as never run (`R15`/`R16`, a real insert/read-back/delete against the dev
+    database) as confirmed at `/validate`, and adds `#676` to the P10 tracked-issue list (it had a
+    GitHub milestone but no roadmap mention).
+  - **A spec/check mismatch found at `/validate`, left as a flagged deviation rather than
+    patched.** R17 required `CLAUDE.md` to state the exception's file name and the words "raw SQL"
+    on one literal physical line, checked by a same-line grep; the bullet states both correctly
+    but wraps across two source lines under this file's own hard-wrap convention. The requirement's
+    intent was met; the literal check was over-strict against the file's formatting style.
+    `specs/sdd-workflow.md`'s grep-trap list (2.30.0 → 2.31.0) now records this as a fifth
+    instance, with the generalised fix: word a same-line requirement as "same bullet/paragraph"
+    when the target file hard-wraps, or check line adjacency instead of exact line identity.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
 
 - **`/document` (final) closeout for panel refusal enforcement & the admin catalogue category
   filter** (`#350`, `#503` part 1; PR #671 merged to `staging`, PR #672 promoted to `main`, merge
