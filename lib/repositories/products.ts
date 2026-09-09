@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
+import { keysetCursorArgs, runKeysetPage } from "@/lib/repositories/pagination";
 import {
   deriveUnitPricePenceForSort,
   type NetContent,
@@ -501,13 +502,15 @@ async function findPage(
   // function because its sort key is computed rather than stored. Nothing here
   // changed: this is still keyset, and it is still what every browse and
   // category listing uses.
-  const rows = await prisma.product.findMany({
-    where,
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: take + 1,
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    select: productSummarySelect,
-  });
+  const rows = await runKeysetPage(keysetCursorArgs(cursor), (pageArgs) =>
+    prisma.product.findMany({
+      where,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: take + 1,
+      ...pageArgs,
+      select: productSummarySelect,
+    }),
+  );
 
   const hasMore = rows.length > take;
   const page = hasMore ? rows.slice(0, take) : rows;
@@ -1443,23 +1446,25 @@ export async function listInventoryForStaff(
     ];
   }
 
-  const rows = await prisma.product.findMany({
-    where: whereClause,
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: take + 1,
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      unitLabel: true,
-      basePrice: true,
-      isActive: true,
-      category: { select: { name: true } },
-      inventory: { select: { quantity: true } },
-      images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
-    },
-  });
+  const rows = await runKeysetPage(keysetCursorArgs(cursor), (pageArgs) =>
+    prisma.product.findMany({
+      where: whereClause,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: take + 1,
+      ...pageArgs,
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        unitLabel: true,
+        basePrice: true,
+        isActive: true,
+        category: { select: { name: true } },
+        inventory: { select: { quantity: true } },
+        images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
+      },
+    }),
+  );
 
   const hasMore = rows.length > take;
   const page = hasMore ? rows.slice(0, take) : rows;
@@ -1508,34 +1513,36 @@ export async function listProductsForAdmin(
     categoryIds?: readonly string[];
   },
 ): Promise<AdminProductPage> {
-  const rows = await prisma.product.findMany({
-    where: {
-      vendorId,
-      // Name only, deliberately. The storefront's search() ORs a `contains`
-      // across name AND description, which is right for a shopper hunting a
-      // concept and wrong for an owner who knows what the product is called —
-      // a description match would bury the exact-name hit they came for.
-      ...(search ? { name: { contains: search, mode: "insensitive" as const } } : {}),
-      ...(isActive === undefined ? {} : { isActive }),
-      // An empty array is treated as "no filter", not "match nothing" — the
-      // caller never produces one (see StaffProductsQuery.categoryIds), and a
-      // silently-empty result set is the worse failure of the two.
-      ...(categoryIds && categoryIds.length > 0 ? { categoryId: { in: [...categoryIds] } } : {}),
-    },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: take + 1,
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      basePrice: true,
-      isActive: true,
-      imageNeedsReview: true,
-      category: { select: { name: true } },
-      inventory: { select: { quantity: true } },
-    },
-  });
+  const rows = await runKeysetPage(keysetCursorArgs(cursor), (pageArgs) =>
+    prisma.product.findMany({
+      where: {
+        vendorId,
+        // Name only, deliberately. The storefront's search() ORs a `contains`
+        // across name AND description, which is right for a shopper hunting a
+        // concept and wrong for an owner who knows what the product is called —
+        // a description match would bury the exact-name hit they came for.
+        ...(search ? { name: { contains: search, mode: "insensitive" as const } } : {}),
+        ...(isActive === undefined ? {} : { isActive }),
+        // An empty array is treated as "no filter", not "match nothing" — the
+        // caller never produces one (see StaffProductsQuery.categoryIds), and a
+        // silently-empty result set is the worse failure of the two.
+        ...(categoryIds && categoryIds.length > 0 ? { categoryId: { in: [...categoryIds] } } : {}),
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: take + 1,
+      ...pageArgs,
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        basePrice: true,
+        isActive: true,
+        imageNeedsReview: true,
+        category: { select: { name: true } },
+        inventory: { select: { quantity: true } },
+      },
+    }),
+  );
 
   const hasMore = rows.length > take;
   const page = hasMore ? rows.slice(0, take) : rows;

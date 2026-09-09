@@ -1,4 +1,5 @@
 import { getPrisma, getPrismaWs } from "@/lib/db";
+import { keysetCursorArgs, runKeysetPage } from "@/lib/repositories/pagination";
 import { buildOrderNumber, computeTotals, type DeliveryRules } from "@/lib/order-totals";
 import { getPaymentService } from "@/lib/payments";
 import { effectiveStock } from "@/lib/cart-rules";
@@ -965,13 +966,15 @@ export async function listOrdersForUser(
   // Deliberately NOT filtered by status. An abandoned PENDING_PAYMENT order
   // and a CANCELLED one are both visible history — hiding them would leave a
   // shopper wondering where their attempted order went.
-  const rows = await prisma.order.findMany({
-    where: { vendorId, userId },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: take + 1,
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    select: ORDER_LIST_SELECT,
-  });
+  const rows = await runKeysetPage(keysetCursorArgs(cursor), (pageArgs) =>
+    prisma.order.findMany({
+      where: { vendorId, userId },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: take + 1,
+      ...pageArgs,
+      select: ORDER_LIST_SELECT,
+    }),
+  );
 
   return toOrderListPage(rows, take);
 }
@@ -1039,13 +1042,15 @@ export async function listOrdersForStaff(
   // Same keyset shape as listForUser, but scoped by status instead of by
   // owner — and served by Order's existing @@index([vendorId, status,
   // createdAt]) from P3b, so no index work was needed for this slice.
-  const rows = await prisma.order.findMany({
-    where: staffOrderWhere(vendorId, filter),
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: take + 1,
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    select: ORDER_LIST_SELECT,
-  });
+  const rows = await runKeysetPage(keysetCursorArgs(cursor), (pageArgs) =>
+    prisma.order.findMany({
+      where: staffOrderWhere(vendorId, filter),
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: take + 1,
+      ...pageArgs,
+      select: ORDER_LIST_SELECT,
+    }),
+  );
 
   return toOrderListPage(rows, take);
 }
