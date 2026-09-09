@@ -563,7 +563,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  115 files / 1520 tests**, measured 2026-09-09 at the storefront-browse-consolidation Build) and treat any shortfall as
+  117 files / 1544 tests**, measured 2026-09-09 at the admin-catalogue-latency-and-cursor-safety Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -633,6 +633,14 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `toCategoryOptionGroups` its first coverage since it shipped in `#630`. The file total did not
   move, which is the case the rule below was written for: watching only the file count would have
   read this run as unchanged. `#538` again did not reproduce.
+  Then `115/1520` moved to **`117/1544`** at the admin-catalogue-latency-and-cursor-safety Build
+  (`#682`/`#670`): two new files (`tests/pagination.test.ts`,
+  `tests/pagination-guard-coverage.test.ts`) carrying all 24 of the new tests, with **no** existing
+  file's count moving — including `tests/tenant.test.ts`, which passed unchanged even though the
+  slice wrapped `getCurrentVendorIdOrNull` in React `cache()`, because that file mocks `@/lib/db`
+  and each `it()` re-imports the module. Eleven of the 24 come from one `it.each` table of
+  malformed cursors, so the same caveat as the `PAIRS` tables above applies: a single new row
+  there is a new test. `#538` again did not reproduce.
   That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that

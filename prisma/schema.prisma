@@ -564,6 +564,14 @@ model Product {
   // roughly in half, so an index earns little and costs on every write.
   @@index([vendorId, isActive, brandId])
   @@index([vendorId, isActive, origin])
+  // #670 part 3 — the ORDERING every product list actually uses. findPage,
+  // listInventoryForStaff and listProductsForAdmin all sort (createdAt desc, id desc),
+  // and nothing above supports it: #503's EXPLAIN showed Seq Scan plus top-N heapsort
+  // over every row on each list page. Order has carried the equivalent
+  // @@index([vendorId, createdAt]) since P3b; Product never got one. Insurance rather
+  // than a present emergency at ~2,000 rows, per architecture.md's rule that every list
+  // is keyset-paginated AND every hot query has an index.
+  @@index([vendorId, createdAt, id])
 }
 
 // ---- P8.5d — Multi-buy tier pricing (#348) ----------------------------------

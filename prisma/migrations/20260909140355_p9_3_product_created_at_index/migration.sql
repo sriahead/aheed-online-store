@@ -1,0 +1,35 @@
+-- P9.3 (#670 part 3) — the ordered index every product list has always wanted.
+--
+-- Every growable Product list sorts (createdAt desc, id desc): findPage,
+-- listInventoryForStaff and listProductsForAdmin in lib/repositories/products.ts.
+-- None of Product's seven existing indexes is ordered by createdAt, so #503's
+-- EXPLAIN (ANALYZE, BUFFERS) showed a Seq Scan plus a top-N heapsort over every
+-- row on each list page. Order has carried the equivalent @@index([vendorId,
+-- createdAt]) since P3b; Product never got one.
+--
+-- Generated from the @@index declaration on model Product, so schema.prisma
+-- remains the source of truth for this object — no hand-authored DDL here.
+--
+-- THREE `DROP INDEX` STATEMENTS WERE REMOVED FROM THIS FILE BY HAND.
+--
+-- `prisma migrate dev --create-only` generated this migration with:
+--
+--   DROP INDEX "Order_guestEmail_trgm_idx";
+--   DROP INDEX "Order_orderNumber_trgm_idx";
+--   DROP INDEX "User_email_trgm_idx";
+--
+-- ahead of the CREATE INDEX below. Those three are the hand-authored pg_trgm GIN
+-- indexes from 20260820143949_p7_5de_order_search_trigram. Prisma's schema
+-- language cannot express an index's access method or operator class, so
+-- schema.prisma does not describe them, so every `migrate dev` run in this repo
+-- proposes dropping them. That original migration's own comment anticipated this
+-- and says the correct response is to keep them and re-assert it.
+--
+-- This is the SEVENTH occurrence: CLAUDE.md records #508, #565, #566, #567 and
+-- #569 before it, and it has now fired on every migration this project has
+-- generated since #508. It is certain, not possible. The drops were caught
+-- because this migration was created with --create-only and the SQL read before
+-- anything was applied; they never reached a database.
+
+-- CreateIndex
+CREATE INDEX "Product_vendorId_createdAt_id_idx" ON "Product"("vendorId", "createdAt", "id");

@@ -6,7 +6,57 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A keyset cursor from a URL no longer reaches Prisma unvalidated** (`#682`, `#670`;
+  `specs/2026-09-09-admin-catalogue-latency-and-cursor-safety/`). **Schema change: one added
+  index, one migration.** New `lib/repositories/pagination.ts` is the only place a Prisma cursor
+  argument is built, enforced by `tests/pagination-guard-coverage.test.ts`, which walks
+  `lib/repositories/` from the filesystem with no allowlist and matches on the parsed AST rather
+  than by grep. Five call sites converted: `findPage`, `listInventoryForStaff` and
+  `listProductsForAdmin` (`products.ts`), `listForUser` and `listOrdersForStaff` (`orders.ts`) —
+  the issue named only `/staff/products`, but the idiom was identical at all five and the
+  storefront's ranked-search path had guarded its own cursor since `#564` without that reasoning
+  ever being carried across.
+  - **Two defects, both measured live under `npm run preview`, neither the one the issue
+    predicted.** A malformed or stale cursor returned **HTTP 200 with an empty list** — Prisma does
+    not error on a cursor matching no row, so a bookmark rendered a 2,080-product catalogue as "No
+    products" with nothing indicating why. A **repeated** `?cursor=` parameter, which is `string[]`
+    at runtime whatever the page's `searchParams` type declares, reached Prisma as
+    `cursor: { id: [...] }` and threw `PrismaClientValidationError` (**HTTP 500**) — on
+    `/staff/products`, `/staff/orders` and `/search` alike. `#682`'s own first hypothesis, a cursor
+    carried across a category filter change, worked correctly before and after and **did not
+    reproduce**; the issue is fixed on the strength of what was actually found, not that guess.
+  - `runKeysetPage` re-runs a cursored query from the first page only when it returns empty, so the
+    extra round-trip is paid solely in the broken case rather than as a pre-check on every request.
+    A filter that genuinely matches nothing still renders empty, and page 1 and page 2 of a real
+    category share zero product ids.
+- **Duplicated `status`/`q`/`category` parameters still 500 on `/staff/products`** — same root
+  cause, different parser, filed as `#689` rather than absorbed into this slice.
+
 ### Changed
+
+- **One render resolves the current vendor once instead of once per service** (`#670` part 2,
+  `#682`). `getCurrentVendorIdOrNull` (`lib/tenant.ts`) is wrapped in React `cache()`, and
+  `listCategoriesForAdmin` plus the storefront `listTopLevel`/`listTree` reads are memoized the
+  same way. Request-scoped de-duplication, not a cross-request cache: nothing survives the request,
+  so the Workers I/O rule is untouched. The previous docstring called the omission deliberate on
+  the grounds that repositories already memoize — they do, but **per instance**, and about twenty
+  service factories each carried their own copy. **Measured: `/staff/products` went from 28
+  outbound round-trips to 24**, counted as `fetch` spans in `wrangler dev`'s observability store
+  with no instrumentation, since `PrismaNeonHttp` is fetch-based. Better Auth's fail-closed rate
+  limiter (`#469`), which calls this from a route handler rather than a render, was verified live
+  and still refuses. The double `getSession` `#670` also names is deliberately not touched and is
+  filed as `#690`.
+- **`Product` has the index its ordering has always needed** (`#670` part 3):
+  `@@index([vendorId, createdAt, id])`. Every product list sorts `(createdAt desc, id desc)` and
+  none of the model's seven existing indexes was ordered, so `EXPLAIN` showed a `Seq Scan` plus
+  top-N heapsort over every row. After: `Index Scan Backward`, **12.063 ms to 0.109 ms** on the
+  admin list query. `prisma migrate dev --create-only` again generated `DROP INDEX` for all three
+  hand-authored `pg_trgm` indexes — the seventh consecutive occurrence — caught by reading the
+  generated SQL before applying it, so the drops never reached a database.
+- `specs/architecture.md` (1.27.0 → 1.28.0) — the Pagination section now states that a cursor is
+  untrusted URL input and names the single module permitted to turn one into Prisma arguments.
 
 - **One filter surface on `/search`: the category control moves into the filter panel** (`#681`;
   `specs/2026-09-09-storefront-browse-consolidation/`). **No schema change, no migration.**
