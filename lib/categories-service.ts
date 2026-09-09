@@ -5,6 +5,7 @@ import {
   getCategoryBySlug,
   getCategoryForAdmin as getCategoryForAdminRepo,
   listCategoriesForAdmin as listCategoriesForAdminRepo,
+  listCategoryTreeForStorefront,
   listTopLevelCategories,
   suggestCategories,
   updateCategoryForVendor as updateCategoryForVendorRepo,
@@ -49,6 +50,10 @@ export function getCategoryRepository(): CategoryRepository {
 
     async suggest(terms, limit) {
       return suggestCategories(prisma, await vendorId(), terms, limit);
+    },
+
+    async listTree() {
+      return listCategoryTreeForStorefront(prisma, await vendorId());
     },
   };
 }

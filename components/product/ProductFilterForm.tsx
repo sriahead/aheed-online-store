@@ -1,4 +1,6 @@
+import { toCategoryOptionGroups } from "@/lib/catalogue-form";
 import type { AvailableFacets } from "@/lib/repositories/products";
+import type { StorefrontCategoryNode } from "@/lib/repositories/categories";
 
 /**
  * Plain <form method="GET"> — no client-side JS. Submitting it is a real page
@@ -12,6 +14,7 @@ export function ProductFilterForm({
   showQuery,
   searchParams,
   facets,
+  categories,
 }: {
   showQuery?: boolean;
   searchParams: {
@@ -34,7 +37,16 @@ export function ProductFilterForm({
   // Per-vendor filter visibility (ADR-004 follow-up): only offer a filter the vendor's catalogue
   // actually uses, narrowed since #568 to the current result context. Defaults to none.
   facets?: AvailableFacets;
+  /**
+   * The vendor's active category tree (#681). Optional, and an empty list renders no category
+   * control at all — `/categories/[slug]` passes none, because there the category is the ROUTE
+   * rather than a parameter and a `GET` form cannot navigate to a different path.
+   */
+  categories?: readonly StorefrontCategoryNode[];
 }) {
+  // Pure reshape, unit-tested in `tests/catalogue-form.test.ts` — one `optgroup` per department,
+  // each department followed by its own children, an orphan promoted to its own group.
+  const categoryGroups = toCategoryOptionGroups<StorefrontCategoryNode>(categories ?? []);
   const spec: AvailableFacets = facets ?? {
     halal: false,
     fresh: false,
@@ -60,15 +72,13 @@ export function ProductFilterForm({
       {searchParams.featured === "1" && <input type="hidden" name="featured" value="1" />}
 
       {/*
-        #568 — `category` needs the identical passthrough for the identical reason. Drill-down is
-        chosen from a link beside the results, not from a control in this form, so without this
-        hidden field pressing Apply would silently drop the category and widen the shopper back to
-        the whole catalogue — the exact failure #501 fixed for `featured`. Like `featured` and
-        unlike `cursor`, it is a filter rather than a position, so it IS carried across a submit.
+        #681 — `category`'s hidden passthrough is GONE, replaced by the real select below.
+        #568 added it because drill-down was chosen from a link beside the results rather than from
+        a control in this form, so an Apply without it would silently widen the shopper back to the
+        whole catalogue. That reasoning expired the moment this form owned the control: keeping
+        both would submit `category` twice. `featured` above keeps its hidden field precisely
+        because nothing here owns it — its entry point is a link in `CollectionNav`.
       */}
-      {searchParams.category && (
-        <input type="hidden" name="category" value={searchParams.category} />
-      )}
 
       {showQuery && (
         <label className="flex flex-col gap-1">
@@ -79,6 +89,39 @@ export function ProductFilterForm({
             defaultValue={searchParams.q ?? ""}
             className="w-full rounded-lg border border-black/20 px-3 py-2"
           />
+        </label>
+      )}
+
+      {/*
+        #681 — the department control, and the ONLY one on this page since `CategoryDrillDown` was
+        deleted. Values are SLUGS, not ids: `/search` resolves `category` with `getBySlug`, and an
+        id here would silently match nothing.
+
+        Departments stay selectable in their own right rather than becoming bare `optgroup` labels,
+        matching `/staff/products` (#630) and for the same reason — a department selection means
+        "this department and everything beneath it", which the page expands via
+        `selectedCategory.children`.
+      */}
+      {categoryGroups.length > 0 && (
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-semibold text-primary">Category</span>
+          <select
+            name="category"
+            defaultValue={searchParams.category ?? ""}
+            className="w-full rounded-lg border border-black/20 px-3 py-2"
+          >
+            <option value="">All categories</option>
+            {categoryGroups.map((group) => (
+              <optgroup key={group.parent.id} label={group.parent.name}>
+                <option value={group.parent.slug}>All of {group.parent.name}</option>
+                {group.children.map((child) => (
+                  <option key={child.id} value={child.slug}>
+                    {child.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
         </label>
       )}
 

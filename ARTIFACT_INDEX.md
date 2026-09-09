@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-09T09:08:05.841Z` · commit `2cec318` · `159` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-09T10:02:59.217Z` · commit `0aee478` · `160` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -157,6 +157,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Storefront & panel accessibility remediation (plan)](specs/2026-09-07-storefront-accessibility-remediation/plan.md) | spec | 1.0.0 | 2026-09-07 | draft | internal | Two contrast-clamped foreground tokens replace 299 alpha-modified colour utilities that silently discard brandStyle's WCAG clamp, plus a shared focus-visible ring, per-field error association, reduced-motion coverage and the missing mobile gutter. |
 | [P9.2 — Prisma-free ErrorEvent fallback capture (plan)](specs/2026-09-08-error-event-fallback-capture/plan.md) | spec | 1.0.0 | 2026-09-08 | draft | internal | Closes #674. A failure inside Prisma's WASM query compiler defeats the recorder meant to record it, because that recorder builds a new compiler. Adds a fetch-based fallback write as a narrow, documented exception to the no-raw-SQL rule. No schema change. |
 | [P9.3 — Panel refusal enforcement & admin catalogue category filter (plan)](specs/2026-09-08-panel-refusal-and-catalogue-category-filter/plan.md) | spec | 1.0.0 | 2026-09-08 | draft | internal | Closes #350 by replacing a hand-maintained prose list with a filesystem-walking test and converting the fourth refusal instance, and #503 part 1 by adding a hierarchy-aware category filter to the admin product list. No schema change. |
+| [Storefront browse consolidation — one filter surface, collection entry points (plan)](specs/2026-09-09-storefront-browse-consolidation/plan.md) | spec | 1.0.0 | 2026-09-09 | draft | internal | Replaces the two competing department pickers on /search with a single category control inside the filter panel, adds Value Bundles, New Arrivals and Featured entry points to that panel, and retires the hidden category passthrough field the old split required. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.27.0 | 2026-09-08 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
