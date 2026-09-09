@@ -1,7 +1,10 @@
 import { getBundlesForStorefront } from "@/lib/bundles-service";
+import { getCategoryRepository } from "@/lib/categories-service";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getEnv } from "@/lib/config";
 import { BundleCard } from "@/components/bundle/BundleCard";
+import { CollectionNav } from "@/components/product/CollectionNav";
+import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { hasAvailableItems } from "@/lib/bundle-pricing";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
@@ -35,12 +38,28 @@ export async function generateMetadata() {
  * (#498), so this is a listing whose cards add to the cart, not a gateway.
  */
 export default async function BundlesPage() {
-  const bundles = await getBundlesForStorefront();
+  const [bundles, departments] = await Promise.all([
+    getBundlesForStorefront(),
+    getCategoryRepository().listTopLevel(),
+  ]);
   const renderable = bundles.filter((bundle) => hasAvailableItems(bundle.items));
   const { CDN_BASE_URL } = getEnv();
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-6">
+      {/*
+        #681 — the same chrome the other browse surfaces carry, so this stops reading as a separate
+        site. It is deliberately NOT the filter panel: `Bundle` has no `categoryId` and none of that
+        form's predicates (price, stock, halal, origin, brand) exist on a bundle at all, because a
+        bundle is a curated set spanning departments (#347). The department strip is therefore a way
+        BACK OUT to a filtered product listing, not a filter over what is on this page.
+      */}
+      <DepartmentScroller categories={departments} activeSlug={null} />
+
+      <div className="mt-6">
+        <CollectionNav activeHref="/bundles" />
+      </div>
+
       <h1 className="text-2xl font-semibold text-primary">Value Bundles</h1>
       <p className="mt-1 text-sm text-primary-muted">
         Curated sets, added to your basket in a single tap.

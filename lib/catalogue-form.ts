@@ -585,11 +585,23 @@ export interface CategoryOption {
   isActive: boolean;
 }
 
-export interface CategoryOptionGroup {
+/**
+ * A department and its children, preserving whatever element type the caller passed in (#681).
+ *
+ * Generic because the storefront's filter control needs each option's `slug` to use as the select
+ * value, while the admin form needs the `id`. Fixing the element type to `CategoryOption` would
+ * have erased `slug` on the way through and forced either a cast or a second, near-identical
+ * grouping function — so the type parameter is what makes this genuinely reusable rather than
+ * merely shared.
+ */
+export interface CategoryOptionGroupOf<T extends CategoryOption> {
   /** The department itself — selectable in its own right, never a label only. */
-  parent: CategoryOption;
-  children: CategoryOption[];
+  parent: T;
+  children: T[];
 }
+
+/** The non-generic shape the admin call sites have always used. */
+export type CategoryOptionGroup = CategoryOptionGroupOf<CategoryOption>;
 
 /**
  * Group categories into one `optgroup` per department for the product form
@@ -613,11 +625,11 @@ export interface CategoryOptionGroup {
  * reason the repository keeps it: an unselectable category is worse than an
  * oddly-placed one.
  */
-export function toCategoryOptionGroups(
-  categories: readonly CategoryOption[],
-): CategoryOptionGroup[] {
-  const groups: CategoryOptionGroup[] = [];
-  const byParentId = new Map<string, CategoryOptionGroup>();
+export function toCategoryOptionGroups<T extends CategoryOption>(
+  categories: readonly T[],
+): CategoryOptionGroupOf<T>[] {
+  const groups: CategoryOptionGroupOf<T>[] = [];
+  const byParentId = new Map<string, CategoryOptionGroupOf<T>>();
 
   const topLevelIds = new Set(categories.filter((c) => c.parentId === null).map((c) => c.id));
 
@@ -625,7 +637,7 @@ export function toCategoryOptionGroups(
     const isTopLevel = category.parentId === null || !topLevelIds.has(category.parentId);
 
     if (isTopLevel) {
-      const group: CategoryOptionGroup = { parent: category, children: [] };
+      const group: CategoryOptionGroupOf<T> = { parent: category, children: [] };
       groups.push(group);
       byParentId.set(category.id, group);
     } else {

@@ -6,6 +6,50 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **One filter surface on `/search`: the category control moves into the filter panel** (`#681`;
+  `specs/2026-09-09-storefront-browse-consolidation/`). **No schema change, no migration.**
+  `/search` rendered two department pickers setting the same `category` parameter — the
+  `DepartmentScroller` strip and `CategoryDrillDown`'s chip row directly beneath it — while the
+  filter panel beside them had no category control at all, carrying `category` only as a hidden
+  passthrough field (`#568`) precisely because nothing visible owned it. `ProductFilterForm` now
+  renders a grouped `select` (departments selectable in their own right, each followed by its
+  subcategories, values are slugs), the hidden `category` input is gone, and
+  `components/product/CategoryDrillDown.tsx` is deleted. `featured`'s hidden field **stays** —
+  nothing visible owns it, so removing it would reintroduce the bug `#501` fixed.
+  - **The page issues no more category queries than before.** A new
+    `listCategoryTreeForStorefront` returns both tiers in one read and **replaces** the
+    `listTopLevel()` call; the department strip takes the `parentId === null` rows of that same
+    result. Read amplification on these pages is live work (`#670`, `#682`) and this slice was
+    careful not to add to it.
+  - **New collection entry points** — `CollectionNav`, rendered once per page above the panel and
+    shared by `/search` and `/bundles`: All products, New Arrivals, Featured Products, Value
+    Bundles. It sits outside `FilterPanel`'s two branches deliberately: that component renders its
+    form twice (mobile disclosure, desktop sidebar), which is safe for a form using no `id`
+    attributes but would put two identical `nav` landmarks in the accessibility tree.
+  - **`/bundles` gains the department strip and the same collection nav**, but deliberately **not**
+    the filter form: `Bundle` has no `categoryId` and none of that form's predicates exist on a
+    bundle, because a bundle is a curated set spanning departments (`#347`). The strip there is a
+    way back out to a filtered product listing, not a filter over bundles.
+  - **No `collection=new` parameter was invented.** `findPage` already orders every browse listing
+    `createdAt desc, id desc`, so `/search` with no query *is* the newest-first listing and the
+    shop page's New Arrivals row is that same query capped at eight. A predicate-free key would
+    have rendered a removable chip claiming a filter that is not running, which `filter-chips.ts`
+    exists to prevent. The listing states its ordering instead. A recency-window New Arrivals is a
+    real feature and a separate one.
+  - `toCategoryOptionGroups` (`lib/catalogue-form.ts`) is now generic over its element type, so the
+    storefront can reuse it without losing `slug`. It had shipped in `#630` with **no test
+    coverage of any kind**; four cases now pin the grouping rules, the orphan-child promotion and
+    the field preservation, before a second caller depends on them.
+  - `specs/design-system.md` (1.12.0 → 1.13.0) records the standing rule this established: a
+    disclosure's two branches may duplicate a **form** that uses no `id` attributes, but never a
+    **landmark** — two identically-named `nav`s are a real defect for anyone navigating by
+    landmark, and invisible on screen.
+  - Deferred and filed rather than folded in: **`#684`** (a real recency-window New Arrivals,
+    which must follow `#601` because it does introduce a new query key) and **`#685`** (the Gate 2
+    pre-commit hook cannot tell a generated artefact from source).
+
 ### Added
 
 - **A Prisma-free fallback so an unhandled request error can still be recorded** (`#674`;
@@ -332,9 +376,32 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` (final) closeout for the storefront browse consolidation** (`#681`; PR #686 merged
+  to `staging`, merge `7c95646`; not yet promoted to `main`). Docs only — no runtime code, no
+  schema change.
+  - `specs/roadmap.md` (1.86.0 → 1.87.0) gains a `#681` bullet in P9.3 and the staging-merge row
+    for this slice.
+  - `/validate` ran from a genuinely fresh context (the session had not built the artifact) and
+    live-verified every row under `npm run preview` against both seeded vendors, reading their
+    hosts from `VendorDomain` rather than assuming the `nocaped.com` convention — the local dev DB
+    here was seeded `localhost:8787`/`srimart.localhost`. All four `validation.md` corrections
+    `build-notes.md` recorded were independently re-verified as the right call. No new defects
+    found; the artifact matched the spec as built.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
+- **Roadmap carry-forward for the `ErrorEvent` fallback capture promotion** (`#674`; PR #679,
+  merge `7efc8eb`, `staging -> main`, promoted 2026-09-09). Docs only — no runtime code, no
+  schema change. `npm run sdd:audit` reported this row pending at `/orient`; it is the only gate
+  that fires after Ship, and the fourth consecutive slice to hit the one-loop documentation lag.
+  - `specs/roadmap.md` (1.85.0 → 1.86.0) gains the promotion row — one promotion carrying both
+    PR #677 (the feature merge) and PR #678 (its Document (final) closeout), rather than the two
+    separate promotions the previous three slices each needed — and its P9.2 bullet for `#674`,
+    which still read "Not yet promoted to `main`", is corrected.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 - **`/document` (final) closeout for the Prisma-free `ErrorEvent` fallback capture** (`#674`;
-  PR #677 merged to `staging`, merge `cb2b1d6`; not yet promoted to `main`). Docs only — no
-  runtime code, no schema change.
+  PR #677 merged to `staging`, merge `cb2b1d6`; promoted to `main` by PR #679, above). Docs only —
+  no runtime code, no schema change.
   - `specs/roadmap.md` (1.85.0) gains the staging-merge row for this slice, records the two rows
     Build flagged as never run (`R15`/`R16`, a real insert/read-back/delete against the dev
     database) as confirmed at `/validate`, and adds `#676` to the P10 tracked-issue list (it had a

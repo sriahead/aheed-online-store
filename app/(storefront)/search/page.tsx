@@ -8,7 +8,7 @@ import { getEnv } from "@/lib/config";
 import { ProductCard } from "@/components/product/ProductCard";
 import { FilterPanel } from "@/components/product/FilterPanel";
 import { FilterChips } from "@/components/product/FilterChips";
-import { CategoryDrillDown } from "@/components/product/CategoryDrillDown";
+import { CollectionNav } from "@/components/product/CollectionNav";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
 import { searchPageHref } from "@/components/product/search-href";
@@ -67,7 +67,16 @@ export default async function SearchPage({
   const query = params.q?.trim() ?? "";
 
   const categoryRepo = getCategoryRepository();
-  const allCategories = await categoryRepo.listTopLevel();
+  /*
+   * #681 — ONE read for both surfaces. The filter panel's category select needs departments AND
+   * their children, which `listTopLevel()` cannot supply (`parentId: null`); the department strip
+   * needs only the departments, which are the `parentId === null` rows of this same result. So the
+   * tree read REPLACES the top-level read rather than joining it, and the page issues no more
+   * category queries than it did before gaining the control — which matters because read
+   * amplification on these pages is live work (#670, #682).
+   */
+  const categoryTree = await categoryRepo.listTree();
+  const allCategories = categoryTree.filter((category) => category.parentId === null);
 
   /*
    * #568 — resolve the drill-down slug to ids. An unknown or inactive slug resolves to `null` and
@@ -181,18 +190,35 @@ export default async function SearchPage({
       <DepartmentScroller categories={allCategories} activeSlug={null} />
 
       <div className="mt-6 flex flex-col gap-6 md:flex-row">
-        {/* #568 — sidebar at md+, a `details` disclosure below it. Both render the same form. */}
-        <FilterPanel heading="Search & filters" showQuery searchParams={params} facets={facets} />
+        {/*
+          #681 — the collection links sit ABOVE the panel and render exactly once. `FilterPanel`
+          renders its form twice (a `details` disclosure below `md`, a static `aside` at `md` and
+          above), which is safe for a form using no `id` attributes but would put two identical
+          `nav` landmarks in the accessibility tree. Keeping them outside also means they stay
+          visible on a narrow viewport instead of collapsing behind the disclosure.
+        */}
+        <div className="md:w-60 md:shrink-0">
+          <CollectionNav activeHref={params.featured === "1" ? "/search?featured=1" : "/search"} />
+          {/* #568 — sidebar at md+, a `details` disclosure below it. Both render the same form. */}
+          <FilterPanel
+            heading="Search & filters"
+            showQuery
+            searchParams={params}
+            facets={facets}
+            categories={categoryTree}
+          />
+        </div>
 
         <div className="flex-1">
-          <h1 className="mb-6 text-2xl font-semibold text-primary">{heading}</h1>
-
-          <CategoryDrillDown
-            categories={allCategories}
-            subcategories={selectedCategory?.parent?.children ?? selectedCategory?.children}
-            params={params}
-            activeSlug={selectedCategory?.slug ?? null}
-          />
+          <h1 className="mb-1 text-2xl font-semibold text-primary">{heading}</h1>
+          {/*
+            #681 — browse mode is ordered `createdAt desc, id desc` by `findPage`, so this listing
+            genuinely IS newest-first. Saying so is what let the New Arrivals entry point exist
+            without inventing a `collection=new` parameter that would change no predicate while
+            rendering a chip claiming a filter that is not running.
+          */}
+          {!query && <p className="mb-6 text-sm text-primary-muted">Newest first</p>}
+          {query && <div className="mb-6" />}
 
           {/*
             #568 fix (R15) — `category` must not reach the chip row unless it actually resolved.

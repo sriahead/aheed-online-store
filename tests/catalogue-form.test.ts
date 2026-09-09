@@ -3,6 +3,7 @@ import {
   parseCategoryForm,
   parseProductForm,
   slugify,
+  toCategoryOptionGroups,
   type ParseResult,
   type RawForm,
 } from "@/lib/catalogue-form";
@@ -384,5 +385,68 @@ describe("parseProductForm — HMC certification (R34, R35)", () => {
     expect(value.brandId).toBe("brand-1");
     // "No brand" is the empty option, and must reach the repository as null rather than "".
     expect(accepted(parseProductForm(productForm({ brandId: "" }))).brandId).toBeNull();
+  });
+});
+
+/**
+ * #681 — `toCategoryOptionGroups` shipped in #630 and drove the `/staff/products` category filter
+ * for three phases with NO test of any kind. This slice makes it drive the storefront's category
+ * control too, so its rules are pinned here before a second caller depends on them.
+ *
+ * The generic case matters as much as the grouping: the storefront needs each option's `slug` for
+ * the select value, and a signature fixed to `CategoryOption` would erase it on the way through.
+ */
+describe("toCategoryOptionGroups (#630, generic since #681)", () => {
+  // Generic over `extra` so the spread's fields survive into the inferred type — without this the
+  // slug case below compiles to `{ id; name; parentId; isActive }` and `group.parent.slug` is a
+  // type error, which is the whole property that case exists to prove.
+  const cat = <E extends Record<string, unknown>>(
+    id: string,
+    parentId: string | null,
+    extra: E = {} as E,
+  ) => ({
+    id,
+    name: id.toUpperCase(),
+    parentId,
+    isActive: true,
+    ...extra,
+  });
+
+  it("returns departments in input order, each followed by its own children", () => {
+    const groups = toCategoryOptionGroups([
+      cat("produce", null),
+      cat("fruit", "produce"),
+      cat("veg", "produce"),
+      cat("bakery", null),
+      cat("bread", "bakery"),
+    ]);
+
+    expect(groups.map((g) => g.parent.id)).toEqual(["produce", "bakery"]);
+    expect(groups[0].children.map((c) => c.id)).toEqual(["fruit", "veg"]);
+    expect(groups[1].children.map((c) => c.id)).toEqual(["bread"]);
+  });
+
+  it("promotes an orphan child to its own group rather than dropping it", () => {
+    // Its parent is absent from the list — an inactive department filtered out upstream, say.
+    // An unselectable category is worse than an oddly-placed one, so it must still appear.
+    const groups = toCategoryOptionGroups([cat("produce", null), cat("stray", "missing-parent")]);
+
+    expect(groups.map((g) => g.parent.id)).toEqual(["produce", "stray"]);
+    expect(groups[1].children).toEqual([]);
+  });
+
+  it("preserves extra fields on the element type, so a caller can read slug off a group", () => {
+    const groups = toCategoryOptionGroups([
+      cat("produce", null, { slug: "produce-slug" }),
+      cat("fruit", "produce", { slug: "fruit-slug" }),
+    ]);
+
+    // Type-level: these compile only because the function is generic over its element.
+    expect(groups[0].parent.slug).toBe("produce-slug");
+    expect(groups[0].children[0].slug).toBe("fruit-slug");
+  });
+
+  it("returns an empty array for an empty list, so a caller can render no control at all", () => {
+    expect(toCategoryOptionGroups([])).toEqual([]);
   });
 });
