@@ -28,6 +28,7 @@ export type SearchHrefParams = {
   brand?: string;
   featured?: string;
   category?: string;
+  packSize?: string;
 };
 
 export const CARRIED: (keyof SearchHrefParams)[] = [
@@ -48,6 +49,10 @@ export const CARRIED: (keyof SearchHrefParams)[] = [
   "onOffer",
   "origin",
   "brand",
+  // #397 — pack size. Present here for the same reason every key above is: this list is what
+  // survives a "Next page" click, and a key in the chips but missing here is dropped one click
+  // into pagination, leaving the shopper on a wider result set than the chips claim.
+  "packSize",
   "featured",
   // #568 — category drill-down is a filter like any other here, so it must survive pagination for
   // the same reason every key above does: dropping it one click into "Next page" silently widens

@@ -3,6 +3,7 @@ import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import { keysetCursorArgs, runKeysetPage } from "@/lib/repositories/pagination";
 import {
+  comparePackSizes,
   deriveUnitPricePenceForSort,
   type NetContent,
   type NetContentUnit,
@@ -63,6 +64,17 @@ export interface ProductSummary {
   isHalal: boolean;
   isFresh: boolean;
   isOrganic: boolean;
+  /**
+   * #608 — the facets `#569` made FILTERABLE but never made visible. A shopper could narrow a
+   * listing to gluten-free products and then read nothing on any card saying which ones were.
+   * These live on the summary rather than only on the detail page because the card is where the
+   * filtered result is actually read.
+   */
+  isVegetarian: boolean;
+  isGlutenFree: boolean;
+  isHmcCertified: boolean;
+  /** #608 — null when the product has no brand; the same shape `getAvailableFacets` returns. */
+  brand: { id: string; name: string; slug: string } | null;
   averageRating: number;
   reviewCount: number;
   /** P3a — cards need this to render the add-to-cart out-of-stock state. */
@@ -101,6 +113,14 @@ const DEFAULT_LOW_STOCK_THRESHOLD = 3;
 export interface ProductDetail extends ProductSummary {
   description: string;
   images: ProductImageSummary[];
+  /**
+   * #608/#239 — the HMC certification reference, so the claim never travels without its
+   * provenance. `lib/catalogue-form.ts` requires this whenever `isHmcCertified` is ticked and
+   * nulls it when it is not, so a true flag always has a reference behind it. Detail-page only:
+   * a card has no room for provenance, and #239 was a real incident of this codebase asserting an
+   * HMC claim with nothing behind it.
+   */
+  hmcReference: string | null;
 }
 
 export interface ProductPage {
@@ -232,6 +252,12 @@ export interface ProductFilters {
    */
   brandId?: string;
   /**
+   * #397 — pack size, as a net-content amount AND unit together. Never one alone: `500` is not a
+   * pack size, and narrowing on the amount by itself would match 500g, 500ml and a 500-pack. See
+   * `buildFilterWhere`, where both columns are emitted from a single guarded block.
+   */
+  packSize?: NetContent;
+  /**
    * P2.6 slice 5 (#568) — category drill-down from within search results. Ids rather than a slug
    * so this stays a pure predicate: resolving a slug (and expanding it to its children) needs a
    * second query, which belongs to the caller that already holds a category repository.
@@ -280,6 +306,12 @@ export interface AvailableFacets {
   origins: string[];
   /** Distinct brands with at least one product in this context, by name. */
   brands: { id: string; name: string; slug: string }[];
+  /**
+   * #397 — distinct pack sizes in this context, ordered by `comparePackSizes` (grouped by
+   * reference unit, smallest first within a group) rather than by raw amount, so `500g` precedes
+   * `1kg`. Empty when no product in context carries net content, which hides the control entirely.
+   */
+  packSizes: NetContent[];
 }
 
 export interface ProductRepository {
@@ -390,6 +422,13 @@ export function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereIn
   if (filters.isHmcCertified) where.isHmcCertified = true;
   if (filters.origin) where.origin = filters.origin;
   if (filters.brandId) where.brandId = filters.brandId;
+  // #397 — both columns or neither. An amount without a unit matches 500g, 500ml and a 500-pack
+  // alike, which is not a pack-size filter; `ProductFilters.packSize` carries them as one value
+  // so this cannot be half-applied.
+  if (filters.packSize) {
+    where.netContentAmount = filters.packSize.amount;
+    where.netContentUnit = filters.packSize.unit;
+  }
   /*
    * #569 — "on offer", and THE ONE FILTER THAT MUST NOT BE WRITTEN THE OBVIOUS WAY.
    *
@@ -439,6 +478,11 @@ const productSummarySelect = {
   isHalal: true,
   isFresh: true,
   isOrganic: true,
+  // #608 — filterable since #569, invisible until now.
+  isVegetarian: true,
+  isGlutenFree: true,
+  isHmcCertified: true,
+  brand: { select: { id: true, name: true, slug: true } },
   averageRating: true,
   reviewCount: true,
   images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
@@ -473,6 +517,10 @@ function toProductSummary(row: ProductSummaryRow, tier: ProductTier | null): Pro
     isHalal: row.isHalal,
     isFresh: row.isFresh,
     isOrganic: row.isOrganic,
+    isVegetarian: row.isVegetarian,
+    isGlutenFree: row.isGlutenFree,
+    isHmcCertified: row.isHmcCertified,
+    brand: row.brand,
     averageRating: row.averageRating,
     reviewCount: row.reviewCount,
     primaryImage: row.images[0] ?? null,
@@ -1052,6 +1100,13 @@ export async function getProductBySlug(
       isHalal: true,
       isFresh: true,
       isOrganic: true,
+      // #608 — the detail page rendered NO facet at all before this, not even Halal or Fresh.
+      isVegetarian: true,
+      isGlutenFree: true,
+      isHmcCertified: true,
+      // #239 — the reference travels with the claim. Detail page only; see ProductDetail.
+      hmcReference: true,
+      brand: { select: { id: true, name: true, slug: true } },
       averageRating: true,
       reviewCount: true,
       images: { orderBy: { sortOrder: "asc" }, select: productImageSelect },
@@ -1133,6 +1188,7 @@ export async function getAvailableFacets(
     onOffer,
     originRows,
     brandRows,
+    packSizeRows,
   ] = await Promise.all([
     flagProbe({ isHalal: true }),
     flagProbe({ isFresh: true }),
@@ -1155,6 +1211,20 @@ export async function getAvailableFacets(
       distinct: ["brandId"],
       orderBy: { brand: { name: "asc" } },
     }),
+    // #397 — both columns must be non-null: `netContentAmount` and `netContentUnit` are written
+    // together or not at all (see the schema comment), and a row with only one is not a pack size.
+    // `distinct` over the PAIR, for the same reason origin and brand use it rather than groupBy —
+    // the facet needs the values, and a count is a second promise nobody renders. Ordering is done
+    // in TypeScript below, not here: comparing 500g against 1kg is a unit conversion Postgres has
+    // no reason to know about.
+    prisma.product.findMany({
+      where: combineWhere(base, {
+        netContentAmount: { not: null },
+        netContentUnit: { not: null },
+      }),
+      select: { netContentAmount: true, netContentUnit: true },
+      distinct: ["netContentAmount", "netContentUnit"],
+    }),
   ]);
 
   return {
@@ -1171,6 +1241,13 @@ export async function getAvailableFacets(
     brands: brandRows
       .map((row) => row.brand)
       .filter((brand): brand is { id: string; name: string; slug: string } => brand !== null),
+    packSizes: packSizeRows
+      .flatMap((row) =>
+        row.netContentAmount !== null && row.netContentUnit !== null
+          ? [{ amount: row.netContentAmount, unit: row.netContentUnit }]
+          : [],
+      )
+      .sort(comparePackSizes),
   };
 }
 

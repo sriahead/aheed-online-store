@@ -221,3 +221,50 @@ describe("#569 facet chips", () => {
     expect(label({ brand: "shan" }, "Shan")).toBe("Shan");
   });
 });
+
+/**
+ * #397 — the pack-size chip. Rendered from the PARSED value, so a value applying no predicate
+ * renders no chip, matching `category`/`brand` rather than `origin`.
+ */
+describe("packSize chip (R13)", () => {
+  it("renders a chip labelled the way the filter control labels the option", () => {
+    const chips = activeFilterChips("/search", { packSize: "500-GRAM" });
+    const chip = chips.find((c) => c.key === "packSize");
+
+    expect(chip).toBeDefined();
+    expect(chip?.label).toBe("500g");
+  });
+
+  it("omits its own key from its href while preserving other filters", () => {
+    const chips = activeFilterChips("/search", {
+      q: "rice",
+      packSize: "500-GRAM",
+      isHalal: "1",
+    });
+    const chip = chips.find((c) => c.key === "packSize");
+    const qs = paramsOf(chip!.href);
+
+    expect(qs.has("packSize")).toBe(false);
+    expect(qs.get("q")).toBe("rice");
+    expect(qs.get("isHalal")).toBe("1");
+  });
+
+  it("renders NO chip for a malformed value, which applies no predicate", () => {
+    for (const packSize of ["bogus", "0-GRAM", "500-TONNE", "500"]) {
+      const chips = activeFilterChips("/search", { packSize });
+      expect(
+        chips.find((c) => c.key === "packSize"),
+        packSize,
+      ).toBeUndefined();
+    }
+  });
+
+  it("survives pagination — packSize is in CARRIED, not only in REMOVABLE", () => {
+    // The failure this guards is invisible in a rendered chip: a key present in REMOVABLE but
+    // missing from CARRIED is dropped one click into "Next page", leaving the shopper on a wider
+    // result set than the chips claim. The R14 pin test above covers the general rule; this
+    // asserts the specific key this slice added.
+    expect(REMOVABLE).toContain("packSize");
+    expect(CARRIED as readonly string[]).toContain("packSize");
+  });
+});
