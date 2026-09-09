@@ -332,9 +332,19 @@ every branch merges.
 
 ### Documentation
 
+- **Roadmap carry-forward for the `ErrorEvent` fallback capture promotion** (`#674`; PR #679,
+  merge `7efc8eb`, `staging -> main`, promoted 2026-09-09). Docs only — no runtime code, no
+  schema change. `npm run sdd:audit` reported this row pending at `/orient`; it is the only gate
+  that fires after Ship, and the fourth consecutive slice to hit the one-loop documentation lag.
+  - `specs/roadmap.md` (1.85.0 → 1.86.0) gains the promotion row — one promotion carrying both
+    PR #677 (the feature merge) and PR #678 (its Document (final) closeout), rather than the two
+    separate promotions the previous three slices each needed — and its P9.2 bullet for `#674`,
+    which still read "Not yet promoted to `main`", is corrected.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 - **`/document` (final) closeout for the Prisma-free `ErrorEvent` fallback capture** (`#674`;
-  PR #677 merged to `staging`, merge `cb2b1d6`; not yet promoted to `main`). Docs only — no
-  runtime code, no schema change.
+  PR #677 merged to `staging`, merge `cb2b1d6`; promoted to `main` by PR #679, above). Docs only —
+  no runtime code, no schema change.
   - `specs/roadmap.md` (1.85.0) gains the staging-merge row for this slice, records the two rows
     Build flagged as never run (`R15`/`R16`, a real insert/read-back/delete against the dev
     database) as confirmed at `/validate`, and adds `#676` to the P10 tracked-issue list (it had a
