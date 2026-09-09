@@ -124,7 +124,10 @@ feature and a different thing. It is deferred, not forgotten: see Open items.
 
 ## Open items carried forward
 
-- A recency-window New Arrivals collection — to be filed as a follow-up at `/build-notes` and
-  referenced from `#681`.
+- **`#684`** — a recency-window New Arrivals collection, filed at `/build-notes`. It must be
+  sequenced **after `#601`**, because unlike this slice it genuinely does introduce a new query key
+  and so does hit the three-unsynchronised-lists trap.
+- **`#685`** — filed at `/build-notes`, discovered rather than deferred: `hooks/pre-commit` cannot
+  distinguish a generated artefact from source, so every docs-only commit needs `--no-verify`.
 - `#601`, `#512` and `#658` remain open and untouched.
 - `#670` and `#682` carry the read-amplification work this slice deliberately leaves alone.

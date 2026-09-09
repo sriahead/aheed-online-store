@@ -42,6 +42,13 @@ every branch merges.
     storefront can reuse it without losing `slug`. It had shipped in `#630` with **no test
     coverage of any kind**; four cases now pin the grouping rules, the orphan-child promotion and
     the field preservation, before a second caller depends on them.
+  - `specs/design-system.md` (1.12.0 → 1.13.0) records the standing rule this established: a
+    disclosure's two branches may duplicate a **form** that uses no `id` attributes, but never a
+    **landmark** — two identically-named `nav`s are a real defect for anyone navigating by
+    landmark, and invisible on screen.
+  - Deferred and filed rather than folded in: **`#684`** (a real recency-window New Arrivals,
+    which must follow `#601` because it does introduce a new query key) and **`#685`** (the Gate 2
+    pre-commit hook cannot tell a generated artefact from source).
 
 ### Added
 
