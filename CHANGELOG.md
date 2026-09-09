@@ -29,6 +29,10 @@ every branch merges.
   - **`#397` was largely already shipped and its issue body is stale**: `#569` had added
     `isVegetarian`, `isGlutenFree`, `isHmcCertified`, the `Brand` model and the origin/brand indexes,
     and `#398` the net-content columns. Pack size was the last genuinely missing facet.
+  - `packSize` survives a "Next page" click on `/categories/[slug]` as well as `/search` — that
+    page's own pagination href builder is separate from `search-href.ts` (it also carries the `#498`
+    `back` cursor stack), and it initially listed every other filter this slice and `#569` added
+    except the one this slice introduced itself. Found and fixed at `/validate`.
 - **The dietary and brand facets are visible on products, not just filterable** (`#608`).
   `ProductSummary` did not carry `isVegetarian`, `isGlutenFree`, `isHmcCertified` or `brand` at all,
   so a shopper could narrow a listing to gluten-free products and read nothing on any card saying

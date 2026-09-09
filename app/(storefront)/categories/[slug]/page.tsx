@@ -77,6 +77,11 @@ function buildHref(
   if (params.onOffer) qs.set("onOffer", params.onOffer);
   if (params.origin) qs.set("origin", params.origin);
   if (params.brand) qs.set("brand", params.brand);
+  // #397 — pack size. Present here for the same reason every key above is: this is the third place
+  // (see the comment above) a filter key must be registered, and this one was missed at Build —
+  // found live at /validate (a "Next page" click on a category listing silently dropped an active
+  // pack-size filter), fixed here rather than in validation.md, since the code was wrong.
+  if (params.packSize) qs.set("packSize", params.packSize);
   if (overrides.cursor) qs.set("cursor", overrides.cursor);
   // A lone "" entry means "page 1 had no cursor" and nothing else — not worth
   // a query param at all, so the very first "Next" click stays a clean URL.

@@ -149,3 +149,24 @@ that is `#608`-adjacent data thinness worth reporting, not a rendering failure.
 `litre`, alphabetical). That is deterministic and unit-tested, but it is an arbitrary grouping order
 rather than a designed one — nobody has said mass should precede volume. Fine to change if a
 reviewer prefers a different order; the test pins current behaviour, not a requirement.
+
+## Fix (post-`/validate`)
+
+**`app/(storefront)/categories/[slug]/page.tsx`'s own hand-rolled `buildHref` dropped `packSize` on
+pagination — found live at `/validate`, fixed at root cause.** That page has its own pagination href
+builder (separate from `search-href.ts`, which backs only `/search` and correctly listed `packSize`
+in `CARRIED`), because it also carries the `back` cursor stack (`#498`) that `/search` doesn't need.
+Its own comment, two lines above the fix, already names this exact failure mode — "the third place a
+filter key must be registered ... the one most easily missed" — and named every other filter added
+by this slice and `#569` (`isVegetarian`, `isGlutenFree`, `isHmcCertified`, `onOffer`, `origin`,
+`brand`) except the one this slice itself introduced. Confirmed live before and after: refetching
+`/search?packSize=500-GRAM` (via `/categories/[slug]`'s own listing) and following a "Next page"
+link previously landed on the wider, unfiltered set with no chip explaining why; after the fix the
+filter survives. R14 as literally validated (`search-href.ts`'s `CARRIED`) had already passed — this
+was the same requirement's *intent* failing on the spec's other named browse page, not a gap `R14`'s
+own check could see, since that page never calls `search-href.ts` at all.
+
+Not extracted into a shared, testable module the way `search-href.ts`/`filter-chips.ts` were: the two
+pages' pagination shapes genuinely differ (`back`-stack vs. plain cursor), and restructuring that is a
+bigger change than this fix's scope. Recorded here rather than silently deferred: if this class of
+bug recurs a third time, that's the signal to extract it, not this one.
