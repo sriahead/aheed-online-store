@@ -376,6 +376,19 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` (final) closeout for the storefront browse consolidation** (`#681`; PR #686 merged
+  to `staging`, merge `7c95646`; not yet promoted to `main`). Docs only — no runtime code, no
+  schema change.
+  - `specs/roadmap.md` (1.86.0 → 1.87.0) gains a `#681` bullet in P9.3 and the staging-merge row
+    for this slice.
+  - `/validate` ran from a genuinely fresh context (the session had not built the artifact) and
+    live-verified every row under `npm run preview` against both seeded vendors, reading their
+    hosts from `VendorDomain` rather than assuming the `nocaped.com` convention — the local dev DB
+    here was seeded `localhost:8787`/`srimart.localhost`. All four `validation.md` corrections
+    `build-notes.md` recorded were independently re-verified as the right call. No new defects
+    found; the artifact matched the spec as built.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 - **Roadmap carry-forward for the `ErrorEvent` fallback capture promotion** (`#674`; PR #679,
   merge `7efc8eb`, `staging -> main`, promoted 2026-09-09). Docs only — no runtime code, no
   schema change. `npm run sdd:audit` reported this row pending at `/orient`; it is the only gate
