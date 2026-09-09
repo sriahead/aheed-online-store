@@ -4,7 +4,7 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.88.0"
+version: "1.89.0"
 updated: 2026-09-09
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P10, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is now a historical record; launch work lives in P9 and post-launch work in P10.
@@ -450,6 +450,72 @@ authoritative for scope" is only true if the roadmap is actually maintained:
 
 **Exit gate.** Production can be deployed, monitored, diagnosed, and rolled back or recovered.
 
+### P9.2 — store owner priority set (named 2026-09-09)
+
+**This is not the same work as the section above, and the shared label is deliberate but
+imperfect.** §P9.2's own objective — production infrastructure and reliability — is largely
+shipped. On 2026-09-09 the store owner named a set of feature issues as the standing priority
+("move these and related issues to 9.2 and work on them ... otherwise we are losing track"), and
+the delivery board's Phase field was set to `P9.2` for all of them with Priority `High`. This
+section exists so `specs/roadmap.md` explains that label rather than silently disagreeing with the
+board, since scope lives here and the board carries status only.
+
+**Board mechanics fixed in the same pass.** The Phase field topped out at `P8`, which is why every
+recent issue carried a wrong phase (`#513`) and P7.5 items were tagged `P7` (`#267`). The missing
+options — `P2.6`, `P7.5`, `P9`, `P9.1`, `P9.2`, `P9.3`, `P9.4`, `P10` — were added additively, each
+existing option passed through with its own id so no item lost its Phase (verified: 219 items across
+all seven previously-used options intact). **Both `#513` and `#267` are closed by that change.**
+
+**The set, in delivery order.** Each slice is sized to ship on its own; the sequence is the
+recommendation, not a dependency chain except where stated.
+
+1. **Social and contact surface** — `#407` (Facebook/Instagram, per-vendor and data-driven) and the
+   deep-link half of `#405` (floating WhatsApp button). One migration adding three nullable
+   `VendorConfig` fields; a null hides the link rather than falling back to a platform default
+   (`#239`'s rule). The WhatsApp *chat re-order* half is split to **`#695`** — it needs Meta
+   Business approval, an inbound webhook and phone-to-`User` identity binding, none of which is code.
+2. **Search synonym operability** — `#583` (the Workers AI call is unverified, and
+   `lib/search-synonym-proposals.ts` still carries the `result.response` string assumption
+   `CLAUDE.md` records as already broken once), `#589`, `#582` (bulk approve/reject) and `#602`
+   (the queue is unlinked from the staff hub).
+3. **Staff panel polish** — `#638` (expand/collapse on `/staff/categories`, its `#627` prerequisite
+   shipped) and `#683` (the runbook renders as one continuous page, and `RunbookClient` hardcodes
+   Aheed's palette into a shared panel).
+4. **`#694`** — CollectionNav absent from category pages. **Built with 5 below.**
+5. **Catalogue facets completion** — `#397`'s pack-size remainder and `#608`'s display half.
+   **Built 2026-09-09 together with `#694`**
+   (`specs/2026-09-09-storefront-browse-discovery-completion/`), not yet merged — a change-log row
+   follows at Ship. Build found `#397` was already ~85% delivered by `#569`/`#398` and its issue
+   body is stale, and separately that **no product in the database carries net content at all**
+   (**`#697`**), which leaves both this facet and `#398`'s unit pricing inert until that is
+   resolved.
+6. **Stock badges** — `#400`'s buildable half only: async loading and an `expectedRestockAt`.
+   Per-store counts stay blocked on `#422`.
+7. **Saved shopping lists** — `#116`. Genuinely phase-sized: a new `ShoppingList`/`ShoppingListItem`
+   aggregate, a migration, account-area UI, and rules for a guest's list at sign-in. Likely two
+   slices.
+8. **Cancel and reverse** — **`#696`** (staff cancellation of a CONFIRMED order), `#137` and `#151`.
+   `#137` and `#151` are **unreachable code today** and cannot ship alone: `releaseOrder` acts only
+   on `PENDING_PAYMENT` orders, strictly before `confirmPayment` writes the `EARN`, so nothing in
+   this codebase can cancel an order that has earned points or used a code. `#696` is the narrower
+   of the two paths that make them reachable. **No money movement** — refunds stay with `#606`.
+9. **Delivery cluster** — `#363` (vendor timezone is a hardcoded constant) must land first, then
+   `#401` (calendar and slots), `#402` (Click & Collect) and `#613` (postcode districts).
+   **Gated on operational input this repository cannot supply**: van count, round size, realistic
+   daily order volume, and how Aheed actually plans rounds.
+
+**Two decisions taken with the owner on 2026-09-09, recorded so they are not re-asked.**
+**Multi-site:** *single site now, multiple planned* — `#402`'s collection point and `#400`'s
+`Inventory` shape are to be built for one site but shaped so a second location is additive rather
+than a breaking change, and **ADR-006 should record this**, since it currently leaves the question
+explicitly open (`#422`). **`#137`:** paired with a staff-cancel path rather than deferred to
+refunds.
+
+**A standing caveat, stated once.** This set displaces P9.3/P9.4 launch certification (`#439`-`#445`,
+including the Playwright smoke suite `#440`). That is the owner's call. It does not move `#113`
+(production runs Stripe **test** keys) or `#104` (Resend has no verified sending domain), which
+remain hard launch blockers regardless of how much feature work ships.
+
 ### P9.3 — Launch quality validation
 
 **Objective:** test the actual candidate rather than continuing to add architecture.
@@ -863,3 +929,4 @@ is unrelated guest-cart retention, and no correctly-numbered issue for this exis
 | 2026-09-08 | **Prisma-free `ErrorEvent` fallback capture, built and merged to staging** (issue **#674**, **PR #677**, merge `cb2b1d6`, `staging`, `specs/2026-09-08-error-event-fallback-capture/`). See the P9.2 bullet above for what shipped. **No schema change, no migration.** `instrumentation.ts`'s `onRequestError` recorded a request failure through `getPrismaUncached()`, which builds a fresh WASM `QueryCompiler` — an error originating in that constructor's own construction defeated the recorder every time, which is what happened live in production on 2026-09-08. `lib/error-event-fallback.ts` adds a second, `fetch`-based write path via `@neondatabase/serverless`'s `neon()` client, sharing no machinery with the failed one; this is the codebase's only raw SQL in application code, a deliberately narrow exception recorded in `CLAUDE.md` and both places `specs/architecture.md` states the no-raw-SQL rule (`#676` tracks making that boundary mechanical rather than prose). **The two rows that could only be checked live had never been run at Build** — `build-notes.md` said so plainly rather than claiming a false pass. `/validate` ran them from a fresh context: `scripts/verify-error-event-fallback.ts` against the dev Neon branch (confirmed distinct from staging/production by comparing hosts across `.env`/`.dev.vars`/`secrets/*.vars`) inserted a real row, read back all 8 columns matching, deleted it, left the row count unchanged, and the run's output carried no `ERR_UNKNOWN_FILE_EXTENSION` and no `.wasm` — proving the fallback genuinely writes from a WASM-free runtime, the whole design claim the slice rests on. **One spec/check mismatch found and left as a flagged deviation, not silently passed or patched**: R17 asked for the exception's file name and the words "raw SQL" on one literal physical line of `CLAUDE.md`, checked by a same-line grep; the bullet states both, correctly, but wraps across two source lines under this file's own hard-wrap convention (used throughout every bullet in the file). The requirement's intent was met; its literal check was over-strict against the file's own formatting style — recorded as a new instance of the `sdd-workflow.md` grep-trap list rather than reflowing one bullet to satisfy a same-line technicality. `gates` (`docs-gates`, `quality/kms`, `quality/quality`) all green on PR #677; post-merge `deploy-staging` (run `34257518471`) completed **success**. **#674 moved to `In Review`** on Project #2; it closes to `Done` only on promotion to `main`. | A build-notes section that says plainly "this was never run" is exactly what let `/validate` treat the two live-database rows as the session's real work rather than a formality — the honest gap was more useful than a confident but unverified pass would have been |
 | 2026-09-09 | **Prisma-free `ErrorEvent` fallback capture promoted to production** (**PR #679**, merge `7efc8eb`, `staging -> main`): carries **PR #677** (the `#674` feature merge) and **PR #678** (merge `2cec318`, its Document (final) closeout) in one promotion, rather than the two separate promotions the previous three slices each needed. **No schema change, no migration** — `git diff --name-only 4628b11 7efc8eb -- prisma/` is empty; the diff is 17 files, +1204/-47. `gates` was green on PR #677 before this promotion, and PR #679 itself re-ran all three required checks green (`docs-gates`, `quality/kms`, `quality/quality`). `deploy-production` and `deploy-docs-internal` both completed **success**; production `/api/health` confirmed serving `7efc8eb` with `db.ok: true`. **#674 closed** on the `main` merge, its Project #2 item auto-moving to **Done**. **This row itself was the carry-forward** `npm run sdd:audit` reported pending at the next `/orient` (2026-09-09) — the fourth consecutive slice to hit the one-loop documentation lag, and the P9.2 bullet above still read "Not yet promoted to `main`" until this commit corrected it. | Folding the closeout into the feature's own promotion halves the number of promotions needing a row, but does not remove the lag — a promotion's row still cannot exist until after the promotion, so the audit remains the only check that can find it |
 | 2026-09-09 | **Storefront browse consolidation, built and merged to staging** (issue **#681**, **PR #686**, merge `7c95646`, `staging`, `specs/2026-09-09-storefront-browse-consolidation/`). See the P9.3 bullet above for what shipped. **No schema change, no migration.** `/search` had rendered two department pickers setting the same `category` parameter while the filter panel beside them carried `category` only as a hidden passthrough field, precisely because nothing visible owned it — deleting the duplicate picker required giving the panel a real control in the same change, or every category filter would strand on the next `Apply`. A new `listCategoryTreeForStorefront` (`lib/repositories/categories.ts`) returns both tiers in one read and **replaces** the page's `listTopLevel()` call, so the category query count on `/search` is unchanged (3 before, 3 after) despite the page gaining a control — confirmed by comparing the call count against `origin/staging`, not just reading the diff. `toCategoryOptionGroups` (`lib/catalogue-form.ts`, shipped in `#630` with no test coverage of its own) is now generic over its element type and gained four unit tests. **`/validate` ran from a genuinely fresh context** (this session had not built the artifact) and live-verified every row under `npm run preview` against both seeded vendors, hosts read from `VendorDomain` rather than assumed (the dev DB here was seeded `localhost:8787`/`srimart.localhost`, not a `nocaped.com` hostname): the category `select` renders correct `optgroup`s and a correct `selected` value on a real department slug; a hidden `category` input is confirmed absent and the hidden `featured` input confirmed present via raw HTML; `?category=household` cross-checked against Prisma — all twelve rendered products genuinely belonged to that department or its children; a bogus slug returned 200 with no filter chip, checked against a real-slug control that does render one; the `aria-label="Collections"` landmark renders exactly once per page on both `/search` and `/bundles`; SriMart's category options are entirely its own `sri-*` slugs with no cross-tenant leakage. All four `validation.md` corrections `build-notes.md` recorded (three grep-anchoring fixes, one landmark-count fix) were independently re-verified as the right call rather than taken on faith. `gates` (`docs-gates`, `quality/kms`, `quality/quality`) all green on PR #686; post-merge `deploy-staging` and `deploy-docs-internal` both completed **success**, staging `/api/health` confirmed serving `7c95646` with `db.ok: true`. **#681 moved to `In Review`** on Project #2; it closes to `Done` only on promotion to `main`. | A fresh-context `/validate` that queries the real seeded `VendorDomain` rows rather than a hardcoded hostname, and cross-checks a category filter's rendered products against Prisma rather than trusting the query looks right — both now a repeated, load-bearing pattern across P9.3 slices rather than a one-off |
+| 2026-09-09 | **Admin catalogue latency and cursor safety promoted to production** (**PR #693**, merge `c99e2e7`, `staging -> main`): carries **PR #691** (the `#682`/`#670` feature merge) and **PR #692** (merge `52cc07d`, its Document (final) closeout). **Schema change: one additive migration** (`20260909140355_p9_3_product_created_at_index`) — `CREATE INDEX` only, confirmed by reading the committed migration file rather than the diff stat. `gates` green on both carried PRs and re-run green on the promotion PR; `deploy-production` and `deploy-docs-internal` both completed **success**; production `/api/health` confirmed serving `c99e2e7` with `db.ok: true`. **#670 closed** on the `main` merge, its Project #2 item auto-moving to **Done**; **#682 deliberately carries no closing keyword anywhere in the PR** and stayed open, since its reported error never reproduced — its board item has now been corrected from a stale `In Review` back to `Backlog`, because the slice shipped and promoted while the issue itself remains unresolved. **This row is the carry-forward `npm run sdd:audit` reported pending at the next `/orient`** — the eighth consecutive slice to hit the one-loop documentation lag. | Promotion of `#670`; `#682` stays open on a shipped fix. The lag is now so reliably reproduced that the audit's `· pending carry-forward` line should be read as a routine hand-off item for the next branch, not as a warning |

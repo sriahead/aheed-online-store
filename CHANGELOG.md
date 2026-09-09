@@ -6,6 +6,37 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **The storefront's collection links now reach every browse page** (`#694`;
+  `specs/2026-09-09-storefront-browse-discovery-completion/`). `CollectionNav` shipped in `#681` on
+  `/search` and `/bundles` only, so Value Bundles, New Arrivals and Featured Products vanished the
+  moment a shopper browsed a department — the page reached from the department menu. It now renders
+  on `/categories/[slug]` too, inside the same `md:w-60 md:shrink-0` column `/search` uses and
+  outside `FilterPanel` (which renders its form twice, so a nav inside it would duplicate the
+  landmark). No `activeHref` there: a category is a different axis from a collection.
+- **A pack-size filter** (`#397`), built on the `netContentAmount`/`netContentUnit` columns `#398`
+  added. **No schema change and no migration.** New pure helpers in `components/product/unit-price.ts`
+  (`formatPackSize`, `packSizeParamValue`, `parsePackSizeParam`, `comparePackSizes`), a predicate
+  emitting both net-content columns or neither, a distinct-pair facet probe, a select rendered only
+  when the context has pack sizes, a removable chip, and both browse pages wired.
+  - Pack sizes are ordered by **real size**, not raw amount — `500g` before `1kg` — by converting
+    through the same `REFERENCE_UNITS` table the unit-price derivation already uses.
+  - `parsePackSizeParam` accepts `string | string[]` and **rejects the array**. `#689` records five
+    existing keys that return HTTP 500 on a repeated query parameter because each calls a string
+    method on what is actually an array; those stay `#689`'s scope, but the new key is array-safe by
+    construction and applies no predicate instead of throwing.
+  - **`#397` was largely already shipped and its issue body is stale**: `#569` had added
+    `isVegetarian`, `isGlutenFree`, `isHmcCertified`, the `Brand` model and the origin/brand indexes,
+    and `#398` the net-content columns. Pack size was the last genuinely missing facet.
+- **The dietary and brand facets are visible on products, not just filterable** (`#608`).
+  `ProductSummary` did not carry `isVegetarian`, `isGlutenFree`, `isHmcCertified` or `brand` at all,
+  so a shopper could narrow a listing to gluten-free products and read nothing on any card saying
+  which ones were. The product card gains three text badges plus the brand; the **product detail
+  page gains a facet block it never had** — it rendered no facet whatsoever before this, not even
+  Halal or Fresh, which made it the larger half of the issue. `hmcReference` renders beside the HMC
+  claim so a certification never travels without its provenance (`#239`).
+
 ### Fixed
 
 - **A keyset cursor from a URL no longer reaches Prisma unvalidated** (`#682`, `#670`;
