@@ -1,18 +1,33 @@
 import { headers } from "next/headers";
+import { cache } from "react";
 import { getPrisma } from "@/lib/db";
 import { splitHostPort } from "@/lib/auth-origin";
 
 /**
  * Resolve the current request's vendor id from the request host (ADR-004 slice 3b).
- * Constructed fresh per call; never cached across requests (Workers I/O rule). Repositories
- * already memoize the result per instance (slice 2), and this is a unique-index lookup, so
- * per-request React cache() is intentionally omitted for testability/simplicity.
+ *
+ * MEMOIZED PER REQUEST with React `cache()` (#670 part 2, #682). This is
+ * request-scoped de-duplication, not a cross-request cache: no Prisma client and
+ * no vendor id survives the request, so the Workers I/O rule ("construct fresh
+ * on every call, never cache across requests") is not engaged. It is the same
+ * mechanism `getCurrentVendorProfile` in `lib/vendor-service.ts` and
+ * `getPrisma`/`getPrismaWs` in `lib/db.ts` already use.
+ *
+ * This docstring previously said per-request `cache()` was "intentionally
+ * omitted for testability/simplicity", on the reasoning that repositories
+ * memoize the result per instance. They do — but PER INSTANCE, and roughly
+ * twenty service factories each carry their own
+ * `vendorIdPromise ??= getCurrentVendorId()`. So one render of a page touching
+ * four services resolved the same immutable value four times. #503 measured the
+ * economics that makes this matter: every query on the path runs in under 2 ms
+ * while a single Neon round-trip costs about 69 ms, so the latency is
+ * round-trip COUNT, not query cost.
  *
  * Exact `VendorDomain.host` match wins. Transition safety: if no host matches AND there is
  * exactly one active vendor, resolve to it (so a single-vendor deployment keeps working
  * before its `VendorDomain` rows are seeded). With 0 or 2+ vendors and no match → null.
  */
-export async function getCurrentVendorIdOrNull(): Promise<string | null> {
+export const getCurrentVendorIdOrNull = cache(async (): Promise<string | null> => {
   const rawHost = (await headers()).get("host") ?? "";
   const host = splitHostPort(rawHost).hostname;
   const prisma = getPrisma();
@@ -69,7 +84,7 @@ export async function getCurrentVendorIdOrNull(): Promise<string | null> {
     take: 2,
   });
   return activeVendors.length === 1 ? activeVendors[0].id : null;
-}
+});
 
 /**
  * Non-null vendor id for data access (repositories, `requireVendorRole`). Throws if the

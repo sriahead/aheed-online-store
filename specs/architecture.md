@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.27.0"
-updated: 2026-09-08
+version: "1.28.0"
+updated: 2026-09-09
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -395,6 +395,19 @@ partial/trigram index for name search only when the catalogue grows.
 **Pagination.** **Keyset (cursor) pagination** on `(createdAt, id)` everywhere lists can grow
 (product grids, order history, admin tables). Never `OFFSET` — it degrades linearly and is the
 classic mobile-scroll performance trap. Prisma `cursor` + `take` implements this directly.
+
+**A cursor is untrusted input, and `lib/repositories/pagination.ts` is the only place it is turned
+into Prisma arguments.** It arrives from a query string a shopper or an owner may have edited,
+bookmarked, truncated or forged, and `keysetCursorArgs()` resolves anything that is not a single
+well-formed id to the first page rather than throwing.
+`tests/pagination-guard-coverage.test.ts` walks `lib/repositories/` and fails if any other file
+builds the argument by hand. Both failure modes were measured live before the guard existed
+(`#682`): a malformed or stale id returned **HTTP 200 with an empty list**, because Prisma does not
+error on a cursor matching no row — so a bad bookmark rendered a 2,000-product catalogue as empty —
+and a **repeated** `cursor` parameter, which is `string[]` at runtime whatever the page's
+`searchParams` type declares, reached Prisma as `cursor: { id: [...] }` and threw
+`PrismaClientValidationError` (**HTTP 500**). The guard narrows the runtime type, which is what
+makes the page-level annotation true rather than aspirational.
 
 **One scoped exception: ranked storefront search** (P2.6 slice 1, `#564`). `searchProducts` in
 `lib/repositories/products.ts` fetches at most `SEARCH_CANDIDATE_LIMIT + 1` (201) matching rows —
