@@ -195,7 +195,27 @@ the badge alone, because a card has no room for provenance and the detail page i
   consecutive generations. At roughly 2,000 products this is the same "insurance rather than a
   present emergency" `#670` part 3 recorded for the ordering index, and the existing
   `@@index([vendorId, isActive, basePrice])` and category indexes already narrow most real queries
-  before the pack-size predicate is reached. **File a follow-up issue at `/document` for the index**,
-  and measure with `EXPLAIN (ANALYZE, BUFFERS)` rather than adding it on the strength of this
-  paragraph. If measurement at Build shows a sequential scan on a realistic catalogue, that is a
-  reason to reopen the no-migration decision inside this slice, not to ship and hope.
+  before the pack-size predicate is reached.
+
+  **MEASURED AT BUILD, and the predicted sequential scan is real — so the decision was reopened
+  rather than assumed.** The dev branch carries no net content at all (`#697`), so the measurement
+  needed a temporary fixture: 800 of Aheed's 2,080 active products were given net content across
+  four pack sizes, `EXPLAIN (ANALYZE, BUFFERS)` was run against the exact predicate and ordering
+  `findPage` uses, and every fixture row was reverted afterwards (verified: 0 products left
+  carrying net content). Result for the 200-product `500-GRAM` case:
+
+  > `Seq Scan on "Product"` … `Rows Removed by Filter: 1883`, then a `top-N heapsort`.
+  > **Planning 1.291 ms, Execution 0.487 ms, `Buffers: shared hit=93`, no `read`.**
+
+  So: a sequential scan, and **not** a performance problem. The whole table is ~87 buffers and
+  entirely in cache — Postgres picks a scan here because at this size a scan genuinely is cheapest,
+  and an index would very likely not be chosen even if it existed. For scale, `#670` part 3 added
+  its index against a **12.063 ms** Seq Scan; this one is **25x faster than that already**. Adding a
+  migration — and a GAP-011 round — to save under half a millisecond would be the worse trade.
+
+  **The decision therefore stands, on evidence rather than on the paragraph above, and the threshold
+  is now known:** execution scales roughly linearly with catalogue size from here, so ~20,000
+  products puts this around 5 ms and ~200,000 around 50 ms. Revisit at the first of those, or sooner
+  if a vendor's catalogue grows faster than Aheed's. A follow-up issue for the index is filed at
+  `/document` carrying these numbers, so the next reader argues with the measurement rather than
+  repeating it.

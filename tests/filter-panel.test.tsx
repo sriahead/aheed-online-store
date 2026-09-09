@@ -27,6 +27,7 @@ const NO_FACETS = {
   onOffer: false,
   origins: [],
   brands: [],
+  packSizes: [],
 };
 
 function renderPanel() {

@@ -9,6 +9,7 @@ import { ProductCard } from "@/components/product/ProductCard";
 import { FilterPanel } from "@/components/product/FilterPanel";
 import { FilterChips } from "@/components/product/FilterChips";
 import { CollectionNav } from "@/components/product/CollectionNav";
+import { parsePackSizeParam } from "@/components/product/unit-price";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
 import { searchPageHref } from "@/components/product/search-href";
@@ -52,6 +53,8 @@ type SearchParams = {
   origin?: string;
   /** #569 — a brand SLUG; unknown values are ignored, exactly as `category` is. */
   brand?: string;
+  /** #397 — pack size as `<amount>-<UNIT>`, e.g. `500-GRAM`. */
+  packSize?: string;
   featured?: string;
   cursor?: string;
   /** #568 — category drill-down from within results. A slug; unknown values are ignored. */
@@ -132,6 +135,10 @@ export default async function SearchPage({
     // unresolved category or brand slug, which apply no predicate at all.
     origin: params.origin || undefined,
     brandId: selectedBrand?.id,
+    // #397 — parsed, never read raw. A repeated `?packSize=` arrives as an array at runtime
+    // whatever this page's SearchParams type says (#689); the parser rejects it and every other
+    // malformed value, applying no predicate rather than throwing.
+    packSize: parsePackSizeParam(params.packSize),
     // Only the exact value "1" enables it — an absent or any other value leaves
     // the filter off, so a stray `?featured=0` browses the full catalogue.
     isFeatured: params.featured === "1",

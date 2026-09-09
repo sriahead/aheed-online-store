@@ -69,7 +69,12 @@ R14. `components/product/search-href.ts` includes `packSize` in both `SearchHref
 into pagination.
 
 R15. Both browse pages declare `packSize` in their own `SearchParams` type, read it, pass it through
-the R7 parser, and forward the result to the product query and to `availableFacets`.
+the R7 parser, and forward the result to the product query. It is deliberately **not** added to
+`FacetContext` and **not** passed to `availableFacets`: that type carries only `groups`,
+`categoryIds`, price and in-stock, because each facet probe must exclude every other facet's own
+selection (see `getAvailableFacets`) — a selected pack size narrowing the probe would hide every
+other pack size from the control that offers them. `origin` and `brandId` are already excluded for
+the identical reason.
 
 R16. A request to `/search?packSize=500-GRAM` returns HTTP 200 and lists only products whose
 `netContentAmount` is `500` and whose `netContentUnit` is `GRAM`.

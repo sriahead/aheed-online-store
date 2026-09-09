@@ -63,6 +63,22 @@ quotes this very spec's prose, so it matches patterns describing the thing being
 a product with no brand, or a category whose products have no net content. Resolve each from Prisma
 against the same `DATABASE_URL` the preview server is using, rather than guessing a slug.
 
+**YOU MUST CREATE A PACK-SIZE FIXTURE FIRST, OR EVERY PACK-SIZE ROW WILL LOOK BROKEN WHEN IT IS
+NOT.** Measured at Build against the dev branch (`ep-sparkling-paper`): **2,080 active Aheed
+products and 3 SriMart products, and ZERO of them carry `netContentAmount`/`netContentUnit`.**
+`prisma/seed.ts` never writes those columns — `#398` added them as nullable and only
+`components/staff/ProductForm.tsx` sets them, per product, by hand. So with an unmodified database
+the pack-size control correctly renders **nowhere**, `packSizes` is empty on every page, and
+`/search?packSize=500-GRAM` correctly returns an empty listing. That is R11's empty case passing,
+not a defect — but it makes R11's non-empty case, R16 and R9 unprovable until some product has net
+content.
+
+Before running R9, R11, R16, R17 or R18: set net content on a handful of dev products (e.g. `500`
+`GRAM` on two, `1` `KILOGRAM` on one, `500` `MILLILITRE` on one) — either through
+`/staff/products/[id]`'s own form, which is the real write path, or with a scratch `tsx` script —
+note their ids, and revert them afterwards. Do **not** change `prisma/seed.ts`; the missing data is
+tracked separately and is not this slice's scope.
+
 ---
 
 ## Validation Steps
@@ -83,7 +99,7 @@ against the same `DATABASE_URL` the preview server is using, rather than guessin
 | R12 | Accessibility | `grep -n -A4 'name="packSize"' components/product/ProductFilterForm.tsx` shows the `select` inside a wrapping `label` with no `id` attribute. Against `search.html`, `grep -o 'id="[^"]*"' search.html \| sort \| uniq -d` prints nothing for any pack-size id — no duplicate ids across the two renders.    |
 | R13 | Unit          | `npx vitest run tests/filter-chips.test.ts` exits 0 with a case asserting a `packSize` chip renders with the R6 label and that its `href` omits `packSize` while preserving other keys. `grep -n "packSize" components/product/filter-chips.ts` shows it in both `REMOVABLE` and `FilterChipParams`.         |
 | R14 | Unit          | `grep -n "packSize" components/product/search-href.ts` shows it in both `SearchHrefParams` and `CARRIED`. `npx vitest run tests/filter-chips.test.ts` exits 0 — that suite already pins `CARRIED` against `REMOVABLE`, so a mismatch fails here rather than in production pagination.                        |
-| R15 | Integration   | `grep -n "packSize" "app/(storefront)/search/page.tsx" "app/(storefront)/categories/[slug]/page.tsx"` shows, in each file, the `SearchParams` declaration, the parser call, and the value reaching both the product query and `availableFacets`.                                                            |
+| R15 | Integration   | `grep -n "packSize" "app/(storefront)/search/page.tsx" "app/(storefront)/categories/[slug]/page.tsx"` shows, in each file, the `SearchParams` declaration, the parser call, and the value reaching the product query. Then confirm the exclusion: `grep -n "packSize" lib/repositories/products.ts` shows it absent from `FacetContext`, and neither page passes it to `availableFacets`. |
 | R16 | E2E           | `curl -s -o p1.html -w "%{http_code}\n" -H "Host: $AHEED_HOST" "http://127.0.0.1:8787/search?packSize=500-GRAM"` prints `200`. Cross-check every product slug in `p1.html` against Prisma directly — each must have `netContentAmount` `500` and `netContentUnit` `GRAM`. Do not trust the page alone.       |
 | R17 | E2E           | `curl -s -o p2.html -w "%{http_code}\n" -H "Host: $AHEED_HOST" "http://127.0.0.1:8787/search?packSize=500-GRAM&packSize=1-KILOGRAM"` prints `200`, and no pack-size chip appears in `p2.html`. A `500` here is the `#689` defect shape reaching a brand-new key and is a hard fail, not a known issue.        |
 | R18 | E2E           | `curl -s -o p3.html -w "%{http_code}\n" -H "Host: $AHEED_HOST" "http://127.0.0.1:8787/search?packSize=bogus"` prints `200`, no pack-size chip appears, and the product count in `p3.html` equals that of a plain `/search` fetch.                                                                           |

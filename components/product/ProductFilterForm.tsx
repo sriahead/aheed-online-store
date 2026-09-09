@@ -1,4 +1,5 @@
 import { toCategoryOptionGroups } from "@/lib/catalogue-form";
+import { formatPackSize, packSizeParamValue } from "@/components/product/unit-price";
 import type { AvailableFacets } from "@/lib/repositories/products";
 import type { StorefrontCategoryNode } from "@/lib/repositories/categories";
 
@@ -33,6 +34,8 @@ export function ProductFilterForm({
     brand?: string;
     featured?: string;
     category?: string;
+    /** #397 — the wire form is `<amount>-<UNIT>`, e.g. `500-GRAM`. */
+    packSize?: string;
   };
   // Per-vendor filter visibility (ADR-004 follow-up): only offer a filter the vendor's catalogue
   // actually uses, narrowed since #568 to the current result context. Defaults to none.
@@ -57,6 +60,7 @@ export function ProductFilterForm({
     onOffer: false,
     origins: [],
     brands: [],
+    packSizes: [],
   };
   return (
     <form method="GET" className="flex flex-col gap-5">
@@ -288,6 +292,38 @@ export function ProductFilterForm({
                 {brand.name}
               </option>
             ))}
+          </select>
+        </label>
+      )}
+
+      {/*
+        #397 — pack size, the last facet that issue asked for which had not shipped. Its other six
+        (origin, brand, HMC, vegetarian, gluten-free, organic) all landed in #569/#398; this one
+        waited on #398's netContentAmount/netContentUnit columns, since `unitLabel` is free text
+        ("£2.40 / kg") and unusable as a facet.
+
+        Like every control in this form, the label WRAPS the select and there is no `id` — see
+        FilterPanel, which renders this whole form twice per page (a `details` disclosure below
+        `md`, an `aside` above it). An `id` here would appear twice in one document and bind half
+        the labels to the wrong control.
+      */}
+      {spec.packSizes.length > 0 && (
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-semibold text-primary">Pack size</span>
+          <select
+            name="packSize"
+            defaultValue={searchParams.packSize ?? ""}
+            className="w-full rounded-lg border border-black/20 px-3 py-2"
+          >
+            <option value="">Any pack size</option>
+            {spec.packSizes.map((packSize) => {
+              const value = packSizeParamValue(packSize);
+              return (
+                <option key={value} value={value}>
+                  {formatPackSize(packSize)}
+                </option>
+              );
+            })}
           </select>
         </label>
       )}

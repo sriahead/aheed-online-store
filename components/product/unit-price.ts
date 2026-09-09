@@ -98,3 +98,73 @@ export function deriveUnitPricePenceForSort(
   if (perUnit === null) return null;
   return Math.round(perUnit);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Pack size as a FACET (#397's remainder)                                     */
+/* -------------------------------------------------------------------------- */
+
+/** How a pack size is written for a shopper: the amount, then a unit suffix. */
+const PACK_SIZE_SUFFIXES: Record<NetContentUnit, string> = {
+  GRAM: "g",
+  KILOGRAM: "kg",
+  MILLILITRE: "ml",
+  LITRE: "L",
+  EACH: " each",
+};
+
+/**
+ * `500` + `GRAM` -> `"500g"`. The shopper-facing label for a pack size, used by the filter
+ * control's options and by the removable filter chip so both read identically.
+ *
+ * Deliberately NOT `deriveUnitPriceLabel`'s job: that one answers "what does this cost per kg",
+ * which is a price. This one answers "how big is the pack", which is the facet being filtered on.
+ */
+export function formatPackSize(netContent: NetContent): string {
+  return `${netContent.amount}${PACK_SIZE_SUFFIXES[netContent.unit]}`;
+}
+
+/** The wire form of a pack size in a query string: `500-GRAM`. */
+export function packSizeParamValue(netContent: NetContent): string {
+  return `${netContent.amount}-${netContent.unit}`;
+}
+
+const PACK_SIZE_PARAM = /^([0-9]{1,6})-(GRAM|KILOGRAM|MILLILITRE|LITRE|EACH)$/;
+
+/**
+ * Parses `packSize=500-GRAM` back into a `NetContent`, or `undefined` for anything else.
+ *
+ * ACCEPTS `string[]`, AND THAT IS THE POINT. A repeated query parameter (`?packSize=a&packSize=b`)
+ * arrives as an array at runtime whatever the page's `searchParams` type annotation declares —
+ * `#689` records five existing keys that throw a real HTTP 500 on exactly that, because each
+ * calls a string method on the array. A brand-new key is not going to become the sixth: an array
+ * yields no filter here, the same "unrecognised value applies no predicate" rule `origin` and
+ * `brand` already follow.
+ *
+ * A zero amount is rejected too — it cannot describe a pack, and it is the one numeric value that
+ * would pass a naive digit check while matching nothing.
+ */
+export function parsePackSizeParam(value: string | string[] | undefined): NetContent | undefined {
+  if (typeof value !== "string") return undefined;
+  const match = PACK_SIZE_PARAM.exec(value);
+  if (match === null) return undefined;
+  const amount = Number(match[1]);
+  if (!Number.isInteger(amount) || amount <= 0) return undefined;
+  return { amount, unit: match[2] as NetContentUnit };
+}
+
+/**
+ * Orders pack sizes the way a shopper reads them: grouped by reference unit (each / kg / litre),
+ * then smallest first WITHIN that group.
+ *
+ * The grouping is what makes this non-trivial. Sorting on the raw amount would put `1kg` before
+ * `500g` — one is a smaller number and a larger pack. Reusing `REFERENCE_UNITS`, the same table
+ * `deriveUnitPriceLabel` converts through, is what lets `500g` and `1kg` be compared at all, and
+ * means a future unit added to the enum is ordered correctly here for free rather than silently
+ * landing at the end.
+ */
+export function comparePackSizes(a: NetContent, b: NetContent): number {
+  const aRef = REFERENCE_UNITS[a.unit];
+  const bRef = REFERENCE_UNITS[b.unit];
+  if (aRef.label !== bRef.label) return aRef.label.localeCompare(bRef.label);
+  return aRef.toReferenceAmount(a.amount) - bRef.toReferenceAmount(b.amount);
+}

@@ -23,6 +23,7 @@ const NO_FACETS = {
   onOffer: false,
   origins: [],
   brands: [],
+  packSizes: [],
 };
 
 describe("ProductFilterForm — featured passthrough", () => {

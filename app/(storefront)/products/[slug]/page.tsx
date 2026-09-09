@@ -36,6 +36,18 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         }) ?? product.unitLabel)
       : product.unitLabel;
 
+  // #608 — only the flags that are actually TRUE, in a fixed reading order. Same labels the
+  // filter chips use (components/product/filter-chips.ts), so a shopper who filtered by
+  // "Gluten free" sees that exact wording again on the product they opened.
+  const dietaryFacets = [
+    product.isHalal ? "Halal" : null,
+    product.isFresh ? "Fresh" : null,
+    product.isOrganic ? "Organic" : null,
+    product.isVegetarian ? "Vegetarian" : null,
+    product.isGlutenFree ? "Gluten free" : null,
+    product.isHmcCertified ? "HMC certified" : null,
+  ].filter((facet): facet is string => facet !== null);
+
   const { CDN_BASE_URL } = getEnv();
   const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const reviewRepo = getReviewRepository();
@@ -58,6 +70,53 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <p className={product.inStock ? "text-action" : "text-danger"}>
           {product.inStock ? "In stock" : "Out of stock"}
         </p>
+
+        {/*
+          #608 — this page rendered NO facet at all before now, not even Halal or Fresh, which the
+          product CARD has shown since P2.5b1. So the detail page was the larger of the two gaps
+          that issue names: a shopper who filtered a listing by a facet and then opened a product
+          lost every trace of why it matched.
+
+          Each entry is text, never colour alone. `dietaryFacets` is built from the product's own
+          booleans so a false flag renders nothing rather than a greyed-out chip claiming an
+          absence the data does not actually assert (a product is not marked "not vegetarian";
+          it is simply not marked).
+        */}
+        {(dietaryFacets.length > 0 || product.brand || product.origin) && (
+          <ul className="flex flex-wrap gap-2" aria-label="Product attributes">
+            {dietaryFacets.map((facet) => (
+              <li
+                key={facet}
+                className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-primary"
+              >
+                {facet}
+              </li>
+            ))}
+            {product.brand && (
+              <li className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-primary">
+                {product.brand.name}
+              </li>
+            )}
+            {product.origin && (
+              <li className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-primary">
+                {product.origin}
+              </li>
+            )}
+          </ul>
+        )}
+
+        {/*
+          #239/#608 — the HMC reference travels WITH the claim, never behind it. #239 was a real
+          incident of this codebase asserting "100% Certified HMC Halal" for a vendor with no basis
+          for it; `lib/catalogue-form.ts` now requires this reference whenever the flag is ticked,
+          and rendering it here is what makes the badge above an attributable claim rather than a
+          decoration.
+        */}
+        {product.isHmcCertified && product.hmcReference && (
+          <p className="text-sm text-primary-muted">
+            HMC certification reference: {product.hmcReference}
+          </p>
+        )}
         {/* Real add-to-cart (P3a) — full-width variant, no wrapping <Link> here. */}
         <AddToCartButton productId={product.id} disabled={!product.inStock} variant="full" />
       </div>

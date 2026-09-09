@@ -94,9 +94,13 @@ describe("getAvailableFacets context (R18)", () => {
     const findMany = vi
       .fn()
       .mockResolvedValueOnce([{ origin: "Morocco" }, { origin: null }])
+      .mockResolvedValueOnce([{ brand: { id: "b1", name: "Shan", slug: "shan" } }, { brand: null }])
+      // #397 — pack sizes, deliberately returned OUT of size order and with a half-null row, to
+      // pin both the ordering and the same null-filtering the two lists above need.
       .mockResolvedValueOnce([
-        { brand: { id: "b1", name: "Shan", slug: "shan" } },
-        { brand: null },
+        { netContentAmount: 1, netContentUnit: "KILOGRAM" },
+        { netContentAmount: 500, netContentUnit: "GRAM" },
+        { netContentAmount: 250, netContentUnit: null },
       ]);
     const client = { product: { findFirst, findMany } } as never;
 
@@ -112,6 +116,12 @@ describe("getAvailableFacets context (R18)", () => {
       // filtered before being returned — a null reaching a `select` option would render blank.
       origins: ["Morocco"],
       brands: [{ id: "b1", name: "Shan", slug: "shan" }],
+      // 500g before 1kg: ordered by real size, not raw amount. The half-null row is dropped —
+      // a pack size needs BOTH columns, and one alone cannot describe a pack.
+      packSizes: [
+        { amount: 500, unit: "GRAM" },
+        { amount: 1, unit: "KILOGRAM" },
+      ],
     });
   });
 });
@@ -197,22 +207,26 @@ describe("#569 widened facet probes", () => {
     const wheres = findMany.mock.calls.map(
       (call) => (call[0] as { where: Record<string, unknown> }).where,
     );
-    expect(wheres).toHaveLength(2);
+    expect(wheres).toHaveLength(3);
 
-    const [originWhere, brandWhere] = wheres;
+    const [originWhere, brandWhere, packSizeWhere] = wheres;
     // Each narrows to rows that HAVE a value, never to a chosen one.
     expect(JSON.stringify(originWhere)).toContain('"origin"');
     expect(originWhere).not.toHaveProperty("origin.equals");
     expect(JSON.stringify(brandWhere)).toContain('"brandId"');
     expect(brandWhere).not.toHaveProperty("brandId.equals");
+    // #397 — the pack-size probe asks for BOTH columns non-null and narrows to neither value.
+    expect(JSON.stringify(packSizeWhere)).toContain('"netContentAmount"');
+    expect(JSON.stringify(packSizeWhere)).toContain('"netContentUnit"');
+    expect(packSizeWhere).not.toHaveProperty("netContentAmount.equals");
   });
 
   it("issues every probe in one Promise.all rather than sequentially (R19)", async () => {
     const { client, findFirst, findMany } = makeStub();
     await getAvailableFacets(client, VENDOR);
-    // Nine probes total: seven findFirst, two findMany. If they were awaited in sequence the counts
+    // Ten probes total: seven findFirst, three findMany. If they were awaited in sequence the counts
     // would be identical — what this pins is the probe SET, so a facet added without extending the
     // Promise.all shows up here as a count change rather than passing silently.
-    expect(findFirst.mock.calls.length + findMany.mock.calls.length).toBe(9);
+    expect(findFirst.mock.calls.length + findMany.mock.calls.length).toBe(10);
   });
 });
