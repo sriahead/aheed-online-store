@@ -6,6 +6,50 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **One filter surface on `/search`: the category control moves into the filter panel** (`#681`;
+  `specs/2026-09-09-storefront-browse-consolidation/`). **No schema change, no migration.**
+  `/search` rendered two department pickers setting the same `category` parameter — the
+  `DepartmentScroller` strip and `CategoryDrillDown`'s chip row directly beneath it — while the
+  filter panel beside them had no category control at all, carrying `category` only as a hidden
+  passthrough field (`#568`) precisely because nothing visible owned it. `ProductFilterForm` now
+  renders a grouped `select` (departments selectable in their own right, each followed by its
+  subcategories, values are slugs), the hidden `category` input is gone, and
+  `components/product/CategoryDrillDown.tsx` is deleted. `featured`'s hidden field **stays** —
+  nothing visible owns it, so removing it would reintroduce the bug `#501` fixed.
+  - **The page issues no more category queries than before.** A new
+    `listCategoryTreeForStorefront` returns both tiers in one read and **replaces** the
+    `listTopLevel()` call; the department strip takes the `parentId === null` rows of that same
+    result. Read amplification on these pages is live work (`#670`, `#682`) and this slice was
+    careful not to add to it.
+  - **New collection entry points** — `CollectionNav`, rendered once per page above the panel and
+    shared by `/search` and `/bundles`: All products, New Arrivals, Featured Products, Value
+    Bundles. It sits outside `FilterPanel`'s two branches deliberately: that component renders its
+    form twice (mobile disclosure, desktop sidebar), which is safe for a form using no `id`
+    attributes but would put two identical `nav` landmarks in the accessibility tree.
+  - **`/bundles` gains the department strip and the same collection nav**, but deliberately **not**
+    the filter form: `Bundle` has no `categoryId` and none of that form's predicates exist on a
+    bundle, because a bundle is a curated set spanning departments (`#347`). The strip there is a
+    way back out to a filtered product listing, not a filter over bundles.
+  - **No `collection=new` parameter was invented.** `findPage` already orders every browse listing
+    `createdAt desc, id desc`, so `/search` with no query *is* the newest-first listing and the
+    shop page's New Arrivals row is that same query capped at eight. A predicate-free key would
+    have rendered a removable chip claiming a filter that is not running, which `filter-chips.ts`
+    exists to prevent. The listing states its ordering instead. A recency-window New Arrivals is a
+    real feature and a separate one.
+  - `toCategoryOptionGroups` (`lib/catalogue-form.ts`) is now generic over its element type, so the
+    storefront can reuse it without losing `slug`. It had shipped in `#630` with **no test
+    coverage of any kind**; four cases now pin the grouping rules, the orphan-child promotion and
+    the field preservation, before a second caller depends on them.
+  - `specs/design-system.md` (1.12.0 → 1.13.0) records the standing rule this established: a
+    disclosure's two branches may duplicate a **form** that uses no `id` attributes, but never a
+    **landmark** — two identically-named `nav`s are a real defect for anyone navigating by
+    landmark, and invisible on screen.
+  - Deferred and filed rather than folded in: **`#684`** (a real recency-window New Arrivals,
+    which must follow `#601` because it does introduce a new query key) and **`#685`** (the Gate 2
+    pre-commit hook cannot tell a generated artefact from source).
+
 ### Added
 
 - **A Prisma-free fallback so an unhandled request error can still be recorded** (`#674`;

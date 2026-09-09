@@ -26,6 +26,22 @@ export interface CategoryRepository {
   getBySlug(slug: string): Promise<CategoryWithChildren | null>;
   /** Autocomplete category suggestions (#568) — see `suggestCategories`. */
   suggest(terms: readonly string[], limit: number): Promise<CategorySummary[]>;
+  /** The whole active tree in one read (#681) — see `listCategoryTreeForStorefront`. */
+  listTree(): Promise<StorefrontCategoryNode[]>;
+}
+
+/**
+ * A category as the storefront's filter control needs it: a `CategorySummary` plus the two fields
+ * required to group departments and their children (#681).
+ *
+ * `isActive` is carried even though `listCategoryTreeForStorefront` only ever returns active rows,
+ * because it is what makes this type structurally satisfy `CategoryOption` in
+ * `lib/catalogue-form.ts` — which is what lets the storefront reuse `toCategoryOptionGroups`
+ * rather than growing a second, near-identical grouping function.
+ */
+export interface StorefrontCategoryNode extends CategorySummary {
+  parentId: string | null;
+  isActive: boolean;
 }
 
 /**
@@ -41,6 +57,33 @@ export async function listTopLevelCategories(
     where: { vendorId, parentId: null, isActive: true },
     orderBy: { sortOrder: "asc" },
     select: { id: true, slug: true, name: true },
+  });
+}
+
+/**
+ * Every active category for this vendor, both tiers, in one read (#681).
+ *
+ * WHY THIS EXISTS RATHER THAN A SECOND CALL BESIDE `listTopLevelCategories`. The storefront filter
+ * panel's category control offers departments AND their subcategories at once, so it needs the
+ * whole tree; `listTopLevelCategories` returns departments only (`parentId: null`). Rather than
+ * issue both, `/search` issues THIS ONE and derives its department strip from the rows whose
+ * `parentId` is null — so the page's category query count is unchanged by gaining the control,
+ * which matters because read amplification on these pages is a live concern (#670, #682).
+ *
+ * Ordering is `(sortOrder, name)` — the same global ordering `listTopLevelCategories` uses,
+ * extended with a tiebreak so two categories sharing a `sortOrder` render in a stable order rather
+ * than whatever the planner returns. Grouping into departments-with-children is NOT done here: it
+ * is pure, it is `toCategoryOptionGroups`' job (`lib/catalogue-form.ts`), and doing it in SQL would
+ * move the one rule worth unit-testing into a query shape that needs a database to assert.
+ */
+export async function listCategoryTreeForStorefront(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+): Promise<StorefrontCategoryNode[]> {
+  return prisma.category.findMany({
+    where: { vendorId, isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, slug: true, name: true, parentId: true, isActive: true },
   });
 }
 
