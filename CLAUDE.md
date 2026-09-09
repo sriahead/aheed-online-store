@@ -1269,6 +1269,23 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   explaining or quoting the very thing being searched for** — anchor to a directive's actual
   position (`^"use server"`, not a bare substring) or explicitly exclude the generated artefact,
   the same way the `&`-escaping case above requires checking the pattern before trusting the count.
+- **A whole-page grep for an attribute that has a legitimate reason to appear MORE THAN ONCE on the
+  same page proves nothing about the one occurrence a requirement actually cares about.** Hit at
+  the storefront-browse-discovery-completion `/validate` (2026-09-09, `#694`): a requirement that
+  `CollectionNav` render with no `aria-current="page"` inside it specified its check as
+  `grep -c 'aria-current="page"' cat.html` printing `0` — but a real category page also renders
+  `DepartmentScroller` and `SubcategoryLinks`, both of which correctly carry `aria-current="page"`
+  on the active department/subcategory tab, for reasons that have nothing to do with
+  `CollectionNav`. The literal command would never print `0` on any category page, regardless of
+  whether `CollectionNav` itself was built correctly. The underlying requirement was genuinely met
+  — confirmed by narrowing the check to the specific element (`grep -oE '<nav aria-label="Collections".{0,1500}'`
+  and inspecting that no `aria-current` appears inside it) — so this was a spec-wording defect, not
+  a code defect: the check counted the whole page when the requirement was about one landmark
+  inside it. **The same rule as the two entries above, one level up**: a grep-based validation row
+  proves what it claims only when the pattern (or, here, the *scope* being searched) can't also
+  match something unrelated that has its own legitimate reason to look identical — scope the search
+  to the specific element a requirement is actually about, not the whole rendered page, whenever
+  more than one thing on that page could plausibly carry the same attribute.
 
 ## Better Auth (`lib/auth.ts`, ADR-002) — learned the hard way
 - **A bare top-level `onRequest` key in `betterAuth({...})`'s config is accepted by TypeScript and

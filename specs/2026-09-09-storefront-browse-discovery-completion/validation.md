@@ -87,7 +87,7 @@ tracked separately and is not this slice's scope.
 | --- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | R1  | Integration   | `grep -c "CollectionNav" "app/(storefront)/categories/[slug]/page.tsx"` prints `2` (one import, one render), and `grep -n "components/product/CollectionNav" "app/(storefront)/categories/[slug]/page.tsx"` prints one import line.                                                                          |
 | R2  | Integration   | `grep -n -B3 -A3 "md:w-60" "app/(storefront)/categories/[slug]/page.tsx"` shows one wrapper carrying both `md:w-60` and `md:shrink-0`, with the `CollectionNav` element before the `FilterPanel` element inside it. The class list must match the equivalent block in `app/(storefront)/search/page.tsx`.     |
-| R3  | E2E           | `curl -s -H "Host: $AHEED_HOST" http://127.0.0.1:8787/categories/<real-slug> -o cat.html` then `grep -c 'aria-current="page"' cat.html` prints `0`. Resolve the slug from Prisma, not by guessing.                                                                                                          |
+| R3  | E2E           | **Corrected at `/document` (2026-09-09) — see below the table.** `curl -s -H "Host: $AHEED_HOST" http://127.0.0.1:8787/categories/<real-slug> -o cat.html` then `grep -oE '<nav aria-label="Collections".{0,1500}'` on `cat.html` and confirm no `aria-current` appears inside that extract. Resolve the slug from Prisma, not by guessing.                                                                                                          |
 | R4  | Accessibility | Against the same `cat.html`: `grep -c 'aria-label="Collections"' cat.html` prints exactly `1`. Two would mean it was rendered inside `FilterPanel`, which renders its form twice.                                                                                                                           |
 | R5  | Regression    | `git diff origin/staging -- components/product/CollectionNav.tsx` shows no change to the `COLLECTIONS` array (an untouched file is the strongest pass), and `grep -A6 "const COLLECTIONS" components/product/CollectionNav.tsx` still shows `/search` for both All products and New Arrivals.                |
 | R6  | Unit          | `npx vitest run tests/unit-price.test.ts` exits 0 with cases asserting `500`+`GRAM` renders `500g`, `1`+`KILOGRAM` renders `1kg`, `500`+`MILLILITRE` renders `500ml`, `1`+`LITRE` renders `1L`, and `6`+`EACH` renders `6 each`.                                                                            |
@@ -115,3 +115,17 @@ tracked separately and is not this slice's scope.
 | R28 | Unit          | `npx vitest run` alone, with no concurrent build and no orphaned `node.exe`/`workerd.exe`, exits 0. Record the file and test totals in `build-notes.md` and compare against `CLAUDE.md`'s baseline of **117 files / 1544 tests** — a shortfall is the forks-pool trap, not a pass; the new totals replace that line. |
 | R29 | Release       | `git diff origin/staging -- CHANGELOG.md` is non-empty and names `#694`, `#397` and `#608`.                                                                                                                                                                                                               |
 | R30 | Release       | `npm run lint`, `npm run typecheck`, `npx vitest run` and `npm run format:check` each exit 0. CI on Linux is the authority; a `format:check` failure on untouched files is real drift now that `.gitattributes` pins `eol=lf`, not the old `core.autocrlf` artifact.                                        |
+
+## R3 correction (found at `/validate`, corrected at `/document`)
+
+R3's original check — `grep -c 'aria-current="page"' cat.html` printing `0` — was wrong as written,
+not the code. A real category page also renders `DepartmentScroller` (the department strip) and
+`SubcategoryLinks`, both of which correctly carry `aria-current="page"` on the active
+department/subcategory tab, entirely unrelated to `CollectionNav`. The literal command prints `1`
+on every category page regardless of whether `CollectionNav` itself is built correctly — confirmed
+live: `grep -oE '.{200}aria-current="page".{100}'` on a real fetch shows both matches coming from
+those two other navs, and a narrower extract of the Collections nav element itself
+(`grep -oE '<nav aria-label="Collections".{0,1500}'`) shows zero `aria-current` occurrences inside
+it, which is what R3 actually requires. Promoted to `CLAUDE.md`'s grep-trap section as a
+transferable lesson: a whole-page grep for an attribute proves nothing when more than one landmark
+on the page has its own legitimate reason to carry it.
