@@ -426,6 +426,28 @@ every branch merges.
 
 ### Documentation
 
+- **`/document` (final) closeout for admin catalogue latency and cursor safety** (`#682`, `#670`;
+  PR #691 merged to `staging`, merge `77869cd`; not yet promoted to `main`). Docs only — no
+  runtime code, no schema change on this branch (the schema change and migration shipped on the
+  feature branch itself, PR #691).
+  - `specs/roadmap.md` (1.87.0 → 1.88.0) gains a `#670` bullet and a separate `#682` bullet in
+    P9.3 — `#670` shipped both remaining parts and moves toward closing on promotion, `#682`
+    stays open regardless of promotion since its own named hypothesis never reproduced — plus the
+    staging-merge change-log row for this slice.
+  - **A second, unrelated carry-forward found and fixed in the same pass**: `npm run sdd:audit`
+    reported PR #688 (the `#681` promotion to `main`, merge `f548306`) as a pending row — it had
+    merged mid-session, before this slice's own `/document` could run. Added as its own
+    change-log row rather than folded into this slice's row, matching the existing convention for
+    a promotion that reaches production independently of the slice being documented.
+  - `/validate` ran from a genuinely fresh context (the session had not built the artifact) and
+    re-verified every live claim independently rather than trusting `build-notes.md`: re-executed
+    the cross-category cursor sequence and cross-checked all 25 returned products against Prisma
+    directly, re-ran `EXPLAIN (ANALYZE, BUFFERS)` independently (matched), reproduced the
+    query-span count live (24, matching exactly), and deliberately triggered the pagination
+    guard's own AST check on a hand-added violation before reverting it. No new defects found; the
+    artifact matched the spec as built.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 - **`/document` (final) closeout for the storefront browse consolidation** (`#681`; PR #686 merged
   to `staging`, merge `7c95646`; not yet promoted to `main`). Docs only — no runtime code, no
   schema change.
