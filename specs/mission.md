@@ -57,7 +57,12 @@ from **one headless API** with RBAC, on a portable Cloudflare + Neon + S3-compat
 
 - Native mobile app (the API is built mobile-ready, but no app ships in the MVP).
 - Courier booking / GPS tracking — Aheed self-delivers; only the three-step status is shown.
-- SMS/WhatsApp notifications, multi-branch management, marketing automation.
+- SMS/WhatsApp notifications, multi-branch management, marketing automation. **Narrowed 2026-09-10
+  (#405):** a per-vendor `wa.me` **contact link** now ships on the storefront. That is a first-party
+  deep link a shopper chooses to tap — no API, no Meta Business account, no inbound webhook, and no
+  message this platform ever sends. Everything that would make WhatsApp an outbound *channel* stays
+  out of scope: notifications, marketing automation, and the chat re-order flow (**#695**, which
+  needs its own `/propose` and almost certainly its own ADR).
 - Multi-language — English only.
 - Hosted identity providers (Clerk/Auth0) — rejected for the MVP (see ADR-002).
 
