@@ -191,3 +191,31 @@ slice does add content to `lib/repositories/vendor.ts`, which that test parses.
 remaining 3 come from filesystem-driven `it.each` tests picking up the two new components. The
 **first** full run reported 103 files / 1463 tests with 15 files silently never executed — the
 documented forks-worker trap. Check the file count, not the exit code.
+
+## Fix (after /validate)
+
+**R15 failed — a real doc defect, not a validation.md wording problem.** `/validate` found
+`docs/store-admin-guide/admin-tabs-guide.md`'s Storefront section still describing the social and
+WhatsApp links as appearing "in the footer," in two sentences, unchanged since before the mid-loop
+redesign moved every link into the floating disclosure and emptied the footer of social content
+(see "Deviations" above). `components/layout/StorefrontChrome.tsx`'s `<footer>` contains only
+copyright and Terms/Privacy — `FloatingContact` renders as a sibling, not inside it — confirmed live
+by extracting the rendered `<footer>` from `npm run preview` output and finding zero facebook/
+instagram matches inside it. This is the exact class of defect R15's own validation row names
+(`#634`'s four false capability claims in this same file): the code moved mid-loop and this doc
+section was never revisited to match.
+
+**Fixed by editing the two sentences** to describe the actual control (a single expandable button,
+bottom-right, above the cart button, revealing whichever links are configured) and to say plainly
+that nothing social renders in the footer, rather than by loosening R15 or validation.md's check —
+the row was right, the doc was wrong. No `requirements.md`/`validation.md` change. Re-ran
+`npm run kms:build-index` (content changed, front-matter did not — the same asymmetry §KMS docs of
+`CLAUDE.md` describes) and `tests/operator-doc-coverage.test.ts` (74/74). No observable app
+behaviour changed, so no `CHANGELOG.md` entry.
+
+**Suite totals at re-validation: 118 files / 1589 tests**, not the 1585 recorded above — four more
+than this file claimed, with no uncommitted change to explain it at the time it was checked. Traced
+to the three post-Build commits (`b028e10`, `ea34a78`, `c92a17f`) each amending this file in place
+without re-running the full suite after their own edits; `b028e10` alone added 22 cases to
+`tests/social-contact-form.test.ts`. Recording the real number here rather than chasing the exact
+per-commit delta further.

@@ -245,10 +245,13 @@ not the same as entering `0`, because `0` would make every order qualify; **Mini
 basket value below which a shopper cannot check out, so enter `0.00` if you do not want one.
 The three social and contact fields work differently from everything else on this page: **leaving
 one blank hides that link entirely** rather than showing a default, so a shop with no Instagram
-account simply has no Instagram icon in its footer. **Facebook page address** and **Instagram
-profile address** must both be full web addresses starting with `https://`. **WhatsApp number** is
-entered as digits only in international format — `447700900123`, not `+44 7700 900123` — and adds a
-WhatsApp button to every storefront page.
+account simply has no Instagram icon anywhere on the storefront. All three links live together in
+one expandable button fixed to the bottom-right corner of every storefront page, above the floating
+cart button — tapping it reveals whichever of Facebook, Instagram and WhatsApp the shop has
+configured. There is no separate row of icons, and nothing social appears in the page footer.
+**Facebook page address** and **Instagram profile address** must both be full web addresses
+starting with `https://`. **WhatsApp number** is entered as digits only in international format —
+`447700900123`, not `+44 7700 900123`.
 
 **Common mistakes and limitations:** Colour choices affect the readability of text sitting on them.
 After changing a brand colour, look at a real page rather than only the colour swatch. Because your
@@ -271,9 +274,9 @@ every value in it is valid.
 **What happens after changes are saved:** Applied across the shop immediately. An uploaded logo may
 take a short time to appear everywhere because images are cached. New delivery rules apply to the
 next basket calculated — a shopper already partway through checkout may still see the previous fee
-until their basket recalculates. Social and contact links appear in the footer, and the WhatsApp
-button on every storefront page, as soon as they are saved; clearing a field removes them just as
-quickly.
+until their basket recalculates. Social and contact links appear inside the floating contact button
+on every storefront page as soon as they are saved; clearing a field removes that link from it just
+as quickly.
 
 ## Delivery areas — `/staff/delivery-areas`
 
