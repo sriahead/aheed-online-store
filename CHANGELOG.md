@@ -57,6 +57,24 @@ every branch merges.
   matching `ProductRow`'s exactly. No change to `BundleCard`, `BundleRow`, or any repository/service
   function.
 
+### Documentation
+
+- **`/document` (final) closeout for storefront browse discovery completion** (`#694`, `#397`,
+  `#608`; PR #699 merged to `staging`, merge `020a99f`). Docs only — no runtime code, no schema
+  change on this branch (the fix itself shipped on the feature branch, PR #699).
+  - `specs/roadmap.md` (1.89.0 → 1.90.0): removed the now-shipped items from the P9.3 "next up"
+    list, added a shipped bullet to P9.3 covering all three issues and the pagination fix found at
+    `/validate`, and the staging-merge change-log row.
+  - **A genuine spec-wording defect found and corrected, not the code**: `validation.md`'s R3 row
+    checked `grep -c 'aria-current="page"' cat.html` printing `0`, but a real category page also
+    renders `DepartmentScroller` and `SubcategoryLinks`, both of which correctly carry
+    `aria-current="page"` on the active tab for reasons unrelated to `CollectionNav` — the literal
+    command could never print `0` on any category page. The underlying requirement (no
+    `aria-current` *inside the Collections nav specifically*) was genuinely met; the row's check
+    was scoped to the whole page instead of the one landmark it was actually about. Corrected in
+    `validation.md` and promoted to `CLAUDE.md`'s grep-trap section as a transferable lesson.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 ### Fixed
 
 - **A keyset cursor from a URL no longer reaches Prisma unvalidated** (`#682`, `#670`;
