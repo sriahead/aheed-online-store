@@ -6,6 +6,109 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **The storefront's collection links now reach every browse page** (`#694`;
+  `specs/2026-09-09-storefront-browse-discovery-completion/`). `CollectionNav` shipped in `#681` on
+  `/search` and `/bundles` only, so Value Bundles, New Arrivals and Featured Products vanished the
+  moment a shopper browsed a department — the page reached from the department menu. It now renders
+  on `/categories/[slug]` too, inside the same `md:w-60 md:shrink-0` column `/search` uses and
+  outside `FilterPanel` (which renders its form twice, so a nav inside it would duplicate the
+  landmark). No `activeHref` there: a category is a different axis from a collection.
+- **A pack-size filter** (`#397`), built on the `netContentAmount`/`netContentUnit` columns `#398`
+  added. **No schema change and no migration.** New pure helpers in `components/product/unit-price.ts`
+  (`formatPackSize`, `packSizeParamValue`, `parsePackSizeParam`, `comparePackSizes`), a predicate
+  emitting both net-content columns or neither, a distinct-pair facet probe, a select rendered only
+  when the context has pack sizes, a removable chip, and both browse pages wired.
+  - Pack sizes are ordered by **real size**, not raw amount — `500g` before `1kg` — by converting
+    through the same `REFERENCE_UNITS` table the unit-price derivation already uses.
+  - `parsePackSizeParam` accepts `string | string[]` and **rejects the array**. `#689` records five
+    existing keys that return HTTP 500 on a repeated query parameter because each calls a string
+    method on what is actually an array; those stay `#689`'s scope, but the new key is array-safe by
+    construction and applies no predicate instead of throwing.
+  - **`#397` was largely already shipped and its issue body is stale**: `#569` had added
+    `isVegetarian`, `isGlutenFree`, `isHmcCertified`, the `Brand` model and the origin/brand indexes,
+    and `#398` the net-content columns. Pack size was the last genuinely missing facet.
+  - `packSize` survives a "Next page" click on `/categories/[slug]` as well as `/search` — that
+    page's own pagination href builder is separate from `search-href.ts` (it also carries the `#498`
+    `back` cursor stack), and it initially listed every other filter this slice and `#569` added
+    except the one this slice introduced itself. Found and fixed at `/validate`.
+- **The dietary and brand facets are visible on products, not just filterable** (`#608`).
+  `ProductSummary` did not carry `isVegetarian`, `isGlutenFree`, `isHmcCertified` or `brand` at all,
+  so a shopper could narrow a listing to gluten-free products and read nothing on any card saying
+  which ones were. The product card gains three text badges plus the brand; the **product detail
+  page gains a facet block it never had** — it rendered no facet whatsoever before this, not even
+  Halal or Fresh, which made it the larger half of the issue. `hmcReference` renders beside the HMC
+  claim so a certification never travels without its provenance (`#239`).
+
+### Changed
+
+- **`/bundles` now uses the same page layout as `/search` and `/categories/[slug]`** (`#701`;
+  `specs/2026-09-10-bundles-page-layout-parity/`). **No schema change, no migration.** The store
+  owner flagged, with screenshots, that clicking "View all" from Value Bundles landed on a
+  single-column page (`CollectionNav` full-width, a 3-column grid of large cards) that visibly
+  didn't match clicking "View all" from New Arrivals or Featured Products (a two-column layout —
+  sidebar plus a 4-column grid). `BundleCard` already shared `ProductCard`'s `.skew-card` visual
+  treatment; the mismatch was the page's own layout wrapper and grid density, not the card. Fixed by
+  moving `CollectionNav` into the same `md:w-60 md:shrink-0` left column `/search` uses (no
+  `FilterPanel` — `Bundle` has no `categoryId` and none of that form's predicates exist on a
+  bundle, a deliberate `#347` decision this slice doesn't reopen) and widening the grid from
+  `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` to `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4`,
+  matching `ProductRow`'s exactly. No change to `BundleCard`, `BundleRow`, or any repository/service
+  function.
+
+### Removed
+
+- **The `Category` select is gone from `/search`'s filter panel** (`#704`;
+  `specs/2026-09-10-search-category-select-removal/`). **No schema change, no migration.**
+  Store-owner-flagged: the department icon strip already at the top of every browse page
+  (`DepartmentScroller`, linking to `/categories/[slug]`) made a second, overlapping department
+  picker inside the filter panel redundant. The underlying `category` query-string filtering is
+  untouched — `FilterChips`'s removable chip and `search-href.ts`'s `categoryFilterHref` (used by
+  the zero-result recovery notice and search suggestions) still work exactly as before, so a
+  shopper who arrives at `/search?category=X` via one of those links still gets a correctly
+  filtered, chip-labelled result.
+  - **A hidden `category` passthrough field was added**, mirroring the existing `featured` one
+    exactly: a plain `<form method="GET">` submits only the fields it contains, so without it,
+    applying any other filter from a category-scoped listing would have silently dropped the
+    category and widened the shopper back to the whole catalogue — the same `#501`/`#568` trap this
+    codebase has already paid to learn about twice.
+  - `app/(storefront)/search/page.tsx`'s category fetch reverts from `categoryRepo.listTree()`
+    (widened by `#681` specifically to feed the now-removed select) back to
+    `categoryRepo.listTopLevel()` — every other consumer on the page only ever needed the
+    top-level rows, so this restores the page to its pre-`#681` one-query shape.
+
+### Documentation
+
+- **`/document` (final) closeout for storefront browse discovery completion** (`#694`, `#397`,
+  `#608`; PR #699 merged to `staging`, merge `020a99f`). Docs only — no runtime code, no schema
+  change on this branch (the fix itself shipped on the feature branch, PR #699).
+  - `specs/roadmap.md` (1.89.0 → 1.90.0): removed the now-shipped items from the P9.3 "next up"
+    list, added a shipped bullet to P9.3 covering all three issues and the pagination fix found at
+    `/validate`, and the staging-merge change-log row.
+  - **A genuine spec-wording defect found and corrected, not the code**: `validation.md`'s R3 row
+    checked `grep -c 'aria-current="page"' cat.html` printing `0`, but a real category page also
+    renders `DepartmentScroller` and `SubcategoryLinks`, both of which correctly carry
+    `aria-current="page"` on the active tab for reasons unrelated to `CollectionNav` — the literal
+    command could never print `0` on any category page. The underlying requirement (no
+    `aria-current` *inside the Collections nav specifically*) was genuinely met; the row's check
+    was scoped to the whole page instead of the one landmark it was actually about. Corrected in
+    `validation.md` and promoted to `CLAUDE.md`'s grep-trap section as a transferable lesson.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+- **`/document` (final) closeout for bundles page layout parity** (`#701`; PR #702 merged to
+  `staging`, merge `a602493`). Docs only — no runtime code, no schema change on this branch.
+  - `specs/roadmap.md` (1.90.0 → 1.91.0): added a `#701` bullet to P9.3 covering what shipped, plus
+    the staging-merge change-log row — explicitly noting the full `/propose → /spec → /build →
+    /validate → /ship` loop ran in one continuous session with no `/clear` between stages, per this
+    repo's own standing lesson that a context which just built something is the worst judge of
+    whether it matches the spec.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+- **`/document` (final) closeout for search category select removal** (`#704`; PR #705 merged to
+  `staging`, merge `78f65d4`). Docs only — no runtime code, no schema change on this branch.
+  - `specs/roadmap.md` (1.91.0 → 1.92.0): added a `#704` bullet to P9.3 covering what shipped, plus
+    the staging-merge change-log row — same continuous-session caveat as `#701`'s closeout above.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+
 ### Fixed
 
 - **A keyset cursor from a URL no longer reaches Prisma unvalidated** (`#682`, `#670`;

@@ -5,6 +5,8 @@ import { getProductRepository } from "@/lib/products-service";
 import { getRequestCartQuantities } from "@/lib/cart-summary";
 import { getEnv } from "@/lib/config";
 import { ProductCard } from "@/components/product/ProductCard";
+import { CollectionNav } from "@/components/product/CollectionNav";
+import { parsePackSizeParam } from "@/components/product/unit-price";
 import { FilterPanel } from "@/components/product/FilterPanel";
 import { getBrandRepository } from "@/lib/brands-service";
 import { FilterChips } from "@/components/product/FilterChips";
@@ -33,6 +35,8 @@ type SearchParams = {
   origin?: string;
   /** #569 — a brand SLUG; an unknown value applies no predicate and renders no chip. */
   brand?: string;
+  /** #397 — pack size as `<amount>-<UNIT>`, e.g. `500-GRAM`. */
+  packSize?: string;
   cursor?: string;
   /**
    * #498 — the stack of cursors used to reach every PRIOR page, comma-joined,
@@ -73,6 +77,11 @@ function buildHref(
   if (params.onOffer) qs.set("onOffer", params.onOffer);
   if (params.origin) qs.set("origin", params.origin);
   if (params.brand) qs.set("brand", params.brand);
+  // #397 — pack size. Present here for the same reason every key above is: this is the third place
+  // (see the comment above) a filter key must be registered, and this one was missed at Build —
+  // found live at /validate (a "Next page" click on a category listing silently dropped an active
+  // pack-size filter), fixed here rather than in validation.md, since the code was wrong.
+  if (params.packSize) qs.set("packSize", params.packSize);
   if (overrides.cursor) qs.set("cursor", overrides.cursor);
   // A lone "" entry means "page 1 had no cursor" and nothing else — not worth
   // a query param at all, so the very first "Next" click stays a clean URL.
@@ -137,6 +146,7 @@ export default async function CategoryPage({
     onOffer: query.onOffer === "1",
     origin: query.origin || undefined,
     brandId: selectedBrand?.id,
+    packSize: parsePackSizeParam(query.packSize),
   });
   /*
    * #568 — facets narrow to this category's own products (and its subcategories'), so a department
@@ -173,8 +183,21 @@ export default async function CategoryPage({
       <DepartmentScroller categories={allCategories} activeSlug={scrollerActiveSlug} />
 
       <div className="mt-6 flex flex-col gap-6 md:flex-row">
-        {/* #568 — sidebar at md+, a `details` disclosure below it. Both render the same form. */}
-        <FilterPanel heading="Filters" searchParams={query} facets={facets} />
+        {/*
+          #694 — the collections were reachable from /search and /bundles and INVISIBLE here, on
+          the page a shopper actually reaches from the department menu. Rendered outside
+          FilterPanel (which renders its form twice, and would put two identical `nav` landmarks in
+          the accessibility tree) and inside this fixed-width column, matching
+          app/(storefront)/search/page.tsx exactly.
+
+          No `activeHref`: a category is a different axis from a collection, so nothing here is the
+          current collection and marking one `aria-current` would be a lie.
+        */}
+        <div className="md:w-60 md:shrink-0">
+          <CollectionNav />
+          {/* #568 — sidebar at md+, a `details` disclosure below it. Both render the same form. */}
+          <FilterPanel heading="Filters" searchParams={query} facets={facets} />
+        </div>
 
         <section className="flex-1">
           <h1 className="mb-6 text-2xl font-semibold text-primary">{category.name}</h1>

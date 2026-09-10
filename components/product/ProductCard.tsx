@@ -97,6 +97,33 @@ export function ProductCard({
               Fresh
             </span>
           )}
+          {/*
+            #608 — filterable since #569, invisible until now: a shopper could narrow a listing to
+            gluten-free products and read nothing on any card saying which ones were. Each badge
+            carries its meaning as TEXT, not colour alone — `bg-surface-muted` here is decoration,
+            and removing every colour from this card would leave all three still readable.
+
+            HMC is a NAMED CERTIFYING BODY, not a synonym for Halal, and #239 was a real incident
+            of this codebase asserting an HMC claim with nothing behind it. The badge is legitimate
+            here because there is per-product data behind it (lib/catalogue-form.ts requires
+            `hmcReference` whenever the flag is ticked), but the reference itself is rendered on
+            the detail page rather than crammed onto a card.
+          */}
+          {product.isVegetarian && (
+            <span className="skew-card-badge rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-semibold text-primary shadow-sm">
+              Vegetarian
+            </span>
+          )}
+          {product.isGlutenFree && (
+            <span className="skew-card-badge rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-semibold text-primary shadow-sm">
+              Gluten free
+            </span>
+          )}
+          {product.isHmcCertified && (
+            <span className="skew-card-badge rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-semibold text-primary shadow-sm">
+              HMC certified
+            </span>
+          )}
           {hasDiscount && (
             <span className="skew-card-badge rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
               Offer
@@ -146,6 +173,16 @@ export function ProductCard({
                 </span>
               )}
             </div>
+
+            {/* #608 — the brand, filterable since #569 and until now not shown anywhere. */}
+            {product.brand && (
+              <div
+                className="mb-1 truncate text-[11px] font-medium text-black/60"
+                title={product.brand.name}
+              >
+                {product.brand.name}
+              </div>
+            )}
 
             {/* Title — the card's one stretched link (R11/R12). `after:absolute
                 after:inset-0` sizes against Card's `position: relative`, not

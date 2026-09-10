@@ -23,6 +23,7 @@ const NO_FACETS = {
   onOffer: false,
   origins: [],
   brands: [],
+  packSizes: [],
 };
 
 describe("ProductFilterForm — featured passthrough", () => {
@@ -56,5 +57,39 @@ describe("ProductFilterForm — featured passthrough", () => {
     );
 
     expect(container.querySelector('input[name="cursor"]')).toBeNull();
+  });
+});
+
+/**
+ * #704 — the form renders no `<select name="category">` any more (the store owner found it
+ * redundant with the department strip at the top of the page), so `category`'s entry point is a
+ * link (a recovery/suggestion notice) rather than a control here — the same shape `featured`'s
+ * `CollectionNav` link already has. Without this hidden field, submitting the form from a
+ * category-scoped listing would silently drop `category` and widen the shopper back to the whole
+ * catalogue, exactly the #501/#568 trap `featured`'s own hidden field exists to prevent.
+ */
+describe("ProductFilterForm — category passthrough", () => {
+  it("renders a hidden category input carrying the exact slug when the param is set", () => {
+    const { container } = render(
+      <ProductFilterForm searchParams={{ category: "fruit-veg" }} facets={NO_FACETS} />,
+    );
+
+    const hidden = container.querySelector('input[type="hidden"][name="category"]');
+    expect(hidden).not.toBeNull();
+    expect(hidden?.getAttribute("value")).toBe("fruit-veg");
+  });
+
+  it("renders no category input when the param is absent", () => {
+    const { container } = render(<ProductFilterForm searchParams={{}} facets={NO_FACETS} />);
+
+    expect(container.querySelector('input[name="category"]')).toBeNull();
+  });
+
+  it("renders no visible category select under any circumstance", () => {
+    const { container } = render(
+      <ProductFilterForm searchParams={{ category: "fruit-veg" }} facets={NO_FACETS} />,
+    );
+
+    expect(container.querySelector('select[name="category"]')).toBeNull();
   });
 });

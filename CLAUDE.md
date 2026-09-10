@@ -563,7 +563,7 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  117 files / 1544 tests**, measured 2026-09-09 at the admin-catalogue-latency-and-cursor-safety Build) and treat any shortfall as
+  117 files / 1557 tests**, measured 2026-09-09 at the storefront-browse-discovery-completion Build) and treat any shortfall as
   a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
@@ -641,6 +641,15 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   and each `it()` re-imports the module. Eleven of the 24 come from one `it.each` table of
   malformed cursors, so the same caveat as the `PAIRS` tables above applies: a single new row
   there is a new test. `#538` again did not reproduce.
+  Then `117/1544` moved to **`117/1557`** at the storefront-browse-discovery-completion Build
+  (`#694`/`#397`/`#608`): **no new file at all** — thirteen tests spread across six existing files
+  (`tests/unit-price.test.ts`, `tests/filter-chips.test.ts`, `tests/product-filter-form.test.tsx`,
+  `tests/filter-panel.test.tsx`, `tests/product-card-stretched-link.test.tsx`,
+  `tests/products-repository.test.ts`) covering the pack-size facet's new pure functions
+  (`formatPackSize`, `parsePackSizeParam`, `comparePackSizes`) and the widened facet-probe set.
+  `#538` reproduced again on the full-suite run at this slice's own `/validate` and `/fix`
+  re-validation, both times confirmed as the known flake by re-running the file alone (passed in
+  under 3s each time).
   That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that
@@ -1260,6 +1269,23 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   explaining or quoting the very thing being searched for** — anchor to a directive's actual
   position (`^"use server"`, not a bare substring) or explicitly exclude the generated artefact,
   the same way the `&`-escaping case above requires checking the pattern before trusting the count.
+- **A whole-page grep for an attribute that has a legitimate reason to appear MORE THAN ONCE on the
+  same page proves nothing about the one occurrence a requirement actually cares about.** Hit at
+  the storefront-browse-discovery-completion `/validate` (2026-09-09, `#694`): a requirement that
+  `CollectionNav` render with no `aria-current="page"` inside it specified its check as
+  `grep -c 'aria-current="page"' cat.html` printing `0` — but a real category page also renders
+  `DepartmentScroller` and `SubcategoryLinks`, both of which correctly carry `aria-current="page"`
+  on the active department/subcategory tab, for reasons that have nothing to do with
+  `CollectionNav`. The literal command would never print `0` on any category page, regardless of
+  whether `CollectionNav` itself was built correctly. The underlying requirement was genuinely met
+  — confirmed by narrowing the check to the specific element (`grep -oE '<nav aria-label="Collections".{0,1500}'`
+  and inspecting that no `aria-current` appears inside it) — so this was a spec-wording defect, not
+  a code defect: the check counted the whole page when the requirement was about one landmark
+  inside it. **The same rule as the two entries above, one level up**: a grep-based validation row
+  proves what it claims only when the pattern (or, here, the *scope* being searched) can't also
+  match something unrelated that has its own legitimate reason to look identical — scope the search
+  to the specific element a requirement is actually about, not the whole rendered page, whenever
+  more than one thing on that page could plausibly carry the same attribute.
 
 ## Better Auth (`lib/auth.ts`, ADR-002) — learned the hard way
 - **A bare top-level `onRequest` key in `betterAuth({...})`'s config is accepted by TypeScript and

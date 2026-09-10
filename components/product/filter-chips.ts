@@ -22,6 +22,7 @@
  */
 
 import { parsePriceInput } from "./parse-price-input";
+import { formatPackSize, parsePackSizeParam } from "./unit-price";
 
 export type FilterChipParams = {
   q?: string;
@@ -39,6 +40,7 @@ export type FilterChipParams = {
   brand?: string;
   featured?: string;
   category?: string;
+  packSize?: string;
   cursor?: string;
   back?: string;
 };
@@ -58,6 +60,7 @@ export const REMOVABLE: (keyof FilterChipParams)[] = [
   "category",
   "brand",
   "origin",
+  "packSize",
   "inStock",
   "onOffer",
   "isHalal",
@@ -142,6 +145,17 @@ function labelFor(
        * shopper would be stranded in an empty result set with no visible way out.
        */
       return value;
+    case "packSize" /*
+     * #397 — the chip is rendered from the PARSED value, not the raw one, so a malformed
+     * `?packSize=bogus` renders no chip at all. That follows `category` and `brand` rather than
+     * `origin` above: a value this parser rejects applies no predicate, so a chip would claim a
+     * filter that is not running. `parsePackSizeParam` also rejects an ARRAY, so a repeated
+     * parameter reaches here as "no filter" and renders nothing, matching what the page did with
+     * it (#689).
+     */: {
+      const packSize = parsePackSizeParam(value);
+      return packSize ? formatPackSize(packSize) : null;
+    }
     case "brand":
       // The resolved NAME, never the slug. Like `category`, the page has already looked the brand
       // up to build the predicate, so passing the name costs no extra query. The fallback is never
