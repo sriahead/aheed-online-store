@@ -242,7 +242,7 @@ export async function Header({
         </div>
 
         {/* Action Controls & Navigation */}
-        <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-2">
+        <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {/* #496 — the landing page's header had no path at all to the
               catalogue: "Shop List" (below) is deliberately hidden there
               (P8.5f), and the only other route in was the hero's rotating
@@ -251,11 +251,11 @@ export async function Header({
           {!isPortal && (
             <Link
               href="/categories"
-              className="hidden lg:flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
+              className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
               title="Browse all departments"
             >
               <Store className="w-4 h-4 text-primary" />
-              <span>Shop</span>
+              <span className="hidden sm:inline">Shop</span>
             </Link>
           )}
 
@@ -264,11 +264,11 @@ export async function Header({
           {!isPortal && !isLanding && (
             <Link
               href="/shop-your-list"
-              className="hidden lg:flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
+              className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
               title="Shop by pasting your list"
             >
               <ShoppingBag className="w-4 h-4 text-primary" />
-              <span>Shop List</span>
+              <span className="hidden sm:inline">Shop List</span>
             </Link>
           )}
 

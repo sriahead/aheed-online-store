@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-10T13:14:57.432Z` · commit `c92a17f` · `165` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-10T14:25:29.611Z` · commit `7b8257e` · `166` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -161,6 +161,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Storefront browse consolidation — one filter surface, collection entry points (plan)](specs/2026-09-09-storefront-browse-consolidation/plan.md) | spec | 1.0.0 | 2026-09-09 | draft | internal | Replaces the two competing department pickers on /search with a single category control inside the filter panel, adds Value Bundles, New Arrivals and Featured entry points to that panel, and retires the hidden category passthrough field the old split required. |
 | [Storefront browse discovery completion (plan)](specs/2026-09-09-storefront-browse-discovery-completion/plan.md) | spec | 1.0.0 | 2026-09-09 | draft | internal | Renders CollectionNav on category pages, adds the pack-size facet |
 | [Bundles page layout parity (plan)](specs/2026-09-10-bundles-page-layout-parity/plan.md) | spec | 1.0.0 | 2026-09-10 | draft | internal | Restructure /bundles to use the same two-column layout and product-grid breakpoints as /search and /categories/[slug], so Value Bundles reads as the same page as New Arrivals and Featured Products rather than a visually distinct one. |
+| [Mobile nav visibility and Value Bundles card size (plan)](specs/2026-09-10-mobile-nav-and-bundle-card-fix/plan.md) | spec | 1.0.0 | 2026-09-10 | draft | internal | Fix two owner-reported staging regressions — Shop/Shop List/the delivery-postcode badge are unreachable below the lg breakpoint on every route, and Value Bundles cards render nearly double the width of the page's other cards. |
 | [Search category select removal (plan)](specs/2026-09-10-search-category-select-removal/plan.md) | spec | 1.0.0 | 2026-09-10 | draft | internal | Remove the redundant Category select from /search's filter panel, and revert the page's category read from the full tree (#681) back to top-level-only, since nothing else on the page needs the tree shape once the select is gone. |
 | [Social & contact surface — Facebook, Instagram and WhatsApp deep link (plan)](specs/2026-09-10-social-contact-surface/plan.md) | spec | 1.0.0 | 2026-09-10 | draft | internal | Three nullable VendorConfig fields put per-vendor Facebook, Instagram and WhatsApp links on the storefront, with a null hiding its link rather than borrowing another vendor's identity. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.28.0 | 2026-09-09 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |

@@ -63,7 +63,7 @@ export function BundleRow({ title, bundles, cdnBaseUrl, viewAllLink }: BundleRow
         // generic label is not enough on a page holding several scrollers.
         itemLabel={title.toLowerCase()}
         as="ul"
-        itemWidthClassName="[&>*]:w-72 [&>*]:shrink-0 sm:[&>*]:w-80"
+        itemWidthClassName="[&>*]:w-40 [&>*]:shrink-0 sm:[&>*]:w-44 lg:[&>*]:w-52"
       >
         {renderable.map((bundle) => (
           <BundleCard
