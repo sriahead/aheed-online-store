@@ -37,11 +37,12 @@ R5. The WhatsApp parser accepts a digits-only value of 7 to 15 digits **whose fi
 
 R6. `components/layout/FloatingContact.tsx`, rendered by `components/layout/StorefrontChrome.tsx`,
     renders a Facebook link when `profile.facebookUrl` is non-null and an Instagram link when
-    `profile.instagramUrl` is non-null; each rendered link carries `target="_blank"`, `rel`
-    containing both `noopener` and `noreferrer`, and an accessible name containing both the
-    vendor's name and the network name (for example `Aheed Food Centre on Instagram`) rather than
-    being an unlabelled icon. **The storefront footer contains no social link** — all three
-    controls float together instead, and the same link is not rendered twice on one page.
+    `profile.instagramUrl` is non-null, both inside the collapsible panel described in R8; each
+    rendered link carries `target="_blank"`, `rel` containing both `noopener` and `noreferrer`, and
+    an accessible name containing both the vendor's name and the network name (for example
+    `Aheed Food Centre on Instagram`) rather than being an unlabelled icon. **The storefront footer
+    contains no social link** — all links live in the one floating disclosure instead, and the same
+    link is not rendered twice on one page.
 
 R7. `components/layout/FloatingContact.tsx` renders a link to `https://wa.me/<whatsappNumber>`
     carrying a prefilled `text` query parameter when `profile.whatsappNumber` is non-null, and
@@ -49,30 +50,33 @@ R7. `components/layout/FloatingContact.tsx` renders a link to `https://wa.me/<wh
     both `noopener` and `noreferrer`, and an accessible name containing the vendor's name and
     identifying it as WhatsApp.
 
-R8. `FloatingContact` renders all present controls inside **one** fixed container whose class list
-    satisfies all four of the following:
-    (a) it positions the container clear of the existing floating cart button, using a `bottom-`
+R8. `FloatingContact` renders a **single always-visible trigger button** with the links in a panel
+    that satisfies all four of the following:
+    (a) the trigger is positioned clear of the existing floating cart button, using a `bottom-`
     value greater than the cart button's `bottom-6` and an `sm:bottom-` value greater than its
-    `sm:bottom-8` (`components/cart/CartDrawerShell.tsx:L113`), so the two do not overlap at either
-    breakpoint, and the controls stack rather than overlapping each other;
-    (b) it hides the container when the reader scrolls **down** past an offset and restores it when
-    they scroll **up**, without unmounting it, and restores it via `focus-within` so a control
-    reached by keyboard is always visible;
+    `sm:bottom-8` (`components/cart/CartDrawerShell.tsx:L113`), and the panel is absolutely
+    positioned relative to the trigger so a collapsed panel occupies no layout space and the
+    trigger does not move when it opens;
+    (b) the panel is **collapsed on first render** and toggles open and closed on click/tap of the
+    trigger — and on **nothing else**: no scroll position, scroll direction, hover or focus opens
+    it, and `FloatingContact` registers no scroll listener at all;
     (c) every `hover:scale-`/`group-hover:scale-`/`active:scale-`/`focus:scale-` utility it uses is
-    paired with a `motion-reduce:` counterpart and the show/hide transition is disabled under
+    paired with a `motion-reduce:` counterpart and the expand/collapse transition is disabled under
     `motion-reduce`, so `tests/motion-reduce-coverage.test.ts` passes;
     (d) it contains no raw hex colour literal and no raw `px` value — colours come from the
     existing semantic tokens, so the controls adopt each vendor's own palette rather than
     WhatsApp's or a network's brand colour.
 
-R8a. `FloatingContact`'s scroll listener is registered in a `useEffect` whose dependency array does
-     **not** contain the visibility state it sets, and the previous scroll offset is held in a ref
-     rather than in state — so the listener is registered once rather than torn down and re-added on
-     every toggle.
+R8a. The trigger carries `aria-expanded` reflecting the open state and `aria-controls` naming the
+     panel's `id`, and an accessible name that changes between the collapsed and expanded states.
+     While collapsed the panel is `aria-hidden` and its links are not reachable by keyboard
+     (`tabIndex={-1}`), so a screen-reader or keyboard user is never offered a link the sighted
+     reader cannot see; the panel is not unmounted, so opening it causes no layout thrash.
 
 R9. Rendering `StorefrontChrome` with a `VendorProfile` whose `facebookUrl`, `instagramUrl` and
     `whatsappNumber` are all `null` produces no Facebook link, no Instagram link, no `wa.me` link
-    and no floating container anywhere in its output.
+    and **no trigger button** anywhere in its output — an empty disclosure must not advertise links
+    that do not exist.
 
 R10. `lib/repositories/vendor.ts`'s `VendorStorefrontConfigInput` declares `facebookUrl`,
      `instagramUrl` and `whatsappNumber` as optional `string | null`, and

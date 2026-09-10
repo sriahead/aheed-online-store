@@ -10,8 +10,8 @@ every branch merges.
 
 - **Per-vendor social and contact links on the storefront** (`#407`, and the deep-link half of
   `#405`; `specs/2026-09-10-social-contact-surface/`). Three nullable `VendorConfig` columns —
-  `facebookUrl`, `instagramUrl`, `whatsappNumber` — render each vendor's own Facebook, Instagram and
-  `wa.me` links as a **floating cluster** that slides away on scroll-down and returns on scroll-up.
+  `facebookUrl`, `instagramUrl`, `whatsappNumber` — put each vendor's own Facebook, Instagram and
+  `wa.me` links behind a **single floating button that expands on tap**, closed by default.
   **A null HIDES that control** rather than falling back to a platform account, the same rule
   `bannerNote`/`heroSubtitle` follow: a platform-written social link is a claim made on a vendor's
   behalf (`#239`). Both seeded vendors start null, so the hidden state is the default rather than
@@ -26,15 +26,19 @@ every branch merges.
     `javascript:alert(1)` perfectly happily — parsing is not safety. `http:` is refused too, since a
     mixed-content link from an HTTPS storefront is a downgrade. `lib/social-contact-form.ts` is pure
     and DB-free like `lib/delivery-rules-form.ts`, with 25 unit tests.
-  - The cluster **stacks above the cart button** rather than taking the bottom-right corner:
+  - The trigger **sits above the cart button** rather than taking the bottom-right corner:
     `CartDrawerShell` already occupies `bottom-6 right-6` and is unconditional (only its badge is
-    conditional). One fixed container with `flex-col-reverse`, so adding or removing a link needs no
-    per-button arithmetic. It uses `bg-action`, not WhatsApp's or any network's brand colour — a hex
-    literal would break the token convention, and a storefront rendering a third party's brand
-    colour in its own chrome is the mistake `#239` fixed — so it renders in each vendor's palette.
-  - Hiding is a translate and fade, never an unmount: dropping the controls from the DOM would take
-    keyboard focus with them, so `focus-within` restores the cluster whenever a control inside it is
-    focused, and the transition is disabled under `prefers-reduced-motion`.
+    conditional). The panel is absolutely positioned above the trigger, so collapsed it takes no
+    layout space and the footprint stays one button however many links a vendor adds. It uses
+    `bg-action`, not WhatsApp's or any network's brand colour — a hex literal would break the token
+    convention, and a storefront rendering a third party's brand colour in its own chrome is the
+    mistake `#239` fixed — so it renders in each vendor's own palette.
+  - **It opens on click and on nothing else** — no scroll position, scroll direction, hover or focus
+    expands it, and the component registers no scroll listener at all. A standard disclosure:
+    `aria-expanded`/`aria-controls`, an accessible name that changes with state, and collapsed links
+    held at `tabIndex={-1}` so a keyboard user is never offered a link they cannot see. The panel
+    stays in the DOM rather than unmounting, and its transition is disabled under
+    `prefers-reduced-motion`.
   - `lucide-react@1.30.0` ships 6056 icons and **no brand marks at all**, so the Facebook and
     Instagram glyphs are inline SVG using lucide's own stroke geometry. Nothing was added to
     `package.json`, which is what `#407` asked for.

@@ -30,9 +30,10 @@ in `features/admin/storefront.ts` because a `"use server"` file may export only 
 (`#159`), a rule nothing in `lint`/`typecheck`/`test` enforces.
 
 **Render.** One client component, `components/layout/FloatingContact.tsx`, mounted in
-`components/layout/StorefrontChrome.tsx`, which already receives `profile: VendorProfile`. All three
-controls float together above the cart button in a single fixed `flex-col-reverse` container, and
-slide away on scroll-down / return on scroll-up.
+`components/layout/StorefrontChrome.tsx`, which already receives `profile: VendorProfile`. A single
+always-visible trigger sits above the cart button and expands on click to reveal whichever links the
+vendor has configured. The panel is absolutely positioned above the trigger, so a collapsed panel
+occupies no layout space and the trigger never moves as it opens.
 
 **This replaced an earlier footer design mid-loop — see "Deviations" below.** The superseded
 `SocialLinks.tsx` (footer links) and `WhatsAppLink.tsx` (floating, alone) were deleted rather than
@@ -104,9 +105,14 @@ behaviour change with an unamended spec would have failed R6 correctly and for t
 2. **The WhatsApp number rule was wrong, and it was a live defect, not a preference.** Recorded in
    full under "Known-shaky" below.
 
-**R8a is new**, added with the client component: it pins the scroll effect's dependency array to
-`[]` and the previous offset to a ref. That is the one requirement a reviewer is most likely to
-regress, and it is the exact shape of the cart-drawer bug in `CLAUDE.md`'s React section.
+**A third change, later in the same loop: the floating cluster became a disclosure.** The owner
+asked for the links grouped behind one expandable button, closed by default, opening only on
+click/tap — explicitly not on scroll or hover. So the scroll listener added in the previous
+revision is **gone entirely**, not layered underneath the toggle: `FloatingContact` now registers no
+listener at all, which is what makes "opens only on click" structural rather than a promise. R8b and
+R8a were rewritten accordingly (R8a is now the disclosure's ARIA contract, not the old scroll
+effect's dependency array), and R9 now checks the trigger itself is absent for an unconfigured
+vendor — an empty disclosure would advertise links that do not exist.
 
 Everything else matches the spec as written.
 
@@ -142,18 +148,27 @@ database; the drops were removed and the migration carries a note. Verified afte
 assertion that all three indexes are still present and all three columns exist. **If a future
 migration on this branch is generated, expect the same and read the SQL again.**
 
-**The cluster's clearance is arithmetic, not observation, and it now stacks up to three controls.**
-`bottom-24`/`sm:bottom-28` was derived from the cart button's classes and an estimated height. With
-all three links set the column is roughly 190px tall on top of that anchor, so on a short phone
-viewport it occupies a real share of the screen — and the cookie banner sits under it until
-dismissed. R8a compares class values, which is a proxy; a real page at both breakpoints, with all
-three links configured and the cookie banner still showing, is what would prove it.
+**The trigger's clearance is arithmetic, not observation.** `bottom-24`/`sm:bottom-28` was derived
+from the cart button's classes and an estimated height, and it now only has to clear that one
+button — the disclosure fixed the footprint problem the three-button stack had, since a collapsed
+panel takes no layout space. What is still unobserved is the panel **expanded** with all three links
+on a short phone viewport, with the cookie banner also showing. R8's (a) compares class values,
+which is a proxy; a real page at both breakpoints is what would prove it.
 
-**The scroll behaviour has no automated coverage at all.** R8b is a source read plus a manual
-browser check. Nothing in the suite exercises the listener, the threshold constants, or the
-`focus-within` restore — a jsdom test would need a synthetic scroll and would mostly assert the
-implementation back at itself. The keyboard path is the one worth actually trying: Tab to a control
-while the cluster is hidden and confirm it becomes visible.
+**The expand/collapse behaviour has no automated coverage.** R8b and R8a are source reads plus
+manual browser checks. Nothing in the suite renders the component or clicks the trigger. The two
+paths worth trying by hand are the keyboard one — with the panel closed, Tab should move from the
+trigger straight past the links, because collapsed links carry `tabIndex={-1}` — and confirming
+that scrolling and hovering never open it, which is the specific behaviour the owner asked for and
+the reason the scroll listener was removed rather than kept.
+
+**A grep in this file's own validation row was wrong and would have failed a correct build.** R8's
+(d) originally used `#[0-9a-fA-F]{3,8}`, which matches the issue references in the component's doc
+comment (`#407`, `#405`, `#239`) because digits are hex characters — it reported two hex-literal
+violations against a file containing no colour at all. Corrected to a six-digit anchor, with a
+sanity check against `StorefrontConfigForm.tsx` (8 real placeholders) so the pattern is known to
+still bite. This is the `CLAUDE.md` hygiene-grep trap, and it is worth knowing it fired inside this
+slice's own spec.
 
 **Two vendors, and only one of them exercises each path.** Aheed will have values set during
 validation; SriMart's three stay `null`. R9's absence check must run against **SriMart** — an
