@@ -7,6 +7,8 @@ Before doing anything else this session on: $ARGUMENTS
 Follow the **Orient** stage of `specs/sdd-workflow.md` (read it if not already in context):
 
 1. Read the actual code/config for the area involved — not just the doc that describes it.
+   Locate that area with `graft map`/`graft ask` before broad Glob/Grep; open source when
+   implementation truth matters — graft is navigation, not proof.
    Planning docs like `docs/repo-structure.md` have gone stale before (phase-tags contradicted by
    what's actually in the repo); `specs/roadmap.md` and the filesystem are authoritative.
 2. If this touches a roadmap item, confirm it's *actually* buildable now — check for the
