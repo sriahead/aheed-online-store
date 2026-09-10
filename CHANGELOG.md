@@ -167,6 +167,32 @@ every branch merges.
 
 ### Documentation
 
+- **`/orient` now reads the delivery board's `Priority` field, and two docs that denied it exists
+  are corrected** (`#724`). Docs and slash-command only — no runtime code, no schema change.
+  - `.claude/commands/orient.md`: step 6 reads `Priority` alongside `Status` and leads with `High`
+    items; step 8 reports those first, with the assistant's own ranking following as commentary on
+    ordering within that set rather than as a competing list. Step 6's example command also gained
+    the **`--limit 600`** it had always been missing — the board carries 369 items and
+    `gh project item-list` silently truncates to a much smaller default page, so the command as
+    written returned a confident wrong answer.
+  - `CLAUDE.md`: the Delivery board section said the board holds **"status only"**. It also carries
+    a `Priority` single-select (`High`/`Medium`/`Low`) and a `Complexity` one (`S`/`M`/`L`).
+  - `specs/roadmap.md` (1.93.0 → 1.94.0): the "Board limitation" note said the `Phase` field "has
+    options only through `P8`", that the options were "UI-only in Projects V2 with no API to add
+    them", and that items for P8.5–P8.7, P7.5, P9, P9.1–P9.4 and P10 must be parked on Phase `P8`
+    (P2.6 on `P2.5`). **All of that is false** — verified against the live API on 2026-09-10, the
+    field carries `P2.6`, `P7.5`, `P9`, `P9.1`–`P9.4` and `P10`, and thirteen issues were set to
+    Phase `P9.2` directly that day.
+  - **Why it is recorded as a lesson rather than a typo fix**: the missing options were added at
+    some point and *nobody rechecked the premise*, so a note written when the limitation was real
+    went on instructing a workaround that now produces wrong board data — the same shape as the
+    repository-visibility premise already recorded under `CLAUDE.md`'s Branch strategy. It cost a
+    session on 2026-09-10: `/orient` reported a ranking derived from correctness and launch-gate
+    reasoning while thirteen owner-marked `High` items sat on the board, unread.
+  - **Deliberately out of scope**: historical items parked on Phase `P8`/`P2.5` under the old
+    convention were not re-filed, so such a value may mean either the real phase or a pre-2026-09-10
+    parking; the roadmap and GitHub milestone stay authoritative, as they were while the limitation
+    was real.
 - **`/document` (final) closeout for storefront browse discovery completion** (`#694`, `#397`,
   `#608`; PR #699 merged to `staging`, merge `020a99f`). Docs only — no runtime code, no schema
   change on this branch (the fix itself shipped on the feature branch, PR #699).

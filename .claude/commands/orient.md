@@ -22,13 +22,27 @@ Follow the **Orient** stage of `specs/sdd-workflow.md` (read it if not already i
    change-log entry and reached `ARTIFACT_INDEX.md`. This is the only check that runs *after* Ship,
    so a gap is real work, not a warning — fix it on the current branch (post-merge doc changes ride
    the next slice's branch) rather than noting it and moving on.
-6. Check the delivery board for the status layer
-   (`gh project item-list 2 --owner sriahead --format json`). Scope comes from `specs/` and the
-   filesystem, never the board — if they disagree, the board needs reconciling.
+6. Check the delivery board for the status **and priority** layers
+   (`gh project item-list 2 --owner sriahead --format json --limit 600` — **pass `--limit`**; the
+   board carries 369 items and the default page silently truncates, giving a confident wrong
+   answer). Scope comes from `specs/` and the filesystem, never the board — if they disagree, the
+   board needs reconciling.
+   **Read the `Priority` field, not just `Status`.** The owner maintains it deliberately, and an
+   item marked `High` is what goes to `/propose` next — ahead of whatever this pass would rank on
+   its own reading of severity, blast radius or launch-gate logic. Filter on `priority == "High"`.
+   The board really does carry `Priority` (High/Medium/Low) and `Complexity` (S/M/L) single-selects,
+   and its `Phase` field really does have `P2.6`, `P7.5`, `P9`, `P9.1`-`P9.4` and `P10` options —
+   verified against the live API on 2026-09-10 (#724). Both `CLAUDE.md` and `specs/roadmap.md`
+   asserted the opposite for months; do not re-derive the old "park it on `P8`" workaround from a
+   stale doc.
 7. **Read `docs/research/discovery-log.md`** for any open finding touching this area. A finding
    there is evidence, not scope — but starting a slice while an unread finding contradicts its
    premise is exactly the waste the Discover phase exists to prevent.
 8. Report a short grounding summary: what you found to be true vs. what the docs/roadmap assumed,
    and any discrepancy worth flagging before moving to `/propose`.
+   **Lead that report with the board's `High` priority items.** Give your own read of sequencing,
+   blockers and what is owner-gated *after* theirs, as commentary on ordering within that set —
+   not as a competing list. Once the owner names the scope, note concerns inline and proceed rather
+   than offering a scoping menu.
 
 Do not start implementing. This is a read-only grounding pass.

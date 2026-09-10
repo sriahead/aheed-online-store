@@ -474,7 +474,13 @@ branch before it merges, and Ship precedes the final documentation pass.
   promotion half rather than failing when `gh` is unavailable, so a skip line is not a pass.
 
 **Delivery board** — GitHub Project #2 "Aheed Online Store — Delivery" (owner `sriahead`), a
-generated *view* of `specs/roadmap.md` holding **status only**; scope lives in `specs/`. Propose adds
+generated *view* of `specs/roadmap.md` holding **status and priority, never scope**; scope lives in
+`specs/`. This line said **status only** until 2026-09-10 (#724), which was wrong and cost a
+session: the board also carries a **`Priority`** single-select (`High`/`Medium`/`Low`) and a
+**`Complexity`** one (`S`/`M`/`L`), the owner maintains `Priority` deliberately, and `/orient` was
+reading neither — so a session opened with the model's own ranking while thirteen `High` items sat
+recorded and unread. **An item marked `High` goes to `/propose` ahead of anything the assistant
+would rank itself.** Propose adds
 the issue (Phase set, Backlog) → Build moves it to In Progress → Ship moves it to **In Review** on
 staging merge → it closes to **Done** only when promoted to `main`. **`Done` means in production**:
 PRs merge into `staging`, not the default branch, so `Closes #NN` never fires on merge and open
