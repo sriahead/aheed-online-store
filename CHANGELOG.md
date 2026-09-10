@@ -41,6 +41,22 @@ every branch merges.
   Halal or Fresh, which made it the larger half of the issue. `hmcReference` renders beside the HMC
   claim so a certification never travels without its provenance (`#239`).
 
+### Changed
+
+- **`/bundles` now uses the same page layout as `/search` and `/categories/[slug]`** (`#701`;
+  `specs/2026-09-10-bundles-page-layout-parity/`). **No schema change, no migration.** The store
+  owner flagged, with screenshots, that clicking "View all" from Value Bundles landed on a
+  single-column page (`CollectionNav` full-width, a 3-column grid of large cards) that visibly
+  didn't match clicking "View all" from New Arrivals or Featured Products (a two-column layout —
+  sidebar plus a 4-column grid). `BundleCard` already shared `ProductCard`'s `.skew-card` visual
+  treatment; the mismatch was the page's own layout wrapper and grid density, not the card. Fixed by
+  moving `CollectionNav` into the same `md:w-60 md:shrink-0` left column `/search` uses (no
+  `FilterPanel` — `Bundle` has no `categoryId` and none of that form's predicates exist on a
+  bundle, a deliberate `#347` decision this slice doesn't reopen) and widening the grid from
+  `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` to `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4`,
+  matching `ProductRow`'s exactly. No change to `BundleCard`, `BundleRow`, or any repository/service
+  function.
+
 ### Fixed
 
 - **A keyset cursor from a URL no longer reaches Prisma unvalidated** (`#682`, `#670`;

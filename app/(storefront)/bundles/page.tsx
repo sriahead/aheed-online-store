@@ -49,40 +49,53 @@ export default async function BundlesPage() {
     <main className="mx-auto max-w-7xl px-4 py-6">
       {/*
         #681 — the same chrome the other browse surfaces carry, so this stops reading as a separate
-        site. It is deliberately NOT the filter panel: `Bundle` has no `categoryId` and none of that
-        form's predicates (price, stock, halal, origin, brand) exist on a bundle at all, because a
-        bundle is a curated set spanning departments (#347). The department strip is therefore a way
-        BACK OUT to a filtered product listing, not a filter over what is on this page.
+        site. The department strip is a way BACK OUT to a filtered product listing, not a filter
+        over what is on this page.
       */}
       <DepartmentScroller categories={departments} activeSlug={null} />
 
-      <div className="mt-6">
-        <CollectionNav activeHref="/bundles" />
+      {/*
+        #701 — `/bundles` used to be a single-column page (CollectionNav full-width, a 3-column
+        grid) while `/search` and `/categories/[slug]` are two-column (sidebar + flex-1 content,
+        4-column grid), so Value Bundles' "View all" landed somewhere that visibly didn't match
+        New Arrivals'/Featured Products'. Same wrapper those two pages use.
+
+        Still deliberately NOT the filter panel: `Bundle` has no `categoryId` and none of that
+        form's predicates (price, stock, halal, origin, brand) exist on a bundle at all, because a
+        bundle is a curated set spanning departments (#347) — this slice doesn't reopen that. The
+        left column carries `CollectionNav` alone.
+      */}
+      <div className="mt-6 flex flex-col gap-6 md:flex-row">
+        <div className="md:w-60 md:shrink-0">
+          <CollectionNav activeHref="/bundles" />
+        </div>
+
+        <div className="flex-1">
+          <h1 className="text-2xl font-semibold text-primary">Value Bundles</h1>
+          <p className="mt-1 text-sm text-primary-muted">
+            Curated sets, added to your basket in a single tap.
+          </p>
+
+          {renderable.length === 0 ? (
+            <p className="mt-6 text-primary-muted">No bundles are available right now.</p>
+          ) : (
+            <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {renderable.map((bundle) => (
+                <BundleCard
+                  key={bundle.id}
+                  id={bundle.id}
+                  name={bundle.name}
+                  tagline={bundle.tagline}
+                  imageKey={bundle.imageKey}
+                  altText={bundle.altText}
+                  items={bundle.items}
+                  cdnBaseUrl={CDN_BASE_URL ?? ""}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
-
-      <h1 className="text-2xl font-semibold text-primary">Value Bundles</h1>
-      <p className="mt-1 text-sm text-primary-muted">
-        Curated sets, added to your basket in a single tap.
-      </p>
-
-      {renderable.length === 0 ? (
-        <p className="mt-6 text-primary-muted">No bundles are available right now.</p>
-      ) : (
-        <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {renderable.map((bundle) => (
-            <BundleCard
-              key={bundle.id}
-              id={bundle.id}
-              name={bundle.name}
-              tagline={bundle.tagline}
-              imageKey={bundle.imageKey}
-              altText={bundle.altText}
-              items={bundle.items}
-              cdnBaseUrl={CDN_BASE_URL ?? ""}
-            />
-          ))}
-        </ul>
-      )}
     </main>
   );
 }
