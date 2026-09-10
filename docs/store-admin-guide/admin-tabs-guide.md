@@ -213,21 +213,24 @@ the redemption value applies to every existing balance.
 
 ## Storefront — `/staff/storefront`
 
-**Purpose:** Your shop's own identity — its branding colours, logo and homepage copy — and the
-delivery rules every order is charged by.
+**Purpose:** Your shop's own identity — its branding colours, logo and homepage copy — the delivery
+rules every order is charged by, and the social and contact links shoppers use to reach you.
 
 **Who can access:** Store admins only
 
 **What you can do:** Pick a ready-made colour theme, set all eight of your brand colours
 individually, upload your logo, edit the homepage hero subtitle and the notice in the header banner,
-and set your delivery fee, your free delivery threshold and your minimum order value.
+set your delivery fee, your free delivery threshold and your minimum order value, and enter your
+Facebook page address, your Instagram profile address and your WhatsApp number.
 
 **Typical workflow:** You do the branding at setup and when it changes. The quickest start is to
 choose a theme from the **Select a theme** list and press **Apply Theme** — that fills all eight
 colour fields for you, and you can then adjust any of them before saving. Otherwise set the colours
 yourself, upload the logo, write the banner note, and check the shop's homepage afterwards.
 Delivery rules are their own form lower down the page with its own Save button — changing your
-delivery fee does not require touching your branding, and saving one does not save the other.
+delivery fee does not require touching your branding, and saving one does not save the other. Social
+and contact links are a third form below that, again with its own Save button, so you can add a
+Facebook page months after setting your colours without touching anything else.
 
 **Important fields and filters:** Colours are applied across the whole shop, so change one and check
 a product page as well as the homepage. There are eight of them and they do different jobs: the two
@@ -240,6 +243,12 @@ are entered in pounds:
 which that fee is waived, and leaving it **blank** means free delivery is never offered — which is
 not the same as entering `0`, because `0` would make every order qualify; **Minimum order** is the
 basket value below which a shopper cannot check out, so enter `0.00` if you do not want one.
+The three social and contact fields work differently from everything else on this page: **leaving
+one blank hides that link entirely** rather than showing a default, so a shop with no Instagram
+account simply has no Instagram icon in its footer. **Facebook page address** and **Instagram
+profile address** must both be full web addresses starting with `https://`. **WhatsApp number** is
+entered as digits only in international format — `447700900123`, not `+44 7700 900123` — and adds a
+WhatsApp button to every storefront page.
 
 **Common mistakes and limitations:** Colour choices affect the readability of text sitting on them.
 After changing a brand colour, look at a real page rather than only the colour swatch. Because your
@@ -252,12 +261,19 @@ worth naming are entering `0` in the free
 delivery field when you meant to leave it blank, and setting a minimum order above what a typical
 basket comes to — that refuses shoppers at checkout rather than warning them earlier. Amounts are
 pounds and pence with at most two decimal places; anything else is refused with the field marked,
-and nothing is saved until every value is valid.
+and nothing is saved until every value is valid. For the social and contact fields, the three
+mistakes worth naming are pasting a Facebook or Instagram address that starts with `http://`
+instead of `https://`, which is refused with the field marked; typing a WhatsApp number with a plus
+sign, spaces or dashes, which is also refused; and expecting a blank field to fall back to
+something — it does not, it removes the link. As with delivery, nothing in this form is saved until
+every value in it is valid.
 
 **What happens after changes are saved:** Applied across the shop immediately. An uploaded logo may
 take a short time to appear everywhere because images are cached. New delivery rules apply to the
 next basket calculated — a shopper already partway through checkout may still see the previous fee
-until their basket recalculates.
+until their basket recalculates. Social and contact links appear in the footer, and the WhatsApp
+button on every storefront page, as soon as they are saved; clearing a field removes them just as
+quickly.
 
 ## Delivery areas — `/staff/delivery-areas`
 

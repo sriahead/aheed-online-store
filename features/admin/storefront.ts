@@ -16,6 +16,7 @@ import {
 } from "@/lib/vendor-service";
 import type { VendorStorefrontConfigInput } from "@/lib/repositories/vendor";
 import { parseDeliveryRules, type DeliveryRulesFormState } from "@/lib/delivery-rules-form";
+import { parseSocialContact, type SocialContactFormState } from "@/lib/social-contact-form";
 import crypto from "crypto";
 
 const PRESIGN_TTL_SECONDS = 300;
@@ -142,9 +143,49 @@ export async function updateDeliveryRules(
     return { error: parsed.error.message, field: parsed.error.field, saved: false };
   }
 
-  // Only the three delivery columns are passed. `bannerNote`/`heroSubtitle` are
-  // omitted entirely rather than sent as null, so Prisma leaves the vendor's
-  // copy untouched — this action has no business rewriting it.
+  // Only the three delivery columns are passed. `bannerNote`/`heroSubtitle` and the three social
+  // columns are omitted entirely rather than sent as null, so Prisma leaves the vendor's copy and
+  // contact links untouched — this action has no business rewriting either.
+  await updateVendorStorefrontConfig(auth.vendorId, parsed.value);
+
+  revalidatePath("/staff/storefront");
+  revalidatePath("/", "layout");
+  return { error: null, field: null, saved: true };
+}
+
+/**
+ * Save this store's social and contact links (P9.2, #407 / #405).
+ *
+ * Its own action and its own form, for the same two reasons `updateDeliveryRules` is separate: the
+ * branding form submits without these fields and must keep leaving them alone, and an invalid URL
+ * needs a FIELD-LEVEL error rendered against the input that caused it — which the branding form's
+ * fire-and-forget `useTransition` shape cannot express.
+ *
+ * Validation lives in `lib/social-contact-form.ts`, DB-free and unit-tested. It is load-bearing
+ * here in a way the copy fields never were: these three values land inside an `href`, so the
+ * parser accepts exactly one URL scheme (`https:`) rather than checking the value merely looks
+ * like a link. A stored `javascript:` URL would be a live script link for every visitor.
+ *
+ * The vendor comes from the session — `requireVendorRole("ADMIN")` — and is never taken from the
+ * submission, so there is no vendor field for a caller to forge.
+ */
+export async function updateSocialContact(
+  _prev: SocialContactFormState,
+  formData: FormData,
+): Promise<SocialContactFormState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { error: refusal(auth.status), field: null, saved: false };
+
+  const parsed = parseSocialContact({
+    facebookUrl: String(formData.get("facebookUrl") ?? ""),
+    instagramUrl: String(formData.get("instagramUrl") ?? ""),
+    whatsappNumber: String(formData.get("whatsappNumber") ?? ""),
+  });
+
+  if (!parsed.ok) {
+    return { error: parsed.error.message, field: parsed.error.field, saved: false };
+  }
+
   await updateVendorStorefrontConfig(auth.vendorId, parsed.value);
 
   revalidatePath("/staff/storefront");
