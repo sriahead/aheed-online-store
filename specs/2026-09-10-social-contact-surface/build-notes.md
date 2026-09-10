@@ -29,13 +29,14 @@ three field-name constants, and `initialSocialContactState` — that last one li
 in `features/admin/storefront.ts` because a `"use server"` file may export only async functions
 (`#159`), a rule nothing in `lint`/`typecheck`/`test` enforces.
 
-**Render.** Two new server components, both mounted in `components/layout/StorefrontChrome.tsx`,
-which already receives `profile: VendorProfile`:
+**Render.** One client component, `components/layout/FloatingContact.tsx`, mounted in
+`components/layout/StorefrontChrome.tsx`, which already receives `profile: VendorProfile`. All three
+controls float together above the cart button in a single fixed `flex-col-reverse` container, and
+slide away on scroll-down / return on scroll-up.
 
-- `components/layout/SocialLinks.tsx` — footer links, rendered beside Terms/Privacy.
-- `components/layout/WhatsAppLink.tsx` — the floating `wa.me` control.
-
-Neither needs client JavaScript; both are plain anchors.
+**This replaced an earlier footer design mid-loop — see "Deviations" below.** The superseded
+`SocialLinks.tsx` (footer links) and `WhatsAppLink.tsx` (floating, alone) were deleted rather than
+left in place; the glyphs moved into `FloatingContact.tsx`.
 
 **Admin.** `features/admin/storefront.ts` gains `updateSocialContact`, a `useActionState` action
 shaped like `updateDeliveryRules` (field-level errors), and `components/staff/StorefrontConfigForm.tsx`
@@ -90,11 +91,43 @@ R7 ask for accessible names, `target`/`rel` and conditional rendering, and say n
 package draws the glyph. Recorded here because a validator reading `plan.md` would otherwise expect
 a `lucide-react` import that is not there.
 
+**A second, larger one: the owner changed the design mid-loop, after Build and after the first
+preclear passed.** Two requests, both acted on, and `requirements.md`/`validation.md` were amended
+to match rather than left stale — validation runs from a fresh context against the spec, so a
+behaviour change with an unamended spec would have failed R6 correctly and for the wrong reason.
+
+1. **Social links moved from the footer to the floating cluster.** `#407` asked for the footer and
+   the original R6 said so. They now float with WhatsApp. The links are **moved, not duplicated** —
+   rendering the same link twice on one page is an accessibility and SEO negative — so R6 now
+   requires *exactly one* match per network and an empty footer. This also turned a pair of server
+   components into one **client** component, because a scroll listener needs the browser.
+2. **The WhatsApp number rule was wrong, and it was a live defect, not a preference.** Recorded in
+   full under "Known-shaky" below.
+
+**R8a is new**, added with the client component: it pins the scroll effect's dependency array to
+`[]` and the previous offset to a ref. That is the one requirement a reviewer is most likely to
+regress, and it is the exact shape of the cart-drawer bug in `CLAUDE.md`'s React section.
+
 Everything else matches the spec as written.
 
 ## Known-shaky areas
 
-**Nothing has been exercised against a running app.** This slice was built and unit-tested only;
+**A real defect was found by the owner before validation ran, and it was a SPEC defect.** The first
+WhatsApp number entered through the admin form was `07448894146` — UK national format. The original
+R5 said "digits-only, 7 to 15 digits", which that satisfies, so the parser accepted it and stored
+it. `https://wa.me/07448894146` then **opens WhatsApp and starts no chat**, with no error in the
+browser, no error in the log, and nothing to distinguish it from the feature simply not working. An
+E.164 number never begins with `0`. R5 and the parser now both reject a leading zero with a message
+naming the fix, and the stored dev row was repaired to `447448894146`.
+
+Two transferable things here. **The requirement was wrong, and the code implemented it faithfully**
+— a unit suite written against that requirement passed 25/25 while the feature was broken in the
+only way that mattered. And **the failure mode is silent**: this is the same shape as the Workers AI
+`result.response` bug in `CLAUDE.md`, where a plausible-looking value produced no error and no
+output. Any future field whose value is handed to a third-party URL scheme deserves a live click,
+not just a passing parser test.
+
+**Nothing else has been exercised against a running app.** This slice was built and unit-tested only;
 no row of `validation.md` has been run. The whole live surface — footer render, floating-control
 position, admin form, refusal path — is unverified. `validation.md`'s "Before you start" carries
 four ordered steps, and step 1 matters most here: **query `VendorDomain` for the real hostnames
@@ -109,10 +142,18 @@ database; the drops were removed and the migration carries a note. Verified afte
 assertion that all three indexes are still present and all three columns exist. **If a future
 migration on this branch is generated, expect the same and read the SQL again.**
 
-**The floating control's clearance is arithmetic, not observation.** The `bottom-24`/`sm:bottom-28`
-values were derived from the cart button's classes and an estimated button height. R8a compares the
-class values, which is a proxy; a real page at both breakpoints is what would prove no overlap.
-Worth an eye during validation, particularly with the cookie banner also visible.
+**The cluster's clearance is arithmetic, not observation, and it now stacks up to three controls.**
+`bottom-24`/`sm:bottom-28` was derived from the cart button's classes and an estimated height. With
+all three links set the column is roughly 190px tall on top of that anchor, so on a short phone
+viewport it occupies a real share of the screen — and the cookie banner sits under it until
+dismissed. R8a compares class values, which is a proxy; a real page at both breakpoints, with all
+three links configured and the cookie banner still showing, is what would prove it.
+
+**The scroll behaviour has no automated coverage at all.** R8b is a source read plus a manual
+browser check. Nothing in the suite exercises the listener, the threshold constants, or the
+`focus-within` restore — a jsdom test would need a synthetic scroll and would mostly assert the
+implementation back at itself. The keyboard path is the one worth actually trying: Tab to a control
+while the cluster is hidden and confirm it becomes visible.
 
 **Two vendors, and only one of them exercises each path.** Aheed will have values set during
 validation; SriMart's three stay `null`. R9's absence check must run against **SriMart** — an

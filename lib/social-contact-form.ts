@@ -31,8 +31,15 @@ import type { ParseResult } from "@/lib/catalogue-form";
  * the form has to re-render with the field named.
  */
 
-/** Digits only, no `+`, no separators. `wa.me` takes E.164 without the leading plus. */
-const WHATSAPP_DIGITS = /^\d{7,15}$/;
+/**
+ * Digits only, no `+`, no separators, and **never a leading zero**. `wa.me` takes E.164 without
+ * the leading plus, and an E.164 number always starts with a country code — so a national-format
+ * number like the UK's `07448894146` is 11 digits of pure numerals that `wa.me` still cannot
+ * resolve. It opens WhatsApp and no chat starts, with no error anywhere. Found live: the first
+ * number ever entered through the admin form was exactly that shape, and the original rule
+ * (`^\d{7,15}$`) accepted it.
+ */
+const WHATSAPP_DIGITS = /^[1-9]\d{6,14}$/;
 
 /** The only URL scheme a stored social link may use. */
 const ALLOWED_URL_SCHEME = "https:";
@@ -114,6 +121,20 @@ export function parseWhatsappNumber(raw: string, field: string): ParseResult<str
   if (trimmed === "") return { ok: true, value: null };
 
   if (!WHATSAPP_DIGITS.test(trimmed)) {
+    // A leading zero is the mistake an operator actually makes — they type the number the way
+    // they'd dial it locally — so it gets its own message naming the fix rather than the
+    // generic one.
+    if (/^0\d+$/.test(trimmed)) {
+      return {
+        ok: false,
+        error: {
+          field,
+          message:
+            "Drop the leading 0 and start with your country code — a UK number like 07448894146 becomes 447448894146. WhatsApp cannot open a chat from a national-format number.",
+        },
+      };
+    }
+
     return {
       ok: false,
       error: {

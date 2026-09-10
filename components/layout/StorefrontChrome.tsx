@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
-import { SocialLinks } from "@/components/layout/SocialLinks";
-import { WhatsAppLink } from "@/components/layout/WhatsAppLink";
+import { FloatingContact } from "@/components/layout/FloatingContact";
 import { CookieBanner } from "@/components/consent/CookieBanner";
 import { brandStyle } from "@/lib/vendor-theme";
 import type { VendorProfile } from "@/lib/repositories/vendor";
@@ -44,15 +43,15 @@ export function StorefrontChrome({
             <Link href="/privacy" className="hover:underline">
               Privacy Policy
             </Link>
-            <SocialLinks
-              vendorName={profile.name}
-              facebookUrl={profile.facebookUrl}
-              instagramUrl={profile.instagramUrl}
-            />
           </div>
         </div>
       </footer>
-      <WhatsAppLink vendorName={profile.name} whatsappNumber={profile.whatsappNumber} />
+      <FloatingContact
+        vendorName={profile.name}
+        facebookUrl={profile.facebookUrl}
+        instagramUrl={profile.instagramUrl}
+        whatsappNumber={profile.whatsappNumber}
+      />
       <CookieBanner />
     </div>
   );

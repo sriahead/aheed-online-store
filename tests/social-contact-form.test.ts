@@ -89,6 +89,28 @@ describe("parseWhatsappNumber", () => {
     expect(parseWhatsappNumber(input, WHATSAPP_NUMBER_FIELD).ok).toBe(false);
   });
 
+  // The bug this rule exists for. `07448894146` is digits-only and in range, so the original
+  // `^\d{7,15}$` accepted it — and wa.me then opened WhatsApp with no chat and no error. An
+  // E.164 number never starts with 0.
+  it.each(["07448894146", "07700900123", "0123456789"])(
+    "rejects national-format %s (leading zero)",
+    (input) => {
+      const result = parseWhatsappNumber(input, WHATSAPP_NUMBER_FIELD);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.field).toBe(WHATSAPP_NUMBER_FIELD);
+        expect(result.error.message).toMatch(/leading 0|country code/i);
+      }
+    },
+  );
+
+  it("accepts the international form of the number it rejects nationally", () => {
+    expect(parseWhatsappNumber("447448894146", WHATSAPP_NUMBER_FIELD)).toEqual({
+      ok: true,
+      value: "447448894146",
+    });
+  });
+
   it("parses a blank value to null", () => {
     expect(parseWhatsappNumber("   ", WHATSAPP_NUMBER_FIELD)).toEqual({ ok: true, value: null });
   });

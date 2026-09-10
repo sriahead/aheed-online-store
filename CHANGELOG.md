@@ -10,21 +10,31 @@ every branch merges.
 
 - **Per-vendor social and contact links on the storefront** (`#407`, and the deep-link half of
   `#405`; `specs/2026-09-10-social-contact-surface/`). Three nullable `VendorConfig` columns —
-  `facebookUrl`, `instagramUrl`, `whatsappNumber` — render each vendor's own Facebook and Instagram
-  links in the footer and a floating `wa.me` deep link. **A null HIDES that element** rather than
-  falling back to a platform account, the same rule `bannerNote`/`heroSubtitle` follow: a
-  platform-written social link is a claim made on a vendor's behalf (`#239`). Both seeded vendors
-  start null, so the hidden state is the default rather than something only a test reaches.
+  `facebookUrl`, `instagramUrl`, `whatsappNumber` — render each vendor's own Facebook, Instagram and
+  `wa.me` links as a **floating cluster** that slides away on scroll-down and returns on scroll-up.
+  **A null HIDES that control** rather than falling back to a platform account, the same rule
+  `bannerNote`/`heroSubtitle` follow: a platform-written social link is a claim made on a vendor's
+  behalf (`#239`). Both seeded vendors start null, so the hidden state is the default rather than
+  something only a test reaches.
+  - **The WhatsApp number must be international format, and a leading zero is refused with a message
+    that names the fix.** An E.164 number never starts with `0`, and `wa.me` given a national-format
+    number like `07448894146` opens WhatsApp and starts **no chat**, silently and with no error. The
+    first number ever entered through the admin form was exactly that shape, and the original rule
+    (`digits, 7-15`) accepted it — the requirement was wrong and the code implemented it faithfully.
   - **URL validation is an https-only allow-list, not a sanity check.** These are the first
     vendor-editable values in this repo that land inside an `href`, and `new URL()` parses
     `javascript:alert(1)` perfectly happily — parsing is not safety. `http:` is refused too, since a
     mixed-content link from an HTTPS storefront is a downgrade. `lib/social-contact-form.ts` is pure
     and DB-free like `lib/delivery-rules-form.ts`, with 25 unit tests.
-  - The floating control **stacks above the cart button** rather than taking the bottom-right corner:
+  - The cluster **stacks above the cart button** rather than taking the bottom-right corner:
     `CartDrawerShell` already occupies `bottom-6 right-6` and is unconditional (only its badge is
-    conditional). It uses `bg-action`, not WhatsApp's brand green — a hex literal would break the
-    token convention, and a storefront rendering a third party's brand colour in its own chrome is
-    the mistake `#239` fixed — so it renders in each vendor's own palette.
+    conditional). One fixed container with `flex-col-reverse`, so adding or removing a link needs no
+    per-button arithmetic. It uses `bg-action`, not WhatsApp's or any network's brand colour — a hex
+    literal would break the token convention, and a storefront rendering a third party's brand
+    colour in its own chrome is the mistake `#239` fixed — so it renders in each vendor's palette.
+  - Hiding is a translate and fade, never an unmount: dropping the controls from the DOM would take
+    keyboard focus with them, so `focus-within` restores the cluster whenever a control inside it is
+    focused, and the transition is disabled under `prefers-reduced-motion`.
   - `lucide-react@1.30.0` ships 6056 icons and **no brand marks at all**, so the Facebook and
     Instagram glyphs are inline SVG using lucide's own stroke geometry. Nothing was added to
     `package.json`, which is what `#407` asked for.

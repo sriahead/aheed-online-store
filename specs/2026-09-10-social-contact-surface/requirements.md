@@ -28,36 +28,51 @@ R4. The URL parser in `lib/social-contact-form.ts` accepts a value whose scheme 
     a blank/whitespace-only value parses successfully to `null` (meaning "not set") rather than
     being reported as an error.
 
-R5. The WhatsApp parser accepts a digits-only value of 7 to 15 digits, rejects any value containing
-    a non-digit character (including `+`, spaces and hyphens), and parses a blank/whitespace-only
-    value successfully to `null`.
+R5. The WhatsApp parser accepts a digits-only value of 7 to 15 digits **whose first digit is not
+    `0`**, rejects any value containing a non-digit character (including `+`, spaces and hyphens),
+    rejects a national-format number with a leading zero (e.g. `07448894146`) with a message telling
+    the operator to drop the zero and prefix a country code, and parses a blank/whitespace-only
+    value successfully to `null`. An E.164 number never begins with `0`, and `wa.me` opens WhatsApp
+    without starting a chat when given one — silently, with no error.
 
-R6. `components/layout/StorefrontChrome.tsx`'s footer renders a Facebook link when
-    `profile.facebookUrl` is non-null and an Instagram link when `profile.instagramUrl` is non-null;
-    each rendered link carries `target="_blank"`, `rel` containing both `noopener` and `noreferrer`,
-    and an accessible name containing both the vendor's name and the network name (for example
-    `Aheed Food Centre on Instagram`) rather than being an unlabelled icon.
+R6. `components/layout/FloatingContact.tsx`, rendered by `components/layout/StorefrontChrome.tsx`,
+    renders a Facebook link when `profile.facebookUrl` is non-null and an Instagram link when
+    `profile.instagramUrl` is non-null; each rendered link carries `target="_blank"`, `rel`
+    containing both `noopener` and `noreferrer`, and an accessible name containing both the
+    vendor's name and the network name (for example `Aheed Food Centre on Instagram`) rather than
+    being an unlabelled icon. **The storefront footer contains no social link** — all three
+    controls float together instead, and the same link is not rendered twice on one page.
 
-R7. `components/layout/StorefrontChrome.tsx` renders a link to `https://wa.me/<whatsappNumber>`
+R7. `components/layout/FloatingContact.tsx` renders a link to `https://wa.me/<whatsappNumber>`
     carrying a prefilled `text` query parameter when `profile.whatsappNumber` is non-null, and
     renders no such element when it is null. That link carries `target="_blank"`, `rel` containing
     both `noopener` and `noreferrer`, and an accessible name containing the vendor's name and
     identifying it as WhatsApp.
 
-R8. The WhatsApp element's class list satisfies all three of the following:
-    (a) it positions the element clear of the existing floating cart button, using a `bottom-`
+R8. `FloatingContact` renders all present controls inside **one** fixed container whose class list
+    satisfies all four of the following:
+    (a) it positions the container clear of the existing floating cart button, using a `bottom-`
     value greater than the cart button's `bottom-6` and an `sm:bottom-` value greater than its
     `sm:bottom-8` (`components/cart/CartDrawerShell.tsx:L113`), so the two do not overlap at either
-    breakpoint;
-    (b) every `hover:scale-`/`group-hover:scale-`/`active:scale-`/`focus:scale-` utility it uses is
-    paired with a `motion-reduce:` counterpart, so `tests/motion-reduce-coverage.test.ts` passes;
-    (c) it contains no raw hex colour literal and no raw `px` value — colours come from the
-    existing semantic tokens, so the control adopts each vendor's own palette rather than
-    WhatsApp's brand green.
+    breakpoint, and the controls stack rather than overlapping each other;
+    (b) it hides the container when the reader scrolls **down** past an offset and restores it when
+    they scroll **up**, without unmounting it, and restores it via `focus-within` so a control
+    reached by keyboard is always visible;
+    (c) every `hover:scale-`/`group-hover:scale-`/`active:scale-`/`focus:scale-` utility it uses is
+    paired with a `motion-reduce:` counterpart and the show/hide transition is disabled under
+    `motion-reduce`, so `tests/motion-reduce-coverage.test.ts` passes;
+    (d) it contains no raw hex colour literal and no raw `px` value — colours come from the
+    existing semantic tokens, so the controls adopt each vendor's own palette rather than
+    WhatsApp's or a network's brand colour.
+
+R8a. `FloatingContact`'s scroll listener is registered in a `useEffect` whose dependency array does
+     **not** contain the visibility state it sets, and the previous scroll offset is held in a ref
+     rather than in state — so the listener is registered once rather than torn down and re-added on
+     every toggle.
 
 R9. Rendering `StorefrontChrome` with a `VendorProfile` whose `facebookUrl`, `instagramUrl` and
-    `whatsappNumber` are all `null` produces no Facebook link, no Instagram link and no `wa.me`
-    link anywhere in its output.
+    `whatsappNumber` are all `null` produces no Facebook link, no Instagram link, no `wa.me` link
+    and no floating container anywhere in its output.
 
 R10. `lib/repositories/vendor.ts`'s `VendorStorefrontConfigInput` declares `facebookUrl`,
      `instagramUrl` and `whatsappNumber` as optional `string | null`, and
