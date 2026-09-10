@@ -22,7 +22,10 @@ reads its own intent into the code and is the worst judge of whether it matches 
    reflexively reformat unrelated files.
 4. Walk through **every row** of `validation.md` and confirm it, not just the generic
    lint/test/build commands. A row you can't check in this environment is reported as **unverified,
-   with the reason** — never quietly counted as passing.
+   with the reason** — never quietly counted as passing. Where the diff changes a shared symbol,
+   use targeted `graft callers` when useful to check for call sites the validation rows may not
+   cover — treat those as investigation targets to confirm against source and tests, never findings
+   themselves.
 5. UI changes: verify by inspecting rendered output (compiled CSS, rendered HTML, or a browser
    screenshot) — not from code review alone. DB-touching code: `npm run preview`, never
    `npm run dev` (see `CLAUDE.md`).

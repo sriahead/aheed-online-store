@@ -8,6 +8,31 @@ every branch merges.
 
 ### Added
 
+- **Graft MCP integration for repository navigation** (`#709`). A prebuilt symbol/edge graph
+  queried through six MCP tools (`graft_repo_map`, `graft_find_code`, `graft_find_all`,
+  `graft_file_api`, `graft_trace_calls`, `graft_check_freshness`), plus hooks, a statusline and a
+  hardened skill. **Graft is navigation, structural relationships and impact analysis only** —
+  source, approved specs/ADRs, tests and runtime validation remain authoritative truth, and the
+  committed `SKILL.md` states that rule explicitly.
+  - Two workflow touchpoints, deliberately minimal: `/orient` step 1 locates the area with
+    `graft map`/`graft ask` before broad Glob/Grep; `/validate` step 4 gains a *conditional*
+    shared-symbol `graft callers` check whose hits are investigation targets to confirm against
+    source and tests, never findings. `/build` and `/document` are untouched — Build runs in
+    Orient's context, and Document already reconciles from validation findings. Graft indexes no
+    `docs/`/`specs/` markdown, so it cannot become a second documentation system.
+  - Permissions are narrowed to read-only graft verbs; there is no broad `Bash(graft:*)`, and
+    `graft build --deep` is not auto-approved. Telemetry is disabled locally for the benchmark;
+    that preference is machine-local (`~/.graft/`) and is **not** enforced by this repository
+    configuration.
+  - The generated `graft/` tree is gitignored and regenerable; `.ignore` re-admits it to ripgrep so
+    the cards stay greppable. `.claude/settings.local.json` is now ignored repo-side rather than
+    depending on an individual contributor's global gitignore.
+  - Requires `@nanonets/graft` installed globally and one `graft build`. The helper shims derive
+    npm's Windows global prefix from `%APPDATA%` rather than baking an absolute path, falling
+    through to package resolution and `npm root -g` elsewhere.
+  - Retention is undecided: the `#407`/`#405` slice runs its full SDD lifecycle as a real-world
+    effectiveness benchmark, concluding KEEP / KEEP BUT MODIFY / REMOVE.
+
 - **The storefront's collection links now reach every browse page** (`#694`;
   `specs/2026-09-09-storefront-browse-discovery-completion/`). `CollectionNav` shipped in `#681` on
   `/search` and `/bundles` only, so Value Bundles, New Arrivals and Featured Products vanished the
