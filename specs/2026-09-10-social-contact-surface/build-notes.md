@@ -114,6 +114,14 @@ R8a were rewritten accordingly (R8a is now the disclosure's ARIA contract, not t
 effect's dependency array), and R9 now checks the trigger itself is absent for an unconfigured
 vendor — an empty disclosure would advertise links that do not exist.
 
+**A fourth change, and the only one outside this slice's subject: the landing hero's carousel
+column (`#715`).** The grid carried `lg:items-center`, an explicit override of CSS grid's `stretch`
+default, which sized the right column to its own content and left dead space above and below the
+panel. Restoring `items-stretch` plus `h-full` down the panel/track/slide chain lets it fill the
+column. It ships here at the owner's request, has its own issue, and is specified as R19 so it is
+validated rather than slipping through — but it is unrelated to social and contact links, and
+`plan.md` says so explicitly so the PR is not quietly carrying an unexplained layout change.
+
 Everything else matches the spec as written.
 
 ## Known-shaky areas

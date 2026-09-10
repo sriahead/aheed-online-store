@@ -82,9 +82,15 @@ export default async function HomePage() {
             column when they don't, so the hero never renders an empty well.
             #496: the department slider was capped at a fixed 28rem regardless
             of viewport, making it a small corner element rather than a real
-            second half of the hero — now an even lg:grid-cols-2 split. */}
+            second half of the hero — now an even lg:grid-cols-2 split.
+
+            `items-stretch`, not `items-center`: centring sized the second column
+            to its own content and parked it mid-row, leaving dead space above
+            and below the panel. Stretching makes the column take the full row
+            height so the carousel can fill it. The hero's own `p-6 md:p-10`
+            still keeps the panel off the section's edges. */}
         <div
-          className={`relative z-10 gap-8 ${heroDepartments.length > 0 ? "lg:grid lg:grid-cols-2 lg:items-center" : ""}`}
+          className={`relative z-10 gap-8 ${heroDepartments.length > 0 ? "lg:grid lg:grid-cols-2 lg:items-stretch" : ""}`}
         >
           <div className="max-w-2xl space-y-4">
             <div className="inline-flex items-center gap-1.5 bg-black/20 border border-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
@@ -146,7 +152,7 @@ export default async function HomePage() {
               VendorPromotion is deleted in this slice; see the spec for why
               "superseded" rather than "unused" is the accurate reason. */}
           {heroDepartments.length > 0 && (
-            <div className="mt-8 lg:mt-0">
+            <div className="mt-8 lg:mt-0 lg:h-full">
               <DepartmentHero departments={heroDepartments} cdnBaseUrl={CDN_BASE_URL ?? null} />
             </div>
           )}

@@ -6,6 +6,18 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The landing hero's department carousel now fills its column** (`#715`;
+  `specs/2026-09-10-social-contact-surface/` R19). The two-column grid carried `lg:items-center` —
+  an explicit override of CSS grid's `stretch` default — which sized the second column to its own
+  content and parked it mid-row, leaving dead space above and below the panel. Restoring
+  `items-stretch` and giving the panel root, slide track and slides `h-full` lets it fill the
+  height; each slide centres its own content so a taller panel does not top-align. `#496` had
+  already fixed the *width* half of this (a fixed `28rem` cap); the height half survived it.
+  Unchanged below `lg`, where no grid applies and `h-full` resolves to `auto`. Shipped on this
+  slice's branch at the owner's request rather than as its own slice.
+
 ### Added
 
 - **Per-vendor social and contact links on the storefront** (`#407`, and the deep-link half of

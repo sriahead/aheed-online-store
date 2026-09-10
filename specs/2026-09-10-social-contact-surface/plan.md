@@ -117,6 +117,14 @@ exist.
 - **Analytics on link clicks.** No third-party script is introduced by this slice, which is what
   keeps it clear of the CSP and consent constraints `#407` notes.
 
+## Added mid-loop, and genuinely out of this slice's subject
+
+**The landing hero's carousel column (`#715`).** The owner asked for it during this loop and it
+ships on this branch, so it is specified as R19 rather than left unvalidated — but it has nothing to
+do with a social and contact surface. It is recorded here, given its own issue, and named in the
+CHANGELOG on its own terms so the PR does not quietly contain an unexplained layout change. If this
+slice is ever reverted, `#715` needs re-applying separately.
+
 ## Open items carried forward
 
 - **`#695`** — WhatsApp chat re-order (the API/approval half).

@@ -106,6 +106,15 @@ R16. `tests/social-contact-form.test.ts` exists and covers, at minimum: an accep
      rejected `javascript:` URL, a rejected `http:` URL, a blank URL parsing to `null`, an accepted
      digits-only WhatsApp number, and a rejected WhatsApp number containing `+`.
 
+R19. **(`#715`, added mid-loop at the owner's request — see `plan.md`.)** The landing hero's
+     two-column grid in `app/(landing)/page.tsx` uses `lg:items-stretch`, not `lg:items-center`, and
+     `components/layout/DepartmentHero.tsx`'s panel root, slide track and each slide carry `h-full`,
+     so the carousel fills its column's height at `lg` and above. Each slide also centres its own
+     content vertically. Below `lg` the layout is unchanged: no grid applies, so `h-full` resolves
+     to `auto`. The hero's existing `p-6 md:p-10` is unchanged, so the panel still clears the
+     section's edges. The left column, the carousel's content, its controls (arrows, dots,
+     pause/play) and its autoplay behaviour are untouched.
+
 R17. `CHANGELOG.md` updated (Gate 4).
 
 R18. `lint`, `typecheck`, `test`, `format:check` all remain green after this slice.
