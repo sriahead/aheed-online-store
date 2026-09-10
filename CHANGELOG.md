@@ -57,6 +57,27 @@ every branch merges.
   matching `ProductRow`'s exactly. No change to `BundleCard`, `BundleRow`, or any repository/service
   function.
 
+### Removed
+
+- **The `Category` select is gone from `/search`'s filter panel** (`#704`;
+  `specs/2026-09-10-search-category-select-removal/`). **No schema change, no migration.**
+  Store-owner-flagged: the department icon strip already at the top of every browse page
+  (`DepartmentScroller`, linking to `/categories/[slug]`) made a second, overlapping department
+  picker inside the filter panel redundant. The underlying `category` query-string filtering is
+  untouched — `FilterChips`'s removable chip and `search-href.ts`'s `categoryFilterHref` (used by
+  the zero-result recovery notice and search suggestions) still work exactly as before, so a
+  shopper who arrives at `/search?category=X` via one of those links still gets a correctly
+  filtered, chip-labelled result.
+  - **A hidden `category` passthrough field was added**, mirroring the existing `featured` one
+    exactly: a plain `<form method="GET">` submits only the fields it contains, so without it,
+    applying any other filter from a category-scoped listing would have silently dropped the
+    category and widened the shopper back to the whole catalogue — the same `#501`/`#568` trap this
+    codebase has already paid to learn about twice.
+  - `app/(storefront)/search/page.tsx`'s category fetch reverts from `categoryRepo.listTree()`
+    (widened by `#681` specifically to feed the now-removed select) back to
+    `categoryRepo.listTopLevel()` — every other consumer on the page only ever needed the
+    top-level rows, so this restores the page to its pre-`#681` one-query shape.
+
 ### Documentation
 
 - **`/document` (final) closeout for storefront browse discovery completion** (`#694`, `#397`,

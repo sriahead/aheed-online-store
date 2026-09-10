@@ -70,16 +70,12 @@ export default async function SearchPage({
   const query = params.q?.trim() ?? "";
 
   const categoryRepo = getCategoryRepository();
-  /*
-   * #681 — ONE read for both surfaces. The filter panel's category select needs departments AND
-   * their children, which `listTopLevel()` cannot supply (`parentId: null`); the department strip
-   * needs only the departments, which are the `parentId === null` rows of this same result. So the
-   * tree read REPLACES the top-level read rather than joining it, and the page issues no more
-   * category queries than it did before gaining the control — which matters because read
-   * amplification on these pages is live work (#670, #682).
-   */
-  const categoryTree = await categoryRepo.listTree();
-  const allCategories = categoryTree.filter((category) => category.parentId === null);
+  // #704 — back to top-level only. #681 widened this to `listTree()` specifically to feed the
+  // filter panel's category select (which needed departments AND their children); every other
+  // consumer here (the department strip, the recovery/suggestions notices) only ever used the
+  // top-level rows. With the select gone, `listTopLevel()` is the whole page's actual need again —
+  // same one-query shape as before #681, not a tree nothing reads any more.
+  const allCategories = await categoryRepo.listTopLevel();
 
   /*
    * #568 — resolve the drill-down slug to ids. An unknown or inactive slug resolves to `null` and
@@ -207,13 +203,7 @@ export default async function SearchPage({
         <div className="md:w-60 md:shrink-0">
           <CollectionNav activeHref={params.featured === "1" ? "/search?featured=1" : "/search"} />
           {/* #568 — sidebar at md+, a `details` disclosure below it. Both render the same form. */}
-          <FilterPanel
-            heading="Search & filters"
-            showQuery
-            searchParams={params}
-            facets={facets}
-            categories={categoryTree}
-          />
+          <FilterPanel heading="Search & filters" showQuery searchParams={params} facets={facets} />
         </div>
 
         <div className="flex-1">
