@@ -1337,6 +1337,29 @@ issues for shipped slices are expected. The Status field's one-time UI rename
 ## React & Next.js Hooks — learned the hard way
 - **A `useEffect` that listens for `pathname` changes to auto-close a UI element (e.g. a drawer/modal) must NOT include its `open` state in its dependencies.** If `open` is included, the act of opening the drawer changes `open` to true, which triggers the effect immediately and closes the drawer right back. Hit in P8: a cart drawer instantly closed on open because the builder passed `open` and `close()` into the dependency array to satisfy the lint rule. The correct pattern is to call the closure function unconditionally (e.g., `close()`) inside the effect, leaving `open` out of the dependency array, and if needed, explicitly silencing the specific lint rule (e.g., `react-hooks/set-state-in-effect`) for that line rather than changing the dependency semantics.
 
+## Storefront header mobile reachability (`components/layout/Header.tsx`) — learned the hard way
+- **A `hidden lg:*` utility on a header control removes it from EVERY phone and tablet, and this
+  repo has no mobile nav fallback of any kind — no bottom bar, no hamburger menu.** "Shop"
+  (`/categories`), "Shop List" (`/shop-your-list`) and `PostcodeChecker`'s `badge` variant (the
+  delivery-postcode tick/cross) were all `hidden lg:flex`/`hidden lg:inline-flex` for months,
+  invisible below 1024px on every route, with nothing else in the codebase offering a way to reach
+  them from a phone — confirmed unreachable by grep for any bottom-nav/mobile-menu component
+  (`components/layout/`), and confirmed pre-existing (not a regression from the session that found
+  it) via `git log` on the file. Owner-reported live against staging (`#718`), not caught by any
+  automated check — nothing in `lint`/`typecheck`/`test`/`build` renders at a viewport width. **The
+  same file already had the right pattern two controls over and it just wasn't reused**:
+  account/sign-in wraps its text label in `hidden sm:inline` with the icon always visible, so it
+  stays reachable (icon-only) down to the narrowest phone. Before hiding any header control below a
+  breakpoint, check whether an icon-only fallback (matching account/sign-in's existing pattern) is
+  what's actually wanted — this store's own header comment says most of its traffic is mobile.
+- **The cart trigger does NOT occupy space in the header's nav row and must not be counted when
+  reasoning about how much fits there on a phone.** `CartDrawerShell`'s opener button is `fixed
+  bottom-6 right-6` (`sm:bottom-8 sm:right-8`) — a floating action button outside normal document
+  flow, not a flex child of `<nav aria-label="Main Navigation">` despite being rendered from inside
+  it in JSX. It is easy to visually mistake for "one more item in the row" since it sits nearby; the
+  row's actual mobile-width budget only has to fit Shop, Shop List, the postcode badge, and
+  account/sign-in.
+
 ## Hard stops
 - Never invent infrastructure or credentials. If a resource/secret is missing, STOP and list what
   the human must create.
