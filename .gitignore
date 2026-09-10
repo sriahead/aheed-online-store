@@ -33,3 +33,11 @@ tsconfig.tsbuildinfo
 kms/site-*/content/*/*.mdx
 !kms/site-*/content/*/index.mdx
 kms/site-*/.next-env.d.ts
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+
+# Per-developer Claude config: machine-specific paths, personal hooks and MCP
+# enablement. It must stay local for every contributor, so ignore it here rather
+# than relying on an individual's global gitignore.
+.claude/settings.local.json

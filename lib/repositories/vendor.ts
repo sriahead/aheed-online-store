@@ -51,6 +51,15 @@ export interface VendorProfile {
    */
   bannerNote: string | null;
   heroSubtitle: string | null;
+  /**
+   * P9.2 (#407, #405) — social and contact identity, under the same rule as the two lines above.
+   * `null` HIDES that link; there is no platform default, because a platform-written social link
+   * is a claim made on a vendor's behalf. Both URLs are stored https-only
+   * (`lib/social-contact-form.ts`); `whatsappNumber` is digits only, for `wa.me`.
+   */
+  facebookUrl: string | null;
+  instagramUrl: string | null;
+  whatsappNumber: string | null;
   deliveryPrefixes: string[];
   // P3a — delivery rules as vendor data. P3a reads only the threshold (cart
   // banner); applying fee/minimum to a payable total is P3b.
@@ -108,6 +117,9 @@ export async function fetchVendorProfile(
           searchPlaceholder: true,
           bannerNote: true,
           heroSubtitle: true,
+          facebookUrl: true,
+          instagramUrl: true,
+          whatsappNumber: true,
           deliveryFeePence: true,
           freeDeliveryThresholdPence: true,
           minimumOrderPence: true,
@@ -143,6 +155,11 @@ export async function fetchVendorProfile(
     // element rather than borrowing Aheed's voice.
     bannerNote: vendor?.config?.bannerNote ?? null,
     heroSubtitle: vendor?.config?.heroSubtitle ?? null,
+    // Same reasoning — an unseeded vendor shows no social links at all rather
+    // than borrowing another vendor's accounts (#407, #405).
+    facebookUrl: vendor?.config?.facebookUrl ?? null,
+    instagramUrl: vendor?.config?.instagramUrl ?? null,
+    whatsappNumber: vendor?.config?.whatsappNumber ?? null,
     deliveryPrefixes: (vendor?.deliveryAreas ?? []).map((a) => a.prefix),
     // Fall back to the schema defaults when the config satellite is unseeded,
     // matching the deploy-before-seed safety the rest of this file uses.
@@ -201,6 +218,15 @@ export interface VendorStorefrontConfigInput {
   bannerNote?: string | null;
   heroSubtitle?: string | null;
   /**
+   * P9.2 (#407, #405) — same optionality rule as the copy fields above, and it matters for the
+   * same reason: the branding form and the delivery-rules form both submit without these, and
+   * omitting them must leave a vendor's social links alone rather than clearing them. `null` is
+   * an explicit clear (which hides the link); `undefined` is "not this form's business".
+   */
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
+  whatsappNumber?: string | null;
+  /**
    * #634 — the three delivery rules. Optional as a group: the branding half of
    * this form submits without them, and omitting them must leave the stored
    * values alone rather than reset them to a default.
@@ -245,6 +271,12 @@ export async function updateVendorStorefrontConfig(
       data: {
         bannerNote: data.bannerNote,
         heroSubtitle: data.heroSubtitle,
+        // Direct assignment, like the two above and unlike the delivery numbers below: Prisma
+        // reads `undefined` in an `update` as "no change", which is exactly the semantics these
+        // need, so no conditional spread is required to keep absent distinct from cleared.
+        facebookUrl: data.facebookUrl,
+        instagramUrl: data.instagramUrl,
+        whatsappNumber: data.whatsappNumber,
         // #634 — written only when supplied. `freeDeliveryThresholdPence` is
         // explicitly nullable, so `undefined` (absent) and `null` (free
         // delivery never offered) must stay distinguishable here; spreading a

@@ -6,7 +6,84 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The landing hero's department carousel now fills its column** (`#715`;
+  `specs/2026-09-10-social-contact-surface/` R19). The two-column grid carried `lg:items-center` —
+  an explicit override of CSS grid's `stretch` default — which sized the second column to its own
+  content and parked it mid-row, leaving dead space above and below the panel. Restoring
+  `items-stretch` and giving the panel root, slide track and slides `h-full` lets it fill the
+  height; each slide centres its own content so a taller panel does not top-align. `#496` had
+  already fixed the *width* half of this (a fixed `28rem` cap); the height half survived it.
+  Unchanged below `lg`, where no grid applies and `h-full` resolves to `auto`. Shipped on this
+  slice's branch at the owner's request rather than as its own slice.
+
 ### Added
+
+- **Per-vendor social and contact links on the storefront** (`#407`, and the deep-link half of
+  `#405`; `specs/2026-09-10-social-contact-surface/`). Three nullable `VendorConfig` columns —
+  `facebookUrl`, `instagramUrl`, `whatsappNumber` — put each vendor's own Facebook, Instagram and
+  `wa.me` links behind a **single floating button that expands on tap**, closed by default.
+  **A null HIDES that control** rather than falling back to a platform account, the same rule
+  `bannerNote`/`heroSubtitle` follow: a platform-written social link is a claim made on a vendor's
+  behalf (`#239`). Both seeded vendors start null, so the hidden state is the default rather than
+  something only a test reaches.
+  - **The WhatsApp number must be international format, and a leading zero is refused with a message
+    that names the fix.** An E.164 number never starts with `0`, and `wa.me` given a national-format
+    number like `07448894146` opens WhatsApp and starts **no chat**, silently and with no error. The
+    first number ever entered through the admin form was exactly that shape, and the original rule
+    (`digits, 7-15`) accepted it — the requirement was wrong and the code implemented it faithfully.
+  - **URL validation is an https-only allow-list, not a sanity check.** These are the first
+    vendor-editable values in this repo that land inside an `href`, and `new URL()` parses
+    `javascript:alert(1)` perfectly happily — parsing is not safety. `http:` is refused too, since a
+    mixed-content link from an HTTPS storefront is a downgrade. `lib/social-contact-form.ts` is pure
+    and DB-free like `lib/delivery-rules-form.ts`, with 25 unit tests.
+  - The trigger **sits above the cart button** rather than taking the bottom-right corner:
+    `CartDrawerShell` already occupies `bottom-6 right-6` and is unconditional (only its badge is
+    conditional). The panel is absolutely positioned above the trigger, so collapsed it takes no
+    layout space and the footprint stays one button however many links a vendor adds. It uses
+    `bg-action`, not WhatsApp's or any network's brand colour — a hex literal would break the token
+    convention, and a storefront rendering a third party's brand colour in its own chrome is the
+    mistake `#239` fixed — so it renders in each vendor's own palette.
+  - **It opens on click and on nothing else** — no scroll position, scroll direction, hover or focus
+    expands it, and the component registers no scroll listener at all. A standard disclosure:
+    `aria-expanded`/`aria-controls`, an accessible name that changes with state, and collapsed links
+    held at `tabIndex={-1}` so a keyboard user is never offered a link they cannot see. The panel
+    stays in the DOM rather than unmounting, and its transition is disabled under
+    `prefers-reduced-motion`.
+  - `lucide-react@1.30.0` ships 6056 icons and **no brand marks at all**, so the Facebook and
+    Instagram glyphs are inline SVG using lucide's own stroke geometry. Nothing was added to
+    `package.json`, which is what `#407` asked for.
+  - `specs/mission.md`'s MVP out-of-scope bullet is **narrowed in place, not deleted**: a contact
+    deep link ships, while WhatsApp as an outbound channel — notifications, marketing automation and
+    the chat re-order flow (`#695`) — stays out.
+  - The generated migration proposed dropping all three `pg_trgm` indexes again (GAP-011, seventh
+    occurrence); `--create-only` caught it before it reached the database.
+
+- **Graft MCP integration for repository navigation** (`#709`). A prebuilt symbol/edge graph
+  queried through six MCP tools (`graft_repo_map`, `graft_find_code`, `graft_find_all`,
+  `graft_file_api`, `graft_trace_calls`, `graft_check_freshness`), plus hooks, a statusline and a
+  hardened skill. **Graft is navigation, structural relationships and impact analysis only** —
+  source, approved specs/ADRs, tests and runtime validation remain authoritative truth, and the
+  committed `SKILL.md` states that rule explicitly.
+  - Two workflow touchpoints, deliberately minimal: `/orient` step 1 locates the area with
+    `graft map`/`graft ask` before broad Glob/Grep; `/validate` step 4 gains a *conditional*
+    shared-symbol `graft callers` check whose hits are investigation targets to confirm against
+    source and tests, never findings. `/build` and `/document` are untouched — Build runs in
+    Orient's context, and Document already reconciles from validation findings. Graft indexes no
+    `docs/`/`specs/` markdown, so it cannot become a second documentation system.
+  - Permissions are narrowed to read-only graft verbs; there is no broad `Bash(graft:*)`, and
+    `graft build --deep` is not auto-approved. Telemetry is disabled locally for the benchmark;
+    that preference is machine-local (`~/.graft/`) and is **not** enforced by this repository
+    configuration.
+  - The generated `graft/` tree is gitignored and regenerable; `.ignore` re-admits it to ripgrep so
+    the cards stay greppable. `.claude/settings.local.json` is now ignored repo-side rather than
+    depending on an individual contributor's global gitignore.
+  - Requires `@nanonets/graft` installed globally and one `graft build`. The helper shims derive
+    npm's Windows global prefix from `%APPDATA%` rather than baking an absolute path, falling
+    through to package resolution and `npm root -g` elsewhere.
+  - Retention is undecided: the `#407`/`#405` slice runs its full SDD lifecycle as a real-world
+    effectiveness benchmark, concluding KEEP / KEEP BUT MODIFY / REMOVE.
 
 - **The storefront's collection links now reach every browse page** (`#694`;
   `specs/2026-09-09-storefront-browse-discovery-completion/`). `CollectionNav` shipped in `#681` on
@@ -107,6 +184,14 @@ every branch merges.
   `staging`, merge `78f65d4`). Docs only — no runtime code, no schema change on this branch.
   - `specs/roadmap.md` (1.91.0 → 1.92.0): added a `#704` bullet to P9.3 covering what shipped, plus
     the staging-merge change-log row — same continuous-session caveat as `#701`'s closeout above.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+- **`/document` (final) closeout for the `staging → main` promotion carrying all three slices above**
+  (`#694`, `#397`, `#608`, `#701`, `#704`; PR #707, merge `2ec84f4`). Docs only — no runtime code, no
+  schema change on this branch.
+  - `specs/roadmap.md` (1.92.0 → 1.93.0): added the promotion's own change-log row, recording that
+    `closingIssuesReferences` was verified to resolve to exactly the five issues above — both before
+    merging and again afterward, alongside independently confirming `#682` and `#697` stayed open —
+    rather than assumed correct from the PR's own title.
   - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
 
 ### Fixed

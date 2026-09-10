@@ -112,7 +112,11 @@ export function DepartmentHero({
 
   return (
     <div
-      className="relative overflow-hidden rounded-3xl border border-black/10 shadow-lg"
+      // `h-full` so the panel fills whatever height its column gives it. The
+      // landing hero stretches that column (lg:items-stretch); anywhere the
+      // parent has no definite height this resolves to auto and changes nothing,
+      // which is what keeps the mobile single-column layout untouched.
+      className="relative h-full overflow-hidden rounded-3xl border border-black/10 shadow-lg"
       role="region"
       aria-roledescription="carousel"
       // P8.5f (R1): was "Shop by department" — that literal phrase is now the
@@ -128,7 +132,7 @@ export function DepartmentHero({
       onBlur={() => setInteractionPaused(false)}
     >
       <div
-        className="flex transition-transform duration-700 ease-in-out"
+        className="flex h-full transition-transform duration-700 ease-in-out"
         style={{ transform: `translateX(-${current * 100}%)` }}
       >
         {departments.map((department, index) => {
@@ -156,7 +160,11 @@ export function DepartmentHero({
           return (
             <div
               key={department.id}
-              className={`dept-panel relative w-full shrink-0 overflow-hidden ${PANEL_TONES[index % PANEL_TONES.length]} p-6 md:p-10`}
+              // `h-full` + `justify-center`: the slide fills the track's height,
+              // and its content stays vertically centred rather than sitting at
+              // the top of a taller panel. The absolutely-positioned children
+              // (chevron cutout, campaign photo, arrows, dots) are unaffected.
+              className={`dept-panel relative flex h-full w-full shrink-0 flex-col justify-center overflow-hidden ${PANEL_TONES[index % PANEL_TONES.length]} p-6 md:p-10`}
               role="group"
               aria-roledescription="slide"
               aria-label={`${index + 1} of ${count}`}

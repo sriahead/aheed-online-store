@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.31.0"
-updated: 2026-09-08
+version: "2.32.0"
+updated: 2026-09-10
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets, plus the Discover and Learn phases that run on milestone close. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -820,6 +820,20 @@ verified reality. **Runs on the same model as Ship (Sonnet 5), not a freshly-swi
 branch, not a PR of their own. Gate 4 requires a CHANGELOG diff on every branch, so a doc-only PR
 needs its own CHANGELOG entry to be pushable at all — worth it for a real correction, wasteful for
 an index footer.
+
+**A Document (final) closeout for a promotion, committed right after `main` and `staging`
+converge, false-positives on `hooks/pre-commit`'s local Gate 2 check.** That hook (`git commit`
+time, not CI) hardcodes its comparison against `origin/main` and treats any staged path under
+`app/` as a "source change" requiring a new `specs/*/requirements.md` — which incidentally catches
+`app/(admin)/staff/runbook/docs.ts`, a KMS-generated file, not authored source. A closeout branch
+created *before* a promotion has plenty of other branches' spec directories sitting in the
+`origin/main...HEAD` range to satisfy the check trivially; one created *immediately after* the
+promotion that same closeout is documenting has almost nothing in that range, so the identical
+docs-only diff shape (`roadmap.md`/`CHANGELOG.md`/`ARTIFACT_INDEX.md`/`docs.ts`, no new spec dir)
+that passed cleanly minutes earlier now blocks. `gates.yml` (the hook's own comment: "the real
+enforcement") has no equivalent Gate 2 check at all, only Gate 4 — so `git commit --no-verify` is
+the hook's own documented escape hatch, not a real gap, **provided the diff genuinely is
+docs-only** (verify with `git status --porcelain` before reaching for it, not after guessing).
 
 When this stage is done, tell the user to **switch to Opus 5** (`/model claude-opus-5`) and *then*
 run `/clear` — the assistant can do neither itself. Switching here, not right after Ship, means the

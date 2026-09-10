@@ -302,6 +302,14 @@ model VendorConfig {
   // Dispatch") was rendering for every vendor, SriMart included.
   bannerNote                 String? // header's second banner line
   heroSubtitle               String? // hero's supporting paragraph, under the tagline
+  // P9.2 (#407, #405) — per-vendor social and contact identity, same null rule as the two
+  // lines above: a null HIDES that link rather than falling back to a platform default. A
+  // platform-written social link is a claim made on a vendor's behalf, which is exactly what
+  // #239 fixed. Both URLs are validated https-only on write (lib/social-contact-form.ts) —
+  // they are the first vendor-editable values in this repo that land inside an href.
+  facebookUrl                String? // full https profile URL
+  instagramUrl               String? // full https profile URL
+  whatsappNumber             String? // digits only, E.164 without the leading +, for wa.me
   // P3a — delivery rules are vendor data, never constants (the AI Studio mockup hardcoded a
   // £30 threshold). Prisma-level defaults mean a newly-inserted vendor is valid without the
   // seed supplying values. P3a reads only the threshold (cart banner); applying the fee and

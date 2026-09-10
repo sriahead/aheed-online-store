@@ -6,6 +6,7 @@ import type { Theme, VendorBranding, VendorConfig } from "@/lib/repositories/ven
 import {
   applyStorefrontTheme,
   updateDeliveryRules,
+  updateSocialContact,
   updateStorefrontConfig,
 } from "@/features/admin/storefront";
 import {
@@ -15,6 +16,12 @@ import {
   initialDeliveryRulesState,
   penceToPoundsValue,
 } from "@/lib/delivery-rules-form";
+import {
+  FACEBOOK_URL_FIELD,
+  INSTAGRAM_URL_FIELD,
+  WHATSAPP_NUMBER_FIELD,
+  initialSocialContactState,
+} from "@/lib/social-contact-form";
 import { VendorLogoUploader } from "@/components/staff/VendorLogoUploader";
 
 /** The eight `VendorBranding` brand primitives — every column that is a hex string. */
@@ -64,6 +71,14 @@ export function StorefrontConfigForm({
   const [deliveryState, saveDeliveryRules, deliveryPending] = useActionState(
     updateDeliveryRules,
     initialDeliveryRulesState,
+  );
+
+  // #407 / #405 — a third independent form, for the same reason the delivery one is separate: an
+  // invalid URL must render against the input that caused it, which the branding form's
+  // fire-and-forget useTransition cannot do.
+  const [socialState, saveSocialContact, socialPending] = useActionState(
+    updateSocialContact,
+    initialSocialContactState,
   );
 
   async function action(formData: FormData) {
@@ -279,6 +294,89 @@ export function StorefrontConfigForm({
           className="rounded-full bg-primary py-3 font-bold text-white hover:bg-primary/90 disabled:opacity-50"
         >
           {deliveryPending ? "Saving…" : "Save Delivery Rules"}
+        </button>
+      </form>
+
+      {/* #407 / #405 — a third sibling <form>, never nested. Leaving a field blank HIDES that
+          link on the storefront rather than falling back to a platform account (#239). */}
+      <form action={saveSocialContact} className="flex flex-col gap-6">
+        <div>
+          <h2 className="font-bold text-black">Social &amp; contact links</h2>
+          <p className="mt-1 text-sm text-black/60">
+            Where shoppers can find you. Leave a field blank to hide that link from your storefront
+            — nothing is shown in its place.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="facebookUrl" className="font-bold text-black">
+            Facebook page address
+          </label>
+          <input
+            id="facebookUrl"
+            name="facebookUrl"
+            type="text"
+            inputMode="url"
+            defaultValue={initialConfig.facebookUrl ?? ""}
+            className={fieldClass(socialState.field === FACEBOOK_URL_FIELD)}
+            placeholder="e.g. https://www.facebook.com/yourpage"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="instagramUrl" className="font-bold text-black">
+            Instagram profile address
+          </label>
+          <input
+            id="instagramUrl"
+            name="instagramUrl"
+            type="text"
+            inputMode="url"
+            defaultValue={initialConfig.instagramUrl ?? ""}
+            className={fieldClass(socialState.field === INSTAGRAM_URL_FIELD)}
+            placeholder="e.g. https://www.instagram.com/yourprofile"
+          />
+          <p className="text-xs text-black/60">
+            Both addresses must start with https:// — anything else is refused.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="whatsappNumber" className="font-bold text-black">
+            WhatsApp number
+          </label>
+          <input
+            id="whatsappNumber"
+            name="whatsappNumber"
+            type="text"
+            inputMode="numeric"
+            defaultValue={initialConfig.whatsappNumber ?? ""}
+            className={fieldClass(socialState.field === WHATSAPP_NUMBER_FIELD)}
+            placeholder="e.g. 447700900123"
+          />
+          <p className="text-xs text-black/60">
+            International format, digits only — no plus sign, spaces or dashes. This adds a WhatsApp
+            button to your storefront.
+          </p>
+        </div>
+
+        {socialState.error && (
+          <p className="rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger">
+            {socialState.error}
+          </p>
+        )}
+        {socialState.saved && !socialState.error && (
+          <p className="rounded-xl bg-action-tint px-4 py-3 text-sm font-medium text-primary">
+            Social &amp; contact links saved.
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={socialPending}
+          className="rounded-full bg-primary py-3 font-bold text-white hover:bg-primary/90 disabled:opacity-50"
+        >
+          {socialPending ? "Saving…" : "Save Social & Contact Links"}
         </button>
       </form>
     </div>

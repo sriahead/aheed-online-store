@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
+import { FloatingContact } from "@/components/layout/FloatingContact";
 import { CookieBanner } from "@/components/consent/CookieBanner";
 import { brandStyle } from "@/lib/vendor-theme";
 import type { VendorProfile } from "@/lib/repositories/vendor";
@@ -45,6 +46,12 @@ export function StorefrontChrome({
           </div>
         </div>
       </footer>
+      <FloatingContact
+        vendorName={profile.name}
+        facebookUrl={profile.facebookUrl}
+        instagramUrl={profile.instagramUrl}
+        whatsappNumber={profile.whatsappNumber}
+      />
       <CookieBanner />
     </div>
   );
