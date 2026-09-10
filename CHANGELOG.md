@@ -108,6 +108,14 @@ every branch merges.
   - `specs/roadmap.md` (1.91.0 → 1.92.0): added a `#704` bullet to P9.3 covering what shipped, plus
     the staging-merge change-log row — same continuous-session caveat as `#701`'s closeout above.
   - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+- **`/document` (final) closeout for the `staging → main` promotion carrying all three slices above**
+  (`#694`, `#397`, `#608`, `#701`, `#704`; PR #707, merge `2ec84f4`). Docs only — no runtime code, no
+  schema change on this branch.
+  - `specs/roadmap.md` (1.92.0 → 1.93.0): added the promotion's own change-log row, recording that
+    `closingIssuesReferences` was verified to resolve to exactly the five issues above — both before
+    merging and again afterward, alongside independently confirming `#682` and `#697` stayed open —
+    rather than assumed correct from the PR's own title.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
 
 ### Fixed
 
