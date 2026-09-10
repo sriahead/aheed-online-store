@@ -37,7 +37,7 @@ export function PostcodeChecker({
 
     return (
       <span
-        className={`hidden lg:inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold ${
+        className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-bold ${
           deliverable
             ? "border-action/30 bg-action-tint text-primary"
             : "border-danger/30 bg-danger-tint text-danger"

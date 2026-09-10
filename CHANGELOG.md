@@ -8,6 +8,16 @@ every branch merges.
 
 ### Fixed
 
+- **`Shop`, `Shop List` and the delivery-postcode badge are reachable on mobile** (`#718`).
+  `components/layout/Header.tsx`'s "Shop"/"Shop List" nav links and
+  `components/layout/PostcodeChecker.tsx`'s `badge` variant were `hidden` below the `lg` (1024px)
+  breakpoint on every route, with no mobile equivalent anywhere — owner-reported against staging on
+  both `/` and `/categories`. Now follows the same icon-always/label-hidden-below-`sm` pattern the
+  account and cart controls already use, rather than disappearing entirely.
+- **Value Bundles cards on `/categories` are the same size as the page's other cards** (`#719`).
+  `BundleRow`'s horizontal-scroller items were sized at 288–320px against `ProductRow`'s 160–208px
+  for the same page's New Arrivals/Featured Products rows — nearly double. Widths now match exactly;
+  `BundleCard`'s content (already sharing `ProductCard`'s padding) is unchanged.
 - **The landing hero's department carousel now fills its column** (`#715`;
   `specs/2026-09-10-social-contact-surface/` R19). The two-column grid carried `lg:items-center` —
   an explicit override of CSS grid's `stretch` default — which sized the second column to its own
