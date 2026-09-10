@@ -95,6 +95,14 @@ every branch merges.
     was scoped to the whole page instead of the one landmark it was actually about. Corrected in
     `validation.md` and promoted to `CLAUDE.md`'s grep-trap section as a transferable lesson.
   - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
+- **`/document` (final) closeout for bundles page layout parity** (`#701`; PR #702 merged to
+  `staging`, merge `a602493`). Docs only — no runtime code, no schema change on this branch.
+  - `specs/roadmap.md` (1.90.0 → 1.91.0): added a `#701` bullet to P9.3 covering what shipped, plus
+    the staging-merge change-log row — explicitly noting the full `/propose → /spec → /build →
+    /validate → /ship` loop ran in one continuous session with no `/clear` between stages, per this
+    repo's own standing lesson that a context which just built something is the worst judge of
+    whether it matches the spec.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match.
 
 ### Fixed
 
