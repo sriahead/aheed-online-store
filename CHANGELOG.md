@@ -6,6 +6,19 @@ every branch merges.
 
 ## [Unreleased]
 
+### Documentation
+
+- **`/document` (final) closeout for the social & contact surface and the mobile nav/bundle-card
+  fixes** (`#407`, `#405`, `#715`, `#718`, `#719`, `#709`; PRs #716/#717/#720/#721 merged and
+  promoted to production). Docs only — no runtime code, no schema change on this branch.
+  - `specs/roadmap.md`: marked item 1 of the P9.2 store-owner priority set CLOSED; added four
+    change-log rows (staging merge and production promotion for each slice) plus a CLAUDE.md
+    lesson on `hidden lg:*` header controls with no mobile fallback.
+  - `CLAUDE.md`: new "Storefront header mobile reachability" section recording the `hidden lg:*`
+    trap and the cart trigger's `fixed`-positioning gotcha, so the next header change checks for an
+    icon-always/label-hidden-below-`sm` fallback rather than reaching for a bare `hidden` gate.
+  - `ARTIFACT_INDEX.md` / `docs.ts` regenerated to match. `npm run sdd:audit` exits 0.
+
 ### Fixed
 
 - **`Shop`, `Shop List` and the delivery-postcode badge are reachable on mobile** (`#718`).
