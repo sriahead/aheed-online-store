@@ -34,6 +34,10 @@ every branch merges.
 
 ### Added
 
+- **Tenant-Scoped Saved Themes & Harmonic Palette Generator** (`#714`). 
+  - **Saved Themes**: Vendors can now save their configured colours as a reusable theme. Unlike the global `Theme` presets (which are platform-wide), these are saved to a new `VendorTheme` model that strictly enforces row-level tenant isolation via a `vendorId` constraint. Vendors can apply both global presets and their own saved themes from the same UI, but attempting to apply another vendor's theme is securely blocked at the repository level.
+  - **Harmonic Random Pick**: A new "Randomise Colours" button allows vendors to dynamically generate accessible palettes. By locking their selected "Main Colour" as the anchor, the generator uses colour-theory relationships (analogous, complementary, triadic) with subtle jitter to build cohesive accents, tints, and backgrounds around it. The math is purely client-side and flows directly into the Live Preview contrast pipeline without premature database saves.
+
 - **Brand colour validation and robust fallback logic** (`#713`; `specs/2026-09-10-brand-colour-validation/`). 
   - `StorefrontConfigForm` migrated from `useTransition` to `useActionState` to render field-level validation errors for malformed hex codes instead of silently submitting them or throwing unhandled errors.
   - Added robust validation in `lib/brand-colour-form.ts` that enforces a strict `^#[0-9a-fA-F]{6}$` hex pattern.

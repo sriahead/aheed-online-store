@@ -8,8 +8,11 @@ import {
   getVendorBranding as getVendorBrandingRepo,
   getVendorConfig as getVendorConfigRepo,
   listThemes as listThemesRepo,
+  listVendorThemes as listVendorThemesRepo,
+  saveVendorTheme as saveVendorThemeRepo,
   updateVendorLogoKey as updateVendorLogoKeyRepo,
   updateVendorStorefrontConfig as updateVendorStorefrontConfigRepo,
+  type BrandPrimitives,
   type VendorProfile,
   type VendorStorefrontConfigInput,
 } from "@/lib/repositories/vendor";
@@ -95,7 +98,15 @@ export async function listThemes() {
   return listThemesRepo(getPrisma());
 }
 
-/** Copies a theme's eight brand primitives onto a vendor's `VendorBranding` row (#75). */
-export async function applyVendorTheme(vendorId: string, themeId: string) {
-  return applyThemeToVendorRepo(getPrisma(), vendorId, themeId);
+export async function listVendorThemes(vendorId: string) {
+  return listVendorThemesRepo(getPrisma(), vendorId);
+}
+
+export async function saveVendorTheme(vendorId: string, name: string, primitives: BrandPrimitives) {
+  return saveVendorThemeRepo(getPrisma(), vendorId, name, primitives);
+}
+
+/** Copies a theme's eight brand primitives onto a vendor's `VendorBranding` row (#75, #714). */
+export async function applyVendorTheme(vendorId: string, themeRef: string) {
+  return applyThemeToVendorRepo(getPrisma(), vendorId, themeRef);
 }
