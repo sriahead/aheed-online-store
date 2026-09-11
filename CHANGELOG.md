@@ -30,6 +30,13 @@ every branch merges.
 
 ### Added
 
+- **Brand colour validation and robust fallback logic** (`#713`; `specs/2026-09-10-brand-colour-validation/`). 
+  - `StorefrontConfigForm` migrated from `useTransition` to `useActionState` to render field-level validation errors for malformed hex codes instead of silently submitting them or throwing unhandled errors.
+  - Added robust validation in `lib/brand-colour-form.ts` that enforces a strict `^#[0-9a-fA-F]{6}$` hex pattern.
+  - Hardened `lib/vendor-theme.ts`'s `brandStyle()` fallback behaviour: any malformed colour from existing data is safely swapped for `DEFAULT_BRAND_PRIMITIVES` before being passed to contrast clamping functions, preventing runtime crashes.
+  - Created an audit script (`scripts/audit-colours.ts`) to hunt down malformed colours in existing databases without running destructive migrations.
+
+
 - **Project-state model handoff integrated into the SDD loop** (`#726`;
   `specs/2026-09-11-model-handoff-workflow/`). Build Notes now retain current-slice implementation
   and validation context; authoritative documents retain permanent truth; `docs/model-handoff.md`

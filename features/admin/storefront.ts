@@ -17,6 +17,7 @@ import {
 import type { VendorStorefrontConfigInput } from "@/lib/repositories/vendor";
 import { parseDeliveryRules, type DeliveryRulesFormState } from "@/lib/delivery-rules-form";
 import { parseSocialContact, type SocialContactFormState } from "@/lib/social-contact-form";
+import { parseBrandColourForm, type BrandColourFormState } from "@/lib/brand-colour-form";
 import crypto from "crypto";
 
 const PRESIGN_TTL_SECONDS = 300;
@@ -79,16 +80,22 @@ export async function attachVendorLogo(key: string): Promise<ImageActionResult<v
 }
 
 export async function updateStorefrontConfig(
-  data: VendorStorefrontConfigInput,
-): Promise<{ ok: boolean; error?: string }> {
+  prevState: BrandColourFormState,
+  formData: FormData,
+): Promise<BrandColourFormState> {
   const auth = await requireVendorRole("ADMIN");
-  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+  if (!auth.ok) return { ...prevState, error: refusal(auth.status), saved: false };
 
-  await updateVendorStorefrontConfig(auth.vendorId, data);
+  const parsed = parseBrandColourForm(formData);
+  if (!parsed.ok) {
+    return { error: parsed.error.message, field: parsed.error.field, saved: false };
+  }
+
+  await updateVendorStorefrontConfig(auth.vendorId, parsed.value);
 
   revalidatePath("/staff/storefront");
   revalidatePath("/", "layout");
-  return { ok: true };
+  return { error: null, field: null, saved: true };
 }
 
 /**

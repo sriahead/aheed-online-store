@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { BrandPrimitives } from "@/lib/repositories/vendor";
+import { type BrandPrimitives, DEFAULT_BRAND_PRIMITIVES } from "@/lib/repositories/vendor";
 import { clampForContrast, darkenForHover, mutedForeground } from "@/lib/color-contrast";
 
 /**
@@ -100,8 +100,17 @@ const AA_NON_TEXT = 3;
 
 const WHITE = "#ffffff";
 
+const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/;
+
 export function brandStyle(primitives: BrandPrimitives): CSSProperties {
-  const p = primitives;
+  const p = { ...primitives };
+
+  // R7 fail-safe: replace any malformed primitive with the system default before it reaches the clamp
+  for (const key of Object.keys(DEFAULT_BRAND_PRIMITIVES) as Array<keyof BrandPrimitives>) {
+    if (!p[key] || !HEX_PATTERN.test(p[key])) {
+      p[key] = DEFAULT_BRAND_PRIMITIVES[key];
+    }
+  }
 
   // The light surfaces a foreground token can land on. `cream` is the vendor's
   // own muted page background, so it belongs here rather than a fixed value.

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useActionState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,7 @@ import {
   WHATSAPP_NUMBER_FIELD,
   initialSocialContactState,
 } from "@/lib/social-contact-form";
+import { initialBrandColourState } from "@/lib/brand-colour-form";
 import { VendorLogoUploader } from "@/components/staff/VendorLogoUploader";
 
 /** The eight `VendorBranding` brand primitives — every column that is a hex string. */
@@ -59,9 +60,13 @@ export function StorefrontConfigForm({
   logoUrl: string | null;
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
   const [themePending, startThemeTransition] = useTransition();
   const [selectedThemeId, setSelectedThemeId] = useState(initialBranding.themeId ?? "");
+
+  const [brandingState, saveBranding, brandingPending] = useActionState(
+    updateStorefrontConfig,
+    initialBrandColourState,
+  );
 
   // #634 — its own form and its own state. The branding form above is
   // fire-and-forget; these three need a field-level error rendered against the
@@ -80,35 +85,6 @@ export function StorefrontConfigForm({
     updateSocialContact,
     initialSocialContactState,
   );
-
-  async function action(formData: FormData) {
-    const bannerNote = formData.get("bannerNote") as string;
-    const heroSubtitle = formData.get("heroSubtitle") as string;
-    const brandGreenDark = formData.get("brandGreenDark") as string;
-    const brandGreen = formData.get("brandGreen") as string;
-    const brandOrange = formData.get("brandOrange") as string;
-    const brandRed = formData.get("brandRed") as string;
-    const brandCream = formData.get("brandCream") as string;
-    const brandGreenTint = formData.get("brandGreenTint") as string;
-    const brandOrangeTint = formData.get("brandOrangeTint") as string;
-    const brandRedTint = formData.get("brandRedTint") as string;
-
-    startTransition(async () => {
-      await updateStorefrontConfig({
-        bannerNote: bannerNote || null,
-        heroSubtitle: heroSubtitle || null,
-        brandGreenDark: brandGreenDark || undefined,
-        brandGreen: brandGreen || undefined,
-        brandOrange: brandOrange || undefined,
-        brandRed: brandRed || undefined,
-        brandCream: brandCream || undefined,
-        brandGreenTint: brandGreenTint || undefined,
-        brandOrangeTint: brandOrangeTint || undefined,
-        brandRedTint: brandRedTint || undefined,
-      });
-      router.refresh();
-    });
-  }
 
   function applyTheme() {
     if (!selectedThemeId) return;
@@ -160,7 +136,7 @@ export function StorefrontConfigForm({
         </div>
       )}
 
-      <form action={action} className="flex flex-col gap-6">
+      <form action={saveBranding} className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
           <label htmlFor="heroSubtitle" className="font-bold text-black">
             Hero Subtitle
@@ -189,28 +165,36 @@ export function StorefrontConfigForm({
           />
         </div>
 
-        {BRAND_COLOR_FIELDS.map((field) => (
-          <div key={field.name} className="flex flex-col gap-2">
-            <label htmlFor={field.name} className="font-bold text-black">
-              {field.label}
-            </label>
-            <input
-              id={field.name}
-              name={field.name}
-              type="text"
-              defaultValue={initialBranding[field.name] || ""}
-              className="rounded-lg border border-black/20 p-3 font-mono"
-              placeholder={field.placeholder}
-            />
-          </div>
-        ))}
+        {BRAND_COLOR_FIELDS.map((field) => {
+          const hasError = brandingState.field === field.name;
+          return (
+            <div key={field.name} className="flex flex-col gap-2">
+              <label htmlFor={field.name} className="font-bold text-black">
+                {field.label}
+              </label>
+              <input
+                id={field.name}
+                name={field.name}
+                type="text"
+                defaultValue={initialBranding[field.name] || ""}
+                className={`rounded-lg border p-3 font-mono ${
+                  hasError ? "border-danger focus-visible:outline-danger" : "border-black/20"
+                }`}
+                placeholder={field.placeholder}
+              />
+              {hasError && (
+                <p className="text-sm font-semibold text-danger">{brandingState.error}</p>
+              )}
+            </div>
+          );
+        })}
 
         <button
           type="submit"
-          disabled={pending}
+          disabled={brandingPending}
           className="rounded-full bg-primary py-3 font-bold text-white hover:bg-primary/90 disabled:opacity-50"
         >
-          {pending ? "Saving…" : "Save Config"}
+          {brandingPending ? "Saving…" : "Save Config"}
         </button>
       </form>
 
