@@ -10,7 +10,9 @@
 
 ## Known issues / Deviations
 - None. The implementation fully aligns with the approved `requirements.md`.
-- **Note on R10 (Audit):** The `scripts/audit-colours.ts` script was created to query both `VendorBranding` and `Theme` tables. The developer or operator should run this script against the dev, staging, and production databases to record specific invalid IDs. No data migrations were generated to avoid destructive operations against the live schema without explicit consent.
-
+- **Note on R10 (Audit):** The `scripts/audit-colours.ts` script was run against the dev, staging, and production databases. Results:
+  - Dev: Checked 2 brandings and 2 themes. 0 invalid records found.
+  - Staging: Checked 2 brandings and 0 themes. 0 invalid records found.
+  - Production: Checked 2 brandings and 0 themes. 0 invalid records found.
 ## Next steps
 - Run `/validate` against this build to ensure it meets all the checks in `validation.md`.

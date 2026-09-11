@@ -20,12 +20,12 @@ describe('brandStyle fallback logic', () => {
     const style = brandStyle(broken);
     
     // Check if the valid one is kept
-    expect(style['--color-brand-red-tint']).toBe('#abcdef');
+    expect((style as any)['--color-brand-red-tint']).toBe('#abcdef');
     
     // Check if the invalid ones are replaced with defaults
-    expect(style['--color-brand-green']).toBe(DEFAULT_BRAND_PRIMITIVES.green);
-    expect(style['--color-brand-orange']).toBe(DEFAULT_BRAND_PRIMITIVES.orange);
-    expect(style['--color-brand-red']).toBe(DEFAULT_BRAND_PRIMITIVES.red);
-    expect(style['--color-brand-cream']).toBe(DEFAULT_BRAND_PRIMITIVES.cream);
+    expect((style as any)['--color-brand-green']).toBe(DEFAULT_BRAND_PRIMITIVES.green);
+    expect((style as any)['--color-brand-orange']).toBe(DEFAULT_BRAND_PRIMITIVES.orange);
+    expect((style as any)['--color-brand-red']).toBe(DEFAULT_BRAND_PRIMITIVES.red);
+    expect((style as any)['--color-brand-cream']).toBe(DEFAULT_BRAND_PRIMITIVES.cream);
   });
 });

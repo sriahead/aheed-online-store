@@ -1,7 +1,10 @@
+import "dotenv/config";
 import { PrismaClient } from '@prisma/client';
+import { PrismaNeon } from "@prisma/adapter-neon";
 
 async function audit() {
-  const prisma = new PrismaClient();
+  const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+  const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString }) });
   const hexPattern = /^#[0-9a-fA-F]{6}$/;
 
   const check = (name: string, obj: any, fields: string[]) => {
