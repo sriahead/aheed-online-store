@@ -102,7 +102,7 @@ All facts in this section require live verification:
 - **PR #722** into `staging` carried final documentation for social/contact and mobile-nav/
   bundle-card work plus promotions PR #717/#721. Required checks were green, but it remained open.
 - **PR #730** merged #713 into `staging` (brand colour validation).
-- **feature/vendor-colour-pickers** completed #714 (vendor colour pickers with live preview), currently pending validation.
+- **PR #731** merged #714 into `staging` (vendor-scoped saved themes and random palette generation).
 
 ## Backlog Reconciliation Findings
 
