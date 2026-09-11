@@ -40,9 +40,9 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-11.
-- **Checkout:** `feature/model-handoff-workflow`, created from `origin/staging` at `eb06def`; #726's
+- **Checkout:** `feature/model-handoff-workflow`, created from `origin/staging` at `f1dfb03`; #726's
   approved spec commit is `b237d67`. Reverify the current head.
-- **Base state:** `origin/staging` at `eb06def`; `origin/main` at `36c5b92`. Staging had no commit
+- **Base state:** `origin/staging` at `f1dfb03`; `origin/main` at `36c5b92`. Staging had no commit
   absent from main after PR #721's promotion.
 - **Worktrees:** only the main checkout.
 - **Protected local work:** the separate `docs/orient-reads-board-priority` branch points to
@@ -99,8 +99,6 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **#726**, this workflow integration, was In Progress locally on
-  `feature/model-handoff-workflow`; no PR existed at the last check.
 - **PR #725** into `staging` taught `/orient` to read board Priority and corrected stale board-field
   claims. Required checks were green, but it remained open.
 - **PR #722** into `staging` carried final documentation for social/contact and mobile-nav/

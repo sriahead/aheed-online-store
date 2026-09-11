@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-11T06:16:01.214Z` · commit `ad39cf3` · `168` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-11T10:40:09.931Z` · commit `262db4c` · `168` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
