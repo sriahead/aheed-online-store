@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-11T10:40:09.931Z` · commit `262db4c` · `168` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-11T18:05:16.593Z` · commit `a3b3268` · `169` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -161,6 +161,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Admin catalogue latency and cursor safety (plan)](specs/2026-09-09-admin-catalogue-latency-and-cursor-safety/plan.md) | spec | 1.0.0 | 2026-09-09 | draft | internal | Guards the unvalidated keyset cursor behind a store-owner error report on /staff/products, collapses per-request vendor and category re-resolution into React cache(), and adds the ordered Product index the list ordering has never had. |
 | [Storefront browse consolidation — one filter surface, collection entry points (plan)](specs/2026-09-09-storefront-browse-consolidation/plan.md) | spec | 1.0.0 | 2026-09-09 | draft | internal | Replaces the two competing department pickers on /search with a single category control inside the filter panel, adds Value Bundles, New Arrivals and Featured entry points to that panel, and retires the hidden category passthrough field the old split required. |
 | [Storefront browse discovery completion (plan)](specs/2026-09-09-storefront-browse-discovery-completion/plan.md) | spec | 1.0.0 | 2026-09-09 | draft | internal | Renders CollectionNav on category pages, adds the pack-size facet |
+| [Brand-colour write validation and fail-safe render (plan)](specs/2026-09-10-brand-colour-validation/plan.md) | spec | 1.0.0 | 2026-09-10 | approved | internal | Validate the eight VendorBranding hex columns on write, move the branding form to useActionState so a rejection renders against its field, and make brandStyle() fall back rather than throw on a malformed stored value. |
 | [Bundles page layout parity (plan)](specs/2026-09-10-bundles-page-layout-parity/plan.md) | spec | 1.0.0 | 2026-09-10 | draft | internal | Restructure /bundles to use the same two-column layout and product-grid breakpoints as /search and /categories/[slug], so Value Bundles reads as the same page as New Arrivals and Featured Products rather than a visually distinct one. |
 | [Mobile nav visibility and Value Bundles card size (plan)](specs/2026-09-10-mobile-nav-and-bundle-card-fix/plan.md) | spec | 1.0.0 | 2026-09-10 | draft | internal | Fix two owner-reported staging regressions — Shop/Shop List/the delivery-postcode badge are unreachable below the lg breakpoint on every route, and Value Bundles cards render nearly double the width of the page's other cards. |
 | [Search category select removal (plan)](specs/2026-09-10-search-category-select-removal/plan.md) | spec | 1.0.0 | 2026-09-10 | draft | internal | Remove the redundant Category select from /search's filter panel, and revert the page's category read from the full tree (#681) back to top-level-only, since nothing else on the page needs the tree shape once the select is gone. |
