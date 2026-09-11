@@ -182,7 +182,9 @@ export function StorefrontConfigForm({
                 }`}
                 placeholder={field.placeholder}
               />
-              {hasError && <p className="text-sm font-semibold text-danger">{brandingState.error}</p>}
+              {hasError && (
+                <p className="text-sm font-semibold text-danger">{brandingState.error}</p>
+              )}
             </div>
           );
         })}

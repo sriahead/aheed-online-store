@@ -104,7 +104,7 @@ const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 export function brandStyle(primitives: BrandPrimitives): CSSProperties {
   const p = { ...primitives };
-  
+
   // R7 fail-safe: replace any malformed primitive with the system default before it reaches the clamp
   for (const key of Object.keys(DEFAULT_BRAND_PRIMITIVES) as Array<keyof BrandPrimitives>) {
     if (!p[key] || !HEX_PATTERN.test(p[key])) {

@@ -27,7 +27,11 @@ export const initialBrandColourState: BrandColourFormState = {
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
-function parseHex(raw: string | undefined | null, field: string, label: string): ParseResult<string | undefined> {
+function parseHex(
+  raw: string | undefined | null,
+  field: string,
+  label: string,
+): ParseResult<string | undefined> {
   if (!raw) return { ok: true, value: undefined };
   const trimmed = raw.trim();
   if (trimmed === "") return { ok: true, value: undefined };
@@ -45,7 +49,7 @@ function parseHex(raw: string | undefined | null, field: string, label: string):
 export function parseBrandColourForm(formData: FormData): ParseResult<BrandColourInput> {
   const bannerNote = formData.get("bannerNote") as string;
   const heroSubtitle = formData.get("heroSubtitle") as string;
-  
+
   const fields = [
     { key: "brandGreenDark", label: "Primary Brand Color (Dark)" },
     { key: "brandGreen", label: "Primary Brand Color" },
