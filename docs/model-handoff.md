@@ -40,8 +40,7 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-11.
-- **Checkout:** `feature/model-handoff-workflow`, created from `origin/staging` at `f1dfb03`; #726's
-  approved spec commit is `b237d67`. Reverify the current head.
+- **Checkout:** `feature/vendor-colour-pickers`, created from `staging`; `#714`'s approved spec commit is `42fe531`. Reverify the current head.
 - **Base state:** `origin/staging` at `f1dfb03`; `origin/main` at `36c5b92`. Staging had no commit
   absent from main after PR #721's promotion.
 - **Worktrees:** only the main checkout.
@@ -66,7 +65,7 @@ The live board showed **22 open High-priority items**, all with blank Complexity
 
 - Search operability: #582, #583, #589, #602.
 - Staff/admin polish: #638, #683.
-- Brand safety: #713, then dependent #714.
+- Brand safety: #714 completed via feature/vendor-colour-pickers.
 - Stock and fulfilment: #363, #400, #401, #402, #613.
 - Saved lists: #116.
 - Paid-order cancellation and reversals: #696, then #137 and #151.
@@ -77,7 +76,6 @@ The live board showed **22 open High-priority items**, all with blank Complexity
 
 Dependencies and scope boundaries worth preserving:
 
-- #713's checkpointed plan is draft only, with no `requirements.md` or approval; #714 depends on it.
 - #696 makes #137 and #151 reachable. Current cancellation acts only on `PENDING_PAYMENT`.
 - #363 gates delivery slots and Click & Collect. #402 also needs the location decision and real
   operating inputs such as capacity, rounds and order volume.
@@ -103,9 +101,8 @@ All facts in this section require live verification:
   claims. Required checks were green, but it remained open.
 - **PR #722** into `staging` carried final documentation for social/contact and mobile-nav/
   bundle-card work plus promotions PR #717/#721. Required checks were green, but it remained open.
-- `npm run sdd:audit` reported four gaps: the #713 draft being treated mechanically as an
-  undocumented slice, the mobile-nav slice, and promotions #717/#721. PR #722 was expected to close
-  the latter three; re-run rather than assuming it merged.
+- **PR #730** merged #713 into `staging` (brand colour validation).
+- **feature/vendor-colour-pickers** completed #714 (vendor colour pickers with live preview), currently pending validation.
 
 ## Backlog Reconciliation Findings
 

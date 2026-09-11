@@ -3,6 +3,8 @@
 import { useState, useActionState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Theme, VendorBranding, VendorConfig } from "@/lib/repositories/vendor";
+import { DEFAULT_BRAND_PRIMITIVES } from "@/lib/repositories/vendor";
+import { brandStyle } from "@/lib/vendor-theme";
 import {
   applyStorefrontTheme,
   updateDeliveryRules,
@@ -63,6 +65,32 @@ export function StorefrontConfigForm({
   const [themePending, startThemeTransition] = useTransition();
   const [selectedThemeId, setSelectedThemeId] = useState(initialBranding.themeId ?? "");
 
+  const [colors, setColors] = useState<Record<BrandColorFieldName, string>>({
+    brandGreenDark: initialBranding.brandGreenDark || "",
+    brandGreen: initialBranding.brandGreen || "",
+    brandOrange: initialBranding.brandOrange || "",
+    brandRed: initialBranding.brandRed || "",
+    brandCream: initialBranding.brandCream || "",
+    brandGreenTint: initialBranding.brandGreenTint || "",
+    brandOrangeTint: initialBranding.brandOrangeTint || "",
+    brandRedTint: initialBranding.brandRedTint || "",
+  });
+
+  const [prevBranding, setPrevBranding] = useState(initialBranding);
+  if (initialBranding !== prevBranding) {
+    setPrevBranding(initialBranding);
+    setColors({
+      brandGreenDark: initialBranding.brandGreenDark || "",
+      brandGreen: initialBranding.brandGreen || "",
+      brandOrange: initialBranding.brandOrange || "",
+      brandRed: initialBranding.brandRed || "",
+      brandCream: initialBranding.brandCream || "",
+      brandGreenTint: initialBranding.brandGreenTint || "",
+      brandOrangeTint: initialBranding.brandOrangeTint || "",
+      brandRedTint: initialBranding.brandRedTint || "",
+    });
+  }
+
   const [brandingState, saveBranding, brandingPending] = useActionState(
     updateStorefrontConfig,
     initialBrandColourState,
@@ -93,6 +121,17 @@ export function StorefrontConfigForm({
       router.refresh();
     });
   }
+
+  const livePrimitives = {
+    "green-dark": colors.brandGreenDark || DEFAULT_BRAND_PRIMITIVES["green-dark"],
+    green: colors.brandGreen || DEFAULT_BRAND_PRIMITIVES["green"],
+    orange: colors.brandOrange || DEFAULT_BRAND_PRIMITIVES["orange"],
+    red: colors.brandRed || DEFAULT_BRAND_PRIMITIVES["red"],
+    cream: colors.brandCream || DEFAULT_BRAND_PRIMITIVES["cream"],
+    "green-tint": colors.brandGreenTint || DEFAULT_BRAND_PRIMITIVES["green-tint"],
+    "orange-tint": colors.brandOrangeTint || DEFAULT_BRAND_PRIMITIVES["orange-tint"],
+    "red-tint": colors.brandRedTint || DEFAULT_BRAND_PRIMITIVES["red-tint"],
+  };
 
   return (
     <div className="flex max-w-2xl flex-col gap-8">
@@ -167,27 +206,72 @@ export function StorefrontConfigForm({
 
         {BRAND_COLOR_FIELDS.map((field) => {
           const hasError = brandingState.field === field.name;
+          const val = colors[field.name];
           return (
             <div key={field.name} className="flex flex-col gap-2">
               <label htmlFor={field.name} className="font-bold text-black">
                 {field.label}
               </label>
-              <input
-                id={field.name}
-                name={field.name}
-                type="text"
-                defaultValue={initialBranding[field.name] || ""}
-                className={`rounded-lg border p-3 font-mono ${
-                  hasError ? "border-danger focus-visible:outline-danger" : "border-black/20"
-                }`}
-                placeholder={field.placeholder}
-              />
+              <div className="flex gap-3">
+                <input
+                  type="color"
+                  value={val || "#ffffff"}
+                  onChange={(e) => setColors((prev) => ({ ...prev, [field.name]: e.target.value }))}
+                  className={`h-[50px] w-[50px] cursor-pointer rounded-lg border p-1 ${
+                    hasError ? "border-danger" : "border-black/20"
+                  }`}
+                />
+                <input
+                  id={field.name}
+                  name={field.name}
+                  type="text"
+                  value={val}
+                  onChange={(e) => setColors((prev) => ({ ...prev, [field.name]: e.target.value }))}
+                  className={`flex-1 rounded-lg border p-3 font-mono ${
+                    hasError ? "border-danger focus-visible:outline-danger" : "border-black/20"
+                  }`}
+                  placeholder={field.placeholder}
+                />
+              </div>
               {hasError && (
                 <p className="text-sm font-semibold text-danger">{brandingState.error}</p>
               )}
             </div>
           );
         })}
+
+        {/* Live Preview */}
+        <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-black/10 p-6">
+          <h3 className="font-bold text-black">Live Preview</h3>
+          <p className="text-sm text-black/60">
+            This shows what your colours will look like to shoppers. Aheed automatically adjusts them to guarantee they are readable.
+          </p>
+          <div
+            style={brandStyle(livePrimitives)}
+            className="flex flex-col gap-4 rounded-xl border border-black/5 bg-surface-muted p-6"
+          >
+            {/* Primary / Header style */}
+            <div className="flex items-center justify-between rounded-lg bg-primary px-4 py-3 text-white">
+              <span className="font-bold">Header / Primary Button</span>
+            </div>
+
+            {/* Action text on action tint */}
+            <div className="flex flex-col gap-1 rounded-lg bg-action-tint p-4">
+              <span className="font-bold text-action">Trust Strip / Info Panel</span>
+              <span className="text-sm text-primary-muted">This is muted text on the action tint.</span>
+            </div>
+
+            {/* Error banner */}
+            <div className="rounded-lg bg-danger-tint p-4 text-danger">
+              <span className="font-bold">Error Banner</span>
+            </div>
+            
+            {/* Accent badge */}
+            <div className="self-start rounded-full bg-accent-tint px-3 py-1 text-sm font-bold text-accent">
+              Accent Badge
+            </div>
+          </div>
+        </div>
 
         <button
           type="submit"
