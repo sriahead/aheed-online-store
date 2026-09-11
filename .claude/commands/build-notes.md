@@ -25,11 +25,24 @@ conversation is destroyed by the Clear that follows.
    ADR) whose standing decision this slice changed. These are part of the change and belong on the
    same branch — not deferred to the post-ship pass.
 4. File a GitHub issue for every deliberately deferred item, now, while the reasoning is fresh.
-5. **Commit it all**, then run `npm run sdd:preclear` and get **exit 0**. It checks the four spec
+5. Run the mandatory **Project-State Handoff Check** before this stage is complete:
+
+   > Did Orient → Propose → Spec → Build discover or change project-level knowledge that would be
+   > lost after Clear and that a future model would otherwise need to rediscover?
+
+   If yes, persist it at the correct level before Clear:
+   - Current-slice implementation and validation detail → `build-notes.md`.
+   - Durable project truth → the appropriate authoritative documentation.
+   - Important overall current state → `docs/model-handoff.md`.
+
+   Routine implementation details stay in Build Notes and are not copied into the project handoff.
+   If no important overall state changed, leave the handoff untouched. This is a semantic judgment,
+   so do not add it to `sdd:preclear` as a heuristic.
+6. **Commit it all**, then run `npm run sdd:preclear` and get **exit 0**. It checks the four spec
    files exist, the build notes carry their required sections, `CHANGELOG.md` differs from the base
    branch, and the working tree is clean. If it fails, fix what it names — do not tell the user it's
    safe to clear on the strength of having intended to commit everything.
-6. Only once it exits 0, tell the user explicitly that it's safe to `/clear` and to switch to
+7. Only once it exits 0, tell the user explicitly that it's safe to `/clear` and to switch to
    Sonnet 5 (`/model claude-sonnet-5`) — you cannot do either yourself.
 
 Do not validate here. Validation runs deliberately from a fresh context against the spec.
