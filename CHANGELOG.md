@@ -30,6 +30,16 @@ every branch merges.
 
 ### Added
 
+- **Project-state model handoff integrated into the SDD loop** (`#726`;
+  `specs/2026-09-11-model-handoff-workflow/`). Build Notes now retain current-slice implementation
+  and validation context; authoritative documents retain permanent truth; `docs/model-handoff.md`
+  retains only important overall current position; and `/orient` recovers from that snapshot before
+  reverifying volatile Git, GitHub, Project, PR, deployment and environment state. `/build-notes`
+  gains a mandatory pre-Clear Project-State Handoff Check, while `/document` reconciles the handoff
+  only when shipped work materially changes overall project state. The semantic decision remains a
+  human judgment rather than a new `sdd:preclear` heuristic, and no parallel handoff artifact,
+  Build Notes heading, `/validate` change, application change or #713 work is included.
+
 - **Per-vendor social and contact links on the storefront** (`#407`, and the deep-link half of
   `#405`; `specs/2026-09-10-social-contact-surface/`). Three nullable `VendorConfig` columns —
   `facebookUrl`, `instagramUrl`, `whatsappNumber` — put each vendor's own Facebook, Instagram and
@@ -5143,7 +5153,6 @@ every branch merges.
 ### Notes
 - No feature code beyond the skeleton. Auth, catalogue, cart, checkout, and the design system
   arrive in P1+ behind their specs and gates.
-
 
 
 

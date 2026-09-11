@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.32.0"
-updated: 2026-09-10
+version: "2.33.0"
+updated: 2026-09-11
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets, plus the Discover and Learn phases that run on milestone close. Each stage is also a Claude Code slash command.
 tags: [sdd, workflow, process, context]
@@ -77,6 +77,29 @@ lucky.
 **The cost.** Everything load-bearing must be on disk *before* a Clear. Anything living only in the
 conversation is gone. That is the discipline the flow is buying, not a side effect of it.
 
+## Project-state handoff responsibilities
+
+Four artifacts answer four different questions. Keep those boundaries explicit so a context reset
+does not create either lost knowledge or four copies of the same knowledge:
+
+- **Build Notes — what happened in this slice?** `build-notes.md` carries implementation decisions,
+  changed areas, deviations, validation context and known-shaky areas needed across the
+  pre-validation Clear. It is detailed and slice-local.
+- **Authoritative documentation — what is permanently true?** Architecture, runtime, roadmap,
+  operations and other standing decisions are corrected in their owning documents. A handoff may
+  point to that authority; it must not replace or duplicate it.
+- **Model Handoff — where does the overall project stand now?** `docs/model-handoff.md` is a concise
+  project-wide recovery snapshot containing only important current position a fresh model would
+  otherwise have to rediscover. It is not another changelog or a substitute for Build Notes.
+- **Orient — what is actually true now?** Orient reads the handoff to recover context, then
+  reverifies volatile Git, GitHub, Project, PR, deployment and scope-relevant environment state
+  before acting. The live result wins.
+
+The two judgment checks that maintain these boundaries live at Document (build notes) and Document
+(final) below. They are deliberately not automated in `sdd:preclear`: whether a finding is routine
+slice detail, durable truth or material overall state is a semantic decision, not a file-presence
+check.
+
 ## Two machine checks
 
 Every SDD gate fires *before or at merge* — `pre-commit` (Gate 2), `pre-push` and `gates.yml`
@@ -132,8 +155,10 @@ specific already-landed PR.
 ## The delivery board
 
 The GitHub Project **“Aheed Online Store — Delivery”** (`#2`, owner `sriahead`, provisioned by
-`scripts/provision-project.sh`) is a generated **view** of this roadmap — the **status layer only**.
-Scope and acceptance criteria live in `specs/`, never on the board.
+`scripts/provision-project.sh`) is a generated **status-and-priority view** of this roadmap, never a
+scope source. It carries Status, Priority (`High`/`Medium`/`Low`) and Complexity (`S`/`M`/`L`);
+scope and acceptance criteria live in `specs/`. The owner maintains Priority deliberately, so an
+open `High` item goes to Propose ahead of an assistant-generated ranking.
 
 Its one non-obvious rule, which the loop has to respect: **`Done` means *in production*, not
 merged.** PRs here merge into `staging`, not the default branch, so `Closes #NN` does **not**
@@ -167,10 +192,15 @@ what happens to a process that charges slice-sized ceremony for a one-line fix.
 
 Check the actual repo before proposing or building anything — not what a doc *says* is true.
 
+- Read `CLAUDE.md` first, then `docs/model-handoff.md`. The handoff is dated recovery context, not
+  authority for volatile GitHub, Project, deployment or environment state; use its fresh-session
+  checks as leads to reverify, and replace assumptions with the live result.
 - Read the code/config for the area you're touching, not just the doc that describes it.
   `docs/repo-structure.md`'s phase-tags have already gone stale in places (it tagged `tsconfig.json`
   and a hex/px-lint rule as P6 after both were effectively superseded) — `specs/roadmap.md` and the
-  actual filesystem are authoritative, planning-doc sketches are not.
+  actual filesystem are authoritative, planning-doc sketches are not. Use the handoff to avoid a
+  repository-wide rediscovery; read deeper authoritative docs and code only for the current task or
+  a discrepancy the live checks surfaced.
 - Check whether a roadmap item is *actually* buildable now, not just nominally next. `lib/repositories/`
   is listed under P0/P1 scope but has nothing to wrap until real Prisma models exist beyond
   `HealthCheck` — confirmed by checking the schema, not by assuming the roadmap line is ready.
@@ -200,9 +230,14 @@ Check the actual repo before proposing or building anything — not what a doc *
   (final) never landed — fix it on the current branch, per the carry-forward rule, rather than
   noting it and moving on. This is the only check that runs *after* Ship, so treat a failure as
   real work, not a warning.
-- Read the delivery board as the status layer (`gh project item-list 2 --owner sriahead`) — but
-  trust `specs/` and the filesystem for scope. A board that disagrees with the repo is a board that
-  needs reconciling, not a source to plan from.
+- Read the delivery board's Status and Priority with
+  `gh project item-list 2 --owner sriahead --format json --limit 600` — the default page silently
+  truncates this board. Trust `specs/` and the filesystem for scope; a board that disagrees with the
+  repo needs reconciling. Lead the orientation report with open items whose Priority is `High`, then
+  give sequencing, blocker and owner-gated commentary within that set rather than replacing it with
+  an assistant-generated priority list.
+- Reverify open PRs, relevant GitHub state, current deployments and any environment fact the next
+  scope depends on. A previous handoff's values are evidence of what to check, never current truth.
 
 ## Propose
 
@@ -365,6 +400,17 @@ Everything that must survive the Clear. This is a **write-to-disk** stage, not a
   a worktree can be removed or pruned before anyone looks. The build-notes file is the one artifact
   the Clear bets on (see above); a worktree's location is exactly the kind of thing that doesn't
   survive the Clear unless it's written down here.
+- **Run the Project-State Handoff Check before this stage is considered complete:**
+
+  > Did Orient → Propose → Spec → Build discover or change project-level knowledge that would be
+  > lost after Clear and that a future model would otherwise need to rediscover?
+
+  If yes, persist it at the correct level before Clear: current-slice implementation and validation
+  detail goes in `build-notes.md`; durable project truth goes in its authoritative documentation;
+  important overall current position goes in `docs/model-handoff.md`. Routine implementation detail
+  stays in Build Notes and is not copied into the project handoff. If no important overall state
+  changed, leave the handoff untouched. This is a mandatory judgment check, not an
+  `sdd:preclear` heuristic.
 - Commit it all. If it isn't committed, the Clear destroys it.
 - **Then run `npm run sdd:preclear` and get exit 0.** It is the gate on this stage, not a
   formality: it derives the slice from the branch, requires all four spec files, requires the
@@ -387,6 +433,7 @@ Still on you, because no script can judge them:
 
 - [ ] The build notes are actually *informative*, not just present
 - [ ] Persistent-doc updates for any changed standing decision
+- [ ] Project-State Handoff Check completed, with information persisted at the correct level
 - [ ] GitHub issues filed for every deferred item
 - [ ] **If Build ran in an isolated sub-agent worktree, its path and branch are written into
       `build-notes.md`, not left to `git worktree list` to rediscover.** `sdd:preclear`'s clean-tree
@@ -785,10 +832,10 @@ session that just shipped.
 
 ## Document (final)
 
-The durable record of what actually shipped and what validation actually proved. Supersedes
-`build-notes.md` where they disagree — the notes describe intent at build time, this describes
-verified reality. **Runs on the same model as Ship (Sonnet 5), not a freshly-switched Opus 5** — see
-"Why the switch sits after Document, not before" above.
+The durable record of what actually shipped and what validation actually proved. Verified permanent
+documentation supersedes an incorrect build-time claim, but it does not replace `build-notes.md`'s
+slice-local record. **Runs on the same model as Ship (Sonnet 5), not a freshly-switched Opus 5** —
+see "Why the switch sits after Document, not before" above.
 
 - Rebuild the KMS index (`npm run kms:build-index`) and re-validate front-matter
   (`npm run kms:validate`). **The index footer records the commit it was built from, so a post-ship
@@ -798,14 +845,19 @@ verified reality. **Runs on the same model as Ship (Sonnet 5), not a freshly-swi
   no amount of pre-ship writing would have predicted (an unverified Resend sending domain that
   blocked all real email delivery; a payment-failure path that needed a scheduled window against live
   secrets) — those become tracked issues and doc corrections here.
+- **Run the final-state handoff reconciliation after Validate/Fix/Ship:** did the completed work
+  materially change the overall project state a fresh model needs for recovery? If yes, update the
+  authoritative documentation first, then reconcile `docs/model-handoff.md` with the final shipped
+  state. Remove or replace stale information rather than appending history, and reference authority
+  rather than copying it. If nothing material changed, leave the handoff untouched. This does not
+  turn Build Notes into final documentation or make the handoff a second changelog.
 - Update `specs/roadmap.md`: progress, and a closure note in its change log if this closed out a
   phase/milestone, matching existing entries' style. **This is the step `sdd:audit` checks at the
   next Orient** — if it doesn't land, the next loop opens with a reported gap. Verify with
   `npm run sdd:audit` before you consider this stage done, rather than waiting to be caught.
-- **Reconcile the delivery board** — the status-layer twin of the roadmap update. Every issue for
+- **Reconcile the delivery board** — the status-and-priority-view twin of the roadmap update. Every issue for
   this slice should be `In Review` (staging) or closed/`Done` (promoted to `main`), and anything
-  newly deferred should be on the board with a Phase. The board holds status only; nothing that
-  belongs in `specs/` goes there.
+  newly deferred should be on the board with a Phase. Nothing that belongs in `specs/` goes there.
 - Record anything the loop itself taught — a trap worth encoding in this file or `CLAUDE.md` — while
   it's still cheap to write down.
 - Later phases (P7 compliance, P8 handover) need compliance reports / a handover pack per their own
