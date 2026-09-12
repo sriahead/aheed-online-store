@@ -75,7 +75,9 @@ export function CategoryListClient({ categories }: { categories: CategoryItem[] 
                     )}
                   </button>
                 )}
-                {!isParent && !category.parentId && <div className="w-5 h-5 shrink-0" aria-hidden />}
+                {!isParent && !category.parentId && (
+                  <div className="w-5 h-5 shrink-0" aria-hidden />
+                )}
                 <div>
                   <p className="flex flex-wrap items-center gap-2">
                     <Link

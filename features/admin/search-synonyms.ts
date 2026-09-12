@@ -143,7 +143,10 @@ export async function bulkManageSynonyms(
 
   const idsRaw = String(form.get("ids") ?? "");
   if (!idsRaw) return { error: "No items selected.", field: null, notice: null };
-  const ids = idsRaw.split(",").map((id) => id.trim()).filter(Boolean);
+  const ids = idsRaw
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
   if (ids.length === 0) return { error: "No items selected.", field: null, notice: null };
 
   const intent = String(form.get("intent") ?? "");
@@ -156,5 +159,9 @@ export async function bulkManageSynonyms(
   if (!result.ok) return { error: result.error, field: null, notice: null };
 
   revalidate();
-  return { error: null, field: null, notice: `${status === "APPROVED" ? "Approved" : "Rejected"} ${ids.length} item(s).` };
+  return {
+    error: null,
+    field: null,
+    notice: `${status === "APPROVED" ? "Approved" : "Rejected"} ${ids.length} item(s).`,
+  };
 }

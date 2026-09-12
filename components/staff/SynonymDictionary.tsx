@@ -230,14 +230,14 @@ export function PendingSynonymsClient({ pendingRows }: { pendingRows: SearchSyno
         <h2 className="text-sm font-semibold uppercase tracking-wide text-primary-muted">
           Awaiting your approval ({pendingRows.length})
         </h2>
-        
+
         {pendingRows.length > 0 && (
           <form action={action} className="flex items-center gap-3">
             <input type="hidden" name="ids" value={Array.from(selected).join(",")} />
-            
+
             <label className="flex items-center gap-2 text-sm text-primary-muted hover:text-primary cursor-pointer">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 className="rounded border-black/20 text-action focus:ring-action"
                 checked={selected.size === pendingRows.length}
                 onChange={toggleAll}
@@ -266,7 +266,7 @@ export function PendingSynonymsClient({ pendingRows }: { pendingRows: SearchSyno
           </form>
         )}
       </div>
-      
+
       <FormMessage error={state.error} notice={state.notice} />
 
       <ul className="space-y-3 mt-3">

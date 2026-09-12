@@ -98,7 +98,9 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
                 >
                   {doc.visibility || "internal"} • {doc.audience.join(", ")}
                 </span>
-                <span className="text-[11px] text-primary-muted/50 font-medium">{doc.lastUpdated}</span>
+                <span className="text-[11px] text-primary-muted font-medium">
+                  {doc.lastUpdated}
+                </span>
               </div>
               <h3
                 className={`font-semibold mt-2 ${
@@ -133,7 +135,7 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
                   <span className="text-xs font-bold text-action uppercase tracking-wider">
                     {selectedDoc.category}
                   </span>
-                  <span className="text-primary-muted/50">/</span>
+                  <span className="text-primary-muted">/</span>
                   <span className="text-xs font-medium text-primary-muted">{selectedDoc.id}</span>
                 </div>
                 <h2 className="text-2xl font-bold text-primary mt-2">{selectedDoc.title}</h2>
@@ -155,7 +157,7 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
             </div>
 
             <div className="mt-8">
-              <div className="prose prose-base max-w-4xl mx-auto prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-a:text-action hover:prose-a:text-action/80 prose-img:rounded-2xl">
+              <div className="prose prose-base max-w-4xl mx-auto prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-a:text-action hover:prose-a:text-primary prose-img:rounded-2xl">
                 <Markdown>{selectedDoc.content}</Markdown>
               </div>
             </div>
