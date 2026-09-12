@@ -8,6 +8,11 @@ every branch merges.
 
 ### Changed
 
+- **Documentation and handoff reconciliation for #737**:
+  - Reconciled `docs/model-handoff.md` with verified staging and main git states, closed #737 (#738) and #733 (#734/#736) work, and updated owner priorities.
+  - Updated `specs/roadmap.md` with closure entries for #737 (PR #738) on staging and promotion PR #736 on main.
+  - Aligned `docs/staff-playbook/staff-tabs-guide.md` and `docs/store-admin-guide/admin-tabs-guide.md` with new Staff vs Admin RBAC boundaries.
+  - Rebuilt KMS artifact index and runbook docs bundle.
 - **Staff vs Admin role isolation and operational refinements** (`#737`; `specs/2026-09-12-staff-admin-help-ratings/`). **No schema change, no migration.**
   - **Role isolation & server-side authorization**: Day-to-day store operations (Products, Categories, Brands, Promotions, Bundles, Runbook, and synonym moderation) are scoped to both `STAFF` and `ADMIN`. Platform-level functions (Payments, Storefront Configuration, Delivery Areas, Loyalty, Discount Codes, Reports, Customers, Team & Access, and AI synonym proposals) are strictly restricted to `ADMIN`, guarded at both UI page level (`<PanelRefusal />`) and server actions.
   - **Category Manager**: Moved the "New Category" creation form above the category list on `/staff/categories`, and added global "Expand All" / "Collapse All" controls in `CategoryListClient`.

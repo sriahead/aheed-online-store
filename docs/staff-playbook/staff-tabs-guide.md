@@ -4,11 +4,11 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.0.0"
-updated: "2026-09-06"
+version: "2.1.0"
+updated: "2026-09-12"
 visibility: internal
-summary: "How to use every page in the Staff Panel: picking and dispatching orders, keeping stock honest, clearing stranded payments, and finding the guides. One section per menu item."
-tags: ["staff", "guide", "ui", "fulfillment", "inventory", "payments"]
+summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, bundles, promotions, inventory, search dictionary moderation, and finding the guides. One section per menu item."
+tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms"]
 ---
 
 # Staff Daily Operations Playbook
@@ -17,8 +17,10 @@ Welcome to the **Staff Panel**. This guide covers every page you can open, one s
 item. If a page is not listed here, your account cannot open it — the Store Admin Management Guide
 covers the owner-only pages.
 
-Your four pages are **Overview**, **Live Inventory & Availability**, **Fulfillment & Orders** and
-**Payment Issues**, plus this **Runbook**. Everything else in the panel belongs to a store admin.
+Your core operational pages are **Overview**, **Live Inventory & Availability**, **Fulfillment & Orders**,
+**Catalogue** (Products, Categories, Brands, Bundles, Promotions), and **Search Dictionary**,
+plus this **Runbook**. Configuration of storefront settings, payments, delivery areas, loyalty,
+and discount codes belongs to a store admin.
 
 ## Overview
 
