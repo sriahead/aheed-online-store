@@ -6,6 +6,15 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **Staff Panel Operability & Search Synonyms** (`#733`, wrapping `#589`, `#583`, `#582`, `#602`, `#638`, `#683`; `specs/2026-09-12-staff-panel-operability/`). **No schema change, no migration.**
+  - **`#589`, `#583`**: Hardened the AI synonym generation path. The Cloudflare Workers AI `fetch` response's JSON parsing is now wrapped in a `try/catch` to gracefully fall back to a standard error rather than throwing an unhandled exception when the model or proxy returns a non-JSON payload (e.g., 502 Bad Gateway HTML).
+  - **`#582`**: Bulk synonym management. The `PENDING` queue in `/staff/search-synonyms` now features a checkbox selection column and a bulk action bar, permitting store admins to approve or reject multiple AI proposals at once. The atomic update runs over the `neon-websocket` (`getPrismaWs()`) adapter via `updateMany` to bypass the Neon HTTP transaction limitations.
+  - **`#602`**: The search dictionary is now explicitly discoverable from the staff hub. A "Search dictionary" card is rendered on `/staff` for admins, bypassing the need to type the URL manually.
+  - **`#638`**: The category manager (`/staff/categories`) now supports hierarchical expand/collapse toggling via a new `CategoryListClient` component. Sub-categories are visually grouped and can be hidden/shown by clicking the parent's toggle (defaulting to expanded), improving operability for large taxonomies.
+  - **`#683`**: `RunbookClient` hardcoded colour scales (`slate-*`, `emerald-*`, `amber-*`) are replaced with the application's semantic design system tokens (`primary`, `primary-muted`, `accent`, `action`, `surface-muted`), aligning the runbook with the vendor's actual palette. Mobile styling for the tab row was updated to horizontally scroll rather than squishing.
+
 ### Fixed
 
 - **`Shop`, `Shop List` and the delivery-postcode badge are reachable on mobile** (`#718`).

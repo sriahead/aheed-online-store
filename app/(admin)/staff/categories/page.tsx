@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { FolderTree } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { CategoryForm } from "@/components/staff/CategoryForm";
+import { CategoryListClient } from "@/components/staff/CategoryListClient";
 
 // Reads the session and this vendor's categories — must render per-request.
 export const dynamic = "force-dynamic";
@@ -40,50 +40,7 @@ export default async function StaffCategoriesPage() {
         Departments shoppers browse by. Two levels deep, top level first.
       </p>
 
-      {categories.length === 0 ? (
-        <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <FolderTree className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
-          <p className="text-sm text-primary-muted">
-            No categories yet. Create one before adding products.
-          </p>
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {categories.map((category) => (
-            <li
-              key={category.id}
-              className={`rounded-2xl border border-black/10 bg-white p-4 ${
-                category.parentId ? "ml-6" : ""
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href={`/staff/categories/${category.id}`}
-                      className="font-semibold text-primary hover:underline"
-                    >
-                      {category.name}
-                    </Link>
-                    {!category.isActive && (
-                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-muted">
-                        Hidden
-                      </span>
-                    )}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-primary-muted">
-                    {category.parentName ? `in ${category.parentName} · ` : ""}
-                    {category.slug}
-                  </p>
-                </div>
-                <p className="shrink-0 text-xs text-primary-muted">
-                  {category.productCount} {category.productCount === 1 ? "product" : "products"}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <CategoryListClient categories={categories} />
 
       {/* Create sits on the list page rather than a /new route of its own: a
           category is five fields, and the list is the context you need to pick a

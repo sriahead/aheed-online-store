@@ -3,11 +3,13 @@
 import { useActionState } from "react";
 import {
   addSynonym,
+  bulkManageSynonyms,
   manageSynonym,
   proposeSynonymsFromLog,
 } from "@/features/admin/search-synonyms";
 import { initialSynonymFormState } from "@/lib/synonym-form";
 import type { SearchSynonymRow } from "@/lib/repositories/search-synonyms";
+import { useState } from "react";
 
 /**
  * `/staff/search-synonyms`'s interactive parts (P2.6 slice 3, #566).
@@ -192,5 +194,99 @@ export function SynonymRowForm({ row }: { row: SearchSynonymRow }) {
       </div>
       <FormMessage error={state.error} notice={state.notice} />
     </form>
+  );
+}
+
+export function PendingSynonymsClient({ pendingRows }: { pendingRows: SearchSynonymRow[] }) {
+  const [selectedState, setSelectedState] = useState<Set<string>>(new Set());
+  const [state, action, pending] = useActionState(bulkManageSynonyms, initialSynonymFormState);
+
+  // Derive actual selection from state and current rows (React docs: "You might not need an effect")
+  const pendingIds = new Set(pendingRows.map((r) => r.id));
+  const selected = new Set([...selectedState].filter((id) => pendingIds.has(id)));
+
+  const toggleAll = () => {
+    if (selected.size === pendingRows.length) {
+      setSelectedState(new Set());
+    } else {
+      setSelectedState(new Set(pendingRows.map((r) => r.id)));
+    }
+  };
+
+  const toggleOne = (id: string) => {
+    setSelectedState((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  if (pendingRows.length === 0) return null;
+
+  return (
+    <section className="mb-8">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-primary-muted">
+          Awaiting your approval ({pendingRows.length})
+        </h2>
+        
+        {pendingRows.length > 0 && (
+          <form action={action} className="flex items-center gap-3">
+            <input type="hidden" name="ids" value={Array.from(selected).join(",")} />
+            
+            <label className="flex items-center gap-2 text-sm text-primary-muted hover:text-primary cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="rounded border-black/20 text-action focus:ring-action"
+                checked={selected.size === pendingRows.length}
+                onChange={toggleAll}
+              />
+              Select all
+            </label>
+
+            <button
+              type="submit"
+              name="intent"
+              value="approve"
+              disabled={pending || selected.size === 0}
+              className="rounded-full border border-action px-3 py-1 text-xs font-semibold text-action disabled:opacity-50"
+            >
+              Approve selected
+            </button>
+            <button
+              type="submit"
+              name="intent"
+              value="reject"
+              disabled={pending || selected.size === 0}
+              className="rounded-full border border-black/15 px-3 py-1 text-xs font-semibold text-primary-muted disabled:opacity-50"
+            >
+              Reject selected
+            </button>
+          </form>
+        )}
+      </div>
+      
+      <FormMessage error={state.error} notice={state.notice} />
+
+      <ul className="space-y-3 mt-3">
+        {pendingRows.map((row) => (
+          <li key={row.id} className="flex gap-3 items-start">
+            <div className="pt-5 pl-1">
+              <input
+                type="checkbox"
+                className="rounded border-black/20 text-action focus:ring-action cursor-pointer"
+                checked={selected.has(row.id)}
+                onChange={() => toggleOne(row.id)}
+                aria-label={`Select ${row.alias}`}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <SynonymRowForm row={row} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

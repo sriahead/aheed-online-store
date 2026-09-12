@@ -21,7 +21,7 @@ type DocArticle = {
 };
 
 /**
- * The runbook reader (#633).
+ * The runbook reader (#633, updated #683).
  *
  * THIS COMPONENT DOES NOT FILTER BY AUDIENCE. `app/(admin)/staff/runbook/page.tsx` has already
  * decided what this viewer may see; a second filter here is what produced #625, where the page
@@ -45,15 +45,16 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       <div className="lg:col-span-4 space-y-4">
-        <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-xl">
+        {/* Overflow-x-auto handles wrapping neatly on narrow screens without squishing */}
+        <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-xl overflow-x-auto custom-scrollbar">
           <button
             type="button"
             onClick={() => setFilter(null)}
             aria-pressed={filter === null}
-            className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition ${
+            className={`whitespace-nowrap flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition ${
               filter === null
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
+                ? "bg-white text-primary shadow-sm"
+                : "text-primary-muted hover:text-primary"
             }`}
           >
             All
@@ -64,10 +65,10 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
               type="button"
               onClick={() => setFilter(audience)}
               aria-pressed={filter === audience}
-              className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition ${
+              className={`whitespace-nowrap flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition ${
                 filter === audience
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                  ? "bg-white text-primary shadow-sm"
+                  : "text-primary-muted hover:text-primary"
               }`}
             >
               {audienceLabel(audience)}
@@ -83,32 +84,32 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
               onClick={() => setSelectedDoc(doc)}
               className={`w-full text-left p-4 rounded-2xl border text-sm transition ${
                 selectedDoc?.id === doc.id
-                  ? "bg-emerald-50/50 border-emerald-200 ring-1 ring-emerald-500 shadow-sm"
-                  : "bg-white border-slate-200 text-slate-800 hover:border-slate-300 hover:bg-slate-50"
+                  ? "bg-action-tint border-action/20 ring-1 ring-action shadow-sm"
+                  : "bg-white border-black/10 text-primary hover:border-black/20 hover:bg-surface-muted"
               }`}
             >
               <div className="flex items-center justify-between mb-1">
                 <span
                   className={`text-[10px] uppercase px-2 py-0.5 rounded-full font-bold ${
                     doc.visibility === "public"
-                      ? "bg-emerald-100 text-emerald-900"
-                      : "bg-amber-100 text-amber-900"
+                      ? "bg-action-tint text-primary"
+                      : "bg-accent-tint text-accent"
                   }`}
                 >
                   {doc.visibility || "internal"} • {doc.audience.join(", ")}
                 </span>
-                <span className="text-[11px] text-slate-400 font-medium">{doc.lastUpdated}</span>
+                <span className="text-[11px] text-primary-muted/50 font-medium">{doc.lastUpdated}</span>
               </div>
               <h3
                 className={`font-semibold mt-2 ${
-                  selectedDoc?.id === doc.id ? "text-emerald-900" : "text-slate-900"
+                  selectedDoc?.id === doc.id ? "text-primary" : "text-primary"
                 }`}
               >
                 {doc.title}
               </h3>
               <p
                 className={`text-xs line-clamp-2 mt-1 ${
-                  selectedDoc?.id === doc.id ? "text-emerald-700/80" : "text-slate-500"
+                  selectedDoc?.id === doc.id ? "text-action" : "text-primary-muted"
                 }`}
               >
                 {doc.summary}
@@ -116,7 +117,7 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
             </button>
           ))}
           {filteredDocs.length === 0 && (
-            <div className="p-8 text-center text-slate-500 text-sm border border-dashed border-slate-200 rounded-2xl">
+            <div className="p-8 text-center text-primary-muted text-sm border border-dashed border-black/10 rounded-2xl">
               No documents found for this filter.
             </div>
           )}
@@ -125,28 +126,28 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
 
       <div className="lg:col-span-8">
         {selectedDoc ? (
-          <div className="bg-white text-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-6 gap-4">
+          <div className="bg-white text-primary rounded-3xl p-6 sm:p-8 border border-black/10 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-black/5 pb-6 gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">
+                  <span className="text-xs font-bold text-action uppercase tracking-wider">
                     {selectedDoc.category}
                   </span>
-                  <span className="text-slate-300">/</span>
-                  <span className="text-xs font-medium text-slate-500">{selectedDoc.id}</span>
+                  <span className="text-primary-muted/50">/</span>
+                  <span className="text-xs font-medium text-primary-muted">{selectedDoc.id}</span>
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900 mt-2">{selectedDoc.title}</h2>
+                <h2 className="text-2xl font-bold text-primary mt-2">{selectedDoc.title}</h2>
               </div>
-              <div className="sm:text-right text-xs text-slate-500 flex flex-row sm:flex-col gap-4 sm:gap-1">
+              <div className="sm:text-right text-xs text-primary-muted flex flex-row sm:flex-col gap-4 sm:gap-1">
                 <p>
                   Visibility:{" "}
-                  <span className="font-medium text-amber-600 capitalize">
+                  <span className="font-medium text-accent capitalize">
                     {selectedDoc.visibility || "internal"}
                   </span>
                 </p>
                 <p>
                   Audience:{" "}
-                  <span className="font-medium text-emerald-600 capitalize">
+                  <span className="font-medium text-action capitalize">
                     {selectedDoc.audience.join(", ")}
                   </span>
                 </p>
@@ -154,13 +155,13 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
             </div>
 
             <div className="mt-8">
-              <div className="prose prose-slate prose-base max-w-4xl mx-auto prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-a:text-emerald-600 hover:prose-a:text-emerald-700 prose-img:rounded-2xl">
+              <div className="prose prose-base max-w-4xl mx-auto prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-a:text-action hover:prose-a:text-action/80 prose-img:rounded-2xl">
                 <Markdown>{selectedDoc.content}</Markdown>
               </div>
             </div>
           </div>
         ) : (
-          <div className="bg-white text-slate-500 rounded-3xl p-12 border border-slate-200 flex items-center justify-center text-sm shadow-sm">
+          <div className="bg-white text-primary-muted rounded-3xl p-12 border border-black/10 flex items-center justify-center text-sm shadow-sm">
             Select a document to read
           </div>
         )}
