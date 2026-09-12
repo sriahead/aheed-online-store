@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-12T08:03:49.559Z` · commit `d57859a` · `174` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-12T09:43:39.715Z` · commit `3d21c90` · `177` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -168,6 +168,9 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Social & contact surface — Facebook, Instagram and WhatsApp deep link (plan)](specs/2026-09-10-social-contact-surface/plan.md) | spec | 1.0.0 | 2026-09-10 | draft | internal | Three nullable VendorConfig fields put per-vendor Facebook, Instagram and WhatsApp links on the storefront, with a null hiding its link rather than borrowing another vendor's identity. |
 | [Project-state model handoff workflow integration (plan)](specs/2026-09-11-model-handoff-workflow/plan.md) | spec | 1.0.0 | 2026-09-11 | approved | internal | Formalize the project-state model handoff within Orient, Build Notes, and final Document while keeping slice detail, durable truth, current project position, and live verification distinct. |
 | [Vendor colour pickers (plan)](specs/2026-09-11-vendor-colour-pickers/plan.md) | spec | 1.0.0 | 2026-09-11 | draft | internal | Add visual colour pickers to the staff storefront configuration form, with a live preview of the contrast-clamped semantic values. |
+| [Staff/Admin Delegation, Category Manager, Help Centre, and Ratings](specs/2026-09-12-staff-admin-help-ratings/plan.md) | doc | 1.0.0 | 2026-09-12 | draft | internal | Consolidate STAFF vs ADMIN responsibilities, enhance Category Manager, improve Help Centre markdown rendering, and hide zero-review ratings. |
+| [Requirements](specs/2026-09-12-staff-admin-help-ratings/requirements.md) | doc | 1.0.0 | 2026-09-12 | draft | internal | Requirements for Staff/Admin roles, Category Manager, Help Centre, and zero-review ratings. |
+| [Validation](specs/2026-09-12-staff-admin-help-ratings/validation.md) | doc | 1.0.0 | 2026-09-12 | draft | internal | Verification criteria for Staff/Admin roles, Category Manager, Help Centre, and zero-review ratings. |
 | [Build Notes](specs/2026-09-12-staff-panel-operability/build-notes.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Build notes for staff panel operability and search synonyms |
 | [Staff Panel Operability & Search Synonyms Plan](specs/2026-09-12-staff-panel-operability/plan.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Plan for staff panel operability and search synonyms |
 | [Requirements](specs/2026-09-12-staff-panel-operability/requirements.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Requirements for staff panel operability and search synonyms |

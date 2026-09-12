@@ -19,7 +19,7 @@ import { createCategoryForVendor, updateCategoryForVendor } from "@/lib/categori
  * Catalogue admin actions (P6b1, #159) — the write half of /staff/products and
  * /staff/categories, and the first admin write path the catalogue has ever had.
  *
- * Each action runs `requireVendorRole("ADMIN")` ITSELF rather than trusting the
+ * Each action runs `requireVendorRole("STAFF", "ADMIN")` ITSELF rather than trusting the
  * page that rendered the form. A server action is a public endpoint at a stable
  * id: anyone who has loaded the page once can POST to it forever, so the page's
  * check protects the page, not this. Same posture P4b's advance-status, P5a's
@@ -60,7 +60,7 @@ export async function saveProduct(
   _prev: CatalogueFormState,
   form: FormData,
 ): Promise<CatalogueFormState> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   // Returned as data, never thrown — matching lib/auth-rbac.ts's posture, so a
   // refusal renders as a message rather than a 500.
   if (!auth.ok) return refusal(auth.status, "the catalogue");
@@ -97,7 +97,7 @@ export async function saveCategory(
   _prev: CatalogueFormState,
   form: FormData,
 ): Promise<CatalogueFormState> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return refusal(auth.status, "categories");
 
   const parsed = parseCategoryForm(readForm(form, CATEGORY_FIELDS));

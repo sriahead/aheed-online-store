@@ -95,7 +95,7 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **PR #725** into `staging` taught `/orient` to read board Priority and corrected stale board-field
+- **Issue #737** (Staff/Admin delegation, Category Manager, Help Centre, Zero-review ratings) is fully built and awaiting `/clear` and PR creation on the current branch.`n- **PR #725** into `staging` taught `/orient` to read board Priority and corrected stale board-field
   claims. Required checks were green, but it remained open.
 - **PR #722** into `staging` carried final documentation for social/contact and mobile-nav/
   bundle-card work plus promotions PR #717/#721. Required checks were green, but it remained open.
@@ -189,3 +189,4 @@ with `db.ok: true` and storage configured. That does not verify any item above.
 6. Read `docs/research/discovery-log.md` for newer evidence touching the selected scope.
 7. Verify health/deployment state and any scope-dependent secret, database or Cloudflare fact live.
 8. Report discrepancies and stop at the current stage's approval boundary.
+

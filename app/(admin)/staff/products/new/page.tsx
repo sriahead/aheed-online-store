@@ -23,7 +23,7 @@ export const metadata: Metadata = { title: "New product" };
  * outcome is a refusal.
  */
 export default async function NewProductPage() {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
     return (
