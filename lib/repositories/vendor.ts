@@ -315,28 +315,80 @@ export async function listThemes(prisma: ReturnType<typeof getPrisma>) {
   return prisma.theme.findMany({ orderBy: { name: "asc" } });
 }
 
+export async function listVendorThemes(prisma: ReturnType<typeof getPrisma>, vendorId: string) {
+  return prisma.vendorTheme.findMany({
+    where: { vendorId },
+    orderBy: { name: "asc" },
+  });
+}
+
+export async function saveVendorTheme(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  name: string,
+  primitives: BrandPrimitives,
+) {
+  return prisma.vendorTheme.create({
+    data: {
+      vendorId,
+      name,
+      brandGreenDark: primitives["green-dark"],
+      brandGreen: primitives.green,
+      brandOrange: primitives.orange,
+      brandRed: primitives.red,
+      brandCream: primitives.cream,
+      brandGreenTint: primitives["green-tint"],
+      brandOrangeTint: primitives["orange-tint"],
+      brandRedTint: primitives["red-tint"],
+    },
+  });
+}
+
 /**
- * Apply a theme to a vendor's branding (#75) — COPIES the theme's eight brand
- * primitives onto `VendorBranding` and records `themeId` for provenance only.
- * `lib/vendor-theme.ts`'s `brandStyle()` never joins `Theme`, so this one-time copy is
- * the entire mechanism; a vendor may edit any colour afterwards and diverge freely.
- *
- * A plain read-then-write, not wrapped in `$transaction` — neither call is an
- * `updateMany`/`createMany` (the only operations that require the WebSocket client,
- * #382), so the caller may pass either `getPrisma()` or `getPrismaWs()`.
+ * Apply a theme to a vendor's branding (#75, #714) — COPIES the theme's eight brand
+ * primitives onto `VendorBranding`. Resolves `themeRef` explicitly:
+ * - `global:<id>` → queries the global `Theme` table
+ * - `vendor:<id>` → queries `VendorTheme` strictly scoped to this `vendorId`
  */
 export async function applyThemeToVendor(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
-  themeId: string,
+  themeRef: string,
 ): Promise<{ ok: true } | { ok: false }> {
-  const theme = await prisma.theme.findUnique({ where: { id: themeId } });
+  let theme: null | {
+    id: string;
+    brandGreenDark: string;
+    brandGreen: string;
+    brandOrange: string;
+    brandRed: string;
+    brandCream: string;
+    brandGreenTint: string;
+    brandOrangeTint: string;
+    brandRedTint: string;
+  } = null;
+  let themeIdToSave: string | null = null;
+
+  if (themeRef.startsWith("global:")) {
+    const id = themeRef.substring(7);
+    theme = await prisma.theme.findUnique({ where: { id } });
+    if (theme) themeIdToSave = theme.id;
+  } else if (themeRef.startsWith("vendor:")) {
+    const id = themeRef.substring(7);
+    const vendorThemes = await prisma.vendorTheme.findMany({
+      where: { id, vendorId },
+      take: 1,
+    });
+    if (vendorThemes.length > 0) {
+      theme = vendorThemes[0];
+    }
+  }
+
   if (!theme) return { ok: false };
 
   await prisma.vendorBranding.update({
     where: { vendorId },
     data: {
-      themeId: theme.id,
+      themeId: themeIdToSave,
       brandGreenDark: theme.brandGreenDark,
       brandGreen: theme.brandGreen,
       brandOrange: theme.brandOrange,
