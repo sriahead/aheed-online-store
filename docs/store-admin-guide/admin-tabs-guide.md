@@ -15,8 +15,9 @@ tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
 
 This guide covers every page reserved strictly for a **store admin**, one section per menu item.
 Pages accessible to both staff and admins — such as Catalogue, Categories, Brands, Bundles,
-Promotions, Inventory, Orders, Search Dictionary, and the Runbook — are described in the Staff Daily
-Operations Playbook rather than repeated here. You can open all of those as well.
+Promotions, Inventory, Orders, Search Dictionary moderation, and the Runbook — are described in the Staff Daily
+Operations Playbook rather than repeated here. You can open all of those as well (generating new AI
+proposals within Search Dictionary remains an admin-only capability).
 
 **Two things this panel does not do, so you are not looking for a control that is not there:**
 

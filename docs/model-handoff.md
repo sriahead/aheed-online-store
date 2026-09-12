@@ -93,6 +93,7 @@ mistake them for backlog.
 All facts in this section require live verification:
 
 - **Issue #737** (Staff/Admin delegation, Category Manager, Help Centre, Zero-review ratings; `specs/2026-09-12-staff-admin-help-ratings/`) is merged to `staging` via **PR #738** (`2687f16`) and is **In Review** on Project #2; closes upon promotion to `main`.
+- **PR #739** into `staging` carries post-ship documentation and roadmap reconciliation for Issue #737. Required checks are green; pending confirmation to merge.
 - **PR #736** merged `staging → main` (`0d41faa`), promoting #733 and closing #582, #583, #589, #602, #638, and #683 to `Done`.
 - **PR #732** merged `staging → main` (`b505d81`), promoting #714 to `Done`.
 - **PR #725** into `staging` taught `/orient` to read board Priority and corrected stale board-field
@@ -135,7 +136,7 @@ Board Phase and GitHub milestone disagreed for #151, #422, #589, #602, #695, #69
 - `deploy-production.yml` still cites the obsolete private-repository paid-plan explanation for no
   approval gate. The current decision is deliberate self-approval avoidance on a public repo.
 - `specs/mission.md` still cites ISR although this Prisma/Workers stack cannot use Next ISR.
-- `CLAUDE.md`'s Vitest baseline was 117/1557; the last verified full run was 118/1589.
+- `CLAUDE.md`'s Vitest baseline was 117/1557; the last verified full run was 123/1611.
 - The roadmap says the internal KMS site went live behind Access; its deploy workflow says no public
   route is configured. Verify Cloudflare before correcting either statement.
 

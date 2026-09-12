@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-12T12:31:26.942Z` · commit `2687f16` · `177` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-12T12:43:20.787Z` · commit `4e72b23` · `178` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -168,9 +168,10 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Social & contact surface — Facebook, Instagram and WhatsApp deep link (plan)](specs/2026-09-10-social-contact-surface/plan.md) | spec | 1.0.0 | 2026-09-10 | draft | internal | Three nullable VendorConfig fields put per-vendor Facebook, Instagram and WhatsApp links on the storefront, with a null hiding its link rather than borrowing another vendor's identity. |
 | [Project-state model handoff workflow integration (plan)](specs/2026-09-11-model-handoff-workflow/plan.md) | spec | 1.0.0 | 2026-09-11 | approved | internal | Formalize the project-state model handoff within Orient, Build Notes, and final Document while keeping slice detail, durable truth, current project position, and live verification distinct. |
 | [Vendor colour pickers (plan)](specs/2026-09-11-vendor-colour-pickers/plan.md) | spec | 1.0.0 | 2026-09-11 | draft | internal | Add visual colour pickers to the staff storefront configuration form, with a live preview of the contrast-clamped semantic values. |
+| [Build Notes: Staff/Admin Delegation, Category Manager, Help Centre, and Ratings](specs/2026-09-12-staff-admin-help-ratings/build-notes.md) | spec | 1.1.0 | 2026-09-12 | approved | internal | Build notes for Staff/Admin roles, Category Manager, Help Centre, and zero-review ratings. |
 | [Staff/Admin Delegation, Category Manager, Help Centre, and Ratings](specs/2026-09-12-staff-admin-help-ratings/plan.md) | doc | 1.1.0 | 2026-09-12 | approved | internal | Consolidate STAFF vs ADMIN responsibilities, enhance Category Manager, improve Help Centre markdown rendering, and hide zero-review ratings. |
-| [Requirements](specs/2026-09-12-staff-admin-help-ratings/requirements.md) | doc | 1.0.0 | 2026-09-12 | draft | internal | Requirements for Staff/Admin roles, Category Manager, Help Centre, and zero-review ratings. |
-| [Validation](specs/2026-09-12-staff-admin-help-ratings/validation.md) | doc | 1.0.0 | 2026-09-12 | draft | internal | Verification criteria for Staff/Admin roles, Category Manager, Help Centre, and zero-review ratings. |
+| [Requirements](specs/2026-09-12-staff-admin-help-ratings/requirements.md) | spec | 1.1.0 | 2026-09-12 | approved | internal | Requirements for Staff/Admin roles, Category Manager, Help Centre, and zero-review ratings. |
+| [Validation](specs/2026-09-12-staff-admin-help-ratings/validation.md) | spec | 1.1.0 | 2026-09-12 | approved | internal | Verification criteria for Staff/Admin roles, Category Manager, Help Centre, and zero-review ratings. |
 | [Build Notes](specs/2026-09-12-staff-panel-operability/build-notes.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Build notes for staff panel operability and search synonyms |
 | [Staff Panel Operability & Search Synonyms Plan](specs/2026-09-12-staff-panel-operability/plan.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Plan for staff panel operability and search synonyms |
 | [Requirements](specs/2026-09-12-staff-panel-operability/requirements.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Requirements for staff panel operability and search synonyms |
@@ -197,7 +198,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Phase 6.5 Autonomous Self-Review Report](docs/developer-portal/sdd/self-review/SELF-REVIEW.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Executive summary and status breakdown of Phase 6.5 audit loop across architecture, schema, security, payments, and deployment. |
 | [Phase 6.5 Validation & Test Results](docs/developer-portal/sdd/self-review/VALIDATION-RESULTS.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Verification log of test runs, build checks, and validation evidence for Phase 6.5 audit loop. |
 | [Operations & Fulfillment Procedures](docs/operations-research/operations-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for operations teams detailing the fulfillment lifecycle, stock management, and exception handling. |
-| [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.1.0 | 2026-09-12 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, bundles, promotions, inventory, search dictionary moderation, and finding the guides. One section per menu item. |
+| [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.2.0 | 2026-09-12 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, bundles, promotions, inventory, search dictionary moderation, and finding the guides. One section per menu item. |
 | [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.2.0 | 2026-09-12 | approved | internal | How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access. |
 | [Phase 6.5 — Autonomous Application Self-Review, Gap Detection & Hardening Plan](specs/2026-08-13-p6.5-self-review-hardening/plan.md) | spec | 1.0.0 | 2026-08-13 | approved | internal | Plan for Phase 6.5 autonomous self-review and hardening audit loop prior to Phase 7. |
 | [Phase 7a Implementation & Execution Plan](specs/2026-08-13-p7a-compliance-hardening/plan.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Step-by-step implementation plan for Phase 7a operational closure, UK compliance, security headers, and user-experience gaps. |

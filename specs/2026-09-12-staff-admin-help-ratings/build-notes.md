@@ -1,3 +1,14 @@
+---
+id: 2026-09-12-staff-admin-help-ratings-build-notes
+title: "Build Notes: Staff/Admin Delegation, Category Manager, Help Centre, and Ratings"
+audience: [dev]
+type: spec
+status: approved
+version: "1.1.0"
+updated: 2026-09-12
+visibility: internal
+summary: "Build notes for Staff/Admin roles, Category Manager, Help Centre, and zero-review ratings."
+---
 # /build-notes for #737
 
 **Phase:** IMPLEMENTATION completed
