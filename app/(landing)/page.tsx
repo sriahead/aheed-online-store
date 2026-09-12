@@ -95,7 +95,9 @@ export default async function HomePage() {
           <div className="max-w-2xl space-y-4">
             <div className="inline-flex items-center gap-1.5 bg-black/20 border border-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              Local Delivery across {localityName}
+              {profile?.offerCollection
+                ? `Local Delivery across ${localityName} & Click & Collect`
+                : `Local Delivery across ${localityName}`}
             </div>
 
             {/* The ONE slot that keeps a fallback rather than hiding: this is the
@@ -175,10 +177,12 @@ export default async function HomePage() {
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
-              Local Delivery
+              {profile?.offerCollection ? "Delivery & Collection" : "Local Delivery"}
             </h4>
             <p className="text-[11px] text-black/60 leading-tight">
-              Delivered across {localityName}
+              {profile?.offerCollection
+                ? `Delivered across ${localityName} or pick up in-store`
+                : `Delivered across ${localityName}`}
             </p>
           </div>
         </div>

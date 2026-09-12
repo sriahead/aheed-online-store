@@ -30,6 +30,16 @@ const COPY: Record<string, { subject: string; heading: string; body: string }> =
     heading: "Your order has been delivered.",
     body: "Thanks for shopping with us. If anything isn't right, just reply to this email.",
   },
+  READY_FOR_COLLECTION: {
+    subject: "is ready for collection",
+    heading: "Your order is ready to collect.",
+    body: "Your items are packed and waiting for you in-store.",
+  },
+  COLLECTED: {
+    subject: "has been collected",
+    heading: "Your order has been collected.",
+    body: "Thanks for shopping with us. If anything isn't right, just reply to this email.",
+  },
 };
 
 export async function sendOrderStatusEmail(order: WebhookOrder, status: string): Promise<void> {

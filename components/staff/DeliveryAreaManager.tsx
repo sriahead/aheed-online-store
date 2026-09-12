@@ -49,14 +49,14 @@ export function AddDeliveryAreaForm() {
         <input
           id="new-delivery-prefix"
           name="prefix"
-          placeholder="MK"
-          maxLength={2}
+          placeholder="MK or MK9"
+          maxLength={4}
           className={inputClass}
           required
         />
         <p className="mt-1 text-xs text-primary-muted">
-          One or two letters — the area, not the district. Adding <strong>MK</strong> covers every
-          MK district, from MK1 to MK19.
+          Enter an area (e.g. <strong>MK</strong>) to cover all districts, or a specific district
+          (e.g. <strong>MK9</strong>) to restrict delivery.
         </p>
       </div>
       <Button disabled={pending}>

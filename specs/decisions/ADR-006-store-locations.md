@@ -117,3 +117,7 @@ detail — say so rather than adding a second required parameter.
 Nothing is built by this ADR. It is written by the #420 sequencing slice
 (`specs/2026-08-28-storefront-brief-sequencing/`) precisely so that #400's per-store half and #402
 can be placed in P8.7 with a known shape rather than left unscheduled with an unknown one.
+
+## Implementation Note
+
+In `#402 Fulfilment Foundation`, `VendorLocation` was implemented exactly as specified: a 1:1 row per `Vendor` used as the physical store reference for Collection orders. The immutable snapshotting is handled by passing the `VendorLocation` coordinates into an `Address` row linked to the `Order` with a null `userId`.

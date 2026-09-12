@@ -40,6 +40,10 @@ const POUNDS = /^\d+(\.\d{1,2})?$/;
 export const DELIVERY_FEE_FIELD = "deliveryFeePence";
 export const FREE_DELIVERY_THRESHOLD_FIELD = "freeDeliveryThresholdPence";
 export const MINIMUM_ORDER_FIELD = "minimumOrderPence";
+export const COLLECTION_OFFER_FIELD = "offerCollection";
+export const COLLECTION_ADDRESS_LINE1_FIELD = "collectionAddressLine1";
+export const COLLECTION_CITY_FIELD = "collectionCity";
+export const COLLECTION_POSTCODE_FIELD = "collectionPostcode";
 
 /** What the three delivery-rule columns hold, in the units the database stores. */
 export interface DeliveryRulesInput {
@@ -47,6 +51,13 @@ export interface DeliveryRulesInput {
   /** `null` = free delivery is never offered. Deliberately distinct from `0`. */
   freeDeliveryThresholdPence: number | null;
   minimumOrderPence: number;
+  offerCollection: boolean;
+  location: {
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    postcode: string;
+  } | null;
 }
 
 export interface DeliveryRulesFormState {
@@ -130,6 +141,11 @@ export function parseDeliveryRules(raw: {
   deliveryFee: string;
   freeDeliveryThreshold: string;
   minimumOrder: string;
+  offerCollection: boolean;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  postcode: string;
 }): ParseResult<DeliveryRulesInput> {
   const fee = parsePoundsToPence(raw.deliveryFee, DELIVERY_FEE_FIELD, "Delivery fee");
   if (!fee.ok) return fee;
@@ -144,12 +160,49 @@ export function parseDeliveryRules(raw: {
   const minimum = parsePoundsToPence(raw.minimumOrder, MINIMUM_ORDER_FIELD, "Minimum order");
   if (!minimum.ok) return minimum;
 
+  let location: DeliveryRulesInput["location"] = null;
+
+  if (raw.offerCollection) {
+    if (!raw.addressLine1.trim()) {
+      return {
+        ok: false,
+        error: {
+          field: COLLECTION_ADDRESS_LINE1_FIELD,
+          message: "Address Line 1 is required for collection.",
+        },
+      };
+    }
+    if (!raw.city.trim()) {
+      return {
+        ok: false,
+        error: { field: COLLECTION_CITY_FIELD, message: "City is required for collection." },
+      };
+    }
+    if (!raw.postcode.trim()) {
+      return {
+        ok: false,
+        error: {
+          field: COLLECTION_POSTCODE_FIELD,
+          message: "Postcode is required for collection.",
+        },
+      };
+    }
+    location = {
+      addressLine1: raw.addressLine1.trim(),
+      addressLine2: raw.addressLine2.trim() || null,
+      city: raw.city.trim(),
+      postcode: raw.postcode.trim(),
+    };
+  }
+
   return {
     ok: true,
     value: {
       deliveryFeePence: fee.value,
       freeDeliveryThresholdPence: threshold.value,
       minimumOrderPence: minimum.value,
+      offerCollection: raw.offerCollection,
+      location,
     },
   };
 }

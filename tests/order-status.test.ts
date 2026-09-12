@@ -20,8 +20,10 @@ import {
 const ALL_STATUSES = [
   "PENDING_PAYMENT",
   "CONFIRMED",
+  "READY_FOR_COLLECTION",
   "OUT_FOR_DELIVERY",
   "DELIVERED",
+  "COLLECTED",
   "CANCELLED",
 ] as const;
 
@@ -140,22 +142,31 @@ describe("order date formatting", () => {
 // ---- Transition legality (P4b, #125) ---------------------------------------
 
 describe("canTransition", () => {
-  it("allows exactly the two rungs of the staff ladder", () => {
-    expect(canTransition("CONFIRMED", "OUT_FOR_DELIVERY")).toBe(true);
-    expect(canTransition("OUT_FOR_DELIVERY", "DELIVERED")).toBe(true);
+  it("allows exactly the rungs of the staff ladder", () => {
+    expect(canTransition("CONFIRMED", "OUT_FOR_DELIVERY", "DELIVERY")).toBe(true);
+    expect(canTransition("OUT_FOR_DELIVERY", "DELIVERED", "DELIVERY")).toBe(true);
+    expect(canTransition("CONFIRMED", "READY_FOR_COLLECTION", "COLLECTION")).toBe(true);
+    expect(canTransition("READY_FOR_COLLECTION", "COLLECTED", "COLLECTION")).toBe(true);
   });
 
-  it("allows NOTHING else across the whole 5x5 matrix", () => {
+  it("allows NOTHING else across the whole matrix", () => {
     const legal: string[] = [];
     for (const from of ALL_STATUSES) {
       for (const to of ALL_STATUSES) {
-        if (canTransition(from, to)) legal.push(`${from}->${to}`);
+        if (canTransition(from, to, "DELIVERY")) legal.push(`DELIVERY:${from}->${to}`);
+        if (canTransition(from, to, "COLLECTION")) legal.push(`COLLECTION:${from}->${to}`);
       }
     }
 
     // Asserting the exact set, not just spot-checks: a future added status must
     // not be able to widen the ladder silently.
-    expect(legal).toEqual(["CONFIRMED->OUT_FOR_DELIVERY", "OUT_FOR_DELIVERY->DELIVERED"]);
+    legal.sort();
+    expect(legal).toEqual([
+      "COLLECTION:CONFIRMED->READY_FOR_COLLECTION",
+      "COLLECTION:READY_FOR_COLLECTION->COLLECTED",
+      "DELIVERY:CONFIRMED->OUT_FOR_DELIVERY",
+      "DELIVERY:OUT_FOR_DELIVERY->DELIVERED",
+    ]);
   });
 
   it("refuses to move an unpaid order at all", () => {
@@ -172,9 +183,13 @@ describe("canTransition", () => {
   });
 
   it("never skips a rung or moves backwards", () => {
-    expect(canTransition("CONFIRMED", "DELIVERED")).toBe(false);
-    expect(canTransition("OUT_FOR_DELIVERY", "CONFIRMED")).toBe(false);
-    expect(canTransition("DELIVERED", "OUT_FOR_DELIVERY")).toBe(false);
+    expect(canTransition("CONFIRMED", "DELIVERED", "DELIVERY")).toBe(false);
+    expect(canTransition("OUT_FOR_DELIVERY", "CONFIRMED", "DELIVERY")).toBe(false);
+    expect(canTransition("DELIVERED", "OUT_FOR_DELIVERY", "DELIVERY")).toBe(false);
+
+    // Collection constraints
+    expect(canTransition("CONFIRMED", "COLLECTED", "COLLECTION")).toBe(false);
+    expect(canTransition("READY_FOR_COLLECTION", "CONFIRMED", "COLLECTION")).toBe(false);
   });
 
   it("permits nothing from or to an unrecognised status, without throwing", () => {
@@ -185,23 +200,34 @@ describe("canTransition", () => {
 });
 
 describe("nextStatus", () => {
-  it("returns the single legal successor, or null at the ends of the ladder", () => {
-    expect(nextStatus("CONFIRMED")).toBe("OUT_FOR_DELIVERY");
-    expect(nextStatus("OUT_FOR_DELIVERY")).toBe("DELIVERED");
-    expect(nextStatus("PENDING_PAYMENT")).toBeNull();
-    expect(nextStatus("DELIVERED")).toBeNull();
-    expect(nextStatus("CANCELLED")).toBeNull();
-    expect(nextStatus("NOT_A_STATUS")).toBeNull();
+  it("returns the single legal successor, or null at the ends of the ladder for DELIVERY", () => {
+    expect(nextStatus("CONFIRMED", "DELIVERY")).toBe("OUT_FOR_DELIVERY");
+    expect(nextStatus("OUT_FOR_DELIVERY", "DELIVERY")).toBe("DELIVERED");
+    expect(nextStatus("PENDING_PAYMENT", "DELIVERY")).toBeNull();
+    expect(nextStatus("DELIVERED", "DELIVERY")).toBeNull();
+    expect(nextStatus("CANCELLED", "DELIVERY")).toBeNull();
+    expect(nextStatus("NOT_A_STATUS", "DELIVERY")).toBeNull();
+  });
+
+  it("returns the single legal successor, or null at the ends of the ladder for COLLECTION", () => {
+    expect(nextStatus("CONFIRMED", "COLLECTION")).toBe("READY_FOR_COLLECTION");
+    expect(nextStatus("READY_FOR_COLLECTION", "COLLECTION")).toBe("COLLECTED");
+    expect(nextStatus("PENDING_PAYMENT", "COLLECTION")).toBeNull();
+    expect(nextStatus("COLLECTED", "COLLECTION")).toBeNull();
+    expect(nextStatus("CANCELLED", "COLLECTION")).toBeNull();
+    expect(nextStatus("OUT_FOR_DELIVERY", "COLLECTION")).toBeNull();
   });
 
   it("cannot disagree with canTransition", () => {
     for (const from of ALL_STATUSES) {
-      const next = nextStatus(from);
-      if (next === null) {
-        // Nothing legal from here at all.
-        expect(ALL_STATUSES.some((to) => canTransition(from, to))).toBe(false);
-      } else {
-        expect(canTransition(from, next)).toBe(true);
+      for (const method of ["DELIVERY", "COLLECTION"] as const) {
+        const next = nextStatus(from, method);
+        if (next === null) {
+          // Nothing legal from here at all.
+          expect(ALL_STATUSES.some((to) => canTransition(from, to, method))).toBe(false);
+        } else {
+          expect(canTransition(from, next, method)).toBe(true);
+        }
       }
     }
   });
@@ -292,7 +318,13 @@ describe("REVENUE_STATUSES", () => {
     expect(STAFF_QUEUE_STATUSES).not.toContain("DELIVERED");
   });
 
-  it("is exactly the three post-payment statuses", () => {
-    expect([...REVENUE_STATUSES]).toEqual(["CONFIRMED", "OUT_FOR_DELIVERY", "DELIVERED"]);
+  it("is exactly the post-payment statuses", () => {
+    expect([...REVENUE_STATUSES]).toEqual([
+      "CONFIRMED",
+      "READY_FOR_COLLECTION",
+      "OUT_FOR_DELIVERY",
+      "DELIVERED",
+      "COLLECTED",
+    ]);
   });
 });

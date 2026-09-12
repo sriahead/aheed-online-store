@@ -185,7 +185,6 @@ export default async function StaffHomePage() {
                 Payment events that were refused, and the orders they may have left stranded.
               </p>
             </Link>
-            `n
             <Link
               href="/staff/storefront"
               className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"

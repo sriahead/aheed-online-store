@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { MapPin, ShieldCheck, Sparkles, Tag, User } from "lucide-react";
 import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-order";
 import { inputClass, labelClass } from "@/lib/form-classes";
@@ -23,6 +23,7 @@ const initialState: CheckoutState = { error: null };
 export function CheckoutForm({
   signedInEmail,
   redeemable,
+  offerCollection,
 }: {
   signedInEmail: string | null;
   /**
@@ -32,8 +33,13 @@ export function CheckoutForm({
    * offer the control.
    */
   redeemable: { balancePoints: number; valueLabel: string; minRedeemPoints: number } | null;
+  offerCollection: boolean;
 }) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
+
+  // The server expects this, and it defaults to DELIVERY or nothing if collection is offered.
+  // We'll let the HTML validation enforce choice if both are offered, but here we can just use state to show/hide.
+  const [method, setMethod] = useState<"DELIVERY" | "COLLECTION">("DELIVERY");
 
   useEffect(() => {
     const saved = localStorage.getItem("aheed_checkout_details");
@@ -43,10 +49,17 @@ export function CheckoutForm({
         const form = document.querySelector("form");
         if (form) {
           Object.entries(details).forEach(([key, value]) => {
-            const el = form.elements.namedItem(key) as HTMLInputElement;
-            // Only prefill if the field is empty, to not clobber user input if they navigated back-forward
-            if (el && !el.value && value) {
-              el.value = value as string;
+            if (key === "fulfilmentMethod") {
+              setMethod(value as "DELIVERY" | "COLLECTION");
+            }
+            const el = form.elements.namedItem(key);
+            if (el instanceof HTMLInputElement && !el.value && value) {
+              // For radio buttons, we need to check the right one
+              if (el.type === "radio") {
+                if (el.value === value) el.checked = true;
+              } else {
+                el.value = value as string;
+              }
             }
           });
         }
@@ -60,6 +73,16 @@ export function CheckoutForm({
     delete details.redeemPoints;
     delete details.discountCode;
     localStorage.setItem("aheed_checkout_details", JSON.stringify(details));
+
+    const selectedMethod = fd.get("fulfilmentMethod");
+    if (selectedMethod === "DELIVERY" || selectedMethod === "COLLECTION") {
+      setMethod(selectedMethod);
+
+      // Dispatch a custom event to notify the page that the method changed so it can update the summary
+      window.dispatchEvent(
+        new CustomEvent("fulfilment-method-changed", { detail: selectedMethod }),
+      );
+    }
   };
 
   return (
@@ -73,10 +96,50 @@ export function CheckoutForm({
         </p>
       )}
 
+      {offerCollection && (
+        <section className="space-y-3">
+          <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
+            <MapPin className="h-4 w-4" aria-hidden />
+            Fulfilment Method
+          </h2>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <label
+              className={`flex flex-1 cursor-pointer items-center gap-3 rounded-xl border p-4 ${method === "DELIVERY" ? "border-primary bg-primary/5" : "border-black/10 hover:bg-black/5"}`}
+            >
+              <input
+                type="radio"
+                name="fulfilmentMethod"
+                value="DELIVERY"
+                checked={method === "DELIVERY"}
+                onChange={() => setMethod("DELIVERY")}
+                className="h-5 w-5 text-primary focus:ring-primary border-black/20"
+                required
+              />
+              <span className="font-bold text-black">Delivery</span>
+            </label>
+            <label
+              className={`flex flex-1 cursor-pointer items-center gap-3 rounded-xl border p-4 ${method === "COLLECTION" ? "border-primary bg-primary/5" : "border-black/10 hover:bg-black/5"}`}
+            >
+              <input
+                type="radio"
+                name="fulfilmentMethod"
+                value="COLLECTION"
+                checked={method === "COLLECTION"}
+                onChange={() => setMethod("COLLECTION")}
+                className="h-5 w-5 text-primary focus:ring-primary border-black/20"
+                required
+              />
+              <span className="font-bold text-black">Click & Collect</span>
+            </label>
+          </div>
+        </section>
+      )}
+      {!offerCollection && <input type="hidden" name="fulfilmentMethod" value="DELIVERY" />}
+
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
           <User className="h-4 w-4" aria-hidden />
-          1. Contact information
+          {offerCollection ? "1" : "1"}. Contact information
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
@@ -109,51 +172,58 @@ export function CheckoutForm({
           )}
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="phone">
-              Phone number (driver updates)
+              Phone number ({method === "DELIVERY" ? "driver updates" : "collection updates"})
             </label>
             <input id="phone" name="phone" type="tel" required className={inputClass} />
           </div>
         </div>
       </section>
 
-      <section className="space-y-3 border-t border-black/5 pt-5">
-        <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
-          <MapPin className="h-4 w-4" aria-hidden />
-          2. Delivery address &amp; instructions
-        </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className={labelClass} htmlFor="line1">
-              Street address
-            </label>
-            <input id="line1" name="line1" required className={inputClass} />
+      {method === "DELIVERY" && (
+        <section className="space-y-3 border-t border-black/5 pt-5">
+          <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
+            <MapPin className="h-4 w-4" aria-hidden />
+            {offerCollection ? "2" : "2"}. Delivery address &amp; instructions
+          </h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className={labelClass} htmlFor="line1">
+                Street address
+              </label>
+              <input
+                id="line1"
+                name="line1"
+                required={method === "DELIVERY"}
+                className={inputClass}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={labelClass} htmlFor="line2">
+                Flat, building (optional)
+              </label>
+              <input id="line2" name="line2" className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="city">
+                Town or city
+              </label>
+              <input id="city" name="city" required className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="postcode">
+                Postcode
+              </label>
+              <input id="postcode" name="postcode" required className={inputClass} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={labelClass} htmlFor="notes">
+                Delivery notes / gate code (optional)
+              </label>
+              <input id="notes" name="notes" className={inputClass} />
+            </div>
           </div>
-          <div className="sm:col-span-2">
-            <label className={labelClass} htmlFor="line2">
-              Flat, building (optional)
-            </label>
-            <input id="line2" name="line2" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="city">
-              Town or city
-            </label>
-            <input id="city" name="city" required className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="postcode">
-              Postcode
-            </label>
-            <input id="postcode" name="postcode" required className={inputClass} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={labelClass} htmlFor="notes">
-              Delivery notes / gate code (optional)
-            </label>
-            <input id="notes" name="notes" className={inputClass} />
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {redeemable && (
         <section className="space-y-3 border-t border-black/5 pt-5">

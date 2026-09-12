@@ -52,6 +52,11 @@ describe("computeTotals — delivery fee boundary", () => {
     expect(computeTotals([line(500, 1, false)], AHEED).deliveryFeePence).toBe(0);
   });
 
+  it("is always free when the method is COLLECTION", () => {
+    expect(computeTotals([line(2999, 1)], AHEED, 0, "COLLECTION").deliveryFeePence).toBe(0);
+    expect(computeTotals([line(2999, 1)], NO_FREE, 0, "COLLECTION").deliveryFeePence).toBe(0);
+  });
+
   it("uses each vendor's own rules — no shared constant", () => {
     // £40 is free for Aheed (£30 threshold) but not for a £50-threshold vendor.
     expect(computeTotals([line(4000, 1)], AHEED).deliveryFeePence).toBe(0);

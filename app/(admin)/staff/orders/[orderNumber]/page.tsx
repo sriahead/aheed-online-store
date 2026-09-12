@@ -47,7 +47,7 @@ export default async function StaffOrderDetailPage({
   const order = await getOrderRepository().getForStaff(orderNumber);
   if (!order) notFound();
 
-  const next = nextStatus(order.status);
+  const next = nextStatus(order.status, order.fulfilmentMethod);
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">

@@ -6,6 +6,15 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Fulfilment Foundation (Click & Collect)** (`#402`; `specs/2026-09-12-p402-fulfilment-foundation/`). **Schema change: one added enum, one new table, one migration.**
+  - **Method-Aware Data:** Introduced `FulfilmentMethod` enum (`DELIVERY` | `COLLECTION`) on `Order`, allowing distinct handling of click & collect orders. Historical orders default to `DELIVERY`.
+  - **Status Isolation:** Split `OrderStatus` ladders to keep them strictly disjoint, adding `READY_FOR_COLLECTION` and `COLLECTED`.
+  - **Vendor Location Snapshotting:** Mapped the physical store location to an immutable snapshot upon checkout for `COLLECTION` orders, ensuring zero downtime for downstream consumers (receipts, staff queues) and maintaining complete audibility.
+  - **Method-Aware Erasure:** Altered GDPR data rights erasure (`eraseVendorData`/`eraseGuestOrderData`). For `COLLECTION` orders, customer-identifying data is still wiped but the immutable `VendorLocation` store address is intentionally retained.
+  - **UI Labels:** Updated checkout, confirmation emails, and staff panels to show distinct copy ("Collection Address", "Ready to collect") based on method.
+
 ### Changed
 
 - **Documentation and handoff reconciliation for #737**:

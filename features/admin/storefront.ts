@@ -174,6 +174,11 @@ export async function updateDeliveryRules(
     deliveryFee: String(formData.get("deliveryFee") ?? ""),
     freeDeliveryThreshold: String(formData.get("freeDeliveryThreshold") ?? ""),
     minimumOrder: String(formData.get("minimumOrder") ?? ""),
+    offerCollection: formData.get("offerCollection") === "on",
+    addressLine1: String(formData.get("collectionAddressLine1") ?? ""),
+    addressLine2: String(formData.get("collectionAddressLine2") ?? ""),
+    city: String(formData.get("collectionCity") ?? ""),
+    postcode: String(formData.get("collectionPostcode") ?? ""),
   });
 
   if (!parsed.ok) {
