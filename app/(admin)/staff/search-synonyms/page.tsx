@@ -6,6 +6,7 @@ import { listSynonymsForStaff } from "@/lib/search-synonyms-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import {
   AddSynonymForm,
+  PendingSynonymsClient,
   ProposeSynonymsForm,
   SynonymRowForm,
 } from "@/components/staff/SynonymDictionary";
@@ -54,20 +55,7 @@ export default async function StaffSearchSynonymsPage() {
         <ProposeSynonymsForm />
       </div>
 
-      {pending.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
-            Awaiting your approval ({pending.length})
-          </h2>
-          <ul className="space-y-3">
-            {pending.map((row) => (
-              <li key={row.id}>
-                <SynonymRowForm row={row} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <PendingSynonymsClient pendingRows={pending} />
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">

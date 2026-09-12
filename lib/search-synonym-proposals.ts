@@ -139,7 +139,13 @@ export async function proposeSynonyms(
     };
   }
 
-  const payload = (await response.json()) as { result?: { response?: unknown } };
+  let payload: { result?: { response?: unknown } };
+  try {
+    payload = (await response.json()) as { result?: { response?: unknown } };
+  } catch {
+    return { ok: false, error: "The AI service returned an unreadable response." };
+  }
+
   const text = typeof payload.result?.response === "string" ? payload.result.response : "";
   return { ok: true, proposals: parseProposalResponse(text) };
 }

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  BookA,
   BookOpen,
   Boxes,
   Bug,
@@ -248,6 +249,17 @@ export default async function StaffHomePage() {
               <p className="font-semibold text-primary">Team & Access</p>
               <p className="mt-1 text-sm text-primary-muted">
                 Manage staff access, roles, and administrative privileges.
+              </p>
+            </Link>
+
+            <Link
+              href="/staff/search-synonyms"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <BookA className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Search dictionary</p>
+              <p className="mt-1 text-sm text-primary-muted">
+                Words your shoppers use that your product names don&apos;t.
               </p>
             </Link>
           </>

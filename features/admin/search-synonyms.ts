@@ -6,6 +6,7 @@ import {
   createSynonym,
   deleteSynonym,
   generateSynonymProposals,
+  setBulkSynonymStatus,
   setSynonymStatus,
   updateSynonym,
 } from "@/lib/search-synonyms-service";
@@ -129,5 +130,38 @@ export async function proposeSynonymsFromLog(
       result.created === 0
         ? `Looked at ${result.considered} search(es); nothing new to propose.`
         : `Added ${result.created} suggestion(s) from ${result.considered} search(es), awaiting your approval.`,
+  };
+}
+
+/** Bulk approve or reject a selection of proposals (#582). */
+export async function bulkManageSynonyms(
+  _prev: SynonymFormState,
+  form: FormData,
+): Promise<SynonymFormState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return refusal(auth.status);
+
+  const idsRaw = String(form.get("ids") ?? "");
+  if (!idsRaw) return { error: "No items selected.", field: null, notice: null };
+  const ids = idsRaw
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  if (ids.length === 0) return { error: "No items selected.", field: null, notice: null };
+
+  const intent = String(form.get("intent") ?? "");
+  if (intent !== "approve" && intent !== "reject") {
+    return { error: "Unknown action.", field: null, notice: null };
+  }
+
+  const status = intent === "approve" ? "APPROVED" : "REJECTED";
+  const result = await setBulkSynonymStatus(auth.vendorId, ids, status);
+  if (!result.ok) return { error: result.error, field: null, notice: null };
+
+  revalidate();
+  return {
+    error: null,
+    field: null,
+    notice: `${status === "APPROVED" ? "Approved" : "Rejected"} ${ids.length} item(s).`,
   };
 }
