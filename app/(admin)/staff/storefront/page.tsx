@@ -30,6 +30,8 @@ export default async function StorefrontAdminPage() {
 
   const config = await getVendorConfig(auth.vendorId);
   const branding = await getVendorBranding(auth.vendorId);
+  const { getVendorLocation } = await import("@/lib/vendor-service");
+  const location = await getVendorLocation(auth.vendorId);
   const themes = await listThemes();
   const vendorThemes = await listVendorThemes(auth.vendorId);
 
@@ -45,6 +47,7 @@ export default async function StorefrontAdminPage() {
       <StorefrontConfigForm
         initialConfig={config}
         initialBranding={branding}
+        initialLocation={location}
         themes={themes}
         vendorThemes={vendorThemes}
         logoUrl={logoUrl}

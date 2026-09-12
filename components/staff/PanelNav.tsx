@@ -105,7 +105,12 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
                 label="Live Inventory & Availability"
               />
               <NavLink href="/staff/orders" icon={ClipboardList} label="Fulfillment & Orders" />
-              <NavLink href="/staff/payments" icon={ShieldAlert} label="Payment Issues" />
+              <NavLink href="/staff/products" icon={Package} label="Catalogue" />
+              <NavLink href="/staff/categories" icon={LayoutDashboard} label="Categories" />
+              <NavLink href="/staff/brands" icon={Tag} label="Brands" />
+              <NavLink href="/staff/promotions" icon={Megaphone} label="Promotions" />
+              <NavLink href="/staff/bundles" icon={Boxes} label="Bundles" />
+              <NavLink href="/staff/search-synonyms" icon={BookA} label="Search Dictionary" />
               <NavLink href="/staff/runbook" icon={BookOpen} label="Internal Operational Runbook" />
             </>
           ) : (

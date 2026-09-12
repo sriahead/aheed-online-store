@@ -70,6 +70,7 @@ export function computeTotals(
   lines: TotalsLine[],
   rules: DeliveryRules,
   discountPence = 0,
+  method: "DELIVERY" | "COLLECTION" = "DELIVERY",
 ): OrderTotals {
   const subtotalPence = lines.reduce((sum, line) => sum + lineContribution(line), 0);
 
@@ -80,7 +81,12 @@ export function computeTotals(
 
   // An empty order carries no delivery fee — charging delivery on nothing would be
   // absurd, and checkout refuses an empty cart before this point anyway.
-  const deliveryFeePence = subtotalPence === 0 || qualifiesForFree ? 0 : rules.deliveryFeePence;
+  let deliveryFeePence = subtotalPence === 0 || qualifiesForFree ? 0 : rules.deliveryFeePence;
+
+  // COLLECTION is always free to collect.
+  if (method === "COLLECTION") {
+    deliveryFeePence = 0;
+  }
 
   const appliedDiscount = Math.min(Math.max(0, discountPence), subtotalPence);
 

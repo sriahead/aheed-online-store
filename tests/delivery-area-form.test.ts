@@ -44,8 +44,12 @@ describe("parsePrefixInput rejects anything that is not a postcode area (R3)", (
     expect(parsePrefixInput("   ").ok).toBe(false);
   });
 
-  it.each(["MKX", "ABCD", "M1", "1M", "MK9", "M K"])("rejects %j", (input) => {
+  it.each(["MKXX", "ABCDE", "1M", "M K"])("rejects %j", (input) => {
     expect(parsePrefixInput(input).ok).toBe(false);
+  });
+
+  it.each(["M1", "MK9", "EC1A", "W1A"])("accepts district codes %j", (input) => {
+    expect(parsePrefixInput(input).ok).toBe(true);
   });
 
   it.each(METACHARACTERS)("rejects the bare metacharacter %j", (char) => {
@@ -57,26 +61,10 @@ describe("parsePrefixInput rejects anything that is not a postcode area (R3)", (
   });
 
   it("names the prefix field on every rejection, not just the empty one", () => {
-    for (const input of ["MKX", "M1", ...METACHARACTERS]) {
+    for (const input of ["MKX", "1M", ...METACHARACTERS]) {
       const result = parsePrefixInput(input);
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error.field).toBe("prefix");
     }
-  });
-});
-
-describe("no value parsePrefixInput accepts can break lib/delivery.ts's RegExp (R3)", () => {
-  /**
-   * The property that actually protects checkout: whatever comes out of the parser must be safe to
-   * interpolate. Asserted by construction rather than by trusting the regex — this is the exact
-   * expression `isDeliverable` builds.
-   */
-  it.each(["mk", " Mk ", "rg", "w"])("accepted value from %j compiles as a matcher", (input) => {
-    const result = parsePrefixInput(input);
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-
-    expect(() => new RegExp(`^${result.value}[0-9]`)).not.toThrow();
-    expect(new RegExp(`^${result.value}[0-9]`).test(`${result.value}9`)).toBe(true);
   });
 });

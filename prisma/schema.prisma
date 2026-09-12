@@ -133,6 +133,7 @@ model Vendor {
   updatedAt                 DateTime                   @updatedAt
   branding                  VendorBranding?
   config                    VendorConfig?
+  location                  VendorLocation?
   deliveryAreas             VendorDeliveryArea[]
   categories                Category[]
   products                  Product[]
@@ -339,6 +340,7 @@ model VendorConfig {
   deliveryFeePence           Int      @default(349)
   freeDeliveryThresholdPence Int? // null = free delivery never offered
   minimumOrderPence          Int      @default(0) // 0 = no minimum
+  offerCollection            Boolean  @default(false)
   // P5a — loyalty settings are vendor data for the same reason the delivery rules
   // above are (#135). Defaults mean an existing VendorConfig row stays valid with
   // no backfill, and loyaltyEnabled defaults OFF so the feature ships dark for any
@@ -380,6 +382,19 @@ model VendorDeliveryArea {
   prefix   String // postcode district prefix, e.g. "MK"
 
   @@unique([vendorId, prefix])
+}
+
+// ADR-006: Physical store location. Enforced 1:1 via unique(vendorId) for #402.
+model VendorLocation {
+  id           String   @id @default(uuid())
+  vendorId     String   @unique
+  vendor       Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  postcode     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 // P2a — catalogue browsing (specs/2026-08-07-p2a-catalogue-browsing/). Matches the
@@ -749,12 +764,19 @@ model CartItem {
 // PENDING_PAYMENT is the initial state: stock is decremented at order creation but
 // payment is not yet settled, so an order must NOT read as CONFIRMED (staff would
 // pick and deliver it). P3c's Stripe webhook moves it to CONFIRMED.
+enum FulfilmentMethod {
+  DELIVERY
+  COLLECTION
+}
+
 enum OrderStatus {
   PENDING_PAYMENT
   CONFIRMED
   OUT_FOR_DELIVERY
   DELIVERED
   CANCELLED
+  READY_FOR_COLLECTION
+  COLLECTED
 }
 
 enum PaymentStatus {
@@ -816,6 +838,7 @@ model Order {
   guestEmail        String?
   addressId         String
   address           Address                 @relation(fields: [addressId], references: [id])
+  fulfilmentMethod  FulfilmentMethod        @default(DELIVERY)
   status            OrderStatus             @default(PENDING_PAYMENT)
   currency          String                  @default("GBP")
   subtotalPence     Int

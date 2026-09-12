@@ -100,10 +100,39 @@ export async function placeOrderAction(
 
   let destination: string;
   try {
-    const postcode = required(form, "postcode");
-    if (!isDeliverable(postcode, vendor.deliveryPrefixes)) {
-      return {
-        error: `Sorry — we don't deliver to ${postcode} yet.`,
+    const rawMethod = form.get("fulfilmentMethod");
+    if (rawMethod !== "DELIVERY" && rawMethod !== "COLLECTION") {
+      throw new MissingFieldError("Please select a delivery or collection method.");
+    }
+    const fulfilmentMethod = rawMethod as "DELIVERY" | "COLLECTION";
+
+    let addressInput;
+    if (fulfilmentMethod === "DELIVERY") {
+      const postcode = required(form, "postcode");
+      if (!isDeliverable(postcode, vendor.deliveryPrefixes)) {
+        return {
+          error: `Sorry — we don't deliver to ${postcode} yet.`,
+        };
+      }
+      addressInput = {
+        recipientName: required(form, "recipientName"),
+        phone: required(form, "phone"),
+        line1: required(form, "line1"),
+        line2: optional(form, "line2"),
+        city: required(form, "city"),
+        postcode,
+        notes: optional(form, "notes"),
+      };
+    } else {
+      // COLLECTION requires no address fields except Name and Phone.
+      addressInput = {
+        recipientName: required(form, "recipientName"),
+        phone: required(form, "phone"),
+        line1: "COLLECTION",
+        line2: null,
+        city: "COLLECTION",
+        postcode: "COLLECTION",
+        notes: optional(form, "notes"),
       };
     }
 
@@ -118,15 +147,7 @@ export async function placeOrderAction(
       cartId,
       userId: identity.userId,
       guestEmail: identity.userId ? null : email,
-      address: {
-        recipientName: required(form, "recipientName"),
-        phone: required(form, "phone"),
-        line1: required(form, "line1"),
-        line2: optional(form, "line2"),
-        city: required(form, "city"),
-        postcode,
-        notes: optional(form, "notes"),
-      },
+      address: addressInput,
       rules: {
         deliveryFeePence: vendor.deliveryFeePence,
         freeDeliveryThresholdPence: vendor.freeDeliveryThresholdPence,
@@ -136,6 +157,7 @@ export async function placeOrderAction(
       discountCode: discountCodeIntent(form),
       vendorSlug: vendor.slug,
       returnOrigin: await currentOrigin(),
+      fulfilmentMethod,
     });
     // With Stripe configured the shopper goes to hosted Checkout; with the stub
     // adapter there is nowhere to pay, so they land on the order page directly.

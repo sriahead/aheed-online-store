@@ -23,7 +23,7 @@ import { isDeliverable } from "@/lib/delivery";
 import { DELIVERY_POSTCODE_COOKIE } from "@/lib/delivery-cookie";
 import { CartDrawerShell } from "@/components/cart/CartDrawerShell";
 import { CartContents } from "@/components/cart/CartContents";
-import { PostcodeChecker } from "./PostcodeChecker";
+import { LocationControl } from "./LocationControl";
 import { SearchSuggest } from "./SearchSuggest";
 import { ViewSwitcher } from "./ViewSwitcher";
 
@@ -105,6 +105,7 @@ export async function Header({
   const deliveryPrefixes = profile?.deliveryPrefixes ?? [];
   const storedPostcode = cookieStore.get(DELIVERY_POSTCODE_COOKIE)?.value ?? null;
   const deliverable = storedPostcode ? isDeliverable(storedPostcode, deliveryPrefixes) : null;
+  const offerCollection = profile?.offerCollection ?? false;
 
   // P8.5a (#345): routed through the request-memoised reader so the header and
   // a product grid on the same page share ONE getSummary() call. The identity
@@ -136,7 +137,9 @@ export async function Header({
           <div className="flex items-center gap-4 text-white/90">
             <span className="flex items-center gap-1 font-medium text-white">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              {name} — local delivery across {localityName}
+              {profile?.offerCollection
+                ? `${name} — local delivery across ${localityName} & click and collect`
+                : `${name} — local delivery across ${localityName}`}
             </span>
             {bannerNote && (
               <>
@@ -224,22 +227,23 @@ export async function Header({
           </Link>
         </div>
 
-        {/* P8.5f: the landing page trades the search box for the postcode
-            checker — search is reachable from every other route's header and
-            from /categories. Every other route keeps search exactly as before. */}
-        <div className="flex-1 max-w-md hidden sm:block">
-          {isLanding ? (
-            <PostcodeChecker
+        {/* Location Control (Desktop) */}
+        {!isPortal && (
+          <div className="hidden sm:block h-full">
+            <LocationControl
               postcode={storedPostcode}
               deliverable={deliverable}
-              localityName={localityName}
-              prefixes={deliveryPrefixes}
-              variant="full"
+              offerCollection={offerCollection}
             />
-          ) : (
-            !isPortal && <SearchForm placeholder={searchPlaceholder} />
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Search */}
+        {!isPortal && (
+          <div className="flex-1 max-w-md hidden sm:block">
+            <SearchForm placeholder={searchPlaceholder} />
+          </div>
+        )}
 
         {/* Action Controls & Navigation */}
         <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -270,16 +274,6 @@ export async function Header({
               <ShoppingBag className="w-4 h-4 text-primary" />
               <span className="hidden sm:inline">Shop List</span>
             </Link>
-          )}
-
-          {!isPortal && !isLanding && (
-            <PostcodeChecker
-              postcode={storedPostcode}
-              deliverable={deliverable}
-              localityName={localityName}
-              prefixes={deliveryPrefixes}
-              variant="badge"
-            />
           )}
 
           {/* Account / Sign In & Sign Out Controls */}
@@ -332,22 +326,19 @@ export async function Header({
         </nav>
       </div>
 
-      {/* Mobile row. Mirrors the desktop slot's landing/non-landing swap — the
-          desktop slot is `hidden sm:block`, so without this the postcode checker
-          would be unreachable on a phone, which is most of this store's traffic. */}
-      <div className="px-4 pb-2.5 sm:hidden">
-        {isLanding ? (
-          <PostcodeChecker
-            postcode={storedPostcode}
-            deliverable={deliverable}
-            localityName={localityName}
-            prefixes={deliveryPrefixes}
-            variant="full"
-          />
-        ) : (
-          !isPortal && <SearchForm placeholder={searchPlaceholder} />
-        )}
-      </div>
+      {/* Mobile row: Location & Search stacked */}
+      {!isPortal && (
+        <div className="flex flex-col gap-2 px-4 pb-3 sm:hidden">
+          <div className="w-full">
+            <LocationControl
+              postcode={storedPostcode}
+              deliverable={deliverable}
+              offerCollection={offerCollection}
+            />
+          </div>
+          <SearchForm placeholder={searchPlaceholder} />
+        </div>
+      )}
     </header>
   );
 }

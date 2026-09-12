@@ -8,6 +8,7 @@ import { getAuth } from "@/lib/auth";
 import { computeTotals } from "@/lib/order-totals";
 import { formatPrice } from "@/components/product/format-price";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
+import { CheckoutSummary } from "@/components/checkout/CheckoutSummary";
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
 
 // Prisma's @prisma/client/wasm can't load during next build's Node-based
@@ -65,42 +66,14 @@ export default async function CheckoutPage() {
 
       <div className="grid gap-6 md:grid-cols-[1fr_18rem]">
         <div className="rounded-2xl border border-black/10 bg-white p-5">
-          <CheckoutForm signedInEmail={signedInEmail} redeemable={redeemable} />
+          <CheckoutForm
+            signedInEmail={signedInEmail}
+            redeemable={redeemable}
+            offerCollection={vendor?.offerCollection ?? false}
+          />
         </div>
 
-        <aside className="h-fit rounded-2xl border border-black/10 bg-surface-muted p-5">
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-primary">
-            Order summary
-          </h2>
-          <ul className="mb-3 space-y-2">
-            {summary.lines.map((line) => (
-              <li key={line.productId} className="flex justify-between gap-3 text-xs">
-                <span className="min-w-0 truncate text-primary-muted">
-                  {line.quantity} × {line.name}
-                </span>
-                <span className="shrink-0 font-medium text-primary">
-                  {formatPrice(line.lineTotalPence)}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <dl className="space-y-1.5 border-t border-black/10 pt-3 text-xs">
-            <div className="flex justify-between">
-              <dt className="text-primary-muted">Subtotal</dt>
-              <dd className="font-medium text-primary">{formatPrice(totals.subtotalPence)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-primary-muted">Delivery</dt>
-              <dd className="font-medium text-primary">
-                {totals.deliveryFeePence === 0 ? "FREE" : formatPrice(totals.deliveryFeePence)}
-              </dd>
-            </div>
-            <div className="flex justify-between border-t border-black/10 pt-2 text-sm font-bold">
-              <dt className="text-primary">Total</dt>
-              <dd className="text-primary">{formatPrice(totals.totalPence)}</dd>
-            </div>
-          </dl>
-        </aside>
+        <CheckoutSummary lines={summary.lines} initialTotals={totals} />
       </div>
     </main>
   );

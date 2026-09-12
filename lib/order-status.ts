@@ -12,8 +12,10 @@
 const LABELS: Record<string, string> = {
   PENDING_PAYMENT: "Awaiting payment",
   CONFIRMED: "Order confirmed",
+  READY_FOR_COLLECTION: "Ready for collection",
   OUT_FOR_DELIVERY: "Out for delivery",
   DELIVERED: "Delivered",
+  COLLECTED: "Collected",
   CANCELLED: "Cancelled",
 };
 
@@ -84,7 +86,7 @@ export function formatOrderDate(date: Date): string {
 // ---- Transition legality (P4b, #125) ---------------------------------------
 
 /**
- * The five OrderStatus values, as a plain literal union.
+ * The seven OrderStatus values, as a plain literal union.
  *
  * Deliberately declared here rather than imported from @prisma/client: this
  * module's defining property is that it does no I/O and pulls in no client, so
@@ -95,8 +97,10 @@ export function formatOrderDate(date: Date): string {
 export const ORDER_STATUSES = [
   "PENDING_PAYMENT",
   "CONFIRMED",
+  "READY_FOR_COLLECTION",
   "OUT_FOR_DELIVERY",
   "DELIVERED",
+  "COLLECTED",
   "CANCELLED",
 ] as const;
 
@@ -109,22 +113,36 @@ export function isOrderStatus(value: string): value is OrderStatusValue {
 
 /**
  * The staff-advanceable ladder. Strictly forward, strictly one rung at a time.
+ * Method-aware as of #402: DELIVERY and COLLECTION flow through disjoint paths.
  *
  * `PENDING_PAYMENT` is deliberately absent as a source: only Stripe's webhook
  * confirms or cancels an unpaid order (P3c), so no staff action can move it and
- * an unpaid order can never jump to delivered. `DELIVERED` and `CANCELLED` are
+ * an unpaid order can never jump to delivered. `DELIVERED`, `COLLECTED`, and `CANCELLED` are
  * terminal. Staff cannot cancel — that is refund-adjacent (ADR-005) and a
  * decision of its own, not a fifth button.
  *
  * A map rather than a chain of `if`s so the whole rule surface is one readable
  * object, and so `nextStatus` and `canTransition` cannot drift apart.
  */
-const LEGAL_TRANSITIONS: Record<string, readonly string[]> = {
-  PENDING_PAYMENT: [],
-  CONFIRMED: ["OUT_FOR_DELIVERY"],
-  OUT_FOR_DELIVERY: ["DELIVERED"],
-  DELIVERED: [],
-  CANCELLED: [],
+const LEGAL_TRANSITIONS: Record<"DELIVERY" | "COLLECTION", Record<string, readonly string[]>> = {
+  DELIVERY: {
+    PENDING_PAYMENT: [],
+    CONFIRMED: ["OUT_FOR_DELIVERY"],
+    OUT_FOR_DELIVERY: ["DELIVERED"],
+    DELIVERED: [],
+    READY_FOR_COLLECTION: [], // Impossible state for DELIVERY
+    COLLECTED: [], // Impossible state for DELIVERY
+    CANCELLED: [],
+  },
+  COLLECTION: {
+    PENDING_PAYMENT: [],
+    CONFIRMED: ["READY_FOR_COLLECTION"],
+    READY_FOR_COLLECTION: ["COLLECTED"],
+    COLLECTED: [],
+    OUT_FOR_DELIVERY: [], // Impossible state for COLLECTION
+    DELIVERED: [], // Impossible state for COLLECTION
+    CANCELLED: [],
+  },
 };
 
 /**
@@ -134,16 +152,23 @@ const LEGAL_TRANSITIONS: Record<string, readonly string[]> = {
  * move an order, and the safe default for an authorization-shaped question is
  * always "no".
  */
-export function canTransition(from: string, to: string): boolean {
-  return (LEGAL_TRANSITIONS[from] ?? []).includes(to);
+export function canTransition(
+  from: string,
+  to: string,
+  method: "DELIVERY" | "COLLECTION" = "DELIVERY",
+): boolean {
+  return (LEGAL_TRANSITIONS[method]?.[from] ?? []).includes(to);
 }
 
 /**
  * The single legal next rung, or null where there is none. Drives the queue's
  * one button, so the UI cannot offer a move the service would then reject.
  */
-export function nextStatus(from: string): string | null {
-  return LEGAL_TRANSITIONS[from]?.[0] ?? null;
+export function nextStatus(
+  from: string,
+  method: "DELIVERY" | "COLLECTION" = "DELIVERY",
+): string | null {
+  return LEGAL_TRANSITIONS[method]?.[from]?.[0] ?? null;
 }
 
 /**
@@ -160,7 +185,11 @@ export function nextStatus(from: string): string | null {
  * are finished. P6a keeps this as the DEFAULT rather than widening it — an
  * explicit ?status= is what reaches the rest.
  */
-export const STAFF_QUEUE_STATUSES = ["CONFIRMED", "OUT_FOR_DELIVERY"] as const;
+export const STAFF_QUEUE_STATUSES = [
+  "CONFIRMED",
+  "READY_FOR_COLLECTION",
+  "OUT_FOR_DELIVERY",
+] as const;
 
 /**
  * The statuses that count as revenue (P7.5a, #238).
@@ -183,7 +212,13 @@ export const STAFF_QUEUE_STATUSES = ["CONFIRMED", "OUT_FOR_DELIVERY"] as const;
  * refunded order will need to leave this set. There is no refund path today, so
  * there is nothing to exclude yet.
  */
-export const REVENUE_STATUSES = ["CONFIRMED", "OUT_FOR_DELIVERY", "DELIVERED"] as const;
+export const REVENUE_STATUSES = [
+  "CONFIRMED",
+  "READY_FOR_COLLECTION",
+  "OUT_FOR_DELIVERY",
+  "DELIVERED",
+  "COLLECTED",
+] as const;
 
 // ---- Staff-facing timeline (P6a, #158) -------------------------------------
 

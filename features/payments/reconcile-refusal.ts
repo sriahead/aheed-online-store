@@ -41,7 +41,7 @@ async function resolveTarget(refusalId: FormDataEntryValue | null) {
  * about whether this order was actually paid.
  */
 export async function reconcileRefusal(formData: FormData) {
-  const auth = await requireVendorRole("STAFF", "ADMIN");
+  const auth = await requireVendorRole("ADMIN");
   if (!auth.ok) return;
 
   const refusalId = formData.get("refusalId");
@@ -90,7 +90,7 @@ export async function reconcileRefusal(formData: FormData) {
  * the same mechanism that refused the original webhook.
  */
 export async function recoverRefusedOrder(formData: FormData) {
-  const auth = await requireVendorRole("STAFF", "ADMIN");
+  const auth = await requireVendorRole("ADMIN");
   if (!auth.ok) return;
 
   const refusalId = formData.get("refusalId");

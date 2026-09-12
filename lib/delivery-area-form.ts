@@ -33,13 +33,10 @@ import type { ParseResult } from "@/lib/catalogue-form";
 const PREFIX_FIELD = "prefix";
 
 /**
- * A UK postcode area: one or two letters. Anchored at both ends, so nothing trailing survives.
- *
- * Note this deliberately does NOT accept a district number (`MK9`). `lib/delivery.ts` appends
- * `[0-9]` itself when matching, so a stored `MK9` could never match any real postcode — the stored
- * value is an area, and the district digit is supplied by the matcher.
+ * A UK postcode area or district: one or two letters optionally followed by one or two digits/letters.
+ * Anchored at both ends, so nothing trailing survives.
  */
-const POSTCODE_AREA = /^[A-Z]{1,2}$/;
+const POSTCODE_AREA = /^[A-Z]{1,2}([0-9][A-Z0-9]?)?$/;
 
 /** The `useActionState` shape for both delivery-area forms. */
 export interface DeliveryAreaFormState {
@@ -82,7 +79,8 @@ export function parsePrefixInput(raw: string): ParseResult<string> {
       ok: false,
       error: {
         field: PREFIX_FIELD,
-        message: "A postcode area is one or two letters, like MK or RG — no numbers or symbols.",
+        message:
+          "A postcode area is 1-2 letters, optionally followed by numbers (e.g. MK or MK9) — no spaces or symbols.",
       },
     };
   }

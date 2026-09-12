@@ -32,7 +32,7 @@ const LIMIT = 50;
  * directly.
  */
 export default async function StaffPaymentsPage() {
-  const auth = await requireVendorRole("STAFF", "ADMIN");
+  const auth = await requireVendorRole("ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
     // 403 — signed in, but not staff for THIS vendor. A message, never a blank

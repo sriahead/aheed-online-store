@@ -33,7 +33,7 @@ import {
  * its own validation stage. Constants and types live in lib/product-image.ts;
  * module-level values below are deliberately NOT exported.
  *
- * Each action runs `requireVendorRole("ADMIN")` itself. A server action is a
+ * Each action runs `requireVendorRole("STAFF", "ADMIN")` itself. A server action is a
  * public endpoint at a stable, build-time id — anyone who has loaded the page
  * once can POST to it forever — so the page's own check protects the page, not
  * these. Same posture as P6b1's saveProduct and P4b's advance-status.
@@ -75,7 +75,7 @@ export async function requestImageUpload(
   productId: string,
   byteLength: number,
 ): Promise<ImageActionResult<UploadTicket>> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   // Checked before the product lookup so an oversized file costs no query, and
@@ -112,7 +112,7 @@ export async function attachProductImage(
   storageKey: string,
   alt: string,
 ): Promise<ImageActionResult<{ url: string }>> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   const product = await getProductForAdmin(auth.vendorId, productId);
@@ -171,7 +171,7 @@ export async function addProductImage(
   storageKey: string,
   alt: string,
 ): Promise<ImageActionResult<{ url: string }>> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   const product = await getProductForAdmin(auth.vendorId, productId);
@@ -207,7 +207,7 @@ export async function promoteProductImage(
   productId: string,
   imageId: string,
 ): Promise<ImageActionResult<null>> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   const result = await promoteProductImageRow(auth.vendorId, productId, imageId);
@@ -230,7 +230,7 @@ export async function removeProductImage(
   productId: string,
   imageId: string,
 ): Promise<ImageActionResult<null>> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   const result = await removeProductImageRow(auth.vendorId, productId, imageId);
@@ -248,7 +248,7 @@ export async function reorderProductImages(
   productId: string,
   orderedImageIds: string[],
 ): Promise<ImageActionResult<null>> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   const result = await reorderProductImagesRow(auth.vendorId, productId, orderedImageIds);
@@ -260,7 +260,7 @@ export async function reorderProductImages(
 }
 
 export async function approveProductImage(productId: string): Promise<ImageActionResult<null>> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   const result = await approveProductImageRow(auth.vendorId, productId);

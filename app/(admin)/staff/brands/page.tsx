@@ -23,7 +23,7 @@ export const metadata: Metadata = { title: "Brands" };
  * and a blank content area — indistinguishable from a loading state rather than a refusal.
  */
 export default async function StaffBrandsPage() {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
     return (

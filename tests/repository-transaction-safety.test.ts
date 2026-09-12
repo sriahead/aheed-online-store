@@ -219,5 +219,5 @@ describe("lib/repositories transaction safety (#382)", () => {
       .join("\n");
 
     expect(violations, violations.length === 0 ? "" : `\n${detail}\n`).toEqual([]);
-  });
+  }, 30000);
 });

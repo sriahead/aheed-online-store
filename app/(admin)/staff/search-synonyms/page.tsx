@@ -25,7 +25,7 @@ export const metadata: Metadata = { title: "Search dictionary" };
  * an entry can add results but never silently substitute a different product.
  */
 export default async function StaffSearchSynonymsPage() {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
     return (
@@ -52,7 +52,7 @@ export default async function StaffSearchSynonymsPage() {
 
       <div className="mb-6 space-y-4">
         <AddSynonymForm />
-        <ProposeSynonymsForm />
+        {(auth.via === "ADMIN" || auth.via === "platform-admin") && <ProposeSynonymsForm />}
       </div>
 
       <PendingSynonymsClient pendingRows={pending} />

@@ -21,7 +21,7 @@ export const metadata: Metadata = { title: "Bundles" };
  * an open instance of exactly this being got wrong on another page).
  */
 export default async function StaffBundlesPage() {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
     return (

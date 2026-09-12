@@ -77,6 +77,11 @@ export async function getVendorBranding(vendorId: string) {
   return getVendorBrandingRepo(getPrisma(), vendorId);
 }
 
+export async function getVendorLocation(vendorId: string) {
+  const { getVendorLocation: getVendorLocationRepo } = await import("@/lib/repositories/vendor");
+  return getVendorLocationRepo(getPrisma(), vendorId);
+}
+
 export async function updateVendorLogoKey(vendorId: string, logoStorageKey: string) {
   return updateVendorLogoKeyRepo(getPrisma(), vendorId, logoStorageKey);
 }

@@ -32,4 +32,15 @@ describe("isDeliverable", () => {
     expect(isDeliverable("not a postcode", ["MK"])).toBe(false);
     expect(isDeliverable("MK9 1AA", [])).toBe(false); // vendor has no delivery areas
   });
+  it("supports exact district matching without over-matching (#613)", () => {
+    // MK1 should match MK1 exactly, but NOT MK17
+    expect(isDeliverable("MK1 1AA", ["MK1"])).toBe(true);
+    expect(isDeliverable("MK17 1AA", ["MK1"])).toBe(false);
+    expect(isDeliverable("MK10 1AA", ["MK1"])).toBe(false);
+
+    // EC1A should match EC1A exactly, but NOT EC1
+    expect(isDeliverable("EC1A 1BB", ["EC1A"])).toBe(true);
+    expect(isDeliverable("EC1A 1BB", ["EC1"])).toBe(false);
+    expect(isDeliverable("EC1 1BB", ["EC1A"])).toBe(false);
+  });
 });

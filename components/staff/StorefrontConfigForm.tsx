@@ -54,12 +54,19 @@ const BRAND_COLOR_FIELDS = [
 export function StorefrontConfigForm({
   initialConfig,
   initialBranding,
+  initialLocation,
   themes,
   vendorThemes,
   logoUrl,
 }: {
   initialConfig: VendorConfig;
   initialBranding: VendorBranding;
+  initialLocation: {
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    postcode: string;
+  } | null;
   themes: Theme[];
   vendorThemes: { id: string; name: string }[];
   logoUrl: string | null;
@@ -72,6 +79,8 @@ export function StorefrontConfigForm({
   const [selectedThemeRef, setSelectedThemeRef] = useState(
     initialBranding.themeId ? `global:${initialBranding.themeId}` : "",
   );
+
+  const [offerCollection, setOfferCollection] = useState(initialConfig.offerCollection ?? false);
 
   const [colors, setColors] = useState<Record<BrandColorFieldName, string>>({
     brandGreenDark: initialBranding.brandGreenDark || "",
@@ -508,6 +517,78 @@ export function StorefrontConfigForm({
             Enter 0.00 for no minimum. A shopper below this cannot check out.
           </p>
         </div>
+
+        <div className="flex items-center gap-3 mt-4">
+          <input
+            type="checkbox"
+            id="offerCollection"
+            name="offerCollection"
+            checked={offerCollection}
+            onChange={(e) => setOfferCollection(e.target.checked)}
+            className="h-5 w-5 rounded border-black/20 text-primary focus:ring-primary"
+          />
+          <label htmlFor="offerCollection" className="font-bold text-black">
+            Offer Click & Collect
+          </label>
+        </div>
+
+        {offerCollection && (
+          <div className="flex flex-col gap-4 rounded-xl border border-black/10 bg-surface-muted p-4">
+            <h3 className="font-bold text-black">Collection Location</h3>
+            <p className="text-sm text-black/60">Where shoppers will collect their orders.</p>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="collectionAddressLine1" className="text-sm font-bold text-black">
+                Address Line 1
+              </label>
+              <input
+                id="collectionAddressLine1"
+                name="collectionAddressLine1"
+                defaultValue={initialLocation?.addressLine1 ?? ""}
+                className={fieldClass(deliveryState.field === "collectionAddressLine1")}
+                placeholder="e.g. Unit 4, Market Square"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="collectionAddressLine2" className="text-sm font-bold text-black">
+                Address Line 2 (Optional)
+              </label>
+              <input
+                id="collectionAddressLine2"
+                name="collectionAddressLine2"
+                defaultValue={initialLocation?.addressLine2 ?? ""}
+                className="rounded-lg border border-black/20 p-3"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="collectionCity" className="text-sm font-bold text-black">
+                City / Town
+              </label>
+              <input
+                id="collectionCity"
+                name="collectionCity"
+                defaultValue={initialLocation?.city ?? ""}
+                className={fieldClass(deliveryState.field === "collectionCity")}
+                placeholder="e.g. Milton Keynes"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="collectionPostcode" className="text-sm font-bold text-black">
+                Postcode
+              </label>
+              <input
+                id="collectionPostcode"
+                name="collectionPostcode"
+                defaultValue={initialLocation?.postcode ?? ""}
+                className={fieldClass(deliveryState.field === "collectionPostcode")}
+                placeholder="e.g. MK9 3QA"
+              />
+            </div>
+          </div>
+        )}
 
         {deliveryState.error && (
           <p className="rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger">

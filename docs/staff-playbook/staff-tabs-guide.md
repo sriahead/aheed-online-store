@@ -4,11 +4,11 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.0.0"
-updated: "2026-09-06"
+version: "2.2.0"
+updated: "2026-09-12"
 visibility: internal
-summary: "How to use every page in the Staff Panel: picking and dispatching orders, keeping stock honest, clearing stranded payments, and finding the guides. One section per menu item."
-tags: ["staff", "guide", "ui", "fulfillment", "inventory", "payments"]
+summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, bundles, promotions, inventory, search dictionary moderation, and finding the guides. One section per menu item."
+tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms"]
 ---
 
 # Staff Daily Operations Playbook
@@ -17,8 +17,10 @@ Welcome to the **Staff Panel**. This guide covers every page you can open, one s
 item. If a page is not listed here, your account cannot open it — the Store Admin Management Guide
 covers the owner-only pages.
 
-Your four pages are **Overview**, **Live Inventory & Availability**, **Fulfillment & Orders** and
-**Payment Issues**, plus this **Runbook**. Everything else in the panel belongs to a store admin.
+Your core operational pages are **Overview**, **Live Inventory & Availability**, **Fulfillment & Orders**,
+**Catalogue** (Products, Categories, Brands, Bundles, Promotions), and **Search Dictionary**,
+plus this **Runbook**. Configuration of storefront settings, payments, delivery areas, loyalty,
+and discount codes belongs to a store admin.
 
 ## Overview
 
@@ -37,8 +39,8 @@ pick.
 **Who can access:** Staff and store admins
 
 **What you can do:** Adjust a product's stock quantity, and switch a product on or off for
-shoppers. You cannot change a price, a name, a photo or which department a product sits in — those
-are owner decisions and live under Catalogue.
+shoppers. You cannot change a price, a name, a photo or which department a product sits in from
+this page — those changes are made under Catalogue (`/staff/products`).
 
 **Typical workflow:** You spot a gap on the shelf during a shift. Search for the product by name,
 correct its quantity to what is really there, and carry on. If the item has gone entirely and you do
@@ -90,36 +92,6 @@ against it and appears in the order's history. The customer sees the new status 
 page. Status moves cannot be undone from this page, so read the order number before you act on a bulk
 selection.
 
-## Payment Issues — `/staff/payments`
-
-**Purpose:** Find orders where the payment did not complete cleanly, and get them unstuck. Without
-this page an affected order sits in *Pending payment* forever, quietly holding its stock.
-
-**Who can access:** Staff and store admins
-
-**What you can do:** See each payment event the system refused, re-check it against the payment
-provider, and recover the order it left stranded.
-
-**Typical workflow:** A customer says they paid but their order still shows as awaiting payment.
-Open this page, find their order, and use the reconcile control to ask the payment provider what
-really happened. If the payment did go through, recover the order so it moves on to *Confirmed* and
-reaches your picking queue.
-
-**Important fields and filters:** The page lists the 50 most recent refusals for this store. Each row
-shows the order it relates to and the amount, so you can match a customer's phone enquiry to a row
-quickly.
-
-**Common mistakes and limitations:** This page shows payments the system actively **refused**, not
-every order stuck in *Pending payment*. An order whose payment notification simply never arrived is
-picked up automatically by a scheduled check instead, so a missing row does not mean nothing is
-wrong. Escalate rather than cancelling an order the customer insists they paid for. Refusals that
-could not be matched to any order do not appear here at all — they are kept for investigation and are
-not something you can action.
-
-**What happens after changes are saved:** Reconciling asks the payment provider and updates the order
-to match reality — it never assumes. Recovering a genuinely paid order moves it into the normal flow,
-where it shows up in Fulfillment & Orders like any other confirmed order. Running the same action
-twice is safe and will not double-charge or double-confirm anything.
 
 ## Internal Operational Runbook — `/staff/runbook`
 
@@ -154,3 +126,183 @@ updates them and the site is redeployed.
   only when you are actively helping them with it.
 - **Refunds are not issued from this panel.** If a customer needs money back, escalate to a store
   admin — there is no refund control anywhere in the staff or admin pages.
+
+
+## Categories — `/staff/categories`
+
+**Purpose:** The departments shoppers browse by, and the subcategories under them.
+
+**Who can access:** Staff and store admins
+
+**What you can do:** Create a department, create a subcategory under a department, rename either,
+change its web address, reorder it, and hide it from shoppers.
+
+**Typical workflow:** You reorganise a section of the shop. Create the new department first, then its
+subcategories, then move products into them from the Catalogue page.
+
+**Important fields and filters:** The New Category creation form is positioned at the top of the
+page above the category list. The tree is **exactly two levels deep** — a department, and
+subcategories under it. You cannot nest a subcategory inside another subcategory, and that limit is
+deliberate rather than an oversight. Each category's web address must be unique across the shop. The
+category list features individual expand/collapse toggle arrows for each department with subcategories,
+as well as global **Expand All** and **Collapse All** controls at the top of the list.
+
+**Common mistakes and limitations:** Subcategories are grouped hierarchically under their parent
+departments, so use the toggle arrows to show or hide nested children. Hiding a department
+hides it from browsing but does not hide the products inside it from search.
+
+**What happens after changes are saved:** The shop's navigation updates immediately. Products already
+assigned to a category stay assigned to it through a rename.
+
+
+## Brands — `/staff/brands`
+
+**Purpose:** The brands shoppers can filter by, such as Shan or TRS.
+
+**Who can access:** Staff and store admins
+
+**What you can do:** Add a brand, rename it, and remove one.
+
+**Typical workflow:** You start stocking a new brand. Add it here first, then set it on each of that
+brand's products from the Catalogue page. Until at least one product carries a brand, the brand
+filter has nothing to show and does not appear to shoppers.
+
+**Important fields and filters:** A brand has a name shoppers see and a web address used in filter
+links. Both must be unique within your shop.
+
+**Common mistakes and limitations:** Creating a brand does nothing visible on its own — a brand with
+no products behind it is invisible in the shop. The work that makes it appear is setting the brand on
+products. Avoid creating near-duplicates ("TRS" and "T.R.S."), because shoppers will see both as
+separate filter options.
+
+**What happens after changes are saved:** The brand becomes available in the Catalogue product form
+straight away, and appears as a shopper-facing filter once a product carries it.
+
+
+## Promotions — `/staff/promotions`
+
+**Purpose:** Department campaign banners — the headline, image and link that front a department.
+
+**Who can access:** Staff and store admins
+
+**What you can do:** Write a campaign headline and subtitle for a department, upload a banner image,
+set a link, and schedule when it runs.
+
+**Typical workflow:** You are running a seasonal push on a department. Pick the department, write the
+headline, upload the banner, set the dates, and save.
+
+**Important fields and filters:** **Only top-level departments can carry a campaign.** A campaign is
+rendered on the department hero, and that only ever displays top-level departments, so there is
+nowhere for a subcategory campaign to appear.
+
+**Common mistakes and limitations:** A campaign's headline and subtitle are free text, so a typo goes
+live exactly as typed — read it back before saving. Scheduling a campaign does not switch anything
+else off; if two departments both run campaigns, both display on their own pages. The real product
+price callout is always shown alongside your campaign copy and cannot be suppressed by it.
+
+**What happens after changes are saved:** The banner appears on that department's page as soon as its
+schedule allows.
+
+
+## Bundles — `/staff/bundles`
+
+**Purpose:** Curated multi-product deals, such as a weekly meat box or a breakfast set.
+
+**Who can access:** Staff and store admins
+
+**What you can do:** Create a bundle, give it a name and tagline, choose the products and quantities
+inside it, upload an image, and control the order bundles appear in.
+
+**Typical workflow:** You decide to promote a weekly box. Create the bundle, add each product with
+the quantity a customer receives, add an image, and save.
+
+**Important fields and filters:** Every product in a bundle must already exist in your catalogue. The
+quantity is how many of that product the customer gets, not a stock figure. **There is no price field
+to set** — the price shown to a shopper is always the live sum of the products' own current prices,
+recalculated on every view.
+
+**Common mistakes and limitations:** Because the price is always live, changing a product's own price
+changes every bundle containing it immediately, with nothing to review or re-save on the bundle
+itself. Removing a product from the catalogue that a bundle still references will leave that bundle
+incomplete, and a product going out of stock drops it from the bundle until it returns.
+
+**What happens after changes are saved:** The bundle appears in the shop's bundle listing
+immediately.
+
+
+
+
+
+
+## Catalogue — `/staff/products`
+
+**Purpose:** The list of everything your shop sells, and the place where products are created and
+edited. This is the record of the product; the day-to-day stock figure lives under Inventory.
+
+**Who can access:** Staff and store admins
+
+**What you can do:** Add a product, edit its name, description, price and unit label, record its net
+content so the shop can work out a real price per kilo or litre, set its department, choose its
+brand, mark dietary and provenance flags, feature it on the homepage, and manage its photographs.
+
+**Typical workflow:** A new line arrives. Create the product, fill in name, price and unit label,
+add the net content if the item is sold by weight or volume, choose the department it belongs in,
+upload a photo, then set its opening stock. After that, staff keep the stock figure current from the
+Inventory page and you only return here when something about the product itself changes.
+
+**Important fields and filters:** Price is entered in pounds and pence. The unit label is what the
+shopper sees next to the price, so make it match how you actually sell the item. **Net content
+amount** and **Net content unit** are the pair that matter for pricing law: fill both in — for
+example `500` and `Grams` — and the shop works out the price per kilogram itself and shows that
+instead of your unit label, so it can never drift from the price you charge. Leave them empty and
+nothing changes: the product goes on showing the unit label you typed. The amount is a whole number
+in the unit you pick, so enter half a kilo as `500` grams rather than `0.5` kilograms. **Unlike the
+shop itself, this list shows switched-off products too** — that is deliberate, because otherwise you
+could never find a product to switch back on.
+
+**Common mistakes and limitations:** A product must be assigned to a department, and it can sit in a
+top-level department or in one of its subcategories. Both are valid, so check you have picked the one
+shoppers will browse. Marking a product as HMC certified requires the certificate reference and
+verification date; the flag cannot be set without them, and that is intentional. Net content is
+all-or-nothing — an amount with no unit, or a unit with no amount, is refused with the field marked,
+because neither half prices anything on its own. It also describes **one** pack: a 1kg bag and a 5kg
+bag are two separate products here, not two sizes of one. Switching a product off hides it from
+shoppers but does not delete it or affect orders already placed.
+
+**What happens after changes are saved:** The change is live immediately — the storefront, the
+department listing and the product's own page all update. Existing orders are unaffected: they keep
+the price and details captured when the customer ordered.
+
+
+
+
+
+## Search dictionary — `/staff/search-synonyms`
+
+**Purpose:** Teach the shop's search that two words mean the same thing, so a shopper typing
+*bhindi* reaches okra.
+
+**Who can access:** Staff and store admins
+
+**What you can do:** Add a synonym by hand, edit or remove one, and approve or reject the entries the
+system proposes from searches that found nothing. Generating new AI proposals from recent searches
+is reserved for store admins.
+
+**Typical workflow:** You notice customers searching for a word your product names do not use. Add
+that word as an alias pointing at the term your catalogue actually uses. Periodically, review the
+proposed entries and approve the ones that make sense.
+
+**Important fields and filters:** An entry maps an **alias** (what the shopper types) to a
+**canonical** term (what your catalogue calls it). Approved entries **widen** a search: the shopper's
+own word always stays in the query, so an entry can add results but can never silently replace what
+they asked for.
+
+**Common mistakes and limitations:** A synonym pointing at a word that appears in no product name
+does nothing. Proposals come from real failed searches and are suggestions, not facts — read each one
+before approving, because an incorrect mapping will surface products a shopper did not ask for.
+
+**What happens after changes are saved:** Approved entries affect shopper searches immediately;
+rejected proposals are removed from the queue.
+
+
+
