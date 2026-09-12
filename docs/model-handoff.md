@@ -39,7 +39,7 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-11.
+- **Date:** 2026-09-12.
 - **Checkout:** `feature/vendor-colour-pickers`, created from `staging`; `#714`'s approved spec commit is `42fe531`. Reverify the current head.
 - **Base state:** `origin/staging` at `f1dfb03`; `origin/main` at `36c5b92`. Staging had no commit
   absent from main after PR #721's promotion.
@@ -61,11 +61,9 @@ in scope.
 
 ## High-Priority Work
 
-The live board showed **22 open High-priority items**, all with blank Complexity:
+The live board showed open High-priority items, all with blank Complexity:
 
-- Search operability: #582, #583, #589, #602.
-- Staff/admin polish: #638, #683.
-- Brand safety: #714 completed via feature/vendor-colour-pickers.
+- Brand safety: #714 and #733 completed via recent merges.
 - Stock and fulfilment: #363, #400, #401, #402, #613.
 - Saved lists: #116.
 - Paid-order cancellation and reversals: #696, then #137 and #151.

@@ -196,6 +196,25 @@ export async function setSynonymStatus(
   return { ok: true };
 }
 
+/** Bulk approve or reject a selection of proposals. Uses updateMany, so it requires prismaWs. */
+export async function setBulkSynonymStatus(
+  prismaWs: ReturnType<typeof getPrismaWs>,
+  vendorId: string,
+  ids: string[],
+  status: SynonymStatus,
+): Promise<SynonymWriteResult> {
+  if (ids.length === 0) return { ok: true };
+
+  // Note: updateMany over HTTP fails, so this must use prismaWs.
+  // The vendorId in the where clause ensures we only update rows belonging to this tenant,
+  // silently skipping any IDs that don't match.
+  await prismaWs.searchSynonym.updateMany({
+    where: { id: { in: ids }, vendorId },
+    data: { status },
+  });
+  return { ok: true };
+}
+
 export async function deleteSynonym(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,

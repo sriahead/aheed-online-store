@@ -4,6 +4,7 @@ import {
   createSynonym as createSynonymRepo,
   deleteSynonym as deleteSynonymRepo,
   listSynonymsForVendor as listSynonymsForVendorRepo,
+  setBulkSynonymStatus as setBulkSynonymStatusRepo,
   setSynonymStatus as setSynonymStatusRepo,
   updateSynonym as updateSynonymRepo,
   type SearchSynonymRow,
@@ -57,6 +58,15 @@ export async function setSynonymStatus(
   status: SynonymStatus,
 ): Promise<SynonymWriteResult> {
   return setSynonymStatusRepo(getPrisma(), vendorId, id, status);
+}
+
+export async function setBulkSynonymStatus(
+  vendorId: string,
+  ids: string[],
+  status: SynonymStatus,
+): Promise<SynonymWriteResult> {
+  // MUST use getPrismaWs() because the repo uses updateMany
+  return setBulkSynonymStatusRepo(getPrismaWs(), vendorId, ids, status);
 }
 
 export async function deleteSynonym(vendorId: string, id: string): Promise<SynonymWriteResult> {

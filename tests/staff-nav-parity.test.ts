@@ -38,11 +38,8 @@ const REPO_ROOT = join(__dirname, "..");
  * `/staff` is the hub itself: PanelNav links to it as "Overview" and the hub cannot link to itself.
  * `/staff/errors` is platform-admin-only, and PanelNav's `currentTier` prop cannot express that
  * distinction, so the hub carries it alone behind its own `auth.via` check.
- * `/staff/search-synonyms` is absent from both surfaces and is #602's open work; this test asserts
- * parity between the two navs, and would otherwise fail for a reason that has nothing to do with
- * parity.
  */
-const EXCLUDED = new Set(["/staff", "/staff/errors", "/staff/search-synonyms"]);
+const EXCLUDED = new Set(["/staff", "/staff/errors"]);
 
 function staffLinksIn(relativePath: string): Set<string> {
   const source = readFileSync(join(REPO_ROOT, relativePath), "utf8");
