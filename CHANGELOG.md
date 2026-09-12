@@ -8,6 +8,11 @@ every branch merges.
 
 ### Changed
 
+- **Staff vs Admin role isolation and operational refinements** (`#737`; `specs/2026-09-12-staff-admin-help-ratings/`). **No schema change, no migration.**
+  - **Role isolation & server-side authorization**: Day-to-day store operations (Products, Categories, Brands, Promotions, Bundles, Runbook, and synonym moderation) are scoped to both `STAFF` and `ADMIN`. Platform-level functions (Payments, Storefront Configuration, Delivery Areas, Loyalty, Discount Codes, Reports, Customers, Team & Access, and AI synonym proposals) are strictly restricted to `ADMIN`, guarded at both UI page level (`<PanelRefusal />`) and server actions.
+  - **Category Manager**: Moved the "New Category" creation form above the category list on `/staff/categories`, and added global "Expand All" / "Collapse All" controls in `CategoryListClient`.
+  - **Help Centre presentation**: Extracted a shared `DocumentSectionRenderer` component used by both the internal operator Runbook and shopper-facing `/help` page to render top-level markdown headings into discrete cards with consistent typography.
+  - **Zero-review product ratings**: Products with 0 reviews now hide aggregate rating UI across the storefront via a reusable `ProductRating` component.
 - **Staff Panel Operability & Search Synonyms** (`#733`, wrapping `#589`, `#583`, `#582`, `#602`, `#638`, `#683`; `specs/2026-09-12-staff-panel-operability/`). **No schema change, no migration.**
   - **`#589`, `#583`**: Hardened the AI synonym generation path. The Cloudflare Workers AI `fetch` response's JSON parsing is now wrapped in a `try/catch` to gracefully fall back to a standard error rather than throwing an unhandled exception when the model or proxy returns a non-JSON payload (e.g., 502 Bad Gateway HTML).
   - **`#582`**: Bulk synonym management. The `PENDING` queue in `/staff/search-synonyms` now features a checkbox selection column and a bulk action bar, permitting store admins to approve or reject multiple AI proposals at once. The atomic update runs over the `neon-websocket` (`getPrismaWs()`) adapter via `updateMany` to bypass the Neon HTTP transaction limitations.
