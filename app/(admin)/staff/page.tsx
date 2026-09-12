@@ -96,16 +96,73 @@ export default async function StaffHomePage() {
           </p>
         </Link>
 
+        
+
         <Link
-          href="/staff/payments"
-          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-        >
-          <ShieldAlert className="mb-3 h-6 w-6 text-action" aria-hidden />
-          <p className="font-semibold text-primary">Payment Issues</p>
-          <p className="mt-1 text-sm text-primary-muted">
-            Payment events that were refused, and the orders they may have left stranded.
-          </p>
-        </Link>
+              href="/staff/products"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Package className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Products</p>
+              <p className="mt-1 text-sm text-primary-muted">
+                Add products, correct prices, and set what&apos;s in stock.
+              </p>
+            </Link>
+
+        <Link
+              href="/staff/categories"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <FolderTree className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Categories</p>
+              <p className="mt-1 text-sm text-primary-muted">
+                The departments shoppers browse by, and how they&apos;re ordered.
+              </p>
+            </Link>
+
+        <Link
+              href="/staff/brands"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Tag className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Brands</p>
+              <p className="mt-1 text-sm text-primary-muted">
+                The brands shoppers can filter by, and which products carry them.
+              </p>
+            </Link>
+
+        <Link
+              href="/staff/promotions"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Megaphone className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Promotions</p>
+              <p className="mt-1 text-sm text-primary-muted">
+                Department campaigns and the banners that front them.
+              </p>
+            </Link>
+
+        <Link
+              href="/staff/bundles"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Boxes className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Bundles</p>
+              <p className="mt-1 text-sm text-primary-muted">
+                Multi-product deals, their pricing and what they contain.
+              </p>
+            </Link>
+
+        <Link
+              href="/staff/search-synonyms"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <BookA className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Search dictionary</p>
+              <p className="mt-1 text-sm text-primary-muted">
+                Words your shoppers use that your product names don&apos;t.
+              </p>
+            </Link>
 
         <Link
           href="/staff/runbook"
@@ -121,61 +178,15 @@ export default async function StaffHomePage() {
         {isAdmin && (
           <>
             <Link
-              href="/staff/products"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <Package className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Products</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                Add products, correct prices, and set what&apos;s in stock.
-              </p>
-            </Link>
-
-            <Link
-              href="/staff/categories"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <FolderTree className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Categories</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                The departments shoppers browse by, and how they&apos;re ordered.
-              </p>
-            </Link>
-
-            <Link
-              href="/staff/brands"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <Tag className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Brands</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                The brands shoppers can filter by, and which products carry them.
-              </p>
-            </Link>
-
-            <Link
-              href="/staff/promotions"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <Megaphone className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Promotions</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                Department campaigns and the banners that front them.
-              </p>
-            </Link>
-
-            <Link
-              href="/staff/bundles"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <Boxes className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Bundles</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                Multi-product deals, their pricing and what they contain.
-              </p>
-            </Link>
-
-            <Link
+          href="/staff/payments"
+          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+        >
+          <ShieldAlert className="mb-3 h-6 w-6 text-action" aria-hidden />
+          <p className="font-semibold text-primary">Payment Issues</p>
+          <p className="mt-1 text-sm text-primary-muted">
+            Payment events that were refused, and the orders they may have left stranded.
+          </p>
+        </Link>`n<Link
               href="/staff/storefront"
               className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
             >
@@ -252,16 +263,7 @@ export default async function StaffHomePage() {
               </p>
             </Link>
 
-            <Link
-              href="/staff/search-synonyms"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <BookA className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Search dictionary</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                Words your shoppers use that your product names don&apos;t.
-              </p>
-            </Link>
+            
           </>
         )}
 
@@ -297,3 +299,5 @@ export default async function StaffHomePage() {
     </main>
   );
 }
+
+

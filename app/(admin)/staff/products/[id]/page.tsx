@@ -31,7 +31,7 @@ export const metadata: Metadata = { title: "Edit product" };
  */
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
     return (
@@ -72,3 +72,4 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     </main>
   );
 }
+

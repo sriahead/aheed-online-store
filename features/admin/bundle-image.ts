@@ -40,7 +40,7 @@ export async function requestBundleImageUpload(
   bundleId: string,
   byteLength: number,
 ): Promise<ImageActionResult<UploadTicket>> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   if (!Number.isInteger(byteLength) || byteLength <= 0 || byteLength > MAX_IMAGE_BYTES) {
@@ -70,7 +70,7 @@ export async function attachBundleImage(
   storageKey: string,
   altText: string,
 ): Promise<ImageActionResult<void>> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   const trimmedAlt = altText.trim();
@@ -103,3 +103,4 @@ export async function attachBundleImage(
   revalidatePath("/categories");
   return { ok: true, value: undefined };
 }
+

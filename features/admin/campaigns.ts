@@ -14,7 +14,7 @@ import { readForm } from "@/lib/catalogue-form";
  * Actions section — the P6b1/#159 trap). `initialCampaignFormState` lives in
  * lib/campaign-form.ts for exactly that reason.
  *
- * Runs `requireVendorRole("ADMIN")` itself, matching `saveCategory` /
+ * Runs `requireVendorRole("STAFF", "ADMIN")` itself, matching `saveCategory` /
  * `saveProduct` — a server action is a public endpoint at a stable id, so the
  * page's own check protects the page, not this.
  */
@@ -34,7 +34,7 @@ export async function saveCampaign(
   _prev: CampaignFormState,
   form: FormData,
 ): Promise<CampaignFormState> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return refusal(auth.status);
 
   const categoryId = String(form.get("categoryId") ?? "").trim();
@@ -58,3 +58,4 @@ export async function saveCampaign(
 
   return { error: null, field: null, saved: true };
 }
+

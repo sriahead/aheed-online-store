@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import Link from "next/link";
 import { ShieldAlert, MapPin, Sparkles, TicketPercent, Lock } from "lucide-react";
-import Markdown from "react-markdown";
+import { DocumentSectionRenderer } from "@/components/ui/DocumentSectionRenderer";
 import { DOC_ARTICLES } from "../../(admin)/staff/runbook/docs";
 
 export const metadata: Metadata = {
@@ -135,11 +135,9 @@ export default async function HelpPage() {
       </div>
 
       {shopperDocs.length > 0 && (
-        <section className="mt-12 bg-white rounded-2xl p-6 sm:p-8 border border-black/10">
-          <h2 className="text-2xl font-bold mb-6">Detailed Shopping Guide</h2>
-          <div className="prose prose-sm max-w-none text-black/80 prose-headings:text-black prose-a:text-primary hover:prose-a:opacity-80">
-            <Markdown>{shopperDocs[0].content}</Markdown>
-          </div>
+        <section className="mt-12">
+          <h2 className="text-2xl font-bold mb-6 px-4 sm:px-0">Detailed Shopping Guide</h2>
+          <DocumentSectionRenderer content={shopperDocs[0].content} />
         </section>
       )}
     </div>

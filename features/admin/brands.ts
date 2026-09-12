@@ -9,7 +9,7 @@ import type { CatalogueWriteResult } from "@/lib/repositories/products";
 /**
  * Brand admin actions (P2.6 slice 6, #569) — the write half of /staff/brands.
  *
- * Each action runs `requireVendorRole("ADMIN")` ITSELF rather than trusting the page that rendered
+ * Each action runs `requireVendorRole("STAFF", "ADMIN")` ITSELF rather than trusting the page that rendered
  * the form. A server action is a public endpoint at a stable id: anyone who has loaded the page
  * once can POST to it forever, so the page's check protects the page, not this. Same posture every
  * other admin action in this codebase takes.
@@ -54,7 +54,7 @@ export async function createBrand(
   _prev: CatalogueFormState,
   form: FormData,
 ): Promise<CatalogueFormState> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return refusal(auth.status);
 
   const name = String(form.get("name") ?? "").trim();
@@ -73,7 +73,7 @@ export async function renameBrand(
   _prev: CatalogueFormState,
   form: FormData,
 ): Promise<CatalogueFormState> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return refusal(auth.status);
 
   const id = String(form.get("brandId") ?? "").trim();
@@ -96,7 +96,7 @@ export async function setBrandImage(
   _prev: CatalogueFormState,
   form: FormData,
 ): Promise<CatalogueFormState> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return refusal(auth.status);
 
   const id = String(form.get("brandId") ?? "").trim();
@@ -109,3 +109,4 @@ export async function setBrandImage(
   revalidateBrandSurfaces();
   return { error: null, field: null, saved: true };
 }
+

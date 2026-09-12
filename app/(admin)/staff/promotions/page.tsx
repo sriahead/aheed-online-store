@@ -40,7 +40,7 @@ function statusLabel(
  * render nowhere (see plan.md's Deliberately excluded).
  */
 export default async function StaffPromotionsPage() {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
     return (
@@ -101,3 +101,5 @@ export default async function StaffPromotionsPage() {
     </main>
   );
 }
+
+

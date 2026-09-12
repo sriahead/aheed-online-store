@@ -27,7 +27,7 @@ export default async function EditCampaignPage({
   params: Promise<{ categoryId: string }>;
 }) {
   const { categoryId } = await params;
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
     return (
@@ -64,3 +64,4 @@ export default async function EditCampaignPage({
     </main>
   );
 }
+

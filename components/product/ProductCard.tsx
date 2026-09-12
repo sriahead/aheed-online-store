@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { AlertTriangle, Star } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { CartQuantityStepper } from "@/components/cart/CartQuantityStepper";
 import { Card } from "@/components/ui/Card";
 import { ProductImage } from "./ProductImage";
+import { ProductRating } from "./ProductRating";
 import { composePublicUrl } from "@/lib/storage";
 import { tierThresholdQuantity } from "@/lib/tier-pricing";
 import { formatPrice } from "./format-price";
@@ -160,13 +161,7 @@ export function ProductCard({
           <div>
             {/* Rating & Origin */}
             <div className="mb-1 flex items-center justify-between text-xs text-black/60">
-              <div className="flex items-center gap-1">
-                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden />
-                <span className="font-medium text-black/70">
-                  {product.averageRating.toFixed(1)}
-                </span>
-                <span>({product.reviewCount})</span>
-              </div>
+              <ProductRating averageRating={product.averageRating} reviewCount={product.reviewCount} />
               {product.origin && (
                 <span className="max-w-[100px] truncate text-[11px]" title={product.origin}>
                   {product.origin}

@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: "Categories" };
  * under the ordering the repository already returns rather than re-sorted here.
  */
 export default async function StaffCategoriesPage() {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
     return (
@@ -40,15 +40,17 @@ export default async function StaffCategoriesPage() {
         Departments shoppers browse by. Two levels deep, top level first.
       </p>
 
-      <CategoryListClient categories={categories} />
-
       {/* Create sits on the list page rather than a /new route of its own: a
           category is five fields, and the list is the context you need to pick a
           parent. Products get their own page because they are fourteen. */}
-      <section className="mt-8">
+      <section className="mb-8">
         <h2 className="mb-3 text-sm font-bold text-primary">New category</h2>
         <CategoryForm category={null} categories={categories} />
       </section>
+
+      <CategoryListClient categories={categories} />
     </main>
   );
 }
+
+

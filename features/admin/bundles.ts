@@ -25,7 +25,7 @@ import {
  * moment one non-function export exists, while every local gate stays green).
  * `initialBundleFormState` lives in lib/bundle-form.ts for exactly that reason.
  *
- * Each action runs `requireVendorRole("ADMIN")` itself, matching `saveCampaign`
+ * Each action runs `requireVendorRole("STAFF", "ADMIN")` itself, matching `saveCampaign`
  * / `saveCategory` / `saveProduct` — a server action is a public endpoint at a
  * stable id, so the page's own check protects the page, not this.
  */
@@ -53,7 +53,7 @@ function refusal(status: number): BundleFormState {
  * consequence. The item replacement is itself atomic (`setBundleItems`).
  */
 export async function saveBundle(_prev: BundleFormState, form: FormData): Promise<BundleFormState> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return refusal(auth.status);
 
   const rawId = String(form.get("bundleId") ?? "").trim();
@@ -94,7 +94,7 @@ export async function saveBundle(_prev: BundleFormState, form: FormData): Promis
 }
 
 export async function removeBundle(formData: FormData) {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) redirect("/staff/bundles");
 
   const bundleId = String(formData.get("bundleId") ?? "").trim();
@@ -106,3 +106,4 @@ export async function removeBundle(formData: FormData) {
 
   redirect("/staff/bundles");
 }
+

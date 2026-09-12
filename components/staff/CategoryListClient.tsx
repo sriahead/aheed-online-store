@@ -42,69 +42,93 @@ export function CategoryListClient({ categories }: { categories: CategoryItem[] 
 
   const hasChildren = (id: string) => categories.some((c) => c.parentId === id);
 
+  const expandAll = () => setCollapsedIds(new Set());
+  const collapseAll = () => {
+    const parentIds = categories.filter(c => !c.parentId && hasChildren(c.id)).map(c => c.id);
+    setCollapsedIds(new Set(parentIds));
+  };
+
   return (
-    <ul className="space-y-2">
-      {categories.map((category) => {
-        const isHidden = category.parentId && collapsedIds.has(category.parentId);
-        if (isHidden) return null;
+    <div>
+      <div className="mb-3 flex justify-end gap-4">
+        <button
+          type="button"
+          onClick={expandAll}
+          className="text-xs font-semibold text-action hover:underline"
+        >
+          Expand all
+        </button>
+        <button
+          type="button"
+          onClick={collapseAll}
+          className="text-xs font-semibold text-primary-muted hover:underline"
+        >
+          Collapse all
+        </button>
+      </div>
+      <ul className="space-y-2">
+        {categories.map((category) => {
+          const isHidden = category.parentId && collapsedIds.has(category.parentId);
+          if (isHidden) return null;
 
-        const isParent = !category.parentId && hasChildren(category.id);
-        const isCollapsed = collapsedIds.has(category.id);
+          const isParent = !category.parentId && hasChildren(category.id);
+          const isCollapsed = collapsedIds.has(category.id);
 
-        return (
-          <li
-            key={category.id}
-            className={`rounded-2xl border border-black/10 bg-white p-4 ${
-              category.parentId ? "ml-6" : ""
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 items-start gap-2">
-                {isParent && (
-                  <button
-                    type="button"
-                    onClick={() => toggleCollapse(category.id)}
-                    className="mt-0.5 rounded-md text-primary-muted hover:bg-surface-muted hover:text-primary focus:outline-none focus:ring-2 focus:ring-action"
-                    aria-label={isCollapsed ? "Expand category" : "Collapse category"}
-                    aria-expanded={!isCollapsed}
-                  >
-                    {isCollapsed ? (
-                      <ChevronRight className="h-5 w-5" aria-hidden />
-                    ) : (
-                      <ChevronDown className="h-5 w-5" aria-hidden />
-                    )}
-                  </button>
-                )}
-                {!isParent && !category.parentId && (
-                  <div className="w-5 h-5 shrink-0" aria-hidden />
-                )}
-                <div>
-                  <p className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href={`/staff/categories/${category.id}`}
-                      className="font-semibold text-primary hover:underline"
+          return (
+            <li
+              key={category.id}
+              className={`rounded-2xl border border-black/10 bg-white p-4 ${
+                category.parentId ? "ml-6" : ""
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-2">
+                  {isParent && (
+                    <button
+                      type="button"
+                      onClick={() => toggleCollapse(category.id)}
+                      className="mt-0.5 rounded-md text-primary-muted hover:bg-surface-muted hover:text-primary focus:outline-none focus:ring-2 focus:ring-action"
+                      aria-label={isCollapsed ? "Expand category" : "Collapse category"}
+                      aria-expanded={!isCollapsed}
                     >
-                      {category.name}
-                    </Link>
-                    {!category.isActive && (
-                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-muted">
-                        Hidden
-                      </span>
-                    )}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-primary-muted">
-                    {category.parentName ? `in ${category.parentName} · ` : ""}
-                    {category.slug}
-                  </p>
+                      {isCollapsed ? (
+                        <ChevronRight className="h-5 w-5" aria-hidden />
+                      ) : (
+                        <ChevronDown className="h-5 w-5" aria-hidden />
+                      )}
+                    </button>
+                  )}
+                  {!isParent && !category.parentId && (
+                    <div className="w-5 h-5 shrink-0" aria-hidden />
+                  )}
+                  <div>
+                    <p className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/staff/categories/${category.id}`}
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        {category.name}
+                      </Link>
+                      {!category.isActive && (
+                        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-muted">
+                          Hidden
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-primary-muted">
+                      {category.parentName ? `in ${category.parentName} · ` : ""}
+                      {category.slug}
+                    </p>
+                  </div>
                 </div>
+                <p className="shrink-0 text-xs text-primary-muted">
+                  {category.productCount} {category.productCount === 1 ? "product" : "products"}
+                </p>
               </div>
-              <p className="shrink-0 text-xs text-primary-muted">
-                {category.productCount} {category.productCount === 1 ? "product" : "products"}
-              </p>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

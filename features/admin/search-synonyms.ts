@@ -20,7 +20,7 @@ import { type SynonymFormState } from "@/lib/synonym-form";
  * for every caller, invisible to `build`/`typecheck`/`test`). `initialSynonymFormState` lives in
  * `lib/synonym-form.ts` for exactly that reason.
  *
- * Each action runs `requireVendorRole("ADMIN")` itself, matching `saveCampaign`/`saveProduct`: a
+ * Each action runs `requireVendorRole("STAFF", "ADMIN")` itself, matching `saveCampaign`/`saveProduct`: a
  * server action is a public endpoint at a stable id, so the page's own check protects the page, not
  * these.
  */
@@ -44,7 +44,7 @@ export async function addSynonym(
   _prev: SynonymFormState,
   form: FormData,
 ): Promise<SynonymFormState> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return refusal(auth.status);
 
   const result = await createSynonym(auth.vendorId, {
@@ -71,7 +71,7 @@ export async function manageSynonym(
   _prev: SynonymFormState,
   form: FormData,
 ): Promise<SynonymFormState> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return refusal(auth.status);
 
   const id = String(form.get("id") ?? "").trim();
@@ -138,7 +138,7 @@ export async function bulkManageSynonyms(
   _prev: SynonymFormState,
   form: FormData,
 ): Promise<SynonymFormState> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return refusal(auth.status);
 
   const idsRaw = String(form.get("ids") ?? "");
@@ -165,3 +165,4 @@ export async function bulkManageSynonyms(
     notice: `${status === "APPROVED" ? "Approved" : "Rejected"} ${ids.length} item(s).`,
   };
 }
+

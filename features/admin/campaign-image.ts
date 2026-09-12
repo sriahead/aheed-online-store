@@ -21,7 +21,7 @@ import { getCategoryForAdmin } from "@/lib/categories-service";
  * ONLY ASYNC FUNCTIONS MAY BE EXPORTED FROM THIS FILE (CLAUDE.md's Server
  * Actions section — the P6b1/#159 trap).
  *
- * Each action runs `requireVendorRole("ADMIN")` itself; a server action is a
+ * Each action runs `requireVendorRole("STAFF", "ADMIN")` itself; a server action is a
  * public endpoint at a stable id, so the page's own check protects the page,
  * not this.
  */
@@ -46,7 +46,7 @@ export async function requestCampaignImageUpload(
   categoryId: string,
   byteLength: number,
 ): Promise<ImageActionResult<UploadTicket>> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   if (!Number.isInteger(byteLength) || byteLength <= 0 || byteLength > MAX_IMAGE_BYTES) {
@@ -78,7 +78,7 @@ export async function attachCampaignImage(
   storageKey: string,
   altText: string,
 ): Promise<ImageActionResult<void>> {
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   const trimmedAlt = altText.trim();
@@ -115,3 +115,4 @@ export async function attachCampaignImage(
   revalidatePath("/", "layout");
   return { ok: true, value: undefined };
 }
+

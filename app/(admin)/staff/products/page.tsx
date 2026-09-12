@@ -41,7 +41,7 @@ export default async function StaffProductsPage({
   searchParams: Promise<{ cursor?: string; status?: string; q?: string; category?: string }>;
 }) {
   const { cursor, status, q, category } = await searchParams;
-  const auth = await requireVendorRole("ADMIN");
+  const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
     if (auth.status === 401) redirect("/login");
     return (
@@ -223,3 +223,5 @@ export default async function StaffProductsPage({
     </main>
   );
 }
+
+
