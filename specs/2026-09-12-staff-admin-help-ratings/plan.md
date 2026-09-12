@@ -3,8 +3,8 @@ id: 2026-09-12-staff-admin-help-ratings
 title: Staff/Admin Delegation, Category Manager, Help Centre, and Ratings
 audience: [dev]
 type: doc
-status: draft
-version: "1.0.0"
+status: approved
+version: "1.1.0"
 updated: 2026-09-12
 visibility: internal
 summary: Consolidate STAFF vs ADMIN responsibilities, enhance Category Manager, improve Help Centre markdown rendering, and hide zero-review ratings.

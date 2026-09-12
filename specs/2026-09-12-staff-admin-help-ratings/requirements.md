@@ -1,10 +1,10 @@
 ---
-id: 2026-09-12-staff-admin-help-ratings
+id: 2026-09-12-staff-admin-help-ratings-req
 title: Requirements
 audience: [dev]
-type: doc
-status: draft
-version: "1.0.0"
+type: spec
+status: approved
+version: "1.1.0"
 updated: 2026-09-12
 visibility: internal
 summary: Requirements for Staff/Admin roles, Category Manager, Help Centre, and zero-review ratings.

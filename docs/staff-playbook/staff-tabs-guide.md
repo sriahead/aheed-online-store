@@ -4,11 +4,11 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.0.0"
-updated: "2026-09-06"
+version: "2.2.0"
+updated: "2026-09-12"
 visibility: internal
-summary: "How to use every page in the Staff Panel: picking and dispatching orders, keeping stock honest, clearing stranded payments, and finding the guides. One section per menu item."
-tags: ["staff", "guide", "ui", "fulfillment", "inventory", "payments"]
+summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, bundles, promotions, inventory, search dictionary moderation, and finding the guides. One section per menu item."
+tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms"]
 ---
 
 # Staff Daily Operations Playbook
@@ -17,8 +17,10 @@ Welcome to the **Staff Panel**. This guide covers every page you can open, one s
 item. If a page is not listed here, your account cannot open it — the Store Admin Management Guide
 covers the owner-only pages.
 
-Your four pages are **Overview**, **Live Inventory & Availability**, **Fulfillment & Orders** and
-**Payment Issues**, plus this **Runbook**. Everything else in the panel belongs to a store admin.
+Your core operational pages are **Overview**, **Live Inventory & Availability**, **Fulfillment & Orders**,
+**Catalogue** (Products, Categories, Brands, Bundles, Promotions), and **Search Dictionary**,
+plus this **Runbook**. Configuration of storefront settings, payments, delivery areas, loyalty,
+and discount codes belongs to a store admin.
 
 ## Overview
 
@@ -37,8 +39,8 @@ pick.
 **Who can access:** Staff and store admins
 
 **What you can do:** Adjust a product's stock quantity, and switch a product on or off for
-shoppers. You cannot change a price, a name, a photo or which department a product sits in — those
-are owner decisions and live under Catalogue.
+shoppers. You cannot change a price, a name, a photo or which department a product sits in from
+this page — those changes are made under Catalogue (`/staff/products`).
 
 **Typical workflow:** You spot a gap on the shelf during a shift. Search for the product by name,
 correct its quantity to what is really there, and carry on. If the item has gone entirely and you do
@@ -138,14 +140,15 @@ change its web address, reorder it, and hide it from shoppers.
 **Typical workflow:** You reorganise a section of the shop. Create the new department first, then its
 subcategories, then move products into them from the Catalogue page.
 
-**Important fields and filters:** The tree is **exactly two levels deep** — a department, and
+**Important fields and filters:** The New Category creation form is positioned at the top of the
+page above the category list. The tree is **exactly two levels deep** — a department, and
 subcategories under it. You cannot nest a subcategory inside another subcategory, and that limit is
-deliberate rather than an oversight. Each category's web address must be unique across the shop.
+deliberate rather than an oversight. Each category's web address must be unique across the shop. The
+category list features individual expand/collapse toggle arrows for each department with subcategories,
+as well as global **Expand All** and **Collapse All** controls at the top of the list.
 
-**Common mistakes and limitations:** The list is currently ordered by sort order and then by name
-across the whole shop rather than grouping each department with its own subcategories, so an indented
-subcategory on screen may sit beneath a department it does not belong to. Read the "in *department*"
-label under a subcategory's name rather than trusting its position in the list. Hiding a department
+**Common mistakes and limitations:** Subcategories are grouped hierarchically under their parent
+departments, so use the toggle arrows to show or hide nested children. Hiding a department
 hides it from browsing but does not hide the products inside it from search.
 
 **What happens after changes are saved:** The shop's navigation updates immediately. Products already
@@ -282,7 +285,8 @@ the price and details captured when the customer ordered.
 **Who can access:** Staff and store admins
 
 **What you can do:** Add a synonym by hand, edit or remove one, and approve or reject the entries the
-system proposes from searches that found nothing.
+system proposes from searches that found nothing. Generating new AI proposals from recent searches
+is reserved for store admins.
 
 **Typical workflow:** You notice customers searching for a word your product names do not use. Add
 that word as an alias pointing at the term your catalogue actually uses. Periodically, review the
@@ -295,9 +299,7 @@ they asked for.
 
 **Common mistakes and limitations:** A synonym pointing at a word that appears in no product name
 does nothing. Proposals come from real failed searches and are suggestions, not facts — read each one
-before approving, because an incorrect mapping will surface products a shopper did not ask for. This
-page is not currently linked from the panel navigation, so reach it from this guide's address or a
-bookmark.
+before approving, because an incorrect mapping will surface products a shopper did not ask for.
 
 **What happens after changes are saved:** Approved entries affect shopper searches immediately;
 rejected proposals are removed from the queue.

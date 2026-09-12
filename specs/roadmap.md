@@ -4,8 +4,8 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.93.0"
-updated: 2026-09-10
+version: "1.94.0"
+updated: 2026-09-12
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P10, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is now a historical record; launch work lives in P9 and post-launch work in P10.
 tags: [roadmap, phases, backlog]
@@ -477,10 +477,14 @@ recommendation, not a dependency chain except where stated.
 2. **Search synonym operability** — `#583` (the Workers AI call is unverified, and
    `lib/search-synonym-proposals.ts` still carries the `result.response` string assumption
    `CLAUDE.md` records as already broken once), `#589`, `#582` (bulk approve/reject) and `#602`
-   (the queue is unlinked from the staff hub).
-3. **Staff panel polish** — `#638` (expand/collapse on `/staff/categories`, its `#627` prerequisite
+   (the queue is unlinked from the staff hub). **Shipped to staging 2026-09-12** (PR #734) and
+   **promoted to production 2026-09-12** (PR #736); `#583`, `#589`, `#582`, `#602` are **closed**.
+3. **Staff panel polish & role delegation** — `#638` (expand/collapse on `/staff/categories`, its `#627` prerequisite
    shipped) and `#683` (the runbook renders as one continuous page, and `RunbookClient` hardcodes
-   Aheed's palette into a shared panel).
+   Aheed's palette into a shared panel) shipped in PR #734 / promoted in PR #736. Followed by
+   **#737** (`specs/2026-09-12-staff-admin-help-ratings/`, **PR #738**, merge `2687f16` into `staging`),
+   scoping day-to-day operations to `STAFF` while restricting platform settings to `ADMIN`, adding global Expand/Collapse
+   controls and reordering `/staff/categories`, standardising `/help` cards via `DocumentSectionRenderer`, and hiding zero-review ratings across the storefront. **#737 moved to In Review** on Project #2; closes to Done on promotion to `main`.
 4. **Stock badges** — `#400`'s buildable half only: async loading and an `expectedRestockAt`.
    Per-store counts stay blocked on `#422`.
 5. **Saved shopping lists** — `#116`. Genuinely phase-sized: a new `ShoppingList`/`ShoppingListItem`
@@ -1010,3 +1014,5 @@ is unrelated guest-cart retention, and no correctly-numbered issue for this exis
 
   
 | 2026-09-12 | **Tenant-Scoped Saved Themes & Harmonic Palette Generator, built and merged to staging** (issue **#714**, **PR #731**, `staging`, `specs/2026-09-11-vendor-colour-pickers/`). **One new model, one migration.** Added `VendorTheme` model explicitly isolated by `vendorId` to replace the non-compliant tenant-level use of the global `Theme` model. Refactored the `/staff/storefront` interface to provide grouped global/saved themes, adding a "Randomise Colours" client-side generator anchored to a user-selectable Main Colour using harmonic offsets. `gates` all green; post-merge `deploy-staging` completed **success**. **#714 moved to In Review** on Project #2; it closes to Done only on promotion to `main`. | Added safe tenant isolation for saved themes and intelligent randomisation |
+| 2026-09-12 | **Staff panel operability & search synonyms promoted to production** (**PR #736**, merge `0d41faa`, `staging -> main`): carries **PR #734** (`d57859a`, the #733 feature merge) and **PR #735** (`59d5561`, its Document (final) closeout). **No schema change, no migration.** `gates` green; `deploy-production` and `deploy-docs-internal` both completed **success**. **#733, #582, #583, #589, #602, #638 and #683 all closed** on the `main` merge, their Project #2 items auto-moving to **Done**. | Promotion of #733 and related staff operability issues |
+| 2026-09-12 | **Staff/Admin role isolation, Category Manager, Help Centre, and Product Ratings, built and merged to staging** (issue **#737**, **PR #738**, merge `2687f16`, `staging`, `specs/2026-09-12-staff-admin-help-ratings/`). Scoped day-to-day operations to `STAFF` (products, categories, brands, bundles, promotions, search dictionary moderation) and restricted platform configurations to `ADMIN` (storefront, delivery areas, loyalty, discount codes, payments, and AI synonym generation). Added global Expand All / Collapse All controls and reordered Create Category form above category list in `/staff/categories`. Extracted `DocumentSectionRenderer` for Help Centre card presentation matching the Runbook. Hid zero-review ratings across storefront via `ProductRating`. **No schema change, no migration.** `gates` all green; post-merge `deploy-staging` completed **success**. **#737 moved to In Review** on Project #2; closes to Done only on promotion to `main`. | Clear separation of daily staff operability vs platform configuration |

@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-09-11
+version: "1.1.0"
+updated: 2026-09-12
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -40,13 +40,12 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-12.
-- **Checkout:** `feature/vendor-colour-pickers`, created from `staging`; `#714`'s approved spec commit is `42fe531`. Reverify the current head.
-- **Base state:** `origin/staging` at `f1dfb03`; `origin/main` at `36c5b92`. Staging had no commit
-  absent from main after PR #721's promotion.
+- **Checkout:** `staging` (and post-ship doc reconciliation branch `docs/reconcile-handoff-roadmap-737`).
+- **Base state:** `origin/staging` at `2687f16` (PR #738 merged); `origin/main` at `0d41faa` (PR #736 promotion merged). Staging is ahead of main by 1 commit (`2687f16`).
 - **Worktrees:** only the main checkout.
 - **Protected local work:** the separate `docs/orient-reads-board-priority` branch points to
   `d56c7b9`, whose parent is the #713 draft checkpoint `2938597`. Preserve both; neither belongs in
-  #726's branch diff.
+  the current branch diff.
 
 ## Project Position
 
@@ -63,7 +62,7 @@ in scope.
 
 The live board showed open High-priority items, all with blank Complexity:
 
-- Brand safety: #714 and #733 completed via recent merges.
+- Brand safety & staff operability: #714 (promoted via PR #732), #733 (promoted via PR #736), and #737 (merged to `staging` via PR #738, currently **In Review** on Project #2 awaiting promotion).
 - Stock and fulfilment: #363, #400, #401, #402, #613.
 - Saved lists: #116.
 - Paid-order cancellation and reversals: #696, then #137 and #151.
@@ -79,8 +78,6 @@ Dependencies and scope boundaries worth preserving:
   operating inputs such as capacity, rounds and order volume.
 - #400 is three concerns: the low-stock badge exists; restock dates and async loading do not;
   per-store stock depends on location modelling.
-- #583 and #589 are confirmed defects in `lib/search-synonym-proposals.ts`: the real Workers AI
-  response is not reliably a string, and `response.json()` is unguarded.
 - #697 is not missing code. The net-content columns, form, unit-price derivation and pack-size facet
   exist, but dev measurement found zero populated products. Production was not measured.
 - #406 must choose between third-party widgets and first-party rendering after considering CSP,
@@ -95,12 +92,14 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Issue #737** (Staff/Admin delegation, Category Manager, Help Centre, Zero-review ratings) is fully built and awaiting `/clear` and PR creation on the current branch.`n- **PR #725** into `staging` taught `/orient` to read board Priority and corrected stale board-field
+- **Issue #737** (Staff/Admin delegation, Category Manager, Help Centre, Zero-review ratings; `specs/2026-09-12-staff-admin-help-ratings/`) is merged to `staging` via **PR #738** (`2687f16`) and is **In Review** on Project #2; closes upon promotion to `main`.
+- **PR #739** into `staging` carries post-ship documentation and roadmap reconciliation for Issue #737. Required checks are green; pending confirmation to merge.
+- **PR #736** merged `staging → main` (`0d41faa`), promoting #733 and closing #582, #583, #589, #602, #638, and #683 to `Done`.
+- **PR #732** merged `staging → main` (`b505d81`), promoting #714 to `Done`.
+- **PR #725** into `staging` taught `/orient` to read board Priority and corrected stale board-field
   claims. Required checks were green, but it remained open.
 - **PR #722** into `staging` carried final documentation for social/contact and mobile-nav/
   bundle-card work plus promotions PR #717/#721. Required checks were green, but it remained open.
-- **PR #730** merged #713 into `staging` (brand colour validation).
-- **PR #731** merged #714 into `staging` (vendor-scoped saved themes and random palette generation).
 
 ## Backlog Reconciliation Findings
 
@@ -137,7 +136,7 @@ Board Phase and GitHub milestone disagreed for #151, #422, #589, #602, #695, #69
 - `deploy-production.yml` still cites the obsolete private-repository paid-plan explanation for no
   approval gate. The current decision is deliberate self-approval avoidance on a public repo.
 - `specs/mission.md` still cites ISR although this Prisma/Workers stack cannot use Next ISR.
-- `CLAUDE.md`'s Vitest baseline was 117/1557; the last verified full run was 118/1589.
+- `CLAUDE.md`'s Vitest baseline was 117/1557; the last verified full run was 123/1611.
 - The roadmap says the internal KMS site went live behind Access; its deploy workflow says no public
   route is configured. Verify Cloudflare before correcting either statement.
 
