@@ -100,6 +100,7 @@ All facts in this section require live verification:
   claims. Required checks were green, but it remained open.
 - **PR #722** into `staging` carried final documentation for social/contact and mobile-nav/
   bundle-card work plus promotions PR #717/#721. Required checks were green, but it remained open.
+- **Branch `feat/location-control`** fixes the delivery postcode modal (preventing "Checking..." from getting stuck, clearing stale errors) and is awaiting a Pull Request into `staging`.
 
 ## Backlog Reconciliation Findings
 
