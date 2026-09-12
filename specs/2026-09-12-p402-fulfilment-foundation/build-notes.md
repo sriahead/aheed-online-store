@@ -1,8 +1,3 @@
----
-title: "Build Notes: #402 Fulfilment Foundation"
-date: "2026-09-12"
----
-
 # Build Notes: #402 Fulfilment Foundation
 
 ## What changed and why
