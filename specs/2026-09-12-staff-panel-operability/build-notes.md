@@ -1,8 +1,14 @@
 ---
 id: 2026-09-12-staff-panel-operability-build-notes
 title: Build Notes
+audience: [dev]
+type: spec
+status: approved
+version: "1.0.0"
+updated: 2026-09-12
+visibility: internal
+summary: "Build notes for staff panel operability and search synonyms"
 ---
-
 # Build Notes: Staff Panel Operability & Search Synonyms
 
 ## What changed and why

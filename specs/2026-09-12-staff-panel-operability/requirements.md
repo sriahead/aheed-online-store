@@ -1,9 +1,14 @@
 ---
-id: 2026-09-12-staff-panel-operability-requirements
-title: Staff Panel Operability & Search Synonyms Requirements
-status: proposed
+id: 2026-09-12-staff-panel-operability-req
+title: Requirements
+audience: [dev]
+type: spec
+status: approved
+version: "1.0.0"
+updated: 2026-09-12
+visibility: internal
+summary: "Requirements for staff panel operability and search synonyms"
 ---
-
 # Requirements: Staff Panel Operability & Search Synonyms (Epic #733)
 
 ## Search Synonym Operability

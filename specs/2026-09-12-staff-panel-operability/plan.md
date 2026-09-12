@@ -1,10 +1,14 @@
 ---
 id: 2026-09-12-staff-panel-operability-plan
 title: Staff Panel Operability & Search Synonyms Plan
-status: proposed
----
-
-# Plan: Staff Panel Operability & Search Synonyms (Epic #733)
+audience: [dev]
+type: spec
+status: approved
+version: "1.0.0"
+updated: 2026-09-12
+visibility: internal
+summary: "Plan for staff panel operability and search synonyms"
+---# Plan: Staff Panel Operability & Search Synonyms (Epic #733)
 
 This slice addresses six distinct but related operator-tooling issues under the `app/(admin)/staff` namespace. All changes are UI or application logic improvements; no database schema changes are required.
 

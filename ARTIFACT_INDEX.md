@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-10T14:25:29.611Z` · commit `7b8257e` · `166` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-12T06:53:59.871Z` · commit `99aa883` · `170` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -164,6 +164,10 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Mobile nav visibility and Value Bundles card size (plan)](specs/2026-09-10-mobile-nav-and-bundle-card-fix/plan.md) | spec | 1.0.0 | 2026-09-10 | draft | internal | Fix two owner-reported staging regressions — Shop/Shop List/the delivery-postcode badge are unreachable below the lg breakpoint on every route, and Value Bundles cards render nearly double the width of the page's other cards. |
 | [Search category select removal (plan)](specs/2026-09-10-search-category-select-removal/plan.md) | spec | 1.0.0 | 2026-09-10 | draft | internal | Remove the redundant Category select from /search's filter panel, and revert the page's category read from the full tree (#681) back to top-level-only, since nothing else on the page needs the tree shape once the select is gone. |
 | [Social & contact surface — Facebook, Instagram and WhatsApp deep link (plan)](specs/2026-09-10-social-contact-surface/plan.md) | spec | 1.0.0 | 2026-09-10 | draft | internal | Three nullable VendorConfig fields put per-vendor Facebook, Instagram and WhatsApp links on the storefront, with a null hiding its link rather than borrowing another vendor's identity. |
+| [Build Notes](specs/2026-09-12-staff-panel-operability/build-notes.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Build notes for staff panel operability and search synonyms |
+| [Staff Panel Operability & Search Synonyms Plan](specs/2026-09-12-staff-panel-operability/plan.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Plan for staff panel operability and search synonyms |
+| [Requirements](specs/2026-09-12-staff-panel-operability/requirements.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Requirements for staff panel operability and search synonyms |
+| [Validation](specs/2026-09-12-staff-panel-operability/validation.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Validation for staff panel operability and search synonyms |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.28.0 | 2026-09-09 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
