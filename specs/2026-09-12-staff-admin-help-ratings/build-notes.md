@@ -11,8 +11,8 @@
 
 ## Decisions taken during the build
 - Extracted the custom markdown splitting logic (by ## ) into components/ui/DocumentSectionRenderer.tsx so that it could be natively reused by the shopper-facing Help Centre.
-- Updated staff-tabs-guide.md and dmin-tabs-guide.md to move the corresponding documentation sections to keep it in sync with the new RBAC checks.
-- Auth checks were centralized and tested using a new suite (	ests/admin-only-authorization.test.ts).
+- Updated staff-tabs-guide.md and admin-tabs-guide.md to move the corresponding documentation sections to keep it in sync with the new RBAC checks.
+- Auth checks were centralized and tested using a new suite (tests/admin-only-authorization.test.ts).
 
 ## Deviations from the spec
 - None. Everything was strictly adhered to.
