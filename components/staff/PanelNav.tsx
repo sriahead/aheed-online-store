@@ -10,6 +10,7 @@ import {
   Sparkles,
   TicketPercent,
   Layers,
+  BookA,
   BookOpen,
   TrendingUp,
   Users,
@@ -59,9 +60,9 @@ function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: 
  * three more were unreachable from it. `tests/staff-nav-parity.test.ts` now pins the two together:
  * add a link here and the test fails until the hub gains it too.
  *
- * Two pages are deliberately excluded from that parity set, not forgotten:
+ * One page is deliberately excluded from that parity set, not forgotten:
  * `/staff/errors` is platform-admin-only (this nav's `currentTier` cannot express that, so the hub
- * carries it behind its own check), and `/staff/search-synonyms` is #602's open work.
+ * carries it behind its own check).
  *
  * THE PARITY TEST ABOVE IS TIER-BLIND, AND THAT COST US ONE LINK (#626, fixed in #633). It collects
  * every href in each file and compares the two sets, so the staff-tier branch below was never
@@ -129,6 +130,7 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
               <NavLink href="/staff/reports" icon={TrendingUp} label="Reports" />
               <NavLink href="/staff/customers" icon={Contact} label="Customers" />
               <NavLink href="/staff/team" icon={Users} label="Team" />
+              <NavLink href="/staff/search-synonyms" icon={BookA} label="Search Dictionary" />
               <NavLink href="/staff/runbook" icon={BookOpen} label="Runbook" />
             </>
           )}

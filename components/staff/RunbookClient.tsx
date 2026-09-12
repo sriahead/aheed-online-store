@@ -156,10 +156,14 @@ export function RunbookClient({ docs }: { docs: DocArticle[] }) {
               </div>
             </div>
 
-            <div className="mt-8">
-              <div className="prose prose-base max-w-4xl mx-auto prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-a:text-action hover:prose-a:text-primary prose-img:rounded-2xl">
-                <Markdown>{selectedDoc.content}</Markdown>
-              </div>
+            <div className="mt-8 space-y-6">
+              {selectedDoc.content.split(/(?=^##\s)/m).map((section, idx) => (
+                <div key={idx} className="bg-surface-muted p-6 rounded-3xl border border-black/5">
+                  <div className="prose prose-base max-w-4xl mx-auto prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-a:text-action hover:prose-a:text-primary prose-img:rounded-2xl">
+                    <Markdown>{section}</Markdown>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ) : (
