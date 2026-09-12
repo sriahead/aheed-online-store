@@ -163,6 +163,7 @@ model Vendor {
   searchSynonyms            SearchSynonym[]
   listNormalisationAttempts ListNormalisationAttempt[]
   brands                    Brand[]
+  vendorThemes              VendorTheme[]
 }
 
 // P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
@@ -256,6 +257,27 @@ model Theme {
   updatedAt       DateTime @updatedAt
 
   vendorBrandings VendorBranding[]
+}
+
+// #714 Fix — Vendor-scoped saved themes. Mirrors Theme's brand primitives but scoped to a single tenant.
+model VendorTheme {
+  id              String   @id @default(uuid())
+  vendorId        String
+  vendor          Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  name            String
+  brandGreenDark  String
+  brandGreen      String
+  brandOrange     String
+  brandRed        String
+  brandCream      String
+  brandGreenTint  String
+  brandOrangeTint String
+  brandRedTint    String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([vendorId, name])
+  @@index([vendorId])
 }
 
 // Satellite config/branding tables ship EMPTY in slice 1 — their values (and the code that
