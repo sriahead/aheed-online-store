@@ -3,8 +3,11 @@
 import { useState, useActionState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Theme, VendorBranding, VendorConfig } from "@/lib/repositories/vendor";
+import { DEFAULT_BRAND_PRIMITIVES } from "@/lib/repositories/vendor";
+import { brandStyle } from "@/lib/vendor-theme";
 import {
   applyStorefrontTheme,
+  saveStorefrontTheme,
   updateDeliveryRules,
   updateSocialContact,
   updateStorefrontConfig,
@@ -52,55 +55,194 @@ export function StorefrontConfigForm({
   initialConfig,
   initialBranding,
   themes,
+  vendorThemes,
   logoUrl,
 }: {
   initialConfig: VendorConfig;
   initialBranding: VendorBranding;
   themes: Theme[];
+  vendorThemes: { id: string; name: string }[];
   logoUrl: string | null;
 }) {
   const router = useRouter();
   const [themePending, startThemeTransition] = useTransition();
-  const [selectedThemeId, setSelectedThemeId] = useState(initialBranding.themeId ?? "");
+  // We prepend global: or vendor: to the select value to handle both lists natively in the same selector.
+  // We don't try to guess the namespace of the initial theme from `initialBranding.themeId` because it's only ever global:
+  // (VendorTheme uses no foreign key, see schema.prisma). So if it has a themeId, it's global.
+  const [selectedThemeRef, setSelectedThemeRef] = useState(
+    initialBranding.themeId ? `global:${initialBranding.themeId}` : "",
+  );
+
+  const [colors, setColors] = useState<Record<BrandColorFieldName, string>>({
+    brandGreenDark: initialBranding.brandGreenDark || "",
+    brandGreen: initialBranding.brandGreen || "",
+    brandOrange: initialBranding.brandOrange || "",
+    brandRed: initialBranding.brandRed || "",
+    brandCream: initialBranding.brandCream || "",
+    brandGreenTint: initialBranding.brandGreenTint || "",
+    brandOrangeTint: initialBranding.brandOrangeTint || "",
+    brandRedTint: initialBranding.brandRedTint || "",
+  });
+
+  const [prevBranding, setPrevBranding] = useState(initialBranding);
+  if (initialBranding !== prevBranding) {
+    setPrevBranding(initialBranding);
+    setColors({
+      brandGreenDark: initialBranding.brandGreenDark || "",
+      brandGreen: initialBranding.brandGreen || "",
+      brandOrange: initialBranding.brandOrange || "",
+      brandRed: initialBranding.brandRed || "",
+      brandCream: initialBranding.brandCream || "",
+      brandGreenTint: initialBranding.brandGreenTint || "",
+      brandOrangeTint: initialBranding.brandOrangeTint || "",
+      brandRedTint: initialBranding.brandRedTint || "",
+    });
+  }
 
   const [brandingState, saveBranding, brandingPending] = useActionState(
     updateStorefrontConfig,
     initialBrandColourState,
   );
 
-  // #634 — its own form and its own state. The branding form above is
-  // fire-and-forget; these three need a field-level error rendered against the
-  // input that caused it, because they reach real money arithmetic on the
-  // checkout path (lib/order-totals.ts) and a silently-rejected save would be
-  // indistinguishable from a successful one.
   const [deliveryState, saveDeliveryRules, deliveryPending] = useActionState(
     updateDeliveryRules,
     initialDeliveryRulesState,
   );
 
-  // #407 / #405 — a third independent form, for the same reason the delivery one is separate: an
-  // invalid URL must render against the input that caused it, which the branding form's
-  // fire-and-forget useTransition cannot do.
   const [socialState, saveSocialContact, socialPending] = useActionState(
     updateSocialContact,
     initialSocialContactState,
   );
 
+  const [savingTheme, setSavingTheme] = useState(false);
+  const [saveThemeName, setSaveThemeName] = useState("");
+  const [saveThemeError, setSaveThemeError] = useState("");
+
+  const [mainColor, setMainColor] = useState(colors.brandGreen || "#467339");
+
   function applyTheme() {
-    if (!selectedThemeId) return;
+    if (!selectedThemeRef) return;
     startThemeTransition(async () => {
-      await applyStorefrontTheme(selectedThemeId);
+      await applyStorefrontTheme(selectedThemeRef);
       router.refresh();
     });
   }
+
+  async function handleSaveTheme() {
+    if (!saveThemeName.trim()) {
+      setSaveThemeError("Please enter a name for your theme.");
+      return;
+    }
+    setSavingTheme(true);
+    setSaveThemeError("");
+    const livePrimitives = {
+      "green-dark": colors.brandGreenDark || DEFAULT_BRAND_PRIMITIVES["green-dark"],
+      green: colors.brandGreen || DEFAULT_BRAND_PRIMITIVES["green"],
+      orange: colors.brandOrange || DEFAULT_BRAND_PRIMITIVES["orange"],
+      red: colors.brandRed || DEFAULT_BRAND_PRIMITIVES["red"],
+      cream: colors.brandCream || DEFAULT_BRAND_PRIMITIVES["cream"],
+      "green-tint": colors.brandGreenTint || DEFAULT_BRAND_PRIMITIVES["green-tint"],
+      "orange-tint": colors.brandOrangeTint || DEFAULT_BRAND_PRIMITIVES["orange-tint"],
+      "red-tint": colors.brandRedTint || DEFAULT_BRAND_PRIMITIVES["red-tint"],
+    };
+    const result = await saveStorefrontTheme(saveThemeName, livePrimitives);
+    if (!result.ok) {
+      setSaveThemeError(result.error || "Failed to save theme.");
+    } else {
+      setSaveThemeName("");
+      // It revalidated the page, so vendorThemes will refresh.
+    }
+    setSavingTheme(false);
+  }
+
+  function randomisePalette() {
+    const hexToHsl = (hex: string) => {
+      let r = parseInt(hex.substring(1, 3), 16) / 255;
+      let g = parseInt(hex.substring(3, 5), 16) / 255;
+      let b = parseInt(hex.substring(5, 7), 16) / 255;
+      let cmin = Math.min(r, g, b),
+        cmax = Math.max(r, g, b),
+        delta = cmax - cmin,
+        h = 0,
+        s = 0,
+        l = 0;
+      if (delta === 0) h = 0;
+      else if (cmax === r) h = ((g - b) / delta) % 6;
+      else if (cmax === g) h = (b - r) / delta + 2;
+      else h = (r - g) / delta + 4;
+      h = Math.round(h * 60);
+      if (h < 0) h += 360;
+      l = (cmax + cmin) / 2;
+      s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+      return { h, s: s * 100, l: l * 100 };
+    };
+
+    const base = hexToHsl(mainColor);
+
+    // Determine random relationship for accent and danger
+    // 1: Complementary (+180)
+    // 2: Analogous (+30 or -30)
+    // 3: Triadic (+120 or +240)
+    // 4: Split-complementary (+150 or +210)
+    const relationships = [
+      [180, 150],
+      [30, 330],
+      [120, 240],
+      [150, 210],
+    ];
+    const rel = relationships[Math.floor(Math.random() * relationships.length)];
+
+    // Add some random jitter to the hues to get variety
+    const jitterH = () => Math.floor(Math.random() * 20) - 10;
+    const jitterS = () => Math.floor(Math.random() * 20) - 10;
+
+    const orangeH = (base.h + rel[0] + jitterH() + 360) % 360;
+    const redH = (base.h + rel[1] + jitterH() + 360) % 360;
+
+    const hslToHex = (h: number, s: number, l: number) => {
+      s = Math.max(0, Math.min(100, s));
+      l = Math.max(0, Math.min(100, l));
+      l /= 100;
+      const a = (s * Math.min(l, 1 - l)) / 100;
+      const f = (n: number) => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color)
+          .toString(16)
+          .padStart(2, "0");
+      };
+      return `#${f(0)}${f(8)}${f(4)}`;
+    };
+
+    setColors({
+      brandGreen: mainColor,
+      brandGreenDark: hslToHex(base.h, base.s, Math.max(10, base.l - 20)),
+      brandOrange: hslToHex(orangeH, Math.min(100, base.s + 20 + jitterS()), 50),
+      brandRed: hslToHex(redH, Math.min(100, base.s + 10 + jitterS()), 50),
+      brandCream: hslToHex(base.h, 20, 96),
+      brandGreenTint: hslToHex(base.h, 30, 92),
+      brandOrangeTint: hslToHex(orangeH, 40, 92),
+      brandRedTint: hslToHex(redH, 40, 92),
+    });
+  }
+
+  const livePrimitives = {
+    "green-dark": colors.brandGreenDark || DEFAULT_BRAND_PRIMITIVES["green-dark"],
+    green: colors.brandGreen || DEFAULT_BRAND_PRIMITIVES["green"],
+    orange: colors.brandOrange || DEFAULT_BRAND_PRIMITIVES["orange"],
+    red: colors.brandRed || DEFAULT_BRAND_PRIMITIVES["red"],
+    cream: colors.brandCream || DEFAULT_BRAND_PRIMITIVES["cream"],
+    "green-tint": colors.brandGreenTint || DEFAULT_BRAND_PRIMITIVES["green-tint"],
+    "orange-tint": colors.brandOrangeTint || DEFAULT_BRAND_PRIMITIVES["orange-tint"],
+    "red-tint": colors.brandRedTint || DEFAULT_BRAND_PRIMITIVES["red-tint"],
+  };
 
   return (
     <div className="flex max-w-2xl flex-col gap-8">
       <VendorLogoUploader currentLogoUrl={logoUrl} />
 
-      {/* #75 — selecting a theme COPIES its eight values onto the fields below;
-          it does not bind them, so any colour may still be edited afterwards. */}
-      {themes.length > 0 && (
+      {/* #75, #714 — Themes dropdown mixing Global and Vendor themes. */}
+      {(themes.length > 0 || vendorThemes.length > 0) && (
         <div className="flex flex-col gap-2 rounded-2xl border border-black/10 p-4">
           <label htmlFor="themeId" className="font-bold text-black">
             Apply a theme
@@ -113,21 +255,34 @@ export function StorefrontConfigForm({
             <select
               id="themeId"
               name="themeId"
-              value={selectedThemeId}
-              onChange={(event) => setSelectedThemeId(event.target.value)}
+              value={selectedThemeRef}
+              onChange={(event) => setSelectedThemeRef(event.target.value)}
               className="rounded-lg border border-black/20 p-3"
             >
               <option value="">Select a theme…</option>
-              {themes.map((theme) => (
-                <option key={theme.id} value={theme.id}>
-                  {theme.name}
-                </option>
-              ))}
+              {themes.length > 0 && (
+                <optgroup label="Global Presets">
+                  {themes.map((theme) => (
+                    <option key={`global:${theme.id}`} value={`global:${theme.id}`}>
+                      {theme.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {vendorThemes.length > 0 && (
+                <optgroup label="Your Saved Themes">
+                  {vendorThemes.map((theme) => (
+                    <option key={`vendor:${theme.id}`} value={`vendor:${theme.id}`}>
+                      {theme.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
             <button
               type="button"
               onClick={applyTheme}
-              disabled={themePending || !selectedThemeId}
+              disabled={themePending || !selectedThemeRef}
               className="rounded-full bg-primary px-6 py-3 font-bold text-white hover:bg-primary/90 disabled:opacity-50"
             >
               {themePending ? "Applying…" : "Apply Theme"}
@@ -167,27 +322,120 @@ export function StorefrontConfigForm({
 
         {BRAND_COLOR_FIELDS.map((field) => {
           const hasError = brandingState.field === field.name;
+          const val = colors[field.name];
           return (
             <div key={field.name} className="flex flex-col gap-2">
               <label htmlFor={field.name} className="font-bold text-black">
                 {field.label}
               </label>
-              <input
-                id={field.name}
-                name={field.name}
-                type="text"
-                defaultValue={initialBranding[field.name] || ""}
-                className={`rounded-lg border p-3 font-mono ${
-                  hasError ? "border-danger focus-visible:outline-danger" : "border-black/20"
-                }`}
-                placeholder={field.placeholder}
-              />
+              <div className="flex gap-3">
+                <input
+                  type="color"
+                  value={val || "#ffffff"}
+                  onChange={(e) => setColors((prev) => ({ ...prev, [field.name]: e.target.value }))}
+                  className={`h-[50px] w-[50px] cursor-pointer rounded-lg border p-1 ${
+                    hasError ? "border-danger" : "border-black/20"
+                  }`}
+                />
+                <input
+                  id={field.name}
+                  name={field.name}
+                  type="text"
+                  value={val}
+                  onChange={(e) => setColors((prev) => ({ ...prev, [field.name]: e.target.value }))}
+                  className={`flex-1 rounded-lg border p-3 font-mono ${
+                    hasError ? "border-danger focus-visible:outline-danger" : "border-black/20"
+                  }`}
+                  placeholder={field.placeholder}
+                />
+              </div>
               {hasError && (
                 <p className="text-sm font-semibold text-danger">{brandingState.error}</p>
               )}
             </div>
           );
         })}
+
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <label htmlFor="mainColorPicker" className="text-sm font-bold text-black">
+            Main Colour:
+          </label>
+          <input
+            id="mainColorPicker"
+            type="color"
+            value={mainColor}
+            onChange={(e) => setMainColor(e.target.value)}
+            className="h-[40px] w-[40px] cursor-pointer rounded-lg border border-black/20 p-1"
+          />
+          <button
+            type="button"
+            onClick={randomisePalette}
+            className="rounded-full bg-action-tint px-6 py-2 text-sm font-bold text-action hover:bg-action/10"
+          >
+            Randomise Colours
+          </button>
+        </div>
+
+        {/* Live Preview */}
+        <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-black/10 p-6">
+          <h3 className="font-bold text-black">Live Preview</h3>
+          <p className="text-sm text-black/60">
+            This shows what your colours will look like to shoppers. Aheed automatically adjusts
+            them to guarantee they are readable.
+          </p>
+          <div
+            style={brandStyle(livePrimitives)}
+            className="flex flex-col gap-4 rounded-xl border border-black/5 bg-surface-muted p-6"
+          >
+            {/* Primary / Header style */}
+            <div className="flex items-center justify-between rounded-lg bg-primary px-4 py-3 text-white">
+              <span className="font-bold">Header / Primary Button</span>
+            </div>
+
+            {/* Action text on action tint */}
+            <div className="flex flex-col gap-1 rounded-lg bg-action-tint p-4">
+              <span className="font-bold text-action">Trust Strip / Info Panel</span>
+              <span className="text-sm text-primary-muted">
+                This is muted text on the action tint.
+              </span>
+            </div>
+
+            {/* Error banner */}
+            <div className="rounded-lg bg-danger-tint p-4 text-danger">
+              <span className="font-bold">Error Banner</span>
+            </div>
+
+            {/* Accent badge */}
+            <div className="self-start rounded-full bg-accent-tint px-3 py-1 text-sm font-bold text-accent">
+              Accent Badge
+            </div>
+          </div>
+
+          {/* Save as Theme */}
+          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-black/5 bg-black/5 p-4">
+            <h4 className="font-bold text-black text-sm">Save these colours as a Theme</h4>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                placeholder="e.g. Summer Palette"
+                value={saveThemeName}
+                onChange={(e) => setSaveThemeName(e.target.value)}
+                className="flex-1 rounded-lg border border-black/20 p-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={handleSaveTheme}
+                disabled={savingTheme || !saveThemeName.trim()}
+                className="rounded-lg bg-black px-4 py-2 text-sm font-bold text-white hover:bg-black/80 disabled:opacity-50"
+              >
+                {savingTheme ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {saveThemeError && (
+              <p className="text-sm font-semibold text-danger">{saveThemeError}</p>
+            )}
+          </div>
+        </div>
 
         <button
           type="submit"
