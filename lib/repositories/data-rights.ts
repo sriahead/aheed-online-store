@@ -344,10 +344,15 @@ export async function eraseVendorData(
   return prisma.$transaction(async (tx) => {
     const orders = await tx.order.findMany({
       where: { vendorId, userId },
-      select: { id: true, addressId: true },
+      select: { id: true, addressId: true, fulfilmentMethod: true },
     });
     const orderIds = orders.map((order) => order.id);
-    const addressIds = orders.map((order) => order.addressId);
+    const deliveryAddressIds = orders
+      .filter((o) => o.fulfilmentMethod === "DELIVERY")
+      .map((o) => o.addressId);
+    const collectionAddressIds = orders
+      .filter((o) => o.fulfilmentMethod === "COLLECTION")
+      .map((o) => o.addressId);
 
     // Tombstone the orders: the buyer link goes, the financial record stays.
     const anonymised = await tx.order.updateMany({
@@ -355,13 +360,13 @@ export async function eraseVendorData(
       data: { userId: null, guestEmail: null },
     });
 
+    let addressesRedacted = 0;
+
     // Redact every address this user owns at this vendor, plus any address one
-    // of their orders points at (an order's address is a snapshot and may not
-    // carry the userId). Redacting in place is a deliberate exception to that
-    // snapshot's "written once and never updated" rule — the alternative is
-    // deleting a row a non-nullable FK still points at.
-    const redacted = await tx.address.updateMany({
-      where: { vendorId, OR: [{ userId }, { id: { in: addressIds } }] },
+    // of their DELIVERY orders points at. Redacting in place is a deliberate
+    // exception to that snapshot's "written once and never updated" rule.
+    const redactedDelivery = await tx.address.updateMany({
+      where: { vendorId, OR: [{ userId }, { id: { in: deliveryAddressIds } }] },
       data: {
         recipientName: REDACTED,
         phone: REDACTED,
@@ -373,6 +378,27 @@ export async function eraseVendorData(
         userId: null,
       },
     });
+    addressesRedacted += redactedDelivery.count;
+
+    // Redact COLLECTION addresses, but retain the store's physical location fields
+    // which are required for order/audit history. Exclude any address already fully
+    // redacted above (if a shopper impossibly managed to use a collection address
+    // as a delivery address too).
+    if (collectionAddressIds.length > 0) {
+      const redactedCollection = await tx.address.updateMany({
+        where: {
+          vendorId,
+          id: { in: collectionAddressIds, notIn: deliveryAddressIds },
+        },
+        data: {
+          recipientName: REDACTED,
+          phone: REDACTED,
+          notes: null,
+          userId: null,
+        },
+      });
+      addressesRedacted += redactedCollection.count;
+    }
 
     // The user's own content and live state: no retention interest in any of it.
     const reviews = await tx.review.deleteMany({ where: { vendorId, userId } });
@@ -410,7 +436,7 @@ export async function eraseVendorData(
     return {
       identityDeleted,
       ordersAnonymised: anonymised.count,
-      addressesRedacted: redacted.count,
+      addressesRedacted,
       reviewsDeleted: reviews.count,
     };
   });
@@ -601,7 +627,7 @@ export async function eraseGuestOrderData(
         userId: null,
         guestEmail: { equals: email, mode: "insensitive" },
       },
-      select: { id: true, orderNumber: true, addressId: true },
+      select: { id: true, orderNumber: true, addressId: true, fulfilmentMethod: true },
     });
 
     if (!order) return null;
@@ -613,16 +639,24 @@ export async function eraseGuestOrderData(
 
     const redacted = await tx.address.updateMany({
       where: { id: order.addressId, vendorId },
-      data: {
-        recipientName: REDACTED,
-        phone: REDACTED,
-        line1: REDACTED,
-        line2: null,
-        city: REDACTED,
-        postcode: REDACTED,
-        notes: null,
-        userId: null,
-      },
+      data:
+        order.fulfilmentMethod === "DELIVERY"
+          ? {
+              recipientName: REDACTED,
+              phone: REDACTED,
+              line1: REDACTED,
+              line2: null,
+              city: REDACTED,
+              postcode: REDACTED,
+              notes: null,
+              userId: null,
+            }
+          : {
+              recipientName: REDACTED,
+              phone: REDACTED,
+              notes: null,
+              userId: null,
+            },
     });
 
     return { orderNumber: order.orderNumber, addressesRedacted: redacted.count };

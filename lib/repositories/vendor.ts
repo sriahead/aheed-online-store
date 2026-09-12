@@ -66,6 +66,7 @@ export interface VendorProfile {
   deliveryFeePence: number;
   freeDeliveryThresholdPence: number | null;
   minimumOrderPence: number;
+  offerCollection: boolean;
 }
 
 // Fallbacks = the Aheed defaults already in design-system/tokens/tokens.css, so a
@@ -123,6 +124,7 @@ export async function fetchVendorProfile(
           deliveryFeePence: true,
           freeDeliveryThresholdPence: true,
           minimumOrderPence: true,
+          offerCollection: true,
         },
       },
       deliveryAreas: { select: { prefix: true } },
@@ -166,6 +168,7 @@ export async function fetchVendorProfile(
     deliveryFeePence: vendor?.config?.deliveryFeePence ?? 349,
     freeDeliveryThresholdPence: vendor?.config?.freeDeliveryThresholdPence ?? null,
     minimumOrderPence: vendor?.config?.minimumOrderPence ?? 0,
+    offerCollection: vendor?.config?.offerCollection ?? false,
   };
 }
 
@@ -180,6 +183,10 @@ export async function getVendorConfig(prisma: ReturnType<typeof getPrisma>, vend
 
 export async function getVendorBranding(prisma: ReturnType<typeof getPrisma>, vendorId: string) {
   return prisma.vendorBranding.findUnique({ where: { vendorId } });
+}
+
+export async function getVendorLocation(prisma: ReturnType<typeof getPrisma>, vendorId: string) {
+  return prisma.vendorLocation.findUnique({ where: { vendorId } });
 }
 
 export async function updateVendorLogoKey(
@@ -234,6 +241,13 @@ export interface VendorStorefrontConfigInput {
   deliveryFeePence?: number;
   freeDeliveryThresholdPence?: number | null;
   minimumOrderPence?: number;
+  offerCollection?: boolean;
+  location?: {
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    postcode: string;
+  } | null;
   brandGreenDark?: string;
   brandGreen?: string;
   brandOrange?: string;
@@ -288,8 +302,26 @@ export async function updateVendorStorefrontConfig(
         ...(data.minimumOrderPence !== undefined
           ? { minimumOrderPence: data.minimumOrderPence }
           : {}),
+        ...(data.offerCollection !== undefined ? { offerCollection: data.offerCollection } : {}),
       },
     });
+
+    if (data.offerCollection && data.location !== undefined) {
+      if (data.location) {
+        await tx.vendorLocation.upsert({
+          where: { vendorId },
+          create: {
+            vendorId,
+            ...data.location,
+          },
+          update: data.location,
+        });
+      } else {
+        // Technically this shouldn't happen based on parseDeliveryRules, but if it does,
+        // we could delete the location if they uncheck the box. However, retaining the
+        // snapshot is better. Let's just leave it alone if they uncheck it.
+      }
+    }
 
     const brandingUpdates: Partial<Record<(typeof BRAND_FIELDS)[number], string>> = {};
     for (const field of BRAND_FIELDS) {

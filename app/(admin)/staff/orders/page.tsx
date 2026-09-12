@@ -141,7 +141,7 @@ export default async function StaffOrdersPage({
 
           <ul className="space-y-3">
             {items.map((order) => {
-              const next = nextStatus(order.status);
+              const next = nextStatus(order.status, order.fulfilmentMethod);
               return (
                 <li
                   key={order.orderNumber}

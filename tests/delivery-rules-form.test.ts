@@ -16,7 +16,16 @@ import {
  * value could not exist. These are the rules that keep that true.
  */
 
-const VALID = { deliveryFee: "3.49", freeDeliveryThreshold: "30", minimumOrder: "0" };
+const VALID = {
+  deliveryFee: "3.49",
+  freeDeliveryThreshold: "30",
+  minimumOrder: "0",
+  offerCollection: false,
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  postcode: "",
+};
 
 describe("parsePoundsToPence", () => {
   it.each([
@@ -101,6 +110,8 @@ describe("parseDeliveryRules", () => {
       deliveryFeePence: 349,
       freeDeliveryThresholdPence: 3000,
       minimumOrderPence: 0,
+      offerCollection: false,
+      location: null,
     });
   });
 

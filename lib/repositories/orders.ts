@@ -98,6 +98,7 @@ export interface PlaceOrderInput {
   /** Absolute origin for the provider's return URLs. Supplied by the checkout
    *  action so this stays free of request context (P3b R9a). */
   returnOrigin: string;
+  fulfilmentMethod: "DELIVERY" | "COLLECTION";
 }
 
 export interface PlacedOrder {
@@ -223,7 +224,7 @@ export async function placeOrder(
     // tier-reduced figure. A shopper whose multi-buy drops them under the
     // minimum is genuinely under it. Codes and points behave the opposite way
     // and that asymmetry is intended, not an oversight.
-    const preDiscount = computeTotals(lines, input.rules);
+    const preDiscount = computeTotals(lines, input.rules, 0, input.fulfilmentMethod);
     if (preDiscount.subtotalPence < input.rules.minimumOrderPence) {
       throw new CheckoutError("BELOW_MINIMUM", "Your order is below this store's minimum.");
     }
@@ -244,8 +245,30 @@ export async function placeOrder(
       }
     }
 
+    let addressData = { vendorId, userId: input.userId, ...input.address };
+    if (input.fulfilmentMethod === "COLLECTION") {
+      const vendorLocation = await tx.vendorLocation.findUnique({ where: { vendorId } });
+      if (!vendorLocation) {
+        throw new CheckoutError(
+          "NOT_DELIVERABLE",
+          "This store has not configured a collection location.",
+        );
+      }
+      addressData = {
+        vendorId,
+        userId: null, // Collection address must never enter the user's saved address book
+        recipientName: input.address.recipientName,
+        phone: input.address.phone,
+        line1: vendorLocation.addressLine1,
+        line2: vendorLocation.addressLine2,
+        city: vendorLocation.city,
+        postcode: vendorLocation.postcode,
+        notes: input.address.notes,
+      };
+    }
+
     const address = await tx.address.create({
-      data: { vendorId, userId: input.userId, ...input.address },
+      data: addressData,
       select: { id: true },
     });
 
@@ -286,7 +309,12 @@ export async function placeOrder(
       config: loyaltyConfig,
     });
 
-    const totals = computeTotals(lines, input.rules, codeDiscountPence + redemption.discountPence);
+    const totals = computeTotals(
+      lines,
+      input.rules,
+      codeDiscountPence + redemption.discountPence,
+      input.fulfilmentMethod,
+    );
 
     // Retry against the unique index rather than assuming randomness never collides.
     let order: { id: string; orderNumber: string; confirmationToken: string | null } | null = null;
@@ -308,6 +336,7 @@ export async function placeOrder(
           userId: input.userId,
           guestEmail: input.guestEmail,
           addressId: address.id,
+          fulfilmentMethod: input.fulfilmentMethod,
           subtotalPence: totals.subtotalPence,
           discountPence: totals.discountPence,
           deliveryFeePence: totals.deliveryFeePence,
@@ -616,6 +645,7 @@ export function toProvenance(row: {
 export interface OrderSummary {
   orderNumber: string;
   status: string;
+  fulfilmentMethod: "DELIVERY" | "COLLECTION";
   createdAt: Date;
   subtotalPence: number;
   /** P5a (#135). Zero for every pre-P5a order and for any order with no discount. */
@@ -672,6 +702,7 @@ export interface OrderSummary {
 export interface OrderListItem {
   orderNumber: string;
   status: string;
+  fulfilmentMethod: "DELIVERY" | "COLLECTION";
   createdAt: Date;
   totalPence: number;
   /** Sum of EVERY item's quantity — 2 × milk + 1 × rice is 3, not 2. */
@@ -724,6 +755,7 @@ const ORDER_LIST_SELECT = {
   id: true,
   orderNumber: true,
   status: true,
+  fulfilmentMethod: true,
   createdAt: true,
   totalPence: true,
   items: {
@@ -736,6 +768,7 @@ type OrderListRow = {
   id: string;
   orderNumber: string;
   status: string;
+  fulfilmentMethod: string;
   createdAt: Date;
   totalPence: number;
   items: { productName: string; quantity: number }[];
@@ -753,6 +786,7 @@ function toOrderListPage(rows: OrderListRow[], take: number): OrderListPage {
     items: page.map((order) => ({
       orderNumber: order.orderNumber,
       status: order.status,
+      fulfilmentMethod: order.fulfilmentMethod as "DELIVERY" | "COLLECTION",
       createdAt: order.createdAt,
       totalPence: order.totalPence,
       itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
@@ -878,6 +912,7 @@ export async function findOrderForViewer(
       orderNumber: true,
       confirmationToken: true,
       status: true,
+      fulfilmentMethod: true,
       createdAt: true,
       subtotalPence: true,
       discountPence: true,
@@ -992,6 +1027,7 @@ export async function findOrderForUser(
     select: {
       orderNumber: true,
       status: true,
+      fulfilmentMethod: true,
       createdAt: true,
       subtotalPence: true,
       discountPence: true,
@@ -1073,6 +1109,7 @@ export async function findOrderForStaff(
     select: {
       orderNumber: true,
       status: true,
+      fulfilmentMethod: true,
       createdAt: true,
       subtotalPence: true,
       discountPence: true,
@@ -1212,6 +1249,8 @@ export type AdvanceResult =
 const TRANSITION_NOTES: Record<string, string> = {
   OUT_FOR_DELIVERY: "Marked out for delivery by staff.",
   DELIVERED: "Marked delivered by staff.",
+  READY_FOR_COLLECTION: "Marked ready for collection by staff.",
+  COLLECTED: "Marked collected by staff.",
 };
 
 /**
@@ -1249,13 +1288,20 @@ export async function advanceOrderStatus(
 ): Promise<AdvanceResult> {
   const existing = await prisma.order.findFirst({
     where: { orderNumber, vendorId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, fulfilmentMethod: true },
   });
   if (!existing) return { ok: false, reason: "not-found" };
 
   // isOrderStatus first, so a forged value ("BANANA") is rejected identically to
   // a merely illegal one — and narrows `toStatus` for the writes below.
-  if (!isOrderStatus(toStatus) || !canTransition(existing.status, toStatus)) {
+  if (
+    !isOrderStatus(toStatus) ||
+    !canTransition(
+      existing.status,
+      toStatus,
+      existing.fulfilmentMethod as "DELIVERY" | "COLLECTION",
+    )
+  ) {
     return { ok: false, reason: "illegal-transition" };
   }
 
@@ -1321,14 +1367,21 @@ export async function advanceOrderStatusBulk(
     for (const { orderNumber, toStatus } of items) {
       const existing = await tx.order.findFirst({
         where: { orderNumber, vendorId },
-        select: { id: true, status: true },
+        select: { id: true, status: true, fulfilmentMethod: true },
       });
       if (!existing) {
         skipped.push({ orderNumber, reason: "not-found" });
         continue;
       }
 
-      if (!isOrderStatus(toStatus) || !canTransition(existing.status, toStatus)) {
+      if (
+        !isOrderStatus(toStatus) ||
+        !canTransition(
+          existing.status,
+          toStatus,
+          existing.fulfilmentMethod as "DELIVERY" | "COLLECTION",
+        )
+      ) {
         skipped.push({ orderNumber, reason: "illegal-transition" });
         continue;
       }
