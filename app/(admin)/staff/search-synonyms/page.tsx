@@ -81,5 +81,3 @@ export default async function StaffSearchSynonymsPage() {
     </main>
   );
 }
-
-

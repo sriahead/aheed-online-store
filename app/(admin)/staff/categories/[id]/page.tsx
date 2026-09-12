@@ -48,4 +48,3 @@ export default async function EditCategoryPage({ params }: { params: Promise<{ i
     </main>
   );
 }
-

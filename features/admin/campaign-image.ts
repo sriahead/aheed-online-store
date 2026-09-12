@@ -115,4 +115,3 @@ export async function attachCampaignImage(
   revalidatePath("/", "layout");
   return { ok: true, value: undefined };
 }
-

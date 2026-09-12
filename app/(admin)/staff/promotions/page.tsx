@@ -101,5 +101,3 @@ export default async function StaffPromotionsPage() {
     </main>
   );
 }
-
-

@@ -103,4 +103,3 @@ export async function attachBundleImage(
   revalidatePath("/categories");
   return { ok: true, value: undefined };
 }
-

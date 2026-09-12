@@ -3,7 +3,7 @@ import Markdown from "react-markdown";
 export function DocumentSectionRenderer({ content }: { content: string }) {
   // Split by markdown h2 headers (## )
   const sections = content.split(/(?=^##\s)/m);
-  
+
   return (
     <div className="space-y-6">
       {sections.map((section, idx) => (

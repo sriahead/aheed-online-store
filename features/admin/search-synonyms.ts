@@ -165,4 +165,3 @@ export async function bulkManageSynonyms(
     notice: `${status === "APPROVED" ? "Approved" : "Rejected"} ${ids.length} item(s).`,
   };
 }
-

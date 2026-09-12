@@ -223,5 +223,3 @@ export default async function StaffProductsPage({
     </main>
   );
 }
-
-

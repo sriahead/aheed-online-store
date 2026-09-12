@@ -17,4 +17,3 @@ describe("ProductRating component", () => {
     expect(getByText("(5)")).toBeDefined();
   });
 });
-

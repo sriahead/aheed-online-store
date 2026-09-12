@@ -161,7 +161,10 @@ export function ProductCard({
           <div>
             {/* Rating & Origin */}
             <div className="mb-1 flex items-center justify-between text-xs text-black/60">
-              <ProductRating averageRating={product.averageRating} reviewCount={product.reviewCount} />
+              <ProductRating
+                averageRating={product.averageRating}
+                reviewCount={product.reviewCount}
+              />
               {product.origin && (
                 <span className="max-w-[100px] truncate text-[11px]" title={product.origin}>
                   {product.origin}

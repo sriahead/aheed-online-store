@@ -72,4 +72,3 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     </main>
   );
 }
-

@@ -106,4 +106,3 @@ export async function removeBundle(formData: FormData) {
 
   redirect("/staff/bundles");
 }
-

@@ -144,12 +144,9 @@ describe("PanelNav's staff tier matches the pages that actually admit STAFF (R23
     expect(staffTierLinks().size).toBeGreaterThan(2);
   });
 
-
-
   it("links to every route that admits STAFF, and to no route that does not", () => {
     const expected = [...routesAdmittingStaff()].sort();
     const actual = [...staffTierLinks()].sort();
     expect(actual).toEqual(expected);
   });
 });
-

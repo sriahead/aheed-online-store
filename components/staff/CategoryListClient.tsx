@@ -44,7 +44,7 @@ export function CategoryListClient({ categories }: { categories: CategoryItem[] 
 
   const expandAll = () => setCollapsedIds(new Set());
   const collapseAll = () => {
-    const parentIds = categories.filter(c => !c.parentId && hasChildren(c.id)).map(c => c.id);
+    const parentIds = categories.filter((c) => !c.parentId && hasChildren(c.id)).map((c) => c.id);
     setCollapsedIds(new Set(parentIds));
   };
 

@@ -71,5 +71,3 @@ export default async function StaffBrandsPage() {
     </main>
   );
 }
-
-

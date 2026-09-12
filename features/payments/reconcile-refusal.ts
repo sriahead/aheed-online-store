@@ -154,4 +154,3 @@ export async function recoverRefusedOrder(formData: FormData) {
   revalidatePath("/staff/payments");
   revalidatePath("/staff/orders");
 }
-

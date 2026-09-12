@@ -270,4 +270,3 @@ export async function approveProductImage(productId: string): Promise<ImageActio
   if (product) revalidateProductSurfaces(product.id, product.slug);
   return { ok: true, value: null };
 }
-

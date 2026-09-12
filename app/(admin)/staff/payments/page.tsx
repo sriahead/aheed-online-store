@@ -165,4 +165,3 @@ export default async function StaffPaymentsPage() {
     </main>
   );
 }
-
