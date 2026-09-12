@@ -137,7 +137,7 @@ export async function Header({
           <div className="flex items-center gap-4 text-white/90">
             <span className="flex items-center gap-1 font-medium text-white">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              {profile?.offerCollection 
+              {profile?.offerCollection
                 ? `${name} — local delivery across ${localityName} & click and collect`
                 : `${name} — local delivery across ${localityName}`}
             </span>
@@ -275,8 +275,6 @@ export async function Header({
               <span className="hidden sm:inline">Shop List</span>
             </Link>
           )}
-
-
 
           {/* Account / Sign In & Sign Out Controls */}
           {user ? (

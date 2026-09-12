@@ -180,7 +180,9 @@ export default async function HomePage() {
               {profile?.offerCollection ? "Delivery & Collection" : "Local Delivery"}
             </h4>
             <p className="text-[11px] text-black/60 leading-tight">
-              {profile?.offerCollection ? `Delivered across ${localityName} or pick up in-store` : `Delivered across ${localityName}`}
+              {profile?.offerCollection
+                ? `Delivered across ${localityName} or pick up in-store`
+                : `Delivered across ${localityName}`}
             </p>
           </div>
         </div>

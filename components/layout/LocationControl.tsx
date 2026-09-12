@@ -14,10 +14,11 @@ export function LocationControl({
   offerCollection: boolean;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  
-  const defaultMode = (postcode && deliverable) ? "DELIVERY" : (offerCollection ? "COLLECTION" : "DELIVERY");
+
+  const defaultMode =
+    postcode && deliverable ? "DELIVERY" : offerCollection ? "COLLECTION" : "DELIVERY";
   const [mode, setMode] = useState<"DELIVERY" | "COLLECTION">(defaultMode);
-  
+
   const [isPending, startTransition] = useTransition();
   const [isDirty, setIsDirty] = useState(false);
 
@@ -68,7 +69,7 @@ export function LocationControl({
             <span className="hidden sm:inline">Click & Collect</span>
             <span className="sm:hidden">Collect</span>
           </button>
-          
+
           <button
             type="button"
             onClick={() => {
@@ -90,7 +91,9 @@ export function LocationControl({
               <Truck className="w-3.5 h-3.5" />
             )}
             <span className="hidden sm:inline">
-              {mode === "DELIVERY" && postcode && deliverable ? `Delivery · ${postcode}` : "Delivery"}
+              {mode === "DELIVERY" && postcode && deliverable
+                ? `Delivery · ${postcode}`
+                : "Delivery"}
             </span>
             <span className="sm:hidden">
               {mode === "DELIVERY" && postcode && deliverable ? postcode : "Delivery"}
@@ -149,7 +152,10 @@ export function LocationControl({
           >
             <div className="flex items-center gap-2">
               <div className="relative flex-1 flex items-center">
-                <MapPin className="pointer-events-none absolute left-3 h-4 w-4 text-black/60" aria-hidden />
+                <MapPin
+                  className="pointer-events-none absolute left-3 h-4 w-4 text-black/60"
+                  aria-hidden
+                />
                 <input
                   type="text"
                   name="postcode"
