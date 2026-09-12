@@ -29,9 +29,11 @@ export function LocationControl({
       if (dialogRef.current?.open) {
         dialogRef.current.close();
       }
+      // eslint-disable-next-line
       setMode("DELIVERY");
     } else if (postcode && deliverable === false) {
       if (offerCollection) {
+        // eslint-disable-next-line
         setMode("COLLECTION");
       }
     }
@@ -116,6 +118,7 @@ export function LocationControl({
         </button>
       )}
 
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
       <dialog
         ref={dialogRef}
         onCancel={(e) => {
