@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-12T21:42:50.098Z` · commit `fb368c8` · `178` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-13T06:01:37.029Z` · commit `8cbcfc5` · `180` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -168,6 +168,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Social & contact surface — Facebook, Instagram and WhatsApp deep link (plan)](specs/2026-09-10-social-contact-surface/plan.md) | spec | 1.0.0 | 2026-09-10 | draft | internal | Three nullable VendorConfig fields put per-vendor Facebook, Instagram and WhatsApp links on the storefront, with a null hiding its link rather than borrowing another vendor's identity. |
 | [Project-state model handoff workflow integration (plan)](specs/2026-09-11-model-handoff-workflow/plan.md) | spec | 1.0.0 | 2026-09-11 | approved | internal | Formalize the project-state model handoff within Orient, Build Notes, and final Document while keeping slice detail, durable truth, current project position, and live verification distinct. |
 | [Vendor colour pickers (plan)](specs/2026-09-11-vendor-colour-pickers/plan.md) | spec | 1.0.0 | 2026-09-11 | draft | internal | Add visual colour pickers to the staff storefront configuration form, with a live preview of the contrast-clamped semantic values. |
+| [P402 Fulfilment Foundation](specs/2026-09-12-p402-fulfilment-foundation/plan.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Plan for the Fulfilment Foundation slice, including Click & Collect collection points and method-aware data. |
 | [Build Notes: Staff/Admin Delegation, Category Manager, Help Centre, and Ratings](specs/2026-09-12-staff-admin-help-ratings/build-notes.md) | spec | 1.1.0 | 2026-09-12 | approved | internal | Build notes for Staff/Admin roles, Category Manager, Help Centre, and zero-review ratings. |
 | [Staff/Admin Delegation, Category Manager, Help Centre, and Ratings](specs/2026-09-12-staff-admin-help-ratings/plan.md) | doc | 1.1.0 | 2026-09-12 | approved | internal | Consolidate STAFF vs ADMIN responsibilities, enhance Category Manager, improve Help Centre markdown rendering, and hide zero-review ratings. |
 | [Requirements](specs/2026-09-12-staff-admin-help-ratings/requirements.md) | spec | 1.1.0 | 2026-09-12 | approved | internal | Requirements for Staff/Admin roles, Category Manager, Help Centre, and zero-review ratings. |
@@ -176,6 +177,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Staff Panel Operability & Search Synonyms Plan](specs/2026-09-12-staff-panel-operability/plan.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Plan for staff panel operability and search synonyms |
 | [Requirements](specs/2026-09-12-staff-panel-operability/requirements.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Requirements for staff panel operability and search synonyms |
 | [Validation](specs/2026-09-12-staff-panel-operability/validation.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Validation for staff panel operability and search synonyms |
+| [P613 Postcode & Address Lookup](specs/2026-09-13-p613-address-lookup/plan.md) | spec | 1.1.0 | 2026-09-13 | approved | internal | Address lookup and postcode validation using postcodes.io, with graceful fallback and no full property autocomplete. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.28.0 | 2026-09-09 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

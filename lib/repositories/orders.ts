@@ -74,6 +74,7 @@ export interface PlaceOrderInput {
     line1: string;
     line2: string | null;
     city: string;
+    county: string | null;
     postcode: string;
     notes: string | null;
   };
@@ -693,6 +694,7 @@ export interface OrderSummary {
     line1: string;
     line2: string | null;
     city: string;
+    county: string | null;
     postcode: string;
     notes: string | null;
   };
