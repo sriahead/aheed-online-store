@@ -801,6 +801,7 @@ model Address {
   line1         String
   line2         String?
   city          String
+  county        String?
   postcode      String
   notes         String?
   createdAt     DateTime @default(now())

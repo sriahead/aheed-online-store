@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **Postcode & Address Lookup** (`#613`; `specs/2026-09-13-p613-address-lookup/`). **Schema change: one new column, one migration.**
+  - **Address Lookup:** Integrated postcodes.io to validate UK postcodes and automatically fill the Town/City and County fields during checkout.
+  - **Fallback Handling:** Ensures checkout continues even if the external postcode service is unavailable.
+  - **Editable Address:** Maintains fully manual Address Line 1 and 2 fields while preventing checkout on explicitly invalid postcodes.
+
 - **Fulfilment Foundation (Click & Collect)** (`#402`; `specs/2026-09-12-p402-fulfilment-foundation/`). **Schema change: one added enum, one new table, one migration.**
   - **Method-Aware Data:** Introduced `FulfilmentMethod` enum (`DELIVERY` | `COLLECTION`) on `Order`, allowing distinct handling of click & collect orders. Historical orders default to `DELIVERY`.
   - **Status Isolation:** Split `OrderStatus` ladders to keep them strictly disjoint, adding `READY_FOR_COLLECTION` and `COLLECTED`.

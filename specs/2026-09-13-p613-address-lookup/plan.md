@@ -3,7 +3,7 @@ id: 2026-09-13-p613-address-lookup
 title: P613 Postcode & Address Lookup
 audience: [dev]
 type: spec
-status: proposed
+status: approved
 version: "1.1.0"
 updated: 2026-09-13
 visibility: internal
