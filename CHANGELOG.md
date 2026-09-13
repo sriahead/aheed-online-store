@@ -13,6 +13,11 @@ every branch merges.
   - **Fallback Handling:** Ensures checkout continues even if the external postcode service is unavailable.
   - **Editable Address:** Maintains fully manual Address Line 1 and 2 fields while preventing checkout on explicitly invalid postcodes.
 
+- **Shared Fulfilment Slots** (`#401`; `specs/2026-09-13-p401-shared-fulfilment-slots/`). **Schema change: two added models, one new table, one migration.**
+  - **Unified Slot Model:** Introduced `VendorFulfilmentSlot` to manage daily recurring time windows for both `DELIVERY` and `COLLECTION` methods.
+  - **Configurable Hold Durations:** Orders placed in checkout tentatively reserve their slot with a `PENDING_PAYMENT` status. The hold automatically expires after `slotHoldDurationMinutes`, freeing the slot for other customers without cron jobs.
+  - **Prisma Native Concurrency:** Slot booking uses Prisma native Serializable transaction isolation rather than raw SQL `SELECT FOR UPDATE` to guarantee no overbooking during high concurrent load, respecting the strict no-raw-SQL domain-data rule.
+
 - **Fulfilment Foundation (Click & Collect)** (`#402`; `specs/2026-09-12-p402-fulfilment-foundation/`). **Schema change: one added enum, one new table, one migration.**
   - **Method-Aware Data:** Introduced `FulfilmentMethod` enum (`DELIVERY` | `COLLECTION`) on `Order`, allowing distinct handling of click & collect orders. Historical orders default to `DELIVERY`.
   - **Status Isolation:** Split `OrderStatus` ladders to keep them strictly disjoint, adding `READY_FOR_COLLECTION` and `COLLECTED`.

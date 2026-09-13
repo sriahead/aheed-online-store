@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-13T06:03:10.302Z` · commit `2e3aabd` · `180` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-13T06:34:40.420Z` · commit `c71f9bb` · `183` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -177,6 +177,9 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Staff Panel Operability & Search Synonyms Plan](specs/2026-09-12-staff-panel-operability/plan.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Plan for staff panel operability and search synonyms |
 | [Requirements](specs/2026-09-12-staff-panel-operability/requirements.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Requirements for staff panel operability and search synonyms |
 | [Validation](specs/2026-09-12-staff-panel-operability/validation.md) | spec | 1.0.0 | 2026-09-12 | approved | internal | Validation for staff panel operability and search synonyms |
+| [P401 Shared Fulfilment Slots](specs/2026-09-13-p401-shared-fulfilment-slots/plan.md) | spec | 1.1.0 | 2026-09-13 | approved | internal | Shared scheduling and slot capacity reservation system for both Delivery and Collection. |
+| [P401 Shared Fulfilment Slots Requirements](specs/2026-09-13-p401-shared-fulfilment-slots/requirements.md) | spec | 1.1.0 | 2026-09-13 | approved | internal | Requirements for shared fulfilment slots. |
+| [P401 Shared Fulfilment Slots Validation](specs/2026-09-13-p401-shared-fulfilment-slots/validation.md) | spec | 1.1.0 | 2026-09-13 | approved | internal | Validation for shared fulfilment slots. |
 | [P613 Postcode & Address Lookup](specs/2026-09-13-p613-address-lookup/plan.md) | spec | 1.1.0 | 2026-09-13 | approved | internal | Address lookup and postcode validation using postcodes.io, with graceful fallback and no full property autocomplete. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.28.0 | 2026-09-09 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |

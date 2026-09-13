@@ -76,6 +76,9 @@ export default async function CheckoutPage() {
       <div className="grid gap-6 md:grid-cols-[1fr_18rem]">
         <div className="rounded-2xl border border-black/10 bg-white p-5">
           <CheckoutForm
+            vendorId={vendor?.id ?? ""}
+            bookingWindowDays={vendor?.bookingWindowDays ?? 14}
+            offerDeliverySlots={vendor?.offerDeliverySlots ?? false}
             signedInEmail={signedInEmail}
             redeemable={redeemable}
             offerCollection={vendor?.offerCollection ?? false}

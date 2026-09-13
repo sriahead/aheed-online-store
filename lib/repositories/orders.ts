@@ -14,6 +14,7 @@ import {
   type StaffTimelineEntry,
   type TimelineEntry,
 } from "@/lib/order-status";
+import { Prisma } from "@prisma/client";
 import {
   earnPoints,
   getLoyaltyConfig,
@@ -55,7 +56,8 @@ export class CheckoutError extends Error {
       | "INSUFFICIENT_STOCK"
       | "ORDER_NUMBER_COLLISION"
       | "PAYMENT_PROVIDER_FAILED"
-      | "DISCOUNT_CODE",
+      | "DISCOUNT_CODE"
+      | "SLOT_FULL",
     message: string,
   ) {
     super(message);
@@ -78,6 +80,8 @@ export interface PlaceOrderInput {
     postcode: string;
     notes: string | null;
   };
+  fulfilmentSlotId?: string | null;
+  fulfilmentDate?: Date | null;
   rules: DeliveryRules & { minimumOrderPence: number };
   /**
    * Loyalty points the shopper asked to spend (P5a, #135). An INTENT, never an
@@ -151,6 +155,31 @@ export async function placeOrder(
   const payments = getPaymentService();
 
   const created = await prisma.$transaction(async (tx) => {
+    if (input.fulfilmentSlotId && input.fulfilmentDate) {
+      const slot = await tx.vendorFulfilmentSlot.findUnique({
+        where: { id: input.fulfilmentSlotId }
+      });
+      const config = await tx.vendorConfig.findUnique({ where: { vendorId } });
+      if (slot && config) {
+        const holdMinutes = config.slotHoldDurationMinutes;
+        const cutoff = new Date(Date.now() - holdMinutes * 60000);
+        const used = await tx.order.count({
+          where: {
+            vendorId,
+            fulfilmentSlotId: slot.id,
+            fulfilmentDate: input.fulfilmentDate,
+            OR: [
+              { status: { in: ["CONFIRMED", "READY_FOR_COLLECTION", "OUT_FOR_DELIVERY", "DELIVERED", "COLLECTED"] } },
+              { status: "PENDING_PAYMENT", createdAt: { gte: cutoff } }
+            ]
+          }
+        });
+        if (used >= slot.capacity) {
+          throw new CheckoutError("SLOT_FULL", "The selected time slot is no longer available.");
+        }
+      }
+    }
+
     // Re-read the cart inside the transaction — never trust what the page rendered.
     const cart = await tx.cart.findFirst({
       where: { id: input.cartId, vendorId },
@@ -263,6 +292,7 @@ export async function placeOrder(
         line1: vendorLocation.addressLine1,
         line2: vendorLocation.addressLine2,
         city: vendorLocation.city,
+        county: null,
         postcode: vendorLocation.postcode,
         notes: input.address.notes,
       };
@@ -437,6 +467,11 @@ export async function placeOrder(
       totalPence: totals.totalPence,
       currency: CURRENCY,
     };
+  },
+  {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    maxWait: 5000,
+    timeout: 10000,
   });
 
   // ---- After commit: talk to the payment provider ----------------------------
@@ -937,6 +972,7 @@ export async function findOrderForViewer(
           line1: true,
           line2: true,
           city: true,
+            county: true,
           postcode: true,
           notes: true,
         },
@@ -1051,6 +1087,7 @@ export async function findOrderForUser(
           line1: true,
           line2: true,
           city: true,
+            county: true,
           postcode: true,
           notes: true,
         },
@@ -1136,6 +1173,7 @@ export async function findOrderForStaff(
           line1: true,
           line2: true,
           city: true,
+            county: true,
           postcode: true,
           notes: true,
         },

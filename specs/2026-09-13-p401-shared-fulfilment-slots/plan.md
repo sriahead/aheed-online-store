@@ -3,7 +3,7 @@ id: 2026-09-13-p401-shared-fulfilment-slots
 title: P401 Shared Fulfilment Slots
 audience: [dev]
 type: spec
-status: proposed
+status: approved
 version: "1.1.0"
 updated: 2026-09-13
 visibility: internal

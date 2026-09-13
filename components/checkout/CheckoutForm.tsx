@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { MapPin, ShieldCheck, Sparkles, Tag, User } from "lucide-react";
+import { MapPin, ShieldCheck, Sparkles, Tag, User, Clock } from "lucide-react";
 import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-order";
 import { inputClass, labelClass } from "@/lib/form-classes";
 import { lookupPostcode } from "@/lib/postcodes-api";
 import { setDeliveryPostcode } from "@/features/storefront/delivery";
+import { SlotPicker } from "./SlotPicker";
 
 /**
  * Checkout form (P3b, #96), following docs/ui-ref/CheckoutModal.tsx's structure —
@@ -27,6 +28,9 @@ export function CheckoutForm({
   redeemable,
   offerCollection,
   initialPostcode,
+  vendorId,
+  bookingWindowDays,
+  offerDeliverySlots,
 }: {
   signedInEmail: string | null;
   /**
@@ -38,6 +42,9 @@ export function CheckoutForm({
   redeemable: { balancePoints: number; valueLabel: string; minRedeemPoints: number } | null;
   offerCollection: boolean;
   initialPostcode?: string | null;
+  vendorId: string;
+  bookingWindowDays: number;
+  offerDeliverySlots: boolean;
 }) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
 
@@ -312,11 +319,26 @@ export function CheckoutForm({
         </section>
       )}
 
+      {((method === "DELIVERY" && offerDeliverySlots) || method === "COLLECTION") && (
+        <section className="space-y-3 border-t border-black/5 pt-5">
+          <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
+            <Clock className="h-4 w-4" aria-hidden />
+            {offerCollection ? "3" : "2"}. Choose a Time
+          </h2>
+          <SlotPicker
+            vendorId={vendorId}
+            method={method}
+            bookingWindowDays={bookingWindowDays}
+            required={true}
+          />
+        </section>
+      )}
+
       {redeemable && (
         <section className="space-y-3 border-t border-black/5 pt-5">
           <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
             <Sparkles className="h-4 w-4" aria-hidden />
-            3. Loyalty points
+            {offerCollection ? "4" : "3"}. Loyalty points
           </h2>
           <p className="text-xs text-primary-muted">
             You have <strong className="text-primary">{redeemable.balancePoints} points</strong>{" "}
