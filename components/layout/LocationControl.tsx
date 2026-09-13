@@ -30,11 +30,9 @@ export function LocationControl({
       if (dialogRef.current?.open) {
         dialogRef.current.close();
       }
-      // eslint-disable-next-line
       setMode("DELIVERY");
     } else if (postcode && deliverable === false) {
       if (offerCollection) {
-        // eslint-disable-next-line
         setMode("COLLECTION");
       }
     }

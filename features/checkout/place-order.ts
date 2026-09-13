@@ -120,6 +120,7 @@ export async function placeOrderAction(
         line1: required(form, "line1"),
         line2: optional(form, "line2"),
         city: required(form, "city"),
+        county: optional(form, "county"),
         postcode,
         notes: optional(form, "notes"),
       };
@@ -131,6 +132,7 @@ export async function placeOrderAction(
         line1: "COLLECTION",
         line2: null,
         city: "COLLECTION",
+        county: null,
         postcode: "COLLECTION",
         notes: optional(form, "notes"),
       };
@@ -143,11 +145,16 @@ export async function placeOrderAction(
     const cartId = await cartRepo.getCartId(identity);
     if (!cartId) return { error: "Your cart is empty." };
 
+    const rawFulfilmentSlotId = optional(form, "fulfilmentSlotId");
+    const rawFulfilmentDate = optional(form, "fulfilmentDate");
+
     const placed = await getOrderRepository().createOrder({
       cartId,
       userId: identity.userId,
       guestEmail: identity.userId ? null : email,
       address: addressInput,
+      fulfilmentSlotId: rawFulfilmentSlotId,
+      fulfilmentDate: rawFulfilmentDate ? new Date(rawFulfilmentDate) : null,
       rules: {
         deliveryFeePence: vendor.deliveryFeePence,
         freeDeliveryThresholdPence: vendor.freeDeliveryThresholdPence,

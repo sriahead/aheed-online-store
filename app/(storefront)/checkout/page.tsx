@@ -13,12 +13,19 @@ import { getLoyaltyRepository } from "@/lib/loyalty-service";
 
 // Prisma's @prisma/client/wasm can't load during next build's Node-based
 // static prerendering — same reason as the other DB-backed storefront routes.
+import { cookies } from "next/headers";
+import { DELIVERY_POSTCODE_COOKIE } from "@/lib/delivery-cookie";
+
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Checkout" };
 
 export default async function CheckoutPage() {
-  const [identity, vendor] = await Promise.all([getCartIdentity(), getCurrentVendorProfile()]);
+  const [identity, vendor, cookieStore] = await Promise.all([
+    getCartIdentity(),
+    getCurrentVendorProfile(),
+    cookies(),
+  ]);
   const summary = await getCartRepository().getSummary(identity);
 
   // An order must never be placed against an empty cart, or one whose merge the
@@ -28,6 +35,8 @@ export default async function CheckoutPage() {
   const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const signedInEmail = (session?.user as { email?: string } | undefined)?.email ?? null;
   const signedInUserId = (session?.user as { id?: string } | undefined)?.id ?? null;
+  
+  const initialPostcode = cookieStore.get(DELIVERY_POSTCODE_COOKIE)?.value ?? null;
 
   // P5a (#135) — offered only to a signed-in shopper at a loyalty-enabled vendor
   // whose VISIBLE balance (zero once lapsed) clears the vendor's minimum. Guests
@@ -67,9 +76,13 @@ export default async function CheckoutPage() {
       <div className="grid gap-6 md:grid-cols-[1fr_18rem]">
         <div className="rounded-2xl border border-black/10 bg-white p-5">
           <CheckoutForm
+            vendorId={vendor?.id ?? ""}
+            bookingWindowDays={vendor?.bookingWindowDays ?? 14}
+            offerDeliverySlots={vendor?.offerDeliverySlots ?? false}
             signedInEmail={signedInEmail}
             redeemable={redeemable}
             offerCollection={vendor?.offerCollection ?? false}
+            initialPostcode={initialPostcode}
           />
         </div>
 

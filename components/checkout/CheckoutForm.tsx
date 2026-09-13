@@ -1,9 +1,12 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { MapPin, ShieldCheck, Sparkles, Tag, User } from "lucide-react";
+import { MapPin, ShieldCheck, Sparkles, Tag, User, Clock } from "lucide-react";
 import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-order";
 import { inputClass, labelClass } from "@/lib/form-classes";
+import { lookupPostcode } from "@/lib/postcodes-api";
+import { setDeliveryPostcode } from "@/features/storefront/delivery";
+import { SlotPicker } from "./SlotPicker";
 
 /**
  * Checkout form (P3b, #96), following docs/ui-ref/CheckoutModal.tsx's structure —
@@ -24,6 +27,10 @@ export function CheckoutForm({
   signedInEmail,
   redeemable,
   offerCollection,
+  initialPostcode,
+  vendorId,
+  bookingWindowDays,
+  offerDeliverySlots,
 }: {
   signedInEmail: string | null;
   /**
@@ -34,12 +41,58 @@ export function CheckoutForm({
    */
   redeemable: { balancePoints: number; valueLabel: string; minRedeemPoints: number } | null;
   offerCollection: boolean;
+  initialPostcode?: string | null;
+  vendorId: string;
+  bookingWindowDays: number;
+  offerDeliverySlots: boolean;
 }) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
 
   // The server expects this, and it defaults to DELIVERY or nothing if collection is offered.
   // We'll let the HTML validation enforce choice if both are offered, but here we can just use state to show/hide.
   const [method, setMethod] = useState<"DELIVERY" | "COLLECTION">("DELIVERY");
+
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
+
+  const handleLookup = async (postcode: string) => {
+    if (!postcode) return;
+    setAddressLoading(true);
+    setAddressError(null);
+    try {
+      const result = await lookupPostcode(postcode);
+      const form = document.querySelector("form");
+      if (form) {
+        const cityInput = form.elements.namedItem("city") as HTMLInputElement;
+        const countyInput = form.elements.namedItem("county") as HTMLInputElement;
+        if (cityInput && result.admin_district) cityInput.value = result.admin_district;
+        if (countyInput && result.admin_county) countyInput.value = result.admin_county;
+        
+        const postcodeInput = document.getElementById("postcode") as HTMLInputElement;
+        if (postcodeInput) postcodeInput.setCustomValidity("");
+      }
+    } catch (err: any) {
+      if (err.name === "PostcodeNotFoundError") {
+        setAddressError("Invalid postcode. Please enter a valid UK postcode.");
+        const postcodeInput = document.getElementById("postcode") as HTMLInputElement;
+        if (postcodeInput) postcodeInput.setCustomValidity("Invalid postcode");
+      } else {
+        // Fallback: don't block checkout on 5xx/timeout
+        console.warn("Postcode API unavailable, falling back to manual entry", err);
+        const postcodeInput = document.getElementById("postcode") as HTMLInputElement;
+        if (postcodeInput) postcodeInput.setCustomValidity("");
+      }
+    } finally {
+      setAddressLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (initialPostcode) {
+      // eslint-disable-next-line
+      handleLookup(initialPostcode);
+    }
+  }, [initialPostcode]);
 
   useEffect(() => {
     const saved = localStorage.getItem("aheed_checkout_details");
@@ -210,10 +263,51 @@ export function CheckoutForm({
               <input id="city" name="city" required className={inputClass} />
             </div>
             <div>
+              <label className={labelClass} htmlFor="county">
+                County (optional)
+              </label>
+              <input id="county" name="county" className={inputClass} />
+            </div>
+            <div className="sm:col-span-2 space-y-2">
               <label className={labelClass} htmlFor="postcode">
                 Postcode
               </label>
-              <input id="postcode" name="postcode" required className={inputClass} />
+              {addressError && <p className="text-xs font-medium text-danger">{addressError}</p>}
+              <div className="flex gap-2">
+                <input
+                  id="postcode"
+                  name="postcode"
+                  defaultValue={initialPostcode || ""}
+                  required
+                  className={inputClass}
+                  placeholder="e.g. SW1A 1AA"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById("postcode") as HTMLInputElement;
+                    if (el) handleLookup(el.value);
+                  }}
+                  disabled={addressLoading}
+                  className="rounded-lg bg-black/5 px-4 py-2 text-sm font-bold text-black transition-colors hover:bg-black/10 disabled:opacity-50"
+                >
+                  {addressLoading ? "Looking up..." : "Find Address"}
+                </button>
+              </div>
+              {initialPostcode && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const fd = new FormData();
+                    fd.append("postcode", "");
+                    await setDeliveryPostcode(fd);
+                    window.location.reload();
+                  }}
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  Change postcode / Delivery area
+                </button>
+              )}
             </div>
             <div className="sm:col-span-2">
               <label className={labelClass} htmlFor="notes">
@@ -225,11 +319,26 @@ export function CheckoutForm({
         </section>
       )}
 
+      {((method === "DELIVERY" && offerDeliverySlots) || method === "COLLECTION") && (
+        <section className="space-y-3 border-t border-black/5 pt-5">
+          <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
+            <Clock className="h-4 w-4" aria-hidden />
+            {offerCollection ? "3" : "2"}. Choose a Time
+          </h2>
+          <SlotPicker
+            vendorId={vendorId}
+            method={method}
+            bookingWindowDays={bookingWindowDays}
+            required={true}
+          />
+        </section>
+      )}
+
       {redeemable && (
         <section className="space-y-3 border-t border-black/5 pt-5">
           <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
             <Sparkles className="h-4 w-4" aria-hidden />
-            3. Loyalty points
+            {offerCollection ? "4" : "3"}. Loyalty points
           </h2>
           <p className="text-xs text-primary-muted">
             You have <strong className="text-primary">{redeemable.balancePoints} points</strong>{" "}
