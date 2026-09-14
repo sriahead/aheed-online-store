@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.2.0"
+version: "1.3.0"
 updated: 2026-09-14
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,18 +40,26 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-14.
-- **Checkout:** `docs/p402-document-final` (this Document (final) pass's own branch, off `staging`).
+- **Checkout:** `feat/p10-shared-fulfilment-state` (`#748`'s own branch, off `staging` at `b85fc2b`).
 - **Base state:** `origin/staging` at `0e3c4f1` (PR #746 merged); `origin/main` at `02d8e82` (PR #741
   promotion merged). **Staging is ahead of main by 14 commits** — #401 (Shared Fulfilment Slots,
   PR #744), #613 (Postcode & Address Lookup, code via #744's shared ancestry; its own PR #743
   closed without merging), and #402 (Express SLA, PR #746) all shipped to `staging`, **none
   promoted to `main`**.
-- **🛑 DO NOT PROMOTE `staging` → `main` — held at the owner's explicit request (2026-09-14),
-  pending review of issues observed on the deployed `staging` site.** No specific defect was
-  described to this session; the next session must ask the owner directly what was seen, or
-  inspect checkout/`/staff/orders`/`/staff/storefront`'s Express Collection config and the
-  freshly-deployed `staging` site itself before assuming. See `specs/roadmap.md`'s matching
-  2026-09-14 change-log row. Do not treat silence on this point as clearance to promote.
+- **🛑 DO NOT PROMOTE `staging` → `main` — held at the owner's explicit request (2026-09-14).**
+  **The hold's cause is no longer unknown.** The previous handoff said "no specific defect was
+  described; the next session must ask the owner" — the owner has since described **seven**, all
+  reproducible on `b85fc2b`, and they are triaged into three issues:
+  - **#748** — fulfilment method is never persisted (postcode un-editable once set, cart and
+    checkout disagree, minimum-order tracker missing, "Delivery FREE" under Click & Collect).
+    **In progress**, branch `feat/p10-shared-fulfilment-state`.
+  - **#749** — checkout "Find Address" does nothing; vendor logo upload fails at
+    `/staff/storefront`.
+  - **#750** — delivery slots and Express Collection shipped with no staff configuration and no
+    seed, so neither can ever appear.
+
+  **Promotion needs at least #748 and #750**: promoting now would ship `#401`/`#402` to production
+  with no way to enable either feature. See `specs/roadmap.md`'s matching 2026-09-14 change-log row.
 - **Worktrees:** only the main checkout.
 - **Protected local work:** the separate `docs/orient-reads-board-priority` branch (PR #725, still
   open) points to `d56c7b9`, whose parent is the #713 draft checkpoint `2938597`. Preserve both;
@@ -135,6 +143,32 @@ All facts in this section require live verification:
 - **`feat/p401-shared-fulfilment-slots`, `feat/p613-address-lookup` and `feat/p402-express-sla`
   are all now merged/closed and safe to delete** (locally and on the remote) — not done by this
   session, left for a deliberate cleanup pass since branch deletion wasn't asked for.
+
+## P10 Delivery-Cluster Review Findings (2026-09-14)
+
+Established live against deployed `staging` (`b85fc2b`) and the staging database. These are
+**evidence a future session should not re-derive**, not scope.
+
+- **`#401`/`#402` have no administrative surface at all.** `offerDeliverySlots`,
+  `expressCollectionEnabled`, `bookingWindowDays`, `slotHoldDurationMinutes`,
+  `VendorFulfilmentSlot` and `VendorExpressSchedule` appear in **no** file under
+  `components/staff/`, `app/(admin)/`, `features/admin/` or `prisma/seed.ts`. Live staging for
+  Aheed: both flags `false`, **0** express schedules, **0** fulfilment slots. The features cannot
+  be switched on, and no time window can be authored. That is `#750`.
+- **The CSP blocks `api.postcodes.io`.** Staging's live header is
+  `connect-src 'self' https://*.r2.cloudflarestorage.com`, and `lib/postcodes-api.ts` has no
+  `"use server"`, so its `fetch` runs in the browser and is blocked before it leaves the page —
+  then swallowed by a `console.warn`-only fallback. `#613`'s address lookup has therefore never
+  worked in any deployed environment. Part of `#749`.
+- **The vendor logo upload's root cause is still unknown, but three candidates are RULED OUT** —
+  do not re-check these: R2 bucket **CORS is correctly configured** (preflight from the staging
+  origin returns `204` with `Access-Control-Allow-Methods: PUT`); the **CSP permits** the R2
+  endpoint; and **nothing throws server-side** (no `ErrorEvent` rows later than 2026-09-10, and
+  server-action throws do reach that table). The next step is a browser reproduction with DevTools
+  open. Separately certain: `components/staff/VendorLogoUploader.tsx:74` carries a corrupted
+  template literal that discards the HTTP status, and its `fetch` is unguarded inside
+  `startTransition` — it is the only one of the repo's four uploaders that cannot report why it
+  failed, which is why this was unreportable.
 
 ## Backlog Reconciliation Findings
 
