@@ -33,6 +33,21 @@ every branch merges.
 
 ### Changed
 
+- **Documentation and handoff reconciliation for #401/#613/#402 (Document (final) for PRs #744/#746)**:
+  - Reconciled `docs/model-handoff.md` with the real post-merge state: `staging` (`0e3c4f1`) is 14
+    commits ahead of `main` (`02d8e82`), and **promotion is explicitly held at the owner's request**
+    pending review of issues observed on staging — flagged prominently rather than left implicit.
+  - Wrote retroactive `build-notes.md` for `specs/2026-09-13-p401-shared-fulfilment-slots/` and
+    `specs/2026-09-13-p613-address-lookup/`, neither of which had one — including the real R8
+    overbooking-guarantee gap (found and fixed during #402's rebase) and #613's PR being closed as
+    superseded rather than merged.
+  - Updated `specs/roadmap.md`'s P10 "Delivery cluster" entry (shipped without `#363` landing
+    first, as originally sequenced there) and added change-log rows for PR #744, #743's closure,
+    PR #746, and #742's closure (a stale PR that would have deleted this work if merged).
+  - Moved #401/#402/#613 to **In Review** on Project #2 (were still `Backlog`).
+  - Corrected `CLAUDE.md`'s vitest baseline (`117/1557` → `127/1618`) and added a new bullet on
+    guarding live-DB test files with `it.skipIf(!process.env.DATABASE_URL)` — missed three times
+    across two slices before being written down.
 - **Documentation and handoff reconciliation for #737**:
   - Reconciled `docs/model-handoff.md` with verified staging and main git states, recorded in-flight PR #739, closed #737 (#738) and #733 (#734/#736) work, and updated owner priorities and test run baselines.
   - Updated `specs/roadmap.md` with closure entries for #737 (PR #738) on staging and promotion PR #736 on main.

@@ -650,6 +650,18 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `#538` reproduced again on the full-suite run at this slice's own `/validate` and `/fix`
   re-validation, both times confirmed as the known flake by re-running the file alone (passed in
   under 3s each time).
+  Then `117/1557` moved to **`127/1618`** across the P401/P613/P402 work that shipped
+  2026-09-13/14 (PRs #744, #746): ten new files
+  (`tests/concurrency-slot-booking.test.ts`, `tests/slot-capacity.test.ts`,
+  `tests/express-sla.test.ts`, `tests/postcodes-api.test.ts`, plus this session's own
+  `lib/fulfilment-slots-service.ts`/`lib/repositories/fulfilment-slots.ts` gaining no dedicated
+  test file of their own — covered instead through the three live-DB test files above) and small
+  additions to `tests/order-confirmation-email.test.ts`/`tests/order-status-email.test.ts`
+  (one `isExpress` field each). Three of the ten new files are genuinely CI-invisible: guarded with
+  `it.skipIf(!process.env.DATABASE_URL)` (see the dedicated bullet on this above), they report as
+  **skipped**, not run, on every CI job — the `127/1618` figure is what a real `DATABASE_URL`-bearing
+  local run reports; CI's own `Test Files`/`Tests` summary line will read 3 fewer *tests run* than
+  this even on a fully green job, which is expected, not a regression.
   That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that
@@ -748,6 +760,23 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   (Next 16 removed that command).
 - `vitest.config.ts` must be `.mts` (or set `"type": "module"` in package.json) — vitest 4's native
   config loader warns/will error on ESM syntax in a file it loads as CommonJS.
+- **Any test file that constructs its own live Prisma/Neon client (`new PrismaClient({ adapter })`
+  against a real `DATABASE_URL`) must guard its test(s) with `it.skipIf(!process.env.DATABASE_URL)`
+  (or `test.skipIf(...)`), or it crashes the whole `npm test` step in CI — never just fails its own
+  test.** `.github/workflows/quality.yml`'s `quality` job sets no `DATABASE_URL` at all (checked
+  directly: `grep -n DATABASE_URL .github/workflows/*.yml` returns nothing), so
+  `new PrismaNeon({ connectionString: undefined })` throws at construction or first query, outside
+  any `it()` vitest can catch and report as a normal failure. Missed three separate times across
+  two slices before this line existed: `tests/concurrency-slot-booking.test.ts` and
+  `tests/slot-capacity.test.ts` (P401, found fixing PR #744, 2026-09-13) and
+  `tests/express-sla.test.ts` (P402, found during PR #746's pre-flight, 2026-09-14) — the first two
+  were fixed once and the third was written afterward, by a different session, without the guard,
+  proving the lesson doesn't transfer just because the fix exists elsewhere in the same repo.
+  **Verify locally by temporarily moving `.env` aside** (`mv .env .env.bak && npx vitest run
+  <file> ; mv .env.bak .env` — `.env` is what supplies `DATABASE_URL` outside a real Cloudflare
+  request context per the Config section above) and confirming the file reports **skipped**, not
+  run and not crashed; a green full-suite run alone proves nothing here, since `DATABASE_URL` is
+  always set locally.
 
 ## Server Actions (`"use server"` files) — learned the hard way
 - **A `"use server"` file may export ONLY async functions — nothing else, not even a plain constant
