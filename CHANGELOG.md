@@ -42,6 +42,26 @@ every branch merges.
 
 ### Changed
 
+- **Documentation and handoff reconciliation for #748 (Document (final) for PR #752)**:
+  - Reconciled `docs/model-handoff.md` with the real post-merge state: `#748` shipped to `staging`
+    via PR #752 (`623c24f`), the first of the three owner-reported staging defects to close;
+    `staging` is now 21 commits ahead of `main`, and **promotion is still held** — `#750` (no staff
+    configuration surface for `#401`/`#402`) remains the hard blocker, `#749` also still open.
+  - Corrected `specs/2026-09-14-p10-shared-fulfilment-state/validation.md`'s R20 row on the same
+    branch as the fix, not here — see that PR's own commit — since it was found before merge.
+  - Filed **#753** to track a live-browser check of R14/R18 that `/validate` couldn't run in that
+    session (no Chrome automation available); both are sound at the code level and called out as
+    "known-shaky" in the slice's own `build-notes.md`.
+  - Added a `CLAUDE.md` bullet on a curl cookie-jar (`-b`/`-c`) trap: a `Secure`-flagged cookie can
+    silently fail to persist for a multi-label local hostname (`srimart.localhost`) while working
+    fine for a single-label one (`localhost:8787`) — extracting `Set-Cookie` values by hand and
+    replaying them as an explicit `Cookie:` header is the reliable pattern for this repo's
+    two-vendor local testing.
+  - Updated `specs/roadmap.md`'s change log with `#748`'s shipped-to-staging row.
+  - Moved `#748` to **In Review** on Project #2 (was `In Progress`); added `#753` to the board as
+    `Backlog`/`P10`/`Low`.
+  - Corrected `CLAUDE.md`'s vitest baseline reference in `docs/model-handoff.md`
+    (`127/1618` → `128/1632`, already current in `CLAUDE.md` itself since `#748`'s own Build).
 - **Documentation and handoff reconciliation for #401/#613/#402 (Document (final) for PRs #744/#746)**:
   - Reconciled `docs/model-handoff.md` with the real post-merge state: `staging` (`0e3c4f1`) is 14
     commits ahead of `main` (`02d8e82`), and **promotion is explicitly held at the owner's request**

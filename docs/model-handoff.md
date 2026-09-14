@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.3.0"
+version: "1.4.0"
 updated: 2026-09-14
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,26 +40,30 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-14.
-- **Checkout:** `feat/p10-shared-fulfilment-state` (`#748`'s own branch, off `staging` at `b85fc2b`).
-- **Base state:** `origin/staging` at `0e3c4f1` (PR #746 merged); `origin/main` at `02d8e82` (PR #741
-  promotion merged). **Staging is ahead of main by 14 commits** — #401 (Shared Fulfilment Slots,
-  PR #744), #613 (Postcode & Address Lookup, code via #744's shared ancestry; its own PR #743
-  closed without merging), and #402 (Express SLA, PR #746) all shipped to `staging`, **none
-  promoted to `main`**.
-- **🛑 DO NOT PROMOTE `staging` → `main` — held at the owner's explicit request (2026-09-14).**
-  **The hold's cause is no longer unknown.** The previous handoff said "no specific defect was
-  described; the next session must ask the owner" — the owner has since described **seven**, all
-  reproducible on `b85fc2b`, and they are triaged into three issues:
+- **Checkout:** `docs/p748-document-final` (this Document (final) closeout, off `staging` at
+  `623c24f`).
+- **Base state:** `origin/staging` at `623c24f` (PR #752 merged); `origin/main` at `02d8e82` (PR
+  #741 promotion merged). **Staging is ahead of main by 21 commits** — #401 (Shared Fulfilment
+  Slots, PR #744), #613 (Postcode & Address Lookup, code via #744's shared ancestry; its own PR
+  #743 closed without merging), #402 (Express SLA, PR #746) and now #748 (Shared Fulfilment State,
+  PR #752) have all shipped to `staging`; **none promoted to `main`**.
+- **🛑 DO NOT PROMOTE `staging` → `main` — still held at the owner's explicit request (2026-09-14).**
+  The owner described **seven** defects on deployed `staging`, triaged into three issues:
   - **#748** — fulfilment method is never persisted (postcode un-editable once set, cart and
     checkout disagree, minimum-order tracker missing, "Delivery FREE" under Click & Collect).
-    **In progress**, branch `feat/p10-shared-fulfilment-state`.
+    **Shipped to `staging` via PR #752 (`623c24f`), 2026-09-14.** Board status **In Review**; stays
+    open until promoted (`Done` means in production here — see `CLAUDE.md`'s branch-strategy
+    section). Two narrow gaps left open as their own tracked follow-ups rather than blocking this
+    slice: **#753** (R14/R18 need a live-browser check — no Chrome automation was available during
+    this slice's `/validate`; code-level reasoning is sound and the risk is well-understood).
   - **#749** — checkout "Find Address" does nothing; vendor logo upload fails at
-    `/staff/storefront`.
+    `/staff/storefront`. **Still open, not started.**
   - **#750** — delivery slots and Express Collection shipped with no staff configuration and no
-    seed, so neither can ever appear.
+    seed, so neither can ever appear. **Still open, not started.**
 
-  **Promotion needs at least #748 and #750**: promoting now would ship `#401`/`#402` to production
-  with no way to enable either feature. See `specs/roadmap.md`'s matching 2026-09-14 change-log row.
+  **Promotion still needs at least #750**: promoting now would ship `#401`/`#402` to production
+  with no way to enable either feature. `#748`'s fix removes one of the three defects blocking the
+  hold, but does not lift it — see `specs/roadmap.md`'s matching 2026-09-14 change-log rows.
 - **Worktrees:** only the main checkout.
 - **Protected local work:** the separate `docs/orient-reads-board-priority` branch (PR #725, still
   open) points to `d56c7b9`, whose parent is the #713 draft checkpoint `2938597`. Preserve both;
@@ -77,8 +81,10 @@ P9.3 launch validation and P9.4 certification.
 **The P10 "Delivery cluster" (#401/#402/#613) shipped to `staging` on 2026-09-14, ahead of its own
 documented sequencing** — `specs/roadmap.md`'s P10 candidate list said `#363` (vendor timezone)
 "must land first"; it did not, and `#402`'s own build-notes record this explicitly as a
-known-shaky area rather than a silent gap. Fine for this app's UK-only vendors today. Promotion to
-`main` is separately blocked — see the DO-NOT-PROMOTE note above.
+known-shaky area rather than a silent gap. Fine for this app's UK-only vendors today. **`#748`
+(fulfilment state, the first of the three owner-reported defects blocking promotion) also shipped
+to `staging` the same day, via PR #752.** Promotion to `main` is still blocked — see the
+DO-NOT-PROMOTE note above; #750 (no staff configuration surface) is the remaining hard blocker.
 
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
@@ -93,7 +99,9 @@ The live board showed open High-priority items, all with blank Complexity:
   board status corrected to **In Review**; **not promoted to `main`** (see DO-NOT-PROMOTE note
   above). #363 and #422 remain genuinely open/unresolved — #402 shipped without either, flagged as
   known-shaky (timezone) and unresolved (multi-site). #400 remains split: the async-loading half
-  still open, the per-store half still blocked on #422.
+  still open, the per-store half still blocked on #422. **#748 (fulfilment method persistence) also
+  shipped to `staging` 2026-09-14 via PR #752**, board status **In Review**; #749 and #750 (the
+  other two owner-reported defects) remain open and unstarted.
 - Saved lists: #116.
 - Paid-order cancellation and reversals: #696, then #137 and #151.
 - Trust and contact: #406 and #695.
@@ -128,6 +136,14 @@ All facts in this section require live verification:
   work). **`deploy-staging` and `deploy-docs-internal` both confirmed `success` for `0e3c4f1`** —
   the latter is notable because it had been broken since before #744 (pre-existing, root-caused to
   a bare `<dialog>` tag in `specs/roadmap.md`, unrelated to either slice) and #746 carried the fix.
+- **`#748` shipped to `staging` 2026-09-14 via PR #752 (`623c24f`)** — full SDD loop
+  (`specs/2026-09-14-p10-shared-fulfilment-state/`), `/validate` run from a fresh context with live
+  checks against both real seeded vendor hosts, `deploy-staging` confirmed `success`. Board status
+  **In Review**. One follow-up filed rather than blocking the ship: **#753** (R14/R18 need a live
+  browser check this session couldn't run). A stale `validation.md` grep row (R20, pointed at
+  `CartContents.tsx` after the control moved to `CheckoutLink.tsx` mid-build) was corrected on the
+  same PR — see `CLAUDE.md`'s new curl/cookie-jar bullet in "Live-testing staff panel server
+  actions without a browser" for the multi-vendor testing trap this slice's `/validate` also hit.
 - **Issue #737** (Staff/Admin delegation, Category Manager, Help Centre, Zero-review ratings;
   `specs/2026-09-12-staff-admin-help-ratings/`) merged to `staging` via **PR #738** (`2687f16`),
   its own Document (final) closeout merged via **PR #739**, and is **In Review** on Project #2;
@@ -140,9 +156,10 @@ All facts in this section require live verification:
   before acting on either.
 - **Branch `feat/location-control`'s delivery-postcode-modal fix merged 2026-09-12 via PR #740** —
   no longer awaiting a PR; this line was stale as of the 2026-09-12 handoff.
-- **`feat/p401-shared-fulfilment-slots`, `feat/p613-address-lookup` and `feat/p402-express-sla`
-  are all now merged/closed and safe to delete** (locally and on the remote) — not done by this
-  session, left for a deliberate cleanup pass since branch deletion wasn't asked for.
+- **`feat/p401-shared-fulfilment-slots`, `feat/p613-address-lookup`, `feat/p402-express-sla` and
+  now `feat/p10-shared-fulfilment-state` are all merged/closed and safe to delete** (locally and on
+  the remote) — not done by this session, left for a deliberate cleanup pass since branch deletion
+  wasn't asked for.
 
 ## P10 Delivery-Cluster Review Findings (2026-09-14)
 
@@ -205,11 +222,12 @@ Board Phase and GitHub milestone disagreed for #151, #422, #589, #602, #695, #69
 - `deploy-production.yml` still cites the obsolete private-repository paid-plan explanation for no
   approval gate. The current decision is deliberate self-approval avoidance on a public repo.
 - `specs/mission.md` still cites ISR although this Prisma/Workers stack cannot use Next ISR.
-- `CLAUDE.md`'s Vitest baseline is now 127/1618 (corrected 2026-09-14, this session, after the
-  P401/P613/P402 work) — three of the files it counts (`tests/concurrency-slot-booking.test.ts`,
-  `tests/slot-capacity.test.ts`, `tests/express-sla.test.ts`) are `it.skipIf(!DATABASE_URL)`-guarded
-  and report **skipped**, not run, in CI, so a real CI job's own summary line will read 3 fewer
-  tests even when fully green — expected, not a discrepancy to chase.
+- `CLAUDE.md`'s Vitest baseline is now 128/1632 (corrected 2026-09-14, `#748`'s Build, after the
+  P401/P613/P402 work's 127/1618) — three of the files it counts
+  (`tests/concurrency-slot-booking.test.ts`, `tests/slot-capacity.test.ts`,
+  `tests/express-sla.test.ts`) are `it.skipIf(!DATABASE_URL)`-guarded and report **skipped**, not
+  run, in CI, so a real CI job's own summary line will read 3 fewer tests even when fully green —
+  expected, not a discrepancy to chase.
 - The roadmap says the internal KMS site went live behind Access; its deploy workflow says no public
   route is configured. Verify Cloudflare before correcting either statement.
 
