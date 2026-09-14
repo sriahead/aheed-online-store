@@ -14,6 +14,7 @@ import {
   type StaffTimelineEntry,
   type TimelineEntry,
 } from "@/lib/order-status";
+import { Prisma } from "@prisma/client";
 import {
   earnPoints,
   getLoyaltyConfig,
@@ -55,7 +56,8 @@ export class CheckoutError extends Error {
       | "INSUFFICIENT_STOCK"
       | "ORDER_NUMBER_COLLISION"
       | "PAYMENT_PROVIDER_FAILED"
-      | "DISCOUNT_CODE",
+      | "DISCOUNT_CODE"
+      | "SLOT_FULL",
     message: string,
   ) {
     super(message);
@@ -74,9 +76,12 @@ export interface PlaceOrderInput {
     line1: string;
     line2: string | null;
     city: string;
+    county: string | null;
     postcode: string;
     notes: string | null;
   };
+  fulfilmentSlotId?: string | null;
+  fulfilmentDate?: Date | null;
   rules: DeliveryRules & { minimumOrderPence: number };
   /**
    * Loyalty points the shopper asked to spend (P5a, #135). An INTENT, never an
@@ -149,294 +154,341 @@ export async function placeOrder(
 
   const payments = getPaymentService();
 
-  const created = await prisma.$transaction(async (tx) => {
-    // Re-read the cart inside the transaction — never trust what the page rendered.
-    const cart = await tx.cart.findFirst({
-      where: { id: input.cartId, vendorId },
-      select: { id: true, items: { select: { productId: true, quantity: true } } },
-    });
-    if (!cart || cart.items.length === 0) {
-      throw new CheckoutError("CART_EMPTY", "Your cart is empty.");
-    }
-
-    // Prices and availability come from the DB at this instant, never from the form.
-    const products = await tx.product.findMany({
-      where: { vendorId, id: { in: cart.items.map((i) => i.productId) } },
-      select: {
-        id: true,
-        name: true,
-        basePrice: true,
-        isActive: true,
-        inventory: { select: { quantity: true } },
-      },
-    });
-    const byId = new Map(products.map((p) => [p.id, p]));
-
-    // P8.5d (#348) — multi-buy tiers, read inside the transaction for the same
-    // reason prices are: never trust what the page rendered. The SAME
-    // `lib/tier-pricing.ts` function prices the cart display
-    // (`lib/repositories/cart.ts`), and those are independent code paths — if
-    // they ever diverge the shopper sees one total and is charged another.
-    const tiers = await listActiveTiersForProducts(
-      tx,
-      vendorId,
-      products.map((p) => p.id),
-    );
-
-    const lines = cart.items.map((item) => {
-      const product = byId.get(item.productId);
-      if (!product) {
-        throw new CheckoutError("LINE_UNAVAILABLE", "An item in your cart is no longer available.");
-      }
-      const available = product.isActive && effectiveStock(product.inventory?.quantity) > 0;
-      if (!available) {
-        throw new CheckoutError(
-          "LINE_UNAVAILABLE",
-          `${product.name} is no longer available — please remove it to continue.`,
-        );
-      }
-      return {
-        productId: product.id,
-        productName: product.name,
-        unitPricePence: product.basePrice,
-        quantity: item.quantity,
-        available,
-        // Explicit because a tiered line is not unitPrice × quantity. When no
-        // tier applies this is exactly that product, so nothing changes.
-        lineTotalPence: tieredLineTotalPence(
-          product.basePrice,
-          item.quantity,
-          tiers.get(product.id) ?? null,
-        ),
-      };
-    });
-
-    // Computed BEFORE any discount: both the vendor's minimum and (inside
-    // computeTotals) the free-delivery threshold are judged on what the shopper
-    // bought, not on what they paid after spending points. Redeeming must not
-    // push an otherwise-valid order under the minimum, nor claw back free
-    // delivery already earned.
-    //
-    // A MULTI-BUY TIER IS ON THE OTHER SIDE OF THAT LINE, deliberately (P8.5d,
-    // #348). A tier is not a deduction from what the shopper bought — it IS the
-    // price they bought it at — so it is already inside `preDiscount` here, and
-    // both the vendor minimum and the free-delivery threshold are judged on the
-    // tier-reduced figure. A shopper whose multi-buy drops them under the
-    // minimum is genuinely under it. Codes and points behave the opposite way
-    // and that asymmetry is intended, not an oversight.
-    const preDiscount = computeTotals(lines, input.rules, 0, input.fulfilmentMethod);
-    if (preDiscount.subtotalPence < input.rules.minimumOrderPence) {
-      throw new CheckoutError("BELOW_MINIMUM", "Your order is below this store's minimum.");
-    }
-
-    // The guard that makes overselling impossible: the WHERE and the write are
-    // evaluated atomically by Postgres, so two concurrent checkouts for the last
-    // item cannot both succeed. count === 0 means someone got there first.
-    for (const line of lines) {
-      const { count } = await tx.inventory.updateMany({
-        where: { vendorId, productId: line.productId, quantity: { gte: line.quantity } },
-        data: { quantity: { decrement: line.quantity } },
-      });
-      if (count === 0) {
-        throw new CheckoutError(
-          "INSUFFICIENT_STOCK",
-          `${line.productName} just sold out — please adjust your cart.`,
-        );
-      }
-    }
-
-    let addressData = { vendorId, userId: input.userId, ...input.address };
-    if (input.fulfilmentMethod === "COLLECTION") {
-      const vendorLocation = await tx.vendorLocation.findUnique({ where: { vendorId } });
-      if (!vendorLocation) {
-        throw new CheckoutError(
-          "NOT_DELIVERABLE",
-          "This store has not configured a collection location.",
-        );
-      }
-      addressData = {
-        vendorId,
-        userId: null, // Collection address must never enter the user's saved address book
-        recipientName: input.address.recipientName,
-        phone: input.address.phone,
-        line1: vendorLocation.addressLine1,
-        line2: vendorLocation.addressLine2,
-        city: vendorLocation.city,
-        postcode: vendorLocation.postcode,
-        notes: input.address.notes,
-      };
-    }
-
-    const address = await tx.address.create({
-      data: addressData,
-      select: { id: true },
-    });
-
-    // The code is claimed FIRST and evaluated against the pre-discount subtotal:
-    // a percentage code must not shrink because the shopper also spent points.
-    // Like the points debit below, the reservation happens before the Order row
-    // exists, so an order can never carry a discount that was not actually
-    // reserved. Its record is written after the insert, once there is an orderId.
-    const claimed =
-      input.discountCode == null || input.discountCode.trim() === ""
-        ? null
-        : await claimCode(tx, vendorId, {
-            code: input.discountCode,
-            userId: input.userId,
-            subtotalPence: preDiscount.subtotalPence,
-            deliveryFeePence: preDiscount.deliveryFeePence,
+  const created = await prisma.$transaction(
+    async (tx) => {
+      if (input.fulfilmentSlotId && input.fulfilmentDate) {
+        const slot = await tx.vendorFulfilmentSlot.findUnique({
+          where: { id: input.fulfilmentSlotId },
+        });
+        const config = await tx.vendorConfig.findUnique({ where: { vendorId } });
+        if (slot && config) {
+          const holdMinutes = config.slotHoldDurationMinutes;
+          const cutoff = new Date(Date.now() - holdMinutes * 60000);
+          const used = await tx.order.count({
+            where: {
+              vendorId,
+              fulfilmentSlotId: slot.id,
+              fulfilmentDate: input.fulfilmentDate,
+              OR: [
+                {
+                  status: {
+                    in: [
+                      "CONFIRMED",
+                      "READY_FOR_COLLECTION",
+                      "OUT_FOR_DELIVERY",
+                      "DELIVERED",
+                      "COLLECTED",
+                    ],
+                  },
+                },
+                { status: "PENDING_PAYMENT", createdAt: { gte: cutoff } },
+              ],
+            },
           });
-    if (claimed && !claimed.ok) {
-      throw new CheckoutError("DISCOUNT_CODE", refusalMessage(claimed.reason));
-    }
-    const codeDiscountPence = claimed?.ok ? claimed.claim.discountPence : 0;
+          if (used >= slot.capacity) {
+            throw new CheckoutError("SLOT_FULL", "The selected time slot is no longer available.");
+          }
+        }
+      }
 
-    // Points are debited BEFORE the order is written, so an order can never
-    // carry a discount whose points the shopper turned out not to have. The
-    // matching ledger row is written below, once there is an orderId to attach
-    // it to; both are inside this transaction, so they commit or roll back
-    // together. See lib/repositories/loyalty.ts for why this is a pair.
-    //
-    // `existingDiscountPence` is what stops the two mechanisms each claiming the
-    // whole subtotal: points fill only the headroom the code left.
-    const loyaltyConfig = await getLoyaltyConfig(tx, vendorId);
-    const redemption = await spendPoints(tx, vendorId, {
-      userId: input.userId,
-      requestedPoints: input.redeemPoints ?? 0,
-      subtotalPence: preDiscount.subtotalPence,
-      deliveryFeePence: preDiscount.deliveryFeePence,
-      existingDiscountPence: codeDiscountPence,
-      config: loyaltyConfig,
-    });
+      // Re-read the cart inside the transaction — never trust what the page rendered.
+      const cart = await tx.cart.findFirst({
+        where: { id: input.cartId, vendorId },
+        select: { id: true, items: { select: { productId: true, quantity: true } } },
+      });
+      if (!cart || cart.items.length === 0) {
+        throw new CheckoutError("CART_EMPTY", "Your cart is empty.");
+      }
 
-    const totals = computeTotals(
-      lines,
-      input.rules,
-      codeDiscountPence + redemption.discountPence,
-      input.fulfilmentMethod,
-    );
+      // Prices and availability come from the DB at this instant, never from the form.
+      const products = await tx.product.findMany({
+        where: { vendorId, id: { in: cart.items.map((i) => i.productId) } },
+        select: {
+          id: true,
+          name: true,
+          basePrice: true,
+          isActive: true,
+          inventory: { select: { quantity: true } },
+        },
+      });
+      const byId = new Map(products.map((p) => [p.id, p]));
 
-    // Retry against the unique index rather than assuming randomness never collides.
-    let order: { id: string; orderNumber: string; confirmationToken: string | null } | null = null;
-    for (let attempt = 0; attempt < ORDER_NUMBER_ATTEMPTS; attempt++) {
-      const orderNumber = buildOrderNumber(input.vendorSlug, new Date());
-      const clash = await tx.order.findUnique({
-        where: { orderNumber },
+      // P8.5d (#348) — multi-buy tiers, read inside the transaction for the same
+      // reason prices are: never trust what the page rendered. The SAME
+      // `lib/tier-pricing.ts` function prices the cart display
+      // (`lib/repositories/cart.ts`), and those are independent code paths — if
+      // they ever diverge the shopper sees one total and is charged another.
+      const tiers = await listActiveTiersForProducts(
+        tx,
+        vendorId,
+        products.map((p) => p.id),
+      );
+
+      const lines = cart.items.map((item) => {
+        const product = byId.get(item.productId);
+        if (!product) {
+          throw new CheckoutError(
+            "LINE_UNAVAILABLE",
+            "An item in your cart is no longer available.",
+          );
+        }
+        const available = product.isActive && effectiveStock(product.inventory?.quantity) > 0;
+        if (!available) {
+          throw new CheckoutError(
+            "LINE_UNAVAILABLE",
+            `${product.name} is no longer available — please remove it to continue.`,
+          );
+        }
+        return {
+          productId: product.id,
+          productName: product.name,
+          unitPricePence: product.basePrice,
+          quantity: item.quantity,
+          available,
+          // Explicit because a tiered line is not unitPrice × quantity. When no
+          // tier applies this is exactly that product, so nothing changes.
+          lineTotalPence: tieredLineTotalPence(
+            product.basePrice,
+            item.quantity,
+            tiers.get(product.id) ?? null,
+          ),
+        };
+      });
+
+      // Computed BEFORE any discount: both the vendor's minimum and (inside
+      // computeTotals) the free-delivery threshold are judged on what the shopper
+      // bought, not on what they paid after spending points. Redeeming must not
+      // push an otherwise-valid order under the minimum, nor claw back free
+      // delivery already earned.
+      //
+      // A MULTI-BUY TIER IS ON THE OTHER SIDE OF THAT LINE, deliberately (P8.5d,
+      // #348). A tier is not a deduction from what the shopper bought — it IS the
+      // price they bought it at — so it is already inside `preDiscount` here, and
+      // both the vendor minimum and the free-delivery threshold are judged on the
+      // tier-reduced figure. A shopper whose multi-buy drops them under the
+      // minimum is genuinely under it. Codes and points behave the opposite way
+      // and that asymmetry is intended, not an oversight.
+      const preDiscount = computeTotals(lines, input.rules, 0, input.fulfilmentMethod);
+      if (preDiscount.subtotalPence < input.rules.minimumOrderPence) {
+        throw new CheckoutError("BELOW_MINIMUM", "Your order is below this store's minimum.");
+      }
+
+      // The guard that makes overselling impossible: the WHERE and the write are
+      // evaluated atomically by Postgres, so two concurrent checkouts for the last
+      // item cannot both succeed. count === 0 means someone got there first.
+      for (const line of lines) {
+        const { count } = await tx.inventory.updateMany({
+          where: { vendorId, productId: line.productId, quantity: { gte: line.quantity } },
+          data: { quantity: { decrement: line.quantity } },
+        });
+        if (count === 0) {
+          throw new CheckoutError(
+            "INSUFFICIENT_STOCK",
+            `${line.productName} just sold out — please adjust your cart.`,
+          );
+        }
+      }
+
+      let addressData = { vendorId, userId: input.userId, ...input.address };
+      if (input.fulfilmentMethod === "COLLECTION") {
+        const vendorLocation = await tx.vendorLocation.findUnique({ where: { vendorId } });
+        if (!vendorLocation) {
+          throw new CheckoutError(
+            "NOT_DELIVERABLE",
+            "This store has not configured a collection location.",
+          );
+        }
+        addressData = {
+          vendorId,
+          userId: null, // Collection address must never enter the user's saved address book
+          recipientName: input.address.recipientName,
+          phone: input.address.phone,
+          line1: vendorLocation.addressLine1,
+          line2: vendorLocation.addressLine2,
+          city: vendorLocation.city,
+          county: null,
+          postcode: vendorLocation.postcode,
+          notes: input.address.notes,
+        };
+      }
+
+      const address = await tx.address.create({
+        data: addressData,
         select: { id: true },
       });
-      if (clash) continue;
-      order = await tx.order.create({
-        data: {
-          vendorId,
-          orderNumber,
-          // P9.1 (#427/#428) — minted here, in the same write as the order
-          // number, so no order can ever exist without one. 122 bits of
-          // randomness from the same source lib/cart-identity.ts already uses.
-          confirmationToken: crypto.randomUUID(),
-          userId: input.userId,
-          guestEmail: input.guestEmail,
-          addressId: address.id,
-          fulfilmentMethod: input.fulfilmentMethod,
-          subtotalPence: totals.subtotalPence,
-          discountPence: totals.discountPence,
-          deliveryFeePence: totals.deliveryFeePence,
-          totalPence: totals.totalPence,
-        },
-        select: { id: true, orderNumber: true, confirmationToken: true },
-      });
-      break;
-    }
-    if (!order) {
-      throw new CheckoutError(
-        "ORDER_NUMBER_COLLISION",
-        "Could not allocate an order number — please try again.",
-      );
-    }
 
-    // The audit half of the redemption above, now that the order has an id.
-    if (redemption.pointsSpent > 0 && input.userId) {
-      await recordRedemption(tx, vendorId, {
-        userId: input.userId,
-        orderId: order.id,
-        pointsSpent: redemption.pointsSpent,
-      });
-    }
-
-    // The record half of the code claim. This is also where the per-customer cap
-    // is actually enforced — the unique index refuses a concurrent second claim
-    // by the same shopper, rolling this whole transaction back.
-    if (claimed?.ok) {
-      try {
-        await recordCodeRedemption(tx, vendorId, {
-          codeId: claimed.claim.codeId,
-          orderId: order.id,
-          userId: input.userId,
-          seq: claimed.claim.seq,
-          amountPence: claimed.claim.discountPence,
-        });
-      } catch (error) {
-        if (error instanceof DiscountClaimError) {
-          throw new CheckoutError("DISCOUNT_CODE", refusalMessage(error.reason));
-        }
-        throw error;
+      // The code is claimed FIRST and evaluated against the pre-discount subtotal:
+      // a percentage code must not shrink because the shopper also spent points.
+      // Like the points debit below, the reservation happens before the Order row
+      // exists, so an order can never carry a discount that was not actually
+      // reserved. Its record is written after the insert, once there is an orderId.
+      const claimed =
+        input.discountCode == null || input.discountCode.trim() === ""
+          ? null
+          : await claimCode(tx, vendorId, {
+              code: input.discountCode,
+              userId: input.userId,
+              subtotalPence: preDiscount.subtotalPence,
+              deliveryFeePence: preDiscount.deliveryFeePence,
+            });
+      if (claimed && !claimed.ok) {
+        throw new CheckoutError("DISCOUNT_CODE", refusalMessage(claimed.reason));
       }
-    }
+      const codeDiscountPence = claimed?.ok ? claimed.claim.discountPence : 0;
 
-    await tx.orderItem.createMany({
-      data: lines.map((line) => ({
+      // Points are debited BEFORE the order is written, so an order can never
+      // carry a discount whose points the shopper turned out not to have. The
+      // matching ledger row is written below, once there is an orderId to attach
+      // it to; both are inside this transaction, so they commit or roll back
+      // together. See lib/repositories/loyalty.ts for why this is a pair.
+      //
+      // `existingDiscountPence` is what stops the two mechanisms each claiming the
+      // whole subtotal: points fill only the headroom the code left.
+      const loyaltyConfig = await getLoyaltyConfig(tx, vendorId);
+      const redemption = await spendPoints(tx, vendorId, {
+        userId: input.userId,
+        requestedPoints: input.redeemPoints ?? 0,
+        subtotalPence: preDiscount.subtotalPence,
+        deliveryFeePence: preDiscount.deliveryFeePence,
+        existingDiscountPence: codeDiscountPence,
+        config: loyaltyConfig,
+      });
+
+      const totals = computeTotals(
+        lines,
+        input.rules,
+        codeDiscountPence + redemption.discountPence,
+        input.fulfilmentMethod,
+      );
+
+      // Retry against the unique index rather than assuming randomness never collides.
+      let order: { id: string; orderNumber: string; confirmationToken: string | null } | null =
+        null;
+      for (let attempt = 0; attempt < ORDER_NUMBER_ATTEMPTS; attempt++) {
+        const orderNumber = buildOrderNumber(input.vendorSlug, new Date());
+        const clash = await tx.order.findUnique({
+          where: { orderNumber },
+          select: { id: true },
+        });
+        if (clash) continue;
+        order = await tx.order.create({
+          data: {
+            vendorId,
+            orderNumber,
+            // P9.1 (#427/#428) — minted here, in the same write as the order
+            // number, so no order can ever exist without one. 122 bits of
+            // randomness from the same source lib/cart-identity.ts already uses.
+            confirmationToken: crypto.randomUUID(),
+            userId: input.userId,
+            guestEmail: input.guestEmail,
+            addressId: address.id,
+            fulfilmentMethod: input.fulfilmentMethod,
+            subtotalPence: totals.subtotalPence,
+            discountPence: totals.discountPence,
+            deliveryFeePence: totals.deliveryFeePence,
+            totalPence: totals.totalPence,
+          },
+          select: { id: true, orderNumber: true, confirmationToken: true },
+        });
+        break;
+      }
+      if (!order) {
+        throw new CheckoutError(
+          "ORDER_NUMBER_COLLISION",
+          "Could not allocate an order number — please try again.",
+        );
+      }
+
+      // The audit half of the redemption above, now that the order has an id.
+      if (redemption.pointsSpent > 0 && input.userId) {
+        await recordRedemption(tx, vendorId, {
+          userId: input.userId,
+          orderId: order.id,
+          pointsSpent: redemption.pointsSpent,
+        });
+      }
+
+      // The record half of the code claim. This is also where the per-customer cap
+      // is actually enforced — the unique index refuses a concurrent second claim
+      // by the same shopper, rolling this whole transaction back.
+      if (claimed?.ok) {
+        try {
+          await recordCodeRedemption(tx, vendorId, {
+            codeId: claimed.claim.codeId,
+            orderId: order.id,
+            userId: input.userId,
+            seq: claimed.claim.seq,
+            amountPence: claimed.claim.discountPence,
+          });
+        } catch (error) {
+          if (error instanceof DiscountClaimError) {
+            throw new CheckoutError("DISCOUNT_CODE", refusalMessage(error.reason));
+          }
+          throw error;
+        }
+      }
+
+      await tx.orderItem.createMany({
+        data: lines.map((line) => ({
+          orderId: order.id,
+          vendorId,
+          productId: line.productId,
+          productName: line.productName,
+          unitPricePence: line.unitPricePence,
+          quantity: line.quantity,
+          // P8.5d (#348): the tiered total, NOT unitPricePence × quantity.
+          // `unitPricePence` stays the product's base unit price, so the two
+          // columns together record both what the product listed at and what this
+          // line actually charged — which is what makes the multi-buy auditable
+          // without a DiscountRedemption row.
+          lineTotalPence: line.lineTotalPence,
+        })),
+      });
+
+      // NO external call inside the transaction (P3c R6). An HTTP round-trip to
+      // Stripe here would hold a Postgres transaction open on a serverless
+      // connection against Prisma's 5s interactive-transaction timeout — a slow
+      // provider would roll back a perfectly good order. The provider reference is
+      // filled in after commit.
+      await tx.payment.create({
+        data: {
+          orderId: order.id,
+          vendorId,
+          provider: PENDING_PROVIDER,
+          providerReference: null,
+          amountPence: totals.totalPence,
+        },
+      });
+
+      await tx.orderStatusEvent.create({
+        data: {
+          orderId: order.id,
+          vendorId,
+          status: "PENDING_PAYMENT",
+          note: "Order placed; awaiting payment.",
+        },
+      });
+
+      // Clearing the cart last, inside the transaction, is what makes a double
+      // submit safe (the second finds CART_EMPTY).
+      await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+      return {
         orderId: order.id,
-        vendorId,
-        productId: line.productId,
-        productName: line.productName,
-        unitPricePence: line.unitPricePence,
-        quantity: line.quantity,
-        // P8.5d (#348): the tiered total, NOT unitPricePence × quantity.
-        // `unitPricePence` stays the product's base unit price, so the two
-        // columns together record both what the product listed at and what this
-        // line actually charged — which is what makes the multi-buy auditable
-        // without a DiscountRedemption row.
-        lineTotalPence: line.lineTotalPence,
-      })),
-    });
-
-    // NO external call inside the transaction (P3c R6). An HTTP round-trip to
-    // Stripe here would hold a Postgres transaction open on a serverless
-    // connection against Prisma's 5s interactive-transaction timeout — a slow
-    // provider would roll back a perfectly good order. The provider reference is
-    // filled in after commit.
-    await tx.payment.create({
-      data: {
-        orderId: order.id,
-        vendorId,
-        provider: PENDING_PROVIDER,
-        providerReference: null,
-        amountPence: totals.totalPence,
-      },
-    });
-
-    await tx.orderStatusEvent.create({
-      data: {
-        orderId: order.id,
-        vendorId,
-        status: "PENDING_PAYMENT",
-        note: "Order placed; awaiting payment.",
-      },
-    });
-
-    // Clearing the cart last, inside the transaction, is what makes a double
-    // submit safe (the second finds CART_EMPTY).
-    await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
-
-    return {
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      // Non-null by construction: the create above always supplies it. The
-      // column is nullable only for orders that predate the P9.1 migration.
-      confirmationToken: order.confirmationToken ?? "",
-      totalPence: totals.totalPence,
-      currency: CURRENCY,
-    };
-  });
+        orderNumber: order.orderNumber,
+        // Non-null by construction: the create above always supplies it. The
+        // column is nullable only for orders that predate the P9.1 migration.
+        confirmationToken: order.confirmationToken ?? "",
+        totalPence: totals.totalPence,
+        currency: CURRENCY,
+      };
+    },
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      maxWait: 5000,
+      timeout: 10000,
+    },
+  );
 
   // ---- After commit: talk to the payment provider ----------------------------
   // If this fails, the order exists but can never be paid, so it is cancelled and
@@ -693,6 +745,7 @@ export interface OrderSummary {
     line1: string;
     line2: string | null;
     city: string;
+    county: string | null;
     postcode: string;
     notes: string | null;
   };
@@ -935,6 +988,7 @@ export async function findOrderForViewer(
           line1: true,
           line2: true,
           city: true,
+          county: true,
           postcode: true,
           notes: true,
         },
@@ -1049,6 +1103,7 @@ export async function findOrderForUser(
           line1: true,
           line2: true,
           city: true,
+          county: true,
           postcode: true,
           notes: true,
         },
@@ -1134,6 +1189,7 @@ export async function findOrderForStaff(
           line1: true,
           line2: true,
           city: true,
+          county: true,
           postcode: true,
           notes: true,
         },
