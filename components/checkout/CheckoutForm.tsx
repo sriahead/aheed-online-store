@@ -31,6 +31,8 @@ export function CheckoutForm({
   vendorId,
   bookingWindowDays,
   offerDeliverySlots,
+  expressCollectionEnabled,
+  expressSchedules,
 }: {
   signedInEmail: string | null;
   /**
@@ -45,6 +47,8 @@ export function CheckoutForm({
   vendorId: string;
   bookingWindowDays: number;
   offerDeliverySlots: boolean;
+  expressCollectionEnabled?: boolean;
+  expressSchedules?: { dayOfWeek: number; openTime: string; closeTime: string }[];
 }) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
 
@@ -330,6 +334,8 @@ export function CheckoutForm({
             method={method}
             bookingWindowDays={bookingWindowDays}
             required={true}
+            expressCollectionEnabled={expressCollectionEnabled}
+            expressSchedules={expressSchedules}
           />
         </section>
       )}

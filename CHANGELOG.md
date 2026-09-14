@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Express SLA for Click & Collect** (`#402`; `specs/2026-09-13-p402-express-sla/`). **Schema change: one new relational model, two new `Order` columns, three migrations.**
+  - **Express Collection toggle:** `VendorConfig.expressCollectionEnabled` plus a relational `VendorExpressSchedule` model (`dayOfWeek`/`openTime`/`closeTime`, no JSON columns) define when a vendor offers ASAP pickup, distinct from the P401 shared-slot booking flow.
+  - **60-minute SLA:** `Order.isExpress`/`Order.targetFulfilmentTime` — the target is stamped only on the `PENDING_PAYMENT` → `CONFIRMED` transition (payment clearing), never at order placement, so a slow checkout never eats into staff's window.
+  - **Checkout UI:** an Express toggle renders in `SlotPicker` only when Collection is selected, an active schedule window matches the current time, and the vendor has the feature enabled.
+  - **Staff queue visibility:** `/staff/orders` renders a live countdown (`ExpressCountdown`) and highlights a row red once `targetFulfilmentTime` has passed.
+
 - **Postcode & Address Lookup** (`#613`; `specs/2026-09-13-p613-address-lookup/`). **Schema change: one new column, one migration.**
   - **Address Lookup:** Integrated postcodes.io to validate UK postcodes and automatically fill the Town/City and County fields during checkout.
   - **Fallback Handling:** Ensures checkout continues even if the external postcode service is unavailable.

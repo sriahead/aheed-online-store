@@ -82,6 +82,7 @@ export interface PlaceOrderInput {
   };
   fulfilmentSlotId?: string | null;
   fulfilmentDate?: Date | null;
+  isExpress?: boolean;
   rules: DeliveryRules & { minimumOrderPence: number };
   /**
    * Loyalty points the shopper asked to spend (P5a, #135). An INTENT, never an
@@ -383,6 +384,15 @@ export async function placeOrder(
             guestEmail: input.guestEmail,
             addressId: address.id,
             fulfilmentMethod: input.fulfilmentMethod,
+            // P401 (#401, R8) — must be persisted at creation: the capacity
+            // count above only prevents overbooking if the reservation it just
+            // counted is actually attached to the row it creates. Pre-existing
+            // gap found while fixing P402's tests against this same function.
+            fulfilmentSlotId: input.fulfilmentSlotId ?? null,
+            fulfilmentDate: input.fulfilmentDate ?? null,
+            // P402 (#402) — must be persisted at creation: confirmPayment's SLA
+            // stamp reads it back off the row, not off the request that placed it.
+            isExpress: input.isExpress ?? false,
             subtotalPence: totals.subtotalPence,
             discountPence: totals.discountPence,
             deliveryFeePence: totals.deliveryFeePence,
@@ -762,6 +772,10 @@ export interface OrderListItem {
   itemCount: number;
   /** First 3 items by product name ascending — a total order, so it never varies. */
   previewItems: { productName: string; quantity: number }[];
+  /** P402 (#402) — true when the shopper selected Express Collection. */
+  isExpress: boolean;
+  /** P402 (#402) — set on PENDING_PAYMENT → CONFIRMED for an Express order; null otherwise. */
+  targetFulfilmentTime: Date | null;
 }
 
 export interface OrderListPage {
@@ -811,6 +825,8 @@ const ORDER_LIST_SELECT = {
   fulfilmentMethod: true,
   createdAt: true,
   totalPence: true,
+  isExpress: true,
+  targetFulfilmentTime: true,
   items: {
     select: { productName: true, quantity: true },
     orderBy: { productName: "asc" },
@@ -824,6 +840,8 @@ type OrderListRow = {
   fulfilmentMethod: string;
   createdAt: Date;
   totalPence: number;
+  isExpress: boolean;
+  targetFulfilmentTime: Date | null;
   items: { productName: string; quantity: number }[];
 };
 
@@ -844,6 +862,8 @@ function toOrderListPage(rows: OrderListRow[], take: number): OrderListPage {
       totalPence: order.totalPence,
       itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
       previewItems: order.items.slice(0, ORDER_PREVIEW_ITEMS),
+      isExpress: order.isExpress,
+      targetFulfilmentTime: order.targetFulfilmentTime,
     })),
     nextCursor: hasMore ? page[page.length - 1].id : null,
   };
@@ -1498,7 +1518,10 @@ export interface WebhookOrder {
   buyerEmail: string | null;
   /** Null for a guest order — P5a needs it to decide whether points can be earned. */
   userId: string | null;
+  /** P402 — true when the shopper selected Express Collection. */
+  isExpress: boolean;
   /** P7.5b (#150) — as `OrderSummary.discountCode`. */
+
   discountCode: { code: string; amountPence: number } | null;
   /**
    * P7.5b (#138) — as `OrderSummary.pointsEarned`.
@@ -1543,6 +1566,7 @@ export async function findOrderForWebhook(
       deliveryFeePence: true,
       guestEmail: true,
       userId: true,
+      isExpress: true,
       user: { select: { email: true } },
       items: {
         select: {
@@ -1555,6 +1579,7 @@ export async function findOrderForWebhook(
       ...ORDER_PROVENANCE_SELECT,
     },
   });
+
   if (!order) return null;
 
   const { guestEmail, user, discountUse, loyaltyEntries, ...rest } = order;
@@ -1705,7 +1730,10 @@ export async function confirmPayment(
         // race the other.
         payment: { is: { provider, providerReference, amountPence } },
       },
-      data: { status: "CONFIRMED" },
+      data: {
+        status: "CONFIRMED",
+        targetFulfilmentTime: order.isExpress ? new Date(Date.now() + 60 * 60 * 1000) : undefined,
+      },
     });
     if (count === 0) {
       return { ok: false as const, reason: await classifyNoMatch(tx, order.id) };

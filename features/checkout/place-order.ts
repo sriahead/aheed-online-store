@@ -147,6 +147,7 @@ export async function placeOrderAction(
 
     const rawFulfilmentSlotId = optional(form, "fulfilmentSlotId");
     const rawFulfilmentDate = optional(form, "fulfilmentDate");
+    const isExpress = form.get("isExpress") === "on";
 
     const placed = await getOrderRepository().createOrder({
       cartId,
@@ -155,6 +156,7 @@ export async function placeOrderAction(
       address: addressInput,
       fulfilmentSlotId: rawFulfilmentSlotId,
       fulfilmentDate: rawFulfilmentDate ? new Date(rawFulfilmentDate) : null,
+      isExpress,
       rules: {
         deliveryFeePence: vendor.deliveryFeePence,
         freeDeliveryThresholdPence: vendor.freeDeliveryThresholdPence,

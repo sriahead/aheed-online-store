@@ -1,20 +1,26 @@
-import "dotenv/config";
-import { describe, expect, it, beforeEach } from "vitest";
+/**
+ * R8 — Overbooking prevention under concurrent load (P4/#401).
+ *
+ * Fires 5 concurrent placeOrder calls for a slot with capacity=1 and asserts
+ * exactly one succeeds; the rest must throw CheckoutError(SLOT_FULL) or a
+ * Prisma serialization failure (P2034).
+ *
+ * Requires a live Postgres connection (Neon) — skipped in CI environments that
+ * don't have DATABASE_URL set.
+ */
+import { describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
-import { placeOrder } from "@/lib/repositories/orders";
+import { placeOrder, CheckoutError } from "@/lib/repositories/orders";
 import { randomUUID } from "node:crypto";
-import { CheckoutError } from "@/lib/repositories/orders";
 
-// A plain connection-string config, matching lib/db.ts's getPrismaWs() — a live `Pool`
-// instance is a valid overload by its type signature but fails at $transaction time
-// with "No database host or connection string was set" (see CLAUDE.md, #382-adjacent).
+// neonConfig.webSocketConstructor is set in tests/setup.ts (vitest setupFiles).
+// A plain connection-string config, matching lib/db.ts's getPrismaWs() — see
+// tests/express-sla.test.ts for why a live `Pool` instance doesn't work here.
 const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 describe("Concurrency Slot Booking (R8)", () => {
-  beforeEach(async () => {});
-
   // Requires a live Postgres connection (Neon) — CI's quality/quality job carries no
   // DATABASE_URL, so this skips there rather than crashing the whole run.
   it.skipIf(!process.env.DATABASE_URL)(
@@ -25,10 +31,12 @@ describe("Concurrency Slot Booking (R8)", () => {
       // the shared dev Neon database and never deletes them, so a hardcoded slot id (was:
       // "test-slot-1") collides with the previous run's own leftover row on every re-run.
       const slotId = "cslot-" + vendorId.substring(0, 8);
+      const vendorSlug = "concurrency-test-" + vendorId.substring(0, 8);
+
       await prisma.vendor.create({
         data: {
           id: vendorId,
-          slug: "concurrency-test-" + vendorId.substring(0, 8),
+          slug: vendorSlug,
           name: "Test Vendor",
           deliveryAreas: { create: { prefix: "AB" } },
           branding: {
@@ -71,7 +79,7 @@ describe("Concurrency Slot Booking (R8)", () => {
       const fulfilmentDate = new Date("2026-09-14T00:00:00.000Z");
 
       const category = await prisma.category.create({
-        data: { vendorId, slug: "test-cat", name: "Test Cat" },
+        data: { vendorId, slug: "cat-" + vendorId.substring(0, 8), name: "Test Cat" },
       });
 
       const productId = randomUUID();
@@ -80,7 +88,7 @@ describe("Concurrency Slot Booking (R8)", () => {
           id: productId,
           vendorId,
           categoryId: category.id,
-          slug: "test-prod",
+          slug: "prod-" + vendorId.substring(0, 8),
           description: "Desc",
           unitLabel: "item",
           name: "Test Product",
@@ -120,7 +128,7 @@ describe("Concurrency Slot Booking (R8)", () => {
           cartId: cartIds[i],
           userId: null,
           guestEmail: email,
-          vendorSlug: "concurrency-test-" + vendorId.substring(0, 8),
+          vendorSlug,
           address: {
             recipientName: "Test",
             phone: "01234567890",

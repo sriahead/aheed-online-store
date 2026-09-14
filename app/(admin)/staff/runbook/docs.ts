@@ -2052,6 +2052,42 @@ export const DOC_ARTICLES: any[] = [
     "content": "| Req | How to verify |\n|---|---|\n| R1 | Inspect `prisma/schema.prisma` for the `VendorFulfilmentSlot` model and run `npx prisma migrate diff` to verify the migration. |\n| R2 | Inspect `prisma/schema.prisma` for `bookingWindowDays` and `slotHoldDurationMinutes` on `VendorConfig`. |\n| R3 | Run `npm run test -- tests/slot-capacity.test.ts` to assert that available capacity correctly subtracts existing orders. |\n| R4 | Ensure `tests/slot-capacity.test.ts` asserts that `CONFIRMED` and `DELIVERED` orders consume capacity. |\n| R5 | Ensure `tests/slot-capacity.test.ts` asserts that a fresh `PENDING_PAYMENT` order consumes capacity. |\n| R6 | Ensure `tests/slot-capacity.test.ts` asserts that a `PENDING_PAYMENT` order older than `slotHoldDurationMinutes` does NOT consume capacity. |\n| R7 | In the browser, toggle Delivery and Collection methods in the checkout and verify the UI displays the respective available slots up to `bookingWindowDays` in the future. |\n| R8 | Run `npm run test -- tests/concurrency-slot-booking.test.ts` to execute concurrent `placeOrderAction` requests against a real Postgres database and assert that a slot with capacity=1 only allows exactly 1 successful reservation and rejects the rest. |\n\n"
   },
   {
+    "id": "specs/2026-09-13-p402-express-sla/plan.md",
+    "title": "P402 Express SLA",
+    "audience": [
+      "dev"
+    ],
+    "visibility": "internal",
+    "category": "spec",
+    "summary": "Click & Collect 60-minute express pickup SLAs with relational scheduling and operational visibility.",
+    "lastUpdated": "2026-09-13",
+    "content": "\n# P402 Express SLA\n\nThis slice builds on the Fulfilment Foundation to deliver the 60-minute express Click & Collect capability.\n\n## Goal\nTo allow vendors to offer Express Collection (ASAP pickup) during specific scheduled operating hours, distinct from standard collection slots, and to track SLA compliance in the staff queue.\n\n## Scope\n* **In Scope:** `expressCollectionEnabled` config. A relational `VendorExpressSchedule` model to define when Express is available. `targetFulfilmentTime` stamping on the order upon payment confirmation. SLA countdown/breach visibility in the staff order queue.\n* **Out of Scope (Deliberately Deferred):** Modifying the P401 shared slot model (Express is an ASAP override, not a specific capacity-bound slot selection).\n\n## Rationale\nExpress Collection must only be offered when the store is open and staffed for it, which may differ from standard collection windows. Using a relational model for the schedule conforms strictly to the project's no-JSON domain-data rule. The 60-minute SLA must start when the payment clears (order transitions from `PENDING_PAYMENT` to `CONFIRMED`), ensuring staff aren't penalized for customer checkout delays. The staff queue UI must prominently highlight these orders to drive operational urgency.\n"
+  },
+  {
+    "id": "specs/2026-09-13-p402-express-sla/requirements.md",
+    "title": "P402 Express SLA Requirements",
+    "audience": [
+      "dev"
+    ],
+    "visibility": "internal",
+    "category": "spec",
+    "summary": "Requirements for Express SLA.",
+    "lastUpdated": "2026-09-13",
+    "content": "# Requirements\n\nR1. The `VendorConfig` model must include an `expressCollectionEnabled` boolean.\nR2. The schema must include a `VendorExpressSchedule` relational model linked to `Vendor`, containing fields to define availability (e.g., `dayOfWeek`, `openTime`, `closeTime`). JSON columns must not be used.\nR3. The `Order` model must include a `targetFulfilmentTime` DateTime field.\nR4. During checkout, if `method === COLLECTION` and the current time is within a valid `VendorExpressSchedule` window, the UI must offer an \"Express (ASAP)\" toggle alongside standard collection slots.\nR5. When an Express order transitions from `PENDING_PAYMENT` to `CONFIRMED`, the system must set the order's `targetFulfilmentTime` to the transition timestamp plus 60 minutes.\nR6. The Staff Order Queue UI must render a countdown timer for Express orders based on `targetFulfilmentTime`.\nR7. The Staff Order Queue UI must visually highlight (e.g., in red) Express orders where the current time exceeds `targetFulfilmentTime`.\n\n"
+  },
+  {
+    "id": "specs/2026-09-13-p402-express-sla/validation.md",
+    "title": "P402 Express SLA Validation",
+    "audience": [
+      "dev"
+    ],
+    "visibility": "internal",
+    "category": "spec",
+    "summary": "Validation for Express SLA.",
+    "lastUpdated": "2026-09-13",
+    "content": "| Req | How to verify |\n|---|---|\n| R1 | Inspect `prisma/schema.prisma` for `expressCollectionEnabled` on `VendorConfig`. |\n| R2 | Inspect `prisma/schema.prisma` for the `VendorExpressSchedule` relational model and verify no JSON columns are used. |\n| R3 | Inspect `prisma/schema.prisma` for `targetFulfilmentTime` on `Order`. |\n| R4 | In the browser, configure an active express schedule, enter checkout, select Collection, and verify the Express option is presented. |\n| R5 | Run `npm run test -- tests/express-sla.test.ts` to assert that `targetFulfilmentTime` is correctly populated ONLY upon the transition from `PENDING_PAYMENT` to `CONFIRMED`. |\n| R6 | In the staff queue browser, view a `CONFIRMED` Express order and verify the countdown timer is visible. |\n| R7 | In the staff queue browser, view an Express order with a `targetFulfilmentTime` in the past and verify the row/badge is styled as breached (e.g. red). |\n\n"
+  },
+  {
     "id": "specs/2026-09-13-p613-address-lookup/plan.md",
     "title": "P613 Postcode & Address Lookup",
     "audience": [

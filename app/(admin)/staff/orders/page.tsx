@@ -13,6 +13,7 @@ import {
 } from "@/lib/staff-orders-query";
 import { formatPrice } from "@/components/product/format-price";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
+import { ExpressCountdown } from "@/components/staff/ExpressCountdown";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { advanceStatus } from "@/features/orders/advance-status";
 import { advanceStatusBulk } from "@/features/orders/advance-status-bulk";
@@ -63,6 +64,12 @@ export default async function StaffOrdersPage({
     cursor,
     filter: query,
   });
+  // Deliberately impure: this page renders per request (see the queue above,
+  // already re-fetched live) and an Express order's breach state is a fact
+  // about the current instant, not a value that should stay stable across
+  // renders of the same props (P402, #402).
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now();
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8">
@@ -142,10 +149,14 @@ export default async function StaffOrdersPage({
           <ul className="space-y-3">
             {items.map((order) => {
               const next = nextStatus(order.status, order.fulfilmentMethod);
+              const isBreached =
+                order.isExpress &&
+                order.targetFulfilmentTime !== null &&
+                order.targetFulfilmentTime.getTime() < now;
               return (
                 <li
                   key={order.orderNumber}
-                  className="rounded-2xl border border-black/10 bg-white p-5"
+                  className={`rounded-2xl border p-5 ${isBreached ? "border-red-500 bg-red-50" : "border-black/10 bg-white"}`}
                 >
                   <div className="mb-2 flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-start gap-3">
@@ -171,6 +182,9 @@ export default async function StaffOrdersPage({
                         </p>
                       </div>
                     </div>
+                    {order.isExpress && order.targetFulfilmentTime && (
+                      <ExpressCountdown targetStr={order.targetFulfilmentTime.toISOString()} />
+                    )}{" "}
                     <OrderStatusBadge status={order.status} />
                   </div>
 
