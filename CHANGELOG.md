@@ -48,6 +48,25 @@ every branch merges.
 
 ### Fixed
 
+- **PR #744 (Shared Fulfilment Slots, `#401`) fully green on CI** — six `quality/quality` ESLint
+  failures, none of them the Prettier issue they were first taken for. `components/checkout/SlotPicker.tsx`
+  and `features/checkout/slots.ts` imported `@prisma/client`/`@/lib/db` directly from the
+  feature/component layer, violating the ADR-004 slice 2 layering rule; split into
+  `lib/repositories/fulfilment-slots.ts` (pure, takes `prisma` explicitly) and
+  `lib/fulfilment-slots-service.ts` (request-scoped wrapper), matching the existing
+  `lib/delivery-areas-service.ts` pattern. Two `SlotPicker.tsx` section headings used `<label>`
+  with no associated control (`jsx-a11y/label-has-associated-control`); changed to `<div>`.
+  `components/layout/LocationControl.tsx`'s `react-hooks/set-state-in-effect` violation was fixed
+  separately (cherry-picked from `#743`'s own fix for the same line). Getting past lint then
+  surfaced real, pre-existing debt in `tests/slot-capacity.test.ts` and
+  `tests/concurrency-slot-booking.test.ts` that had never actually run in CI: an invalid
+  `PrismaNeon` adapter construction (a live `Pool` instance instead of a connection-string config,
+  matching `lib/db.ts`'s `getPrismaWs()`), a `tsc` error from mixing scalar FKs with a nested
+  relation write on `Order.create`, an unhandled-rejection race from firing `placeOrder` calls
+  inside the same loop as cart creation, and hardcoded non-unique ids with no row cleanup against
+  the shared dev database — now suffixed per run and guarded with
+  `it.skipIf(!process.env.DATABASE_URL)`, since CI's `quality/quality` job carries no
+  `DATABASE_URL` and would otherwise crash the whole `npm test` step on these two files.
 - **`Shop`, `Shop List` and the delivery-postcode badge are reachable on mobile** (`#718`).
   `components/layout/Header.tsx`'s "Shop"/"Shop List" nav links and
   `components/layout/PostcodeChecker.tsx`'s `badge` variant were `hidden` below the `lg` (1024px)
