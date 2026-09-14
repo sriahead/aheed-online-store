@@ -35,7 +35,7 @@ export default async function CheckoutPage() {
   const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const signedInEmail = (session?.user as { email?: string } | undefined)?.email ?? null;
   const signedInUserId = (session?.user as { id?: string } | undefined)?.id ?? null;
-  
+
   const initialPostcode = cookieStore.get(DELIVERY_POSTCODE_COOKIE)?.value ?? null;
 
   // P5a (#135) — offered only to a signed-in shopper at a loyalty-enabled vendor

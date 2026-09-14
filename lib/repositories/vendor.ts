@@ -67,10 +67,10 @@ export interface VendorProfile {
   freeDeliveryThresholdPence: number | null;
   minimumOrderPence: number;
   offerCollection: boolean;
-    id: string;
-    bookingWindowDays: number;
-    slotHoldDurationMinutes: number;
-    offerDeliverySlots: boolean;
+  id: string;
+  bookingWindowDays: number;
+  slotHoldDurationMinutes: number;
+  offerDeliverySlots: boolean;
 }
 
 // Fallbacks = the Aheed defaults already in design-system/tokens/tokens.css, so a

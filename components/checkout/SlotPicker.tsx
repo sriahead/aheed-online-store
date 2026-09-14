@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { getAvailableSlotsForDate } from "@/features/checkout/slots";
-import type { FulfilmentMethod } from "@prisma/client";
+import type { FulfilmentMethod } from "@/lib/repositories/fulfilment-slots";
 
 interface Slot {
   id: string;
@@ -51,16 +51,16 @@ export function SlotPicker({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-xs font-bold uppercase tracking-wide text-black/60 mb-2">
+        <div className="block text-xs font-bold uppercase tracking-wide text-black/60 mb-2">
           Select Date
-        </label>
+        </div>
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
           {dates.map((date) => {
             const isSelected = date.getTime() === selectedDate.getTime();
-            const dayName = new Intl.DateTimeFormat('en-GB', { weekday: 'short' }).format(date);
+            const dayName = new Intl.DateTimeFormat("en-GB", { weekday: "short" }).format(date);
             const dayNum = date.getDate();
-            const monthName = new Intl.DateTimeFormat('en-GB', { month: 'short' }).format(date);
-            
+            const monthName = new Intl.DateTimeFormat("en-GB", { month: "short" }).format(date);
+
             return (
               <button
                 key={date.toISOString()}
@@ -83,14 +83,18 @@ export function SlotPicker({
       </div>
 
       <div>
-        <label className="block text-xs font-bold uppercase tracking-wide text-black/60 mb-2">
+        <div className="block text-xs font-bold uppercase tracking-wide text-black/60 mb-2">
           Select Time Slot
-        </label>
+        </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {isPending ? (
-            <div className="col-span-full py-4 text-center text-sm text-black/60">Loading slots...</div>
+            <div className="col-span-full py-4 text-center text-sm text-black/60">
+              Loading slots...
+            </div>
           ) : slots.length === 0 ? (
-            <div className="col-span-full py-4 text-center text-sm text-black/60">No slots available for this date.</div>
+            <div className="col-span-full py-4 text-center text-sm text-black/60">
+              No slots available for this date.
+            </div>
           ) : (
             slots.map((slot) => {
               const isAvailable = slot.available > 0;

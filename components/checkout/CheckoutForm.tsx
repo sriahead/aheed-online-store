@@ -67,7 +67,7 @@ export function CheckoutForm({
         const countyInput = form.elements.namedItem("county") as HTMLInputElement;
         if (cityInput && result.admin_district) cityInput.value = result.admin_district;
         if (countyInput && result.admin_county) countyInput.value = result.admin_county;
-        
+
         const postcodeInput = document.getElementById("postcode") as HTMLInputElement;
         if (postcodeInput) postcodeInput.setCustomValidity("");
       }
