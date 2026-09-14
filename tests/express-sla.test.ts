@@ -21,107 +21,114 @@ import { randomUUID } from "node:crypto";
 const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
-test("R5: Express targetFulfilmentTime is populated on payment confirmation", async () => {
-  const vendorId = randomUUID();
-  const vendorSlug = "express-test-" + vendorId.substring(0, 8);
+// Requires a live Postgres connection (Neon) — CI's quality/quality job carries no
+// DATABASE_URL, so this skips there rather than crashing the whole run (same lesson
+// as tests/slot-capacity.test.ts and tests/concurrency-slot-booking.test.ts).
+test.skipIf(!process.env.DATABASE_URL)(
+  "R5: Express targetFulfilmentTime is populated on payment confirmation",
+  async () => {
+    const vendorId = randomUUID();
+    const vendorSlug = "express-test-" + vendorId.substring(0, 8);
 
-  await prisma.vendor.create({
-    data: {
-      id: vendorId,
-      slug: vendorSlug,
-      name: "Express Test Vendor",
-      deliveryAreas: { create: { prefix: "AB" } },
-      branding: {
-        create: {
-          name: "Express Test Vendor",
-          brandGreenDark: "",
-          brandGreen: "",
-          brandOrange: "",
-          brandRed: "",
-          brandCream: "",
-          brandGreenTint: "",
-          brandOrangeTint: "",
-          brandRedTint: "",
+    await prisma.vendor.create({
+      data: {
+        id: vendorId,
+        slug: vendorSlug,
+        name: "Express Test Vendor",
+        deliveryAreas: { create: { prefix: "AB" } },
+        branding: {
+          create: {
+            name: "Express Test Vendor",
+            brandGreenDark: "",
+            brandGreen: "",
+            brandOrange: "",
+            brandRed: "",
+            brandCream: "",
+            brandGreenTint: "",
+            brandOrangeTint: "",
+            brandRedTint: "",
+          },
+        },
+        config: {
+          create: {
+            localityName: "Test",
+            senderName: "Test",
+            senderEmail: "test@example.com",
+            searchPlaceholder: "",
+            expressCollectionEnabled: true,
+          },
         },
       },
-      config: {
-        create: {
-          localityName: "Test",
-          senderName: "Test",
-          senderEmail: "test@example.com",
-          searchPlaceholder: "",
-          expressCollectionEnabled: true,
+    });
+
+    // Create a minimal address (required FK on Order)
+    const addressId = randomUUID();
+    await prisma.address.create({
+      data: {
+        id: addressId,
+        vendorId,
+        recipientName: "Test",
+        phone: "01234567890",
+        line1: "1 Test St",
+        city: "Test City",
+        postcode: "AB1 2CD",
+      },
+    });
+
+    const orderNumber = "EXP-" + vendorId.substring(0, 8);
+    const providerRef = "sess_" + randomUUID();
+
+    await prisma.order.create({
+      data: {
+        vendorId,
+        orderNumber,
+        isExpress: true,
+        status: "PENDING_PAYMENT",
+        fulfilmentMethod: "COLLECTION",
+        subtotalPence: 1000,
+        discountPence: 0,
+        deliveryFeePence: 0,
+        totalPence: 1000,
+        guestEmail: "express@example.com",
+        confirmationToken: randomUUID(),
+        addressId,
+        payment: {
+          create: {
+            vendorId,
+            provider: "stripe",
+            providerReference: providerRef,
+            amountPence: 1000,
+            status: "PENDING",
+          },
         },
       },
-    },
-  });
+    });
 
-  // Create a minimal address (required FK on Order)
-  const addressId = randomUUID();
-  await prisma.address.create({
-    data: {
-      id: addressId,
-      vendorId,
-      recipientName: "Test",
-      phone: "01234567890",
-      line1: "1 Test St",
-      city: "Test City",
-      postcode: "AB1 2CD",
-    },
-  });
+    const beforeConfirm = Date.now();
 
-  const orderNumber = "EXP-" + vendorId.substring(0, 8);
-  const providerRef = "sess_" + randomUUID();
+    const res = await confirmPayment(prisma as any, orderNumber, {
+      provider: "stripe",
+      providerReference: providerRef,
+      amountPence: 1000,
+      currency: "GBP",
+    });
 
-  await prisma.order.create({
-    data: {
-      vendorId,
-      orderNumber,
-      isExpress: true,
-      status: "PENDING_PAYMENT",
-      fulfilmentMethod: "COLLECTION",
-      subtotalPence: 1000,
-      discountPence: 0,
-      deliveryFeePence: 0,
-      totalPence: 1000,
-      guestEmail: "express@example.com",
-      confirmationToken: randomUUID(),
-      addressId,
-      payment: {
-        create: {
-          vendorId,
-          provider: "stripe",
-          providerReference: providerRef,
-          amountPence: 1000,
-          status: "PENDING",
-        },
-      },
-    },
-  });
+    expect(res.ok).toBe(true);
 
-  const beforeConfirm = Date.now();
+    const updated = await prisma.order.findUnique({
+      where: { orderNumber },
+      select: { status: true, targetFulfilmentTime: true },
+    });
 
-  const res = await confirmPayment(prisma as any, orderNumber, {
-    provider: "stripe",
-    providerReference: providerRef,
-    amountPence: 1000,
-    currency: "GBP",
-  });
+    expect(updated?.status).toBe("CONFIRMED");
+    expect(updated?.targetFulfilmentTime).not.toBeNull();
 
-  expect(res.ok).toBe(true);
-
-  const updated = await prisma.order.findUnique({
-    where: { orderNumber },
-    select: { status: true, targetFulfilmentTime: true },
-  });
-
-  expect(updated?.status).toBe("CONFIRMED");
-  expect(updated?.targetFulfilmentTime).not.toBeNull();
-
-  // targetFulfilmentTime should be approximately now + 60 min (within ±2 min tolerance)
-  const target = updated!.targetFulfilmentTime!.getTime();
-  const expectedMin = beforeConfirm + 58 * 60_000;
-  const expectedMax = beforeConfirm + 62 * 60_000;
-  expect(target).toBeGreaterThan(expectedMin);
-  expect(target).toBeLessThan(expectedMax);
-}, 30_000);
+    // targetFulfilmentTime should be approximately now + 60 min (within ±2 min tolerance)
+    const target = updated!.targetFulfilmentTime!.getTime();
+    const expectedMin = beforeConfirm + 58 * 60_000;
+    const expectedMax = beforeConfirm + 62 * 60_000;
+    expect(target).toBeGreaterThan(expectedMin);
+    expect(target).toBeLessThan(expectedMax);
+  },
+  30_000,
+);
