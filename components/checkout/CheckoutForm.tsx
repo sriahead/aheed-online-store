@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { MapPin, ShieldCheck, Sparkles, Tag, User, Clock } from "lucide-react";
 import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-order";
 import { inputClass, labelClass } from "@/lib/form-classes";
 import { lookupPostcode } from "@/lib/postcodes-api";
-import { setDeliveryPostcode } from "@/features/storefront/delivery";
+import { setDeliveryPostcode, setFulfilmentMethod } from "@/features/storefront/delivery";
+import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
 import { SlotPicker } from "./SlotPicker";
 
 /**
@@ -33,6 +34,7 @@ export function CheckoutForm({
   offerDeliverySlots,
   expressCollectionEnabled,
   expressSchedules,
+  method,
 }: {
   signedInEmail: string | null;
   /**
@@ -49,12 +51,27 @@ export function CheckoutForm({
   offerDeliverySlots: boolean;
   expressCollectionEnabled?: boolean;
   expressSchedules?: { dayOfWeek: number; openTime: string; closeTime: string }[];
+  /**
+   * #748 — resolved server-side from the shared fulfilment cookie, NOT held in
+   * local state. This component used to own a `useState` for it and broadcast
+   * changes over a `window` CustomEvent, which meant the cart, the header and
+   * this page could each believe something different. Changing the radio now
+   * writes the cookie and the server re-renders both this form and the summary
+   * from one value.
+   */
+  method: FulfilmentMethodChoice;
 }) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
+  const [, startMethodTransition] = useTransition();
 
-  // The server expects this, and it defaults to DELIVERY or nothing if collection is offered.
-  // We'll let the HTML validation enforce choice if both are offered, but here we can just use state to show/hide.
-  const [method, setMethod] = useState<"DELIVERY" | "COLLECTION">("DELIVERY");
+  const chooseMethod = (next: FulfilmentMethodChoice) => {
+    if (next === method) return;
+    const formData = new FormData();
+    formData.append("fulfilmentMethod", next);
+    startMethodTransition(async () => {
+      await setFulfilmentMethod(formData);
+    });
+  };
 
   const [addressLoading, setAddressLoading] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
@@ -106,9 +123,6 @@ export function CheckoutForm({
         const form = document.querySelector("form");
         if (form) {
           Object.entries(details).forEach(([key, value]) => {
-            if (key === "fulfilmentMethod") {
-              setMethod(value as "DELIVERY" | "COLLECTION");
-            }
             const el = form.elements.namedItem(key);
             if (el instanceof HTMLInputElement && !el.value && value) {
               // For radio buttons, we need to check the right one
@@ -129,17 +143,11 @@ export function CheckoutForm({
     const details = Object.fromEntries(fd.entries());
     delete details.redeemPoints;
     delete details.discountCode;
+    // #748 — the method is no longer client state, so it must not be restored
+    // from here either: the cookie is the single source of truth, and a stale
+    // localStorage copy would fight it on the next visit.
+    delete details.fulfilmentMethod;
     localStorage.setItem("aheed_checkout_details", JSON.stringify(details));
-
-    const selectedMethod = fd.get("fulfilmentMethod");
-    if (selectedMethod === "DELIVERY" || selectedMethod === "COLLECTION") {
-      setMethod(selectedMethod);
-
-      // Dispatch a custom event to notify the page that the method changed so it can update the summary
-      window.dispatchEvent(
-        new CustomEvent("fulfilment-method-changed", { detail: selectedMethod }),
-      );
-    }
   };
 
   return (
@@ -168,7 +176,7 @@ export function CheckoutForm({
                 name="fulfilmentMethod"
                 value="DELIVERY"
                 checked={method === "DELIVERY"}
-                onChange={() => setMethod("DELIVERY")}
+                onChange={() => chooseMethod("DELIVERY")}
                 className="h-5 w-5 text-primary focus:ring-primary border-black/20"
                 required
               />
@@ -182,7 +190,7 @@ export function CheckoutForm({
                 name="fulfilmentMethod"
                 value="COLLECTION"
                 checked={method === "COLLECTION"}
-                onChange={() => setMethod("COLLECTION")}
+                onChange={() => chooseMethod("COLLECTION")}
                 className="h-5 w-5 text-primary focus:ring-primary border-black/20"
                 required
               />

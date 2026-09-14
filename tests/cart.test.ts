@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   assertSingleIdentity,
   clampQuantity,
-  deliveryProgress,
   effectiveStock,
+  fulfilmentProgress,
   isMergePending,
   isMergeResolution,
   resolveMerge,
@@ -153,31 +153,84 @@ describe("assertSingleIdentity", () => {
   });
 });
 
-describe("deliveryProgress", () => {
-  it("renders nothing when the vendor offers no free delivery", () => {
-    expect(deliveryProgress(1000, null)).toEqual({ kind: "none" });
-    expect(deliveryProgress(1000, 0)).toEqual({ kind: "none" });
-  });
+describe("fulfilmentProgress", () => {
+  // Aheed's real staging figures, so a regression here is a regression a shopper
+  // would actually see: £15 minimum, £30 free-delivery threshold.
+  const aheed = { minimumOrderPence: 1500, freeDeliveryThresholdPence: 3000 };
 
-  it("reports the remaining amount and progress below the threshold", () => {
-    expect(deliveryProgress(1200, 3000)).toEqual({
-      kind: "remaining",
-      remainingPence: 1800,
-      percent: 40,
+  it("reports the shortfall to the minimum under DELIVERY", () => {
+    expect(fulfilmentProgress(500, { method: "DELIVERY", ...aheed })).toEqual({
+      kind: "below-minimum",
+      remainingPence: 1000,
+      percent: 33,
     });
   });
 
-  it("unlocks at and above the threshold", () => {
-    expect(deliveryProgress(3000, 3000)).toEqual({ kind: "unlocked" });
-    expect(deliveryProgress(9999, 3000)).toEqual({ kind: "unlocked" });
+  it("reports the SAME shortfall under COLLECTION — the minimum is method-independent", () => {
+    // The rule placeOrder enforces makes no distinction between the two, so
+    // neither may the banner. This pairing is the requirement (R6).
+    const delivery = fulfilmentProgress(500, { method: "DELIVERY", ...aheed });
+    const collection = fulfilmentProgress(500, { method: "COLLECTION", ...aheed });
+    expect(collection).toEqual(delivery);
+    expect(collection.kind).toBe("below-minimum");
   });
 
-  it("uses each vendor's own threshold — no shared constant", () => {
-    expect(deliveryProgress(4000, 3000)).toEqual({ kind: "unlocked" }); // Aheed £30
-    expect(deliveryProgress(4000, 5000)).toEqual({
-      kind: "remaining",
+  it("moves to free-delivery progress once the minimum is met", () => {
+    expect(fulfilmentProgress(1800, { method: "DELIVERY", ...aheed })).toEqual({
+      kind: "delivery-remaining",
+      remainingPence: 1200,
+      percent: 60,
+    });
+  });
+
+  it("unlocks free delivery at and above the threshold", () => {
+    expect(fulfilmentProgress(3000, { method: "DELIVERY", ...aheed })).toEqual({
+      kind: "delivery-unlocked",
+    });
+    expect(fulfilmentProgress(9999, { method: "DELIVERY", ...aheed })).toEqual({
+      kind: "delivery-unlocked",
+    });
+  });
+
+  it("never advertises free delivery on a COLLECTION order, even far above the threshold", () => {
+    // The defect this slice exists to fix: the drawer said "You unlocked FREE
+    // Local Delivery" on a Click & Collect cart. There is no fee to waive.
+    expect(fulfilmentProgress(9999, { method: "COLLECTION", ...aheed })).toEqual({
+      kind: "collection-ready",
+    });
+  });
+
+  it("says nothing when the vendor sets no minimum and offers no free delivery", () => {
+    const bare = { minimumOrderPence: 0, freeDeliveryThresholdPence: null };
+    expect(fulfilmentProgress(1000, { method: "DELIVERY", ...bare })).toEqual({ kind: "none" });
+    expect(fulfilmentProgress(1000, { method: "COLLECTION", ...bare })).toEqual({ kind: "none" });
+  });
+
+  it("treats a zero threshold as no free-delivery offer", () => {
+    expect(
+      fulfilmentProgress(1000, {
+        method: "DELIVERY",
+        minimumOrderPence: 0,
+        freeDeliveryThresholdPence: 0,
+      }),
+    ).toEqual({ kind: "none" });
+  });
+
+  it("uses each vendor's own figures — no shared constant", () => {
+    // SriMart: £10 minimum, £50 free delivery.
+    const srimart = { minimumOrderPence: 1000, freeDeliveryThresholdPence: 5000 };
+    expect(fulfilmentProgress(4000, { method: "DELIVERY", ...aheed })).toEqual({
+      kind: "delivery-unlocked",
+    });
+    expect(fulfilmentProgress(4000, { method: "DELIVERY", ...srimart })).toEqual({
+      kind: "delivery-remaining",
       remainingPence: 1000,
       percent: 80,
-    }); // SriMart £50
+    });
+  });
+
+  it("clamps percent into 0-100", () => {
+    const below = fulfilmentProgress(0, { method: "DELIVERY", ...aheed });
+    expect(below).toMatchObject({ kind: "below-minimum", percent: 0 });
   });
 });

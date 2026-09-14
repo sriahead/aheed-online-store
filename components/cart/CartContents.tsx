@@ -1,11 +1,13 @@
+import { Minus, Plus, ShoppingBag, Sparkles, Store, Trash2, Truck } from "lucide-react";
 import Link from "next/link";
-import { Minus, Plus, ShoppingBag, Sparkles, Trash2, Truck } from "lucide-react";
 import { formatPrice } from "@/components/product/format-price";
 import { composePublicUrl } from "@/lib/storage";
-import { deliveryProgress } from "@/lib/cart-rules";
+import { fulfilmentProgress } from "@/lib/cart-rules";
+import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
 import type { CartSummary } from "@/lib/repositories/cart";
 import { removeFromCart } from "@/features/cart/remove-item";
 import { updateQuantity } from "@/features/cart/update-quantity";
+import { CheckoutLink } from "./CheckoutLink";
 
 /**
  * Server-rendered cart body (P3a, #93) — shared by the drawer and /cart so both
@@ -14,31 +16,62 @@ import { updateQuantity } from "@/features/cart/update-quantity";
  * Quantity and remove controls are plain <form> posts to server actions, so they
  * work without client JS; only the drawer's open/close is a client island.
  *
- * Everything vendor-specific comes from data: the free-delivery threshold and the
- * locality name are VendorConfig values, never constants (the reference mockup
- * hardcoded £30 and "Aheed"). Colours are semantic tokens.
+ * Everything vendor-specific comes from data: the minimum order, the free-delivery
+ * threshold and the locality name are VendorConfig values, never constants (the
+ * reference mockup hardcoded £30 and "Aheed"). Colours are semantic tokens.
+ *
+ * #748 — the progress banner is derived entirely by `fulfilmentProgress`, which
+ * is also what `/checkout` renders from. This component does no arithmetic over
+ * the minimum or the threshold itself: when it did, the drawer advertised free
+ * delivery to shoppers who had chosen Click & Collect, and never mentioned the
+ * vendor minimum at all.
  */
 export function CartContents({
   summary,
+  method,
+  minimumOrderPence,
   freeDeliveryThresholdPence,
   localityName,
   cdnBaseUrl,
   showViewCartLink = false,
 }: {
   summary: CartSummary;
+  method: FulfilmentMethodChoice;
+  minimumOrderPence: number;
   freeDeliveryThresholdPence: number | null;
   localityName: string;
   cdnBaseUrl: string;
   showViewCartLink?: boolean;
 }) {
-  const progress = deliveryProgress(summary.subtotalPence, freeDeliveryThresholdPence);
+  const progress = fulfilmentProgress(summary.subtotalPence, {
+    method,
+    minimumOrderPence,
+    freeDeliveryThresholdPence,
+  });
 
   return (
     <>
-      {/* Delivery incentive — omitted entirely when the vendor offers no free delivery. */}
+      {/* Progress banner — omitted entirely when there is nothing to report. */}
       {progress.kind !== "none" && (
         <div className="border-b border-black/5 bg-action-tint p-3 text-xs text-primary">
-          {progress.kind === "remaining" ? (
+          {progress.kind === "below-minimum" && (
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-1 font-medium">
+                {method === "COLLECTION" ? (
+                  <Store className="h-4 w-4 text-primary" aria-hidden />
+                ) : (
+                  <Truck className="h-4 w-4 text-primary" aria-hidden />
+                )}
+                Add {formatPrice(progress.remainingPence)} to reach the{" "}
+                {formatPrice(minimumOrderPence)} minimum order
+              </span>
+              <div className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-black/10">
+                <div className="h-full bg-primary" style={{ width: `${progress.percent}%` }} />
+              </div>
+            </div>
+          )}
+
+          {progress.kind === "delivery-remaining" && (
             <div className="flex items-center justify-between gap-3">
               <span className="flex items-center gap-1 font-medium">
                 <Truck className="h-4 w-4 text-primary" aria-hidden />
@@ -48,11 +81,20 @@ export function CartContents({
                 <div className="h-full bg-primary" style={{ width: `${progress.percent}%` }} />
               </div>
             </div>
-          ) : (
+          )}
+
+          {progress.kind === "delivery-unlocked" && (
             <div className="flex items-center gap-1 font-bold text-primary">
               <Sparkles className="h-4 w-4 text-amber-500" aria-hidden />
               You unlocked FREE Local Delivery
               {localityName ? ` to ${localityName}` : ""}!
+            </div>
+          )}
+
+          {progress.kind === "collection-ready" && (
+            <div className="flex items-center gap-1 font-bold text-primary">
+              <Store className="h-4 w-4 text-primary" aria-hidden />
+              Ready for Click &amp; Collect
             </div>
           )}
         </div>
@@ -190,12 +232,8 @@ export function CartContents({
           </div>
           {/* The cart deliberately stops at a subtotal — delivery fee and total are
               computed at checkout (P3b) so the two can never disagree. */}
-          <Link
-            href="/checkout"
-            className="flex w-full items-center justify-center rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white"
-          >
-            Proceed to checkout
-          </Link>
+          <CheckoutLink />
+
           {showViewCartLink && (
             <Link
               href="/cart"

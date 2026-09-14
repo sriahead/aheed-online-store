@@ -662,6 +662,18 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   **skipped**, not run, on every CI job — the `127/1618` figure is what a real `DATABASE_URL`-bearing
   local run reports; CI's own `Test Files`/`Tests` summary line will read 3 fewer *tests run* than
   this even on a fully green job, which is expected, not a regression.
+  Then `127/1618` moved to **`128/1632`** at the shared-fulfilment-state Build (`#748`,
+  2026-09-14): one new file (`tests/fulfilment-cookie.test.ts`) carrying nine tests, plus a net
+  **+5** in `tests/cart.test.ts` — its four `deliveryProgress` tests were *replaced* by nine
+  `fulfilmentProgress` ones, because the two-argument signature was deleted rather than kept
+  alongside. Worth noting as the mixed case where an existing file's count moves because tests were
+  rewritten, not added: a diff showing five new `it` blocks understates it, and a diff showing nine
+  overstates it. The same run surfaced **`tests/postcodes-api.test.ts` making a REAL network call
+  to `api.postcodes.io`** — it failed the full-suite run with `PostcodeApiError: This operation was
+  aborted` (its own 3s timeout) and passed in 907ms alone. That is a second, distinct full-suite
+  flake from `#538`, it is not load-related in the same way, and a unit test reaching the public
+  internet will fail whenever CI's egress is slow; filed against `#749`'s postcode work rather than
+  fixed in a slice that does not touch that file.
   That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that

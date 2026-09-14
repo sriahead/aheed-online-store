@@ -6,6 +6,15 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Shared fulfilment state across cart and checkout** (`#748`; `specs/2026-09-14-p10-shared-fulfilment-state/`). **No schema change.** Three separately-reported staging defects with one cause: the Delivery / Click & Collect choice was four independent client `useState` values — two `LocationControl` instances, `CheckoutForm` and `CheckoutSummary` — stitched together by a `window` CustomEvent and a `localStorage` blob, and readable by no Server Component.
+  - **One source of truth:** the method now lives in a `fulfilment-method` cookie written by a server action (`setFulfilmentMethod`), beside the existing `delivery-postcode` cookie and with the same attributes. `lib/fulfilment-service.ts` resolves the effective method per request, reconciling the stored preference against what the vendor actually offers — a vendor with `offerCollection: false` is always `DELIVERY`, whatever the cookie holds. The header's desktop and mobile controls can no longer disagree, and the choice survives navigation.
+  - **The postcode is editable again:** the Delivery button previously opened the postcode modal *only* when no deliverable postcode was stored, so once one was set nothing on the page could reopen it. A dedicated edit control now does. Submitting a new postcode while on Click & Collect also no longer forces the shopper back to Delivery.
+  - **Trackers derive from one pure function:** `fulfilmentProgress` in `lib/cart-rules.ts` replaces `deliveryProgress`, and expresses the vendor minimum *and* the free-delivery threshold *and* the method. The cart drawer, `/cart` and `/checkout` all render from it, so the minimum-order shortfall is now visible in the cart instead of only as a static banner at checkout, and a Click & Collect cart no longer advertises "FREE Local Delivery".
+  - **Checkout stops computing money twice:** `app/(storefront)/checkout/page.tsx` now passes the method to `computeTotals` (the argument already existed and simply was not supplied), and `CheckoutSummary` became a Server Component that renders the totals it is handed. Its duplicate arithmetic had also been dropping `discountPence` entirely, so loyalty redemptions and discount codes never appeared in the summary; they do now.
+  - **"Proceed to checkout" closes the drawer on click** rather than waiting for the pathname effect, which could not fire until the `force-dynamic` checkout page finished rendering server-side.
+
 ### Added
 
 - **Express SLA for Click & Collect** (`#402`; `specs/2026-09-13-p402-express-sla/`). **Schema change: one new relational model, two new `Order` columns, three migrations.**

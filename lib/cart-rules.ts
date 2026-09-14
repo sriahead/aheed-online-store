@@ -100,23 +100,85 @@ export function assertSingleIdentity(userId: string | null, guestToken: string |
 }
 
 /**
- * Free-delivery banner state. `threshold` is null when the vendor does not offer
- * free delivery at all, in which case the banner does not render.
+ * What the cart, `/cart` and `/checkout` tell the shopper about their progress
+ * towards being able to order, and towards free delivery (#748).
+ *
+ * ## Why one function and not three
+ *
+ * This supersedes `deliveryProgress(subtotalPence, thresholdPence)`, which knew
+ * only about the free-delivery threshold. Because it had no concept of the
+ * vendor minimum or the fulfilment method, every surface that needed either
+ * computed it itself — the drawer advertised "FREE Local Delivery" under Click &
+ * Collect, and the vendor minimum appeared only as a static banner on
+ * `/checkout` and nowhere in the cart. The two-argument signature is deliberately
+ * GONE rather than kept alongside: leaving it in place would leave the
+ * method-blind behaviour reachable, which is the defect.
+ *
+ * ## Ordering
+ *
+ * The minimum is evaluated FIRST and independently of method, matching the rule
+ * `placeOrder` already enforces (`lib/repositories/orders.ts`) — an order below
+ * the vendor's minimum cannot be placed by delivery OR collection, so telling a
+ * collecting shopper about free delivery before they can order at all would be
+ * advertising the wrong next step.
+ *
+ * Free delivery is only ever reported for DELIVERY. Collection has no fee to
+ * waive, so "you unlocked free delivery" on a collection order is a claim about
+ * money the shopper was never going to be charged.
  */
-export type DeliveryProgress =
+export type FulfilmentProgress =
+  /** Nothing worth telling the shopper: no minimum to reach and no free-delivery offer. */
   | { kind: "none" }
-  | { kind: "remaining"; remainingPence: number; percent: number }
-  | { kind: "unlocked" };
+  /** Below the vendor's minimum order — blocks checkout for BOTH methods. */
+  | { kind: "below-minimum"; remainingPence: number; percent: number }
+  /** DELIVERY, minimum met, still short of free delivery. */
+  | { kind: "delivery-remaining"; remainingPence: number; percent: number }
+  /** DELIVERY, free delivery earned. */
+  | { kind: "delivery-unlocked" }
+  /** COLLECTION, minimum met — ready to collect, with no fee in play at all. */
+  | { kind: "collection-ready" };
 
-export function deliveryProgress(
+export interface FulfilmentProgressRules {
+  method: "DELIVERY" | "COLLECTION";
+  /** 0 when this vendor sets no minimum. */
+  minimumOrderPence: number;
+  /** null when this vendor never offers free delivery. */
+  freeDeliveryThresholdPence: number | null;
+}
+
+/** Whole percent of `target` reached by `subtotalPence`, clamped to 0-100. */
+function percentTowards(subtotalPence: number, target: number): number {
+  if (target <= 0) return 100;
+  return Math.max(0, Math.min(100, Math.round((subtotalPence / target) * 100)));
+}
+
+export function fulfilmentProgress(
   subtotalPence: number,
-  thresholdPence: number | null,
-): DeliveryProgress {
-  if (thresholdPence === null || thresholdPence <= 0) return { kind: "none" };
-  if (subtotalPence >= thresholdPence) return { kind: "unlocked" };
+  rules: FulfilmentProgressRules,
+): FulfilmentProgress {
+  const { method, minimumOrderPence, freeDeliveryThresholdPence } = rules;
+
+  if (minimumOrderPence > 0 && subtotalPence < minimumOrderPence) {
+    return {
+      kind: "below-minimum",
+      remainingPence: minimumOrderPence - subtotalPence,
+      percent: percentTowards(subtotalPence, minimumOrderPence),
+    };
+  }
+
+  if (method === "COLLECTION") {
+    // An empty collection cart at a vendor with no minimum has nothing to say.
+    return minimumOrderPence > 0 ? { kind: "collection-ready" } : { kind: "none" };
+  }
+
+  if (freeDeliveryThresholdPence === null || freeDeliveryThresholdPence <= 0) {
+    return { kind: "none" };
+  }
+  if (subtotalPence >= freeDeliveryThresholdPence) return { kind: "delivery-unlocked" };
+
   return {
-    kind: "remaining",
-    remainingPence: thresholdPence - subtotalPence,
-    percent: Math.min(100, Math.round((subtotalPence / thresholdPence) * 100)),
+    kind: "delivery-remaining",
+    remainingPence: freeDeliveryThresholdPence - subtotalPence,
+    percent: percentTowards(subtotalPence, freeDeliveryThresholdPence),
   };
 }

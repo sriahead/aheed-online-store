@@ -24,6 +24,7 @@ import { DELIVERY_POSTCODE_COOKIE } from "@/lib/delivery-cookie";
 import { CartDrawerShell } from "@/components/cart/CartDrawerShell";
 import { CartContents } from "@/components/cart/CartContents";
 import { LocationControl } from "./LocationControl";
+import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 import { SearchSuggest } from "./SearchSuggest";
 import { ViewSwitcher } from "./ViewSwitcher";
 
@@ -106,6 +107,10 @@ export async function Header({
   const storedPostcode = cookieStore.get(DELIVERY_POSTCODE_COOKIE)?.value ?? null;
   const deliverable = storedPostcode ? isDeliverable(storedPostcode, deliveryPrefixes) : null;
   const offerCollection = profile?.offerCollection ?? false;
+
+  // #748 — one resolved answer for the whole render. Both LocationControl
+  // instances and the cart drawer read this same value, so they cannot disagree.
+  const fulfilmentMethod = await getFulfilmentMethod();
 
   // P8.5a (#345): routed through the request-memoised reader so the header and
   // a product grid on the same page share ONE getSummary() call. The identity
@@ -234,6 +239,7 @@ export async function Header({
               postcode={storedPostcode}
               deliverable={deliverable}
               offerCollection={offerCollection}
+              method={fulfilmentMethod}
             />
           </div>
         )}
@@ -305,6 +311,8 @@ export async function Header({
             >
               <CartContents
                 summary={cartSummary}
+                method={fulfilmentMethod}
+                minimumOrderPence={profile?.minimumOrderPence ?? 0}
                 freeDeliveryThresholdPence={profile?.freeDeliveryThresholdPence ?? null}
                 localityName={localityName}
                 cdnBaseUrl={CDN_BASE_URL ?? ""}
@@ -334,6 +342,7 @@ export async function Header({
               postcode={storedPostcode}
               deliverable={deliverable}
               offerCollection={offerCollection}
+              method={fulfilmentMethod}
             />
           </div>
           <SearchForm placeholder={searchPlaceholder} />
