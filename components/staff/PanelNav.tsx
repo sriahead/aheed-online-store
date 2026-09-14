@@ -23,6 +23,7 @@ import {
   Contact,
   ShieldAlert,
   Truck,
+  CalendarClock,
 } from "lucide-react";
 
 export interface PanelNavProps {
@@ -130,6 +131,7 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
               <NavLink href="/staff/bundles" icon={Boxes} label="Bundles" />
               <NavLink href="/staff/storefront" icon={Store} label="Storefront" />
               <NavLink href="/staff/delivery-areas" icon={Truck} label="Delivery areas" />
+              <NavLink href="/staff/fulfilment" icon={CalendarClock} label="Fulfilment" />
               <NavLink href="/staff/loyalty" icon={Sparkles} label="Loyalty" />
               <NavLink href="/staff/discounts" icon={TicketPercent} label="Discounts" />
               <NavLink href="/staff/reports" icon={TrendingUp} label="Reports" />

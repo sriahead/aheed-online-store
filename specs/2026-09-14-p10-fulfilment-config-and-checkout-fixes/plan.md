@@ -173,11 +173,16 @@ with the exact steps. The rotation is not performed here.
 
 - **The R2 credential rotation** — every staff image upload in every environment stays broken until
   it happens. This slice makes it visible and one command away from confirmation; it cannot fix it.
-- **`prisma/seed.ts` cannot currently complete a full run against an unseeded database**, because
-  its `putTracked` image uploads call `putObject`, which now returns `403`. The slot/express seed
-  data added here touches no storage and so is unaffected on an already-seeded database, but a
-  from-scratch seed is blocked on the rotation above. Stated so a validator does not read it as a
-  defect in this slice.
+- **`prisma/seed.ts` cannot complete AT ALL until the rotation above happens — not even against an
+  already-seeded database.** This paragraph originally claimed only a from-scratch seed was blocked
+  and that a re-seed was unaffected; **that was wrong, and running the seed at Build disproved it.**
+  `refreshProductImages` re-uploads regardless of existing rows, so it throws
+  `storage putObject failed: 403` at `prisma/seed.ts:901`, called from `main` at **line 75** —
+  one line before `upsertVendorSatellites` (line 76), which is what calls the new
+  `seedFulfilmentSchedule`. The new seed code therefore never executes, and **R15 and R16 cannot
+  pass in any current environment**. That is a blocked requirement caused by `#755`, not a defect
+  in this slice's code; `#756` tracks verifying it once the credentials are rotated. R16 can still
+  be exercised by adding a slot through the new page itself, which needs no storage.
 - **Whether the CDN read path is genuinely unaffected was not verified in this session** — two
   attempts to fetch a known image key from the staging and production CDN hosts failed with local
   curl transport errors (`exit 35`/`43`), not HTTP responses, while plain `/api/health` calls to

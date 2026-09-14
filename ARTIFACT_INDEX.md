@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-14T13:51:49.752Z` · commit `623c24f` · `187` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-14T23:34:21.472Z` · commit `aec19f5` · `188` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -184,6 +184,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P402 Express SLA Requirements](specs/2026-09-13-p402-express-sla/requirements.md) | spec | 1.1.0 | 2026-09-13 | approved | internal | Requirements for Express SLA. |
 | [P402 Express SLA Validation](specs/2026-09-13-p402-express-sla/validation.md) | spec | 1.1.0 | 2026-09-13 | approved | internal | Validation for Express SLA. |
 | [P613 Postcode & Address Lookup](specs/2026-09-13-p613-address-lookup/plan.md) | spec | 1.1.0 | 2026-09-13 | approved | internal | Address lookup and postcode validation using postcodes.io, with graceful fallback and no full property autocomplete. |
+| [P10 — Fulfilment configuration and checkout fixes (plan)](specs/2026-09-14-p10-fulfilment-config-and-checkout-fixes/plan.md) | spec | 1.0.0 | 2026-09-14 | draft | internal | Gives #401/#402 the staff configuration surface they shipped without (#750), moves the checkout postcode lookup server-side and fixes the form it writes into (#749), and makes the vendor logo upload report why it fails — which is how its cause, rejected R2 credentials, was found. |
 | [P10 Shared Fulfilment State](specs/2026-09-14-p10-shared-fulfilment-state/plan.md) | spec | 1.0.0 | 2026-09-14 | draft | internal | Promote the fulfilment method from four disconnected client states to one server-readable cookie, and collapse the duplicated delivery-fee and tracker arithmetic into the existing pure functions. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.28.0 | 2026-09-09 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
