@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.1.0"
-updated: 2026-09-12
+version: "1.2.0"
+updated: 2026-09-14
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,13 +39,25 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-12.
-- **Checkout:** `staging` (and post-ship doc reconciliation branch `docs/reconcile-handoff-roadmap-737`).
-- **Base state:** `origin/staging` at `2687f16` (PR #738 merged); `origin/main` at `0d41faa` (PR #736 promotion merged). Staging is ahead of main by 1 commit (`2687f16`).
+- **Date:** 2026-09-14.
+- **Checkout:** `docs/p402-document-final` (this Document (final) pass's own branch, off `staging`).
+- **Base state:** `origin/staging` at `0e3c4f1` (PR #746 merged); `origin/main` at `02d8e82` (PR #741
+  promotion merged). **Staging is ahead of main by 14 commits** — #401 (Shared Fulfilment Slots,
+  PR #744), #613 (Postcode & Address Lookup, code via #744's shared ancestry; its own PR #743
+  closed without merging), and #402 (Express SLA, PR #746) all shipped to `staging`, **none
+  promoted to `main`**.
+- **🛑 DO NOT PROMOTE `staging` → `main` — held at the owner's explicit request (2026-09-14),
+  pending review of issues observed on the deployed `staging` site.** No specific defect was
+  described to this session; the next session must ask the owner directly what was seen, or
+  inspect checkout/`/staff/orders`/`/staff/storefront`'s Express Collection config and the
+  freshly-deployed `staging` site itself before assuming. See `specs/roadmap.md`'s matching
+  2026-09-14 change-log row. Do not treat silence on this point as clearance to promote.
 - **Worktrees:** only the main checkout.
-- **Protected local work:** the separate `docs/orient-reads-board-priority` branch points to
-  `d56c7b9`, whose parent is the #713 draft checkpoint `2938597`. Preserve both; neither belongs in
-  the current branch diff.
+- **Protected local work:** the separate `docs/orient-reads-board-priority` branch (PR #725, still
+  open) points to `d56c7b9`, whose parent is the #713 draft checkpoint `2938597`. Preserve both;
+  neither belongs in the current branch diff. PR #722 (`docs/document-final-social-contact-mobile-nav`)
+  is also still open, independently of this session's work — both #725 and #722 had green checks
+  as of 2026-09-10/09-11 but were not re-verified live by this session.
 
 ## Project Position
 
@@ -53,6 +65,12 @@ The product is a functioning multi-vendor grocery storefront and staff panel, no
 skeleton still named in a few stale headers. P0 through P8 and P2.6 are substantially closed. Work
 is in **P9 launch readiness**, but the owner's High-priority P9.2 feature set currently displaces
 P9.3 launch validation and P9.4 certification.
+
+**The P10 "Delivery cluster" (#401/#402/#613) shipped to `staging` on 2026-09-14, ahead of its own
+documented sequencing** — `specs/roadmap.md`'s P10 candidate list said `#363` (vendor timezone)
+"must land first"; it did not, and `#402`'s own build-notes record this explicitly as a
+known-shaky area rather than a silent gap. Fine for this app's UK-only vendors today. Promotion to
+`main` is separately blocked — see the DO-NOT-PROMOTE note above.
 
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
@@ -63,7 +81,11 @@ in scope.
 The live board showed open High-priority items, all with blank Complexity:
 
 - Brand safety & staff operability: #714 (promoted via PR #732), #733 (promoted via PR #736), and #737 (merged to `staging` via PR #738, currently **In Review** on Project #2 awaiting promotion).
-- Stock and fulfilment: #363, #400, #401, #402, #613.
+- Stock and fulfilment: #401, #402 and #613 **shipped to `staging` 2026-09-14** (PRs #744/#746),
+  board status corrected to **In Review**; **not promoted to `main`** (see DO-NOT-PROMOTE note
+  above). #363 and #422 remain genuinely open/unresolved — #402 shipped without either, flagged as
+  known-shaky (timezone) and unresolved (multi-site). #400 remains split: the async-loading half
+  still open, the per-store half still blocked on #422.
 - Saved lists: #116.
 - Paid-order cancellation and reversals: #696, then #137 and #151.
 - Trust and contact: #406 and #695.
@@ -92,15 +114,27 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Issue #737** (Staff/Admin delegation, Category Manager, Help Centre, Zero-review ratings; `specs/2026-09-12-staff-admin-help-ratings/`) is merged to `staging` via **PR #738** (`2687f16`) and is **In Review** on Project #2; closes upon promotion to `main`.
-- **PR #739** into `staging` carries post-ship documentation and roadmap reconciliation for Issue #737. Required checks are green; pending confirmation to merge.
+- **#401/#402/#613 all shipped to `staging` 2026-09-14** — see the DO-NOT-PROMOTE note under Last
+  Verified and `specs/roadmap.md`'s matching change-log rows for the full history (PR #744, #743
+  closed superseded, PR #746, #742 closed as a hazardous stale PR that would have deleted this
+  work). **`deploy-staging` and `deploy-docs-internal` both confirmed `success` for `0e3c4f1`** —
+  the latter is notable because it had been broken since before #744 (pre-existing, root-caused to
+  a bare `<dialog>` tag in `specs/roadmap.md`, unrelated to either slice) and #746 carried the fix.
+- **Issue #737** (Staff/Admin delegation, Category Manager, Help Centre, Zero-review ratings;
+  `specs/2026-09-12-staff-admin-help-ratings/`) merged to `staging` via **PR #738** (`2687f16`),
+  its own Document (final) closeout merged via **PR #739**, and is **In Review** on Project #2;
+  closes upon promotion to `main` (blocked with everything else — see DO-NOT-PROMOTE).
 - **PR #736** merged `staging → main` (`0d41faa`), promoting #733 and closing #582, #583, #589, #602, #638, and #683 to `Done`.
 - **PR #732** merged `staging → main` (`b505d81`), promoting #714 to `Done`.
-- **PR #725** into `staging` taught `/orient` to read board Priority and corrected stale board-field
-  claims. Required checks were green, but it remained open.
-- **PR #722** into `staging` carried final documentation for social/contact and mobile-nav/
-  bundle-card work plus promotions PR #717/#721. Required checks were green, but it remained open.
-- **Branch `feat/location-control`** fixes the delivery postcode modal (preventing "Checking..." from getting stuck, clearing stale errors) and is awaiting a Pull Request into `staging`.
+- **PR #725** (`docs/orient-reads-board-priority`) and **PR #722**
+  (`docs/document-final-social-contact-mobile-nav`) are **both still open**, unrelated to this
+  session's work. Checks were green as of 2026-09-10/09-11; not re-verified live here — re-check
+  before acting on either.
+- **Branch `feat/location-control`'s delivery-postcode-modal fix merged 2026-09-12 via PR #740** —
+  no longer awaiting a PR; this line was stale as of the 2026-09-12 handoff.
+- **`feat/p401-shared-fulfilment-slots`, `feat/p613-address-lookup` and `feat/p402-express-sla`
+  are all now merged/closed and safe to delete** (locally and on the remote) — not done by this
+  session, left for a deliberate cleanup pass since branch deletion wasn't asked for.
 
 ## Backlog Reconciliation Findings
 
@@ -137,7 +171,11 @@ Board Phase and GitHub milestone disagreed for #151, #422, #589, #602, #695, #69
 - `deploy-production.yml` still cites the obsolete private-repository paid-plan explanation for no
   approval gate. The current decision is deliberate self-approval avoidance on a public repo.
 - `specs/mission.md` still cites ISR although this Prisma/Workers stack cannot use Next ISR.
-- `CLAUDE.md`'s Vitest baseline was 117/1557; the last verified full run was 123/1611.
+- `CLAUDE.md`'s Vitest baseline is now 127/1618 (corrected 2026-09-14, this session, after the
+  P401/P613/P402 work) — three of the files it counts (`tests/concurrency-slot-booking.test.ts`,
+  `tests/slot-capacity.test.ts`, `tests/express-sla.test.ts`) are `it.skipIf(!DATABASE_URL)`-guarded
+  and report **skipped**, not run, in CI, so a real CI job's own summary line will read 3 fewer
+  tests even when fully green — expected, not a discrepancy to chase.
 - The roadmap says the internal KMS site went live behind Access; its deploy workflow says no public
   route is configured. Verify Cloudflare before correcting either statement.
 
@@ -183,7 +221,10 @@ with `db.ok: true` and storage configured. That does not verify any item above.
 3. Run `git fetch --all --prune`, `git status --short --branch`, `git worktree list`, and compare
    `origin/main` with `origin/staging`.
 4. Re-read open PRs #722 and #725, check #726, run `npm run sdd:audit`, and verify the protected
-   checkpoint branch without modifying it.
+   checkpoint branch without modifying it. **Check whether the DO-NOT-PROMOTE hold under Last
+   Verified has been lifted or superseded before proposing or running any `staging → main`
+   promotion** — if this handoff has not been updated since 2026-09-14, assume it still applies and
+   ask the owner rather than promoting.
 5. Query Project #2 with `--limit 600`; filter `Priority == High` and read Status, Phase and
    Complexity. Re-open issue bodies before accepting stale/duplicate findings.
 6. Read `docs/research/discovery-log.md` for newer evidence touching the selected scope.
