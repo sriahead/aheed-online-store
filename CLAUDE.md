@@ -1327,6 +1327,25 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   match something unrelated that has its own legitimate reason to look identical — scope the search
   to the specific element a requirement is actually about, not the whole rendered page, whenever
   more than one thing on that page could plausibly carry the same attribute.
+- **`curl -b jar.txt -c jar.txt` combined with a custom `-H "Host: ..."` header can silently fail
+  to persist a `Secure`-flagged `Set-Cookie` for a multi-label local hostname, while the same
+  pattern works fine for a single-label one — with no error, just an empty jar file.** Hit at
+  `#748`'s `/validate` (2026-09-14), testing both seeded local vendor hosts under `npm run
+  preview`: `curl -c jar.txt -H "Host: localhost:8787" http://127.0.0.1:8787/...` correctly wrote
+  the returned `aheed_cart` cookie into the jar (domain `localhost`, `Secure` flag preserved), but
+  the identical pattern against `-H "Host: srimart.localhost"` produced a jar containing only the
+  file header comments — no cookie line at all — even though the response's `Set-Cookie` header was
+  present and well-formed. Every subsequent request replaying that empty jar got a **fresh**
+  guest-cart id each time (the server correctly treats "no cookie" as "no identity" and mints a new
+  one), which reads as "the cart never persists" rather than "curl never saved the cookie." The
+  fix is to skip the jar entirely for a multi-label local host: extract the value straight out of
+  the `Set-Cookie` response header (`grep -i "^set-cookie: <name>" | sed -E 's/^[Ss]et-[Cc]ookie:
+  ([^;]+);.*/\1/'`) and pass it back explicitly on every later request as `-H "Cookie: <name>=<value>;
+  ..."`, rather than relying on `-b`/`-c` at all. This matters specifically for this repo's own
+  documented two-vendor testing pattern (`validation.md`'s "Two vendors matter here" rule) — Aheed's
+  local host is single-label (`localhost:8787`) and works fine with a jar; SriMart's
+  (`srimart.localhost`) does not, so a validator who only smoke-tested the jar approach against
+  Aheed would trust it for both.
 
 ## Better Auth (`lib/auth.ts`, ADR-002) — learned the hard way
 - **A bare top-level `onRequest` key in `betterAuth({...})`'s config is accepted by TypeScript and
