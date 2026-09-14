@@ -30,6 +30,8 @@ export function LocationControl({
       if (dialogRef.current?.open) {
         dialogRef.current.close();
       }
+      // Syncing local mode from server-derived props once the transition settles.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMode("DELIVERY");
     } else if (postcode && deliverable === false) {
       if (offerCollection) {
