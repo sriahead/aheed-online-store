@@ -71,6 +71,9 @@ export interface VendorProfile {
   bookingWindowDays: number;
   slotHoldDurationMinutes: number;
   offerDeliverySlots: boolean;
+  /** P402 (#402) — Express Collection (ASAP pickup), gated on a schedule window. */
+  expressCollectionEnabled: boolean;
+  expressSchedules: { dayOfWeek: number; openTime: string; closeTime: string }[];
 }
 
 // Fallbacks = the Aheed defaults already in design-system/tokens/tokens.css, so a
@@ -132,9 +135,13 @@ export async function fetchVendorProfile(
           bookingWindowDays: true,
           slotHoldDurationMinutes: true,
           offerDeliverySlots: true,
+          expressCollectionEnabled: true,
         },
       },
       deliveryAreas: { select: { prefix: true } },
+      vendorExpressSchedules: {
+        select: { dayOfWeek: true, openTime: true, closeTime: true },
+      },
     },
   });
 
@@ -180,6 +187,8 @@ export async function fetchVendorProfile(
     bookingWindowDays: vendor?.config?.bookingWindowDays ?? 14,
     slotHoldDurationMinutes: vendor?.config?.slotHoldDurationMinutes ?? 15,
     offerDeliverySlots: vendor?.config?.offerDeliverySlots ?? false,
+    expressCollectionEnabled: vendor?.config?.expressCollectionEnabled ?? false,
+    expressSchedules: vendor?.vendorExpressSchedules ?? [],
   };
 }
 

@@ -79,6 +79,8 @@ export default async function CheckoutPage() {
             vendorId={vendor?.id ?? ""}
             bookingWindowDays={vendor?.bookingWindowDays ?? 14}
             offerDeliverySlots={vendor?.offerDeliverySlots ?? false}
+            expressCollectionEnabled={vendor?.expressCollectionEnabled ?? false}
+            expressSchedules={vendor?.expressSchedules ?? []}
             signedInEmail={signedInEmail}
             redeemable={redeemable}
             offerCollection={vendor?.offerCollection ?? false}

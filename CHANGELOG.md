@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Express SLA for Click & Collect** (`#402`; `specs/2026-09-13-p402-express-sla/`). **Schema change: one new relational model, two new `Order` columns, three migrations.**
+  - **Express Collection toggle:** `VendorConfig.expressCollectionEnabled` plus a relational `VendorExpressSchedule` model (`dayOfWeek`/`openTime`/`closeTime`, no JSON columns) define when a vendor offers ASAP pickup, distinct from the P401 shared-slot booking flow.
+  - **60-minute SLA:** `Order.isExpress`/`Order.targetFulfilmentTime` — the target is stamped only on the `PENDING_PAYMENT` → `CONFIRMED` transition (payment clearing), never at order placement, so a slow checkout never eats into staff's window.
+  - **Checkout UI:** an Express toggle renders in `SlotPicker` only when Collection is selected, an active schedule window matches the current time, and the vendor has the feature enabled.
+  - **Staff queue visibility:** `/staff/orders` renders a live countdown (`ExpressCountdown`) and highlights a row red once `targetFulfilmentTime` has passed.
+
 - **Postcode & Address Lookup** (`#613`; `specs/2026-09-13-p613-address-lookup/`). **Schema change: one new column, one migration.**
   - **Address Lookup:** Integrated postcodes.io to validate UK postcodes and automatically fill the Town/City and County fields during checkout.
   - **Fallback Handling:** Ensures checkout continues even if the external postcode service is unavailable.
@@ -48,6 +54,28 @@ every branch merges.
 
 ### Fixed
 
+- **PR #744 (Shared Fulfilment Slots, `#401`) fully green on CI** — six `quality/quality` ESLint
+  failures, none of them the Prettier issue they were first taken for. `components/checkout/SlotPicker.tsx`
+  and `features/checkout/slots.ts` imported `@prisma/client`/`@/lib/db` directly from the
+  feature/component layer, violating the ADR-004 slice 2 layering rule; split into
+  `lib/repositories/fulfilment-slots.ts` (pure, takes `prisma` explicitly) and
+  `lib/fulfilment-slots-service.ts` (request-scoped wrapper), matching the existing
+  `lib/delivery-areas-service.ts` pattern. Two `SlotPicker.tsx` section headings used `<label>`
+  with no associated control (`jsx-a11y/label-has-associated-control`); changed to `<div>`.
+  `components/layout/LocationControl.tsx`'s `react-hooks/set-state-in-effect` violation was fixed
+  separately (cherry-picked from `#743`'s own fix for the same line). Getting past lint then
+  surfaced real, pre-existing debt in `tests/slot-capacity.test.ts` and
+  `tests/concurrency-slot-booking.test.ts` that had never actually run in CI: an invalid
+  `PrismaNeon` adapter construction (a live `Pool` instance instead of a connection-string config,
+  matching `lib/db.ts`'s `getPrismaWs()`), a `tsc` error from mixing scalar FKs with a nested
+  relation write on `Order.create`, an unhandled-rejection race from firing `placeOrder` calls
+  inside the same loop as cart creation, and hardcoded non-unique ids with no row cleanup against
+  the shared dev database — now suffixed per run and guarded with
+  `it.skipIf(!process.env.DATABASE_URL)`, since CI's `quality/quality` job carries no
+  `DATABASE_URL` and would otherwise crash the whole `npm test` step on these two files.
+  **Separately (`#743`, superseded by `#744`)**: PR #743 (Postcode & Address Lookup) was closed
+  without merging — every code change it carried was already on staging via shared ancestry with
+  `#744`; this entry is the one piece of its own work (documenting the above) worth preserving.
 - **`Shop`, `Shop List` and the delivery-postcode badge are reachable on mobile** (`#718`).
   `components/layout/Header.tsx`'s "Shop"/"Shop List" nav links and
   `components/layout/PostcodeChecker.tsx`'s `badge` variant were `hidden` below the `lg` (1024px)

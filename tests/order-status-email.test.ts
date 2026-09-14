@@ -24,6 +24,7 @@ const order = (overrides: Partial<WebhookOrder> = {}): WebhookOrder => ({
   vendorId: "v-aheed",
   orderNumber: "AHD-ABC123",
   status: "OUT_FOR_DELIVERY",
+  isExpress: false,
   // P7.5b (#150/#138): the status email renders no money provenance, so these
   // stay null here — present only because WebhookOrder requires them.
   discountCode: null,

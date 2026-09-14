@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   test: {
     environment: "node",
+    // Registers neonConfig.webSocketConstructor = ws before any test file
+    // (P402, #402) — ordering-sensitive, see tests/setup.ts's own docstring.
     setupFiles: ["./tests/setup.ts"],
     // .claude/worktrees/<agent-id>/ is a full separate checkout a forked sub-agent
     // builds in, own node_modules included — vitest's own defaults don't exclude it,

@@ -5,9 +5,9 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 import { getAvailableSlotsForDate } from "@/features/checkout/slots";
 import { randomUUID } from "node:crypto";
 
-// A plain connection-string config, matching lib/db.ts's getPrismaWs() — a live `Pool`
-// instance is a valid overload by its type signature but fails at $transaction time
-// with "No database host or connection string was set" (see CLAUDE.md, #382-adjacent).
+// neonConfig.webSocketConstructor is set in tests/setup.ts (vitest setupFiles).
+// A plain connection-string config, matching lib/db.ts's getPrismaWs() — see
+// tests/express-sla.test.ts for why a live `Pool` instance doesn't work here.
 const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
