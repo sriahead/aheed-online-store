@@ -145,11 +145,16 @@ export async function placeOrderAction(
     const cartId = await cartRepo.getCartId(identity);
     if (!cartId) return { error: "Your cart is empty." };
 
+    const rawFulfilmentSlotId = optional(form, "fulfilmentSlotId");
+    const rawFulfilmentDate = optional(form, "fulfilmentDate");
+
     const placed = await getOrderRepository().createOrder({
       cartId,
       userId: identity.userId,
       guestEmail: identity.userId ? null : email,
       address: addressInput,
+      fulfilmentSlotId: rawFulfilmentSlotId,
+      fulfilmentDate: rawFulfilmentDate ? new Date(rawFulfilmentDate) : null,
       rules: {
         deliveryFeePence: vendor.deliveryFeePence,
         freeDeliveryThresholdPence: vendor.freeDeliveryThresholdPence,

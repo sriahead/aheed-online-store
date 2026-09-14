@@ -37,11 +37,14 @@ export async function lookupPostcode(postcode: string): Promise<PostcodeResult> 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
 
-    const res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(normalized)}`, {
-      signal: controller.signal,
-      headers: { Accept: "application/json" },
-    });
-    
+    const res = await fetch(
+      `https://api.postcodes.io/postcodes/${encodeURIComponent(normalized)}`,
+      {
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      },
+    );
+
     clearTimeout(timeout);
 
     if (res.status === 404) {

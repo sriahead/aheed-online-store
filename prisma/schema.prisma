@@ -135,6 +135,7 @@ model Vendor {
   config                    VendorConfig?
   location                  VendorLocation?
   deliveryAreas             VendorDeliveryArea[]
+  fulfilmentSlots           VendorFulfilmentSlot[]
   categories                Category[]
   products                  Product[]
   inventory                 Inventory[]
@@ -260,6 +261,21 @@ model Theme {
   vendorBrandings VendorBranding[]
 }
 
+model VendorFulfilmentSlot {
+  id        String           @id @default(uuid())
+  vendorId  String
+  vendor    Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  method    FulfilmentMethod
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  capacity  Int
+
+  orders    Order[]
+
+  @@index([vendorId, method, dayOfWeek])
+}
+
 // #714 Fix — Vendor-scoped saved themes. Mirrors Theme's brand primitives but scoped to a single tenant.
 model VendorTheme {
   id              String   @id @default(uuid())
@@ -346,6 +362,9 @@ model VendorConfig {
   // no backfill, and loyaltyEnabled defaults OFF so the feature ships dark for any
   // vendor that hasn't opted in.
   loyaltyEnabled             Boolean  @default(false)
+  bookingWindowDays          Int      @default(14)
+  slotHoldDurationMinutes    Int      @default(15)
+  offerDeliverySlots         Boolean  @default(false)
   pointsPerPoundEarned       Int      @default(1) // points per whole £1 of eligible spend
   pencePerPointRedeemed      Int      @default(1) // 100 points = £1
   minRedeemPoints            Int      @default(100) // below this, redemption isn't offered
@@ -840,6 +859,9 @@ model Order {
   addressId         String
   address           Address                 @relation(fields: [addressId], references: [id])
   fulfilmentMethod  FulfilmentMethod        @default(DELIVERY)
+  fulfilmentSlotId  String?
+  fulfilmentSlot    VendorFulfilmentSlot?   @relation(fields: [fulfilmentSlotId], references: [id])
+  fulfilmentDate    DateTime?
   status            OrderStatus             @default(PENDING_PAYMENT)
   currency          String                  @default("GBP")
   subtotalPence     Int

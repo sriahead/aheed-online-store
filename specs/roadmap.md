@@ -1019,4 +1019,5 @@ is unrelated guest-cart retention, and no correctly-numbered issue for this exis
 | 2026-09-12 | **#402 Fulfilment Foundation — built and pushed to feat/location-control** (issue **#402**, eat/location-control, specs/2026-09-12-p402-fulfilment-foundation/). Architectural foundation for multi-method fulfilment, separating DELIVERY from COLLECTION. Included a native HTML <dialog> redesign of the delivery postcode modal with React 19 useTransition. | Foundation for #402 Click & Collect |
 
 | 2026-09-13 | **Postcode & Address Lookup built and merged to staging** (issue **#613**, `specs/2026-09-13-p613-address-lookup/`). Address lookup and postcode validation using postcodes.io. | Postcode & Address Lookup |
-| 2026-09-12 | **Promoted staging to main** (**PR #741**, merge `02d8e82`, `staging -> main`). Finalised issue #737. | Promotion of staging to main |
+| 2026-09-13 | **Shared Fulfilment Slots built and pushed** (issue **#401**, specs/2026-09-13-p401-shared-fulfilment-slots/). Unified slot model, configurable hold duration, and native Prisma serializable concurrency. | Shared Fulfilment Slots |
+  | 2026-09-12 | **Promoted staging to main** (**PR #741**, merge `02d8e82`, `staging -> main`). Finalised issue #737. | Promotion of staging to main |

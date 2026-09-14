@@ -35,7 +35,7 @@ export default async function CheckoutPage() {
   const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const signedInEmail = (session?.user as { email?: string } | undefined)?.email ?? null;
   const signedInUserId = (session?.user as { id?: string } | undefined)?.id ?? null;
-  
+
   const initialPostcode = cookieStore.get(DELIVERY_POSTCODE_COOKIE)?.value ?? null;
 
   // P5a (#135) — offered only to a signed-in shopper at a loyalty-enabled vendor
@@ -76,6 +76,9 @@ export default async function CheckoutPage() {
       <div className="grid gap-6 md:grid-cols-[1fr_18rem]">
         <div className="rounded-2xl border border-black/10 bg-white p-5">
           <CheckoutForm
+            vendorId={vendor?.id ?? ""}
+            bookingWindowDays={vendor?.bookingWindowDays ?? 14}
+            offerDeliverySlots={vendor?.offerDeliverySlots ?? false}
             signedInEmail={signedInEmail}
             redeemable={redeemable}
             offerCollection={vendor?.offerCollection ?? false}
