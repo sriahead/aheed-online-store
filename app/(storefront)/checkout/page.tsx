@@ -10,6 +10,8 @@ import { formatPrice } from "@/components/product/format-price";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
 import { CheckoutSummary } from "@/components/checkout/CheckoutSummary";
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
+import { getFulfilmentMethod } from "@/lib/fulfilment-service";
+import { fulfilmentProgress } from "@/lib/cart-rules";
 
 // Prisma's @prisma/client/wasm can't load during next build's Node-based
 // static prerendering — same reason as the other DB-backed storefront routes.
@@ -56,20 +58,45 @@ export default async function CheckoutPage() {
         }
       : null;
 
-  const totals = computeTotals(summary.lines, {
-    deliveryFeePence: vendor?.deliveryFeePence ?? 0,
+  // #748 — the method is resolved server-side from the shared cookie, so this
+  // page, the header and the cart drawer cannot disagree. Passing it into
+  // computeTotals is what stops a collection order being priced with a delivery
+  // fee; the argument already existed and simply was not being supplied.
+  const fulfilmentMethod = await getFulfilmentMethod();
+  const minimumOrderPence = vendor?.minimumOrderPence ?? 0;
+
+  const totals = computeTotals(
+    summary.lines,
+    {
+      deliveryFeePence: vendor?.deliveryFeePence ?? 0,
+      freeDeliveryThresholdPence: vendor?.freeDeliveryThresholdPence ?? null,
+    },
+    0,
+    fulfilmentMethod,
+  );
+
+  // The same pure function the cart and drawer render from, so the shopper is
+  // told the same thing about the same cart wherever they are looking.
+  const progress = fulfilmentProgress(totals.subtotalPence, {
+    method: fulfilmentMethod,
+    minimumOrderPence,
     freeDeliveryThresholdPence: vendor?.freeDeliveryThresholdPence ?? null,
   });
-  const belowMinimum = totals.subtotalPence < (vendor?.minimumOrderPence ?? 0);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
       <h1 className="mb-4 text-xl font-bold text-primary">Checkout</h1>
 
-      {belowMinimum && (
+      {progress.kind === "below-minimum" && (
         <p className="mb-4 rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger">
-          This store has a minimum order of {formatPrice(vendor?.minimumOrderPence ?? 0)}. Add a
-          little more to continue.
+          This store has a minimum order of {formatPrice(minimumOrderPence)}. Add{" "}
+          {formatPrice(progress.remainingPence)} more to continue.
+        </p>
+      )}
+
+      {progress.kind === "delivery-remaining" && (
+        <p className="mb-4 rounded-xl bg-action-tint px-4 py-3 text-sm font-medium text-primary">
+          Add {formatPrice(progress.remainingPence)} more for free delivery.
         </p>
       )}
 
@@ -85,10 +112,11 @@ export default async function CheckoutPage() {
             redeemable={redeemable}
             offerCollection={vendor?.offerCollection ?? false}
             initialPostcode={initialPostcode}
+            method={fulfilmentMethod}
           />
         </div>
 
-        <CheckoutSummary lines={summary.lines} initialTotals={totals} />
+        <CheckoutSummary lines={summary.lines} totals={totals} method={fulfilmentMethod} />
       </div>
     </main>
   );
