@@ -584,8 +584,9 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  117 files / 1557 tests**, measured 2026-09-09 at the storefront-browse-discovery-completion Build) and treat any shortfall as
-  a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
+  129 files / 1687 tests**, measured 2026-09-15 at the fulfilment-config-and-checkout-fixes Build)
+  and treat any shortfall as a non-result to re-run, not a pass. **This number has now been stale
+  twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
   `86/1019` moved to `86/1023` a few hours later in the same slice's own `/fix` (four tests added to

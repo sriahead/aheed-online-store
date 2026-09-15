@@ -155,3 +155,25 @@ over `CDN_BASE_URL`, which is why nothing looked broken.
   `lib/repositories/`,** and this slice added 236 lines to one of them. It did not reproduce on this
   Build's full-suite run, but it is a load-dependent 5000ms timeout and a green run is not evidence
   it is fixed. If it fails at `/validate`, re-run that file alone before treating it as real.
+
+## Fix (post-Validate)
+
+`/validate` (2026-09-15) confirmed all 27 requirements — R15 correctly blocked by `#755`, R1-R14/
+R15a/R16-R27 confirmed live under `npm run preview` against the real dev database (settings/slot/
+express-window writes and their six-plus-two invalid-input rejections driven via curl against the
+real `useActionState` forms; cross-vendor slot and express-window removal both proven to leave the
+other vendor's row untouched; the postcode lookup driven live end-to-end for both a real and an
+unrecognised UK postcode; `scripts/verify-storage-credentials.ts` run for real, independently
+reconfirming `#755`). One finding, not a code defect: R27's own validation row asks to "update
+`CLAUDE.md`" with the clean-run baseline, and `CLAUDE.md`'s **anchor** sentence ("currently 117
+files / 1557 tests, measured 2026-09-09") had gone stale — the paragraph's own trailing historical
+log already correctly tracked the count to `129/1687` as of this slice's Build (line ~698, "Then
+`128/1632` moved to `129/1687` at the fulfilment-config-and-checkout-fixes Build"), but nobody had
+synced the anchor to match. Fixed by updating the anchor to `129 files / 1687 tests, measured
+2026-09-15`, which is exactly what a clean `npx vitest run` reports on this branch. Ran
+`npm run kms:build-index` afterward (`CLAUDE.md` carries no front-matter, so only `docs.ts`'s
+embedded body and `ARTIFACT_INDEX.md`'s regeneration footer moved) and re-ran the full local suite,
+the KMS docs-site build, and `next build` — all green. `tests/motion-reduce-coverage.test.ts` timed
+out once on a full-suite run taken immediately after the `kms/site-internal` build (the documented
+`#538`-class load flake, not `#538` itself); it passed in 302ms alone and on a subsequent clean full
+run. No observable application behaviour changed, so no new `CHANGELOG.md` entry.
