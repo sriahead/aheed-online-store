@@ -6,6 +6,12 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **`/staff/fulfilment` moved next to `/staff/orders`** in both navigation surfaces
+  (`components/staff/PanelNav.tsx`, the hub cards in `app/(admin)/staff/page.tsx`) — an owner
+  request after using the new page (`#750`) for the first time.
+
 ### Added
 
 - **Fulfilment scheduling for store admins** (`#750`; `specs/2026-09-14-p10-fulfilment-config-and-checkout-fixes/`). **No schema change.** `#401` (delivery slots) and `#402` (express collection) shipped their models, checkout UI and capacity logic with **no administrative surface and no seed data**, so live staging carried both feature flags `false`, zero `VendorFulfilmentSlot` rows and zero `VendorExpressSchedule` rows — neither feature could be switched on, and no time window could be authored by anyone. This was the hard blocker on the `staging → main` promotion.

@@ -194,12 +194,18 @@ before it is released for someone else.
 
 **Common mistakes and limitations:** **If delivery time slots are switched on but no delivery slots
 exist, customers see "No slots available" and cannot choose a time** — switching the feature on is
-only half the job. Express collection also needs Click & Collect switched on in **Storefront** under
-delivery rules; without it the express control here is disabled, because express is only ever offered
-to collection customers. An express window only shows a customer express collection while the current
-time is inside it — a window that has passed today shows nothing until it comes round again next
-week. Removing a slot does not move orders already booked into it. All times are UK local time, and
-there is currently no per-store setting for a shop in another timezone.
+only half the job. **Collection is the same trap with no switch to catch it**: whenever Click &
+Collect is on, a customer choosing Collection always sees the time picker — there is no
+"offer collection slots" toggle the way there is for delivery — so a store that offers collection
+but hasn't added any Collection-method weekly slots shows every collection customer "No slots
+available" until slots are added here. Add at least one slot of each method you offer before
+turning a fulfilment method on for customers. Express collection also needs Click & Collect switched
+on in **Storefront** under delivery rules; without it the express control here is disabled, because
+express is only ever offered to collection customers. An express window only shows a customer
+express collection while the current time is inside it — a window that has passed today shows
+nothing until it comes round again next week. Removing a slot does not move orders already booked
+into it. All times are UK local time, and there is currently no per-store setting for a shop in
+another timezone.
 
 **What happens after changes are saved:** Effective immediately at checkout, for shoppers already
 mid-basket as well as new ones. Orders already placed against a slot keep it.
