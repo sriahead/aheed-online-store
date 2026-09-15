@@ -70,3 +70,18 @@ export async function lookupPostcode(postcode: string): Promise<PostcodeResult> 
     throw new PostcodeApiError(error instanceof Error ? error.message : "Unknown error");
   }
 }
+
+/**
+ * The shape `features/checkout/postcode-lookup.ts` returns to the browser (P10, #749).
+ *
+ * A thrown error cannot cross the server-action boundary usefully — Next replaces a production
+ * throw with an opaque digest, so `err.name === "PostcodeNotFoundError"` (what `CheckoutForm` used
+ * to branch on, back when this ran in the browser) can never be true on a deployed environment.
+ * The two outcomes the UI actually distinguishes are therefore returned as data.
+ *
+ * `"unavailable"` deliberately collapses a 5xx, a timeout and a network failure into one case: the
+ * UI's response to all three is identical — let the shopper type the address themselves rather than
+ * block checkout on a third-party lookup.
+ */
+export type PostcodeLookupOutcome =
+  { ok: true; result: PostcodeResult } | { ok: false; reason: "not-found" | "unavailable" };

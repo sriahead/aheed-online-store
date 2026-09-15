@@ -193,6 +193,27 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
 - Object storage via the **S3-compatible API only**, behind `lib/storage` (`StorageService` port).
   No R2 SDK, no R2-specific features. Prefer `aws4fetch` over the AWS SDK (Worker bundle size).
 - DB holds relative keys; compose `${CDN_BASE_URL}/${key}` at read time.
+- **Broken S3 credentials are invisible to every check this repo has, including `/api/health`.**
+  Reads never touch the S3 API — `publicUrl()` is pure string composition over `CDN_BASE_URL` and
+  the bytes come from the CDN — so a revoked key pair breaks **only writes**, i.e. every staff
+  upload, while the storefront looks perfectly healthy. `lint`/`typecheck`/`test`/`build` execute no
+  request; `/api/health`'s `storage: { configured: true }` asserts only that the **variables are
+  present**, never that they work. Found at `#749`/`#755` (2026-09-15): the pair was rejected in
+  **dev, staging AND production simultaneously** — all three share one key pair and differ only in
+  `S3_BUCKET` — and the only visible symptom anywhere was one staff form failing. **`npx tsx
+  scripts/verify-storage-credentials.ts` is the one command that answers "do these credentials
+  actually work?"** (read-only: a `HEAD` for a key that does not exist — `404` proves the credential
+  works, `403` proves it does not). Run it before trusting any image-upload path, and after any
+  Cloudflare token rotation — the R2 keys live in **two** stores per environment (`secrets/*.vars`
+  and `wrangler secret put`), so a file-only rotation leaves the deployed Worker on the old value,
+  exactly as recorded for Neon passwords.
+- **A browser-reported storage bug does not need a browser to reproduce.** `lib/storage.ts` imports
+  only `aws4fetch` and `lib/config`, so the entire presign/PUT path runs in plain Node via `npx tsx`.
+  `#749`'s vendor-logo failure had been carried for days as "needs a browser reproduction with
+  DevTools open"; a scratch script reproduced it in one run and bisected it in three more
+  (every presign variant, a header-signed `putObject`, and a presigned GET all `403`, which is what
+  ruled out the signing options and pointed at the credentials). Check whether the failing path
+  actually depends on the browser before deferring on the browser's availability.
 - **Raster images (confirmed: `.png`) cannot be validated visually under `npm run preview` —
   accept this and check them on a deployed environment instead.** Both the staging and dev CDN
   zones enforce Cloudflare hotlink/referer protection: a request carrying `Referer:
@@ -563,8 +584,9 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  117 files / 1557 tests**, measured 2026-09-09 at the storefront-browse-discovery-completion Build) and treat any shortfall as
-  a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
+  129 files / 1687 tests**, measured 2026-09-15 at the fulfilment-config-and-checkout-fixes Build)
+  and treat any shortfall as a non-result to re-run, not a pass. **This number has now been stale
+  twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
   `86/1019` moved to `86/1023` a few hours later in the same slice's own `/fix` (four tests added to
@@ -674,6 +696,21 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   flake from `#538`, it is not load-related in the same way, and a unit test reaching the public
   internet will fail whenever CI's egress is slow; filed against `#749`'s postcode work rather than
   fixed in a slice that does not touch that file.
+  Then `128/1632` moved to **`129/1687`** at the fulfilment-config-and-checkout-fixes Build
+  (`#750`/`#749`, 2026-09-15): one new file (`tests/fulfilment-form.test.ts`) carrying 43 tests,
+  plus **twelve** more — and the split is the instructive part. Only six were hand-written, all of
+  them in `tests/postcodes-api.test.ts`, which grew from 2 to 8 while *losing* its real network call
+  (the `#751` flake recorded in the entry above is now fixed, not merely known). The other six were
+  written by nobody: `tests/operator-doc-coverage.test.ts` gained four (four per `/staff/*` route,
+  as above) and `tests/panel-token-purity.test.ts` gained two — one per new file under
+  `app/(admin)/` or `components/staff/`, here `staff/fulfilment/page.tsx` and
+  `components/staff/FulfilmentManager.tsx`. **Adding one `/staff/*` page moves this number by six
+  with no test file opened at all.** Note `tests/panel-refusal-coverage.test.ts` contributed
+  **zero** despite also walking the filesystem: it holds a fixed three `it` blocks that each loop
+  internally, so it gains no test per page. That distinction was asserted wrongly here first and
+  corrected by measuring each file alone against a stashed baseline — **a filesystem-driven test
+  file does not necessarily have a filesystem-driven test COUNT**, and which of the two a file is
+  cannot be inferred from the fact that it discovers routes.
   That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that

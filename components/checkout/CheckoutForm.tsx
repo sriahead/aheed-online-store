@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { MapPin, ShieldCheck, Sparkles, Tag, User, Clock } from "lucide-react";
 import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-order";
 import { inputClass, labelClass } from "@/lib/form-classes";
-import { lookupPostcode } from "@/lib/postcodes-api";
+import { lookupPostcodeForCheckout } from "@/features/checkout/postcode-lookup";
 import { setDeliveryPostcode, setFulfilmentMethod } from "@/features/storefront/delivery";
 import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
 import { SlotPicker } from "./SlotPicker";
@@ -76,43 +76,68 @@ export function CheckoutForm({
   const [addressLoading, setAddressLoading] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
 
+  /**
+   * #749 — every element is resolved from THIS form, never from the document.
+   *
+   * The previous implementation used `document.querySelector("form")`, which returns the FIRST form
+   * in the document. Since #748 that is the fulfilment-method form rendered above the address
+   * fields, so a successful lookup wrote `city`/`county` into the wrong element entirely. The bug
+   * was invisible while CSP blocked the lookup from ever succeeding.
+   */
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const fieldIn = (name: string): HTMLInputElement | null => {
+    const el = formRef.current?.elements.namedItem(name);
+    return el instanceof HTMLInputElement ? el : null;
+  };
+
   const handleLookup = async (postcode: string) => {
     if (!postcode) return;
     setAddressLoading(true);
     setAddressError(null);
-    try {
-      const result = await lookupPostcode(postcode);
-      const form = document.querySelector("form");
-      if (form) {
-        const cityInput = form.elements.namedItem("city") as HTMLInputElement;
-        const countyInput = form.elements.namedItem("county") as HTMLInputElement;
-        if (cityInput && result.admin_district) cityInput.value = result.admin_district;
-        if (countyInput && result.admin_county) countyInput.value = result.admin_county;
 
-        const postcodeInput = document.getElementById("postcode") as HTMLInputElement;
-        if (postcodeInput) postcodeInput.setCustomValidity("");
+    // Runs on the server: api.postcodes.io is blocked by this app's CSP in the browser (#749).
+    const outcome = await lookupPostcodeForCheckout(postcode);
+    const postcodeInput = fieldIn("postcode");
+
+    if (outcome.ok) {
+      const cityInput = fieldIn("city");
+      const countyInput = fieldIn("county");
+      if (cityInput && outcome.result.admin_district) {
+        cityInput.value = outcome.result.admin_district;
       }
-    } catch (err: any) {
-      if (err.name === "PostcodeNotFoundError") {
-        setAddressError("Invalid postcode. Please enter a valid UK postcode.");
-        const postcodeInput = document.getElementById("postcode") as HTMLInputElement;
-        if (postcodeInput) postcodeInput.setCustomValidity("Invalid postcode");
-      } else {
-        // Fallback: don't block checkout on 5xx/timeout
-        console.warn("Postcode API unavailable, falling back to manual entry", err);
-        const postcodeInput = document.getElementById("postcode") as HTMLInputElement;
-        if (postcodeInput) postcodeInput.setCustomValidity("");
+      if (countyInput && outcome.result.admin_county) {
+        countyInput.value = outcome.result.admin_county;
       }
-    } finally {
-      setAddressLoading(false);
+      postcodeInput?.setCustomValidity("");
+    } else if (outcome.reason === "not-found") {
+      setAddressError("Invalid postcode. Please enter a valid UK postcode.");
+      postcodeInput?.setCustomValidity("Invalid postcode");
+    } else {
+      // A 5xx, a timeout or a network failure. Never block checkout on a third-party lookup —
+      // the shopper can type the address themselves.
+      postcodeInput?.setCustomValidity("");
     }
+
+    setAddressLoading(false);
   };
 
   useEffect(() => {
     if (initialPostcode) {
-      // eslint-disable-next-line
+      // `handleLookup` sets loading/error state, which `react-hooks/set-state-in-effect` flags.
+      // Prefilling the address from a postcode the shopper already gave us is the whole point of
+      // this effect, so the rule is silenced here rather than the behaviour changed — the same
+      // resolution CLAUDE.md's Hooks section records for the self-closing drawer.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       handleLookup(initialPostcode);
     }
+    // `handleLookup` is deliberately omitted below. It is re-created on every render, so including it
+    // would re-run this effect on every render — one server round-trip to the postcode API per
+    // render, for as long as the page is open. The effect's real trigger is a NEW postcode
+    // arriving, which `initialPostcode` expresses exactly. Same class of trap as the drawer that
+    // closed itself the moment it opened (CLAUDE.md's React & Next.js Hooks section): satisfying
+    // the dependency rule literally would change what the effect means.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPostcode]);
 
   useEffect(() => {
@@ -120,7 +145,8 @@ export function CheckoutForm({
     if (saved) {
       try {
         const details = JSON.parse(saved);
-        const form = document.querySelector("form");
+        // Same #749 fix as handleLookup above: this form, not the document's first one.
+        const form = formRef.current;
         if (form) {
           Object.entries(details).forEach(([key, value]) => {
             const el = form.elements.namedItem(key);
@@ -151,7 +177,7 @@ export function CheckoutForm({
   };
 
   return (
-    <form action={formAction} onChange={handleFormChange} className="space-y-6">
+    <form ref={formRef} action={formAction} onChange={handleFormChange} className="space-y-6">
       {state.error && (
         <p
           role="alert"
@@ -297,7 +323,7 @@ export function CheckoutForm({
                 <button
                   type="button"
                   onClick={() => {
-                    const el = document.getElementById("postcode") as HTMLInputElement;
+                    const el = fieldIn("postcode");
                     if (el) handleLookup(el.value);
                   }}
                   disabled={addressLoading}

@@ -170,6 +170,40 @@ while excluding another.
 **What happens after changes are saved:** Effective immediately for every shopper, including ones
 already mid-basket.
 
+## Fulfilment — `/staff/fulfilment`
+
+**Purpose:** When customers can receive their orders — the delivery and collection time windows they
+choose between at checkout, and the hours express collection is offered.
+
+**Who can access:** Store admins only
+
+**What you can do:** Switch delivery time slots on or off; switch 60-minute express collection on or
+off; set how far ahead customers can book and how long an unpaid order holds its slot; add and remove
+weekly delivery and collection slots; add and remove express windows.
+
+**Typical workflow:** You decide to start offering Saturday morning delivery. Add a slot for Saturday
+from 09:00 to 12:00 with a capacity of 12, and it appears at checkout for the next Saturday inside
+your booking window.
+
+**Important fields and filters:** **Capacity is the number of orders you can fulfil in that window**,
+and once it is full the slot stops being offered — it is the only thing preventing a day taking more
+orders than you can physically deliver. Slots repeat every week; there is no one-off or holiday slot.
+Times are 24-hour, so afternoon slots start at 13:00 rather than 1:00. **The booking window** is how
+many days ahead a customer may book. **The slot hold** is how long an unpaid order keeps its space
+before it is released for someone else.
+
+**Common mistakes and limitations:** **If delivery time slots are switched on but no delivery slots
+exist, customers see "No slots available" and cannot choose a time** — switching the feature on is
+only half the job. Express collection also needs Click & Collect switched on in **Storefront** under
+delivery rules; without it the express control here is disabled, because express is only ever offered
+to collection customers. An express window only shows a customer express collection while the current
+time is inside it — a window that has passed today shows nothing until it comes round again next
+week. Removing a slot does not move orders already booked into it. All times are UK local time, and
+there is currently no per-store setting for a shop in another timezone.
+
+**What happens after changes are saved:** Effective immediately at checkout, for shoppers already
+mid-basket as well as new ones. Orders already placed against a slot keep it.
+
 ## Reports — `/staff/reports`
 
 **Purpose:** The numbers for your shop — sales, catalogue health and loyalty liability.

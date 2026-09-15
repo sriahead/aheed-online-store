@@ -187,6 +187,31 @@ Established live against deployed `staging` (`b85fc2b`) and the staging database
   `startTransition` — it is the only one of the repo's four uploaders that cannot report why it
   failed, which is why this was unreportable.
 
+## Live Production Defect: R2 Storage Credentials (2026-09-15)
+
+**`#755` — the R2 (S3-compatible) credential pair is REJECTED in all three environments, including
+production.** Not a staging-only or dev-only problem, and not fixed by this slice: rotating it is a
+human action (`CLAUDE.md`'s hard stop on inventing credentials).
+
+- **Evidence:** every presign variant, a header-signed `putObject`, a presigned GET and a read-only
+  `HEAD` all return `403 SignatureDoesNotMatch` against dev, staging and production. All three share
+  one key pair and differ only in `S3_BUCKET`. Reproduce with
+  `npx tsx scripts/verify-storage-credentials.ts` (read-only, added by this slice, exits non-zero
+  while any environment is rejected).
+- **Blast radius:** every `getStorage()` S3 API caller — product images, bundle images, campaign
+  banners and the AI campaign-image route, the vendor logo, `lib/product-image-pipeline.ts` — and
+  **`prisma/seed.ts`, which now cannot complete at all**, even against an already-seeded database
+  (`refreshProductImages` at `main`'s line 75 throws before anything after it runs).
+- **Why it went unnoticed:** shopper-facing image *display* is unaffected. `publicUrl()` is pure
+  string composition over `CDN_BASE_URL`, so reads go to the CDN and never touch the S3 API. The
+  storefront looks healthy and `/api/health` reports `storage: { configured: true }`, which asserts
+  only that the variables are present.
+- **Rotation needs BOTH stores per environment** — `secrets/*.vars` *and*
+  `wrangler secret put S3_ACCESS_KEY/S3_SECRET_KEY --env <env>` — then a redeploy. Possibly a loose
+  end from `#219` (the exposed Cloudflare API token), if that rotation revoked the R2 token.
+- **`#756`** tracks re-verifying the new fulfilment seed data once this is resolved; `#750`'s R15
+  and R16 are blocked on it and must not be recorded as failures of that slice's code.
+
 ## Backlog Reconciliation Findings
 
 Verified candidates, not instructions to close anything without re-checking:
