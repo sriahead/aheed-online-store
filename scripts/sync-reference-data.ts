@@ -41,7 +41,7 @@
  * application — adding one is configuration plus a run, never a code change.
  */
 import { config } from "dotenv";
-import { PrismaClient } from "../lib/generated/reference-client";
+import { PrismaClient } from "@aheed/reference-client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { codePointSource } from "../lib/reference-data/sources/code-point";
 import { openNamesSource } from "../lib/reference-data/sources/open-names";

@@ -34,9 +34,24 @@ datasource db {
 
 generator client {
   provider   = "prisma-client-js"
-  // Its own output directory: two generated clients cannot share one, and the
-  // default location is already taken by Aheed's client.
-  output     = "../../lib/generated/reference-client"
+  // Its own output directory, INSIDE node_modules, and that location is load-bearing.
+  //
+  // Generated anywhere under the project (lib/generated/, say), webpack treats the
+  // client as ordinary source and tries to parse its query_compiler_bg.wasm — which
+  // fails the build outright: "Module parse failed ... not flagged as WebAssembly
+  // module for webpack". The default @prisma/client escapes that only because
+  // next.config.mjs lists it in `serverExternalPackages`, and that option matches
+  // PACKAGE SPECIFIERS, which a relative path can never be.
+  //
+  // Under node_modules with a scoped directory, it resolves as
+  // `@aheed/reference-client`, `serverExternalPackages` can name it, and webpack
+  // leaves it alone exactly as it leaves Aheed's own client alone.
+  //
+  // The cost: `npm ci` wipes it, so every workflow that builds must run
+  // `npm run db:generate` first. Both deploy workflows now do; they previously
+  // relied on @prisma/client's postinstall, which only ever knew about the default
+  // schema and would never have generated this one.
+  output     = "../../node_modules/@aheed/reference-client"
   // Mandatory on Workers. The default "library" engine locates its native binary
   // via fs.readdir at runtime, which workerd's nodejs_compat polyfill does not
   // implement — every query would fail with "[unenv] fs.readdir is not

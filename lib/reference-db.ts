@@ -1,4 +1,4 @@
-import { PrismaClient } from "@/lib/generated/reference-client/wasm";
+import { PrismaClient } from "@aheed/reference-client/wasm";
 import { PrismaNeonHttp } from "@prisma/adapter-neon";
 import { cache } from "react";
 import { getReferenceEnv } from "./config";
@@ -12,7 +12,7 @@ import { getReferenceEnv } from "./config";
  *
  * ## Why `/wasm` explicitly, and never the bare specifier
  *
- * `@/lib/generated/reference-client` resolves through the generated package's export conditions,
+ * `@aheed/reference-client` resolves through the generated package's export conditions,
  * and Next's build-time file tracer runs in **real Node** — so the bare specifier picks the `node`
  * condition (`index.js`, which loads its WASM through `fs.readFileSync`) even though this code
  * actually executes in workerd. It fails at runtime with `[unenv] fs.readFileSync is not
