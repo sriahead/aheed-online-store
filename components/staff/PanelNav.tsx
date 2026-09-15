@@ -123,6 +123,7 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
                 label="Live Inventory & Availability"
               />
               <NavLink href="/staff/orders" icon={ClipboardList} label="Orders" />
+              <NavLink href="/staff/fulfilment" icon={CalendarClock} label="Fulfilment" />
               <NavLink href="/staff/payments" icon={ShieldAlert} label="Payment Issues" />
               <NavLink href="/staff/products" icon={Package} label="Catalogue" />
               <NavLink href="/staff/categories" icon={LayoutDashboard} label="Categories" />
@@ -131,7 +132,6 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
               <NavLink href="/staff/bundles" icon={Boxes} label="Bundles" />
               <NavLink href="/staff/storefront" icon={Store} label="Storefront" />
               <NavLink href="/staff/delivery-areas" icon={Truck} label="Delivery areas" />
-              <NavLink href="/staff/fulfilment" icon={CalendarClock} label="Fulfilment" />
               <NavLink href="/staff/loyalty" icon={Sparkles} label="Loyalty" />
               <NavLink href="/staff/discounts" icon={TicketPercent} label="Discounts" />
               <NavLink href="/staff/reports" icon={TrendingUp} label="Reports" />
