@@ -1351,135 +1351,24 @@ model VendorExpressSchedule {
 }
 
 // ---------------------------------------------------------------------------
-// Reference data (#764) — PLATFORM-WIDE, deliberately NOT vendor-scoped.
+// Reference data MOVED OUT (#764).
 //
-// ADR-004 makes `vendorId` the sole tenancy isolation axis for DOMAIN data, and
-// its decision 1 explicitly anticipates "Region/Location as their own reference
-// tables when geography grows beyond delivery areas". These are that case: a
-// postcode is identical for every vendor, so duplicating it per vendor would be
-// storing the same fact N times and inviting them to disagree. Nothing here
-// carries a `vendorId`, and `tests/repository-vendor-scoping.test.ts` should
-// never expect one.
+// PostcodeReference, PlaceReference, ReferenceDataset and ReferenceDataSyncRun
+// briefly lived here and are gone. They now live in their own Neon project,
+// `uk-location-reference`, declared in prisma/reference/schema.prisma with its
+// own client and migration history.
 //
-// The name `PlaceReference` deliberately avoids ADR-006's reserved words: that
-// ADR keeps `Location` for geography and `VendorLocation` for a trading site,
-// and asks whichever is built first to take the more specific name.
+// WHY, IN NUMBERS. A full-GB Code-Point import into this database succeeded at
+// 1,749,109 rows and occupied 456.9 MB, taking the whole project to 489.8 MB of
+// its 512 MB ceiling — 89% of the budget for one reference table, against under
+// 5 MB for every transactional table combined. The Open Names import then failed
+// outright with a project-size-limit error, and ordinary writes began failing
+// too. Shared UK reference data is not Aheed's data, it dwarfs Aheed's data, and
+// it competes for a budget sized for orders and products.
+//
+// Aheed reaches that data through lib/reference/, never through a table here.
+// CustomerAddress below stays: it IS Aheed's data, vendor- and user-scoped.
 // ---------------------------------------------------------------------------
-
-enum ReferenceSyncStatus {
-  IDLE
-  RUNNING
-  SUCCEEDED
-  FAILED
-}
-
-/// One row per reference dataset. `sourceVersion` + `sourceChecksum` are the
-/// change-detection pair: OS publishes both on an unauthenticated endpoint, so
-/// "has the source changed?" is one keyless GET and an equality check.
-///
-/// `lastSyncedAt` is the INITIALISATION FLAG the validity state model turns on.
-/// Null means this environment has never successfully populated the dataset, and
-/// every postcode is then UNVERIFIED rather than invalid — a table nobody has
-/// filled is not evidence that a postcode does not exist. See
-/// lib/delivery-eligibility.ts.
-model ReferenceDataset {
-  id                   String              @id @default(uuid())
-  sourceKey            String              @unique
-  displayName          String
-  sourceVersion        String?
-  sourceChecksum       String?
-  lastCheckedAt        DateTime?
-  lastSyncedAt         DateTime?
-  recordCount          Int                 @default(0)
-  refreshFrequencyDays Int                 @default(30)
-  isActive             Boolean             @default(true)
-  syncStatus           ReferenceSyncStatus @default(IDLE)
-  syncError            String?
-  cacheVersion         Int                 @default(0)
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-
-  runs ReferenceDataSyncRun[]
-}
-
-/// One row per sync attempt, successful or not. This is the only record of what a
-/// run actually did, so it is written for the unchanged case too — a run that
-/// exits early still proves the schedule fired.
-model ReferenceDataSyncRun {
-  id            String              @id @default(uuid())
-  datasetId     String
-  dataset       ReferenceDataset    @relation(fields: [datasetId], references: [id], onDelete: Cascade)
-  sourceVersion String?
-  startedAt     DateTime            @default(now())
-  finishedAt    DateTime?
-  inserted      Int                 @default(0)
-  updated       Int                 @default(0)
-  retired       Int                 @default(0)
-  unchanged     Int                 @default(0)
-  status        ReferenceSyncStatus @default(RUNNING)
-  errorMessage  String?
-
-  @@index([datasetId, startedAt])
-}
-
-/// OS Code-Point Open. The SOLE authority on whether a postcode exists.
-///
-/// Coordinates are stored as British National Grid eastings/northings exactly as
-/// Code-Point supplies them, NOT as latitude/longitude. Two reasons: Open Names
-/// uses the same grid, so the proximity join is plain Euclidean arithmetic in
-/// metres with no reprojection; and the WGS84 conversion is then applied only to
-/// the handful of rows leaving through the API, rather than to 1.7M rows at
-/// import. lib/osgb36.ts does that conversion.
-model PostcodeReference {
-  id                 String   @id @default(uuid())
-  normalisedPostcode String   @unique // "MK92NW" — upper-case, no whitespace
-  displayPostcode    String // "MK9 2NW"
-  postcodeArea       String // "MK"
-  postcodeDistrict   String // "MK9"
-  eastings           Int
-  northings          Int
-  adminDistrictCode  String?
-  adminCountyCode    String?
-  countryCode        String?
-  isActive           Boolean  @default(true)
-  sourceVersion      String
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  @@index([postcodeDistrict])
-}
-
-/// OS Open Names. ENRICHMENT ONLY — absence from this table must never make a
-/// postcode or an address invalid.
-///
-/// The index order matters and is not arbitrary. Open Names' own POSTCODE_DISTRICT
-/// holds only the first two-to-four characters ("MK9"), never a full unit, so a
-/// street hint needs BOTH a district match and a distance ceiling. The query is a
-/// bounding box — Prisma cannot express a Euclidean filter and raw SQL is banned
-/// in application code — so `postcodeDistrict` narrows first and the two
-/// coordinate ranges narrow within it.
-model PlaceReference {
-  id               String   @id @default(uuid())
-  sourceId         String   @unique
-  name             String
-  type             String // "populatedPlace" | "transportNetwork" | "other"
-  localType        String
-  eastings         Int
-  northings        Int
-  postcodeDistrict String?
-  populatedPlace   String?
-  districtBorough  String?
-  countyUnitary    String?
-  region           String?
-  country          String?
-  isActive         Boolean  @default(true)
-  sourceVersion    String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  @@index([postcodeDistrict, eastings, northings])
-  @@index([type])
-}
 
 /// A customer's saved, REUSABLE address (#764).
 ///
