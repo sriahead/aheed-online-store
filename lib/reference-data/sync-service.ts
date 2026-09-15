@@ -141,7 +141,7 @@ export async function syncReferenceData<TRecord>(
 
     if (areas.length === 0) {
       return fail(
-        "no postcode areas configured — set REFERENCE_POSTCODE_AREAS, or pass --areas",
+        "no postcode areas configured — set UK_LOCATION_REF_POSTCODE_AREAS, or pass --areas",
         null,
       );
     }

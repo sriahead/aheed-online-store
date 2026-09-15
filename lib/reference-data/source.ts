@@ -18,7 +18,7 @@ import type { getReferencePrisma } from "@/lib/reference-db";
  *
  * Every stage that touches data takes the list of postcode **areas** being materialised. No source,
  * repository, schema or service contains an area literal; the list comes from configuration
- * (`REFERENCE_POSTCODE_AREAS`) and flows through as data. That is what makes adding an area a
+ * (`UK_LOCATION_REF_POSTCODE_AREAS`) and flows through as data. That is what makes adding an area a
  * configuration change rather than a code change — the requirement this contract exists to hold.
  *
  * ## Node only — deliberately

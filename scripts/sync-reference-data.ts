@@ -31,12 +31,12 @@
  * plain script, and it is why every stage of `ReferenceDataSource` takes a client rather than
  * resolving one.
  *
- * It uses `REFERENCE_DIRECT_URL`, not the pooled URL: this is a long-running bulk import against
+ * It uses `UK_LOCATION_REF_DIRECT_URL`, not the pooled URL: this is a long-running bulk import against
  * the dedicated `uk-location-reference` database, which is exactly what a direct connection is for.
  *
  * ## Coverage comes from configuration
  *
- * Which postcode areas to materialise is `REFERENCE_POSTCODE_AREAS`, overridable per run with
+ * Which postcode areas to materialise is `UK_LOCATION_REF_POSTCODE_AREAS`, overridable per run with
  * `--areas`. No area literal appears anywhere in the schema, the sources, the repositories or the
  * application — adding one is configuration plus a run, never a code change.
  */
@@ -56,10 +56,10 @@ const SOURCES: ReferenceDataSource<never>[] = [
 const USAGE = `
 Synchronise reference datasets from their publishers.
 
-  --env-file <path>   Environment file holding REFERENCE_DIRECT_URL (default: .env)
+  --env-file <path>   Environment file holding UK_LOCATION_REF_DIRECT_URL (default: .env)
   --source <key>      Only this source: ${SOURCES.map((s) => s.key).join(", ")}
   --areas <list>      Postcode areas to materialise, comma-separated (default:
-                      REFERENCE_POSTCODE_AREAS)
+                      UK_LOCATION_REF_POSTCODE_AREAS)
   --force             Re-import even when the release and coverage are both unchanged
   --help              Show this message
 
@@ -82,23 +82,23 @@ async function main() {
   const envFile = argValue("--env-file") ?? ".env";
   config({ path: envFile, override: true });
 
-  const connectionString = process.env.REFERENCE_DIRECT_URL;
+  const connectionString = process.env.UK_LOCATION_REF_DIRECT_URL;
   if (!connectionString) {
     console.error(
-      `No REFERENCE_DIRECT_URL found in ${envFile}. This is the dedicated uk-location-reference ` +
+      `No UK_LOCATION_REF_DIRECT_URL found in ${envFile}. This is the dedicated uk-location-reference ` +
         `database, NOT Aheed's own DIRECT_URL. Refusing to guess a database.`,
     );
     process.exit(1);
   }
 
-  const areas = (argValue("--areas") ?? process.env.REFERENCE_POSTCODE_AREAS ?? "")
+  const areas = (argValue("--areas") ?? process.env.UK_LOCATION_REF_POSTCODE_AREAS ?? "")
     .split(",")
     .map((area) => area.trim().toUpperCase())
     .filter((area) => area !== "");
 
   if (areas.length === 0) {
     console.error(
-      "No postcode areas configured. Set REFERENCE_POSTCODE_AREAS in the env file, or pass " +
+      "No postcode areas configured. Set UK_LOCATION_REF_POSTCODE_AREAS in the env file, or pass " +
         "--areas MK,RG. Refusing to import the whole of Great Britain by accident.",
     );
     process.exit(1);

@@ -35,14 +35,14 @@ import { getReferenceEnv } from "./config";
  * request" on Workers.
  */
 export const getReferencePrisma = cache(() => {
-  const { REFERENCE_DATABASE_URL } = getReferenceEnv();
-  if (!REFERENCE_DATABASE_URL) {
+  const { UK_LOCATION_REF_DATABASE_URL } = getReferenceEnv();
+  if (!UK_LOCATION_REF_DATABASE_URL) {
     // Throwing here is correct and safe: the only caller is `lib/reference/`, which catches it and
     // reports UNVERIFIED. Returning a client pointed at nothing would defer the same failure to a
     // query, where it would be harder to attribute.
-    throw new Error("REFERENCE_DATABASE_URL is not configured");
+    throw new Error("UK_LOCATION_REF_DATABASE_URL is not configured");
   }
-  const adapter = new PrismaNeonHttp(REFERENCE_DATABASE_URL, {});
+  const adapter = new PrismaNeonHttp(UK_LOCATION_REF_DATABASE_URL, {});
   return new PrismaClient({ adapter });
 });
 
@@ -60,7 +60,7 @@ export const getReferencePrisma = cache(() => {
  */
 export function isReferenceDatabaseConfigured(): boolean {
   try {
-    return Boolean(getReferenceEnv().REFERENCE_DATABASE_URL);
+    return Boolean(getReferenceEnv().UK_LOCATION_REF_DATABASE_URL);
   } catch {
     return false;
   }

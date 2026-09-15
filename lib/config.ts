@@ -191,7 +191,7 @@ const jobsSchema = z
  * A SECOND Neon project (`uk-location-reference`), separate from Aheed's transactional database,
  * holding shared postcode and place reference data. Aheed reads it through `lib/reference/`.
  *
- * `REFERENCE_DATABASE_URL` is the POOLED url used at runtime; `REFERENCE_DIRECT_URL` is the direct
+ * `UK_LOCATION_REF_DATABASE_URL` is the POOLED url used at runtime; `UK_LOCATION_REF_DIRECT_URL` is the direct
  * one used by migrations and the bulk sync — the same split `DATABASE_URL`/`DIRECT_URL` already
  * uses, and for the same reasons.
  *
@@ -201,25 +201,25 @@ const jobsSchema = z
  * provisioning gap into a broken storefront, which is the exact inversion this feature's state
  * model exists to prevent. Callers use `isReferenceDatabaseConfigured()` rather than a bare check.
  *
- * `REFERENCE_POSTCODE_AREAS` is the demand-driven coverage list — which postcode AREAS to
+ * `UK_LOCATION_REF_POSTCODE_AREAS` is the demand-driven coverage list — which postcode AREAS to
  * materialise, comma-separated (e.g. "MK,RG"). It lives in configuration precisely so that adding
  * an area needs no migration, no importer and no application change. The default is empty: an
  * environment that has not said what it needs gets nothing rather than silently importing the whole
  * of Great Britain.
  */
 const referenceSchema = z.object({
-  REFERENCE_DATABASE_URL: z.string().optional(),
-  REFERENCE_DIRECT_URL: z.string().optional(),
-  REFERENCE_POSTCODE_AREAS: z.string().optional(),
+  UK_LOCATION_REF_DATABASE_URL: z.string().optional(),
+  UK_LOCATION_REF_DIRECT_URL: z.string().optional(),
+  UK_LOCATION_REF_POSTCODE_AREAS: z.string().optional(),
 });
 
 export type ReferenceEnv = z.infer<typeof referenceSchema>;
 
 export function getReferenceEnv(): ReferenceEnv {
   return referenceSchema.parse({
-    REFERENCE_DATABASE_URL: readEnv("REFERENCE_DATABASE_URL"),
-    REFERENCE_DIRECT_URL: readEnv("REFERENCE_DIRECT_URL"),
-    REFERENCE_POSTCODE_AREAS: readEnv("REFERENCE_POSTCODE_AREAS"),
+    UK_LOCATION_REF_DATABASE_URL: readEnv("UK_LOCATION_REF_DATABASE_URL"),
+    UK_LOCATION_REF_DIRECT_URL: readEnv("UK_LOCATION_REF_DIRECT_URL"),
+    UK_LOCATION_REF_POSTCODE_AREAS: readEnv("UK_LOCATION_REF_POSTCODE_AREAS"),
   });
 }
 
@@ -231,7 +231,7 @@ export function getReferenceEnv(): ReferenceEnv {
  * when unset — see the schema note above for why that is the safe default rather than "everything".
  */
 export function getRequiredPostcodeAreas(): string[] {
-  const raw = getReferenceEnv().REFERENCE_POSTCODE_AREAS ?? "";
+  const raw = getReferenceEnv().UK_LOCATION_REF_POSTCODE_AREAS ?? "";
   return [
     ...new Set(
       raw

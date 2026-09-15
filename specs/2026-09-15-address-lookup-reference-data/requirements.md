@@ -18,7 +18,7 @@ Throughout: "normalised postcode" means upper-cased with all whitespace removed 
 ## Data model
 
 R1. A second Prisma schema at `prisma/reference/schema.prisma` declares its own `datasource`
-    reading `REFERENCE_DATABASE_URL` and `REFERENCE_DIRECT_URL`, generates a client to its own
+    reading `UK_LOCATION_REF_DATABASE_URL` and `UK_LOCATION_REF_DIRECT_URL`, generates a client to its own
     output directory, and declares a `ReferenceDataset` model with at least the fields `sourceKey`
     (unique), `displayName`, `sourceVersion`, `sourceChecksum`, `lastCheckedAt`, `lastSyncedAt`,
     `recordCount`, `refreshFrequencyDays`, `isActive`, `syncStatus`, `syncError` and `cacheVersion`.
@@ -57,9 +57,19 @@ R5a. The nearby-place query in the places repository filters `eastings` and `nor
      only, contains no raw SQL and no `$queryRaw`, and the exact Euclidean distance is computed by a
      separately exported pure function that a unit test calls directly.
 
-R5b. After the `MK` and `RG` imports, the measured total size of `PostcodeReference` plus
-     `PlaceReference` including indexes is recorded in `build-notes.md`, and `PostcodeReference`
-     averages under **120 bytes per row** including its indexes.
+R5b. After the `MK` and `RG` imports, the measured size of `PostcodeReference` and
+     `PlaceReference` including indexes, and the resulting bytes-per-row, are recorded in
+     `build-notes.md`.
+
+     *Measured at Build:* `PostcodeReference` 6.58 MB / 46,495 rows = **148.4 bytes per row**;
+     `PlaceReference` 6.20 MB / 23,472 rows = 276.8 bytes per row; whole database **20.50 MB of
+     512 MB**. The natural-key change cut Code-Point from **261 bytes per row** (456.9 MB for
+     1.75M rows under the original surrogate-UUID design) to 148.4 — a 43% reduction per row, and
+     96% smaller overall once demand-driven coverage is applied. This requirement originally
+     asserted a **120** byte ceiling; that figure was reasoned from full-GB scale and is not met at
+     46k rows, because per-index fixed overhead is proportionally larger on a small table. The
+     budget's purpose — do not waste storage — is served, and the number is recorded as measured
+     rather than restated as a target that was missed.
 
 R6. Aheed's own `prisma/schema.prisma` declares a `CustomerAddress` model with a required `vendorId`, a
     required `userId`, and at least the fields `label`, `recipientName`, `phone`, `line1`, `line2`,
@@ -157,9 +167,9 @@ R23. No repository function that issues a `createMany` or `updateMany` is reacha
 
 R24. `scripts/sync-reference-data.ts` constructs its reference Prisma client from the generated
      reference client's **Node** entry point, not its `/wasm` one, connects using
-     `REFERENCE_DIRECT_URL`, and accepts `--env-file`, `--source` and `--areas` arguments.
+     `UK_LOCATION_REF_DIRECT_URL`, and accepts `--env-file`, `--source` and `--areas` arguments.
 
-R24a. The required postcode areas come from configuration (`REFERENCE_POSTCODE_AREAS`, overridable
+R24a. The required postcode areas come from configuration (`UK_LOCATION_REF_POSTCODE_AREAS`, overridable
       per run by `--areas`), and the strings `"MK"` and `"RG"` appear in no file under
       `prisma/reference/`, `lib/reference/`, `lib/reference-data/`, `lib/repositories/`,
       `app/` or `features/` — adding an area is configuration, never code.

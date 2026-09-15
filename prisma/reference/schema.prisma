@@ -15,7 +15,7 @@
 //
 // COVERAGE IS DEMAND-DRIVEN. The schema is UK-wide capable; only the postcode
 // areas actually required are materialised, and which areas those are is
-// CONFIGURATION (`REFERENCE_POSTCODE_AREAS`), never a value in this file or in
+// CONFIGURATION (`UK_LOCATION_REF_POSTCODE_AREAS`), never a value in this file or in
 // any repository, API or domain service. Adding an area later is a config change
 // plus a sync run — no migration, no new importer, no application change.
 //
@@ -28,8 +28,8 @@ datasource db {
   provider  = "postgresql"
   // Pooled URL for runtime reads from the Worker; direct URL for migrations and
   // the bulk sync, exactly as Aheed's own schema splits them.
-  url       = env("REFERENCE_DATABASE_URL")
-  directUrl = env("REFERENCE_DIRECT_URL")
+  url       = env("UK_LOCATION_REF_DATABASE_URL")
+  directUrl = env("UK_LOCATION_REF_DIRECT_URL")
 }
 
 generator client {

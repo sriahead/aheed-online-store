@@ -584,7 +584,15 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  129 files / 1687 tests**, measured 2026-09-15 at the fulfilment-config-and-checkout-fixes Build)
+  136 files / 1816 tests**, measured 2026-09-15 at `#764`'s Build — seven new files carrying 129
+  tests, for the reference-data framework, coverage, eligibility, places, provider, scoping and
+  coordinate conversion. **Three of those 136 files currently FAIL locally and would pass in CI**:
+  `tests/slot-capacity.test.ts`, `tests/concurrency-slot-booking.test.ts` and
+  `tests/express-sla.test.ts` are the `it.skipIf(!DATABASE_URL)` live-DB files, and Aheed's dev
+  database is temporarily at its 512 MB ceiling while `#764`'s superseded full-GB import awaits
+  cleanup, so every write fails with `could not extend file because project size limit (512 MB) has
+  been exceeded`. CI sets no `DATABASE_URL`, so it skips them. Treat a local `133 passed / 3 failed`
+  with that message as this known state, not a regression)
   and treat any shortfall as a non-result to re-run, not a pass. **This number has now been stale
   twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
