@@ -49,9 +49,25 @@ These steps apply to every row below. A validator with no memory of the build ne
 7. **Two vendors matter here.** Delivery eligibility is per-vendor, so rows R40 and R45 must be run
    against both seeded vendors, using the hosts resolved in step 2.
 
-Run the reference-data sync against the dev database once before the integration rows:
-`npx tsx scripts/sync-reference-data.ts --env-file .env --source code-point-open > sync-cp.log`
-then the same for `--source os-open-names`, and read each log file.
+8. **Reference data lives in its OWN Neon project**, `uk-location-reference` (branch
+   `uk-location-reference-staging` for this validation), reached through `REFERENCE_DATABASE_URL`
+   (pooled, runtime) and `REFERENCE_DIRECT_URL` (direct, migrations and sync). These are
+   **owner-supplied secrets**: they are not in the repository and must not be invented. Confirm
+   both are present before any reference row below.
+9. **Never point staging at production reference data.** Check the host in `REFERENCE_DIRECT_URL`
+   names the staging branch before running a sync.
+
+Set the reference database up once, in this order, before the integration rows:
+
+```
+npx prisma migrate deploy --schema prisma/reference/schema.prisma
+npx prisma generate --schema prisma/reference/schema.prisma
+npx tsx scripts/sync-reference-data.ts --env-file .env --source code-point-open > sync-cp.log
+npx tsx scripts/sync-reference-data.ts --env-file .env --source os-open-names  > sync-on.log
+```
+
+Read each log file rather than piping it. Coverage defaults to `REFERENCE_POSTCODE_AREAS`
+(`MK,RG`); `--areas` overrides it for a single run.
 
 ---
 
@@ -59,13 +75,16 @@ then the same for `--source os-open-names`, and read each log file.
 
 | Req | Testing Area | How to verify |
 |-----|--------------|---------------|
-| R1 | Unit | `grep -n "model ReferenceDataset" -A 20 prisma/schema.prisma` lists `sourceKey`, `displayName`, `sourceVersion`, `sourceChecksum`, `lastCheckedAt`, `lastSyncedAt`, `recordCount`, `refreshFrequencyDays`, `isActive`, `syncStatus`, `syncError`, `cacheVersion`, and shows no `vendorId`. |
-| R2 | Unit | `grep -n "model ReferenceDataSyncRun" -A 18 prisma/schema.prisma` lists `datasetId`, `sourceVersion`, `startedAt`, `finishedAt`, `inserted`, `updated`, `retired`, `unchanged`, `status`, `errorMessage`. |
-| R3 | Unit | `grep -n "enum ReferenceSyncStatus" -A 6 prisma/schema.prisma` shows `IDLE`, `RUNNING`, `SUCCEEDED`, `FAILED`. |
-| R4 | Unit | `grep -n "model PostcodeReference" -A 20 prisma/schema.prisma` lists every field named in R4, shows `@@index` on `postcodeDistrict`, and shows no `vendorId`. |
-| R5 | Unit | `grep -n "model PlaceReference" -A 22 prisma/schema.prisma` lists every field named in R5, shows a composite `@@index` including `postcodeDistrict`, and shows no `vendorId`. |
-| R5a | Unit | `grep -nE "queryRaw\|executeRaw\|\\\$raw" lib/repositories/places.ts` returns nothing. `npx vitest run tests/places-repository.test.ts` exits 0, including direct calls to the exported distance function asserting a corner of the bounding box beyond 250 metres is discarded. |
-| R6 | Unit | `grep -n "model CustomerAddress" -A 20 prisma/schema.prisma` shows required `vendorId` and `userId`, every field named in R6, and `@@index([vendorId, userId])`. |
+| R1 | Unit | `grep -n "datasource\|REFERENCE_DATABASE_URL\|REFERENCE_DIRECT_URL\|output" prisma/reference/schema.prisma` shows a datasource reading both reference URLs and a generator with its own `output`. `grep -n "model ReferenceDataset" -A 18 prisma/reference/schema.prisma` lists every field named in R1. |
+| R1a | Security | `grep -n "ReferenceDataset\|PostcodeReference\|PlaceReference\|ReferenceAreaCoverage" prisma/schema.prisma` returns nothing. `grep -rn "reference-client\|prisma/reference" app components features --include=*.ts --include=*.tsx` returns nothing — the boundary is `lib/reference/`. |
+| R2 | Unit | `grep -n "model ReferenceDataSyncRun" -A 16 prisma/reference/schema.prisma` lists `datasetId`, `sourceVersion`, `startedAt`, `finishedAt`, `inserted`, `updated`, `retired`, `unchanged`, `status`, `errorMessage`. |
+| R3 | Unit | `grep -n "enum ReferenceSyncStatus" -A 6 prisma/reference/schema.prisma` shows `IDLE`, `RUNNING`, `SUCCEEDED`, `FAILED`. |
+| R3a | Unit | `grep -n "model ReferenceAreaCoverage" -A 12 prisma/reference/schema.prisma` shows `sourceKey`, `postcodeArea`, `sourceVersion`, `recordCount`, `materialisedAt` and a unique on `sourceKey` plus `postcodeArea`. |
+| R4 | Unit | `grep -n "model PostcodeReference" -A 16 prisma/reference/schema.prisma` shows `normalisedPostcode` carrying `@id`, every field named in R4, no `vendorId`, no `createdAt`/`updatedAt`/`sourceVersion`, and `@@index` on both `postcodeArea` and `postcodeDistrict`. |
+| R5 | Unit | `grep -n "model PlaceReference" -A 18 prisma/reference/schema.prisma` shows `sourceId` carrying `@id`, every field named in R5, no `vendorId`, no per-row timestamps, and a composite `@@index([postcodeDistrict, eastings, northings])`. |
+| R5a | Unit | `grep -nE "queryRaw\|executeRaw\|\$raw" lib/repositories/places.ts` returns nothing. `npx vitest run tests/places-repository.test.ts` exits 0, including direct calls to the exported distance function asserting a corner of the bounding box beyond 250 metres is discarded. |
+| R5b | Performance | After the MK+RG imports, run the size measurement against `REFERENCE_DIRECT_URL` (`pg_total_relation_size` per table) and confirm `PostcodeReference` bytes divided by its row count is under 120. Record both table sizes and the per-row figure in `build-notes.md`. |
+| R6 | Unit | `grep -n "model CustomerAddress" -A 20 prisma/schema.prisma` (Aheed's own schema) shows required `vendorId` and `userId`, every field named in R6, and `@@index([vendorId, userId])`. |
 | R6a | Security | `npx vitest run tests/customer-addresses-repository.test.ts` exits 0, including a case seeding a `CustomerAddress` for vendor A and asserting a read scoped to vendor B returns zero rows, and one asserting a read for user X excludes user Y's row. `npx vitest run tests/repository-purity.test.ts tests/repository-client-injection.test.ts tests/repository-vendor-scoping.test.ts` exits 0. |
 | R7 | Integration | `git diff origin/staging -- prisma/schema.prisma` shows no change inside `model Address`; `grep -n "address.create" lib/repositories/orders.ts` returns exactly one hit, inside `placeOrder`'s `tx` block. |
 | R8 | Integration | `git status --short prisma/migrations/` shows exactly one new directory. `grep -rn "DROP INDEX" prisma/migrations/<new-dir>/migration.sql` returns no line naming `Order_orderNumber_trgm_idx`, `Order_guestEmail_trgm_idx` or `User_email_trgm_idx`. `npx prisma migrate status` prints that the database schema is up to date. |
@@ -76,22 +95,27 @@ then the same for `--source os-open-names`, and read each log file.
 | R13 | Integration | `npx vitest run tests/reference-source-code-point.test.ts` exits 0. Then confirm live and keyless: `curl -s https://api.os.uk/downloads/v1/products/CodePointOpen` returns a JSON body containing `"version"`, with no credential sent. `grep -niE "authorization\|api[-_]?key" lib/reference-data/sources/code-point.ts` returns nothing. |
 | R14 | Integration | As R13 against `https://api.os.uk/downloads/v1/products/OpenNames` and `lib/reference-data/sources/open-names.ts`. |
 | R15 | Security | `grep -rniE "OS_API\|ORDNANCE\|OS_KEY\|EPC_" lib/reference-data/ scripts/sync-reference-data.ts` returns nothing. |
-| R16 | Integration | With both sources already synced, re-run `npx tsx scripts/sync-reference-data.ts --env-file .env --source code-point-open > sync-unchanged.log` and read the file: it reports `inserted=0 updated=0 retired=0`, status `SUCCEEDED`, and states the source was unchanged. Confirm no download occurred (the log names no archive). Query `ReferenceDataSyncRun` for the newest row and confirm the same counts. |
+| R16 | Integration | With both sources synced for `MK,RG`, re-run the Code-Point sync to `sync-unchanged.log` and read it: `inserted=0 updated=0 retired=0`, status `SUCCEEDED`, source reported unchanged, and no archive named (nothing downloaded). Query the newest `ReferenceDataSyncRun` and confirm the same counts. |
+| R16a | Integration | **The coverage dimension.** With the upstream version unchanged, re-run with `--areas MK,RG,LU`. The log must show it did NOT exit unchanged: it downloads, imports `LU` only, and reports a non-zero `inserted`. Confirm `ReferenceAreaCoverage` then holds three rows and that the `MK`/`RG` counts are unchanged, proving they were not re-imported. This is the exact case an md5-only check gets wrong. |
+| R16b | Integration | Confirm no `ReferenceAreaCoverage` row exists for an area whose import did not complete — the failed Open Names run recorded in `build-notes.md` is the real-world instance, where a partially written area left no coverage row and the dataset stayed uninitialised. |
 | R17 | Integration | `npx vitest run tests/reference-sync-integrity.test.ts` exits 0, including a case where a downloaded archive whose bytes do not match the published `md5` aborts before any reference row is written. |
-| R18 | Integration | Same test file: a parsed dataset below the per-source minimum record count, and one missing a required header column, each abort with no reference row mutated. |
+| R18 | Integration | Same test file: a parsed dataset below the per-**area** minimum record count, and one missing a required header column, each abort with no reference row mutated. |
 | R19 | Integration | Same test file: a failure injected after download leaves the previously imported rows readable and `cacheVersion` unchanged, and writes a `ReferenceDataSyncRun` with `status = FAILED` and a non-null `errorMessage`. |
 | R20 | Integration | Same test file asserts `cacheVersion` increments on success only. Confirm live: note `cacheVersion` before and after the R16 unchanged run — it is identical. |
 | R21 | Integration | The second run in R16 is the idempotency check: `inserted`, `updated` and `retired` are all `0`. |
-| R22 | Integration | `npx vitest run tests/reference-sync-integrity.test.ts` includes a case where a record present in import 1 and absent from import 2 ends with `isActive = false`, still present in the table, and counted in `retired`. |
+| R22 | Integration | `npx vitest run tests/reference-sync-integrity.test.ts` includes a case where a record present in import 1 and absent from import 2 ends with `isActive = false`, still present, and counted in `retired`; and a case proving an import scoped to one area does not retire another area's rows. |
 | R23 | Integration | `grep -rn "createMany\|updateMany" lib/repositories/` lists the bulk import functions; for each, `graft callers <fn>` shows `scripts/sync-reference-data.ts` and test files only, no `app/`, `features/` or `lib/*-service.ts` caller. `npx vitest run tests/repository-transaction-safety.test.ts` exits 0 — if it times out at 5000ms under full-suite load, re-run that file alone, which is the known `#538` flake, not a failure. |
-| R24 | Unit | `grep -n "@prisma/client" scripts/sync-reference-data.ts` shows the bare specifier and no `/wasm`. `npx tsx scripts/sync-reference-data.ts --help` prints usage naming `--env-file` and `--source`. |
+| R24 | Unit | `grep -n "wasm" scripts/sync-reference-data.ts` returns nothing, and its client import points at the generated reference client's Node entry. `npx tsx scripts/sync-reference-data.ts --help` prints usage naming `--env-file`, `--source` and `--areas`. |
+| R24a | Security | A search for the literals `"MK"` and `"RG"` across `prisma/reference/`, `lib/reference/`, `lib/reference-data/`, `lib/repositories/`, `app/` and `features/` returns nothing. The areas appear only in configuration (`.dev.vars`, `secrets/*.vars`, `lib/config.ts`'s default) and in docs/specs. |
 | R25 | Integration | `cat .github/workflows/sync-reference-data.yml` shows a `schedule` cron firing monthly, a `workflow_dispatch` trigger, an environment file materialised from `secrets.`, and a removal step guarded by `if: always()`. |
 | R25a | E2E | Against the dev database, delete every row from `PostcodeReference` and `PlaceReference` (they are rebuildable cache data by definition — this is the clean-environment test). With `npm run preview` NOT running, run both sync commands and redirect each to a log file; read the logs and confirm both report a non-zero `inserted` count and status `SUCCEEDED`, and that row counts are non-zero afterwards. Confirm `gh workflow run sync-reference-data.yml` is accepted without any deploy workflow running. |
 | R25b | Regression | The bootstrap doc exists under `docs/`, names both sync commands verbatim, and states the `UNVERIFIED` degradation. `npm run kms:validate` exits 0. |
 | R26 | Security | `grep -rn "postcodes.io\|api.postcodes" app components features lib --include=*.ts --include=*.tsx` returns nothing. `grep -rn "fetch(" lib/address-lookup-service.ts lib/delivery-eligibility.ts` returns nothing. |
-| R26a | E2E | With `code-point-open` synced, request `/api/address/lookup?postcode=ZZ99+9ZZ` under `npm run preview` and confirm the body reports the postcode invalid. Then set one real `PostcodeReference` row's `isActive` to `false`, request that postcode, confirm it also reports invalid, and restore the row. |
-| R27 | E2E | Under `npm run preview`, set the `code-point-open` dataset row's `lastSyncedAt` to null, then request `/api/address/lookup?postcode=MK9+2NW` **and** `?postcode=ZZ99+9ZZ`; confirm neither reports the postcode as invalid, even though a `PostcodeReference` row exists for the first and not the second. Restore `lastSyncedAt` afterwards. |
-| R27a | E2E | In the same `lastSyncedAt`-null state, load `/checkout` in a browser or via `curl`: no postcode validation error is rendered, every address field accepts input, and a full checkout completes and creates an order. Restore `lastSyncedAt` afterwards. |
+| R26a | E2E | With `MK` materialised, request `/api/address/lookup?postcode=MK99+9ZZ` under `npm run preview` — a well-formed postcode in a COVERED area that does not exist — and confirm `status` is `INVALID`. Then set one real MK row's `isActive` to `false`, request that postcode, confirm it also reports `INVALID`, and restore the row. |
+| R27 | E2E | **The coverage distinction.** Request `/api/address/lookup?postcode=EH1+1YZ` — a real postcode in an area deliberately NOT materialised. Confirm `status` is `UNVERIFIED`, **not** `INVALID`. Repeat for `SW1A 1AA`. Then confirm `MK9 2NW` reports `VALID`, proving the two are genuinely distinguished rather than everything being unverified. |
+| R27a | E2E | With an UNVERIFIED postcode entered (an uncovered area, per R27), load `/checkout`: no postcode validation error is rendered, every address field accepts input, and a full checkout completes and creates an order. |
+| R27b | Resilience | Point `REFERENCE_DATABASE_URL` at an unreachable host, restart `npm run preview`, and request the lookup for `MK9 2NW`. Confirm HTTP 200 with `status` `UNVERIFIED` — not a 500, not `INVALID` — and that checkout still accepts a manually entered address. Restore the URL afterwards. This failure mode is the whole reason the state exists once reference data sits behind its own database. |
+| R27c | Performance | With `npm run preview` running, load `/checkout` once and query the local Worker log store (`POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query`) for reference-lookup lines; confirm one render issues at most one reference round trip per postcode. |
 | R28 | Unit | `npx vitest run tests/delivery-eligibility.test.ts` exits 0, covering all four `status` values. `grep -nE "^import .*(@prisma/client\|next/headers\|@/lib/db)" lib/delivery-eligibility.ts` returns nothing. |
 | R29 | Unit | `graft grep "isDeliverable"` (or `grep -rn "isDeliverable" app components features lib --include=*.ts --include=*.tsx`) shows call sites only in `lib/delivery-eligibility.ts`; `components/layout/Header.tsx`, `features/checkout/place-order.ts` and `lib/fulfilment-service.ts` each import the new service instead. |
 | R30 | Unit | `npx vitest run tests/address-lookup-service.test.ts` includes a case where `PlaceReference` returns no rows and the result still reports `valid: true` and the same `deliverable` verdict. |
@@ -105,7 +129,7 @@ then the same for `--source os-open-names`, and read each log file.
 | R37a | Integration | Pipe the `MK9 2NW` response through `node -e` and print `Object.keys(body.location).sort()`; it equals `county,district,latitude,longitude,streetSuggestions,town`. Confirm `latitude` is near `52.0` and `longitude` near `-0.76` (WGS84 degrees, not a six-figure grid value), and that every entry of `streetSuggestions` is a plain string. |
 | R38 | Security | Pipe each response through `grep -cE "sourceVersion\|eastings\|northings\|localType\|sourceId\|datasetId\|cacheVersion\|vendorId\|userId"` and confirm `0`. |
 | R39 | Security | `curl -s -o /dev/null -w "%{http_code}" ".../api/address/lookup"`, the same with `?postcode=!!!`, and the same with a 500-character `postcode` value, all return `400`. `grep -n "api.os.uk" app/api/address/lookup/route.ts` returns nothing. Read the handler and confirm the shape/length rejection precedes every repository call. |
-| R40 | E2E | Run the same lookup against **both** vendor hosts resolved in "Before you start" step 2, using a postcode inside one vendor's `VendorDeliveryArea` and outside the other's, and confirm the two responses report different `deliverable` values. |
+| R40 | E2E | Run the same lookup against **both** vendor hosts resolved in "Before you start" step 2, using a postcode inside one vendor's `VendorDeliveryArea` and outside the other's, and confirm the two responses report different `deliverable` values. Then confirm no file under `lib/reference/` or `prisma/reference/` reads vendor delivery configuration — the reference service does not own vendor eligibility. |
 | R41 | E2E | Under `npm run preview`, on `/checkout`, enter `MK9 2NW` and trigger the lookup; the `city` input is populated and the `line1` and `line2` inputs are empty and editable. |
 | R42 | E2E | On the same form, type a value into `city`, then run the lookup again with a different postcode; the typed `city` value is not overwritten. |
 | R43 | E2E | Signed in, complete a checkout confirming the address. Query the dev database: one new `CustomerAddress` row exists for that `vendorId`/`userId`, and the order's own `Address` snapshot row also exists and is a different row. |

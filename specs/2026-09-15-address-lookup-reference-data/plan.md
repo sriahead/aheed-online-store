@@ -4,10 +4,10 @@ title: "Address lookup — reference-data framework, Code-Point Open, OS Open Na
 audience: [dev]
 type: spec
 status: approved
-version: "1.0.0"
+version: "2.0.0"
 updated: 2026-09-15
 visibility: internal
-summary: A generic reference-data sync framework with two real sources (OS Code-Point Open, OS Open Names), a consolidated delivery-eligibility service, a provider-neutral address-lookup API, and customer saved addresses. No credentials required.
+summary: A dedicated UK location-reference database with demand-driven postcode-area coverage, fed by OS Code-Point Open and OS Open Names, behind a reference-data service boundary; plus a consolidated delivery-eligibility service, a provider-neutral address-lookup API, and customer saved addresses.
 tags: [reference-data, postcodes, address-lookup, delivery, fulfilment, sync]
 related: [adr-004-multi-tenancy, adr-006-store-locations, architecture, roadmap]
 ---
@@ -24,6 +24,91 @@ necessary → confirmation → save and reuse` — while removing checkout's run
 third-party postcode API, and leaving a provider port a licensed property-address service can drop
 into later without touching checkout, the forms, the API contract, postcode validation or delivery
 eligibility.
+
+## Revised at Build: a dedicated reference database, demand-driven
+
+**Version 2.0.0 of this plan.** The first implementation stored reference data in Aheed's own
+transactional database and imported the full GB datasets. Building it proved that wrong, with
+numbers rather than argument:
+
+- A real full-GB Code-Point import succeeded — **1,749,109 postcodes** — and occupied **456.9 MB**.
+- Aheed's whole dev database then stood at **489.8 MB against a 512 MB Neon project limit**, with
+  postcodes alone consuming 89% of the budget and every transactional table together under 5 MB.
+- The Open Names import then failed at 1,042,656 records with `could not extend file because
+  project size limit (512 MB) has been exceeded`.
+
+Two conclusions followed, and the owner ruled on both. **Shared UK reference data does not belong in
+a tenant's transactional database** — it is not Aheed's data, it dwarfs Aheed's data, and it
+competes with it for a storage budget sized for orders and products. And **importing the whole of
+Great Britain to serve two postcode areas is waste**, not thoroughness.
+
+The architecture is now a **dedicated reusable UK location-reference database with demand-driven
+postcode-area population**.
+
+### The persistence boundary
+
+| Database | Owns |
+|---|---|
+| **`uk-location-reference`** (new Neon project; `uk-location-reference-staging` branch for now) | `PostcodeReference`, `PlaceReference`, dataset versions/checksums, materialised area coverage, sync/audit state, and future compatible UK location datasets |
+| **Aheed's application database** (unchanged) | Vendors, customers, `CustomerAddress`, orders and their immutable `Address` snapshots, carts, products, delivery configuration, every other transactional concern |
+
+`CustomerAddress` stays in Aheed's database, and a customer-confirmed address is **never** promoted
+into the shared reference database or offered to another customer. Order-address snapshots remain
+immutable. None of that changes.
+
+### Demand-driven coverage, not an MK/RG architecture
+
+The reference database is **UK-wide capable**; only the areas actually needed are materialised.
+Today that is `MK` and `RG`, supplied through configuration — and nothing in the schema,
+repositories, API or domain services knows those two values exist. Adding `LU` later is a
+configuration change plus a sync run: **no migration, no new importer, no new endpoint, no checkout
+change.**
+
+This falls out of the archive layout rather than being bolted on. Code-Point Open ships **one CSV
+per postcode area** (`Data/CSV/mk.csv`, `rg.csv`, ...), so importing two areas means reading two
+files out of 129 rather than filtering 1.7M rows. Open Names is tiled by grid square instead, so its
+rows are filtered on the area prefix of `POSTCODE_DISTRICT` during the parse.
+
+### The sync has TWO independent change dimensions
+
+This is the subtlety the first implementation would have got wrong. A sync must run when **either**:
+
+1. the upstream OS release changed (new version or checksum), **or**
+2. our required coverage changed — a newly configured area is not yet materialised.
+
+Exiting `changed=false` because the upstream md5 matched, while `LU` sits unimported, would be a
+silent failure of exactly the kind this project keeps paying for. So `ReferenceAreaCoverage` records
+which areas have been **successfully** materialised for a given source and version, and a newly
+configured area is not reported as covered until its import completes.
+
+### Coverage makes validity three-state, explicitly
+
+| Condition | Verdict |
+|---|---|
+| Area materialised, postcode present and active | `VALID` |
+| Area materialised, authoritative data has no active row | `INVALID` |
+| Area **not** materialised | `UNVERIFIED` |
+| Reference service or database unavailable, or dataset never initialised | `UNVERIFIED` |
+
+**A postcode outside MK/RG must never be called invalid merely because we have not imported that
+area.** Moving reference data behind its own database introduces a runtime dependency, so the same
+rule now covers infrastructure failure too: an unreachable reference database yields `UNVERIFIED`
+and degrades to manual address entry. An infrastructure or coverage gap is never converted into a
+rejection of the customer's address.
+
+### The access boundary
+
+```
+OS Downloads API -> uk-location-reference -> reference-data service -> Aheed
+                                                                    -> DeliveryEligibilityService
+                                                                    -> checkout / address forms
+```
+
+The reference service answers only: is this postcode covered and current, what location information
+attaches to it, and what reliable enrichment or street hints exist. It **does not own vendor
+delivery eligibility** — that stays in Aheed, reading the vendor's own `VendorDeliveryArea` rows —
+and `AddressLookupProvider` stays a separate seam, so a future licensed property-address provider
+needs no change to the reference service.
 
 ## Why this shape
 

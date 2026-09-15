@@ -7,39 +7,61 @@ provider-neutral `GET /api/address/lookup`, adds customer saved addresses, and r
 runtime dependency on `postcodes.io`. No credential of any kind is required. See `plan.md` for the
 reasoning; `validation.md` for how each requirement below is checked.
 
+**Revised at Build (v2).** Requirements R1-R5a, R13-R27a and R40 changed when the real import proved
+the original storage design wrong: full-GB Code-Point occupied 456.9 MB of Aheed's 512 MB database
+and Open Names then failed outright. Reference data now lives in a dedicated `uk-location-reference`
+Neon project with demand-driven postcode-area coverage. See `plan.md`'s "Revised at Build" section.
+
 Throughout: "normalised postcode" means upper-cased with all whitespace removed (`MK92NW`);
 "display postcode" means the canonical spaced form (`MK9 2NW`).
 
 ## Data model
 
-R1. `prisma/schema.prisma` declares a `ReferenceDataset` model with at least the fields
-    `sourceKey` (unique), `displayName`, `sourceVersion`, `sourceChecksum`, `lastCheckedAt`,
-    `lastSyncedAt`, `recordCount`, `refreshFrequencyDays`, `isActive`, `syncStatus`, `syncError`
-    and `cacheVersion`, and none of them carries a `vendorId`.
+R1. A second Prisma schema at `prisma/reference/schema.prisma` declares its own `datasource`
+    reading `REFERENCE_DATABASE_URL` and `REFERENCE_DIRECT_URL`, generates a client to its own
+    output directory, and declares a `ReferenceDataset` model with at least the fields `sourceKey`
+    (unique), `displayName`, `sourceVersion`, `sourceChecksum`, `lastCheckedAt`, `lastSyncedAt`,
+    `recordCount`, `refreshFrequencyDays`, `isActive`, `syncStatus`, `syncError` and `cacheVersion`.
 
-R2. `prisma/schema.prisma` declares a `ReferenceDataSyncRun` model with at least the fields
-    `datasetId` (relation to `ReferenceDataset`), `sourceVersion`, `startedAt`, `finishedAt`,
-    `inserted`, `updated`, `retired`, `unchanged`, `status` and `errorMessage`.
+R1a. No reference model is declared in Aheed's own `prisma/schema.prisma` datasource going forward,
+     and no file under `app/`, `components/` or `features/` imports the reference Prisma client
+     directly — reference data is reached only through the service boundary in `lib/reference/`.
 
-R3. `prisma/schema.prisma` declares a `ReferenceSyncStatus` enum whose values include `IDLE`,
-    `RUNNING`, `SUCCEEDED` and `FAILED`.
+R2. `prisma/reference/schema.prisma` declares a `ReferenceDataSyncRun` model with at least the
+    fields `datasetId`, `sourceVersion`, `startedAt`, `finishedAt`, `inserted`, `updated`,
+    `retired`, `unchanged`, `status` and `errorMessage`.
 
-R4. `prisma/schema.prisma` declares a `PostcodeReference` model with at least the fields
-    `normalisedPostcode` (unique), `displayPostcode`, `postcodeArea`, `postcodeDistrict`,
-    `eastings`, `northings`, `adminDistrictCode`, `adminCountyCode`, `countryCode`, `isActive` and
-    `sourceVersion`, carrying no `vendorId`, and declaring an index on `postcodeDistrict`.
+R3. `prisma/reference/schema.prisma` declares a `ReferenceSyncStatus` enum whose values include
+    `IDLE`, `RUNNING`, `SUCCEEDED` and `FAILED`.
 
-R5. `prisma/schema.prisma` declares a `PlaceReference` model with at least the fields `sourceId`
-    (unique), `name`, `type`, `localType`, `eastings`, `northings`, `postcodeDistrict`,
-    `populatedPlace`, `districtBorough`, `countyUnitary`, `region`, `country`, `isActive` and
-    `sourceVersion`, carrying no `vendorId`, and declaring a composite index on
-    `postcodeDistrict`, `eastings`, `northings` in that order.
+R3a. `prisma/reference/schema.prisma` declares a `ReferenceAreaCoverage` model recording, per
+     `sourceKey` and `postcodeArea`, the `sourceVersion` it was materialised from, its
+     `recordCount` and a `materialisedAt` timestamp, keyed uniquely on `sourceKey` plus
+     `postcodeArea`.
 
-R5a. The nearby-place query in `lib/repositories/places.ts` filters `eastings` and `northings` by
-     range only, contains no raw SQL and no `$queryRaw`, and the exact Euclidean distance is
-     computed by a separately exported pure function that a unit test calls directly.
+R4. `prisma/reference/schema.prisma` declares a `PostcodeReference` model whose **primary key is
+    `normalisedPostcode`** — no surrogate UUID — with at least the fields `displayPostcode`,
+    `postcodeArea`, `postcodeDistrict`, `eastings`, `northings`, `adminDistrictCode`,
+    `adminCountyCode`, `countryCode` and `isActive`, carrying no `vendorId` and no per-row
+    `createdAt`/`updatedAt`/`sourceVersion` (dataset-level metadata covers those), and declaring
+    indexes on `postcodeArea` and on `postcodeDistrict`.
 
-R6. `prisma/schema.prisma` declares a `CustomerAddress` model with a required `vendorId`, a
+R5. `prisma/reference/schema.prisma` declares a `PlaceReference` model whose **primary key is
+    `sourceId`** — no surrogate UUID — with at least the fields `name`, `type`, `localType`,
+    `eastings`, `northings`, `postcodeArea`, `postcodeDistrict`, `populatedPlace`,
+    `districtBorough`, `countyUnitary`, `region`, `country` and `isActive`, carrying no `vendorId`
+    and no per-row timestamps, and declaring a composite index on `postcodeDistrict`, `eastings`,
+    `northings` in that order.
+
+R5a. The nearby-place query in the places repository filters `eastings` and `northings` by range
+     only, contains no raw SQL and no `$queryRaw`, and the exact Euclidean distance is computed by a
+     separately exported pure function that a unit test calls directly.
+
+R5b. After the `MK` and `RG` imports, the measured total size of `PostcodeReference` plus
+     `PlaceReference` including indexes is recorded in `build-notes.md`, and `PostcodeReference`
+     averages under **120 bytes per row** including its indexes.
+
+R6. Aheed's own `prisma/schema.prisma` declares a `CustomerAddress` model with a required `vendorId`, a
     required `userId`, and at least the fields `label`, `recipientName`, `phone`, `line1`, `line2`,
     `city`, `county`, `postcode`, `notes`, `isDefault` and `lastUsedAt`, indexed on
     `vendorId` plus `userId`.
@@ -89,17 +111,28 @@ R15. No file under `lib/reference-data/` or `scripts/sync-reference-data.ts` rea
 
 ## Sync behaviour
 
-R16. When a source's discovered version **and** checksum both equal the values already stored on
-     its `ReferenceDataset` row, the sync writes no row to `PostcodeReference` or `PlaceReference`,
-     downloads no archive, updates `lastCheckedAt`, and records a `ReferenceDataSyncRun` whose
-     `status` is `SUCCEEDED` and whose `inserted`, `updated` and `retired` counts are all `0`.
+R16. The sync exits without downloading or writing only when **both** change dimensions are
+     satisfied: the discovered version and checksum equal the values stored on the
+     `ReferenceDataset` row, **and** every currently required postcode area already has a
+     `ReferenceAreaCoverage` row for that source at that version. It then updates `lastCheckedAt`
+     and records a `ReferenceDataSyncRun` with `status` `SUCCEEDED` and `inserted`, `updated` and
+     `retired` all `0`.
+
+R16a. When the upstream version and checksum are unchanged but a required postcode area has no
+      coverage row at that version, the sync **still imports that area** — it does not report
+      `changed=false`. Areas already materialised at the current version are not re-imported.
+
+R16b. A `ReferenceAreaCoverage` row is written only after that area's import has completed
+      successfully, so a newly configured area is never reported as covered before its data is
+      present.
 
 R17. The sync verifies the downloaded archive against the published `md5` before parsing it, and
      aborts without mutating any reference row when the checksum does not match.
 
-R18. The sync rejects a parsed dataset, without mutating any reference row, when its record count
-     is below a declared per-source minimum or when a required column is absent from the parsed
-     header.
+R18. The sync rejects a parsed dataset, without mutating any reference row, when a required column
+     is absent from the parsed header, or when the parsed record count for a requested area is
+     below a declared per-source minimum. The minimum is expressed **per area**, because a
+     demand-driven import legitimately parses far fewer records than a full-GB one.
 
 R19. A sync that fails at any stage after download leaves the previously imported reference rows
      readable and their `ReferenceDataset.cacheVersion` unchanged, and records a
@@ -113,6 +146,8 @@ R21. Running the sync twice in succession against an unchanged source reports `i
 
 R22. A reference record present in a previous import and absent from the current one is marked
      `isActive = false` rather than deleted, and is counted in the run's `retired` total.
+     Retirement is scoped to the postcode areas being imported in that run, so importing `LU` never
+     retires `MK` rows that were simply not part of that pass.
 
 R23. No repository function that issues a `createMany` or `updateMany` is reachable from
      request-path code: the bulk reference-import functions are called only by
@@ -120,8 +155,14 @@ R23. No repository function that issues a `createMany` or `updateMany` is reacha
      `createMany`/`updateMany` that *is* reachable from a request runs through `getPrismaWs()`,
      never `getPrisma()`.
 
-R24. `scripts/sync-reference-data.ts` constructs its Prisma client from the bare `@prisma/client`
-     specifier, not `@prisma/client/wasm`, and accepts `--env-file` and `--source` arguments.
+R24. `scripts/sync-reference-data.ts` constructs its reference Prisma client from the generated
+     reference client's **Node** entry point, not its `/wasm` one, connects using
+     `REFERENCE_DIRECT_URL`, and accepts `--env-file`, `--source` and `--areas` arguments.
+
+R24a. The required postcode areas come from configuration (`REFERENCE_POSTCODE_AREAS`, overridable
+      per run by `--areas`), and the strings `"MK"` and `"RG"` appear in no file under
+      `prisma/reference/`, `lib/reference/`, `lib/reference-data/`, `lib/repositories/`,
+      `app/` or `features/` — adding an area is configuration, never code.
 
 R25. `.github/workflows/sync-reference-data.yml` exists, declares both a `schedule` trigger that
      fires monthly and a `workflow_dispatch` trigger, materialises its environment file from
@@ -138,21 +179,29 @@ R25b. A bootstrap procedure is documented under `docs/` naming the exact command
 
 ## Validity, eligibility and enrichment
 
-R26. Postcode validity is determined solely by the presence of an active `PostcodeReference` row.
-     No application module outside `lib/reference-data/` performs a network request to determine
-     whether a postcode is valid.
+R26. Postcode validity is determined solely by the reference service, from an active
+     `PostcodeReference` row within a materialised area. No application module outside
+     `lib/reference-data/` performs a network request to determine whether a postcode is valid.
 
-R26a. Where the `code-point-open` `ReferenceDataset` row records at least one successful sync, a
-      postcode with no matching `PostcodeReference` row, or whose matching row has
-      `isActive = false`, is reported as `INVALID_POSTCODE`.
+R26a. Where the postcode's **area is materialised** for `code-point-open`, a postcode with no
+      matching `PostcodeReference` row, or whose matching row has `isActive = false`, is reported
+      as `INVALID`.
 
-R27. When the `code-point-open` `ReferenceDataset` row records no successful sync — it is absent,
-     or its `lastSyncedAt` is null — every postcode is reported as `UNVERIFIED` rather than
-     invalid, regardless of whether a `PostcodeReference` row happens to exist for it.
+R27. A postcode whose **area is not materialised** is reported as `UNVERIFIED`, never `INVALID` —
+     not having imported an area is not evidence that a postcode in it does not exist. This holds
+     regardless of whether a row happens to exist for it.
 
 R27a. No customer-facing surface presents an `UNVERIFIED` verdict as an invalid postcode. While the
       verdict is `UNVERIFIED`, the checkout form renders no postcode validation error, permits
       manual entry of every address field, and allows the order to be placed.
+
+R27b. `UNVERIFIED` is also returned — never `INVALID`, and never an unhandled error — when the
+      reference database is unreachable, the reference client cannot be constructed, the dataset
+      has never successfully initialised, or any other infrastructure condition prevents an
+      authoritative answer. The lookup catches such failures rather than letting them propagate.
+
+R27c. The reference-service lookup is memoised per request, so a single checkout render performs at
+      most one reference-database round trip for a given postcode.
 
 R28. `lib/delivery-eligibility.ts` exports a pure function returning a discriminated union whose
      `status` is one of `INVALID_POSTCODE`, `UNVERIFIED`, `OUTSIDE_DELIVERY_AREA` or
@@ -220,7 +269,9 @@ R39. `GET /api/address/lookup` returns HTTP 400 for a missing or malformed `post
 
 R40. `GET /api/address/lookup` resolves the current vendor from the request host and reports
      `deliverable` against that vendor's own `VendorDeliveryArea` rows, so two vendors can return
-     different `deliverable` values for the same postcode.
+     different `deliverable` values for the same postcode. Nothing under `lib/reference/` or
+     `prisma/reference/` reads vendor delivery configuration — the reference service does not own
+     vendor eligibility.
 
 ## Integration
 
