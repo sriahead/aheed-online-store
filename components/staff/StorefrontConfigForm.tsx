@@ -153,12 +153,14 @@ export function StorefrontConfigForm({
     } else if (outcome.ok) {
       // Only fills an EMPTY field, same rule as checkout: never overwrite what an admin typed.
       const cityInput = document.getElementById(cityInputId);
-      if (cityInput instanceof HTMLInputElement && cityInput.value.trim() === "" && outcome.result.town) {
+      if (
+        cityInput instanceof HTMLInputElement &&
+        cityInput.value.trim() === "" &&
+        outcome.result.town
+      ) {
         cityInput.value = outcome.result.town;
       }
-      setLocationLookup(
-        outcome.result.town ? `Found: ${outcome.result.town}` : "Postcode found.",
-      );
+      setLocationLookup(outcome.result.town ? `Found: ${outcome.result.town}` : "Postcode found.");
     } else {
       setLocationLookup(null);
     }
