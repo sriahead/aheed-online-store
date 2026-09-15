@@ -1,0 +1,260 @@
+# Address lookup — reference-data framework, Code-Point Open, OS Open Names (requirements)
+
+Closes **#764**. Builds a generic reference-data sync framework with two real sources (OS Code-Point
+Open, OS Open Names), makes Code-Point the sole authority on postcode validity, consolidates the
+three existing `isDeliverable()` call sites into one delivery-eligibility service, exposes a
+provider-neutral `GET /api/address/lookup`, adds customer saved addresses, and removes checkout's
+runtime dependency on `postcodes.io`. No credential of any kind is required. See `plan.md` for the
+reasoning; `validation.md` for how each requirement below is checked.
+
+Throughout: "normalised postcode" means upper-cased with all whitespace removed (`MK92NW`);
+"display postcode" means the canonical spaced form (`MK9 2NW`).
+
+## Data model
+
+R1. `prisma/schema.prisma` declares a `ReferenceDataset` model with at least the fields
+    `sourceKey` (unique), `displayName`, `sourceVersion`, `sourceChecksum`, `lastCheckedAt`,
+    `lastSyncedAt`, `recordCount`, `refreshFrequencyDays`, `isActive`, `syncStatus`, `syncError`
+    and `cacheVersion`, and none of them carries a `vendorId`.
+
+R2. `prisma/schema.prisma` declares a `ReferenceDataSyncRun` model with at least the fields
+    `datasetId` (relation to `ReferenceDataset`), `sourceVersion`, `startedAt`, `finishedAt`,
+    `inserted`, `updated`, `retired`, `unchanged`, `status` and `errorMessage`.
+
+R3. `prisma/schema.prisma` declares a `ReferenceSyncStatus` enum whose values include `IDLE`,
+    `RUNNING`, `SUCCEEDED` and `FAILED`.
+
+R4. `prisma/schema.prisma` declares a `PostcodeReference` model with at least the fields
+    `normalisedPostcode` (unique), `displayPostcode`, `postcodeArea`, `postcodeDistrict`,
+    `eastings`, `northings`, `adminDistrictCode`, `adminCountyCode`, `countryCode`, `isActive` and
+    `sourceVersion`, carrying no `vendorId`, and declaring an index on `postcodeDistrict`.
+
+R5. `prisma/schema.prisma` declares a `PlaceReference` model with at least the fields `sourceId`
+    (unique), `name`, `type`, `localType`, `eastings`, `northings`, `postcodeDistrict`,
+    `populatedPlace`, `districtBorough`, `countyUnitary`, `region`, `country`, `isActive` and
+    `sourceVersion`, carrying no `vendorId`, and declaring a composite index on
+    `postcodeDistrict`, `eastings`, `northings` in that order.
+
+R5a. The nearby-place query in `lib/repositories/places.ts` filters `eastings` and `northings` by
+     range only, contains no raw SQL and no `$queryRaw`, and the exact Euclidean distance is
+     computed by a separately exported pure function that a unit test calls directly.
+
+R6. `prisma/schema.prisma` declares a `CustomerAddress` model with a required `vendorId`, a
+    required `userId`, and at least the fields `label`, `recipientName`, `phone`, `line1`, `line2`,
+    `city`, `county`, `postcode`, `notes`, `isDefault` and `lastUsedAt`, indexed on
+    `vendorId` plus `userId`.
+
+R6a. Every exported function in `lib/repositories/customer-addresses.ts` takes `prisma`,
+     `vendorId` and `userId` as explicit parameters, and a read issued for one vendor never
+     returns a `CustomerAddress` row belonging to another vendor or another user.
+
+R7. The existing `Address` model is unchanged, and `lib/repositories/orders.ts`'s `placeOrder`
+    still creates exactly one `Address` row per order inside its transaction.
+
+R8. Exactly one new directory exists under `prisma/migrations/`, its `migration.sql` contains no
+    `DROP INDEX` statement naming `Order_orderNumber_trgm_idx`, `Order_guestEmail_trgm_idx` or
+    `User_email_trgm_idx`, and `npx prisma migrate status` reports no pending migration against
+    the dev database.
+
+## Pure helpers
+
+R9. `lib/postcode-normalisation.ts` exports `normalisePostcode`, which maps any of `"mk9 2nw"`,
+    `" MK9  2NW "` and `"MK92NW"` to `"MK92NW"`, and `formatPostcode`, which maps `"MK92NW"` to
+    `"MK9 2NW"`. Neither function imports Prisma, `next/headers` or `node:fs`.
+
+R10. `lib/postcode-normalisation.ts` exports `postcodeDistrictOf` and `postcodeAreaOf`, which
+     return `"MK9"` and `"MK"` respectively for `"MK92NW"`, and return `null` for an input that
+     cannot be parsed as a UK postcode shape.
+
+R11. `lib/osgb36.ts` exports a pure `eastingsNorthingsToWgs84` function that converts British
+     National Grid coordinates to latitude/longitude within **10 metres** of the published value
+     for at least three known reference points, and imports no third-party package.
+
+## The reference-data source contract
+
+R12. `lib/reference-data/source.ts` exports a `ReferenceDataSource` TypeScript interface declaring
+     at least `key`, `discoverLatest`, `download`, `parse`, `validate` and `apply`.
+
+R13. `lib/reference-data/sources/code-point.ts` exports an implementation of `ReferenceDataSource`
+     whose `key` is `"code-point-open"`, and whose `discoverLatest` reads the `version` from
+     `https://api.os.uk/downloads/v1/products/CodePointOpen` and the `md5` from that product's
+     `/downloads` response, sending no credential, API key or `Authorization` header.
+
+R14. `lib/reference-data/sources/open-names.ts` exports an implementation of
+     `ReferenceDataSource` whose `key` is `"os-open-names"`, and whose `discoverLatest` reads the
+     `version` and `md5` from the `OpenNames` product on the same host, sending no credential.
+
+R15. No file under `lib/reference-data/` or `scripts/sync-reference-data.ts` reads an environment
+     variable naming an OS, Ordnance Survey, or EPC credential.
+
+## Sync behaviour
+
+R16. When a source's discovered version **and** checksum both equal the values already stored on
+     its `ReferenceDataset` row, the sync writes no row to `PostcodeReference` or `PlaceReference`,
+     downloads no archive, updates `lastCheckedAt`, and records a `ReferenceDataSyncRun` whose
+     `status` is `SUCCEEDED` and whose `inserted`, `updated` and `retired` counts are all `0`.
+
+R17. The sync verifies the downloaded archive against the published `md5` before parsing it, and
+     aborts without mutating any reference row when the checksum does not match.
+
+R18. The sync rejects a parsed dataset, without mutating any reference row, when its record count
+     is below a declared per-source minimum or when a required column is absent from the parsed
+     header.
+
+R19. A sync that fails at any stage after download leaves the previously imported reference rows
+     readable and their `ReferenceDataset.cacheVersion` unchanged, and records a
+     `ReferenceDataSyncRun` whose `status` is `FAILED` with a non-null `errorMessage`.
+
+R20. `ReferenceDataset.cacheVersion` is incremented only after a successful import, and is not
+     incremented by a run that exits unchanged or fails.
+
+R21. Running the sync twice in succession against an unchanged source reports `inserted`, `updated`
+     and `retired` all `0` on the second run.
+
+R22. A reference record present in a previous import and absent from the current one is marked
+     `isActive = false` rather than deleted, and is counted in the run's `retired` total.
+
+R23. No repository function that issues a `createMany` or `updateMany` is reachable from
+     request-path code: the bulk reference-import functions are called only by
+     `scripts/sync-reference-data.ts`, which supplies its own Node Prisma client. Any
+     `createMany`/`updateMany` that *is* reachable from a request runs through `getPrismaWs()`,
+     never `getPrisma()`.
+
+R24. `scripts/sync-reference-data.ts` constructs its Prisma client from the bare `@prisma/client`
+     specifier, not `@prisma/client/wasm`, and accepts `--env-file` and `--source` arguments.
+
+R25. `.github/workflows/sync-reference-data.yml` exists, declares both a `schedule` trigger that
+     fires monthly and a `workflow_dispatch` trigger, materialises its environment file from
+     GitHub secrets and removes that file in an `if: always()` step.
+
+R25a. `scripts/sync-reference-data.ts` populates both datasets from empty against a database whose
+      `PostcodeReference` and `PlaceReference` tables contain zero rows, with no application
+      deployment present, and `.github/workflows/sync-reference-data.yml` is invocable by
+      `workflow_dispatch` independently of either deploy workflow.
+
+R25b. A bootstrap procedure is documented under `docs/` naming the exact commands that populate
+      both datasets in a new environment, and stating that an environment which has not yet run
+      them serves `UNVERIFIED` rather than failing.
+
+## Validity, eligibility and enrichment
+
+R26. Postcode validity is determined solely by the presence of an active `PostcodeReference` row.
+     No application module outside `lib/reference-data/` performs a network request to determine
+     whether a postcode is valid.
+
+R26a. Where the `code-point-open` `ReferenceDataset` row records at least one successful sync, a
+      postcode with no matching `PostcodeReference` row, or whose matching row has
+      `isActive = false`, is reported as `INVALID_POSTCODE`.
+
+R27. When the `code-point-open` `ReferenceDataset` row records no successful sync — it is absent,
+     or its `lastSyncedAt` is null — every postcode is reported as `UNVERIFIED` rather than
+     invalid, regardless of whether a `PostcodeReference` row happens to exist for it.
+
+R27a. No customer-facing surface presents an `UNVERIFIED` verdict as an invalid postcode. While the
+      verdict is `UNVERIFIED`, the checkout form renders no postcode validation error, permits
+      manual entry of every address field, and allows the order to be placed.
+
+R28. `lib/delivery-eligibility.ts` exports a pure function returning a discriminated union whose
+     `status` is one of `INVALID_POSTCODE`, `UNVERIFIED`, `OUTSIDE_DELIVERY_AREA` or
+     `DELIVERABLE`, and which imports neither Prisma nor `next/headers`.
+
+R29. `components/layout/Header.tsx`, `features/checkout/place-order.ts` and
+     `lib/fulfilment-service.ts` each reach delivery eligibility through the new service, and
+     `lib/delivery.ts`'s `isDeliverable` has no call site outside `lib/delivery-eligibility.ts`
+     and its own tests.
+
+R30. Absence of a matching `PlaceReference` record never changes a postcode's validity or a
+     vendor's delivery eligibility for that postcode.
+
+R31. Street suggestions are drawn only from `PlaceReference` rows whose `type` is
+     `transportNetwork`, whose `postcodeDistrict` equals the postcode's district, **and** whose
+     distance from the postcode's eastings/northings is at most **250 metres**.
+
+R32. Street suggestions are deduplicated by name, ranked by ascending distance, and limited to at
+     most **3** entries.
+
+R33. When more than **8** distinct road names fall within the 250-metre radius, or when none does,
+     the lookup returns an empty street-suggestion list rather than a partial or arbitrary one.
+
+## Provider port and public API
+
+R34. `lib/address-lookup-provider.ts` exports an `AddressLookupProvider` interface whose lookup
+     method takes a postcode and resolves to an array of a normalised `AddressCandidate` type
+     exposing at most a stable source identifier, address line 1, address line 2, locality,
+     town, postcode, latitude, longitude and source.
+
+R35. `lib/address-lookup-provider.ts` exports a null provider that resolves to an empty array, and
+     that provider is the one configured for this slice.
+
+R36. The `addresses` array in the `GET /api/address/lookup` response is empty for every postcode,
+     and no street-level or locality-level suggestion appears inside it.
+
+R37. `GET /api/address/lookup?postcode=…` returns HTTP 200 with a JSON body containing the keys
+     `postcode`, `valid`, `deliverable`, `location`, `addresses` and `manualEntryAvailable`, where
+     `manualEntryAvailable` is `true` in every response.
+
+R37a. The `location` value in that response exposes exactly the keys `town`, `district`, `county`,
+      `latitude`, `longitude` and `streetSuggestions`, where `latitude` and `longitude` are WGS84
+      decimal degrees derived from the stored eastings/northings, and `streetSuggestions` is an
+      array of plain street-name strings carrying no identifier or distance.
+
+R38. The `GET /api/address/lookup` response body contains none of the strings `sourceVersion`,
+     `eastings`, `northings`, `localType`, `sourceId`, `datasetId`, `cacheVersion`, `vendorId` or
+     `userId`, and no database row identifier.
+
+R39. `GET /api/address/lookup` returns HTTP 400 for a missing or malformed `postcode` parameter —
+     rejecting it on shape and length **before** issuing any database query — and its handler
+     issues no request to `api.os.uk` on any code path.
+
+R40. `GET /api/address/lookup` resolves the current vendor from the request host and reports
+     `deliverable` against that vendor's own `VendorDeliveryArea` rows, so two vendors can return
+     different `deliverable` values for the same postcode.
+
+## Integration
+
+R41. `components/checkout/CheckoutForm.tsx` populates the `city` and `county` inputs from the
+     lookup's `location`, and leaves `line1` and `line2` empty and editable.
+
+R42. `components/checkout/CheckoutForm.tsx` does not overwrite the value of an address input the
+     user has edited since the last lookup.
+
+R43. A signed-in customer who confirms an address at checkout has a `CustomerAddress` row written
+     for that vendor and user, and placing the order still writes its own separate `Address`
+     snapshot row.
+
+R43a. Updating or deleting a `CustomerAddress` row leaves every existing `Address` snapshot row,
+      and every `Order` referencing one, unchanged — a customer correcting their saved address
+      does not alter where any past order was recorded as delivered.
+
+R44. A signed-in customer with at least one `CustomerAddress` row for the current vendor is offered
+     those addresses at checkout, and selecting one populates every address field without
+     performing a postcode lookup to reconstruct them.
+
+R45. Selecting a saved address re-evaluates postcode validity and the current vendor's delivery
+     eligibility, and surfaces a refusal when that vendor no longer delivers to it.
+
+R46. No code path writes a customer-entered address value into `PostcodeReference`,
+     `PlaceReference` or the `addresses` array of the lookup API.
+
+R47. `lib/repositories/data-rights.ts` includes `CustomerAddress` rows in both the data export and
+     the erasure path.
+
+R48. `components/staff/StorefrontConfigForm.tsx` validates its postcode against
+     `PostcodeReference` and populates its town/county fields from the lookup, and does not display
+     a delivery-eligibility verdict.
+
+R49. `lib/postcodes-api.ts`, `features/checkout/postcode-lookup.ts` and
+     `tests/postcodes-api.test.ts` no longer exist, and no file in the repository imports them.
+
+## Documentation and gates
+
+R50. `specs/architecture.md` records the reference-data framework, names Code-Point Open as the
+     authority on postcode validity, and records EPC as investigated and rejected for production
+     address lookup with the AddressBase/PAF licensing reason stated.
+
+R51. `CLAUDE.md`'s recorded Vitest baseline matches the `Test Files` and `Tests` totals a clean
+     local `npx vitest run` reports after this slice.
+
+R52. `CHANGELOG.md` updated (Gate 4).
+
+R53. `lint`, `typecheck`, `test` and `format:check` all remain green after this slice.
