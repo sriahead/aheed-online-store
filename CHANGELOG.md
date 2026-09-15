@@ -11,6 +11,10 @@ every branch merges.
 - **`/staff/fulfilment` moved next to `/staff/orders`** in both navigation surfaces
   (`components/staff/PanelNav.tsx`, the hub cards in `app/(admin)/staff/page.tsx`) — an owner
   request after using the new page (`#750`) for the first time.
+- **The Fulfilment guide now explains the Collection-method empty-slot trap has no on/off switch**
+  (`docs/store-admin-guide/admin-tabs-guide.md`) — unlike Delivery, Collection's time picker always
+  shows once Click & Collect is on, so a store with no Collection-method weekly slots shows every
+  collection customer "No slots available" with nothing to disable. Found live on staging.
 
 ### Added
 
