@@ -6,7 +6,50 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **`/staff/fulfilment` moved next to `/staff/orders`** in both navigation surfaces
+  (`components/staff/PanelNav.tsx`, the hub cards in `app/(admin)/staff/page.tsx`) — an owner
+  request after using the new page (`#750`) for the first time.
+
 ### Added
+
+- **Fulfilment scheduling for store admins** (`#750`; `specs/2026-09-14-p10-fulfilment-config-and-checkout-fixes/`). **No schema change.** `#401` (delivery slots) and `#402` (express collection) shipped their models, checkout UI and capacity logic with **no administrative surface and no seed data**, so live staging carried both feature flags `false`, zero `VendorFulfilmentSlot` rows and zero `VendorExpressSchedule` rows — neither feature could be switched on, and no time window could be authored by anyone. This was the hard blocker on the `staging → main` promotion.
+  - **New `/staff/fulfilment` page** (store admins only), structurally a copy of `/staff/delivery-areas` (`#612`), which fixed the identical "only the seed can write this" defect for `VendorDeliveryArea`. Three sections: the four `VendorConfig` settings (`offerDeliverySlots`, `expressCollectionEnabled`, `bookingWindowDays`, `slotHoldDurationMinutes`), a weekly slot editor, and express windows.
+  - **Validation is load-bearing, not cosmetic:** times must be zero-padded 24-hour `HH:mm` because both consumers compare these columns as *text* (`"9:00"` sorts after `"10:00"`), end must be strictly after start, and capacity must be at least 1 — it is the real overbooking guard `lib/repositories/orders.ts` counts against, so a zero produces a slot that renders and can never be booked.
+  - **Express controls are withheld, with an explanation, from a vendor that does not offer collection** rather than offered as a setting that could never take effect.
+  - **Seed data** for both vendors, conditional on each vendor's stored `offerCollection`. Currently unreachable — see `#755`/`#756`.
+
+### Fixed
+
+- **Checkout address lookup never worked in any deployed environment** (`#749`; same spec). `lib/postcodes-api.ts`'s `fetch` ran in the browser, where every environment's `connect-src 'self' https://*.r2.cloudflarestorage.com` blocked it before it left the page — and the caller's `catch` treated the block as a transient API failure and swallowed it with `console.warn`. Now runs behind a server action (`features/checkout/postcode-lookup.ts`) rather than widening CSP, and returns outcomes as data, since a production throw crossing a server-action boundary reaches the client as an opaque digest.
+- **The lookup also wrote into the wrong form** (`#749`). It resolved fields via `document.querySelector("form")` — the document's *first* form, which since `#748` is the fulfilment-method form rendered above the address fields. Both that call and an identical one in the `localStorage` restore now resolve from a ref to the checkout form itself.
+- **`tests/postcodes-api.test.ts` no longer reaches the public internet** (`#751`), which flaked the full suite whenever egress was slow. Rewritten against a stubbed `fetch`, which also gave the 404, 5xx, malformed-body and network-failure paths their first coverage.
+- **The vendor logo upload can finally report why it fails** (`#749`). Its rejection message was a corrupted template literal that discarded the HTTP status, and its `fetch` was unguarded inside `startTransition`, so a network throw rejected silently — the only one of the repository's four uploaders that could not say what went wrong. **Root-caused to `#755`: the R2 S3 credential pair is rejected in all three environments**, so every `getStorage()` S3 API caller — product images, bundle images, campaign banners, the vendor logo, the image pipeline, and `prisma/seed.ts` — is failing everywhere. Shopper-facing image display is unaffected because `publicUrl()` is pure string composition over `CDN_BASE_URL`, which is why nothing looked broken. Added `scripts/verify-storage-credentials.ts`, a read-only per-environment credential probe.
+- **Shared fulfilment state across cart and checkout** (`#748`; `specs/2026-09-14-p10-shared-fulfilment-state/`). **No schema change.** Three separately-reported staging defects with one cause: the Delivery / Click & Collect choice was four independent client `useState` values — two `LocationControl` instances, `CheckoutForm` and `CheckoutSummary` — stitched together by a `window` CustomEvent and a `localStorage` blob, and readable by no Server Component.
+  - **One source of truth:** the method now lives in a `fulfilment-method` cookie written by a server action (`setFulfilmentMethod`), beside the existing `delivery-postcode` cookie and with the same attributes. `lib/fulfilment-service.ts` resolves the effective method per request, reconciling the stored preference against what the vendor actually offers — a vendor with `offerCollection: false` is always `DELIVERY`, whatever the cookie holds. The header's desktop and mobile controls can no longer disagree, and the choice survives navigation.
+  - **The postcode is editable again:** the Delivery button previously opened the postcode modal *only* when no deliverable postcode was stored, so once one was set nothing on the page could reopen it. A dedicated edit control now does. Submitting a new postcode while on Click & Collect also no longer forces the shopper back to Delivery.
+  - **Trackers derive from one pure function:** `fulfilmentProgress` in `lib/cart-rules.ts` replaces `deliveryProgress`, and expresses the vendor minimum *and* the free-delivery threshold *and* the method. The cart drawer, `/cart` and `/checkout` all render from it, so the minimum-order shortfall is now visible in the cart instead of only as a static banner at checkout, and a Click & Collect cart no longer advertises "FREE Local Delivery".
+  - **Checkout stops computing money twice:** `app/(storefront)/checkout/page.tsx` now passes the method to `computeTotals` (the argument already existed and simply was not supplied), and `CheckoutSummary` became a Server Component that renders the totals it is handed. Its duplicate arithmetic had also been dropping `discountPence` entirely, so loyalty redemptions and discount codes never appeared in the summary; they do now.
+  - **"Proceed to checkout" closes the drawer on click** rather than waiting for the pathname effect, which could not fire until the `force-dynamic` checkout page finished rendering server-side.
+
+### Added
+
+- **Express SLA for Click & Collect** (`#402`; `specs/2026-09-13-p402-express-sla/`). **Schema change: one new relational model, two new `Order` columns, three migrations.**
+  - **Express Collection toggle:** `VendorConfig.expressCollectionEnabled` plus a relational `VendorExpressSchedule` model (`dayOfWeek`/`openTime`/`closeTime`, no JSON columns) define when a vendor offers ASAP pickup, distinct from the P401 shared-slot booking flow.
+  - **60-minute SLA:** `Order.isExpress`/`Order.targetFulfilmentTime` — the target is stamped only on the `PENDING_PAYMENT` → `CONFIRMED` transition (payment clearing), never at order placement, so a slow checkout never eats into staff's window.
+  - **Checkout UI:** an Express toggle renders in `SlotPicker` only when Collection is selected, an active schedule window matches the current time, and the vendor has the feature enabled.
+  - **Staff queue visibility:** `/staff/orders` renders a live countdown (`ExpressCountdown`) and highlights a row red once `targetFulfilmentTime` has passed.
+
+- **Postcode & Address Lookup** (`#613`; `specs/2026-09-13-p613-address-lookup/`). **Schema change: one new column, one migration.**
+  - **Address Lookup:** Integrated postcodes.io to validate UK postcodes and automatically fill the Town/City and County fields during checkout.
+  - **Fallback Handling:** Ensures checkout continues even if the external postcode service is unavailable.
+  - **Editable Address:** Maintains fully manual Address Line 1 and 2 fields while preventing checkout on explicitly invalid postcodes.
+
+- **Shared Fulfilment Slots** (`#401`; `specs/2026-09-13-p401-shared-fulfilment-slots/`). **Schema change: two added models, one new table, one migration.**
+  - **Unified Slot Model:** Introduced `VendorFulfilmentSlot` to manage daily recurring time windows for both `DELIVERY` and `COLLECTION` methods.
+  - **Configurable Hold Durations:** Orders placed in checkout tentatively reserve their slot with a `PENDING_PAYMENT` status. The hold automatically expires after `slotHoldDurationMinutes`, freeing the slot for other customers without cron jobs.
+  - **Prisma Native Concurrency:** Slot booking uses Prisma native Serializable transaction isolation rather than raw SQL `SELECT FOR UPDATE` to guarantee no overbooking during high concurrent load, respecting the strict no-raw-SQL domain-data rule.
 
 - **Fulfilment Foundation (Click & Collect)** (`#402`; `specs/2026-09-12-p402-fulfilment-foundation/`). **Schema change: one added enum, one new table, one migration.**
   - **Method-Aware Data:** Introduced `FulfilmentMethod` enum (`DELIVERY` | `COLLECTION`) on `Order`, allowing distinct handling of click & collect orders. Historical orders default to `DELIVERY`.
@@ -17,6 +60,41 @@ every branch merges.
 
 ### Changed
 
+- **Documentation and handoff reconciliation for #748 (Document (final) for PR #752)**:
+  - Reconciled `docs/model-handoff.md` with the real post-merge state: `#748` shipped to `staging`
+    via PR #752 (`623c24f`), the first of the three owner-reported staging defects to close;
+    `staging` is now 21 commits ahead of `main`, and **promotion is still held** — `#750` (no staff
+    configuration surface for `#401`/`#402`) remains the hard blocker, `#749` also still open.
+  - Corrected `specs/2026-09-14-p10-shared-fulfilment-state/validation.md`'s R20 row on the same
+    branch as the fix, not here — see that PR's own commit — since it was found before merge.
+  - Filed **#753** to track a live-browser check of R14/R18 that `/validate` couldn't run in that
+    session (no Chrome automation available); both are sound at the code level and called out as
+    "known-shaky" in the slice's own `build-notes.md`.
+  - Added a `CLAUDE.md` bullet on a curl cookie-jar (`-b`/`-c`) trap: a `Secure`-flagged cookie can
+    silently fail to persist for a multi-label local hostname (`srimart.localhost`) while working
+    fine for a single-label one (`localhost:8787`) — extracting `Set-Cookie` values by hand and
+    replaying them as an explicit `Cookie:` header is the reliable pattern for this repo's
+    two-vendor local testing.
+  - Updated `specs/roadmap.md`'s change log with `#748`'s shipped-to-staging row.
+  - Moved `#748` to **In Review** on Project #2 (was `In Progress`); added `#753` to the board as
+    `Backlog`/`P10`/`Low`.
+  - Corrected `CLAUDE.md`'s vitest baseline reference in `docs/model-handoff.md`
+    (`127/1618` → `128/1632`, already current in `CLAUDE.md` itself since `#748`'s own Build).
+- **Documentation and handoff reconciliation for #401/#613/#402 (Document (final) for PRs #744/#746)**:
+  - Reconciled `docs/model-handoff.md` with the real post-merge state: `staging` (`0e3c4f1`) is 14
+    commits ahead of `main` (`02d8e82`), and **promotion is explicitly held at the owner's request**
+    pending review of issues observed on staging — flagged prominently rather than left implicit.
+  - Wrote retroactive `build-notes.md` for `specs/2026-09-13-p401-shared-fulfilment-slots/` and
+    `specs/2026-09-13-p613-address-lookup/`, neither of which had one — including the real R8
+    overbooking-guarantee gap (found and fixed during #402's rebase) and #613's PR being closed as
+    superseded rather than merged.
+  - Updated `specs/roadmap.md`'s P10 "Delivery cluster" entry (shipped without `#363` landing
+    first, as originally sequenced there) and added change-log rows for PR #744, #743's closure,
+    PR #746, and #742's closure (a stale PR that would have deleted this work if merged).
+  - Moved #401/#402/#613 to **In Review** on Project #2 (were still `Backlog`).
+  - Corrected `CLAUDE.md`'s vitest baseline (`117/1557` → `127/1618`) and added a new bullet on
+    guarding live-DB test files with `it.skipIf(!process.env.DATABASE_URL)` — missed three times
+    across two slices before being written down.
 - **Documentation and handoff reconciliation for #737**:
   - Reconciled `docs/model-handoff.md` with verified staging and main git states, recorded in-flight PR #739, closed #737 (#738) and #733 (#734/#736) work, and updated owner priorities and test run baselines.
   - Updated `specs/roadmap.md` with closure entries for #737 (PR #738) on staging and promotion PR #736 on main.
@@ -38,6 +116,28 @@ every branch merges.
 
 ### Fixed
 
+- **PR #744 (Shared Fulfilment Slots, `#401`) fully green on CI** — six `quality/quality` ESLint
+  failures, none of them the Prettier issue they were first taken for. `components/checkout/SlotPicker.tsx`
+  and `features/checkout/slots.ts` imported `@prisma/client`/`@/lib/db` directly from the
+  feature/component layer, violating the ADR-004 slice 2 layering rule; split into
+  `lib/repositories/fulfilment-slots.ts` (pure, takes `prisma` explicitly) and
+  `lib/fulfilment-slots-service.ts` (request-scoped wrapper), matching the existing
+  `lib/delivery-areas-service.ts` pattern. Two `SlotPicker.tsx` section headings used `<label>`
+  with no associated control (`jsx-a11y/label-has-associated-control`); changed to `<div>`.
+  `components/layout/LocationControl.tsx`'s `react-hooks/set-state-in-effect` violation was fixed
+  separately (cherry-picked from `#743`'s own fix for the same line). Getting past lint then
+  surfaced real, pre-existing debt in `tests/slot-capacity.test.ts` and
+  `tests/concurrency-slot-booking.test.ts` that had never actually run in CI: an invalid
+  `PrismaNeon` adapter construction (a live `Pool` instance instead of a connection-string config,
+  matching `lib/db.ts`'s `getPrismaWs()`), a `tsc` error from mixing scalar FKs with a nested
+  relation write on `Order.create`, an unhandled-rejection race from firing `placeOrder` calls
+  inside the same loop as cart creation, and hardcoded non-unique ids with no row cleanup against
+  the shared dev database — now suffixed per run and guarded with
+  `it.skipIf(!process.env.DATABASE_URL)`, since CI's `quality/quality` job carries no
+  `DATABASE_URL` and would otherwise crash the whole `npm test` step on these two files.
+  **Separately (`#743`, superseded by `#744`)**: PR #743 (Postcode & Address Lookup) was closed
+  without merging — every code change it carried was already on staging via shared ancestry with
+  `#744`; this entry is the one piece of its own work (documenting the above) worth preserving.
 - **`Shop`, `Shop List` and the delivery-postcode badge are reachable on mobile** (`#718`).
   `components/layout/Header.tsx`'s "Shop"/"Shop List" nav links and
   `components/layout/PostcodeChecker.tsx`'s `badge` variant were `hidden` below the `lg` (1024px)

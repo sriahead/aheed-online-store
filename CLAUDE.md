@@ -193,6 +193,27 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
 - Object storage via the **S3-compatible API only**, behind `lib/storage` (`StorageService` port).
   No R2 SDK, no R2-specific features. Prefer `aws4fetch` over the AWS SDK (Worker bundle size).
 - DB holds relative keys; compose `${CDN_BASE_URL}/${key}` at read time.
+- **Broken S3 credentials are invisible to every check this repo has, including `/api/health`.**
+  Reads never touch the S3 API — `publicUrl()` is pure string composition over `CDN_BASE_URL` and
+  the bytes come from the CDN — so a revoked key pair breaks **only writes**, i.e. every staff
+  upload, while the storefront looks perfectly healthy. `lint`/`typecheck`/`test`/`build` execute no
+  request; `/api/health`'s `storage: { configured: true }` asserts only that the **variables are
+  present**, never that they work. Found at `#749`/`#755` (2026-09-15): the pair was rejected in
+  **dev, staging AND production simultaneously** — all three share one key pair and differ only in
+  `S3_BUCKET` — and the only visible symptom anywhere was one staff form failing. **`npx tsx
+  scripts/verify-storage-credentials.ts` is the one command that answers "do these credentials
+  actually work?"** (read-only: a `HEAD` for a key that does not exist — `404` proves the credential
+  works, `403` proves it does not). Run it before trusting any image-upload path, and after any
+  Cloudflare token rotation — the R2 keys live in **two** stores per environment (`secrets/*.vars`
+  and `wrangler secret put`), so a file-only rotation leaves the deployed Worker on the old value,
+  exactly as recorded for Neon passwords.
+- **A browser-reported storage bug does not need a browser to reproduce.** `lib/storage.ts` imports
+  only `aws4fetch` and `lib/config`, so the entire presign/PUT path runs in plain Node via `npx tsx`.
+  `#749`'s vendor-logo failure had been carried for days as "needs a browser reproduction with
+  DevTools open"; a scratch script reproduced it in one run and bisected it in three more
+  (every presign variant, a header-signed `putObject`, and a presigned GET all `403`, which is what
+  ruled out the signing options and pointed at the credentials). Check whether the failing path
+  actually depends on the browser before deferring on the browser's availability.
 - **Raster images (confirmed: `.png`) cannot be validated visually under `npm run preview` —
   accept this and check them on a deployed environment instead.** Both the staging and dev CDN
   zones enforce Cloudflare hotlink/referer protection: a request carrying `Referer:
@@ -563,8 +584,9 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  117 files / 1557 tests**, measured 2026-09-09 at the storefront-browse-discovery-completion Build) and treat any shortfall as
-  a non-result to re-run, not a pass. **This number has now been stale twice, and moved a third,
+  129 files / 1687 tests**, measured 2026-09-15 at the fulfilment-config-and-checkout-fixes Build)
+  and treat any shortfall as a non-result to re-run, not a pass. **This number has now been stale
+  twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
   `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
   `86/1019` moved to `86/1023` a few hours later in the same slice's own `/fix` (four tests added to
@@ -650,6 +672,45 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `#538` reproduced again on the full-suite run at this slice's own `/validate` and `/fix`
   re-validation, both times confirmed as the known flake by re-running the file alone (passed in
   under 3s each time).
+  Then `117/1557` moved to **`127/1618`** across the P401/P613/P402 work that shipped
+  2026-09-13/14 (PRs #744, #746): ten new files
+  (`tests/concurrency-slot-booking.test.ts`, `tests/slot-capacity.test.ts`,
+  `tests/express-sla.test.ts`, `tests/postcodes-api.test.ts`, plus this session's own
+  `lib/fulfilment-slots-service.ts`/`lib/repositories/fulfilment-slots.ts` gaining no dedicated
+  test file of their own — covered instead through the three live-DB test files above) and small
+  additions to `tests/order-confirmation-email.test.ts`/`tests/order-status-email.test.ts`
+  (one `isExpress` field each). Three of the ten new files are genuinely CI-invisible: guarded with
+  `it.skipIf(!process.env.DATABASE_URL)` (see the dedicated bullet on this above), they report as
+  **skipped**, not run, on every CI job — the `127/1618` figure is what a real `DATABASE_URL`-bearing
+  local run reports; CI's own `Test Files`/`Tests` summary line will read 3 fewer *tests run* than
+  this even on a fully green job, which is expected, not a regression.
+  Then `127/1618` moved to **`128/1632`** at the shared-fulfilment-state Build (`#748`,
+  2026-09-14): one new file (`tests/fulfilment-cookie.test.ts`) carrying nine tests, plus a net
+  **+5** in `tests/cart.test.ts` — its four `deliveryProgress` tests were *replaced* by nine
+  `fulfilmentProgress` ones, because the two-argument signature was deleted rather than kept
+  alongside. Worth noting as the mixed case where an existing file's count moves because tests were
+  rewritten, not added: a diff showing five new `it` blocks understates it, and a diff showing nine
+  overstates it. The same run surfaced **`tests/postcodes-api.test.ts` making a REAL network call
+  to `api.postcodes.io`** — it failed the full-suite run with `PostcodeApiError: This operation was
+  aborted` (its own 3s timeout) and passed in 907ms alone. That is a second, distinct full-suite
+  flake from `#538`, it is not load-related in the same way, and a unit test reaching the public
+  internet will fail whenever CI's egress is slow; filed against `#749`'s postcode work rather than
+  fixed in a slice that does not touch that file.
+  Then `128/1632` moved to **`129/1687`** at the fulfilment-config-and-checkout-fixes Build
+  (`#750`/`#749`, 2026-09-15): one new file (`tests/fulfilment-form.test.ts`) carrying 43 tests,
+  plus **twelve** more — and the split is the instructive part. Only six were hand-written, all of
+  them in `tests/postcodes-api.test.ts`, which grew from 2 to 8 while *losing* its real network call
+  (the `#751` flake recorded in the entry above is now fixed, not merely known). The other six were
+  written by nobody: `tests/operator-doc-coverage.test.ts` gained four (four per `/staff/*` route,
+  as above) and `tests/panel-token-purity.test.ts` gained two — one per new file under
+  `app/(admin)/` or `components/staff/`, here `staff/fulfilment/page.tsx` and
+  `components/staff/FulfilmentManager.tsx`. **Adding one `/staff/*` page moves this number by six
+  with no test file opened at all.** Note `tests/panel-refusal-coverage.test.ts` contributed
+  **zero** despite also walking the filesystem: it holds a fixed three `it` blocks that each loop
+  internally, so it gains no test per page. That distinction was asserted wrongly here first and
+  corrected by measuring each file alone against a stashed baseline — **a filesystem-driven test
+  file does not necessarily have a filesystem-driven test COUNT**, and which of the two a file is
+  cannot be inferred from the fact that it discovers routes.
   That earlier jump is unusually large for two files
   because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
   filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that
@@ -748,6 +809,23 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   (Next 16 removed that command).
 - `vitest.config.ts` must be `.mts` (or set `"type": "module"` in package.json) — vitest 4's native
   config loader warns/will error on ESM syntax in a file it loads as CommonJS.
+- **Any test file that constructs its own live Prisma/Neon client (`new PrismaClient({ adapter })`
+  against a real `DATABASE_URL`) must guard its test(s) with `it.skipIf(!process.env.DATABASE_URL)`
+  (or `test.skipIf(...)`), or it crashes the whole `npm test` step in CI — never just fails its own
+  test.** `.github/workflows/quality.yml`'s `quality` job sets no `DATABASE_URL` at all (checked
+  directly: `grep -n DATABASE_URL .github/workflows/*.yml` returns nothing), so
+  `new PrismaNeon({ connectionString: undefined })` throws at construction or first query, outside
+  any `it()` vitest can catch and report as a normal failure. Missed three separate times across
+  two slices before this line existed: `tests/concurrency-slot-booking.test.ts` and
+  `tests/slot-capacity.test.ts` (P401, found fixing PR #744, 2026-09-13) and
+  `tests/express-sla.test.ts` (P402, found during PR #746's pre-flight, 2026-09-14) — the first two
+  were fixed once and the third was written afterward, by a different session, without the guard,
+  proving the lesson doesn't transfer just because the fix exists elsewhere in the same repo.
+  **Verify locally by temporarily moving `.env` aside** (`mv .env .env.bak && npx vitest run
+  <file> ; mv .env.bak .env` — `.env` is what supplies `DATABASE_URL` outside a real Cloudflare
+  request context per the Config section above) and confirming the file reports **skipped**, not
+  run and not crashed; a green full-suite run alone proves nothing here, since `DATABASE_URL` is
+  always set locally.
 
 ## Server Actions (`"use server"` files) — learned the hard way
 - **A `"use server"` file may export ONLY async functions — nothing else, not even a plain constant
@@ -1286,6 +1364,25 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   match something unrelated that has its own legitimate reason to look identical — scope the search
   to the specific element a requirement is actually about, not the whole rendered page, whenever
   more than one thing on that page could plausibly carry the same attribute.
+- **`curl -b jar.txt -c jar.txt` combined with a custom `-H "Host: ..."` header can silently fail
+  to persist a `Secure`-flagged `Set-Cookie` for a multi-label local hostname, while the same
+  pattern works fine for a single-label one — with no error, just an empty jar file.** Hit at
+  `#748`'s `/validate` (2026-09-14), testing both seeded local vendor hosts under `npm run
+  preview`: `curl -c jar.txt -H "Host: localhost:8787" http://127.0.0.1:8787/...` correctly wrote
+  the returned `aheed_cart` cookie into the jar (domain `localhost`, `Secure` flag preserved), but
+  the identical pattern against `-H "Host: srimart.localhost"` produced a jar containing only the
+  file header comments — no cookie line at all — even though the response's `Set-Cookie` header was
+  present and well-formed. Every subsequent request replaying that empty jar got a **fresh**
+  guest-cart id each time (the server correctly treats "no cookie" as "no identity" and mints a new
+  one), which reads as "the cart never persists" rather than "curl never saved the cookie." The
+  fix is to skip the jar entirely for a multi-label local host: extract the value straight out of
+  the `Set-Cookie` response header (`grep -i "^set-cookie: <name>" | sed -E 's/^[Ss]et-[Cc]ookie:
+  ([^;]+);.*/\1/'`) and pass it back explicitly on every later request as `-H "Cookie: <name>=<value>;
+  ..."`, rather than relying on `-b`/`-c` at all. This matters specifically for this repo's own
+  documented two-vendor testing pattern (`validation.md`'s "Two vendors matter here" rule) — Aheed's
+  local host is single-label (`localhost:8787`) and works fine with a jar; SriMart's
+  (`srimart.localhost`) does not, so a validator who only smoke-tested the jar approach against
+  Aheed would trust it for both.
 
 ## Better Auth (`lib/auth.ts`, ADR-002) — learned the hard way
 - **A bare top-level `onRequest` key in `betterAuth({...})`'s config is accepted by TypeScript and

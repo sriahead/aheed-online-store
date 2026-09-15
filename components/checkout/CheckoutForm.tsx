@@ -1,9 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { MapPin, ShieldCheck, Sparkles, Tag, User } from "lucide-react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { MapPin, ShieldCheck, Sparkles, Tag, User, Clock } from "lucide-react";
 import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-order";
 import { inputClass, labelClass } from "@/lib/form-classes";
+import { lookupPostcodeForCheckout } from "@/features/checkout/postcode-lookup";
+import { setDeliveryPostcode, setFulfilmentMethod } from "@/features/storefront/delivery";
+import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
+import { SlotPicker } from "./SlotPicker";
 
 /**
  * Checkout form (P3b, #96), following docs/ui-ref/CheckoutModal.tsx's structure —
@@ -24,6 +28,13 @@ export function CheckoutForm({
   signedInEmail,
   redeemable,
   offerCollection,
+  initialPostcode,
+  vendorId,
+  bookingWindowDays,
+  offerDeliverySlots,
+  expressCollectionEnabled,
+  expressSchedules,
+  method,
 }: {
   signedInEmail: string | null;
   /**
@@ -34,24 +45,110 @@ export function CheckoutForm({
    */
   redeemable: { balancePoints: number; valueLabel: string; minRedeemPoints: number } | null;
   offerCollection: boolean;
+  initialPostcode?: string | null;
+  vendorId: string;
+  bookingWindowDays: number;
+  offerDeliverySlots: boolean;
+  expressCollectionEnabled?: boolean;
+  expressSchedules?: { dayOfWeek: number; openTime: string; closeTime: string }[];
+  /**
+   * #748 — resolved server-side from the shared fulfilment cookie, NOT held in
+   * local state. This component used to own a `useState` for it and broadcast
+   * changes over a `window` CustomEvent, which meant the cart, the header and
+   * this page could each believe something different. Changing the radio now
+   * writes the cookie and the server re-renders both this form and the summary
+   * from one value.
+   */
+  method: FulfilmentMethodChoice;
 }) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
+  const [, startMethodTransition] = useTransition();
 
-  // The server expects this, and it defaults to DELIVERY or nothing if collection is offered.
-  // We'll let the HTML validation enforce choice if both are offered, but here we can just use state to show/hide.
-  const [method, setMethod] = useState<"DELIVERY" | "COLLECTION">("DELIVERY");
+  const chooseMethod = (next: FulfilmentMethodChoice) => {
+    if (next === method) return;
+    const formData = new FormData();
+    formData.append("fulfilmentMethod", next);
+    startMethodTransition(async () => {
+      await setFulfilmentMethod(formData);
+    });
+  };
+
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
+
+  /**
+   * #749 — every element is resolved from THIS form, never from the document.
+   *
+   * The previous implementation used `document.querySelector("form")`, which returns the FIRST form
+   * in the document. Since #748 that is the fulfilment-method form rendered above the address
+   * fields, so a successful lookup wrote `city`/`county` into the wrong element entirely. The bug
+   * was invisible while CSP blocked the lookup from ever succeeding.
+   */
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const fieldIn = (name: string): HTMLInputElement | null => {
+    const el = formRef.current?.elements.namedItem(name);
+    return el instanceof HTMLInputElement ? el : null;
+  };
+
+  const handleLookup = async (postcode: string) => {
+    if (!postcode) return;
+    setAddressLoading(true);
+    setAddressError(null);
+
+    // Runs on the server: api.postcodes.io is blocked by this app's CSP in the browser (#749).
+    const outcome = await lookupPostcodeForCheckout(postcode);
+    const postcodeInput = fieldIn("postcode");
+
+    if (outcome.ok) {
+      const cityInput = fieldIn("city");
+      const countyInput = fieldIn("county");
+      if (cityInput && outcome.result.admin_district) {
+        cityInput.value = outcome.result.admin_district;
+      }
+      if (countyInput && outcome.result.admin_county) {
+        countyInput.value = outcome.result.admin_county;
+      }
+      postcodeInput?.setCustomValidity("");
+    } else if (outcome.reason === "not-found") {
+      setAddressError("Invalid postcode. Please enter a valid UK postcode.");
+      postcodeInput?.setCustomValidity("Invalid postcode");
+    } else {
+      // A 5xx, a timeout or a network failure. Never block checkout on a third-party lookup —
+      // the shopper can type the address themselves.
+      postcodeInput?.setCustomValidity("");
+    }
+
+    setAddressLoading(false);
+  };
+
+  useEffect(() => {
+    if (initialPostcode) {
+      // `handleLookup` sets loading/error state, which `react-hooks/set-state-in-effect` flags.
+      // Prefilling the address from a postcode the shopper already gave us is the whole point of
+      // this effect, so the rule is silenced here rather than the behaviour changed — the same
+      // resolution CLAUDE.md's Hooks section records for the self-closing drawer.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      handleLookup(initialPostcode);
+    }
+    // `handleLookup` is deliberately omitted below. It is re-created on every render, so including it
+    // would re-run this effect on every render — one server round-trip to the postcode API per
+    // render, for as long as the page is open. The effect's real trigger is a NEW postcode
+    // arriving, which `initialPostcode` expresses exactly. Same class of trap as the drawer that
+    // closed itself the moment it opened (CLAUDE.md's React & Next.js Hooks section): satisfying
+    // the dependency rule literally would change what the effect means.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPostcode]);
 
   useEffect(() => {
     const saved = localStorage.getItem("aheed_checkout_details");
     if (saved) {
       try {
         const details = JSON.parse(saved);
-        const form = document.querySelector("form");
+        // Same #749 fix as handleLookup above: this form, not the document's first one.
+        const form = formRef.current;
         if (form) {
           Object.entries(details).forEach(([key, value]) => {
-            if (key === "fulfilmentMethod") {
-              setMethod(value as "DELIVERY" | "COLLECTION");
-            }
             const el = form.elements.namedItem(key);
             if (el instanceof HTMLInputElement && !el.value && value) {
               // For radio buttons, we need to check the right one
@@ -72,21 +169,15 @@ export function CheckoutForm({
     const details = Object.fromEntries(fd.entries());
     delete details.redeemPoints;
     delete details.discountCode;
+    // #748 — the method is no longer client state, so it must not be restored
+    // from here either: the cookie is the single source of truth, and a stale
+    // localStorage copy would fight it on the next visit.
+    delete details.fulfilmentMethod;
     localStorage.setItem("aheed_checkout_details", JSON.stringify(details));
-
-    const selectedMethod = fd.get("fulfilmentMethod");
-    if (selectedMethod === "DELIVERY" || selectedMethod === "COLLECTION") {
-      setMethod(selectedMethod);
-
-      // Dispatch a custom event to notify the page that the method changed so it can update the summary
-      window.dispatchEvent(
-        new CustomEvent("fulfilment-method-changed", { detail: selectedMethod }),
-      );
-    }
   };
 
   return (
-    <form action={formAction} onChange={handleFormChange} className="space-y-6">
+    <form ref={formRef} action={formAction} onChange={handleFormChange} className="space-y-6">
       {state.error && (
         <p
           role="alert"
@@ -111,7 +202,7 @@ export function CheckoutForm({
                 name="fulfilmentMethod"
                 value="DELIVERY"
                 checked={method === "DELIVERY"}
-                onChange={() => setMethod("DELIVERY")}
+                onChange={() => chooseMethod("DELIVERY")}
                 className="h-5 w-5 text-primary focus:ring-primary border-black/20"
                 required
               />
@@ -125,7 +216,7 @@ export function CheckoutForm({
                 name="fulfilmentMethod"
                 value="COLLECTION"
                 checked={method === "COLLECTION"}
-                onChange={() => setMethod("COLLECTION")}
+                onChange={() => chooseMethod("COLLECTION")}
                 className="h-5 w-5 text-primary focus:ring-primary border-black/20"
                 required
               />
@@ -210,10 +301,51 @@ export function CheckoutForm({
               <input id="city" name="city" required className={inputClass} />
             </div>
             <div>
+              <label className={labelClass} htmlFor="county">
+                County (optional)
+              </label>
+              <input id="county" name="county" className={inputClass} />
+            </div>
+            <div className="sm:col-span-2 space-y-2">
               <label className={labelClass} htmlFor="postcode">
                 Postcode
               </label>
-              <input id="postcode" name="postcode" required className={inputClass} />
+              {addressError && <p className="text-xs font-medium text-danger">{addressError}</p>}
+              <div className="flex gap-2">
+                <input
+                  id="postcode"
+                  name="postcode"
+                  defaultValue={initialPostcode || ""}
+                  required
+                  className={inputClass}
+                  placeholder="e.g. SW1A 1AA"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = fieldIn("postcode");
+                    if (el) handleLookup(el.value);
+                  }}
+                  disabled={addressLoading}
+                  className="rounded-lg bg-black/5 px-4 py-2 text-sm font-bold text-black transition-colors hover:bg-black/10 disabled:opacity-50"
+                >
+                  {addressLoading ? "Looking up..." : "Find Address"}
+                </button>
+              </div>
+              {initialPostcode && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const fd = new FormData();
+                    fd.append("postcode", "");
+                    await setDeliveryPostcode(fd);
+                    window.location.reload();
+                  }}
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  Change postcode / Delivery area
+                </button>
+              )}
             </div>
             <div className="sm:col-span-2">
               <label className={labelClass} htmlFor="notes">
@@ -225,11 +357,28 @@ export function CheckoutForm({
         </section>
       )}
 
+      {((method === "DELIVERY" && offerDeliverySlots) || method === "COLLECTION") && (
+        <section className="space-y-3 border-t border-black/5 pt-5">
+          <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
+            <Clock className="h-4 w-4" aria-hidden />
+            {offerCollection ? "3" : "2"}. Choose a Time
+          </h2>
+          <SlotPicker
+            vendorId={vendorId}
+            method={method}
+            bookingWindowDays={bookingWindowDays}
+            required={true}
+            expressCollectionEnabled={expressCollectionEnabled}
+            expressSchedules={expressSchedules}
+          />
+        </section>
+      )}
+
       {redeemable && (
         <section className="space-y-3 border-t border-black/5 pt-5">
           <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
             <Sparkles className="h-4 w-4" aria-hidden />
-            3. Loyalty points
+            {offerCollection ? "4" : "3"}. Loyalty points
           </h2>
           <p className="text-xs text-primary-muted">
             You have <strong className="text-primary">{redeemable.balancePoints} points</strong>{" "}

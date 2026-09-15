@@ -64,14 +64,31 @@ export function VendorLogoUploader({ currentLogoUrl }: { currentLogoUrl: string 
         return;
       }
 
-      const put = await fetch(ticket.value.url, {
-        method: "PUT",
-        headers: { "Content-Type": IMAGE_CONTENT_TYPE },
-        body: blob,
-      });
+      /**
+       * #749 — the status is reported, and a network throw is caught.
+       *
+       * This was the only one of the repository's four uploaders that could not say why it had
+       * failed: the message was a corrupted template literal that discarded `put.status`, and the
+       * `fetch` was unguarded inside `startTransition`, so a thrown network error rejected silently
+       * and the UI simply did nothing. That is why a real, reproducible 403 went undiagnosed for
+       * weeks — the rejected R2 credential pair behind it is tracked separately.
+       */
+      let put: Response;
+      try {
+        put = await fetch(ticket.value.url, {
+          method: "PUT",
+          headers: { "Content-Type": IMAGE_CONTENT_TYPE },
+          body: blob,
+        });
+      } catch (cause) {
+        setError(
+          `The upload could not reach storage: ${cause instanceof Error ? cause.message : "network error"}.`,
+        );
+        return;
+      }
 
       if (!put.ok) {
-        setError("The upload was rejected by storage (\).");
+        setError(`The upload was rejected by storage (HTTP ${put.status}).`);
         return;
       }
 

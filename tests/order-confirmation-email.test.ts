@@ -32,6 +32,7 @@ const order = (overrides: Partial<WebhookOrder> = {}): WebhookOrder => ({
   vendorId: "v-aheed",
   orderNumber: "AHD-ABC123",
   status: "CONFIRMED",
+  isExpress: false,
   // P7.5b (#150/#138) defaults: no code, no points awarded. Cases that exercise
   // provenance override them explicitly, so every other case here keeps
   // asserting the pre-P7.5b money block unchanged.

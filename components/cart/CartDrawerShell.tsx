@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { ShoppingBag, X } from "lucide-react";
+import { CartDrawerContext } from "./drawer-context";
 
 /** Everything focusable we expect inside the drawer, in DOM order. */
 const FOCUSABLE =
@@ -41,6 +42,11 @@ export function CartDrawerShell({
 
   const close = useCallback(() => setOpen(false), []);
   const pathname = usePathname();
+
+  // #748 — handed to the drawer's own contents so "Proceed to checkout" can close
+  // on click rather than waiting for the pathname effect below, which cannot fire
+  // until the force-dynamic /checkout page has finished rendering server-side.
+  const drawer = useMemo(() => ({ close }), [close]);
 
   // Close the drawer automatically when navigating to another page (like /checkout or /cart)
   useEffect(() => {
@@ -168,7 +174,9 @@ export function CartDrawerShell({
                 </button>
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+              <div className="flex min-h-0 flex-1 flex-col">
+                <CartDrawerContext.Provider value={drawer}>{children}</CartDrawerContext.Provider>
+              </div>
             </div>
           </div>
         </div>

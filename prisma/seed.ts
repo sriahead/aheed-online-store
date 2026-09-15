@@ -279,6 +279,106 @@ type VendorSatellites = {
   }[];
 };
 
+/**
+ * Weekly fulfilment slots and express windows (P10, #750).
+ *
+ * `#401` and `#402` shipped `VendorFulfilmentSlot`, `VendorExpressSchedule` and the four
+ * `VendorConfig` flags that gate them with NO writer at all — not a staff page, and not this file.
+ * Live staging therefore carried both flags `false` and zero rows of either kind, so the delivery
+ * calendar and express collection could never render. `/staff/fulfilment` is the real writer; this
+ * gives a freshly seeded environment something to render before anyone opens it.
+ *
+ * WHY `offerCollection` IS READ RATHER THAN SEEDED. It is not set anywhere in this file — both
+ * vendors take Prisma's `false` default here, and the live value is whatever an admin has since
+ * chosen in Storefront's delivery rules (Aheed's staging row is `true`, SriMart's is `false`).
+ * Seeding collection slots or express windows for a vendor that does not offer collection would
+ * write rows nothing can ever render, so the collection half is conditional on the stored value.
+ *
+ * IDEMPOTENCE. `VendorFulfilmentSlot` and `VendorExpressSchedule` carry no unique constraint, so
+ * there is no natural key to upsert on. Each row is matched on the tuple that identifies it in
+ * practice — method, day and start time — and created only when absent, so a re-run adds nothing and
+ * leaves a capacity an admin has since tuned exactly as they left it.
+ */
+async function seedFulfilmentSchedule(vendorId: string) {
+  const config = await prisma.vendorConfig.findUnique({
+    where: { vendorId },
+    select: { offerCollection: true },
+  });
+  const offerCollection = config?.offerCollection ?? false;
+
+  // Weekday mornings and afternoons, plus Saturday morning — a plausible week for a local grocer
+  // rather than an exhaustive timetable. 1 = Monday.
+  const deliverySlots = [1, 2, 3, 4, 5].flatMap((dayOfWeek) => [
+    { dayOfWeek, startTime: "09:00", endTime: "12:00", capacity: 10 },
+    { dayOfWeek, startTime: "13:00", endTime: "17:00", capacity: 10 },
+  ]);
+  deliverySlots.push({ dayOfWeek: 6, startTime: "09:00", endTime: "12:00", capacity: 8 });
+
+  for (const slot of deliverySlots) {
+    const existing = await prisma.vendorFulfilmentSlot.findFirst({
+      where: {
+        vendorId,
+        method: "DELIVERY",
+        dayOfWeek: slot.dayOfWeek,
+        startTime: slot.startTime,
+      },
+      select: { id: true },
+    });
+    if (!existing) {
+      await prisma.vendorFulfilmentSlot.create({ data: { vendorId, method: "DELIVERY", ...slot } });
+    }
+  }
+
+  if (offerCollection) {
+    const collectionSlots = [1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
+      dayOfWeek,
+      startTime: "10:00",
+      endTime: "18:00",
+      capacity: 20,
+    }));
+
+    for (const slot of collectionSlots) {
+      const existing = await prisma.vendorFulfilmentSlot.findFirst({
+        where: {
+          vendorId,
+          method: "COLLECTION",
+          dayOfWeek: slot.dayOfWeek,
+          startTime: slot.startTime,
+        },
+        select: { id: true },
+      });
+      if (!existing) {
+        await prisma.vendorFulfilmentSlot.create({
+          data: { vendorId, method: "COLLECTION", ...slot },
+        });
+      }
+    }
+
+    // Express runs the same hours the shop is open for collection.
+    for (const dayOfWeek of [1, 2, 3, 4, 5, 6]) {
+      const existing = await prisma.vendorExpressSchedule.findFirst({
+        where: { vendorId, dayOfWeek, openTime: "10:00" },
+        select: { id: true },
+      });
+      if (!existing) {
+        await prisma.vendorExpressSchedule.create({
+          data: { vendorId, dayOfWeek, openTime: "10:00", closeTime: "18:00" },
+        });
+      }
+    }
+  }
+
+  // Enabling the flags is the point of the exercise: rows alone still render nothing. Express stays
+  // off for a vendor without collection, where it could never be offered anyway.
+  await prisma.vendorConfig.update({
+    where: { vendorId },
+    data: {
+      offerDeliverySlots: true,
+      expressCollectionEnabled: offerCollection,
+    },
+  });
+}
+
 async function upsertVendorSatellites(vendorId: string, s: VendorSatellites) {
   await prisma.vendorBranding.upsert({
     where: { vendorId },
@@ -297,6 +397,7 @@ async function upsertVendorSatellites(vendorId: string, s: VendorSatellites) {
       update: {},
     });
   }
+  await seedFulfilmentSchedule(vendorId);
   // Upsert by (vendorId, key) so re-running never duplicates a tier and never
   // clobbers a threshold an admin has since tuned away from the seed value...
   // except that it does update, deliberately: the seed is the declared baseline,

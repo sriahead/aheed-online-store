@@ -8,6 +8,7 @@ import { getEnv } from "@/lib/config";
 import { CartContents } from "@/components/cart/CartContents";
 import { MergePrompt } from "@/components/cart/MergePrompt";
 import { parseUnavailableNames } from "@/lib/bundle-notice";
+import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 
 /**
  * Canonical cart URL (P3a, #93). The drawer is the primary surface, but this
@@ -29,6 +30,7 @@ export default async function CartPage({
     searchParams,
   ]);
   const summary = await getCartRepository().getSummary(identity);
+  const fulfilmentMethod = await getFulfilmentMethod();
   const cdnBaseUrl = getEnv().CDN_BASE_URL ?? "";
   // P8.5c (#347): "Add all N to basket" adds what it can and names what it
   // couldn't, rather than silently delivering a partial bundle.
@@ -77,6 +79,8 @@ export default async function CartPage({
       <div className="flex min-h-[24rem] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white">
         <CartContents
           summary={summary}
+          method={fulfilmentMethod}
+          minimumOrderPence={vendor?.minimumOrderPence ?? 0}
           freeDeliveryThresholdPence={vendor?.freeDeliveryThresholdPence ?? null}
           localityName={vendor?.localityName ?? ""}
           cdnBaseUrl={cdnBaseUrl}

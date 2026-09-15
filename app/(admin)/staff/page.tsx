@@ -20,6 +20,7 @@ import {
   TicketPercent,
   TrendingUp,
   Truck,
+  CalendarClock,
   Users,
 } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
@@ -95,6 +96,19 @@ export default async function StaffHomePage() {
             Work the queue, search past orders, and open one for its full history.
           </p>
         </Link>
+
+        {isAdmin && (
+          <Link
+            href="/staff/fulfilment"
+            className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+          >
+            <CalendarClock className="mb-3 h-6 w-6 text-accent" aria-hidden />
+            <p className="font-semibold text-primary">Fulfilment</p>
+            <p className="mt-1 text-sm text-primary-muted">
+              Delivery and collection time slots, and express collection hours.
+            </p>
+          </Link>
+        )}
 
         <Link
           href="/staff/products"

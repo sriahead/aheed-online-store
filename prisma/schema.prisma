@@ -135,6 +135,7 @@ model Vendor {
   config                    VendorConfig?
   location                  VendorLocation?
   deliveryAreas             VendorDeliveryArea[]
+  fulfilmentSlots           VendorFulfilmentSlot[]
   categories                Category[]
   products                  Product[]
   inventory                 Inventory[]
@@ -165,6 +166,7 @@ model Vendor {
   listNormalisationAttempts ListNormalisationAttempt[]
   brands                    Brand[]
   vendorThemes              VendorTheme[]
+  vendorExpressSchedules    VendorExpressSchedule[]
 }
 
 // P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
@@ -260,6 +262,21 @@ model Theme {
   vendorBrandings VendorBranding[]
 }
 
+model VendorFulfilmentSlot {
+  id        String           @id @default(uuid())
+  vendorId  String
+  vendor    Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  method    FulfilmentMethod
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  capacity  Int
+
+  orders Order[]
+
+  @@index([vendorId, method, dayOfWeek])
+}
+
 // #714 Fix — Vendor-scoped saved themes. Mirrors Theme's brand primitives but scoped to a single tenant.
 model VendorTheme {
   id              String   @id @default(uuid())
@@ -346,6 +363,10 @@ model VendorConfig {
   // no backfill, and loyaltyEnabled defaults OFF so the feature ships dark for any
   // vendor that hasn't opted in.
   loyaltyEnabled             Boolean  @default(false)
+  bookingWindowDays          Int      @default(14)
+  slotHoldDurationMinutes    Int      @default(15)
+  offerDeliverySlots         Boolean  @default(false)
+  expressCollectionEnabled   Boolean  @default(false)
   pointsPerPoundEarned       Int      @default(1) // points per whole £1 of eligible spend
   pencePerPointRedeemed      Int      @default(1) // 100 points = £1
   minRedeemPoints            Int      @default(100) // below this, redemption isn't offered
@@ -801,6 +822,7 @@ model Address {
   line1         String
   line2         String?
   city          String
+  county        String?
   postcode      String
   notes         String?
   createdAt     DateTime @default(now())
@@ -822,41 +844,46 @@ model Address {
 // carries the full rationale. Consequence: `prisma migrate diff` may report drift
 // that is not drift, and `prisma migrate dev` may propose DROPPING them. Keep them.
 model Order {
-  id                String                  @id @default(uuid())
-  vendorId          String
-  vendor            Vendor                  @relation(fields: [vendorId], references: [id])
-  orderNumber       String                  @unique
+  id                   String                  @id @default(uuid())
+  vendorId             String
+  vendor               Vendor                  @relation(fields: [vendorId], references: [id])
+  orderNumber          String                  @unique
   // P9.1 (#427/#428) — a guest order's actual credential. The order number is
   // NOT one: it appears in emails, shared links, browser history and support
   // threads, so knowing it must not return a name and a residential address.
   // Nullable because every order placed before this migration has none; those
   // guests fall back to /orders/lookup (order number + email). Never selected
   // into OrderSummary — see findOrderForViewer.
-  confirmationToken String?                 @unique
-  userId            String?
-  user              User?                   @relation(fields: [userId], references: [id])
-  guestEmail        String?
-  addressId         String
-  address           Address                 @relation(fields: [addressId], references: [id])
-  fulfilmentMethod  FulfilmentMethod        @default(DELIVERY)
-  status            OrderStatus             @default(PENDING_PAYMENT)
-  currency          String                  @default("GBP")
-  subtotalPence     Int
+  confirmationToken    String?                 @unique
+  userId               String?
+  user                 User?                   @relation(fields: [userId], references: [id])
+  guestEmail           String?
+  addressId            String
+  address              Address                 @relation(fields: [addressId], references: [id])
+  fulfilmentMethod     FulfilmentMethod        @default(DELIVERY)
+  fulfilmentSlotId     String?
+  fulfilmentSlot       VendorFulfilmentSlot?   @relation(fields: [fulfilmentSlotId], references: [id])
+  fulfilmentDate       DateTime?
+  isExpress            Boolean                 @default(false)
+  targetFulfilmentTime DateTime?               @db.Timestamptz(3)
+  status               OrderStatus             @default(PENDING_PAYMENT)
+  currency             String                  @default("GBP")
+  subtotalPence        Int
   // P5a (#135) — a GENERIC discount column, not a points-specific one: P5b's
   // discount codes reduce the same total and must not need a second column and a
   // second arithmetic rule. The order money identity is
   // subtotalPence - discountPence + deliveryFeePence = totalPence.
-  discountPence     Int                     @default(0)
-  deliveryFeePence  Int
-  totalPence        Int
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
-  items             OrderItem[]
-  payment           Payment?
-  statusEvents      OrderStatusEvent[]
-  loyaltyEntries    LoyaltyLedgerEntry[]
-  discountUse       DiscountRedemption?
-  bindingRefusals   PaymentBindingRefusal[]
+  discountPence        Int                     @default(0)
+  deliveryFeePence     Int
+  totalPence           Int
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  items                OrderItem[]
+  payment              Payment?
+  statusEvents         OrderStatusEvent[]
+  loyaltyEntries       LoyaltyLedgerEntry[]
+  discountUse          DiscountRedemption?
+  bindingRefusals      PaymentBindingRefusal[]
 
   @@index([vendorId, createdAt])
   @@index([vendorId, status, createdAt])
@@ -1310,4 +1337,13 @@ model ListNormalisationAttempt {
   createdAt DateTime @default(now())
 
   @@index([vendorId, ipHash, createdAt])
+}
+
+model VendorExpressSchedule {
+  id        String @id @default(uuid())
+  vendorId  String
+  vendor    Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  dayOfWeek Int // 0 = Sunday, 1 = Monday...
+  openTime  String // HH:mm
+  closeTime String // HH:mm
 }

@@ -1,122 +1,157 @@
 "use client";
 
-import { useState, useRef, useEffect, useTransition } from "react";
-import { Truck, MapPin, Store, Check, X } from "lucide-react";
-import { setDeliveryPostcode } from "@/features/storefront/delivery";
+import { useRef, useEffect, useState, useTransition } from "react";
+import { Truck, MapPin, Store, Check, Pencil } from "lucide-react";
+import { setDeliveryPostcode, setFulfilmentMethod } from "@/features/storefront/delivery";
+import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
 
+/**
+ * Header delivery / Click & Collect control.
+ *
+ * #748 — `mode` used to be local `useState`. That made this component the OWNER
+ * of the fulfilment method, which it cannot be: `Header` renders it TWICE
+ * (desktop and mobile), so the two instances held independent state and could
+ * disagree, and nothing server-rendered — the cart drawer, `/cart`, `/checkout` —
+ * could read it at all. The method now arrives as a prop resolved by
+ * `lib/fulfilment-service.ts` from a cookie, and the toggle WRITES that cookie
+ * through a server action. The two instances therefore always agree, and the
+ * choice survives navigation.
+ *
+ * Both controls are real `<form>` submissions, so the toggle works with client
+ * JavaScript disabled — same posture as the postcode form it sits beside.
+ */
 export function LocationControl({
   postcode,
   deliverable,
   offerCollection,
+  method,
 }: {
   postcode: string | null;
   deliverable: boolean | null;
   offerCollection: boolean;
+  method: FulfilmentMethodChoice;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
-  const defaultMode =
-    postcode && deliverable ? "DELIVERY" : offerCollection ? "COLLECTION" : "DELIVERY";
-  const [mode, setMode] = useState<"DELIVERY" | "COLLECTION">(defaultMode);
-
   const [isPending, startTransition] = useTransition();
   const [isDirty, setIsDirty] = useState(false);
+  const hasDeliverablePostcode = Boolean(postcode && deliverable);
 
+  // Close the modal once a submitted postcode comes back deliverable. This
+  // deliberately no longer touches the fulfilment method: it used to force
+  // DELIVERY here, so a shopper who had chosen Click & Collect and then edited
+  // their postcode was silently switched back to Delivery (#748).
   useEffect(() => {
-    // Automatically manage modal state and mode based on incoming server state once loading finishes
     if (isPending) return;
-
-    if (postcode && deliverable) {
-      if (dialogRef.current?.open) {
-        dialogRef.current.close();
-      }
-      // eslint-disable-next-line
-      setMode("DELIVERY");
-    } else if (postcode && deliverable === false) {
-      if (offerCollection) {
-        // eslint-disable-next-line
-        setMode("COLLECTION");
-      }
+    if (hasDeliverablePostcode && dialogRef.current?.open) {
+      dialogRef.current.close();
     }
-  }, [postcode, deliverable, isPending, offerCollection]);
+  }, [hasDeliverablePostcode, isPending]);
 
   const openModal = () => {
     setIsDirty(false);
     dialogRef.current?.showModal();
   };
+  const closeModal = () => dialogRef.current?.close();
 
-  const closeModal = () => {
-    dialogRef.current?.close();
-    if (!(postcode && deliverable) && offerCollection) {
-      setMode("COLLECTION");
-    }
-  };
+  const toggleClass = (active: boolean) =>
+    `flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
+      active
+        ? "bg-white text-primary shadow-sm border border-black/5"
+        : "text-black/60 hover:text-black"
+    }`;
+
+  const deliveryLabel =
+    method === "DELIVERY" && hasDeliverablePostcode ? `Delivery · ${postcode}` : "Delivery";
 
   return (
     <div className="flex h-full items-center">
       {offerCollection ? (
         <div className="flex bg-surface-muted rounded-xl p-1 border border-black/10">
-          <button
-            type="button"
-            onClick={() => setMode("COLLECTION")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
-              mode === "COLLECTION"
-                ? "bg-white text-primary shadow-sm border border-black/5"
-                : "text-black/60 hover:text-black"
-            }`}
-          >
-            <Store className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Click & Collect</span>
-            <span className="sm:hidden">Collect</span>
-          </button>
+          {/*
+            Bound straight to the server action — NOT to a client function — so
+            the toggle submits with client JavaScript disabled. The chosen value
+            rides on the submitting button's own name/value pair.
+          */}
+          <form action={setFulfilmentMethod}>
+            <button
+              type="submit"
+              name="fulfilmentMethod"
+              value="COLLECTION"
+              className={toggleClass(method === "COLLECTION")}
+            >
+              <Store className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Click &amp; Collect</span>
+              <span className="sm:hidden">Collect</span>
+            </button>
+          </form>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (postcode && deliverable) {
-                setMode("DELIVERY");
-              } else {
-                openModal();
-              }
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
-              mode === "DELIVERY"
-                ? "bg-white text-primary shadow-sm border border-black/5"
-                : "text-black/60 hover:text-black"
-            }`}
-          >
-            {mode === "DELIVERY" && postcode && deliverable ? (
-              <Check className="w-3.5 h-3.5 text-action" />
-            ) : (
+          {hasDeliverablePostcode ? (
+            <form action={setFulfilmentMethod}>
+              <button
+                type="submit"
+                name="fulfilmentMethod"
+                value="DELIVERY"
+                className={toggleClass(method === "DELIVERY")}
+              >
+                {method === "DELIVERY" ? (
+                  <Check className="w-3.5 h-3.5 text-action" />
+                ) : (
+                  <Truck className="w-3.5 h-3.5" />
+                )}
+                <span className="hidden sm:inline">{deliveryLabel}</span>
+                <span className="sm:hidden">{method === "DELIVERY" ? postcode : "Delivery"}</span>
+              </button>
+            </form>
+          ) : (
+            // No usable postcode yet, so ask for one rather than selecting a
+            // method the shopper cannot complete. A plain button because the
+            // modal it opens is `<dialog>.showModal()`, which needs JS anyway —
+            // there is no no-JS behaviour being given up here.
+            <button type="button" onClick={openModal} className={toggleClass(false)}>
               <Truck className="w-3.5 h-3.5" />
-            )}
-            <span className="hidden sm:inline">
-              {mode === "DELIVERY" && postcode && deliverable
-                ? `Delivery · ${postcode}`
-                : "Delivery"}
-            </span>
-            <span className="sm:hidden">
-              {mode === "DELIVERY" && postcode && deliverable ? postcode : "Delivery"}
-            </span>
-          </button>
+              <span className="hidden sm:inline">Delivery</span>
+              <span className="sm:hidden">Delivery</span>
+            </button>
+          )}
+
+          {/*
+            #748 — the postcode was previously un-editable: the Delivery button
+            opened the modal ONLY when no deliverable postcode was stored, so once
+            one was set nothing on the page could reopen it. This is that missing
+            affordance, and it is separate from the method toggle on purpose —
+            changing where you live is not the same action as changing how you
+            receive the order.
+          */}
+          {postcode && (
+            <button
+              type="button"
+              onClick={openModal}
+              aria-label={`Change delivery postcode (currently ${postcode})`}
+              title="Change postcode"
+              className="flex items-center px-2 text-black/60 transition-colors hover:text-primary"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       ) : (
         <button
           type="button"
           onClick={openModal}
           className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10 w-full sm:w-auto h-full"
-          title="Check availability"
+          title={hasDeliverablePostcode ? "Change postcode" : "Check availability"}
         >
-          {postcode && deliverable ? (
+          {hasDeliverablePostcode ? (
             <Check className="w-4 h-4 text-action" />
           ) : (
             <Truck className="w-4 h-4 text-primary" />
           )}
           <span className="hidden sm:inline">
-            {postcode && deliverable ? `Delivery · ${postcode}` : "Check delivery availability"}
+            {hasDeliverablePostcode ? `Delivery · ${postcode}` : "Check delivery availability"}
           </span>
           <span className="sm:hidden truncate">
-            {postcode && deliverable ? `Delivery · ${postcode}` : "Check delivery"}
+            {hasDeliverablePostcode ? `Delivery · ${postcode}` : "Check delivery"}
           </span>
         </button>
       )}
@@ -184,7 +219,7 @@ export function LocationControl({
                 {offerCollection && (
                   <p className="flex items-center gap-1.5 text-sm font-bold text-primary mt-3">
                     <Check className="w-4 h-4 text-action" />
-                    Click & Collect is still available
+                    Click &amp; Collect is still available
                   </p>
                 )}
               </div>
