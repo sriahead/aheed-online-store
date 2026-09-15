@@ -4,9 +4,10 @@ import { useActionState, useEffect, useRef, useState, useTransition } from "reac
 import { MapPin, ShieldCheck, Sparkles, Tag, User, Clock } from "lucide-react";
 import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-order";
 import { inputClass, labelClass } from "@/lib/form-classes";
-import { lookupPostcodeForCheckout } from "@/features/checkout/postcode-lookup";
+import { lookupAddressForCheckout } from "@/features/checkout/address-lookup";
 import { setDeliveryPostcode, setFulfilmentMethod } from "@/features/storefront/delivery";
 import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
+import type { CustomerAddressRow } from "@/lib/repositories/customer-addresses";
 import { SlotPicker } from "./SlotPicker";
 
 /**
@@ -35,6 +36,7 @@ export function CheckoutForm({
   expressCollectionEnabled,
   expressSchedules,
   method,
+  savedAddresses = [],
 }: {
   signedInEmail: string | null;
   /**
@@ -60,6 +62,14 @@ export function CheckoutForm({
    * from one value.
    */
   method: FulfilmentMethodChoice;
+  /**
+   * #764 — addresses this signed-in shopper has confirmed before. Always empty for a guest.
+   *
+   * Offered rather than applied: picking one fills the form, and the shopper can still edit every
+   * field afterwards. Nothing is preselected, because silently populating an address a returning
+   * shopper did not choose is how an order goes to last year's flat.
+   */
+  savedAddresses?: CustomerAddressRow[];
 }) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
   const [, startMethodTransition] = useTransition();
@@ -73,8 +83,20 @@ export function CheckoutForm({
     });
   };
 
+  const [savedAddressError, setSavedAddressError] = useState<string | null>(null);
   const [addressLoading, setAddressLoading] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
+  /** Street names near this postcode, offered as hints on Address line 1 (#764). Never auto-filled. */
+  const [streetSuggestions, setStreetSuggestions] = useState<string[]>([]);
+
+  /**
+   * Fields the shopper has typed into since the last lookup (#764).
+   *
+   * A lookup must never overwrite something a person has already corrected — that is the behaviour
+   * that makes an autofill feel like it is fighting you. Tracked in a ref rather than state
+   * because nothing renders from it and a re-render on every keystroke would be wasteful.
+   */
+  const editedFields = useRef<Set<string>>(new Set());
 
   /**
    * #749 — every element is resolved from THIS form, never from the document.
@@ -91,32 +113,102 @@ export function CheckoutForm({
     return el instanceof HTMLInputElement ? el : null;
   };
 
+  /**
+   * Fill a field from a lookup, unless the shopper has already touched it (#764).
+   *
+   * An empty field is always safe to fill. A field the shopper typed into is never overwritten,
+   * even if it is "wrong" by the lookup's reckoning — they know their own address better than a
+   * dataset does.
+   */
+  const fillIfUntouched = (name: string, value: string | null) => {
+    if (!value) return;
+    const input = fieldIn(name);
+    if (!input) return;
+    if (editedFields.current.has(name)) return;
+    if (input.value.trim() !== "") return;
+    input.value = value;
+  };
+
+  /**
+   * Apply a saved address to the form, then re-check it (#764).
+   *
+   * Two things happen, and the second is the important one. Filling the fields is the convenience;
+   * **re-validating** is the correctness. A saved address is a snapshot of what was true when the
+   * shopper last ordered, and the vendor's delivery areas can have changed since — so a returning
+   * customer must not be allowed to sail through with an address this shop no longer serves.
+   * `handleLookup` re-runs postcode validity AND the current vendor's delivery eligibility.
+   *
+   * Every field is written unconditionally here, unlike a lookup: the shopper explicitly chose
+   * this address, so overwriting what is in the form is exactly what they asked for. The edited-
+   * field record is cleared for the same reason.
+   */
+  const applySavedAddress = async (id: string) => {
+    const saved = savedAddresses.find((address) => address.id === id);
+    if (!saved) return;
+
+    setSavedAddressError(null);
+    editedFields.current.clear();
+
+    const assign = (name: string, value: string | null) => {
+      const input = fieldIn(name);
+      if (input) input.value = value ?? "";
+    };
+
+    assign("recipientName", saved.recipientName);
+    assign("phone", saved.phone);
+    assign("line1", saved.line1);
+    assign("line2", saved.line2);
+    assign("city", saved.city);
+    assign("county", saved.county);
+    assign("postcode", saved.postcode);
+    assign("notes", saved.notes);
+
+    // Re-check against the CURRENT vendor configuration, not against whatever was true when this
+    // address was saved.
+    const outcome = await lookupAddressForCheckout(saved.postcode);
+    if (outcome.ok && !outcome.result.deliverable) {
+      setSavedAddressError(
+        `We no longer deliver to ${outcome.result.postcode}. Choose another address, or enter a new one.`,
+      );
+    }
+  };
+
   const handleLookup = async (postcode: string) => {
     if (!postcode) return;
     setAddressLoading(true);
     setAddressError(null);
 
-    // Runs on the server: api.postcodes.io is blocked by this app's CSP in the browser (#749).
-    const outcome = await lookupPostcodeForCheckout(postcode);
+    // Runs on the server for two reasons: this app's CSP blocks outbound browser calls (#749), and
+    // since #764 the answer comes from our own reference tables rather than any third party.
+    const outcome = await lookupAddressForCheckout(postcode);
     const postcodeInput = fieldIn("postcode");
 
     if (outcome.ok) {
-      const cityInput = fieldIn("city");
-      const countyInput = fieldIn("county");
-      if (cityInput && outcome.result.admin_district) {
-        cityInput.value = outcome.result.admin_district;
+      const { status, town, county, streetSuggestions: streets } = outcome.result;
+
+      // INVALID_POSTCODE is the only verdict that contradicts the shopper, and it is only ever
+      // reached when reference data IS loaded and genuinely has no such postcode. UNVERIFIED —
+      // this environment has not imported the data yet — must never surface as a validation
+      // error: it is our gap, not their mistake.
+      if (status === "INVALID_POSTCODE") {
+        setAddressError("That postcode doesn't look right. Please check it, or enter your address manually."); // prettier-ignore
+        postcodeInput?.setCustomValidity("Invalid postcode");
+      } else {
+        postcodeInput?.setCustomValidity("");
+        fillIfUntouched("city", town);
+        fillIfUntouched("county", county);
       }
-      if (countyInput && outcome.result.admin_county) {
-        countyInput.value = outcome.result.admin_county;
-      }
-      postcodeInput?.setCustomValidity("");
-    } else if (outcome.reason === "not-found") {
-      setAddressError("Invalid postcode. Please enter a valid UK postcode.");
-      postcodeInput?.setCustomValidity("Invalid postcode");
+
+      // Hints only, and only on the address line the shopper still completes themselves. These say
+      // where the postcode is, never that a property is on that street, which is why they are a
+      // datalist rather than a value.
+      setStreetSuggestions(status === "INVALID_POSTCODE" ? [] : streets);
     } else {
-      // A 5xx, a timeout or a network failure. Never block checkout on a third-party lookup —
-      // the shopper can type the address themselves.
+      // Malformed input, or a lookup we could not complete. Never block checkout on either — the
+      // shopper can type the address themselves, which is the whole point of manual entry always
+      // being available.
       postcodeInput?.setCustomValidity("");
+      setStreetSuggestions([]);
     }
 
     setAddressLoading(false);
@@ -165,6 +257,14 @@ export function CheckoutForm({
   }, []);
 
   const handleFormChange = (e: React.FormEvent<HTMLFormElement>) => {
+    // #764 — remember which address fields the shopper has touched, so a later lookup cannot
+    // overwrite them. Recorded here rather than per-input because this handler already sees every
+    // change in the form.
+    const target = e.target;
+    if (target instanceof HTMLInputElement && target.name) {
+      editedFields.current.add(target.name);
+    }
+
     const fd = new FormData(e.currentTarget);
     const details = Object.fromEntries(fd.entries());
     delete details.redeemPoints;
@@ -276,6 +376,43 @@ export function CheckoutForm({
             <MapPin className="h-4 w-4" aria-hidden />
             {offerCollection ? "2" : "2"}. Delivery address &amp; instructions
           </h2>
+          {savedAddresses.length > 0 && (
+            <div className="rounded-xl border border-black/10 bg-surface-muted p-4">
+              <label className={labelClass} htmlFor="savedAddress">
+                Use a saved address
+              </label>
+              <select
+                id="savedAddress"
+                // Deliberately NOT part of the submitted form data: this control only fills the
+                // real address inputs below, which remain the single source of what is submitted.
+                // A shopper who picks one and then edits a field sends what they edited.
+                name="savedAddressPicker"
+                className={inputClass}
+                defaultValue=""
+                onChange={(e) => {
+                  if (e.target.value) void applySavedAddress(e.target.value);
+                }}
+              >
+                <option value="">Enter a new address</option>
+                {savedAddresses.map((address) => (
+                  <option key={address.id} value={address.id}>
+                    {[address.label, address.line1, address.city, address.postcode]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </option>
+                ))}
+              </select>
+              {savedAddressError && (
+                <p role="alert" className="mt-2 text-sm font-medium text-danger">
+                  {savedAddressError}
+                </p>
+              )}
+              <p className="mt-2 text-xs text-primary-muted">
+                You can change any of the details below after choosing.
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className={labelClass} htmlFor="line1">
@@ -286,7 +423,26 @@ export function CheckoutForm({
                 name="line1"
                 required={method === "DELIVERY"}
                 className={inputClass}
+                // #764 — nearby street names offered as browser suggestions. A datalist SUGGESTS
+                // without filling: the field stays empty and fully editable, the shopper still
+                // types their house number, and an absent or unhelpful hint costs nothing. Putting
+                // these in the field's value instead would assert that the property is on that
+                // street, which the data cannot support.
+                list={streetSuggestions.length > 0 ? "line1-street-suggestions" : undefined}
               />
+              {streetSuggestions.length > 0 && (
+                <>
+                  <datalist id="line1-street-suggestions">
+                    {streetSuggestions.map((street) => (
+                      <option key={street} value={street} />
+                    ))}
+                  </datalist>
+                  <p className="mt-1 text-xs text-primary-muted">
+                    Streets near this postcode: {streetSuggestions.join(", ")}. Add your house name
+                    or number.
+                  </p>
+                </>
+              )}
             </div>
             <div className="sm:col-span-2">
               <label className={labelClass} htmlFor="line2">

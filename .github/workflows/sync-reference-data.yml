@@ -1,0 +1,97 @@
+name: sync-reference-data
+
+# #764 — keep the OS reference datasets current.
+#
+# WHY THIS IS A GITHUB ACTIONS SCHEDULE AND NOT A CLOUDFLARE CRON TRIGGER.
+# Same reason as fill-product-images.yml, plus one of its own. The OpenNext-
+# generated worker exports only `fetch`, so a [triggers] block in the root
+# wrangler.toml would fire into a Worker with no handler. And this work could not
+# run there anyway: Code-Point Open is ~1.7M rows and OS Open Names is a 103 MB
+# archive, neither of which decompresses inside a 128 MB isolate. A plain Node
+# runner has the memory, and nothing here needs a Worker binding — the OS
+# downloads API is unauthenticated and the database is reached over DIRECT_URL.
+#
+# workers/scheduler is deliberately not involved. It exists for short,
+# database-light domain jobs polled every fifteen minutes. Splitting the cheap
+# "has the source changed?" check onto it and the ingest onto here would add a
+# mechanism boundary for no benefit: the check is one unauthenticated GET that
+# this job performs itself in a second before exiting.
+#
+# NO CREDENTIALS ARE NEEDED FOR THE SOURCES. Both products are OS OpenData,
+# reachable with no API key. The only secret here is the database URL.
+
+on:
+  schedule:
+    # 04:00 UTC on the 3rd of each month. Monthly because Code-Point Open is
+    # published quarterly and Open Names a few times a year, so a monthly check
+    # is already several times more often than either changes; the 3rd avoids
+    # the month-boundary crowd, and 04:00 is quiet.
+    - cron: "0 4 3 * *"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Which GitHub environment's DIRECT_URL to sync"
+        type: choice
+        options: [staging, production]
+        default: staging
+      source:
+        description: "Limit to one source (blank = all)"
+        required: false
+        default: ""
+      force:
+        description: "Re-import even if the published version is unchanged"
+        type: boolean
+        default: false
+
+# A second run against the same database while one is importing would have both
+# writing the same reference rows. Queue rather than cancel: an interrupted
+# import is not harmful (nothing is deleted, and activation is the last step),
+# but finishing is still better than restarting.
+concurrency:
+  group: sync-reference-data-${{ inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # Scheduled runs keep production current; a dispatch can target either.
+    environment: ${{ inputs.environment || 'production' }}
+    # Open Names parses to hundreds of thousands of records and the first import
+    # of Code-Point writes ~1.7M rows, so the default 360-minute cap is generous
+    # but the job should never approach it. A much lower ceiling would make a
+    # slow-but-healthy first run look like a failure.
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx prisma generate
+
+      # The script takes an explicit --env-file rather than reading ambient env,
+      # because naming the target file is what makes the environment impossible
+      # to get wrong by accident (CLAUDE.md, #119 and P5a). CI has no secrets
+      # file, so one is materialised from the GitHub environment's secrets and
+      # removed again in the same job.
+      #
+      # Quoted values: CLAUDE.md's env-format rule — an unquoted connection
+      # string with a trailing character has silently broken parsing here.
+      - name: Materialise the environment file
+        run: |
+          umask 077
+          cat > "$RUNNER_TEMP/target.vars" <<VARS
+          DIRECT_URL="${{ secrets.DIRECT_URL }}"
+          VARS
+
+      - name: Synchronise reference data
+        run: |
+          npx tsx scripts/sync-reference-data.ts \
+            --env-file "$RUNNER_TEMP/target.vars" \
+            ${{ inputs.source && format('--source {0}', inputs.source) || '' }} \
+            ${{ inputs.force && '--force' || '' }}
+
+      # `always()` so an interrupted or failed run never leaves a file holding
+      # a real connection string behind on the runner.
+      - name: Remove the environment file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/target.vars"

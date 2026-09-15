@@ -19,7 +19,7 @@ import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getRequestCartSummary } from "@/lib/cart-summary";
-import { isDeliverable } from "@/lib/delivery";
+import { isPostcodeDeliverable } from "@/lib/delivery-eligibility-service";
 import { DELIVERY_POSTCODE_COOKIE } from "@/lib/delivery-cookie";
 import { CartDrawerShell } from "@/components/cart/CartDrawerShell";
 import { CartContents } from "@/components/cart/CartContents";
@@ -103,9 +103,13 @@ export async function Header({
   // stored; the verdict is recomputed every render against the vendor's CURRENT
   // prefixes, so extending a delivery area doesn't leave a shopper holding a
   // stale "we don't deliver to you".
+  // #764: the verdict now comes from the one delivery-eligibility service rather than this
+  // component calling `isDeliverable` itself. The badge's behaviour is unchanged — `deliverable`
+  // is computed from the vendor's current prefixes either way — but the header and checkout can no
+  // longer drift apart, which is the failure this consolidation exists to prevent.
   const deliveryPrefixes = profile?.deliveryPrefixes ?? [];
   const storedPostcode = cookieStore.get(DELIVERY_POSTCODE_COOKIE)?.value ?? null;
-  const deliverable = storedPostcode ? isDeliverable(storedPostcode, deliveryPrefixes) : null;
+  const deliverable = storedPostcode ? await isPostcodeDeliverable(storedPostcode) : null;
   const offerCollection = profile?.offerCollection ?? false;
 
   // #748 — one resolved answer for the whole render. Both LocationControl

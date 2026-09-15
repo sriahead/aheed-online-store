@@ -7,7 +7,9 @@ import { getOrderRepository } from "@/lib/orders-service";
 import { CheckoutError } from "@/lib/repositories/orders";
 import { getCartIdentity } from "@/lib/cart-identity";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
-import { isDeliverable } from "@/lib/delivery";
+import { getDeliveryEligibility } from "@/lib/delivery-eligibility-service";
+import { blocksCheckout, eligibilityMessage } from "@/lib/delivery-eligibility";
+import { getCustomerAddressService } from "@/lib/customer-addresses-service";
 
 /**
  * Checkout server action (P3b, #96).
@@ -109,10 +111,17 @@ export async function placeOrderAction(
     let addressInput;
     if (fulfilmentMethod === "DELIVERY") {
       const postcode = required(form, "postcode");
-      if (!isDeliverable(postcode, vendor.deliveryPrefixes)) {
-        return {
-          error: `Sorry — we don't deliver to ${postcode} yet.`,
-        };
+
+      // #764 — one eligibility service, shared with the header and the fulfilment default, so the
+      // three can no longer disagree about the same postcode.
+      //
+      // Only two verdicts refuse an order: a postcode that is definitely not real, and one this
+      // vendor definitely does not serve. UNVERIFIED — reference data not yet imported in this
+      // environment — deliberately does NOT block: a deployment-ordering accident must degrade to
+      // "we could not check", never to a rejected order.
+      const eligibility = await getDeliveryEligibility(postcode);
+      if (blocksCheckout(eligibility)) {
+        return { error: eligibilityMessage(eligibility) ?? "We can't deliver to that postcode." };
       }
       addressInput = {
         recipientName: required(form, "recipientName"),
@@ -168,6 +177,28 @@ export async function placeOrderAction(
       returnOrigin: await currentOrigin(),
       fulfilmentMethod,
     });
+    // #764 — remember the address a signed-in shopper just confirmed, so next time it can be
+    // offered rather than retyped.
+    //
+    // This writes a CustomerAddress row. It does NOT touch the Address snapshot the order above
+    // just created, and nothing links the two: the snapshot records where THIS order goes and is
+    // never rewritten, while the saved address is an editable convenience the shopper owns.
+    // Correcting a typo in the saved copy later changes no past order.
+    //
+    // DELIVERY only — a COLLECTION order's address fields are placeholders, not somewhere anyone
+    // lives. Guests are skipped inside the service, since a saved address needs an owner.
+    // Deliberately not allowed to fail the checkout: the order is already placed and paid for by
+    // this point, and a convenience feature must never be the reason a shopper sees an error.
+    if (fulfilmentMethod === "DELIVERY") {
+      try {
+        await getCustomerAddressService().save(addressInput);
+      } catch (error) {
+        console.error(
+          `could not save the customer address after order ${placed.orderNumber}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
     // With Stripe configured the shopper goes to hosted Checkout; with the stub
     // adapter there is nowhere to pay, so they land on the order page directly.
     //

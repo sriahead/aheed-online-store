@@ -173,8 +173,20 @@ R31. Street suggestions are drawn only from `PlaceReference` rows whose `type` i
 R32. Street suggestions are deduplicated by name, ranked by ascending distance, and limited to at
      most **3** entries.
 
-R33. When more than **8** distinct road names fall within the 250-metre radius, or when none does,
-     the lookup returns an empty street-suggestion list rather than a partial or arbitrary one.
+R33. The lookup returns an empty street-suggestion list — never a partial or arbitrary one — when
+     any of the following holds: no road qualifies under R31; the nearest qualifying road is more
+     than **200 metres** away; or more than **25** distinct road names fall within the 250-metre
+     radius.
+
+     *These two ceilings were calibrated against the real OS Open Names dataset at Build, not
+     chosen a priori, and the first draft of this requirement was measurably wrong.* Over 4,000
+     real postcodes per city, the median number of distinct roads within 250 m is **10** in Milton
+     Keynes, **12** in central London and **7** in Birmingham — so this requirement's original
+     ceiling of 8 would have suppressed the hint for **59% of Milton Keynes postcodes** and 73% of
+     central London, disabling the feature for most shoppers while appearing to work. At
+     200 m / 25 the rule serves 88.7% of Milton Keynes, 89.6% of central London and 77.4% of
+     Birmingham, and **both** suppression paths still fire on real data (in Milton Keynes: 6.1% no
+     candidate, 1.4% too far, 3.8% too dense), so the protection is real rather than nominal.
 
 ## Provider port and public API
 

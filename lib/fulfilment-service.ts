@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import { getCurrentVendorProfile } from "./vendor-service";
 import { DELIVERY_POSTCODE_COOKIE } from "./delivery-cookie";
-import { isDeliverable } from "./delivery";
+import { isPostcodeDeliverable } from "./delivery-eligibility-service";
 import {
   FULFILMENT_METHOD_COOKIE,
   defaultFulfilmentMethod,
@@ -45,7 +45,10 @@ export const getFulfilmentMethod = cache(async (): Promise<FulfilmentMethodChoic
   // No preference expressed. Fall back to the rule LocationControl used to
   // compute locally, so shoppers who have never touched the toggle are
   // unaffected by this slice.
+  // #764 — routed through the one eligibility service rather than calling `isDeliverable` here.
+  // Unchanged in behaviour: `deliverable` still comes from this vendor's current prefixes and
+  // needs no reference data, so an environment that has never synced answers exactly as before.
   const postcode = jar.get(DELIVERY_POSTCODE_COOKIE)?.value ?? null;
-  const deliverable = postcode ? isDeliverable(postcode, profile.deliveryPrefixes) : false;
+  const deliverable = postcode ? await isPostcodeDeliverable(postcode) : false;
   return defaultFulfilmentMethod(deliverable, profile.offerCollection);
 });

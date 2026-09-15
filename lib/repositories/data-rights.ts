@@ -77,6 +77,27 @@ export interface PersonalDataExport {
     notes: string | null;
     createdAt: Date;
   }[];
+  /**
+   * Saved, reusable addresses (#764) — personal data, and a DIFFERENT table from `addresses`
+   * above.
+   *
+   * `addresses` are per-order snapshots of where an order was actually delivered; these are the
+   * shopper's own saved copies, which they can edit or delete without touching any order. Both are
+   * disclosed because the subject supplied both, and exporting only one would understate what is
+   * held about them.
+   */
+  savedAddresses: {
+    label: string | null;
+    recipientName: string;
+    phone: string;
+    line1: string;
+    line2: string | null;
+    city: string;
+    county: string | null;
+    postcode: string;
+    notes: string | null;
+    createdAt: Date;
+  }[];
   orders: {
     orderNumber: string;
     status: string;
@@ -121,6 +142,7 @@ export async function exportPersonalData(
     accounts,
     sessions,
     addresses,
+    savedAddresses,
     orders,
     reviews,
     carts,
@@ -160,6 +182,24 @@ export async function exportPersonalData(
         line1: true,
         line2: true,
         city: true,
+        postcode: true,
+        notes: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    // #764 — the shopper's own saved addresses, scoped to this vendor and this user like
+    // everything else here.
+    prisma.customerAddress.findMany({
+      where: { vendorId, userId },
+      select: {
+        label: true,
+        recipientName: true,
+        phone: true,
+        line1: true,
+        line2: true,
+        city: true,
+        county: true,
         postcode: true,
         notes: true,
         createdAt: true,
@@ -233,6 +273,7 @@ export async function exportPersonalData(
     linkedAccounts: accounts,
     sessions,
     addresses,
+    savedAddresses,
     orders: orders.map((order) => ({
       orderNumber: order.orderNumber,
       status: order.status,
@@ -316,6 +357,8 @@ export interface EraseResult {
   identityDeleted: boolean;
   ordersAnonymised: number;
   addressesRedacted: number;
+  /** #764 — saved addresses are deleted outright, not redacted. See eraseVendorData. */
+  savedAddressesDeleted: number;
   reviewsDeleted: number;
 }
 
@@ -359,6 +402,16 @@ export async function eraseVendorData(
       where: { vendorId, userId },
       data: { userId: null, guestEmail: null },
     });
+
+    // #764 — saved addresses are DELETED outright, not redacted.
+    //
+    // The redaction below exists because an `Address` snapshot is load-bearing financial history:
+    // an order must still say it was delivered somewhere, so the row survives with its personal
+    // fields blanked. A `CustomerAddress` carries none of that weight — it is a convenience the
+    // shopper owns, nothing references it, and deleting it is both the cleaner erasure and the one
+    // a subject would expect. Scoped to this vendor and user like everything else in this
+    // transaction.
+    const savedAddressesDeleted = await tx.customerAddress.deleteMany({ where: { vendorId, userId } }); // prettier-ignore
 
     let addressesRedacted = 0;
 
@@ -437,6 +490,7 @@ export async function eraseVendorData(
       identityDeleted,
       ordersAnonymised: anonymised.count,
       addressesRedacted,
+      savedAddressesDeleted: savedAddressesDeleted.count,
       reviewsDeleted: reviews.count,
     };
   });

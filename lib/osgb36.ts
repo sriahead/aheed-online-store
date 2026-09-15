@@ -173,7 +173,10 @@ export function eastingsNorthingsToWgs84(eastings: number, northings: number): L
  * assumed zero contributes well under a metre of horizontal error at these
  * latitudes — immaterial against the transformation's own ~5 m.
  */
-function helmertAiryToWgs84(latitude: number, longitude: number): { latitude: number; longitude: number } { // prettier-ignore
+function helmertAiryToWgs84(
+  latitude: number,
+  longitude: number,
+): { latitude: number; longitude: number } {
   const from = AIRY_1830;
   const to = WGS84;
 
