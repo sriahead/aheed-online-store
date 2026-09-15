@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { findOutstandingAreas, recordAreaCoverage } from "@/lib/repositories/reference-coverage";
 import type { Db, ReferenceDataSource } from "./source";
 
 /**
@@ -6,34 +7,49 @@ import type { Db, ReferenceDataSource } from "./source";
  *
  * One implementation, driven by every source:
  *
- *   discover latest release -> compare version/checksum -> exit if unchanged -> download ->
- *   verify checksum -> parse -> validate -> apply -> activate -> record result
+ *   discover latest release -> compare version/checksum AND required coverage ->
+ *   exit if neither changed -> download -> verify checksum -> parse (scoped to the areas
+ *   needing work) -> validate -> apply -> record coverage -> activate -> record result
+ *
+ * ## THE SYNC DECISION HAS TWO INDEPENDENT DIMENSIONS
+ *
+ * This is the subtlety a checksum-only implementation gets wrong, silently. Work is needed when
+ * **either**:
+ *
+ * 1. the upstream OS release changed — a new version or a new checksum; **or**
+ * 2. our required coverage changed — an area is configured that is not yet materialised at the
+ *    current version.
+ *
+ * Exiting `changed=false` because the publisher's md5 matched, while a newly configured area sits
+ * unimported, would be a failure with no error and no output — the shape of bug this project keeps
+ * paying for. So the decision consults `ReferenceAreaCoverage` as well as the checksum, and a run
+ * imports exactly the areas that are outstanding, leaving already-current areas untouched.
  *
  * ## The guarantees this file exists to provide
  *
  * **A failed refresh never costs you the data you already had.** Nothing is deleted at any point;
  * `apply` inserts, updates and marks rows inactive, and every stage that can fail happens *before*
- * the dataset is marked current. If the download is corrupt, the schema moved, or the record count
- * collapsed, the previous release keeps serving and the run is recorded as FAILED with a reason.
- * This is the "build then swap, never delete then rebuild" rule made concrete.
+ * the dataset is marked current. If the download is corrupt, the schema moved, or an area's record
+ * count collapsed, the previous release keeps serving and the run is recorded as FAILED with a
+ * reason. This is not theoretical: the first full Open Names import died mid-write against a full
+ * database, and because coverage is written only after an area completes, those partial rows were
+ * never treated as an authority.
  *
- * **`cacheVersion` is the activation signal, and it moves only on success.** It is not touched by a
- * run that exits unchanged, and not touched by a run that fails. A reader comparing it can trust
- * that a change means a complete new dataset landed.
+ * **Coverage is written per area, only on success.** An area that fails leaves no coverage row, so
+ * it stays UNVERIFIED to the reference service rather than appearing covered with missing data.
  *
- * **Unchanged is cheap and is still recorded.** When the publisher's version and checksum both
- * match what is stored, nothing is downloaded and no reference row is written — but `lastCheckedAt`
- * moves and a `ReferenceDataSyncRun` is still written, because "the schedule fired and there was
- * nothing to do" and "the schedule did not fire" must be distinguishable after the fact.
+ * **`cacheVersion` is the activation signal, and it moves only on success.** Untouched by a run that
+ * exits unchanged, and untouched by a run that fails.
  *
- * **Retrying is always safe.** Every stage is idempotent: the same release applied twice inserts
- * nothing the second time, which `tests/reference-sync-integrity.test.ts` asserts directly.
+ * **Retrying is always safe.** Every stage is idempotent.
  *
  * Node only — `node:crypto` and multi-megabyte buffers. See `source.ts` for why.
  */
 
 export interface SyncOptions {
-  /** Re-import even when the publisher's version and checksum are unchanged. */
+  /** The postcode areas this environment requires. */
+  areas: string[];
+  /** Re-import even when the publisher's release and our coverage are both unchanged. */
   force?: boolean;
   /** Where progress is reported. Defaults to `console.log`. */
   log?: (message: string) => void;
@@ -44,6 +60,8 @@ export interface SyncRunSummary {
   status: "SUCCEEDED" | "FAILED";
   version: string | null;
   changed: boolean;
+  /** The areas this run actually imported. Empty when nothing was outstanding. */
+  importedAreas: string[];
   inserted: number;
   updated: number;
   retired: number;
@@ -75,20 +93,21 @@ async function ensureDataset(prisma: Db, source: ReferenceDataSource<unknown>) {
 export async function syncReferenceData<TRecord>(
   prisma: Db,
   source: ReferenceDataSource<TRecord>,
-  options: SyncOptions = {},
+  options: SyncOptions,
 ): Promise<SyncRunSummary> {
   const log = options.log ?? ((message: string) => console.log(message));
+  const areas = [...new Set(options.areas.map((area) => area.trim().toUpperCase()))].sort();
   const dataset = await ensureDataset(prisma, source as ReferenceDataSource<unknown>);
 
   const run = await prisma.referenceDataSyncRun.create({
-    data: { datasetId: dataset.id, status: "RUNNING" },
+    data: { datasetId: dataset.id, status: "RUNNING", requestedAreas: areas.join(",") },
     select: { id: true },
   });
 
   const fail = async (message: string, version: string | null): Promise<SyncRunSummary> => {
     // The dataset keeps its previous sourceVersion, sourceChecksum, recordCount, lastSyncedAt and
-    // cacheVersion. Only the failure itself is recorded, so the last known-good release is still
-    // exactly what it was, and still serving.
+    // cacheVersion, and every coverage row it already had. Only the failure is recorded, so the
+    // last known-good release is still exactly what it was, and still serving.
     await prisma.referenceDataset.update({
       where: { id: dataset.id },
       data: { syncStatus: "FAILED", syncError: message, lastCheckedAt: new Date() },
@@ -103,6 +122,7 @@ export async function syncReferenceData<TRecord>(
       status: "FAILED",
       version,
       changed: false,
+      importedAreas: [],
       inserted: 0,
       updated: 0,
       retired: 0,
@@ -119,17 +139,26 @@ export async function syncReferenceData<TRecord>(
       data: { syncStatus: "RUNNING", syncError: null },
     });
 
-    log(`[${source.key}] discovering latest release`);
+    if (areas.length === 0) {
+      return fail(
+        "no postcode areas configured — set REFERENCE_POSTCODE_AREAS, or pass --areas",
+        null,
+      );
+    }
+
+    log(`[${source.key}] discovering latest release (required areas: ${areas.join(", ")})`);
     const release = await source.discoverLatest();
     version = release.version;
 
-    const unchanged =
+    const releaseUnchanged =
       dataset.sourceVersion === release.version && dataset.sourceChecksum === release.checksum;
 
-    if (unchanged && !options.force) {
-      // The whole point of the change-detection pair: nothing is downloaded, nothing is parsed,
-      // and no reference row is touched.
-      log(`[${source.key}] unchanged at version ${release.version} — nothing to do`);
+    // DIMENSION TWO. Areas already materialised at THIS version need no work; anything else does,
+    // whether it is newly configured or stale because the version moved.
+    const outstanding = await findOutstandingAreas(prisma, source.key, areas, release.version);
+
+    if (releaseUnchanged && outstanding.length === 0 && !options.force) {
+      log(`[${source.key}] unchanged at version ${release.version}, coverage complete — nothing to do`); // prettier-ignore
       await prisma.referenceDataset.update({
         where: { id: dataset.id },
         data: { lastCheckedAt: new Date(), syncStatus: "SUCCEEDED", syncError: null },
@@ -148,6 +177,7 @@ export async function syncReferenceData<TRecord>(
         status: "SUCCEEDED",
         version: release.version,
         changed: false,
+        importedAreas: [],
         inserted: 0,
         updated: 0,
         retired: 0,
@@ -156,7 +186,13 @@ export async function syncReferenceData<TRecord>(
       };
     }
 
-    log(`[${source.key}] downloading ${release.sizeBytes} bytes for version ${release.version}`);
+    // A forced run re-imports everything required; otherwise only what is outstanding.
+    const toImport = options.force ? areas : outstanding;
+    log(
+      `[${source.key}] version ${release.version}${releaseUnchanged ? " (unchanged upstream)" : " (new release)"} — importing areas: ${toImport.join(", ")}`,
+    );
+
+    log(`[${source.key}] downloading ${release.sizeBytes} bytes`);
     const archive = await source.download(release);
 
     // Treat the archive as untrusted input. The checksum is the publisher's own, so a mismatch
@@ -170,22 +206,36 @@ export async function syncReferenceData<TRecord>(
     }
 
     log(`[${source.key}] checksum verified, parsing`);
-    const records = source.parse(archive, release);
+    const records = source.parse(archive, release, toImport);
 
-    const validation = source.validate(records);
+    const validation = source.validate(records, toImport);
     if (!validation.ok) return fail(validation.error, version);
 
     log(`[${source.key}] applying ${records.length} records`);
-    const outcome = await source.apply(prisma, records, release.version);
+    const outcome = await source.apply(prisma, records, release.version, toImport);
+
+    // COVERAGE, written per area and only now — after that area's rows are in. An area that never
+    // got here has no coverage row, so the reference service keeps reporting it UNVERIFIED rather
+    // than treating incomplete data as authoritative.
+    for (const area of toImport) {
+      await recordAreaCoverage(
+        prisma,
+        source.key,
+        area,
+        release.version,
+        outcome.perArea[area] ?? 0,
+      );
+    }
 
     // ACTIVATION. Only now does the dataset claim this version, and only now does cacheVersion
     // move — every way this run could have failed is already behind us.
+    const totalRecords = await countRecords(prisma, source.key);
     await prisma.referenceDataset.update({
       where: { id: dataset.id },
       data: {
         sourceVersion: release.version,
         sourceChecksum: release.checksum,
-        recordCount: records.length,
+        recordCount: totalRecords,
         lastCheckedAt: new Date(),
         lastSyncedAt: new Date(),
         syncStatus: "SUCCEEDED",
@@ -203,12 +253,12 @@ export async function syncReferenceData<TRecord>(
         inserted: outcome.inserted,
         updated: outcome.updated,
         retired: outcome.retired,
-        unchanged: records.length - outcome.inserted - outcome.updated,
+        unchanged: Math.max(records.length - outcome.inserted - outcome.updated, 0),
       },
     });
 
     log(
-      `[${source.key}] SUCCEEDED version=${release.version} inserted=${outcome.inserted} updated=${outcome.updated} retired=${outcome.retired}`,
+      `[${source.key}] SUCCEEDED version=${release.version} areas=${toImport.join(",")} inserted=${outcome.inserted} updated=${outcome.updated} retired=${outcome.retired}`,
     );
 
     return {
@@ -216,13 +266,28 @@ export async function syncReferenceData<TRecord>(
       status: "SUCCEEDED",
       version: release.version,
       changed: true,
+      importedAreas: toImport,
       inserted: outcome.inserted,
       updated: outcome.updated,
       retired: outcome.retired,
-      unchanged: records.length - outcome.inserted - outcome.updated,
+      unchanged: Math.max(records.length - outcome.inserted - outcome.updated, 0),
       error: null,
     };
   } catch (error) {
     return fail(error instanceof Error ? error.message : String(error), version);
   }
+}
+
+/**
+ * How many active rows the source now holds in total, across every covered area.
+ *
+ * Read back rather than accumulated from this run, because a run only touches the areas it
+ * imported — adding `LU` must leave `recordCount` describing everything, not just `LU`.
+ */
+async function countRecords(prisma: Db, sourceKey: string): Promise<number> {
+  const coverage = await prisma.referenceAreaCoverage.findMany({
+    where: { sourceKey },
+    select: { recordCount: true },
+  });
+  return coverage.reduce((total, row) => total + row.recordCount, 0);
 }

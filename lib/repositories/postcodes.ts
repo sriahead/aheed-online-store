@@ -1,7 +1,7 @@
 // Type-only: a value import of "@prisma/client/wasm" is unresolvable under vitest, and this file
 // needs nothing from it at runtime.
-import type { getPrisma } from "@/lib/db";
-import { normalisePostcode } from "@/lib/postcode-normalisation";
+import type { getReferencePrisma } from "@/lib/reference-db";
+import { normalisePostcode, postcodeAreaOf } from "@/lib/postcode-normalisation";
 
 /**
  * Postcode reference reads (#764) — the ONLY DB access for `PostcodeReference`.
@@ -18,7 +18,7 @@ import { normalisePostcode } from "@/lib/postcode-normalisation";
  * never here.
  */
 
-type Db = ReturnType<typeof getPrisma>;
+type Db = ReturnType<typeof getReferencePrisma>;
 
 export interface PostcodeReferenceRow {
   normalisedPostcode: string;

@@ -1,4 +1,4 @@
-import type { getPrisma } from "@/lib/db";
+import type { getReferencePrisma } from "@/lib/reference-db";
 import { gridDistanceMetres } from "@/lib/osgb36";
 
 /**
@@ -24,7 +24,7 @@ import { gridDistanceMetres } from "@/lib/osgb36";
  * without a database.
  */
 
-type Db = ReturnType<typeof getPrisma>;
+type Db = ReturnType<typeof getReferencePrisma>;
 
 /** Open Names' own TYPE value for roads. */
 const TRANSPORT_NETWORK = "transportNetwork";

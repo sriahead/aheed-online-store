@@ -15,11 +15,12 @@ import type {
 } from "../source";
 
 /**
- * OS Code-Point Open (#764) — the authority on whether a UK postcode exists.
+ * OS Code-Point Open (#764) — the authority on whether a UK postcode exists, within a materialised
+ * area.
  *
  * Open data under OGL v3, published quarterly, requiring no credential of any kind: the product
  * metadata endpoint and the download endpoint are both unauthenticated, which is why this feature
- * has no secret to manage and could be built without waiting on anybody.
+ * has no secret to manage for its sources.
  *
  * Attribution obligations, taken verbatim from `Doc/licence.txt` inside the archive itself:
  *   Contains Ordnance Survey data (c) Crown copyright and database right 2026.
@@ -28,12 +29,15 @@ import type {
  *
  * ## Archive shape, confirmed against the real 2026-08 release
  *
- * 129 entries: `Data/CSV/<area>.csv`, one per postcode area (`mk.csv`, `sw.csv`, ...), plus a
- * `Doc/` folder. The data files carry **no header row**; the column names live in
+ * 129 entries: `Data/CSV/<area>.csv`, **one file per postcode area** (`mk.csv`, `rg.csv`, ...), plus
+ * a `Doc/` folder. That layout is why demand-driven coverage is almost free here: importing two
+ * areas means reading two files out of 129, not filtering 1.7M rows.
+ *
+ * The data files carry **no header row**; the column names live in
  * `Doc/Code-Point_Open_Column_Headers.csv`, which holds two lines — short codes (`PC,PQ,EA,NO,...`)
  * then long names (`Postcode,Positional_quality_indicator,Eastings,Northings,...`). We map from the
- * long-name line, so a column inserted upstream surfaces as a missing-required-column failure
- * rather than as silently misread data.
+ * long-name line, so a column inserted upstream surfaces as a missing-required-column failure rather
+ * than as silently misread data.
  */
 
 const PRODUCT = "CodePointOpen";
@@ -41,7 +45,6 @@ const METADATA_URL = `https://api.os.uk/downloads/v1/products/${PRODUCT}`;
 const DOWNLOADS_URL = `${METADATA_URL}/downloads`;
 
 const HEADER_ENTRY = /Code-Point_Open_Column_Headers\.csv$/i;
-const DATA_ENTRY = /^Data\/CSV\/.+\.csv$/i;
 
 const REQUIRED_COLUMNS = [
   "Postcode",
@@ -53,13 +56,14 @@ const REQUIRED_COLUMNS = [
 ] as const;
 
 /**
- * Great Britain has roughly 1.7 million live postcode units. A release parsing to fewer than a
- * million is damaged or truncated, not a real contraction, and must not be allowed to replace a
- * complete dataset.
+ * The smallest plausible postcode count for one area.
+ *
+ * Even the sparsest GB postcode area holds thousands of units, so a parse yielding fewer than this
+ * means the area's file is truncated or its schema moved — not that the area genuinely shrank.
  */
-const MINIMUM_RECORD_COUNT = 1_000_000;
+const MINIMUM_RECORDS_PER_AREA = 500;
 
-/** Rows per write. Large enough that 1.7M rows is a few hundred statements, small enough to not blow a parameter limit. */
+/** Rows per write. Large enough to keep statement counts sane, small enough to not hit a parameter limit. */
 const CHUNK_SIZE = 5_000;
 
 export interface PostcodeRecord {
@@ -75,7 +79,13 @@ export interface PostcodeRecord {
 }
 
 /** Everything that decides whether a stored row needs rewriting, as one comparable string. */
-function signature(record: PostcodeRecord): string {
+function signature(record: {
+  eastings: number;
+  northings: number;
+  adminDistrictCode: string | null;
+  adminCountyCode: string | null;
+  countryCode: string | null;
+}): string {
   return [
     record.eastings,
     record.northings,
@@ -94,7 +104,7 @@ export const codePointSource: ReferenceDataSource<PostcodeRecord> = {
   key: "code-point-open",
   displayName: "OS Code-Point Open",
   refreshFrequencyDays: 30,
-  minimumRecordCount: MINIMUM_RECORD_COUNT,
+  minimumRecordsPerArea: MINIMUM_RECORDS_PER_AREA,
 
   async discoverLatest(): Promise<DiscoveredRelease> {
     // No Authorization header, no API key, no credential — see this module's header.
@@ -122,7 +132,7 @@ export const codePointSource: ReferenceDataSource<PostcodeRecord> = {
     return new Uint8Array(await response.arrayBuffer());
   },
 
-  parse(archive: Uint8Array): PostcodeRecord[] {
+  parse(archive: Uint8Array, _release: DiscoveredRelease, areas: string[]): PostcodeRecord[] {
     const files = unzipSync(archive);
     const names = Object.keys(files);
 
@@ -136,18 +146,27 @@ export const codePointSource: ReferenceDataSource<PostcodeRecord> = {
 
     const records: PostcodeRecord[] = [];
 
-    for (const name of names.filter((entry) => DATA_ENTRY.test(entry))) {
-      for (const line of csvLines(strFromU8(files[name]))) {
+    for (const area of areas) {
+      // One file per area — the whole reason demand-driven coverage is cheap for this source.
+      const entry = names.find((name) =>
+        new RegExp(`^Data/CSV/${area.toLowerCase()}\\.csv$`, "i").test(name),
+      );
+      if (!entry) {
+        throw new Error(
+          `Code-Point Open: no data file for postcode area "${area}" — check the configured areas`,
+        );
+      }
+
+      for (const line of csvLines(strFromU8(files[entry]))) {
         const fields = parseCsvLine(line);
-        const rawPostcode = fields[columns.Postcode] ?? "";
-        const normalised = normalisePostcode(rawPostcode);
+        const normalised = normalisePostcode(fields[columns.Postcode] ?? "");
 
         // Code-Point pads the outward code to a fixed width, so whitespace varies by postcode
         // length; normalising removes it entirely. A row whose postcode will not parse is skipped
         // rather than stored as a key nothing can ever look up.
         const district = postcodeDistrictOf(normalised);
-        const area = postcodeAreaOf(normalised);
-        if (!district || !area) continue;
+        const parsedArea = postcodeAreaOf(normalised);
+        if (!district || !parsedArea) continue;
 
         const eastings = Number(fields[columns.Eastings]);
         const northings = Number(fields[columns.Northings]);
@@ -156,7 +175,7 @@ export const codePointSource: ReferenceDataSource<PostcodeRecord> = {
         records.push({
           normalisedPostcode: normalised,
           displayPostcode: formatPostcode(normalised),
-          postcodeArea: area,
+          postcodeArea: parsedArea,
           postcodeDistrict: district,
           eastings,
           northings,
@@ -170,82 +189,77 @@ export const codePointSource: ReferenceDataSource<PostcodeRecord> = {
     return records;
   },
 
-  validate(records: PostcodeRecord[]): ValidationOutcome {
-    if (records.length < MINIMUM_RECORD_COUNT) {
-      return {
-        ok: false,
-        error: `Code-Point Open: parsed ${records.length} records, below the ${MINIMUM_RECORD_COUNT} minimum — treating the release as damaged rather than replacing a complete dataset`,
-      };
+  validate(records: PostcodeRecord[], areas: string[]): ValidationOutcome {
+    // Checked per area, so a truncated file for one area cannot hide behind a healthy count for
+    // another.
+    for (const area of areas) {
+      const count = records.filter((record) => record.postcodeArea === area).length;
+      if (count < MINIMUM_RECORDS_PER_AREA) {
+        return {
+          ok: false,
+          error: `Code-Point Open: postcode area ${area} parsed ${count} records, below the ${MINIMUM_RECORDS_PER_AREA} minimum — treating the release as damaged rather than replacing good data`,
+        };
+      }
     }
     return { ok: true };
   },
 
-  async apply(prisma: Db, records: PostcodeRecord[], version: string): Promise<ApplyOutcome> {
-    return applyPostcodeRecords(prisma, records, version);
+  async apply(
+    prisma: Db,
+    records: PostcodeRecord[],
+    _version: string,
+    areas: string[],
+  ): Promise<ApplyOutcome> {
+    return applyPostcodeRecords(prisma, records, areas);
   },
 };
 
 /**
- * Write the parsed release.
+ * Write the parsed release for the given areas.
  *
  * Exported so `tests/reference-sync-integrity.test.ts` can drive it directly with a handful of
- * records and a stub client, proving the insert/update/retire accounting without a 14 MB download.
+ * records and a stub client, proving the insert/update/retire accounting and the area scoping
+ * without a 14 MB download.
  *
- * Rows that disappear from a release are marked `isActive = false`, never deleted: a postcode that
- * OS withdraws should stop being offered, but an `Address` or `CustomerAddress` already holding it
- * must remain explicable rather than pointing at nothing.
+ * Rows that disappear from a release are marked `isActive = false`, never deleted: a postcode OS
+ * withdraws should stop being offered, but an `Address` or `CustomerAddress` already holding it must
+ * remain explicable rather than pointing at nothing.
+ *
+ * **Reads and retirement are both scoped to `areas`.** Loading only the areas being imported keeps
+ * the comparison map proportional to the work rather than to the whole database, and stops an `LU`
+ * import from retiring every `MK` row that was simply not in this pass.
  */
 export async function applyPostcodeRecords(
   prisma: Db,
   records: PostcodeRecord[],
-  version: string,
+  areas: string[],
 ): Promise<ApplyOutcome> {
   const existing = new Map<string, { signature: string; isActive: boolean }>();
 
-  // Paged so the read does not materialise 1.7M rows in one statement. Only the fields that decide
-  // "has this changed?" are selected; the full row is never needed here.
-  let cursor: string | undefined;
-  for (;;) {
-    const page = await prisma.postcodeReference.findMany({
-      take: CHUNK_SIZE,
-      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
-      orderBy: { id: "asc" },
-      select: {
-        id: true,
-        normalisedPostcode: true,
-        eastings: true,
-        northings: true,
-        adminDistrictCode: true,
-        adminCountyCode: true,
-        countryCode: true,
-        isActive: true,
-      },
-    });
-    if (page.length === 0) break;
-
-    for (const row of page) {
-      existing.set(row.normalisedPostcode, {
-        signature: [
-          row.eastings,
-          row.northings,
-          row.adminDistrictCode ?? "",
-          row.adminCountyCode ?? "",
-          row.countryCode ?? "",
-        ].join("|"),
-        isActive: row.isActive,
-      });
-    }
-
-    cursor = page[page.length - 1].id;
-    if (page.length < CHUNK_SIZE) break;
+  for (const row of await prisma.postcodeReference.findMany({
+    where: { postcodeArea: { in: areas } },
+    select: {
+      normalisedPostcode: true,
+      eastings: true,
+      northings: true,
+      adminDistrictCode: true,
+      adminCountyCode: true,
+      countryCode: true,
+      isActive: true,
+    },
+  })) {
+    existing.set(row.normalisedPostcode, { signature: signature(row), isActive: row.isActive });
   }
 
   const toInsert: PostcodeRecord[] = [];
   const toUpdate: PostcodeRecord[] = [];
   const seen = new Set<string>();
+  const perArea: Record<string, number> = {};
 
   for (const record of records) {
     seen.add(record.normalisedPostcode);
+    perArea[record.postcodeArea] = (perArea[record.postcodeArea] ?? 0) + 1;
+
     const previous = existing.get(record.normalisedPostcode);
     if (!previous) toInsert.push(record);
     else if (previous.signature !== signature(record) || !previous.isActive) toUpdate.push(record);
@@ -253,7 +267,7 @@ export async function applyPostcodeRecords(
 
   for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
     await prisma.postcodeReference.createMany({
-      data: toInsert.slice(i, i + CHUNK_SIZE).map((record) => ({ ...record, sourceVersion: version })), // prettier-ignore
+      data: toInsert.slice(i, i + CHUNK_SIZE),
       skipDuplicates: true,
     });
   }
@@ -261,7 +275,7 @@ export async function applyPostcodeRecords(
   for (const record of toUpdate) {
     await prisma.postcodeReference.update({
       where: { normalisedPostcode: record.normalisedPostcode },
-      data: { ...record, sourceVersion: version, isActive: true },
+      data: { ...record, isActive: true },
     });
   }
 
@@ -278,7 +292,7 @@ export async function applyPostcodeRecords(
     retired += result.count;
   }
 
-  return { inserted: toInsert.length, updated: toUpdate.length, retired };
+  return { inserted: toInsert.length, updated: toUpdate.length, retired, perArea };
 }
 
 async function readJson(response: Response): Promise<unknown> {

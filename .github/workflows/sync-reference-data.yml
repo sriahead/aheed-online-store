@@ -18,7 +18,17 @@ name: sync-reference-data
 # this job performs itself in a second before exiting.
 #
 # NO CREDENTIALS ARE NEEDED FOR THE SOURCES. Both products are OS OpenData,
-# reachable with no API key. The only secret here is the database URL.
+# reachable with no API key.
+#
+# THE DATABASE IS NOT AHEED'S. Reference data lives in its own Neon project,
+# `uk-location-reference`, reached through REFERENCE_DIRECT_URL — never through
+# Aheed's own DIRECT_URL. That separation exists because a full-GB Code-Point
+# import measured 456.9 MB against Aheed's 512 MB project and left no room for
+# Open Names at all.
+#
+# COVERAGE IS DEMAND-DRIVEN. REFERENCE_POSTCODE_AREAS names the postcode areas to
+# materialise. Nothing here, and nothing in the application, hardcodes which ones
+# — adding an area is a secret/variable change plus a run.
 
 on:
   schedule:
@@ -36,6 +46,10 @@ on:
         default: staging
       source:
         description: "Limit to one source (blank = all)"
+        required: false
+        default: ""
+      areas:
+        description: "Postcode areas to materialise (blank = REFERENCE_POSTCODE_AREAS)"
         required: false
         default: ""
       force:
@@ -66,7 +80,11 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
-      - run: npx prisma generate
+      # Both clients: Aheed's and the reference database's.
+      - run: npm run db:generate
+        env:
+          REFERENCE_DATABASE_URL: ${{ secrets.REFERENCE_DIRECT_URL }}
+          REFERENCE_DIRECT_URL: ${{ secrets.REFERENCE_DIRECT_URL }}
 
       # The script takes an explicit --env-file rather than reading ambient env,
       # because naming the target file is what makes the environment impossible
@@ -80,14 +98,25 @@ jobs:
         run: |
           umask 077
           cat > "$RUNNER_TEMP/target.vars" <<VARS
-          DIRECT_URL="${{ secrets.DIRECT_URL }}"
+          REFERENCE_DIRECT_URL="${{ secrets.REFERENCE_DIRECT_URL }}"
+          REFERENCE_POSTCODE_AREAS="${{ vars.REFERENCE_POSTCODE_AREAS }}"
           VARS
+
+      # The reference database has its own schema and its own migration history,
+      # entirely separate from Aheed's, so a brand-new reference branch is made
+      # usable here rather than by a manual step somebody has to remember.
+      - name: Apply reference-database migrations
+        env:
+          REFERENCE_DATABASE_URL: ${{ secrets.REFERENCE_DIRECT_URL }}
+          REFERENCE_DIRECT_URL: ${{ secrets.REFERENCE_DIRECT_URL }}
+        run: npm run ref:migrate
 
       - name: Synchronise reference data
         run: |
           npx tsx scripts/sync-reference-data.ts \
             --env-file "$RUNNER_TEMP/target.vars" \
             ${{ inputs.source && format('--source {0}', inputs.source) || '' }} \
+            ${{ inputs.areas && format('--areas {0}', inputs.areas) || '' }} \
             ${{ inputs.force && '--force' || '' }}
 
       # `always()` so an interrupted or failed run never leaves a file holding

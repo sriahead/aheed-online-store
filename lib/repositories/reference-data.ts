@@ -1,4 +1,4 @@
-import type { getPrisma } from "@/lib/db";
+import type { getReferencePrisma } from "@/lib/reference-db";
 
 /**
  * Reference-dataset status reads (#764) — the ONLY request-path DB access for `ReferenceDataset`.
@@ -15,7 +15,7 @@ import type { getPrisma } from "@/lib/db";
  * Not vendor-scoped; every export takes `prisma` explicitly and reads no request context.
  */
 
-type Db = ReturnType<typeof getPrisma>;
+type Db = ReturnType<typeof getReferencePrisma>;
 
 /** `sourceKey` of the postcode authority. Must match `codePointSource.key`. */
 export const CODE_POINT_SOURCE_KEY = "code-point-open";

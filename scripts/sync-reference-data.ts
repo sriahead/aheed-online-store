@@ -23,18 +23,25 @@
  *
  * ## Why the Prisma client is built here rather than imported
  *
- * `lib/db.ts` imports `PrismaClient` from `@prisma/client/wasm`, which is mandatory on Workers and
- * which **Node cannot load** — its WASM query compiler fails with `Unknown file extension ".wasm"`.
- * So this script constructs its own client from the **bare** `@prisma/client` specifier, exactly as
- * `prisma/seed.ts` does, and passes it into every source. That is the same property that makes
- * `lib/repositories/*` exercisable from a plain script, and it is why `ReferenceDataSource.apply`
- * takes a client rather than resolving one.
+ * `lib/reference-db.ts` imports the generated client's `/wasm` entry, which is mandatory on Workers
+ * and which **Node cannot load** — its WASM query compiler fails with `Unknown file extension
+ * ".wasm"`. So this script imports the generated reference client's **Node** entry point directly
+ * and passes the resulting client into every source, exactly as `prisma/seed.ts` uses the bare
+ * `@prisma/client`. That is the same property that makes `lib/repositories/*` exercisable from a
+ * plain script, and it is why every stage of `ReferenceDataSource` takes a client rather than
+ * resolving one.
  *
- * It uses `DIRECT_URL`, not the pooled URL: this is a long-running bulk import, which is exactly
- * what a direct connection is for.
+ * It uses `REFERENCE_DIRECT_URL`, not the pooled URL: this is a long-running bulk import against
+ * the dedicated `uk-location-reference` database, which is exactly what a direct connection is for.
+ *
+ * ## Coverage comes from configuration
+ *
+ * Which postcode areas to materialise is `REFERENCE_POSTCODE_AREAS`, overridable per run with
+ * `--areas`. No area literal appears anywhere in the schema, the sources, the repositories or the
+ * application — adding one is configuration plus a run, never a code change.
  */
 import { config } from "dotenv";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../lib/generated/reference-client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { codePointSource } from "../lib/reference-data/sources/code-point";
 import { openNamesSource } from "../lib/reference-data/sources/open-names";
@@ -49,13 +56,16 @@ const SOURCES: ReferenceDataSource<never>[] = [
 const USAGE = `
 Synchronise reference datasets from their publishers.
 
-  --env-file <path>   Environment file to read DIRECT_URL from (default: .env)
+  --env-file <path>   Environment file holding REFERENCE_DIRECT_URL (default: .env)
   --source <key>      Only this source: ${SOURCES.map((s) => s.key).join(", ")}
-  --force             Re-import even when the published version and checksum are unchanged
+  --areas <list>      Postcode areas to materialise, comma-separated (default:
+                      REFERENCE_POSTCODE_AREAS)
+  --force             Re-import even when the release and coverage are both unchanged
   --help              Show this message
 
-Safe to re-run: an unchanged source exits without downloading or writing anything, and a failed
-run leaves the previous known-good dataset serving.
+Safe to re-run: a source whose release AND coverage are both unchanged exits without downloading or
+writing anything, and a failed run leaves the previous known-good dataset serving. Adding an area to
+--areas imports just that area, even when the upstream release has not moved.
 `.trim();
 
 function argValue(flag: string): string | undefined {
@@ -72,9 +82,25 @@ async function main() {
   const envFile = argValue("--env-file") ?? ".env";
   config({ path: envFile, override: true });
 
-  const connectionString = process.env.DIRECT_URL;
+  const connectionString = process.env.REFERENCE_DIRECT_URL;
   if (!connectionString) {
-    console.error(`No DIRECT_URL found in ${envFile}. Refusing to guess a database.`);
+    console.error(
+      `No REFERENCE_DIRECT_URL found in ${envFile}. This is the dedicated uk-location-reference ` +
+        `database, NOT Aheed's own DIRECT_URL. Refusing to guess a database.`,
+    );
+    process.exit(1);
+  }
+
+  const areas = (argValue("--areas") ?? process.env.REFERENCE_POSTCODE_AREAS ?? "")
+    .split(",")
+    .map((area) => area.trim().toUpperCase())
+    .filter((area) => area !== "");
+
+  if (areas.length === 0) {
+    console.error(
+      "No postcode areas configured. Set REFERENCE_POSTCODE_AREAS in the env file, or pass " +
+        "--areas MK,RG. Refusing to import the whole of Great Britain by accident.",
+    );
     process.exit(1);
   }
 
@@ -82,6 +108,7 @@ async function main() {
   // records a migration reaching production because two env files agreed on the wrong project.
   const host = connectionString.match(/@([^/?]+)/)?.[1] ?? "unknown";
   console.log(`reference-data sync -> ${host} (from ${envFile})`);
+  console.log(`required postcode areas: ${areas.join(", ")}`);
 
   const requested = argValue("--source");
   const selected = requested ? SOURCES.filter((source) => source.key === requested) : SOURCES;
@@ -99,7 +126,7 @@ async function main() {
     // Sequential, never parallel: two multi-hundred-megabyte imports at once would compete for
     // memory on the runner and for connections on the database, and there is no deadline here.
     for (const source of selected) {
-      summaries.push(await syncReferenceData(prisma as unknown as Db, source, { force }));
+      summaries.push(await syncReferenceData(prisma as unknown as Db, source, { areas, force }));
     }
   } finally {
     await prisma.$disconnect();
@@ -109,7 +136,8 @@ async function main() {
   for (const summary of summaries) {
     console.log(
       `${summary.sourceKey}: ${summary.status} version=${summary.version ?? "-"} ` +
-        `changed=${summary.changed} inserted=${summary.inserted} updated=${summary.updated} ` +
+        `changed=${summary.changed} areas=[${summary.importedAreas.join(",")}] ` +
+        `inserted=${summary.inserted} updated=${summary.updated} ` +
         `retired=${summary.retired} unchanged=${summary.unchanged}` +
         (summary.error ? ` error=${summary.error}` : ""),
     );

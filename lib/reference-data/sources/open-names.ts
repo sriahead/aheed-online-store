@@ -1,5 +1,6 @@
 import { unzipSync, strFromU8 } from "fflate";
 import { columnIndex, csvLines, parseCsvLine, requireColumns } from "../csv";
+import { postcodeAreaOf } from "@/lib/postcode-normalisation";
 import type {
   ApplyOutcome,
   Db,
@@ -72,15 +73,19 @@ export const POPULATED_PLACE = "populatedPlace";
 const IMPORTED_TYPES = new Set([TRANSPORT_NETWORK, POPULATED_PLACE]);
 
 /**
- * Roads and settlements alone account for well over 800,000 records in a healthy release. A parse
- * yielding fewer than half a million means the archive is truncated or its schema moved.
+ * The smallest plausible count for one postcode area.
+ *
+ * Deliberately low. Open Names coverage varies enormously by area — a dense urban area yields tens
+ * of thousands of roads while a sparse rural one yields hundreds — so this floor only catches an
+ * archive that is truncated or whose schema moved, never a genuinely small area.
  */
-const MINIMUM_RECORD_COUNT = 500_000;
+const MINIMUM_RECORDS_PER_AREA = 50;
 
 const CHUNK_SIZE = 5_000;
 
 export interface PlaceRecord {
   sourceId: string;
+  postcodeArea: string | null;
   name: string;
   type: string;
   localType: string;
@@ -117,7 +122,7 @@ export const openNamesSource: ReferenceDataSource<PlaceRecord> = {
   key: "os-open-names",
   displayName: "OS Open Names",
   refreshFrequencyDays: 30,
-  minimumRecordCount: MINIMUM_RECORD_COUNT,
+  minimumRecordsPerArea: MINIMUM_RECORDS_PER_AREA,
 
   async discoverLatest(): Promise<DiscoveredRelease> {
     const [product, downloads] = await Promise.all([
@@ -144,7 +149,12 @@ export const openNamesSource: ReferenceDataSource<PlaceRecord> = {
     return new Uint8Array(await response.arrayBuffer());
   },
 
-  parse(archive: Uint8Array): PlaceRecord[] {
+  parse(archive: Uint8Array, _release: DiscoveredRelease, areas: string[]): PlaceRecord[] {
+    // Open Names is tiled by GRID SQUARE, not by postcode area, so unlike Code-Point every tile has
+    // to be read and rows filtered on the area prefix of their POSTCODE_DISTRICT. The archive is
+    // decompressed once either way; what demand-driven coverage saves here is the writing, not the
+    // reading.
+    const wanted = new Set(areas);
     const files = unzipSync(archive);
     const names = Object.keys(files);
 
@@ -167,18 +177,27 @@ export const openNamesSource: ReferenceDataSource<PlaceRecord> = {
         const placeName = fields[columns.NAME1]?.trim() ?? "";
         if (!sourceId || !placeName) continue;
 
+        // A record with no postcode district cannot be attributed to an area, so it can never be
+        // covered, retired or served — skipping it keeps the table honest about what it holds.
+        const district = emptyToNull(fields[columns.POSTCODE_DISTRICT]);
+        const area = district
+          ? (postcodeAreaOf(district + "1AA") ?? districtAreaPrefix(district))
+          : null;
+        if (!area || !wanted.has(area)) continue;
+
         const eastings = Number(fields[columns.GEOMETRY_X]);
         const northings = Number(fields[columns.GEOMETRY_Y]);
         if (!Number.isFinite(eastings) || !Number.isFinite(northings)) continue;
 
         records.push({
           sourceId,
+          postcodeArea: area,
           name: placeName,
           type,
           localType: fields[columns.LOCAL_TYPE]?.trim() ?? "",
           eastings,
           northings,
-          postcodeDistrict: emptyToNull(fields[columns.POSTCODE_DISTRICT]),
+          postcodeDistrict: district,
           populatedPlace: emptyToNull(fields[columns.POPULATED_PLACE]),
           districtBorough: emptyToNull(fields[columns.DISTRICT_BOROUGH]),
           countyUnitary: emptyToNull(fields[columns.COUNTY_UNITARY]),
@@ -191,23 +210,48 @@ export const openNamesSource: ReferenceDataSource<PlaceRecord> = {
     return records;
   },
 
-  validate(records: PlaceRecord[]): ValidationOutcome {
-    if (records.length < MINIMUM_RECORD_COUNT) {
-      return {
-        ok: false,
-        error: `OS Open Names: parsed ${records.length} records, below the ${MINIMUM_RECORD_COUNT} minimum — treating the release as damaged rather than replacing a complete dataset`,
-      };
+  validate(records: PlaceRecord[], areas: string[]): ValidationOutcome {
+    for (const area of areas) {
+      const count = records.filter((record) => record.postcodeArea === area).length;
+      if (count < MINIMUM_RECORDS_PER_AREA) {
+        return {
+          ok: false,
+          error: `OS Open Names: postcode area ${area} parsed ${count} records, below the ${MINIMUM_RECORDS_PER_AREA} minimum — treating the release as damaged rather than replacing good data`,
+        };
+      }
     }
     return { ok: true };
   },
 
-  async apply(prisma: Db, records: PlaceRecord[], version: string): Promise<ApplyOutcome> {
-    return applyPlaceRecords(prisma, records, version);
+  async apply(
+    prisma: Db,
+    records: PlaceRecord[],
+    _version: string,
+    areas: string[],
+  ): Promise<ApplyOutcome> {
+    return applyPlaceRecords(prisma, records, areas);
   },
 };
 
 /**
- * Write the parsed release, retiring rather than deleting anything that disappeared.
+ * The letters at the front of a postcode district, when the district alone is all we have.
+ *
+ * Open Names publishes `"MK9"`, not a full unit, so `postcodeAreaOf` cannot be used on it directly —
+ * that function deliberately refuses anything that is not a complete postcode. Synthesising a unit
+ * is the cheap path; this is the fallback when even that does not parse.
+ */
+function districtAreaPrefix(district: string): string | null {
+  return (
+    district
+      .trim()
+      .toUpperCase()
+      .match(/^[A-Z]{1,2}/)?.[0] ?? null
+  );
+}
+
+/**
+ * Write the parsed release for the given areas, retiring rather than deleting anything that
+ * disappeared from within them.
  *
  * Exported for `tests/reference-sync-integrity.test.ts`, which drives it with a few records and a
  * stub client rather than a 103 MB archive.
@@ -215,60 +259,45 @@ export const openNamesSource: ReferenceDataSource<PlaceRecord> = {
 export async function applyPlaceRecords(
   prisma: Db,
   records: PlaceRecord[],
-  version: string,
+  areas: string[],
 ): Promise<ApplyOutcome> {
   const existing = new Map<string, { signature: string; isActive: boolean }>();
 
-  let cursor: string | undefined;
-  for (;;) {
-    const page = await prisma.placeReference.findMany({
-      take: CHUNK_SIZE,
-      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
-      orderBy: { id: "asc" },
-      select: {
-        id: true,
-        sourceId: true,
-        name: true,
-        type: true,
-        localType: true,
-        eastings: true,
-        northings: true,
-        postcodeDistrict: true,
-        populatedPlace: true,
-        districtBorough: true,
-        countyUnitary: true,
-        isActive: true,
-      },
-    });
-    if (page.length === 0) break;
-
-    for (const row of page) {
-      existing.set(row.sourceId, {
-        signature: [
-          row.name,
-          row.type,
-          row.localType,
-          row.eastings,
-          row.northings,
-          row.postcodeDistrict ?? "",
-          row.populatedPlace ?? "",
-          row.districtBorough ?? "",
-          row.countyUnitary ?? "",
-        ].join("|"),
-        isActive: row.isActive,
-      });
-    }
-
-    cursor = page[page.length - 1].id;
-    if (page.length < CHUNK_SIZE) break;
+  // Scoped to the areas being imported: the comparison map stays proportional to the work rather
+  // than to the whole table, and retirement below cannot reach another area's rows.
+  for (const row of await prisma.placeReference.findMany({
+    where: { postcodeArea: { in: areas } },
+    select: {
+      sourceId: true,
+      name: true,
+      type: true,
+      localType: true,
+      eastings: true,
+      northings: true,
+      postcodeArea: true,
+      postcodeDistrict: true,
+      populatedPlace: true,
+      districtBorough: true,
+      countyUnitary: true,
+      region: true,
+      country: true,
+      isActive: true,
+    },
+  })) {
+    existing.set(row.sourceId, { signature: signature(row), isActive: row.isActive });
   }
 
   const toInsert: PlaceRecord[] = [];
   const toUpdate: PlaceRecord[] = [];
   const seen = new Set<string>();
+  const perArea: Record<string, number> = {};
 
   for (const record of records) {
     seen.add(record.sourceId);
+    if (record.postcodeArea) {
+      perArea[record.postcodeArea] = (perArea[record.postcodeArea] ?? 0) + 1;
+    }
+
     const previous = existing.get(record.sourceId);
     if (!previous) toInsert.push(record);
     else if (previous.signature !== signature(record) || !previous.isActive) toUpdate.push(record);
@@ -276,7 +305,7 @@ export async function applyPlaceRecords(
 
   for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
     await prisma.placeReference.createMany({
-      data: toInsert.slice(i, i + CHUNK_SIZE).map((record) => ({ ...record, sourceVersion: version })), // prettier-ignore
+      data: toInsert.slice(i, i + CHUNK_SIZE),
       skipDuplicates: true,
     });
   }
@@ -284,7 +313,7 @@ export async function applyPlaceRecords(
   for (const record of toUpdate) {
     await prisma.placeReference.update({
       where: { sourceId: record.sourceId },
-      data: { ...record, sourceVersion: version, isActive: true },
+      data: { ...record, isActive: true },
     });
   }
 
@@ -301,7 +330,7 @@ export async function applyPlaceRecords(
     retired += result.count;
   }
 
-  return { inserted: toInsert.length, updated: toUpdate.length, retired };
+  return { inserted: toInsert.length, updated: toUpdate.length, retired, perArea };
 }
 
 async function readJson(response: Response): Promise<unknown> {
