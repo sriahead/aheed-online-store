@@ -106,6 +106,55 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   have no such requirement and may use either client per the normal read/write split. Full
   investigation: `specs/2026-08-26-auth-http-transaction-fix/build-notes.md`.
 
+## There are TWO databases (#764) — learned the hard way
+
+- **Aheed's application database is NOT the only one.** A second Neon project,
+  **`uk-location-reference`**, holds shared UK postcode and place reference data. It has its own
+  schema (`prisma/reference/schema.prisma`), its own migration history
+  (`prisma/reference/migrations/`, applied with `npm run ref:migrate`) and its own generated client.
+  Env vars: **`UK_LOCATION_REF_DATABASE_URL`** (pooled, runtime) and **`UK_LOCATION_REF_DIRECT_URL`**
+  (direct, migrations and sync), plus **`UK_LOCATION_REF_POSTCODE_AREAS`** (coverage, e.g. `"MK,RG"`).
+  Dev and staging share one branch; production is separate.
+- **Why it exists, in numbers.** Reference data was first built into Aheed's own database. A full-GB
+  Code-Point import succeeded at 1,749,109 rows and **456.9 MB**, taking that project to **489.8 MB
+  of its 512 MB ceiling** against under 5 MB for every transactional table combined; the Open Names
+  import then failed outright and **ordinary application writes started failing**. The tell was
+  three unrelated live-DB tests failing with `could not extend file because project size limit
+  (512 MB) has been exceeded` — nothing to do with their own subject matter. **If a live-DB test
+  fails with a message unrelated to what it tests, check `pg_database_size(current_database())`
+  against the 512 MB ceiling before debugging the test.**
+- **Reach reference data ONLY through `lib/reference/`.** Nothing under `app/`, `components/` or
+  `features/` may import the reference client. The reference service answers "does this postcode
+  exist and what is near it"; it must never own vendor delivery rules, which stay in
+  `lib/delivery-eligibility.ts` reading `VendorDeliveryArea`.
+- **A generated Prisma client MUST live in `node_modules`, never inside the project.** The reference
+  client generates to `node_modules/@aheed/reference-client`. Generated under `lib/` instead,
+  webpack parses its `query_compiler_bg.wasm` as source and `opennextjs-cloudflare build` fails
+  outright with `Module parse failed ... not flagged as WebAssembly module for webpack`.
+  `next.config.mjs`'s `serverExternalPackages` is what exempts `@prisma/client` from that, and it
+  matches **package specifiers** — which a relative path can never be. Consequence: `npm ci` wipes
+  it, so every workflow that builds must run `npm run db:generate` first. **Both deploy workflows
+  previously ran no generate step at all**, relying on `@prisma/client`'s postinstall, which only
+  ever knew about the default schema.
+- **Import the reference client's `/wasm` entry in runtime code** (`@aheed/reference-client/wasm`)
+  and its bare entry in Node scripts — the identical trap this file already records for
+  `@prisma/client/wasm`. A second generated client is not exempt.
+- **Coverage is demand-driven, and a missing row is ambiguous.** Only the postcode areas in
+  `UK_LOCATION_REF_POSTCODE_AREAS` are materialised, so "no row" can mean the postcode does not
+  exist **or** that we never imported that part of the country. Covered area with no active row is
+  **INVALID**; an uncovered area is **UNVERIFIED**, as is an unreachable or unconfigured reference
+  database. **Never convert an infrastructure or coverage gap into INVALID** — it degrades to manual
+  address entry, never to telling a customer their address is wrong.
+- **A sync decision has TWO dimensions: has the upstream release changed, AND is required coverage
+  complete?** Checking only the publisher's checksum means a newly configured area never imports,
+  silently. `ReferenceAreaCoverage` is the second dimension, and a coverage row is written only
+  after that area's import completes.
+- **`.env`/`.dev.vars` here use `KEY = "value"` with spaces around the `=`.** That contradicts this
+  file's own env-format rule below, and it parses fine in practice — but any script that rewrites an
+  env file must tolerate the spacing. A `^KEY=` substitution silently matches nothing, which once
+  made a live outage test appear to pass while actually exercising the healthy path. **Verify an env
+  edit landed before trusting any result that depends on it.**
+
 ## Schema rules
 - Strict relational / 3NF, explicit foreign keys, provider-neutral Postgres types only.
 - **No `Json` columns / document storage** for domain data. **No raw SQL** in application code.
