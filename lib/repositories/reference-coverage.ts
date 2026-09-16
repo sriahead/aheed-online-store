@@ -110,3 +110,25 @@ export async function recordAreaCoverage(
     update: { sourceVersion, recordCount, materialisedAt: new Date() },
   });
 }
+
+/**
+ * Withdraw the claim of authority over one area (#770).
+ *
+ * The inverse of `recordAreaCoverage`, and — because of what this table means — the step that has
+ * to happen FIRST when an area is decommissioned. Deleting an area's data rows while its coverage
+ * row survives produces precisely the state this module's header calls the authoritative one:
+ * covered area, no active row, therefore **INVALID**. For however long that window lasts, every
+ * customer in that area is told their own address is wrong. Removing the coverage row first moves
+ * the area to UNVERIFIED, where the worst outcome is manual address entry.
+ *
+ * Idempotent: `deleteMany` rather than `delete` so retrying after a partial run does not throw on a
+ * row that is already gone. `deleteMany` is also safe through the HTTP adapter, unlike
+ * `updateMany`/`createMany` (#382).
+ */
+export async function removeAreaCoverage(
+  prisma: Db,
+  sourceKey: string,
+  postcodeArea: string,
+): Promise<void> {
+  await prisma.referenceAreaCoverage.deleteMany({ where: { sourceKey, postcodeArea } });
+}
