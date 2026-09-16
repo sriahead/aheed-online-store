@@ -38,5 +38,15 @@ Follow the **Learn** stage of `specs/sdd-workflow.md` (read it if not already in
    newest first, and bump its front-matter `version` and `updated`.
 9. File issues for the follow-on work. Nothing here becomes implementation scope without `/propose`.
 
-Then run `npm run kms:validate` and `npm run kms:build-index`, since both research files are KMS
-artifacts. Watch the MDX traps: no bare `<` before a digit, no unbackticked curly braces in prose.
+10. **At a milestone close, one stage follows this one: the business case review.** Update
+    `docs/business-analysis/business-case.md` per **Business case review** in
+    `specs/sdd-workflow.md` — move capabilities between IMPLEMENTED / IN PROGRESS / PLANNED to match
+    what this milestone actually shipped, update the `Milestone assessed` and `Last reviewed` rows,
+    re-research the external pricing, answer the previous entry's open items, and append a revision
+    entry naming what was **withdrawn or corrected**. It runs after Learn, not before, because it
+    consumes what you just established rather than re-deriving it. `npm run sdd:audit` reports the
+    artifact as due until this lands.
+
+Then run `npm run kms:validate` and `npm run kms:build-index`, since the research files and the
+business case are all KMS artifacts. Watch the MDX traps: no bare `<` before a digit, no unbackticked
+curly braces in prose — a document full of prices and percentages is unusually exposed to both.

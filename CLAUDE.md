@@ -570,17 +570,40 @@ Most stages are slash commands (`/orient`, `/propose`, `/spec`, `/build`, `/buil
 `/validate`, `/fix`, `/ship`, `/document`). For detailed procedures on each stage, read the corresponding markdown file in `.claude/commands/`. Use them; that doc carries lessons already paid for
 (stale-doc traps, CI-vs-local-Windows drift, PR merge races) that are easy to relearn the hard way.
 
-**Two further phases sit outside that per-slice loop and run on the MILESTONE, not the slice:**
+**THREE further stages sit outside that per-slice loop and run on the MILESTONE, not the slice:**
 **`/discover`** (forward-looking — unowned customer problems, opportunities, friction, operational
-gaps, risks, assumptions, constraints) and **`/learn`** (retrospective — what a completed milestone
-actually delivered, which assumptions held, what emerged, which lessons get promoted). Both are
-invocable at any time, and both run **automatically at milestone close, Discover first**, as part of
-the final `/document` and before the model switch and second `/clear`. Their output is evidence, not
-scope: findings append to `docs/research/discovery-log.md` and
-`docs/research/milestone-retrospectives.md`, and reach the roadmap only through `/propose`. **Neither
+gaps, risks, assumptions, constraints), **`/learn`** (retrospective — what a completed milestone
+actually delivered, which assumptions held, what emerged, which lessons get promoted), and the
+**business case review** (outward-looking — what the platform is worth commercially now). The first
+two are invocable at any time; all three run **automatically at milestone close, in that order**, as
+part of the final `/document` and before the model switch and second `/clear`. Their output is
+evidence, not scope: findings append to `docs/research/discovery-log.md` and
+`docs/research/milestone-retrospectives.md`, and reach the roadmap only through `/propose`. **None
 is a gate** — evidence a merge depends on gets written to pass rather than to be true, so the four
 gates above are unchanged. **A lesson recorded only in the retrospective has not been promoted**;
 anything that should change every future session belongs in this file.
+
+- **The business case review (`#777`) updates `docs/business-analysis/business-case.md`** — the
+  stakeholder-facing commercial account of the platform, and the only KMS artifact whose claims
+  decay on a schedule nobody controls. It runs **after `/learn`**, deliberately: Learn establishes
+  from evidence what shipped and which assumptions held, and the business case consumes that rather
+  than re-deriving it and reaching a different answer than the retrospective beside it. The review
+  moves capabilities between IMPLEMENTED / IN PROGRESS / PLANNED, updates the visible
+  `| **Last reviewed** |` row, **re-researches the external pricing** (Shopify, Stripe, Cloudflare,
+  Neon, Resend — each figure carries a retrieval date, and a stale date makes the figure unverified
+  rather than merely old), answers the previous revision entry's open items, and appends a revision
+  entry naming what was **withdrawn or corrected**. Full procedure: `specs/sdd-workflow.md`,
+  **Business case review**.
+- **`npm run sdd:audit` enforces it** (`scripts/sdd-business-case.ts`), comparing that
+  `Last reviewed` row against the newest phase-closure row in `specs/roadmap.md`'s change log.
+  **It will report the artifact as due from the moment `/document` writes a closure row until the
+  review lands — that is the check working, not a fault.** It cannot know which stage of a close it
+  is in, and suppressing the report mid-close would hide exactly the case it exists for: a close
+  abandoned halfway. **A milestone close is not finished until `sdd:audit` exits 0 again.**
+- **Never present PLANNED functionality as IMPLEMENTED in that document, and never state a modelled
+  saving as a realised one.** As of 2026-09-16 the platform has never traded — `#113` (live Stripe
+  keys) and `#104` (verified email sending domain) are both open — so every financial figure in it
+  is a model at a stated volume, and no invoice data exists anywhere in this repo.
 
 Two rules the assistant **cannot** enforce for itself, so it must ask:
 - **`/clear` is user-invoked.** Before either Clear, everything load-bearing must be committed — a
@@ -697,11 +720,19 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  139 files / 1842 tests**, measured 2026-09-16 at the reference-coverage-reconciliation Build
+  140 files / 1868 tests**, measured 2026-09-16 at the business-case-KMS Build (`#777`) — one new
+  file (`tests/sdd-business-case.test.ts`) carrying 26 tests, with **no** existing file's count
+  moving. Worth noting what that file covers, because it is the second recorded case of a
+  regex-based checker in `scripts/` matching far more than its author intended: a first version of
+  the roadmap phase-closure detector allowed 80 characters between the phase name and the verb and
+  matched ordinary narrative (`P10, two closed`, `P10 and their milestones closed`), reporting a
+  milestone closure on a date when none happened. All three false positives are now pinned as
+  tests. The previous figure was **139 files / 1842 tests**, measured 2026-09-16 at the
+  reference-coverage-reconciliation Build
   (`#767`/`#770`/`#771`) — three new files carrying 26 tests (decommission ordering and refusals,
   the AST check confining deletion to that path, and the reference status service), with **no**
   existing file's count moving: `tests/reference-sync-integrity.test.ts` was edited to satisfy the
-  widened `ReferenceDataSource` interface but gained no test. The previous figure was **136 files /
+  widened `ReferenceDataSource` interface but gained no test. Before that it was **136 files /
   1816 tests**, measured 2026-09-15 at `#764`'s Build — seven new files carrying 129
   tests, for the reference-data framework, area coverage, delivery eligibility, places, the address
   provider port, saved-address scoping and OSGB36 coordinate conversion. All 139 pass locally; the
