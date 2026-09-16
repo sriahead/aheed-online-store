@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.6.0"
-updated: 2026-09-15
+version: "1.7.0"
+updated: 2026-09-16
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,18 +39,21 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-15.
-- **Checkout:** `feature/p10-address-lookup-reference-data` (#764's Build), off `staging`.
-- **Base state:** `origin/staging` was at `12ad3be`, two documentation commits ahead of
-  `origin/main` (`d855e1f`) at the start of this work. That promotion is still outstanding.
-- **NEW INFRASTRUCTURE — a second Neon project now exists.** See the dedicated section below. This
-  is the most consequential project-level change since multi-tenancy.
+- **Date:** 2026-09-16.
+- **Checkout:** `staging`, at `ab1f080` (`#764`'s Ship — PR #768). The `feature/p10-address-lookup-
+  reference-data` branch is merged and deleted, both locally and on the remote.
+- **Base state:** `origin/staging` moved `12ad3be` → `ab1f080` this session. `origin/main` is still
+  at `d855e1f`; the `staging → main` promotion for `#764` has **not** been opened — this repo
+  batches promotions rather than opening one per slice (see PR #759's precedent, which carried four
+  prior issues), and no owner instruction to promote now was given at `/ship`.
+- **NEW INFRASTRUCTURE — a second Neon project now exists, and is now live on staging.** See the
+  dedicated section below. This is the most consequential project-level change since multi-tenancy.
 - **Worktrees:** only the main checkout.
 - **Protected local work, unchanged:** PR #725 (`docs/orient-reads-board-priority`) and PR #722
   (`docs/document-final-social-contact-mobile-nav`) are both still open, based on an older
   `staging`, unrelated to this work. Not re-verified live.
 
-## A second database now exists: `uk-location-reference` (#764, 2026-09-15)
+## A second database now exists: `uk-location-reference` (#764, shipped to staging 2026-09-16)
 
 **This is the fact a fresh session is most likely to be missing.** The application now reads from
 **two** Neon projects.
@@ -79,6 +82,12 @@ configuration plus a sync run — no migration, no code change.
 answers `UNVERIFIED` for every postcode, which degrades correctly to manual address entry but means
 the feature is dark there.
 
+**The feature this database backs is live on staging**: `GET /api/address/lookup`, postcode
+validation and delivery-eligibility consolidation (`lib/delivery-eligibility.ts`), and customer
+saved addresses (`CustomerAddress`, separate from the per-order `Address` snapshot). `addresses[]`
+in the lookup response stays empty until a licensed property-address provider exists — tracked as
+**`#766`**, not a defect. Both `#766` and `#767` are filed, on Project #2 (Backlog, Phase `P10`).
+
 Read `CLAUDE.md`'s "There are TWO databases" section and `specs/architecture.md` §3.0 before
 touching any of it.
 
@@ -105,6 +114,11 @@ actually shipped via `#744`'s ancestry — **that feature has no issue of its ow
 slice's `/ship` (2026-09-15) while preparing the promotion PR's closing-issue list; `#613` was
 deliberately left open and uncited by PR #759. See the Documentation Reconciliation section below
 for the tracked cleanup issue.
+
+**`#764` (address lookup, reference-data framework, saved addresses) shipped to staging 2026-09-16
+(PR #768, merge `ab1f080`) and is `In Review` on Project #2** — not yet promoted to `main`. See "A
+second database now exists" above for the infrastructure it depends on and what remains dark in
+production until `#767` resolves.
 
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
@@ -148,6 +162,8 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **`#764` shipped to `staging` (PR #768, `ab1f080`), In Review on Project #2, not yet promoted** —
+  see Last Verified/Project Position above.
 - **The whole delivery cluster is DONE — see Last Verified/Project Position above.** `#401`, `#402`,
   `#748`, `#749`, `#750`, `#751` all shipped, closed, and are live in production (`d855e1f`,
   2026-09-15). `#613` was never part of it (citation error, corrected above).
