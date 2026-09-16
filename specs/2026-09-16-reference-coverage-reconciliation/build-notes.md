@@ -131,3 +131,55 @@ in the `UNVERIFIED`/`INVALID` model.
   this machine** while `wrangler secret list`, `wrangler versions deploy` and plain `curl` worked,
   and the Cloudflare REST API worked from PowerShell but intermittently returned `HTTP 000` from
   Bash. If a Cloudflare read fails, try the other shell before concluding the account is unreachable.
+
+## Fix (2026-09-16) — R23 and R31 found failing at a fresh-context `/validate`
+
+Two genuine defects, both confirmed live rather than assumed from the spec or build notes.
+
+- **R23 failed live.** The Cloudflare API (`GET …/deployments` → `…/versions/<id>`, the exact
+  method the `wrangler secret list` trap paragraph above prescribes) showed the currently deployed
+  `aheed-store-staging` version carrying `UK_LOCATION_REF_DATABASE_URL` but **not**
+  `UK_LOCATION_REF_POSTCODE_AREAS` — despite the "Deviations from the spec" section above claiming
+  R23 was satisfied as of Build. **Root cause: a routine `deploy-staging` CI run fired between Build
+  and this Validate** (`2026-09-16T06:51:40Z`, `gh run list --workflow=deploy-staging.yml`) and
+  silently dropped the variable. `wrangler deploy` rebuilds a Worker version's `vars` entirely from
+  `wrangler.toml`; the variable had only ever been added through the Cloudflare dashboard (per the
+  "newest version" deviation note above, converted from a secret to a plain-text variable), never
+  declared in `wrangler.toml`, never set via `wrangler secret put` in either deploy workflow. A
+  genuine secret (`UK_LOCATION_REF_DATABASE_URL`) survives a bare `wrangler deploy`; a dashboard-only
+  plain-text var does not — confirmed by the asymmetry in what the deploy actually dropped. This was
+  not a one-off: every future `deploy-staging`/`deploy-production` run would repeat it.
+  - **Fix**: added `[env.staging.vars]` / `[env.production.vars]` to `wrangler.toml`, each declaring
+    `UK_LOCATION_REF_POSTCODE_AREAS = "MK,RG"` as committed config (not a secret — the value isn't
+    sensitive, and `requirements.md`'s own framing already treats `MK,RG` as a fixed invariant "in
+    every environment"). Verified with `wrangler deploy --env staging --dry-run` and `--env
+    production --dry-run`: both print `env.UK_LOCATION_REF_POSTCODE_AREAS ("MK,RG")` as an
+    `Environment Variable` binding, proving the config is syntactically and semantically correct
+    without touching the live Worker.
+  - **Not re-verified against a live deployed Worker in this Fix pass, deliberately.** Actually
+    redeploying staging outside the normal branch → PR → CI path would be another out-of-band
+    action layered on the one that caused this — and CI's own `deploy-staging` will apply this fix
+    automatically on merge, the same routine run that silently broke it. **R23 must be re-checked
+    live (Cloudflare API, not `wrangler secret list`) after this branch merges to `staging`**,
+    before Ship treats the promotion as done — same posture already established for R27–R30's own
+    deferred production verification above.
+  - Documented as a third, related trap in `CLAUDE.md`'s Config & secrets section, alongside the
+    `wrangler secret list` and `vars.X`/`secrets.X` traps this exact slice already found: a
+    dashboard-only plain-text var is wiped by the next `wrangler deploy`, a dashboard-only secret is
+    not. `CLAUDE.md`'s own front-matter (`1.22.0`/2026-09-07) hadn't been bumped despite this
+    slice's Build already adding substantial content to it — bumped now (`1.23.0`/2026-09-16) along
+    with this addition, rather than left stale for a later slice to notice.
+- **R31 failed.** `docs/model-handoff.md` stated in one paragraph that production's reference data
+  "matches the dev/staging branch row for row" (true, confirmed live via
+  `verify-reference-coverage.ts --env-file secrets/production.vars`) and, a few lines later, that
+  "Production's reference branch has NOT been migrated or synced" (false, and directly
+  contradicting the paragraph above it) — a straight leftover from before `#767` ran, never
+  reconciled against the paragraph written for the same edit. **Fix**: rewrote the paragraph to
+  state the two facts this feature actually has — the reference *database* is bootstrapped (done,
+  `#767`) and the *application* serving it is not yet promoted (`#764`, tracked separately) — rather
+  than conflating them into one "dark" claim. Version bumped `1.7.0` → `1.7.1`.
+- `npm run kms:build-index` re-run after both front-matter bumps (`ARTIFACT_INDEX.md` and
+  `app/(admin)/staff/runbook/docs.ts` regenerated), then `npm run kms:check-generated` confirmed
+  both current. Full local suite (`lint`, `typecheck`, `format:check`, `npx vitest run` — still
+  139/1842, `npm run build`, `kms:assemble:internal` + the internal docs site build) re-run clean
+  after the fix, not just the two failing rows.

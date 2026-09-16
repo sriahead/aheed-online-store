@@ -40,6 +40,12 @@ every branch merges.
     pending version also blocked every `deploy-staging` run at its first step.
   - **Production's reference database bootstrapped** (`#767`): migrated from empty and imported
     `MK`/`RG` for both sources.
+  - **`wrangler.toml` now declares `UK_LOCATION_REF_POSTCODE_AREAS` as committed `[vars]` config for
+    both `staging` and `production`**, found necessary at this slice's own `/validate`: a routine
+    `deploy-staging` CI run silently wiped the dashboard-only variable the "pending version" fix
+    above had just restored, because `wrangler deploy` rebuilds a Worker's `vars` set entirely from
+    this file and a dashboard-only plain-text var isn't part of it (unlike a genuine secret, which
+    survives). Closes the whole class of drift rather than the one instance.
   - `tests/reference-decommission-safety.test.ts` confines every `delete`/`deleteMany` under
     `lib/reference-data/` to four named functions, on the AST rather than by grep — these files
     discuss deletion at length, and a text check could only be satisfied by removing the

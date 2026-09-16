@@ -56,6 +56,15 @@ custom_domain = true
 binding = "IMAGES"
 bucket_name = "aheed-images-staging"
 
+# #767/#771 — NOT a secret, just non-sensitive config, so it belongs in committed config rather
+# than a dashboard-only binding. A dashboard-added plain-text var (no `[vars]` entry, no
+# `wrangler secret put`) does NOT survive the next `wrangler deploy`: deploy rebuilds a Worker's
+# `vars` set entirely from this file, while secrets persist independently. That silently wiped
+# this exact variable between this slice's Build and its own Validate (CLAUDE.md, Config &
+# secrets) — a `[vars]` entry here is what makes it durable.
+[env.staging.vars]
+UK_LOCATION_REF_POSTCODE_AREAS = "MK,RG"
+
 # ---- Production ----------------------------------------------------------
 [env.production]
 name = "aheed-store-production"
@@ -73,5 +82,10 @@ custom_domain = true
 binding = "IMAGES"
 bucket_name = "aheed-images-production"
 
-# NOTE: secrets (DATABASE_URL, S3_*, STRIPE_*, BETTER_AUTH_SECRET) are NOT set here.
-# Add them per environment with:  wrangler secret put NAME --env staging|production
+# See the identical [env.staging.vars] block above for why this is committed config rather than
+# a dashboard binding.
+[env.production.vars]
+UK_LOCATION_REF_POSTCODE_AREAS = "MK,RG"
+
+# NOTE: secrets (DATABASE_URL, UK_LOCATION_REF_DATABASE_URL, S3_*, STRIPE_*, BETTER_AUTH_SECRET)
+# are NOT set here. Add them per environment with:  wrangler secret put NAME --env staging|production

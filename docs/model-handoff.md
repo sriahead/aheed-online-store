@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.7.0"
+version: "1.7.1"
 updated: 2026-09-16
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -94,9 +94,16 @@ service an authority on Luton while nothing would ever refresh it.
 on `main`, and GitHub resolves `schedule` and `workflow_dispatch` from the default branch, so every
 import so far has been manual and will stay manual until `#764` is promoted (**#772**).
 
-**Production's reference branch has NOT been migrated or synced (`#767`).** Production therefore
-answers `UNVERIFIED` for every postcode, which degrades correctly to manual address entry but means
-the feature is dark there.
+**Production's reference DATABASE is bootstrapped (`#767`, 2026-09-16) — the APPLICATION serving
+it is not, and those are two separate facts.** The database itself is migrated and synced, matching
+dev/staging row for row (see the paragraph above); confirmed live via `scripts/verify-reference-
+coverage.ts --env-file secrets/production.vars` and `prisma migrate status`. But `#764` — the slice
+that adds `GET /api/address/lookup` — has not been promoted to `main`, so production's deployed
+Worker does not route that endpoint at all, on a database or not. **Do not read a production 404 on
+that path as a reference-data failure**: it is the application, not the data, that is not there yet.
+This line previously said the database itself was unmigrated, which was true until `#767` and is
+stale now — the two facts (database readiness, application promotion) were conflated here and need
+checking independently.
 
 **The feature this database backs is live on staging**: `GET /api/address/lookup`, postcode
 validation and delivery-eligibility consolidation (`lib/delivery-eligibility.ts`), and customer

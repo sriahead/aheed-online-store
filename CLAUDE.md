@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.22.0"
-updated: 2026-09-07
+version: "1.23.0"
+updated: 2026-09-16
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -383,6 +383,24 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   and `… /environments/<env>/secrets --jq '.secrets[].name'`. Variable *values* are readable, which
   makes `UK_LOCATION_REF_POSTCODE_AREAS=MK,RG` verifiable rather than merely present — a reason to
   prefer a variable for anything that is not actually a credential.
+- **A THIRD, related trap: a plain-text var added to a Worker only through the Cloudflare
+  dashboard — never declared in `wrangler.toml`'s `[vars]`, never set via `wrangler secret put` —
+  does NOT survive the next `wrangler deploy`, even though a genuine SECRET added the same way
+  does.** `wrangler deploy` rebuilds a Worker version's `vars` set entirely from `wrangler.toml`;
+  secrets are stored and reattached independently and are untouched by a deploy that doesn't
+  explicitly change them. Found at this same slice's own `/validate` (2026-09-16, `#767`/`#771`):
+  the fix for the `wrangler secret list` trap above (redeploying the dashboard-created version that
+  carried both `UK_LOCATION_REF_DATABASE_URL` and `UK_LOCATION_REF_POSTCODE_AREAS`) worked, but a
+  *routine* `deploy-staging` CI run afterward silently dropped `UK_LOCATION_REF_POSTCODE_AREAS`
+  again — confirmed by reading the newly-deployed version's bindings via the Cloudflare API
+  (`GET …/versions/<id>`, per the bullet above): `UK_LOCATION_REF_DATABASE_URL` (a real secret)
+  was still there; `UK_LOCATION_REF_POSTCODE_AREAS` (converted to a plain-text variable during the
+  original fix) was gone, and neither `wrangler.toml` nor either deploy workflow ever named it.
+  This would have recurred on every future deploy. **The fix is to declare any non-secret,
+  environment-wide config value in `wrangler.toml`'s `[env.<env>.vars]` block** (see
+  `UK_LOCATION_REF_POSTCODE_AREAS` there) so it's part of committed config and rebuilt correctly on
+  every deploy, rather than a fragile one-time dashboard edit — reserve `wrangler secret put` (or a
+  dashboard-added secret) for values that are actually credentials.
 - **`instrumentation.ts`'s `onRequestError` DOES have a working Cloudflare Workers request context
   under this app's Next 16 / OpenNext / Workers stack** — `getCloudflareContext()`/`readEnv()`
   resolve normally there, confirmed live in `#508` (2026-09-01): a forced throw under `npm run
