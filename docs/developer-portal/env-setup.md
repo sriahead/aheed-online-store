@@ -116,8 +116,16 @@ running Worker has a reference binding at all.
 every postcode.** `lib/reference/postcode-reference-service.ts` treats an unconfigured, unreachable,
 or never-synced reference database identically to an uncovered postcode area: the answer degrades to
 "could not check," which the checkout and address-lookup surfaces render as manual entry being
-available, never as a validation error. Production's reference branch had exactly this status as of
-`#764` (tracked in `#767`) — dark, not failing.
+available, never as a validation error.
+
+**Production's reference branch (`ep-summer-boat-zapzp2t9`) had exactly this status from `#764`
+until 2026-09-16**, when `#767` bootstrapped it: migrations applied, then `MK` and `RG` imported for
+both sources — 16,215 and 23,816 postcodes, 9,989 and 13,483 places, four coverage rows and nothing
+else. It matches the dev/staging branch row for row. Note the bootstrap was run **by hand against
+`secrets/production.vars`, not by dispatching the workflow**: `sync-reference-data.yml` has never
+existed on `main`, and GitHub resolves both `workflow_dispatch` and `schedule` from the default
+branch, so neither the dispatch nor the monthly cron can fire until `#764` is promoted (**#772**).
+Until then, every refresh of every environment is a manual run.
 
 ### Per-vendor host mapping (ADR-004 slice 3b)
 

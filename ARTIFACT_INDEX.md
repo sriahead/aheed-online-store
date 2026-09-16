@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-16T06:38:50.627Z` · commit `ab1f080` · `189` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-16T10:47:57.553Z` · commit `3e7c162` · `190` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -187,7 +187,8 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P10 — Fulfilment configuration and checkout fixes (plan)](specs/2026-09-14-p10-fulfilment-config-and-checkout-fixes/plan.md) | spec | 1.0.0 | 2026-09-14 | draft | internal | Gives #401/#402 the staff configuration surface they shipped without (#750), moves the checkout postcode lookup server-side and fixes the form it writes into (#749), and makes the vendor logo upload report why it fails — which is how its cause, rejected R2 credentials, was found. |
 | [P10 Shared Fulfilment State](specs/2026-09-14-p10-shared-fulfilment-state/plan.md) | spec | 1.0.0 | 2026-09-14 | draft | internal | Promote the fulfilment method from four disconnected client states to one server-readable cookie, and collapse the duplicated delivery-fee and tracker arithmetic into the existing pure functions. |
 | [Address lookup — reference-data framework, Code-Point Open, OS Open Names (plan)](specs/2026-09-15-address-lookup-reference-data/plan.md) | spec | 2.0.0 | 2026-09-15 | approved | internal | A dedicated UK location-reference database with demand-driven postcode-area coverage, fed by OS Code-Point Open and OS Open Names, behind a reference-data service boundary; plus a consolidated delivery-eligibility service, a provider-neutral address-lookup API, and customer saved addresses. |
-| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.29.0 | 2026-09-15 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
+| [Reference coverage reconciliation — decommission, observability and production bootstrap (plan)](specs/2026-09-16-reference-coverage-reconciliation/plan.md) | spec | 1.0.0 | 2026-09-16 | draft | internal | Gives the reference-data pipeline a way to retire an unsupported postcode area, reports configured-vs-covered drift on /api/health, and brings production's reference database up from empty to MK/RG. |
+| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.30.0 | 2026-09-16 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
 | [ADR-003 — Object Storage Abstraction (S3-compatible)](specs/decisions/ADR-003-storage-abstraction.md) | adr | 1.2.0 | 2026-08-17 | approved | internal | Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time. |

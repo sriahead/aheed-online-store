@@ -6,6 +6,45 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Retiring an unsupported postcode area, and making coverage drift visible** (`#770`, `#771`,
+  `#767`; `specs/2026-09-16-reference-coverage-reconciliation/`).
+  - **The reference pipeline could add a postcode area but never remove one.** Both of its
+    mechanisms are scoped to the areas being imported — deliberately, so one area's import cannot
+    retire another's — which together meant an area dropping out of
+    `UK_LOCATION_REF_POSTCODE_AREAS` was never touched by any later run. It froze at whatever
+    release imported it while its `ReferenceAreaCoverage` row went on claiming authority, so a
+    postcode issued there afterwards was answered `INVALID`: the one outcome the `UNVERIFIED` state
+    exists to prevent. `LU` had been in that state since 2026-09-15, Code-Point only, with **0**
+    `PlaceReference` rows.
+  - **`ReferenceDataSource.decommissionAreas` plus `decommissionUnsupportedAreas`**, reachable only
+    through `sync-reference-data.ts --decommission` (with `--dry-run` to rehearse). It removes each
+    unsupported area's **coverage row before its data rows**, so the area degrades to `UNVERIFIED`
+    rather than passing through a window in which it reads as `INVALID` — a correctness property
+    with its own call-order test, not a comment. It refuses when no areas are configured, because
+    "nothing is required" must never mean "remove everything", and the monthly workflow never
+    passes the flag.
+  - **`LU` retired from the dev/staging reference branch**: 6,464 postcodes and one coverage row
+    deleted, `MK` (16,215 / 9,989) and `RG` (23,816 / 13,483) unchanged. Staging now answers
+    `LU1 1AA` with `UNVERIFIED`, and `MK10 0AA` with Milton Keynes, coordinates and street hints.
+  - **`/api/health` now carries a `reference` block** — configured, reachable, required areas, and
+    per source the covered areas plus drift in **both** directions. Reported, never fatal: an
+    unsynced reference database is a designed, recoverable state, so it does not change the health
+    verdict. `scripts/verify-reference-coverage.ts` answers the same question about a database named
+    by an env file, read-only, exiting non-zero on drift.
+  - **Nothing compared configured against materialised coverage before this**, which is why the
+    above went unnoticed — and why a second failure did too: staging served `UNVERIFIED` for every
+    postcode for a day because the reference secrets had been added through the Cloudflare dashboard
+    as a version that was never deployed, while `wrangler secret list` listed them happily. That
+    pending version also blocked every `deploy-staging` run at its first step.
+  - **Production's reference database bootstrapped** (`#767`): migrated from empty and imported
+    `MK`/`RG` for both sources.
+  - `tests/reference-decommission-safety.test.ts` confines every `delete`/`deleteMany` under
+    `lib/reference-data/` to four named functions, on the AST rather than by grep — these files
+    discuss deletion at length, and a text check could only be satisfied by removing the
+    explanations.
+
 ### Changed
 
 - **Documentation and handoff reconciliation for #764 (Document (final) for PR #768)**:
