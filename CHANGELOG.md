@@ -6,6 +6,19 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Postcode validation, location enrichment and saved addresses, on a dedicated UK reference database** (`#764`; `specs/2026-09-15-address-lookup-reference-data/`). Closes the whole flow: `saved address where available → postcode validation → delivery check → location assistance → manual completion → confirmation → save and reuse`.
+  - **Reference data lives in its own Neon project** (`uk-location-reference`), not Aheed's. Forced by measurement, not preference: a full-GB Code-Point import into Aheed's database succeeded at **1,749,109 rows and 456.9 MB**, took the project to **489.8 MB of its 512 MB ceiling** — against under 5 MB for every transactional table combined — and the Open Names import then failed outright. Shared UK reference data is not Aheed's data and dwarfs it. Its own schema (`prisma/reference/`), migrations and generated client; Aheed reaches it only through `lib/reference/`.
+  - **Demand-driven coverage.** UK-wide capable, but only the postcode areas configured in `UK_LOCATION_REF_POSTCODE_AREAS` are materialised — today `MK,RG`, at **40,031 postcodes and 20.50 MB** instead of 1.75M and 456.9 MB. Adding an area is configuration plus a sync run: no migration, no importer, no application change. No area literal exists anywhere in the schema, sources, repositories, services or routes.
+  - **The sync has two independent change dimensions**, and both matter. A new upstream release, *or* a newly required area that is not yet materialised. A checksum-only check would exit "unchanged" while a newly configured area sat unimported — silently, with no error. Proven live: with the release unchanged at `2026-08`, adding `LU` imported 6,464 rows and left `MK`/`RG` untouched.
+  - **Validity is coverage-aware and three-state.** Covered area with no active row is `INVALID`; an area never imported is `UNVERIFIED`, never invalid. A postcode outside `MK`/`RG` is not wrong just because we have not imported that part of the country.
+  - **Every infrastructure failure degrades to `UNVERIFIED`**, never `INVALID` and never a 500. Verified live with the reference database pointed at an unreachable host: `MK99 9ZZ` flips from `INVALID` to `UNVERIFIED` and checkout still accepts a manually entered address. Vendor delivery rules keep working throughout, because they never touch the reference database.
+  - **One `DeliveryEligibilityService`**, replacing three independent `isDeliverable()` call sites (`Header`, `place-order`, `fulfilment-service`) that could each drift — the damaging case being a header that promises delivery checkout then refuses.
+  - **`GET /api/address/lookup`** — provider-neutral, vendor-aware, exposing no internal field. `addresses[]` is reserved for genuine property-level candidates and is **empty**: no lawfully usable UK source exists (`#766`). Street hints live under `location`, are suppressed entirely when ambiguous, and are never presented as addresses.
+  - **`CustomerAddress`** — saved addresses for signed-in customers, separate from the immutable per-order `Address` snapshot, included in data-rights export and deleted on erasure.
+  - **Removed `lib/postcodes-api.ts`**: checkout no longer depends on a third-party postcode API, with no network fallback.
+
 ### Changed
 
 - **`/staff/fulfilment` moved next to `/staff/orders`** in both navigation surfaces
@@ -5304,5 +5317,6 @@ every branch merges.
 
 
  
- |   2 0 2 6 - 0 9 - 1 2   |   D o c u m e n t a t i o n   h a n d o f f   f o r   # 7 3 4 ,   b u i l t   a n d   m e r g e d   t o   s t a g i n g .   |   P o s t - s h i p   d o c s   r e c o n c i l i a t i o n   |  
+ |   2 0 2 6 - 0 9 - 1 2   |   D o c u m e n t a t i o n   h a n d o f f   f o r   # 7 3 4 ,   b u i l t   a n d   m e r g e d   t o   s t a g i n g .   |   P o s t - s h i p   d o c s   r e c o n c i l i a t i o n   | 
+ 
  

@@ -68,6 +68,7 @@ model User {
   discountUses        DiscountRedemption[]
   roleChangesTargeted VendorRoleAuditLog[] @relation("TargetUser")
   roleChangesActedOn  VendorRoleAuditLog[] @relation("ActorUser")
+  customerAddresses   CustomerAddress[]
 }
 
 model Session {
@@ -167,6 +168,7 @@ model Vendor {
   brands                    Brand[]
   vendorThemes              VendorTheme[]
   vendorExpressSchedules    VendorExpressSchedule[]
+  customerAddresses         CustomerAddress[]
 }
 
 // P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
@@ -1346,4 +1348,61 @@ model VendorExpressSchedule {
   dayOfWeek Int // 0 = Sunday, 1 = Monday...
   openTime  String // HH:mm
   closeTime String // HH:mm
+}
+
+// ---------------------------------------------------------------------------
+// Reference data MOVED OUT (#764).
+//
+// PostcodeReference, PlaceReference, ReferenceDataset and ReferenceDataSyncRun
+// briefly lived here and are gone. They now live in their own Neon project,
+// `uk-location-reference`, declared in prisma/reference/schema.prisma with its
+// own client and migration history.
+//
+// WHY, IN NUMBERS. A full-GB Code-Point import into this database succeeded at
+// 1,749,109 rows and occupied 456.9 MB, taking the whole project to 489.8 MB of
+// its 512 MB ceiling — 89% of the budget for one reference table, against under
+// 5 MB for every transactional table combined. The Open Names import then failed
+// outright with a project-size-limit error, and ordinary writes began failing
+// too. Shared UK reference data is not Aheed's data, it dwarfs Aheed's data, and
+// it competes for a budget sized for orders and products.
+//
+// Aheed reaches that data through lib/reference/, never through a table here.
+// CustomerAddress below stays: it IS Aheed's data, vendor- and user-scoped.
+// ---------------------------------------------------------------------------
+
+/// A customer's saved, REUSABLE address (#764).
+///
+/// Deliberately NOT the same table as `Address`. `Address` is a per-order snapshot
+/// written once inside placeOrder's transaction and never updated, because
+/// architecture.md requires that editing a saved address must not rewrite where a
+/// past order was delivered. This table is the editable thing a checkout form is
+/// populated FROM; the snapshot remains what an order is delivered TO. Correcting
+/// a typo here changes nothing about any existing order.
+///
+/// Vendor-scoped and user-scoped, because unlike the reference tables above this
+/// IS domain data: ADR-004's mandatory `vendorId` filter applies in full, and a
+/// saved address must never surface to another vendor or another customer.
+/// `userId` is required — a guest has no identity to own a durable record, so
+/// guests continue to rely on the delivery-postcode cookie.
+model CustomerAddress {
+  id            String    @id @default(uuid())
+  vendorId      String
+  vendor        Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label         String?
+  recipientName String
+  phone         String
+  line1         String
+  line2         String?
+  city          String
+  county        String?
+  postcode      String
+  notes         String?
+  isDefault     Boolean   @default(false)
+  lastUsedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([vendorId, userId])
 }

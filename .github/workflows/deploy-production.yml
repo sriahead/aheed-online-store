@@ -37,6 +37,21 @@ jobs:
       # step most likely to fail: a root proxy.ts once passed next build, lint, typecheck
       # and every test, and failed only here. Migrating first meant such a failure left
       # production on a newly migrated schema still serving the previous bundle.
+      # BOTH Prisma clients, before the build. @prisma/client's postinstall generates
+      # only the default schema during `npm ci`; it has never known about
+      # prisma/reference/schema.prisma, whose client is generated into node_modules
+      # (see that schema's generator block for why it must live there). Without this
+      # step the OpenNext build below fails to resolve @aheed/reference-client.
+      #
+      # No database is contacted — a Prisma client is generated from the schema file.
+      # The URLs are supplied only because the datasource block requires the variables
+      # to exist for the schema to parse.
+      - name: Generate Prisma clients
+        env:
+          UK_LOCATION_REF_DATABASE_URL: ${{ secrets.UK_LOCATION_REF_DATABASE_URL }}
+          UK_LOCATION_REF_DIRECT_URL: ${{ secrets.UK_LOCATION_REF_DIRECT_URL }}
+        run: npm run db:generate
+
       - name: Build (OpenNext)
         run: npx opennextjs-cloudflare build
 

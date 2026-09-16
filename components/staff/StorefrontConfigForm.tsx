@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useActionState, useTransition } from "react";
+import { lookupAddressForCheckout } from "@/features/checkout/address-lookup";
 import { useRouter } from "next/navigation";
 import type { Theme, VendorBranding, VendorConfig } from "@/lib/repositories/vendor";
 import { DEFAULT_BRAND_PRIMITIVES } from "@/lib/repositories/vendor";
@@ -128,6 +129,44 @@ export function StorefrontConfigForm({
   const [saveThemeError, setSaveThemeError] = useState("");
 
   const [mainColor, setMainColor] = useState(colors.brandGreen || "#467339");
+
+  /**
+   * #764 — postcode assistance for the store's own location.
+   *
+   * Deliberately shows NO delivery-eligibility verdict. This is where the shop physically is, not
+   * somewhere an order is going, so "do we deliver here?" is a meaningless question to put in front
+   * of an admin — and answering it would imply the store must be inside its own delivery area,
+   * which is not a rule this application has.
+   */
+  const [locationLookup, setLocationLookup] = useState<string | null>(null);
+  const [locationLookingUp, setLocationLookingUp] = useState(false);
+
+  const lookUpStorePostcode = async (postcode: string, cityInputId: string) => {
+    if (!postcode.trim()) return;
+    setLocationLookingUp(true);
+    setLocationLookup(null);
+
+    const outcome = await lookupAddressForCheckout(postcode);
+
+    if (outcome.ok && outcome.result.status === "INVALID_POSTCODE") {
+      setLocationLookup("That postcode isn't in the postcode reference data.");
+    } else if (outcome.ok) {
+      // Only fills an EMPTY field, same rule as checkout: never overwrite what an admin typed.
+      const cityInput = document.getElementById(cityInputId);
+      if (
+        cityInput instanceof HTMLInputElement &&
+        cityInput.value.trim() === "" &&
+        outcome.result.town
+      ) {
+        cityInput.value = outcome.result.town;
+      }
+      setLocationLookup(outcome.result.town ? `Found: ${outcome.result.town}` : "Postcode found.");
+    } else {
+      setLocationLookup(null);
+    }
+
+    setLocationLookingUp(false);
+  };
 
   function applyTheme() {
     if (!selectedThemeRef) return;
@@ -585,7 +624,14 @@ export function StorefrontConfigForm({
                 defaultValue={initialLocation?.postcode ?? ""}
                 className={fieldClass(deliveryState.field === "collectionPostcode")}
                 placeholder="e.g. MK9 3QA"
+                onBlur={(e) => void lookUpStorePostcode(e.target.value, "collectionCity")}
               />
+              {locationLookingUp && (
+                <p className="text-xs text-primary-muted">Checking postcode...</p>
+              )}
+              {locationLookup && !locationLookingUp && (
+                <p className="text-xs text-primary-muted">{locationLookup}</p>
+              )}
             </div>
           </div>
         )}

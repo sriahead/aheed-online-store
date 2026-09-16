@@ -8,6 +8,7 @@ import { getAuth } from "@/lib/auth";
 import { computeTotals } from "@/lib/order-totals";
 import { formatPrice } from "@/components/product/format-price";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
+import { getCustomerAddressService } from "@/lib/customer-addresses-service";
 import { CheckoutSummary } from "@/components/checkout/CheckoutSummary";
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
 import { getFulfilmentMethod } from "@/lib/fulfilment-service";
@@ -39,6 +40,11 @@ export default async function CheckoutPage() {
   const signedInUserId = (session?.user as { id?: string } | undefined)?.id ?? null;
 
   const initialPostcode = cookieStore.get(DELIVERY_POSTCODE_COOKIE)?.value ?? null;
+
+  // #764 — a returning signed-in shopper is offered the addresses they have already confirmed,
+  // rather than being made to retype one we hold. The service returns an empty list for a guest,
+  // who has no identity to own a saved address.
+  const savedAddresses = await getCustomerAddressService().list();
 
   // P5a (#135) — offered only to a signed-in shopper at a loyalty-enabled vendor
   // whose VISIBLE balance (zero once lapsed) clears the vendor's minimum. Guests
@@ -112,6 +118,7 @@ export default async function CheckoutPage() {
             redeemable={redeemable}
             offerCollection={vendor?.offerCollection ?? false}
             initialPostcode={initialPostcode}
+            savedAddresses={savedAddresses}
             method={fulfilmentMethod}
           />
         </div>
