@@ -8,6 +8,13 @@ every branch merges.
 
 ### Changed
 
+- **Documentation reconciliation for the `#764`/`#770`/`#771`/`#767` production promotion (PR
+  #775)**: `specs/roadmap.md`'s change-log row for the promotion, plus a corrected P10 tracked-issue
+  bullet (all five issues closed, `#766` the only one left open). `docs/model-handoff.md` updated
+  throughout — `main`/`staging` both at `1e44533`, no pending promotion; live post-deploy production
+  checks (`/api/health`, `/api/address/lookup` for `MK`/`LU`) recorded; the two now-deleted branches
+  removed from "safe to delete" listings.
+
 - **Documentation and handoff reconciliation for #770/#771/#767 (Document (final) for PR #773)**:
   - Added `specs/roadmap.md`'s change-log row for this slice (closing the `npm run sdd:audit` gap
     it left behind) and updated the P10 tracked-issue entry for `#767` — its database half is done,
