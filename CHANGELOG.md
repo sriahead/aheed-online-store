@@ -6,7 +6,52 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Stakeholder Business Case & Platform Pitch, as a living KMS artifact (`#777`,
+  `specs/2026-09-16-business-case-kms/`)**: `docs/business-analysis/business-case.md` — the first
+  stakeholder-facing commercial account of the platform. Covers the executive pitch, delivered
+  capabilities and their business value, a Shopify comparison specific to this business model,
+  modelled cost savings, projected operating costs, monetisation including the multi-vendor
+  licensing opportunity, planned work and its expected impact, the day-to-day operating model,
+  growth strategy, risks, and a 12–24 month horizon plan.
+  - Every capability is tagged **IMPLEMENTED / IN PROGRESS / PLANNED** against a cited file, model,
+    route or issue; every derived figure is tagged `ESTIMATE` with its assumption at the point of
+    use; every external price carries its source and its 2026-09-16 retrieval date.
+  - **States plainly that the platform has never traded** — `#113` (live Stripe keys) and `#104`
+    (verified email sending domain) are both open — so no figure is presented as realised.
+  - `audience: [product, platform-admin]`, so it reaches `ARTIFACT_INDEX.md` and the internal docs
+    site but is withheld at `/staff/runbook` from vendor store admins, whose own commercials it
+    discusses.
+
+- **`npm run sdd:audit` now checks the business case for staleness** (`scripts/sdd-business-case.ts`,
+  `tests/sdd-business-case.test.ts`, 26 tests): it compares the document's own visible
+  `| **Last reviewed** |` row against the newest phase-closure row in `specs/roadmap.md`'s change
+  log, and reports a gap when a milestone closed afterwards, when the file is missing, or when the
+  marker cannot be parsed. Placed in `audit()` rather than a vitest check because the review belongs
+  after Ship, not before merge — the same reasoning as the `#207` promotion audit.
+  - The closure detector required tightening mid-build: a first version allowing 80 characters
+    between phase name and verb matched narrative prose (`P10, two closed`, `P10 and their
+    milestones closed`) and reported a phase closure on a date when none happened. Adjacency plus a
+    negation guard fixed it; all three false positives are pinned as tests.
+
 ### Changed
+
+- **The SDD milestone close now has a third stage** (`specs/sdd-workflow.md` 2.34.0,
+  `.claude/commands/document.md`, `.claude/commands/learn.md`): **Business case review**, run after
+  `/discover` and `/learn` and before the front-matter bump, model switch and `/clear`. Sequenced
+  after Learn deliberately — Learn establishes from evidence what shipped and which assumptions
+  held, and the business case consumes that rather than re-deriving it and risking a different
+  answer. Documented, including the fact that `sdd:audit` reports the artifact as due from the
+  moment `/document` writes the roadmap closure row until the review lands, and that the close is
+  not finished until it exits 0 again. Not a gate, for the same reason Discover and Learn are not.
+
+- **Documentation reconciliation for the `#764`/`#770`/`#771`/`#767` production promotion (PR
+  #775)**: `specs/roadmap.md`'s change-log row for the promotion, plus a corrected P10 tracked-issue
+  bullet (all five issues closed, `#766` the only one left open). `docs/model-handoff.md` updated
+  throughout — `main`/`staging` both at `1e44533`, no pending promotion; live post-deploy production
+  checks (`/api/health`, `/api/address/lookup` for `MK`/`LU`) recorded; the two now-deleted branches
+  removed from "safe to delete" listings.
 
 - **Documentation and handoff reconciliation for #770/#771/#767 (Document (final) for PR #773)**:
   - Added `specs/roadmap.md`'s change-log row for this slice (closing the `npm run sdd:audit` gap

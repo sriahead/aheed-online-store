@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.8.0"
+version: "1.9.0"
 updated: 2026-09-16
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,13 +40,12 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-16.
-- **Checkout:** `staging`, at `cb397b8` (reference-coverage-reconciliation's Ship — PR #773). The
-  `feature/reference-coverage-reconciliation` branch is merged; not yet deleted (do so once nothing
-  else needs its history).
-- **Base state:** `origin/staging` moved `ab1f080` → `cb397b8` this session. `origin/main` is still
-  at `d855e1f`; the `staging → main` promotion for `#764` and this slice has **not** been opened —
-  this repo batches promotions rather than opening one per slice (see PR #759's precedent, which
-  carried four prior issues), and no owner instruction to promote now was given at `/ship`.
+- **Checkout:** `main` and `staging` are both at `1e44533` — **`#764` and `#770`/`#771`/`#767` are
+  now in production** (PR #775, "Promote address lookup, reference-data and coverage
+  reconciliation to production", `staging → main`). `#764`, `#767`, `#770`, `#771` and `#772` all
+  closed on the merge; `#766` stays open, deliberately.
+- **Base state:** `origin/staging` and `origin/main` moved `d855e1f` → `1e44533` this session (PR
+  #775). Both branches are in sync — no pending promotion.
 - **NEW INFRASTRUCTURE — a second Neon project now exists, and is now live on staging.** See the
   dedicated section below. This is the most consequential project-level change since multi-tenancy.
 - **Worktrees:** only the main checkout.
@@ -106,37 +105,41 @@ This line previously said the database itself was unmigrated, which was true unt
 stale now — the two facts (database readiness, application promotion) were conflated here and need
 checking independently.
 
-**The feature this database backs is live on staging**: `GET /api/address/lookup`, postcode
-validation and delivery-eligibility consolidation (`lib/delivery-eligibility.ts`), and customer
-saved addresses (`CustomerAddress`, separate from the per-order `Address` snapshot). `addresses[]`
-in the lookup response stays empty until a licensed property-address provider exists — tracked as
-**`#766`**, not a defect (Backlog, Phase `P10`). **`#767`'s database half is done** (this session's
-`#770`/`#771`/`#767` slice — see below), and its issue is `In Review` on Project #2 rather than
-`Backlog` now; what's left on it is `#772` (the application isn't promoted, so production serves the
-route to nobody yet regardless of database state).
+**The feature this database backs is now live in PRODUCTION, not just staging**: `GET
+/api/address/lookup`, postcode validation and delivery-eligibility consolidation
+(`lib/delivery-eligibility.ts`), and customer saved addresses (`CustomerAddress`, separate from
+the per-order `Address` snapshot) — promoted via PR #775, `1e44533`, 2026-09-16. `addresses[]` in
+the lookup response stays empty until a licensed property-address provider exists — tracked as
+**`#766`**, not a defect (Backlog, Phase `P10`), the only issue in this group still open. `#764`,
+`#767`, `#770`, `#771` and `#772` all closed on the promotion.
 
-## Reference coverage reconciliation (`#770`, `#771`, `#767`, shipped to staging 2026-09-16, PR #773)
+## Reference coverage reconciliation — NOW IN PRODUCTION (`#770`, `#771`, `#767`, PR #773/#774 to
+staging, promoted via PR #775, merge `1e44533`, 2026-09-16)
 
-Closes the one hole `#764`'s coverage model left open: the sync pipeline could add a postcode area
+Closed the one hole `#764`'s coverage model left open: the sync pipeline could add a postcode area
 but never remove one, so an area dropping out of `UK_LOCATION_REF_POSTCODE_AREAS` froze at whatever
 release imported it while its `ReferenceAreaCoverage` row kept claiming authority — reading
 `INVALID`, the exact outcome `UNVERIFIED` exists to prevent. `sync-reference-data.ts --decommission`
-now closes that gap (coverage row removed before data rows, refuses on an empty required list,
-never run by the schedule); `LU` — the one area that had drifted this way — is retired from
-dev/staging. `/api/health` now carries a `reference` block (`lib/reference/reference-status-service.ts`)
-reporting configured/reachable/required areas and per-source drift in both directions, never fatal.
-**Production's reference database is bootstrapped** (migrated, `MK`/`RG` imported for both sources,
-matches dev/staging row for row) — the *application* serving it is still `staging`-only (`#772`
-tracks the promotion; `sync-reference-data.yml`'s monthly schedule stays dormant until then, since
-GitHub resolves `schedule`/`workflow_dispatch` against the default branch only).
+closes that gap (coverage row removed before data rows, refuses on an empty required list, never
+run by the schedule); `LU` — the one area that had drifted this way — was retired from dev/staging
+(production never had it). `/api/health` carries a `reference` block
+(`lib/reference/reference-status-service.ts`) reporting configured/reachable/required areas and
+per-source drift in both directions, never fatal.
 
-**Found and fixed at this slice's own `/validate`, not part of the original build**: a routine
-`deploy-staging` CI run silently wiped `UK_LOCATION_REF_POSTCODE_AREAS` from the deployed staging
-Worker's bindings — `wrangler deploy` rebuilds a Worker's `vars` entirely from `wrangler.toml`, and
-the variable had only ever been added via the Cloudflare dashboard, never committed. Now declared
-as `[env.staging.vars]`/`[env.production.vars]` in `wrangler.toml`, confirmed live against the
-deployed Worker's actual bindings (Cloudflare API) after this PR's own post-merge `deploy-staging`
-ran — `/api/health` on deployed staging reports `drift: false` at `cb397b8`.
+**Production is now fully live, not just the database.** Promoting `#764` to `main` is what `#772`
+itself named as the fix for the dormant monthly schedule (`.github/workflows/sync-reference-data.yml`
+now exists on `main`; `gh workflow list` shows it `active`, confirmed live). Production `/api/health`
+reports `db.ok: true` and `reference.drift: false` at `1e44533`; `/api/address/lookup?postcode=MK10
+0AA` returns `DELIVERABLE` with real coordinates; `LU11AA` correctly returns `UNVERIFIED` (never
+imported in production, a different reason than dev/staging's retired `LU`, same correct state).
+
+**Found and fixed at this slice's own `/validate`, before promotion**: a routine `deploy-staging`
+CI run had silently wiped `UK_LOCATION_REF_POSTCODE_AREAS` from the deployed staging Worker's
+bindings — `wrangler deploy` rebuilds a Worker's `vars` entirely from `wrangler.toml`, and the
+variable had only ever been added via the Cloudflare dashboard, never committed. Fixed by declaring
+it as `[env.staging.vars]`/`[env.production.vars]` in `wrangler.toml` — confirmed working on both
+environments' own first real deploy from committed config (staging's post-merge `deploy-staging`,
+then production's `deploy-production` on promotion), neither needing a dashboard workaround.
 
 Read `CLAUDE.md`'s "There are TWO databases" section and `specs/architecture.md` §3.0 before
 touching any of it.
@@ -165,14 +168,11 @@ slice's `/ship` (2026-09-15) while preparing the promotion PR's closing-issue li
 deliberately left open and uncited by PR #759. See the Documentation Reconciliation section below
 for the tracked cleanup issue.
 
-**`#764` (address lookup, reference-data framework, saved addresses) shipped to staging 2026-09-16
-(PR #768, merge `ab1f080`) and is `In Review` on Project #2** — not yet promoted to `main`.
-**`#770`/`#771`/`#767` (reference coverage reconciliation) shipped the same day (PR #773, merge
-`cb397b8`) and are also `In Review`** — the decommission path, `/api/health`'s `reference` block,
-and production's database bootstrap. See "Reference coverage reconciliation" above for what shipped
-and "A second database now exists" for the infrastructure it depends on. **Nothing about this
-feature is dark in production for a database reason any more** — what remains is the application
-promotion itself (**`#772`**), which is also what wakes the monthly sync schedule.
+**`#764` (address lookup, reference-data framework, saved addresses) and `#770`/`#771`/`#767`
+(reference coverage reconciliation) are BOTH now promoted to production** (PR #775, merge
+`1e44533`, 2026-09-16) — see Last Verified above and "Reference coverage reconciliation" for what
+shipped and how it was live-verified post-deploy. `#764`, `#767`, `#770`, `#771` and `#772` all
+closed; `#766` remains open, deliberately (no licensed address provider in scope).
 
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
@@ -216,11 +216,10 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#764` shipped to `staging` (PR #768, `ab1f080`), In Review on Project #2, not yet promoted** —
-  see Last Verified/Project Position above.
-- **`#770`/`#771`/`#767` shipped to `staging` (PR #773, `cb397b8`), In Review on Project #2, not yet
-  promoted** — see Last Verified/Project Position/"Reference coverage reconciliation" above. Merged
-  and safe to delete once nothing else needs it: `feature/reference-coverage-reconciliation`.
+- **`#764` and `#770`/`#771`/`#767` are DONE — see Last Verified/Project Position above.** Both
+  promoted to production via PR #775 (`1e44533`, 2026-09-16); `#764`, `#767`, `#770`, `#771`,
+  `#772` all closed. `feature/reference-coverage-reconciliation` and
+  `docs/document-final-reference-coverage-reconciliation` already deleted, locally and remote.
 - **The whole delivery cluster is DONE — see Last Verified/Project Position above.** `#401`, `#402`,
   `#748`, `#749`, `#750`, `#751` all shipped, closed, and are live in production (`d855e1f`,
   2026-09-15). `#613` was never part of it (citation error, corrected above).
