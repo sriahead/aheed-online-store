@@ -3,7 +3,9 @@
  *
  *   npm run sdd:preclear   Before a Clear: is everything load-bearing actually on disk?
  *   npm run sdd:audit      At Orient: did the last shipped slice — and the last promotion
- *                          (staging → main) — get its roadmap entry? (#207)
+ *                          (staging → main) — get its roadmap entry? (#207) And is the
+ *                          stakeholder business case current for the milestone that closed
+ *                          most recently? (#777)
  *
  * The loop's whole bet is "persist before clear" and "documentation actually lands".
  * Both were prose in specs/sdd-workflow.md, which is how three slices (P3a/P3b/P3c)
@@ -23,6 +25,7 @@ import {
   type Promotion,
   type PromotionVerdict,
 } from "./sdd-promotions";
+import { BUSINESS_CASE_PATH, auditBusinessCase } from "./sdd-business-case";
 
 /**
  * Slices at or before this one predate the loop (specs/sdd-workflow.md 2.0.0) and are
@@ -168,6 +171,54 @@ function reportPromotions(roadmapText: string): number {
 
   const missing = missingPromotionRows(verdicts);
   return missing.length;
+}
+
+// ------------------------------------------------------------ business case
+
+/**
+ * Is the stakeholder business case current for the milestone the roadmap says closed most
+ * recently? (#777)
+ *
+ * **Expect this to report a gap DURING a milestone close, and read that as the check working.**
+ * `/document` writes the roadmap closure row at step 4, and the business case review happens
+ * after `/learn`, later in the same close — so between those two points the artifact genuinely
+ * is stale, and saying so is the entire point. The close is not finished until `sdd:audit` exits
+ * 0 again. The alternative — suppressing the report while a close is in flight — would require
+ * this function to know which stage it is running in, which it cannot, and would silently cover
+ * the exact case of a close abandoned halfway.
+ */
+function reportBusinessCase(roadmapText: string): number {
+  console.log("stakeholder business case (reviewed at every milestone close):");
+
+  const path = join(ROOT, BUSINESS_CASE_PATH);
+  const text = existsSync(path) ? readFileSync(path, "utf8") : null;
+  const verdict = auditBusinessCase(text, roadmapText);
+
+  switch (verdict.kind) {
+    case "missing":
+      fail(`${BUSINESS_CASE_PATH} is MISSING — the milestone-close review has nothing to update`);
+      return 1;
+    case "unparseable":
+      fail(
+        `${BUSINESS_CASE_PATH} has no parseable "| **Last reviewed** | YYYY-MM-DD |" row — ` +
+          "a typo here would silently disable this check, so it is reported as a gap",
+      );
+      return 1;
+    case "stale":
+      fail(
+        `${BUSINESS_CASE_PATH} last reviewed ${verdict.lastReviewed}, but a milestone closed on ` +
+          `${verdict.closure.date} — run the milestone-close review (specs/sdd-workflow.md)`,
+      );
+      console.error(`      closure row: ${verdict.closure.row.slice(0, 160)}`);
+      return 1;
+    case "ok":
+      pass(
+        `reviewed ${verdict.lastReviewed}` +
+          (verdict.milestoneAssessed ? ` against ${verdict.milestoneAssessed}` : "") +
+          (verdict.closureDate ? ` (newest phase closure ${verdict.closureDate})` : ""),
+      );
+      return 0;
+  }
 }
 
 // ---------------------------------------------------------------- preclear
@@ -339,6 +390,9 @@ function audit(): number {
 
   console.log("");
   gaps += reportPromotions(roadmapText);
+
+  console.log("");
+  gaps += reportBusinessCase(roadmapText);
 
   if (gaps > 0) {
     console.error(`\n${gaps} documentation gap(s). The Document (final) pass did not land.`);

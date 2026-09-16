@@ -4,10 +4,10 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.33.0"
-updated: 2026-09-11
+version: "2.34.0"
+updated: 2026-09-16
 visibility: internal
-summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two deliberate context resets, plus the Discover and Learn phases that run on milestone close. Each stage is also a Claude Code slash command.
+summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
 ---
 
@@ -37,7 +37,7 @@ ORIENT → PROPOSE → SPEC → BUILD → DOCUMENT (build notes)
                                      CLEAR  ← switch to Opus 5 → back to ORIENT
 ```
 
-Two further phases sit **outside** that per-slice loop and run on the milestone, not the slice:
+Three further stages sit **outside** that per-slice loop and run on the milestone, not the slice:
 
 ```
    ... last slice of a milestone ships and is documented ...
@@ -46,15 +46,19 @@ Two further phases sit **outside** that per-slice loop and run on the milestone,
                         ↓
                      LEARN     (backward-looking: what did this milestone teach us?)
                         ↓
-             findings land in docs/research/ + promoted lessons
+              BUSINESS CASE    (outward-looking: what is this worth now?)
+                        ↓
+      findings land in docs/research/ + docs/business-analysis/ + promoted lessons
                         ↓
               back to ORIENT for the next milestone
 ```
 
-Both are **independently invocable at any time** (`/discover`, `/learn`) and both run
+Discover and Learn are **independently invocable at any time** (`/discover`, `/learn`) and both run
 **automatically at milestone close**, in that order — Discover before Learn, so the retrospective
-can react to what discovery just surfaced rather than the other way round. Neither is a gate:
-neither can block a merge, and neither produces approved scope. Their output is evidence.
+can react to what discovery just surfaced rather than the other way round. The **business case
+review** follows Learn, because it consumes what Learn established rather than re-deriving it; see
+**Business case review** below. None of the three is a gate: none can block a merge, and none
+produces approved scope. Their output is evidence.
 
 **Why the switch sits after Document, not before.** Document (final) is reconciliation work —
 roadmap row, KMS rebuild, board sync — against a branch the current Sonnet 5 session already has
@@ -993,9 +997,14 @@ milestone rather than optional extra work:
    anything with a next action beyond `RESEARCH MORE`.
 3. **`/learn`** — retrospective appended to `docs/research/milestone-retrospectives.md`, lessons
    promoted to `CLAUDE.md` / this file / a test, and hypotheses from the last cycle answered.
-4. Both files' front-matter `version` and `updated` bumped, then `npm run kms:validate` and
+4. **Review and update the stakeholder business case** (`docs/business-analysis/business-case.md`),
+   per **Business case review** below. This is the only stage that runs after Learn, and it runs
+   after Learn deliberately.
+5. All three files' front-matter `version` and `updated` bumped, then `npm run kms:validate` and
    `npm run kms:build-index` re-run — these are KMS artifacts and go stale like any other.
-5. Only then the model switch and `/clear`.
+6. **`npm run sdd:audit` exits 0.** The close is not finished until it does — see the note in
+   Business case review about what it reports mid-close.
+7. Only then the model switch and `/clear`.
 
 **Why Discover runs first.** Learn should be able to react to what Discover surfaced; a
 retrospective written first will re-derive half of it and miss the rest.
@@ -1007,3 +1016,46 @@ pass rather than to be true. The four SDD gates stay exactly as they are.
 the roadmap through `/propose`, and reaches code through `/spec`. That is not a formality here — it
 is the only thing keeping a research phase from becoming an unbounded backlog of work nobody agreed
 to do.
+
+## Business case review (at milestone close, after Learn)
+
+`docs/business-analysis/business-case.md` is the stakeholder-facing commercial account of the
+platform: what is built, what it costs to run, what it saves against Shopify, how it could earn, and
+what remains to be invested. It is a **living** artifact — a milestone that closes changes what
+"current" means in it, so it is reviewed at every close (`#777`).
+
+**Why after Learn, not before.** Learn establishes, from evidence, what the milestone actually
+delivered and which assumptions held. The business case consumes that. Reviewed first, it would
+re-derive the same material from the same sources and risk reaching a different answer than the
+retrospective sitting next to it.
+
+**What the review does:**
+
+1. **Move capabilities between IMPLEMENTED / IN PROGRESS / PLANNED** to match what the milestone
+   actually shipped, with the citation updated. A capability that was descoped moves *back*, and
+   saying so is the point.
+2. **Update the status block** — `Milestone assessed` and `Last reviewed`. `Last reviewed` is the
+   field `npm run sdd:audit` reads; it must be the ISO date of the review.
+3. **Re-research the external figures.** Shopify plan pricing and transaction rates, Stripe rates,
+   Cloudflare, Neon and Resend pricing, and the GBP/USD rate all move. Each carries its retrieval
+   date; if the date is stale, the figure is unverified rather than merely old.
+4. **Re-check the open items** listed in the previous revision entry, and answer each.
+5. **Append a revision entry** naming the milestone, what materially changed, and what was
+   **withdrawn or corrected**. Revise the body in place so a reader always sees current truth —
+   the record of what moved lives in the revision history, not as superseded prose left in the body.
+6. **Bump `version` and `updated`.**
+
+**The rules the artifact is held to** — these are why it is worth keeping rather than a marketing
+document: never present PLANNED functionality as IMPLEMENTED; cite a file, model, route or issue for
+every capability; label every derived figure `ESTIMATE` with its assumption at the point of use; and
+never state a modelled saving as a realised one.
+
+**`npm run sdd:audit` will report the business case as due from the moment `/document` writes the
+roadmap closure row until this review lands. That is the check working, not a fault.** It cannot
+know which stage of a close it is running in, and suppressing the report while a close is in flight
+would hide the case this check exists for — a close abandoned halfway. The close ends when
+`sdd:audit` exits 0 again.
+
+**This is not a gate**, for the same reason Discover and Learn are not: it runs after Ship, and
+evidence a merge depends on gets written to pass rather than to be true. It is enforced by
+`sdd:audit` at the next `/orient`, which reports rather than blocks.
