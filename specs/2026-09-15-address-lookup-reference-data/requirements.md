@@ -83,10 +83,18 @@ R6a. Every exported function in `lib/repositories/customer-addresses.ts` takes `
 R7. The existing `Address` model is unchanged, and `lib/repositories/orders.ts`'s `placeOrder`
     still creates exactly one `Address` row per order inside its transaction.
 
-R8. Exactly one new directory exists under `prisma/migrations/`, its `migration.sql` contains no
-    `DROP INDEX` statement naming `Order_orderNumber_trgm_idx`, `Order_guestEmail_trgm_idx` or
-    `User_email_trgm_idx`, and `npx prisma migrate status` reports no pending migration against
-    the dev database.
+R8. New directories exist under `prisma/migrations/` for this slice's own changes to Aheed's
+    schema, none of whose `migration.sql` files contain a `DROP INDEX` statement naming
+    `Order_orderNumber_trgm_idx`, `Order_guestEmail_trgm_idx` or `User_email_trgm_idx`, and
+    `npx prisma migrate status` reports no pending migration against the dev database.
+
+    *Revised at Fix (2026-09-16).* Originally said "exactly one new directory." The v1→v2 storage
+    pivot recorded in `plan.md` and `build-notes.md` means there are genuinely **two**:
+    `20260915160937_p10_address_lookup_reference_data` (v1's reference tables plus `CustomerAddress`)
+    and `20260915221254_p10_drop_superseded_reference_tables` (dropping those reference tables once
+    the dedicated `uk-location-reference` database replaced them). The substance this requirement
+    protects — no accidental drop of the P7d trigram indexes, and a clean `migrate status` — holds
+    across both; only the count assumed a single, un-revised migration.
 
 ## Pure helpers
 

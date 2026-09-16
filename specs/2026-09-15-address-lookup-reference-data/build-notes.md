@@ -190,3 +190,44 @@ Reference DB unreachable:
 `MK17 8NL` independently validates the coordinate maths: this code converts Code-Point's grid
 reference to `52.0103,-0.6436`, and postcodes.io reports `52.010298,-0.64353` for the same postcode
 from data this code never saw.
+
+## Fix (2026-09-16) — three gaps found at `/validate`
+
+**Checkout's saved-address flow (R43, R43a, R44, R45) got its end-to-end run.** The gap this file
+flagged above ("Checkout's saved-address flow has not been driven end to end") was closed at
+`/validate`, not here — no code changed for it. Driven live as the demo customer via the
+`Next-Action` header technique (`addToCart`) and a curl-submitted `useActionState` form
+(`placeOrderAction`), through a real Stripe test-mode redirect: a `CustomerAddress` row and a
+separate `Address` snapshot were both confirmed written, editing/deleting the saved address left the
+snapshot byte-identical, the saved address was offered and filled every field with no lookup, and
+temporarily removing the matching `VendorDeliveryArea` prefix confirmed `applySavedAddress`'s
+re-check refuses correctly. Recorded here so this isn't re-flagged as untested next time.
+
+**1. `scripts/verify-data-rights.ts`'s own R4 check failed — root cause, not this slice's fault
+originally, but this slice's job to fix.** Its hardcoded top-level export-key list (written for an
+earlier data-rights spec) never gained `savedAddresses`, which `exportPersonalData` now legitimately
+returns. Every substantive CustomerAddress export/erasure assertion in the same script passed; only
+this stale list was wrong. Fixed by adding `"savedAddresses"` to the `expected` array — confirmed
+`npx tsx scripts/verify-data-rights.ts` now reports "All checks passed."
+
+**2. R25b was genuinely unmet — no doc named the bootstrap commands.** `docs/model-handoff.md`
+covered the two-database split and the production-dark/`UNVERIFIED` fact, but named only
+`npm run ref:migrate` (schema) and never the two `sync-reference-data.ts` invocations that actually
+populate the tables. Fixed by adding a "Bootstrapping the reference database" subsection to
+`docs/developer-portal/env-setup.md` (the file's existing "Bootstrapping a fresh environment
+database" pattern for Aheed's own DB made this the natural home, not `model-handoff.md`, which is
+explicitly a point-in-time snapshot rather than an authoritative procedure doc), naming all four
+commands verbatim and stating the `UNVERIFIED` degradation. Version bumped 1.10.0 → 1.11.0;
+`npm run kms:validate` and a full `kms:assemble:internal` + `next build` of `kms/site-internal` both
+confirmed clean, and `npm run kms:build-index` / `kms:check-generated` re-run since the doc's body
+(not just its front-matter) changed.
+
+**3. R8's "exactly one new directory" was wrong the moment the v1→v2 pivot happened, and nobody
+went back to fix the count.** There are genuinely two: the v1 migration and the one that drops its
+superseded tables. The protection R8 exists for (no dropped trigram indexes, clean `migrate status`)
+held throughout — only the requirement's arithmetic was stale. Corrected `requirements.md` R8 and
+its `validation.md` row to describe both directories and to diff against `origin/staging` rather
+than assume `git status` still shows an uncommitted new directory.
+
+No app behaviour changed by any of the three fixes, so no `CHANGELOG.md` entry — Gate 4's existing
+`#764` entry already covers this slice's user-observable changes.

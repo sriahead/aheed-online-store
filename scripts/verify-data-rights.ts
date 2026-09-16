@@ -244,6 +244,7 @@ async function modeExportShape(prisma: PrismaClient): Promise<void> {
       "loyalty",
       "orders",
       "reviews",
+      "savedAddresses",
       "sessions",
       "vendor",
     ];

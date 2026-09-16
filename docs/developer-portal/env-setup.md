@@ -4,10 +4,10 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.10.0"
-updated: 2026-09-06
+version: "1.11.0"
+updated: 2026-09-16
 visibility: internal
-summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), routing each to the correct store and never exposing values, plus DB isolation, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
+summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
 related: [architecture, adr-003-storage-abstraction, adr-004-multi-tenancy, neon-db-separation, demo-accounts-tool, multitenancy-slice3b-host-resolver, multitenancy-slice3c-auth-cookie-scoping, dev-environment]
 ---
@@ -52,6 +52,33 @@ DIRECT_URL="<env-direct-url>" DEMO_ACCOUNT_PASSWORD="<min-8>" npm run demo:accou
 
 Never point staging at production's project (or vice versa) to "save setup" — that reintroduces the
 exact shared-database problem this split removed.
+
+### Bootstrapping the reference database (`uk-location-reference`, #764)
+
+A **second**, separate Neon project holds shared UK postcode/place reference data — its own schema
+(`prisma/reference/schema.prisma`), its own migrations and its own generated client. See
+`CLAUDE.md`'s "There are TWO databases" section and `specs/architecture.md` §3.0 for why it exists
+and how it's reached (`lib/reference/` only). To populate it from empty in a new environment, in
+this order, against that environment's `UK_LOCATION_REF_DIRECT_URL`:
+
+```bash
+npx prisma migrate deploy --schema prisma/reference/schema.prisma
+npx prisma generate --schema prisma/reference/schema.prisma
+npx tsx scripts/sync-reference-data.ts --env-file .env --source code-point-open
+npx tsx scripts/sync-reference-data.ts --env-file .env --source os-open-names
+```
+
+Coverage defaults to `UK_LOCATION_REF_POSTCODE_AREAS`; pass `--areas` to override for a single run.
+`.github/workflows/sync-reference-data.yml` runs the same script monthly and is also
+`workflow_dispatch`-able per environment, so a fresh staging/production project does not strictly
+need a manual first run — but nothing else in either deploy workflow does this for you.
+
+**An environment that has not yet run this bootstrap is not broken — it serves `UNVERIFIED` for
+every postcode.** `lib/reference/postcode-reference-service.ts` treats an unconfigured, unreachable,
+or never-synced reference database identically to an uncovered postcode area: the answer degrades to
+"could not check," which the checkout and address-lookup surfaces render as manual entry being
+available, never as a validation error. Production's reference branch had exactly this status as of
+`#764` (tracked in `#767`) — dark, not failing.
 
 ### Per-vendor host mapping (ADR-004 slice 3b)
 
