@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.28.0"
-updated: 2026-09-09
+version: "1.30.0"
+updated: 2026-09-16
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -119,6 +119,84 @@ No layer skips inward; components never touch Prisma or the S3 client directly.
 ---
 
 ## 3. Database Design Approach
+
+### 3.0 Two databases: the transactional one, and the shared reference one
+
+This application reads from **two separate Neon projects**, and the split is load-bearing.
+
+| Database | Owns | Reached through |
+|---|---|---|
+| Aheed's application database | Vendors, customers, orders and their immutable `Address` snapshots, `CustomerAddress`, carts, products, delivery configuration — every transactional and tenant-owned concern | `lib/db.ts` |
+| **`uk-location-reference`** | `PostcodeReference`, `PlaceReference`, dataset versions/checksums, materialised area coverage, sync/audit state, and future compatible UK location datasets | `lib/reference/` only |
+
+**Why the split exists, in numbers** (#764, 2026-09-15). Reference data was first built into the
+application database. A full-GB OS Code-Point Open import succeeded — 1,749,109 rows — and occupied
+**456.9 MB**, taking the project to **489.8 MB of its 512 MB ceiling**, against under 5 MB for every
+transactional table combined. The OS Open Names import then failed outright with `could not extend
+file because project size limit (512 MB) has been exceeded`, and ordinary application writes began
+failing too, which surfaced as three unrelated live-database tests failing for reasons that had
+nothing to do with their subject matter.
+
+Shared national reference data is not a tenant's data, it dwarfs a tenant's data, and it competes
+for a storage budget sized for orders and products. It now lives in its own project, reusable by any
+tenant, with its own schema (`prisma/reference/schema.prisma`), its own migration history and its own
+generated client.
+
+**Three rules follow, and none of them is optional.**
+
+1. **Nothing under `app/`, `components/` or `features/` touches the reference client.** The boundary
+   is `lib/reference/`. The reference database can be reshaped, moved, or put behind a network API
+   without any of those files changing.
+2. **The reference service never owns vendor-specific judgement.** It answers "is this postcode
+   covered and current, and what is near it". Whether a particular shop delivers there is Aheed's
+   question, answered from that vendor's own `VendorDeliveryArea` rows in
+   `lib/delivery-eligibility.ts`. A tenant's commercial rules must never reach shared platform
+   infrastructure, and that infrastructure's availability must never decide a tenant's rules.
+3. **Coverage is demand-driven, and absence of coverage is not absence of fact.** The reference
+   database is UK-wide capable but materialises only the postcode areas configured in
+   `UK_LOCATION_REF_POSTCODE_AREAS`. So a missing row is ambiguous, and the ambiguity is resolved
+   explicitly: a covered area with no active row is **INVALID**; an area never imported is
+   **UNVERIFIED**. Every infrastructure failure — unconfigured, unreachable, never synced — is also
+   UNVERIFIED. **An infrastructure or coverage gap must never be converted into telling a customer
+   their address is wrong**; it degrades to manual entry instead. Verified live by pointing the
+   reference database at an unreachable host and confirming HTTP 200 with UNVERIFIED rather than a
+   500 or a false rejection.
+
+   **Demand-driven runs in both directions, and only the additive one is automatic** (#770). A
+   scheduled sync imports newly configured areas, but nothing in it can retire an area that has
+   left the configuration: `apply` and `findOutstandingAreas` are each scoped to the areas being
+   imported — deliberately, so one area's import cannot damage another's — which means an
+   unconfigured area is never touched again by any run. It then sits frozen at whatever release
+   imported it while its coverage row goes on claiming authority, so a postcode issued there
+   afterwards is answered INVALID: precisely the outcome the paragraph above forbids. Retiring an
+   area is therefore an explicit operation (`sync-reference-data.ts --decommission`), never a side
+   effect of a refresh, and it **removes the coverage row before the data rows** so the area
+   degrades to UNVERIFIED rather than passing through a window in which it reads as INVALID. It
+   refuses outright when no areas are configured, because "nothing is required" must never be read
+   as "remove everything".
+
+   **Drift between the two is reported, not assumed away.** `/api/health`'s `reference` block
+   (`lib/reference/reference-status-service.ts`) carries the configured areas, each source's covered
+   areas, and the difference in both directions; `scripts/verify-reference-coverage.ts` answers the
+   same question about a database named by an env file, and exits non-zero on drift. Both exist
+   because every failure in this subsystem is silent by design — a deployed Worker with no reference
+   binding and a healthy one serve identical pages — so an operator needs a surface that says which
+   it is.
+
+**Storage is scarce in the reference database too.** Both large tables use their natural key
+(`normalisedPostcode`, `sourceId`) rather than a surrogate UUID, and carry no per-row timestamps or
+source metadata — that belongs on the dataset row, where one row describes millions. The surrogate
+key and its redundant index cost a measured 261 bytes per row; the natural key costs 148.4.
+
+**EPC open data was investigated and REJECTED as an address source**, and the ruling is recorded here
+rather than only in a slice folder so it is not silently reopened. Much of the dataset is published
+under OGL, but its **address and postcode fields carry additional licensing restrictions** because
+they incorporate OS AddressBase Premium / Royal Mail PAF-derived data, and address-level EPC records
+raise data-protection questions of their own. No EPC data is imported, exposed or depended upon.
+`lib/address-lookup-provider.ts` is the seam a lawfully licensed provider plugs into later; until one
+exists, `addresses[]` in the public API is empty by design and street-level hints must never be put
+there.
+
 
 ### 3.1 Modelling rules
 

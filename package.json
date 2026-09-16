@@ -9,7 +9,7 @@
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && wrangler deploy",
     "cf-typegen": "wrangler types",
-    "db:generate": "prisma generate",
+    "db:generate": "prisma generate && prisma generate --schema prisma/reference/schema.prisma",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
@@ -27,7 +27,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "ref:generate": "prisma generate --schema prisma/reference/schema.prisma",
+    "ref:migrate": "prisma migrate deploy --schema prisma/reference/schema.prisma",
+    "ref:migrate:dev": "prisma migrate dev --schema prisma/reference/schema.prisma",
+    "ref:sync": "tsx scripts/sync-reference-data.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -58,6 +62,7 @@
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.3.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
+    "fflate": "0.8.3",
     "gray-matter": "^4.0.3",
     "jsdom": "^29.1.1",
     "prettier": "^3.9.6",

@@ -4,8 +4,8 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.22.0"
-updated: 2026-09-07
+version: "1.24.0"
+updated: 2026-09-16
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
 tags: [guardrails, ai-assistant, conventions]
@@ -105,6 +105,55 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   is enough, and the WS adapter can execute it). `deleteMany`/`upsert`/singular `create`/`update`
   have no such requirement and may use either client per the normal read/write split. Full
   investigation: `specs/2026-08-26-auth-http-transaction-fix/build-notes.md`.
+
+## There are TWO databases (#764) — learned the hard way
+
+- **Aheed's application database is NOT the only one.** A second Neon project,
+  **`uk-location-reference`**, holds shared UK postcode and place reference data. It has its own
+  schema (`prisma/reference/schema.prisma`), its own migration history
+  (`prisma/reference/migrations/`, applied with `npm run ref:migrate`) and its own generated client.
+  Env vars: **`UK_LOCATION_REF_DATABASE_URL`** (pooled, runtime) and **`UK_LOCATION_REF_DIRECT_URL`**
+  (direct, migrations and sync), plus **`UK_LOCATION_REF_POSTCODE_AREAS`** (coverage, e.g. `"MK,RG"`).
+  Dev and staging share one branch; production is separate.
+- **Why it exists, in numbers.** Reference data was first built into Aheed's own database. A full-GB
+  Code-Point import succeeded at 1,749,109 rows and **456.9 MB**, taking that project to **489.8 MB
+  of its 512 MB ceiling** against under 5 MB for every transactional table combined; the Open Names
+  import then failed outright and **ordinary application writes started failing**. The tell was
+  three unrelated live-DB tests failing with `could not extend file because project size limit
+  (512 MB) has been exceeded` — nothing to do with their own subject matter. **If a live-DB test
+  fails with a message unrelated to what it tests, check `pg_database_size(current_database())`
+  against the 512 MB ceiling before debugging the test.**
+- **Reach reference data ONLY through `lib/reference/`.** Nothing under `app/`, `components/` or
+  `features/` may import the reference client. The reference service answers "does this postcode
+  exist and what is near it"; it must never own vendor delivery rules, which stay in
+  `lib/delivery-eligibility.ts` reading `VendorDeliveryArea`.
+- **A generated Prisma client MUST live in `node_modules`, never inside the project.** The reference
+  client generates to `node_modules/@aheed/reference-client`. Generated under `lib/` instead,
+  webpack parses its `query_compiler_bg.wasm` as source and `opennextjs-cloudflare build` fails
+  outright with `Module parse failed ... not flagged as WebAssembly module for webpack`.
+  `next.config.mjs`'s `serverExternalPackages` is what exempts `@prisma/client` from that, and it
+  matches **package specifiers** — which a relative path can never be. Consequence: `npm ci` wipes
+  it, so every workflow that builds must run `npm run db:generate` first. **Both deploy workflows
+  previously ran no generate step at all**, relying on `@prisma/client`'s postinstall, which only
+  ever knew about the default schema.
+- **Import the reference client's `/wasm` entry in runtime code** (`@aheed/reference-client/wasm`)
+  and its bare entry in Node scripts — the identical trap this file already records for
+  `@prisma/client/wasm`. A second generated client is not exempt.
+- **Coverage is demand-driven, and a missing row is ambiguous.** Only the postcode areas in
+  `UK_LOCATION_REF_POSTCODE_AREAS` are materialised, so "no row" can mean the postcode does not
+  exist **or** that we never imported that part of the country. Covered area with no active row is
+  **INVALID**; an uncovered area is **UNVERIFIED**, as is an unreachable or unconfigured reference
+  database. **Never convert an infrastructure or coverage gap into INVALID** — it degrades to manual
+  address entry, never to telling a customer their address is wrong.
+- **A sync decision has TWO dimensions: has the upstream release changed, AND is required coverage
+  complete?** Checking only the publisher's checksum means a newly configured area never imports,
+  silently. `ReferenceAreaCoverage` is the second dimension, and a coverage row is written only
+  after that area's import completes.
+- **`.env`/`.dev.vars` here use `KEY = "value"` with spaces around the `=`.** That contradicts this
+  file's own env-format rule below, and it parses fine in practice — but any script that rewrites an
+  env file must tolerate the spacing. A `^KEY=` substitution silently matches nothing, which once
+  made a live outage test appear to pass while actually exercising the healthy path. **Verify an env
+  edit landed before trusting any result that depends on it.**
 
 ## Schema rules
 - Strict relational / 3NF, explicit foreign keys, provider-neutral Postgres types only.
@@ -303,6 +352,55 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   `# comment` or leading space has silently broken connection strings here).
 - Runtime secrets live in Cloudflare (`wrangler secret put NAME --env <env>`); CI secrets in GitHub
   environments. Never commit secrets; never read `DIRECT_URL` at runtime.
+- **`wrangler secret list --env <env>` reports the SCRIPT's secrets, not the RUNNING version's
+  bindings — so a secret can be listed there while the deployed Worker has no such binding at all,
+  and every feature gated on it degrades silently.** Found 2026-09-16 (`#767`/`#771`): both
+  `UK_LOCATION_REF_DATABASE_URL` and `UK_LOCATION_REF_POSTCODE_AREAS` appeared in
+  `wrangler secret list --env staging`, while the Cloudflare API showed the *deployed* version
+  (`f7e5c0ca…`, the CI deploy at `2026-09-16T06:55:51Z`) carrying 19 bindings with **neither among
+  them** and no deployment event after that timestamp. Staging therefore answered `UNVERIFIED` for
+  every postcode for a day while its reference database was perfectly healthy — the same two
+  postcodes returned real data from `npm run preview` against that identical database. **Nothing
+  logged**, because `lib/reference/`'s guard returns before it constructs a client, which is correct
+  behaviour and exactly why the silence is total. **A secret added after the last deploy is not
+  live until something deploys**; a `wrangler secret put` normally triggers that itself, but a
+  dashboard edit or a `wrangler versions secret put` need not, and the listing looks identical
+  either way. **To answer "does the running Worker actually have this binding?", read the deployed
+  version**: `GET /accounts/<acct>/workers/scripts/<script>/deployments` →
+  `result.deployments[0].versions[0].version_id` → `GET …/versions/<id>` and inspect
+  `result.resources.bindings`. `npx wrangler deployments list` and `npx wrangler tail` both failed
+  here with `fetch failed` from Git Bash while `wrangler secret list` and plain `curl` worked, so
+  reach for the REST API rather than assuming the account is unreachable.
+- **A GitHub Actions workflow reading `vars.X` sees nothing when the value was stored as a *secret*
+  named `X`, and vice versa — they are two separate stores with no fallback between them.**
+  `.github/workflows/sync-reference-data.yml` reads `secrets.UK_LOCATION_REF_DIRECT_URL` and
+  `vars.UK_LOCATION_REF_POSTCODE_AREAS`; a first attempt at provisioning added *both* as secrets,
+  and `UK_LOCATION_REF_DATABASE_URL` rather than `_DIRECT_URL` besides. The workflow would have
+  materialised an env file with two empty values and failed closed at `npm run ref:migrate` on the
+  next scheduled production run, which is the right direction but looks like a broken workflow
+  rather than a missing variable. **Check both endpoints, not one**:
+  `gh api repos/sriahead/aheed-online-store/environments/<env>/variables --jq '.variables[] | "\(.name)=\(.value)"'`
+  and `… /environments/<env>/secrets --jq '.secrets[].name'`. Variable *values* are readable, which
+  makes `UK_LOCATION_REF_POSTCODE_AREAS=MK,RG` verifiable rather than merely present — a reason to
+  prefer a variable for anything that is not actually a credential.
+- **A THIRD, related trap: a plain-text var added to a Worker only through the Cloudflare
+  dashboard — never declared in `wrangler.toml`'s `[vars]`, never set via `wrangler secret put` —
+  does NOT survive the next `wrangler deploy`, even though a genuine SECRET added the same way
+  does.** `wrangler deploy` rebuilds a Worker version's `vars` set entirely from `wrangler.toml`;
+  secrets are stored and reattached independently and are untouched by a deploy that doesn't
+  explicitly change them. Found at this same slice's own `/validate` (2026-09-16, `#767`/`#771`):
+  the fix for the `wrangler secret list` trap above (redeploying the dashboard-created version that
+  carried both `UK_LOCATION_REF_DATABASE_URL` and `UK_LOCATION_REF_POSTCODE_AREAS`) worked, but a
+  *routine* `deploy-staging` CI run afterward silently dropped `UK_LOCATION_REF_POSTCODE_AREAS`
+  again — confirmed by reading the newly-deployed version's bindings via the Cloudflare API
+  (`GET …/versions/<id>`, per the bullet above): `UK_LOCATION_REF_DATABASE_URL` (a real secret)
+  was still there; `UK_LOCATION_REF_POSTCODE_AREAS` (converted to a plain-text variable during the
+  original fix) was gone, and neither `wrangler.toml` nor either deploy workflow ever named it.
+  This would have recurred on every future deploy. **The fix is to declare any non-secret,
+  environment-wide config value in `wrangler.toml`'s `[env.<env>.vars]` block** (see
+  `UK_LOCATION_REF_POSTCODE_AREAS` there) so it's part of committed config and rebuilt correctly on
+  every deploy, rather than a fragile one-time dashboard edit — reserve `wrangler secret put` (or a
+  dashboard-added secret) for values that are actually credentials.
 - **`instrumentation.ts`'s `onRequestError` DOES have a working Cloudflare Workers request context
   under this app's Next 16 / OpenNext / Workers stack** — `getCloudflareContext()`/`readEnv()`
   resolve normally there, confirmed live in `#508` (2026-09-01): a forced throw under `npm run
@@ -439,6 +537,21 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   then succeeded on the first retry. The local check is what distinguishes this from a real outage
   (where retrying would be pointless) or a genuine connection-string/firewall problem (where
   retrying would just fail again) — don't skip straight to either conclusion.
+- **A workflow carrying `schedule` or `workflow_dispatch` does nothing until it reaches the default
+  branch (`main`), however correct it looks on `staging`.** GitHub resolves both triggers against
+  the default branch specifically — not whatever branch the file was merged to. Found 2026-09-16
+  (`#772`): `.github/workflows/sync-reference-data.yml` shipped with `#764` onto `staging` and has
+  never existed on `main`, so its `cron: "0 4 3 * *"` was inert and `gh workflow run
+  sync-reference-data.yml --ref staging` failed outright with `HTTP 404: workflow … not found on
+  the default branch` — a dispatch is impossible too, not just the schedule. **Invisible in the
+  usual places**: the file is present and correct on the branch everyone works on,
+  `gh workflow list --ref staging` shows it, and `lint`/`typecheck`/`test`/`build` say nothing about
+  workflow placement — the only tell is the absence of runs, and a job that has never run produces
+  no failure to notice. This repo merges into `staging` and promotes to `main` separately, so
+  **every** scheduled workflow it adds has a dormant period lasting until that promotion —
+  `fill-product-images.yml` has the identical shape. Check `git ls-tree origin/main --name-only
+  .github/workflows/` before trusting that a new `schedule`/`workflow_dispatch` workflow will
+  actually fire.
 
 ## The four SDD gates (non-negotiable)
 1. **Propose before work** — open the issue + a spec proposal; wait for approval.
@@ -584,7 +697,23 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  129 files / 1687 tests**, measured 2026-09-15 at the fulfilment-config-and-checkout-fixes Build)
+  139 files / 1842 tests**, measured 2026-09-16 at the reference-coverage-reconciliation Build
+  (`#767`/`#770`/`#771`) — three new files carrying 26 tests (decommission ordering and refusals,
+  the AST check confining deletion to that path, and the reference status service), with **no**
+  existing file's count moving: `tests/reference-sync-integrity.test.ts` was edited to satisfy the
+  widened `ReferenceDataSource` interface but gained no test. The previous figure was **136 files /
+  1816 tests**, measured 2026-09-15 at `#764`'s Build — seven new files carrying 129
+  tests, for the reference-data framework, area coverage, delivery eligibility, places, the address
+  provider port, saved-address scoping and OSGB36 coordinate conversion. All 139 pass locally; the
+  three `it.skipIf(!DATABASE_URL)` files still report as **skipped** in CI, so CI's own summary
+  reads 3 fewer tests run, which is expected rather than a shortfall.
+  **A lesson worth keeping from that slice: a full DATABASE is indistinguishable from broken code
+  in a test summary.** Those same three live-DB files failed for an afternoon with
+  `could not extend file because project size limit (512 MB) has been exceeded` — nothing to do
+  with their own subject matter — because an oversized reference-data import had filled Aheed's dev
+  Neon project to 489.8 MB of 512 MB and every write was failing. If a live-DB test fails with a
+  message that has no relationship to what it tests, check `pg_database_size(current_database())`
+  against the project ceiling before debugging the test)
   and treat any shortfall as a non-result to re-run, not a pass. **This number has now been stale
   twice, and moved a third,
   fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,

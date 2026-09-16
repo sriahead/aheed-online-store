@@ -1,0 +1,220 @@
+// UK location-reference database (#764).
+//
+// A SEPARATE Neon project (`uk-location-reference`) from Aheed's transactional
+// database, with its own schema, its own migrations and its own generated
+// client. That separation was not planned — it was forced by measurement. A
+// full-GB Code-Point import into Aheed's own database succeeded at 1,749,109
+// rows and occupied 456.9 MB of a 512 MB project, 89% of the budget for one
+// reference table, against under 5 MB for every transactional table combined;
+// the Open Names import then failed outright with a project-size-limit error.
+//
+// Shared UK reference data is not Aheed's data, it dwarfs Aheed's data, and it
+// competes for a storage budget sized for orders and products. So it lives here
+// instead, reusable by any tenant, and Aheed reaches it only through the service
+// boundary in `lib/reference/`.
+//
+// COVERAGE IS DEMAND-DRIVEN. The schema is UK-wide capable; only the postcode
+// areas actually required are materialised, and which areas those are is
+// CONFIGURATION (`UK_LOCATION_REF_POSTCODE_AREAS`), never a value in this file or in
+// any repository, API or domain service. Adding an area later is a config change
+// plus a sync run — no migration, no new importer, no application change.
+//
+// STORAGE IS NOT FREE HERE EITHER. A dedicated database is not permission to
+// waste it: both large tables use their NATURAL key rather than a surrogate
+// UUID, carry no per-row timestamps, and keep version/checksum metadata at the
+// dataset level where one row describes millions.
+
+datasource db {
+  provider  = "postgresql"
+  // Pooled URL for runtime reads from the Worker; direct URL for migrations and
+  // the bulk sync, exactly as Aheed's own schema splits them.
+  url       = env("UK_LOCATION_REF_DATABASE_URL")
+  directUrl = env("UK_LOCATION_REF_DIRECT_URL")
+}
+
+generator client {
+  provider   = "prisma-client-js"
+  // Its own output directory, INSIDE node_modules, and that location is load-bearing.
+  //
+  // Generated anywhere under the project (lib/generated/, say), webpack treats the
+  // client as ordinary source and tries to parse its query_compiler_bg.wasm — which
+  // fails the build outright: "Module parse failed ... not flagged as WebAssembly
+  // module for webpack". The default @prisma/client escapes that only because
+  // next.config.mjs lists it in `serverExternalPackages`, and that option matches
+  // PACKAGE SPECIFIERS, which a relative path can never be.
+  //
+  // Under node_modules with a scoped directory, it resolves as
+  // `@aheed/reference-client`, `serverExternalPackages` can name it, and webpack
+  // leaves it alone exactly as it leaves Aheed's own client alone.
+  //
+  // The cost: `npm ci` wipes it, so every workflow that builds must run
+  // `npm run db:generate` first. Both deploy workflows now do; they previously
+  // relied on @prisma/client's postinstall, which only ever knew about the default
+  // schema and would never have generated this one.
+  output     = "../../node_modules/@aheed/reference-client"
+  // Mandatory on Workers. The default "library" engine locates its native binary
+  // via fs.readdir at runtime, which workerd's nodejs_compat polyfill does not
+  // implement — every query would fail with "[unenv] fs.readdir is not
+  // implemented yet!". Same rule as Aheed's own schema.
+  engineType = "client"
+}
+
+enum ReferenceSyncStatus {
+  IDLE
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+/// One row per reference dataset — the authority on what release we hold.
+///
+/// `sourceVersion` + `sourceChecksum` are the publisher's own change-detection
+/// pair, both available from an unauthenticated endpoint, so "has the source
+/// changed?" costs one keyless GET.
+///
+/// That is only HALF the sync decision. The other half is coverage: the upstream
+/// release can be unchanged while a newly required postcode area is still
+/// unmaterialised, and a sync that exits on the checksum alone would silently
+/// never import it. See ReferenceAreaCoverage.
+model ReferenceDataset {
+  id                   String              @id @default(uuid())
+  sourceKey            String              @unique
+  displayName          String
+  sourceVersion        String?
+  sourceChecksum       String?
+  lastCheckedAt        DateTime?
+  lastSyncedAt         DateTime?
+  recordCount          Int                 @default(0)
+  refreshFrequencyDays Int                 @default(30)
+  isActive             Boolean             @default(true)
+  syncStatus           ReferenceSyncStatus @default(IDLE)
+  syncError            String?
+  cacheVersion         Int                 @default(0)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  runs     ReferenceDataSyncRun[]
+  coverage ReferenceAreaCoverage[]
+}
+
+/// Which postcode areas have SUCCESSFULLY been materialised, for which source and
+/// which upstream version.
+///
+/// This is what makes "is this postcode area covered?" answerable, and therefore
+/// what makes UNVERIFIED distinguishable from INVALID. A postcode in an area we
+/// have never imported is not evidence that the postcode does not exist, and must
+/// never be reported as invalid.
+///
+/// A row appears only AFTER that area's import completes. A partially written
+/// area leaves no row, so an interrupted import can never make an area look
+/// covered when its data is incomplete — which is exactly what happened for real
+/// when the first Open Names attempt died mid-write.
+model ReferenceAreaCoverage {
+  id             String           @id @default(uuid())
+  sourceKey      String
+  dataset        ReferenceDataset @relation(fields: [sourceKey], references: [sourceKey], onDelete: Cascade)
+  /// Postcode AREA — the leading letters only, e.g. "MK", "RG". Never a district.
+  postcodeArea   String
+  /// The upstream release this area's data came from. A new release makes every
+  /// area stale, which is how a version bump forces a re-import.
+  sourceVersion  String
+  recordCount    Int              @default(0)
+  materialisedAt DateTime         @default(now())
+
+  @@unique([sourceKey, postcodeArea])
+  @@index([sourceKey, sourceVersion])
+}
+
+/// One row per sync attempt, successful or not — the only record of what a run
+/// actually did. Written for the unchanged case too, so "the schedule fired and
+/// there was nothing to do" stays distinguishable from "the schedule never fired".
+model ReferenceDataSyncRun {
+  id             String              @id @default(uuid())
+  datasetId      String
+  dataset        ReferenceDataset    @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  sourceVersion  String?
+  /// Which areas this run was asked to materialise, comma-separated, so a failed
+  /// run says what it was attempting.
+  requestedAreas String?
+  startedAt      DateTime            @default(now())
+  finishedAt     DateTime?
+  inserted       Int                 @default(0)
+  updated        Int                 @default(0)
+  retired        Int                 @default(0)
+  unchanged      Int                 @default(0)
+  status         ReferenceSyncStatus @default(RUNNING)
+  errorMessage   String?
+
+  @@index([datasetId, startedAt])
+}
+
+/// OS Code-Point Open — the authority on whether a postcode exists, WITHIN a
+/// materialised area.
+///
+/// PRIMARY KEY IS THE POSTCODE ITSELF. The first implementation carried a
+/// `String @id @default(uuid())` alongside a unique index on the postcode, which
+/// on 1.75M rows cost roughly 37 bytes per row plus an entire redundant index —
+/// measured at 456.9 MB for the table. The postcode is already unique, already
+/// the only thing anything looks up by, and is short; a surrogate key bought
+/// nothing and cost the storage budget.
+///
+/// No per-row `createdAt`/`updatedAt`/`sourceVersion` either: every row in a
+/// table comes from the same release, so that metadata belongs on
+/// ReferenceDataset and ReferenceAreaCoverage, where one row describes millions.
+///
+/// Coordinates are British National Grid eastings/northings exactly as OS
+/// publishes them, NOT latitude/longitude. Open Names uses the same grid, so
+/// proximity is plain Euclidean arithmetic in metres with no reprojection; WGS84
+/// conversion happens in `lib/osgb36.ts` only for the handful of rows leaving
+/// through the API.
+model PostcodeReference {
+  normalisedPostcode String  @id // "MK92NW" — upper-case, no whitespace
+  displayPostcode    String // "MK9 2NW"
+  postcodeArea       String // "MK" — the materialisation unit
+  postcodeDistrict   String // "MK9"
+  eastings           Int
+  northings          Int
+  adminDistrictCode  String?
+  adminCountyCode    String?
+  countryCode        String?
+  isActive           Boolean @default(true)
+
+  // postcodeArea drives coverage queries and area-scoped retirement;
+  // postcodeDistrict drives the Open Names proximity join.
+  @@index([postcodeArea])
+  @@index([postcodeDistrict])
+}
+
+/// OS Open Names — ENRICHMENT ONLY. Absence from this table must never make a
+/// postcode or an address invalid.
+///
+/// Keyed on the publisher's own stable id, for the same reason PostcodeReference
+/// is keyed on the postcode: a surrogate UUID would be a second identifier for
+/// something that already has one.
+///
+/// The composite index order is not arbitrary. Open Names publishes only a
+/// postcode DISTRICT ("MK9"), never a unit, so a street hint needs both a
+/// district match and a distance ceiling. The query is a bounding box — Prisma
+/// cannot express a Euclidean filter and raw SQL is banned in application code —
+/// so postcodeDistrict narrows first and the coordinate ranges narrow within it.
+model PlaceReference {
+  sourceId         String  @id
+  name             String
+  type             String // "populatedPlace" | "transportNetwork" | "other"
+  localType        String
+  eastings         Int
+  northings        Int
+  /// Denormalised from postcodeDistrict so area-scoped coverage and retirement
+  /// are a plain indexed equality rather than a prefix match.
+  postcodeArea     String?
+  postcodeDistrict String?
+  populatedPlace   String?
+  districtBorough  String?
+  countyUnitary    String?
+  region           String?
+  country          String?
+  isActive         Boolean @default(true)
+
+  @@index([postcodeDistrict, eastings, northings])
+  @@index([postcodeArea])
+}

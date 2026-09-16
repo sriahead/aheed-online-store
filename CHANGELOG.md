@@ -8,9 +8,103 @@ every branch merges.
 
 ### Changed
 
+- **Documentation and handoff reconciliation for #770/#771/#767 (Document (final) for PR #773)**:
+  - Added `specs/roadmap.md`'s change-log row for this slice (closing the `npm run sdd:audit` gap
+    it left behind) and updated the P10 tracked-issue entry for `#767` — its database half is done,
+    what remains is `#772` (the application promotion).
+  - Reconciled `docs/model-handoff.md` with the real post-merge state: this slice shipped to
+    `staging` via PR #773 (`cb397b8`), a new "Reference coverage reconciliation" section records
+    what shipped and the Fix cycle's two findings, and Project Position/In-Flight Work both note
+    the slice is `In Review`, not promoted. Also corrected the recorded Vitest baseline
+    (`129/1687` → `139/1842`, two full updates behind) and the `Backlog`/`In Review` status for
+    `#767`.
+  - Documented a third Cloudflare deploy trap in `CLAUDE.md` (a dashboard-only plain-text var is
+    wiped by the next `wrangler deploy`, unlike a real secret) and a general one in the Branch
+    strategy section (a `schedule`/`workflow_dispatch` workflow does nothing until it reaches the
+    default branch, found via `#772`).
+
+### Added
+
+- **Retiring an unsupported postcode area, and making coverage drift visible** (`#770`, `#771`,
+  `#767`; `specs/2026-09-16-reference-coverage-reconciliation/`).
+  - **The reference pipeline could add a postcode area but never remove one.** Both of its
+    mechanisms are scoped to the areas being imported — deliberately, so one area's import cannot
+    retire another's — which together meant an area dropping out of
+    `UK_LOCATION_REF_POSTCODE_AREAS` was never touched by any later run. It froze at whatever
+    release imported it while its `ReferenceAreaCoverage` row went on claiming authority, so a
+    postcode issued there afterwards was answered `INVALID`: the one outcome the `UNVERIFIED` state
+    exists to prevent. `LU` had been in that state since 2026-09-15, Code-Point only, with **0**
+    `PlaceReference` rows.
+  - **`ReferenceDataSource.decommissionAreas` plus `decommissionUnsupportedAreas`**, reachable only
+    through `sync-reference-data.ts --decommission` (with `--dry-run` to rehearse). It removes each
+    unsupported area's **coverage row before its data rows**, so the area degrades to `UNVERIFIED`
+    rather than passing through a window in which it reads as `INVALID` — a correctness property
+    with its own call-order test, not a comment. It refuses when no areas are configured, because
+    "nothing is required" must never mean "remove everything", and the monthly workflow never
+    passes the flag.
+  - **`LU` retired from the dev/staging reference branch**: 6,464 postcodes and one coverage row
+    deleted, `MK` (16,215 / 9,989) and `RG` (23,816 / 13,483) unchanged. Staging now answers
+    `LU1 1AA` with `UNVERIFIED`, and `MK10 0AA` with Milton Keynes, coordinates and street hints.
+  - **`/api/health` now carries a `reference` block** — configured, reachable, required areas, and
+    per source the covered areas plus drift in **both** directions. Reported, never fatal: an
+    unsynced reference database is a designed, recoverable state, so it does not change the health
+    verdict. `scripts/verify-reference-coverage.ts` answers the same question about a database named
+    by an env file, read-only, exiting non-zero on drift.
+  - **Nothing compared configured against materialised coverage before this**, which is why the
+    above went unnoticed — and why a second failure did too: staging served `UNVERIFIED` for every
+    postcode for a day because the reference secrets had been added through the Cloudflare dashboard
+    as a version that was never deployed, while `wrangler secret list` listed them happily. That
+    pending version also blocked every `deploy-staging` run at its first step.
+  - **Production's reference database bootstrapped** (`#767`): migrated from empty and imported
+    `MK`/`RG` for both sources.
+  - **`wrangler.toml` now declares `UK_LOCATION_REF_POSTCODE_AREAS` as committed `[vars]` config for
+    both `staging` and `production`**, found necessary at this slice's own `/validate`: a routine
+    `deploy-staging` CI run silently wiped the dashboard-only variable the "pending version" fix
+    above had just restored, because `wrangler deploy` rebuilds a Worker's `vars` set entirely from
+    this file and a dashboard-only plain-text var isn't part of it (unlike a genuine secret, which
+    survives). Closes the whole class of drift rather than the one instance.
+  - `tests/reference-decommission-safety.test.ts` confines every `delete`/`deleteMany` under
+    `lib/reference-data/` to four named functions, on the AST rather than by grep — these files
+    discuss deletion at length, and a text check could only be satisfied by removing the
+    explanations.
+
+### Changed
+
+- **Documentation and handoff reconciliation for #764 (Document (final) for PR #768)**:
+  - Added `specs/roadmap.md`'s change-log row for `#764` (closing the `npm run sdd:audit` gap it
+    left behind) and P10 tracked-issue entries for `#766`/`#767`, both now tagged Phase `P10` on
+    Project #2 (were untagged Backlog).
+  - Reconciled `docs/model-handoff.md` with the real post-merge state: `#764` shipped to `staging`
+    via PR #768 (`ab1f080`), the reference-database section no longer frames itself as an in-branch
+    change, and Project Position/In-Flight Work both note the slice is `In Review`, not promoted.
+  - Corrected five `specs/2026-09-15-address-lookup-reference-data/validation.md` rows (R13, R14,
+    R30–R33) that cited unit-test files never created — the behaviour they describe is genuinely
+    tested, just in `tests/reference-sync-integrity.test.ts`/`tests/places-repository.test.ts`
+    rather than the files named — and annotated R25a/R27b with what was confirmed at Build versus
+    not re-executed at Validate, and why.
+
+### Added
+
+- **Postcode validation, location enrichment and saved addresses, on a dedicated UK reference database** (`#764`; `specs/2026-09-15-address-lookup-reference-data/`). Closes the whole flow: `saved address where available → postcode validation → delivery check → location assistance → manual completion → confirmation → save and reuse`.
+  - **Reference data lives in its own Neon project** (`uk-location-reference`), not Aheed's. Forced by measurement, not preference: a full-GB Code-Point import into Aheed's database succeeded at **1,749,109 rows and 456.9 MB**, took the project to **489.8 MB of its 512 MB ceiling** — against under 5 MB for every transactional table combined — and the Open Names import then failed outright. Shared UK reference data is not Aheed's data and dwarfs it. Its own schema (`prisma/reference/`), migrations and generated client; Aheed reaches it only through `lib/reference/`.
+  - **Demand-driven coverage.** UK-wide capable, but only the postcode areas configured in `UK_LOCATION_REF_POSTCODE_AREAS` are materialised — today `MK,RG`, at **40,031 postcodes and 20.50 MB** instead of 1.75M and 456.9 MB. Adding an area is configuration plus a sync run: no migration, no importer, no application change. No area literal exists anywhere in the schema, sources, repositories, services or routes.
+  - **The sync has two independent change dimensions**, and both matter. A new upstream release, *or* a newly required area that is not yet materialised. A checksum-only check would exit "unchanged" while a newly configured area sat unimported — silently, with no error. Proven live: with the release unchanged at `2026-08`, adding `LU` imported 6,464 rows and left `MK`/`RG` untouched.
+  - **Validity is coverage-aware and three-state.** Covered area with no active row is `INVALID`; an area never imported is `UNVERIFIED`, never invalid. A postcode outside `MK`/`RG` is not wrong just because we have not imported that part of the country.
+  - **Every infrastructure failure degrades to `UNVERIFIED`**, never `INVALID` and never a 500. Verified live with the reference database pointed at an unreachable host: `MK99 9ZZ` flips from `INVALID` to `UNVERIFIED` and checkout still accepts a manually entered address. Vendor delivery rules keep working throughout, because they never touch the reference database.
+  - **One `DeliveryEligibilityService`**, replacing three independent `isDeliverable()` call sites (`Header`, `place-order`, `fulfilment-service`) that could each drift — the damaging case being a header that promises delivery checkout then refuses.
+  - **`GET /api/address/lookup`** — provider-neutral, vendor-aware, exposing no internal field. `addresses[]` is reserved for genuine property-level candidates and is **empty**: no lawfully usable UK source exists (`#766`). Street hints live under `location`, are suppressed entirely when ambiguous, and are never presented as addresses.
+  - **`CustomerAddress`** — saved addresses for signed-in customers, separate from the immutable per-order `Address` snapshot, included in data-rights export and deleted on erasure.
+  - **Removed `lib/postcodes-api.ts`**: checkout no longer depends on a third-party postcode API, with no network fallback.
+
+### Changed
+
 - **`/staff/fulfilment` moved next to `/staff/orders`** in both navigation surfaces
   (`components/staff/PanelNav.tsx`, the hub cards in `app/(admin)/staff/page.tsx`) — an owner
   request after using the new page (`#750`) for the first time.
+- **The Fulfilment guide now explains the Collection-method empty-slot trap has no on/off switch**
+  (`docs/store-admin-guide/admin-tabs-guide.md`) — unlike Delivery, Collection's time picker always
+  shows once Click & Collect is on, so a store with no Collection-method weekly slots shows every
+  collection customer "No slots available" with nothing to disable. Found live on staging.
 
 ### Added
 
@@ -5300,5 +5394,6 @@ every branch merges.
 
 
  
- |   2 0 2 6 - 0 9 - 1 2   |   D o c u m e n t a t i o n   h a n d o f f   f o r   # 7 3 4 ,   b u i l t   a n d   m e r g e d   t o   s t a g i n g .   |   P o s t - s h i p   d o c s   r e c o n c i l i a t i o n   |  
+ |   2 0 2 6 - 0 9 - 1 2   |   D o c u m e n t a t i o n   h a n d o f f   f o r   # 7 3 4 ,   b u i l t   a n d   m e r g e d   t o   s t a g i n g .   |   P o s t - s h i p   d o c s   r e c o n c i l i a t i o n   | 
+ 
  

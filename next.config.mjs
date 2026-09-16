@@ -3,7 +3,16 @@ const nextConfig = {
   // Keep the app on the Node.js runtime (OpenNext/Workers) — do NOT set runtime: 'edge'.
   // Treat the DB stack as external so bundlers defer resolution to the actual runtime
   // rather than statically rewriting these imports.
-  serverExternalPackages: ["@prisma/client", "@prisma/adapter-neon", "@neondatabase/serverless"],
+  // "@aheed/reference-client" is the generated client for the uk-location-reference
+  // database (#764). It MUST be listed here: without it webpack parses the package's
+  // query_compiler_bg.wasm as source and the build fails outright. Same reason
+  // "@prisma/client" is listed.
+  serverExternalPackages: [
+    "@prisma/client",
+    "@aheed/reference-client",
+    "@prisma/adapter-neon",
+    "@neondatabase/serverless",
+  ],
 
   async headers() {
     return [

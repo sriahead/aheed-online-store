@@ -185,6 +185,63 @@ const jobsSchema = z
     }
   });
 
+/**
+ * UK location-reference database (#764).
+ *
+ * A SECOND Neon project (`uk-location-reference`), separate from Aheed's transactional database,
+ * holding shared postcode and place reference data. Aheed reads it through `lib/reference/`.
+ *
+ * `UK_LOCATION_REF_DATABASE_URL` is the POOLED url used at runtime; `UK_LOCATION_REF_DIRECT_URL` is the direct
+ * one used by migrations and the bulk sync — the same split `DATABASE_URL`/`DIRECT_URL` already
+ * uses, and for the same reasons.
+ *
+ * DELIBERATELY NOT required-in-production. Unlike the payment and job secrets, an absent reference
+ * database is a RECOVERABLE state, not a misconfiguration to crash on: the reference service treats
+ * it as UNVERIFIED and checkout degrades to manual address entry. Making it fail-hard would turn a
+ * provisioning gap into a broken storefront, which is the exact inversion this feature's state
+ * model exists to prevent. Callers use `isReferenceDatabaseConfigured()` rather than a bare check.
+ *
+ * `UK_LOCATION_REF_POSTCODE_AREAS` is the demand-driven coverage list — which postcode AREAS to
+ * materialise, comma-separated (e.g. "MK,RG"). It lives in configuration precisely so that adding
+ * an area needs no migration, no importer and no application change. The default is empty: an
+ * environment that has not said what it needs gets nothing rather than silently importing the whole
+ * of Great Britain.
+ */
+const referenceSchema = z.object({
+  UK_LOCATION_REF_DATABASE_URL: z.string().optional(),
+  UK_LOCATION_REF_DIRECT_URL: z.string().optional(),
+  UK_LOCATION_REF_POSTCODE_AREAS: z.string().optional(),
+});
+
+export type ReferenceEnv = z.infer<typeof referenceSchema>;
+
+export function getReferenceEnv(): ReferenceEnv {
+  return referenceSchema.parse({
+    UK_LOCATION_REF_DATABASE_URL: readEnv("UK_LOCATION_REF_DATABASE_URL"),
+    UK_LOCATION_REF_DIRECT_URL: readEnv("UK_LOCATION_REF_DIRECT_URL"),
+    UK_LOCATION_REF_POSTCODE_AREAS: readEnv("UK_LOCATION_REF_POSTCODE_AREAS"),
+  });
+}
+
+/**
+ * The postcode areas this environment requires, normalised and de-duplicated.
+ *
+ * Upper-cased and trimmed so `"mk, rg"` and `"MK,RG"` are the same configuration, and sorted so two
+ * environments listing the same areas in different orders compare equal. Returns an empty array
+ * when unset — see the schema note above for why that is the safe default rather than "everything".
+ */
+export function getRequiredPostcodeAreas(): string[] {
+  const raw = getReferenceEnv().UK_LOCATION_REF_POSTCODE_AREAS ?? "";
+  return [
+    ...new Set(
+      raw
+        .split(",")
+        .map((area) => area.trim().toUpperCase())
+        .filter((area) => area !== ""),
+    ),
+  ].sort();
+}
+
 export type JobsEnv = z.infer<typeof jobsSchema>;
 
 export function getJobsEnv(): JobsEnv {
