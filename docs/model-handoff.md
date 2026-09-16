@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.7.1"
+version: "1.8.0"
 updated: 2026-09-16
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,12 +40,13 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-16.
-- **Checkout:** `staging`, at `ab1f080` (`#764`'s Ship — PR #768). The `feature/p10-address-lookup-
-  reference-data` branch is merged and deleted, both locally and on the remote.
-- **Base state:** `origin/staging` moved `12ad3be` → `ab1f080` this session. `origin/main` is still
-  at `d855e1f`; the `staging → main` promotion for `#764` has **not** been opened — this repo
-  batches promotions rather than opening one per slice (see PR #759's precedent, which carried four
-  prior issues), and no owner instruction to promote now was given at `/ship`.
+- **Checkout:** `staging`, at `cb397b8` (reference-coverage-reconciliation's Ship — PR #773). The
+  `feature/reference-coverage-reconciliation` branch is merged; not yet deleted (do so once nothing
+  else needs its history).
+- **Base state:** `origin/staging` moved `ab1f080` → `cb397b8` this session. `origin/main` is still
+  at `d855e1f`; the `staging → main` promotion for `#764` and this slice has **not** been opened —
+  this repo batches promotions rather than opening one per slice (see PR #759's precedent, which
+  carried four prior issues), and no owner instruction to promote now was given at `/ship`.
 - **NEW INFRASTRUCTURE — a second Neon project now exists, and is now live on staging.** See the
   dedicated section below. This is the most consequential project-level change since multi-tenancy.
 - **Worktrees:** only the main checkout.
@@ -109,7 +110,33 @@ checking independently.
 validation and delivery-eligibility consolidation (`lib/delivery-eligibility.ts`), and customer
 saved addresses (`CustomerAddress`, separate from the per-order `Address` snapshot). `addresses[]`
 in the lookup response stays empty until a licensed property-address provider exists — tracked as
-**`#766`**, not a defect. Both `#766` and `#767` are filed, on Project #2 (Backlog, Phase `P10`).
+**`#766`**, not a defect (Backlog, Phase `P10`). **`#767`'s database half is done** (this session's
+`#770`/`#771`/`#767` slice — see below), and its issue is `In Review` on Project #2 rather than
+`Backlog` now; what's left on it is `#772` (the application isn't promoted, so production serves the
+route to nobody yet regardless of database state).
+
+## Reference coverage reconciliation (`#770`, `#771`, `#767`, shipped to staging 2026-09-16, PR #773)
+
+Closes the one hole `#764`'s coverage model left open: the sync pipeline could add a postcode area
+but never remove one, so an area dropping out of `UK_LOCATION_REF_POSTCODE_AREAS` froze at whatever
+release imported it while its `ReferenceAreaCoverage` row kept claiming authority — reading
+`INVALID`, the exact outcome `UNVERIFIED` exists to prevent. `sync-reference-data.ts --decommission`
+now closes that gap (coverage row removed before data rows, refuses on an empty required list,
+never run by the schedule); `LU` — the one area that had drifted this way — is retired from
+dev/staging. `/api/health` now carries a `reference` block (`lib/reference/reference-status-service.ts`)
+reporting configured/reachable/required areas and per-source drift in both directions, never fatal.
+**Production's reference database is bootstrapped** (migrated, `MK`/`RG` imported for both sources,
+matches dev/staging row for row) — the *application* serving it is still `staging`-only (`#772`
+tracks the promotion; `sync-reference-data.yml`'s monthly schedule stays dormant until then, since
+GitHub resolves `schedule`/`workflow_dispatch` against the default branch only).
+
+**Found and fixed at this slice's own `/validate`, not part of the original build**: a routine
+`deploy-staging` CI run silently wiped `UK_LOCATION_REF_POSTCODE_AREAS` from the deployed staging
+Worker's bindings — `wrangler deploy` rebuilds a Worker's `vars` entirely from `wrangler.toml`, and
+the variable had only ever been added via the Cloudflare dashboard, never committed. Now declared
+as `[env.staging.vars]`/`[env.production.vars]` in `wrangler.toml`, confirmed live against the
+deployed Worker's actual bindings (Cloudflare API) after this PR's own post-merge `deploy-staging`
+ran — `/api/health` on deployed staging reports `drift: false` at `cb397b8`.
 
 Read `CLAUDE.md`'s "There are TWO databases" section and `specs/architecture.md` §3.0 before
 touching any of it.
@@ -139,9 +166,13 @@ deliberately left open and uncited by PR #759. See the Documentation Reconciliat
 for the tracked cleanup issue.
 
 **`#764` (address lookup, reference-data framework, saved addresses) shipped to staging 2026-09-16
-(PR #768, merge `ab1f080`) and is `In Review` on Project #2** — not yet promoted to `main`. See "A
-second database now exists" above for the infrastructure it depends on and what remains dark in
-production until `#767` resolves.
+(PR #768, merge `ab1f080`) and is `In Review` on Project #2** — not yet promoted to `main`.
+**`#770`/`#771`/`#767` (reference coverage reconciliation) shipped the same day (PR #773, merge
+`cb397b8`) and are also `In Review`** — the decommission path, `/api/health`'s `reference` block,
+and production's database bootstrap. See "Reference coverage reconciliation" above for what shipped
+and "A second database now exists" for the infrastructure it depends on. **Nothing about this
+feature is dark in production for a database reason any more** — what remains is the application
+promotion itself (**`#772`**), which is also what wakes the monthly sync schedule.
 
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
@@ -187,6 +218,9 @@ All facts in this section require live verification:
 
 - **`#764` shipped to `staging` (PR #768, `ab1f080`), In Review on Project #2, not yet promoted** —
   see Last Verified/Project Position above.
+- **`#770`/`#771`/`#767` shipped to `staging` (PR #773, `cb397b8`), In Review on Project #2, not yet
+  promoted** — see Last Verified/Project Position/"Reference coverage reconciliation" above. Merged
+  and safe to delete once nothing else needs it: `feature/reference-coverage-reconciliation`.
 - **The whole delivery cluster is DONE — see Last Verified/Project Position above.** `#401`, `#402`,
   `#748`, `#749`, `#750`, `#751` all shipped, closed, and are live in production (`d855e1f`,
   2026-09-15). `#613` was never part of it (citation error, corrected above).
@@ -304,8 +338,9 @@ Board Phase and GitHub milestone disagreed for #151, #422, #589, #602, #695, #69
 - `deploy-production.yml` still cites the obsolete private-repository paid-plan explanation for no
   approval gate. The current decision is deliberate self-approval avoidance on a public repo.
 - `specs/mission.md` still cites ISR although this Prisma/Workers stack cannot use Next ISR.
-- `CLAUDE.md`'s Vitest baseline is now **129/1687** (corrected 2026-09-15 at `#750`'s Validate/Fix,
-  after `#748`'s 128/1632) — three of the files it counts
+- `CLAUDE.md`'s Vitest baseline is now **139/1842** (measured 2026-09-16 at this session's own
+  `/validate`, up from `#764`'s 136/1816 — three new files, 26 tests, for the decommission path,
+  its safety AST check, and the reference status service) — three of the files it counts
   (`tests/concurrency-slot-booking.test.ts`, `tests/slot-capacity.test.ts`,
   `tests/express-sla.test.ts`) are `it.skipIf(!DATABASE_URL)`-guarded and report **skipped**, not
   run, in CI, so a real CI job's own summary line will read 3 fewer tests even when fully green —

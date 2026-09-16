@@ -4,7 +4,7 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.23.0"
+version: "1.24.0"
 updated: 2026-09-16
 visibility: internal
 summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
@@ -537,6 +537,21 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   then succeeded on the first retry. The local check is what distinguishes this from a real outage
   (where retrying would be pointless) or a genuine connection-string/firewall problem (where
   retrying would just fail again) — don't skip straight to either conclusion.
+- **A workflow carrying `schedule` or `workflow_dispatch` does nothing until it reaches the default
+  branch (`main`), however correct it looks on `staging`.** GitHub resolves both triggers against
+  the default branch specifically — not whatever branch the file was merged to. Found 2026-09-16
+  (`#772`): `.github/workflows/sync-reference-data.yml` shipped with `#764` onto `staging` and has
+  never existed on `main`, so its `cron: "0 4 3 * *"` was inert and `gh workflow run
+  sync-reference-data.yml --ref staging` failed outright with `HTTP 404: workflow … not found on
+  the default branch` — a dispatch is impossible too, not just the schedule. **Invisible in the
+  usual places**: the file is present and correct on the branch everyone works on,
+  `gh workflow list --ref staging` shows it, and `lint`/`typecheck`/`test`/`build` say nothing about
+  workflow placement — the only tell is the absence of runs, and a job that has never run produces
+  no failure to notice. This repo merges into `staging` and promotes to `main` separately, so
+  **every** scheduled workflow it adds has a dormant period lasting until that promotion —
+  `fill-product-images.yml` has the identical shape. Check `git ls-tree origin/main --name-only
+  .github/workflows/` before trusting that a new `schedule`/`workflow_dispatch` workflow will
+  actually fire.
 
 ## The four SDD gates (non-negotiable)
 1. **Propose before work** — open the issue + a spec proposal; wait for approval.
