@@ -6,6 +6,21 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **Documentation and handoff reconciliation for #764 (Document (final) for PR #768)**:
+  - Added `specs/roadmap.md`'s change-log row for `#764` (closing the `npm run sdd:audit` gap it
+    left behind) and P10 tracked-issue entries for `#766`/`#767`, both now tagged Phase `P10` on
+    Project #2 (were untagged Backlog).
+  - Reconciled `docs/model-handoff.md` with the real post-merge state: `#764` shipped to `staging`
+    via PR #768 (`ab1f080`), the reference-database section no longer frames itself as an in-branch
+    change, and Project Position/In-Flight Work both note the slice is `In Review`, not promoted.
+  - Corrected five `specs/2026-09-15-address-lookup-reference-data/validation.md` rows (R13, R14,
+    R30–R33) that cited unit-test files never created — the behaviour they describe is genuinely
+    tested, just in `tests/reference-sync-integrity.test.ts`/`tests/places-repository.test.ts`
+    rather than the files named — and annotated R25a/R27b with what was confirmed at Build versus
+    not re-executed at Validate, and why.
+
 ### Added
 
 - **Postcode validation, location enrichment and saved addresses, on a dedicated UK reference database** (`#764`; `specs/2026-09-15-address-lookup-reference-data/`). Closes the whole flow: `saved address where available → postcode validation → delivery check → location assistance → manual completion → confirmation → save and reuse`.
