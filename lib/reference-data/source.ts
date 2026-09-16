@@ -51,6 +51,12 @@ export interface DiscoveredRelease {
 /** The outcome of validating a parsed dataset, before anything is written. */
 export type ValidationOutcome = { ok: true } | { ok: false; error: string };
 
+/** What a decommission run actually removed for one source. */
+export interface DecommissionOutcome {
+  /** Data rows deleted, across every area named in the call. */
+  deleted: number;
+}
+
 /** What an import actually changed, and which areas it completed. */
 export interface ApplyOutcome {
   inserted: number;
@@ -105,8 +111,34 @@ export interface ReferenceDataSource<TRecord = unknown> {
    * Write the records for the given areas, marking anything no longer present **within those
    * areas** as inactive rather than deleting it.
    *
+   * "Rather than deleting" is a statement about `apply` specifically, not about the pipeline as a
+   * whole: a refresh never deletes, because a postcode the publisher withdraws must stay explicable
+   * to an `Address` that already holds it. Removing an area outright is a different operation with
+   * a different justification — see `decommissionAreas` below.
+   *
    * Scoping retirement to the areas being imported is what stops an `LU` import from retiring every
    * `MK` row simply because they were not part of that pass.
    */
   apply(prisma: Db, records: TRecord[], version: string, areas: string[]): Promise<ApplyOutcome>;
+
+  /**
+   * Delete this source's rows for areas that are no longer supported (#770).
+   *
+   * The counterpart to `apply`, and the only method in this contract that deletes. It exists
+   * because coverage is demand-driven in **both** directions: `apply` and `findOutstandingAreas`
+   * are each scoped to the areas being imported — deliberately, so one area's import cannot retire
+   * another's — which also means an area that drops out of `UK_LOCATION_REF_POSTCODE_AREAS` is
+   * never touched by any later run. It sits frozen at whatever release imported it while its
+   * coverage row goes on claiming authority over it, so a postcode issued there after that release
+   * is answered INVALID. Deactivating rather than deleting would not help: a covered area whose
+   * rows are all inactive is exactly the INVALID case.
+   *
+   * Implementations delete **only** rows whose `postcodeArea` is in `areas`, and must never issue a
+   * delete whose filter omits that column.
+   *
+   * Callers are `decommissionUnsupportedAreas` alone, which removes the coverage row for an area
+   * BEFORE calling this — so the area degrades to UNVERIFIED, never through a window where it reads
+   * as INVALID.
+   */
+  decommissionAreas(prisma: Db, areas: string[]): Promise<DecommissionOutcome>;
 }

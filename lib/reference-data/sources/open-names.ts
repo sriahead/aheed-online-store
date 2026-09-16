@@ -4,6 +4,7 @@ import { postcodeAreaOf } from "@/lib/postcode-normalisation";
 import type {
   ApplyOutcome,
   Db,
+  DecommissionOutcome,
   DiscoveredRelease,
   ReferenceDataSource,
   ValidationOutcome,
@@ -231,6 +232,10 @@ export const openNamesSource: ReferenceDataSource<PlaceRecord> = {
   ): Promise<ApplyOutcome> {
     return applyPlaceRecords(prisma, records, areas);
   },
+
+  async decommissionAreas(prisma: Db, areas: string[]): Promise<DecommissionOutcome> {
+    return decommissionPlaceAreas(prisma, areas);
+  },
 };
 
 /**
@@ -251,7 +256,8 @@ function districtAreaPrefix(district: string): string | null {
 
 /**
  * Write the parsed release for the given areas, retiring rather than deleting anything that
- * disappeared from within them.
+ * disappeared from within them. "Rather than deleting" describes this function only — removing an
+ * area outright is `decommissionPlaceAreas`, below.
  *
  * Exported for `tests/reference-sync-integrity.test.ts`, which drives it with a few records and a
  * stub client rather than a 103 MB archive.
@@ -331,6 +337,30 @@ export async function applyPlaceRecords(
   }
 
   return { inserted: toInsert.length, updated: toUpdate.length, retired, perArea };
+}
+
+/**
+ * Delete every place row belonging to the given areas (#770).
+ *
+ * `PlaceReference.postcodeArea` is nullable — Open Names publishes rows carrying no postcode
+ * district at all, from which no area can be derived. Those rows match no area and are therefore
+ * never removed here, which is correct: a row we cannot attribute to an area is not evidence about
+ * that area. It also means this source can legitimately report fewer deletions than Code-Point for
+ * the same decommission.
+ *
+ * Exported for `tests/reference-decommission.test.ts` and allow-listed by
+ * `tests/reference-decommission-safety.test.ts`.
+ */
+export async function decommissionPlaceAreas(
+  prisma: Db,
+  areas: string[],
+): Promise<DecommissionOutcome> {
+  if (areas.length === 0) return { deleted: 0 };
+
+  const result = await prisma.placeReference.deleteMany({
+    where: { postcodeArea: { in: areas } },
+  });
+  return { deleted: result.count };
 }
 
 async function readJson(response: Response): Promise<unknown> {

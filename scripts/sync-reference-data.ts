@@ -6,6 +6,8 @@
  *   npx tsx scripts/sync-reference-data.ts --env-file .env --source os-open-names
  *   npx tsx scripts/sync-reference-data.ts --env-file .env            # every source, in order
  *   npx tsx scripts/sync-reference-data.ts --env-file .env --force    # re-import even if unchanged
+ *   npx tsx scripts/sync-reference-data.ts --env-file .env --decommission --dry-run
+ *   npx tsx scripts/sync-reference-data.ts --env-file .env --decommission
  *
  * ## Why this runs on a Node runner and not in the application Worker
  *
@@ -39,13 +41,27 @@
  * Which postcode areas to materialise is `UK_LOCATION_REF_POSTCODE_AREAS`, overridable per run with
  * `--areas`. No area literal appears anywhere in the schema, the sources, the repositories or the
  * application — adding one is configuration plus a run, never a code change.
+ *
+ * ## Removing an area is a separate, opt-in mode (#770)
+ *
+ * Configuration drives coverage in both directions, but only the additive direction happens
+ * automatically. `--decommission` retires areas that are materialised and no longer required; it
+ * downloads nothing, imports nothing, and is never passed by
+ * `.github/workflows/sync-reference-data.yml`. That asymmetry is deliberate: the scheduled job runs
+ * unattended against production, and a destructive action driven by a value one mistyped GitHub
+ * variable could empty is not something to run unattended.
  */
 import { config } from "dotenv";
 import { PrismaClient } from "@aheed/reference-client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { codePointSource } from "../lib/reference-data/sources/code-point";
 import { openNamesSource } from "../lib/reference-data/sources/open-names";
-import { syncReferenceData, type SyncRunSummary } from "../lib/reference-data/sync-service";
+import {
+  decommissionUnsupportedAreas,
+  syncReferenceData,
+  type DecommissionRunSummary,
+  type SyncRunSummary,
+} from "../lib/reference-data/sync-service";
 import type { Db, ReferenceDataSource } from "../lib/reference-data/source";
 
 const SOURCES: ReferenceDataSource<never>[] = [
@@ -61,11 +77,20 @@ Synchronise reference datasets from their publishers.
   --areas <list>      Postcode areas to materialise, comma-separated (default:
                       UK_LOCATION_REF_POSTCODE_AREAS)
   --force             Re-import even when the release and coverage are both unchanged
+  --decommission      Remove coverage and rows for areas that are materialised but NOT required.
+                      Downloads nothing and imports nothing — this mode only deletes.
+  --dry-run           With --decommission, report what would be removed and remove nothing.
   --help              Show this message
 
 Safe to re-run: a source whose release AND coverage are both unchanged exits without downloading or
 writing anything, and a failed run leaves the previous known-good dataset serving. Adding an area to
 --areas imports just that area, even when the upstream release has not moved.
+
+--decommission is the one destructive mode and is never used by the scheduled workflow. It removes
+each unsupported area's coverage row BEFORE its data rows, so the area degrades to UNVERIFIED rather
+than passing through a window where it reads as INVALID. It refuses outright when no areas are
+configured, because "nothing is required" must never mean "remove everything". Run it with
+--dry-run first.
 `.trim();
 
 function argValue(flag: string): string | undefined {
@@ -120,6 +145,45 @@ async function main() {
 
   const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString }) });
   const force = process.argv.includes("--force");
+  const decommission = process.argv.includes("--decommission");
+  const dryRun = process.argv.includes("--dry-run");
+
+  // The two modes are deliberately exclusive rather than sequential. Decommissioning deletes and
+  // importing downloads; running both under one invocation would make a destructive step a side
+  // effect of a routine one, which is the shape this flag exists to avoid.
+  if (decommission) {
+    const summaries: DecommissionRunSummary[] = [];
+    console.log(dryRun ? "mode: decommission (DRY RUN — nothing will be removed)" : "mode: decommission"); // prettier-ignore
+
+    try {
+      for (const source of selected) {
+        summaries.push(
+          await decommissionUnsupportedAreas(prisma as unknown as Db, source, { areas, dryRun }),
+        );
+      }
+    } finally {
+      await prisma.$disconnect();
+    }
+
+    console.log("\n--- summary ---");
+    for (const summary of summaries) {
+      console.log(
+        `${summary.sourceKey}: ${summary.status} removed=[${summary.removedAreas.join(",")}] ` +
+          `deleted=${summary.deleted} dryRun=${summary.dryRun}` +
+          (summary.error ? ` error=${summary.error}` : ""),
+      );
+    }
+
+    if (summaries.some((summary) => summary.status === "FAILED")) process.exit(1);
+    return;
+  }
+
+  if (dryRun) {
+    console.error("--dry-run is only meaningful with --decommission. Refusing to guess.");
+    await prisma.$disconnect();
+    process.exit(1);
+  }
+
   const summaries: SyncRunSummary[] = [];
 
   try {

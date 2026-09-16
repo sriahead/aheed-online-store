@@ -290,6 +290,12 @@ function stubSource(
       retired: 0,
       perArea: Object.fromEntries(areas.map((area) => [area, 3])),
     }),
+    // Throws rather than returning zero: nothing in THIS file's subject — the refresh pipeline —
+    // may ever decommission, so a call here is a defect to surface, not a no-op to absorb.
+    // `tests/reference-decommission.test.ts` owns that path.
+    decommissionAreas: async () => {
+      throw new Error("a refresh must never decommission");
+    },
     ...overrides,
   };
 }

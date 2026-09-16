@@ -73,12 +73,59 @@ Coverage defaults to `UK_LOCATION_REF_POSTCODE_AREAS`; pass `--areas` to overrid
 `workflow_dispatch`-able per environment, so a fresh staging/production project does not strictly
 need a manual first run — but nothing else in either deploy workflow does this for you.
 
+That workflow needs **two differently-stored values** in the GitHub environment it targets, and
+they are not interchangeable: `UK_LOCATION_REF_DIRECT_URL` as a **secret**, and
+`UK_LOCATION_REF_POSTCODE_AREAS` as a **variable** (`vars.`, not `secrets.` — a coverage list is
+not a credential, and a variable's value is readable, which makes it verifiable). Check both:
+
+```bash
+gh api repos/sriahead/aheed-online-store/environments/<env>/variables --jq '.variables[] | "\(.name)=\(.value)"'
+gh api repos/sriahead/aheed-online-store/environments/<env>/secrets   --jq '.secrets[].name'
+```
+
+### Removing a postcode area, and checking coverage matches configuration
+
+Configuration drives coverage in both directions, but **only the additive direction is automatic**.
+A scheduled sync imports a newly configured area; nothing in it ever retires one that has been
+removed, because every stage is scoped to the areas being imported. An unconfigured area therefore
+sits frozen at whatever release imported it while its coverage row still claims authority over it —
+so a postcode issued there afterwards is answered `INVALID` rather than `UNVERIFIED`.
+
+```bash
+# Always rehearse first — this is the only destructive mode in the project.
+npx tsx scripts/sync-reference-data.ts --env-file .env --decommission --dry-run
+npx tsx scripts/sync-reference-data.ts --env-file .env --decommission
+```
+
+It removes each unsupported area's coverage row **before** its data rows (so the area degrades to
+`UNVERIFIED`, never through a window where it reads as `INVALID`), refuses outright when no areas
+are configured, and is never passed by the scheduled workflow.
+
+To check any environment's database against its configuration, including one that has never been
+migrated:
+
+```bash
+npx tsx scripts/verify-reference-coverage.ts --env-file secrets/production.vars
+```
+
+Read-only, safe against production, and exits non-zero on drift in either direction. The deployed
+equivalent is `/api/health`'s `reference` block, which reports the same comparison plus whether the
+running Worker has a reference binding at all.
+
 **An environment that has not yet run this bootstrap is not broken — it serves `UNVERIFIED` for
 every postcode.** `lib/reference/postcode-reference-service.ts` treats an unconfigured, unreachable,
 or never-synced reference database identically to an uncovered postcode area: the answer degrades to
 "could not check," which the checkout and address-lookup surfaces render as manual entry being
-available, never as a validation error. Production's reference branch had exactly this status as of
-`#764` (tracked in `#767`) — dark, not failing.
+available, never as a validation error.
+
+**Production's reference branch (`ep-summer-boat-zapzp2t9`) had exactly this status from `#764`
+until 2026-09-16**, when `#767` bootstrapped it: migrations applied, then `MK` and `RG` imported for
+both sources — 16,215 and 23,816 postcodes, 9,989 and 13,483 places, four coverage rows and nothing
+else. It matches the dev/staging branch row for row. Note the bootstrap was run **by hand against
+`secrets/production.vars`, not by dispatching the workflow**: `sync-reference-data.yml` has never
+existed on `main`, and GitHub resolves both `workflow_dispatch` and `schedule` from the default
+branch, so neither the dispatch nor the monthly cron can fire until `#764` is promoted (**#772**).
+Until then, every refresh of every environment is a manual run.
 
 ### Per-vendor host mapping (ADR-004 slice 3b)
 

@@ -63,7 +63,13 @@ export async function findDatasetStatus(
   return { ...row, initialised: row.lastSyncedAt !== null };
 }
 
-/** Every dataset's status, for operational reporting. Never used on the request path. */
+/**
+ * Every dataset's status, for operational reporting.
+ *
+ * Read on the request path by `/api/health` alone (#771), never by an address or checkout surface —
+ * those ask `findDatasetStatus` about one source. An unbounded read of a table holding one row per
+ * dataset is cheap; this staying true depends on that remaining the shape of the table.
+ */
 export async function listDatasetStatuses(prisma: Db): Promise<ReferenceDatasetStatus[]> {
   const rows = await prisma.referenceDataset.findMany({
     orderBy: { sourceKey: "asc" },

@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.7.0"
+version: "1.7.1"
 updated: 2026-09-16
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -67,20 +67,43 @@ reconciliation. If overall project state did not materially change, leave this f
 
 Branches: dev and staging **share** `ep-wild-violet-zaa9udu5`; production is
 `ep-summer-boat-zapzp2t9`. Env vars `UK_LOCATION_REF_DATABASE_URL`, `UK_LOCATION_REF_DIRECT_URL`
-and `UK_LOCATION_REF_POSTCODE_AREAS` exist in all four env files.
+and `UK_LOCATION_REF_POSTCODE_AREAS` exist in all four env files — and, since 2026-09-16, in the
+places that actually serve traffic: both Cloudflare Workers carry the two runtime values, and both
+GitHub environments carry `UK_LOCATION_REF_DIRECT_URL` as a **secret** with
+`UK_LOCATION_REF_POSTCODE_AREAS` as a **variable** (`vars.`, which is what the sync workflow reads).
+**A local env file is not evidence about either.** Staging served `UNVERIFIED` for every postcode
+for a day with a perfectly healthy database, because its secrets sat on a dashboard-created Worker
+version that was never deployed; `/api/health`'s `reference` block and
+`scripts/verify-reference-coverage.ts` exist to answer that question directly.
 
 **Why it exists:** a full-GB Code-Point import into Aheed's database occupied **456.9 MB of its
 512 MB ceiling**, the Open Names import then failed outright, and ordinary application writes
 started failing. Those superseded tables and their 1.75M rows have since been **dropped from Aheed's
 database** (489.8 MB → 17.3 MB) by migration `20260915221254_p10_drop_superseded_reference_tables`.
 
-**Coverage is demand-driven:** only `MK` and `RG` are materialised (plus `LU` for Code-Point only,
-left from proving the expansion path), at 40,031 postcodes and 20.50 MB. Adding an area is
-configuration plus a sync run — no migration, no code change.
+**Coverage is demand-driven:** only `MK` and `RG` are materialised, at 40,031 postcodes and 23,472
+places — **identical in dev/staging and production** as of 2026-09-16, when `#767` bootstrapped
+production from empty and `#770` retired the leftover `LU`. Adding an area is configuration plus a
+sync run; **removing one is `sync-reference-data.ts --decommission`**, which is opt-in, never run by
+the schedule, and deletes each area's coverage row before its data rows so the area degrades to
+`UNVERIFIED` rather than briefly reading as `INVALID`. `LU` had been materialised for Code-Point
+only, left from proving the expansion path, and that was not harmless: its coverage row made the
+service an authority on Luton while nothing would ever refresh it.
 
-**Production's reference branch has NOT been migrated or synced (`#767`).** Production therefore
-answers `UNVERIFIED` for every postcode, which degrades correctly to manual address entry but means
-the feature is dark there.
+**The monthly sync cannot run yet.** `.github/workflows/sync-reference-data.yml` has never existed
+on `main`, and GitHub resolves `schedule` and `workflow_dispatch` from the default branch, so every
+import so far has been manual and will stay manual until `#764` is promoted (**#772**).
+
+**Production's reference DATABASE is bootstrapped (`#767`, 2026-09-16) — the APPLICATION serving
+it is not, and those are two separate facts.** The database itself is migrated and synced, matching
+dev/staging row for row (see the paragraph above); confirmed live via `scripts/verify-reference-
+coverage.ts --env-file secrets/production.vars` and `prisma migrate status`. But `#764` — the slice
+that adds `GET /api/address/lookup` — has not been promoted to `main`, so production's deployed
+Worker does not route that endpoint at all, on a database or not. **Do not read a production 404 on
+that path as a reference-data failure**: it is the application, not the data, that is not there yet.
+This line previously said the database itself was unmigrated, which was true until `#767` and is
+stale now — the two facts (database readiness, application promotion) were conflated here and need
+checking independently.
 
 **The feature this database backs is live on staging**: `GET /api/address/lookup`, postcode
 validation and delivery-eligibility consolidation (`lib/delivery-eligibility.ts`), and customer

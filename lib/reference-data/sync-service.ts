@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
-import { findOutstandingAreas, recordAreaCoverage } from "@/lib/repositories/reference-coverage";
+import {
+  findOutstandingAreas,
+  listCoveredAreas,
+  recordAreaCoverage,
+  removeAreaCoverage,
+} from "@/lib/repositories/reference-coverage";
 import type { Db, ReferenceDataSource } from "./source";
 
 /**
@@ -27,9 +32,11 @@ import type { Db, ReferenceDataSource } from "./source";
  *
  * ## The guarantees this file exists to provide
  *
- * **A failed refresh never costs you the data you already had.** Nothing is deleted at any point;
- * `apply` inserts, updates and marks rows inactive, and every stage that can fail happens *before*
- * the dataset is marked current. If the download is corrupt, the schema moved, or an area's record
+ * **A failed refresh never costs you the data you already had.** `syncReferenceData` deletes
+ * nothing at any point; `apply` inserts, updates and marks rows inactive, and every stage that can
+ * fail happens *before* the dataset is marked current. (The one path in this file that does delete
+ * is `decommissionUnsupportedAreas`, which is a different operation, reachable only from an
+ * explicit `--decommission` run, and never called by the scheduled refresh below.) If the download is corrupt, the schema moved, or an area's record
  * count collapsed, the previous release keeps serving and the run is recorded as FAILED with a
  * reason. This is not theoretical: the first full Open Names import died mid-write against a full
  * database, and because coverage is written only after an area completes, those partial rows were
@@ -284,6 +291,207 @@ export async function syncReferenceData<TRecord>(
  * Read back rather than accumulated from this run, because a run only touches the areas it
  * imported — adding `LU` must leave `recordCount` describing everything, not just `LU`.
  */
+export interface DecommissionOptions {
+  /** The postcode areas this environment requires. Anything covered but absent here is retired. */
+  areas: string[];
+  /** Report what would be removed, change nothing. */
+  dryRun?: boolean;
+  /** Where progress is reported. Defaults to `console.log`. */
+  log?: (message: string) => void;
+}
+
+export interface DecommissionRunSummary {
+  sourceKey: string;
+  status: "SUCCEEDED" | "FAILED";
+  /** Areas actually retired — or, on a dry run, the areas that would have been. */
+  removedAreas: string[];
+  /** Data rows deleted. Always 0 on a dry run. */
+  deleted: number;
+  dryRun: boolean;
+  error: string | null;
+}
+
+/**
+ * Retire every area this source has materialised that the environment no longer requires (#770).
+ *
+ * ## Why this exists at all
+ *
+ * `syncReferenceData` above converges an environment TOWARDS its configured coverage but can never
+ * converge it back down. Both of its area-scoped mechanisms are correct in isolation and blind
+ * together: `apply` reads and retires only within the areas being imported, so one area's import
+ * cannot damage another's, and `findOutstandingAreas` only ever considers the REQUIRED areas, so an
+ * area that has left configuration is never even a candidate for work. An unsupported area
+ * therefore sits at whatever release last imported it, forever, while its `ReferenceAreaCoverage`
+ * row goes on asserting that we are an authority on it — and a postcode issued there afterwards is
+ * answered INVALID by `lib/reference/postcode-reference-service.ts`. `LU` was in exactly that state.
+ *
+ * ## Why the coverage row goes first
+ *
+ * Deleting an area's data while its coverage row survives produces "covered area, no active row",
+ * which is the one state that yields an authoritative INVALID. Deleting the coverage row first
+ * moves the area to UNVERIFIED — "we cannot tell", which degrades to manual address entry. The
+ * ordering is therefore a correctness property, not tidiness, and
+ * `tests/reference-decommission.test.ts` asserts it by recording call order.
+ *
+ * ## Two refusals
+ *
+ * An empty `areas` list means the environment has said nothing about what it needs — which must
+ * never be read as "it needs nothing", or a single mistyped `UK_LOCATION_REF_POSTCODE_AREAS` would
+ * clear every area. And a required area is never removed, even if it somehow appears in the
+ * unsupported set. Both return a FAILED summary having deleted nothing.
+ *
+ * Never invoked by the scheduled workflow: `scripts/sync-reference-data.ts` calls this only under
+ * `--decommission`.
+ */
+export async function decommissionUnsupportedAreas<TRecord>(
+  prisma: Db,
+  source: ReferenceDataSource<TRecord>,
+  options: DecommissionOptions,
+): Promise<DecommissionRunSummary> {
+  const log = options.log ?? ((message: string) => console.log(message));
+  const dryRun = options.dryRun ?? false;
+  const required = new Set(options.areas.map((area) => area.trim().toUpperCase()));
+
+  const refuse = (message: string): DecommissionRunSummary => {
+    log(`[${source.key}] REFUSED: ${message}`);
+    return {
+      sourceKey: source.key,
+      status: "FAILED",
+      removedAreas: [],
+      deleted: 0,
+      dryRun,
+      error: message,
+    };
+  };
+
+  if (required.size === 0) {
+    return refuse(
+      "no postcode areas configured — refusing to decommission, because an empty required list " +
+        "means the environment has not said what it needs, not that it needs nothing",
+    );
+  }
+
+  // Held outside the try so the catch below can close out a run row that was already opened —
+  // otherwise a mid-run failure would leave it RUNNING forever, which is exactly the ambiguity
+  // `ReferenceDataSyncRun` exists to remove.
+  let runId: string | null = null;
+
+  try {
+    const covered = await listCoveredAreas(prisma, source.key);
+    const unsupported = covered
+      .map((row) => row.postcodeArea)
+      .filter((area) => !required.has(area))
+      .sort();
+
+    if (unsupported.length === 0) {
+      log(`[${source.key}] coverage matches configuration (${[...required].sort().join(", ")}) — nothing to decommission`); // prettier-ignore
+      return {
+        sourceKey: source.key,
+        status: "SUCCEEDED",
+        removedAreas: [],
+        deleted: 0,
+        dryRun,
+        error: null,
+      };
+    }
+
+    // Defence in depth. `unsupported` is built by excluding `required`, so this cannot fire as
+    // written — it exists so that a future edit to that filter fails loudly rather than deleting a
+    // required area.
+    const overlap = unsupported.filter((area) => required.has(area));
+    if (overlap.length > 0) {
+      return refuse(`refusing to decommission required area(s): ${overlap.join(", ")}`);
+    }
+
+    const rowCounts = covered
+      .filter((row) => unsupported.includes(row.postcodeArea))
+      .map((row) => `${row.postcodeArea}=${row.recordCount}`)
+      .join(", ");
+    log(`[${source.key}] unsupported coverage: ${unsupported.join(", ")} (${rowCounts})`);
+
+    if (dryRun) {
+      log(`[${source.key}] dry run — nothing removed`);
+      return {
+        sourceKey: source.key,
+        status: "SUCCEEDED",
+        removedAreas: unsupported,
+        deleted: 0,
+        dryRun: true,
+        error: null,
+      };
+    }
+
+    const dataset = await ensureDataset(prisma, source as ReferenceDataSource<unknown>);
+    const run = await prisma.referenceDataSyncRun.create({
+      data: {
+        datasetId: dataset.id,
+        status: "RUNNING",
+        requestedAreas: unsupported.join(","),
+        sourceVersion: dataset.sourceVersion,
+      },
+      select: { id: true },
+    });
+    runId = run.id;
+
+    let deleted = 0;
+    for (const area of unsupported) {
+      // AUTHORITY FIRST. See this function's header: the reverse order publishes INVALID.
+      log(`[${source.key}] withdrawing coverage for ${area}`);
+      await removeAreaCoverage(prisma, source.key, area);
+
+      const outcome = await source.decommissionAreas(prisma, [area]);
+      deleted += outcome.deleted;
+      log(`[${source.key}] deleted ${outcome.deleted} rows for ${area}`);
+    }
+
+    const totalRecords = await countRecords(prisma, source.key);
+    await prisma.referenceDataset.update({
+      where: { id: dataset.id },
+      data: {
+        recordCount: totalRecords,
+        lastCheckedAt: new Date(),
+        syncStatus: "SUCCEEDED",
+        syncError: null,
+        // The activation signal moves for the same reason a successful import moves it: what this
+        // environment serves has changed.
+        cacheVersion: { increment: 1 },
+      },
+    });
+
+    await prisma.referenceDataSyncRun.update({
+      where: { id: run.id },
+      data: { status: "SUCCEEDED", finishedAt: new Date(), retired: deleted },
+    });
+
+    log(`[${source.key}] DECOMMISSIONED areas=${unsupported.join(",")} deleted=${deleted}`);
+    return {
+      sourceKey: source.key,
+      status: "SUCCEEDED",
+      removedAreas: unsupported,
+      deleted,
+      dryRun: false,
+      error: null,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (runId) {
+      await prisma.referenceDataSyncRun.update({
+        where: { id: runId },
+        data: { status: "FAILED", errorMessage: message, finishedAt: new Date() },
+      });
+    }
+    log(`[${source.key}] FAILED: ${message}`);
+    return {
+      sourceKey: source.key,
+      status: "FAILED",
+      removedAreas: [],
+      deleted: 0,
+      dryRun,
+      error: message,
+    };
+  }
+}
+
 async function countRecords(prisma: Db, sourceKey: string): Promise<number> {
   const coverage = await prisma.referenceAreaCoverage.findMany({
     where: { sourceKey },

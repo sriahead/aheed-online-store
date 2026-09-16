@@ -9,6 +9,7 @@ import { columnIndex, csvLines, parseCsvLine, requireColumns } from "../csv";
 import type {
   ApplyOutcome,
   Db,
+  DecommissionOutcome,
   DiscoveredRelease,
   ReferenceDataSource,
   ValidationOutcome,
@@ -212,6 +213,10 @@ export const codePointSource: ReferenceDataSource<PostcodeRecord> = {
   ): Promise<ApplyOutcome> {
     return applyPostcodeRecords(prisma, records, areas);
   },
+
+  async decommissionAreas(prisma: Db, areas: string[]): Promise<DecommissionOutcome> {
+    return decommissionPostcodeAreas(prisma, areas);
+  },
 };
 
 /**
@@ -221,9 +226,10 @@ export const codePointSource: ReferenceDataSource<PostcodeRecord> = {
  * records and a stub client, proving the insert/update/retire accounting and the area scoping
  * without a 14 MB download.
  *
- * Rows that disappear from a release are marked `isActive = false`, never deleted: a postcode OS
- * withdraws should stop being offered, but an `Address` or `CustomerAddress` already holding it must
- * remain explicable rather than pointing at nothing.
+ * Rows that disappear from a release are marked `isActive = false`, never deleted **by this
+ * function**: a postcode OS withdraws should stop being offered, but an `Address` or
+ * `CustomerAddress` already holding it must remain explicable rather than pointing at nothing.
+ * Deleting an area outright is a separate, opt-in operation — see `decommissionPostcodeAreas`.
  *
  * **Reads and retirement are both scoped to `areas`.** Loading only the areas being imported keeps
  * the comparison map proportional to the work rather than to the whole database, and stops an `LU`
@@ -293,6 +299,34 @@ export async function applyPostcodeRecords(
   }
 
   return { inserted: toInsert.length, updated: toUpdate.length, retired, perArea };
+}
+
+/**
+ * Delete every postcode row belonging to the given areas (#770).
+ *
+ * The one function in this module that deletes, and the counterpart to `applyPostcodeRecords`'s
+ * deliberate refusal to. The justification differs because the situations differ: a postcode OS
+ * withdraws from a *covered* area is still a fact about a covered area, so it is deactivated and
+ * stays explicable. An area we no longer support is not a fact we hold at all — leaving its rows
+ * behind, active or inactive, means the reference database keeps answering for a part of the
+ * country nothing will ever refresh.
+ *
+ * `postcodeArea` is in the `where` clause and is not optional. A delete without it would clear the
+ * table.
+ *
+ * Exported so `tests/reference-decommission.test.ts` can drive it with a stub client, and so
+ * `tests/reference-decommission-safety.test.ts` has a named function to allow-list.
+ */
+export async function decommissionPostcodeAreas(
+  prisma: Db,
+  areas: string[],
+): Promise<DecommissionOutcome> {
+  if (areas.length === 0) return { deleted: 0 };
+
+  const result = await prisma.postcodeReference.deleteMany({
+    where: { postcodeArea: { in: areas } },
+  });
+  return { deleted: result.count };
 }
 
 async function readJson(response: Response): Promise<unknown> {

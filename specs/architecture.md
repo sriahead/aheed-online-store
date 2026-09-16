@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.29.0"
-updated: 2026-09-15
+version: "1.30.0"
+updated: 2026-09-16
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -161,6 +161,27 @@ generated client.
    their address is wrong**; it degrades to manual entry instead. Verified live by pointing the
    reference database at an unreachable host and confirming HTTP 200 with UNVERIFIED rather than a
    500 or a false rejection.
+
+   **Demand-driven runs in both directions, and only the additive one is automatic** (#770). A
+   scheduled sync imports newly configured areas, but nothing in it can retire an area that has
+   left the configuration: `apply` and `findOutstandingAreas` are each scoped to the areas being
+   imported — deliberately, so one area's import cannot damage another's — which means an
+   unconfigured area is never touched again by any run. It then sits frozen at whatever release
+   imported it while its coverage row goes on claiming authority, so a postcode issued there
+   afterwards is answered INVALID: precisely the outcome the paragraph above forbids. Retiring an
+   area is therefore an explicit operation (`sync-reference-data.ts --decommission`), never a side
+   effect of a refresh, and it **removes the coverage row before the data rows** so the area
+   degrades to UNVERIFIED rather than passing through a window in which it reads as INVALID. It
+   refuses outright when no areas are configured, because "nothing is required" must never be read
+   as "remove everything".
+
+   **Drift between the two is reported, not assumed away.** `/api/health`'s `reference` block
+   (`lib/reference/reference-status-service.ts`) carries the configured areas, each source's covered
+   areas, and the difference in both directions; `scripts/verify-reference-coverage.ts` answers the
+   same question about a database named by an env file, and exits non-zero on drift. Both exist
+   because every failure in this subsystem is silent by design — a deployed Worker with no reference
+   binding and a healthy one serve identical pages — so an operator needs a surface that says which
+   it is.
 
 **Storage is scarce in the reference database too.** Both large tables use their natural key
 (`normalisedPostcode`, `sourceId`) rather than a surrogate UUID, and carry no per-row timestamps or
