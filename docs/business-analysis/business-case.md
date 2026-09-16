@@ -46,7 +46,7 @@ realised result. The platform is in **P9 — Production launch readiness**, the 
 criterion is a formal GO decision (`#445`).
 
 **What that leaves, which is substantial.** Fifteen milestones are closed. The system runs on real
-infrastructure in three environments, with 47 data models, 51 applied database migrations, an
+infrastructure in three environments, with 47 data models, 50 applied database migrations, an
 automated deployment pipeline, and a test suite of 1,842 tests. Two distinct vendors — Aheed Food
 Centre and SriMart — already resolve from their own domains, with their own catalogues, branding,
 delivery areas and staff, from a single deployment.
@@ -362,7 +362,7 @@ That is the investment §10 and §11 quantify.
 | Opportunity | Status | Note |
 | --- | --- | --- |
 | Express delivery as a paid tier | IMPLEMENTED, unpriced | `VendorExpressSchedule` exists; charging for it is a pricing decision, not a build |
-| Delivery fees and minimum order values | IMPLEMENTED | `VendorConfig`; currently seed-configured, see `#634` |
+| Delivery fees and minimum order values | IMPLEMENTED | `VendorConfig`; editable by staff at `/staff/storefront` (`#634`, PR #640) — was seed-only until that slice shipped |
 | Supplier-funded promotion and featured placement | IMPLEMENTED as a mechanism | `DepartmentCampaign`, promotions and banners exist; selling placement is a commercial decision |
 | Loyalty-driven repeat purchase | IMPLEMENTED | `LoyaltyLedgerEntry`; margin effect unmeasured |
 | Bundle and multi-buy margin | IMPLEMENTED | `Bundle`, `ProductPriceTier`; basket-value effect unmeasured |

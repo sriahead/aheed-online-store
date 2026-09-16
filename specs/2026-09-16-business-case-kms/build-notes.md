@@ -118,3 +118,35 @@ The next review must do the same rather than trusting these rows.
 
 The `summary` field overran the 300-character cap on the first `kms:validate` after the
 `sdd-workflow.md` front-matter edit — caught by the check, trimmed, re-validated clean.
+
+## Fix, after `/validate` (2026-09-16)
+
+`/validate` walked R4 — "the row most likely to fail honestly" per `validation.md`'s own note —
+by cross-checking every cited Prisma model (39/39 confirmed against `schema.prisma`) and spot-
+checking roughly 20 cited issue numbers against live GitHub state (`gh issue view`). One genuinely
+failed, and it was a content defect in the artifact, not a validation-environment problem.
+
+**§6.3's "Delivery fees and minimum order values" row cited `#634` to claim the fields were
+"currently seed-configured"; that stopped being true before this slice was even written.** `#634`
+was closed by PR #640 (`e3c9642`, the admin-panel-operability slice, 2026-09-07), which shipped a
+"Delivery rules" form on `/staff/storefront` (`saveDeliveryRules` → `updateDeliveryRules` in
+`features/admin/storefront.ts`) writing `deliveryFeePence`/`freeDeliveryThresholdPence`/
+`minimumOrderPence` on `VendorConfig`. The component's own comment says as much:
+`"#634 — until this shipped, changing a delivery fee needed a developer with database access."`
+This is exactly the failure class `#777` exists to prevent — a capability citation going stale
+between when it was researched and when a reader trusts it — and it slipped through the build
+because the row was written by copying `CLAUDE.md`'s own historical account of `#634` rather than
+checking whether `#634` had since been resolved.
+
+Fixed at the root cause: the row now states the fields are editable at `/staff/storefront`,
+citing `#634` and PR #640 as the slice that shipped it, rather than as an open gap. Also corrected
+a minor accuracy slip found in the same pass — §1's executive pitch claimed **51** applied
+database migrations; `prisma/migrations/` holds **50** (`find prisma/migrations -maxdepth 1 -type
+d -name "2026*" | wc -l`). Neither correction changes any requirement's pass/fail shape or any
+other row's evidence — re-ran the full requirements walk from the top per the Fix stage's own
+instruction, nothing regressed.
+
+No CHANGELOG entry needed: this fix corrects prose inside the artifact `[Unreleased]` already
+describes in general terms: it makes no claim specific to the `#634` wording being corrected, and
+no observable application behaviour changed (the delivery-rules form itself shipped in an earlier,
+already-merged slice — this fix only corrects how this document describes it).
