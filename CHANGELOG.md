@@ -6,6 +6,23 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **Documentation and handoff reconciliation for #770/#771/#767 (Document (final) for PR #773)**:
+  - Added `specs/roadmap.md`'s change-log row for this slice (closing the `npm run sdd:audit` gap
+    it left behind) and updated the P10 tracked-issue entry for `#767` — its database half is done,
+    what remains is `#772` (the application promotion).
+  - Reconciled `docs/model-handoff.md` with the real post-merge state: this slice shipped to
+    `staging` via PR #773 (`cb397b8`), a new "Reference coverage reconciliation" section records
+    what shipped and the Fix cycle's two findings, and Project Position/In-Flight Work both note
+    the slice is `In Review`, not promoted. Also corrected the recorded Vitest baseline
+    (`129/1687` → `139/1842`, two full updates behind) and the `Backlog`/`In Review` status for
+    `#767`.
+  - Documented a third Cloudflare deploy trap in `CLAUDE.md` (a dashboard-only plain-text var is
+    wiped by the next `wrangler deploy`, unlike a real secret) and a general one in the Branch
+    strategy section (a `schedule`/`workflow_dispatch` workflow does nothing until it reaches the
+    default branch, found via `#772`).
+
 ### Added
 
 - **Retiring an unsupported postcode area, and making coverage drift visible** (`#770`, `#771`,
