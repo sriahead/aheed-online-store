@@ -89,5 +89,6 @@ hits "Back" from the Stripe Checkout page, they used to lose their items.
 ## Tracking and GitHub Issues
 
 When adding new features that interact with `Cart` or `Order` entities, ensure these test cases are
-run. If an issue occurs, reference this file and the underlying architecture defined in `CLAUDE.md`.
+run. If an issue occurs, reference this file and the hybrid-client contract in
+`docs/developer-portal/runtime-pitfalls.md`.
 

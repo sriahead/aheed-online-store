@@ -311,7 +311,7 @@ still open and need an environment that can reach Cloudflare's tail API or a hum
 | **#163** | Comment recording the measured scan cost (16.4 ms p50 with search vs 16.4 ms without, at 118 orders). Stays open. |
 | **#236** | Comment recording patterns A/B/C and what is left unattributed. Stays open. |
 | **#46** | Decision recorded: keep `<img>`. Transformations are unavailable, so a `next/image` loader would ship identical bytes. |
-| **GAP-011** | Root cause updated with P7d's raw-SQL ruling (see `CLAUDE.md`). |
+| **GAP-011** | Root cause updated with P7d's raw-SQL ruling (see `specs/architecture.md` §3.1). |
 
 ## Query re-measurement at catalogue scale — 2026-08-31 (#489)
 

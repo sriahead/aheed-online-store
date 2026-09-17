@@ -208,8 +208,19 @@ there.
   `lib/error-event-fallback.ts`, reachable only from `instrumentation.ts`'s error handler. The
   ordinary recorder writes through a freshly constructed Prisma client and therefore a fresh WASM
   query compiler, so it cannot record a failure that originated in that constructor; the fallback
-  is `fetch`-based and shares none of that machinery. Scope and reasoning are in `CLAUDE.md`'s
-  schema rules and `specs/2026-09-08-error-event-fallback-capture/plan.md`.
+  is `fetch`-based and shares none of that machinery.
+
+  **The exception's scope is exactly this, and this section is where it is defined** (it previously
+  deferred to `CLAUDE.md`, which deferred back here — a circular reference resolved in #786): **one
+  statement, one table** (`ErrorEvent`, which carries no vendor relation), reachable only from
+  `instrumentation.ts`'s `onRequestError` fallback branch, with every value passed as a numbered
+  placeholder through `sql.query(text, params)` and nothing interpolated. The rule's purpose
+  survives intact — the model is still declared in `schema.prisma`, the migration still creates the
+  table, and the statement names only columns Prisma already describes. **Do not widen this into a
+  general-purpose raw-SQL helper**: a second raw statement needs its own argument at `/propose`, not
+  this one's precedent. Note also what it is *not* — the compare-and-set rule in §3.4 ("which raw
+  SQL is not permitted to rescue") is about contended hot-path writes and is untouched. Full
+  reasoning: `specs/2026-09-08-error-event-fallback-capture/plan.md`.
 - **Provider-neutral types only.** Integers, `text`/`varchar`, `boolean`, `timestamptz`, `numeric`,
   Prisma enums (compile to standard Postgres enums), `uuid`. **No** `money`, no Neon/RDS-specific
   extensions in the hot path. `citext`/`pg_trgm` are optional and only via portable migrations.
@@ -231,6 +242,22 @@ there.
   `prisma/migrations/20260825190000_p8_5d_product_price_tier/migration.sql` names the three
   statements it omits so a regeneration does not silently reintroduce them. Treat the paragraph
   above as an operational instruction, not a theoretical caveat.
+
+  **The procedure this implies, stated explicitly (moved here from `CLAUDE.md` in #786).** The drift
+  is no longer "possible" — it has fired on **every migration this project has generated since**
+  `#508` (2026-09-01): six occurrences by `#569` (2026-09-05), namely `#508`, then once per P2.6
+  slice carrying a migration (`#565`, `#566`, `#567`), and again at `#569`. Adding a new model
+  (`ErrorEvent`) with **no relationship whatsoever** to `Order` or `User` was enough for
+  `prisma migrate dev` to emit `DROP INDEX` for all three hand-authored `pg_trgm` indexes. So:
+  1. **Generate every migration with `--create-only` and read the generated `migration.sql` before
+     letting it apply.** At `#508` the erroneous drop **executed** against the dev database before
+     anyone read the file. A `--create-only` run is not a precaution here; it is the procedure.
+  2. **Recovery needs three steps, not one.** Re-adding the `CREATE INDEX` is not enough: restore
+     the indexes on the already-mutated database, rewrite the migration file to remove the erroneous
+     drops (so a fresh `migrate deploy` elsewhere never repeats them), **and** reconcile Prisma's
+     own `_prisma_migrations` checksum for that file — delete the stale row and
+     `prisma migrate resolve --applied <name>` — since editing an already-applied migration leaves
+     the recorded checksum stale.
 - **Money as integer minor units (pence).** Currency stored explicitly (`GBP` default). Avoids
   float drift and locale-bound types.
 - **Images/large files never in the DB.** Only a **relative storage key** (e.g.

@@ -8,6 +8,34 @@ every branch merges.
 
 ### Added
 
+- **`CLAUDE.md` reduced from 149,380 to ~13,900 characters, with every rule relocated first
+  (`#786`, `specs/2026-09-17-claude-md-guardrail-refactor/`)**: the file is loaded into every
+  session before any work begins, so its whole size was a fixed per-session cost, and five of its
+  statements had drifted into being false against the repository.
+  - **Three new developer-portal documents** take the material that had no owner:
+    `runtime-pitfalls.md` (code that passes `lint`/`typecheck`/`test`/`build` and still fails on
+    Workers), `app-conventions.md` (per-layer invariants and the tests enforcing them), and
+    `local-dev-playbook.md` (Windows shell, and proving something live without a browser). Six
+    existing documents absorbed the rest: `specs/architecture.md`, `tech-stack.md`,
+    `sdd-workflow.md`, `design-system.md`, `env-setup.md` and the SDD operator runbook.
+  - **Completeness is proved line-by-line, not by bullet.** `migration-ledger.md` claims all 1,599
+    non-blank body lines of the pre-change file across 173 rows, each carrying a disposition and a
+    literal phrase verified against its destination. An earlier draft inventoried only lines
+    starting `- `, which was structurally blind to the four SDD gates (numbered items) and the
+    `getPrisma`/`getPrismaWs` split (nested bullets). The ledger caught one genuine omission during
+    Build — the `ProductImage` row-versus-object rule had been relocated nowhere.
+  - **Five false statements reconciled from repository evidence**: the Milestone 0 claim (M0 closed
+    2026-08-06; the project is at P10), `@prisma/adapter-neon` stated as 6.19.3 when it is pinned
+    and test-asserted at 7.9.1, an env-format claim that generalised two keys into a file-wide
+    convention, the `phase:`/`gate:` PR label requirement (only two such labels have ever existed,
+    `#546`), and the claim that the delivery board holds status only (`Priority` is a real field,
+    `#724`).
+  - **The vitest suite baseline was removed rather than relocated** (`#584`). It had gone stale
+    roughly twenty times, each time disabling the detection it existed to provide; the forks-pool
+    trap is now documented with a detection procedure that needs no recorded number.
+  - No application source, configuration or environment file was changed. The 207 `CLAUDE.md`
+    citations in source were honoured by preserving every cited section heading.
+
 - **Credential verification now covers both stores, and the deploy wedge is documented
   (`#780`, `#781`, `#782`, `specs/2026-09-17-credential-verification-closeout/`)**: closes the three
   defects found while resolving the R2 credential outage (`#755`).
