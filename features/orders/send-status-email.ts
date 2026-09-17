@@ -40,6 +40,17 @@ const COPY: Record<string, { subject: string; heading: string; body: string }> =
     heading: "Your order has been collected.",
     body: "Thanks for shopping with us. If anything isn't right, just reply to this email.",
   },
+  // P9.2 (#696). The copy is deliberately careful about money: cancelling an
+  // order does NOT return the payment — no code path in this codebase issues a
+  // refund, and #606 owns that decision. Saying or implying otherwise would be
+  // the one thing this email could get wrong that actually costs someone money,
+  // so it states plainly that the charge stands and points them at a human.
+  // `tests/order-status-email.test.ts` asserts the absence of "refund" here.
+  CANCELLED: {
+    subject: "has been cancelled",
+    heading: "Your order has been cancelled.",
+    body: "We're sorry — we've had to cancel this order and any points or discount code you used have been put back on your account. No payment has been returned yet, so please reply to this email and we'll sort that out with you directly.",
+  },
 };
 
 export async function sendOrderStatusEmail(order: WebhookOrder, status: string): Promise<void> {

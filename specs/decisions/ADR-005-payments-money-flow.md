@@ -126,6 +126,10 @@ be returned, because `releaseOrder` acts only on `PENDING_PAYMENT` orders. That 
 structural reason #137 gives for earn reversal, and it is tracked as #151 rather than solved here —
 refunds are this ADR's territory, and the decision belongs with them.
 
+**Superseded 2026-09-17 by #696** — see the implementation note at the end of this file. Both
+reversals now exist and neither waited for refunds. The structural claim above was accurate when
+written; what it inferred from it, that the decision had to travel with refunds, was not.
+
 ## Implementation note (P7.5a, 2026-08-19, #234)
 
 **The payment-failure compensation restores the shopper's cart as well as the stock.** P3c's note
@@ -259,10 +263,14 @@ the three have three different remediations — only the refused one must **not*
 
 **Still undecided, and deliberately not decided here: refunds and the capture method.**
 `lib/payments.ts` pins no `capture_method`, so payment is captured immediately, and no code path
-writes `PaymentStatus.REFUNDED`. The consequences section above already records that a paid order's
-discount-code use cannot be reversed (**#151**) and neither can earned points (**#137**). Reducing,
-substituting or refunding a paid order needs that decision, it is entangled with **#399**'s variant
-and weight model, and it remains this ADR's open territory.
+writes `PaymentStatus.REFUNDED`. Reducing, substituting or refunding a paid order needs that
+decision, it is entangled with **#399**'s variant and weight model, and it remains this ADR's open
+territory — now tracked as **#606**.
+
+This paragraph used to add that a paid order's discount-code use and earned points could not be
+reversed either. **That is no longer true (#696, 2026-09-17)** and the two questions have been
+separated; see the implementation note at the end of this file. Refunds are still undecided. Ledger
+reversal no longer waits on them.
 
 ## Implementation note (P9.2, 2026-09-06, #618)
 
@@ -300,6 +308,42 @@ that cutoff can still be paid.
 for. It is *hazardous* here, because this path's risk runs the opposite way — "unpaid" is what
 authorizes cancellation — so the job route refuses to run at all when `STRIPE_SECRET_KEY` is unset.
 A safety property that holds in one direction on this port does not automatically hold in the other.
+
+## Implementation note (P9.2, 2026-09-17, #696)
+
+**Ledger reversal is now decoupled from refunds, and no numbered decision is reopened.** Staff can
+cancel an order that was actually paid for (`cancelConfirmedOrder`), and that cancellation returns
+the stock, reverses the loyalty `REDEEM` *and* the `EARN`, and gives back the discount-code use.
+`#137` and `#151` are closed by it. The capture method is unchanged, `lib/payments.ts` still pins no
+`capture_method`, and **nothing in this codebase writes `PaymentStatus.REFUNDED`** — the Decision
+above stands exactly as written.
+
+**What this ADR previously assumed, and why it was wrong.** Two passages above recorded that a paid
+order's code use and earned points could not be reversed, and both concluded that the decision
+therefore "belongs with" refunds. The first half was a true structural observation: `releaseOrder`
+acts only on `PENDING_PAYMENT` orders, strictly before `confirmPayment` writes the `EARN`, so no
+path existed that could reverse either. The second half did not follow from it. Reversing a ledger
+entry and moving money are separate acts, and only the second is this ADR's territory. What was
+actually missing was a cancel path for a paid order — not a refund decision.
+
+**The state this creates, stated plainly because it is unusual.** A cancelled order whose `Payment`
+still reads `SUCCEEDED`. The customer's money is retained, their points and code use are restored,
+and the goods are back in stock. That is a real operational position — staff cancel an order and
+settle up with the customer out of band — and #696 represents it honestly rather than implying a
+refund happened. `cancelConfirmedOrder` never touches the `Payment` row, deliberately: writing
+`FAILED` there (as `releaseOrder` does on the unpaid path, correctly) would be false at the moment
+it was written, and would collide with the real `REFUNDED` writer #606 eventually adds.
+
+**Two consequences a refund slice will inherit:**
+
+- **Revenue is derived from order status, not payment state**, so a cancelled-but-unrefunded order
+  silently leaves `/staff/reports` although its money is in the bank. Tracked as **#795**, which
+  proposes deriving revenue from a `SUCCEEDED`-and-not-`REFUNDED` payment instead — that rule would
+  cover this case and the refund exclusion `REVENUE_STATUSES`' own comment already asks for, in one
+  change rather than two.
+- **`LoyaltyEntryKind` gained `EARN_REVERSAL`** rather than widening
+  `@@unique([orderId, kind])`. A partial refund reversing part of an earn does not fit that shape
+  and should expect to revisit it — this slice deliberately did not pre-commit #606 to an answer.
 
 ## Deferred upgrade — Stripe Connect
 
