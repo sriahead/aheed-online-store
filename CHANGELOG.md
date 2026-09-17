@@ -108,6 +108,24 @@ every branch merges.
 
 ### Changed
 
+- **Documentation reconciliation for `#786`'s `/document` pass (PR #787/#788)**:
+  `docs/model-handoff.md` and `specs/roadmap.md` brought current after three promotions
+  (`#779`, `#785`, `#788`) shipped with no separate Document (final) pass — `npm run sdd:audit`
+  reported two missing slice rows and three pending-carry-forward promotion rows; all five now
+  added. `docs/model-handoff.md`'s "Last Verified" section rewritten (`main`/`staging` both at
+  `9a6b6d8`), its stale `CLAUDE.md` section citation and vitest-baseline bullet corrected to match
+  `#786`'s relocation, and the `#780`/`#781` follow-up marked closed rather than in progress.
+  `specs/sdd-workflow.md` gains a documented trap: its own R9 setup step's `git grep`
+  pathspec (`'docs/**/*.md'`) silently excludes files directly under `docs/`, which is how a stale
+  cross-reference inside `sdd-workflow.md` itself (a "KMS docs" section citation pointing at
+  content `#786` had already relocated within the same file) survived `/validate` uncaught — fixed,
+  and the pathspec pattern documented as a trap for the next row that needs it. Two small,
+  independently-tracked findings opened as issues rather than fixed inline: `#789` (a pre-existing,
+  never-real `CLAUDE.md` "outage guidance" citation, predates `#786`) and `#790` (the missing
+  Document passes themselves, so the two un-backfilled narrative sections get picked up later).
+
+### Changed
+
 - **The SDD milestone close now has a third stage** (`specs/sdd-workflow.md` 2.34.0,
   `.claude/commands/document.md`, `.claude/commands/learn.md`): **Business case review**, run after
   `/discover` and `/learn` and before the front-matter bump, model switch and `/clear`. Sequenced
