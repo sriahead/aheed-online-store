@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.9.0"
-updated: 2026-09-16
+version: "1.10.0"
+updated: 2026-09-17
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,19 +39,72 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-16.
-- **Checkout:** `main` and `staging` are both at `1e44533` — **`#764` and `#770`/`#771`/`#767` are
-  now in production** (PR #775, "Promote address lookup, reference-data and coverage
-  reconciliation to production", `staging → main`). `#764`, `#767`, `#770`, `#771` and `#772` all
-  closed on the merge; `#766` stays open, deliberately.
-- **Base state:** `origin/staging` and `origin/main` moved `d855e1f` → `1e44533` this session (PR
-  #775). Both branches are in sync — no pending promotion.
+- **Date:** 2026-09-17.
+- **Checkout:** `main` is at `575782c` (PR #779, "Promote the stakeholder business case and P775
+  closeout to production") and `staging` is at `de477e7` — **content-identical, no pending
+  promotion.** `#777` closed on that merge. Work in progress on
+  `feature/credential-verification-closeout`.
+- **THE LIVE R2 CREDENTIAL OUTAGE IS OVER (`#755`, resolved 2026-09-16).** Every staff image upload
+  was failing in **all three environments** for roughly a day; it is fixed, and a real vendor-logo
+  upload was confirmed working on both staging and production by the owner. See the dedicated
+  section below — **the rotation itself was the easy half**, and the way it stayed invisible is the
+  part a future session needs.
+- **Both Workers were redeployed and are on clean wrangler-sourced deploys**: staging `859a1ff6`,
+  production `8d1c074c`, each its own newest version. `npx tsx scripts/verify-storage-credentials.ts`
+  exits 0 with all four env files accepted.
+- **Five issues closed 2026-09-16/17 after live verification**, not on assertion: `#755` (rotation),
+  `#756` (fulfilment seed — all four of its own criteria executed), `#713` (brand-colour validation,
+  found **already shipped** in PR #730 and re-verified rather than rebuilt), `#219` (Cloudflare token
+  rotation, confirmed by the owner and corroborated by post-exposure GitHub secret timestamps) and
+  `#777`.
+- **Base state:** `origin/main` moved `1e44533` → `575782c`; `origin/staging` moved `1e44533` →
+  `de477e7` (PR #778, the business case) and both were then promoted together.
 - **NEW INFRASTRUCTURE — a second Neon project now exists, and is now live on staging.** See the
   dedicated section below. This is the most consequential project-level change since multi-tenancy.
 - **Worktrees:** only the main checkout.
 - **Protected local work, unchanged:** PR #725 (`docs/orient-reads-board-priority`) and PR #722
   (`docs/document-final-social-contact-mobile-nav`) are both still open, based on an older
   `staging`, unrelated to this work. Not re-verified live.
+
+## The R2 credential outage is resolved — and HOW it stayed hidden is the durable lesson (`#755`, 2026-09-16)
+
+`#755` is closed. The R2 API token was rotated, all four env files updated, both Workers
+redeployed, and a real vendor-logo upload confirmed on staging **and** production. Do not re-open
+this as a live defect. What follows is why it took four steps beyond what the repository documented.
+
+**Rotating the token and updating the files was necessary and NOT sufficient.** The credential
+lives in two stores. The secrets were updated through the Cloudflare **dashboard**, which creates a
+new Worker version and does **not** deploy it — so both Workers went on serving the revoked key
+while every local check said the rotation had worked. Specifically:
+
+- `scripts/verify-storage-credentials.ts` reported **ACCEPTED for all three environments**. It read
+  files. The files were correct.
+- `/api/health` reported `storage: { configured: true }`, which only ever meant the variables exist.
+- `wrangler secret list` would have shown the secrets present, because it reports the *script's*
+  secrets, not the running version's bindings.
+
+The only thing that showed it was reading the **deployed version** through the Cloudflare REST API
+and seeing four `by dash` versions newer than the deployed one.
+
+**The undeployed versions had also wedged CI**, which is the louder half and was not documented
+anywhere. Both deploy workflows open their deploy step with `wrangler secret put`, and wrangler
+refuses that call while an undeployed version is newest (`Secret edit failed. You attempted to
+modify a secret, but the latest version of your Worker isn't currently deployed.`). Every future
+deploy on both environments would have failed. Recovery was
+`npx wrangler versions deploy <version-id>@100 --env <env>`, after which both workflow reruns
+succeeded.
+
+**Prefer `node scripts/configure-env.mjs <env>` over a dashboard secret edit** — it writes through
+`wrangler secret put` and therefore deploys as it goes, and updates the GitHub environment secrets
+in the same pass.
+
+`#780` and `#781` (both open, in progress on `feature/credential-verification-closeout`) close the
+tooling and documentation gaps this exposed. `CLAUDE.md` now carries both halves.
+
+**Two things this did NOT resolve:** whether the previously-exposed Cloudflare token was actually
+*deleted* rather than merely superseded (an owner dashboard action, unobservable from here), and
+`#783` — staging and production still share one Cloudflare API token, which was `#219` step 3 and
+became untracked when that issue closed.
 
 ## A second database now exists: `uk-location-reference` (#764, shipped to staging 2026-09-16)
 
@@ -193,7 +246,8 @@ The live board showed open High-priority items, all with blank Complexity:
 - Trust and contact: #406 and #695.
 - Data activation: #697.
 - Location decision reconciliation: #422.
-- Exposed credential rotation: #219.
+- Exposed credential rotation: **#219 is CLOSED** (rotated, verified 2026-09-16). Its step 3 — the
+  per-environment token split — is now **#783**.
 
 Dependencies and scope boundaries worth preserving:
 
@@ -223,8 +277,9 @@ All facts in this section require live verification:
 - **The whole delivery cluster is DONE — see Last Verified/Project Position above.** `#401`, `#402`,
   `#748`, `#749`, `#750`, `#751` all shipped, closed, and are live in production (`d855e1f`,
   2026-09-15). `#613` was never part of it (citation error, corrected above).
-- **`#755`/`#756` remain open and unresolved** — see the dedicated section below. Not fixed by this
-  promotion; the credential rotation is still an owner action.
+- **`#755` and `#756` are both CLOSED** (2026-09-16) — see the resolved section below. The
+  credential rotation happened and was verified end to end; this line previously said they remained
+  open and unresolved.
 - **Issue #737** (Staff/Admin delegation, Category Manager, Help Centre, Zero-review ratings) is
   **CLOSED** (2026-09-12), independently of and before this session's work.
 - **PR #736** merged `staging → main` (`0d41faa`), promoting #733 and closing #582, #583, #589, #602, #638, and #683 to `Done`.
@@ -249,58 +304,32 @@ and the vendor logo upload's diagnosability (`#749`) — whose actual root cause
 previously suspected; see the dedicated section below. Kept here only as a pointer, not to
 re-derive: read the spec directory above for what shipped and why.
 
-## Live Production Defect: R2 Storage Credentials (2026-09-15)
+## RESOLVED — was "Live Production Defect: R2 Storage Credentials" (`#755`, closed 2026-09-16)
 
-**`#755` — the R2 (S3-compatible) credential pair is REJECTED in all three environments, including
-production.** Not a staging-only or dev-only problem, and not fixed by this slice: rotating it is a
-human action (`CLAUDE.md`'s hard stop on inventing credentials).
+**Kept as a pointer only. Do not re-derive this as a live defect.** This section described the R2
+credential pair being rejected in dev, staging and production simultaneously, breaking every staff
+image upload while the storefront looked perfectly healthy. It is fixed — see "The R2 credential
+outage is resolved" above for what the fix actually required and why every local check said it had
+already worked.
 
-- **Evidence:** every presign variant, a header-signed `putObject`, a presigned GET and a read-only
-  `HEAD` all return `403 SignatureDoesNotMatch` against dev, staging and production. All three share
-  one key pair and differ only in `S3_BUCKET`. Reproduce with
-  `npx tsx scripts/verify-storage-credentials.ts` (read-only, added by this slice, exits non-zero
-  while any environment is rejected).
-- **Blast radius:** every `getStorage()` S3 API caller — product images, bundle images, campaign
-  banners and the AI campaign-image route, the vendor logo, `lib/product-image-pipeline.ts` — and
-  **`prisma/seed.ts`, which now cannot complete at all**, even against an already-seeded database
-  (`refreshProductImages` at `main`'s line 75 throws before anything after it runs).
-- **Why it went unnoticed:** shopper-facing image *display* is unaffected. `publicUrl()` is pure
-  string composition over `CDN_BASE_URL`, so reads go to the CDN and never touch the S3 API. The
-  storefront looks healthy and `/api/health` reports `storage: { configured: true }`, which asserts
-  only that the variables are present.
-- **Rotation needs BOTH stores per environment** — `secrets/*.vars` *and*
-  `wrangler secret put S3_ACCESS_KEY/S3_SECRET_KEY --env <env>` — then a redeploy. Possibly a loose
-  end from `#219` (the exposed Cloudflare API token), if that rotation revoked the R2 token.
-- **`#756`** tracks re-verifying the new fulfilment seed data once this is resolved; `#750`'s R15
-  and R16 are blocked on it and must not be recorded as failures of that slice's code.
-- **Refined 2026-09-15, live in the browser on staging:** attempting the vendor logo upload now
-  shows `"The upload could not reach storage: Failed to fetch"` — a different signature from the
-  Node-diagnosed `403 SignatureDoesNotMatch` above, and worth understanding rather than re-opening
-  as a new bug. **The Node-based diagnosis could never have detected a CORS problem either way** —
-  `aws4fetch` run in plain Node enforces no CORS policy at all. The likely mechanism: a
-  cross-origin `PUT` with a `Content-Type` header triggers a browser preflight `OPTIONS`, which
-  staging's bucket CORS policy (applied correctly in `specs/2026-08-12-p6b2-image-upload/`, verified
-  with a real browser at the time, untouched since) almost certainly still passes — but the actual
-  `PUT` then hits the same `403`, and if R2's own error response for a rejected signature omits
-  `Access-Control-Allow-Origin` (common — providers often handle preflight correctly while skipping
-  CORS headers on their own error bodies), the browser cannot read the response at all and `fetch()`
-  throws a bare `TypeError` instead of exposing a status. Not believed to be a second, independent
-  bug; no CORS change is expected once the credential pair is rotated. Full reasoning posted as a
-  comment on `#755`.
-- **Operational workaround live on staging and production since 2026-09-15, NOT a fix for `#755`:**
-  a full week of real `VendorFulfilmentSlot` rows (afternoon + evening, both `DELIVERY` and
-  `COLLECTION`, all seven days) and the two canonical `Theme` rows were written directly against
-  staging's database — via this slice's own repository functions, not the blocked seed script — at
-  the owner's request after finding the checkout slot picker and the storefront theme dropdown both
-  empty in the browser. `prisma/seed.ts` itself is still blocked by `#755` exactly as `#756`
-  describes; this only unblocks the *data* for the one already-seeded database it touched. A
-  from-scratch database, or SriMart, still has none of this until `#755` resolves and the seed runs,
-  or until an admin adds it through `/staff/fulfilment` directly.
-- **A live gap found while adding that data:** the Fulfilment guide's "Common mistakes and
-  limitations" only warned about the Delivery-side empty-slot trap (`offerDeliverySlots` on, no
-  slots). Collection has no equivalent toggle — the slot picker always shows once Click & Collect is
-  on — so the identical trap was undocumented for Collection. Fixed in
-  `docs/store-admin-guide/admin-tabs-guide.md` via PR #760 (already in production).
+Two things that section recorded are worth keeping, because they outlive the outage:
+
+- **`prisma/seed.ts` was blocked entirely**, even against an already-seeded database, because
+  `refreshProductImages` threw before anything after it ran. That is resolved: the seed now
+  completes with 26 successful `putObject` calls, which is the rotation proven through real
+  application code rather than through a probe script. `#756` verified this and is **closed** — its
+  own four criteria were executed, including a re-run proving idempotence and a checkout slot
+  picker driven end to end under `npm run preview`.
+- **The operational workaround is still in place and is still not seed data.** A full week of
+  `VendorFulfilmentSlot` rows and the two canonical `Theme` rows were written **directly** against
+  staging's database on 2026-09-15, via repository functions rather than the blocked seed. Staging
+  therefore holds fulfilment data that no seed run produced. `#756`'s verification ran against
+  **dev**; staging and production were deliberately not re-seeded, since nothing asked for it.
+- **The browser-side symptom was a red herring worth remembering**: the upload failed with
+  `"The upload could not reach storage: Failed to fetch"`, which reads like CORS. It was not. R2
+  omits `Access-Control-Allow-Origin` on its own `403` error body, so the browser could not read the
+  response and `fetch()` threw a bare `TypeError`. No CORS change was needed, exactly as predicted.
+
 
 ## Backlog Reconciliation Findings
 
@@ -363,9 +392,10 @@ These are separate from, not a silent reordering of, the owner's High priorities
   gaps.
 - Launch evidence remains incomplete: #439 through #445, including no Playwright harness, UAT,
   accessibility validation, game day, exact-candidate verification or GO/NO-GO.
-- **`#755` — every staff/admin image upload is broken in all three environments** (rejected R2
-  credential pair), confirmed live 2026-09-15. See the dedicated section above; owner action needed
-  (credential rotation) before any of `#750`'s R15 or `#756` can pass.
+- ~~`#755` — every staff/admin image upload is broken in all three environments~~ **RESOLVED
+  2026-09-16.** Rotated, both Workers redeployed, real uploads confirmed on staging and production.
+  `#750`'s R15/R16 and `#756` are all unblocked and `#756` is closed. Kept as a crossed-out line
+  rather than deleted because this was the single largest live defect the project has carried.
 - #599 confirms `Cache-Control` did not create edge caching for search suggestions.
 - Prisma migration generation repeatedly proposes deleting the hand-authored trigram indexes.
 - The raw-SQL exception has no mechanical single-file enforcement (#676).
@@ -379,7 +409,9 @@ Not verified by the latest orientation:
 - Whether production Stripe credentials are test or live.
 - Resend domain verification and real external delivery.
 - Cloudflare Worker secret presence, including scheduler/application token parity.
-- Whether #219/#175 rotations happened outside GitHub issue state.
+- Whether the **#175** rotation happened outside GitHub issue state. (**#219** is answered: rotated,
+  confirmed by the owner, GitHub secret timestamps post-date the exposure. Still unverified is
+  whether the OLD token was deleted rather than merely superseded — a dashboard-only fact.)
 - Neon plan limits, backup retention and an actual isolated restore.
 - Persisted Workers Logs, alert-channel delivery and scheduler executions.
 - Production/staging net-content row counts for #697.

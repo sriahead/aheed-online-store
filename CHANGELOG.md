@@ -8,6 +8,37 @@ every branch merges.
 
 ### Added
 
+- **Credential verification now covers both stores, and the deploy wedge is documented
+  (`#780`, `#781`, `#782`, `specs/2026-09-17-credential-verification-closeout/`)**: closes the three
+  defects found while resolving the R2 credential outage (`#755`).
+  - `scripts/verify-storage-credentials.ts` now probes **four** env files, not three — `.dev.vars`
+    was absent, and it is the file that wins under `npm run preview`, so a rotation could pass the
+    check while local preview stayed broken. It additionally reports, for the staging and production
+    Workers, whether each is running its newest version: that divergence is what made `#755`
+    invisible, with the script reporting ACCEPTED for all three environments while both deployed
+    Workers served a revoked key. A stale Worker now exits non-zero; an unreachable Cloudflare API
+    reports `unknown` and deliberately does **not** affect the exit code, since this dev machine
+    produces transient `fetch failed` errors and a flaky network must never read as a mismatch.
+    That three-way decision is a pure exported `workerVersionState`, unit-tested in
+    `tests/worker-version-state.test.ts`, including the case where the lookup failed *and* the ids
+    differ.
+  - `CLAUDE.md` gains the **loud** half of the undeployed-version trap. The existing `#767`/`#771`
+    note covers the silent case; this adds that a dashboard secret edit makes every subsequent
+    `wrangler secret put` fail with `Secret edit failed`, and since both deploy workflows open their
+    deploy step with exactly that call, it fails **every future deploy on that environment** until
+    the pending version is deployed. Records `wrangler versions deploy` as the recovery and
+    `scripts/configure-env.mjs` as the path that avoids it. The Storage section's claim that the
+    verify script "is the one command that answers" whether credentials work is corrected to state
+    what it actually covers — it still cannot read a deployed secret's value, and a real upload
+    remains the only complete proof.
+  - `saveStorefrontTheme` (`features/admin/storefront.ts`) now validates its eight brand primitives
+    via a new `parseBrandPrimitives` in `lib/brand-colour-form.ts`, reusing `#713`'s validator rather
+    than a parallel one. The theme path is a second writer to the same columns, arrived with `#714`,
+    and wrote them verbatim. Its duplicate-name branch also tested `P2002` directly while that write
+    runs through the HTTP adapter, which throws `23505` — so the intended message could never fire
+    and a duplicate name produced a generic error. Now uses the shared `isUniqueViolation`; this was
+    the last direct `P2002` comparison in application code.
+
 - **Stakeholder Business Case & Platform Pitch, as a living KMS artifact (`#777`,
   `specs/2026-09-16-business-case-kms/`)**: `docs/business-analysis/business-case.md` — the first
   stakeholder-facing commercial account of the platform. Covers the executive pitch, delivered
