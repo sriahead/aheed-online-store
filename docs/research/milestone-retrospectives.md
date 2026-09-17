@@ -168,9 +168,10 @@ All six were promoted to production the same day (or next) they merged to `stagi
 ### Lessons promoted
 
 - **Workers AI response-shape handling** — already promoted to `CLAUDE.md`'s "Workers AI" section
-  at slice 4's close (2026-09-04); this retrospective adds no new promotion here, only confirms the
-  second instance (`lib/search-synonym-proposals.ts`) is still open at milestone close, tracked on
-  `#583`/`#589`.
+  at slice 4's close (2026-09-04), now `docs/developer-portal/runtime-pitfalls.md`'s "Workers AI"
+  section since `#786` relocated it; this retrospective adds no new promotion here, only confirms
+  the second instance (`lib/search-synonym-proposals.ts`) is still open at milestone close, tracked
+  on `#583`/`#589`.
 - **GAP-011's certainty** — already promoted to `CLAUDE.md`'s database section, updated at every
   occurrence including this milestone's sixth.
 - **The `validation.md`-grep-matches-comment trap** — already extensively promoted to

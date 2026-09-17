@@ -4,1641 +4,221 @@ title: "CLAUDE.md — AI Assistant Guardrails"
 audience: [dev]
 type: doc
 status: approved
-version: "1.24.0"
-updated: 2026-09-16
+version: "2.0.0"
+updated: 2026-09-17
 visibility: internal
-summary: AI assistant guardrails for the Aheed Online Store — runtime/hosting, database, schema, storage, config, CI/CD, and the SDD gates every session must follow.
+summary: Always-loaded guardrails for the Aheed Online Store — runtime, database, schema, storage, config, CI and the SDD gates — reduced to what every session needs, with pointers to the documents that carry the detail.
 tags: [guardrails, ai-assistant, conventions]
 ---
 
 # CLAUDE.md — AI assistant guardrails (Aheed Food Centre Online Store)
 
 Read this first, every session. It encodes decisions already made; do not re-derive them from
-training defaults. For depth, read `specs/architecture.md`, `specs/tech-stack.md`, and
-`specs/decisions/ADR-001..003` **before proposing anything**.
+training defaults. It holds the **rule**, not the evidence. Open the matching document when an area
+becomes relevant — each is authoritative, and none is loaded automatically.
+
+- Designing, or the data model — `specs/architecture.md`, then `specs/decisions/`
+- A runtime failure a green build did not predict — `docs/developer-portal/runtime-pitfalls.md`
+- Writing in `lib/repositories/`, `app/(admin)/staff/`, or a `"use server"` module —
+  `docs/developer-portal/app-conventions.md`
+- Running or proving something locally — `docs/developer-portal/local-dev-playbook.md`
+- Environments and secrets — `docs/developer-portal/env-setup.md`
+- A delivery stage or a spec — `specs/sdd-workflow.md`, `.claude/commands/`
+- What CI runs — `docs/developer-portal/sdd/operator-runbook.md`
+- Dependencies — `specs/tech-stack.md`. Branding — `specs/design-system.md`
 
 ## What this project is
-UK grocery e-commerce for **Aheed Food Centre**. **PostgreSQL-first, vendor-agnostic,
-cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal app proving
-`browser → Worker → Prisma → Neon` end to end. No features until M0 is green.
 
-## Runtime & hosting (authoritative — overrides any GCP/Pages/edge assumptions)
-- Next.js on **Cloudflare Workers** via `@opennextjs/cloudflare`. **NOT** Cloudflare Pages, **NOT**
-  `@cloudflare/next-on-pages`, **NOT** Next's `edge` runtime. Never add `export const runtime = 'edge'`.
-- App runs on the **Node.js runtime** (Workers `nodejs_compat`). Keep `compatibility_flags =
-  ["nodejs_compat"]` and a recent `compatibility_date` in `wrangler.toml`.
-- Build/deploy: `opennextjs-cloudflare build` then `wrangler deploy --env <env>`. Local dev: `next dev`.
-  Local Workers runtime: `opennextjs-cloudflare preview`.
+UK grocery e-commerce for **Aheed Food Centre**: **PostgreSQL-first, vendor-agnostic,
+cost-effective, multi-tenant** (ADR-004) — vendor, branding and delivery rules come from the
+database, never hardcoded. Currently **P10 (post-launch improvements)**; M0–P9 are in production.
+**The platform has never traded** — `#113` (live Stripe keys) and `#104` (verified email domain)
+are open owner-gated blockers — so no financial figure here is a realised number.
+
+## Runtime & hosting (overrides any GCP/Pages/edge assumption)
+
+- Next.js on **Cloudflare Workers** via `@opennextjs/cloudflare`. **Not** Pages, **not**
+  `@cloudflare/next-on-pages`, **not** Next's `edge` runtime — never add an edge runtime export.
+- **Node.js runtime** (`nodejs_compat`); keep that flag and a recent `compatibility_date`.
+- Deploy: `opennextjs-cloudflare build`, then `wrangler deploy --env <env>`.
+- **No `proxy.ts`/`middleware.ts` can ship at all.** No per-file workaround — pass a prop from the
+  layout. `next build` stays green regardless, so it proves nothing.
 
 ## Database (Neon + Prisma on V8 isolates)
-- Neon Serverless Postgres via **Prisma + `@prisma/adapter-neon`** over `@neondatabase/serverless`
-  (WebSocket/HTTP). **Never** plain `pg`/TCP at runtime. Hyperdrive only as an optional accelerator
-  behind `lib/db`, never the default.
-- **Two URLs:** `DATABASE_URL` = **pooled** (host has `-pooler`, runtime). `DIRECT_URL` = **direct**
-  (migrations/seed). Schema uses `url = env("DATABASE_URL")`, `directUrl = env("DIRECT_URL")`.
-- **Migrations run in CI on a Node runner using `DIRECT_URL` only.** Never on the Worker, never at
-  request time, never against the pooled URL.
-- Prisma 6: driver adapters are **GA** — do NOT add `driverAdapters` to `previewFeatures`.
-  `@prisma/adapter-neon@6.19.3` requires a driver adapter. **Use a Hybrid Strategy for Cloudflare Isolates**:
-  - `getPrisma()` (fetch-based `PrismaNeonHttp`): Use for 99% of read operations. Stateless `fetch` sidesteps Cloudflare WebSocket connection limits entirely.
-  - `getPrismaWs()` (WebSocket-based `PrismaNeon`): Use STRICTLY for operations requiring `$transaction` (e.g., checkout, cart items). `PrismaNeonHttp` does not support interactive transactions. By isolating WebSocket usage to just transactions, we avoid hitting the 50-socket limit per isolate.
-  Instantiate Prisma via `lib/db`'s `getPrisma()` — **construct fresh on every call, never cache
-  across requests.** A cached cross-request singleton was the original pattern here and shipped in
-  M0; it throws `"Cannot perform I/O on behalf of a different request"` on Cloudflare Workers
-  (I/O objects can't cross request boundaries) on roughly 1-in-3 rapid sequential requests — caught
-  in P1 once something actually stress-tested it, not before. Any function wrapping `getPrisma()`
-  (e.g. `lib/auth.ts`'s `getAuth()`) must also construct fresh per call — caching the wrapper still
-  pins the first request's Prisma client inside it.
-- **`getPrisma()`'s HTTP adapter (`PrismaNeonHttp`) and `getPrismaWs()`'s WebSocket adapter
-  (`PrismaNeon`) surface the SAME underlying Postgres error with DIFFERENT `.code` values** — a
-  driver-error-code check written and tested against one silently doesn't fire under the other.
-  Confirmed for a unique-constraint violation: the WebSocket adapter normalises it to Prisma's own
-  `P2002`; the HTTP adapter — what `getPrisma()` returns, i.e. what the large majority of writes in
-  this app actually run through — throws the same `PrismaClientKnownRequestError` but with the raw
-  Postgres SQLSTATE `"23505"` on `.code` instead. `lib/repositories/prisma-errors.ts`'s
-  `isUniqueViolation()` checked only `P2002`, so `lib/repositories/bundles.ts`'s `upsertBundle`
-  (writing through `getPrisma()`) 500ed uncaught on a real duplicate-slug submission — found live at
-  P8.5c's `/validate` (#347, PR #374) against `npm run preview`, invisible to `lint`/`typecheck`/
-  `npx vitest run`/`npm run build`, because a unit test constructing the error object by hand
-  reproduces whichever shape the test author assumed, not the shape either real adapter actually
-  throws. Fixed by widening the shared predicate to accept both codes — `lib/repositories/
-  categories.ts` had the identical exposure through the same predicate, unconfirmed (#375). **The
-  transferable lesson: any `error.code`/error-shape check guarding a write reachable through
-  `getPrisma()` needs to be verified against what that adapter actually throws, not against what
-  Prisma's own docs or `PrismaClientKnownRequestError`'s shape under the WebSocket adapter would
-  suggest** — reproduce it live (a real duplicate/invalid submission through `npm run preview`), not
-  by constructing the error object from a guess.
-- **Validate DB-touching code with `npm run preview` (OpenNext + local Workers/Miniflare), never
-  `npm run dev`.** Plain `next dev` runs in real Node, which cannot load `@prisma/client/wasm`'s
-  WASM query engine — any DB-touching route silently renders an error state, with no crash and no
-  obvious signal. The M0 homepage did exactly this, unnoticed, until P1 checked. `next dev` is
-  fine for UI-only iteration; anything touching Prisma needs `npm run preview`.
-- `generator client` in `prisma/schema.prisma` **must** set `engineType = "client"`. The default
-  `"library"` engine locates its native binary via `fs.readdir` at runtime — workerd's
-  `nodejs_compat` `fs` polyfill doesn't implement it, so every query fails with
-  `[unenv] fs.readdir is not implemented yet!`.
-- In runtime code (`lib/db.ts`), import `PrismaClient` from **`@prisma/client/wasm`**, never the
-  bare `@prisma/client` specifier. Next's build-time file tracer runs in real Node, so a bare
-  specifier resolves via the package's `"node"` export condition (`index.js`, which loads its WASM
-  via `fs.readFileSync`) even though the code runs in workerd — failing with
-  `[unenv] fs.readFileSync is not implemented yet!`. `@prisma/client/wasm` sidesteps
-  conditional-exports resolution and always uses the `import()`-based loader workerd actually
-  supports. `prisma/seed.ts` runs in real Node (CI runner via `tsx`), so it correctly keeps the
-  bare `@prisma/client` specifier there — don't "fix" it to `/wasm`.
-- **Neon Auth: leave OFF.** Auth is Better Auth (ADR-002), added in P1 via a normal Prisma migration.
-- **`prisma.<model>.updateMany(...)` and `.createMany(...)` — and ONLY those two operations —
-  unconditionally crash when run through `getPrisma()`, regardless of `where`-clause shape or match
-  count**, with `Error: Transactions are not supported in HTTP mode` thrown from
-  `PrismaNeonHttpAdapter.startTransaction`. This is **not** a Better Auth or application-code bug:
-  Prisma 6's client-side query compiler (`engineType = "client"`, mandatory — see below) internally
-  wraps `updateMany`/`createMany` in a transaction it opens itself, which the HTTP adapter can never
-  execute. Confirmed empirically in #382 (2026-08-27) with a local Node script run directly against
-  a live Neon DB (`PrismaNeonHttp` is fetch-based, so it reproduces identically outside Workers):
-  `updateMany`/`createMany` crash every time, including a 0-row match; `deleteMany` (0-row AND a
-  real match), `upsert`, and singular `create`/`update` all succeed. First found live via
-  `setBundleImage` (`lib/repositories/bundles.ts`) 500ing on a real bundle-image upload during
-  P8.5d — three prior diagnostic rounds correctly ruled out Better Auth's adapter (its
-  `$transaction` really is `undefined` on the HTTP client and really is never called) before a
-  fourth round of step-logging pinned it to this instead. **Any `updateMany`/`createMany` call in
-  `lib/repositories/*` MUST run through `getPrismaWs()`** (inside a `tx.` block, or directly if no
-  application-level transaction is otherwise needed — the query compiler's own internal transaction
-  is enough, and the WS adapter can execute it). `deleteMany`/`upsert`/singular `create`/`update`
-  have no such requirement and may use either client per the normal read/write split. Full
-  investigation: `specs/2026-08-26-auth-http-transaction-fix/build-notes.md`.
 
-## There are TWO databases (#764) — learned the hard way
+Every rule here fails **silently**. Evidence: `docs/developer-portal/runtime-pitfalls.md`.
 
-- **Aheed's application database is NOT the only one.** A second Neon project,
-  **`uk-location-reference`**, holds shared UK postcode and place reference data. It has its own
-  schema (`prisma/reference/schema.prisma`), its own migration history
-  (`prisma/reference/migrations/`, applied with `npm run ref:migrate`) and its own generated client.
-  Env vars: **`UK_LOCATION_REF_DATABASE_URL`** (pooled, runtime) and **`UK_LOCATION_REF_DIRECT_URL`**
-  (direct, migrations and sync), plus **`UK_LOCATION_REF_POSTCODE_AREAS`** (coverage, e.g. `"MK,RG"`).
-  Dev and staging share one branch; production is separate.
-- **Why it exists, in numbers.** Reference data was first built into Aheed's own database. A full-GB
-  Code-Point import succeeded at 1,749,109 rows and **456.9 MB**, taking that project to **489.8 MB
-  of its 512 MB ceiling** against under 5 MB for every transactional table combined; the Open Names
-  import then failed outright and **ordinary application writes started failing**. The tell was
-  three unrelated live-DB tests failing with `could not extend file because project size limit
-  (512 MB) has been exceeded` — nothing to do with their own subject matter. **If a live-DB test
-  fails with a message unrelated to what it tests, check `pg_database_size(current_database())`
-  against the 512 MB ceiling before debugging the test.**
-- **Reach reference data ONLY through `lib/reference/`.** Nothing under `app/`, `components/` or
-  `features/` may import the reference client. The reference service answers "does this postcode
-  exist and what is near it"; it must never own vendor delivery rules, which stay in
-  `lib/delivery-eligibility.ts` reading `VendorDeliveryArea`.
-- **A generated Prisma client MUST live in `node_modules`, never inside the project.** The reference
-  client generates to `node_modules/@aheed/reference-client`. Generated under `lib/` instead,
-  webpack parses its `query_compiler_bg.wasm` as source and `opennextjs-cloudflare build` fails
-  outright with `Module parse failed ... not flagged as WebAssembly module for webpack`.
-  `next.config.mjs`'s `serverExternalPackages` is what exempts `@prisma/client` from that, and it
-  matches **package specifiers** — which a relative path can never be. Consequence: `npm ci` wipes
-  it, so every workflow that builds must run `npm run db:generate` first. **Both deploy workflows
-  previously ran no generate step at all**, relying on `@prisma/client`'s postinstall, which only
-  ever knew about the default schema.
-- **Import the reference client's `/wasm` entry in runtime code** (`@aheed/reference-client/wasm`)
-  and its bare entry in Node scripts — the identical trap this file already records for
-  `@prisma/client/wasm`. A second generated client is not exempt.
-- **Coverage is demand-driven, and a missing row is ambiguous.** Only the postcode areas in
-  `UK_LOCATION_REF_POSTCODE_AREAS` are materialised, so "no row" can mean the postcode does not
-  exist **or** that we never imported that part of the country. Covered area with no active row is
-  **INVALID**; an uncovered area is **UNVERIFIED**, as is an unreachable or unconfigured reference
-  database. **Never convert an infrastructure or coverage gap into INVALID** — it degrades to manual
-  address entry, never to telling a customer their address is wrong.
-- **A sync decision has TWO dimensions: has the upstream release changed, AND is required coverage
-  complete?** Checking only the publisher's checksum means a newly configured area never imports,
-  silently. `ReferenceAreaCoverage` is the second dimension, and a coverage row is written only
-  after that area's import completes.
-- **`.env`/`.dev.vars` here use `KEY = "value"` with spaces around the `=`.** That contradicts this
-  file's own env-format rule below, and it parses fine in practice — but any script that rewrites an
-  env file must tolerate the spacing. A `^KEY=` substitution silently matches nothing, which once
-  made a live outage test appear to pass while actually exercising the healthy path. **Verify an env
-  edit landed before trusting any result that depends on it.**
+- Neon Postgres via **Prisma + `@prisma/adapter-neon`**. **Never** plain `pg`/TCP at runtime.
+- **`DATABASE_URL` is pooled (runtime); `DIRECT_URL` is direct.** Migrations run **in CI on a Node
+  runner against `DIRECT_URL` only** — never on the Worker, never at request time.
+- **Hybrid client, not optional:** `getPrisma()` (HTTP) for reads and ordinary writes;
+  `getPrismaWs()` (WebSocket) **only** where an interactive `$transaction` is needed — that
+  isolation keeps an isolate under its socket limit.
+- **Construct a client fresh every call; never cache across requests**, including inside wrappers
+  such as `getAuth()`.
+- **`updateMany`/`createMany` must use `getPrismaWs()`** — through `getPrisma()` they crash
+  unconditionally, even on zero rows. `deleteMany`, `upsert`, singular `create`/`update` are fine.
+- **The two adapters report the same Postgres error under different `.code` values** (raw SQLSTATE
+  `"23505"` vs Prisma `P2002`). Any `error.code` check guarding a write must accept **both**, and be
+  verified against a real failing request — a hand-built double only reproduces its author's guess.
+- **`engineType = "client"`**; runtime code imports from **`@prisma/client/wasm`**, Node scripts
+  from the bare specifier. Same for `@aheed/reference-client/wasm`.
+- **Validate DB-touching code with `npm run preview`, never `npm run dev`** — `next dev` cannot load
+  the WASM engine and silently renders an error state. Fine for UI-only work.
+- **Two databases exist.** `uk-location-reference` is reached **only** via `lib/reference/`. A
+  coverage or infrastructure gap degrades to UNVERIFIED, never to telling a customer their address
+  is wrong.
+- **Neon Auth stays OFF** — auth is Better Auth (ADR-002).
 
 ## Schema rules
-- Strict relational / 3NF, explicit foreign keys, provider-neutral Postgres types only.
-- **No `Json` columns / document storage** for domain data. **No raw SQL** in application code.
-- **"No raw SQL" governs application code, NOT migrations.** Confirmed and written down here in P7d
-  (#218). This was **never actually an open question** — `specs/architecture.md` §3.1 has said it
-  since the schema was written ("DDL for indexes lives in migrations, which is standard portable
-  SQL, not application queries"), and §3.1 even names `citext`/`pg_trgm` as acceptable "via portable
-  migrations". But **this file never said it**, and this file is what gets read every session, so
-  GAP-011 sat deferred behind a question that was already answered one document over. That is the
-  transferable lesson: a ruling that lives only in a doc nobody opens at decision time is not a
-  ruling. The rule's purpose is that the Prisma schema stays the single source of truth for the data
-  model and that queries stay portable; a migration is the mechanism by which the schema *becomes*
-  the database. Concretely: **DDL that Prisma generates from a
-  schema declaration is always fine** (P7d's `CREATE INDEX` came from an `@@index` line —
-  `schema.prisma` still describes it fully). **Hand-authored DDL in a migration is permitted but is
-  a deliberate exception**, and it costs something specific: for anything Prisma's schema language
-  cannot express — a `pg_trgm` trigram index (GAP-011), a row-level-security policy (#220) — the
-  schema stops describing the database, so `prisma migrate diff` can report drift that isn't drift
-  and a future `migrate dev` can propose dropping the object. So: hand-authored DDL requires a
-  comment in the migration saying what Prisma cannot express and why, and a note in the ADR or spec
-  that introduced it. What stays banned either way is raw SQL **at request time** in `app/`,
-  `features/`, `components/` or `lib/repositories/*` — that is the portability and injection
-  surface the rule was written for.
-- **There is exactly ONE permitted raw SQL statement in application code: the parameterised INSERT
-  in `lib/error-event-fallback.ts` (#674, 2026-09-08).** Its scope is the whole of the exception —
-  one statement, one table (`ErrorEvent`, which carries no vendor relation), reachable only from
-  `instrumentation.ts`'s `onRequestError` fallback branch, with every value passed as a numbered
-  placeholder through `sql.query(text, params)` and nothing interpolated. **It exists because the
-  ordinary recorder cannot record this class of failure at all**: `onRequestError` writes through
-  `getPrismaUncached()`, which builds a fresh `PrismaClient` and therefore a fresh WASM
-  `QueryCompiler`, so an error originating in that constructor — which is what `#674` was, confirmed
-  by mapping the production stack onto `node_modules/.prisma/client/query_compiler_bg.js` — makes
-  the recorder re-enter the code path that just threw. `@neondatabase/serverless`'s `neon()` is
-  `fetch`-based and loads no WASM, which is the only reason it is a fallback rather than a retry.
-  The rule's purpose survives intact: the model is still declared in `schema.prisma`, the migration
-  still creates the table, and the statement names only columns Prisma already describes. **Do not
-  widen this into a general-purpose raw-SQL helper** — a second raw statement needs its own
-  argument at `/propose`, not this file's precedent. Note also what it is NOT: `architecture.md`'s
-  compare-and-set rule ("which raw SQL is not permitted to rescue") is about contended hot-path
-  writes and is untouched.
-- **The GAP-011 drift risk above is not hypothetical — it fired for real in #508 (2026-09-01), and
-  has now fired on EVERY migration this project has generated since.** By `#569` (2026-09-05) that
-  is six occurrences: `#508`, then once per P2.6 slice carrying a migration (`#565`, `#566`, `#567`)
-  and again at `#569`. Treat it as certain rather than possible — `--create-only` followed by
-  reading the generated SQL is not a precaution here, it is the procedure.
-  Adding a new model (`ErrorEvent`) with no relationship whatsoever to `Order` or `User` was enough
-  for `prisma migrate dev` to generate `DROP INDEX` for all three hand-authored `pg_trgm` indexes
-  from `20260820143949_p7_5de_order_search_trigram` — and that drop **executed** against the dev
-  database before it was caught by reading the generated `migration.sql`, not before applying it.
-  Recovery needed three separate steps, not just re-adding the `CREATE INDEX`: restoring the
-  indexes on the already-mutated database, rewriting the migration file to remove the erroneous
-  drops (so a fresh `migrate deploy` elsewhere never repeats them), and reconciling Prisma's own
-  `_prisma_migrations` checksum for that file (delete the stale row, `prisma migrate resolve
-  --applied <name>`) since editing an already-applied migration's contents leaves the recorded
-  checksum stale. **The transferable step this adds: read every `migrate dev`-generated
-  `migration.sql` before letting it apply — a `--create-only` run followed by a manual review would
-  have caught this before the drop ever touched a real database, which "keep them and re-assert
-  this migration" (the original migration's own comment) assumes you already know to do.**
-- Money = **integer pence** + explicit currency. No floats, no `money` type.
-- Images: store a **relative key** (e.g. `products/{productId}/{uuid}.webp`), **never a URL**.
-  Keys are **immutable** — replacing an image writes a new key and repoints the row, so a CDN purge
-  is never needed. (This line said `products/{sku}/main.webp` until P6b2; `Product` has no `sku`
-  field and the seed writes `products/{slug}/main.svg`, so the example matched nothing in the repo.)
-- **A `ProductImage` row and the object it names are written by different systems, so a row can and
-  does outlive its object — treat "the row exists" as no evidence the image loads.** Found in #502
-  (2026-09-01): `prisma/seed.ts`'s `seedGeneratedCatalogue` wrote both, but guarded both behind a
-  **row-only** check (`if (existing >= count) return;`) placed *above* its own `putTracked` uploads.
-  So the moment a database held the generated products, no later seed run uploaded the objects into
-  that environment's bucket. The dev bucket had every `products/gen-<subcategory>/main.svg`; staging's
-  had none, and returned **404** for all of them while staging's pages went on referencing them —
-  invisible to `lint`/`typecheck`/`test`/`build`, and invisible locally, because dev's bucket was
-  complete. Production was untouched only by luck: it carries no generated products. **Two
-  transferable rules.** First, when one function writes both a row and its object, any idempotency
-  guard must be positioned so the storage write still happens on a re-run, or the two diverge
-  silently and per-environment. Second, **verify an image key against the CDN of the environment
-  that actually serves it** (`curl -I "${CDN_BASE_URL}/${key}"`) rather than against dev — the same
-  key legitimately returns 200 in one environment and 404 in another, which is exactly the case no
-  local check can see. `scripts/restore-placeholder-images.ts` repairs a database whose rows already
-  exist; the seed fix alone cannot, since it only helps databases seeded after it. Storefront cards
-  now degrade a missing object to the "no image" box (`components/product/ProductImage.tsx`) rather
-  than a broken-image icon, so this class of gap is no longer *visibly* broken — which makes
-  checking the CDN, not the page, the way to catch the next one.
+
+Modelling rules, the raw-SQL exception, the migration procedure: `specs/architecture.md` §3.1.
+
+- Strict relational / 3NF, explicit foreign keys, provider-neutral Postgres types.
+- **No `Json` columns** for domain data. **No raw SQL in application code** — one permitted
+  exception exists (`lib/error-event-fallback.ts`); do not widen it. Migration DDL is allowed.
+- Money = **integer pence** plus explicit currency. No floats, no `money` type.
+- Images: store a **relative key**, never a URL; keys are immutable.
+- **Generate every migration with `--create-only` and read the SQL before it applies** — Prisma has
+  proposed dropping the hand-authored `pg_trgm` indexes on every migration since `#508`.
 
 ## Storage (ADR-003)
-- Object storage via the **S3-compatible API only**, behind `lib/storage` (`StorageService` port).
-  No R2 SDK, no R2-specific features. Prefer `aws4fetch` over the AWS SDK (Worker bundle size).
-- DB holds relative keys; compose `${CDN_BASE_URL}/${key}` at read time.
-- **Broken S3 credentials are invisible to every check this repo has, including `/api/health`.**
-  Reads never touch the S3 API — `publicUrl()` is pure string composition over `CDN_BASE_URL` and
-  the bytes come from the CDN — so a revoked key pair breaks **only writes**, i.e. every staff
-  upload, while the storefront looks perfectly healthy. `lint`/`typecheck`/`test`/`build` execute no
-  request; `/api/health`'s `storage: { configured: true }` asserts only that the **variables are
-  present**, never that they work. Found at `#749`/`#755` (2026-09-15): the pair was rejected in
-  **dev, staging AND production simultaneously** — all three share one key pair and differ only in
-  `S3_BUCKET` — and the only visible symptom anywhere was one staff form failing. **`npx tsx
-  scripts/verify-storage-credentials.ts` is the closest thing to an answer for "do these credentials
-  actually work?", and it is important to know exactly what it covers** (read-only: a `HEAD` for a
-  key that does not exist — `404` proves the credential works, `403` proves it does not). Run it
-  before trusting any image-upload path, and after any Cloudflare token rotation — the R2 keys live
-  in **two** stores per environment (all four env FILES, and `wrangler secret put`), so a file-only
-  rotation leaves the deployed Worker on the old value, exactly as recorded for Neon passwords.
-- **That script checks FOUR files and reports the deployed Worker's version — but it still cannot
-  read a deployed secret's value, and nothing can.** It probes `.env`, `.dev.vars`,
-  `secrets/staging.vars` and `secrets/production.vars` (**`.dev.vars` was missing until `#780`,
-  and it is the file that wins under `npm run preview`** per the Config section — so a rotation
-  could pass this check while local preview stayed broken). It then reports, for staging and
-  production, whether each Worker's newest version is the deployed one, because that divergence is
-  what made `#755` invisible: **the script reported ACCEPTED for all three environments while both
-  deployed Workers served a revoked key**, the new values sitting in dashboard-created versions
-  that were never deployed. A Worker reported `IN SYNC` proves the newest version is live, **not**
-  that it carries the key you think it does. **The only complete proof of an image-upload path
-  remains a real upload through the deployed environment** — treat a green script run as "nothing
-  is obviously wrong", never as "this works".
-- **A browser-reported storage bug does not need a browser to reproduce.** `lib/storage.ts` imports
-  only `aws4fetch` and `lib/config`, so the entire presign/PUT path runs in plain Node via `npx tsx`.
-  `#749`'s vendor-logo failure had been carried for days as "needs a browser reproduction with
-  DevTools open"; a scratch script reproduced it in one run and bisected it in three more
-  (every presign variant, a header-signed `putObject`, and a presigned GET all `403`, which is what
-  ruled out the signing options and pointed at the credentials). Check whether the failing path
-  actually depends on the browser before deferring on the browser's availability.
-- **Raster images (confirmed: `.png`) cannot be validated visually under `npm run preview` —
-  accept this and check them on a deployed environment instead.** Both the staging and dev CDN
-  zones enforce Cloudflare hotlink/referer protection: a request carrying `Referer:
-  http://localhost:8787/` gets **403**, live-confirmed against both hosts on 2026-08-24 (#235,
-  originally found in #231's `/build`, 2026-08-18). `next.config`'s CSP is not the cause and logs no
-  violation — the block happens at the CDN edge, before the app is involved, so it cannot be fixed
-  in application code. **`.svg` is not covered by the rule** — every seeded *product* image is
-  `.svg` and loads fine locally; only raster assets are blocked, which today means just the vendor
-  logo. Provisioning a dev-tier CDN host (#277) did not incidentally fix this — the restriction is
-  zone-level, not host-specific, and the dev zone carries the identical rule. Walk image-load rows
-  in `validation.md` against a real deployed environment, not local preview; see
-  `specs/2026-08-13-p6.6-p0-ui-overhaul/validation.md` for the pattern this line generalizes.
 
-## Cloudflare edge caching of Worker routes — learned the hard way
-- **A `Cache-Control: public, max-age=N` header on a Worker route's response does NOT make
-  Cloudflare cache it at the edge — that needs an explicit zone-level Cache Rule or the Worker
-  calling the Cache API (`caches.default.put()`/`.match()`) itself, neither of which exists anywhere
-  in this repo.** Confirmed live in P2.6 slice 5 (#568, #599, 2026-09-05): `/api/search/suggest`
-  emits exactly that header, but six requests against two vendor hosts on staging — including four
-  rapid repeats against one host — never once returned a `cf-cache-status` or `Age` header. Every
-  request reached the Worker fresh. This is the CDN-caches-static-assets rule from the Storage
-  section above running in reverse: that section is about a real cache (hotlink protection firing at
-  the edge, before the app sees the request) blocking something that should load; this is about an
-  *assumed* cache (a route designed to lean on edge caching for cost control) never actually forming
-  at all, silently. Neither failure mode is visible from `lint`/`typecheck`/`test`/`build`, and
-  neither is visible from a single request either — the tell here specifically was the *absence* of
-  a cache-status header across repeats, not an error. **Before designing a cost or isolation
-  argument around "Cloudflare will cache this by default," check a real deployed response's headers
-  for `cf-cache-status`/`Age` across repeated requests** — a `Cache-Control` header alone proves the
-  route is willing to be cached, never that anything upstream of the Worker actually will.
+- **S3-compatible API only**, behind `lib/storage`; no R2 SDK. Prefer `aws4fetch`.
+- DB holds relative keys; compose the URL from `CDN_BASE_URL` plus the key at read time.
+- **Broken S3 credentials are invisible to every check here, including `/api/health`** — only writes
+  break. Run `npx tsx scripts/verify-storage-credentials.ts` before trusting an upload path; green
+  means "nothing obviously wrong", not proof.
 
 ## Config & secrets
-- All config through validated **`lib/config`** (zod). Precedence is the **Cloudflare request context
-  first**, then `process.env` — `readEnv()` tries `getCloudflareContext()` and only falls through to
-  `process.env` when there is no Worker request context. So under `npm run preview` (and on a real
-  Worker) **`.dev.vars` wins**; `.env` wins only where no Cloudflare context exists — `next dev` and
-  plain Node scripts (`prisma/seed.ts`, `scripts/*`, migrations). This line previously claimed the
-  reverse ("`process.env` first … a stray `.dev.vars` can't shadow it"); it was wrong from the day
-  `lib/config.ts` was written and was corrected during P4a's validation, where it mattered — see
-  **#119**, where `.env` and `.dev.vars` point at *different Neon projects*, so a fixture script and
-  the app under `preview` silently read different databases. Check both before trusting a live result.
-- **The precedence above is per-key, not per-environment, and that distinction matters when you're
-  deliberately trying to simulate a secret being unset.** `readEnv(key)`'s actual body falls through
-  to `process.env[key]` whenever the Cloudflare-context value for *that key* isn't a non-empty
-  string — not only when `getCloudflareContext()` itself throws. So commenting a secret out of
-  `.dev.vars` alone does **not** simulate "unset" if `.env` still carries a real value for the same
-  key: `next build` bakes `.env` into the built Worker's own `process.env` regardless of Cloudflare
-  context, and `readEnv` silently prefers that leftover value the moment `.dev.vars`'s copy goes
-  missing. Confirmed live at `#618`'s `/validate` (2026-09-06): commenting out `STRIPE_SECRET_KEY`
-  in `.dev.vars` only, restarting `npm run preview`, and calling a route gated on
-  `getPaymentEnv().STRIPE_SECRET_KEY` still ran as if the key were set — because `.env` still had
-  it. The fix is to comment the secret out of **both** files before restarting; a single-file edit
-  proves nothing here. This is a real deployed environment's behaviour too, not a local-only quirk —
-  staging and production have no `.env` file at all, so this fallback path is dormant there, but
-  local preview always has one and will use it the moment `.dev.vars` stops naming a key.
-- **A `lib/config.ts` accessor that THROWS when its field is required-in-production (the
-  `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`JOB_INVOCATION_TOKEN` pattern: a zod `superRefine`
-  that adds an issue when `process.env.NODE_ENV === "production"` and the value is absent) makes
-  that condition UNREACHABLE as a plain falsy check in any caller, because `NODE_ENV` is
-  unconditionally `"production"` in every BUILT Worker this app ever runs in** — `npm run preview`
-  included, not just staging/production — since `next build` sets it regardless of deploy target.
-  A route written as `const { X } = getXEnv(); if (!X) { ...graceful handling... }` never reaches
-  its own `if`: the accessor throws first, and the graceful branch is dead code that only "works"
-  under `next dev` or a plain Node script, neither of which this class of route actually runs under.
-  Found live at `#618`'s `/validate` (2026-09-06): `app/api/jobs/reconcile-payments/route.ts`'s own
-  documented 503-on-missing-secret behaviour (R10, R23) was unreachable this way, reproducing as an
-  uncaught `ZodError` (a bare 500) instead — and `app/api/webhooks/stripe/route.ts` has the
-  identical latent defect for `STRIPE_WEBHOOK_SECRET`, pre-existing and unfixed (**#621**). **Any
-  route that wants to treat "this required-in-production secret happens to be absent right now" as
-  its own recoverable case — rather than the hard failure the accessor is designed to be — must
-  catch the accessor's throw itself**, e.g. a small `readOptional(() => getXEnv())` wrapper, rather
-  than assuming the accessor can hand back an empty value to check. Verify any such route's
-  fail-closed branch live, under `npm run preview` with the secret genuinely unset in both `.env`
-  and `.dev.vars` (see the bullet above) — a unit test against the schema alone proves the schema
-  throws, never that the route calling it actually survives the throw.
-- **Checking `.env` against `.dev.vars` is necessary but NOT sufficient — diff both against
-  `secrets/staging.vars` and `secrets/production.vars` before any live-DB work.** Two files drift
-  into agreement on the *wrong* target as easily as they drift apart from each other. At P5a's
-  validation they agreed perfectly and both pointed at **production** (`ep-young-glitter-…`), while
-  the surrounding config in the same file (`S3_BUCKET`, `CDN_BASE_URL`) correctly said *staging* —
-  so nothing about the file looked wrong, and P5a's migration reached the production database ahead
-  of its promotion PR. It was additive and provably harmless (row counts unchanged, no drift), but
-  the same mistake against a destructive migration would not have been. **A "staging-sounding" file
-  is not evidence the DB host is staging; only the host is.** `secrets/*.vars` are gitignored but
-  present in a working checkout, which is what makes this a two-second check.
-- `.env` format: no spaces around `=`, **quote values**, comments on their own line (a trailing
-  `# comment` or leading space has silently broken connection strings here).
-- Runtime secrets live in Cloudflare (`wrangler secret put NAME --env <env>`); CI secrets in GitHub
-  environments. Never commit secrets; never read `DIRECT_URL` at runtime.
-- **`wrangler secret list --env <env>` reports the SCRIPT's secrets, not the RUNNING version's
-  bindings — so a secret can be listed there while the deployed Worker has no such binding at all,
-  and every feature gated on it degrades silently.** Found 2026-09-16 (`#767`/`#771`): both
-  `UK_LOCATION_REF_DATABASE_URL` and `UK_LOCATION_REF_POSTCODE_AREAS` appeared in
-  `wrangler secret list --env staging`, while the Cloudflare API showed the *deployed* version
-  (`f7e5c0ca…`, the CI deploy at `2026-09-16T06:55:51Z`) carrying 19 bindings with **neither among
-  them** and no deployment event after that timestamp. Staging therefore answered `UNVERIFIED` for
-  every postcode for a day while its reference database was perfectly healthy — the same two
-  postcodes returned real data from `npm run preview` against that identical database. **Nothing
-  logged**, because `lib/reference/`'s guard returns before it constructs a client, which is correct
-  behaviour and exactly why the silence is total. **A secret added after the last deploy is not
-  live until something deploys**; a `wrangler secret put` normally triggers that itself, but a
-  dashboard edit or a `wrangler versions secret put` need not, and the listing looks identical
-  either way. **To answer "does the running Worker actually have this binding?", read the deployed
-  version**: `GET /accounts/<acct>/workers/scripts/<script>/deployments` →
-  `result.deployments[0].versions[0].version_id` → `GET …/versions/<id>` and inspect
-  `result.resources.bindings`. `npx wrangler deployments list` and `npx wrangler tail` both failed
-  here with `fetch failed` from Git Bash while `wrangler secret list` and plain `curl` worked, so
-  reach for the REST API rather than assuming the account is unreachable.
-- **The SAME undeployed-version state has a second, LOUDER consequence the bullet above does not
-  describe: it wedges CI outright, and the error blames secrets rather than deployment state.**
-  A secret edited through the Cloudflare **dashboard** creates a new Worker version and does **not**
-  deploy it. Every subsequent `wrangler secret put` against that Worker then fails:
-  ```
-  Secret edit failed. You attempted to modify a secret, but the latest version of your
-  Worker isn't currently deployed.
-  ```
-  **Both `deploy-staging.yml` and `deploy-production.yml` OPEN their deploy step with
-  `wrangler secret put`** (`CLOUDFLARE_ACCOUNT_ID`, then `CLOUDFLARE_API_TOKEN`, before
-  `wrangler deploy` is reached), so a single dashboard edit fails **every future deploy on that
-  environment** — including deploys carrying unrelated fixes — until the pending version is
-  deployed. Found live 2026-09-16 (`#781`) during `#755`'s credential rotation: both deploy reruns
-  failed this way, and because the message names *secrets*, the natural reading is "the token is
-  wrong" rather than "an undeployed version exists". Nothing in the repository hinted otherwise.
-  **Recover by deploying the pending version** — wrangler's own option (2):
-  `npx wrangler versions deploy <version-id>@100 --env <staging|production>`, taking the newest
-  version id from the REST API call in the bullet above. After that the workflow rerun succeeds
-  normally. **Avoid the problem by not editing secrets in the dashboard at all**: use
-  `node scripts/configure-env.mjs <staging|production>`, which writes through `wrangler secret put`
-  and therefore deploys as it goes, updating the GitHub environment secrets in the same pass.
-  `npx tsx scripts/verify-storage-credentials.ts` now reports this state (`STALE`) for both
-  Workers, so it is detectable before the next deploy discovers it the hard way.
-- **A GitHub Actions workflow reading `vars.X` sees nothing when the value was stored as a *secret*
-  named `X`, and vice versa — they are two separate stores with no fallback between them.**
-  `.github/workflows/sync-reference-data.yml` reads `secrets.UK_LOCATION_REF_DIRECT_URL` and
-  `vars.UK_LOCATION_REF_POSTCODE_AREAS`; a first attempt at provisioning added *both* as secrets,
-  and `UK_LOCATION_REF_DATABASE_URL` rather than `_DIRECT_URL` besides. The workflow would have
-  materialised an env file with two empty values and failed closed at `npm run ref:migrate` on the
-  next scheduled production run, which is the right direction but looks like a broken workflow
-  rather than a missing variable. **Check both endpoints, not one**:
-  `gh api repos/sriahead/aheed-online-store/environments/<env>/variables --jq '.variables[] | "\(.name)=\(.value)"'`
-  and `… /environments/<env>/secrets --jq '.secrets[].name'`. Variable *values* are readable, which
-  makes `UK_LOCATION_REF_POSTCODE_AREAS=MK,RG` verifiable rather than merely present — a reason to
-  prefer a variable for anything that is not actually a credential.
-- **A THIRD, related trap: a plain-text var added to a Worker only through the Cloudflare
-  dashboard — never declared in `wrangler.toml`'s `[vars]`, never set via `wrangler secret put` —
-  does NOT survive the next `wrangler deploy`, even though a genuine SECRET added the same way
-  does.** `wrangler deploy` rebuilds a Worker version's `vars` set entirely from `wrangler.toml`;
-  secrets are stored and reattached independently and are untouched by a deploy that doesn't
-  explicitly change them. Found at this same slice's own `/validate` (2026-09-16, `#767`/`#771`):
-  the fix for the `wrangler secret list` trap above (redeploying the dashboard-created version that
-  carried both `UK_LOCATION_REF_DATABASE_URL` and `UK_LOCATION_REF_POSTCODE_AREAS`) worked, but a
-  *routine* `deploy-staging` CI run afterward silently dropped `UK_LOCATION_REF_POSTCODE_AREAS`
-  again — confirmed by reading the newly-deployed version's bindings via the Cloudflare API
-  (`GET …/versions/<id>`, per the bullet above): `UK_LOCATION_REF_DATABASE_URL` (a real secret)
-  was still there; `UK_LOCATION_REF_POSTCODE_AREAS` (converted to a plain-text variable during the
-  original fix) was gone, and neither `wrangler.toml` nor either deploy workflow ever named it.
-  This would have recurred on every future deploy. **The fix is to declare any non-secret,
-  environment-wide config value in `wrangler.toml`'s `[env.<env>.vars]` block** (see
-  `UK_LOCATION_REF_POSTCODE_AREAS` there) so it's part of committed config and rebuilt correctly on
-  every deploy, rather than a fragile one-time dashboard edit — reserve `wrangler secret put` (or a
-  dashboard-added secret) for values that are actually credentials.
-- **`instrumentation.ts`'s `onRequestError` DOES have a working Cloudflare Workers request context
-  under this app's Next 16 / OpenNext / Workers stack** — `getCloudflareContext()`/`readEnv()`
-  resolve normally there, confirmed live in `#508` (2026-09-01): a forced throw under `npm run
-  preview` reached a plain, uncached `PrismaClient` constructed inside the hook, and it resolved
-  `DATABASE_URL` and wrote a real row on the first try. This was flagged as a genuinely unconfirmed
-  risk at that slice's `/propose` (this repo has a documented history of Next-on-Workers behaviour
-  not matching framework-documented semantics — `proxy.ts`, `edge` runtime, `@prisma/client/wasm`
-  resolution, all elsewhere in this file), so `getPrismaUncached()` was built deliberately *not*
-  wrapped in React's `cache()` to sidestep the question rather than gamble on it. The mitigation
-  turned out not to be needed for context availability itself, but keep using an uncached client
-  for any future `onRequestError` work anyway — `cache()`'s per-request de-dupe still isn't needed
-  for a handler that only ever runs once per throw, and reaching for it would reopen a question
-  that's now moot rather than genuinely require re-answering it.
+
+Detail and the deployed-binding traps: `docs/developer-portal/env-setup.md`.
+
+- All config through validated **`lib/config`** (zod); never read `process.env` directly.
+- Precedence is **Cloudflare request context first, then `process.env`** — `.dev.vars` wins under
+  `npm run preview` and on a Worker; `.env` wins only without a Worker context. It is **per key**,
+  so simulating an unset secret means removing it from **both** files.
+- `.env` format: **no spaces around the equals sign, quoted values, comments on their own line.**
+  Two reference-database keys carry the spaced form, so a script rewriting an env file must tolerate
+  both (`#505`).
+- Runtime secrets live in Cloudflare (`wrangler secret put`); CI secrets in GitHub environments —
+  **two stores**, and setting one does not populate the other. Never commit secrets; never read
+  `DIRECT_URL` at runtime.
+- Before live-database work, diff `.env` and `.dev.vars` against `secrets/staging.vars` and
+  `secrets/production.vars` — two files agreeing is not evidence they are right.
+
+## Commands
+
+`npm run lint` · `typecheck` · `format:check` · `npx vitest run` · `build` (pinned `--webpack`;
+Turbopack cannot resolve `@prisma/client/wasm`) · `preview` · `db:generate` (after every `npm ci`) ·
+`kms:validate` · `kms:build-index` · `kms:check-generated` · `sdd:audit` · `sdd:preclear`.
+After editing `docs/` or `specs/`, also run `kms:assemble:internal` **and** a real Next build in
+`kms/site-internal` — `gates` never builds the docs site.
 
 ## Branch strategy & CI/CD
-- `feature/<slug>` → PR into **`staging`** (auto-deploys to `staging.aheedfoodcentre.nocaped.com`).
-- **`staging` → `main`** via PR, deploying to `aheedfoodcentre.nocaped.com`. Never push directly to
-  `main`/`staging`.
-- **THIS REPOSITORY IS PUBLIC** — `gh api repos/sriahead/aheed-online-store --jq .visibility`
-  returns `"public"`, confirmed 2026-09-07 (#644). That matters because this section spent weeks
-  asserting a **private-repo, free-plan** limitation as a current constraint on what protection is
-  available here, and it is not one: the paid-plan restriction on required reviewers applies to
-  *private* repositories. **Nobody rechecked the premise after the repo's visibility changed** —
-  the same shape as the GAP-011 ruling that sat deferred behind a question already answered one
-  document over. Before citing a plan limitation as a reason something cannot be enforced, re-read
-  `.visibility`.
-- **Partially closed gap — a PR can no longer be merged with red checks, but the branch strategy is
-  still not fully enforced.** Two separate controls; the second is now in place:
-  1. **No environment approval gate.** Required reviewers were rejected with a 422 when this repo
-     was private. It is public now, so this is likely available — but it was **deliberately not
-     adopted** at #644: as sole maintainer the user would be approving their own deploys, which
-     adds a click and no independent check. `environment: production` in `deploy-production.yml`
-     selects that environment's secret set and nothing more. Revisit if a second maintainer joins.
-  2. **Required status checks ARE now configured on both branches** (#644, 2026-09-07), closing the
-     half of #472 that mattered most. Each ruleset carries a `required_status_checks` rule naming
-     exactly three contexts — **`docs-gates`, `quality / kms`, `quality / quality`** — with
-     `strict_required_status_checks_policy: false` (a PR need not be rebased first; the goal is
-     "red cannot merge", not "must be up to date"). **The context strings were read from the check
-     names a real completed run actually reported** (PRs #640 and #643), never guessed: a
-     `required_status_checks` rule naming a context nothing reports blocks every merge on that
-     branch permanently, which is precisely why #539 deferred adding one. If you add a workflow
-     job and want it required, read its reported name from a finished run first. **`deploy` is
-     deliberately NOT required** — it runs on `push`, not `pull_request`, so requiring it would
-     block every PR forever.
-     Note **both branches ARE covered by repository
-     rulesets**, and this line said "No branch protection at all, on either branch" until
-     2026-09-02 (#537). **The check it cited cannot see rulesets.**
-     `gh api repos/sriahead/aheed-online-store/branches/main/protection` queries *classic* branch
-     protection and returns **`404 Branch not protected`** whether or not a ruleset is active, so
-     P9.2's verification was structurally incapable of finding the thing it concluded was absent.
-     **Use `gh api repos/sriahead/aheed-online-store/rulesets` instead** (add `/<id>` for the
-     rules), and **`gh api repos/sriahead/aheed-online-store/rules/branches/<branch>` to ask what
-     actually applies to a branch** — that second endpoint is the one that catches a ruleset
-     created successfully with a ref condition matching nothing, which a reading of the
-     declaration alone cannot.
-     Actual state, confirmed 2026-09-07: two **active** rulesets, each carrying `pull_request`
-     (so a **direct push to either branch is blocked**), `non_fast_forward`, `deletion` and — since
-     #644 — `required_status_checks`, each with **`required_approving_review_count: 0`** and **no
-     bypass actors**. `protect-main`'s condition is `~DEFAULT_BRANCH` (`main` only);
-     **`protect-staging`** (added by #539) is scoped to `refs/heads/staging`.
-  So the substance of the warning is narrower again: **a PR into either branch can still be opened
-  and merged by its own author** — with `required_approving_review_count: 0`, self-merge remains
-  possible — but **no longer with red checks**, and no longer without a PR at all. Note the
-  paid-plan 422 recorded above is about **required reviewers specifically**, not about rulesets —
-  reading it as "branch protection is unavailable here" is what kept `staging` uncovered for so
-  long, and later kept required status checks unattempted for longer still.
-  The historical warning still stands as written for a different reason: **PRs #464, #465 and #466
-  all merged straight into `main` on 2026-08-30**, bypassing `staging` entirely, and
-  `deploy-production` ran on each; **neither ruleset would have stopped any of them**, since each
-  was a genuine PR and nothing constrains a PR's *source* branch. Treat PR review discipline as the
-  only real gate for that, and check the base branch of every PR you open.
-- **Quality checks live in `.github/workflows/quality.yml`** (`on: workflow_call`), added by P9.2
-  (#435). **All three of `gates.yml`, `deploy-staging.yml` and `deploy-production.yml` call it**, so
-  neither deploy path runs a weaker set than a PR runs. (`deploy-staging.yml` was the last to get it,
-  in #539; it previously ran **no** checks, justified by a comment asserting that `gates` had already
-  run on the PR that produced the merge — true only once a ruleset made a PR mandatory, which is why
-  #539 added `protect-staging` in the same slice rather than the workflow job alone.)
-  **Add a new check there, not to a caller** — duplicating the steps into each is
-  what let the production path drift to running none at all. **Only the Gate 4 CHANGELOG diff stays
-  inline in `gates.yml`'s `docs-gates` job**, because it genuinely needs `github.base_ref`, which a
-  `push` event does not have.
-- **Both KMS checks (`kms:validate` and `kms:check-generated`) live in `quality.yml`'s own `kms`
-  job**, moved there 2026-09-02 (#537, resolving #473). Until then this file, `gates.yml` and
-  `quality.yml` all claimed the `ARTIFACT_INDEX` staleness check *also* needed `github.base_ref`;
-  it never did — it copied a file, regenerated, and diffed. That untrue sentence, repeated in three
-  places, is the whole reason the production deploy path ran **no** KMS checks at all. The `kms` job
-  is separate from `quality` because `continue-on-error` is per-job: it is **blocking on the
-  pull-request path and non-blocking on both deploy paths** (`kms_blocking: false` from
-  `deploy-production.yml` and, since #539, from `deploy-staging.yml`). The PR is the gate; on a
-  branch the same check is a drift tripwire, and failing a deploy cannot un-merge drift that already
-  landed — it only withholds the fix. **Whether the non-blocking branch actually resolves as
-  intended was never verified, and #541 is now CLOSED as an accepted risk rather than left open
-  indefinitely (#644, 2026-09-07).** `continue-on-error` is inert on a *passing* job, so the first
-  post-promotion `deploy-production` run (`33606818256`, 2026-09-02) proved nothing despite being
-  the run everyone was waiting for — and neither did `34103597181` on 2026-09-07, for exactly the
-  same reason. That is not bad luck: **the only way to observe the false branch is to deliberately
-  push a broken KMS artefact to `main`**, i.e. to ship a known-bad artefact through the production
-  deploy path to watch what happens. That price is not worth the information, because **the failure
-  direction is safe**: if the expression does not resolve as intended the job stays *blocking*, so
-  a stale artefact would stop a production deploy rather than pass silently — loud and wrong, not
-  quiet and wrong. Recorded here rather than carried as a permanently-open issue nobody can close.
-  If a KMS check ever does fail on a deploy branch, that run is the free observation; note what it
-  did.
-- **`npm run kms:build-index` writes TWO files** — `ARTIFACT_INDEX.md` and
-  `app/(admin)/staff/runbook/docs.ts` — and they go stale under **different** conditions, which is
-  what made a one-file check look adequate for so long. The index renders **front-matter only**;
-  `docs.ts` embeds each document's **full body**. So editing a doc's content without touching its
-  front-matter rebuilds the index byte-identically and `docs.ts` differently. Commit `122609c` did
-  exactly that (five roadmap change-log rows, front-matter untouched) and shipped a stale
-  `/staff/runbook` article to production with every check green. **Never enumerate the generated
-  files by hand** — `kms/scripts/build-index.ts` exports `GENERATED_ARTIFACTS`, and both
-  `kms/scripts/check-generated.ts` and `scripts/sdd-check.ts` derive their coverage from it, so a
-  third output is covered the moment it is added. `npm run kms:check-generated` is the one command
-  that answers "are the generated artefacts current?".
-- **Both deploy workflows build BEFORE they migrate** (P9.2, #434). `prisma migrate deploy` used to
-  run first, so a build failure left the database migrated while the Worker still served the previous
-  bundle — and the adapter build is the step most likely to fail (a root `proxy.ts` once passed
-  `next build`, `lint`, `typecheck` and every test, failing only there). Do not reorder these back.
-  The window is narrowed, not closed: a `wrangler deploy` failure *after* a successful migrate still
-  leaves production migrated ahead of its code, which is #438's territory.
-- Both `staging` and `production` need their own GitHub environment secrets: `CLOUDFLARE_API_TOKEN`,
-  `CLOUDFLARE_ACCOUNT_ID`, `DIRECT_URL` (used for `prisma migrate deploy` in CI). Separately, each
-  Cloudflare Worker needs its own **runtime** secret set via `wrangler secret put NAME --env <env>`
-  (`DATABASE_URL` at minimum) — the GitHub Actions secrets above do not populate these; they're two
-  different secret stores.
-- **A `prisma migrate deploy` step failing with `P1001: Can't reach database server` in
-  `deploy-staging`/`deploy-production` is not necessarily a real outage** — before assuming Neon is
-  down and either blind-retrying or escalating, run `DIRECT_URL=<the same URL> npx prisma migrate
-  status` from a local machine against the identical `DIRECT_URL`. Hit at PR #485's `deploy-staging`
-  run (2026-08-31, run `33366365439`): the migrate step failed with `P1001` against staging's direct
-  endpoint, but a local `prisma migrate status` against that exact URL succeeded seconds later and
-  correctly reported the pending migration — proving the database was up and reachable, and the
-  failure was a transient GitHub Actions-runner-to-Neon network blip. `gh run rerun <id> --failed`
-  then succeeded on the first retry. The local check is what distinguishes this from a real outage
-  (where retrying would be pointless) or a genuine connection-string/firewall problem (where
-  retrying would just fail again) — don't skip straight to either conclusion.
-- **A workflow carrying `schedule` or `workflow_dispatch` does nothing until it reaches the default
-  branch (`main`), however correct it looks on `staging`.** GitHub resolves both triggers against
-  the default branch specifically — not whatever branch the file was merged to. Found 2026-09-16
-  (`#772`): `.github/workflows/sync-reference-data.yml` shipped with `#764` onto `staging` and has
-  never existed on `main`, so its `cron: "0 4 3 * *"` was inert and `gh workflow run
-  sync-reference-data.yml --ref staging` failed outright with `HTTP 404: workflow … not found on
-  the default branch` — a dispatch is impossible too, not just the schedule. **Invisible in the
-  usual places**: the file is present and correct on the branch everyone works on,
-  `gh workflow list --ref staging` shows it, and `lint`/`typecheck`/`test`/`build` say nothing about
-  workflow placement — the only tell is the absence of runs, and a job that has never run produces
-  no failure to notice. This repo merges into `staging` and promotes to `main` separately, so
-  **every** scheduled workflow it adds has a dormant period lasting until that promotion —
-  `fill-product-images.yml` has the identical shape. Check `git ls-tree origin/main --name-only
-  .github/workflows/` before trusting that a new `schedule`/`workflow_dispatch` workflow will
-  actually fire.
+
+Rulesets, workflows, deploy ordering: `docs/developer-portal/sdd/operator-runbook.md`.
+
+- `feature/<slug>` into **`staging`** by PR, then **`staging` into `main`** by PR. **Never push
+  directly to either** — both carry rulesets requiring a PR and blocking a merge with red checks.
+- Every PR references its issue (`Closes #NN`) and touches `CHANGELOG.md`. **Check the base branch
+  of every PR you open** — nothing constrains a PR's source, and three have reached `main` directly.
+- **Quality checks live in `.github/workflows/quality.yml`**, used by all three callers — **add a
+  check there, not to a caller**, or the deploy paths drift into running less than a PR does.
+- **Both deploy workflows build before they migrate.** Do not reorder.
+- A `schedule`/`workflow_dispatch` workflow does nothing until it reaches **`main`**.
 
 ## The four SDD gates (non-negotiable)
+
 1. **Propose before work** — open the issue + a spec proposal; wait for approval.
 2. **Spec before code** — no source without `specs/<YYYY-MM-DD-feature>/requirements.md`.
 3. **Validate before done** — `lint`, `typecheck`, `test`, and `validation.md` criteria pass.
 4. **Changelog before merge** — update `CHANGELOG.md` on the branch.
-Every PR references its issue (`Closes #NN`), carries `phase:P_` + `gate:_` labels, touches CHANGELOG.
 
-**Full operational workflow:** `specs/sdd-workflow.md` expands these four gates into a delivery
-**loop** with two deliberate context resets:
+**Read `specs/sdd-workflow.md`** for the full loop and its two context resets: **Orient → Propose →
+Spec → Build → Build notes → CLEAR → Validate/Fix → Ship → Document → CLEAR**. Each stage is a slash
+command with its procedure in `.claude/commands/`. `/discover`, `/learn` and the business case
+review run on the **milestone**, are evidence rather than scope, and are **not** gates — a lesson
+recorded only in a retrospective has not been promoted; anything that should change every future
+session belongs in this file.
 
-**Orient → Propose → Spec → Build → Document (build notes) → CLEAR → Validate ⇄ Fix → Ship →
-Document (final) → CLEAR → Orient**
-
-Most stages are slash commands (`/orient`, `/propose`, `/spec`, `/build`, `/build-notes`,
-`/validate`, `/fix`, `/ship`, `/document`). For detailed procedures on each stage, read the corresponding markdown file in `.claude/commands/`. Use them; that doc carries lessons already paid for
-(stale-doc traps, CI-vs-local-Windows drift, PR merge races) that are easy to relearn the hard way.
-
-**THREE further stages sit outside that per-slice loop and run on the MILESTONE, not the slice:**
-**`/discover`** (forward-looking — unowned customer problems, opportunities, friction, operational
-gaps, risks, assumptions, constraints), **`/learn`** (retrospective — what a completed milestone
-actually delivered, which assumptions held, what emerged, which lessons get promoted), and the
-**business case review** (outward-looking — what the platform is worth commercially now). The first
-two are invocable at any time; all three run **automatically at milestone close, in that order**, as
-part of the final `/document` and before the model switch and second `/clear`. Their output is
-evidence, not scope: findings append to `docs/research/discovery-log.md` and
-`docs/research/milestone-retrospectives.md`, and reach the roadmap only through `/propose`. **None
-is a gate** — evidence a merge depends on gets written to pass rather than to be true, so the four
-gates above are unchanged. **A lesson recorded only in the retrospective has not been promoted**;
-anything that should change every future session belongs in this file.
-
-- **The business case review (`#777`) updates `docs/business-analysis/business-case.md`** — the
-  stakeholder-facing commercial account of the platform, and the only KMS artifact whose claims
-  decay on a schedule nobody controls. It runs **after `/learn`**, deliberately: Learn establishes
-  from evidence what shipped and which assumptions held, and the business case consumes that rather
-  than re-deriving it and reaching a different answer than the retrospective beside it. The review
-  moves capabilities between IMPLEMENTED / IN PROGRESS / PLANNED, updates the visible
-  `| **Last reviewed** |` row, **re-researches the external pricing** (Shopify, Stripe, Cloudflare,
-  Neon, Resend — each figure carries a retrieval date, and a stale date makes the figure unverified
-  rather than merely old), answers the previous revision entry's open items, and appends a revision
-  entry naming what was **withdrawn or corrected**. Full procedure: `specs/sdd-workflow.md`,
-  **Business case review**.
-- **`npm run sdd:audit` enforces it** (`scripts/sdd-business-case.ts`), comparing that
-  `Last reviewed` row against the newest phase-closure row in `specs/roadmap.md`'s change log.
-  **It will report the artifact as due from the moment `/document` writes a closure row until the
-  review lands — that is the check working, not a fault.** It cannot know which stage of a close it
-  is in, and suppressing the report mid-close would hide exactly the case it exists for: a close
-  abandoned halfway. **A milestone close is not finished until `sdd:audit` exits 0 again.**
-- **Never present PLANNED functionality as IMPLEMENTED in that document, and never state a modelled
-  saving as a realised one.** As of 2026-09-16 the platform has never traded — `#113` (live Stripe
-  keys) and `#104` (verified email sending domain) are both open — so every financial figure in it
-  is a model at a stated volume, and no invoice data exists anywhere in this repo.
+- **Gate 4 lands in `/build-notes`**, not the final `/document`.
+- **`sdd:preclear`** must exit 0 before it is safe to `/clear`; **`sdd:audit`** is the only check
+  after Ship. A skip line is not a pass.
+- **The delivery board** (Project #2) carries **Status, Priority and Phase**; scope lives in
+  `specs/`. An open `High` item goes to Propose ahead of any ranking you generate. **`Done` means in
+  production**, so open issues for staging-merged slices are expected.
 
 Two rules the assistant **cannot** enforce for itself, so it must ask:
-- **`/clear` is user-invoked.** Before either Clear, everything load-bearing must be committed — a
-  Clear destroys anything living only in the conversation. `/build-notes` exists to get it on disk.
-- **Model switches are user-invoked.** Sonnet 5 for the Validate/Fix/Ship/Document (final) half,
-  Opus 5 for the Orient/Propose/Spec/Build half. The switch to Opus 5 happens at the *end* of
-  Document (final), immediately before the second `/clear` — not right after Ship — so Document
-  runs on the model that already has context from Ship rather than a freshly-switched one spending
-  tokens re-orienting to do reconciliation work. If a stage is running on the wrong model, say so
-  and ask rather than proceeding quietly.
 
-**Gate 4 lands in `/build-notes`, not the final `/document`** — the CHANGELOG entry must be on the
-branch before it merges, and Ship precedes the final documentation pass.
+- **`/clear` is user-invoked.** Before either Clear, everything load-bearing must be committed.
+- **Model switches are user-invoked** — Sonnet 5 for Validate/Fix/Ship/Document, Opus 5 for
+  Orient/Propose/Spec/Build, switching at the *end* of Document. If a stage is on the wrong model,
+  say so and ask rather than proceeding quietly.
 
-**Two machine checks back the loop's honor-system stages** (`scripts/sdd-check.ts`):
-- `npm run sdd:preclear` — run at the end of `/build-notes`; must exit 0 before saying it's safe to
-  `/clear`. Verifies the four spec files, the build-notes template's sections, a CHANGELOG diff vs
-  base, and a clean tree.
-- `npm run sdd:audit` — run at `/orient`. Reports slices that shipped without a roadmap change-log
-  entry, **and merged `staging → main` promotions with no roadmap row** (#207, added 2026-08-18 —
-  a row must cite `PR #NNN` or the merge SHA; a bare `#NNN` doesn't count, since issues and PRs
-  share one number space). Every other gate fires before or at merge; this is the only one after
-  Ship, which is how P3a/P3b/P3c all shipped undocumented — and how PRs #118/#121/#134 sat
-  undocumented until the promotion half of this check existed to find them. It **skips** the
-  promotion half rather than failing when `gh` is unavailable, so a skip line is not a pass.
+## Dependency & version discipline
 
-**Delivery board** — GitHub Project #2 "Aheed Online Store — Delivery" (owner `sriahead`), a
-generated *view* of `specs/roadmap.md` holding **status only**; scope lives in `specs/`. Propose adds
-the issue (Phase set, Backlog) → Build moves it to In Progress → Ship moves it to **In Review** on
-staging merge → it closes to **Done** only when promoted to `main`. **`Done` means in production**:
-PRs merge into `staging`, not the default branch, so `Closes #NN` never fires on merge and open
-issues for shipped slices are expected. The Status field's one-time UI rename
-(`scripts/provision-project.sh` manual steps) is **done** — all four options `Backlog` /
-`In Progress` / `In Review` / `Done` exist, so no board setup is outstanding.
+Policy: `specs/tech-stack.md`. Failures: `docs/developer-portal/runtime-pitfalls.md`.
 
-## Windows shell & file encoding (learned the hard way)
-- **Never rewrite a repo file through `Get-Content` / `Set-Content` on Windows PowerShell 5.1.**
-  `Get-Content -Raw` reads with the system ANSI codepage unless `-Encoding utf8` is passed, so every
-  non-ASCII character in a UTF-8 file (this repo's docs are full of em-dashes and arrows) is decoded
-  as mojibake and then written back **double-encoded** — `—` becomes `â€”` throughout. It also
-  rewrites line endings, so a two-line version bump lands as a 147-line diff. Hit in P6b2 bumping
-  front-matter on `architecture.md`, `tech-stack.md` and ADR-003; caught only because the diff
-  size was implausible, and fixed by `git checkout --` on all three and redoing the edits with the
-  Edit tool. **Use the Edit/Write tools for file content; keep PowerShell for git, npm and gh.**
-- **Check `git diff --numstat` after any scripted file rewrite.** A line count far larger than the
-  edit is the cheapest possible signal that an encoding or line-ending rewrite happened.
-- **`format:check` failing on dozens of untouched files was the `core.autocrlf` artifact — FIXED in
-  PR #328 (`.gitattributes`, #327), so it is no longer the expected explanation.** `eol=lf` now pins
-  the working tree, which is what makes local Prettier agree with CI; `git add --renormalize .`
-  produces zero changes and `prettier --check .` passes across the repo. **If `format:check` fails
-  on files you did not touch today, treat it as real drift and read the diff** rather than reaching
-  for the old ritual. Should a line-ending question genuinely resurface, the way to settle it is
-  still to write a file's committed blob (`git show HEAD:<file>`) out with LF endings and run
-  `prettier --config .prettierrc.json --check` on it — **in a directory prettier can resolve the
-  config from, or passing `--config` explicitly**, since checking a copy in a temp directory
-  silently falls back to prettier's *defaults* and reports failures that mean nothing. CI on Linux
-  remains the authority.
-- **Anchor patterns when grepping an env file.** `DATABASE_URL` ends in `BASE_URL`, so a filter for
-  `BASE_URL` prints the Neon connection string, password included (#175). Prefer `^SEED_` over
-  `SEED_`, and prefer printing keys over lines.
-- `gh` args containing double quotes break native argument parsing in PS 5.1 (`accepts 1 arg(s),
-  received 8`). Write the body to a file and use `--body-file`.
-- **In Git Bash specifically (not PowerShell), a `gh` string argument that starts with `/` gets
-  silently rewritten to a Windows path before `gh` ever sees it** — MSYS's automatic POSIX-path
-  conversion fires on any argument that merely looks path-shaped, with no way to tell from the
-  argument alone that it was meant as literal text. Hit live in P2.6 slice 6's `/document`
-  (2026-09-05): `gh issue create --title "/staff/search-synonyms is unlinked from the staff hub…"`
-  (filed as `#602`) shipped with a title of `C:/Program Files/Git/staff/search-synonyms is
-  unlinked…` — silently wrong, no error, and easy to miss since only the leading segment changes.
-  Prefix the command with `MSYS_NO_PATHCONV=1` (as already used elsewhere in this repo's own
-  scripts) to suppress the conversion, and always read back a filed issue/PR's title after creating
-  it from Git Bash if it starts with `/`. Fixed after the fact via `gh issue edit`, same env-var
-  prefix.
-- **`npx tsx -e "<multi-line script>"` fails silently on this Windows setup the moment the script
-  imports an installed package (e.g. `@prisma/client`) — no stdout, no stderr, exit 0, even with an
-  explicit `.catch()`/`.finally()` around every promise.** It isn't a working-directory problem
-  (the shell's cwd is already the repo, so `node_modules` resolves fine) — a script that does
-  nothing but `console.log('hello')` via `-e` works, but the same process with a real `import`
-  produces no output at all, indistinguishable from success without independently confirming the
-  side effect happened. Hit in the dev-environment slice's `/validate` (R10's live isolation
-  check, inserting a marker `HealthCheck` row into a Neon branch) — three silent `-e` attempts
-  before switching to a real `.ts` file. **Write the script to a file inside the repo (so module
-  resolution and `tsx`'s own error reporting both work) and run `npx tsx path/to/script.ts`
-  instead of `-e`** for anything beyond a trivial one-liner; delete the scratch file afterward.
-- **Stopping `npm run preview` does not stop `npm run preview`.** The task-runner kill only ends the
-  top-level `npm` process; `opennextjs-cloudflare preview` chains into `wrangler dev`, which spawns
-  its own `wrangler.js` and `workerd.exe` children that survive the parent's termination on Windows.
-  The next `npm run preview` then fails the build with `EBUSY: resource busy or locked, rmdir
-  '.open-next\assets'` — the orphaned `workerd.exe` still has the directory open. Killing just
-  `workerd.exe` is not enough either; the whole chain (`npm run-cli.js run preview` →
-  `opennextjs-cloudflare … preview` → `npm … exec wrangler dev` → `wrangler.js dev` →
-  `wrangler-dist\cli.js dev` → `workerd.exe` ×2) must go. Find it with
-  `Get-CimInstance Win32_Process -Filter "Name='node.exe' or Name='workerd.exe'" | Select
-  ProcessId,CommandLine` (match on the repo path and `wrangler dev` in the command line, not just
-  the image name — other unrelated `node.exe`/`workerd.exe` processes are common) and
-  `taskkill /F /PID <every id>` before retrying the build.
-- **Never pipe a live-writing script's output through `head` (or anything else that closes the pipe
-  early).** The reader closing the pipe sends the writer SIGPIPE, which can kill the process **before
-  its own cleanup section runs** — indistinguishable from the command completing normally except for
-  a shorter-than-expected output. Hit at `/validate` for #411/#412 (2026-08-27):
-  `npx tsx scripts/verify-repository-injection.ts | head -30` — a script that creates real rows and
-  deletes them itself at the end — got cut off mid-run and left one `__verify-`-prefixed product, two
-  images and one category behind in the dev database, found only by a follow-up query and cleaned up
-  by hand before the real (untruncated) run could be trusted. **Redirect to a file and `Read` it, or
-  let it print in full** — never truncate a script's stdout with a command that can close the pipe
-  before the writer's own exit path runs.
-- **Never run `npx vitest run` concurrently with another heavy build on this machine — vitest
-  reports `exit 0` while whole test files silently never execute.** Under load its forks pool fails
-  to start workers (`Error: [vitest-pool]: Failed to start forks worker for test files ...` /
-  `[vitest-pool-runner]: Timeout waiting for worker to respond`), and those files are counted as
-  **unhandled errors, not failures** — so the process still exits 0 and a casual reading of the
-  summary looks like a pass. Hit 2026-09-02 during #539's Build: the suite was launched alongside
-  `next build --webpack` for `kms/site-internal` and reported **`Test Files 64 passed (64)` /
-  `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
-  gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
-  file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  141 files / 1886 tests**, measured 2026-09-17 at the credential-verification-closeout Build
-  (`#780`/`#781`/`#782`) — one new file (`tests/worker-version-state.test.ts`) carrying 7 tests,
-  plus 11 added to the existing `tests/brand-colour-validation.test.ts`, six of which come from one
-  `it.each` table of malformed hex values, so the same caveat as the `PAIRS` tables below applies.
-  The previous figure was **140 files / 1868 tests**, measured 2026-09-16 at the business-case-KMS
-  Build (`#777`) — one new
-  file (`tests/sdd-business-case.test.ts`) carrying 26 tests, with **no** existing file's count
-  moving. Worth noting what that file covers, because it is the second recorded case of a
-  regex-based checker in `scripts/` matching far more than its author intended: a first version of
-  the roadmap phase-closure detector allowed 80 characters between the phase name and the verb and
-  matched ordinary narrative (`P10, two closed`, `P10 and their milestones closed`), reporting a
-  milestone closure on a date when none happened. All three false positives are now pinned as
-  tests. The previous figure was **139 files / 1842 tests**, measured 2026-09-16 at the
-  reference-coverage-reconciliation Build
-  (`#767`/`#770`/`#771`) — three new files carrying 26 tests (decommission ordering and refusals,
-  the AST check confining deletion to that path, and the reference status service), with **no**
-  existing file's count moving: `tests/reference-sync-integrity.test.ts` was edited to satisfy the
-  widened `ReferenceDataSource` interface but gained no test. Before that it was **136 files /
-  1816 tests**, measured 2026-09-15 at `#764`'s Build — seven new files carrying 129
-  tests, for the reference-data framework, area coverage, delivery eligibility, places, the address
-  provider port, saved-address scoping and OSGB36 coordinate conversion. All 139 pass locally; the
-  three `it.skipIf(!DATABASE_URL)` files still report as **skipped** in CI, so CI's own summary
-  reads 3 fewer tests run, which is expected rather than a shortfall.
-  **A lesson worth keeping from that slice: a full DATABASE is indistinguishable from broken code
-  in a test summary.** Those same three live-DB files failed for an afternoon with
-  `could not extend file because project size limit (512 MB) has been exceeded` — nothing to do
-  with their own subject matter — because an oversized reference-data import had filled Aheed's dev
-  Neon project to 489.8 MB of 512 MB and every write was failing. If a live-DB test fails with a
-  message that has no relationship to what it tests, check `pg_database_size(current_database())`
-  against the project ceiling before debugging the test)
-  and treat any shortfall as a non-result to re-run, not a pass. **This number has now been stale
-  twice, and moved a third,
-  fourth and sixth time within the same slice** — `74/874` until `#491` corrected it to `77/903`,
-  `77/903` until `#566` found the real figure was `86/1019` after three P2.6 slices added tests,
-  `86/1019` moved to `86/1023` a few hours later in the same slice's own `/fix` (four tests added to
-  an *existing* file, `tests/shopping-list.test.ts`), and `86/1023` moved again to `87/1025` in the
-  same slice's `/validate` → `/fix` round trip that followed, which added one new file
-  (`tests/search-synonyms-repository.test.ts`, R18's missing coverage) carrying two tests, and
-  `87/1025` moved to `89/1072` the next day at `#567`'s Build (two new files plus five tests added
-  to `tests/shopping-list.test.ts`) — a fifth move, updated at Build rather than left for
-  `/document`, because a Clear sits between the two and the measured number would not survive it —
-  and `89/1072` moved to `89/1076` the same day at `#567`'s own `/fix`: no new file, four tests
-  added to an *existing* one (`tests/list-normalisation.test.ts`), covering the response-shape bug
-  `/validate` found live plus the R15 hang-timeout case that had been missing since Build, and
-  `94/1126` moved to `94/1144` at `#569`'s Build — eighteen tests across five *existing* files,
-  no new file at all, which is the cleanest demonstration yet of the refinement below — and
-  `94/1144` moved to `97/1200` at `#612`'s Build, three new files carrying fifty-six tests, and
-  `97/1200` moved to `100/1221` at `#618`'s Build — three new files carrying eighteen tests
-  plus three added to two existing files, the mixed case both halves of this rule describe at once —
-  and `100/1221` moved to **`102/1316`** at `#633`'s Build: two new files carrying ninety-two tests
-  plus three added to `tests/staff-nav-parity.test.ts`, and `102/1316` moved to **`105/1411`**
-  at the admin-panel-operability Build (`#627`/`#628`/`#630`/`#631`/`#634`) — three new files
-  carrying ninety-one tests plus four added to `tests/staff-orders-query.test.ts`. One of those
-  new files, `tests/panel-token-purity.test.ts`, is `it.each` over panel files discovered from
-  the **filesystem**, so like `operator-doc-coverage` its count moves whenever a `.tsx`/`.ts`
-  file is added under `app/(admin)/` or `components/staff/` — with no test file touched at all.
-  Then `105/1411` moved to **`107/1431`** at `#644`'s Build: two new files
-  (`tests/guest-cart-reaper.test.ts`, `tests/error-rate.test.ts`) carrying eighteen tests, four
-  added to `tests/config-jobs.test.ts`, and — the part worth noting — a **net −2** in
-  `tests/scheduler.test.ts`, which gained a test but lost the two that had hardcoded
-  `toHaveBeenCalledTimes(1)` against a one-entry `JOBS` array while its own comment claimed to be
-  independent of how many jobs were registered. Adding two scheduled jobs broke them. **A count
-  can move DOWN as well as up, and a suite that fails because you registered a new job is a test
-  asserting arithmetic it did not mean to assert** — fix the test's shape rather than bumping its
-  constant.
-  Then `107/1431` moved to **`109/1456`** at the storefront-accessibility-remediation Build
-  (`#649`/`#650`/`#651`/`#652`): two new files (`tests/token-alpha-purity.test.ts`,
-  `tests/motion-reduce-coverage.test.ts`) carrying six tests, and **nineteen** more spread across
-  three existing files — which is the largest existing-file contribution recorded here and is worth
-  understanding rather than just counting. Only four of the nineteen were hand-written; the rest came
-  from `it.each` tables growing: `tests/design-tokens-contrast.test.ts` gained ten because five
-  colour pairs were added to `PAIRS` and five to a new `NON_TEXT_PAIRS`, and
-  `tests/vendor-theme.test.ts` gained five because two of its three new tests are `it.each` over
-  both seeded vendors. **A single new row in a `PAIRS`-style table is a new test**, so a slice that
-  adds no test file and writes only a handful of `it` blocks can still move this number by twenty.
-  Then `109/1456` moved to **`113/1478`** at the deferred-abstraction-sweep Build
-  (`#662`: `#656`/`#653`/`#351`/`#639`/`#75`/`#398`): four new files
-  (`tests/radius-scale.test.ts`, `tests/form-field-aria.test.tsx`,
-  `tests/product-card-stretched-link.test.tsx`, `tests/unit-price.test.ts`) carrying all 22 of the
-  new tests, with **no** existing file's count moving at all. That is the plainest case in this
-  list and is recorded to show the count staying current rather than to add a lesson. Worth noting
-  separately: the same run reproduced **`#538`** — `tests/repository-transaction-safety.test.ts`
-  times out at 5000ms under full-suite load and passes in 1.8s alone. That test parses every file
-  in `lib/repositories/`, and this slice added exports to two of them, so expect it to keep
-  creeping; the fix is a per-test timeout, not a re-run.
-  Then `113/1478` moved to **`114/1495`** at the panel-refusal/category-filter Build
-  (`#350`/`#503`): one new file (`tests/panel-refusal-coverage.test.ts`) carrying three tests, plus
-  **fourteen** added to the existing `tests/staff-products-query.test.ts` — the mixed case, and the
-  first time the existing-file half has outweighed the new-file half by more than 4x. Nothing
-  `it.each`-driven moved; all seventeen are hand-written `it` blocks. `#538` did **not** reproduce
-  on this run, which is worth recording precisely because the entry above says to expect it: it is
-  a load-dependent timeout, so a green run is not evidence it is fixed.
-  Then `114/1495` moved to **`115/1516`** at the ErrorEvent-fallback Build (`#674`): one new file
-  (`tests/error-event-fallback.test.ts`) carrying sixteen tests, plus five added to the existing
-  `tests/instrumentation.test.ts`. Nothing `it.each`-driven moved. `#538` again did not reproduce.
-  Then `115/1516` moved to **`115/1520`** at the storefront-browse-consolidation Build (`#681`):
-  **no new file at all** — four tests added to the existing `tests/catalogue-form.test.ts`, giving
-  `toCategoryOptionGroups` its first coverage since it shipped in `#630`. The file total did not
-  move, which is the case the rule below was written for: watching only the file count would have
-  read this run as unchanged. `#538` again did not reproduce.
-  Then `115/1520` moved to **`117/1544`** at the admin-catalogue-latency-and-cursor-safety Build
-  (`#682`/`#670`): two new files (`tests/pagination.test.ts`,
-  `tests/pagination-guard-coverage.test.ts`) carrying all 24 of the new tests, with **no** existing
-  file's count moving — including `tests/tenant.test.ts`, which passed unchanged even though the
-  slice wrapped `getCurrentVendorIdOrNull` in React `cache()`, because that file mocks `@/lib/db`
-  and each `it()` re-imports the module. Eleven of the 24 come from one `it.each` table of
-  malformed cursors, so the same caveat as the `PAIRS` tables above applies: a single new row
-  there is a new test. `#538` again did not reproduce.
-  Then `117/1544` moved to **`117/1557`** at the storefront-browse-discovery-completion Build
-  (`#694`/`#397`/`#608`): **no new file at all** — thirteen tests spread across six existing files
-  (`tests/unit-price.test.ts`, `tests/filter-chips.test.ts`, `tests/product-filter-form.test.tsx`,
-  `tests/filter-panel.test.tsx`, `tests/product-card-stretched-link.test.tsx`,
-  `tests/products-repository.test.ts`) covering the pack-size facet's new pure functions
-  (`formatPackSize`, `parsePackSizeParam`, `comparePackSizes`) and the widened facet-probe set.
-  `#538` reproduced again on the full-suite run at this slice's own `/validate` and `/fix`
-  re-validation, both times confirmed as the known flake by re-running the file alone (passed in
-  under 3s each time).
-  Then `117/1557` moved to **`127/1618`** across the P401/P613/P402 work that shipped
-  2026-09-13/14 (PRs #744, #746): ten new files
-  (`tests/concurrency-slot-booking.test.ts`, `tests/slot-capacity.test.ts`,
-  `tests/express-sla.test.ts`, `tests/postcodes-api.test.ts`, plus this session's own
-  `lib/fulfilment-slots-service.ts`/`lib/repositories/fulfilment-slots.ts` gaining no dedicated
-  test file of their own — covered instead through the three live-DB test files above) and small
-  additions to `tests/order-confirmation-email.test.ts`/`tests/order-status-email.test.ts`
-  (one `isExpress` field each). Three of the ten new files are genuinely CI-invisible: guarded with
-  `it.skipIf(!process.env.DATABASE_URL)` (see the dedicated bullet on this above), they report as
-  **skipped**, not run, on every CI job — the `127/1618` figure is what a real `DATABASE_URL`-bearing
-  local run reports; CI's own `Test Files`/`Tests` summary line will read 3 fewer *tests run* than
-  this even on a fully green job, which is expected, not a regression.
-  Then `127/1618` moved to **`128/1632`** at the shared-fulfilment-state Build (`#748`,
-  2026-09-14): one new file (`tests/fulfilment-cookie.test.ts`) carrying nine tests, plus a net
-  **+5** in `tests/cart.test.ts` — its four `deliveryProgress` tests were *replaced* by nine
-  `fulfilmentProgress` ones, because the two-argument signature was deleted rather than kept
-  alongside. Worth noting as the mixed case where an existing file's count moves because tests were
-  rewritten, not added: a diff showing five new `it` blocks understates it, and a diff showing nine
-  overstates it. The same run surfaced **`tests/postcodes-api.test.ts` making a REAL network call
-  to `api.postcodes.io`** — it failed the full-suite run with `PostcodeApiError: This operation was
-  aborted` (its own 3s timeout) and passed in 907ms alone. That is a second, distinct full-suite
-  flake from `#538`, it is not load-related in the same way, and a unit test reaching the public
-  internet will fail whenever CI's egress is slow; filed against `#749`'s postcode work rather than
-  fixed in a slice that does not touch that file.
-  Then `128/1632` moved to **`129/1687`** at the fulfilment-config-and-checkout-fixes Build
-  (`#750`/`#749`, 2026-09-15): one new file (`tests/fulfilment-form.test.ts`) carrying 43 tests,
-  plus **twelve** more — and the split is the instructive part. Only six were hand-written, all of
-  them in `tests/postcodes-api.test.ts`, which grew from 2 to 8 while *losing* its real network call
-  (the `#751` flake recorded in the entry above is now fixed, not merely known). The other six were
-  written by nobody: `tests/operator-doc-coverage.test.ts` gained four (four per `/staff/*` route,
-  as above) and `tests/panel-token-purity.test.ts` gained two — one per new file under
-  `app/(admin)/` or `components/staff/`, here `staff/fulfilment/page.tsx` and
-  `components/staff/FulfilmentManager.tsx`. **Adding one `/staff/*` page moves this number by six
-  with no test file opened at all.** Note `tests/panel-refusal-coverage.test.ts` contributed
-  **zero** despite also walking the filesystem: it holds a fixed three `it` blocks that each loop
-  internally, so it gains no test per page. That distinction was asserted wrongly here first and
-  corrected by measuring each file alone against a stashed baseline — **a filesystem-driven test
-  file does not necessarily have a filesystem-driven test COUNT**, and which of the two a file is
-  cannot be inferred from the fact that it discovers routes.
-  That earlier jump is unusually large for two files
-  because `tests/operator-doc-coverage.test.ts` uses `it.each` over routes discovered from the
-  filesystem, so its test count grows by four every time a `/staff/*` page is added — a count that
-  moves on a change to `app/`, with no test file touched at all. Those last three moves are the
-  ordinary case the rule was originally written for, and they are
-  recorded here mainly to show the count staying current rather than to add a new lesson. Each time,
-  the staleness
-  quietly *disabled* the detection it exists to provide: a validator believing `77` would read
-  `#566`'s genuine ten-file shortfall as roughly right. **The rule this last move corrects: it is
-  the TEST total that drifts fastest, not the file total** — "a slice that adds or removes a test
-  file must update this count" was true but incomplete, since adding tests to a file nobody added or
-  removed moves the number too. Update this line whenever `npx vitest run`'s own summary no longer
-  matches it, not only when a file is added or removed, and a count that looks close to the current
-  run is not evidence it is current — check it against a clean run rather than assuming. **Two
-  refinements from hitting it again during `#491`'s Build:** it fired
-  immediately after a heavy `kms/site-internal` build even with the suite run **alone**, so
-  "concurrently" understates it — a build that has just *finished* is enough; and that run exited
-  **1**, not the `exit 0` described above, so a non-zero exit carrying `Failed to start forks
-  worker` is this trap rather than a real failure. Check for orphaned processes
-  (`Get-CimInstance Win32_Process -Filter "Name='node.exe' or Name='workerd.exe'"`) before
-  re-running; an empty result means simply re-running is the right move. This is distinct from
-  **#538**, which is a genuine 5000ms timeout on `tests/repository-transaction-safety.test.ts` under
-  full-suite load (2.69s green in isolation) and reports as a real *failure*; CI's Linux runners are
-  the authority for both.
+- **Exact-pin infrastructure-adjacent packages**, enforced by `tests/dependency-pins.test.ts`:
+  `@neondatabase/serverless` **1.1.0**, `@prisma/adapter-neon` **7.9.1**, `@prisma/client`
+  **6.19.3**. The 7.x adapter against the 6.x client is a **deliberate, ratified straddle** no
+  tooling can warn about (`#560`). Change a pin and its test literal in the same commit.
+- **Never `npm audit fix --force`** — it downgrades wrangler and breaks the OpenNext peer.
+- **Never absorb a breaking major** as a side effect of an unrelated change.
 
-## Dependency & version discipline (learned the hard way)
-- **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their
-  declared semver ranges are looser than real compatibility. **Locked today, and enforced by
-  `tests/dependency-pins.test.ts`:** `@neondatabase/serverless` = **1.1.0 exact**,
-  `@prisma/adapter-neon` = **7.9.1 exact**, `@prisma/client` = **6.19.3 exact**. All three are
-  declared with no range operator, and that test asserts both halves — the installed version *and*
-  the absence of a caret — because checking only the version passes right through a re-loosened pin
-  that happens to still resolve correctly today.
-  **These were raised from `0.10.4` / `^6.19.3` in commit `ac3f0d6` (2026-08-14), deliberately, as
-  part of the Cloudflare connection-exhaustion fix** that introduced `lib/db.ts`'s hybrid
-  `getPrisma()`/`getPrismaWs()` strategy. That commit updated this file's hybrid-driver section but
-  not this paragraph, so for three weeks the pins documented here had not existed since mid-August —
-  and because both became **caret** ranges, `npm install` could have moved them again at any point.
-  Found by hand at `#489`'s `/spec`, ratified rather than reverted in `#491`; the versions have
-  production behind them and reverting would have undone half of a real fix.
-  **`@prisma/adapter-neon` is a full major ahead of `@prisma/client` (7.x against 6.19.3). That is
-  deliberate, known, and tracked by `#560`** — not an oversight to "correct" by bumping one of them.
-  Nothing in the toolchain can warn about it: adapter-neon@7 declares **no `peerDependencies` at
-  all** (it takes `@prisma/driver-adapter-utils` at an exact `7.9.1` and `@neondatabase/serverless`
-  at `>0.6.0 <2`), so npm has nothing to check the client version against. The pin test is the only
-  thing that makes the pairing unable to change silently.
-  `@cloudflare/workers-types` is **not** exact-pinned and is **not** covered by that test — it is
-  types-only, on date-based versioning, and ships no runtime behaviour. Its majors do **not** track
-  wrangler's, whatever this line used to claim: the observed working pairing today is
-  `@cloudflare/workers-types` **5.x** (`5.20260804.1`) with `wrangler` **4.x** (`4.119.0`). Record
-  what is observed here rather than asserting a rule; `#491` found the old "must match wrangler's
-  major (v5)" sentence was false in both halves.
-  **`prisma` (the CLI/generator) is still `^6.19.3` and floats.** `npm ci` pins it via the lockfile
-  so CI is unaffected, but a local `npm install`/`npm update` can drift the generator away from the
-  now-pinned client. Deliberately left out of `#491`'s scope; raise it at `/propose` if it bites.
-- **Do NOT run `npm audit fix --force`.** Here it downgrades wrangler and re-breaks the OpenNext peer.
-  Audit findings are dev/build-tooling (undici→miniflare→wrangler); track under P7, don't force-fix.
-- **Do NOT jump breaking majors mid-stream** without deliberately absorbing the migration (as done for
-  Next 16 / vitest 4 below) — don't let a version bump land as a side effect of an unrelated change.
-  Taking **`@prisma/client`/`prisma` themselves** to 7 is still its own future item (breaking
-  generator) — `#560`. Note the *adapter* is already on 7.9.1 per the pin bullet above; that is the
-  straddle `#560` closes, not a contradiction of this rule.
-- npm 11+ blocks dependency install scripts by default: approve the toolchain via `package.json`'s
-  `allowScripts` (`esbuild workerd sharp unrs-resolver @prisma/client @prisma/engines prisma dotenv`
-  — keys are exact `name@version`, must match what's actually resolved) before expecting
-  test/build/preview to work.
-- **Next 16 defaults to Turbopack for `next build`/`next dev`, and Turbopack cannot resolve
-  `@prisma/client/wasm`'s subpath export** (`Module not found`) even though webpack handles it fine
-  and the package.json `exports` map is valid. Both `dev` and `build` scripts pin `--webpack`
-  explicitly until Turbopack's resolver catches up — don't remove that flag without re-verifying.
-- **There is no `proxy.ts`/`middleware.ts` this project can currently ship, on any configuration.**
-  Next 16 renamed `middleware.js` to `proxy.js` and made Node.js the *only* runtime a Proxy file can
-  use — the `runtime` segment option is not just defaulted, it's **forbidden**; setting it throws.
-  But `@opennextjs/cloudflare` (pinned `^1.20.2`, and `1.20.2` is the newest version published as of
-  P8.5f) unconditionally `process.exit(1)`s the `opennextjs-cloudflare build` step the moment it
-  detects Node-runtime middleware (`ERROR Node.js middleware is not currently supported. Consider
-  switching to Edge Middleware.` — `useNodeMiddleware()` in its own `build.js`). Next 16 forbids the
-  one thing that would satisfy the adapter (opting back into Edge). `next build` alone stays green
-  and even prints `ƒ Proxy (Middleware)` — it never runs the Cloudflare adapter's build step, so it
-  proves nothing about deployability. **Only `npm run preview` (`opennextjs-cloudflare build`) or an
-  actual `deploy-staging`/`deploy-production` run surfaces this.** Hit in P8.5f (#362): a root
-  `proxy.ts` annotating requests with a pathname header passed `next build` and every local
-  `lint`/`typecheck`/`test`, merged to `staging`, and only failed when `deploy-staging` actually ran
-  — confirmed by deliberately merging the unfixed build and watching the real deploy fail before
-  fixing it, not by local reasoning alone. **There is no per-file workaround** — the incompatibility
-  is between "any Proxy file exists" and "this adapter version," not between two implementation
-  choices within one. If a route needs to differ by path (e.g. a header rendering differently on `/`
-  than elsewhere), reach for **an explicit prop passed down from whichever layout/route renders it**
-  instead — a second route group sharing an extracted layout-body component if the App Router
-  structure requires it (see `components/layout/StorefrontChrome.tsx` / `app/(landing)/`), same
-  pattern as the existing `isPortal` prop. Re-check `@opennextjs/cloudflare`'s changelog before
-  reaching for `proxy.ts` again — this note is only current as of `1.20.2`.
-- **ESLint 9 requires flat config** (`eslint.config.mjs`), not `.eslintrc.json`. `eslint-config-next`
-  (bumped to match `next`'s major) exports flat-config-ready arrays directly:
-  `eslint-config-next/core-web-vitals`. The `lint` script is plain `eslint .`, not `next lint`
-  (Next 16 removed that command).
-- `vitest.config.ts` must be `.mts` (or set `"type": "module"` in package.json) — vitest 4's native
-  config loader warns/will error on ESM syntax in a file it loads as CommonJS.
-- **Any test file that constructs its own live Prisma/Neon client (`new PrismaClient({ adapter })`
-  against a real `DATABASE_URL`) must guard its test(s) with `it.skipIf(!process.env.DATABASE_URL)`
-  (or `test.skipIf(...)`), or it crashes the whole `npm test` step in CI — never just fails its own
-  test.** `.github/workflows/quality.yml`'s `quality` job sets no `DATABASE_URL` at all (checked
-  directly: `grep -n DATABASE_URL .github/workflows/*.yml` returns nothing), so
-  `new PrismaNeon({ connectionString: undefined })` throws at construction or first query, outside
-  any `it()` vitest can catch and report as a normal failure. Missed three separate times across
-  two slices before this line existed: `tests/concurrency-slot-booking.test.ts` and
-  `tests/slot-capacity.test.ts` (P401, found fixing PR #744, 2026-09-13) and
-  `tests/express-sla.test.ts` (P402, found during PR #746's pre-flight, 2026-09-14) — the first two
-  were fixed once and the third was written afterward, by a different session, without the guard,
-  proving the lesson doesn't transfer just because the fix exists elsewhere in the same repo.
-  **Verify locally by temporarily moving `.env` aside** (`mv .env .env.bak && npx vitest run
-  <file> ; mv .env.bak .env` — `.env` is what supplies `DATABASE_URL` outside a real Cloudflare
-  request context per the Config section above) and confirming the file reports **skipped**, not
-  run and not crashed; a green full-suite run alone proves nothing here, since `DATABASE_URL` is
-  always set locally.
+## Server Actions (`"use server"` files)
 
-## Server Actions (`"use server"` files) — learned the hard way
-- **A `"use server"` file may export ONLY async functions — nothing else, not even a plain constant
-  used purely to seed `useActionState`.** The restriction is enforced at *runtime*, not build time:
-  `next build`, `tsc --noEmit`, and `npm test` all stay green with a violating file, because none of
-  them load the module through the flight-loader's action-dispatch path. The compiled bundle calls
-  `ensureServerEntryExports([...allExportsOfTheFile])` unconditionally the moment *any* action from
-  that file is dispatched — so a same-file value export (e.g. `export const initialFormState = {...}`
-  living next to the real actions "for convenience") makes **every** action in that file 500 for
-  **every** caller, real browser included, with `Error: A "use server" file can only export async
-  functions, found object`. First hit in P6b1 (#159) — `features/admin/catalogue.ts` exported
-  `initialCatalogueState` alongside `saveProduct`/`saveCategory`; nothing caught it until
-  `npm run preview`'s live write rows at Validate. Keep any such state constant in a plain module
-  (e.g. `lib/<feature>-form.ts`) and import it from the client component directly — never from the
-  `"use server"` file itself.
-- **A page needing both a per-row action and a bulk action over the same rows cannot nest one
-  `<form>` inside another** — HTML forbids it outright. Bind a row's control to a form it isn't a
-  DOM descendant of via the standard `form="<id>"` attribute on that `<input>`/`<button>`, pointing
-  at a separate top-level `<form id="...">` elsewhere on the page; both stay real progressive-
-  enhancement forms, no client JS. First used in the P7a fix (#162) for `/staff/orders`: each row
-  keeps its own untouched single-order `<form action={advanceStatus}>`, and a row's bulk-select
-  checkbox sits in the same `<li>` but carries `form="bulk-advance"` to bind to a separate
-  `<form id="bulk-advance" action={advanceStatusBulk}>` rendered once above the list.
+- **Such a file may export ONLY async functions — not even a plain constant.** Enforced at
+  *runtime*, so `build`/`typecheck`/`test` stay green while **every** action in the file 500s for
+  every caller. Keep state constants in a plain module.
 
-## Repository layer (`lib/repositories/*`) — learned the hard way
-- **A request-scoped facade (resolving a live Prisma client and/or the current vendor from request
-  context) does not belong in the same file as the pure functions it wraps.** Every function
-  exported from a `lib/repositories/<name>.ts` file is expected to take its Prisma client and
-  `vendorId`/`userId` as **explicit parameters** and read no request context — that is what lets a
-  plain `tsx` script (a validation harness, a seed script) import the module in real Node and
-  exercise it directly, without a live Workers request. Adding a `getCurrentVendorId()`-calling
-  factory to the same file — even one that only wraps the pure functions "for convenience" — breaks
-  that property for the whole module, not just for itself: the file's own contract becomes true of
-  *some* of its exports and not others, and a validator running the file's own literal check (grep
-  for `getCurrentVendorId(`, `headers(`, `getAuth(`) will find it. Put the facade in a sibling
-  `lib/<name>-service.ts` instead, matching `lib/auth-rbac.ts`'s existing pattern — a request-context
-  wrapper living *beside*, not inside, `lib/repositories/`. First hit in P7b (#216, PR #223):
-  `getDataRightsRepository()` was added to `lib/repositories/data-rights.ts` at Build for exactly
-  this "convenience" reason, `build-notes.md` disclosed two smaller deviations from spec but not this
-  one, and `/validate` caught it by running `validation.md`'s own R2 probe rather than re-deriving
-  it. Fixed at `/fix` by moving it to `lib/data-rights-service.ts`; the facade also became a plain
-  sync factory once it no longer needed a dynamic `import()` to stay loadable by the same file a
-  `tsx` script has to import.
-- **The rule has TWO halves, and they are enforced by two different tests. Both must pass.**
-  - **Request context** — `tests/repository-purity.test.ts` (#252, CLOSED at P8.1b) fails if any file
-    in `lib/repositories/*.ts` contains a *value* import of `next/headers`, `@/lib/tenant`,
-    `@/lib/auth` or `@/lib/auth-rbac`. Type-only imports stay legal and are the documented pattern
-    (`import type { getPrisma } from "@/lib/db"`). Whole-file, import-level, **no allowlist** — put
-    the facade in `lib/<name>-service.ts` and it passes.
-  - **Client injection** — `tests/repository-client-injection.test.ts` (#409) fails on a
-    `getPrisma()`/`getPrismaWs()` **call expression** inside a repository file. AST-based, not a
-    grep, because these files legitimately name both functions in prose and in
-    `ReturnType<typeof getPrisma>` type positions. **Unscoped as of #411/#412 (2026-08-27): it walks
-    every `.ts` file in `lib/repositories/` discovered from the filesystem**, so a newly added
-    repository file is covered the moment it exists. It shipped in #410 scoped to an explicit
-    four-file list because the other four files were still non-compliant; that list is gone and must
-    not come back.
-  Every repository module has a sibling service where one is needed: `cart`, `categories`,
-  `customers`, `discounts`, `loyalty`, `order-lookup-rate-limit`, `orders`, `products`, `reports`,
-  `reviews`, `roles`, `vendor`, `data-rights`, `promotions`.
-- **When you convert an export, the client moves to the sibling service and the call sites keep the
-  function's NAME.** #411/#412 imported each repository function into its service under a `…Repo`
-  alias and re-exported a same-named wrapper, so 29 call sites changed only their import path. That
-  is deliberate: across 26 conversions a rename is the mistake most likely to go unnoticed, and a
-  type-only import (`import type { AdminProductRow }`) must keep pointing at the repository while
-  the value import moves. **Sweep by symbol, not by name** — `features/admin/storefront.ts` imported
-  `updateVendorStorefrontConfig as updateConfigRepo` and called it under the alias, so a grep for the
-  function name reported zero call sites and made it look like dead code.
-- **A repository export that resolves its own Prisma client cannot be run from a plain `tsx` script
-  AT ALL — this is structural, not a matter of inconvenience, and it is why the client must be a
-  parameter.** `lib/db.ts` imports `PrismaClient` from `@prisma/client/wasm`, which is mandatory on
-  Workers (see the Database section). **Node cannot load that build's WASM query compiler**, so any
-  call routed through `lib/db` dies with `PrismaClientKnownRequestError (ERR_UNKNOWN_FILE_EXTENSION):
-  Unknown file extension ".wasm" for node_modules/.prisma/client/query_compiler_bg.wasm`. Measured
-  2026-08-27 against the dev Neon branch: `getAvailableSpecialities(prisma, vendorId)` **passed** with
-  a client the script built from the bare `@prisma/client` specifier (as `prisma/seed.ts` does);
-  `getVendorConfig(vendorId)`, which resolved its own, **failed**; the identical query through the
-  script's own client **passed**. Same query, same database — the only variable was where the client
-  came from. `scripts/verify-repository-injection.ts` is the committed harness that demonstrates this.
-- **This rule has now claimed a false enforcement THREE times, and the third is the most instructive.**
-  The first two pointed at `tests/repository-vendor-scoping.test.ts` (a test about *scoping*, not
-  *location*). The third was subtler: `tests/repository-purity.test.ts` genuinely enforces what it
-  claims — but its docstring also asserted that "several **compliant** repository functions call
-  `getPrisma()` internally while still taking `vendorId` explicitly," which quietly blessed the other
-  half of the rule as optional. **32 of 109 exports across 8 files** had done exactly that, including
-  every catalogue write, every product-image mutation, loyalty tier CRUD, discount create/deactivate,
-  and the guest order-lookup **rate limiter** — a security control that could not be exercised outside
-  a live request. Three separate repository docstrings (`customers.ts`, `reports.ts`, and
-  `discounts-service.ts`'s "every export there takes `prisma`") asserted the property while the file
-  violated it. **The transferable lesson beyond the earlier two: a test that correctly enforces its
-  own invariant can still launder a second, unenforced invariant if its comments opine on one.**
-  Scope a test's prose to what it checks; if it must mention a neighbouring rule, name the test that
-  enforces that one, or say plainly that nothing does.
-  **A FOURTH docstring turned up while finishing the conversion** — `lib/products-service.ts` said
-  the repository's "admin write path takes `vendorId` explicitly for the same reason these reads now
-  do, so a plain `tsx` script can exercise either without a live Workers request," false for all 14
-  of those exports. Four files asserting the same untrue sentence is what a property nobody ever
-  executed looks like; the fix is `scripts/verify-repository-injection.ts`, which now *runs* all four
-  files' exports against a real database instead of asserting anything.
-- **The conversion found three dead Prisma clients, and the reason nothing caught them matters more
-  than the waste.** `updateProductForVendor`, `setPrimaryProductImage` and `quickUpdateInventory` each
-  opened with `const prisma = getPrisma();` and then **never read it** — every statement ran on the
-  transaction client. So each admin product update, image set and stock tweak constructed an
-  HTTP-adapter `PrismaClient` and discarded it. They had also been recorded in #409's own plan as
-  functions "needing both clients," a claim that survived into two issues and a spec before anyone
-  checked the bodies. **`eslint.config.mjs` enables no `no-unused-vars` rule of any kind** (verified
-  empirically — a file with an unused local lints clean), so nothing in `lint`/`typecheck`/`test`
-  reports an assigned-and-never-read variable. Tracked as **#416**. Until that lands, an unused
-  binding is invisible here: do not assume a variable is used because CI is green.
-- **The reason it took three attempts is worth more than the fix.** This rule twice claimed an
-  enforcement that did not exist: it said `tests/repository-vendor-scoping.test.ts` "allowlists all
-  nine by name … so the list cannot quietly grow." Both halves were false. That test asks whether an
-  exported function **queries a vendor-scoped model without taking a vendor id** — a question about
-  *scoping*, not about *location*. It held six of the nine plus two functions that were never on the
-  list, and was structurally blind to `getDiscountRepository`, `getWebhookOrderService` and
-  `getGuestOrderLookupService`, because a facade that *delegates* to pure functions issues no Prisma
-  call of its own for it to see. An earlier version of this rule also pointed at `getCartRepository`
-  as the example to copy while `getCartRepository` was itself the defect, so a reader following it
-  literally reproduced the problem. **The transferable lesson: a rule that names its own enforcement
-  must be checked against that enforcement, or it becomes a rule that documents a guarantee nobody
-  provides.**
-- **`lib/repositories/roles.ts` was the hardest case and shows what a real fix looks like.** It was
-  never on #252's list, and it had **no pure functions at all** — both exports resolved the vendor
-  themselves and one ran its own `requireVendorRole("ADMIN")`. So it needed a *split written*, not a
-  move: `listVendorTeam(prisma, vendorId)` / `applyVendorRole(prisma, prismaWs, vendorId, actor, …)`
-  stayed, and `lib/roles-service.ts` performs the session check and passes the resulting actor in as
-  **data**. That is what made the hierarchy rules (who may grant ADMIN, who may touch a platform
-  admin, the last-admin self-demotion guard) testable at all — which authorization logic needs most.
+## Repository layer (`lib/repositories/*`)
 
-## Staff panel pages (`app/(admin)/staff/*`) — learned the hard way
-- **Every page's `requireVendorRole(...)` refusal branch must render `<PanelRefusal>` — never
-  `return null` or fall through silently.** **`app/(admin)/layout.tsx`** renders the portal shell
-  (header, tier badge, "View store" link) around whatever the page returns, so a page that returns
-  `null` on refusal still serves `200` with that shell and a blank content area — no "Staff only"
-  message, easy to mistake for a loading state rather than a real refusal. (This line said
-  `app/(admin)/staff/layout.tsx` until P7.5d+e; **no such file has ever existed** — the shell is one
-  segment up, at the route group. The rule's substance was unaffected, but the path a reader would
-  open to check it was wrong, which is the same failure mode as a ruling nobody can find.)
-  **`tests/panel-refusal-coverage.test.ts` (#350, 2026-09-08) now enforces this mechanically**, so
-  the paragraph below is history rather than the enforcement. It walks `app/(admin)/` on the
-  filesystem, has **no allowlist**, and fails a page that calls `requireVendorRole(` without
-  rendering `<PanelRefusal>` — or that returns `null` from an `auth`-conditioned branch. It matches
-  **JSX element names on the parsed TypeScript AST, not text**, because several of these pages carry
-  a comment saying the refusal branch renders `<PanelRefusal>` and never returns `null`, which
-  satisfies any substring check on its own. Do not reintroduce a hand-maintained list.
-  **The history is the reason the test exists.** This rule was enforced by the prose list that used
-  to sit here — naming `categories`, `inventory`, `orders`, `products`, `reports`, `team`,
-  `customers` and `staff/page.tsx` as compliant, plus `runbook` and `loyalty` as fixed — and by the
-  time anyone checked it against the filesystem it was wrong in **two directions at once**. It never
-  mentioned `storefront` (**#350**, the live `return null` instance, found while scoping P8.5b and
-  fixed incidentally in `e3c9642` by a slice editing that page for something else) and never
-  mentioned `discounts` (**the fourth instance**, hand-rolled markup, found only by walking all 25
-  pages at #350's own `/propose` on 2026-09-08); meanwhile `components/staff/PanelRefusal.tsx`'s
-  docstring still claimed `loyalty` kept a private copy three phases after **#136** converted it.
-  Four instances (`runbook` #231, `loyalty` #136, `storefront` #350, `discounts` #350) across five
-  phases, two of them invisible to the list that existed to prevent them. **#231's was the only one
-  a user could have hit** — it fired at `/validate` on the exact signed-in-non-staff case that
-  slice's own `validation.md` had flagged as never exercised.
-  **`storefront` and `discounts` now both render `<PanelRefusal>` on refusal, same as every other
-  page in this section** — that is what closed #350, and `tests/panel-refusal-coverage.test.ts` is
-  what keeps it true from here, not a prose list. When adding a new `/staff/*` page, copy an
-  existing one's refusal branch; the test will tell you if you forgot.
-- **There are TWO navigation surfaces and a new page must be added to BOTH** —
-  `components/staff/PanelNav.tsx` (the persistent nav) and `app/(admin)/staff/page.tsx` (the hub's
-  cards). Until P9.2 (#612) neither was a superset of the other: the nav omitted `brands`,
-  `customers` and `payments` while the hub omitted `bundles`, `promotions` and `storefront`, so
-  three pages vanished from the chrome the moment a user navigated off the hub and three more were
-  unreachable from it. **Nothing detected that for months because each file is individually
-  correct** — the defect existed only in the *relationship* between them, which is the class of
-  thing a per-file review structurally cannot catch, and which is why the fix was a test rather than
-  an edit. `tests/staff-nav-parity.test.ts` now pins the two together and fails if either surface
-  gains or loses a link the other lacks; it parses the literal hrefs out of both files rather than
-  rendering them, because each gates part of its list behind a role check and rendering would test
-  one viewer's slice rather than the full declared set. Three routes are excluded **by name, each
-  for a stated reason**: `/staff` (the hub cannot link to itself), `/staff/errors` (platform-admin
-  only — `PanelNav`'s `currentTier` prop cannot express that, so the hub carries it alone behind its
-  own `auth.via === "platform-admin"` check) and `/staff/search-synonyms` (#602's open work). If you
-  add a page and the parity test fails, add it to the other surface — do not add it to the exclusion
-  list, which exists for routes that genuinely cannot appear on both.
-- **As of #633 there are THREE surfaces, not two: a new `/staff/*` page must also be DOCUMENTED, and
-  `tests/operator-doc-coverage.test.ts` fails until it is.** That test enumerates route directories
-  from the filesystem — no hardcoded list — and requires each to carry exactly one section in one of
-  the three operator guides (`docs/staff-playbook/staff-tabs-guide.md`,
-  `docs/store-admin-guide/admin-tabs-guide.md`, `docs/platform-admin-guide/platform-admin-guide.md`),
-  with seven labelled parts and a `Who can access` line that **matches the page's own
-  `requireVendorRole` arguments** (an `auth.via !== "platform-admin"` refusal counts as
-  platform-admin-only). Two consequences worth knowing before you hit them: the section lives in the
-  guide matching the page's gate, not wherever is convenient; and a `####` heading *inside* a section
-  terminates it as far as the parser is concerned, so keep sub-structure to bold labels and lists.
-  Note also that this test's own test COUNT grows by four per staff page added, which moves the
-  vitest baseline recorded above on a change that touches no test file at all.
-- **The parity and coverage tests pin structure and permissions; NOTHING mechanically checks whether
-  a documented capability exists.** `docs/store-admin-guide/admin-tabs-guide.md` shipped `approved`
-  for weeks telling store admins they could issue Stripe refunds, invite staff members, and grant the
-  Store Admin role. All three were false (**#629**), and a **fourth** — that the delivery fee, free
-  delivery threshold and minimum order are editable — was found only at `#633`'s Build by tracing
-  each claim to a real control, and filed as **#634** (those three `VendorConfig` fields are written
-  by `prisma/seed.ts` and by nothing else in the panel). **When you add or edit an operator-guide
-  section, trace every capability sentence to a form, link or action import on that page** — a
-  capability that reads plausibly and matches a schema field is not evidence of a control, and this
-  is the one class of documentation error no test in this repo can catch.
-- **`isAdmin` in the hub is NOT the same question as "may this person open the page".** It is true
-  for a vendor `ADMIN` as well as a platform admin, and it is additionally downgraded by the
-  `admin-tier` cookie's "view as staff" simulation. `/staff/errors` refuses anyone whose
-  `auth.via !== "platform-admin"` (#508 — a stack trace can reveal internal paths a vendor-scoped
-  account has no reason to see), so gating its card on `isAdmin` would render a link every store
-  admin can see and none of them can open. Gate a platform-admin-only card on `auth.via` directly.
+- **Every export takes its Prisma client and `vendorId`/`userId` as explicit parameters and reads no
+  request context**; request-scoped facades live in a sibling `lib/<name>-service.ts`. Both halves
+  are enforced without allowlists by `tests/repository-purity.test.ts` and
+  `tests/repository-client-injection.test.ts`.
 
-## KMS docs (`docs/*.md`, `specs/*.md`) — learned the hard way
-- **A GFM table cell (or any prose) containing a bare `<` immediately followed by a digit breaks
-  the internal KMS docs site build, and nothing in the app's own `lint`/`typecheck`/`test`/`build`
-  catches it.** `docs/*.md` and `specs/*.md` are assembled into MDX (`npm run
-  kms:assemble:internal`) and built with Nextra in `kms/site-internal`, a separate pipeline the
-  `gates` workflow never runs. MDX parses `<1%` as the start of an invalid JSX tag name
-  (`Unexpected character '1' before name`), so a slice's own PR can pass every check and merge
-  clean while `deploy-docs-internal` fails on the very next push. Hit in P7d (#218):
-  `docs/nfr-baseline.md` shipped a `<1%` table cell in PR #245, and the break was found only when
-  `/ship` opened the staging→main promotion PR and read `deploy-docs-internal`'s status. Fixed as
-  its own follow-up PR (#248) rather than amending the already-merged one. Write `under 1%` (or
-  wrap the value in backticks) instead of a bare `<N` anywhere in `docs/`/`specs/` prose or tables.
-  Before merging a slice that adds or edits either directory, a real check is `npm run
-  kms:assemble:internal && (cd kms/site-internal && npx next build --webpack)` — not just the root
-  `lint`/`build`.
-- **The same pipeline breaks on a bare `{...}` in prose, and this has now cost a build THREE times.**
-  MDX evaluates `{anything}` outside backticks as a **JSX expression**, so quoting a code fragment
-  the natural way — `"Save {formatPrice(saving)}"` inside double quotes — compiles fine, passes every
-  root gate, and then dies at *prerender* with `ReferenceError: formatPrice is not defined` naming
-  the doc's own URL (`/dev/<id>`). Double quotes do not escape anything in Markdown; only backticks
-  do. **Write `` `Save {formatPrice(saving)}` ``**, and note a path template like
-  `` `bundles/{bundleId}/{uuid}.webp` `` is already safe *because* it is in backticks — the trap is
-  the unbackticked case, not the braces themselves. First hit at P8.5e (PR #360, "escape bare
-  curly-brace reference breaking `deploy-docs-internal`"); hit again at P8.5c's `/build-notes`,
-  caught before merge only because that slice actually ran the check above. **A third hit, in the
-  storefront-browsing-ux-fixes slice (#496, 2026-08-31), is the more instructive one**: it wasn't an
-  edit to an existing doc, it was a bare `"Shop {Department}"` written into a brand-new `plan.md`'s
-  *first draft*, describing a UI button's own label in prose. Writing fresh spec prose is exactly as
-  exposed as editing an existing one — there is no "this file is new, so it's fine" exemption. Caught
-  the same way as the second hit: the two-command check below, run before push, not discovered via a
-  failed `deploy-docs-internal` after merge. **Run the two-command check on every slice that adds or
-  edits a spec file, including the very first one you write for it, and read its real exit status** —
-  piping it through `tail` reports the pipe's success, not the build's, which is how a `Next.js build
-  worker exited with code: 1` can look like `exited with code 0`.
-- **A spec's front-matter `id` cannot contain a literal `.`** — `kms/schema/frontmatter.ts`'s `id`
-  regex is `^[a-z0-9-]+$`. A phase name that already has a dot (`P8.1a`, `P7.5a`, `P6.5`, …) is easy
-  to copy straight into `id:` when writing a new `plan.md` at `/spec`, and none of
-  `lint`/`typecheck`/`test`/`format:check`/`build` catch it — only the `gates` workflow's own "KMS —
-  front-matter validation" step does, on the next push. Every existing dotted-phase slice's `id`
-  replaces the dot with a dash and suffixes `-plan` (e.g. `p7-5a-reports-cart-integrity-plan`);
-  follow that convention at `/spec` rather than rediscovering the regex at `/ship`. First hit this
-  way in P8.1a (#334, PR #338): `id: p8.1a-frontend-a11y-debt` failed `gates` on first push, fixed to
-  `p8-1a-frontend-a11y-debt-plan` — which then required its own `npm run kms:build-index` (a
-  previously-invalid `plan.md` becoming valid makes it a newly-countable artifact, so the checked-in
-  `ARTIFACT_INDEX.md`/`docs.ts` go stale in the same commit that fixes the `id`). Run `npm run
-  kms:validate` locally after writing or editing any spec's front-matter — it's fast and catches
-  this before a push, unlike the `<1%` MDX trap above which needs the heavier
-  `kms:assemble:internal` build.
-- **`kms/schema/frontmatter.ts`'s `summary` field is capped at 300 characters
-  (`z.string().min(20).max(300)`), and nothing in `lint`/`typecheck`/`test`/`format:check`/`build`
-  checks it either** — same invisibility class as the two traps above, just a length limit instead
-  of an MDX-parse failure. A `plan.md` written with a full narrative summary (the style this file's
-  own prose encourages) can overrun it easily. First hit at `#565`'s `/validate` (2026-09-03,
-  PR #577): a 363-character `summary` failed only `npm run kms:validate`, which runs in CI's
-  `quality/kms` job — so this would have failed on push, not locally, exactly like the `id` regex
-  trap above. Fixed by trimming to the load-bearing sentence rather than dropping detail from the
-  file's actual prose. `npm run kms:validate` (the same command that catches the `id` regex issue)
-  catches this too — run it after writing any spec's front-matter, not just when the `id` looks
-  unusual.
+## Staff panel pages (`app/(admin)/staff/*`)
 
-## Design tokens & per-vendor branding (`design-system/tokens/tokens.css`, `lib/vendor-theme.ts`) — learned the hard way
-- **A jsdom test that parses `tokens.css` directly proves the file is right — it proves nothing
-  about what a browser actually renders, because `lib/vendor-theme.ts`'s `brandStyle()` injects a
-  second, competing set of CSS custom properties as an inline `style` on every page's root element
-  (ADR-004 decision 5, per-vendor branding), and an inline style always beats a `:root` stylesheet
-  rule on specificity.** `brandStyle()` re-declares each semantic token it lists from that vendor's
-  raw primitive colour — correct for `--color-primary`/`--color-surface-muted`/the three semantic
-  tints, which really are simple `var()` aliases of a primitive in `tokens.css` and need the
-  per-element re-declaration to pick up an override at all (a custom property's `var()` substitutes
-  once, where the property is *declared* — a descendant overriding the referenced primitive does not
-  make an ancestor's already-computed alias recompute). It is **wrong** for any semantic token
-  `tokens.css` has decoupled into an independent literal value, because re-declaring it from a
-  primitive silently reintroduces whatever `tokens.css` moved away from. Hit in P7 closeout (#251):
-  darkening `--color-action`/`--color-accent`/`--color-danger` (plus hover shades) for WCAG AA
-  landed cleanly in `tokens.css` and its contrast test passed, but every real page kept rendering the
-  pre-slice, AA-*failing* hex — found only by pulling live rendered HTML from `npm run preview`
-  against staging at `/validate`, not from the test suite. **Before trusting a `tokens.css` edit,
-  check whether `brandStyle()` also lists the token being changed** — if it does and the change is
-  meant to be a fixed, audited constant rather than something that should keep tracking a vendor's
-  brand colour, remove it from `brandStyle()`'s per-vendor list too, or the CSS file's value never
-  reaches a browser.
-- **SriMart's `VendorBranding` primitives are real, live-differentiated colours (`#1e88e5` blue,
-  `#8e24aa` purple, `#c62828` red), not filler test data** — a change that assumes every vendor
-  looks like Aheed's default green/orange/red will visibly break SriMart's theme, and nothing in
-  `lint`/`typecheck`/`test` checks a second vendor's rendered output. Curl or otherwise fetch a page
-  with `Host: srimart-staging.nocaped.com` (or `srimart.nocaped.com` in production) under
-  `npm run preview` before treating a branding/token change as verified.
-- **A local `VendorDomain.host` value that includes a port can never resolve — seed it port-less,
-  always, even for local-only testing.** `lib/tenant.ts`'s `getCurrentVendorIdOrNull()` runs every
-  request host through `splitHostPort(...).hostname` before the `VendorDomain` lookup, which always
-  strips the port — deliberate and correct, since a real `Host` header on
-  `staging.aheedfoodcentre.nocaped.com`/`nocaped.com` never carries one. A row seeded with a port
-  (e.g. `SEED_SRIMART_HOST=srimart.localhost:8787`, the value a from-scratch local seed might
-  reasonably reach for) silently can never match, and the request falls through to `/coming-soon` —
-  indistinguishable from "this host genuinely isn't mapped," no error anywhere. The line above
-  already models the right convention (`srimart-staging.nocaped.com`, no port, reused as the local
-  `Host` header value even though nothing is actually listening on that domain — only the header
-  string matters to `getCurrentVendorIdOrNull()`, not where the TCP connection actually goes) but
-  didn't say why it has to be port-less until this was hit live: `/validate` for #501 slice A
-  (2026-09-01, `#514`) found a dev-DB row seeded as `srimart.localhost:8787` in an earlier session,
-  fixed by rewriting it port-less. Any `SEED_SRIMART_HOST`/`SEED_AHEED_HOST` value — local, staging,
-  or production — must never contain a port.
-- **Don't assume a local Worker's `VendorDomain` rows use the `nocaped.com` staging convention this
-  file's own bullets above model — query the connected database before writing (or trusting)
-  `curl -H "Host: ..."` commands against `npm run preview`.** A mandatory two-vendor check written
-  into `validation.md` (accessibility remediation, 2026-09-07, `#649`) hardcoded
-  `aheedfoodcentre.nocaped.com`/`srimart-staging.nocaped.com` as the local `Host` header values, on
-  the assumption every developer's local dev DB is seeded that way. The session that actually ran
-  `/validate` had a dev DB seeded instead with `localhost:8787` (Aheed) and `srimart.localhost`
-  (SriMart) — both requests to the documented hostnames silently redirected to `/coming-soon` (0 or
-  2+ vendors, no host match — `lib/tenant.ts`'s documented fallback), with no error and no hint
-  which of "wrong host" or "feature broken" was true. Resolved by connecting Prisma directly
-  (`prisma.vendor.findMany()` / `prisma.vendorDomain.findMany()`) against the same `DATABASE_URL`
-  `npm run preview` uses, reading the real seeded `host` values, and re-running with those instead —
-  which then passed cleanly. **Before trusting any hardcoded `Host` header in a spec or a memory of
-  a previous session, query `VendorDomain` in the environment actually under test** — which
-  hostnames resolve which vendor is a property of that specific database's seed history, not a
-  platform-wide constant.
-- **A `grep` for a retired hex literal against a page's SAVED, rendered HTML can match even when the
-  literal has been correctly removed from every component's own source, because `brandStyle()` must
-  legitimately re-embed that exact hex string as a CSS custom-property VALUE for whichever vendor's
-  primitive happens to equal it.** Hit at P9.2's admin-panel-operability `/validate` (2026-09-06,
-  R22b, `#631`): the retired literals `#e8f5e9`/`#f5f5f0` were removed from every `.tsx` file (proven
-  by a source-level AST/regex sweep with zero matches), yet `grep -E '#(2e7d32|e8f5e9|c8e6c9|f5f5f0)'`
-  against `/staff/inventory`'s saved HTML still matched four times — both inside the rendered
-  `style="--color-action-tint:#e8f5e9;--color-surface-muted:#f5f5f0;..."` attribute and again inside
-  the page's own RSC hydration payload carrying the identical string as JSON, because Aheed's own
-  brand-tint and cream primitives are numerically identical to the hex codes the components used to
-  hardcode. This is the same class this file already records for `<1%` and unescaped `&` in rendered
-  HTML — an absence-check against live output can false-positive on the exact mechanism proving the
-  fix works, not just false-negative on an escaped character. **A live-HTML grep for a retired colour
-  literal is only meaningful against a *second* vendor whose primitives differ from the value being
-  retired** (SriMart's `#1e88e5`/`#8e24aa`/`#c62828`, per the bullet above) — checked against the
-  vendor whose primitive happens to coincide with the old hardcoded value, it cannot distinguish "the
-  literal is gone from the page" from "the literal is still exactly what this vendor's own brand
-  colour resolves to." Confirm the real claim (no literal in component source) with the source-level
-  test instead, and treat a live-HTML hex match as inconclusive rather than a failure until checked
-  against a vendor it should NOT match.
+- **A new `/staff/*` page must land on three surfaces** — `components/staff/PanelNav.tsx`, the hub
+  at `app/(admin)/staff/page.tsx`, and one of the three operator guides — and its
+  `requireVendorRole` refusal branch must render the `PanelRefusal` component, never `return null`.
+  Three tests enforce this. **No test checks whether a documented capability exists**, so trace
+  every capability sentence to a real control.
 
-## Workers AI (Cloudflare REST API calls) — learned the hard way
-- **`result.response` from `POST /accounts/<id>/ai/run/<model>` is NOT reliably a string — for
-  `@cf/meta/llama-3.1-8b-instruct` it comes back as an ALREADY-PARSED JSON value (an array, when
-  the model's reply is JSON) when the reply parses as such, with the string form of the same
-  content sitting separately at `result.choices[0].message.content`.** Both
-  `lib/search-synonym-proposals.ts` (#566) and `lib/list-normalisation.ts` (#567) were written with
-  `typeof payload.result?.response === "string" ? payload.result.response : ""`, and both were
-  built and unit-tested entirely against a stubbed `fetch` that only ever returns `response` as a
-  string — because that is what the code assumed, so that is what the test double encoded, and the
-  double proved nothing about what Cloudflare's own endpoint actually returns. Confirmed live for
-  the first time at `#567`'s `/validate` (2026-09-04): a real call with real
-  `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` succeeded (200, valid JSON body) and the pre-pass
-  still silently extracted zero items on every single call, because `typeof response !== "string"`
-  made the extraction fall through to `""` every time — no error, no failed request, nothing in any
-  log to suggest anything was wrong; the feature just never worked. **This is the same failure
-  shape this file already records for Prisma driver error codes** (`isUniqueViolation()` checking
-  only `P2002` when the HTTP adapter throws `23505`): a hand-constructed test double reproduces
-  whichever shape its author assumed, not the shape the real service actually returns, and the only
-  way to find the gap is a live call. Fixed in `lib/list-normalisation.ts` via an `extractReplyText`
-  helper that accepts `response` as a string (used directly), as a non-string non-null value
-  (re-serialised with `JSON.stringify` so the same bracket-and-`JSON.parse` parser still runs
-  unmodified), or falls back to `choices[0].message.content` when `response` is absent entirely.
-  **`lib/search-synonym-proposals.ts` still has the unfixed assumption** — flagged on `#583` but not
-  fixed there, since that module was out of this slice's scope. **Any code calling Workers AI's REST
-  endpoint and expecting a string reply must widen its extraction the same way, and must verify it
-  against a real call under `npm run preview`** (`.dev.vars` needs `CLOUDFLARE_ACCOUNT_ID`/
-  `CLOUDFLARE_API_TOKEN` — see the Config section above for precedence) — a green unit suite proves
-  nothing here, exactly as it didn't for the Prisma error-code case.
+## Design tokens & per-vendor branding
 
-## Local Stripe webhook testing — learned the hard way
-- **This repo's `.dev.vars` and `.env` both carry a real `STRIPE_SECRET_KEY` (test-mode) by
-  default, so `npm run preview` does NOT run the stub payment adapter** — `lib/payments.ts` picks
-  the stub only when the key is unset, and here it never is. Any spec's `validation.md` that writes
-  "with no `STRIPE_SECRET_KEY` set, the stub adapter is active" (a reasonable-sounding default) is
-  describing a hypothetical, not this environment: checking out in local preview redirects to real
-  hosted Stripe Checkout, same as staging/production. Confirmed at P9.1's `/validate` (#427/#428,
-  2026-08-29) — the guest-order-authorization slice's own `validation.md` assumed the stub path for
-  its live rows; the actual redirect went to `checkout.stripe.com`. Where a live row needs the order
-  a real checkout produced but not the payment itself, resolve the order directly against the dev
-  database instead of relying on the stub's synchronous redirect — it exercises the same
-  post-checkout code either way. Where a row genuinely needs the stub adapter (e.g. asserting the
-  *fallback* URL shape itself, as opposed to what it leads to), that requires temporarily unsetting
-  `STRIPE_SECRET_KEY` and restarting `npm run preview` — `.dev.vars` is read at Worker boot.
-- **`stripe listen`'s webhook signing secret is per-invocation, not fixed** — it will differ from
-  whatever is already sitting in `.dev.vars`'s `STRIPE_WEBHOOK_SECRET` (itself likely written down
-  from a previous, different `stripe listen` session). A mismatch fails the webhook route's
-  signature check silently from the outside: the Stripe test-card payment itself succeeds, the
-  order sits forever in `PENDING_PAYMENT`, and nothing in the browser or `npm run preview` console
-  says why. Before relying on a live checkout→webhook round-trip, start
-  `stripe listen --forward-to <preview-url>/api/webhooks/stripe`, copy the secret it prints into
-  `.dev.vars`, and **restart `npm run preview`** — `.dev.vars` is read at Worker boot, so editing it
-  with the preview server already running has no effect until it restarts.
-- **`stripe listen` only forwards events that occur while it is running.** A payment completed
-  *before* starting the listener is not retroactively forwarded — `stripe events resend <id>`
-  resends to a registered webhook **endpoint** in the Stripe dashboard, not to an ad-hoc CLI
-  listener, so it doesn't help here either. Place a fresh order after `stripe listen` is confirmed
-  ready (`Ready! ... webhook signing secret is whsec_...` in its output) rather than trying to
-  recover an already-completed payment's event.
-- **Resend's API rejects `to` addresses on unverified domains (`example.com` included) even in test
-  mode**, so a live checkout using a demo account's `@example.com` address will genuinely fail to
-  send — `lib/email.ts`'s try/catch swallows it correctly (this is what R20-style requirements are
-  for), but it also means the actual outbound HTML is never observable this way. Confirmed in
-  P7.5b's `/validate` (#262): the full webhook→confirm→email pipeline was proven live up to the
-  point of the real Resend call; the literal HTML bytes still have to come from a unit test that
-  parses the outbound request body, not from watching a real send succeed.
-- **`npm run preview`'s local Worker exposes a queryable log of its own `console.*` output — use it
-  instead of trying to read `npm run preview`'s own terminal, which interleaves the dev server's own
-  noise with application logs and scrolls past whatever a webhook call just printed.** `wrangler dev`
-  captures every request/console line into a local SQLite-backed store, queryable via
-  `POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query` with a body of
-  `{"sql": "..."}` against a `logs` table (`ts_ms`, `level`, `message`, plus `trace_id`/`span_id`).
-  This is what actually proves a `console.error` line's exact wording, that it fired exactly once,
-  and that it did **not** fire on an adjacent case — filter on `level = 'error'` and a substring of
-  the order number or session id. Used to confirm R23/R24/R31–R33 live for #429's webhook-binding
-  slice (2026-08-29): a `binding-mismatch` refusal logs exactly the reason/event-type/order/session
-  line the route promises, a duplicate delivery (`already-processed`) logs nothing, and no unrelated
-  error fires alongside either. `GET .../cdn-cgi/local/explorer/api/local/workers` lists the other
-  endpoints the same Explorer API exposes (KV, D1, R2, Durable Objects, Workflows).
+- **A `tokens.css` edit may never reach a browser** — `brandStyle()` injects competing custom
+  properties inline, and inline beats `:root`. Check whether `brandStyle()` lists the token too, and
+  verify against a **second vendor**: SriMart's colours differ, and several checks false-positive
+  against Aheed's.
 
-## Live-testing staff panel server actions without a browser — learned the hard way
-- **A plain progressive-enhancement server-action form (`<form action={someServerAction}>`, no
-  client component) can be submitted with `curl`, with no browser and no JS runtime at all** —
-  that is the entire point of building it that way. The rendered HTML carries the target as a
-  hidden field named `$ACTION_ID_<hash>` (empty value) inside a `multipart/form-data` form whose
-  own `action` attribute is empty (posts to the current page URL). Fetch the page once, grep for
-  `\$ACTION_ID_[a-f0-9]*` paired with the row's other hidden fields (e.g. `refusalId`), then
-  `curl -X POST <page-url> -H "Cookie: <session>" -H "Origin: <same-origin>" -F '$ACTION_ID_<hash>=' -F 'refusalId=<id>'`
-  reproduces exactly what a no-JS browser submit would send. Used this way to drive
-  `/staff/payments`'s reconcile/recover actions end-to-end against a real dev database and a real
-  Stripe test-mode session for `#454`'s `/validate` and `/ship`, with no Chrome extension
-  available for part of that session.
-- **A `useActionState`-bound form (still a real `<form action={...}>`, but wrapped in a client
-  component so a field error can render from the action's return value) is ALSO curl-drivable, but
-  carries a different hidden-field shape than the plain progressive-enhancement pattern above —
-  grepping for `\$ACTION_ID_` on one finds nothing.** Instead of a single `$ACTION_ID_<hash>` field,
-  React renders `$ACTION_REF_<N>` (empty value), `$ACTION_<N>:0` (JSON `{"id":"<action-hash>",
-  "bound":"$@1"}`), `$ACTION_<N>:1` (JSON-encoded previous state, e.g.
-  `[{"error":null,"field":null,"notice":null}]`), and `$ACTION_KEY` (a per-row nonce that changes
-  every render, so it must be re-read from a fresh page fetch before each submission, not reused
-  across requests). Confirmed live in P2.6 slice 3 (#566) driving `/staff/search-synonyms`'s
-  add/edit/remove/approve/reject forms end-to-end with no Chrome extension available — same
-  `curl -F` approach as the plain-form case, just with these four fields instead of one, plus the
-  named fields the action actually reads (e.g. `alias`, `canonical`, `intent`).
-- **A server action a client component calls directly (`await someAction(arg1, arg2)`, e.g.
-  `addToCart`) rather than binding to a `<form action={...}>` is ALSO curl-drivable, but as a
-  wholly different wire protocol — neither `$ACTION_ID_<hash>` nor the `useActionState` four-field
-  shape appears anywhere in the HTML, because there is no form for React to render one into.** Next
-  ships these as a POST to the current page URL carrying a `Next-Action: <action-id>` header (the
-  action's id — the same stable build-time hash `.next/server/server-reference-manifest.json` maps
-  to a `filename`/`exportedName`, per the existing entry below) with a plain-text body that is a
-  JSON **array** of the call's positional arguments, in order — `["<productId>", 1]` for
-  `addToCart(productId, delta)`. No cookie-derived nonce, no per-render key: `curl -b <cookies>
-  -X POST <page-url> -H "Next-Action: <id>" -H "Content-Type: text/plain;charset=UTF-8" --data-raw
-  '["<arg1>", <arg2>]'` reproduces the call exactly, and the response is the page's normal RSC
-  payload (parse it for the effect, e.g. re-fetch the affected page rather than trying to read a
-  return value out of the stream). Used this way in `#612`'s `/validate` to add a real product to a
-  guest cart (`features/cart/add-to-cart.ts`'s `addToCart`) with no browser and no client JS, so
-  `features/checkout/place-order.ts`'s delivery-postcode refusal (R24) could be driven end-to-end
-  against a real cart rather than stopping at the cheaper storefront-header signal (R23).
-- **`npm run preview`'s `next build` step type-checks every `.ts` file its tsconfig includes —
-  which, by default, means the repo root — so a type error in a scratch validation script placed
-  at the repo root (rather than under `lib/`, `app/`, etc.) fails the WHOLE build**, not just that
-  script. `npx tsx path/to/scratch.ts` alone won't catch this, because `tsx` only type-checks (or
-  rather doesn't type-check at all, by default) the file it runs — the failure only surfaces on
-  the next `next build`/`npm run preview`, wasting a full OpenNext build cycle. Run `npx tsc
-  --noEmit` once after writing a repo-root scratch script and before relying on it inside a
-  preview cycle.
-- **Better Auth's session validation is bound to the Host/Origin a request declares, not just to
-  a valid session cookie** — replaying a genuine session cookie (captured signing in at
-  `127.0.0.1:8787`) against the same server with a spoofed `Host: srimart.localhost:8787` header
-  (to simulate reaching a second local vendor domain without a second real hostname) is correctly
-  rejected with `401`/`Invalid origin`, not silently accepted. This is Better Auth's own
-  cross-origin protection firing, not a bug in this app's vendor-scoping. **Signing in fresh under
-  the spoofed host doesn't work either** — Better Auth's `trustedOrigins` only lists this
-  project's real dev/staging/production hosts, so a made-up local alias is rejected outright with
-  `Invalid origin` at sign-in. Cross-tenant **write** scoping can still be proven without ever
-  switching hosts: submit the action against a row belonging to a *different* vendor while signed
-  in and already on your own vendor's host — the scoping lives in the query's `where` clause, not
-  in which host served the page, so this exercises the exact same guard a real cross-tenant attack
-  would hit. Cross-tenant **read/list** scoping (a page never showing another vendor's rows) is
-  provable the same way, from one side only: confirm your own vendor's list excludes a row you
-  know belongs to someone else, rather than trying to view the other vendor's own list.
-- **A `grep` pattern written against a literal string (e.g. a doc title containing `&`) can silently
-  false-negative against a page's real, rendered HTML, because HTML-escapes it as `&amp;` — and a
-  `validation.md` row's own example command is not exempt from this.** Hit at `#633`'s `/validate`
-  (2026-09-06): the spec's own suggested check, `grep -c 'Platform & Technical Admin Guide'
-  runbook-admin.html` / `runbook-platform.html`, was meant to print `0` then a non-zero count,
-  proving the platform-admin guide is withheld from a vendor admin and shown to a platform admin.
-  Run literally, it printed `0` for **both** files — not because the feature was broken, but because
-  Next's rendered output always carries `Platform &amp; Technical Admin Guide`, so the unescaped
-  pattern never matches the positive case either. Confirmed the feature actually worked by re-running
-  with the escaped string; the code was correct, the validation doc's example command was not.
-  **Before treating a grep-against-live-HTML row as failed (or as passed) on the strength of a
-  zero/non-zero count, check whether the literal string being matched contains `&`, `<`, `>`, `"`, or
-  `'`** — any of which a browser or React's server renderer will escape — and grep for the escaped
-  form instead of assuming the spec's literal example command is already correct.
-- **The same failure shape recurs without any HTML escaping involved — a `grep` command in
-  `validation.md` can false-positive on its own explanatory prose or its own file-inclusion flags,
-  not just on rendered output.** Hit twice in the same slice's `/validate` (accessibility
-  remediation, 2026-09-07, `#649`/`#650`). First: a row asserting `lib/form-classes.ts` carries no
-  `"use server"` **directive** used `grep -c "use server" lib/form-classes.ts`, expecting `0` — it
-  returned `1`, because the file's own doc comment *explains* it is not a `"use server"` file, and
-  that sentence contains the phrase being searched for. Second: a row asserting zero
-  `focus:outline-none` occurrences added `--include=*.ts` (needed to reach `lib/form-classes.ts`,
-  which isn't `.tsx`) and collaterally re-included `app/(admin)/staff/runbook/docs.ts` — the
-  generated KMS bundle the same file's own "Before you start" section had already said to exclude,
-  which legitimately quotes this very spec's prose discussing the phrase. Neither was a real
-  violation; both were confirmed by hand (`grep -n '^"use server"'` for the first; adding
-  `| grep -v "runbook/docs.ts"` for the second) and the `validation.md` rows corrected at
-  `/document` rather than left to mislead the next reader. **A grep-based validation row proves
-  what it claims only when the pattern can't also match a comment, docstring, or generated bundle
-  explaining or quoting the very thing being searched for** — anchor to a directive's actual
-  position (`^"use server"`, not a bare substring) or explicitly exclude the generated artefact,
-  the same way the `&`-escaping case above requires checking the pattern before trusting the count.
-- **A whole-page grep for an attribute that has a legitimate reason to appear MORE THAN ONCE on the
-  same page proves nothing about the one occurrence a requirement actually cares about.** Hit at
-  the storefront-browse-discovery-completion `/validate` (2026-09-09, `#694`): a requirement that
-  `CollectionNav` render with no `aria-current="page"` inside it specified its check as
-  `grep -c 'aria-current="page"' cat.html` printing `0` — but a real category page also renders
-  `DepartmentScroller` and `SubcategoryLinks`, both of which correctly carry `aria-current="page"`
-  on the active department/subcategory tab, for reasons that have nothing to do with
-  `CollectionNav`. The literal command would never print `0` on any category page, regardless of
-  whether `CollectionNav` itself was built correctly. The underlying requirement was genuinely met
-  — confirmed by narrowing the check to the specific element (`grep -oE '<nav aria-label="Collections".{0,1500}'`
-  and inspecting that no `aria-current` appears inside it) — so this was a spec-wording defect, not
-  a code defect: the check counted the whole page when the requirement was about one landmark
-  inside it. **The same rule as the two entries above, one level up**: a grep-based validation row
-  proves what it claims only when the pattern (or, here, the *scope* being searched) can't also
-  match something unrelated that has its own legitimate reason to look identical — scope the search
-  to the specific element a requirement is actually about, not the whole rendered page, whenever
-  more than one thing on that page could plausibly carry the same attribute.
-- **`curl -b jar.txt -c jar.txt` combined with a custom `-H "Host: ..."` header can silently fail
-  to persist a `Secure`-flagged `Set-Cookie` for a multi-label local hostname, while the same
-  pattern works fine for a single-label one — with no error, just an empty jar file.** Hit at
-  `#748`'s `/validate` (2026-09-14), testing both seeded local vendor hosts under `npm run
-  preview`: `curl -c jar.txt -H "Host: localhost:8787" http://127.0.0.1:8787/...` correctly wrote
-  the returned `aheed_cart` cookie into the jar (domain `localhost`, `Secure` flag preserved), but
-  the identical pattern against `-H "Host: srimart.localhost"` produced a jar containing only the
-  file header comments — no cookie line at all — even though the response's `Set-Cookie` header was
-  present and well-formed. Every subsequent request replaying that empty jar got a **fresh**
-  guest-cart id each time (the server correctly treats "no cookie" as "no identity" and mints a new
-  one), which reads as "the cart never persists" rather than "curl never saved the cookie." The
-  fix is to skip the jar entirely for a multi-label local host: extract the value straight out of
-  the `Set-Cookie` response header (`grep -i "^set-cookie: <name>" | sed -E 's/^[Ss]et-[Cc]ookie:
-  ([^;]+);.*/\1/'`) and pass it back explicitly on every later request as `-H "Cookie: <name>=<value>;
-  ..."`, rather than relying on `-b`/`-c` at all. This matters specifically for this repo's own
-  documented two-vendor testing pattern (`validation.md`'s "Two vendors matter here" rule) — Aheed's
-  local host is single-label (`localhost:8787`) and works fine with a jar; SriMart's
-  (`srimart.localhost`) does not, so a validator who only smoke-tested the jar approach against
-  Aheed would trust it for both.
+## React & Next.js Hooks
 
-## Better Auth (`lib/auth.ts`, ADR-002) — learned the hard way
-- **A bare top-level `onRequest` key in `betterAuth({...})`'s config is accepted by TypeScript and
-  never invoked at runtime.** `BetterAuthOptions`'s type carries an `onRequest` field, so
-  `betterAuth({ onRequest: myHandler, ... })` type-checks cleanly and looks correct on read — but
-  Better Auth's own `router()` (`node_modules/better-auth/dist/api/index.mjs`) always installs its
-  *own* internal `onRequest` on the underlying `better-call` router, and that internal
-  implementation only loops over `ctx.options.plugins[].onRequest`; it never reads a bare
-  `ctx.options.onRequest`. The only way to hook a request is a **plugin**: `{ id: "some-id",
-  onRequest: async (request, ctx) => {...} }` registered via `plugins: [...]`, and its return
-  contract also differs from what a bare handler would suggest — `{ response: Response }` to
-  short-circuit, `{ request: Request }` to continue with a modified request, or `void`/`undefined`
-  to continue unmodified (`@better-auth/core`'s `BetterAuthPlugin` type). A bare `Response` return
-  value, or nothing, is silently swallowed either way, because the code path that would have read it
-  never runs. Found live in **#483** (2026-08-31): P9.1's auth rate limiter (#431, `lib/auth.ts`)
-  had used a top-level `onRequest` key since it shipped on 2026-08-29 — confirmed with a temporary
-  diagnostic log that it never printed for any real request, at any point, regardless of path or
-  database state. **Any future request-level hook into Better Auth (rate limiting, logging,
-  header injection, request rewriting) must be a plugin, never a bare config key** — verify live
-  under `npm run preview` with a real request, not by reading the type or by `tsc --noEmit` passing,
-  since neither would have caught this.
-- **Confirm a Better Auth endpoint's real path from its own route registration
-  (`node_modules/better-auth/dist/api/routes/*.mjs`'s `createAuthEndpoint("/...")` calls), never
-  from the intuitive short form.** Email/password sign-in is `/sign-in/email`, not `/sign-in`;
-  sign-up is `/sign-up/email`; the password-reset request endpoint is `/request-password-reset`,
-  not `/forget-password` (that name exists only as an internal label inside the unused `emailOTP`
-  plugin). A path-matching check written against the short form silently never matches real traffic
-  — found live in **#481** (2026-08-31) the same way as #483 above: 7 wrong-password requests to the
-  real `/sign-in/email` endpoint all returned `401`, never `429`, because `endsWith("/sign-in")` is
-  false for a path that ends in `/email`. Better Auth's own internal default rate limiter
-  (`node_modules/better-auth/dist/api/rate-limiter/index.mjs`'s `getDefaultSpecialRules`) matches
-  the *stripped*, basePath-relative path with `startsWith` — not directly transferable to a hook
-  reading `new URL(req.url).pathname`, which is the full, unstripped path (`authOnRequest` in
-  `lib/auth.ts` reads `endsWith` against the real full-path suffixes instead; see the code comment
-  there for why `startsWith` would silently never match anything in that context).
-- **A model added to `prisma/schema.prisma` for a Better Auth–adjacent feature needs its own
-  migration checked in the same PR, and CI passing is not evidence one exists.** `#431` added the
-  `AuthenticationAttempt` model but no migration was ever generated or committed for it, in any
-  branch (**#482**, 2026-08-31) — `lint`/`typecheck`/`test`/`build` all stayed green throughout,
-  because none of them touch a live database. `prisma migrate status` reporting "up to date" is not
-  reassurance either: with no migration to be pending, there is nothing for it to flag. The table
-  did not exist in the dev database and, since `deploy-staging`/`deploy-production` both run
-  `prisma migrate deploy` from the same committed `prisma/migrations/` directory, almost certainly
-  never existed in staging or production either. After adding or changing a model this app's runtime
-  code depends on, confirm the migration exists (`ls prisma/migrations/`, not just `git diff
-  prisma/schema.prisma`) and — for anything security- or data-integrity-relevant — that a live query
-  against it actually succeeds under `npm run preview`, not just that the ORM call type-checks.
+- **A `useEffect` that closes a UI element on `pathname` change must NOT list that element's `open`
+  state in its dependencies** — opening it re-triggers the effect and closes it immediately. Call
+  the close function unconditionally and silence the specific lint rule instead.
 
-## React & Next.js Hooks — learned the hard way
-- **A `useEffect` that listens for `pathname` changes to auto-close a UI element (e.g. a drawer/modal) must NOT include its `open` state in its dependencies.** If `open` is included, the act of opening the drawer changes `open` to true, which triggers the effect immediately and closes the drawer right back. Hit in P8: a cart drawer instantly closed on open because the builder passed `open` and `close()` into the dependency array to satisfy the lint rule. The correct pattern is to call the closure function unconditionally (e.g., `close()`) inside the effect, leaving `open` out of the dependency array, and if needed, explicitly silencing the specific lint rule (e.g., `react-hooks/set-state-in-effect`) for that line rather than changing the dependency semantics.
+## Windows shell & local development
+
+- **Use the Edit/Write tools for file content; keep PowerShell for git, npm and gh.**
+  `Get-Content`/`Set-Content` double-encodes UTF-8 and rewrites line endings. Check
+  `git diff --numstat` after any scripted rewrite.
+- **Run `npx vitest run` alone** — beside or straight after a heavy build its forks pool silently
+  fails to start workers and whole files never execute, sometimes still exiting 0.
+- **Stopping `npm run preview` does not stop it** — kill the whole `node`/`workerd` chain first, or
+  the next build fails with `EBUSY`.
+- **Server actions and staff pages are drivable with `curl`, no browser needed.**
 
 ## Hard stops
+
 - Never invent infrastructure or credentials. If a resource/secret is missing, STOP and list what
   the human must create.
 - Propose (Gate 1) before implementing anything non-trivial; show the plan and wait.
 - Build only what the current stage requires. Reuse before create.
+
 
 <!-- BEGIN:nextjs-agent-rules -->
 

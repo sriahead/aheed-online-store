@@ -57,7 +57,7 @@ exact shared-database problem this split removed.
 
 A **second**, separate Neon project holds shared UK postcode/place reference data — its own schema
 (`prisma/reference/schema.prisma`), its own migrations and its own generated client. See
-`CLAUDE.md`'s "There are TWO databases" section and `specs/architecture.md` §3.0 for why it exists
+`specs/architecture.md` §3.0 and `docs/developer-portal/runtime-pitfalls.md` for why it exists
 and how it's reached (`lib/reference/` only). To populate it from empty in a new environment, in
 this order, against that environment's `UK_LOCATION_REF_DIRECT_URL`:
 
@@ -482,4 +482,210 @@ DIRECT_URL=<env-direct-url> npm run demo:accounts -- remove
 - **"gh not authenticated" / "wrangler not authenticated"** — run the prerequisite login above.
 - **A single `✗ NAME`** — that one secret failed (e.g. token lacks scope); the rest still applied.
   Fix and re-run; re-running is idempotent (it overwrites).
+
+
+---
+
+## Config precedence, and the traps in it
+
+Moved here from `CLAUDE.md` in #786, which now carries only the one-line rule and a pointer to this
+section. All config goes through validated `lib/config` (zod); nothing reads `process.env` directly.
+
+- All config through validated **`lib/config`** (zod). Precedence is the **Cloudflare request context
+  first**, then `process.env` — `readEnv()` tries `getCloudflareContext()` and only falls through to
+  `process.env` when there is no Worker request context. So under `npm run preview` (and on a real
+  Worker) **`.dev.vars` wins**; `.env` wins only where no Cloudflare context exists — `next dev` and
+  plain Node scripts (`prisma/seed.ts`, `scripts/*`, migrations). This line previously claimed the
+  reverse ("`process.env` first … a stray `.dev.vars` can't shadow it"); it was wrong from the day
+  `lib/config.ts` was written and was corrected during P4a's validation, where it mattered — see
+  **#119**, where `.env` and `.dev.vars` point at *different Neon projects*, so a fixture script and
+  the app under `preview` silently read different databases. Check both before trusting a live result.
+- **The precedence above is per-key, not per-environment, and that distinction matters when you're
+  deliberately trying to simulate a secret being unset.** `readEnv(key)`'s actual body falls through
+  to `process.env[key]` whenever the Cloudflare-context value for *that key* isn't a non-empty
+  string — not only when `getCloudflareContext()` itself throws. So commenting a secret out of
+  `.dev.vars` alone does **not** simulate "unset" if `.env` still carries a real value for the same
+  key: `next build` bakes `.env` into the built Worker's own `process.env` regardless of Cloudflare
+  context, and `readEnv` silently prefers that leftover value the moment `.dev.vars`'s copy goes
+  missing. Confirmed live at `#618`'s `/validate` (2026-09-06): commenting out `STRIPE_SECRET_KEY`
+  in `.dev.vars` only, restarting `npm run preview`, and calling a route gated on
+  `getPaymentEnv().STRIPE_SECRET_KEY` still ran as if the key were set — because `.env` still had
+  it. The fix is to comment the secret out of **both** files before restarting; a single-file edit
+  proves nothing here. This is a real deployed environment's behaviour too, not a local-only quirk —
+  staging and production have no `.env` file at all, so this fallback path is dormant there, but
+  local preview always has one and will use it the moment `.dev.vars` stops naming a key.
+- **A `lib/config.ts` accessor that THROWS when its field is required-in-production (the
+  `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`JOB_INVOCATION_TOKEN` pattern: a zod `superRefine`
+  that adds an issue when `process.env.NODE_ENV === "production"` and the value is absent) makes
+  that condition UNREACHABLE as a plain falsy check in any caller, because `NODE_ENV` is
+  unconditionally `"production"` in every BUILT Worker this app ever runs in** — `npm run preview`
+  included, not just staging/production — since `next build` sets it regardless of deploy target.
+  A route written as `const { X } = getXEnv(); if (!X) { ...graceful handling... }` never reaches
+  its own `if`: the accessor throws first, and the graceful branch is dead code that only "works"
+  under `next dev` or a plain Node script, neither of which this class of route actually runs under.
+  Found live at `#618`'s `/validate` (2026-09-06): `app/api/jobs/reconcile-payments/route.ts`'s own
+  documented 503-on-missing-secret behaviour (R10, R23) was unreachable this way, reproducing as an
+  uncaught `ZodError` (a bare 500) instead — and `app/api/webhooks/stripe/route.ts` has the
+  identical latent defect for `STRIPE_WEBHOOK_SECRET`, pre-existing and unfixed (**#621**). **Any
+  route that wants to treat "this required-in-production secret happens to be absent right now" as
+  its own recoverable case — rather than the hard failure the accessor is designed to be — must
+  catch the accessor's throw itself**, e.g. a small `readOptional(() => getXEnv())` wrapper, rather
+  than assuming the accessor can hand back an empty value to check. Verify any such route's
+  fail-closed branch live, under `npm run preview` with the secret genuinely unset in both `.env`
+  and `.dev.vars` (see the bullet above) — a unit test against the schema alone proves the schema
+  throws, never that the route calling it actually survives the throw.
+- **Checking `.env` against `.dev.vars` is necessary but NOT sufficient — diff both against
+  `secrets/staging.vars` and `secrets/production.vars` before any live-DB work.** Two files drift
+  into agreement on the *wrong* target as easily as they drift apart from each other. At P5a's
+  validation they agreed perfectly and both pointed at **production** (`ep-young-glitter-…`), while
+  the surrounding config in the same file (`S3_BUCKET`, `CDN_BASE_URL`) correctly said *staging* —
+  so nothing about the file looked wrong, and P5a's migration reached the production database ahead
+  of its promotion PR. It was additive and provably harmless (row counts unchanged, no drift), but
+  the same mistake against a destructive migration would not have been. **A "staging-sounding" file
+  is not evidence the DB host is staging; only the host is.** `secrets/*.vars` are gitignored but
+  present in a working checkout, which is what makes this a two-second check.
+- `.env` format: no spaces around `=`, **quote values**, comments on their own line (a trailing
+  `# comment` or leading space has silently broken connection strings here).
+- Runtime secrets live in Cloudflare (`wrangler secret put NAME --env <env>`); CI secrets in GitHub
+  environments. Never commit secrets; never read `DIRECT_URL` at runtime.
+- **`wrangler secret list --env <env>` reports the SCRIPT's secrets, not the RUNNING version's
+  bindings — so a secret can be listed there while the deployed Worker has no such binding at all,
+  and every feature gated on it degrades silently.** Found 2026-09-16 (`#767`/`#771`): both
+  `UK_LOCATION_REF_DATABASE_URL` and `UK_LOCATION_REF_POSTCODE_AREAS` appeared in
+  `wrangler secret list --env staging`, while the Cloudflare API showed the *deployed* version
+  (`f7e5c0ca…`, the CI deploy at `2026-09-16T06:55:51Z`) carrying 19 bindings with **neither among
+  them** and no deployment event after that timestamp. Staging therefore answered `UNVERIFIED` for
+  every postcode for a day while its reference database was perfectly healthy — the same two
+  postcodes returned real data from `npm run preview` against that identical database. **Nothing
+  logged**, because `lib/reference/`'s guard returns before it constructs a client, which is correct
+  behaviour and exactly why the silence is total. **A secret added after the last deploy is not
+  live until something deploys**; a `wrangler secret put` normally triggers that itself, but a
+  dashboard edit or a `wrangler versions secret put` need not, and the listing looks identical
+  either way. **To answer "does the running Worker actually have this binding?", read the deployed
+  version**: `GET /accounts/<acct>/workers/scripts/<script>/deployments` →
+  `result.deployments[0].versions[0].version_id` → `GET …/versions/<id>` and inspect
+  `result.resources.bindings`. `npx wrangler deployments list` and `npx wrangler tail` both failed
+  here with `fetch failed` from Git Bash while `wrangler secret list` and plain `curl` worked, so
+  reach for the REST API rather than assuming the account is unreachable.
+- **The SAME undeployed-version state has a second, LOUDER consequence the bullet above does not
+  describe: it wedges CI outright, and the error blames secrets rather than deployment state.**
+  A secret edited through the Cloudflare **dashboard** creates a new Worker version and does **not**
+  deploy it. Every subsequent `wrangler secret put` against that Worker then fails:
+  ```
+  Secret edit failed. You attempted to modify a secret, but the latest version of your
+  Worker isn't currently deployed.
+  ```
+  **Both `deploy-staging.yml` and `deploy-production.yml` OPEN their deploy step with
+  `wrangler secret put`** (`CLOUDFLARE_ACCOUNT_ID`, then `CLOUDFLARE_API_TOKEN`, before
+  `wrangler deploy` is reached), so a single dashboard edit fails **every future deploy on that
+  environment** — including deploys carrying unrelated fixes — until the pending version is
+  deployed. Found live 2026-09-16 (`#781`) during `#755`'s credential rotation: both deploy reruns
+  failed this way, and because the message names *secrets*, the natural reading is "the token is
+  wrong" rather than "an undeployed version exists". Nothing in the repository hinted otherwise.
+  **Recover by deploying the pending version** — wrangler's own option (2):
+  `npx wrangler versions deploy <version-id>@100 --env <staging|production>`, taking the newest
+  version id from the REST API call in the bullet above. After that the workflow rerun succeeds
+  normally. **Avoid the problem by not editing secrets in the dashboard at all**: use
+  `node scripts/configure-env.mjs <staging|production>`, which writes through `wrangler secret put`
+  and therefore deploys as it goes, updating the GitHub environment secrets in the same pass.
+  `npx tsx scripts/verify-storage-credentials.ts` now reports this state (`STALE`) for both
+  Workers, so it is detectable before the next deploy discovers it the hard way.
+- **A GitHub Actions workflow reading `vars.X` sees nothing when the value was stored as a *secret*
+  named `X`, and vice versa — they are two separate stores with no fallback between them.**
+  `.github/workflows/sync-reference-data.yml` reads `secrets.UK_LOCATION_REF_DIRECT_URL` and
+  `vars.UK_LOCATION_REF_POSTCODE_AREAS`; a first attempt at provisioning added *both* as secrets,
+  and `UK_LOCATION_REF_DATABASE_URL` rather than `_DIRECT_URL` besides. The workflow would have
+  materialised an env file with two empty values and failed closed at `npm run ref:migrate` on the
+  next scheduled production run, which is the right direction but looks like a broken workflow
+  rather than a missing variable. **Check both endpoints, not one**:
+  `gh api repos/sriahead/aheed-online-store/environments/<env>/variables --jq '.variables[] | "\(.name)=\(.value)"'`
+  and `… /environments/<env>/secrets --jq '.secrets[].name'`. Variable *values* are readable, which
+  makes `UK_LOCATION_REF_POSTCODE_AREAS=MK,RG` verifiable rather than merely present — a reason to
+  prefer a variable for anything that is not actually a credential.
+- **A THIRD, related trap: a plain-text var added to a Worker only through the Cloudflare
+  dashboard — never declared in `wrangler.toml`'s `[vars]`, never set via `wrangler secret put` —
+  does NOT survive the next `wrangler deploy`, even though a genuine SECRET added the same way
+  does.** `wrangler deploy` rebuilds a Worker version's `vars` set entirely from `wrangler.toml`;
+  secrets are stored and reattached independently and are untouched by a deploy that doesn't
+  explicitly change them. Found at this same slice's own `/validate` (2026-09-16, `#767`/`#771`):
+  the fix for the `wrangler secret list` trap above (redeploying the dashboard-created version that
+  carried both `UK_LOCATION_REF_DATABASE_URL` and `UK_LOCATION_REF_POSTCODE_AREAS`) worked, but a
+  *routine* `deploy-staging` CI run afterward silently dropped `UK_LOCATION_REF_POSTCODE_AREAS`
+  again — confirmed by reading the newly-deployed version's bindings via the Cloudflare API
+  (`GET …/versions/<id>`, per the bullet above): `UK_LOCATION_REF_DATABASE_URL` (a real secret)
+  was still there; `UK_LOCATION_REF_POSTCODE_AREAS` (converted to a plain-text variable during the
+  original fix) was gone, and neither `wrangler.toml` nor either deploy workflow ever named it.
+  This would have recurred on every future deploy. **The fix is to declare any non-secret,
+  environment-wide config value in `wrangler.toml`'s `[env.<env>.vars]` block** (see
+  `UK_LOCATION_REF_POSTCODE_AREAS` there) so it's part of committed config and rebuilt correctly on
+  every deploy, rather than a fragile one-time dashboard edit — reserve `wrangler secret put` (or a
+  dashboard-added secret) for values that are actually credentials.
+- **`instrumentation.ts`'s `onRequestError` DOES have a working Cloudflare Workers request context
+  under this app's Next 16 / OpenNext / Workers stack** — `getCloudflareContext()`/`readEnv()`
+  resolve normally there, confirmed live in `#508` (2026-09-01): a forced throw under `npm run
+  preview` reached a plain, uncached `PrismaClient` constructed inside the hook, and it resolved
+  `DATABASE_URL` and wrote a real row on the first try. This was flagged as a genuinely unconfirmed
+  risk at that slice's `/propose` (this repo has a documented history of Next-on-Workers behaviour
+  not matching framework-documented semantics — `proxy.ts`, `edge` runtime, `@prisma/client/wasm`
+  resolution, all elsewhere in this file), so `getPrismaUncached()` was built deliberately *not*
+  wrapped in React's `cache()` to sidestep the question rather than gamble on it. The mitigation
+  turned out not to be needed for context availability itself, but keep using an uncached client
+  for any future `onRequestError` work anyway — `cache()`'s per-request de-dupe still isn't needed
+  for a handler that only ever runs once per throw, and reaching for it would reopen a question
+  that's now moot rather than genuinely require re-answering it.
+
+
+### Local Stripe webhook testing — what actually goes wrong
+
+The setup steps are in the "Stripe payments (P3c)" section above. What follows is the set of
+failures that section does not prevent, moved here from `CLAUDE.md` in #786.
+
+- **This repo's `.dev.vars` and `.env` both carry a real `STRIPE_SECRET_KEY` (test-mode) by
+  default, so `npm run preview` does NOT run the stub payment adapter** — `lib/payments.ts` picks
+  the stub only when the key is unset, and here it never is. Any spec's `validation.md` that writes
+  "with no `STRIPE_SECRET_KEY` set, the stub adapter is active" (a reasonable-sounding default) is
+  describing a hypothetical, not this environment: checking out in local preview redirects to real
+  hosted Stripe Checkout, same as staging/production. Confirmed at P9.1's `/validate` (#427/#428,
+  2026-08-29) — the guest-order-authorization slice's own `validation.md` assumed the stub path for
+  its live rows; the actual redirect went to `checkout.stripe.com`. Where a live row needs the order
+  a real checkout produced but not the payment itself, resolve the order directly against the dev
+  database instead of relying on the stub's synchronous redirect — it exercises the same
+  post-checkout code either way. Where a row genuinely needs the stub adapter (e.g. asserting the
+  *fallback* URL shape itself, as opposed to what it leads to), that requires temporarily unsetting
+  `STRIPE_SECRET_KEY` and restarting `npm run preview` — `.dev.vars` is read at Worker boot.
+- **`stripe listen`'s webhook signing secret is per-invocation, not fixed** — it will differ from
+  whatever is already sitting in `.dev.vars`'s `STRIPE_WEBHOOK_SECRET` (itself likely written down
+  from a previous, different `stripe listen` session). A mismatch fails the webhook route's
+  signature check silently from the outside: the Stripe test-card payment itself succeeds, the
+  order sits forever in `PENDING_PAYMENT`, and nothing in the browser or `npm run preview` console
+  says why. Before relying on a live checkout→webhook round-trip, start
+  `stripe listen --forward-to <preview-url>/api/webhooks/stripe`, copy the secret it prints into
+  `.dev.vars`, and **restart `npm run preview`** — `.dev.vars` is read at Worker boot, so editing it
+  with the preview server already running has no effect until it restarts.
+- **`stripe listen` only forwards events that occur while it is running.** A payment completed
+  *before* starting the listener is not retroactively forwarded — `stripe events resend <id>`
+  resends to a registered webhook **endpoint** in the Stripe dashboard, not to an ad-hoc CLI
+  listener, so it doesn't help here either. Place a fresh order after `stripe listen` is confirmed
+  ready (`Ready! ... webhook signing secret is whsec_...` in its output) rather than trying to
+  recover an already-completed payment's event.
+- **Resend's API rejects `to` addresses on unverified domains (`example.com` included) even in test
+  mode**, so a live checkout using a demo account's `@example.com` address will genuinely fail to
+  send — `lib/email.ts`'s try/catch swallows it correctly (this is what R20-style requirements are
+  for), but it also means the actual outbound HTML is never observable this way. Confirmed in
+  P7.5b's `/validate` (#262): the full webhook→confirm→email pipeline was proven live up to the
+  point of the real Resend call; the literal HTML bytes still have to come from a unit test that
+  parses the outbound request body, not from watching a real send succeed.
+- **`npm run preview`'s local Worker exposes a queryable log of its own `console.*` output — use it
+  instead of trying to read `npm run preview`'s own terminal, which interleaves the dev server's own
+  noise with application logs and scrolls past whatever a webhook call just printed.** `wrangler dev`
+  captures every request/console line into a local SQLite-backed store, queryable via
+  `POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query` with a body of
+  `{"sql": "..."}` against a `logs` table (`ts_ms`, `level`, `message`, plus `trace_id`/`span_id`).
+  This is what actually proves a `console.error` line's exact wording, that it fired exactly once,
+  and that it did **not** fire on an adjacent case — filter on `level = 'error'` and a substring of
+  the order number or session id. Used to confirm R23/R24/R31–R33 live for #429's webhook-binding
+  slice (2026-08-29): a `binding-mismatch` refusal logs exactly the reason/event-type/order/session
+  line the route promises, a duplicate delivery (`already-processed`) logs nothing, and no unrelated
+  error fires alongside either. `GET .../cdn-cgi/local/explorer/api/local/workers` lists the other
+  endpoints the same Explorer API exposes (KV, D1, R2, Durable Objects, Workflows).
 

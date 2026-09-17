@@ -46,7 +46,7 @@ npm run dev                   # http://localhost:3000 — UI iteration only, see
 plain Node, which can't load `@prisma/client/wasm`'s WASM query engine — DB-touching routes
 silently show an error state, no crash, no obvious signal. `npm run preview` (OpenNext + local
 Workers/Miniflare runtime, reads `.dev.vars`) is the only local runtime that behaves like the real
-deploy. See `CLAUDE.md`'s Database section for why.
+deploy. See `docs/developer-portal/runtime-pitfalls.md` for why.
 
 ## Environment variables
 All config flows through `lib/config` (zod-validated), read from `.env` (Node-side tooling —

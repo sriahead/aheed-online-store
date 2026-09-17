@@ -358,6 +358,75 @@ not present.
   the spec doesn't contradict an existing ADR or persistent doc.
 - Commit the spec files as their own commit, before any implementation commit.
 
+### Front-matter and MDX traps when writing a spec
+
+Moved here from `CLAUDE.md` in #786, because this is the stage at which front-matter actually gets
+written. Every one of these is invisible to `lint`, `typecheck`, `test`, `format:check` and `build`
+— they fail either the `quality/kms` CI job or, worse, the `deploy-docs-internal` workflow on the
+push *after* the slice merges. `npm run kms:validate` catches the front-matter ones locally and is
+fast; the MDX ones need `npm run kms:assemble:internal` plus a real Next build in
+`kms/site-internal`.
+
+- **A GFM table cell (or any prose) containing a bare `<` immediately followed by a digit breaks
+  the internal KMS docs site build, and nothing in the app's own `lint`/`typecheck`/`test`/`build`
+  catches it.** `docs/*.md` and `specs/*.md` are assembled into MDX (`npm run
+  kms:assemble:internal`) and built with Nextra in `kms/site-internal`, a separate pipeline the
+  `gates` workflow never runs. MDX parses `<1%` as the start of an invalid JSX tag name
+  (`Unexpected character '1' before name`), so a slice's own PR can pass every check and merge
+  clean while `deploy-docs-internal` fails on the very next push. Hit in P7d (#218):
+  `docs/nfr-baseline.md` shipped a `<1%` table cell in PR #245, and the break was found only when
+  `/ship` opened the staging→main promotion PR and read `deploy-docs-internal`'s status. Fixed as
+  its own follow-up PR (#248) rather than amending the already-merged one. Write `under 1%` (or
+  wrap the value in backticks) instead of a bare `<N` anywhere in `docs/`/`specs/` prose or tables.
+  Before merging a slice that adds or edits either directory, a real check is `npm run
+  kms:assemble:internal && (cd kms/site-internal && npx next build --webpack)` — not just the root
+  `lint`/`build`.
+- **The same pipeline breaks on a bare `{...}` in prose, and this has now cost a build THREE times.**
+  MDX evaluates `{anything}` outside backticks as a **JSX expression**, so quoting a code fragment
+  the natural way — `"Save {formatPrice(saving)}"` inside double quotes — compiles fine, passes every
+  root gate, and then dies at *prerender* with `ReferenceError: formatPrice is not defined` naming
+  the doc's own URL (`/dev/<id>`). Double quotes do not escape anything in Markdown; only backticks
+  do. **Write `` `Save {formatPrice(saving)}` ``**, and note a path template like
+  `` `bundles/{bundleId}/{uuid}.webp` `` is already safe *because* it is in backticks — the trap is
+  the unbackticked case, not the braces themselves. First hit at P8.5e (PR #360, "escape bare
+  curly-brace reference breaking `deploy-docs-internal`"); hit again at P8.5c's `/build-notes`,
+  caught before merge only because that slice actually ran the check above. **A third hit, in the
+  storefront-browsing-ux-fixes slice (#496, 2026-08-31), is the more instructive one**: it wasn't an
+  edit to an existing doc, it was a bare `"Shop {Department}"` written into a brand-new `plan.md`'s
+  *first draft*, describing a UI button's own label in prose. Writing fresh spec prose is exactly as
+  exposed as editing an existing one — there is no "this file is new, so it's fine" exemption. Caught
+  the same way as the second hit: the two-command check below, run before push, not discovered via a
+  failed `deploy-docs-internal` after merge. **Run the two-command check on every slice that adds or
+  edits a spec file, including the very first one you write for it, and read its real exit status** —
+  piping it through `tail` reports the pipe's success, not the build's, which is how a `Next.js build
+  worker exited with code: 1` can look like `exited with code 0`.
+- **A spec's front-matter `id` cannot contain a literal `.`** — `kms/schema/frontmatter.ts`'s `id`
+  regex is `^[a-z0-9-]+$`. A phase name that already has a dot (`P8.1a`, `P7.5a`, `P6.5`, …) is easy
+  to copy straight into `id:` when writing a new `plan.md` at `/spec`, and none of
+  `lint`/`typecheck`/`test`/`format:check`/`build` catch it — only the `gates` workflow's own "KMS —
+  front-matter validation" step does, on the next push. Every existing dotted-phase slice's `id`
+  replaces the dot with a dash and suffixes `-plan` (e.g. `p7-5a-reports-cart-integrity-plan`);
+  follow that convention at `/spec` rather than rediscovering the regex at `/ship`. First hit this
+  way in P8.1a (#334, PR #338): `id: p8.1a-frontend-a11y-debt` failed `gates` on first push, fixed to
+  `p8-1a-frontend-a11y-debt-plan` — which then required its own `npm run kms:build-index` (a
+  previously-invalid `plan.md` becoming valid makes it a newly-countable artifact, so the checked-in
+  `ARTIFACT_INDEX.md`/`docs.ts` go stale in the same commit that fixes the `id`). Run `npm run
+  kms:validate` locally after writing or editing any spec's front-matter — it's fast and catches
+  this before a push, unlike the `<1%` MDX trap above which needs the heavier
+  `kms:assemble:internal` build.
+- **`kms/schema/frontmatter.ts`'s `summary` field is capped at 300 characters
+  (`z.string().min(20).max(300)`), and nothing in `lint`/`typecheck`/`test`/`format:check`/`build`
+  checks it either** — same invisibility class as the two traps above, just a length limit instead
+  of an MDX-parse failure. A `plan.md` written with a full narrative summary (the style this file's
+  own prose encourages) can overrun it easily. First hit at `#565`'s `/validate` (2026-09-03,
+  PR #577): a 363-character `summary` failed only `npm run kms:validate`, which runs in CI's
+  `quality/kms` job — so this would have failed on push, not locally, exactly like the `id` regex
+  trap above. Fixed by trimming to the load-bearing sentence rather than dropping detail from the
+  file's actual prose. `npm run kms:validate` (the same command that catches the `id` regex issue)
+  catches this too — run it after writing any spec's front-matter, not just when the `id` looks
+  unusual.
+
+
 ## Build
 
 Implement to the approved spec — nothing more.

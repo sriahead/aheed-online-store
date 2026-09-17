@@ -413,8 +413,8 @@ everything except this.
 
 **Confidence:** Known for the code facts — the `<img>` sweep and the single `ProductImage` import
 were both read directly. Whether any of these keys currently 404 in staging or production is **not
-claimed**: `CLAUDE.md` prescribes `curl -I "${CDN_BASE_URL}/${key}"` against the environment that
-serves them, and that check was not run in this pass.
+claimed**: `docs/developer-portal/runtime-pitfalls.md` prescribes `curl -I "${CDN_BASE_URL}/${key}"`
+against the environment that serves them, and that check was not run in this pass.
 
 **Why it matters commercially:** a broken-image icon on a product detail page reads as a broken
 shop, and the `#502` incident showed this failing per-environment — complete in dev, entirely

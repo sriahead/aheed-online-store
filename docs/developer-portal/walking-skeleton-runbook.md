@@ -26,7 +26,7 @@ each branch.
 > **Known gap:** a required-reviewer approval gate on the `production` GitHub environment needs a
 > paid GitHub plan (or a public repo) — `gh api ... environments/production` returns a 422 on this
 > repo's plan. `deploy-production` currently runs straight through with no pause. Treat PR review as
-> the real gate until this is resolved (see `CLAUDE.md`).
+> the real gate until this is resolved (see `docs/developer-portal/sdd/operator-runbook.md`).
 
 ## 1. Create the repo and push `main`
 ```bash

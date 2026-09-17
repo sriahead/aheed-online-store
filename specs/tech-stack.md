@@ -161,3 +161,40 @@ pages require final review by Aheed's solicitor.
 - `specs/decisions/ADR-002-auth-library.md`
 - `specs/decisions/ADR-003-storage-abstraction.md` (S3-compatible port)
 - `specs/architecture.md` (full system architecture + migration strategy)
+
+## Dependency & version discipline
+
+Moved here from `CLAUDE.md` in #786, which now carries the short form (exact-pin the DB drivers and
+adapters, never `npm audit fix --force`, never absorb a breaking major as a side effect) and a
+pointer to this section. The version-adjacent failures these policies exist to prevent —
+Turbopack's resolver, the `proxy.ts` incompatibility, ESLint 9 flat config, the live-DB test guard
+— are in `docs/developer-portal/runtime-pitfalls.md`.
+
+- **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their
+  declared semver ranges are looser than real compatibility. **Locked today, and enforced by
+  `tests/dependency-pins.test.ts`:** `@neondatabase/serverless` = **1.1.0 exact**,
+  `@prisma/adapter-neon` = **7.9.1 exact**, `@prisma/client` = **6.19.3 exact**. All three are
+  declared with no range operator, and that test asserts both halves — the installed version *and*
+  the absence of a caret — because checking only the version passes right through a re-loosened pin
+  that happens to still resolve correctly today.
+  **These were raised from `0.10.4` / `^6.19.3` in commit `ac3f0d6` (2026-08-14), deliberately, as
+  part of the Cloudflare connection-exhaustion fix** that introduced `lib/db.ts`'s hybrid
+  `getPrisma()`/`getPrismaWs()` strategy. That commit updated this file's hybrid-driver section but
+  not this paragraph, so for three weeks the pins documented here had not existed since mid-August —
+  and because both became **caret** ranges, `npm install` could have moved them again at any point.
+  Found by hand at `#489`'s `/spec`, ratified rather than reverted in `#491`; the versions have
+  production behind them and reverting would have undone half of a real fix.
+  **`@prisma/adapter-neon` is a full major ahead of `@prisma/client` (7.x against 6.19.3). That is
+  deliberate, known, and tracked by `#560`** — not an oversight to "correct" by bumping one of them.
+  Nothing in the toolchain can warn about it: adapter-neon@7 declares **no `peerDependencies` at
+  all** (it takes `@prisma/driver-adapter-utils` at an exact `7.9.1` and `@neondatabase/serverless`
+  at `>0.6.0 <2`), so npm has nothing to check the client version against. The pin test is the only
+  thing that makes the pairing unable to change silently.
+  `@cloudflare/workers-types` is **not** exact-pinned and is **not** covered by that test — it is
+  types-only, on date-based versioning, and ships no runtime behaviour. Its majors do **not** track
+  wrangler's, whatever this line used to claim: the observed working pairing today is
+  `@cloudflare/workers-types` **5.x** (`5.20260804.1`) with `wrangler` **4.x** (`4.119.0`). Record
+  what is observed here rather than asserting a rule; `#491` found the old "must match wrangler's
+  major (v5)" sentence was false in both halves.
+  **`prisma` (the CLI/generator) is still `^6.19.3` and floats.** `npm ci` pins it via the lockfile
+  so CI is unaffected, but a local `npm install`/`npm update` can drift the generator away from the
