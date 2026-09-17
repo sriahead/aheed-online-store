@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-16T16:45:49.060Z` · commit `60a0afc` · `192` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-17T01:19:44.065Z` · commit `6f928fe` · `193` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -190,6 +190,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Address lookup — reference-data framework, Code-Point Open, OS Open Names (plan)](specs/2026-09-15-address-lookup-reference-data/plan.md) | spec | 2.0.0 | 2026-09-15 | approved | internal | A dedicated UK location-reference database with demand-driven postcode-area coverage, fed by OS Code-Point Open and OS Open Names, behind a reference-data service boundary; plus a consolidated delivery-eligibility service, a provider-neutral address-lookup API, and customer saved addresses. |
 | [Living stakeholder business case as a milestone-reviewed KMS artifact (plan)](specs/2026-09-16-business-case-kms/plan.md) | spec | 1.0.0 | 2026-09-16 | draft | internal | Adds a stakeholder-facing business case to the KMS business-analysis section, and makes reviewing it part of the existing milestone close rather than a second documentation process, with a machine check behind it. |
 | [Reference coverage reconciliation — decommission, observability and production bootstrap (plan)](specs/2026-09-16-reference-coverage-reconciliation/plan.md) | spec | 1.0.0 | 2026-09-16 | draft | internal | Gives the reference-data pipeline a way to retire an unsupported postcode area, reports configured-vs-covered drift on /api/health, and brings production's reference database up from empty to MK/RG. |
+| [Credential verification closeout (plan)](specs/2026-09-17-credential-verification-closeout/plan.md) | spec | 1.0.0 | 2026-09-17 | draft | internal | Closes the three defects found while resolving the R2 credential outage: a verifier blind to the deployed Worker, an undocumented deploy wedge, and an unvalidated brand-colour write path. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.30.0 | 2026-09-16 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

@@ -250,12 +250,24 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   present**, never that they work. Found at `#749`/`#755` (2026-09-15): the pair was rejected in
   **dev, staging AND production simultaneously** — all three share one key pair and differ only in
   `S3_BUCKET` — and the only visible symptom anywhere was one staff form failing. **`npx tsx
-  scripts/verify-storage-credentials.ts` is the one command that answers "do these credentials
-  actually work?"** (read-only: a `HEAD` for a key that does not exist — `404` proves the credential
-  works, `403` proves it does not). Run it before trusting any image-upload path, and after any
-  Cloudflare token rotation — the R2 keys live in **two** stores per environment (`secrets/*.vars`
-  and `wrangler secret put`), so a file-only rotation leaves the deployed Worker on the old value,
-  exactly as recorded for Neon passwords.
+  scripts/verify-storage-credentials.ts` is the closest thing to an answer for "do these credentials
+  actually work?", and it is important to know exactly what it covers** (read-only: a `HEAD` for a
+  key that does not exist — `404` proves the credential works, `403` proves it does not). Run it
+  before trusting any image-upload path, and after any Cloudflare token rotation — the R2 keys live
+  in **two** stores per environment (all four env FILES, and `wrangler secret put`), so a file-only
+  rotation leaves the deployed Worker on the old value, exactly as recorded for Neon passwords.
+- **That script checks FOUR files and reports the deployed Worker's version — but it still cannot
+  read a deployed secret's value, and nothing can.** It probes `.env`, `.dev.vars`,
+  `secrets/staging.vars` and `secrets/production.vars` (**`.dev.vars` was missing until `#780`,
+  and it is the file that wins under `npm run preview`** per the Config section — so a rotation
+  could pass this check while local preview stayed broken). It then reports, for staging and
+  production, whether each Worker's newest version is the deployed one, because that divergence is
+  what made `#755` invisible: **the script reported ACCEPTED for all three environments while both
+  deployed Workers served a revoked key**, the new values sitting in dashboard-created versions
+  that were never deployed. A Worker reported `IN SYNC` proves the newest version is live, **not**
+  that it carries the key you think it does. **The only complete proof of an image-upload path
+  remains a real upload through the deployed environment** — treat a green script run as "nothing
+  is obviously wrong", never as "this works".
 - **A browser-reported storage bug does not need a browser to reproduce.** `lib/storage.ts` imports
   only `aws4fetch` and `lib/config`, so the entire presign/PUT path runs in plain Node via `npx tsx`.
   `#749`'s vendor-logo failure had been carried for days as "needs a browser reproduction with
@@ -371,6 +383,29 @@ cost-effective.** Currently at **Milestone 0 (walking skeleton)** — a minimal 
   `result.resources.bindings`. `npx wrangler deployments list` and `npx wrangler tail` both failed
   here with `fetch failed` from Git Bash while `wrangler secret list` and plain `curl` worked, so
   reach for the REST API rather than assuming the account is unreachable.
+- **The SAME undeployed-version state has a second, LOUDER consequence the bullet above does not
+  describe: it wedges CI outright, and the error blames secrets rather than deployment state.**
+  A secret edited through the Cloudflare **dashboard** creates a new Worker version and does **not**
+  deploy it. Every subsequent `wrangler secret put` against that Worker then fails:
+  ```
+  Secret edit failed. You attempted to modify a secret, but the latest version of your
+  Worker isn't currently deployed.
+  ```
+  **Both `deploy-staging.yml` and `deploy-production.yml` OPEN their deploy step with
+  `wrangler secret put`** (`CLOUDFLARE_ACCOUNT_ID`, then `CLOUDFLARE_API_TOKEN`, before
+  `wrangler deploy` is reached), so a single dashboard edit fails **every future deploy on that
+  environment** — including deploys carrying unrelated fixes — until the pending version is
+  deployed. Found live 2026-09-16 (`#781`) during `#755`'s credential rotation: both deploy reruns
+  failed this way, and because the message names *secrets*, the natural reading is "the token is
+  wrong" rather than "an undeployed version exists". Nothing in the repository hinted otherwise.
+  **Recover by deploying the pending version** — wrangler's own option (2):
+  `npx wrangler versions deploy <version-id>@100 --env <staging|production>`, taking the newest
+  version id from the REST API call in the bullet above. After that the workflow rerun succeeds
+  normally. **Avoid the problem by not editing secrets in the dashboard at all**: use
+  `node scripts/configure-env.mjs <staging|production>`, which writes through `wrangler secret put`
+  and therefore deploys as it goes, updating the GitHub environment secrets in the same pass.
+  `npx tsx scripts/verify-storage-credentials.ts` now reports this state (`STALE`) for both
+  Workers, so it is detectable before the next deploy discovers it the hard way.
 - **A GitHub Actions workflow reading `vars.X` sees nothing when the value was stored as a *secret*
   named `X`, and vice versa — they are two separate stores with no fallback between them.**
   `.github/workflows/sync-reference-data.yml` reads `secrets.UK_LOCATION_REF_DIRECT_URL` and
@@ -720,7 +755,12 @@ issues for shipped slices are expected. The Status field's one-time UI rename
   `Tests 784 passed (784)` with `Errors 10 errors`, exit 0**. Run alone seconds later, the same tree
   gave **74 files / 874 tests** — ten files, ninety tests, had never run at all. **The tell is the
   file count, not the exit code**: know what the suite's file/test totals should be (**currently
-  140 files / 1868 tests**, measured 2026-09-16 at the business-case-KMS Build (`#777`) — one new
+  141 files / 1886 tests**, measured 2026-09-17 at the credential-verification-closeout Build
+  (`#780`/`#781`/`#782`) — one new file (`tests/worker-version-state.test.ts`) carrying 7 tests,
+  plus 11 added to the existing `tests/brand-colour-validation.test.ts`, six of which come from one
+  `it.each` table of malformed hex values, so the same caveat as the `PAIRS` tables below applies.
+  The previous figure was **140 files / 1868 tests**, measured 2026-09-16 at the business-case-KMS
+  Build (`#777`) — one new
   file (`tests/sdd-business-case.test.ts`) carrying 26 tests, with **no** existing file's count
   moving. Worth noting what that file covers, because it is the second recorded case of a
   regex-based checker in `scripts/` matching far more than its author intended: a first version of

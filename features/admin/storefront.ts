@@ -17,7 +17,12 @@ import {
 import type { VendorStorefrontConfigInput, BrandPrimitives } from "@/lib/repositories/vendor";
 import { parseDeliveryRules, type DeliveryRulesFormState } from "@/lib/delivery-rules-form";
 import { parseSocialContact, type SocialContactFormState } from "@/lib/social-contact-form";
-import { parseBrandColourForm, type BrandColourFormState } from "@/lib/brand-colour-form";
+import {
+  parseBrandColourForm,
+  parseBrandPrimitives,
+  type BrandColourFormState,
+} from "@/lib/brand-colour-form";
+import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import crypto from "crypto";
 
 const PRESIGN_TTL_SECONDS = 300;
@@ -132,12 +137,24 @@ export async function saveStorefrontTheme(
     return { ok: false, error: "Theme name cannot be empty." };
   }
 
+  // #782 — the theme path writes the same eight colour columns the branding form does, and
+  // was never validated. `#713` closed the form; this closes the second writer. Reuses that
+  // slice's validator rather than a parallel one.
+  const parsed = parseBrandPrimitives(primitives);
+  if (!parsed.ok) {
+    return { ok: false, error: parsed.error.message };
+  }
+
   try {
     await import("@/lib/vendor-service").then((m) =>
-      m.saveVendorTheme(auth.vendorId, name.trim(), primitives),
+      m.saveVendorTheme(auth.vendorId, name.trim(), parsed.value),
     );
-  } catch (err: any) {
-    if (err?.code === "P2002") {
+  } catch (err: unknown) {
+    // #782 — this checked `P2002` directly, which is what the WEBSOCKET adapter throws.
+    // `saveVendorTheme` runs through `getPrisma()` (HTTP), which surfaces a unique-constraint
+    // violation as the raw Postgres SQLSTATE `23505`, so this branch could never fire and a
+    // duplicate name produced the generic message below. The shared predicate accepts both.
+    if (isUniqueViolation(err)) {
       return { ok: false, error: "You already have a saved theme with that name." };
     }
     return { ok: false, error: "An unexpected error occurred saving the theme." };
