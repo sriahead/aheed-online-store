@@ -108,6 +108,53 @@ every branch merges.
 
 ### Changed
 
+- **Docs and board reconciliation, taken before the next feature slice (`#792`)**: four statements
+  in `specs/roadmap.md` that the 2026-09-17 `/orient` pass found false against live state, plus two
+  board corrections and the outstanding docs-only promotion. No source, schema or configuration
+  touched.
+  - **`#724` closes.** Its `/orient` and `CLAUDE.md` halves were already fixed (PR #727/#726 and
+    `#786` respectively); the roadmap half was still open in **three** places, not the one the
+    issue describes — the Delivery-tracking note (`the board holds only the status layer`), the
+    `Board limitation` note, and §P9.2's `the board carries status only`. All three denied fields
+    the board has carried since 2026-09-09 (`Priority`, `Complexity`, and the full `Phase` option
+    set), so every session read a roadmap that contradicted both the board and `CLAUDE.md`.
+  - **The `Board limitation` note is rewritten as history, not deleted.** It explains why ~219
+    items predating 2026-09-09 legitimately sit on Phase `P8`/`P2.5`; deleting it would leave that
+    unexplained. It now states plainly that parking a *new* item that way produces wrong board
+    data, and retires its own false claim that the options were "UI-only in Projects V2 with no API
+    to add them". The note previously contradicted a paragraph four lines below it in the same file.
+  - **§P9.2 item 7 no longer claims the delivery cluster is unpromoted.** It read "Not yet promoted
+    to `main` — held at the owner's request"; that hold was lifted and `#401`/`#402`/`#748`–`#751`
+    promoted to production on 2026-09-15 (PR #759). The fourth recurrence of the lag the Roadmap
+    Change Log's PR #679 row records as the third, and the pattern `#790` now tracks.
+  - **`#745` closed as resolved by other work** — PR #744 merged, PR #743 closed as superseded, and
+    every CI defect it lists is gone. It was an open `High` board item that would have distorted
+    the next ranking.
+  - **`#613`'s board Status corrected `In Review` → `Backlog`.** No code for it was ever written;
+    the status was contamination from the `#761` citation error. The issue stays open and gated on
+    operational input from Aheed.
+  - **`#762` deliberately excluded** (roadmap double-encoded em-dashes, 389 lines): its diff would
+    bury the four targeted corrections above. Replacement text here uses correct UTF-8 em-dashes,
+    which is what `#762` will normalise the rest of the file to.
+
+- **Documentation reconciliation for `#786`'s `/document` pass (PR #787/#788)**:
+  `docs/model-handoff.md` and `specs/roadmap.md` brought current after three promotions
+  (`#779`, `#785`, `#788`) shipped with no separate Document (final) pass — `npm run sdd:audit`
+  reported two missing slice rows and three pending-carry-forward promotion rows; all five now
+  added. `docs/model-handoff.md`'s "Last Verified" section rewritten (`main`/`staging` both at
+  `9a6b6d8`), its stale `CLAUDE.md` section citation and vitest-baseline bullet corrected to match
+  `#786`'s relocation, and the `#780`/`#781` follow-up marked closed rather than in progress.
+  `specs/sdd-workflow.md` gains a documented trap: its own R9 setup step's `git grep`
+  pathspec (`'docs/**/*.md'`) silently excludes files directly under `docs/`, which is how a stale
+  cross-reference inside `sdd-workflow.md` itself (a "KMS docs" section citation pointing at
+  content `#786` had already relocated within the same file) survived `/validate` uncaught — fixed,
+  and the pathspec pattern documented as a trap for the next row that needs it. Two small,
+  independently-tracked findings opened as issues rather than fixed inline: `#789` (a pre-existing,
+  never-real `CLAUDE.md` "outage guidance" citation, predates `#786`) and `#790` (the missing
+  Document passes themselves, so the two un-backfilled narrative sections get picked up later).
+
+### Changed
+
 - **The SDD milestone close now has a third stage** (`specs/sdd-workflow.md` 2.34.0,
   `.claude/commands/document.md`, `.claude/commands/learn.md`): **Business case review**, run after
   `/discover` and `/learn` and before the front-matter bump, model switch and `/clear`. Sequenced

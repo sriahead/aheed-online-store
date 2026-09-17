@@ -579,8 +579,9 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   real drift.
 - **If the slice touches `docs/*.md` or `specs/*.md`, that local suite is not the fast pre-flight
   it looks like — none of `lint`/`build`/`test` build the internal KMS docs site, and a defect
-  there merges clean and only fails on the next push.** See `CLAUDE.md`'s "KMS docs" section
-  (added at P7d's `/document`, #218, after exactly this happened): `npm run kms:assemble:internal
+  there merges clean and only fails on the next push.** See this file's "Front-matter and MDX
+  traps when writing a spec" section (added at P7d's `/document`, #218, after exactly this
+  happened; moved here from `CLAUDE.md` in `#786`): `npm run kms:assemble:internal
   && (cd kms/site-internal && npx next build --webpack)` is the real check for those directories.
 - Walk **every row** of `validation.md`, not just the generic lint/test/build commands. A row that
   can't be checked in this environment is reported as unverified, with the reason — never quietly
@@ -666,6 +667,18 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   syntax being parsed — which good comments do constantly, since that's what they're for. Strip
   comments before parsing, or anchor the parse to a construct a comment can't produce (line start, a
   specific delimiter a comment's prose won't contain).
+- **A tenth instance, `#786`'s `/validate` (2026-09-17), is the setup command itself under-matching,
+  not a row misreading a correct match.** `#786`'s R9 row scanned inbound references with `git grep
+  -l "CLAUDE.md" -- 'docs/**/*.md' 'specs/**/*.md'` — a glob that silently excludes every file
+  directly inside `docs/` or `specs/` (`docs/model-handoff.md`, `specs/roadmap.md`,
+  `specs/sdd-workflow.md` itself, and others), matching only files at least one directory deeper.
+  The row reported clean; three real stale cross-references (including one inside this very file,
+  pointing at a `CLAUDE.md` section `#786` had just relocated) went uncaught until `/document`'s
+  own reconciliation pass happened to re-grep more broadly. Confirmed by running `'docs/*.md'` and
+  `'docs/**/*.md'` side by side against the same file set and diffing the results — they disagree.
+  **When a pathspec must reach every depth including the root of the directory it names, pair it
+  with the single-level form** (`'docs/*.md' 'docs/**/*.md'`, not `'docs/**/*.md'` alone) or drop
+  the glob entirely and grep the whole tree, then exclude what doesn't apply.
 - UI changes: verify against rendered output (compiled CSS, rendered HTML, browser screenshot), not
   code review alone. DB-touching code: `npm run preview`, never `npm run dev` (see `CLAUDE.md`).
 - **Server actions can be driven headlessly against `npm run preview`** — no browser needed. Next
