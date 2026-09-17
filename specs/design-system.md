@@ -354,3 +354,89 @@ copied literally:
 `design-system/tokens/tokens.css` — Tailwind v4 CSS-first `@theme` block encoding the tables above.
 Imported by `app/globals.css` alongside Tailwind itself. See
 `specs/2026-08-06-design-system/requirements.md` for the slice that introduced this.
+
+---
+
+## Token and branding traps (learned the hard way)
+
+Moved here from `CLAUDE.md` in #786, which now carries only the one-line rule — a `tokens.css` edit
+does not reach a browser if `brandStyle()` also lists that token — and a pointer to this section.
+
+- **A jsdom test that parses `tokens.css` directly proves the file is right — it proves nothing
+  about what a browser actually renders, because `lib/vendor-theme.ts`'s `brandStyle()` injects a
+  second, competing set of CSS custom properties as an inline `style` on every page's root element
+  (ADR-004 decision 5, per-vendor branding), and an inline style always beats a `:root` stylesheet
+  rule on specificity.** `brandStyle()` re-declares each semantic token it lists from that vendor's
+  raw primitive colour — correct for `--color-primary`/`--color-surface-muted`/the three semantic
+  tints, which really are simple `var()` aliases of a primitive in `tokens.css` and need the
+  per-element re-declaration to pick up an override at all (a custom property's `var()` substitutes
+  once, where the property is *declared* — a descendant overriding the referenced primitive does not
+  make an ancestor's already-computed alias recompute). It is **wrong** for any semantic token
+  `tokens.css` has decoupled into an independent literal value, because re-declaring it from a
+  primitive silently reintroduces whatever `tokens.css` moved away from. Hit in P7 closeout (#251):
+  darkening `--color-action`/`--color-accent`/`--color-danger` (plus hover shades) for WCAG AA
+  landed cleanly in `tokens.css` and its contrast test passed, but every real page kept rendering the
+  pre-slice, AA-*failing* hex — found only by pulling live rendered HTML from `npm run preview`
+  against staging at `/validate`, not from the test suite. **Before trusting a `tokens.css` edit,
+  check whether `brandStyle()` also lists the token being changed** — if it does and the change is
+  meant to be a fixed, audited constant rather than something that should keep tracking a vendor's
+  brand colour, remove it from `brandStyle()`'s per-vendor list too, or the CSS file's value never
+  reaches a browser.
+- **SriMart's `VendorBranding` primitives are real, live-differentiated colours (`#1e88e5` blue,
+  `#8e24aa` purple, `#c62828` red), not filler test data** — a change that assumes every vendor
+  looks like Aheed's default green/orange/red will visibly break SriMart's theme, and nothing in
+  `lint`/`typecheck`/`test` checks a second vendor's rendered output. Curl or otherwise fetch a page
+  with `Host: srimart-staging.nocaped.com` (or `srimart.nocaped.com` in production) under
+  `npm run preview` before treating a branding/token change as verified.
+- **A local `VendorDomain.host` value that includes a port can never resolve — seed it port-less,
+  always, even for local-only testing.** `lib/tenant.ts`'s `getCurrentVendorIdOrNull()` runs every
+  request host through `splitHostPort(...).hostname` before the `VendorDomain` lookup, which always
+  strips the port — deliberate and correct, since a real `Host` header on
+  `staging.aheedfoodcentre.nocaped.com`/`nocaped.com` never carries one. A row seeded with a port
+  (e.g. `SEED_SRIMART_HOST=srimart.localhost:8787`, the value a from-scratch local seed might
+  reasonably reach for) silently can never match, and the request falls through to `/coming-soon` —
+  indistinguishable from "this host genuinely isn't mapped," no error anywhere. The line above
+  already models the right convention (`srimart-staging.nocaped.com`, no port, reused as the local
+  `Host` header value even though nothing is actually listening on that domain — only the header
+  string matters to `getCurrentVendorIdOrNull()`, not where the TCP connection actually goes) but
+  didn't say why it has to be port-less until this was hit live: `/validate` for #501 slice A
+  (2026-09-01, `#514`) found a dev-DB row seeded as `srimart.localhost:8787` in an earlier session,
+  fixed by rewriting it port-less. Any `SEED_SRIMART_HOST`/`SEED_AHEED_HOST` value — local, staging,
+  or production — must never contain a port.
+- **Don't assume a local Worker's `VendorDomain` rows use the `nocaped.com` staging convention this
+  file's own bullets above model — query the connected database before writing (or trusting)
+  `curl -H "Host: ..."` commands against `npm run preview`.** A mandatory two-vendor check written
+  into `validation.md` (accessibility remediation, 2026-09-07, `#649`) hardcoded
+  `aheedfoodcentre.nocaped.com`/`srimart-staging.nocaped.com` as the local `Host` header values, on
+  the assumption every developer's local dev DB is seeded that way. The session that actually ran
+  `/validate` had a dev DB seeded instead with `localhost:8787` (Aheed) and `srimart.localhost`
+  (SriMart) — both requests to the documented hostnames silently redirected to `/coming-soon` (0 or
+  2+ vendors, no host match — `lib/tenant.ts`'s documented fallback), with no error and no hint
+  which of "wrong host" or "feature broken" was true. Resolved by connecting Prisma directly
+  (`prisma.vendor.findMany()` / `prisma.vendorDomain.findMany()`) against the same `DATABASE_URL`
+  `npm run preview` uses, reading the real seeded `host` values, and re-running with those instead —
+  which then passed cleanly. **Before trusting any hardcoded `Host` header in a spec or a memory of
+  a previous session, query `VendorDomain` in the environment actually under test** — which
+  hostnames resolve which vendor is a property of that specific database's seed history, not a
+  platform-wide constant.
+- **A `grep` for a retired hex literal against a page's SAVED, rendered HTML can match even when the
+  literal has been correctly removed from every component's own source, because `brandStyle()` must
+  legitimately re-embed that exact hex string as a CSS custom-property VALUE for whichever vendor's
+  primitive happens to equal it.** Hit at P9.2's admin-panel-operability `/validate` (2026-09-06,
+  R22b, `#631`): the retired literals `#e8f5e9`/`#f5f5f0` were removed from every `.tsx` file (proven
+  by a source-level AST/regex sweep with zero matches), yet `grep -E '#(2e7d32|e8f5e9|c8e6c9|f5f5f0)'`
+  against `/staff/inventory`'s saved HTML still matched four times — both inside the rendered
+  `style="--color-action-tint:#e8f5e9;--color-surface-muted:#f5f5f0;..."` attribute and again inside
+  the page's own RSC hydration payload carrying the identical string as JSON, because Aheed's own
+  brand-tint and cream primitives are numerically identical to the hex codes the components used to
+  hardcode. This is the same class this file already records for `<1%` and unescaped `&` in rendered
+  HTML — an absence-check against live output can false-positive on the exact mechanism proving the
+  fix works, not just false-negative on an escaped character. **A live-HTML grep for a retired colour
+  literal is only meaningful against a *second* vendor whose primitives differ from the value being
+  retired** (SriMart's `#1e88e5`/`#8e24aa`/`#c62828`, per the bullet above) — checked against the
+  vendor whose primitive happens to coincide with the old hardcoded value, it cannot distinguish "the
+  literal is gone from the page" from "the literal is still exactly what this vendor's own brand
+  colour resolves to." Confirm the real claim (no literal in component source) with the source-level
+  test instead, and treat a live-HTML hex match as inconclusive rather than a failure until checked
+  against a vendor it should NOT match.
+

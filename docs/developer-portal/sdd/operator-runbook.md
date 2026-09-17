@@ -997,3 +997,155 @@ anything that generalizes beyond the one slice, and fold it in here:
 **Anyone hitting a previously undocumented problem** should add it here once resolved, using the
 Symptom → Likely cause → Checks → Resolution shape already established above, so the next person (or
 the next automated loop) diagnoses it faster than the first time it happened.
+
+---
+
+## Branch strategy and CI — the detail
+
+Moved here from `CLAUDE.md` in #786, which now carries only the rules that apply to virtually every
+change (feature branch into `staging`, `staging` into `main` by PR, never push directly, red checks
+cannot merge, every PR cites its issue and touches the CHANGELOG) plus a pointer to this section.
+
+**Note on one rule that was dropped rather than moved.** `CLAUDE.md` used to require every PR to
+carry `phase:P_` and `gate:_` labels. Only two such labels have ever existed in this repository
+(`gate:4`, `phase:P9.2`), so the rule was unenforceable as written; it was removed in #786 rather
+than satisfied by creating a full label taxonomy nothing would check. The delivery board's **Phase**
+field and the GitHub milestone already carry phase information (`#546`).
+
+- `feature/<slug>` → PR into **`staging`** (auto-deploys to `staging.aheedfoodcentre.nocaped.com`).
+- **`staging` → `main`** via PR, deploying to `aheedfoodcentre.nocaped.com`. Never push directly to
+  `main`/`staging`.
+- **THIS REPOSITORY IS PUBLIC** — `gh api repos/sriahead/aheed-online-store --jq .visibility`
+  returns `"public"`, confirmed 2026-09-07 (#644). That matters because this section spent weeks
+  asserting a **private-repo, free-plan** limitation as a current constraint on what protection is
+  available here, and it is not one: the paid-plan restriction on required reviewers applies to
+  *private* repositories. **Nobody rechecked the premise after the repo's visibility changed** —
+  the same shape as the GAP-011 ruling that sat deferred behind a question already answered one
+  document over. Before citing a plan limitation as a reason something cannot be enforced, re-read
+  `.visibility`.
+- **Partially closed gap — a PR can no longer be merged with red checks, but the branch strategy is
+  still not fully enforced.** Two separate controls; the second is now in place:
+  1. **No environment approval gate.** Required reviewers were rejected with a 422 when this repo
+     was private. It is public now, so this is likely available — but it was **deliberately not
+     adopted** at #644: as sole maintainer the user would be approving their own deploys, which
+     adds a click and no independent check. `environment: production` in `deploy-production.yml`
+     selects that environment's secret set and nothing more. Revisit if a second maintainer joins.
+  2. **Required status checks ARE now configured on both branches** (#644, 2026-09-07), closing the
+     half of #472 that mattered most. Each ruleset carries a `required_status_checks` rule naming
+     exactly three contexts — **`docs-gates`, `quality / kms`, `quality / quality`** — with
+     `strict_required_status_checks_policy: false` (a PR need not be rebased first; the goal is
+     "red cannot merge", not "must be up to date"). **The context strings were read from the check
+     names a real completed run actually reported** (PRs #640 and #643), never guessed: a
+     `required_status_checks` rule naming a context nothing reports blocks every merge on that
+     branch permanently, which is precisely why #539 deferred adding one. If you add a workflow
+     job and want it required, read its reported name from a finished run first. **`deploy` is
+     deliberately NOT required** — it runs on `push`, not `pull_request`, so requiring it would
+     block every PR forever.
+     Note **both branches ARE covered by repository
+     rulesets**, and this line said "No branch protection at all, on either branch" until
+     2026-09-02 (#537). **The check it cited cannot see rulesets.**
+     `gh api repos/sriahead/aheed-online-store/branches/main/protection` queries *classic* branch
+     protection and returns **`404 Branch not protected`** whether or not a ruleset is active, so
+     P9.2's verification was structurally incapable of finding the thing it concluded was absent.
+     **Use `gh api repos/sriahead/aheed-online-store/rulesets` instead** (add `/<id>` for the
+     rules), and **`gh api repos/sriahead/aheed-online-store/rules/branches/<branch>` to ask what
+     actually applies to a branch** — that second endpoint is the one that catches a ruleset
+     created successfully with a ref condition matching nothing, which a reading of the
+     declaration alone cannot.
+     Actual state, confirmed 2026-09-07: two **active** rulesets, each carrying `pull_request`
+     (so a **direct push to either branch is blocked**), `non_fast_forward`, `deletion` and — since
+     #644 — `required_status_checks`, each with **`required_approving_review_count: 0`** and **no
+     bypass actors**. `protect-main`'s condition is `~DEFAULT_BRANCH` (`main` only);
+     **`protect-staging`** (added by #539) is scoped to `refs/heads/staging`.
+  So the substance of the warning is narrower again: **a PR into either branch can still be opened
+  and merged by its own author** — with `required_approving_review_count: 0`, self-merge remains
+  possible — but **no longer with red checks**, and no longer without a PR at all. Note the
+  paid-plan 422 recorded above is about **required reviewers specifically**, not about rulesets —
+  reading it as "branch protection is unavailable here" is what kept `staging` uncovered for so
+  long, and later kept required status checks unattempted for longer still.
+  The historical warning still stands as written for a different reason: **PRs #464, #465 and #466
+  all merged straight into `main` on 2026-08-30**, bypassing `staging` entirely, and
+  `deploy-production` ran on each; **neither ruleset would have stopped any of them**, since each
+  was a genuine PR and nothing constrains a PR's *source* branch. Treat PR review discipline as the
+  only real gate for that, and check the base branch of every PR you open.
+- **Quality checks live in `.github/workflows/quality.yml`** (`on: workflow_call`), added by P9.2
+  (#435). **All three of `gates.yml`, `deploy-staging.yml` and `deploy-production.yml` call it**, so
+  neither deploy path runs a weaker set than a PR runs. (`deploy-staging.yml` was the last to get it,
+  in #539; it previously ran **no** checks, justified by a comment asserting that `gates` had already
+  run on the PR that produced the merge — true only once a ruleset made a PR mandatory, which is why
+  #539 added `protect-staging` in the same slice rather than the workflow job alone.)
+  **Add a new check there, not to a caller** — duplicating the steps into each is
+  what let the production path drift to running none at all. **Only the Gate 4 CHANGELOG diff stays
+  inline in `gates.yml`'s `docs-gates` job**, because it genuinely needs `github.base_ref`, which a
+  `push` event does not have.
+- **Both KMS checks (`kms:validate` and `kms:check-generated`) live in `quality.yml`'s own `kms`
+  job**, moved there 2026-09-02 (#537, resolving #473). Until then this file, `gates.yml` and
+  `quality.yml` all claimed the `ARTIFACT_INDEX` staleness check *also* needed `github.base_ref`;
+  it never did — it copied a file, regenerated, and diffed. That untrue sentence, repeated in three
+  places, is the whole reason the production deploy path ran **no** KMS checks at all. The `kms` job
+  is separate from `quality` because `continue-on-error` is per-job: it is **blocking on the
+  pull-request path and non-blocking on both deploy paths** (`kms_blocking: false` from
+  `deploy-production.yml` and, since #539, from `deploy-staging.yml`). The PR is the gate; on a
+  branch the same check is a drift tripwire, and failing a deploy cannot un-merge drift that already
+  landed — it only withholds the fix. **Whether the non-blocking branch actually resolves as
+  intended was never verified, and #541 is now CLOSED as an accepted risk rather than left open
+  indefinitely (#644, 2026-09-07).** `continue-on-error` is inert on a *passing* job, so the first
+  post-promotion `deploy-production` run (`33606818256`, 2026-09-02) proved nothing despite being
+  the run everyone was waiting for — and neither did `34103597181` on 2026-09-07, for exactly the
+  same reason. That is not bad luck: **the only way to observe the false branch is to deliberately
+  push a broken KMS artefact to `main`**, i.e. to ship a known-bad artefact through the production
+  deploy path to watch what happens. That price is not worth the information, because **the failure
+  direction is safe**: if the expression does not resolve as intended the job stays *blocking*, so
+  a stale artefact would stop a production deploy rather than pass silently — loud and wrong, not
+  quiet and wrong. Recorded here rather than carried as a permanently-open issue nobody can close.
+  If a KMS check ever does fail on a deploy branch, that run is the free observation; note what it
+  did.
+- **`npm run kms:build-index` writes TWO files** — `ARTIFACT_INDEX.md` and
+  `app/(admin)/staff/runbook/docs.ts` — and they go stale under **different** conditions, which is
+  what made a one-file check look adequate for so long. The index renders **front-matter only**;
+  `docs.ts` embeds each document's **full body**. So editing a doc's content without touching its
+  front-matter rebuilds the index byte-identically and `docs.ts` differently. Commit `122609c` did
+  exactly that (five roadmap change-log rows, front-matter untouched) and shipped a stale
+  `/staff/runbook` article to production with every check green. **Never enumerate the generated
+  files by hand** — `kms/scripts/build-index.ts` exports `GENERATED_ARTIFACTS`, and both
+  `kms/scripts/check-generated.ts` and `scripts/sdd-check.ts` derive their coverage from it, so a
+  third output is covered the moment it is added. `npm run kms:check-generated` is the one command
+  that answers "are the generated artefacts current?".
+- **Both deploy workflows build BEFORE they migrate** (P9.2, #434). `prisma migrate deploy` used to
+  run first, so a build failure left the database migrated while the Worker still served the previous
+  bundle — and the adapter build is the step most likely to fail (a root `proxy.ts` once passed
+  `next build`, `lint`, `typecheck` and every test, failing only there). Do not reorder these back.
+  The window is narrowed, not closed: a `wrangler deploy` failure *after* a successful migrate still
+  leaves production migrated ahead of its code, which is #438's territory.
+- Both `staging` and `production` need their own GitHub environment secrets: `CLOUDFLARE_API_TOKEN`,
+  `CLOUDFLARE_ACCOUNT_ID`, `DIRECT_URL` (used for `prisma migrate deploy` in CI). Separately, each
+  Cloudflare Worker needs its own **runtime** secret set via `wrangler secret put NAME --env <env>`
+  (`DATABASE_URL` at minimum) — the GitHub Actions secrets above do not populate these; they're two
+  different secret stores.
+- **A `prisma migrate deploy` step failing with `P1001: Can't reach database server` in
+  `deploy-staging`/`deploy-production` is not necessarily a real outage** — before assuming Neon is
+  down and either blind-retrying or escalating, run `DIRECT_URL=<the same URL> npx prisma migrate
+  status` from a local machine against the identical `DIRECT_URL`. Hit at PR #485's `deploy-staging`
+  run (2026-08-31, run `33366365439`): the migrate step failed with `P1001` against staging's direct
+  endpoint, but a local `prisma migrate status` against that exact URL succeeded seconds later and
+  correctly reported the pending migration — proving the database was up and reachable, and the
+  failure was a transient GitHub Actions-runner-to-Neon network blip. `gh run rerun <id> --failed`
+  then succeeded on the first retry. The local check is what distinguishes this from a real outage
+  (where retrying would be pointless) or a genuine connection-string/firewall problem (where
+  retrying would just fail again) — don't skip straight to either conclusion.
+- **A workflow carrying `schedule` or `workflow_dispatch` does nothing until it reaches the default
+  branch (`main`), however correct it looks on `staging`.** GitHub resolves both triggers against
+  the default branch specifically — not whatever branch the file was merged to. Found 2026-09-16
+  (`#772`): `.github/workflows/sync-reference-data.yml` shipped with `#764` onto `staging` and has
+  never existed on `main`, so its `cron: "0 4 3 * *"` was inert and `gh workflow run
+  sync-reference-data.yml --ref staging` failed outright with `HTTP 404: workflow … not found on
+  the default branch` — a dispatch is impossible too, not just the schedule. **Invisible in the
+  usual places**: the file is present and correct on the branch everyone works on,
+  `gh workflow list --ref staging` shows it, and `lint`/`typecheck`/`test`/`build` say nothing about
+  workflow placement — the only tell is the absence of runs, and a job that has never run produces
+  no failure to notice. This repo merges into `staging` and promotes to `main` separately, so
+  **every** scheduled workflow it adds has a dormant period lasting until that promotion —
+  `fill-product-images.yml` has the identical shape. Check `git ls-tree origin/main --name-only
+  .github/workflows/` before trusting that a new `schedule`/`workflow_dispatch` workflow will
+  actually fire.
+
