@@ -958,16 +958,26 @@ enum LoyaltyEntryKind {
   EARN
   REDEEM
   REVERSAL
+  /// Added by #696. REVERSAL was already spoken for — it means "undoes this
+  /// order's REDEEM" and nothing else — and @@unique([orderId, kind]) allows
+  /// exactly one row per kind per order. A staff cancellation of a paid order
+  /// reverses BOTH sides, so it needs a second reversal kind rather than a
+  /// widened index: a distinct value keeps that unique constraint working
+  /// unchanged as the idempotency guard for both paths.
+  EARN_REVERSAL
 }
 
 /// The append-only audit trail of every points movement. `points` is SIGNED:
 /// EARN is positive, REDEEM negative, REVERSAL the exact negation of the REDEEM
-/// it undoes. Nothing here is ever updated or deleted.
+/// it undoes, EARN_REVERSAL the exact negation of the EARN it undoes. Nothing
+/// here is ever updated or deleted.
 ///
 /// @@unique([orderId, kind]) is the structural idempotency guard: a duplicate
 /// Stripe delivery attempting a second EARN, or a double-submitted checkout
 /// attempting a second REDEEM, is refused by the database rather than by a check
-/// someone has to remember to write.
+/// someone has to remember to write. #696 adds a fourth kind rather than
+/// relaxing this, so a cancelled paid order carrying both a REVERSAL and an
+/// EARN_REVERSAL is still one row per kind.
 model LoyaltyLedgerEntry {
   id       String           @id @default(uuid())
   vendorId String
@@ -1109,6 +1119,25 @@ model DiscountRedemption {
   seq         Int
   amountPence Int
   createdAt   DateTime     @default(now())
+
+  /// Set by #696 when staff cancel a PAID order: the use is given back to the
+  /// customer and to the code's remainingRedemptions, but the row STAYS.
+  ///
+  /// The asymmetry with releaseCodeRedemption — which deletes the row on the
+  /// unpaid path — is deliberate and is the same argument the loyalty ledger
+  /// makes for being append-only. A discount on a never-paid order is not a
+  /// financial event, so deleting it loses nothing. A discount on an order that
+  /// was actually paid for IS one: Order.discountPence survives on the cancelled
+  /// order, and this row is the only thing that explains where that number came
+  /// from.
+  ///
+  /// Retaining the row also keeps its `seq` occupied, which is why #696 allocates
+  /// seq as max(seq)+1 rather than by counting. Counting non-reversed rows to
+  /// pick the next seq would hand out a value a retained row already holds and
+  /// collide on @@unique([codeId, userId, seq]) — the trap the seq comment in
+  /// lib/repositories/discounts.ts warns about. Allocation reads every row; only
+  /// the per-customer CAP skips reversed ones.
+  reversedAt  DateTime?
 
   @@unique([orderId])
   @@unique([codeId, userId, seq])

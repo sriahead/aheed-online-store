@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/lib/db", () => ({ getPrisma: vi.fn(), getPrismaWs: vi.fn() }));
 vi.mock("@/lib/tenant", () => ({ getCurrentVendorId: vi.fn() }));
 
-const { reverseRedemption } = await import("@/lib/repositories/loyalty");
+const { reverseEarn, reverseRedemption } = await import("@/lib/repositories/loyalty");
 
 /**
  * #224 — reverseRedemption's null-owner path.
@@ -129,6 +129,146 @@ describe("reverseRedemption — nothing to reverse", () => {
     const { tx, calls } = fakeTx({ redeem: null, alreadyReversed: false });
 
     expect(await reverseRedemption(tx, VENDOR, ORDER)).toBe(0);
+    expect(calls.ledgerCreates).toHaveLength(0);
+    expect(calls.accountUpdates).toHaveLength(0);
+  });
+});
+
+/**
+ * P9.2 (#696) — reverseEarn, the mirror of reverseRedemption and the reversal
+ * half of #137.
+ *
+ * Until #696 an EARN could not be reversed by any code path: releaseOrder acts
+ * only on PENDING_PAYMENT orders, strictly before confirmPayment writes the
+ * EARN. cancelConfirmedOrder is the path that made this reachable, which is why
+ * #137 could not ship on its own.
+ *
+ * Its own fake, not fakeTx above: this reads a different row (EARN), checks a
+ * different guard (EARN_REVERSAL), and moves the balance the other way.
+ */
+
+type EarnState = {
+  earn: LedgerRow | null;
+  alreadyReversed: boolean;
+};
+
+function fakeEarnTx(state: EarnState) {
+  const calls = {
+    accountUpdates: [] as { where: unknown; data: unknown }[],
+    ledgerCreates: [] as Record<string, unknown>[],
+  };
+
+  const tx = {
+    loyaltyLedgerEntry: {
+      findUnique: async ({ where }: { where: { orderId_kind: { kind: string } } }) => {
+        const { kind } = where.orderId_kind;
+        if (kind === "EARN") return state.earn;
+        if (kind === "EARN_REVERSAL") return state.alreadyReversed ? { id: "erev-1" } : null;
+        // REVERSAL must NOT satisfy the EARN_REVERSAL guard — that conflation is
+        // exactly what a shared kind would have caused.
+        return null;
+      },
+      create: async ({ data }: { data: Record<string, unknown> }) => {
+        calls.ledgerCreates.push(data);
+        return data;
+      },
+    },
+    loyaltyAccount: {
+      updateMany: async (args: { where: unknown; data: unknown }) => {
+        calls.accountUpdates.push(args);
+        return { count: 1 };
+      },
+    },
+  };
+
+  return { tx: tx as unknown as Parameters<typeof reverseEarn>[0], calls };
+}
+
+describe("reverseEarn (#696)", () => {
+  it("writes EARN_REVERSAL with the exact negation of the EARN", async () => {
+    const { tx, calls } = fakeEarnTx({
+      earn: { userId: "u-1", points: 120 },
+      alreadyReversed: false,
+    });
+
+    const taken = await reverseEarn(tx, VENDOR, ORDER);
+
+    expect(taken).toBe(-120);
+    expect(calls.ledgerCreates).toHaveLength(1);
+    expect(calls.ledgerCreates[0]).toMatchObject({
+      vendorId: VENDOR,
+      orderId: ORDER,
+      kind: "EARN_REVERSAL",
+      points: -120,
+      userId: "u-1",
+    });
+  });
+
+  it("debits BOTH balancePoints and lifetimePoints", async () => {
+    // The EARN incremented both columns, so undoing it has to move both or the
+    // account's two counters end up explaining different histories. Distinct
+    // from lapsing, which forfeits a balance without rewriting lifetime history:
+    // these points were never legitimately earned at all.
+    const { tx, calls } = fakeEarnTx({
+      earn: { userId: "u-1", points: 120 },
+      alreadyReversed: false,
+    });
+
+    await reverseEarn(tx, VENDOR, ORDER);
+
+    expect(calls.accountUpdates).toHaveLength(1);
+    expect(calls.accountUpdates[0]).toMatchObject({
+      where: { vendorId: VENDOR, userId: "u-1" },
+      data: {
+        balancePoints: { increment: -120 },
+        lifetimePoints: { increment: -120 },
+      },
+    });
+  });
+
+  it("does not clamp the balance at zero", async () => {
+    // The shopper may already have spent these points elsewhere. Clamping would
+    // silently forgive the difference and leave the ledger disagreeing with the
+    // balance it exists to explain; the redemption path's own guard is what
+    // stops a negative balance being SPENT.
+    const { tx, calls } = fakeEarnTx({
+      earn: { userId: "u-1", points: 5000 },
+      alreadyReversed: false,
+    });
+
+    await reverseEarn(tx, VENDOR, ORDER);
+
+    expect(calls.accountUpdates[0]).toMatchObject({
+      data: { balancePoints: { increment: -5000 } },
+    });
+  });
+
+  it("writes the row but touches no account when the owner was erased", async () => {
+    const { tx, calls } = fakeEarnTx({
+      earn: { userId: null, points: 120 },
+      alreadyReversed: false,
+    });
+
+    expect(await reverseEarn(tx, VENDOR, ORDER)).toBe(-120);
+    expect(calls.ledgerCreates[0]).toMatchObject({ kind: "EARN_REVERSAL", userId: null });
+    expect(calls.accountUpdates).toHaveLength(0);
+  });
+
+  it("returns 0 and writes nothing when the order never earned", async () => {
+    const { tx, calls } = fakeEarnTx({ earn: null, alreadyReversed: false });
+
+    expect(await reverseEarn(tx, VENDOR, ORDER)).toBe(0);
+    expect(calls.ledgerCreates).toHaveLength(0);
+    expect(calls.accountUpdates).toHaveLength(0);
+  });
+
+  it("refuses a second reversal for the same order", async () => {
+    const { tx, calls } = fakeEarnTx({
+      earn: { userId: "u-1", points: 120 },
+      alreadyReversed: true,
+    });
+
+    expect(await reverseEarn(tx, VENDOR, ORDER)).toBe(0);
     expect(calls.ledgerCreates).toHaveLength(0);
     expect(calls.accountUpdates).toHaveLength(0);
   });

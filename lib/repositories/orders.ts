@@ -1,4 +1,11 @@
-import { getPrisma, getPrismaWs } from "@/lib/db";
+// TYPE-ONLY, like lib/repositories/{loyalty,discounts,fulfilment-slots}.ts. Both
+// names appear here solely inside `ReturnType<typeof ...>` annotations, so a
+// value import pulled @prisma/client/wasm into every consumer for nothing —
+// including a plain Node script, which cannot resolve it. Made type-only by
+// #696 so cancelConfirmedOrder's transaction can be driven against a real
+// database from `npx tsx` (requirements.md R9-R12), which is the only honest way
+// to prove an atomicity or idempotence claim.
+import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { keysetCursorArgs, runKeysetPage } from "@/lib/repositories/pagination";
 import { buildOrderNumber, computeTotals, type DeliveryRules } from "@/lib/order-totals";
 import { getPaymentService } from "@/lib/payments";
@@ -20,6 +27,7 @@ import {
   getLoyaltyConfig,
   getTiers,
   recordRedemption,
+  reverseEarn,
   reverseRedemption,
   spendPoints,
   windowSpendPence,
@@ -29,6 +37,7 @@ import {
   claimCode,
   recordCodeRedemption,
   releaseCodeRedemption,
+  reverseCodeRedemptionForPaidOrder,
 } from "@/lib/repositories/discounts";
 import { refusalMessage } from "@/lib/discounts";
 import { tieredLineTotalPence } from "@/lib/tier-pricing";
@@ -1838,6 +1847,105 @@ export async function cancelUnpaidOrder(
   });
   if (!order) return false;
   return releaseOrder(prisma, vendorId, order.id, reason);
+}
+
+/**
+ * Staff cancellation of an order that was actually PAID for (P9.2, #696) — the
+ * path that makes `#137` (earn reversal) and `#151` (code-use reversal)
+ * reachable at all. Before this, `releaseOrder` was the only cancel path and it
+ * acts solely on `PENDING_PAYMENT` orders, strictly before `confirmPayment`
+ * writes an EARN, so nothing in this codebase could cancel an order that had
+ * earned points or spent a code.
+ *
+ * A SIBLING of `releaseOrder`, deliberately not a parameterisation of it. Its
+ * status guard could have been widened; its `payment.updateMany(... FAILED)`
+ * could not. On this path the money arrived and — because cancelling never
+ * refunds, `#606` owns money movement — it stays. Writing `FAILED` here would be
+ * false at the moment it was written and would collide with the real `REFUNDED`
+ * writer `#606` eventually adds. **This function never touches the Payment row.**
+ *
+ * Takes `prisma` and `vendorId` explicitly and reads no request context, per the
+ * repository-layer contract — which is also what lets the whole transaction be
+ * driven from a plain script against a real database (requirements.md R9-R12).
+ *
+ * `getPrismaWs()` is required, not preferred: this uses `updateMany`, which
+ * crashes unconditionally through the HTTP adapter even on zero rows.
+ *
+ * The guarded compare-and-set is the same technique `releaseOrder` and
+ * `confirmPayment` both use — `count === 0` means the order was not in a
+ * cancellable status, or another request got there first, and either way nothing
+ * else in this transaction should run. That is what makes a double-submitted
+ * cancel safe rather than a second stock increment.
+ *
+ * NOT done here, each for a recorded reason:
+ * - **No refund.** `#606`/ADR-005. A cancelled-but-unrefunded order is a real
+ *   operational state and is represented as exactly that.
+ * - **The cart is not restored.** `restoreCartFromOrder` is deliberately not
+ *   called even from `releaseOrder`, and the argument is stronger here: a staff
+ *   cancellation happens long after checkout, with the shopper gone and quite
+ *   possibly a new basket built.
+ * - **The fulfilment slot is not explicitly freed** — it frees itself.
+ *   `getAvailableSlotsForDate` and `placeOrder`'s own capacity guard both count
+ *   a slot as used by the five post-payment statuses plus in-window
+ *   `PENDING_PAYMENT` holds; `CANCELLED` is in neither list, so the capacity
+ *   comes back the moment the status changes. Asserted by R11a rather than left
+ *   for a future reader to rediscover, because this function now depends on it.
+ */
+export async function cancelConfirmedOrder(
+  prisma: ReturnType<typeof getPrismaWs>,
+  vendorId: string,
+  orderId: string,
+  reason: string,
+  actorUserId: string | null,
+): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.order.updateMany({
+      where: {
+        id: orderId,
+        vendorId,
+        // The persisted status decides, never the caller. `canCancel` is the
+        // same rule the page and the action use, expressed here as the query
+        // predicate that actually enforces it.
+        status: { in: ["CONFIRMED", "READY_FOR_COLLECTION"] },
+      },
+      data: { status: "CANCELLED" },
+    });
+    if (count === 0) return false;
+
+    const items = await tx.orderItem.findMany({
+      where: { orderId },
+      select: { productId: true, quantity: true },
+    });
+    for (const item of items) {
+      await tx.inventory.updateMany({
+        where: { vendorId, productId: item.productId },
+        data: { quantity: { increment: item.quantity } },
+      });
+    }
+
+    await tx.orderStatusEvent.create({
+      data: {
+        orderId,
+        vendorId,
+        status: "CANCELLED",
+        note: reason,
+        createdByUserId: actorUserId,
+      },
+    });
+
+    // Both sides of the loyalty ledger, because a paid order may carry both. Each
+    // is independently idempotent on its own @@unique([orderId, kind]) slot, and
+    // each no-ops when its source row is absent.
+    await reverseRedemption(tx, vendorId, orderId);
+    await reverseEarn(tx, vendorId, orderId);
+
+    // Stamps `reversedAt` and keeps the row — NOT `releaseCodeRedemption`, which
+    // deletes it. See that function's own comment for why the paid case inverts
+    // its argument.
+    await reverseCodeRedemptionForPaidOrder(tx, vendorId, orderId);
+
+    return true;
+  });
 }
 
 /* `getWebhookOrderService()` moved to `lib/orders-service.ts` (#252). It resolved

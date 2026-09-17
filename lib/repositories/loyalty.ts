@@ -338,10 +338,12 @@ export async function earnPoints(
  * Give back points held by an order that is being cancelled. Call INSIDE
  * `releaseOrder`'s transaction.
  *
- * Only a REDEEM is ever reversed here. An EARN cannot be: `releaseOrder` acts
- * only on PENDING_PAYMENT orders, which is strictly before `confirmPayment`
- * writes an earn, so no code path in this codebase can cancel an order that has
- * earned. Earn reversal arrives with refunds (ADR-005 territory).
+ * Only a REDEEM is reversed here — see `reverseEarn` below for the other half.
+ * Until #696 an EARN could not be reversed at all, because `releaseOrder` acts
+ * only on PENDING_PAYMENT orders, strictly before `confirmPayment` writes an
+ * earn, so nothing could cancel an order that had earned. `cancelConfirmedOrder`
+ * is that missing path, and it calls BOTH functions: a cancelled paid order may
+ * carry a REDEEM and an EARN, and each is undone by its own row.
  *
  * Idempotent by the same unique index as the earn path.
  */
@@ -388,6 +390,96 @@ export async function reverseRedemption(
   });
 
   return restored;
+}
+
+/**
+ * Take back points an order EARNED, when staff cancel that order after it was
+ * paid for (P9.2, #696 — the reversal half of #137). Call INSIDE
+ * `cancelConfirmedOrder`'s transaction, beside `reverseRedemption`.
+ *
+ * This is the mirror of `reverseRedemption` and deliberately a separate
+ * function rather than a `kind` parameter on it: the two differ in which row
+ * they read, which row they write, and which direction the balance moves, and
+ * the only thing they share is the shape. Collapsing them would produce a
+ * function whose every line branches on the argument.
+ *
+ * `EARN_REVERSAL`, not `REVERSAL`. `@@unique([orderId, kind])` permits exactly
+ * one row per kind per order, and `REVERSAL` is already spoken for by the redeem
+ * path — an order that both redeemed and earned needs both reversals, and a
+ * fourth enum value is what lets the index keep doing its job untouched rather
+ * than being widened to accommodate a second meaning.
+ *
+ * NOTE: the EARN row's `tierKey`/`multiplierBps` snapshot is deliberately left
+ * alone. It records what was true when the points were granted, which is the
+ * whole reason it is snapshotted rather than recomputed; the cancelled order
+ * separately drops out of `windowSpendPence` because that query filters on order
+ * status, so future tier resolution already excludes it with no write here.
+ *
+ * Idempotent by that same unique index, and by the explicit pre-check below.
+ */
+export async function reverseEarn(
+  tx: AnyDb,
+  vendorId: string,
+  orderId: string,
+  now: Date = new Date(),
+): Promise<number> {
+  const earn = await tx.loyaltyLedgerEntry.findUnique({
+    where: { orderId_kind: { orderId, kind: "EARN" } },
+    select: { userId: true, points: true },
+  });
+  if (!earn) return 0;
+
+  const alreadyReversed = await tx.loyaltyLedgerEntry.findUnique({
+    where: { orderId_kind: { orderId, kind: "EARN_REVERSAL" } },
+    select: { id: true },
+  });
+  if (alreadyReversed) return 0;
+
+  const taken = -earn.points; // EARN.points is positive, so this is negative
+
+  // Same erasure case reverseRedemption documents (P7b, #216): a null userId
+  // means the shopper exercised erasure and their LoyaltyAccount is gone. There
+  // is no balance left to debit — write the ledger row anyway so the trail still
+  // balances and the idempotency guard still holds.
+  //
+  // `increment` by a negative can drive balancePoints below zero, and that is
+  // correct rather than something to clamp: the shopper may already have spent
+  // these points on another order. A clamp here would silently forgive the
+  // difference and leave the ledger disagreeing with the balance it is supposed
+  // to explain. The redemption path's own guard is what stops a negative balance
+  // being SPENT.
+  //
+  // `lifetimePoints` moves too, and this is a decision requirements.md did not
+  // specify either way (#696, noted in build-notes.md for the validator). The
+  // EARN incremented BOTH columns, so a full reversal of that EARN has to undo
+  // both or the account's two counters end up explaining different histories.
+  // This is NOT in tension with the lapsing comment in `awardPoints` above —
+  // "lapsing forfeits a balance, it doesn't rewrite history" is about points
+  // that WERE earned and then expired, whereas a cancelled order's points were
+  // never earned at all. Expiry and cancellation are different events and only
+  // one of them is history.
+  if (earn.userId !== null) {
+    await tx.loyaltyAccount.updateMany({
+      where: { vendorId, userId: earn.userId },
+      data: {
+        balancePoints: { increment: taken },
+        lifetimePoints: { increment: taken },
+        lastActivityAt: now,
+      },
+    });
+  }
+
+  await tx.loyaltyLedgerEntry.create({
+    data: {
+      vendorId,
+      userId: earn.userId,
+      orderId,
+      kind: "EARN_REVERSAL",
+      points: taken,
+    },
+  });
+
+  return taken;
 }
 
 /**

@@ -27,10 +27,16 @@ export function OrderPointsNote({
   /** False for a guest order — a guest earns nothing, so promise nothing. */
   hasAccount: boolean;
 }) {
-  // A cancelled order earns nothing, and its compensation deliberately does not
-  // reverse an earn (releaseOrder only ever acts on PENDING_PAYMENT, strictly
-  // before confirmPayment). Guarding on status rather than on the data being
-  // absent keeps that independent of how the row got there.
+  // A cancelled order earns nothing. Since #696 that is true for two different
+  // reasons rather than one — an unpaid order never reached `confirmPayment` and
+  // so has no EARN at all, while a paid order cancelled by staff had its EARN
+  // reversed by `reverseEarn` — and this guard is deliberately indifferent to
+  // which. Telling someone how many points they "earned" on an order that no
+  // longer exists is wrong in both cases. Guarding on status rather than on the
+  // data being absent is what keeps this independent of how the row got there.
+  //
+  // (This comment previously said a cancelled order's compensation does not
+  // reverse an earn, which stopped being true with #696.)
   if (status === "CANCELLED") return null;
   if (!hasAccount) return null;
 

@@ -118,8 +118,16 @@ export function isOrderStatus(value: string): value is OrderStatusValue {
  * `PENDING_PAYMENT` is deliberately absent as a source: only Stripe's webhook
  * confirms or cancels an unpaid order (P3c), so no staff action can move it and
  * an unpaid order can never jump to delivered. `DELIVERED`, `COLLECTED`, and `CANCELLED` are
- * terminal. Staff cannot cancel — that is refund-adjacent (ADR-005) and a
- * decision of its own, not a fifth button.
+ * terminal.
+ *
+ * Cancellation is STILL not a rung here, and #696 deliberately kept it that way
+ * when it gave staff a cancel path. This ladder is strictly forward and
+ * one-at-a-time, and `nextStatus` returns the single legal successor that drives
+ * the queue's one button — adding `CANCELLED` as a target would make that
+ * function ambiguous and turn a safe forward-only control into a destructive
+ * one. Cancellation is a separate authorized action with its own predicate
+ * (`canCancel` below) and its own form. What this comment used to say — that
+ * staff cannot cancel at all — stopped being true with #696.
  *
  * A map rather than a chain of `if`s so the whole rule surface is one readable
  * object, and so `nextStatus` and `canTransition` cannot drift apart.
@@ -169,6 +177,37 @@ export function nextStatus(
   method: "DELIVERY" | "COLLECTION" = "DELIVERY",
 ): string | null {
   return LEGAL_TRANSITIONS[method]?.[from]?.[0] ?? null;
+}
+
+/**
+ * The statuses a staff cancellation may act on (P9.2, #696).
+ *
+ * Deliberately NOT expressed in terms of `LEGAL_TRANSITIONS`, `STAFF_QUEUE_STATUSES`
+ * or `REVENUE_STATUSES`. This answers a different question from all three — "are
+ * the goods still in the shop?" — and `REVENUE_STATUSES`' own comment records
+ * what happens when two sets that answer different questions get defined in
+ * terms of each other (#238: revenue overstated 39%).
+ *
+ * `CONFIRMED` and `READY_FOR_COLLECTION` both mean the order is paid for and
+ * picked or picking, physically still on the premises, so `cancelConfirmedOrder`
+ * returning its stock to `Inventory` is TRUE rather than merely convenient.
+ * `OUT_FOR_DELIVERY` is excluded for exactly that reason: those goods are on a
+ * van, and no return-to-stock step is modelled anywhere in this codebase, so an
+ * increment there would be a lie written into the inventory count. `DELIVERED`
+ * and `COLLECTED` are gone. `PENDING_PAYMENT` has its own path already
+ * (`releaseOrder`, which is also the only one that may touch the payment row),
+ * and `CANCELLED` is already there.
+ *
+ * Money is NOT part of this judgement: cancelling never refunds (#606 owns
+ * that), so a cancelled order's `Payment` keeps saying `SUCCEEDED`.
+ *
+ * An unrecognised status permits nothing, matching `canTransition` — the safe
+ * default for an authorization-shaped question is always "no".
+ */
+const CANCELLABLE_STATUSES: readonly string[] = ["CONFIRMED", "READY_FOR_COLLECTION"];
+
+export function canCancel(status: string): boolean {
+  return CANCELLABLE_STATUSES.includes(status);
 }
 
 /**
