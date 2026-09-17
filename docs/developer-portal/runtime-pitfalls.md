@@ -34,7 +34,7 @@ are in `local-dev-playbook.md`. Design intent — what was decided and why — s
 - **Migrations run in CI on a Node runner using `DIRECT_URL` only.** Never on the Worker, never at
   request time, never against the pooled URL.
 - Prisma 6: driver adapters are **GA** — do NOT add `driverAdapters` to `previewFeatures`.
-  `@prisma/adapter-neon@6.19.3` requires a driver adapter. **Use a Hybrid Strategy for Cloudflare Isolates**:
+  `@prisma/adapter-neon@7.9.1` requires a driver adapter. **Use a Hybrid Strategy for Cloudflare Isolates**:
   - `getPrisma()` (fetch-based `PrismaNeonHttp`): Use for 99% of read operations. Stateless `fetch` sidesteps Cloudflare WebSocket connection limits entirely.
   - `getPrismaWs()` (WebSocket-based `PrismaNeon`): Use STRICTLY for operations requiring `$transaction` (e.g., checkout, cart items). `PrismaNeonHttp` does not support interactive transactions. By isolating WebSocket usage to just transactions, we avoid hitting the 50-socket limit per isolate.
   Instantiate Prisma via `lib/db`'s `getPrisma()` — **construct fresh on every call, never cache

@@ -25,9 +25,17 @@ merges. What Gate 3 proves is that this slice **fully implements** the changes t
 `R14` for `#546`, `R15` for `#724`'s overlap, `R16` for `#584`, `R13` for `#505`'s overlap. The
 closure checklist lives in `plan.md`.
 
-R1. `CLAUDE.md` is **10,000 characters or fewer**, measured by `wc -c`. Correctness takes priority
+R1. `CLAUDE.md` is **14,000 characters or fewer**, measured by `wc -c`. Correctness takes priority
     over compression: no rule may be dropped, and no wording may be shortened into ambiguity, to
     reach this number. There is no minimum size.
+
+    **Amended at `/fix` (2026-09-17), approved by the user.** The original ceiling was 10,000. Four
+    compression passes reached 13,925 with every rule intact and every source-cited heading
+    preserved (17,344 → 15,508 → 14,753 → 14,012 → 13,925, each pass yielding less) — Build assessed
+    that as the honest floor and escalated the remaining gap rather than trimming a rule into
+    ambiguity or reducing a heavily-cited section (Server Actions: 11 source citations) to a bare
+    pointer. The user chose to accept ~13.9k over either alternative. 14,000 gives headroom above
+    the achieved 13,925 rather than pinning the ceiling to today's exact byte count.
 
 R2. `CLAUDE.md` contains **no `@`-prefixed import line** — no line matching `^@` and no inline
     `@path` reference used to pull another file's content into the session automatically. Every
@@ -71,10 +79,19 @@ R7. Every `CLAUDE.md` section name cited from source code still resolves to a re
     `Dependency`, `Hard stops`).
 
 R8. No application source, configuration or environment file is modified. `git diff --name-only
-    BASE...HEAD` lists only files ending in `.md`, plus exactly `ARTIFACT_INDEX.md` and
-    `app/(admin)/staff/runbook/docs.ts`. In particular, no file under `lib/`, `app/` (other than the
-    generated `app/(admin)/staff/runbook/docs.ts`), `features/`, `components/`, `tests/`,
-    `scripts/`, `prisma/`, `.github/`, `.env`, `.dev.vars` or `secrets/` is modified.
+    BASE...HEAD` lists only files ending in `.md`, plus exactly `ARTIFACT_INDEX.md`,
+    `app/(admin)/staff/runbook/docs.ts`, and any `.mjs` file added under this slice's own
+    `specs/2026-09-17-claude-md-guardrail-refactor/` folder. In particular, no file under `lib/`,
+    `app/` (other than the generated `app/(admin)/staff/runbook/docs.ts`), `features/`,
+    `components/`, `tests/`, `scripts/`, `prisma/`, `.github/`, `.env`, `.dev.vars` or `secrets/` is
+    modified.
+
+    **Amended at `/fix` (2026-09-17), approved by the user.** `gen-ledger.mjs` and
+    `verify-ledger.mjs` are the tooling `validation.md`'s R6 row asks for ("script it rather than
+    eyeballing") and the only way to reproduce the R4–R6 completeness proof. Both live inside this
+    slice's own spec folder, are imported by nothing outside it, and run only when invoked by hand —
+    no application, configuration or environment behaviour is affected. The user chose to keep them
+    over deleting them after Gate 3, since deletion would make the ledger unreproducible.
 
 R9. Every documentation reference that pointed into a `CLAUDE.md` section this slice moved now names
     the destination document instead. After the change, no file under `docs/` or `specs/` (excluding

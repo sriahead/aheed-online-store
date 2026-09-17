@@ -136,3 +136,41 @@ issue was closed or commented on, and no `@path` import was used.
   other place a fresh reader should re-check rather than trust.
 - **Suite result:** `141 files / 1886 tests`, all passing, run alone. Recorded here as a Build-time
   observation only — deliberately **not** written into any document as a baseline (`#584`).
+
+## Fix (2026-09-17)
+
+`/validate` ran from a genuinely fresh context (no Build memory) and found five things: the two
+already-disclosed deviations above, confirmed exactly as reported, plus three defects the Build
+pass missed. All five are now resolved.
+
+**R1 and R8 — the user decided, not this session:**
+- **R1:** accept ~13.9k over cutting further. `requirements.md`'s R1 ceiling raised
+  10,000 → 14,000; `validation.md`'s R1 row updated to match. `CLAUDE.md` itself is unchanged
+  (13,925 chars).
+- **R8:** keep `gen-ledger.mjs`/`verify-ledger.mjs` over deleting them. `requirements.md`'s R8 and
+  `validation.md`'s R8 row both amended to explicitly permit `.mjs` files added under this slice's
+  own `specs/2026-09-17-claude-md-guardrail-refactor/` folder.
+
+**Three genuine defects, fixed as root-cause corrections (not row-loosening):**
+1. `docs/developer-portal/runtime-pitfalls.md:37` still read `@prisma/adapter-neon@6.19.3` —
+   carried verbatim from `BASE:CLAUDE.md:42` by the "move substantially verbatim" approach, and
+   never caught because R12 only checks `CLAUDE.md` itself. This is the exact false pin statement
+   the slice's own requirements preamble claims to have corrected repository-wide; it hadn't been,
+   in the one place that now carries the detail. Corrected to `7.9.1`, consistent with the same
+   file's own lines 270/281.
+2. `docs/research/discovery-log.md:416` said `CLAUDE.md` prescribes the `curl -I` CDN check — that
+   check moved to `runtime-pitfalls.md:233` and `CLAUDE.md` no longer contains it. Repointed.
+3. `docs/research/milestone-retrospectives.md:170` said Workers AI handling was promoted to
+   `CLAUDE.md`'s "Workers AI" section — that section no longer exists in `CLAUDE.md` (moved whole
+   to `runtime-pitfalls.md`). Appended a note recording the `#786` relocation rather than rewriting
+   the historical claim, since the original sentence was accurate as of 2026-09-04.
+
+None of the three needed a new decision — each was a factual correction to match what the artifact
+already says elsewhere, so none went back to Spec. `/validate`'s R9 pass was scoped to the 11
+"living" docs/specs files referencing `CLAUDE.md` (not the ~580 hits inside frozen per-slice dated
+spec folders, by analogy to the exemption `requirements.md` already grants this slice's own
+folder) — that scoping call is the validator's, recorded here for whoever re-checks it.
+
+**Not re-litigated:** the five reconciliations, the ledger, the three-document boundary and every
+other row that already passed. Re-running `/validate` from the top per the Fix stage's own
+instruction, not just the failing rows.
