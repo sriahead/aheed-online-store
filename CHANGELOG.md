@@ -8,6 +8,40 @@ every branch merges.
 
 ### Added
 
+- **Staff can cancel a paid order (`#696`, closing `#137` and `#151`,
+  `specs/2026-09-17-p696-staff-cancel-confirmed-order/`)**: `#137` and `#151` were unreachable
+  code, and said so in their own bodies — `releaseOrder` acts only on `PENDING_PAYMENT` orders,
+  strictly before `confirmPayment` writes the `EARN`, so nothing in this codebase could cancel an
+  order that had earned points or spent a discount code. `cancelConfirmedOrder` is that missing
+  path, which is why all three close together.
+  - **It never touches the `Payment` row.** `releaseOrder` writes `FAILED` there, correctly, because
+    no money ever arrived on that path. Here it did and it stays — cancelling issues no refund
+    (`#606` owns money movement), so a cancelled order whose payment still reads `SUCCEEDED` is the
+    honest representation rather than an oversight. Confirmed against real Postgres, not by reading.
+  - **Cancellation is a predicate, not a rung on the status ladder.** `LEGAL_TRANSITIONS` stays
+    forward-only and `nextStatus` still returns the single successor driving the queue's one button;
+    `canCancel` permits `CONFIRMED` and `READY_FOR_COLLECTION` only, the two states where the goods
+    are still on the premises and returning them to stock is true rather than convenient.
+    `OUT_FOR_DELIVERY` is excluded because no return-to-stock step is modelled anywhere.
+  - **Schema, additive:** `LoyaltyEntryKind` gains `EARN_REVERSAL` so a cancelled paid order can
+    carry both reversals while `@@unique([orderId, kind])` keeps working unchanged;
+    `DiscountRedemption` gains `reversedAt`. No backfill.
+  - **The discount redemption is stamped, not deleted**, inverting `releaseCodeRedemption`'s "a
+    discount on a never-paid order is not a financial event" — `Order.discountPence` survives on the
+    cancelled order and the row is the only thing explaining it. Retaining the row forced `seq` to
+    stop being a count: it is now `max(seq)+1` over all rows while only un-reversed rows count
+    against `maxPerCustomer`, which preserves the `@@unique([codeId, userId, seq])` concurrency
+    guard exactly. **`tests/discounts-repository.test.ts` is new** because that guard had no test at
+    all — `tests/discounts.test.ts` covers only the pure `evaluateCode` — so it was pinned before
+    `seq` moved rather than after.
+  - **The fulfilment slot frees itself**: `getAvailableSlotsForDate` omits `CANCELLED` from its used
+    count. Measured live (9 → 10), not assumed, since the slice now depends on it.
+  - **Known and deliberate:** a cancelled-but-unrefunded order's retained money leaves
+    `/staff/reports`, because `REVENUE_STATUSES` is a status literal. Tracked as **`#795`**.
+  - `ADR-005` gains an implementation note: ledger reversal is now decoupled from refunds. No
+    numbered decision reopened — capture method unchanged, nothing writes `PaymentStatus.REFUNDED`,
+    refunds remain its open territory.
+
 - **`CLAUDE.md` reduced from 149,380 to 13,925 characters, with every rule relocated first
   (`#786`, `specs/2026-09-17-claude-md-guardrail-refactor/`)**: the file is loaded into every
   session before any work begins, so its whole size was a fixed per-session cost, and five of its
