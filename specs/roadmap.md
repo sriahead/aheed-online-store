@@ -18,9 +18,12 @@ and minimise risk. The pivot to Cloudflare Workers + Neon adds a **Milestone 0**
 prove the infrastructure end-to-end with a walking skeleton, *then* build features.
 
 > **Delivery tracking.** The GitHub Project *Aheed Online Store â€” Delivery* is a generated **view** of
-> this roadmap, never a second plan. It holds only the **status layer** â€” what is in progress, in
-> review, or blocked right now. Phases, scope and acceptance criteria live here and in
-> `specs/<slice>/`; if something belongs in a doc, it does not go in the Project.
+> this roadmap, never a second plan. It carries the **delivery-tracking layers** — `Status` (what is
+> in progress, in review or blocked right now), plus the owner-maintained `Priority`
+> (`High`/`Medium`/`Low`), `Complexity` (`S`/`M`/`L`) and `Phase`. **Scope is not one of them:**
+> phases, scope and acceptance criteria live here and in
+> `specs/<slice>/`; if something belongs in a doc, it does not go in the Project. An open `High`
+> item goes to `/propose` ahead of an assistant-generated ranking (#724).
 > Provisioned by `scripts/provision-project.sh` (idempotent).
 >
 > **Milestone titles are zero-padded; phase names in prose are not.** GitHub sorts milestones as
@@ -259,19 +262,19 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
 > unit-price half is the one part of this brief that stays pre-launch; #397, #400, #403 and #407 all
 > sit on **P10**, their earliest surviving phase.
 >
-> **Board limitation.** Project #2's Phase field has options only through `P8` â€” it cannot express
-> P8.5, P8.6 or P8.7, and per the open **#267** it cannot express P7.5 either. **Nor can it express
-> P9, P9.1â€“P9.4 or P10** (#426). The options are UI-only in Projects V2 with no API to add them, so
-> board items for all of these stay on Phase `P8`; this roadmap and the GitHub milestone carry the
-> real phase. There is no application-code fix, and #426 did not attempt one â€” it extended this note
-> rather than leaving the next reader to re-investigate.
+> **Board limitation — HISTORICAL, resolved 2026-09-09. Do not follow it.** This note recorded that
+> Project #2's Phase field had options only through `P8`, so items for P7.5, P8.5–P8.7, P2.6,
+> P9–P9.4 and P10 were parked on the nearest existing option (`P8`, or `P2.5` for P2.6) while this
+> roadmap and the GitHub milestone carried the real phase. **The missing options were added
+> additively on 2026-09-09** — `P2.6`, `P7.5`, `P9`, `P9.1`–`P9.4`, `P10` — each pre-existing option
+> passed through with its own id, so no item lost its Phase (219 items across all seven
+> previously-used options verified intact). **#513 and #267 both closed on that change.**
 >
-> **Nor can it express P2.6** (added 2026-09-03, at #564's `/propose`) â€” the field's options are a
-> fixed, alphabetically-bounded set through `P8` and P2.6 sits earlier in that ordering than every
-> other inserted phase above, not later, so it cannot simply reuse the "stays on `P8`" convention
-> those use. P2.6 board items are parked on **Phase `P2.5`** instead â€” the nearest existing option
-> before it â€” and this roadmap plus the GitHub milestone (`P02.6 â€” Search & AI shopping`) carry the
-> real phase, same division of labour as every other case on this list.
+> It is kept, rather than deleted, because it explains why items predating that date still sit on
+> `P8` or `P2.5`: they were parked there correctly under the rule above. **Parking a new item that
+> way now produces wrong board data** — set the item's real phase. The claim that the options were
+> "UI-only in Projects V2 with no API to add them" was also false and is not a reason to re-park
+> anything.
 
 ## P9 â€” Production launch readiness
 
@@ -458,7 +461,8 @@ shipped. On 2026-09-09 the store owner named a set of feature issues as the stan
 ("move these and related issues to 9.2 and work on them ... otherwise we are losing track"), and
 the delivery board's Phase field was set to `P9.2` for all of them with Priority `High`. This
 section exists so `specs/roadmap.md` explains that label rather than silently disagreeing with the
-board, since scope lives here and the board carries status only.
+board, since scope lives here while the board carries the delivery-tracking layers (`Status`,
+`Priority`, `Complexity`, `Phase`) — see the Delivery tracking note at the top of this file.
 
 **Board mechanics fixed in the same pass.** The Phase field topped out at `P8`, which is why every
 recent issue carried a wrong phase (`#513`) and P7.5 items were tagged `P7` (`#267`). The missing
@@ -506,9 +510,12 @@ recommendation, not a dependency chain except where stated.
    NOT resolved first** â€” `#402`'s own build-notes flag this explicitly under "Known-shaky areas":
    `SlotPicker`'s window check and `ExpressCountdown`'s countdown both use the browser's local
    clock, `confirmPayment`'s 60-minute stamp uses server UTC wall-clock. Fine for this app's
-   UK-only vendors today; re-verify against `#363` before onboarding a non-UK vendor. **Not yet
-   promoted to `main` — held at the owner's request pending review of issues observed on staging
-   (2026-09-14); see `docs/model-handoff.md`.**
+   UK-only vendors today; re-verify against `#363` before onboarding a non-UK vendor. **Promoted to
+   production 2026-09-15** (**PR #759**, merge `d855e1f`) — the hold placed on 2026-09-14 pending
+   the owner's review of issues observed on staging was lifted once `#750`/`#749` shipped; `#401`,
+   `#402`, `#748`, `#749`, `#750` and `#751` all closed on that promotion. See the Roadmap Change
+   Log's PR #759 row. **`#613` was never part of this cluster** and remains open — the address-lookup
+   feature that shipped under `#744`'s ancestry was mis-cited to it (`#761`).
    **Gated on operational input this repository cannot supply**: van count, round size, realistic
    daily order volume, and how Aheed actually plans rounds.
 
