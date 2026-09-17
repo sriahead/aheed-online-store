@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.10.0"
+version: "1.11.0"
 updated: 2026-09-17
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,31 +40,43 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-17.
-- **Checkout:** `main` is at `575782c` (PR #779, "Promote the stakeholder business case and P775
-  closeout to production") and `staging` is at `de477e7` — **content-identical, no pending
-  promotion.** `#777` closed on that merge. Work in progress on
-  `feature/credential-verification-closeout`.
-- **THE LIVE R2 CREDENTIAL OUTAGE IS OVER (`#755`, resolved 2026-09-16).** Every staff image upload
-  was failing in **all three environments** for roughly a day; it is fixed, and a real vendor-logo
-  upload was confirmed working on both staging and production by the owner. See the dedicated
-  section below — **the rotation itself was the easy half**, and the way it stayed invisible is the
+- **Checkout:** `main` and `staging` are both at `9a6b6d8` (PR #788, "Promote CLAUDE.md guardrail
+  refactor to production") — **content-identical, no pending promotion.**
+- **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
+  2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
+  `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
+  and `docs/developer-portal/{runtime-pitfalls,app-conventions,local-dev-playbook}.md` for the
+  three new documents that absorbed the material with no prior owner. A session that still expects
+  `CLAUDE.md` to carry the vitest suite baseline, a Milestone-0 claim, `phase:`/`gate:` PR labels,
+  or `@prisma/adapter-neon@6.19.3` is working from a stale memory — all five were corrected or
+  removed, not merely reworded. `#584` and `#546` closed on this promotion; `#724` and `#505` each
+  got a partial correction and stay open for their non-`CLAUDE.md` halves (see those issues).
+- **Two prior slices promoted to `main` with no separate Document (final) PR of their own**:
+  the stakeholder business case (`#777`, PR #778/#779, 2026-09-16) and the credential verification
+  closeout (`#780`/`#781`/`#782`, PR #784/#785, 2026-09-17). This section's SHA/issue state below is
+  now current for both, but neither got the dedicated narrative section a Document pass normally
+  writes — read those PRs directly for detail beyond what's summarised here.
+- **THE LIVE R2 CREDENTIAL OUTAGE IS OVER (`#755`, resolved 2026-09-16) AND ITS FOLLOW-UP WORK IS
+  ALSO DONE (`#780`/`#781`/`#782`, closed on PR #785, 2026-09-17).** `scripts/verify-storage-
+  credentials.ts` now probes all four env files (`.dev.vars` included) and reports whether each
+  deployed Worker is running its newest version; `CLAUDE.md` (now `docs/developer-portal/
+  runtime-pitfalls.md`) documents the loud half of the undeployed-version trap; `saveStorefrontTheme`
+  validates its input and uses the shared `isUniqueViolation` check. See the dedicated section below
+  for the outage itself — **the rotation was the easy half**, and the way it stayed invisible is the
   part a future session needs.
 - **Both Workers were redeployed and are on clean wrangler-sourced deploys**: staging `859a1ff6`,
-  production `8d1c074c`, each its own newest version. `npx tsx scripts/verify-storage-credentials.ts`
-  exits 0 with all four env files accepted.
-- **Five issues closed 2026-09-16/17 after live verification**, not on assertion: `#755` (rotation),
-  `#756` (fulfilment seed — all four of its own criteria executed), `#713` (brand-colour validation,
-  found **already shipped** in PR #730 and re-verified rather than rebuilt), `#219` (Cloudflare token
-  rotation, confirmed by the owner and corroborated by post-exposure GitHub secret timestamps) and
-  `#777`.
-- **Base state:** `origin/main` moved `1e44533` → `575782c`; `origin/staging` moved `1e44533` →
-  `de477e7` (PR #778, the business case) and both were then promoted together.
-- **NEW INFRASTRUCTURE — a second Neon project now exists, and is now live on staging.** See the
+  production `8d1c074c`, each its own newest version, as of the `#755` rotation — not re-verified
+  live since.
+- **Issues closed 2026-09-16/17 after live verification**, not on assertion: `#755` (rotation),
+  `#756` (fulfilment seed), `#713` (brand-colour validation, found already shipped), `#219`
+  (Cloudflare token rotation), `#777` (business case), `#780`/`#781`/`#782` (credential closeout),
+  `#786`/`#584`/`#546` (this slice).
+- **NEW INFRASTRUCTURE — a second Neon project now exists, and is live in production.** See the
   dedicated section below. This is the most consequential project-level change since multi-tenancy.
 - **Worktrees:** only the main checkout.
-- **Protected local work, unchanged:** PR #725 (`docs/orient-reads-board-priority`) and PR #722
-  (`docs/document-final-social-contact-mobile-nav`) are both still open, based on an older
-  `staging`, unrelated to this work. Not re-verified live.
+- **Protected local work, unchanged:** PR #725 (`docs/orient-reads-board-priority`, addresses part
+  of `#724`) and PR #722 (`docs/document-final-social-contact-mobile-nav`) are both still open,
+  based on an older `staging`, unrelated to this work. Not re-verified live.
 
 ## The R2 credential outage is resolved — and HOW it stayed hidden is the durable lesson (`#755`, 2026-09-16)
 
@@ -98,8 +110,9 @@ succeeded.
 `wrangler secret put` and therefore deploys as it goes, and updates the GitHub environment secrets
 in the same pass.
 
-`#780` and `#781` (both open, in progress on `feature/credential-verification-closeout`) close the
-tooling and documentation gaps this exposed. `CLAUDE.md` now carries both halves.
+`#780` and `#781` — **closed** on PR #785, 2026-09-17 — closed the tooling and documentation gaps
+this exposed. `docs/developer-portal/env-setup.md` now carries both halves (moved out of
+`CLAUDE.md` by `#786`, substance unchanged).
 
 **Two things this did NOT resolve:** whether the previously-exposed Cloudflare token was actually
 *deleted* rather than merely superseded (an owner dashboard action, unobservable from here), and
@@ -194,8 +207,8 @@ it as `[env.staging.vars]`/`[env.production.vars]` in `wrangler.toml` — confir
 environments' own first real deploy from committed config (staging's post-merge `deploy-staging`,
 then production's `deploy-production` on promotion), neither needing a dashboard workaround.
 
-Read `CLAUDE.md`'s "There are TWO databases" section and `specs/architecture.md` §3.0 before
-touching any of it.
+Read `CLAUDE.md`'s "Database" section ("Two databases exist" bullet) and `specs/architecture.md`
+§3.0 before touching any of it.
 
 ## Project Position
 
@@ -357,22 +370,25 @@ Board Phase and GitHub milestone disagreed for #151, #422, #589, #602, #695, #69
 
 ## Documentation Reconciliation
 
-- `CLAUDE.md`, `package.json` and `prisma/schema.prisma` still contain walking-skeleton descriptions.
+- `package.json` and `prisma/schema.prisma` still contain walking-skeleton descriptions.
+  (`CLAUDE.md`'s own copy was corrected — the project is stated as P10 — by `#786`, 2026-09-17.)
 - Architecture and tech-stack prose says "Pages/Workers" although the runtime is Workers only.
 - `specs/architecture.md` says the storage port has five operations and no delete; the code has six,
   including `getObject` and `deleteObject`.
-- `CLAUDE.md` says local `VendorDomain` values must not carry a port; `lib/tenant.ts` deliberately
-  supports a port-qualified local fallback.
+- `specs/design-system.md` says local `VendorDomain` values must not carry a port; `lib/tenant.ts`
+  deliberately supports a port-qualified local fallback. (Relocated verbatim from `CLAUDE.md` by
+  `#786`, 2026-09-17 — the discrepancy itself is unchanged, only where it's written down.)
 - `deploy-production.yml` still cites the obsolete private-repository paid-plan explanation for no
   approval gate. The current decision is deliberate self-approval avoidance on a public repo.
 - `specs/mission.md` still cites ISR although this Prisma/Workers stack cannot use Next ISR.
-- `CLAUDE.md`'s Vitest baseline is now **139/1842** (measured 2026-09-16 at this session's own
-  `/validate`, up from `#764`'s 136/1816 — three new files, 26 tests, for the decommission path,
-  its safety AST check, and the reference status service) — three of the files it counts
-  (`tests/concurrency-slot-booking.test.ts`, `tests/slot-capacity.test.ts`,
-  `tests/express-sla.test.ts`) are `it.skipIf(!DATABASE_URL)`-guarded and report **skipped**, not
-  run, in CI, so a real CI job's own summary line will read 3 fewer tests even when fully green —
-  expected, not a discrepancy to chase.
+- **The hardcoded vitest suite baseline this bullet used to track no longer exists anywhere**
+  (`#584`, closed by `#786`, 2026-09-17) — it was removed, not relocated, after going stale roughly
+  twenty times. `CLAUDE.md` and `docs/developer-portal/local-dev-playbook.md` now document the
+  forks-pool trap it existed to catch via a detection procedure instead of a recorded count. If you
+  need the current count for some other reason, run `npx vitest run` alone (never beside or
+  straight after a heavy build — see the forks-pool trap) and read its own summary line; three
+  `it.skipIf(!DATABASE_URL)`-guarded files still report fewer tests in CI than locally, which is
+  expected, not a discrepancy.
 - The roadmap says the internal KMS site went live behind Access; its deploy workflow says no public
   route is configured. Verify Cloudflare before correcting either statement.
 - **`#613` citation error, tracked as `#761`:** `specs/2026-09-13-p613-address-lookup/`, and rows in
