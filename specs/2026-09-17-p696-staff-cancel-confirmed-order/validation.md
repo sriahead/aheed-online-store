@@ -53,7 +53,7 @@ explicit-client rule makes possible. Run it with `npx tsx`, not through the Work
 | Req | Testing Area | How to verify |
 |-----|--------------|---------------|
 | R1  | Unit | `grep -A6 "enum LoyaltyEntryKind" prisma/schema.prisma` lists exactly `EARN`, `REDEEM`, `REVERSAL`, `EARN_REVERSAL` in that order. |
-| R2  | Unit | `grep -c "@@unique(\[orderId, kind\])" prisma/schema.prisma` returns `1`; `git diff origin/staging -- prisma/schema.prisma` shows no change to that line. |
+| R2  | Unit | `grep -n "@@unique(\[orderId, kind\])" prisma/schema.prisma` shows the constraint declared exactly once; a bare `grep -c` over the same pattern returns `3`, not `1`, because this slice's own new doc comments quote the constraint in prose (the `#649`/`#650` grep-self-match trap in `local-dev-playbook.md`) — anchor to the `@@unique` line itself (no leading `///`) or diff the declaration, not a raw count. `git diff origin/staging -- prisma/schema.prisma` shows no change to the declaration line. |
 | R3  | Unit | `grep -A18 "model DiscountRedemption" prisma/schema.prisma` shows `reversedAt DateTime?` and all three original constraints present and unmodified. |
 | R4  | Integration | Open the single new file under `prisma/migrations/*/migration.sql`. It contains `ALTER TYPE "LoyaltyEntryKind" ADD VALUE 'EARN_REVERSAL'` and `ALTER TABLE "DiscountRedemption" ADD COLUMN "reversedAt"`, and `grep -iE "drop index\|trgm" ` over that file returns nothing. |
 | R5  | Unit | `npx vitest run tests/order-status.test.ts` — new cases assert `canCancel` true for the two cancellable statuses and false for the other five plus `"NOT_A_STATUS"`. |
