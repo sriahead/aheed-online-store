@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.13.0"
+version: "1.14.0"
 updated: 2026-09-18
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,10 +40,13 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-18.
-- **Checkout:** `main` is at `e63a920` (PR #794, promoting `#792`/`#724`'s roadmap/board
-  reconciliation). `staging` is **4 commits ahead** at `ab43f16` (PR #796, merge `ab43f16`) —
-  **one slice pending promotion**: `#696`/`#137`/`#151` (staff cancellation of a CONFIRMED order).
-  Board items for all three are `In Review`, not `Done`, until that promotion lands.
+- **Checkout:** `main` and `staging` are **converged** at `d8f61a4` (PR #799, "Promote staff
+  cancellation of a CONFIRMED order to production (#696, #137, #151)", merge `staging -> main`,
+  carrying PR #796's feature merge and PR #798's Document (final) closeout). **No slice pending
+  promotion.** `#696`, `#137` and `#151` all closed on this merge, their Project #2 items
+  auto-moving to `Done`. Migration `20260917140514_p696_staff_cancel_confirmed_order` applied
+  (additive: `LoyaltyEntryKind.EARN_REVERSAL`, `DiscountRedemption.reversedAt`, no backfill).
+  Production `/api/health` confirmed serving `d8f61a4` with `db.ok: true` post-deploy.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
@@ -263,10 +266,9 @@ The live board showed open High-priority items, all with blank Complexity:
   known-shaky (timezone) and unresolved (multi-site). #400 remains split: the async-loading half
   still open, the per-store half still blocked on #422.
 - Saved lists: #116.
-- **Paid-order cancellation and reversals: SHIPPED TO STAGING, 2026-09-17** — #696, #137 and #151
-  all built together (PR #796, merge `ab43f16`, `specs/2026-09-17-p696-staff-cancel-confirmed-order/`)
-  and moved to `In Review`. Not yet promoted — see Checkout above. `cancelConfirmedOrder` never
-  touches `Payment`; refunds stay with #606.
+- **Paid-order cancellation and reversals: DONE, 2026-09-18** — #696, #137 and #151 all **closed →
+  Done**, promoted to production via PR #799 (`specs/2026-09-17-p696-staff-cancel-confirmed-order/`).
+  `cancelConfirmedOrder` never touches `Payment`; refunds stay with #606.
 - Trust and contact: #406 and #695.
 - Data activation: #697.
 - Location decision reconciliation: #422.
@@ -275,8 +277,7 @@ The live board showed open High-priority items, all with blank Complexity:
 
 Dependencies and scope boundaries worth preserving:
 
-- #696 made #137 and #151 reachable (shipped to `staging`, see High-Priority Work above). `main`
-  still cancels only `PENDING_PAYMENT` orders until this promotes.
+- #696 made #137 and #151 reachable, now in production (see High-Priority Work above and Checkout).
 - #363 gates delivery slots and Click & Collect. #402 also needs the location decision and real
   operating inputs such as capacity, rounds and order volume.
 - #400 is three concerns: the low-stock badge exists; restock dates and async loading do not;
