@@ -69,6 +69,7 @@ model User {
   roleChangesTargeted VendorRoleAuditLog[] @relation("TargetUser")
   roleChangesActedOn  VendorRoleAuditLog[] @relation("ActorUser")
   customerAddresses   CustomerAddress[]
+  shoppingLists       ShoppingList[]
 }
 
 model Session {
@@ -169,6 +170,7 @@ model Vendor {
   vendorThemes              VendorTheme[]
   vendorExpressSchedules    VendorExpressSchedule[]
   customerAddresses         CustomerAddress[]
+  shoppingLists             ShoppingList[]
 }
 
 // P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
@@ -1137,7 +1139,7 @@ model DiscountRedemption {
   /// collide on @@unique([codeId, userId, seq]) — the trap the seq comment in
   /// lib/repositories/discounts.ts warns about. Allocation reads every row; only
   /// the per-customer CAP skips reversed ones.
-  reversedAt  DateTime?
+  reversedAt DateTime?
 
   @@unique([orderId])
   @@unique([codeId, userId, seq])
@@ -1434,4 +1436,64 @@ model CustomerAddress {
   updatedAt     DateTime  @updatedAt
 
   @@index([vendorId, userId])
+}
+
+// P10 (#116) — a shopper's saved, reusable shopping list.
+//
+// ## Why there is no productId here
+//
+// P4's `reorderItems` already answers "the same products as last time, exactly", and #116's own
+// text warned that it "probably supersedes half of what a saved list is for". A list of product
+// ids would answer the same question under a different name. This model answers the different
+// question a weekly grocery shopper actually has: "here is my standing list in my own words —
+// show me what you have for it this week."
+//
+// So an item stores the shopper's LINE, not a product. On open, the list is re-matched through
+// the pass P3d (#114) and P2.6 (#566, #567) already ship. The consequences are all good ones: a
+// delisted product simply stops matching (no nullable FK, no onDelete decision against Product,
+// no "no longer available" branch), and a line this shop has never stocked can be stored at all,
+// which under a product-id model it could not.
+//
+// `userId` is NON-NULLABLE, matching CustomerAddress: a guest has no durable identity to own a
+// saved record, and a weekly-reuse feature is aimed squarely at a returning identified shopper.
+// Guests keep the stateless /shop-your-list path, which still writes nothing.
+model ShoppingList {
+  id        String             @id @default(uuid())
+  vendorId  String
+  vendor    Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  items     ShoppingListItem[]
+
+  @@index([vendorId, userId])
+}
+
+// One saved line. `rawText` is what the shopper wrote; `terms` is what we search for.
+//
+// They are DIFFERENT FACTS, which is why both are stored. `parseList(rawText)` would only ever
+// reproduce the deterministic parse — when the AI pre-pass in lib/list-normalisation.ts ran,
+// `terms` holds the NORMALISED words, and those cannot be recovered from the original line
+// without calling the model again. Saving them means re-opening a list costs one DB query and
+// no Workers AI call.
+//
+// `terms` is a space-joined String and deliberately NOT a Json column (architecture.md §3.1
+// forbids Json for domain data) and NOT a child table (nothing ever queries an individual term —
+// they are read back whole as one line's search input, and every per-line decision happens in
+// pure code afterwards). The join is lossless by construction: toTerms() emits lowercase tokens
+// with whitespace already split out, so no token can contain a space.
+model ShoppingListItem {
+  id       String       @id @default(uuid())
+  listId   String
+  list     ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  rawText  String
+  terms    String
+  quantity Int
+  measure  String?
+  brand    String?
+  position Int
+
+  @@index([listId])
 }

@@ -99,8 +99,16 @@ function clampLineQuantity(value: number): number {
   return Math.min(Math.trunc(value), MAX_LINE_QUANTITY);
 }
 
-/** Lowercase, strip surrounding punctuation and quotes, drop empties. */
-function toTerms(text: string): string[] {
+/**
+ * Lowercase, strip surrounding punctuation and quotes, drop empties.
+ *
+ * Exported for P10 (#116): a saved list built from a catalogue product name — the /cart and
+ * order "save as list" entry points — needs the same tokenisation a pasted line gets, or the
+ * saved line would not re-match the very product it came from. Also the reason a saved line's
+ * `terms` can be stored space-joined: every token this returns has already had whitespace split
+ * out, so no token can contain a space and split-on-read inverts join-on-write exactly.
+ */
+export function toTerms(text: string): string[] {
   return text
     .toLowerCase()
     .split(/\s+/)

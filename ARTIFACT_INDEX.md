@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-18T04:17:18.450Z` · commit `e388d92` · `198` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-18T09:55:03.531Z` · commit `b29ccf9` · `199` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -196,6 +196,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [CLAUDE.md guardrail refactor — reduce always-loaded context (plan)](specs/2026-09-17-claude-md-guardrail-refactor/plan.md) | spec | 1.0.0 | 2026-09-17 | draft | internal | Reduce CLAUDE.md from 149,380 characters to under 10,000 by relocating every rule to six existing and three new authoritative documents under a line-by-line migration ledger, repointing every inbound reference, and reconciling five false statements. |
 | [Credential verification closeout (plan)](specs/2026-09-17-credential-verification-closeout/plan.md) | spec | 1.0.0 | 2026-09-17 | draft | internal | Closes the three defects found while resolving the R2 credential outage: a verifier blind to the deployed Worker, an undocumented deploy wedge, and an unvalidated brand-colour write path. |
 | [Staff cancellation of a CONFIRMED order (plan)](specs/2026-09-17-p696-staff-cancel-confirmed-order/plan.md) | spec | 1.0.0 | 2026-09-17 | draft | internal | Gives staff a cancel path for a paid order whose goods are still in the store, restoring stock and reversing the loyalty earn and discount-code use — without moving money, which stays with |
+| [Saved shopping lists (plan)](specs/2026-09-18-p116-saved-shopping-lists/plan.md) | spec | 1.0.0 | 2026-09-18 | draft | internal | A signed-in shopper can save a reusable shopping list and re-open it against today's catalogue. Stores the shopper's own words, not product ids, so a saved list survives catalogue churn and stays different from reorder. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.30.0 | 2026-09-16 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

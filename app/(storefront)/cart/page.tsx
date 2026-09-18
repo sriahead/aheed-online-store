@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ListChecks } from "lucide-react";
+import { BookmarkPlus, ListChecks } from "lucide-react";
 import { getCartRepository } from "@/lib/cart-service";
-import { getCartIdentity } from "@/lib/cart-identity";
+import { getCartIdentity, getUserId } from "@/lib/cart-identity";
+import { saveCartAsList } from "@/features/lists/save-cart-as-list";
+import { MAX_LIST_NAME_LENGTH, MAX_SAVED_LISTS } from "@/lib/saved-list";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getEnv } from "@/lib/config";
 import { CartContents } from "@/components/cart/CartContents";
@@ -22,7 +24,7 @@ export const metadata: Metadata = { title: "Your cart" };
 export default async function CartPage({
   searchParams,
 }: {
-  searchParams: Promise<{ unavailable?: string }>;
+  searchParams: Promise<{ unavailable?: string; list?: string }>;
 }) {
   const [identity, vendor, params] = await Promise.all([
     getCartIdentity(),
@@ -31,6 +33,9 @@ export default async function CartPage({
   ]);
   const summary = await getCartRepository().getSummary(identity);
   const fulfilmentMethod = await getFulfilmentMethod();
+  // P10 (#116) — saving needs an account, so the control is resolved here rather than rendered
+  // and then refused. Guests keep the cart exactly as it was.
+  const canSaveList = (await getUserId()) !== null;
   const cdnBaseUrl = getEnv().CDN_BASE_URL ?? "";
   // P8.5c (#347): "Add all N to basket" adds what it can and names what it
   // couldn't, rather than silently delivering a partial bundle.
@@ -86,6 +91,48 @@ export default async function CartPage({
           cdnBaseUrl={cdnBaseUrl}
         />
       </div>
+
+      {/* P10 (#116) — turn this cart into a reusable list. We save the product NAMES, not ids, so
+          next week the list matches whatever is in stock under those names. */}
+      {canSaveList && summary.lines.length > 0 && (
+        <form action={saveCartAsList} className="mt-4 space-y-2">
+          <label htmlFor="cartListName" className="block text-sm font-bold text-primary">
+            Save this cart as a list
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="cartListName"
+              name="name"
+              type="text"
+              maxLength={MAX_LIST_NAME_LENGTH}
+              placeholder="Weekly shop"
+              className="min-w-0 flex-1 rounded-2xl border border-black/10 bg-white p-2.5 text-sm text-primary placeholder:text-primary-muted focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+            />
+            <button
+              type="submit"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white"
+            >
+              <BookmarkPlus className="h-4 w-4" aria-hidden />
+              Save list
+            </button>
+          </div>
+          {params.list === "saved" && (
+            <p role="status" className="text-xs font-semibold text-primary">
+              Saved — find it under Your lists.
+            </p>
+          )}
+          {params.list === "capped" && (
+            <p role="status" className="text-xs font-semibold text-danger">
+              You already have {MAX_SAVED_LISTS} saved lists. Delete one to save another.
+            </p>
+          )}
+          {params.list === "empty" && (
+            <p role="status" className="text-xs font-semibold text-danger">
+              There is nothing in your cart to save.
+            </p>
+          )}
+        </form>
+      )}
     </main>
   );
 }

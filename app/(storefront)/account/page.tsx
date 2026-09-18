@@ -44,6 +44,16 @@ export default async function AccountPage() {
         <span className="font-semibold text-primary">Your orders</span>
         <ChevronRight className="h-5 w-5 text-primary-subtle" aria-hidden />
       </Link>
+
+      {/* P10 (#116) — saved shopping lists. Always shown: unlike loyalty, this is not gated on a
+          vendor feature flag, and an empty state explains itself. */}
+      <Link
+        href="/account/lists"
+        className="mb-3 flex items-center justify-between rounded-2xl border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
+      >
+        <span className="font-semibold text-primary">Your lists</span>
+        <ChevronRight className="h-5 w-5 text-primary-subtle" aria-hidden />
+      </Link>
       {/* Only where this vendor actually runs a scheme — /account/loyalty 404s
           otherwise, and a link to a 404 is worse than no link (P5a, #135). */}
       {loyaltyEnabled && (
