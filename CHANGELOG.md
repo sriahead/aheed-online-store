@@ -142,6 +142,18 @@ every branch merges.
 
 ### Changed
 
+- **Document (final) for `#696`'s staff-cancellation slice, plus a backfilled roadmap gap.**
+  `specs/roadmap.md` gains the change-log rows for the `#696`/`#137`/`#151` staging merge (PR #796)
+  and, backfilled in the same pass, the `#792`/`#724` board-reconciliation staging merge and
+  promotion (PRs #793/#794) that `npm run sdd:audit` reported as pending carry-forward. `#696`'s own
+  `validation.md` R2 row is corrected: its literal `grep -c` check returns `3`, not the `1` it
+  claimed, because this slice's schema comments quote the constraint in prose — the actual
+  declaration is unmodified. `docs/model-handoff.md` reconciled with the shipped-but-not-yet-promoted
+  state (`staging` is 4 commits ahead of `main`). Filed **`#797`** (live-DB test fixtures in
+  `tests/slot-capacity.test.ts` and two siblings never clean up their `Vendor` rows — 110 of 112
+  vendors in the dev database are orphaned fixtures, self-documented in a code comment for a while
+  but never tracked). No source, schema or configuration touched.
+
 - **Docs and board reconciliation, taken before the next feature slice (`#792`)**: four statements
   in `specs/roadmap.md` that the 2026-09-17 `/orient` pass found false against live state, plus two
   board corrections and the outstanding docs-only promotion. No source, schema or configuration
