@@ -8,6 +8,41 @@ every branch merges.
 
 ### Added
 
+- **Saved shopping lists (`#116`, `specs/2026-09-18-p116-saved-shopping-lists/`)**: a signed-in
+  shopper saves a reusable list and re-opens it against today's catalogue. `#116` was filed asking
+  to sequence P4's reorder first "and see what demand is left"; reorder shipped, and this is
+  deliberately the half it does not cover.
+  - **A saved line stores the shopper's WORDS, never a `productId`.** `ShoppingListItem` has no
+    relation to `Product` at all. `reorderItems` already answers "the same products as last time,
+    exactly" — a product-id list would be that again under a new name, which `#116`'s own body
+    predicted. Storing text answers "here is my standing list, show me what you have this week,"
+    and costs nothing to maintain: no nullable FK, no `onDelete` decision, no "no longer available"
+    branch, and a line this shop has never stocked can be stored at all.
+  - **Nothing re-matches a saved list except the code that already matched a pasted one.**
+    `itemsToLines` → `matchListTerms` + `synonymAliasMap` → `resolveLines` → the existing review
+    step. The review block moved to `components/cart/ListReview.tsx` so both surfaces render one
+    component rather than two that can drift; `add-list-to-cart.ts` and `reorder-items.ts` are
+    byte-identical to `staging`.
+  - **`terms` is stored, not derived.** `parseList(rawText)` reproduces only the deterministic
+    parse — when P2.6's AI pre-pass ran, `terms` holds the normalised words, which cannot be
+    recovered without paying for the model again. So re-opening a list costs one DB query and no
+    Workers AI call. It is a space-joined `String`, not `Json` (§3.1) and not a child table: nothing
+    ever queries an individual term.
+  - **Schema, additive:** `ShoppingList` + `ShoppingListItem`, non-null `userId` (guests are not
+    served, matching `#764`'s ruling for saved addresses). No backfill.
+  - **Three entry points**, one aggregate: the `/shop-your-list` review screen, `/cart`, and a past
+    order beside the existing Reorder button. The cart and order paths build lines from catalogue
+    product names, so they need no AI call.
+  - **`CLAUDE.md` and `runtime-pitfalls.md` corrected, with measurements.** `#382` recorded
+    `updateMany`/`createMany` as the operations that crash on the HTTP adapter "and ONLY those
+    two," and singular `create` as always fine. That was true only of the childless create it
+    tested: a singular `create` **with nested child writes** fails identically
+    (`Transactions are not supported in HTTP mode`). The rule is "does this open an implicit
+    transaction," not which method is named. Reproducible on demand via the slice's
+    `verify-saved-lists.ts --prove-http`, which treats a success there as a failed check.
+  - Saved lists reach all three data-rights surfaces (export, other-vendor count, erasure).
+    `terms` is deliberately not exported — it is our tokenisation, not something the subject gave us.
+
 - **Staff can cancel a paid order (`#696`, closing `#137` and `#151`,
   `specs/2026-09-17-p696-staff-cancel-confirmed-order/`)**: `#137` and `#151` were unreachable
   code, and said so in their own bodies — `releaseOrder` acts only on `PENDING_PAYMENT` orders,

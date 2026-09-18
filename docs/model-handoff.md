@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.14.0"
+version: "1.15.0"
 updated: 2026-09-18
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -265,7 +265,7 @@ The live board showed open High-priority items, all with blank Complexity:
   above.) #363 and #422 remain genuinely open/unresolved — #402 shipped without either, flagged as
   known-shaky (timezone) and unresolved (multi-site). #400 remains split: the async-loading half
   still open, the per-store half still blocked on #422.
-- Saved lists: #116.
+- Saved lists: **#116 — built, awaiting Validate** (see In-Flight Work below). Not yet merged to `staging`.
 - **Paid-order cancellation and reversals: DONE, 2026-09-18** — #696, #137 and #151 all **closed →
   Done**, promoted to production via PR #799 (`specs/2026-09-17-p696-staff-cancel-confirmed-order/`).
   `cancelConfirmedOrder` never touches `Payment`; refunds stay with #606.
@@ -296,6 +296,16 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **`#116` (saved shopping lists) is BUILT BUT NOT SHIPPED**, on `feature/116-saved-shopping-lists`
+  (spec `b29ccf9`, implementation `4682b75`), awaiting Validate. Two things about it are
+  environmental rather than slice-local:
+  - **It carries a real migration** (`20260918053538_p116_saved_shopping_lists`, two new tables) that
+    has **not** reached `staging` or `main`. Both deploy workflows build before they migrate, so it
+    applies on promotion; nothing to do, but a promotion PR for this branch is not a docs-only one.
+  - **The DEV Neon branch has already been migrated** (`ep-sparkling-paper-za3j7xza`, via a local
+    `prisma migrate deploy` so the slice's live script could run). So `ShoppingList` and
+    `ShoppingListItem` exist in dev and not in staging or production. Do not read dev's schema as
+    evidence about either environment until PR promotion.
 - **`#764` and `#770`/`#771`/`#767` are DONE — see Last Verified/Project Position above.** Both
   promoted to production via PR #775 (`1e44533`, 2026-09-16); `#764`, `#767`, `#770`, `#771`,
   `#772` all closed. `feature/reference-coverage-reconciliation` and
