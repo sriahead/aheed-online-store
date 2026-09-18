@@ -23,7 +23,7 @@ vi.mock("@/lib/payments", () => ({
   getPaymentService: () => ({ createPayment: () => paymentStub.createPayment() }),
 }));
 
-const { placeOrder, CheckoutError, toProvenance, findOrderForViewer } =
+const { placeOrder, CheckoutError, toProvenance, findOrderForViewer, cancelConfirmedOrder } =
   await import("@/lib/repositories/orders");
 
 const VENDOR = "v-aheed";
@@ -1343,5 +1343,190 @@ describe("listStalePendingOrders", () => {
       { orderNumber: "AH-2", createdAt, providerReference: null },
       { orderNumber: "AH-3", createdAt, providerReference: null },
     ]);
+  });
+});
+
+/**
+ * P9.2 (#696) — cancelConfirmedOrder, the paid cancel path.
+ *
+ * A SIBLING of releaseOrder, not a parameterisation of it: releaseOrder's status
+ * guard could have been widened, but its `payment.updateMany(... FAILED)` could
+ * not. On this path the money arrived and stays (no refund — #606 owns money
+ * movement), so writing FAILED would be false the moment it was written.
+ *
+ * Its own fake rather than the module-level one above, which is shaped for
+ * placeOrder's much larger transaction.
+ */
+describe("cancelConfirmedOrder (#696)", () => {
+  const ORDER_ID = "o-1";
+
+  function fakeCancelDb(opts: {
+    updatedCount: number;
+    items?: { productId: string; quantity: number }[];
+  }) {
+    const calls = {
+      orderUpdates: [] as { where: Record<string, unknown>; data: Record<string, unknown> }[],
+      inventoryUpdates: [] as { where: Record<string, unknown>; data: Record<string, unknown> }[],
+      events: [] as Record<string, unknown>[],
+      paymentUpdates: [] as unknown[],
+      ledgerReads: [] as string[],
+    };
+
+    const tx = {
+      order: {
+        updateMany: async (args: {
+          where: Record<string, unknown>;
+          data: Record<string, unknown>;
+        }) => {
+          calls.orderUpdates.push(args);
+          return { count: opts.updatedCount };
+        },
+      },
+      orderItem: {
+        findMany: async () => opts.items ?? [],
+      },
+      inventory: {
+        updateMany: async (args: {
+          where: Record<string, unknown>;
+          data: Record<string, unknown>;
+        }) => {
+          calls.inventoryUpdates.push(args);
+          return { count: 1 };
+        },
+      },
+      orderStatusEvent: {
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          calls.events.push(data);
+          return data;
+        },
+      },
+      // Present so a stray write would be RECORDED rather than throwing — an
+      // assertion that it was never called is only meaningful if calling it
+      // would have succeeded.
+      payment: {
+        updateMany: async (args: unknown) => {
+          calls.paymentUpdates.push(args);
+          return { count: 1 };
+        },
+      },
+      // The three reversals run against the real functions; give them nothing
+      // to find so they no-op, which is the behaviour their own suites cover.
+      loyaltyLedgerEntry: {
+        findUnique: async ({ where }: { where: { orderId_kind: { kind: string } } }) => {
+          calls.ledgerReads.push(where.orderId_kind.kind);
+          return null;
+        },
+        create: async () => ({}),
+      },
+      loyaltyAccount: { updateMany: async () => ({ count: 0 }) },
+      discountRedemption: {
+        findFirst: async () => null,
+        updateMany: async () => ({ count: 0 }),
+      },
+      discountCode: { updateMany: async () => ({ count: 0 }) },
+    };
+
+    const db = {
+      $transaction: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx),
+    };
+
+    return { db: db as unknown as Parameters<typeof cancelConfirmedOrder>[0], calls };
+  }
+
+  it("guards on the two cancellable statuses and the vendor", async () => {
+    const { db, calls } = fakeCancelDb({ updatedCount: 1 });
+
+    await cancelConfirmedOrder(db, VENDOR, ORDER_ID, "customer called", "staff-1");
+
+    expect(calls.orderUpdates[0].where).toMatchObject({
+      id: ORDER_ID,
+      vendorId: VENDOR,
+      status: { in: ["CONFIRMED", "READY_FOR_COLLECTION"] },
+    });
+    expect(calls.orderUpdates[0].data).toMatchObject({ status: "CANCELLED" });
+  });
+
+  it("returns false and writes NOTHING else when the guard matches no row", async () => {
+    // count 0 means the order was not cancellable, or another request got there
+    // first. Either way nothing after the compare-and-set may run — this is what
+    // makes a double-submitted cancel safe rather than a second stock increment.
+    const { db, calls } = fakeCancelDb({
+      updatedCount: 0,
+      items: [{ productId: "p-1", quantity: 3 }],
+    });
+
+    expect(await cancelConfirmedOrder(db, VENDOR, ORDER_ID, "reason", "staff-1")).toBe(false);
+
+    expect(calls.inventoryUpdates).toHaveLength(0);
+    expect(calls.events).toHaveLength(0);
+    expect(calls.ledgerReads).toHaveLength(0);
+  });
+
+  it("restores stock for every order line", async () => {
+    const { db, calls } = fakeCancelDb({
+      updatedCount: 1,
+      items: [
+        { productId: "p-1", quantity: 3 },
+        { productId: "p-2", quantity: 1 },
+      ],
+    });
+
+    expect(await cancelConfirmedOrder(db, VENDOR, ORDER_ID, "reason", "staff-1")).toBe(true);
+
+    expect(calls.inventoryUpdates).toHaveLength(2);
+    expect(calls.inventoryUpdates[0]).toMatchObject({
+      where: { vendorId: VENDOR, productId: "p-1" },
+      data: { quantity: { increment: 3 } },
+    });
+    expect(calls.inventoryUpdates[1].data).toMatchObject({ quantity: { increment: 1 } });
+  });
+
+  it("NEVER touches the Payment row — the money arrived and stays", async () => {
+    // The single most important assertion in this file. releaseOrder writes
+    // FAILED here, correctly, because no money ever arrived on that path. Doing
+    // the same on a paid order would be false at the moment it was written and
+    // would collide with the real REFUNDED writer #606 eventually adds.
+    const { db, calls } = fakeCancelDb({
+      updatedCount: 1,
+      items: [{ productId: "p-1", quantity: 1 }],
+    });
+
+    await cancelConfirmedOrder(db, VENDOR, ORDER_ID, "reason", "staff-1");
+
+    expect(calls.paymentUpdates).toHaveLength(0);
+  });
+
+  it("records the reason and the acting staff user on the status event", async () => {
+    const { db, calls } = fakeCancelDb({ updatedCount: 1 });
+
+    await cancelConfirmedOrder(db, VENDOR, ORDER_ID, "van broke down", "staff-7");
+
+    expect(calls.events).toHaveLength(1);
+    expect(calls.events[0]).toMatchObject({
+      orderId: ORDER_ID,
+      vendorId: VENDOR,
+      status: "CANCELLED",
+      note: "van broke down",
+      createdByUserId: "staff-7",
+    });
+  });
+
+  it("attempts BOTH ledger reversals, since a paid order may carry both", async () => {
+    const { db, calls } = fakeCancelDb({ updatedCount: 1 });
+
+    await cancelConfirmedOrder(db, VENDOR, ORDER_ID, "reason", "staff-1");
+
+    // reverseRedemption reads REDEEM; reverseEarn reads EARN. Each no-ops when
+    // its source row is absent, but both must be attempted.
+    expect(calls.ledgerReads).toContain("REDEEM");
+    expect(calls.ledgerReads).toContain("EARN");
+  });
+
+  it("accepts a null actor, for a future unattended caller", async () => {
+    const { db, calls } = fakeCancelDb({ updatedCount: 1 });
+
+    await cancelConfirmedOrder(db, VENDOR, ORDER_ID, "reason", null);
+
+    expect(calls.events[0]).toMatchObject({ createdByUserId: null });
   });
 });

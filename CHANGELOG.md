@@ -8,6 +8,40 @@ every branch merges.
 
 ### Added
 
+- **Staff can cancel a paid order (`#696`, closing `#137` and `#151`,
+  `specs/2026-09-17-p696-staff-cancel-confirmed-order/`)**: `#137` and `#151` were unreachable
+  code, and said so in their own bodies — `releaseOrder` acts only on `PENDING_PAYMENT` orders,
+  strictly before `confirmPayment` writes the `EARN`, so nothing in this codebase could cancel an
+  order that had earned points or spent a discount code. `cancelConfirmedOrder` is that missing
+  path, which is why all three close together.
+  - **It never touches the `Payment` row.** `releaseOrder` writes `FAILED` there, correctly, because
+    no money ever arrived on that path. Here it did and it stays — cancelling issues no refund
+    (`#606` owns money movement), so a cancelled order whose payment still reads `SUCCEEDED` is the
+    honest representation rather than an oversight. Confirmed against real Postgres, not by reading.
+  - **Cancellation is a predicate, not a rung on the status ladder.** `LEGAL_TRANSITIONS` stays
+    forward-only and `nextStatus` still returns the single successor driving the queue's one button;
+    `canCancel` permits `CONFIRMED` and `READY_FOR_COLLECTION` only, the two states where the goods
+    are still on the premises and returning them to stock is true rather than convenient.
+    `OUT_FOR_DELIVERY` is excluded because no return-to-stock step is modelled anywhere.
+  - **Schema, additive:** `LoyaltyEntryKind` gains `EARN_REVERSAL` so a cancelled paid order can
+    carry both reversals while `@@unique([orderId, kind])` keeps working unchanged;
+    `DiscountRedemption` gains `reversedAt`. No backfill.
+  - **The discount redemption is stamped, not deleted**, inverting `releaseCodeRedemption`'s "a
+    discount on a never-paid order is not a financial event" — `Order.discountPence` survives on the
+    cancelled order and the row is the only thing explaining it. Retaining the row forced `seq` to
+    stop being a count: it is now `max(seq)+1` over all rows while only un-reversed rows count
+    against `maxPerCustomer`, which preserves the `@@unique([codeId, userId, seq])` concurrency
+    guard exactly. **`tests/discounts-repository.test.ts` is new** because that guard had no test at
+    all — `tests/discounts.test.ts` covers only the pure `evaluateCode` — so it was pinned before
+    `seq` moved rather than after.
+  - **The fulfilment slot frees itself**: `getAvailableSlotsForDate` omits `CANCELLED` from its used
+    count. Measured live (9 → 10), not assumed, since the slice now depends on it.
+  - **Known and deliberate:** a cancelled-but-unrefunded order's retained money leaves
+    `/staff/reports`, because `REVENUE_STATUSES` is a status literal. Tracked as **`#795`**.
+  - `ADR-005` gains an implementation note: ledger reversal is now decoupled from refunds. No
+    numbered decision reopened — capture method unchanged, nothing writes `PaymentStatus.REFUNDED`,
+    refunds remain its open territory.
+
 - **`CLAUDE.md` reduced from 149,380 to 13,925 characters, with every rule relocated first
   (`#786`, `specs/2026-09-17-claude-md-guardrail-refactor/`)**: the file is loaded into every
   session before any work begins, so its whole size was a fixed per-session cost, and five of its
@@ -107,6 +141,18 @@ every branch merges.
     negation guard fixed it; all three false positives are pinned as tests.
 
 ### Changed
+
+- **Document (final) for `#696`'s staff-cancellation slice, plus a backfilled roadmap gap.**
+  `specs/roadmap.md` gains the change-log rows for the `#696`/`#137`/`#151` staging merge (PR #796)
+  and, backfilled in the same pass, the `#792`/`#724` board-reconciliation staging merge and
+  promotion (PRs #793/#794) that `npm run sdd:audit` reported as pending carry-forward. `#696`'s own
+  `validation.md` R2 row is corrected: its literal `grep -c` check returns `3`, not the `1` it
+  claimed, because this slice's schema comments quote the constraint in prose — the actual
+  declaration is unmodified. `docs/model-handoff.md` reconciled with the shipped-but-not-yet-promoted
+  state (`staging` is 4 commits ahead of `main`). Filed **`#797`** (live-DB test fixtures in
+  `tests/slot-capacity.test.ts` and two siblings never clean up their `Vendor` rows — 110 of 112
+  vendors in the dev database are orphaned fixtures, self-documented in a code comment for a while
+  but never tracked). No source, schema or configuration touched.
 
 - **Docs and board reconciliation, taken before the next feature slice (`#792`)**: four statements
   in `specs/roadmap.md` that the 2026-09-17 `/orient` pass found false against live state, plus two

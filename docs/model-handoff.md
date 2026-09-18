@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.11.0"
-updated: 2026-09-17
+version: "1.13.0"
+updated: 2026-09-18
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,9 +39,11 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-17.
-- **Checkout:** `main` and `staging` are both at `9a6b6d8` (PR #788, "Promote CLAUDE.md guardrail
-  refactor to production") — **content-identical, no pending promotion.**
+- **Date:** 2026-09-18.
+- **Checkout:** `main` is at `e63a920` (PR #794, promoting `#792`/`#724`'s roadmap/board
+  reconciliation). `staging` is **4 commits ahead** at `ab43f16` (PR #796, merge `ab43f16`) —
+  **one slice pending promotion**: `#696`/`#137`/`#151` (staff cancellation of a CONFIRMED order).
+  Board items for all three are `In Review`, not `Done`, until that promotion lands.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
@@ -49,8 +51,10 @@ reconciliation. If overall project state did not materially change, leave this f
   three new documents that absorbed the material with no prior owner. A session that still expects
   `CLAUDE.md` to carry the vitest suite baseline, a Milestone-0 claim, `phase:`/`gate:` PR labels,
   or `@prisma/adapter-neon@6.19.3` is working from a stale memory — all five were corrected or
-  removed, not merely reworded. `#584` and `#546` closed on this promotion; `#724` and `#505` each
-  got a partial correction and stay open for their non-`CLAUDE.md` halves (see those issues).
+  removed, not merely reworded. `#584` and `#546` closed on this promotion. **`#724` has since
+  CLOSED** (PR #793/#794, 2026-09-17) — its remaining half was `specs/roadmap.md` denying the
+  board's `Priority`/`Complexity`/Phase fields in three places, corrected there. `#505` is still
+  open for its non-`CLAUDE.md` half.
 - **Two prior slices promoted to `main` with no separate Document (final) PR of their own**:
   the stakeholder business case (`#777`, PR #778/#779, 2026-09-16) and the credential verification
   closeout (`#780`/`#781`/`#782`, PR #784/#785, 2026-09-17). This section's SHA/issue state below is
@@ -74,9 +78,13 @@ reconciliation. If overall project state did not materially change, leave this f
 - **NEW INFRASTRUCTURE — a second Neon project now exists, and is live in production.** See the
   dedicated section below. This is the most consequential project-level change since multi-tenancy.
 - **Worktrees:** only the main checkout.
-- **Protected local work, unchanged:** PR #725 (`docs/orient-reads-board-priority`, addresses part
-  of `#724`) and PR #722 (`docs/document-final-social-contact-mobile-nav`) are both still open,
-  based on an older `staging`, unrelated to this work. Not re-verified live.
+- **PR #725 and PR #722 are OBSOLETE — stop protecting them.** Verified live 2026-09-17: both are
+  open, both are `CONFLICTING`, and both touch `CLAUDE.md`, which `#786` rewrote from 149,380 to
+  13,925 characters underneath them. Their substance has already landed by other routes — #725's
+  `orient.md` half via PR #726/#727, its `CLAUDE.md` half via `#786`, its roadmap half via PR #793,
+  and `#724` itself is closed; #722's roadmap rows already exist at `specs/roadmap.md:1032` and
+  `:1035`. Rebasing either costs more than re-deriving anything still missing. **Recommend closing
+  both** — an owner action, not taken here.
 
 ## The R2 credential outage is resolved — and HOW it stayed hidden is the durable lesson (`#755`, 2026-09-16)
 
@@ -255,7 +263,10 @@ The live board showed open High-priority items, all with blank Complexity:
   known-shaky (timezone) and unresolved (multi-site). #400 remains split: the async-loading half
   still open, the per-store half still blocked on #422.
 - Saved lists: #116.
-- Paid-order cancellation and reversals: #696, then #137 and #151.
+- **Paid-order cancellation and reversals: SHIPPED TO STAGING, 2026-09-17** — #696, #137 and #151
+  all built together (PR #796, merge `ab43f16`, `specs/2026-09-17-p696-staff-cancel-confirmed-order/`)
+  and moved to `In Review`. Not yet promoted — see Checkout above. `cancelConfirmedOrder` never
+  touches `Payment`; refunds stay with #606.
 - Trust and contact: #406 and #695.
 - Data activation: #697.
 - Location decision reconciliation: #422.
@@ -264,7 +275,8 @@ The live board showed open High-priority items, all with blank Complexity:
 
 Dependencies and scope boundaries worth preserving:
 
-- #696 makes #137 and #151 reachable. Current cancellation acts only on `PENDING_PAYMENT`.
+- #696 made #137 and #151 reachable (shipped to `staging`, see High-Priority Work above). `main`
+  still cancels only `PENDING_PAYMENT` orders until this promotes.
 - #363 gates delivery slots and Click & Collect. #402 also needs the location decision and real
   operating inputs such as capacity, rounds and order volume.
 - #400 is three concerns: the low-stock badge exists; restock dates and async loading do not;
@@ -297,10 +309,9 @@ All facts in this section require live verification:
   **CLOSED** (2026-09-12), independently of and before this session's work.
 - **PR #736** merged `staging → main` (`0d41faa`), promoting #733 and closing #582, #583, #589, #602, #638, and #683 to `Done`.
 - **PR #732** merged `staging → main` (`b505d81`), promoting #714 to `Done`.
-- **PR #725** (`docs/orient-reads-board-priority`) and **PR #722**
-  (`docs/document-final-social-contact-mobile-nav`) are **both still open**, unrelated to this
-  session's work, based on an older `staging` snapshot. Not re-verified live here — re-check before
-  acting on either.
+- **PR #725 and PR #722 — see Last Verified above.** Both still open, both now `CONFLICTING`, both
+  superseded. This line previously said only "not re-verified live"; they have since been verified,
+  and the answer is that neither is worth rebasing.
 - **Merged and safe to delete** (locally and on the remote), not done by this session: the four
   branches already noted in the 2026-09-14 handoff (`feat/p401-shared-fulfilment-slots`,
   `feat/p613-address-lookup`, `feat/p402-express-sla`, `feat/p10-shared-fulfilment-state`), plus
@@ -443,7 +454,8 @@ with `db.ok: true` and storage configured. That does not verify any item above.
    newer authority than live state.
 3. Run `git fetch --all --prune`, `git status --short --branch`, `git worktree list`, and compare
    `origin/main` with `origin/staging`.
-4. Re-read open PRs #722 and #725, check #726, run `npm run sdd:audit`, and verify the protected
+4. List open PRs live (#722 and #725 are both obsolete — see Last Verified; do not reflexively
+   re-read them), check #726, run `npm run sdd:audit`, and verify the protected
    checkpoint branch without modifying it. **There is no active DO-NOT-PROMOTE hold as of
    2026-09-15** — the one this handoff carried through 2026-09-14 was lifted when `#750`/`#749`
    shipped and `staging` promoted to `main` via PR #759. Compare `origin/main` with `origin/staging`

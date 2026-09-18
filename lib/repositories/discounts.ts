@@ -98,14 +98,39 @@ export async function claimCode(
   // not exist — the vendor is in the lookup key, not checked afterwards.
   if (!row) return { ok: false, reason: "UNKNOWN" };
 
-  // Only counted when there is an identity to count against. A guest with a
-  // capped code is refused by evaluateCode before this number could matter.
-  const seq =
+  // Two DIFFERENT numbers, split apart by #696. They were one `count` until a
+  // reversed-but-retained redemption row existed, at which point one value could
+  // not serve both jobs:
+  //
+  //   seq   — the slot this row will occupy in @@unique([codeId, userId, seq]).
+  //           That index is the real per-customer concurrency control (see
+  //           recordCodeRedemption below), so seq must never be handed out
+  //           twice. It is allocated over ALL rows including reversed ones,
+  //           because a reversed row keeps its slot.
+  //   uses  — how many times this customer has actually USED the code, which is
+  //           what the cap is about. A reversed use was given back, so it does
+  //           not count here.
+  //
+  // With no rows at all both are 0, exactly as the single count was, so nothing
+  // changes for a first-time claim. Only counted when there is an identity to
+  // count against — a guest with a capped code is refused by evaluateCode before
+  // either number could matter.
+  const { seq, uses } =
     input.userId === null
-      ? 0
-      : await tx.discountRedemption.count({
-          where: { vendorId, codeId: row.id, userId: input.userId },
-        });
+      ? { seq: 0, uses: 0 }
+      : await (async () => {
+          const [highest, used] = await Promise.all([
+            tx.discountRedemption.findFirst({
+              where: { vendorId, codeId: row.id, userId: input.userId },
+              orderBy: { seq: "desc" },
+              select: { seq: true },
+            }),
+            tx.discountRedemption.count({
+              where: { vendorId, codeId: row.id, userId: input.userId, reversedAt: null },
+            }),
+          ]);
+          return { seq: (highest?.seq ?? -1) + 1, uses: used };
+        })();
 
   const evaluation = evaluateCode({
     kind: row.kind as DiscountKind,
@@ -119,7 +144,7 @@ export async function claimCode(
     subtotalPence: input.subtotalPence,
     deliveryFeePence: input.deliveryFeePence,
     userId: input.userId,
-    customerUseCount: seq,
+    customerUseCount: uses,
     now: input.now ?? new Date(),
   });
   if (!evaluation.ok) return { ok: false, reason: evaluation.reason };
@@ -148,6 +173,12 @@ export async function claimCode(
  * `@@unique([codeId, userId, seq])` refuses the second here, rolling back its
  * whole transaction (including its `remainingRedemptions` decrement). A
  * count-then-write would have let both through.
+ *
+ * #696 changed how `seq` is CHOSEN (max+1 rather than count, so a reversed row
+ * keeps its slot) and deliberately did not change anything about this guarantee:
+ * two concurrent claims still resolve to the same `seq` and the index still
+ * refuses the loser. `tests/discounts-repository.test.ts` pins that, since
+ * before #696 it was asserted only by this comment.
  */
 export async function recordCodeRedemption(
   tx: AnyDb,
@@ -217,6 +248,62 @@ export async function releaseCodeRedemption(
 
   // increment on a NULL column leaves it NULL, so an unlimited code stays
   // unlimited without a branch.
+  await tx.discountCode.updateMany({
+    where: { id: redemption.codeId, vendorId },
+    data: { remainingRedemptions: { increment: 1 } },
+  });
+
+  return count;
+}
+
+/**
+ * Give back the code use held by a PAID order that staff are cancelling (P9.2,
+ * #696 — the reversal half of #151). Call INSIDE `cancelConfirmedOrder`'s
+ * transaction, beside `reverseEarn` and `reverseRedemption`.
+ *
+ * The difference from `releaseCodeRedemption` above is one line of behaviour and
+ * the whole of the reasoning: this STAMPS the row, that one DELETES it.
+ *
+ * `releaseCodeRedemption`'s argument for deleting is that "a discount on a
+ * never-paid order is not a financial event, and the CANCELLED Order row is
+ * itself the record of what happened". Both halves of that stop holding once the
+ * order was actually paid for. `Order.discountPence` survives on the cancelled
+ * order and is money that genuinely came off a real payment — and since no
+ * refund is issued (#606 owns money movement), the customer really was charged
+ * the discounted amount. Deleting the redemption would leave that number with
+ * nothing in the database explaining where it came from, which is the precise
+ * argument `LoyaltyLedgerEntry` makes for being append-only.
+ *
+ * The code's `remainingRedemptions` is still given back, and the customer's
+ * per-customer cap still stops counting this use — `claimCode` above counts only
+ * rows with `reversedAt: null` for that. What the retained row keeps is its
+ * `seq`, which is why allocation there had to stop being a count.
+ *
+ * Idempotent on `reversedAt`: a second call finds it already set, returns 0 and
+ * does not increment the code a second time. The guarded `updateMany` is what
+ * makes that race-safe rather than the read above it — `count === 0` means
+ * another transaction got there first, the same technique `releaseOrder` uses.
+ */
+export async function reverseCodeRedemptionForPaidOrder(
+  tx: AnyDb,
+  vendorId: string,
+  orderId: string,
+  now: Date = new Date(),
+): Promise<number> {
+  // findFirst rather than findUnique so `vendorId` is in the WHERE — orderId
+  // alone is unique, but a vendor-less read has no place in this layer.
+  const redemption = await tx.discountRedemption.findFirst({
+    where: { orderId, vendorId, reversedAt: null },
+    select: { id: true, codeId: true },
+  });
+  if (!redemption) return 0;
+
+  const { count } = await tx.discountRedemption.updateMany({
+    where: { id: redemption.id, vendorId, reversedAt: null },
+    data: { reversedAt: now },
+  });
+  if (count === 0) return 0;
+
   await tx.discountCode.updateMany({
     where: { id: redemption.codeId, vendorId },
     data: { remainingRedemptions: { increment: 1 } },

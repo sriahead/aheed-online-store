@@ -3,6 +3,7 @@ import { getCurrentVendorId } from "@/lib/tenant";
 import {
   advanceOrderStatus,
   advanceOrderStatusBulk,
+  cancelConfirmedOrder,
   cancelUnpaidOrder,
   confirmPayment,
   countOrdersForStaff,
@@ -217,6 +218,38 @@ export function getOrderCancelService() {
   return {
     cancelUnpaid: async (orderNumber: string, reason: string) =>
       cancelUnpaidOrder(getPrismaWs(), await getCurrentVendorId(), orderNumber, reason),
+
+    /**
+     * Staff cancellation of a PAID order (P9.2, #696). Takes an order NUMBER
+     * like its sibling above, because that is what a form field carries, and
+     * resolves it to an id inside the vendor scope before the repository's own
+     * guarded compare-and-set runs — a number belonging to another vendor
+     * resolves to nothing here rather than being refused later.
+     *
+     * `getPrismaWs()` is mandatory, not stylistic: `cancelConfirmedOrder` uses
+     * `updateMany`.
+     */
+    cancelConfirmed: async (orderNumber: string, reason: string, actorUserId: string | null) => {
+      const prisma = getPrismaWs();
+      const vendorId = await getCurrentVendorId();
+      const order = await prisma.order.findFirst({
+        where: { orderNumber, vendorId },
+        select: { id: true },
+      });
+      if (!order) return null;
+
+      const cancelled = await cancelConfirmedOrder(prisma, vendorId, order.id, reason, actorUserId);
+      if (!cancelled) return null;
+
+      // Re-read AFTER the commit for the caller's email, exactly as
+      // `advanceOrderStatus` does: findOrderForWebhook already resolves
+      // buyerEmail (guestEmail ?? user.email) and carries the items and money,
+      // so there is no parallel type for the same payload. Its deliberate
+      // lack of vendor scoping is safe here and only here — the findFirst
+      // above already proved this order number belongs to this vendor, which
+      // is the check a public caller would be missing.
+      return findOrderForWebhook(prisma, orderNumber);
+    },
   };
 }
 

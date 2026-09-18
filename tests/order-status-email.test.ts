@@ -81,10 +81,17 @@ describe("sendOrderStatusEmail", () => {
     expect(sentBody().subject).not.toContain("Aheed");
   });
 
-  it("sends NOTHING for a status this slice does not own", async () => {
+  it("sends NOTHING for a status no slice owns", async () => {
     // CONFIRMED especially: P3c already emails on payment confirmation, and a
     // branch here would mean two mails for one event.
-    for (const status of ["CONFIRMED", "PENDING_PAYMENT", "CANCELLED", "BANANA"]) {
+    //
+    // CANCELLED was in this list until #696 and has deliberately left it. There
+    // was no staff cancel path then, so the only way to reach CANCELLED was an
+    // abandoned or failed checkout — an order the shopper had already walked
+    // away from, where a mail would have been noise. A staff cancellation of an
+    // order someone PAID for is the opposite: they are expecting it to arrive.
+    // See the CANCELLED describe block below.
+    for (const status of ["CONFIRMED", "PENDING_PAYMENT", "BANANA"]) {
       await sendOrderStatusEmail(order(), status);
     }
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -121,5 +128,36 @@ describe("sendOrderStatusEmail", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalled();
     errorSpy.mockRestore();
+  });
+
+  /**
+   * P9.2 (#696) — the cancellation email, and the one thing it must never say.
+   *
+   * Cancelling does not refund: no code path in this codebase writes
+   * PaymentStatus.REFUNDED, and #606 owns money movement. An email implying the
+   * customer has been paid back is the single most expensive thing this template
+   * could get wrong, so the absence is asserted rather than left to review.
+   */
+  describe("CANCELLED (#696)", () => {
+    it("sends, unlike CONFIRMED which is deliberately silent", async () => {
+      await sendOrderStatusEmail(order({ status: "CANCELLED" }), "CANCELLED");
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("never implies a refund was issued", async () => {
+      await sendOrderStatusEmail(order({ status: "CANCELLED" }), "CANCELLED");
+      const html = sentBody().html as string;
+
+      expect(html).not.toMatch(/refund|refunded|repaid/i);
+      expect(html).toMatch(/no payment has been returned/i);
+    });
+
+    it("tells the customer their points and code came back", async () => {
+      await sendOrderStatusEmail(order({ status: "CANCELLED" }), "CANCELLED");
+      const html = sentBody().html as string;
+
+      expect(html).toMatch(/points/i);
+      expect(html).toMatch(/discount code/i);
+    });
   });
 });

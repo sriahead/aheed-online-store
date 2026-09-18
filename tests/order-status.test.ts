@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildStaffTimeline,
   buildTimeline,
+  canCancel,
   canTransition,
   formatOrderDate,
   formatOrderDateTime,
@@ -326,5 +327,67 @@ describe("REVENUE_STATUSES", () => {
       "DELIVERED",
       "COLLECTED",
     ]);
+  });
+});
+
+/**
+ * P9.2 (#696) — cancellation is a predicate, NOT a rung on the ladder.
+ *
+ * The question `canCancel` answers is "are the goods still in the shop?", which
+ * is why it is not derived from STAFF_QUEUE_STATUSES or REVENUE_STATUSES: those
+ * answer different questions, and REVENUE_STATUSES' own comment records what
+ * happened (#238, revenue overstated 39%) the last time two such sets were
+ * expressed in terms of each other.
+ */
+describe("canCancel", () => {
+  it("permits exactly the two statuses where the goods are still on the premises", () => {
+    expect(canCancel("CONFIRMED")).toBe(true);
+    expect(canCancel("READY_FOR_COLLECTION")).toBe(true);
+  });
+
+  it("refuses OUT_FOR_DELIVERY — those goods are on a van and cannot be restocked", () => {
+    // There is no return-to-stock step modelled anywhere, so an Inventory
+    // increment here would write a lie into the stock count.
+    expect(canCancel("OUT_FOR_DELIVERY")).toBe(false);
+  });
+
+  it("refuses the terminal statuses and the unpaid one", () => {
+    expect(canCancel("DELIVERED")).toBe(false);
+    expect(canCancel("COLLECTED")).toBe(false);
+    expect(canCancel("CANCELLED")).toBe(false);
+    // PENDING_PAYMENT has its own path (releaseOrder), which is also the only
+    // one permitted to touch the Payment row.
+    expect(canCancel("PENDING_PAYMENT")).toBe(false);
+  });
+
+  it("refuses an unrecognised status, like canTransition", () => {
+    expect(canCancel("NOT_A_STATUS")).toBe(false);
+    expect(canCancel("")).toBe(false);
+  });
+
+  it("covers every OrderStatus value, so a new status cannot be silently omitted", () => {
+    for (const status of ALL_STATUSES) {
+      expect(typeof canCancel(status)).toBe("boolean");
+    }
+  });
+});
+
+/**
+ * #696 deliberately did NOT add cancellation to the ladder. This pins that:
+ * nextStatus drives the queue's single button, and a second legal target would
+ * make it ambiguous and turn a forward-only control into a destructive one.
+ */
+describe("LEGAL_TRANSITIONS is unchanged by #696", () => {
+  it("offers no route to CANCELLED from any status, by either method", () => {
+    for (const method of ["DELIVERY", "COLLECTION"] as const) {
+      for (const from of ALL_STATUSES) {
+        expect(canTransition(from, "CANCELLED", method)).toBe(false);
+      }
+    }
+  });
+
+  it("still yields exactly one forward rung from CONFIRMED", () => {
+    expect(nextStatus("CONFIRMED", "DELIVERY")).toBe("OUT_FOR_DELIVERY");
+    expect(nextStatus("CONFIRMED", "COLLECTION")).toBe("READY_FOR_COLLECTION");
   });
 });
