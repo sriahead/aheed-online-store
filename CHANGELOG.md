@@ -142,6 +142,15 @@ every branch merges.
 
 ### Changed
 
+- **`#696`/`#137`/`#151` promoted to production (PR #799, merge `d8f61a4`); roadmap and handoff
+  reconciled to match.** `specs/roadmap.md` gains the promotion's change-log row (PR #799, migration
+  `20260917140514_p696_staff_cancel_confirmed_order` applied) and its §P9.2 item 6 bullet no longer
+  reads "Not yet promoted". `docs/model-handoff.md`'s Checkout section is corrected from "`staging`
+  4 commits ahead, one slice pending promotion" to converged at `d8f61a4`, no slice pending. This
+  is carry-forward reconciliation, not a fresh Document (final) pass — `staging`'s own Document
+  (final) (PR #798) already covered the feature content before this promotion; only the promotion's
+  own facts needed correcting. No source, schema or configuration touched.
+
 - **Document (final) for `#696`'s staff-cancellation slice, plus a backfilled roadmap gap.**
   `specs/roadmap.md` gains the change-log rows for the `#696`/`#137`/`#151` staging merge (PR #796)
   and, backfilled in the same pass, the `#792`/`#724` board-reconciliation staging merge and
