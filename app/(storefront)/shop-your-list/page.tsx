@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getUserId } from "@/lib/cart-identity";
 import { ShopYourList } from "@/components/cart/ShopYourList";
 
 /**
@@ -14,7 +15,12 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Shop your list" };
 
-export default function ShopYourListPage() {
+export default async function ShopYourListPage() {
+  // Saving a list needs an account, so the control is resolved here and passed down: ShopYourList
+  // is a client component and cannot read the session, and CLAUDE.md rules out a middleware.ts or
+  // proxy.ts to carry it. Matching and adding stay available to guests exactly as before (#116).
+  const canSave = (await getUserId()) !== null;
+
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
       <h1 className="text-xl font-bold text-primary">Shop your list</h1>
@@ -23,7 +29,7 @@ export default function ShopYourListPage() {
         say so.
       </p>
 
-      <ShopYourList />
+      <ShopYourList canSave={canSave} />
 
       <Link href="/cart" className="mt-6 inline-block text-xs font-semibold text-primary underline">
         Back to your cart

@@ -81,23 +81,44 @@ are in `local-dev-playbook.md`. Design intent — what was decided and why — s
   supports. `prisma/seed.ts` runs in real Node (CI runner via `tsx`), so it correctly keeps the
   bare `@prisma/client` specifier there — don't "fix" it to `/wasm`.
 - **Neon Auth: leave OFF.** Auth is Better Auth (ADR-002), added in P1 via a normal Prisma migration.
-- **`prisma.<model>.updateMany(...)` and `.createMany(...)` — and ONLY those two operations —
-  unconditionally crash when run through `getPrisma()`, regardless of `where`-clause shape or match
-  count**, with `Error: Transactions are not supported in HTTP mode` thrown from
+- **`prisma.<model>.updateMany(...)`, `.createMany(...)`, and any write that opens an implicit
+  transaction — including a singular `create` carrying NESTED child writes — unconditionally crash
+  when run through `getPrisma()`, regardless of `where`-clause shape or match count**, with `Error: Transactions are not supported in HTTP mode` thrown from
   `PrismaNeonHttpAdapter.startTransaction`. This is **not** a Better Auth or application-code bug:
   Prisma 6's client-side query compiler (`engineType = "client"`, mandatory — see below) internally
   wraps `updateMany`/`createMany` in a transaction it opens itself, which the HTTP adapter can never
   execute. Confirmed empirically in #382 (2026-08-27) with a local Node script run directly against
   a live Neon DB (`PrismaNeonHttp` is fetch-based, so it reproduces identically outside Workers):
   `updateMany`/`createMany` crash every time, including a 0-row match; `deleteMany` (0-row AND a
-  real match), `upsert`, and singular `create`/`update` all succeed. First found live via
+  real match), `upsert`, and singular `create`/`update` all succeed.
+
+  **Corrected and widened 2026-09-18 by #116.** The original "ONLY those two operations" phrasing
+  was too narrow, and its "singular `create` succeeds" was true only of the case #382 actually
+  tested — a create with no nested writes. The real rule is about **implicit transactions**, not
+  about which method name is called. Measured on one `PrismaNeonHttp` client against the dev Neon
+  branch, all five in a single run:
+
+  | Operation | HTTP adapter |
+  |---|---|
+  | singular `create`, no nested children | succeeds |
+  | singular `create` **with** nested child writes | **fails** — `Transactions are not supported in HTTP mode` |
+  | singular `update` by primary key | succeeds |
+  | `updateMany` | **fails** — same error |
+  | `deleteMany` | succeeds |
+
+  A nested create is several inserts, so the query compiler opens its own transaction for it for
+  exactly the same reason it does for `createMany` — the method name just does not say so. Reproduce
+  with `specs/2026-09-18-p116-saved-shopping-lists/verify-saved-lists.ts --prove-http`, which runs
+  the failing pair on purpose and reports a SUCCESS as a failed check, so the day this stops being
+  true the script says so rather than passing quietly. First found live via
   `setBundleImage` (`lib/repositories/bundles.ts`) 500ing on a real bundle-image upload during
   P8.5d — three prior diagnostic rounds correctly ruled out Better Auth's adapter (its
   `$transaction` really is `undefined` on the HTTP client and really is never called) before a
   fourth round of step-logging pinned it to this instead. **Any `updateMany`/`createMany` call in
   `lib/repositories/*` MUST run through `getPrismaWs()`** (inside a `tx.` block, or directly if no
   application-level transaction is otherwise needed — the query compiler's own internal transaction
-  is enough, and the WS adapter can execute it). `deleteMany`/`upsert`/singular `create`/`update`
+  is enough, and the WS adapter can execute it). **So must any singular `create` that carries nested
+  child writes.** `deleteMany`, `upsert`, and a singular `create`/`update` with NO nested writes
   have no such requirement and may use either client per the normal read/write split. Full
   investigation: `specs/2026-08-26-auth-http-transaction-fix/build-notes.md`.
 
