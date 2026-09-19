@@ -223,6 +223,18 @@ every branch merges.
 
 ### Changed
 
+- **`#363`/`#811` promoted to production (PR #815, merge `a682177`); roadmap and handoff
+  reconciled to match.** `specs/roadmap.md` gains the promotion's change-log row (migration
+  `20260919113731_p363_vendor_timezone` applied to `main`), removes `#363` from P10's
+  tracked-issues bucket, and updates the P10 Delivery-cluster and `#420` gate-analysis narratives
+  from "shipped to `staging`" to promoted. `docs/model-handoff.md`'s Checkout, High-Priority Work,
+  In-Flight Work and Project Position sections are corrected from "shipped to `staging`, not yet
+  promoted" to both issues closed and live in production, confirmed via `/api/health` serving
+  `a682177`. **`#811`'s fix was verified a third time, directly against production**: the same
+  real BST-observing browser used at `/ship` to catch the pre-fix defect on staging read
+  `/checkout`'s hidden `fulfilmentDate` field on production itself and got the correct bare
+  `"2026-09-19"`. No source, schema or configuration touched.
+
 - **`#116`/`#806` promoted to production (PR #808, merge `187b5eb`); roadmap and handoff
   reconciled to match.** `specs/roadmap.md` gains two change-log rows — `#806`'s own staging-merge
   row (PR #807, merge `a5d1769`; `sdd:audit` had flagged this slice as missing its row) and the
