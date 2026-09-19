@@ -57,7 +57,12 @@ Every rule here fails **silently**. Evidence: `docs/developer-portal/runtime-pit
 - **Construct a client fresh every call; never cache across requests**, including inside wrappers
   such as `getAuth()`.
 - **`updateMany`/`createMany` must use `getPrismaWs()`** — through `getPrisma()` they crash
-  unconditionally, even on zero rows. `deleteMany`, `upsert`, singular `create`/`update` are fine.
+  unconditionally, even on zero rows. **So must a singular `create` carrying nested child writes**
+  (`data: { …, items: { create: [...] } }`) — the rule is "does this open an implicit transaction",
+  not which method is named, and a nested create is several inserts (measured `#116`, 2026-09-18;
+  `#382`'s original note said singular `create` was always fine because it only tested the
+  childless case). `deleteMany`, `upsert`, and singular `create`/`update` with **no** nested writes
+  are fine.
 - **The two adapters report the same Postgres error under different `.code` values** (raw SQLSTATE
   `"23505"` vs Prisma `P2002`). Any `error.code` check guarding a write must accept **both**, and be
   verified against a real failing request — a hand-built double only reproduces its author's guess.

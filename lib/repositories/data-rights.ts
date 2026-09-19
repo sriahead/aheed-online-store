@@ -118,6 +118,16 @@ export interface PersonalDataExport {
     ledger: { kind: string; points: number; createdAt: Date; orderNumber: string }[];
   };
   discountRedemptions: { code: string; amountPence: number; createdAt: Date }[];
+  /**
+   * Saved shopping lists (#116) — personal data: the shopper wrote these lines themselves, and
+   * they are held indefinitely until deleted.
+   *
+   * Disclosed as the shopper's own text plus the quantity, which is the whole of what is stored.
+   * `terms` is deliberately NOT disclosed: it is a derived search key, not something the subject
+   * supplied, and exporting it would present our tokenisation back to them as though it were
+   * their data.
+   */
+  savedLists: { name: string; createdAt: Date; items: { rawText: string; quantity: number }[] }[];
 }
 
 /**
@@ -149,6 +159,7 @@ export async function exportPersonalData(
     loyaltyAccount,
     ledger,
     redemptions,
+    savedLists,
   ] = await Promise.all([
     prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { id: true, name: true } }),
     prisma.user.findUniqueOrThrow({
@@ -264,6 +275,18 @@ export async function exportPersonalData(
       select: { amountPence: true, createdAt: true, code: { select: { code: true } } },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.shoppingList.findMany({
+      where: { vendorId, userId },
+      select: {
+        name: true,
+        createdAt: true,
+        items: {
+          orderBy: { position: "asc" },
+          select: { rawText: true, quantity: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   return {
@@ -311,6 +334,7 @@ export async function exportPersonalData(
       amountPence: redemption.amountPence,
       createdAt: redemption.createdAt,
     })),
+    savedLists,
   };
 }
 
@@ -348,6 +372,7 @@ export async function countOtherVendorData(
     prisma.loyaltyAccount.count({ where: notThisVendor }),
     prisma.loyaltyLedgerEntry.count({ where: notThisVendor }),
     prisma.discountRedemption.count({ where: notThisVendor }),
+    prisma.shoppingList.count({ where: notThisVendor }),
   ]);
   return counts.reduce((total, count) => total + count, 0);
 }
@@ -360,6 +385,12 @@ export interface EraseResult {
   /** #764 — saved addresses are deleted outright, not redacted. See eraseVendorData. */
   savedAddressesDeleted: number;
   reviewsDeleted: number;
+  /**
+   * #116 — saved lists are deleted outright. Nothing references them (they hold text, never a
+   * productId), so unlike an order there is no record whose integrity requires keeping a redacted
+   * shell behind.
+   */
+  savedListsDeleted: number;
 }
 
 /**
@@ -412,6 +443,11 @@ export async function eraseVendorData(
     // a subject would expect. Scoped to this vendor and user like everything else in this
     // transaction.
     const savedAddressesDeleted = await tx.customerAddress.deleteMany({ where: { vendorId, userId } }); // prettier-ignore
+
+    // #116 — saved lists go the same way, and for the same reason: the shopper owns them, nothing
+    // references them (they hold text, never a productId), and no surviving record needs them to
+    // stay explicable. Their items cascade from the schema, so there is no second delete here.
+    const savedListsDeleted = await tx.shoppingList.deleteMany({ where: { vendorId, userId } });
 
     let addressesRedacted = 0;
 
@@ -492,6 +528,7 @@ export async function eraseVendorData(
       addressesRedacted,
       savedAddressesDeleted: savedAddressesDeleted.count,
       reviewsDeleted: reviews.count,
+      savedListsDeleted: savedListsDeleted.count,
     };
   });
 }

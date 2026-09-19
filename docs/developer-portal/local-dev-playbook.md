@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.0.0"
-updated: 2026-09-17
+version: "1.1.0"
+updated: 2026-09-19
 visibility: internal
 summary: How to work on this repo on a Windows machine and how to prove a change works live without a browser — shell and encoding traps, process cleanup, the vitest forks-pool trap, curl-driven server actions, and grep-against-rendered-HTML pitfalls.
 tags: [local-dev, windows, validation, playbook]
@@ -162,6 +162,20 @@ the evidence and the recipe.
   add/edit/remove/approve/reject forms end-to-end with no Chrome extension available — same
   `curl -F` approach as the plain-form case, just with these four fields instead of one, plus the
   named fields the action actually reads (e.g. `alias`, `canonical`, `intent`).
+- **A `useActionState` result can come back correctly WITHOUT ever appearing as literal text in the
+  curl response — check the flight payload, not just the rendered HTML, before calling a row
+  failed.** Confirmed at `#116`'s `/validate` (2026-09-19) on `/shop-your-list`'s two stacked
+  `useActionState` forms (match, then save): the **match** action's new state (`lines`) fed a large
+  subtree (the whole review list) and rendered as literal `<li>`/`<select>` HTML in the same
+  response — a plain `grep` against it worked exactly like the plain-form case above. The **save**
+  action's new state (`{"outcome":"capped"}`) fed one small conditional `<p>` in the same client
+  component, and did NOT appear anywhere in the rendered HTML — only inside a
+  `self.__next_f.push([2,[{"outcome":"capped"}, ...]])` script tag, React's client-side "form
+  replay" payload for a no-JS submission, which a curl-only client never executes. The action DID
+  run correctly (confirmed independently: no 21st row written, `outcome` correctly `"capped"` in
+  that payload) — the visible sentence just needs a JS-executing client to materialise. **Parse the
+  `self.__next_f.push(...)` JSON for the action's own state field when a `useActionState` result's
+  visible text comes up empty**, rather than concluding the UI failed to render it.
 - **A server action a client component calls directly (`await someAction(arg1, arg2)`, e.g.
   `addToCart`) rather than binding to a `<form action={...}>` is ALSO curl-drivable, but as a
   wholly different wire protocol — neither `$ACTION_ID_<hash>` nor the `useActionState` four-field

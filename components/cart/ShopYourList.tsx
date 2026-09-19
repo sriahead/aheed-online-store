@@ -1,20 +1,26 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { CircleAlert, CircleHelp, ListChecks, PackageX } from "lucide-react";
-import { formatPrice } from "@/components/product/format-price";
-import { addListToCart } from "@/features/cart/add-list-to-cart";
+import { useActionState } from "react";
+import { BookmarkPlus, CircleCheck } from "lucide-react";
+import { ListReview } from "@/components/cart/ListReview";
 import { matchList } from "@/features/cart/match-list";
-import { EMPTY_MATCH_STATE, MAX_LIST_LINES, type ResolvedLine } from "@/lib/shopping-list";
+import { saveListFromMatch } from "@/features/lists/save-list-from-match";
+import { EMPTY_MATCH_STATE, MAX_LIST_LINES } from "@/lib/shopping-list";
+import { EMPTY_SAVE_STATE, MAX_LIST_NAME_LENGTH, MAX_SAVED_LISTS } from "@/lib/saved-list";
 
 /**
- * "Shop your list" (P3d, #114). Two sibling forms, not one: the first matches
- * the pasted list, the second adds the reviewed lines. Both are server actions,
- * so both still submit without client JS.
+ * "Shop your list" (P3d, #114). Sibling forms, not nested ones: the first matches the pasted
+ * list, `ListReview` renders the second which adds the reviewed lines, and P10 (#116) adds a
+ * third that saves them for next week. Every one is a server action, so all three still submit
+ * without client JS.
  *
- * The only client state is which product an ambiguous line resolved to — needed
- * to keep the "Add N items" count honest as the shopper chooses. Matching
- * itself writes nothing, so leaving this page mid-review leaves no cart.
+ * `canSave` comes from the page as a prop rather than being read here — this is a client
+ * component and cannot see the session, and CLAUDE.md rules out shipping a `middleware.ts` or
+ * `proxy.ts` to carry it. Saving needs an account (a guest has no durable identity to own a saved
+ * record); matching and adding do not, and are unchanged for guests.
+ *
+ * The save form is deliberately OUTSIDE `ListReview`. HTML forbids nested forms, and the add
+ * button lives inside the one `ListReview` renders.
  */
 
 const PLACEHOLDER = `2x chicken breast
@@ -22,18 +28,11 @@ const PLACEHOLDER = `2x chicken breast
 milk
 apples x 3`;
 
-function lineIsAddable(line: ResolvedLine): boolean {
-  return line.resolution.kind === "matched" && line.resolution.product.stock > 0;
-}
-
-export function ShopYourList() {
+export function ShopYourList({ canSave = false }: { canSave?: boolean }) {
   const [state, formAction, pending] = useActionState(matchList, EMPTY_MATCH_STATE);
-  const [choices, setChoices] = useState<Record<number, string>>({});
+  const [saveState, saveAction, saving] = useActionState(saveListFromMatch, EMPTY_SAVE_STATE);
 
   const lines = state.lines;
-  const readyCount = lines
-    ? lines.filter((line, index) => lineIsAddable(line) || (choices[index] ?? "") !== "").length
-    : 0;
 
   return (
     <div className="space-y-6">
@@ -63,116 +62,69 @@ export function ShopYourList() {
         {state.error && <p className="text-xs font-semibold text-danger">{state.error}</p>}
       </form>
 
-      {lines && (
-        <form action={addListToCart} className="space-y-3">
-          <div className="flex items-center gap-2 border-t border-black/10 pt-5">
-            <ListChecks className="h-5 w-5 text-primary" aria-hidden />
-            <h2 className="text-sm font-bold text-primary">
-              Check your matches before adding anything
-            </h2>
+      {lines && <ListReview lines={lines} />}
+
+      {lines && canSave && (
+        <form action={saveAction} className="space-y-2 border-t border-black/10 pt-5">
+          <label htmlFor="listName" className="block text-sm font-bold text-primary">
+            Save this list for next time
+          </label>
+          <p className="text-xs text-primary-muted">
+            We save your words, not the products — so next week it matches whatever we have in
+            today.
+          </p>
+
+          {/*
+            Every line is carried back, including the unmatched ones: a line this shop doesn't
+            stock is the shopper's own note to themselves and re-matches every week. Five
+            positional arrays, the same index-alignment discipline add-list-to-cart.ts relies on —
+            every line emits all five inputs or none.
+          */}
+          {lines.map((line, index) => (
+            <div key={`save-${index}-${line.original}`}>
+              <input type="hidden" name="lineText" value={line.original} />
+              <input type="hidden" name="lineTerms" value={line.terms.join(" ")} />
+              <input type="hidden" name="lineQuantity" value={line.quantity} />
+              <input type="hidden" name="lineMeasure" value={line.measure ?? ""} />
+              <input type="hidden" name="lineBrand" value={line.brand ?? ""} />
+            </div>
+          ))}
+
+          <div className="flex gap-2">
+            <input
+              id="listName"
+              name="name"
+              type="text"
+              maxLength={MAX_LIST_NAME_LENGTH}
+              placeholder="Weekly shop"
+              className="min-w-0 flex-1 rounded-2xl border border-black/10 bg-white p-2.5 text-sm text-primary placeholder:text-primary-muted focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+            />
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+            >
+              <BookmarkPlus className="h-4 w-4" aria-hidden />
+              {saving ? "Saving…" : "Save list"}
+            </button>
           </div>
 
-          <ul className="space-y-2">
-            {lines.map((line, index) => (
-              <li
-                key={`${index}-${line.original}`}
-                className="rounded-2xl border border-black/10 bg-white p-3"
-              >
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="truncate text-xs font-semibold text-primary-muted">
-                    {line.original}
-                  </span>
-                  <span className="shrink-0 text-[11px] font-bold text-primary">
-                    ×{line.quantity}
-                  </span>
-                </div>
-
-                {line.resolution.kind === "matched" && (
-                  <div className="mt-1.5">
-                    {line.resolution.product.stock > 0 ? (
-                      <>
-                        <p className="text-sm font-bold text-primary">
-                          {line.resolution.product.name}
-                        </p>
-                        <p className="text-[11px] text-primary-muted">
-                          {formatPrice(line.resolution.product.basePrice)} ·{" "}
-                          {line.resolution.product.unitLabel}
-                        </p>
-                        <input type="hidden" name="productId" value={line.resolution.product.id} />
-                        <input type="hidden" name="quantity" value={line.quantity} />
-                      </>
-                    ) : (
-                      <p className="flex items-center gap-1.5 text-xs font-semibold text-danger">
-                        <PackageX className="h-4 w-4" aria-hidden />
-                        {line.resolution.product.name} — unavailable, not added
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {line.resolution.kind === "ambiguous" && (
-                  <div className="mt-1.5">
-                    <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-accent">
-                      <CircleHelp className="h-4 w-4" aria-hidden />
-                      {/*
-                        P2.6 slice 4 (#567). A line asking for a pack size this shop doesn't stock
-                        is a different question from an ambiguous name, and asking the generic one
-                        would read as though we hadn't understood. We did — we just can't fill it
-                        exactly, and picking a size on the shopper's behalf is the one thing this
-                        step exists to prevent.
-                      */}
-                      {line.measure
-                        ? `We don't stock a ${line.measure} pack — choose a size`
-                        : "Which one did you mean?"}
-                    </p>
-                    <select
-                      name="productId"
-                      aria-label={
-                        line.measure
-                          ? `Choose a pack size for "${line.original}"`
-                          : `Choose a product for "${line.original}"`
-                      }
-                      value={choices[index] ?? ""}
-                      onChange={(event) =>
-                        setChoices((prev) => ({ ...prev, [index]: event.target.value }))
-                      }
-                      className="w-full rounded-xl border border-black/10 bg-surface-muted p-2 text-xs font-semibold text-primary"
-                    >
-                      <option value="">Skip this line</option>
-                      {line.resolution.candidates.map((candidate) => (
-                        <option
-                          key={candidate.id}
-                          value={candidate.stock > 0 ? candidate.id : ""}
-                          disabled={candidate.stock === 0}
-                        >
-                          {candidate.name} · {formatPrice(candidate.basePrice)}
-                          {candidate.stock === 0 ? " (out of stock)" : ""}
-                        </option>
-                      ))}
-                    </select>
-                    <input type="hidden" name="quantity" value={line.quantity} />
-                  </div>
-                )}
-
-                {line.resolution.kind === "unmatched" && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-primary-muted">
-                    <CircleAlert className="h-4 w-4" aria-hidden />
-                    No match in this shop — check the spelling or search for it
-                  </p>
-                )}
-              </li>
-            ))}
-          </ul>
-
-          <button
-            type="submit"
-            disabled={readyCount === 0}
-            className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white disabled:opacity-40"
-          >
-            {readyCount === 0
-              ? "Nothing to add yet"
-              : `Add ${readyCount} item${readyCount === 1 ? "" : "s"} to cart`}
-          </button>
+          {saveState.outcome === "saved" && (
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <CircleCheck className="h-4 w-4" aria-hidden />
+              Saved as “{saveState.name}” — find it under Your lists.
+            </p>
+          )}
+          {saveState.outcome === "capped" && (
+            <p className="text-xs font-semibold text-danger">
+              You already have {MAX_SAVED_LISTS} saved lists. Delete one to save another.
+            </p>
+          )}
+          {saveState.outcome === "empty" && (
+            <p className="text-xs font-semibold text-danger">
+              There is nothing in this list to save yet.
+            </p>
+          )}
         </form>
       )}
     </div>

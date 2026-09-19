@@ -8,6 +8,48 @@ every branch merges.
 
 ### Added
 
+- **Saved lists surfaced on `/shop-your-list` (`#116` follow-up, `#806`,
+  `specs/2026-09-19-p10-shop-your-list-saved-lists/`)**: a signed-in shopper with saved lists sees
+  them right on `/shop-your-list`, above the paste box — up to the 5 most recently updated, each
+  linking to the `/account/lists/<id>` page `#116` already shipped for the resolve-and-review
+  journey, plus a "Manage your lists" link. No new repository or service function; reuses
+  `getShoppingListService().list()` as-is. Guests and signed-in shoppers with no saved lists see the
+  page exactly as before.
+- **Saved shopping lists (`#116`, `specs/2026-09-18-p116-saved-shopping-lists/`)**: a signed-in
+  shopper saves a reusable list and re-opens it against today's catalogue. `#116` was filed asking
+  to sequence P4's reorder first "and see what demand is left"; reorder shipped, and this is
+  deliberately the half it does not cover.
+  - **A saved line stores the shopper's WORDS, never a `productId`.** `ShoppingListItem` has no
+    relation to `Product` at all. `reorderItems` already answers "the same products as last time,
+    exactly" — a product-id list would be that again under a new name, which `#116`'s own body
+    predicted. Storing text answers "here is my standing list, show me what you have this week,"
+    and costs nothing to maintain: no nullable FK, no `onDelete` decision, no "no longer available"
+    branch, and a line this shop has never stocked can be stored at all.
+  - **Nothing re-matches a saved list except the code that already matched a pasted one.**
+    `itemsToLines` → `matchListTerms` + `synonymAliasMap` → `resolveLines` → the existing review
+    step. The review block moved to `components/cart/ListReview.tsx` so both surfaces render one
+    component rather than two that can drift; `add-list-to-cart.ts` and `reorder-items.ts` are
+    byte-identical to `staging`.
+  - **`terms` is stored, not derived.** `parseList(rawText)` reproduces only the deterministic
+    parse — when P2.6's AI pre-pass ran, `terms` holds the normalised words, which cannot be
+    recovered without paying for the model again. So re-opening a list costs one DB query and no
+    Workers AI call. It is a space-joined `String`, not `Json` (§3.1) and not a child table: nothing
+    ever queries an individual term.
+  - **Schema, additive:** `ShoppingList` + `ShoppingListItem`, non-null `userId` (guests are not
+    served, matching `#764`'s ruling for saved addresses). No backfill.
+  - **Three entry points**, one aggregate: the `/shop-your-list` review screen, `/cart`, and a past
+    order beside the existing Reorder button. The cart and order paths build lines from catalogue
+    product names, so they need no AI call.
+  - **`CLAUDE.md` and `runtime-pitfalls.md` corrected, with measurements.** `#382` recorded
+    `updateMany`/`createMany` as the operations that crash on the HTTP adapter "and ONLY those
+    two," and singular `create` as always fine. That was true only of the childless create it
+    tested: a singular `create` **with nested child writes** fails identically
+    (`Transactions are not supported in HTTP mode`). The rule is "does this open an implicit
+    transaction," not which method is named. Reproducible on demand via the slice's
+    `verify-saved-lists.ts --prove-http`, which treats a success there as a failed check.
+  - Saved lists reach all three data-rights surfaces (export, other-vendor count, erasure).
+    `terms` is deliberately not exported — it is our tokenisation, not something the subject gave us.
+
 - **Staff can cancel a paid order (`#696`, closing `#137` and `#151`,
   `specs/2026-09-17-p696-staff-cancel-confirmed-order/`)**: `#137` and `#151` were unreachable
   code, and said so in their own bodies — `releaseOrder` acts only on `PENDING_PAYMENT` orders,
@@ -141,6 +183,26 @@ every branch merges.
     negation guard fixed it; all three false positives are pinned as tests.
 
 ### Changed
+
+- **Document (final) for `#116`'s saved-shopping-lists slice.** `specs/roadmap.md` gains the
+  change-log row for the `staging` merge (PR #804, merge `60275d9`). `docs/model-handoff.md`'s
+  Checkout section and In-Flight Work entry are reconciled from "built, awaiting Validate" to
+  "shipped to `staging`, pending promotion" — the migration
+  (`20260918053538_p116_saved_shopping_lists`) is now on `staging`, not yet on `main`.
+  `docs/developer-portal/local-dev-playbook.md` gains a new trap found at this slice's `/validate`:
+  a `useActionState` form's action result can execute correctly and still never appear as literal
+  text in a no-JS `curl` response when it only feeds a small conditional fragment, rather than a
+  large subtree, of the same client component — the `self.__next_f.push(...)` flight payload is
+  ground truth either way. No source, schema or configuration touched.
+
+- **`#696`/`#137`/`#151` promoted to production (PR #799, merge `d8f61a4`); roadmap and handoff
+  reconciled to match.** `specs/roadmap.md` gains the promotion's change-log row (PR #799, migration
+  `20260917140514_p696_staff_cancel_confirmed_order` applied) and its §P9.2 item 6 bullet no longer
+  reads "Not yet promoted". `docs/model-handoff.md`'s Checkout section is corrected from "`staging`
+  4 commits ahead, one slice pending promotion" to converged at `d8f61a4`, no slice pending. This
+  is carry-forward reconciliation, not a fresh Document (final) pass — `staging`'s own Document
+  (final) (PR #798) already covered the feature content before this promotion; only the promotion's
+  own facts needed correcting. No source, schema or configuration touched.
 
 - **Document (final) for `#696`'s staff-cancellation slice, plus a backfilled roadmap gap.**
   `specs/roadmap.md` gains the change-log rows for the `#696`/`#137`/`#151` staging merge (PR #796)
