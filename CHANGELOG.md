@@ -184,6 +184,20 @@ every branch merges.
 
 ### Changed
 
+- **`#116`/`#806` promoted to production (PR #808, merge `187b5eb`); roadmap and handoff
+  reconciled to match.** `specs/roadmap.md` gains two change-log rows — `#806`'s own staging-merge
+  row (PR #807, merge `a5d1769`; `sdd:audit` had flagged this slice as missing its row) and the
+  promotion row (PR #808, migration `20260918053538_p116_saved_shopping_lists` applied to `main`) —
+  plus removes `#116`, `#137` and `#151` from P10's tracked-issues bucket (the latter two had been
+  left there for a day after actually closing via PR #799). `docs/model-handoff.md`'s Checkout,
+  High-Priority Work, In-Flight Work and Project Position sections are corrected from "`#116`
+  shipped to `staging`, pending promotion" to both issues closed and live in production, confirmed
+  via `/api/health` serving `187b5eb`. Re-encountered `#762` (open since 2026-09-15, pervasive
+  double-encoded em-dash corruption in `specs/roadmap.md`) while writing this pass — now at 393
+  occurrences, up from 389 at filing; a duplicate (`#809`) was mistakenly filed before checking for
+  an existing issue and closed in favour of `#762`. No source, schema or configuration touched.
+
+
 - **Document (final) for `#116`'s saved-shopping-lists slice.** `specs/roadmap.md` gains the
   change-log row for the `staging` merge (PR #804, merge `60275d9`). `docs/model-handoff.md`'s
   Checkout section and In-Flight Work entry are reconciled from "built, awaiting Validate" to

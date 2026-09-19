@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.15.0"
-updated: 2026-09-18
+version: "1.16.0"
+updated: 2026-09-19
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -40,14 +40,16 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-19.
-- **Checkout:** `staging` is **one slice ahead of `main`**, at `60275d9` (PR #804, "feat(#116):
-  saved shopping lists", merge `feature/116-saved-shopping-lists -> staging`). `main` is still at
-  `d8f61a4` (PR #799, `#696`/`#137`/`#151`'s promotion). **`#116` is pending promotion** — its
-  Project #2 item is `In Review`, not `Done`, and stays open until a `staging -> main` PR merges.
-  `deploy-staging` confirmed green post-merge. Migration `20260918053538_p116_saved_shopping_lists`
-  (`ShoppingList`, `ShoppingListItem`, additive, no backfill) is now on `staging` and **not yet on
-  `main`**; both deploy workflows build before they migrate, so promotion applies it automatically —
-  nothing to do, but the promotion PR for this branch is not a docs-only one.
+- **Checkout:** `staging` and `main` are **aligned at `187b5eb`** (PR #808, "Promote saved shopping
+  lists and /shop-your-list quick-access to production (#116, #806)", `staging -> main`). This
+  promotion carried PR #804 (`#116`, "saved shopping lists") and PR #807 (`#806`, "surface saved
+  lists on /shop-your-list", a same-day direct follow-up with zero new schema/repository/service
+  surface of its own — batched into one promotion rather than a second near-identical review
+  cycle). **Both `#116` and `#806` are DONE** — closed on the `main` merge, their Project #2 items
+  auto-moved to `Done`. `deploy-production` and `deploy-docs-internal` both confirmed **success**;
+  production `/api/health` confirmed live serving `187b5eb` with `db.ok: true`. Migration
+  `20260918053538_p116_saved_shopping_lists` (`ShoppingList`, `ShoppingListItem`, additive, no
+  backfill) is now on **both** `staging` and `main`.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
@@ -252,6 +254,12 @@ for the tracked cleanup issue.
 shipped and how it was live-verified post-deploy. `#764`, `#767`, `#770`, `#771` and `#772` all
 closed; `#766` remains open, deliberately (no licensed address provider in scope).
 
+**`#116` (saved shopping lists) and `#806` (its same-day `/shop-your-list` quick-access follow-up)
+are BOTH now promoted to production** (PR #808, merge `187b5eb`, 2026-09-19) — see Last Verified
+above. `#806` added zero new schema/repository/service surface of its own (confirmed by an empty
+`git diff` across every file `#116` and the existing paste/match/add-to-cart journey own), which is
+why the two were batched into one promotion rather than two.
+
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
 in scope.
@@ -266,7 +274,9 @@ The live board showed open High-priority items, all with blank Complexity:
   above.) #363 and #422 remain genuinely open/unresolved — #402 shipped without either, flagged as
   known-shaky (timezone) and unresolved (multi-site). #400 remains split: the async-loading half
   still open, the per-store half still blocked on #422.
-- Saved lists: **#116 — validated and shipped to `staging`** (PR #804, 2026-09-19; see In-Flight Work below). Pending promotion to `main`.
+- **Saved lists: DONE, 2026-09-19** — #116 and #806 both **closed → Done**, promoted to production
+  via PR #808 (`specs/2026-09-18-p116-saved-shopping-lists/`,
+  `specs/2026-09-19-p10-shop-your-list-saved-lists/`).
 - **Paid-order cancellation and reversals: DONE, 2026-09-18** — #696, #137 and #151 all **closed →
   Done**, promoted to production via PR #799 (`specs/2026-09-17-p696-staff-cancel-confirmed-order/`).
   `cancelConfirmedOrder` never touches `Payment`; refunds stay with #606.
@@ -297,21 +307,24 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#116` (saved shopping lists) is SHIPPED TO `staging`, PENDING PROMOTION** (PR #804, merge
-  `60275d9`, 2026-09-19). `/validate` ran from a fresh context: full local suite green
-  (147 files / 1977 tests), every `validation.md` row confirmed live — `verify-saved-lists.ts`
-  against dev Postgres (including `--prove-http`) and `npm run preview` under a real
-  `demo-customer` session (paste → match → review → add-to-cart across all four resolution
-  branches; save → reopen; the 20-list cap refusing a 21st save; cross-user 404). Two things about
-  it are environmental rather than slice-local:
-  - **Its migration** (`20260918053538_p116_saved_shopping_lists`, `ShoppingList` +
-    `ShoppingListItem`, additive) **is now on `staging` and not yet on `main`.** Both deploy
-    workflows build before they migrate, so promotion applies it automatically; nothing to do, but
-    the `staging -> main` PR for this slice is not a docs-only one.
-  - **The DEV Neon branch was migrated separately**, before `staging`, via a local
-    `prisma migrate deploy` so the slice's live script could run. Dev, staging and production all
-    now carry compatible schema, but reached it independently — do not infer one environment's
-    state from another's.
+- **`#116` and `#806` (saved shopping lists + `/shop-your-list` quick-access) are DONE — see Last
+  Verified/Project Position above.** Both promoted to production via PR #808 (merge `187b5eb`,
+  2026-09-19), carrying PR #804 (`#116`) and PR #807 (`#806`). Each ran a fresh-context `/validate`:
+  `#116`'s full local suite green (147 files / 1977 tests), every `validation.md` row confirmed
+  live — `verify-saved-lists.ts` against dev Postgres (including `--prove-http`) and
+  `npm run preview` under a real `demo-customer` session (paste → match → review → add-to-cart
+  across all four resolution branches; save → reopen; the 20-list cap refusing a 21st save;
+  cross-user 404); `#806`'s own live checks (5-item cap and ordering re-seeded and reconfirmed
+  independently of Build's spot-check; singular/plural item-count text; guest/zero-list
+  short-circuit; the three `/account/lists/<id>` outcomes) all under the same `demo-customer`
+  session. **The DEV Neon branch was migrated separately**, before `staging`, via a local
+  `prisma migrate deploy` so `#116`'s live script could run — dev, staging and production all
+  reached compatible schema independently; do not infer one environment's state from another's.
+  Re-encountered **#762** (already open, filed 2026-09-15) during this Document (final) pass:
+  `specs/roadmap.md` itself carries pre-existing double-encoded em-dash/quote mojibake corruption,
+  unrelated to this slice, now at 393 occurrences (was 389 at filing) — confirms the file is still
+  accumulating more, not a stale one-time count. A duplicate issue (`#809`) was mistakenly filed
+  before checking for an existing one and closed in favour of `#762`.
 - **`#764` and `#770`/`#771`/`#767` are DONE — see Last Verified/Project Position above.** Both
   promoted to production via PR #775 (`1e44533`, 2026-09-16); `#764`, `#767`, `#770`, `#771`,
   `#772` all closed. `feature/reference-coverage-reconciliation` and
