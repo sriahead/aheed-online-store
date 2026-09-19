@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Saved lists surfaced on `/shop-your-list` (`#116` follow-up, `#806`,
+  `specs/2026-09-19-p10-shop-your-list-saved-lists/`)**: a signed-in shopper with saved lists sees
+  them right on `/shop-your-list`, above the paste box — up to the 5 most recently updated, each
+  linking to the `/account/lists/<id>` page `#116` already shipped for the resolve-and-review
+  journey, plus a "Manage your lists" link. No new repository or service function; reuses
+  `getShoppingListService().list()` as-is. Guests and signed-in shoppers with no saved lists see the
+  page exactly as before.
 - **Saved shopping lists (`#116`, `specs/2026-09-18-p116-saved-shopping-lists/`)**: a signed-in
   shopper saves a reusable list and re-opens it against today's catalogue. `#116` was filed asking
   to sequence P4's reorder first "and see what demand is left"; reorder shipped, and this is
