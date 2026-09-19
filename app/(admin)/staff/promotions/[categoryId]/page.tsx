@@ -7,6 +7,8 @@ import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { CampaignForm } from "@/components/staff/CampaignForm";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { STORE_TIMEZONE } from "@/lib/local-datetime";
 
 // Reads the session and one live category/campaign — must render per-request.
 export const dynamic = "force-dynamic";
@@ -38,11 +40,16 @@ export default async function EditCampaignPage({
     );
   }
 
-  const [category, campaign] = await Promise.all([
+  const [category, campaign, profile] = await Promise.all([
     getCategoryForAdmin(auth.vendorId, categoryId),
     getCampaignForVendorCategory(auth.vendorId, categoryId),
+    // #363 — the zone the form renders the stored instants back in. Must match the one
+    // `saveCampaign` parses with, which resolves the same profile.
+    getCurrentVendorProfile(),
   ]);
   if (!category) notFound();
+
+  const timezone = profile?.timezone ?? STORE_TIMEZONE;
 
   const { CDN_BASE_URL } = getEnv();
   const imageUrl =
@@ -60,6 +67,7 @@ export default async function EditCampaignPage({
         categoryName={category.name}
         campaign={campaign}
         imageUrl={imageUrl}
+        timezone={timezone}
       />
     </main>
   );

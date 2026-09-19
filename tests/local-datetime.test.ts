@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { STORE_TIMEZONE, formatLocalInput, parseLocalInput } from "@/lib/local-datetime";
+import {
+  STORE_TIMEZONE,
+  addCalendarDays,
+  calendarDayInZone,
+  calendarDayToUtcMidnight,
+  formatLocalInput,
+  parseLocalInput,
+  zoneWallClock,
+} from "@/lib/local-datetime";
 
 /**
  * P8.5f — `datetime-local` ⇄ instant conversion (R17-R19).
@@ -111,5 +119,111 @@ describe("round trip", () => {
       const input = `2026-01-15T${String(hour).padStart(2, "0")}:15`;
       expect(formatLocalInput(parseLocalInput(input))).toBe(input);
     }
+  });
+});
+
+/**
+ * #811 — the calendar-day helpers.
+ *
+ * Same property as everything above: the result must not depend on the process's own timezone.
+ * These exist because the checkout slot picker treated a calendar day as an instant, so during
+ * BST it asked the server for one day and the server answered for another.
+ */
+
+describe("calendarDayInZone", () => {
+  it("returns the day the ZONE is on, not the day UTC is on", () => {
+    // 23:30Z on the 18th is already the 19th in London during BST — the exact shape of #811.
+    expect(calendarDayInZone(new Date("2026-09-18T23:30:00Z"), "Europe/London")).toBe("2026-09-19");
+    expect(calendarDayInZone(new Date("2026-09-18T23:30:00Z"), "UTC")).toBe("2026-09-18");
+  });
+
+  it("goes the other way for a negative offset", () => {
+    expect(calendarDayInZone(new Date("2026-09-19T02:00:00Z"), "America/New_York")).toBe(
+      "2026-09-18",
+    );
+  });
+
+  it("agrees with UTC in winter, when London has no offset", () => {
+    expect(calendarDayInZone(new Date("2026-01-15T23:30:00Z"), "Europe/London")).toBe("2026-01-15");
+  });
+
+  it("defaults to the platform zone", () => {
+    expect(calendarDayInZone(new Date("2026-09-18T23:30:00Z"))).toBe("2026-09-19");
+  });
+});
+
+describe("calendarDayToUtcMidnight", () => {
+  it("anchors a day to its own UTC midnight", () => {
+    expect(calendarDayToUtcMidnight("2026-09-19")?.toISOString()).toBe("2026-09-19T00:00:00.000Z");
+  });
+
+  it("refuses a day that does not exist in its own month", () => {
+    // Date.UTC would roll this into March rather than refusing it.
+    expect(calendarDayToUtcMidnight("2026-02-31")).toBeNull();
+  });
+
+  it.each([
+    ["an instant", "2026-09-19T00:00:00.000Z"],
+    ["a partial day", "2026-09"],
+    ["an unpadded day", "2026-9-19"],
+    ["empty", ""],
+    ["nonsense", "not-a-day"],
+  ])("refuses %s", (_label, value) => {
+    expect(calendarDayToUtcMidnight(value)).toBeNull();
+  });
+
+  it("tolerates surrounding whitespace", () => {
+    expect(calendarDayToUtcMidnight(" 2026-09-19 ")?.toISOString()).toBe(
+      "2026-09-19T00:00:00.000Z",
+    );
+  });
+});
+
+describe("addCalendarDays", () => {
+  it("crosses a month boundary", () => {
+    expect(addCalendarDays("2026-09-30", 1)).toBe("2026-10-01");
+  });
+
+  it("crosses a year boundary", () => {
+    expect(addCalendarDays("2026-12-31", 1)).toBe("2027-01-01");
+  });
+
+  it("handles a leap day", () => {
+    expect(addCalendarDays("2028-02-28", 1)).toBe("2028-02-29");
+  });
+
+  it("counts backwards", () => {
+    expect(addCalendarDays("2026-09-01", -1)).toBe("2026-08-31");
+  });
+
+  it("does not skip or repeat a day across the spring-forward boundary", () => {
+    // 29 March 2026 is the UK's spring-forward Sunday: a 23-hour local day.
+    expect(addCalendarDays("2026-03-28", 1)).toBe("2026-03-29");
+    expect(addCalendarDays("2026-03-29", 1)).toBe("2026-03-30");
+  });
+
+  it("returns an unparsable day unchanged rather than throwing", () => {
+    expect(addCalendarDays("not-a-day", 1)).toBe("not-a-day");
+  });
+});
+
+describe("zoneWallClock", () => {
+  it("reads the weekday and time the VENDOR's clock shows", () => {
+    // 23:30Z Friday 18 Sep is 00:30 Saturday in London (BST).
+    expect(zoneWallClock(new Date("2026-09-18T23:30:00Z"), "Europe/London")).toEqual({
+      dayOfWeek: 6,
+      hhmm: "00:30",
+    });
+  });
+
+  it("reads the same instant differently in another zone", () => {
+    expect(zoneWallClock(new Date("2026-09-18T23:30:00Z"), "UTC")).toEqual({
+      dayOfWeek: 5,
+      hhmm: "23:30",
+    });
+  });
+
+  it("zero-pads the hour so a text comparison against an HH:mm column is sound", () => {
+    expect(zoneWallClock(new Date("2026-01-15T09:05:00Z"), "Europe/London").hhmm).toBe("09:05");
   });
 });

@@ -10,6 +10,7 @@ import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getDeliveryEligibility } from "@/lib/delivery-eligibility-service";
 import { blocksCheckout, eligibilityMessage } from "@/lib/delivery-eligibility";
 import { getCustomerAddressService } from "@/lib/customer-addresses-service";
+import { calendarDayToUtcMidnight } from "@/lib/local-datetime";
 
 /**
  * Checkout server action (P3b, #96).
@@ -158,13 +159,29 @@ export async function placeOrderAction(
     const rawFulfilmentDate = optional(form, "fulfilmentDate");
     const isExpress = form.get("isExpress") === "on";
 
+    /*
+     * #811 — `fulfilmentDate` arrives as a bare `YYYY-MM-DD` calendar day and is stored as that
+     * day's UTC MIDNIGHT. It used to be `new Date(rawFulfilmentDate)` over an instant the browser
+     * had built from its own local midnight, so during BST every order was filed against 23:00 on
+     * the preceding day — and `lib/repositories/orders.ts`'s capacity count, which matches this
+     * column by exact equality, counted it there too.
+     *
+     * Refused rather than coerced: a malformed day means the picker and this action disagree about
+     * the wire format, and silently placing the order on some other day is the failure mode the
+     * whole slice exists to remove.
+     */
+    const fulfilmentDate = rawFulfilmentDate ? calendarDayToUtcMidnight(rawFulfilmentDate) : null;
+    if (rawFulfilmentDate && fulfilmentDate === null) {
+      return { error: "Please choose a delivery or collection date." };
+    }
+
     const placed = await getOrderRepository().createOrder({
       cartId,
       userId: identity.userId,
       guestEmail: identity.userId ? null : email,
       address: addressInput,
       fulfilmentSlotId: rawFulfilmentSlotId,
-      fulfilmentDate: rawFulfilmentDate ? new Date(rawFulfilmentDate) : null,
+      fulfilmentDate,
       isExpress,
       rules: {
         deliveryFeePence: vendor.deliveryFeePence,

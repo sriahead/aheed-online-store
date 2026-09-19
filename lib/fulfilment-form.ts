@@ -62,6 +62,67 @@ export interface FulfilmentSettingsInput {
   expressCollectionEnabled: boolean;
   bookingWindowDays: number;
   slotHoldDurationMinutes: number;
+  /** #363 — an IANA zone name, validated by `isSupportedTimeZone` below. */
+  timezone: string;
+}
+
+/**
+ * Whether the runtime accepts `value` as an IANA time zone.
+ *
+ * `Intl.DateTimeFormat` throws `RangeError` for an unknown zone and accepts every zone the runtime
+ * actually supports, which is the only definition that matters here — a hand-maintained allow-list
+ * would drift from whatever `lib/local-datetime.ts` can really convert with, and the whole point of
+ * #363 is that a stored zone must be usable, not merely well-spelled.
+ *
+ * `"UTC"` and offset-style names are accepted if the runtime accepts them; nothing is normalised,
+ * because the stored string is fed straight back to `Intl` and a round-trip that changes it would
+ * make the staff page show something other than what was saved.
+ */
+export function isSupportedTimeZone(value: string): boolean {
+  if (value.trim() === "") return false;
+  try {
+    new Intl.DateTimeFormat("en-GB", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Every zone this runtime knows, for the settings form's select.
+ *
+ * `Intl.supportedValuesOf` is not guaranteed to exist on every runtime this ships to, and a select
+ * that silently renders empty would be exactly the kind of invisible breakage #750 was filed for —
+ * so an explicit fallback covers the zones the platform plausibly onboards into, and the stored
+ * value is unioned in by the form itself so a vendor can never lose the zone they already have.
+ */
+export const FALLBACK_TIME_ZONES = [
+  "Europe/London",
+  "Europe/Dublin",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Lisbon",
+  "Europe/Madrid",
+  "Europe/Warsaw",
+  "Europe/Bucharest",
+  "Europe/Istanbul",
+  "Asia/Karachi",
+  "Asia/Kolkata",
+  "Asia/Dhaka",
+  "Asia/Colombo",
+  "Asia/Dubai",
+  "Africa/Lagos",
+  "Africa/Nairobi",
+  "America/New_York",
+  "America/Toronto",
+  "America/Los_Angeles",
+  "Australia/Sydney",
+  "UTC",
+] as const;
+
+export function supportedTimeZones(): string[] {
+  const fromRuntime = Intl.supportedValuesOf?.("timeZone");
+  return fromRuntime && fromRuntime.length > 0 ? [...fromRuntime] : [...FALLBACK_TIME_ZONES];
 }
 
 export interface SlotInput {
@@ -130,7 +191,13 @@ export function parseFulfilmentSettings(raw: {
   expressCollectionEnabled: boolean;
   bookingWindowDays: string;
   slotHoldDurationMinutes: string;
+  timezone: string;
 }): ParseResult<FulfilmentSettingsInput> {
+  const timezone = raw.timezone.trim();
+  if (!isSupportedTimeZone(timezone)) {
+    return invalid("timezone", "Choose a valid time zone, e.g. Europe/London.");
+  }
+
   const days = parseBoundedInteger(
     raw.bookingWindowDays,
     "bookingWindowDays",
@@ -156,6 +223,7 @@ export function parseFulfilmentSettings(raw: {
       expressCollectionEnabled: raw.expressCollectionEnabled,
       bookingWindowDays: days.value,
       slotHoldDurationMinutes: hold.value,
+      timezone,
     },
   };
 }

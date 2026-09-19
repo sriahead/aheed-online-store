@@ -28,11 +28,18 @@ export function CampaignForm({
   categoryName,
   campaign,
   imageUrl,
+  timezone,
 }: {
   categoryId: string;
   categoryName: string;
   campaign: CampaignRow | null;
   imageUrl: string | null;
+  /**
+   * #363 — the vendor's IANA zone, supplied by the page. Required, and it must be the SAME zone
+   * `saveCampaign` parses with: this is the read half of the write/read pair #362 existed to keep
+   * in agreement, and defaulting it here would let the two drift apart again silently.
+   */
+  timezone: string;
 }) {
   const [state, action, saving] = useActionState(saveCampaign, initialCampaignFormState);
 
@@ -99,7 +106,7 @@ export function CampaignForm({
               name="startsAt"
               label="Starts (optional)"
               type="datetime-local"
-              defaultValue={formatLocalInput(campaign?.startsAt ?? null)}
+              defaultValue={formatLocalInput(campaign?.startsAt ?? null, timezone)}
               error={isInvalid("startsAt")}
               errorId="campaign-form-error"
             />
@@ -107,7 +114,7 @@ export function CampaignForm({
               name="endsAt"
               label="Ends (optional)"
               type="datetime-local"
-              defaultValue={formatLocalInput(campaign?.endsAt ?? null)}
+              defaultValue={formatLocalInput(campaign?.endsAt ?? null, timezone)}
               error={isInvalid("endsAt")}
               errorId="campaign-form-error"
             />

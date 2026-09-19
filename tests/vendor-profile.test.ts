@@ -5,6 +5,7 @@ import {
   DEFAULT_BRAND_PRIMITIVES,
   DEFAULT_SENDER_NAME,
   DEFAULT_SEARCH_PLACEHOLDER,
+  DEFAULT_TIMEZONE,
 } from "@/lib/repositories/vendor";
 
 const findUnique = vi.fn(); // vendor.findUnique
@@ -99,5 +100,41 @@ describe("listActiveVendorIds", () => {
     // is a worse default than leaving them for whoever resolves the suspension.
     expect(findMany.mock.calls[0][0].where).toEqual({ status: "ACTIVE" });
     expect(ids).toEqual(["v-aheed", "v-srimart"]);
+  });
+});
+
+/**
+ * #363 — the vendor's timezone on the profile.
+ *
+ * This is the resolution path every `datetime-local` conversion and the checkout slot picker use,
+ * so the fallback matters as much as the happy path: a vendor whose config satellite is unseeded
+ * must still convert dates, in the zone every row in the system used before the column existed.
+ */
+describe("fetchVendorProfile timezone", () => {
+  it("returns the configured zone", async () => {
+    findUnique.mockResolvedValue({
+      name: "SriMart",
+      branding: null,
+      config: { timezone: "Asia/Karachi" },
+      deliveryAreas: [],
+      vendorExpressSchedules: [],
+    });
+
+    const profile = await fetchVendorProfile(prisma, "v1");
+    expect(profile.timezone).toBe("Asia/Karachi");
+  });
+
+  it("falls back to the platform default when there is no config row", async () => {
+    findUnique.mockResolvedValue({
+      name: "SriMart",
+      branding: null,
+      config: null,
+      deliveryAreas: [],
+      vendorExpressSchedules: [],
+    });
+
+    const profile = await fetchVendorProfile(prisma, "v1");
+    expect(profile.timezone).toBe(DEFAULT_TIMEZONE);
+    expect(profile.timezone).toBe("Europe/London");
   });
 });

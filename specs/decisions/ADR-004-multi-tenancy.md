@@ -4,8 +4,8 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.12.0"
-updated: 2026-09-07
+version: "1.13.0"
+updated: 2026-09-19
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
@@ -314,30 +314,50 @@ small change. The deeper fix is **#220 (P7e)** — row-level security, which dec
 to P7 — so that a missing `vendorId` filter fails closed at Postgres instead of relying on the
 repository layer and the `no-restricted-imports` lint rule being the only enforcement.
 
-## Implementation note — store timezone is a constant, not yet vendor data (P8.5f, 2026-08-25)
+## Implementation note — store timezone IS vendor data (P8.5f deferred it; #363 closed it, 2026-09-19)
 
-Decision 3 makes region, locality and delivery footprint **DB-driven per vendor**. Time zone is the
-one region-shaped value that P8.5f deliberately did **not** put in the database: `lib/local-datetime.ts`
-pins a single `STORE_TIMEZONE = "Europe/London"` for the whole platform.
+Decision 3 makes region, locality and delivery footprint **DB-driven per vendor**. Time zone was the
+last region-shaped value still hardcoded. It no longer is.
 
-The reason is that the slice existed to fix a *correctness* bug, and a constant fixes it completely
-for every vendor that exists. `datetime-local` form values (campaign `startsAt`/`endsAt`, discount
-code windows) were being parsed with a bare `new Date(value)`, which ECMAScript interprets in **the
-runtime's own** zone — UTC on the Worker — and rendered back through the browser's local clock. The
-two assumptions disagreed by exactly the UK's summer offset, so an admin typing `07:25` in BST read
-back `08:25` and the database held an instant nobody chose. Fixing that requires only that **one
-explicit zone is used on both sides**; which zone it is matters only when a vendor is somewhere else.
+**Where it lives now.** `VendorConfig.timezone`, a `String` defaulting to `"Europe/London"`, beside
+`localityName` and the delivery and fulfilment settings — `VendorConfig` holds a vendor's
+region-shaped and operational values, `Vendor` holds its identity. It is editable by an ADMIN on
+`/staff/fulfilment`, validated on write by asking `Intl.DateTimeFormat` whether the runtime can
+actually convert with it (`isSupportedTimeZone`, `lib/fulfilment-form.ts`) rather than by matching a
+hand-maintained list that would drift from what the conversion layer accepts.
 
-Both seeded vendors are UK (Aheed in Milton Keynes, SriMart in Reading), so today the constant and a
-per-vendor column produce identical results for every row in the system.
+**How it is resolved.** Through `VendorProfile.timezone` (`lib/repositories/vendor.ts`), which
+`getCurrentVendorProfile()` already memoises per request. `lib/local-datetime.ts` remains pure,
+DB-free, session-free and request-free: it is **told** the zone and never looks one up, so a plain
+`tsx` script can still exercise every conversion. `STORE_TIMEZONE` survives as the **platform
+default** — what a vendor with no `VendorConfig` row falls back to, re-exported as
+`DEFAULT_TIMEZONE` — not as the answer.
 
-**What makes it safe to defer:** the constant is read in exactly one module, and every caller already
-passes through `parseLocalInput`/`formatLocalInput`. Adding `Vendor.timezone` later means a migration,
-a default of `Europe/London`, and threading a vendor id into those two functions — mechanical, and
-guarded by tests that already assert the conversion is independent of the process clock. **What makes
-it a real limit:** the moment a non-UK vendor onboards, every campaign schedule and discount window
-on the platform is interpreted in London time until that column exists. That is a blocker for
-international onboarding, not a cosmetic gap — treat this note as the prerequisite it is.
+**Why P8.5f was right to defer it, recorded because the reasoning outlives the deferral.** That
+slice existed to fix a *correctness* bug: `datetime-local` values were parsed with a bare
+`new Date(value)`, which ECMAScript interprets in **the runtime's own** zone — UTC on the Worker —
+and rendered back through the browser's local clock. The two assumptions disagreed by exactly the
+UK's summer offset, so an admin typing `07:25` in BST read back `08:25`. Fixing that requires only
+that **one explicit zone is used on both sides**; which zone it is matters only when a vendor is
+somewhere else, and both seeded vendors are UK.
+
+**What the deferral did cost, and it was not theoretical.** The constant did not merely block
+non-UK onboarding — it hid a live customer-facing defect for the UK vendors it was supposed to be
+sufficient for. Because no code could name a vendor's zone, `components/checkout/SlotPicker.tsx`
+picked one by accident: it sent the shopper's **browser-local** midnight as an instant, and
+`lib/repositories/fulfilment-slots.ts` read the weekday back off it with a **UTC** `getDay()`.
+Through all of British Summer Time a shopper choosing Saturday was shown and booked into Friday's
+delivery slots. Filed as `#811` and fixed in the same slice as this column.
+
+The durable lesson is about the shape of the argument, not about time zones: "a constant and a
+column are identical for every row that exists today" was **true**, and still left the system with
+no way to express the concept — so the next piece of code that needed it invented its own answer.
+A deferred abstraction is only as safe as the code that later needs it and cannot ask for it.
+
+**Two related things this did NOT settle.** A second physical site in a different zone would need
+the column per *location*, not per vendor — see `#422`, still open. And several staff pages still
+render dates with a bare `toLocaleDateString`, which shows the Worker's UTC rather than the
+vendor's zone; display-only, staff-only, deliberately out of `#363`'s scope.
 
 ## Row-level security — determined 2026-08-19, NOT adopted (#220, P7 closeout #251)
 
