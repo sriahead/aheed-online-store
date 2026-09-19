@@ -30,20 +30,53 @@
  * the property tests/local-datetime.test.ts asserts by running under two very
  * different `TZ` values and expecting identical output.
  *
- * ## Why the timezone is a constant
+ * ## The timezone used to be a constant. It is now vendor data (#363).
  *
- * `STORE_TIMEZONE` is platform-wide rather than a `Vendor` column: both seeded
- * vendors are UK, so a constant and a per-vendor field produce identical results
- * for every row that exists today. See ADR-004's "store timezone is a constant,
- * not yet vendor data" note for what that defers and what it blocks (non-UK
- * vendor onboarding). Every caller already goes through these two functions, so
- * adding the column later means threading a vendor id in here — not a rewrite.
+ * `STORE_TIMEZONE` was platform-wide for P8.5f, and that was the right call at
+ * the time: both seeded vendors are UK, so a constant and a per-vendor field
+ * produced identical results for every row that existed, and #362 was a
+ * CORRECTNESS bug about the two sides disagreeing — which zone it is matters
+ * only when a vendor is somewhere else.
+ *
+ * Since #363 the zone lives on `VendorConfig.timezone` and reaches these
+ * functions as an explicit argument, resolved by the caller through
+ * `VendorProfile.timezone` (`lib/repositories/vendor.ts`). `STORE_TIMEZONE`
+ * survives as the PLATFORM DEFAULT — the value a vendor with no config row
+ * falls back to — not as the answer. This module stays pure, DB-free,
+ * session-free and request-free: it never looks a vendor up, it is told.
+ *
+ * ## The calendar-day helpers, and why they take no zone on the way back (#811)
+ *
+ * A calendar day is not an instant, and treating it as one is what broke the
+ * checkout slot picker for the whole of British Summer Time. `SlotPicker` sent
+ * browser-local midnight as an ISO instant and the Worker read the weekday off
+ * it with a UTC `getDay()`, so a customer picking Saturday was shown Friday's
+ * slots — every hour of every day from late March to late October, not an edge
+ * case near midnight. Under `next dev` on a UK laptop both sides are BST and the
+ * two errors cancel exactly, which is the same way #362 hid.
+ *
+ * So the wire format between a picker and the server is a plain `YYYY-MM-DD`
+ * calendar day, and `Order.fulfilmentDate` is always the UTC midnight of that
+ * day. The zone is needed ONCE, at the top, to decide which calendar day "today"
+ * is for this vendor; after that no further zone reasoning happens, because
+ * there is nothing left to get wrong.
  */
 
+/**
+ * The platform default zone — what a vendor with no `VendorConfig` row resolves
+ * to. `lib/repositories/vendor.ts` re-exports this as `DEFAULT_TIMEZONE`.
+ */
 export const STORE_TIMEZONE = "Europe/London";
 
 /** `YYYY-MM-DDTHH:mm`, with the optional `:ss` a `step` attribute can add. */
 const INPUT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/;
+
+/** A bare calendar day, the wire format between a date picker and the server. */
+const CALENDAR_DAY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
 
 /**
  * `h23` rather than `hour12: false` deliberately: `hour12: false` is specified to
@@ -158,6 +191,92 @@ export function formatLocalInput(date: Date | null, timeZone: string = STORE_TIM
   if (date === null || Number.isNaN(date.getTime())) return "";
 
   const p = zoneParts(date, timeZone);
-  const pad = (n: number) => String(n).padStart(2, "0");
   return `${p.year}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`;
+}
+
+/* -------------------------------------------------------------------------------------------- *
+ * Calendar days (#811)
+ *
+ * A calendar day is a label, not a point in time. These four keep it that way — see the "calendar
+ * day" section of this file's header for the defect that made them necessary.
+ * -------------------------------------------------------------------------------------------- */
+
+/**
+ * The `YYYY-MM-DD` calendar day `instant` falls on IN `timeZone`.
+ *
+ * This is the one place the zone is needed in the slot-picking path: it answers "which day is it
+ * where the vendor is", and every later step works on the resulting string.
+ */
+export function calendarDayInZone(instant: Date, timeZone: string = STORE_TIMEZONE): string {
+  const p = zoneParts(instant, timeZone);
+  return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
+}
+
+/**
+ * The instant at UTC midnight of a `YYYY-MM-DD` day, or `null` for anything that isn't one.
+ *
+ * This is the stored form: `Order.fulfilmentDate` is ALWAYS the UTC midnight of the vendor-local
+ * calendar day, which is what makes an exact-equality capacity query correct. `tests/slot-capacity`
+ * and `tests/concurrency-slot-booking` already assumed it before #811 made it true in production.
+ *
+ * Rejects a well-shaped but impossible day: `Date.UTC` rolls `2026-02-31` over into March rather
+ * than refusing it, so the components are re-read from the result and compared — the same guard
+ * `parseLocalInput` uses above.
+ */
+export function calendarDayToUtcMidnight(day: string): Date | null {
+  const match = CALENDAR_DAY_PATTERN.exec(day.trim());
+  if (!match) return null;
+
+  const [, year, month, date] = match;
+  const y = Number(year);
+  const mo = Number(month);
+  const d = Number(date);
+
+  const ms = Date.UTC(y, mo - 1, d);
+  if (Number.isNaN(ms)) return null;
+
+  const back = new Date(ms);
+  if (back.getUTCFullYear() !== y || back.getUTCMonth() !== mo - 1 || back.getUTCDate() !== d) {
+    return null;
+  }
+  return back;
+}
+
+/**
+ * `n` days after (or before, for a negative `n`) a `YYYY-MM-DD` day.
+ *
+ * Pure string-to-string arithmetic through UTC, so it cannot drift across a DST boundary the way
+ * adding 86,400,000ms to a zoned instant does. An input that is not a calendar day is returned
+ * unchanged rather than throwing — this module never throws — but callers derive `day` from
+ * `calendarDayInZone`, so that branch is unreachable by construction.
+ */
+export function addCalendarDays(day: string, n: number): string {
+  const base = calendarDayToUtcMidnight(day);
+  if (base === null) return day;
+
+  const moved = new Date(base.getTime());
+  moved.setUTCDate(moved.getUTCDate() + n);
+  return `${moved.getUTCFullYear()}-${pad(moved.getUTCMonth() + 1)}-${pad(moved.getUTCDate())}`;
+}
+
+/**
+ * The weekday and `HH:mm` that `timeZone` reads at `instant`.
+ *
+ * `dayOfWeek` is `0` = Sunday, matching `VendorFulfilmentSlot.dayOfWeek` and `VendorExpressSchedule.
+ * dayOfWeek`; `hhmm` is zero-padded 24-hour, matching the `HH:mm` string columns those rows carry,
+ * so the caller can compare them as text exactly as `lib/fulfilment-form.ts` documents.
+ *
+ * Exists for the Express-collection window, which is the one part of the slot path that genuinely
+ * needs a zone rather than a calendar day: "is the vendor open right now" is a question about the
+ * vendor's wall clock, and the shopper's browser is the wrong clock to ask.
+ */
+export function zoneWallClock(
+  instant: Date,
+  timeZone: string = STORE_TIMEZONE,
+): { dayOfWeek: number; hhmm: string } {
+  const p = zoneParts(instant, timeZone);
+  // Via the zone's own calendar day, so the weekday can never disagree with the date beside it.
+  const dayOfWeek =
+    calendarDayToUtcMidnight(calendarDayInZone(instant, timeZone))?.getUTCDay() ?? 0;
+  return { dayOfWeek, hhmm: `${pad(p.hour)}:${pad(p.minute)}` };
 }

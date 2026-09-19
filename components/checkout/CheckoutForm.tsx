@@ -35,6 +35,7 @@ export function CheckoutForm({
   offerDeliverySlots,
   expressCollectionEnabled,
   expressSchedules,
+  timezone,
   method,
   savedAddresses = [],
 }: {
@@ -53,6 +54,8 @@ export function CheckoutForm({
   offerDeliverySlots: boolean;
   expressCollectionEnabled?: boolean;
   expressSchedules?: { dayOfWeek: number; openTime: string; closeTime: string }[];
+  /** #363/#811 — the vendor's IANA zone, passed straight through to `SlotPicker`. */
+  timezone: string;
   /**
    * #748 — resolved server-side from the shared fulfilment cookie, NOT held in
    * local state. This component used to own a `useState` for it and broadcast
@@ -526,6 +529,7 @@ export function CheckoutForm({
             required={true}
             expressCollectionEnabled={expressCollectionEnabled}
             expressSchedules={expressSchedules}
+            timezone={timezone}
           />
         </section>
       )}

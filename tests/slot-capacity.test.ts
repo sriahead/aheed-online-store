@@ -75,7 +75,8 @@ describe("Slot Capacity Calculation", () => {
       });
 
       const mondayDate = new Date("2026-09-14T00:00:00.000Z"); // Monday
-      const mondayStr = mondayDate.toISOString();
+      // #811 — a bare calendar day, the wire format the picker now submits.
+      const mondayStr = "2026-09-14";
       await prisma.address.create({
         data: {
           id: addressId,

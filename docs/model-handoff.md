@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.15.0"
-updated: 2026-09-18
+version: "1.17.0"
+updated: 2026-09-19
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -40,14 +40,16 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-19.
-- **Checkout:** `staging` is **one slice ahead of `main`**, at `60275d9` (PR #804, "feat(#116):
-  saved shopping lists", merge `feature/116-saved-shopping-lists -> staging`). `main` is still at
-  `d8f61a4` (PR #799, `#696`/`#137`/`#151`'s promotion). **`#116` is pending promotion** — its
-  Project #2 item is `In Review`, not `Done`, and stays open until a `staging -> main` PR merges.
-  `deploy-staging` confirmed green post-merge. Migration `20260918053538_p116_saved_shopping_lists`
-  (`ShoppingList`, `ShoppingListItem`, additive, no backfill) is now on `staging` and **not yet on
-  `main`**; both deploy workflows build before they migrate, so promotion applies it automatically —
-  nothing to do, but the promotion PR for this branch is not a docs-only one.
+- **Checkout:** `main` is still at `187b5eb` (PR #808, promoting `#116`/`#806`) — **`staging` has
+  since moved ahead to `ee09404` and is NOT aligned with `main`.** Two PRs landed on `staging` after
+  that promotion: PR #810 (docs-only, `#116`/`#806` Document (final) reconciliation, no source
+  change) and **PR #813 (`#363`/`#811`, "vendor timezone becomes data; fix the BST slot-picker day
+  defect"), merged 2026-09-19.** `deploy-staging` confirmed **success**; staging `/api/health`
+  confirmed live serving `ee09404`. **`#363` and `#811` are on staging, In Review on the board —
+  NOT yet Done, NOT yet in production.** See In-Flight Work below for what shipped and how it was
+  live-verified, including a real before/after browser check against deployed (pre-fix) staging.
+  Promoting `staging -> main` is an outstanding, deliberate decision — it would carry both PR #810
+  and PR #813 together, and has not been opened.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
@@ -252,6 +254,12 @@ for the tracked cleanup issue.
 shipped and how it was live-verified post-deploy. `#764`, `#767`, `#770`, `#771` and `#772` all
 closed; `#766` remains open, deliberately (no licensed address provider in scope).
 
+**`#116` (saved shopping lists) and `#806` (its same-day `/shop-your-list` quick-access follow-up)
+are BOTH now promoted to production** (PR #808, merge `187b5eb`, 2026-09-19) — see Last Verified
+above. `#806` added zero new schema/repository/service surface of its own (confirmed by an empty
+`git diff` across every file `#116` and the existing paste/match/add-to-cart journey own), which is
+why the two were batched into one promotion rather than two.
+
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
 in scope.
@@ -263,10 +271,16 @@ The live board showed open High-priority items, all with blank Complexity:
 - Brand safety & staff operability: #714 (promoted via PR #732), #733 (promoted via PR #736), and #737 (merged via PR #738, **closed** 2026-09-12 — see In-Flight Work below, this line was stale as of the 2026-09-14 handoff).
 - **Stock and fulfilment: DONE, 2026-09-15** — #401, #402, #748, #749, #750, #751 all **closed →
   Done**, promoted to production via PR #759. (`#613` was never part of this — see Project Position
-  above.) #363 and #422 remain genuinely open/unresolved — #402 shipped without either, flagged as
-  known-shaky (timezone) and unresolved (multi-site). #400 remains split: the async-loading half
-  still open, the per-store half still blocked on #422.
-- Saved lists: **#116 — validated and shipped to `staging`** (PR #804, 2026-09-19; see In-Flight Work below). Pending promotion to `main`.
+  above.) #422 remains genuinely open/unresolved (multi-site location decision). #400 remains split:
+  the async-loading half still open, the per-store half still blocked on #422.
+- **Vendor timezone and the BST slot-picker defect: SHIPPED TO STAGING, 2026-09-19** — #363 and
+  #811 both merged to `staging` via PR #813 and are **In Review** on the board, not yet Done — see
+  Checkout above and In-Flight Work below. `#402` had shipped without this (flagged as known-shaky
+  timezone handling); that gap is now closed for the vendor-timezone half. `#422` (multi-site) is
+  unrelated and still open.
+- **Saved lists: DONE, 2026-09-19** — #116 and #806 both **closed → Done**, promoted to production
+  via PR #808 (`specs/2026-09-18-p116-saved-shopping-lists/`,
+  `specs/2026-09-19-p10-shop-your-list-saved-lists/`).
 - **Paid-order cancellation and reversals: DONE, 2026-09-18** — #696, #137 and #151 all **closed →
   Done**, promoted to production via PR #799 (`specs/2026-09-17-p696-staff-cancel-confirmed-order/`).
   `cancelConfirmedOrder` never touches `Payment`; refunds stay with #606.
@@ -279,8 +293,9 @@ The live board showed open High-priority items, all with blank Complexity:
 Dependencies and scope boundaries worth preserving:
 
 - #696 made #137 and #151 reachable, now in production (see High-Priority Work above and Checkout).
-- #363 gates delivery slots and Click & Collect. #402 also needs the location decision and real
-  operating inputs such as capacity, rounds and order volume.
+- #363 no longer gates delivery slots and Click & Collect — `VendorConfig.timezone` shipped to
+  staging via PR #813 (see High-Priority Work above). #402 still needs the location decision and
+  real operating inputs such as capacity, rounds and order volume.
 - #400 is three concerns: the low-stock badge exists; restock dates and async loading do not;
   per-store stock depends on location modelling.
 - #697 is not missing code. The net-content columns, form, unit-price derivation and pack-size facet
@@ -297,21 +312,40 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#116` (saved shopping lists) is SHIPPED TO `staging`, PENDING PROMOTION** (PR #804, merge
-  `60275d9`, 2026-09-19). `/validate` ran from a fresh context: full local suite green
-  (147 files / 1977 tests), every `validation.md` row confirmed live — `verify-saved-lists.ts`
-  against dev Postgres (including `--prove-http`) and `npm run preview` under a real
-  `demo-customer` session (paste → match → review → add-to-cart across all four resolution
-  branches; save → reopen; the 20-list cap refusing a 21st save; cross-user 404). Two things about
-  it are environmental rather than slice-local:
-  - **Its migration** (`20260918053538_p116_saved_shopping_lists`, `ShoppingList` +
-    `ShoppingListItem`, additive) **is now on `staging` and not yet on `main`.** Both deploy
-    workflows build before they migrate, so promotion applies it automatically; nothing to do, but
-    the `staging -> main` PR for this slice is not a docs-only one.
-  - **The DEV Neon branch was migrated separately**, before `staging`, via a local
-    `prisma migrate deploy` so the slice's live script could run. Dev, staging and production all
-    now carry compatible schema, but reached it independently — do not infer one environment's
-    state from another's.
+- **`#116` and `#806` (saved shopping lists + `/shop-your-list` quick-access) are DONE — see Last
+  Verified/Project Position above.** Both promoted to production via PR #808 (merge `187b5eb`,
+  2026-09-19), carrying PR #804 (`#116`) and PR #807 (`#806`). Each ran a fresh-context `/validate`:
+  `#116`'s full local suite green (147 files / 1977 tests), every `validation.md` row confirmed
+  live — `verify-saved-lists.ts` against dev Postgres (including `--prove-http`) and
+  `npm run preview` under a real `demo-customer` session (paste → match → review → add-to-cart
+  across all four resolution branches; save → reopen; the 20-list cap refusing a 21st save;
+  cross-user 404); `#806`'s own live checks (5-item cap and ordering re-seeded and reconfirmed
+  independently of Build's spot-check; singular/plural item-count text; guest/zero-list
+  short-circuit; the three `/account/lists/<id>` outcomes) all under the same `demo-customer`
+  session. **The DEV Neon branch was migrated separately**, before `staging`, via a local
+  `prisma migrate deploy` so `#116`'s live script could run — dev, staging and production all
+  reached compatible schema independently; do not infer one environment's state from another's.
+  Re-encountered **#762** (already open, filed 2026-09-15) during this Document (final) pass:
+  `specs/roadmap.md` itself carries pre-existing double-encoded em-dash/quote mojibake corruption,
+  unrelated to this slice, now at 393 occurrences (was 389 at filing) — confirms the file is still
+  accumulating more, not a stale one-time count. A duplicate issue (`#809`) was mistakenly filed
+  before checking for an existing one and closed in favour of `#762`.
+- **`#363` and `#811` are SHIPPED TO STAGING, NOT YET PROMOTED — see Checkout/High-Priority Work
+  above.** PR #813 merged 2026-09-19; `deploy-staging` confirmed success. `VendorConfig.timezone`
+  now exists (default `"Europe/London"`, additive migration with an idempotent backfill), resolved
+  through `VendorProfile.timezone`; the checkout slot picker's wire format is now a bare
+  `YYYY-MM-DD` calendar day end to end, replacing the browser-local-midnight instant that caused
+  `#811`. A fresh-context `/validate` confirmed every row of
+  `specs/2026-09-19-p363-vendor-timezone/validation.md` (R1–R33) except one spec-wording note (R11
+  assumes an update action `discount-codes.ts` has never had, by pre-existing design — not a build
+  defect). **`#811` was proven live, not just server-side**: on the same real machine (naturally
+  BST, UTC+1), selecting today's date against currently-deployed (pre-fix) staging produced
+  `fulfilmentDate = "2026-09-18T23:00:00.000Z"` — the exact wrong-day mechanism; the same action
+  against this branch's local preview, and then against staging again post-merge, produced
+  `fulfilmentDate = "2026-09-19"`. Also resolved a build-time "known-shaky" open question:
+  `Intl.supportedValuesOf` **does** work on this workerd runtime — `/staff/fulfilment`'s timezone
+  select renders all ~418 real IANA zones, not the 21-entry fallback. Promoting `staging -> main`
+  is outstanding and would bundle this with PR #810 (docs-only); not opened.
 - **`#764` and `#770`/`#771`/`#767` are DONE — see Last Verified/Project Position above.** Both
   promoted to production via PR #775 (`1e44533`, 2026-09-16); `#764`, `#767`, `#770`, `#771`,
   `#772` all closed. `feature/reference-coverage-reconciliation` and

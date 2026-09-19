@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { normaliseCode, type DiscountKind } from "@/lib/discounts";
-import { parseLocalInput } from "@/lib/local-datetime";
+import { STORE_TIMEZONE, parseLocalInput } from "@/lib/local-datetime";
 import { createCodeForVendor, deactivateCodeForVendor } from "@/lib/discounts-service";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import type { CreateCodeInput } from "@/lib/repositories/discounts";
 
 /**
@@ -66,11 +67,15 @@ function optionalIntegerField(form: FormData, field: string, min: number): numbe
  * it mattered more here: these two fields decide when a discount code starts and
  * stops being redeemable, so an hour's drift is an hour of unintended (or
  * refused) redemptions.
+ *
+ * #363: `timeZone` is the vendor's own, and is required rather than defaulted —
+ * an optional parameter would let a caller silently fall back to the platform
+ * constant with nothing failing, which is the defect itself.
  */
-function optionalDateField(form: FormData, field: string): Date | null {
+function optionalDateField(form: FormData, field: string, timeZone: string): Date | null {
   const raw = String(form.get(field) ?? "").trim();
   if (raw === "") return null;
-  const parsed = parseLocalInput(raw);
+  const parsed = parseLocalInput(raw, timeZone);
   if (parsed === null) {
     throw new InvalidFieldError("Dates must be valid.");
   }
@@ -96,6 +101,10 @@ export async function createDiscountCode(
     return { error: refusal(auth.status), saved: false };
   }
 
+  // #363 — resolved before any date field is read. Same vendor `requireVendorRole` just resolved:
+  // both go through `getCurrentVendorId()`.
+  const timezone = (await getCurrentVendorProfile())?.timezone ?? STORE_TIMEZONE;
+
   let input: CreateCodeInput;
   try {
     const code = normaliseCode(String(form.get("code") ?? ""));
@@ -110,8 +119,8 @@ export async function createDiscountCode(
       throw new InvalidFieldError("A percentage can't be more than 100% (10000 basis points).");
     }
 
-    const startsAt = optionalDateField(form, "startsAt") ?? new Date();
-    const endsAt = optionalDateField(form, "endsAt");
+    const startsAt = optionalDateField(form, "startsAt", timezone) ?? new Date();
+    const endsAt = optionalDateField(form, "endsAt", timezone);
     if (endsAt !== null && endsAt.getTime() < startsAt.getTime()) {
       throw new InvalidFieldError("The end date can't be before the start date.");
     }

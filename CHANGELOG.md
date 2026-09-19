@@ -8,6 +8,45 @@ every branch merges.
 
 ### Added
 
+- **Vendor timezone is now data, and the checkout slot picker no longer returns the wrong day
+  during BST (`#363`, `#811`, `specs/2026-09-19-p363-vendor-timezone/`)**: two issues in one slice,
+  because they are one root cause — nothing in the codebase could name a vendor's timezone, so each
+  piece of date code picked one by accident.
+  - **`VendorConfig.timezone`** (`String`, default `"Europe/London"`), beside the other
+    region-shaped and operational vendor values rather than on `Vendor`, which holds identity.
+    Additive; Postgres backfills existing rows from the default. Editable by an ADMIN on
+    `/staff/fulfilment`, validated on write by asking `Intl` whether the runtime can actually
+    convert with the value — not against a hand-maintained list, which would drift from what the
+    conversion layer accepts.
+  - **Resolved through `VendorProfile.timezone`**, the request-scoped profile that is already
+    memoised per request. `lib/local-datetime.ts` stays pure, DB-free and request-free: it is told
+    the zone and never looks one up, so a plain `tsx` script can still exercise every conversion.
+    `STORE_TIMEZONE` survives as the **platform default** — what a vendor with no config row falls
+    back to, re-exported as `DEFAULT_TIMEZONE` — not as the answer.
+  - **The zone is a REQUIRED parameter**, through `parseCampaignForm` and `optionalDateField`, not
+    an optional one: an optional parameter lets a future caller silently fall back to the platform
+    constant with nothing failing, which is the defect itself. `#363` named two call sites; it
+    missed the read side (`CampaignForm.tsx`), and threading only the writes would have put write
+    and read back into the disagreement `#362` created that module to end.
+  - **`#811` — the slot picker was wrong for the whole of British Summer Time, in production.**
+    `SlotPicker` submitted the shopper's *browser-local* midnight as an instant and the Worker read
+    the weekday back off it with a *UTC* `getDay()`, so a customer choosing Saturday was shown and
+    booked into Friday's slots. Not an edge case near midnight: every hour of every day from late
+    March to late October. The suite stayed green because `tests/slot-capacity` and
+    `tests/concurrency-slot-booking` already built `fulfilmentDate` as UTC midnight — they encoded
+    the right contract and the browser violated it — and under `next dev` on a UK laptop both sides
+    are BST and the two errors cancel exactly.
+  - **Fixed by removing the zone from day selection rather than answering it**: a bare `YYYY-MM-DD`
+    calendar day on the wire, and `Order.fulfilmentDate` always the UTC midnight of the
+    vendor-local calendar day. The Express-collection window genuinely does need a zone — "is the
+    shop open now" is a question about the vendor's wall clock, not the shopper's — and gets it via
+    the new `zoneWallClock`.
+  - **The migration carries an idempotent backfill.** Both capacity queries match `fulfilmentDate`
+    by exact equality, so a BST-era row at 23:00Z would have stopped counting against its own day.
+  - Four pure helpers in `lib/local-datetime.ts`; `ADR-004`'s "store timezone is a constant" note
+    rewritten to record that the deferral, correct at the time, went on to hide a live defect for
+    the UK vendors it was judged sufficient for.
+
 - **Saved lists surfaced on `/shop-your-list` (`#116` follow-up, `#806`,
   `specs/2026-09-19-p10-shop-your-list-saved-lists/`)**: a signed-in shopper with saved lists sees
   them right on `/shop-your-list`, above the paste box — up to the 5 most recently updated, each
@@ -183,6 +222,33 @@ every branch merges.
     negation guard fixed it; all three false positives are pinned as tests.
 
 ### Changed
+
+- **`#116`/`#806` promoted to production (PR #808, merge `187b5eb`); roadmap and handoff
+  reconciled to match.** `specs/roadmap.md` gains two change-log rows — `#806`'s own staging-merge
+  row (PR #807, merge `a5d1769`; `sdd:audit` had flagged this slice as missing its row) and the
+  promotion row (PR #808, migration `20260918053538_p116_saved_shopping_lists` applied to `main`) —
+  plus removes `#116`, `#137` and `#151` from P10's tracked-issues bucket (the latter two had been
+  left there for a day after actually closing via PR #799). `docs/model-handoff.md`'s Checkout,
+  High-Priority Work, In-Flight Work and Project Position sections are corrected from "`#116`
+  shipped to `staging`, pending promotion" to both issues closed and live in production, confirmed
+  via `/api/health` serving `187b5eb`. Re-encountered `#762` (open since 2026-09-15, pervasive
+  double-encoded em-dash corruption in `specs/roadmap.md`) while writing this pass — now at 393
+  occurrences, up from 389 at filing; a duplicate (`#809`) was mistakenly filed before checking for
+  an existing issue and closed in favour of `#762`. No source, schema or configuration touched.
+
+- **Document (final) for `#363`/`#811`'s vendor-timezone slice, shipped to `staging` (PR #813,
+  merge `ee09404`).** `specs/roadmap.md` gains the slice's own change-log row (`sdd:audit` had
+  flagged it missing) and removes `#363` from P10's tracked-issues bucket; the `#420` gate analysis
+  entry for `#363` is marked cleared rather than rewritten. `docs/model-handoff.md`'s Checkout,
+  High-Priority Work and In-Flight Work sections are reconciled — `staging` is no longer aligned
+  with `main` (two PRs ahead: this docs-only #810 and the feature #813), `#363`/`#811` moved from
+  "genuinely open/unresolved" to "shipped to staging, In Review, not yet promoted." Commented on
+  `#379` (multi-buy tier scheduling) noting its `#363` sequencing blocker is now cleared.
+  `docs/developer-portal/local-dev-playbook.md` gains a technique found at this slice's `/ship`: a
+  UK dev machine's own BST clock (March–October) reproduces a client-side timezone defect in a real
+  browser tab with no DevTools timezone override needed — used to confirm `#811`'s fix live against
+  both pre-fix and post-fix deployed staging by reading the submitted `fulfilmentDate` field
+  directly. No source, schema or configuration touched.
 
 - **Document (final) for `#116`'s saved-shopping-lists slice.** `specs/roadmap.md` gains the
   change-log row for the `staging` merge (PR #804, merge `60275d9`). `docs/model-handoff.md`'s

@@ -178,8 +178,9 @@ choose between at checkout, and the hours express collection is offered.
 **Who can access:** Store admins only
 
 **What you can do:** Switch delivery time slots on or off; switch 60-minute express collection on or
-off; set how far ahead customers can book and how long an unpaid order holds its slot; add and remove
-weekly delivery and collection slots; add and remove express windows.
+off; set how far ahead customers can book and how long an unpaid order holds its slot; set your
+store's time zone; add and remove weekly delivery and collection slots; add and remove express
+windows.
 
 **Typical workflow:** You decide to start offering Saturday morning delivery. Add a slot for Saturday
 from 09:00 to 12:00 with a capacity of 12, and it appears at checkout for the next Saturday inside
@@ -190,7 +191,10 @@ and once it is full the slot stops being offered — it is the only thing preven
 orders than you can physically deliver. Slots repeat every week; there is no one-off or holiday slot.
 Times are 24-hour, so afternoon slots start at 13:00 rather than 1:00. **The booking window** is how
 many days ahead a customer may book. **The slot hold** is how long an unpaid order keeps its space
-before it is released for someone else.
+before it is released for someone else. **The time zone** is your store's own clock: it decides
+which calendar day a slot falls on for a customer booking from anywhere in the world, and how the
+start and end times you type on campaigns and discount codes are read. Leave it at `Europe/London`
+unless your shop is genuinely in another zone.
 
 **Common mistakes and limitations:** **If delivery time slots are switched on but no delivery slots
 exist, customers see "No slots available" and cannot choose a time** — switching the feature on is
@@ -204,8 +208,9 @@ on in **Storefront** under delivery rules; without it the express control here i
 express is only ever offered to collection customers. An express window only shows a customer
 express collection while the current time is inside it — a window that has passed today shows
 nothing until it comes round again next week. Removing a slot does not move orders already booked
-into it. All times are UK local time, and there is currently no per-store setting for a shop in
-another timezone.
+into it. **Changing the time zone does not move slots or orders already booked** — the times you
+typed stay the numbers you typed, and they are simply read as that new zone's clock from then on,
+so a store that genuinely moves zone should check its weekly slots still say what it means.
 
 **What happens after changes are saved:** Effective immediately at checkout, for shoppers already
 mid-basket as well as new ones. Orders already placed against a slot keep it.

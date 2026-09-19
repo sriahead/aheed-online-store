@@ -18,6 +18,7 @@ import { fulfilmentProgress } from "@/lib/cart-rules";
 // static prerendering — same reason as the other DB-backed storefront routes.
 import { cookies } from "next/headers";
 import { DELIVERY_POSTCODE_COOKIE } from "@/lib/delivery-cookie";
+import { STORE_TIMEZONE } from "@/lib/local-datetime";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +115,7 @@ export default async function CheckoutPage() {
             offerDeliverySlots={vendor?.offerDeliverySlots ?? false}
             expressCollectionEnabled={vendor?.expressCollectionEnabled ?? false}
             expressSchedules={vendor?.expressSchedules ?? []}
+            timezone={vendor?.timezone ?? STORE_TIMEZONE}
             signedInEmail={signedInEmail}
             redeemable={redeemable}
             offerCollection={vendor?.offerCollection ?? false}

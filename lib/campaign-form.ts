@@ -92,28 +92,42 @@ function relativeLinkUrl(raw: RawForm): ParseResult<string | null> {
  * through the admin's browser clock. The two disagreed by the BST offset, so
  * `07:25` typed in Milton Keynes was stored as `07:25Z` and redisplayed as
  * `08:25`. `parseLocalInput` names the zone explicitly on both sides.
+ *
+ * #363: the zone is now the VENDOR's, passed in rather than defaulted. It is a
+ * required parameter all the way down deliberately — an optional one would let a
+ * caller silently fall back to the platform constant, which is exactly the bug,
+ * and nothing would fail.
  */
-function optionalDate(raw: RawForm, field: string, label: string): ParseResult<Date | null> {
+function optionalDate(
+  raw: RawForm,
+  field: string,
+  label: string,
+  timeZone: string,
+): ParseResult<Date | null> {
   const value = text(raw, field);
   if (value === "") return { ok: true, value: null };
-  const parsed = parseLocalInput(value);
+  const parsed = parseLocalInput(value, timeZone);
   if (parsed === null) {
     return { ok: false, error: { field, message: `${label} isn't a valid date.` } };
   }
   return { ok: true, value: parsed };
 }
 
-export function parseCampaignForm(raw: RawForm): ParseResult<CampaignFormValues> {
+/**
+ * `timeZone` is the vendor's IANA zone (`VendorProfile.timezone`, #363) and is required — see
+ * `optionalDate` above for why it is not defaulted.
+ */
+export function parseCampaignForm(raw: RawForm, timeZone: string): ParseResult<CampaignFormValues> {
   const headline = requiredText(raw, "headline", "Headline");
   if (!headline.ok) return headline;
 
   const linkUrl = relativeLinkUrl(raw);
   if (!linkUrl.ok) return linkUrl;
 
-  const startsAt = optionalDate(raw, "startsAt", "Start date");
+  const startsAt = optionalDate(raw, "startsAt", "Start date", timeZone);
   if (!startsAt.ok) return startsAt;
 
-  const endsAt = optionalDate(raw, "endsAt", "End date");
+  const endsAt = optionalDate(raw, "endsAt", "End date", timeZone);
   if (!endsAt.ok) return endsAt;
 
   if (startsAt.value !== null && endsAt.value !== null && startsAt.value > endsAt.value) {

@@ -6,6 +6,8 @@ import {
   parseSlotInput,
   MAX_BOOKING_WINDOW_DAYS,
   MAX_SLOT_HOLD_MINUTES,
+  isSupportedTimeZone,
+  supportedTimeZones,
 } from "../lib/fulfilment-form";
 
 /**
@@ -33,6 +35,7 @@ const VALID_SETTINGS = {
   expressCollectionEnabled: false,
   bookingWindowDays: "14",
   slotHoldDurationMinutes: "15",
+  timezone: "Europe/London",
 };
 
 describe("parseSlotInput", () => {
@@ -153,6 +156,7 @@ describe("parseFulfilmentSettings", () => {
         expressCollectionEnabled: true,
         bookingWindowDays: 14,
         slotHoldDurationMinutes: 15,
+        timezone: "Europe/London",
       },
     });
   });
@@ -211,5 +215,48 @@ describe("dayName", () => {
 
   it("does not throw on an index the parsers would have rejected", () => {
     expect(dayName(9)).toBe("Unknown");
+  });
+});
+
+/**
+ * #363 — the timezone field on the fulfilment settings form.
+ *
+ * Validation is by asking `Intl` rather than by matching an allow-list: the only zone that is
+ * genuinely valid is one this runtime can actually convert with, which is what
+ * `lib/local-datetime.ts` will be handed.
+ */
+describe("timezone validation", () => {
+  it("accepts a real IANA zone", () => {
+    expect(isSupportedTimeZone("Asia/Karachi")).toBe(true);
+  });
+
+  it("rejects a well-shaped but unknown zone", () => {
+    expect(isSupportedTimeZone("Not/AZone")).toBe(false);
+  });
+
+  it.each([
+    ["empty", ""],
+    ["whitespace", "   "],
+  ])("rejects %s", (_label, value) => {
+    expect(isSupportedTimeZone(value)).toBe(false);
+  });
+
+  it("carries a valid zone through parseFulfilmentSettings", () => {
+    const parsed = parseFulfilmentSettings({ ...VALID_SETTINGS, timezone: "Asia/Karachi" });
+    expect(parsed.ok && parsed.value.timezone).toBe("Asia/Karachi");
+  });
+
+  it("returns a field error for an invalid zone rather than throwing", () => {
+    const parsed = parseFulfilmentSettings({ ...VALID_SETTINGS, timezone: "Not/AZone" });
+    expect(parsed.ok).toBe(false);
+    expect(!parsed.ok && parsed.error.field).toBe("timezone");
+  });
+
+  it("offers a non-empty zone list containing the platform default", () => {
+    const zones = supportedTimeZones();
+    expect(zones.length).toBeGreaterThan(0);
+    expect(zones).toContain("Europe/London");
+    expect(zones).toContain("Europe/Dublin");
+    expect(zones).toContain("Asia/Karachi");
   });
 });

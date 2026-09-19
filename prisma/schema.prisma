@@ -336,6 +336,12 @@ model VendorConfig {
   vendorId                   String   @unique
   vendor                     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   localityName               String // e.g. "Milton Keynes"
+  // #363 — the store's IANA timezone, region-shaped vendor data for the same reason
+  // localityName above is. Interprets every datetime-local field (campaign windows,
+  // discount-code windows) and decides which calendar day "today" is when the checkout
+  // slot picker offers dates. Default keeps every existing row, and any vendor created
+  // before a zone is chosen, on the platform default — see lib/local-datetime.ts.
+  timezone                   String   @default("Europe/London")
   senderName                 String // transactional email sender identity
   senderEmail                String
   searchPlaceholder          String? // header search-box copy, e.g. "Search halal lamb, basmati, lentils…"
