@@ -177,6 +177,17 @@ every branch merges.
 
 ### Changed
 
+- **Document (final) for `#116`'s saved-shopping-lists slice.** `specs/roadmap.md` gains the
+  change-log row for the `staging` merge (PR #804, merge `60275d9`). `docs/model-handoff.md`'s
+  Checkout section and In-Flight Work entry are reconciled from "built, awaiting Validate" to
+  "shipped to `staging`, pending promotion" — the migration
+  (`20260918053538_p116_saved_shopping_lists`) is now on `staging`, not yet on `main`.
+  `docs/developer-portal/local-dev-playbook.md` gains a new trap found at this slice's `/validate`:
+  a `useActionState` form's action result can execute correctly and still never appear as literal
+  text in a no-JS `curl` response when it only feeds a small conditional fragment, rather than a
+  large subtree, of the same client component — the `self.__next_f.push(...)` flight payload is
+  ground truth either way. No source, schema or configuration touched.
+
 - **`#696`/`#137`/`#151` promoted to production (PR #799, merge `d8f61a4`); roadmap and handoff
   reconciled to match.** `specs/roadmap.md` gains the promotion's change-log row (PR #799, migration
   `20260917140514_p696_staff_cancel_confirmed_order` applied) and its §P9.2 item 6 bullet no longer

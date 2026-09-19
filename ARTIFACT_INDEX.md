@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-18T20:37:02.744Z` · commit `4682b75` · `199` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-19T04:12:36.924Z` · commit `60275d9` · `199` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -29,7 +29,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Application Conventions — per-layer invariants and the tests that enforce them](docs/developer-portal/app-conventions.md) | doc | 1.0.0 | 2026-09-17 | approved | internal | What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), and React hooks — together with the tests that enforce each invariant mechanically. |
 | [Architecture & System Design Overview](docs/developer-portal/architecture-overview.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A high-level map of the platform's architecture, system design, and database design, acting as a directory to the deeper technical specifications. |
 | [Environment Setup — Secrets & Config (staging / production / dev)](docs/developer-portal/env-setup.md) | doc | 1.11.0 | 2026-09-16 | approved | internal | How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier. |
-| [Local Development Playbook — Windows shell, and proving things live without a browser](docs/developer-portal/local-dev-playbook.md) | runbook | 1.0.0 | 2026-09-17 | approved | internal | How to work on this repo on a Windows machine and how to prove a change works live without a browser — shell and encoding traps, process cleanup, the vitest forks-pool trap, curl-driven server actions, and grep-against-rendered-HTML pitfalls. |
+| [Local Development Playbook — Windows shell, and proving things live without a browser](docs/developer-portal/local-dev-playbook.md) | runbook | 1.1.0 | 2026-09-19 | approved | internal | How to work on this repo on a Windows machine and how to prove a change works live without a browser — shell and encoding traps, process cleanup, the vitest forks-pool trap, curl-driven server actions, and grep-against-rendered-HTML pitfalls. |
 | [NFR Baseline — measured performance against the Gate-3 targets](docs/developer-portal/nfr-baseline.md) | doc | 1.4.0 | 2026-09-05 | approved | internal | Measurements against mission.md's LCP and API p95 targets, plus the index/query review behind them — including a 4.7x LCP breach from a 1.9 MB vendor logo — a re-measurement of the query paths at roughly 2,000 products rather than 22, and a further re-measurement of storefront search after |
 | [Onboarding](docs/developer-portal/onboarding.md) | doc | 1.1.0 | 2026-08-06 | approved | internal | 5-minute start-here guide — where the project actually is, prerequisites, local setup, and how to get a new developer running, tested, and branching independently. |
 | [Manual Regression Test Register](docs/developer-portal/regression-tests.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Manual regression test cases for known critical issues — the hybrid Prisma client contract under Cloudflare Worker connection limits, and cart persistence across a cancelled Stripe checkout. |
