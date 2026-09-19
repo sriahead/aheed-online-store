@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.17.0"
+version: "1.18.0"
 updated: 2026-09-19
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,16 +40,19 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-19.
-- **Checkout:** `main` is still at `187b5eb` (PR #808, promoting `#116`/`#806`) — **`staging` has
-  since moved ahead to `ee09404` and is NOT aligned with `main`.** Two PRs landed on `staging` after
-  that promotion: PR #810 (docs-only, `#116`/`#806` Document (final) reconciliation, no source
-  change) and **PR #813 (`#363`/`#811`, "vendor timezone becomes data; fix the BST slot-picker day
-  defect"), merged 2026-09-19.** `deploy-staging` confirmed **success**; staging `/api/health`
-  confirmed live serving `ee09404`. **`#363` and `#811` are on staging, In Review on the board —
-  NOT yet Done, NOT yet in production.** See In-Flight Work below for what shipped and how it was
-  live-verified, including a real before/after browser check against deployed (pre-fix) staging.
-  Promoting `staging -> main` is an outstanding, deliberate decision — it would carry both PR #810
-  and PR #813 together, and has not been opened.
+- **Checkout:** `staging` and `main` are **aligned at `a682177`** (PR #815, "Promote vendor timezone
+  and BST slot-picker fix to production (#363, #811)", `staging -> main`). This promotion carried
+  PR #810 (docs-only `#116`/`#806` Document (final) reconciliation — those two issues were already
+  `Done`, PR #810 just hadn't reached `main` yet), PR #813 (the `#363`/`#811` feature merge), and
+  PR #814 (docs-only `#363`/`#811` Document (final)). **`#363` and `#811` are DONE** — closed on the
+  `main` merge, their Project #2 items auto-moved to `Done`. `deploy-production` confirmed
+  **success**; production `/api/health` confirmed live serving `a682177` with `db.ok: true`.
+  Migration `20260919113731_p363_vendor_timezone` (`VendorConfig.timezone`, additive, plus an
+  idempotent DML backfill of historical `Order.fulfilmentDate` rows) is now on **both** `staging`
+  and `main`. See In-Flight Work below for what shipped and how it was live-verified — a real
+  before/after browser check against pre-fix and post-fix deployed staging, **then repeated a third
+  time directly against production** (same real BST browser, `/checkout`'s hidden `fulfilmentDate`
+  field read `"2026-09-19"`, the correct bare calendar day) after this promotion.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
@@ -260,6 +263,13 @@ above. `#806` added zero new schema/repository/service surface of its own (confi
 `git diff` across every file `#116` and the existing paste/match/add-to-cart journey own), which is
 why the two were batched into one promotion rather than two.
 
+**`#363` (vendor timezone becomes data) and `#811` (its same-slice BST slot-picker day defect) are
+BOTH now promoted to production** (PR #815, merge `a682177`, 2026-09-19) — see Last Verified and
+High-Priority Work above. This finally resolves the sequencing gap the P10 Delivery cluster bullet
+above describes (`#401`/`#402` shipped ahead of `#363`); their own zone-handling paths
+(`SlotPicker`'s window check, `ExpressCountdown`, `confirmPayment`'s 60-minute stamp) were not
+themselves part of `#363`'s scope and remain unverified against a genuinely non-UK vendor.
+
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
 in scope.
@@ -273,11 +283,10 @@ The live board showed open High-priority items, all with blank Complexity:
   Done**, promoted to production via PR #759. (`#613` was never part of this — see Project Position
   above.) #422 remains genuinely open/unresolved (multi-site location decision). #400 remains split:
   the async-loading half still open, the per-store half still blocked on #422.
-- **Vendor timezone and the BST slot-picker defect: SHIPPED TO STAGING, 2026-09-19** — #363 and
-  #811 both merged to `staging` via PR #813 and are **In Review** on the board, not yet Done — see
-  Checkout above and In-Flight Work below. `#402` had shipped without this (flagged as known-shaky
-  timezone handling); that gap is now closed for the vendor-timezone half. `#422` (multi-site) is
-  unrelated and still open.
+- **Vendor timezone and the BST slot-picker defect: DONE, 2026-09-19** — #363 and #811 both
+  **closed → Done**, promoted to production via PR #815 — see Checkout above and In-Flight Work
+  below. `#402` had shipped without this (flagged as known-shaky timezone handling); that gap is
+  now closed for the vendor-timezone half. `#422` (multi-site) is unrelated and still open.
 - **Saved lists: DONE, 2026-09-19** — #116 and #806 both **closed → Done**, promoted to production
   via PR #808 (`specs/2026-09-18-p116-saved-shopping-lists/`,
   `specs/2026-09-19-p10-shop-your-list-saved-lists/`).
@@ -330,22 +339,23 @@ All facts in this section require live verification:
   unrelated to this slice, now at 393 occurrences (was 389 at filing) — confirms the file is still
   accumulating more, not a stale one-time count. A duplicate issue (`#809`) was mistakenly filed
   before checking for an existing one and closed in favour of `#762`.
-- **`#363` and `#811` are SHIPPED TO STAGING, NOT YET PROMOTED — see Checkout/High-Priority Work
-  above.** PR #813 merged 2026-09-19; `deploy-staging` confirmed success. `VendorConfig.timezone`
-  now exists (default `"Europe/London"`, additive migration with an idempotent backfill), resolved
-  through `VendorProfile.timezone`; the checkout slot picker's wire format is now a bare
-  `YYYY-MM-DD` calendar day end to end, replacing the browser-local-midnight instant that caused
-  `#811`. A fresh-context `/validate` confirmed every row of
+- **`#363` and `#811` are DONE — see Checkout/High-Priority Work above.** PR #813 merged the
+  feature to `staging` 2026-09-19; PR #815 promoted it to `main` the same day (merge `a682177`),
+  bundled with PR #810 (docs-only `#116`/`#806` reconciliation, already `Done`, just hadn't reached
+  `main` yet). `deploy-production` confirmed success; production `/api/health` confirmed serving
+  `a682177`. `VendorConfig.timezone` now exists (default `"Europe/London"`, additive migration with
+  an idempotent backfill), resolved through `VendorProfile.timezone`; the checkout slot picker's
+  wire format is now a bare `YYYY-MM-DD` calendar day end to end, replacing the browser-local-
+  midnight instant that caused `#811`. A fresh-context `/validate` confirmed every row of
   `specs/2026-09-19-p363-vendor-timezone/validation.md` (R1–R33) except one spec-wording note (R11
   assumes an update action `discount-codes.ts` has never had, by pre-existing design — not a build
-  defect). **`#811` was proven live, not just server-side**: on the same real machine (naturally
-  BST, UTC+1), selecting today's date against currently-deployed (pre-fix) staging produced
-  `fulfilmentDate = "2026-09-18T23:00:00.000Z"` — the exact wrong-day mechanism; the same action
-  against this branch's local preview, and then against staging again post-merge, produced
-  `fulfilmentDate = "2026-09-19"`. Also resolved a build-time "known-shaky" open question:
-  `Intl.supportedValuesOf` **does** work on this workerd runtime — `/staff/fulfilment`'s timezone
-  select renders all ~418 real IANA zones, not the 21-entry fallback. Promoting `staging -> main`
-  is outstanding and would bundle this with PR #810 (docs-only); not opened.
+  defect). **`#811` was proven live in three environments, not just server-side**: on the same real
+  machine (naturally BST, UTC+1), selecting today's date against currently-deployed (pre-fix)
+  staging produced `fulfilmentDate = "2026-09-18T23:00:00.000Z"` — the exact wrong-day mechanism;
+  the same action against this branch's local preview, then staging post-merge, then **production
+  itself post-promotion**, each produced `fulfilmentDate = "2026-09-19"`. Also resolved a build-time
+  "known-shaky" open question: `Intl.supportedValuesOf` **does** work on this workerd runtime —
+  `/staff/fulfilment`'s timezone select renders all ~418 real IANA zones, not the 21-entry fallback.
 - **`#764` and `#770`/`#771`/`#767` are DONE — see Last Verified/Project Position above.** Both
   promoted to production via PR #775 (`1e44533`, 2026-09-16); `#764`, `#767`, `#770`, `#771`,
   `#772` all closed. `feature/reference-coverage-reconciliation` and
