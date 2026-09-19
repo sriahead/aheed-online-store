@@ -39,14 +39,15 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-18.
-- **Checkout:** `main` and `staging` are **converged** at `d8f61a4` (PR #799, "Promote staff
-  cancellation of a CONFIRMED order to production (#696, #137, #151)", merge `staging -> main`,
-  carrying PR #796's feature merge and PR #798's Document (final) closeout). **No slice pending
-  promotion.** `#696`, `#137` and `#151` all closed on this merge, their Project #2 items
-  auto-moving to `Done`. Migration `20260917140514_p696_staff_cancel_confirmed_order` applied
-  (additive: `LoyaltyEntryKind.EARN_REVERSAL`, `DiscountRedemption.reversedAt`, no backfill).
-  Production `/api/health` confirmed serving `d8f61a4` with `db.ok: true` post-deploy.
+- **Date:** 2026-09-19.
+- **Checkout:** `staging` is **one slice ahead of `main`**, at `60275d9` (PR #804, "feat(#116):
+  saved shopping lists", merge `feature/116-saved-shopping-lists -> staging`). `main` is still at
+  `d8f61a4` (PR #799, `#696`/`#137`/`#151`'s promotion). **`#116` is pending promotion** — its
+  Project #2 item is `In Review`, not `Done`, and stays open until a `staging -> main` PR merges.
+  `deploy-staging` confirmed green post-merge. Migration `20260918053538_p116_saved_shopping_lists`
+  (`ShoppingList`, `ShoppingListItem`, additive, no backfill) is now on `staging` and **not yet on
+  `main`**; both deploy workflows build before they migrate, so promotion applies it automatically —
+  nothing to do, but the promotion PR for this branch is not a docs-only one.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
@@ -265,7 +266,7 @@ The live board showed open High-priority items, all with blank Complexity:
   above.) #363 and #422 remain genuinely open/unresolved — #402 shipped without either, flagged as
   known-shaky (timezone) and unresolved (multi-site). #400 remains split: the async-loading half
   still open, the per-store half still blocked on #422.
-- Saved lists: **#116 — built, awaiting Validate** (see In-Flight Work below). Not yet merged to `staging`.
+- Saved lists: **#116 — validated and shipped to `staging`** (PR #804, 2026-09-19; see In-Flight Work below). Pending promotion to `main`.
 - **Paid-order cancellation and reversals: DONE, 2026-09-18** — #696, #137 and #151 all **closed →
   Done**, promoted to production via PR #799 (`specs/2026-09-17-p696-staff-cancel-confirmed-order/`).
   `cancelConfirmedOrder` never touches `Payment`; refunds stay with #606.
@@ -296,16 +297,21 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#116` (saved shopping lists) is BUILT BUT NOT SHIPPED**, on `feature/116-saved-shopping-lists`
-  (spec `b29ccf9`, implementation `4682b75`), awaiting Validate. Two things about it are
-  environmental rather than slice-local:
-  - **It carries a real migration** (`20260918053538_p116_saved_shopping_lists`, two new tables) that
-    has **not** reached `staging` or `main`. Both deploy workflows build before they migrate, so it
-    applies on promotion; nothing to do, but a promotion PR for this branch is not a docs-only one.
-  - **The DEV Neon branch has already been migrated** (`ep-sparkling-paper-za3j7xza`, via a local
-    `prisma migrate deploy` so the slice's live script could run). So `ShoppingList` and
-    `ShoppingListItem` exist in dev and not in staging or production. Do not read dev's schema as
-    evidence about either environment until PR promotion.
+- **`#116` (saved shopping lists) is SHIPPED TO `staging`, PENDING PROMOTION** (PR #804, merge
+  `60275d9`, 2026-09-19). `/validate` ran from a fresh context: full local suite green
+  (147 files / 1977 tests), every `validation.md` row confirmed live — `verify-saved-lists.ts`
+  against dev Postgres (including `--prove-http`) and `npm run preview` under a real
+  `demo-customer` session (paste → match → review → add-to-cart across all four resolution
+  branches; save → reopen; the 20-list cap refusing a 21st save; cross-user 404). Two things about
+  it are environmental rather than slice-local:
+  - **Its migration** (`20260918053538_p116_saved_shopping_lists`, `ShoppingList` +
+    `ShoppingListItem`, additive) **is now on `staging` and not yet on `main`.** Both deploy
+    workflows build before they migrate, so promotion applies it automatically; nothing to do, but
+    the `staging -> main` PR for this slice is not a docs-only one.
+  - **The DEV Neon branch was migrated separately**, before `staging`, via a local
+    `prisma migrate deploy` so the slice's live script could run. Dev, staging and production all
+    now carry compatible schema, but reached it independently — do not infer one environment's
+    state from another's.
 - **`#764` and `#770`/`#771`/`#767` are DONE — see Last Verified/Project Position above.** Both
   promoted to production via PR #775 (`1e44533`, 2026-09-16); `#764`, `#767`, `#770`, `#771`,
   `#772` all closed. `feature/reference-coverage-reconciliation` and
