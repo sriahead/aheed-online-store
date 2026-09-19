@@ -8,6 +8,43 @@ every branch merges.
 
 ### Added
 
+- **Customers can leave feedback about the shop, staff approve it before anyone sees it, and
+  approved feedback renders on the landing page (`#818`,
+  `specs/2026-09-19-p818-customer-feedback-reviews/`)**: the storefront previously carried no
+  business-level social proof at all. The product-review system (`#39`) is per-*product* and, it
+  turns out, unmoderated — a separate finding filed as its own issue.
+  - **`CustomerFeedback`, `CustomerFeedbackAttempt` and `VendorReviewLink`**, one additive
+    migration. A new model rather than an extension of `Review`, whose `productId` is required,
+    part of its unique key, and drives a denormalised aggregate.
+  - **Any signed-in customer may submit; a purchase is not required.** A `DELIVERED` or
+    `COLLECTED` order stamps `verifiedPurchase` and earns a "Verified customer" badge — computed
+    server-side from the customer's own orders and never read from the submitted form. One row per
+    customer per vendor, written as an upsert, so a customer replaces their feedback rather than
+    accumulating rows.
+  - **Editing returns the row to `PENDING` and clears the moderation stamp.** Without that,
+    approve-then-edit publishes text nobody approved, which is a complete bypass of the only
+    content control the feature has. Proven against a real database, not asserted.
+  - **Moderation at `/staff/feedback`** (STAFF and ADMIN): approve, reject, un-approve, bulk
+    approve, internal note. **Staff cannot create feedback or change a customer's rating, comment
+    or name** — no repository function exists that could, so the rule is enforced a layer below the
+    UI rather than by the absence of a button.
+  - **Abuse controls, since the schema no longer gates on a purchase**: a verified email is already
+    mandatory to sign in (`requireEmailVerification`), the unique key caps a customer at one row,
+    and the throttle covers **submits and edits alike** — 5 writes per vendor and hashed IP per 10
+    minutes, plus 60 seconds between writes to the same row. Limiting submission alone would have
+    converted flooding into churn through the moderation queue.
+  - **A reusable `components/ui/CardStack.tsx`** — generic, no feedback reference, no new
+    dependency. Under `prefers-reduced-motion: reduce` it degrades to a plain scrollable row via a
+    real media query, not a class-scoped opt-out (the existing one already misses 24 transforms).
+  - **External review platforms are outbound links only** (`VendorReviewLink`, managed on
+    `/staff/storefront`): vendor-configurable, `https`-validated, no platform name compiled in.
+    Nothing is fetched, synced, cached or displayed from Google, Trustpilot or anywhere else — see
+    the spec for why the widget and Places-API routes were both rejected. **`#406` is superseded.**
+  - **No CSP change and no cookie-consent change**, which was `#406`'s entire difficulty.
+  - **P7b**: feedback is in the data-rights export, is deleted and counted by erasure
+    (`feedbackDeleted`), and is counted by `countOtherVendorData` — without that last one, an
+    erasure at one vendor would have cascade-deleted another vendor's published feedback.
+
 - **Vendor timezone is now data, and the checkout slot picker no longer returns the wrong day
   during BST (`#363`, `#811`, `specs/2026-09-19-p363-vendor-timezone/`)**: two issues in one slice,
   because they are one root cause — nothing in the codebase could name a vendor's timezone, so each
