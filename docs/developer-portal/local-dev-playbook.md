@@ -4,10 +4,10 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.1.0"
+version: "1.2.0"
 updated: 2026-09-19
 visibility: internal
-summary: How to work on this repo on a Windows machine and how to prove a change works live without a browser — shell and encoding traps, process cleanup, the vitest forks-pool trap, curl-driven server actions, and grep-against-rendered-HTML pitfalls.
+summary: How to work on this repo on a Windows machine and how to prove a change works live without a browser — shell and encoding traps, process cleanup, the vitest forks-pool trap, silently-ignored TZ overrides, curl-driven server actions, and grep-against-rendered-HTML pitfalls.
 tags: [local-dev, windows, validation, playbook]
 ---
 
@@ -136,6 +136,35 @@ the evidence and the recipe.
   **Three test files are guarded with `it.skipIf(!process.env.DATABASE_URL)`** and report as
   **skipped**, not run, in CI — so CI's own summary legitimately runs fewer tests than a local run
   with a real `DATABASE_URL`. That is expected, not a shortfall.
+
+## A `TZ` override is silently ignored on Windows when the value contains a slash
+
+Measured 2026-09-19 (`#363`/`#811`). **On this project's Windows dev machine, `TZ=Europe/Berlin cmd`
+does not set `process.env.TZ` at all** — the variable arrives `undefined` and the process runs in
+the system zone, so a command written to prove timezone-independence proves nothing and reports a
+confident pass.
+
+```
+TZ=UTC              node -e "..."   ->  env=UTC          resolved=UTC                  # works
+TZ=Pacific/Auckland node -e "..."   ->  env=undefined    resolved=Europe/London        # IGNORED
+TZ=PST8PDT          node -e "..."   ->  env=PST8PDT      resolved=America/Los_Angeles  # works
+TZ=EST5EDT          node -e "..."   ->  env=EST5EDT      resolved=America/New_York     # works
+```
+
+`env TZ=… cmd` and a preceding `export TZ=…` behave the same way — it is the slash, not the syntax.
+
+- **Use slash-free values locally**: `UTC`, `PST8PDT`, `EST5EDT`. They propagate and do change the
+  zone, including what `Intl` resolves.
+- **Any IANA name works on the Linux CI runner**, so a CI-only two-zone run is sound. The trap is
+  local only.
+- **Assert the override took effect rather than trusting it.** Compare the UTC **offset**
+  (`-new Date().getTimezoneOffset()`), not the zone name: `TZ=PST8PDT` legitimately resolves as
+  `America/Los_Angeles`, so a name comparison reports a change that did happen as if it had not.
+  `specs/2026-09-19-p363-vendor-timezone/verify-vendor-timezone.ts` prints an `AMBIENT ZONE` line
+  doing exactly this.
+
+This matters beyond time zones: it is the same class as the vitest forks-pool trap above — a
+command that cannot fail is worse than no command, because it is recorded as evidence.
 
 ## Live-testing staff panel server actions without a browser
 

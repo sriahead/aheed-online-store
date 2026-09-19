@@ -147,12 +147,13 @@ plain `YYYY-MM-DD` calendar day, never an instant.
 
 ## Deliberately excluded
 
-- **The six staff pages that render dates with a bare `toLocaleDateString`** —
-  `/staff/{customers,errors,payments,reports,team}` and `lib/saved-list.ts`. With no `timeZone`
-  option these render in the Worker's UTC rather than the vendor's zone. Real, but display-only,
-  staff-only, and a different shape of fix. Kept out rather than allowed to enlarge this slice. It
-  was offered to the owner at `/propose` and not taken up, so no issue exists for it yet — it is
-  recorded here and in the open items below so it does not vanish.
+- **Four surfaces that render dates with a bare `toLocaleDateString`/`toLocaleString`** —
+  `staff/errors/page.tsx:64`, `staff/payments/page.tsx:85,126`, `staff/team/page.tsx:66` and
+  `lib/saved-list.ts:98`. With no `timeZone` option these render in the Worker's UTC rather than
+  the vendor's zone. Real, but display-only and a different shape of fix. Kept out rather than
+  allowed to enlarge this slice; **filed as `#812`** at build-notes time. (An earlier draft of this
+  document said *six*, counting `staff/customers/page.tsx:109` and `staff/reports/page.tsx:171` —
+  those two format loyalty-point **numbers**, not dates, and are unaffected.)
 - **A timezone column on `Vendor` rather than `VendorConfig`.** Considered and rejected above.
 - **Per-vendor locale or currency formatting.** `Order.currency` already exists and the discovery
   log's 2026-09-07 finding covers the hardcoded pound sign in six UI implementations. Zone and
@@ -174,9 +175,8 @@ plain `YYYY-MM-DD` calendar day, never an instant.
 - **`#422`** (does Aheed trade from more than one physical site) is untouched. A second site in a
   different zone would need the column per *location*, not per vendor. Named here so a future reader
   does not mistake this slice for having answered it.
-- **The staff-page `toLocaleDateString` gap** described under "Deliberately excluded" above — six
-  surfaces rendering dates in the Worker's UTC. **No issue exists for it.** Whoever runs the next
-  `/orient` or `/discover` should file one rather than rediscover it.
+- **The staff-page `toLocaleDateString` gap** described under "Deliberately excluded" above — four
+  surfaces rendering dates in the Worker's UTC. Filed as **`#812`** (board Phase `P10`).
 - **Whether any production `Order` row actually carries a BST-skewed `fulfilmentDate`** is unknown
   until the migration runs — the platform has never traded (`#113`, `#104`), so the expected count
   is zero or near it, and the backfill exists for correctness rather than for a known volume.
