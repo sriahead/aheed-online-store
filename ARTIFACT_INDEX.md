@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-19T14:36:04.213Z` · commit `55e2ffc` · `201` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-19T15:52:47.244Z` · commit `6e5b95d` · `202` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -199,6 +199,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Saved shopping lists (plan)](specs/2026-09-18-p116-saved-shopping-lists/plan.md) | spec | 1.0.0 | 2026-09-18 | draft | internal | A signed-in shopper can save a reusable shopping list and re-open it against today's catalogue. Stores the shopper's own words, not product ids, so a saved list survives catalogue churn and stays different from reorder. |
 | [Surface saved lists on /shop-your-list (plan)](specs/2026-09-19-p10-shop-your-list-saved-lists/plan.md) | spec | 1.0.0 | 2026-09-19 | draft | internal | A signed-in shopper's saved lists appear on /shop-your-list itself, above the paste box, so re-opening one is a click instead of a trip through /account. |
 | [P9.2 — Vendor timezone becomes data, and the BST slot-picker day defect (plan)](specs/2026-09-19-p363-vendor-timezone/plan.md) | spec | 1.0.0 | 2026-09-19 | draft | internal | Adds VendorConfig.timezone with a staff control, threads it through the campaign and discount datetime-local conversion, and fixes the live BST defect where the slot picker returns the wrong calendar day's slots. |
+| [P9.2 — Customer Feedback & Reviews: first-party submission, moderation and the Cards Stack Slider (plan)](specs/2026-09-19-p818-customer-feedback-reviews/plan.md) | spec | 1.0.0 | 2026-09-19 | draft | internal | Adds first-party business-level customer feedback with pre-publication moderation, renders approved feedback in a reusable Cards Stack Slider on the landing page, and replaces #406's embedded third-party review widgets with vendor-configurable outbound links. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.30.0 | 2026-09-16 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
