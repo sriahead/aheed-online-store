@@ -70,6 +70,8 @@ model User {
   roleChangesActedOn  VendorRoleAuditLog[] @relation("ActorUser")
   customerAddresses   CustomerAddress[]
   shoppingLists       ShoppingList[]
+  feedback            CustomerFeedback[]
+  feedbackModerated   CustomerFeedback[]   @relation("FeedbackModerator")
 }
 
 model Session {
@@ -171,6 +173,9 @@ model Vendor {
   vendorExpressSchedules    VendorExpressSchedule[]
   customerAddresses         CustomerAddress[]
   shoppingLists             ShoppingList[]
+  customerFeedback          CustomerFeedback[]
+  feedbackAttempts          CustomerFeedbackAttempt[]
+  reviewLinks               VendorReviewLink[]
 }
 
 // P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
@@ -748,6 +753,112 @@ model Review {
 
   @@unique([vendorId, userId, productId])
   @@index([vendorId, productId, createdAt])
+}
+
+// P9.2 (#818) — business-level customer feedback, moderated before publication.
+//
+// NOT AN EXTENSION OF `Review` ABOVE, DELIBERATELY. That model is per-PRODUCT: `productId`
+// is required, it is part of the unique key, and every write recomputes
+// `Product.averageRating` inside a transaction (lib/repositories/reviews.ts). Making
+// `productId` nullable to reuse it would break the unique constraint's meaning and push a
+// null branch through that aggregate recompute. This is feedback about the SHOP, and it has
+// a moderation lifecycle `Review` has never had — product reviews publish on submit and
+// remain unmoderated, whatever #406's body claimed.
+//
+// ONE ROW PER CUSTOMER PER VENDOR, written as an upsert, the same shape as `upsertReview`.
+// A customer replaces their own feedback rather than accumulating rows, which is also the
+// duplicate control: flooding the moderation queue would need many accounts, not many posts.
+//
+// EDITING RESETS `status` TO PENDING and clears the moderation stamp. Without that,
+// approve-then-edit publishes text no one approved — a complete bypass of the only content
+// control this feature has. See lib/repositories/customer-feedback.ts.
+//
+// `verifiedPurchase` IS A SNAPSHOT, not a derivation. It is recomputed server-side on every
+// submit and edit from the customer's own DELIVERED/COLLECTED orders, and never read from
+// the client. Published text and its badge should not silently change months later because
+// order history moved; the moment a customer edits is the moment they re-assert the content.
+//
+// A purchase is NOT required to submit. The badge is the only thing it earns.
+enum FeedbackStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model CustomerFeedback {
+  id               String         @id @default(uuid())
+  vendorId         String
+  vendor           Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Display form captured at submit ("Sarah M."), not re-derived at render: a later account
+  // rename must not silently rewrite words already published under the old name.
+  authorName       String
+  rating           Int // 1-5
+  comment          String?
+  verifiedPurchase Boolean        @default(false)
+  status           FeedbackStatus @default(PENDING)
+  // The moderating staff user. SetNull rather than Cascade — a staff member leaving must not
+  // delete the customer feedback they once approved.
+  moderatedById    String?
+  moderatedBy      User?          @relation("FeedbackModerator", fields: [moderatedById], references: [id], onDelete: SetNull)
+  moderatedAt      DateTime?
+  // Internal only. Never rendered on any public surface.
+  moderationNote   String?
+  // SHA-256 of the submitter's IP, never the raw address — same reasoning as
+  // OrderLookupAttempt below. Abuse forensics only.
+  ipHash           String?
+  // Distinct from createdAt: an edit moves this, and both the per-row edit throttle and the
+  // storefront's newest-first ordering read it.
+  submittedAt      DateTime       @default(now())
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([vendorId, userId])
+  @@index([vendorId, status, submittedAt])
+}
+
+// P9.2 (#818) — write-attempt counter for the feedback throttle. Deliberately the same shape
+// as OrderLookupAttempt and AuthenticationAttempt: one row per attempt, hashed IP, counted
+// over a window and swept by age, backed by Postgres because no Cloudflare rate-limiting
+// binding is provisioned.
+//
+// Counts submits AND edits identically. Throttling submission alone would convert flooding
+// into edit churn through the moderation queue, which costs a human the same attention.
+model CustomerFeedbackAttempt {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  ipHash    String
+  createdAt DateTime @default(now())
+
+  @@index([vendorId, ipHash, createdAt])
+}
+
+// P9.2 (#818) — outbound links to external review platforms. LINKS ONLY: nothing in this
+// application fetches, syncs, caches or displays review content from Google, Trustpilot or
+// anywhere else, and that is a standing boundary rather than a not-yet.
+//
+// A TABLE RATHER THAN COLUMNS ON VendorConfig, because the ask named "other future review
+// platforms" explicitly. Adding one is then data, not a migration, and no platform name is
+// compiled into the application. `platform` is the vendor's own label for the destination.
+//
+// A vendor with no active rows renders no link group at all (#239's null-hides rule).
+model VendorReviewLink {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  platform  String
+  // Validated https-only on write via parseSocialUrl (lib/social-contact-form.ts) — these are
+  // vendor-editable values that land inside an href, and `new URL("javascript:...")` parses.
+  url       String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([vendorId, platform])
+  @@index([vendorId, isActive, sortOrder])
 }
 
 // P3a — cart foundation (specs/2026-08-09-p3a-cart-foundation/, #93).

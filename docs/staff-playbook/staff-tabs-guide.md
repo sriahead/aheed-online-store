@@ -4,11 +4,11 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.2.0"
-updated: "2026-09-12"
+version: "2.3.0"
+updated: "2026-09-19"
 visibility: internal
-summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, bundles, promotions, inventory, search dictionary moderation, and finding the guides. One section per menu item."
-tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms"]
+summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
+tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback"]
 ---
 
 # Staff Daily Operations Playbook
@@ -306,3 +306,39 @@ rejected proposals are removed from the queue.
 
 
 
+
+## Customer feedback — `/staff/feedback`
+
+**Purpose:** Read and approve the feedback customers leave about the shop, so the approved ones
+appear on the shop's home page.
+
+**Who can access:** Staff and store admins
+
+**What you can do:** Read every piece of feedback, approve one so it appears on the home page,
+reject one so it does not, un-approve one you approved earlier, approve everything waiting in a
+single click, and write an internal note against any of them.
+
+**Typical workflow:** Feedback waiting to be checked is listed first. Read it, then approve it or
+reject it. If you later change your mind about one you approved, un-approve it and it disappears
+from the home page again.
+
+**Important fields and filters:** Each entry shows the star rating, the customer's first name and
+surname initial, what they wrote, and when. **Verified customer** means that person had an order
+marked delivered or collected when they wrote it — it is added automatically and cannot be set by
+hand. The status is **PENDING** (waiting for you), **APPROVED** (on the home page) or **REJECTED**
+(not shown). The internal note is for your team only and is never shown to the customer or on the
+shop.
+
+**Common mistakes and limitations:** You cannot write feedback for a customer, and you cannot edit
+what one of them wrote — you can only decide whether it appears. That is deliberate: publishing
+words a customer did not write would be inventing a review.
+
+**Reject spam, abuse, anything containing someone's personal details, and anything unrelated to the
+shop — but not simply because it is critical.** A one-star review that describes a real experience
+is honest feedback and belongs on the site. Publishing only the flattering ones makes the whole
+section misleading, which is worse for trust than a low rating.
+
+**What happens after changes are saved:** Approving publishes it to the home page and rejecting or
+un-approving removes it, both straight away. If a customer edits feedback you already approved, it
+comes back to you as **PENDING** and disappears from the home page until you check it again — so
+what is published is always something a person has read.
