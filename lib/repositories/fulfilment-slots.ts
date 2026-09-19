@@ -2,6 +2,7 @@ import type { getPrisma } from "@/lib/db";
 import type { FulfilmentMethod } from "@prisma/client";
 import type { CatalogueWriteResult } from "@/lib/repositories/products";
 import type { ExpressWindowInput, FulfilmentSettingsInput, SlotInput } from "@/lib/fulfilment-form";
+import { STORE_TIMEZONE, calendarDayToUtcMidnight } from "@/lib/local-datetime";
 
 export type { FulfilmentMethod };
 
@@ -27,10 +28,24 @@ export async function getAvailableSlotsForDate(
   prisma: Db,
   vendorId: string,
   method: FulfilmentMethod,
-  dateStr: string,
+  day: string,
 ): Promise<AvailableSlot[]> {
-  const date = new Date(dateStr);
-  const dayOfWeek = date.getDay(); // 0 = Sunday
+  /*
+   * #811. `day` is a bare `YYYY-MM-DD` CALENDAR DAY, never an instant, and this is the whole fix.
+   *
+   * This used to be `new Date(dateStr).getDay()` against an ISO instant the browser had built from
+   * its OWN local midnight. A Worker's `getDay()` is UTC, so during BST a customer picking
+   * Saturday sent `2026-09-18T23:00:00Z` and got Friday's slots — every hour of every day from
+   * late March to late October. Under `next dev` on a UK laptop both sides are BST and the errors
+   * cancel, which is why the suite stayed green.
+   *
+   * A calendar day has exactly one weekday and needs no zone to find it, so the zone question is
+   * gone from this path rather than answered. An unparsable day yields no slots rather than a
+   * query on `NaN`, which Prisma would reject at the driver with a much less obvious message.
+   */
+  const date = calendarDayToUtcMidnight(day);
+  if (date === null) return [];
+  const dayOfWeek = date.getUTCDay(); // 0 = Sunday
 
   const vendor = await prisma.vendor.findUnique({
     where: { id: vendorId },
@@ -150,6 +165,8 @@ export interface FulfilmentSettings {
   expressCollectionEnabled: boolean;
   bookingWindowDays: number;
   slotHoldDurationMinutes: number;
+  /** #363 — the vendor's IANA zone. Editable here because it governs when the slots below fall. */
+  timezone: string;
   /** Not editable here — it belongs to /staff/storefront's delivery rules — but the page needs it
    *  to decide whether collection-only controls can take effect at all (#750 R15a). */
   offerCollection: boolean;
@@ -170,6 +187,7 @@ export async function getFulfilmentSettingsForVendor(
       expressCollectionEnabled: true,
       bookingWindowDays: true,
       slotHoldDurationMinutes: true,
+      timezone: true,
       offerCollection: true,
     },
   });
@@ -179,6 +197,7 @@ export async function getFulfilmentSettingsForVendor(
     expressCollectionEnabled: config?.expressCollectionEnabled ?? false,
     bookingWindowDays: config?.bookingWindowDays ?? 14,
     slotHoldDurationMinutes: config?.slotHoldDurationMinutes ?? 15,
+    timezone: config?.timezone ?? STORE_TIMEZONE,
     offerCollection: config?.offerCollection ?? false,
   };
 }
@@ -202,6 +221,7 @@ export async function updateFulfilmentSettingsForVendor(
       expressCollectionEnabled: input.expressCollectionEnabled,
       bookingWindowDays: input.bookingWindowDays,
       slotHoldDurationMinutes: input.slotHoldDurationMinutes,
+      timezone: input.timezone,
     },
     select: { id: true },
   });

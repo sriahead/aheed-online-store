@@ -15,6 +15,7 @@ import {
   initialFulfilmentState,
   MAX_BOOKING_WINDOW_DAYS,
   MAX_SLOT_HOLD_MINUTES,
+  supportedTimeZones,
   type FulfilmentFormState,
 } from "@/lib/fulfilment-form";
 import type {
@@ -76,6 +77,15 @@ function DayOptions() {
  */
 export function FulfilmentSettingsForm({ settings }: { settings: FulfilmentSettings }) {
   const [state, action, pending] = useActionState(saveFulfilmentSettings, initialFulfilmentState);
+
+  /*
+   * #363 — the stored zone is unioned into the list rather than assumed to be in it.
+   *
+   * `supportedTimeZones()` falls back to a fixed list where `Intl.supportedValuesOf` is missing,
+   * and a vendor set to a zone outside that list would otherwise find the select silently showing
+   * someone else's zone as selected — and saving it on the next submit.
+   */
+  const timeZoneOptions = Array.from(new Set([settings.timezone, ...supportedTimeZones()])).sort();
 
   return (
     <form action={action} className="flex flex-col gap-4">
@@ -156,6 +166,29 @@ export function FulfilmentSettingsForm({ settings }: { settings: FulfilmentSetti
           />
           <p className="mt-1 text-xs text-primary-muted">
             How long an unpaid order keeps its slot before the space is released again.
+          </p>
+        </div>
+
+        <div>
+          <label className={labelClass} htmlFor="timezone">
+            Time zone
+          </label>
+          <select
+            id="timezone"
+            name="timezone"
+            defaultValue={settings.timezone}
+            className={inputClass}
+            required
+          >
+            {timeZoneOptions.map((zone) => (
+              <option key={zone} value={zone}>
+                {zone}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-primary-muted">
+            The store&apos;s own clock. Decides which day a delivery slot falls on, and how the
+            start and end times on campaigns and discount codes are read.
           </p>
         </div>
       </div>

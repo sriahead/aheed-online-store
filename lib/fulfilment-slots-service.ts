@@ -29,9 +29,10 @@ import type { ExpressWindowInput, FulfilmentSettingsInput, SlotInput } from "@/l
 export async function getAvailableSlotsForVendor(
   vendorId: string,
   method: FulfilmentMethod,
-  dateStr: string,
+  /** #811 — a `YYYY-MM-DD` calendar day, never an instant. See the repository for why. */
+  day: string,
 ): Promise<AvailableSlot[]> {
-  return getAvailableSlotsForDate(getPrisma(), vendorId, method, dateStr);
+  return getAvailableSlotsForDate(getPrisma(), vendorId, method, day);
 }
 
 /* -------------------------------------------------------------------------------------------- *

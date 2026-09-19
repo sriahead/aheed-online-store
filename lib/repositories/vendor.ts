@@ -1,4 +1,5 @@
 import type { getPrisma, getPrismaWs } from "@/lib/db";
+import { STORE_TIMEZONE } from "@/lib/local-datetime";
 
 /**
  * Re-exported so the app/UI/feature layers can type a prop against the real
@@ -40,6 +41,12 @@ export interface VendorProfile {
   logoStorageKey: string | null;
   primitives: BrandPrimitives;
   localityName: string;
+  /**
+   * #363 — the vendor's IANA timezone. Every `datetime-local` conversion and the checkout slot
+   * picker's notion of "today" resolve through here; `lib/local-datetime.ts` is told the zone and
+   * never looks one up.
+   */
+  timezone: string;
   senderName: string;
   senderEmail: string;
   searchPlaceholder: string;
@@ -90,6 +97,12 @@ export const DEFAULT_BRAND_PRIMITIVES: BrandPrimitives = {
   "red-tint": "#ffebee",
 };
 export const DEFAULT_SENDER_NAME = "Aheed Food Centre";
+/**
+ * #363 — the zone a vendor with no `VendorConfig` row resolves to. Deliberately the same value as
+ * `STORE_TIMEZONE` rather than a second literal: that constant is the platform default, and this
+ * is the profile layer's name for it.
+ */
+export const DEFAULT_TIMEZONE = STORE_TIMEZONE;
 export const DEFAULT_SEARCH_PLACEHOLDER = "Search products…";
 
 /** Core fetch (not memoized) — safe to call outside a React render, and unit-testable. */
@@ -120,6 +133,7 @@ export async function fetchVendorProfile(
       config: {
         select: {
           localityName: true,
+          timezone: true,
           senderName: true,
           senderEmail: true,
           searchPlaceholder: true,
@@ -164,6 +178,10 @@ export async function fetchVendorProfile(
         }
       : DEFAULT_BRAND_PRIMITIVES,
     localityName: vendor?.config?.localityName ?? "",
+    // Unlike localityName, this one HAS a platform default: a vendor with no config row must still
+    // convert dates somehow, and doing it in the platform's own zone is the behaviour every row in
+    // the system had before #363. An empty string here would silently make Intl throw.
+    timezone: vendor?.config?.timezone ?? DEFAULT_TIMEZONE,
     senderName: vendor?.config?.senderName ?? DEFAULT_SENDER_NAME,
     senderEmail: vendor?.config?.senderEmail ?? "",
     searchPlaceholder: vendor?.config?.searchPlaceholder ?? DEFAULT_SEARCH_PLACEHOLDER,

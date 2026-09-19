@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { CAMPAIGN_FIELDS, parseCampaignForm, type CampaignFormState } from "@/lib/campaign-form";
 import { saveCampaignForVendor } from "@/lib/campaigns-service";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { STORE_TIMEZONE } from "@/lib/local-datetime";
 import { readForm } from "@/lib/catalogue-form";
 
 /**
@@ -42,7 +44,14 @@ export async function saveCampaign(
     return { error: "Missing department.", field: null, saved: false };
   }
 
-  const parsed = parseCampaignForm(readForm(form, CAMPAIGN_FIELDS));
+  // #363 — the vendor's own zone decides what a naked `datetime-local` value means. Resolved from
+  // the request host through the memoised profile, which is the same vendor `requireVendorRole`
+  // above resolved: both go through `getCurrentVendorId()`.
+  // A null profile cannot normally happen here — `requireVendorRole` above resolved this vendor
+  // from the same host — so fall back to the platform default rather than refusing a valid save.
+  const timezone = (await getCurrentVendorProfile())?.timezone ?? STORE_TIMEZONE;
+
+  const parsed = parseCampaignForm(readForm(form, CAMPAIGN_FIELDS), timezone);
   if (!parsed.ok) {
     return { error: parsed.error.message, field: parsed.error.field, saved: false };
   }

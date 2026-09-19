@@ -6,7 +6,8 @@ import type { FulfilmentMethod } from "@/lib/repositories/fulfilment-slots";
 export async function getAvailableSlotsForDate(
   vendorId: string,
   method: FulfilmentMethod,
-  dateStr: string,
+  /** #811 — a `YYYY-MM-DD` calendar day, never an instant. */
+  day: string,
 ) {
-  return getAvailableSlotsForVendor(vendorId, method, dateStr);
+  return getAvailableSlotsForVendor(vendorId, method, day);
 }
