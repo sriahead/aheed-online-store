@@ -236,6 +236,19 @@ every branch merges.
   occurrences, up from 389 at filing; a duplicate (`#809`) was mistakenly filed before checking for
   an existing issue and closed in favour of `#762`. No source, schema or configuration touched.
 
+- **Document (final) for `#363`/`#811`'s vendor-timezone slice, shipped to `staging` (PR #813,
+  merge `ee09404`).** `specs/roadmap.md` gains the slice's own change-log row (`sdd:audit` had
+  flagged it missing) and removes `#363` from P10's tracked-issues bucket; the `#420` gate analysis
+  entry for `#363` is marked cleared rather than rewritten. `docs/model-handoff.md`'s Checkout,
+  High-Priority Work and In-Flight Work sections are reconciled — `staging` is no longer aligned
+  with `main` (two PRs ahead: this docs-only #810 and the feature #813), `#363`/`#811` moved from
+  "genuinely open/unresolved" to "shipped to staging, In Review, not yet promoted." Commented on
+  `#379` (multi-buy tier scheduling) noting its `#363` sequencing blocker is now cleared.
+  `docs/developer-portal/local-dev-playbook.md` gains a technique found at this slice's `/ship`: a
+  UK dev machine's own BST clock (March–October) reproduces a client-side timezone defect in a real
+  browser tab with no DevTools timezone override needed — used to confirm `#811`'s fix live against
+  both pre-fix and post-fix deployed staging by reading the submitted `fulfilmentDate` field
+  directly. No source, schema or configuration touched.
 
 - **Document (final) for `#116`'s saved-shopping-lists slice.** `specs/roadmap.md` gains the
   change-log row for the `staging` merge (PR #804, merge `60275d9`). `docs/model-handoff.md`'s

@@ -4,10 +4,10 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.2.0"
+version: "1.3.0"
 updated: 2026-09-19
 visibility: internal
-summary: How to work on this repo on a Windows machine and how to prove a change works live without a browser — shell and encoding traps, process cleanup, the vitest forks-pool trap, silently-ignored TZ overrides, curl-driven server actions, and grep-against-rendered-HTML pitfalls.
+summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, silently-ignored TZ overrides, the dev machine's BST clock as a free browser timezone override, curl-driven server actions, grep-vs-rendered-HTML pitfalls.
 tags: [local-dev, windows, validation, playbook]
 ---
 
@@ -165,6 +165,31 @@ TZ=EST5EDT          node -e "..."   ->  env=EST5EDT      resolved=America/New_Yo
 
 This matters beyond time zones: it is the same class as the vitest forks-pool trap above — a
 command that cannot fail is worse than no command, because it is recorded as evidence.
+
+## A browser-side timezone bug needs no DevTools override on a UK dev machine, March–October
+
+Used at `#363`/`#811`'s `/ship` (2026-09-19) to reproduce and disprove the live BST slot-picker
+defect in a real Chrome tab, no CDP `Emulation.setTimezoneOverride`/Sensors panel required.
+
+`Intl.DateTimeFormat().resolvedOptions().timeZone` and `-new Date().getTimezoneOffset()` reflect the
+**OS's** timezone, and this repo's Windows dev machine's OS zone is `Europe/London`. From late March
+to late October that is **British Summer Time, UTC+1** — the exact non-UTC offset a client-side
+timezone defect needs to reproduce against a UTC Worker. No override, no `TZ` env var (that only
+reaches Node's own process, not Chrome), no DevTools Sensors panel: just open the page in the normal
+browser and read a submitted value.
+
+Confirmed the discriminator directly rather than by eyeballing a slot list: against **currently-
+deployed (pre-fix) staging**, selecting today's date and reading
+`document.querySelector('input[name="fulfilmentDate"]').value` returned
+`"2026-09-18T23:00:00.000Z"` — the browser's local midnight serialised as an instant, one day behind
+what was clicked. The identical action against the fixed branch (`npm run preview`, then staging
+again post-merge) returned the bare day `"2026-09-19"`. A `javascript_tool`/console read of the
+hidden field's `value` is enough; no network capture needed, since (as built) date selection here is
+client state, not a per-date server round trip.
+
+**This stops working outside BST** (late October–late March, when the dev machine's own zone is
+GMT/UTC+0 and no longer discriminates) — fall back to a real DevTools Sensors timezone override, or
+to the server-side two-`TZ`-run technique above, at that time of year.
 
 ## Live-testing staff panel server actions without a browser
 
