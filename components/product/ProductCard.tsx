@@ -1,10 +1,12 @@
-import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+"use client";
+
+import { AlertTriangle, Eye } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { CartQuantityStepper } from "@/components/cart/CartQuantityStepper";
 import { Card } from "@/components/ui/Card";
 import { ProductImage } from "./ProductImage";
 import { ProductRating } from "./ProductRating";
+import { useQuickView } from "./quick-view-context";
 import { composePublicUrl } from "@/lib/storage";
 import { tierThresholdQuantity } from "@/lib/tier-pricing";
 import { formatPrice } from "./format-price";
@@ -48,6 +50,7 @@ export function ProductCard({
   /** Quantity of this product currently in the cart; 0 when it isn't. */
   cartQuantity?: number;
 }) {
+  const { openQuickView } = useQuickView();
   const hasDiscount = product.originalPrice != null && product.originalPrice > product.basePrice;
   const saving = hasDiscount ? product.originalPrice! - product.basePrice : 0;
   /**
@@ -154,6 +157,34 @@ export function ProductCard({
               Save {formatPrice(saving)}
             </div>
           )}
+
+          {/* Desktop Quick View overlay: reveals on card hover with smooth, subtle hover transition */}
+          <div className="skew-card-inner absolute inset-0 hidden sm:flex items-center justify-center bg-black/25 opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100 focus-within:opacity-100 pointer-events-none group-hover:pointer-events-auto focus-within:pointer-events-auto z-20">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                openQuickView(product.slug, product);
+              }}
+              className="flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-xs font-bold text-primary shadow-md backdrop-blur-xs transition-transform duration-200 hover:scale-105 motion-reduce:hover:scale-100 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+            >
+              <Eye className="h-3.5 w-3.5" aria-hidden />
+              <span>Quick View</span>
+            </button>
+          </div>
+
+          {/* Mobile / Touch: Always show a compact Quick View button/icon */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              openQuickView(product.slug, product);
+            }}
+            aria-label={`Quick view ${product.name}`}
+            className="sm:hidden absolute top-2 right-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs transition active:scale-95 motion-reduce:active:scale-100"
+          >
+            <Eye className="h-4 w-4" aria-hidden />
+          </button>
         </div>
 
         {/* Content */}
@@ -182,17 +213,15 @@ export function ProductCard({
               </div>
             )}
 
-            {/* Title — the card's one stretched link (R11/R12). `after:absolute
-                after:inset-0` sizes against Card's `position: relative`, not
-                this anchor's own box, so it covers the whole card while
-                staying a plain single-element `<Link>`. */}
+            {/* Title — triggers Quick View drawer; no navigation to separate product detail page */}
             <h3 className="line-clamp-2 text-sm leading-tight font-semibold text-black/90 transition-colors group-hover:text-primary">
-              <Link
-                href={`/products/${product.slug}`}
-                className="after:absolute after:inset-0 after:content-['']"
+              <button
+                type="button"
+                onClick={() => openQuickView(product.slug, product)}
+                className="text-left font-semibold text-black/90 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action rounded-xs"
               >
                 {product.name}
-              </Link>
+              </button>
             </h3>
 
             <p className="mt-0.5 text-xs text-black/60">{unitDisplay}</p>
