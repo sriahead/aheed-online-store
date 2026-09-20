@@ -110,7 +110,10 @@ export function ProductImageGallery({
         style={{ transform: `translateX(-${safeIndex * 100}%)` }}
       >
         {images.map((image, index) => (
-          <div key={image.storageKey || index} className="relative h-full w-full shrink-0 aspect-square">
+          <div
+            key={image.storageKey || index}
+            className="relative h-full w-full shrink-0 aspect-square"
+          >
             <img
               src={composePublicUrl(cdnBaseUrl, image.storageKey)}
               alt={image.alt}
