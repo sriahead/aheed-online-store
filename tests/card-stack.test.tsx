@@ -25,29 +25,49 @@ describe("CardStack (P824)", () => {
     expect(frontCard.style.transform).toContain("scale(1)");
     expect(frontCard.style.transform).toContain("translate3d(0px, 0px, 0px)");
 
-    // Card behind (index 1) has reduced scale and negative translateZ depth
+    // Card behind (index 1) has vertical stacked offset and negative translateZ depth
     const nextCard = slides[1] as HTMLElement;
     expect(nextCard.style.transform).toContain("scale(0.955)");
-    expect(nextCard.style.transform).toContain("-40px");
+    expect(nextCard.style.transform).toContain("-22px");
+    expect(nextCard.style.transform).toContain("-35px");
+
+    // Third card (index 2) is tiered higher and deeper
+    const thirdCard = slides[2] as HTMLElement;
+    expect(thirdCard.style.transform).toContain("scale(0.91)");
+    expect(thirdCard.style.transform).toContain("-44px");
   });
 
-  it("advances active card and counter when clicking Next button (R7, R9)", () => {
+  it("removes previous and next arrow buttons (R7)", () => {
     render(<CardStack itemLabel="reviews">{items}</CardStack>);
 
-    const nextBtn = screen.getByRole("button", { name: "Next reviews" });
-    fireEvent.click(nextBtn);
+    expect(screen.queryByRole("button", { name: /Previous/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Next/ })).toBeNull();
+  });
 
+  it("advances active card and counter when clicking the front card (R7, R9)", () => {
+    const { container } = render(<CardStack itemLabel="reviews">{items}</CardStack>);
+    const slides = container.querySelectorAll(".card-stack-item");
+
+    fireEvent.click(slides[0]);
     expect(screen.getByText("2 / 4")).toBeTruthy();
   });
 
-  it("advances active card backwards when clicking Previous button (R7, R9)", () => {
+  it("advances directly to background card when clicking a stacked card (R7, R9)", () => {
+    const { container } = render(<CardStack itemLabel="reviews">{items}</CardStack>);
+    const slides = container.querySelectorAll(".card-stack-item");
+
+    // Click third card (depth 2)
+    fireEvent.click(slides[2]);
+    expect(screen.getByText("3 / 4")).toBeTruthy();
+  });
+
+  it("navigates to card when clicking pagination indicator pill (R7, R9)", () => {
     render(<CardStack itemLabel="reviews">{items}</CardStack>);
 
-    const prevBtn = screen.getByRole("button", { name: "Previous reviews" });
-    fireEvent.click(prevBtn);
+    const tab2 = screen.getByRole("tab", { name: "Go to reviews 2 of 4" });
+    fireEvent.click(tab2);
 
-    // Infinite loop cycles from 1 to 4
-    expect(screen.getByText("4 / 4")).toBeTruthy();
+    expect(screen.getByText("2 / 4")).toBeTruthy();
   });
 
   it("responds to keyboard ArrowRight and ArrowLeft on carousel container (R9)", () => {

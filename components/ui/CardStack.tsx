@@ -10,11 +10,11 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
- * A 3D stacked-card carousel: one card in front, the rest fanned behind it in 3D perspective,
- * advanced smoothly by pointer drag, arrow buttons or keyboard in an infinite loop.
+ * A 3D stacked-card carousel: one card in front, the rest visibly stacked behind it
+ * in 3D perspective, advanced smoothly by clicking, pointer drag/swipe, pagination pills,
+ * or keyboard in an infinite loop.
  *
  * DELIBERATELY GENERIC. It knows nothing about what a card contains — no domain-specific
  * metrics, scores, opinions or entries, and no `lib/` import of any kind. Storefront callers
@@ -23,12 +23,16 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
  * to disentangle it from domain models.
  *
  * ANIMATION & INTERACTION:
- * - 3D Card Peel Effect: Cards are arranged with CSS 3D perspective (1200px) and depth in Z.
- * - When advancing to the next card, the front card peels out to the side with 3D rotation
- *   and translation, while the cards behind it smoothly step forward in the stack.
+ * - 3D Card Stack: Cards are stacked with tiered vertical offset (Y) and depth (Z)
+ *   so cards behind clearly peek out above the front card, revealing their distinct color
+ *   borders and headers.
+ * - When advancing, the active card smoothly peels away with 3D rotation and translation,
+ *   while the cards behind it glide forward into position.
  * - Infinite Loop: Cards cycle continuously without rewinding; exiting cards cycle to the
  *   back of the deck to advance endlessly.
- * - Interactive Drag: Pointer events track dragging in real time with proportional 3D tilt.
+ * - Direct Interaction: Clicking the active card advances to the next review; clicking
+ *   a peeking background card immediately brings it to the front. Pointer drag/swipe
+ *   and pagination pills provide tactile direct manipulation.
  *
  * ACCESSIBILITY:
  * - Every card stays in the DOM and readable in source order, never `display: none` and never
@@ -41,11 +45,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
  */
 
 /** Visual geometry parameters for the 3D stack */
-const OFFSET_X_PX = 16;
-const OFFSET_Z_PX = -40;
-const ROTATE_Y_DEG = 3.5;
-const SCALE_STEP = 0.045;
-const SWIPE_THRESHOLD_PX = 45;
+const STACK_OFFSET_Y_PX = -22;
+const STACK_OFFSET_Z_PX = -35;
+const STACK_SCALE_STEP = 0.045;
+const SWIPE_THRESHOLD_PX = 40;
 const ANIMATION_DURATION_MS = 400;
 
 export function CardStack({
@@ -67,6 +70,7 @@ export function CardStack({
   const [isDragging, setIsDragging] = useState(false);
 
   const dragStartX = useRef<number | null>(null);
+  const hasDragged = useRef(false);
   const isAnimating = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const liveRegionId = useId();
@@ -102,11 +106,37 @@ export function CardStack({
     [active, count],
   );
 
+  const handleCardClick = (depth: number) => {
+    if (hasDragged.current || isAnimating.current || count <= 1) return;
+    if (depth === 0) {
+      go(1);
+    } else {
+      go(depth);
+    }
+  };
+
+  const onContainerClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (hasDragged.current || isAnimating.current || count <= 1) return;
+    const target = event.target as HTMLElement | null;
+    const slideEl = target?.closest("[data-slide-depth]");
+    if (slideEl) {
+      const d = Number(slideEl.getAttribute("data-slide-depth"));
+      if (!Number.isNaN(d)) {
+        handleCardClick(d);
+      }
+    }
+  };
+
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "ArrowLeft") {
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
       event.preventDefault();
       go(-1);
-    } else if (event.key === "ArrowRight") {
+    } else if (
+      event.key === "ArrowRight" ||
+      event.key === "ArrowDown" ||
+      event.key === " " ||
+      event.key === "Enter"
+    ) {
       event.preventDefault();
       go(1);
     }
@@ -115,6 +145,7 @@ export function CardStack({
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (count <= 1 || isAnimating.current) return;
     dragStartX.current = event.clientX;
+    hasDragged.current = false;
     setIsDragging(true);
     setDragOffset(0);
     try {
@@ -127,6 +158,9 @@ export function CardStack({
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!isDragging || dragStartX.current === null) return;
     const dx = event.clientX - dragStartX.current;
+    if (Math.abs(dx) > 5) {
+      hasDragged.current = true;
+    }
     setDragOffset(dx);
   };
 
@@ -158,7 +192,7 @@ export function CardStack({
   if (count === 0) return null;
 
   return (
-    <div className="relative w-full overflow-hidden px-1 py-2">
+    <div className="relative w-full overflow-hidden px-1 pt-12 pb-2">
       {/*
         eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions --
         Under `prefers-reduced-motion: reduce` this container becomes a horizontally
@@ -173,6 +207,7 @@ export function CardStack({
         aria-label={itemLabel}
         // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- see comment above
         tabIndex={0}
+        onClick={onContainerClick}
         onKeyDown={onKeyDown}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -191,51 +226,54 @@ export function CardStack({
           const transitionStr =
             isDragging && isFront
               ? "none"
-              : `transform ${ANIMATION_DURATION_MS}ms cubic-bezier(0.25, 1, 0.5, 1), opacity ${ANIMATION_DURATION_MS - 50}ms ease-out`;
+              : `transform ${ANIMATION_DURATION_MS}ms cubic-bezier(0.2, 0.9, 0.3, 1), opacity ${ANIMATION_DURATION_MS - 40}ms ease-out`;
 
           if (isExitingCard) {
             // Card peeling off the front
             const exitDirection = exiting.direction === "next" ? -1 : 1;
-            transformStr = `translate3d(${exitDirection * 108}%, 0px, -60px) rotateY(${exitDirection * -42}deg) rotateZ(${exitDirection * -4}deg) scale(0.94)`;
+            transformStr = `translate3d(${exitDirection * 110}%, -12px, 30px) rotateY(${exitDirection * -26}deg) rotateZ(${exitDirection * -5}deg) scale(0.96)`;
             opacityVal = 0;
             zIndexVal = count + 5;
           } else if (isFront) {
             // Front card (interactive with drag offset)
             if (isDragging && dragOffset !== 0) {
-              const dragRotateY = -dragOffset * 0.08;
+              const dragRotateY = -dragOffset * 0.06;
               const dragRotateZ = dragOffset * 0.02;
               transformStr = `translate3d(${dragOffset}px, 0px, 0px) rotateY(${dragRotateY}deg) rotateZ(${dragRotateZ}deg) scale(1)`;
             } else {
-              transformStr = "translate3d(0px, 0px, 0px) rotateY(0deg) scale(1)";
+              transformStr = "translate3d(0px, 0px, 0px) scale(1)";
             }
             opacityVal = 1;
             zIndexVal = count + 2;
           } else {
-            // Behind cards in the stack
+            // Visible stacked cards tiered above and behind
             const dragProgress =
-              isDragging && Math.abs(dragOffset) > 0 ? Math.min(Math.abs(dragOffset) / 200, 1) : 0;
+              isDragging && Math.abs(dragOffset) > 0 ? Math.min(Math.abs(dragOffset) / 180, 1) : 0;
 
             // Step forward proportionally while dragging
             const effectiveDepth = Math.max(0, depth - dragProgress);
-            const xOffset = effectiveDepth * OFFSET_X_PX;
-            const zOffset = effectiveDepth * OFFSET_Z_PX;
-            const yRotation = effectiveDepth * ROTATE_Y_DEG;
-            const scaleVal = 1 - effectiveDepth * SCALE_STEP;
+            const yOffset = effectiveDepth * STACK_OFFSET_Y_PX;
+            const zOffset = effectiveDepth * STACK_OFFSET_Z_PX;
+            const scaleVal = 1 - effectiveDepth * STACK_SCALE_STEP;
 
-            transformStr = `translate3d(${xOffset}px, 0px, ${zOffset}px) scale(${scaleVal}) rotateY(${yRotation}deg)`;
-            opacityVal = depth > 3 ? 0 : depth === 3 ? 0.4 : depth === 2 ? 0.75 : 0.92;
+            transformStr = `translate3d(0px, ${yOffset}px, ${zOffset}px) scale(${scaleVal})`;
+            opacityVal = depth > 3 ? 0 : depth === 3 ? 0.65 : depth === 2 ? 0.88 : 0.96;
             zIndexVal = count - depth;
           }
 
           return (
             <div
               key={index}
-              className="card-stack-item relative overflow-hidden"
+              data-slide-depth={depth}
+              data-slide-index={index}
+              className={`card-stack-item relative overflow-hidden select-none ${
+                isFront || depth <= 2 ? "cursor-pointer" : ""
+              }`}
               style={{
                 transform: transformStr,
                 zIndex: zIndexVal,
                 opacity: opacityVal,
-                pointerEvents: isFront ? "auto" : "none",
+                pointerEvents: depth <= 2 ? "auto" : "none",
                 transition: transitionStr,
               }}
               aria-roledescription="slide"
@@ -247,7 +285,7 @@ export function CardStack({
                 className="pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-300"
                 style={{
                   backgroundColor: "black",
-                  opacity: isExitingCard ? 0 : Math.min(depth * 0.06, 0.18),
+                  opacity: isExitingCard ? 0 : Math.min(depth * 0.05, 0.15),
                 }}
                 aria-hidden="true"
               />
@@ -256,28 +294,37 @@ export function CardStack({
         })}
       </div>
 
-      <div className="mt-4 flex items-center justify-center gap-3">
-        <button
-          type="button"
-          onClick={() => go(-1)}
-          aria-label={`Previous ${itemLabel}`}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-primary shadow-sm transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
-        >
-          <ChevronLeft className="h-4 w-4" aria-hidden />
-        </button>
+      {/* Navigation: pagination indicator pills and "X / total" counter */}
+      <div className="mt-5 flex flex-col items-center justify-center gap-2.5">
+        {count > 1 && (
+          <div
+            className="flex items-center justify-center gap-1.5"
+            role="tablist"
+            aria-label={`${itemLabel} pagination`}
+          >
+            {Array.from({ length: count }).map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                role="tab"
+                aria-selected={idx === active}
+                aria-label={`Go to ${itemLabel} ${idx + 1} of ${count}`}
+                onClick={() => {
+                  if (idx === active || isAnimating.current) return;
+                  const diff = (idx - active + count) % count;
+                  go(diff);
+                }}
+                className={`h-1.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-1 ${
+                  idx === active ? "w-6 bg-primary" : "w-1.5 bg-primary/25 hover:bg-primary/50"
+                }`}
+              />
+            ))}
+          </div>
+        )}
 
-        <p className="text-sm font-medium text-primary-muted tabular-nums">
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary-muted tabular-nums">
           {active + 1} / {count}
         </p>
-
-        <button
-          type="button"
-          onClick={() => go(1)}
-          aria-label={`Next ${itemLabel}`}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-primary shadow-sm transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
-        >
-          <ChevronRight className="h-4 w-4" aria-hidden />
-        </button>
       </div>
 
       <p id={liveRegionId} aria-live="polite" className="sr-only">
