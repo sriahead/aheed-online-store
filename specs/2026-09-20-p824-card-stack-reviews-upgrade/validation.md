@@ -15,10 +15,10 @@
 | R3  | Unit         | Run `npx vitest run tests/customer-feedback-cards.test.tsx` checking that computed contrast ratio of text against all palette background tints is >= 4.5:1. |
 | R4  | Integration  | Run `npx vitest run tests/customer-feedback-cards.test.tsx` asserting rendered header contains "What our customers say", star rating, numeric average, review count text, and link href `"/feedback"`. |
 | R5  | Integration  | Run `npx vitest run tests/customer-feedback-cards.test.tsx` asserting card output includes 5-star rating, "Verified customer" badge (for `verifiedPurchase: true`), comment text, author name, and relative date. |
-| R6  | Unit         | Run `npx vitest run tests/card-stack.test.tsx` verifying front card has `scale(1)` with `depth === 0`, and background cards receive depth transforms with scale reduction (`scale < 1`) and `translateZ`. |
-| R7  | Unit         | Run `npx vitest run tests/card-stack.test.tsx` verifying Next and Previous actions trigger the exit animation state and advance the active index. |
-| R8  | Unit         | Run `npx vitest run tests/card-stack.test.tsx` verifying pointer drag events update drag offset and advance card when swipe threshold (50px) is exceeded. |
-| R9  | Integration  | Run `npx vitest run tests/card-stack.test.tsx` verifying clicks on Next/Prev buttons, ArrowLeft/ArrowRight key events, and "X / total" text counter updates. |
+| R6  | Unit         | Run `npx vitest run tests/card-stack.test.tsx` verifying front card has `scale(1)` with `depth === 0`, and background cards receive tiered vertical offset (`-22px`, `-44px`) with depth transforms (`translateZ`) and scale reduction. |
+| R7  | Unit         | Run `npx vitest run tests/card-stack.test.tsx` verifying front card click advances to next card, and clicking a background card jumps directly to it. |
+| R8  | Unit         | Run `npx vitest run tests/card-stack.test.tsx` verifying pointer drag events update drag offset and advance card when swipe threshold (40px) is exceeded. |
+| R9  | Integration  | Run `npx vitest run tests/card-stack.test.tsx` verifying previous/next arrow buttons are absent, pagination indicator pills navigate correctly, ArrowLeft/ArrowRight key events navigate, and "X / total" text counter updates. |
 | R10 | Regression   | Verify `components/ui/CardStack.tsx` and `app/globals.css` contain `overflow: hidden` bounding wrapper, preventing horizontal page overflow down to 320px viewport width. |
 | R11 | Unit / CSS   | Inspect `app/globals.css` and verify `@media (prefers-reduced-motion: reduce)` block clears transforms on `.card-stack-item` and sets horizontal scroll layout. |
 | R12 | Unit         | Run `npx vitest run tests/customer-feedback-cards.test.tsx` asserting `CustomerFeedbackCards` returns `null` when `feedback` is an empty array `[]`. |

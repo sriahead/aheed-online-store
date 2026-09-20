@@ -12,13 +12,13 @@ R4. `CustomerFeedbackCards` preserves all existing header elements: section head
 
 R5. Each review card in `CustomerFeedbackCards` preserves all existing content elements: 5-star rating display, "Verified customer" badge with checkmark icon (rendered conditionally for verified purchases), review comment text, author name, and relative submission date (`relativeDate`).
 
-R6. `components/ui/CardStack.tsx` arranges cards in a 3D perspective stack where the active card (`depth = 0`) is positioned front and center at full scale (`scale(1)`), and cards behind (`depth > 0`) are visible with progressive scale reduction, depth displacement in Z, and horizontal offset.
+R6. `components/ui/CardStack.tsx` arranges cards in a prominent 3D perspective stack where the active card (`depth = 0`) is positioned front and center at full scale (`scale(1)`), and background cards (`depth > 0`) are tiered with vertical offset (-22px per level) and depth displacement in Z, allowing the lively pastel background and border of cards behind to clearly peek out above the front card.
 
-R7. `components/ui/CardStack.tsx` executes a smooth 3D peel/slide animation when navigating Next or Previous, translating and rotating the departing card while smoothly stepping the arriving card into the front position.
+R7. `components/ui/CardStack.tsx` enables direct card interaction: clicking the front card advances to the next review; clicking any visible background card immediately brings it to the front. Smooth 3D peel/slide animations smoothly transition cards between positions.
 
 R8. `components/ui/CardStack.tsx` supports pointer and touch drag gestures that interactively translate and tilt the active card with the pointer, advancing the stack when dragged past a threshold.
 
-R9. `components/ui/CardStack.tsx` renders accessible Previous and Next chevron buttons, responds to ArrowLeft and ArrowRight keyboard navigation on the focused carousel, and displays a visible "X / total" slide counter.
+R9. In accordance with user refinement, previous and next arrow buttons are removed in favor of direct card clicking, touch drag/swipe, accessible keyboard navigation (ArrowLeft/ArrowRight/ArrowUp/ArrowDown/Space/Enter), pagination indicator pills, and visible "X / total" slide counter.
 
 R10. The card stack container and its items prevent horizontal page overflow and horizontal scrollbars across all screen widths down to 320px.
 

@@ -11,9 +11,11 @@ Written at the end of Build, before the Clear.
    - Preserved all existing content: 5-star ratings, "Verified customer" badges, comments, author names, relative dates, heading rating statistics, "Share your experience" link, and outbound `ReviewLinkGroup`.
 
 2. **`components/ui/CardStack.tsx`**:
-   - Refined 3D visual geometry parameters (`OFFSET_X_PX = 16`, `OFFSET_Z_PX = -40`, `ROTATE_Y_DEG = 3.5`, `SCALE_STEP = 0.045`, `ANIMATION_DURATION_MS = 400`) and eased peel animation to align with the UIInitiative Cards Stack Slider reference.
-   - Wrapped the carousel in an `overflow-hidden` bounding container and set the inner stack to `w-[calc(100%-2rem)] max-w-2xl mx-auto`, preventing any horizontal scrolling or document overflow on mobile viewports down to 320px.
-   - Maintained interactive touch/pointer drag with live 3D tilt, Next/Previous chevron buttons, Arrow key navigation, live region announcements, and infinite loop cycling.
+   - Refined 3D visual geometry parameters (`STACK_OFFSET_Y_PX = -22`, `STACK_OFFSET_Z_PX = -35`, `STACK_SCALE_STEP = 0.045`, `ANIMATION_DURATION_MS = 400`) and eased peel animation to arrange cards into a prominent vertical 3D deck where the colorful tops and borders of background cards clearly peek out above the active front card.
+   - Removed Previous and Next arrow buttons per user refinement in favor of direct card clicking, touch swipe/drag, and pagination indicator pills.
+   - Enabled direct card interaction: clicking the front card advances to the next card; clicking a peeking background card immediately brings it to the front.
+   - Added container top padding (`pt-12`) so the stacked cards extending up to 44px above the front card are fully visible and never clipped by the `overflow-hidden` boundary.
+   - Maintained interactive touch/pointer drag with live 3D tilt, Arrow key navigation, live region announcements, and infinite loop cycling.
 
 3. **`app/globals.css`**:
    - Adjusted `.card-stack` `min-height` to `16rem` to comfortably accommodate multi-line reviews and metadata.
