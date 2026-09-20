@@ -5,6 +5,7 @@ import { FloatingContact } from "@/components/layout/FloatingContact";
 import { CookieBanner } from "@/components/consent/CookieBanner";
 import { QuickViewProvider } from "@/components/product/quick-view-context";
 import { QuickViewDrawer } from "@/components/product/QuickViewDrawer";
+import { RewardsLauncher } from "@/components/rewards/RewardsLauncher";
 import { brandStyle } from "@/lib/vendor-theme";
 import type { VendorProfile } from "@/lib/repositories/vendor";
 
@@ -57,6 +58,7 @@ export function StorefrontChrome({
         />
         <CookieBanner />
         <QuickViewDrawer />
+        <RewardsLauncher />
       </div>
     </QuickViewProvider>
   );
