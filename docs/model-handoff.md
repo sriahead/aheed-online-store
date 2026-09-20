@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.20.0"
+version: "1.21.0"
 updated: 2026-09-20
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,16 +40,14 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-20.
-- **Checkout:** `staging` and `main` are **aligned at `4aab0c8`** (PR #826, "Promote vibrant card-stack
-  review slider to production (#824)", `staging -> main`). This promotion carried PR #825 and PR #827
-  (vibrant pastel card palette, vertical 3D card stacking, card-click navigation, touch swipe/drag,
-  and removal of arrow buttons). Preceding this was PR #822 (merge `684e828`, 2026-09-20), promoting
-  customer feedback and reviews (`#818`, `#406`), which applied migration
-  `20260919195726_p818_customer_feedback` (`CustomerFeedback`, `CustomerFeedbackAttempt`,
-  `VendorReviewLink`, `FeedbackStatus` enum) to production. **`#818`, `#406`, and `#824` are DONE** —
-  all closed on their respective `main` merges, their Project #2 items auto-moved to `Done`.
-  `deploy-production` (run `35514904191`) succeeded; production `/api/health` confirmed live serving
-  `4aab0c8` with `db.ok: true`.
+- **Checkout:** `staging` and `main` are **aligned at `c18001b`** (PR #834, "Promote Quick View product
+  drawer and image carousel to production (#830, #832)", `staging -> main`). This promotion carried
+  PR #831 (Quick View product drawer replacing drill-down navigation, `#830`) and PR #833 (Quick View
+  product image carousel with horizontal swipe and arrows, `#832`). Preceding this was PR #829
+  (merge `8df4efa`, 2026-09-20) reconciling docs, and PR #826 (merge `4aab0c8`, 2026-09-20), promoting
+  the vibrant card-stack review slider (`#824`). **`#830` and `#832` are DONE** — both closed on their
+  `main` merge, their Project #2 items auto-moved to `Done`. `deploy-production` (run `35523515823`)
+  succeeded; production `/api/health` confirmed live serving `c18001b` with `db.ok: true`.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof

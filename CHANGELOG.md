@@ -8,6 +8,11 @@ every branch merges.
 
 ### Changed
 
+- **Quick View product drawer and image carousel promoted to production (PR #834); roadmap and handoff reconciled to match (`#830`, `#832`).**
+  - **`specs/roadmap.md`** gains four change-log rows: PR #829 documentation reconciliation promotion (merge `8df4efa`, 2026-09-20); `#830` Quick View product drawer slice (`specs/2026-09-20-p830-quick-view-product-drawer/`, PR #831 merge `fd79d22`); `#832` Quick View product image carousel slice (`specs/2026-09-20-p832-quick-view-image-carousel/`, PR #833 merge `d02ff8e`); and PR #834 promotion to production (merge `c18001b`, 2026-09-20). Records `#830` and `#832` as closed and Done.
+  - **`docs/model-handoff.md`** reconciled with production reality: records checkout alignment at `c18001b`, documents Quick View drawer and horizontal image carousel live in production, and records `#830` and `#832` as closed and Done.
+  - KMS index rebuilt (`ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`) and verified with `npm run sdd:audit`.
+
 - **Customer feedback & reviews and vibrant card-stack slider promoted to production (PR #817, PR #822, PR #826); roadmap and handoff reconciled to match (`#818`, `#824`, `#406`).**
   - **`specs/roadmap.md`** gains five change-log rows: PR #817 promotion (merge `7d7bdff`, 2026-09-19); `#818` customer feedback slice (`specs/2026-09-19-p818-customer-feedback-reviews/`, PR #821 merge `5acc427`, PR #823 merge `a34f8a3`); PR #822 promotion to production (merge `684e828`, 2026-09-20) applying migration `20260919195726_p818_customer_feedback`; `#824` vibrant card-stack review slider slice (`specs/2026-09-20-p824-card-stack-reviews-upgrade/`, PR #825 merge `7585b51`, PR #827 merge `32d96b4`); and PR #826 promotion to production (merge `4aab0c8`, 2026-09-20). Removes `#406` and `#818` from P10 tracked issues and records both as Done.
   - **`docs/model-handoff.md`** reconciled with production reality: records checkout alignment at `4aab0c8`, removes stale "built and unvalidated" status for `#818`, documents first-party feedback and vibrant 3D vertical card stack slider live in production, and notes closed status for `#818`, `#824`, and `#406`.
