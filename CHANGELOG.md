@@ -8,6 +8,11 @@ every branch merges.
 
 ### Changed
 
+- **Customer feedback & reviews and vibrant card-stack slider promoted to production (PR #817, PR #822, PR #826); roadmap and handoff reconciled to match (`#818`, `#824`, `#406`).**
+  - **`specs/roadmap.md`** gains five change-log rows: PR #817 promotion (merge `7d7bdff`, 2026-09-19); `#818` customer feedback slice (`specs/2026-09-19-p818-customer-feedback-reviews/`, PR #821 merge `5acc427`, PR #823 merge `a34f8a3`); PR #822 promotion to production (merge `684e828`, 2026-09-20) applying migration `20260919195726_p818_customer_feedback`; `#824` vibrant card-stack review slider slice (`specs/2026-09-20-p824-card-stack-reviews-upgrade/`, PR #825 merge `7585b51`, PR #827 merge `32d96b4`); and PR #826 promotion to production (merge `4aab0c8`, 2026-09-20). Removes `#406` and `#818` from P10 tracked issues and records both as Done.
+  - **`docs/model-handoff.md`** reconciled with production reality: records checkout alignment at `4aab0c8`, removes stale "built and unvalidated" status for `#818`, documents first-party feedback and vibrant 3D vertical card stack slider live in production, and notes closed status for `#818`, `#824`, and `#406`.
+  - KMS index rebuilt (`ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`) and verified with `npm run sdd:audit`.
+
 - **Vibrant card-stack review slider and lively pastel card palette (`#824`, `specs/2026-09-20-p824-card-stack-reviews-upgrade/`)**:
   upgrades the landing page "What our customers say" customer feedback section to adopt a lively, modern aesthetic and align interaction with the UIInitiative Cards Stack Slider reference.
   - **Lively rotating pastel color themes**: 6 distinct, tasteful background tints (soft green `#f0fdf4`, warm amber `#fffbeb`, soft orange `#fff7ed`, sky blue `#f0f9ff`, rose pink `#fff1f2`, lavender purple `#faf5ff`) with subtle complementary borders, cycled deterministically across cards. Each clears WCAG AA contrast (ratio >= 4.5:1, up to 8.3:1) for primary and muted text.
