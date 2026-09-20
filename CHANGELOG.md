@@ -6,6 +6,16 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **Vibrant card-stack review slider and lively pastel card palette (`#824`, `specs/2026-09-20-p824-card-stack-reviews-upgrade/`)**:
+  upgrades the landing page "What our customers say" customer feedback section to adopt a lively, modern aesthetic and align interaction with the UIInitiative Cards Stack Slider reference.
+  - **Lively rotating pastel color themes**: 6 distinct, tasteful background tints (soft green `#f0fdf4`, warm amber `#fffbeb`, soft orange `#fff7ed`, sky blue `#f0f9ff`, rose pink `#fff1f2`, lavender purple `#faf5ff`) with subtle complementary borders, cycled deterministically across cards. Each clears WCAG AA contrast (ratio >= 4.5:1, up to 8.3:1) for primary and muted text.
+  - **Smooth 3D stacked deck interaction**: active card sits front and center (`depth = 0`, `scale(1)`); cards behind fan in depth with progressive scale step, z-axis offset, and subtle shadow overlays.
+  - **Peel and step-forward animations**: smooth 3D rotation and peel-out slide when advancing Next or Previous, paired with pointer/touch dragging with real-time tilt and swipe thresholds.
+  - **Full responsive containment**: outer wrapper prevents horizontal overflow and document scrollbars across mobile viewports down to 320px.
+  - **Preserved content and controls**: all review stars, "Verified customer" badges, comments, author names, relative dates, heading rating statistics, "Share your experience" link, and "X / total" navigation remain fully intact.
+
 ### Added
 
 - **Customers can leave feedback about the shop, staff approve it before anyone sees it, and

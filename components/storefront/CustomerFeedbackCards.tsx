@@ -59,6 +59,22 @@ function relativeDate(value: Date, now: Date): string {
   return formatter.format(Math.round(diffDays / 365), "year");
 }
 
+export interface CardPalette {
+  name: string;
+  bg: string;
+  border: string;
+  hexBg: string;
+}
+
+export const CARD_PALETTES: CardPalette[] = [
+  { name: "green", bg: "bg-[#f0fdf4]", border: "border-[#bbf7d0]", hexBg: "#f0fdf4" },
+  { name: "amber", bg: "bg-[#fffbeb]", border: "border-[#fde68a]", hexBg: "#fffbeb" },
+  { name: "orange", bg: "bg-[#fff7ed]", border: "border-[#fed7aa]", hexBg: "#fff7ed" },
+  { name: "blue", bg: "bg-[#f0f9ff]", border: "border-[#bae6fd]", hexBg: "#f0f9ff" },
+  { name: "pink", bg: "bg-[#fff1f2]", border: "border-[#fecdd3]", hexBg: "#fff1f2" },
+  { name: "purple", bg: "bg-[#faf5ff]", border: "border-[#ddd6fe]", hexBg: "#faf5ff" },
+];
+
 export function CustomerFeedbackCards({
   feedback,
   summary,
@@ -83,13 +99,13 @@ export function CustomerFeedbackCards({
           <h2 id="customer-feedback-heading" className="text-xl font-bold text-primary md:text-2xl">
             What our customers say
           </h2>
-          <p className="mt-1 flex items-center gap-2 text-sm text-primary-muted">
+          <div className="mt-1 flex items-center gap-2 text-sm text-primary-muted">
             <Stars rating={Math.round(summary.averageRating)} />
             <span className="font-semibold text-primary">{summary.averageRating.toFixed(1)}</span>
             <span>
               from {summary.approvedCount} {summary.approvedCount === 1 ? "review" : "reviews"}
             </span>
-          </p>
+          </div>
         </div>
 
         <Link
@@ -101,28 +117,33 @@ export function CustomerFeedbackCards({
       </div>
 
       <CardStack itemLabel="customer feedback">
-        {feedback.map((entry) => (
-          <article
-            key={entry.id}
-            className="flex h-full flex-col gap-3 rounded-2xl border border-black/10 bg-surface-muted p-5 shadow-sm"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <Stars rating={entry.rating} />
-              {entry.verifiedPurchase && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-action-tint px-2 py-0.5 text-xs font-semibold text-action">
-                  <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
-                  Verified customer
-                </span>
-              )}
-            </div>
+        {feedback.map((entry, index) => {
+          const palette = CARD_PALETTES[index % CARD_PALETTES.length];
+          return (
+            <article
+              key={entry.id}
+              className={`flex h-full flex-col justify-between gap-4 rounded-2xl border ${palette.border} ${palette.bg} p-6 shadow-sm transition-colors duration-300`}
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <Stars rating={entry.rating} />
+                  {entry.verifiedPurchase && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-action-tint px-2.5 py-0.5 text-xs font-semibold text-action">
+                      <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+                      Verified customer
+                    </span>
+                  )}
+                </div>
 
-            <p className="flex-1 text-sm leading-relaxed text-primary">{entry.comment}</p>
+                <p className="mt-3 text-sm leading-relaxed text-primary">{entry.comment}</p>
+              </div>
 
-            <p className="text-xs font-medium text-primary-muted">
-              {entry.authorName} · {relativeDate(entry.submittedAt, now)}
-            </p>
-          </article>
-        ))}
+              <p className="border-t border-black/5 pt-3 text-xs font-medium text-primary-muted">
+                {entry.authorName} · {relativeDate(entry.submittedAt, now)}
+              </p>
+            </article>
+          );
+        })}
       </CardStack>
 
       <ReviewLinkGroup reviewLinks={reviewLinks} bordered />

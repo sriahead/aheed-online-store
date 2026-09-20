@@ -41,12 +41,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
  */
 
 /** Visual geometry parameters for the 3D stack */
-const OFFSET_X_PX = 18;
-const OFFSET_Z_PX = -45;
-const ROTATE_Y_DEG = 4;
-const SCALE_STEP = 0.05;
-const SWIPE_THRESHOLD_PX = 50;
-const ANIMATION_DURATION_MS = 380;
+const OFFSET_X_PX = 16;
+const OFFSET_Z_PX = -40;
+const ROTATE_Y_DEG = 3.5;
+const SCALE_STEP = 0.045;
+const SWIPE_THRESHOLD_PX = 45;
+const ANIMATION_DURATION_MS = 400;
 
 export function CardStack({
   children,
@@ -158,7 +158,7 @@ export function CardStack({
   if (count === 0) return null;
 
   return (
-    <div className="relative">
+    <div className="relative w-full overflow-hidden px-1 py-2">
       {/*
         eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions --
         Under `prefers-reduced-motion: reduce` this container becomes a horizontally
@@ -167,7 +167,7 @@ export function CardStack({
         container provides that accessibility. Paired with visible controls below.
       */}
       <div
-        className="card-stack"
+        className="card-stack mx-auto w-[calc(100%-2rem)] max-w-2xl"
         role="group"
         aria-roledescription="carousel"
         aria-label={itemLabel}
@@ -191,18 +191,18 @@ export function CardStack({
           const transitionStr =
             isDragging && isFront
               ? "none"
-              : `transform ${ANIMATION_DURATION_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity ${ANIMATION_DURATION_MS}ms ease-out`;
+              : `transform ${ANIMATION_DURATION_MS}ms cubic-bezier(0.25, 1, 0.5, 1), opacity ${ANIMATION_DURATION_MS - 50}ms ease-out`;
 
           if (isExitingCard) {
             // Card peeling off the front
             const exitDirection = exiting.direction === "next" ? -1 : 1;
-            transformStr = `translate3d(${exitDirection * 115}%, 0px, -80px) rotateY(${exitDirection * -50}deg) rotateZ(${exitDirection * -5}deg) scale(0.92)`;
+            transformStr = `translate3d(${exitDirection * 108}%, 0px, -60px) rotateY(${exitDirection * -42}deg) rotateZ(${exitDirection * -4}deg) scale(0.94)`;
             opacityVal = 0;
             zIndexVal = count + 5;
           } else if (isFront) {
             // Front card (interactive with drag offset)
             if (isDragging && dragOffset !== 0) {
-              const dragRotateY = -dragOffset * 0.1;
+              const dragRotateY = -dragOffset * 0.08;
               const dragRotateZ = dragOffset * 0.02;
               transformStr = `translate3d(${dragOffset}px, 0px, 0px) rotateY(${dragRotateY}deg) rotateZ(${dragRotateZ}deg) scale(1)`;
             } else {
@@ -213,7 +213,7 @@ export function CardStack({
           } else {
             // Behind cards in the stack
             const dragProgress =
-              isDragging && Math.abs(dragOffset) > 0 ? Math.min(Math.abs(dragOffset) / 250, 1) : 0;
+              isDragging && Math.abs(dragOffset) > 0 ? Math.min(Math.abs(dragOffset) / 200, 1) : 0;
 
             // Step forward proportionally while dragging
             const effectiveDepth = Math.max(0, depth - dragProgress);
@@ -223,7 +223,7 @@ export function CardStack({
             const scaleVal = 1 - effectiveDepth * SCALE_STEP;
 
             transformStr = `translate3d(${xOffset}px, 0px, ${zOffset}px) scale(${scaleVal}) rotateY(${yRotation}deg)`;
-            opacityVal = depth > 2 ? 0 : depth === 2 ? 0.75 : 0.92;
+            opacityVal = depth > 3 ? 0 : depth === 3 ? 0.4 : depth === 2 ? 0.75 : 0.92;
             zIndexVal = count - depth;
           }
 
@@ -247,7 +247,7 @@ export function CardStack({
                 className="pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-300"
                 style={{
                   backgroundColor: "black",
-                  opacity: isExitingCard ? 0 : Math.min(depth * 0.08, 0.25),
+                  opacity: isExitingCard ? 0 : Math.min(depth * 0.06, 0.18),
                 }}
                 aria-hidden="true"
               />

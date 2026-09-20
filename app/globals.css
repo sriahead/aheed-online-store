@@ -177,7 +177,7 @@ body {
 .card-stack {
   position: relative;
   display: grid;
-  min-height: 15rem;
+  min-height: 16rem;
   perspective: 1200px;
   perspective-origin: center center;
   transform-style: preserve-3d;
