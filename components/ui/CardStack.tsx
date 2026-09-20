@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  useCallback,
+  useEffect,
   useId,
   useRef,
   useState,
@@ -11,8 +13,8 @@ import {
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
- * A stacked-card slider: one card in front, the rest fanned behind it, advanced by drag,
- * arrow buttons or the keyboard.
+ * A 3D stacked-card carousel: one card in front, the rest fanned behind it in 3D perspective,
+ * advanced smoothly by pointer drag, arrow buttons or keyboard in an infinite loop.
  *
  * DELIBERATELY GENERIC. It knows nothing about what a card contains — no domain-specific
  * metrics, scores, opinions or entries, and no `lib/` import of any kind. Storefront callers
@@ -20,40 +22,31 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
  * (R34), not a stylistic preference: any future feature that wants a card stack should not have
  * to disentangle it from domain models.
  *
- * WHY NO LIBRARY. The design reference is Swiper-based, and Swiper is a real client bundle
- * on a landing page whose LCP was fought from roughly 12s down to a 2.5s target (#243). The
- * behaviour here is CSS transforms plus Pointer Events, which also keeps full control of
- * focus order and the reduced-motion path — the two things a wrapper usually takes away.
+ * ANIMATION & INTERACTION:
+ * - 3D Card Peel Effect: Cards are arranged with CSS 3D perspective (1200px) and depth in Z.
+ * - When advancing to the next card, the front card peels out to the side with 3D rotation
+ *   and translation, while the cards behind it smoothly step forward in the stack.
+ * - Infinite Loop: Cards cycle continuously without rewinding; exiting cards cycle to the
+ *   back of the deck to advance endlessly.
+ * - Interactive Drag: Pointer events track dragging in real time with proportional 3D tilt.
  *
- * `itemLabel` is REQUIRED, following `components/layout/HorizontalScroller.tsx`: two stacks
- * on one page whose only controls are both called "Previous" are indistinguishable to a
- * screen reader.
- *
- * ACCESSIBILITY, stated here because most of it is invisible in the markup:
- * - Every card stays in the DOM and readable, in source order. Cards behind the front one
- *   are moved with `transform` and dimmed, never `display: none` and never `aria-hidden` —
- *   a screen-reader user reads the whole set regardless of which card is in front.
- * - THE STACK ITSELF takes focus (`tabIndex={0}`) and arrow keys drive it; the cards do
- *   not. #818's R40 originally asked for every card to be individually tabbable, which on
- *   inspection specifies an anti-pattern: the cards hold static text, making static text
- *   focusable is a known screen-reader nuisance, and cards fanned behind the front one are
- *   visually hidden, so tabbing would land focus on something the sighted user cannot see.
- *   R40 was amended during build to the standard focusable-container pattern — recorded in
- *   the build notes rather than changed quietly.
+ * ACCESSIBILITY:
+ * - Every card stays in the DOM and readable in source order, never `display: none` and never
+ *   `aria-hidden` — screen readers read the full set regardless of which card is in front.
+ * - The stack itself takes focus (`tabIndex={0}`) with visible focus rings, driven by arrow keys.
  * - Position changes are announced through a polite live region.
- * - Nothing advances on a timer, so there is no pause control to need.
- * - Under `prefers-reduced-motion: reduce` the whole stack becomes a plain scrollable row.
- *   That is done with a real CSS media query in `globals.css` (`.card-stack` /
- *   `.card-stack-item`) rather than a JS check, because the class-scoped opt-out this
- *   project already had was found missing 24 utility transforms — a media query cannot
- *   forget a transform the way an opt-out class can.
+ * - No timer auto-advance (front card never changes without user interaction).
+ * - Under `prefers-reduced-motion: reduce` the whole stack becomes a plain scrollable row with
+ *   zero transform animations.
  */
 
-/** How far back each card behind the front one sits, in pixels and degrees. */
-const OFFSET_PX = 14;
-const SCALE_STEP = 0.04;
-/** Drag distance, in pixels, past which a pointer release advances the stack. */
-const SWIPE_THRESHOLD_PX = 60;
+/** Visual geometry parameters for the 3D stack */
+const OFFSET_X_PX = 18;
+const OFFSET_Z_PX = -45;
+const ROTATE_Y_DEG = 4;
+const SCALE_STEP = 0.05;
+const SWIPE_THRESHOLD_PX = 50;
+const ANIMATION_DURATION_MS = 380;
 
 export function CardStack({
   children,
@@ -61,26 +54,53 @@ export function CardStack({
 }: {
   children: ReactNode[];
   /**
-   * What is being stacked, for the controls' accessible names — "cards",
+   * What is being stacked, for the controls' accessible names — e.g. "cards",
    * "offers". Required rather than defaulted, for the reason in the docstring above.
    */
   itemLabel: string;
 }) {
   const [active, setActive] = useState(0);
+  const [exiting, setExiting] = useState<{ index: number; direction: "next" | "prev" } | null>(
+    null,
+  );
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
   const dragStartX = useRef<number | null>(null);
+  const isAnimating = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const liveRegionId = useId();
 
   const count = children.length;
-  if (count === 0) return null;
 
-  const go = (delta: number) => {
-    setActive((current) => {
-      const next = current + delta;
-      if (next < 0) return count - 1;
-      if (next >= count) return 0;
-      return next;
-    });
-  };
+  // Clean up any pending transition timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const go = useCallback(
+    (delta: number) => {
+      if (count <= 1) return;
+      if (isAnimating.current) return;
+
+      const direction = delta > 0 ? "next" : "prev";
+      const currentActive = active;
+      const nextActive = (currentActive + delta + count) % count;
+
+      isAnimating.current = true;
+      setExiting({ index: currentActive, direction });
+      setActive(nextActive);
+
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        setExiting(null);
+        isAnimating.current = false;
+      }, ANIMATION_DURATION_MS);
+    },
+    [active, count],
+  );
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "ArrowLeft") {
@@ -93,73 +113,144 @@ export function CardStack({
   };
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (count <= 1 || isAnimating.current) return;
     dragStartX.current = event.clientX;
+    setIsDragging(true);
+    setDragOffset(0);
+    try {
+      (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+    } catch {
+      // ignore
+    }
+  };
+
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!isDragging || dragStartX.current === null) return;
+    const dx = event.clientX - dragStartX.current;
+    setDragOffset(dx);
   };
 
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    const start = dragStartX.current;
+    if (!isDragging) return;
+    try {
+      (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
+    } catch {
+      // ignore
+    }
+    const currentOffset = dragOffset;
+    setIsDragging(false);
     dragStartX.current = null;
-    if (start === null) return;
+    setDragOffset(0);
 
-    const travelled = event.clientX - start;
-    if (Math.abs(travelled) < SWIPE_THRESHOLD_PX) return;
-    go(travelled < 0 ? 1 : -1);
+    if (currentOffset < -SWIPE_THRESHOLD_PX) {
+      go(1);
+    } else if (currentOffset > SWIPE_THRESHOLD_PX) {
+      go(-1);
+    }
   };
+
+  const onPointerCancel = () => {
+    setIsDragging(false);
+    dragStartX.current = null;
+    setDragOffset(0);
+  };
+
+  if (count === 0) return null;
 
   return (
     <div className="relative">
       {/*
         eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions --
-        Both this rule and no-noninteractive-tabindex below are false positives for this
-        element, and the second is the interesting one.
         Under `prefers-reduced-motion: reduce` this container becomes a horizontally
         SCROLLABLE region (see .card-stack in globals.css). A scrollable region must be
         reachable and operable by keyboard — WCAG 2.1.1 — and `tabIndex={0}` on a scroll
-        container is the recommended way to provide that, not something to avoid. Removing it
-        to satisfy the linter would make the reduced-motion path unreachable by keyboard,
-        which is the opposite of what the rule exists to protect. The keyboard listener is
-        paired with the visible previous/next buttons below, so the behaviour is also
-        available through ordinary interactive controls.
+        container provides that accessibility. Paired with visible controls below.
       */}
       <div
         className="card-stack"
         role="group"
         aria-roledescription="carousel"
         aria-label={itemLabel}
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- see the comment above
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- see comment above
         tabIndex={0}
         onKeyDown={onKeyDown}
         onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={() => {
-          dragStartX.current = null;
-        }}
+        onPointerCancel={onPointerCancel}
       >
         {children.map((child, index) => {
-          // Distance from the front card, wrapping, so the stack fans in one direction and
-          // the card just behind the last one is the first, not a gap.
+          const isExitingCard = exiting !== null && exiting.index === index;
           const depth = (index - active + count) % count;
-          const isFront = depth === 0;
+          const isFront = depth === 0 && !isExitingCard;
+
+          // Compute 3D transforms
+          let transformStr = "";
+          let opacityVal = 1;
+          let zIndexVal = count - depth;
+          const transitionStr =
+            isDragging && isFront
+              ? "none"
+              : `transform ${ANIMATION_DURATION_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity ${ANIMATION_DURATION_MS}ms ease-out`;
+
+          if (isExitingCard) {
+            // Card peeling off the front
+            const exitDirection = exiting.direction === "next" ? -1 : 1;
+            transformStr = `translate3d(${exitDirection * 115}%, 0px, -80px) rotateY(${exitDirection * -50}deg) rotateZ(${exitDirection * -5}deg) scale(0.92)`;
+            opacityVal = 0;
+            zIndexVal = count + 5;
+          } else if (isFront) {
+            // Front card (interactive with drag offset)
+            if (isDragging && dragOffset !== 0) {
+              const dragRotateY = -dragOffset * 0.1;
+              const dragRotateZ = dragOffset * 0.02;
+              transformStr = `translate3d(${dragOffset}px, 0px, 0px) rotateY(${dragRotateY}deg) rotateZ(${dragRotateZ}deg) scale(1)`;
+            } else {
+              transformStr = "translate3d(0px, 0px, 0px) rotateY(0deg) scale(1)";
+            }
+            opacityVal = 1;
+            zIndexVal = count + 2;
+          } else {
+            // Behind cards in the stack
+            const dragProgress =
+              isDragging && Math.abs(dragOffset) > 0 ? Math.min(Math.abs(dragOffset) / 250, 1) : 0;
+
+            // Step forward proportionally while dragging
+            const effectiveDepth = Math.max(0, depth - dragProgress);
+            const xOffset = effectiveDepth * OFFSET_X_PX;
+            const zOffset = effectiveDepth * OFFSET_Z_PX;
+            const yRotation = effectiveDepth * ROTATE_Y_DEG;
+            const scaleVal = 1 - effectiveDepth * SCALE_STEP;
+
+            transformStr = `translate3d(${xOffset}px, 0px, ${zOffset}px) scale(${scaleVal}) rotateY(${yRotation}deg)`;
+            opacityVal = depth > 2 ? 0 : depth === 2 ? 0.75 : 0.92;
+            zIndexVal = count - depth;
+          }
 
           return (
             <div
-              // Index is a stable key here: the array is a fixed, ordered set for the life
-              // of the render, and nothing reorders or splices it.
               key={index}
-              className="card-stack-item"
+              className="card-stack-item relative overflow-hidden"
               style={{
-                // Inline because the values are computed per card from `depth`; a Tailwind
-                // class cannot express an arbitrary per-item transform. Colour and radius
-                // still come from tokens inside the card itself.
-                transform: `translateX(${depth * OFFSET_PX}px) scale(${1 - depth * SCALE_STEP})`,
-                zIndex: count - depth,
-                opacity: depth > 2 ? 0 : 1,
+                transform: transformStr,
+                zIndex: zIndexVal,
+                opacity: opacityVal,
                 pointerEvents: isFront ? "auto" : "none",
+                transition: transitionStr,
               }}
               aria-roledescription="slide"
               aria-label={`${index + 1} of ${count}`}
             >
               {child}
+              {/* Depth shadow overlay: dims cards further back in the deck */}
+              <div
+                className="pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-300"
+                style={{
+                  backgroundColor: "black",
+                  opacity: isExitingCard ? 0 : Math.min(depth * 0.08, 0.25),
+                }}
+                aria-hidden="true"
+              />
             </div>
           );
         })}
@@ -189,10 +280,6 @@ export function CardStack({
         </button>
       </div>
 
-      {/*
-        Polite, not assertive: a position change is a confirmation of something the user just
-        did, not an interruption worth cutting across whatever they are reading.
-      */}
       <p id={liveRegionId} aria-live="polite" className="sr-only">
         {`${itemLabel} ${active + 1} of ${count}`}
       </p>
