@@ -58,44 +58,67 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
   };
 }
 
-describe("ProductCard — stretched link, no nested interactive content (R11/R12)", () => {
-  it("renders no <button> as a descendant of any <a>, with the product not yet in the cart", () => {
+describe("ProductCard — Quick View triggers, no detail-page drill-down, no nested interactive content", () => {
+  it("renders no link navigating to a separate product detail page", () => {
     const { container } = render(
       <ProductCard product={product()} cdnBaseUrl="https://cdn.example" cartQuantity={0} />,
     );
 
-    const anchors = Array.from(container.querySelectorAll("a"));
-    expect(anchors.length, "expected the card's title link to exist").toBeGreaterThan(0);
-
-    const offenders = anchors.flatMap((a) => Array.from(a.querySelectorAll("button")));
+    const detailLinks = Array.from(container.querySelectorAll("a")).filter((a) =>
+      a.getAttribute("href")?.startsWith("/products/"),
+    );
     expect(
-      offenders,
-      "a <button> is nested inside an <a> — HTML forbids interactive content inside a link",
+      detailLinks,
+      "Product card must not navigate to separate product detail page; drill-down is replaced by Quick View",
     ).toEqual([]);
   });
 
-  it("renders no <button> as a descendant of any <a>, with the product already in the cart", () => {
-    // cartQuantity > 0 swaps AddToCartButton for CartQuantityStepper, which
-    // renders TWO buttons (decrease/increase) — the case most likely to
-    // regress if either control moves back inside the link.
+  it("renders no <button> as a descendant of another <button> or <a>, with product not in cart", () => {
+    const { container } = render(
+      <ProductCard product={product()} cdnBaseUrl="https://cdn.example" cartQuantity={0} />,
+    );
+
+    const buttons = Array.from(container.querySelectorAll("button"));
+    const nestedButtons = buttons.flatMap((b) => Array.from(b.querySelectorAll("button")));
+    expect(nestedButtons, "HTML forbids nested interactive buttons").toEqual([]);
+
+    const anchors = Array.from(container.querySelectorAll("a"));
+    const buttonsInAnchors = anchors.flatMap((a) => Array.from(a.querySelectorAll("button")));
+    expect(buttonsInAnchors, "HTML forbids button inside anchor").toEqual([]);
+  });
+
+  it("renders no <button> as a descendant of another <button> or <a>, with product already in cart", () => {
     const { container } = render(
       <ProductCard product={product()} cdnBaseUrl="https://cdn.example" cartQuantity={2} />,
     );
 
+    const buttons = Array.from(container.querySelectorAll("button"));
+    const nestedButtons = buttons.flatMap((b) => Array.from(b.querySelectorAll("button")));
+    expect(nestedButtons).toEqual([]);
+
     const anchors = Array.from(container.querySelectorAll("a"));
-    const offenders = anchors.flatMap((a) => Array.from(a.querySelectorAll("button")));
-    expect(offenders).toEqual([]);
+    const buttonsInAnchors = anchors.flatMap((a) => Array.from(a.querySelectorAll("button")));
+    expect(buttonsInAnchors).toEqual([]);
   });
 
-  it("still has exactly one link, covering the whole card via a stretched-link overlay", () => {
+  it("renders desktop and mobile Quick View triggers", () => {
     const { container } = render(
       <ProductCard product={product()} cdnBaseUrl="https://cdn.example" cartQuantity={0} />,
     );
 
-    const anchors = container.querySelectorAll("a");
-    expect(anchors).toHaveLength(1);
-    expect(anchors[0].getAttribute("href")).toBe("/products/golden-paneer-500g");
-    expect(anchors[0].className).toContain("after:absolute");
-    expect(anchors[0].className).toContain("after:inset-0");
+    // Desktop Quick View button
+    const buttons = Array.from(container.querySelectorAll("button"));
+    const desktopTrigger = buttons.find((b) => b.textContent?.includes("Quick View"));
+    expect(desktopTrigger).toBeDefined();
+
+    // Mobile compact Quick View button
+    const mobileTrigger = buttons.find(
+      (b) => b.getAttribute("aria-label") === "Quick view Golden Paneer 500g",
+    );
+    expect(mobileTrigger).toBeDefined();
+
+    // Title Quick View trigger button
+    const titleTrigger = buttons.find((b) => b.textContent?.trim() === "Golden Paneer 500g");
+    expect(titleTrigger).toBeDefined();
   });
 });
