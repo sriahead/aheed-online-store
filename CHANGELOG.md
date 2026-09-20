@@ -25,6 +25,23 @@ every branch merges.
 
 ### Added
 
+- **Quick View product image carousel with horizontal swipe and arrows (`#832`, `specs/2026-09-20-p832-quick-view-image-carousel/`)**:
+  upgrades the Quick View product drawer to display multiple product images in a compact horizontal carousel instead of stacking vertically.
+  - **Single main image view**: displays one product image at a time within a consistent aspect-square container, eliminating excessive vertical height and keeping product details, cart, and reviews immediately accessible.
+  - **Horizontal navigation arrows**: accessible left and right chevron buttons overlaying the image when multiple images exist (`images.length > 1`), smoothly wrapping around.
+  - **Touch swipe gestures**: supports natural horizontal swipe gestures on mobile and touch devices.
+  - **Pagination indicators**: compact bottom pill combining clickable indicator dots and a tabular "X / total" slide counter.
+  - **Smooth transitions & accessibility**: smooth CSS transforms (`transition-transform duration-300 motion-reduce:transition-none`), keyboard navigation (ArrowLeft, ArrowRight), and auto-hiding of controls on single-image products.
+
+- **Quick View product drawer replacing drill-down navigation (`#830`, `specs/2026-09-20-p830-quick-view-product-drawer/`)**:
+  replaces product card drill-down navigation with a seamless right-side slide-out drawer on desktop and mobile, displaying full product info, cart actions, and reviews without navigating away from the browsing experience.
+  - **Desktop and mobile triggers**: desktop reveals a smooth "Quick View" button overlay on card hover (`group-hover:opacity-100 transition-opacity duration-300`); mobile viewports display an always-visible compact Quick View button in the card corner.
+  - **Slide-out Quick View drawer (`components/product/QuickViewDrawer.tsx`)**: accessible dialog with darkened backdrop, focus trap, Escape key dismiss, and body scroll lock.
+  - **Complete product details**: multi-image thumbnail gallery, brand, product name, badges, rating stars, review count, price/unit price, stock status, low stock alert, and markdown description.
+  - **In-drawer Cart and Reviews**: prominent quantity stepper with Add to Cart action (`variant="drawer"`), customer reviews list with verified purchaser badges, and interactive review submission/edit/delete form with immediate live refresh.
+  - **No drill-down navigation**: removes "View full details" link to keep shoppers in flow while preserving `/products/[slug]` for direct visits and search indexing.
+  - **API endpoint (`app/api/products/quick-view/route.ts`)**: GET endpoint providing product details, approved reviews, and user session context.
+
 - **Customers can leave feedback about the shop, staff approve it before anyone sees it, and
   approved feedback renders on the landing page (`#818`,
   `specs/2026-09-19-p818-customer-feedback-reviews/`)**: the storefront previously carried no

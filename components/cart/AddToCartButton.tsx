@@ -13,7 +13,7 @@ export function AddToCartButton({
   productId: string;
   disabled?: boolean;
   label?: string;
-  variant?: "icon" | "full" | "card";
+  variant?: "icon" | "full" | "card" | "drawer";
 }) {
   const [pending, startTransition] = useTransition();
   const [added, setAdded] = useState(false);
@@ -89,6 +89,53 @@ export function AddToCartButton({
         >
           <Icon className={`w-3.5 h-3.5 ${pending ? "animate-spin" : ""}`} />
           {added ? "Added" : "Add"}
+        </button>
+      </div>
+    );
+  }
+
+  if (variant === "drawer") {
+    if (disabled) {
+      return (
+        <button
+          type="button"
+          disabled
+          className="flex w-full items-center justify-center rounded-2xl bg-surface-muted px-4 py-3 text-sm font-bold text-black/60 cursor-not-allowed"
+        >
+          Out of stock
+        </button>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-3">
+        <div className="flex items-center rounded-xl border border-black/10 bg-surface-muted overflow-hidden h-11">
+          <button
+            type="button"
+            onClick={onClickMinus}
+            aria-label="Decrease quantity"
+            className="px-3 h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
+          >
+            <Minus className="w-4 h-4" aria-hidden="true" />
+          </button>
+          <span className="text-sm font-bold text-primary w-8 text-center">{qty}</span>
+          <button
+            type="button"
+            onClick={onClickPlus}
+            aria-label="Increase quantity"
+            className="px-3 h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
+          >
+            <Plus className="w-4 h-4" aria-hidden="true" />
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={onClickAdd}
+          disabled={pending}
+          className="flex-1 flex items-center justify-center gap-2 h-11 rounded-2xl bg-primary px-4 text-white text-sm font-bold transition hover:bg-primary/90 active:scale-95 motion-reduce:active:scale-100 shadow-sm"
+        >
+          <Icon className={`w-4 h-4 ${pending ? "animate-spin" : ""}`} />
+          <span>{added ? "Added to cart" : label}</span>
         </button>
       </div>
     );
