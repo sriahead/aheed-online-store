@@ -6,6 +6,18 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **Vibrant card-stack review slider and lively pastel card palette (`#824`, `specs/2026-09-20-p824-card-stack-reviews-upgrade/`)**:
+  upgrades the landing page "What our customers say" customer feedback section to adopt a lively, modern aesthetic and align interaction with the UIInitiative Cards Stack Slider reference.
+  - **Lively rotating pastel color themes**: 6 distinct, tasteful background tints (soft green `#f0fdf4`, warm amber `#fffbeb`, soft orange `#fff7ed`, sky blue `#f0f9ff`, rose pink `#fff1f2`, lavender purple `#faf5ff`) with subtle complementary borders, cycled deterministically across cards. Each clears WCAG AA contrast (ratio >= 4.5:1, up to 8.3:1) for primary and muted text.
+  - **Prominent vertical 3D stacked deck**: active card sits front and center (`depth = 0`, `scale(1)`); cards behind tier in depth with vertical offset (-22px per level) and z-axis displacement, letting the distinct lively pastel colors and borders of background cards clearly peek out above the front card.
+  - **Direct card clicking and touch drag**: clicking the front card advances to the next review; clicking any visible background card immediately brings it to the front. Pointer drag/swipe provides tactile direct manipulation.
+  - **Removal of arrow buttons and addition of pagination pills**: previous/next arrow buttons removed per user refinement; replaced with modern accessible pagination indicator pills alongside the preserved "X / total" slide counter.
+  - **Peel and step-forward animations**: smooth 3D rotation and peel-out slide when advancing, with cubic-bezier easing.
+  - **Full responsive containment**: outer wrapper with generous top padding (`pt-12`) prevents clipping of the stacked cards while strictly containing horizontal overflow across mobile viewports down to 320px.
+  - **Preserved content and controls**: all review stars, "Verified customer" badges, comments, author names, relative dates, heading rating statistics, "Share your experience" link, and "X / total" navigation remain fully intact.
+
 ### Added
 
 - **Customers can leave feedback about the shop, staff approve it before anyone sees it, and
