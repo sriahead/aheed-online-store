@@ -34,7 +34,8 @@ every branch merges.
     minutes, plus 60 seconds between writes to the same row. Limiting submission alone would have
     converted flooding into churn through the moderation queue.
   - **A reusable `components/ui/CardStack.tsx`** — generic, no feedback reference, no new
-    dependency. Under `prefers-reduced-motion: reduce` it degrades to a plain scrollable row via a
+    dependency. Features 3D perspective card peel physics with interactive pointer/touch drag and continuous
+    infinite loop cycling. Under `prefers-reduced-motion: reduce` it degrades to a plain scrollable row via a
     real media query, not a class-scoped opt-out (the existing one already misses 24 transforms).
   - **External review platforms are outbound links only** (`VendorReviewLink`, managed on
     `/staff/storefront`): vendor-configurable, `https`-validated, no platform name compiled in.
