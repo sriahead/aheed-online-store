@@ -8,6 +8,8 @@ import {
 } from "@/lib/vendor-service";
 import { StorefrontConfigForm } from "@/components/staff/StorefrontConfigForm";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
+import { ReviewLinksManager } from "@/components/staff/ReviewLinksManager";
+import { getVendorReviewLinkRepository } from "@/lib/vendor-review-links-service";
 import { getStorage } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +36,7 @@ export default async function StorefrontAdminPage() {
   const location = await getVendorLocation(auth.vendorId);
   const themes = await listThemes();
   const vendorThemes = await listVendorThemes(auth.vendorId);
+  const reviewLinks = await getVendorReviewLinkRepository().listAll();
 
   if (!config || !branding) {
     return <div className="p-8">Vendor config or branding not found.</div>;
@@ -52,6 +55,12 @@ export default async function StorefrontAdminPage() {
         vendorThemes={vendorThemes}
         logoUrl={logoUrl}
       />
+
+      {/* P9.2 (#818) — outbound review-site links. Here rather than on /staff/feedback
+          because these are storefront settings, which keeps that page purely moderation. */}
+      <div className="mt-10 border-t border-black/10 pt-8">
+        <ReviewLinksManager links={reviewLinks} />
+      </div>
     </main>
   );
 }

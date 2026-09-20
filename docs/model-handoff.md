@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.18.0"
+version: "1.19.0"
 updated: 2026-09-19
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -293,7 +293,8 @@ The live board showed open High-priority items, all with blank Complexity:
 - **Paid-order cancellation and reversals: DONE, 2026-09-18** — #696, #137 and #151 all **closed →
   Done**, promoted to production via PR #799 (`specs/2026-09-17-p696-staff-cancel-confirmed-order/`).
   `cancelConfirmedOrder` never touches `Payment`; refunds stay with #606.
-- Trust and contact: #406 and #695.
+- Trust and contact: **#406's approach is REJECTED and its replacement `#818` is in flight** (see
+  below); #695 is unchanged.
 - Data activation: #697.
 - Location decision reconciliation: #422.
 - Exposed credential rotation: **#219 is CLOSED** (rotated, verified 2026-09-16). Its step 3 — the
@@ -320,6 +321,25 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **`#818` (customer feedback) is BUILT AND UNVALIDATED on `feature/818-customer-feedback-reviews`
+  — not merged, not shipped.** Spec `019b550`, build `c58be72`, branched from `staging` at
+  `6e5b95d`. Do not read the sections below as though it had shipped.
+  - **`#406` is superseded and its embedded-widget premise is rejected**, which matters because the
+    board still carries `#406` as an open **High** item and a fresh Orient would otherwise re-rank
+    it into `/propose`. The decision and its full reasoning are a comment on `#406` itself; the
+    replacement is `#818`. Closing `#406` is an owner action, deliberately not taken.
+  - **The fact that killed the Google route is external and worth not re-deriving:** Google's
+    Places API terms **forbid storing or caching review content** (only the place ID may be stored
+    indefinitely; only coordinates, for 30 days). So the only compliant use is a live billed call
+    per page render, on a `force-dynamic` landing page, capped at 5 reviews. The Business Profile
+    API removes the cost and the cap but needs a Google access request measured in weeks, a
+    separate OAuth client, and per-vendor OAuth onboarding that does not fit a multi-tenant
+    platform. This is why the project builds first-party feedback and links out rather than in.
+  - **A correction to this project's own record:** `#406`'s body asserts the `Review` model has
+    moderation. **It does not** — there is no status column and `features/reviews/submit-review.ts`
+    publishes on submit, so **product reviews are unmoderated in shipped code.** Found by reading
+    the schema, not the issue. Tracked as **`#819`**; `#820` carries `#818`'s two deferrals.
 
 - **`#116` and `#806` (saved shopping lists + `/shop-your-list` quick-access) are DONE — see Last
   Verified/Project Position above.** Both promoted to production via PR #808 (merge `187b5eb`,
