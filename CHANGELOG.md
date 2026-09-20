@@ -25,6 +25,14 @@ every branch merges.
 
 ### Added
 
+- **Quick View product image carousel with horizontal swipe and arrows (`#832`, `specs/2026-09-20-p832-quick-view-image-carousel/`)**:
+  upgrades the Quick View product drawer to display multiple product images in a compact horizontal carousel instead of stacking vertically.
+  - **Single main image view**: displays one product image at a time within a consistent aspect-square container, eliminating excessive vertical height and keeping product details, cart, and reviews immediately accessible.
+  - **Horizontal navigation arrows**: accessible left and right chevron buttons overlaying the image when multiple images exist (`images.length > 1`), smoothly wrapping around.
+  - **Touch swipe gestures**: supports natural horizontal swipe gestures on mobile and touch devices.
+  - **Pagination indicators**: compact bottom pill combining clickable indicator dots and a tabular "X / total" slide counter.
+  - **Smooth transitions & accessibility**: smooth CSS transforms (`transition-transform duration-300 motion-reduce:transition-none`), keyboard navigation (ArrowLeft, ArrowRight), and auto-hiding of controls on single-image products.
+
 - **Quick View product drawer replacing drill-down navigation (`#830`, `specs/2026-09-20-p830-quick-view-product-drawer/`)**:
   replaces product card drill-down navigation with a seamless right-side slide-out drawer on desktop and mobile, displaying full product info, cart actions, and reviews without navigating away from the browsing experience.
   - **Desktop and mobile triggers**: desktop reveals a smooth "Quick View" button overlay on card hover (`group-hover:opacity-100 transition-opacity duration-300`); mobile viewports display an always-visible compact Quick View button in the card corner.

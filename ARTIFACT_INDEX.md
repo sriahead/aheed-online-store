@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-20T15:48:21.910Z` · commit `6a5edc0` · `204` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-20T16:08:24.450Z` · commit `fd79d22` · `205` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -202,6 +202,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P9.2 — Customer Feedback & Reviews: first-party submission, moderation and the Cards Stack Slider (plan)](specs/2026-09-19-p818-customer-feedback-reviews/plan.md) | spec | 1.0.0 | 2026-09-19 | draft | internal | Adds first-party business-level customer feedback with pre-publication moderation, renders approved feedback in a reusable Cards Stack Slider on the landing page, and replaces #406's embedded third-party review widgets with vendor-configurable outbound links. |
 | [P824 — Vibrant Card-Stack Review Slider (plan)](specs/2026-09-20-p824-card-stack-reviews-upgrade/plan.md) | spec | 1.0.0 | 2026-09-20 | draft | internal | Upgrade the storefront customer feedback reviews section with vibrant, accessible pastel card themes and smooth 3D stacked-card interaction aligned with UIInitiative. |
 | [P830 — Quick View Product Drawer (plan)](specs/2026-09-20-p830-quick-view-product-drawer/plan.md) | spec | 1.0.0 | 2026-09-20 | draft | internal | Replace product card drill-down navigation with an accessible right-side Quick View drawer containing complete product details, cart actions, and reviews. |
+| [P832 — Quick View Product Image Carousel (plan)](specs/2026-09-20-p832-quick-view-image-carousel/plan.md) | spec | 1.0.0 | 2026-09-20 | draft | internal | Upgrade the Quick View product drawer image display to an accessible single-image horizontal carousel with arrow controls, swipe gestures, and pagination dots. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.30.0 | 2026-09-16 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

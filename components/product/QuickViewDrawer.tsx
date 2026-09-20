@@ -298,7 +298,11 @@ export function QuickViewDrawer() {
               <div className="flex flex-col gap-6">
                 {/* Images */}
                 <div className="overflow-hidden rounded-2xl bg-surface-muted">
-                  <ProductImageGallery images={displayImages} cdnBaseUrl={cdnBaseUrl} />
+                  <ProductImageGallery
+                    images={displayImages}
+                    cdnBaseUrl={cdnBaseUrl}
+                    variant="carousel"
+                  />
                 </div>
 
                 {/* Product Title & Basic Info */}
