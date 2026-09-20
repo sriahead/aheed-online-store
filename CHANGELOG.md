@@ -30,6 +30,15 @@ every branch merges.
 
 ### Added
 
+- **Shopper Account Upgrade & Loyalty/Rewards Integration with Referrals (`#836`, `specs/2026-09-20-p836-shopper-account-rewards/`)**:
+  upgrades the Demo/Shopper "Your account" experience to visually match the Staff View / Store Admin layout, integrates the Loyalty & Rewards interaction into the account, adds a persistent floating Rewards launcher with a compact slide-out panel, and establishes a customer referral system.
+  - **Staff View Card-Grid Parity (`app/(storefront)/account/page.tsx`)**: full-width structure and spacing (`max-w-5xl px-4 py-8`) aligning "Your account" with Store Admin. Replaces the narrow vertical menu with a responsive 2-column card grid (Orders, Lists, Loyalty & Rewards, Feedback, and Data Rights) matching Staff View borders, radius (`rounded-2xl`), padding (`p-5`), typography, icons, and hover states (`hover:border-action`). Customer Name, Email, and Role displayed in a clean surface card near the top; Logout button clearly accessible below.
+  - **Upgraded Loyalty & Rewards Page (`app/(storefront)/account/loyalty/page.tsx`)**: redesigned to `max-w-5xl` layout with breadcrumb back link. Displays current points balance, cash discount value, expiration date (when inactivity expiry applies), current tier multiplier, and next tier spend progress.
+  - **Interactive Rewards Accordions & Vouchers**: adds expandable/collapsible accordions for "Ways to earn" and "Ways to redeem", plus an "Available rewards" section with unlock progress bars for grocery basket vouchers (£1, £5, £10 off).
+  - **Floating Rewards Launcher & Slide-out Panel (`components/rewards/`)**: floating pill button at `bottom-6 left-6` (`sm:bottom-8 sm:left-8`) styled in brand accent gold that toggles a compact slide-out panel matching the reference widget with yellow brand header, points, expiry, accordions, referral invite, and account link. Captures `?ref=...` query parameters to set the referral cookie across the storefront.
+  - **Customer Referral Subsystem (`lib/referrals.ts`, `lib/referrals-service.ts`)**: unique customer referral codes (`REF-XXXXXXXX`) and links (`/?ref=...`), copy button with checkmark feedback, one-click social sharing for Facebook, X (Twitter), Email, and WhatsApp, completed referral tracking, and guards against self-referrals and duplicate redemptions.
+  - **Unified Data API (`app/api/rewards/route.ts`)**: single endpoint serving identical real-time points, expiry, and referral data to both the account page and the floating launcher.
+
 - **Quick View product image carousel with horizontal swipe and arrows (`#832`, `specs/2026-09-20-p832-quick-view-image-carousel/`)**:
   upgrades the Quick View product drawer to display multiple product images in a compact horizontal carousel instead of stacking vertically.
   - **Single main image view**: displays one product image at a time within a consistent aspect-square container, eliminating excessive vertical height and keeping product details, cart, and reviews immediately accessible.
