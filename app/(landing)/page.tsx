@@ -7,6 +7,15 @@ import { formatPrice } from "@/components/product/format-price";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getCampaignsForHero } from "@/lib/campaigns-service";
 import { isCampaignLive } from "@/lib/campaign-liveness";
+import {
+  CustomerFeedbackCards,
+  ReviewLinkGroup,
+} from "@/components/storefront/CustomerFeedbackCards";
+import { getCustomerFeedbackRepository } from "@/lib/customer-feedback-service";
+import { getVendorReviewLinkRepository } from "@/lib/vendor-review-links-service";
+
+/** How many approved cards the stack holds. Beyond this the fan is unreadable anyway. */
+const FEEDBACK_CARD_LIMIT = 12;
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +46,17 @@ export default async function HomePage() {
   // Liveness is decided HERE, once, so DepartmentHero never has to re-derive it
   // from isActive/startsAt/endsAt.
   const campaigns = await getCampaignsForHero(categories.map((c) => c.id));
+
+  // P9.2 (#818) — three reads from this vendor's own database, in parallel with each other.
+  // No external call is on this path: the feedback is first-party and the review links are
+  // outbound URLs, not fetched content.
+  const feedbackRepo = getCustomerFeedbackRepository();
+  const [approvedFeedback, feedbackSummary, reviewLinks] = await Promise.all([
+    feedbackRepo.listApproved(FEEDBACK_CARD_LIMIT),
+    feedbackRepo.approvedSummary(),
+    getVendorReviewLinkRepository().listActive(),
+  ]);
+
   const now = new Date();
   const heroDepartments = categories.map((category) => {
     const campaign = campaigns.get(category.id);
@@ -211,6 +231,23 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* P9.2 (#818) — first-party customer feedback, below the fold.
+          Both parts render independently: the cards disappear entirely when nothing is
+          approved (#239's null-hides rule), while the outbound review links stay, because
+          at launch there is no feedback yet and the links are the only social proof there
+          is. Nothing here is fetched from Google, Trustpilot or any other platform. */}
+      <CustomerFeedbackCards
+        feedback={approvedFeedback}
+        summary={feedbackSummary}
+        reviewLinks={reviewLinks}
+      />
+      {/* No approved feedback: the cards section renders nothing at all (R36 — an empty
+          frame reads as broken), but the outbound links are NOT part of that section and
+          still render. Discovery of /feedback in this state is the account area's link,
+          which is sufficient because only a signed-in customer can submit in the first
+          place. */}
+      {approvedFeedback.length === 0 && <ReviewLinkGroup reviewLinks={reviewLinks} />}
     </main>
   );
 }

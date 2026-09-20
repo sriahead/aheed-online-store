@@ -66,6 +66,19 @@ export default async function AccountPage() {
         </Link>
       )}
 
+      {/* P9.2 (#818) — leave or update feedback about the shop. Always shown, and not gated
+          on having ordered: any signed-in customer may leave feedback, and a completed order
+          only earns the "Verified customer" badge. This is the durable entry point — the
+          landing page's own link sits inside the feedback section, which is hidden while
+          nothing has been approved yet. */}
+      <Link
+        href="/feedback"
+        className="mb-3 flex items-center justify-between rounded-2xl border border-black/10 bg-surface-muted p-5 transition hover:border-black/20"
+      >
+        <span className="font-semibold text-primary">Your feedback</span>
+        <ChevronRight className="h-5 w-5 text-primary-subtle" aria-hidden />
+      </Link>
+
       {/* P7b (#216) — download, correct or erase your data. Always shown: the
           rights it exercises are not conditional on a vendor feature flag. */}
       <Link

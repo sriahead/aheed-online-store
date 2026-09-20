@@ -158,3 +158,63 @@ body {
     transition: none;
   }
 }
+
+/*
+ * P9.2 (#818) — the customer-feedback card stack.
+ *
+ * The geometry (per-card translate/scale/z-index) is inline in
+ * components/ui/CardStack.tsx, because it is computed per card from its depth and a utility
+ * class cannot express an arbitrary per-item transform. What lives here is everything a
+ * media query has to be able to switch off.
+ *
+ * THE REDUCED-MOTION FALLBACK IS A REAL MEDIA QUERY, NOT A JS CHECK OR AN OPT-OUT CLASS.
+ * This project's existing class-scoped opt-out was found missing 24 utility transforms
+ * (Discover, 2026-09-07): an opt-out can forget a transform, a media query that clears
+ * `transform` on the item selector cannot. Under `reduce` the stack stops being a stack —
+ * it becomes an ordinary horizontally scrollable row with native scrolling, which is both
+ * motion-free and fully operable.
+ */
+.card-stack {
+  position: relative;
+  display: grid;
+  min-height: 15rem;
+  perspective: 1200px;
+  perspective-origin: center center;
+  transform-style: preserve-3d;
+}
+
+.card-stack:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 4px;
+  border-radius: var(--radius-2xl);
+}
+
+.card-stack-item {
+  grid-area: 1 / 1;
+  touch-action: pan-y;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-stack {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    min-height: 0;
+    perspective: none !important;
+    transform-style: flat !important;
+  }
+
+  .card-stack-item {
+    /* Clears the inline transform from the component: no fan, no scale, no motion. */
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transition: none !important;
+    flex: 0 0 min(22rem, 85%);
+    scroll-snap-align: start;
+  }
+}

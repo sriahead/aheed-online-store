@@ -128,6 +128,23 @@ export interface PersonalDataExport {
    * their data.
    */
   savedLists: { name: string; createdAt: Date; items: { rawText: string; quantity: number }[] }[];
+  /**
+   * Business feedback about the shop (#818) — personal data: the customer wrote it themselves,
+   * and an approved one is published under their first name and surname initial.
+   *
+   * `status` IS disclosed, unlike a derived field: whether their words were published, and
+   * whether they are still waiting, is information about them that they cannot otherwise see
+   * once they have left the site. `moderationNote` is NOT disclosed — it is staff-authored
+   * commentary, not the subject's data, and exporting it would turn an internal note into a
+   * message to the customer.
+   */
+  feedback: {
+    rating: number;
+    comment: string | null;
+    status: string;
+    verifiedPurchase: boolean;
+    submittedAt: Date;
+  }[];
 }
 
 /**
@@ -160,6 +177,7 @@ export async function exportPersonalData(
     ledger,
     redemptions,
     savedLists,
+    feedback,
   ] = await Promise.all([
     prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { id: true, name: true } }),
     prisma.user.findUniqueOrThrow({
@@ -287,6 +305,19 @@ export async function exportPersonalData(
       },
       orderBy: { createdAt: "desc" },
     }),
+    // #818 — business feedback about the shop, distinct from the product reviews above.
+    // `moderationNote` is deliberately not selected: see the type's comment.
+    prisma.customerFeedback.findMany({
+      where: { vendorId, userId },
+      select: {
+        rating: true,
+        comment: true,
+        status: true,
+        verifiedPurchase: true,
+        submittedAt: true,
+      },
+      orderBy: { submittedAt: "desc" },
+    }),
   ]);
 
   return {
@@ -309,6 +340,13 @@ export async function exportPersonalData(
       items: order.items,
       payment: order.payment,
       statusHistory: order.statusEvents,
+    })),
+    feedback: feedback.map((entry) => ({
+      rating: entry.rating,
+      comment: entry.comment,
+      status: entry.status,
+      verifiedPurchase: entry.verifiedPurchase,
+      submittedAt: entry.submittedAt,
     })),
     reviews: reviews.map((review) => ({
       rating: review.rating,
@@ -373,6 +411,11 @@ export async function countOtherVendorData(
     prisma.loyaltyLedgerEntry.count({ where: notThisVendor }),
     prisma.discountRedemption.count({ where: notThisVendor }),
     prisma.shoppingList.count({ where: notThisVendor }),
+    // #818 — feedback left at ANOTHER vendor must keep the shared identity alive. User is the
+    // CustomerFeedback owner with onDelete: Cascade, so deleting the identity here would erase
+    // that vendor's published reviews as a side effect of an erasure request this vendor
+    // received. Omitting a model from this list is silent and irreversible.
+    prisma.customerFeedback.count({ where: notThisVendor }),
   ]);
   return counts.reduce((total, count) => total + count, 0);
 }
@@ -391,6 +434,8 @@ export interface EraseResult {
    * shell behind.
    */
   savedListsDeleted: number;
+  /** #818 — business feedback is deleted outright, for the same reason saved lists are. */
+  feedbackDeleted: number;
 }
 
 /**
@@ -491,6 +536,10 @@ export async function eraseVendorData(
 
     // The user's own content and live state: no retention interest in any of it.
     const reviews = await tx.review.deleteMany({ where: { vendorId, userId } });
+    // #818 — feedback is deleted outright, not redacted. Like a saved list, nothing references
+    // it and no record's integrity depends on a shell being left behind; unlike an order, there
+    // is no accounting or audit interest in having said it.
+    const feedbackDeleted = await tx.customerFeedback.deleteMany({ where: { vendorId, userId } });
     await tx.cart.deleteMany({ where: { vendorId, userId } });
     await tx.loyaltyAccount.deleteMany({ where: { vendorId, userId } });
 
@@ -529,6 +578,7 @@ export async function eraseVendorData(
       savedAddressesDeleted: savedAddressesDeleted.count,
       reviewsDeleted: reviews.count,
       savedListsDeleted: savedListsDeleted.count,
+      feedbackDeleted: feedbackDeleted.count,
     };
   });
 }

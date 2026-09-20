@@ -12,6 +12,7 @@ import {
   FolderTree,
   Layers,
   Megaphone,
+  MessageSquareQuote,
   Package,
   ShieldAlert,
   Sparkles,
@@ -207,6 +208,17 @@ export default async function StaffHomePage() {
               <p className="font-semibold text-primary">Storefront</p>
               <p className="mt-1 text-sm text-primary-muted">
                 This store&apos;s branding, logo and shopfront configuration.
+              </p>
+            </Link>
+            <Link
+              href="/staff/feedback"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <MessageSquareQuote className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Customer Feedback</p>
+              <p className="mt-1 text-sm text-primary-muted">
+                Reviews customers left about the shop. Nothing appears on the storefront until you
+                approve it.
               </p>
             </Link>
             <Link

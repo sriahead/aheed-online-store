@@ -71,8 +71,19 @@ export default async function PrivacyPage() {
           <p className="text-sm text-primary-muted leading-relaxed">
             We keep records of completed orders for <strong>six years</strong>, which is the
             retention period UK tax law requires for proof of sale. Your account details, saved
-            addresses, reviews, basket and loyalty points are kept for as long as you have an
-            account with us, and are removed when you ask us to erase your data.
+            addresses, reviews, feedback, basket and loyalty points are kept for as long as you have
+            an account with us, and are removed when you ask us to erase your data.
+          </p>
+          {/* P9.2 (#818) — feedback is the only thing a customer writes here that we publish
+              to strangers, so what appears alongside it is stated plainly rather than left to
+              be discovered after the fact. */}
+          <p className="text-sm text-primary-muted leading-relaxed">
+            <strong>Feedback you leave about the shop.</strong> If you send us feedback, a member of
+            our team reads it before it appears anywhere. If we publish it, we show your{" "}
+            <strong>first name, the initial of your surname</strong> and your star rating alongside
+            what you wrote — never your full name, your email address or anything about your orders.
+            You can change or replace your feedback at any time, and erasing your data removes it
+            entirely.
           </p>
         </section>
 
@@ -89,10 +100,11 @@ export default async function PrivacyPage() {
           </p>
           <p className="text-sm text-primary-muted leading-relaxed">
             <strong>What erasure does.</strong> We remove your name, contact details, addresses,
-            reviews, basket and loyalty points. We <em>keep</em> your past orders, because we are
-            required to retain proof of sale — but we strip your name and address from them first,
-            so the records that remain no longer identify you. If you do not shop with any of our
-            other stores, your sign-in is deleted too.
+            reviews, any feedback you left about the shop, basket and loyalty points. We{" "}
+            <em>keep</em> your past orders, because we are required to retain proof of sale — but we
+            strip your name and address from them first, so the records that remain no longer
+            identify you. If you do not shop with any of our other stores, your sign-in is deleted
+            too.
           </p>
           <p className="text-sm text-primary-muted leading-relaxed">
             <strong>If you checked out as a guest.</strong> You do not need an account to exercise
