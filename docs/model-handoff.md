@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.19.0"
-updated: 2026-09-19
+version: "1.20.0"
+updated: 2026-09-20
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,20 +39,17 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-19.
-- **Checkout:** `staging` and `main` are **aligned at `a682177`** (PR #815, "Promote vendor timezone
-  and BST slot-picker fix to production (#363, #811)", `staging -> main`). This promotion carried
-  PR #810 (docs-only `#116`/`#806` Document (final) reconciliation — those two issues were already
-  `Done`, PR #810 just hadn't reached `main` yet), PR #813 (the `#363`/`#811` feature merge), and
-  PR #814 (docs-only `#363`/`#811` Document (final)). **`#363` and `#811` are DONE** — closed on the
-  `main` merge, their Project #2 items auto-moved to `Done`. `deploy-production` confirmed
-  **success**; production `/api/health` confirmed live serving `a682177` with `db.ok: true`.
-  Migration `20260919113731_p363_vendor_timezone` (`VendorConfig.timezone`, additive, plus an
-  idempotent DML backfill of historical `Order.fulfilmentDate` rows) is now on **both** `staging`
-  and `main`. See In-Flight Work below for what shipped and how it was live-verified — a real
-  before/after browser check against pre-fix and post-fix deployed staging, **then repeated a third
-  time directly against production** (same real BST browser, `/checkout`'s hidden `fulfilmentDate`
-  field read `"2026-09-19"`, the correct bare calendar day) after this promotion.
+- **Date:** 2026-09-20.
+- **Checkout:** `staging` and `main` are **aligned at `4aab0c8`** (PR #826, "Promote vibrant card-stack
+  review slider to production (#824)", `staging -> main`). This promotion carried PR #825 and PR #827
+  (vibrant pastel card palette, vertical 3D card stacking, card-click navigation, touch swipe/drag,
+  and removal of arrow buttons). Preceding this was PR #822 (merge `684e828`, 2026-09-20), promoting
+  customer feedback and reviews (`#818`, `#406`), which applied migration
+  `20260919195726_p818_customer_feedback` (`CustomerFeedback`, `CustomerFeedbackAttempt`,
+  `VendorReviewLink`, `FeedbackStatus` enum) to production. **`#818`, `#406`, and `#824` are DONE** —
+  all closed on their respective `main` merges, their Project #2 items auto-moved to `Done`.
+  `deploy-production` (run `35514904191`) succeeded; production `/api/health` confirmed live serving
+  `4aab0c8` with `db.ok: true`.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
@@ -80,10 +77,12 @@ reconciliation. If overall project state did not materially change, leave this f
 - **Both Workers were redeployed and are on clean wrangler-sourced deploys**: staging `859a1ff6`,
   production `8d1c074c`, each its own newest version, as of the `#755` rotation — not re-verified
   live since.
-- **Issues closed 2026-09-16/17 after live verification**, not on assertion: `#755` (rotation),
+- **Issues closed 2026-09-16–20 after live verification**, not on assertion: `#755` (rotation),
   `#756` (fulfilment seed), `#713` (brand-colour validation, found already shipped), `#219`
   (Cloudflare token rotation), `#777` (business case), `#780`/`#781`/`#782` (credential closeout),
-  `#786`/`#584`/`#546` (this slice).
+  `#786`/`#584`/`#546` (CLAUDE.md refactor), `#792`/`#724` (board/roadmap reconcile),
+  `#696`/`#137`/`#151` (cancellations), `#116`/`#806` (saved lists), `#363`/`#811` (timezone),
+  `#818`/`#406` (customer feedback), `#824` (vibrant card-stack slider).
 - **NEW INFRASTRUCTURE — a second Neon project now exists, and is live in production.** See the
   dedicated section below. This is the most consequential project-level change since multi-tenancy.
 - **Worktrees:** only the main checkout.
@@ -293,8 +292,10 @@ The live board showed open High-priority items, all with blank Complexity:
 - **Paid-order cancellation and reversals: DONE, 2026-09-18** — #696, #137 and #151 all **closed →
   Done**, promoted to production via PR #799 (`specs/2026-09-17-p696-staff-cancel-confirmed-order/`).
   `cancelConfirmedOrder` never touches `Payment`; refunds stay with #606.
-- Trust and contact: **#406's approach is REJECTED and its replacement `#818` is in flight** (see
-  below); #695 is unchanged.
+- **Customer feedback & reviews and vibrant card-stack slider: DONE, 2026-09-20** — #818 and #406 both
+  **closed → Done**, promoted to production via PR #822 (`specs/2026-09-19-p818-customer-feedback-reviews/`);
+  #824 **closed → Done**, promoted to production via PR #826 (`specs/2026-09-20-p824-card-stack-reviews-upgrade/`).
+  #695 is unchanged.
 - Data activation: #697.
 - Location decision reconciliation: #422.
 - Exposed credential rotation: **#219 is CLOSED** (rotated, verified 2026-09-16). Its step 3 — the
@@ -310,8 +311,8 @@ Dependencies and scope boundaries worth preserving:
   per-store stock depends on location modelling.
 - #697 is not missing code. The net-content columns, form, unit-price derivation and pack-size facet
   exist, but dev measurement found zero populated products. Production was not measured.
-- #406 must choose between third-party widgets and first-party rendering after considering CSP,
-  PECR consent, performance and per-vendor identifiers.
+- #406 settled by #818: first-party feedback with staff moderation, outbound review links, and 3D
+  Cards Stack Slider adopted instead of third-party widgets, preserving CSP and PECR privacy postures.
 - #695 needs Meta approval, inbound webhook design and phone-to-user identity; it is not
   repository-only work.
 
@@ -322,24 +323,32 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#818` (customer feedback) is BUILT AND UNVALIDATED on `feature/818-customer-feedback-reviews`
-  — not merged, not shipped.** Spec `019b550`, build `c58be72`, branched from `staging` at
-  `6e5b95d`. Do not read the sections below as though it had shipped.
-  - **`#406` is superseded and its embedded-widget premise is rejected**, which matters because the
-    board still carries `#406` as an open **High** item and a fresh Orient would otherwise re-rank
-    it into `/propose`. The decision and its full reasoning are a comment on `#406` itself; the
-    replacement is `#818`. Closing `#406` is an owner action, deliberately not taken.
-  - **The fact that killed the Google route is external and worth not re-deriving:** Google's
-    Places API terms **forbid storing or caching review content** (only the place ID may be stored
-    indefinitely; only coordinates, for 30 days). So the only compliant use is a live billed call
-    per page render, on a `force-dynamic` landing page, capped at 5 reviews. The Business Profile
-    API removes the cost and the cap but needs a Google access request measured in weeks, a
-    separate OAuth client, and per-vendor OAuth onboarding that does not fit a multi-tenant
-    platform. This is why the project builds first-party feedback and links out rather than in.
-  - **A correction to this project's own record:** `#406`'s body asserts the `Review` model has
+- **`#818` and `#406` (customer feedback and reviews) are DONE — see Last Verified above.**
+  Promoted to production via PR #822 (merge `684e828`, 2026-09-20), carrying PR #821 (feature merge)
+  and PR #823 (CardStack 3D peel animation). Both `#818` and `#406` closed and moved to `Done` in
+  Project #2. Features first-party customer feedback with signed-in submission, automatic
+  verified-purchase badge derivation from completed orders, staff moderation at `/staff/feedback`
+  (approve, reject, unapprove, bulk approve, notes), external review links management on
+  `/staff/storefront`, landing page review display, data-rights erasure and export, and hashed-IP
+  rate limiting.
+  - **`#406` is superseded and its embedded-widget premise was rejected.** Google's Places API terms
+    **forbid storing or caching review content**, requiring live billed requests on every page render;
+    linking out via `VendorReviewLink` avoids external script injection, tracking cookies, and CSP changes.
+  - **A correction to this project's own record:** `#406`'s body asserted the `Review` model has
     moderation. **It does not** — there is no status column and `features/reviews/submit-review.ts`
-    publishes on submit, so **product reviews are unmoderated in shipped code.** Found by reading
-    the schema, not the issue. Tracked as **`#819`**; `#820` carries `#818`'s two deferrals.
+    publishes on submit, so **product reviews are unmoderated in shipped code.** Tracked as **`#819`**;
+    `#820` carries `#818`'s two deferrals.
+- **`#824` (vibrant card-stack review slider upgrade) is DONE — see Last Verified above.**
+  Promoted to production via PR #826 (merge `4aab0c8`, 2026-09-20), carrying PR #825 (feature merge)
+  and PR #827 (vertical 3D depth stacking, card-click navigation, arrow button removal). Closes `#824`
+  to `Done` in Project #2. Enhances the landing page customer reviews section
+  (`components/storefront/CustomerFeedbackCards.tsx` and `components/ui/CardStack.tsx`) with a rotating
+  6-color lively pastel palette (each >= 4.5:1 contrast, WCAG AA compliant), prominent vertical 3D deck
+  arrangement (`STACK_OFFSET_Y_PX = -22`, `STACK_OFFSET_Z_PX = -35`) where background cards clearly peek
+  out above the front card, direct card-click navigation (front card advances, background cards bring to
+  front), touch drag/swipe with live tilt, accessible keyboard handling, pagination indicator pills, and
+  clean removal of arrow buttons per user refinement. Fully responsive down to 320px with zero horizontal
+  overflow.
 
 - **`#116` and `#806` (saved shopping lists + `/shop-your-list` quick-access) are DONE — see Last
   Verified/Project Position above.** Both promoted to production via PR #808 (merge `187b5eb`,
