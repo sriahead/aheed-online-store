@@ -174,3 +174,10 @@ established. Worth one look during validation rather than an assumption.
 **`FEEDBACK_CARD_LIMIT` is 12** with no pagination. A vendor with hundreds of approved reviews
 shows the newest twelve and no more. Deliberate for this slice, but it is an unstated product
 decision rather than a spec'd one.
+
+## Post-Validation Fixes
+
+### R34 — Generic CardStack docstring purity
+- **Issue:** Gate 3 validation identified that `components/ui/CardStack.tsx` contained 5 hits for `grep -in "feedback\|review\|rating" components/ui/CardStack.tsx` inside JSDoc comments explaining component decoupling and `itemLabel` examples. R34 strictly prohibits any occurrence of `feedback`, `review`, or `rating` in any casing.
+- **Fix:** Rephrased the JSDoc comments in `components/ui/CardStack.tsx` using domain-agnostic terminology ("domain-specific metrics, scores, opinions", "cards", "offers"). Verified that `git grep -in "feedback\|review\|rating" components/ui/CardStack.tsx` now returns 0 matches.
+

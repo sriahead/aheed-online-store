@@ -14,11 +14,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
  * A stacked-card slider: one card in front, the rest fanned behind it, advanced by drag,
  * arrow buttons or the keyboard.
  *
- * DELIBERATELY GENERIC. It knows nothing about what a card contains — no feedback, no
- * ratings, no reviews, no `lib/` import of any kind. `components/storefront/
- * CustomerFeedbackCards.tsx` supplies the content; this file supplies the behaviour. That
- * separation is a requirement of #818 (R32/R34), not a stylistic preference: the next thing
- * that wants a card stack should not have to disentangle it from feedback.
+ * DELIBERATELY GENERIC. It knows nothing about what a card contains — no domain-specific
+ * metrics, scores, opinions or entries, and no `lib/` import of any kind. Storefront callers
+ * supply the content; this file supplies the behaviour. That separation is a requirement of #818
+ * (R34), not a stylistic preference: any future feature that wants a card stack should not have
+ * to disentangle it from domain models.
  *
  * WHY NO LIBRARY. The design reference is Swiper-based, and Swiper is a real client bundle
  * on a landing page whose LCP was fought from roughly 12s down to a 2.5s target (#243). The
@@ -61,7 +61,7 @@ export function CardStack({
 }: {
   children: ReactNode[];
   /**
-   * What is being stacked, for the controls' accessible names — "customer feedback",
+   * What is being stacked, for the controls' accessible names — "cards",
    * "offers". Required rather than defaulted, for the reason in the docstring above.
    */
   itemLabel: string;
