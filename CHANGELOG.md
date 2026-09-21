@@ -8,11 +8,20 @@ every branch merges.
 
 ### Changed
 
-- **Clickable star ratings for product reviews replacing select dropdowns (`#841`)**:
-  - Replaces traditional rating `<select>` dropdowns in the Quick View drawer (`components/product/QuickViewDrawer.tsx`) and product details page (`features/reviews/components/ReviewForm.tsx`) with an accessible, interactive `StarRatingInput` component.
-  - Allows customers to simply click stars (1–5) to set or update their rating, with hover previews, scale animations, `motion-reduce` support, and descriptive status labels ("Poor", "Fair", "Good", "Very Good", "Excellent").
-  - Backed by an accessible `<fieldset>` with radio inputs for keyboard navigation, screen reader support, and native form data serialization.
-  - Comprehensive unit tests added in `tests/star-rating-input.test.tsx` and `tests/review-form.test.tsx`, with updated Quick View tests in `tests/quick-view.test.tsx`.
+- **Clickable star ratings with descriptive labels for product reviews, and documentation reconciliation (`#841`).**
+  - **Storefront Review UX**:
+    - Replaces traditional rating `<select>` dropdowns in the Quick View drawer (`components/product/QuickViewDrawer.tsx`) and product reviews form (`features/reviews/components/ReviewForm.tsx`) with an accessible, interactive `StarRatingInput` component.
+    - Allows customers to click stars (1–5) to set or update their rating, with hover previews, scale animations, `motion-reduce` support, and custom descriptive rating labels ("Poor", "Fair", "Good", "Very Good", "Excellent").
+    - Backed by an accessible `<fieldset>` with radio inputs overlaid directly on star icons, satisfying Chromium focusability constraints without throwing unhandled form control errors.
+    - Comprehensive unit tests added in `tests/star-rating-input.test.tsx` and `tests/review-form.test.tsx`, with updated Quick View tests in `tests/quick-view.test.tsx`.
+  - **`specs/roadmap.md`**:
+    - Adds change-log row for PR #840 shopper account upgrade promotion to production (merge `e3648bc`, 2026-09-21).
+    - Adds change-log row for `#841` clickable star ratings with descriptive labels (`specs/2026-09-21-p841-clickable-review-stars/`, PR #842 merge `d4e5c7c`, PR #843 merge `e6a6a44`).
+  - **`docs/model-handoff.md`**:
+    - Updates checkout alignment to `e6a6a44` (PR #843) on staging and `e3648bc` (PR #840) on main.
+    - Documents clickable 5-star ratings with descriptive labels live on staging across `QuickViewDrawer` and `ReviewForm`.
+    - Updates issue #841 delivery board status to In Review on Project #2.
+  - KMS index rebuilt (`ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`) and verified with `npm run sdd:audit`.
 
 - **Shopper account upgrade, loyalty/rewards integration with referrals, and documentation reconciliation (`#836`).**
   - **`specs/roadmap.md`**:
