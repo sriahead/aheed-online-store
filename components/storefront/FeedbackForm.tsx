@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { StarRatingInput } from "@/components/product/StarRatingInput";
 import { submitFeedback } from "@/features/feedback/submit-feedback";
 import {
   MAX_COMMENT_LENGTH,
@@ -16,9 +17,8 @@ import {
  * still submits and still works with JavaScript disabled — the same progressive-enhancement
  * shape as `features/reviews/submit-review.ts`'s form.
  *
- * The rating is a radio group, not a star widget with click handlers: radios are keyboard-
- * operable and screen-reader-labelled for free, and a custom star control would have to
- * rebuild both. The stars are the visual layer over a real `<input type="radio">`.
+ * The rating is an interactive star-rating input backed by accessible radio inputs under the
+ * hood for keyboard navigation and screen-reader support (reusing `StarRatingInput`).
  *
  * `existing` pre-fills the form when the customer has left feedback before. Saving replaces
  * it and sends it back to the moderation queue, which the copy below states plainly —
@@ -36,27 +36,14 @@ export function FeedbackForm({
 
   return (
     <form action={formAction} className="space-y-6">
-      <fieldset>
-        <legend className="text-sm font-semibold text-primary">Your rating</legend>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {[1, 2, 3, 4, 5].map((value) => (
-            <label
-              key={value}
-              className="flex cursor-pointer items-center gap-2 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-surface-muted has-[:checked]:border-action has-[:checked]:bg-action-tint focus-within:ring-2 focus-within:ring-action focus-within:ring-offset-2"
-            >
-              <input
-                type="radio"
-                name="rating"
-                value={value}
-                defaultChecked={existing?.rating === value}
-                required
-                className="h-4 w-4 accent-action"
-              />
-              {value} {value === 1 ? "star" : "stars"}
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      <StarRatingInput
+        key={existing?.rating ?? "new"}
+        name="rating"
+        defaultValue={existing?.rating ?? null}
+        label="Your rating"
+        labelClassName="text-sm font-semibold text-primary"
+        required
+      />
 
       <div>
         <label htmlFor="feedback-comment" className="text-sm font-semibold text-primary">
