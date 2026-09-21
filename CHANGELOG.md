@@ -8,7 +8,7 @@ every branch merges.
 
 ### Changed
 
-- **Website Feedback rating UI upgraded to match Product Feedback with clickable star ratings (`#847`).**
+- **Website Feedback clickable star ratings promoted to production (PR #849); roadmap and handoff reconciled to match (`#847`).**
   - **Storefront Feedback UX**:
     - Replaces the radio-button pill group in `components/storefront/FeedbackForm.tsx` on `/feedback` with the shared `StarRatingInput` component.
     - Provides a consistent 1–5 clickable star rating experience across both product reviews and website feedback, complete with hover previews, scale animations, and descriptive rating labels ("Poor", "Fair", "Good", "Very Good", "Excellent").
@@ -16,6 +16,13 @@ every branch merges.
     - Preserves all existing feedback functionality, comment handling, submission validation, rate limiting, and moderation workflows untouched.
   - **Automated Tests**:
     - `tests/feedback-form.test.tsx`: 5 passing tests covering default unrated render, pre-filled state, star click selection, hover preview, and form submission data serialization.
+  - **Production Promotion (PR #849)**:
+    - Promoted to `main` via PR #849 (merge `6a9db8b`, 2026-09-21) carrying PR #848 and PR #846.
+    - `deploy-production` (run `35621757768`) and `deploy-docs-internal` (run `35621757321`) succeeded; production `/api/health` confirmed live serving `6a9db8b` with `db.ok: true`. Closes #847 to `Done` on Project #2.
+  - **Documentation Reconciliation**:
+    - `specs/roadmap.md` updated with PR #848 and PR #849 rows; version bumped to 1.105.0.
+    - `docs/model-handoff.md` updated with `main` at `6a9db8b`; #847 marked as Done in production; version bumped to 1.25.0.
+    - KMS index rebuilt (`ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`) and verified with `npm run sdd:audit`.
 
 - **Clickable star ratings with descriptive labels for product reviews promoted to production (PR #845); roadmap and handoff reconciled to match (`#841`).**
   - **Storefront Review UX**:
