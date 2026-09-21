@@ -10,7 +10,7 @@ every branch merges.
 
 - **Clickable star ratings for product reviews replacing select dropdowns (`#841`)**:
   - Replaces traditional rating `<select>` dropdowns in the Quick View drawer (`components/product/QuickViewDrawer.tsx`) and product details page (`features/reviews/components/ReviewForm.tsx`) with an accessible, interactive `StarRatingInput` component.
-  - Allows customers to simply click stars (1–5) to set or update their rating, with hover previews, scale animations, `motion-reduce` support, and clear live rating status labels.
+  - Allows customers to simply click stars (1–5) to set or update their rating, with hover previews, scale animations, `motion-reduce` support, and descriptive status labels ("Poor", "Fair", "Good", "Very Good", "Excellent").
   - Backed by an accessible `<fieldset>` with radio inputs for keyboard navigation, screen reader support, and native form data serialization.
   - Comprehensive unit tests added in `tests/star-rating-input.test.tsx` and `tests/review-form.test.tsx`, with updated Quick View tests in `tests/quick-view.test.tsx`.
 
