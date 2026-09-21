@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.23.0"
+version: "1.24.0"
 updated: 2026-09-21
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,16 +40,16 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-21.
-- **Checkout:** `staging` is at **`e6a6a44`** (PR #843, "Merge pull request #843 from sriahead/feature/841-custom-rating-labels",
-  following PR #842 merge `d4e5c7c`, `feat(#841): Clickable star ratings for product reviews replacing select dropdown`).
-  `main` is at **`e3648bc`** (PR #840, "Promote shopper account upgrade, loyalty rewards integration and documentation reconciliation to production (#836)", `staging -> main`).
-  Staging carries the interactive clickable 5-star rating input (`components/product/StarRatingInput.tsx`) across both
+- **Checkout:** `main` is at **`a579781`** (PR #845, "Promote clickable star ratings with descriptive labels for product reviews to production (#841)", `staging -> main`).
+  `staging` is at **`3747b23`** (PR #844 merge, carrying docs reconciliation, before post-promotion alignment).
+  Production carries the interactive clickable 5-star rating input (`components/product/StarRatingInput.tsx`) across both
   the Quick View drawer (`components/product/QuickViewDrawer.tsx`) and product reviews form (`features/reviews/components/ReviewForm.tsx`),
   with hover previews, scale animations, `motion-reduce` support, and custom descriptive rating labels ("Poor", "Fair",
   "Good", "Very Good", "Excellent").
   Automated tests: 17 passing tests across `tests/star-rating-input.test.tsx`, `tests/quick-view.test.tsx`, and `tests/review-form.test.tsx`.
-  `deploy-staging` (runs `35569041821` and `35570157837`) succeeded; live on staging at `https://staging.aheedfoodcentre.nocaped.com`.
-  Production promotion is pending for #841. Issue #841 is in `In Review` on Project #2.
+  `deploy-production` (run `35582384583`) and `deploy-docs-internal` (run `35582384156`) succeeded; production `/api/health` confirmed live
+  serving `a579781` with `db.ok: true`.
+  **Issue #841 is CLOSED and moved to `Done` on Project #2.**
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
@@ -280,12 +280,12 @@ session in `StorefrontChrome` to eliminate unauthenticated flash, and introduced
 discount code checkout prefilling from cookie, and 100 bonus loyalty points attribution on confirmed orders. Zero DB schema
 migrations (pure relational 3NF).
 
-**`#841` (Clickable Star Ratings with Descriptive Labels for Product Reviews)** is merged to staging (PR #842, merge
-`d4e5c7c`, and PR #843, merge `e6a6a44`, 2026-09-21) and ready for production promotion. It replaces traditional rating `<select>`
-dropdowns across both `QuickViewDrawer.tsx` and `ReviewForm.tsx` with an accessible, interactive `StarRatingInput` component.
+**`#841` (Clickable Star Ratings with Descriptive Labels for Product Reviews)** was promoted to production
+(PR #845, merge `a579781`, 2026-09-21, `staging -> main`). It replaced traditional rating `<select>` dropdowns across
+both `QuickViewDrawer.tsx` and `ReviewForm.tsx` with an accessible, interactive `StarRatingInput` component.
 Customers click stars (1–5) to set or update ratings, with dynamic hover previews, keyboard navigation, semantic `<fieldset>`/`<legend>`
 structure, invisible overlaid radio inputs satisfying Chromium focusability constraints on required inputs, and descriptive rating
-labels ("Poor", "Fair", "Good", "Very Good", "Excellent"). Zero DB schema migrations.
+labels ("Poor", "Fair", "Good", "Very Good", "Excellent"). Zero DB schema migrations. Closes #841 to `Done`.
 
 
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
@@ -316,8 +316,8 @@ The live board showed open High-priority items, all with blank Complexity:
   #824 **closed → Done**, promoted to production via PR #826 (`specs/2026-09-20-p824-card-stack-reviews-upgrade/`).
 - **Shopper account upgrade and rewards integration: DONE, 2026-09-21** — #836 **closed → Done**, promoted
   to production via PR #840 (`specs/2026-09-20-p836-shopper-account-rewards/`).
-- **Clickable star ratings for product reviews: IN REVIEW on staging, 2026-09-21** — #841 merged to staging
-  via PR #842 and PR #843 (`specs/2026-09-21-p841-clickable-review-stars/`).
+- **Clickable star ratings for product reviews: DONE, 2026-09-21** — #841 **closed → Done**, promoted
+  to production via PR #845 (`specs/2026-09-21-p841-clickable-review-stars/`).
   #695 is unchanged.
 - Data activation: #697.
 - Location decision reconciliation: #422.
@@ -346,15 +346,16 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#841` (clickable star ratings with descriptive labels for product reviews) is built and merged to staging — see Last Verified above.**
-  Merged to `staging` via PR #842 (merge `d4e5c7c`, 2026-09-21) and PR #843 (merge `e6a6a44`, 2026-09-21), `specs/2026-09-21-p841-clickable-review-stars/`.
-  Replaces the product review rating `<select>` dropdown menu with an interactive, accessible 5-star rating input component (`components/product/StarRatingInput.tsx`)
-  across both the Quick View drawer (`components/product/QuickViewDrawer.tsx`) and product reviews form (`features/reviews/components/ReviewForm.tsx`).
-  Features click-to-rate (1–5), hover preview, keyboard navigation, semantic `<fieldset>` and `<legend>` structure, overlaid full-size radio inputs
-  avoiding Chromium non-focusable form control errors, and custom descriptive rating labels ("Poor", "Fair", "Good", "Very Good", "Excellent").
-  Honors `motion-reduce:hover:scale-100 motion-reduce:active:scale-100`. 17 tests passing across `tests/star-rating-input.test.tsx`,
-  `tests/quick-view.test.tsx`, and `tests/review-form.test.tsx`. Deployed and verified live on staging. #841 moved to `In Review` on Project #2;
-  closes to `Done` on promotion to `main`.
+- **`#841` (clickable star ratings with descriptive labels for product reviews) is DONE — see Last Verified above.**
+  Promoted to production via PR #845 (merge `a579781`, 2026-09-21), carrying PR #842 (feature merge), PR #843 (custom descriptive labels),
+  and PR #844 (docs-only Document (final) reconciliation). Issue #841 closed and moved to `Done` in Project #2.
+  Replaces the product review rating `<select>` dropdown menu with an interactive, accessible 5-star rating input component
+  (`components/product/StarRatingInput.tsx`) across both the Quick View drawer (`components/product/QuickViewDrawer.tsx`) and product reviews form
+  (`features/reviews/components/ReviewForm.tsx`). Features click-to-rate (1–5), hover preview, keyboard navigation, semantic `<fieldset>`
+  and `<legend>` structure, overlaid full-size radio inputs avoiding Chromium non-focusable form control errors, and custom descriptive
+  rating labels ("Poor", "Fair", "Good", "Very Good", "Excellent"). Honors `motion-reduce:hover:scale-100 motion-reduce:active:scale-100`.
+  17 tests passing across `tests/star-rating-input.test.tsx`, `tests/quick-view.test.tsx`, and `tests/review-form.test.tsx`. Deployed and
+  verified live on production (`a579781`, `db.ok: true`).
 
 - **`#818` and `#406` (customer feedback and reviews) are DONE — see Last Verified above.**
   Promoted to production via PR #822 (merge `684e828`, 2026-09-20), carrying PR #821 (feature merge)
