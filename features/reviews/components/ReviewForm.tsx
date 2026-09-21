@@ -1,7 +1,8 @@
 import { submitReview } from "../submit-review";
 import type { ReviewInput } from "@/lib/repositories/reviews";
+import { StarRatingInput } from "@/components/product/StarRatingInput";
 
-/** Plain <form action={submitReview}> — no client-side JS, matches P2's zero-client-JS pattern. */
+/** Product review form with clickable star rating and server action submission. */
 export function ReviewForm({
   productId,
   productSlug,
@@ -15,7 +16,7 @@ export function ReviewForm({
     <form
       // Server Component refreshes (via revalidatePath after submit) re-render
       // this form with new `existingReview` props but don't remount its DOM
-      // nodes — defaultValue only applies at mount, so an unkeyed <select>
+      // nodes — defaultValue only applies at mount, so an unkeyed form
       // silently keeps showing its old (pre-submit) value. Keying on the
       // review's identity forces a remount whenever it actually changes.
       key={existingReview ? `${existingReview.rating}:${existingReview.comment ?? ""}` : "new"}
@@ -24,24 +25,12 @@ export function ReviewForm({
     >
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="productSlug" value={productSlug} />
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-semibold text-primary">Your rating</span>
-        <select
-          name="rating"
-          required
-          defaultValue={existingReview?.rating ?? ""}
-          className="w-24 rounded-lg border border-black/20 px-3 py-2"
-        >
-          <option value="" disabled>
-            Select
-          </option>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-      </label>
+      <StarRatingInput
+        name="rating"
+        defaultValue={existingReview?.rating ?? null}
+        labelClassName="text-sm font-semibold text-primary"
+        required
+      />
       <label className="flex flex-col gap-1">
         <span className="text-sm font-semibold text-primary">Comment (optional)</span>
         <textarea
