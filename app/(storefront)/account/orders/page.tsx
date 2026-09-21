@@ -42,7 +42,7 @@ export default async function OrdersPage({
   });
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold text-primary">Your orders</h1>
 
       {items.length === 0 ? (

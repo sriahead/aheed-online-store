@@ -1120,7 +1120,7 @@ describe("confirmPayment / failPayment — payment binding (#429)", () => {
       },
       // reverseRedemption and releaseCodeRedemption both exit on a null lookup.
       loyaltyLedgerEntry: { findUnique: async () => null },
-      discountRedemption: { findFirst: async () => null },
+      discountRedemption: { findFirst: async () => null, findUnique: async () => null },
     };
 
     const prisma = {

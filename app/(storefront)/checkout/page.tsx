@@ -41,6 +41,7 @@ export default async function CheckoutPage() {
   const signedInUserId = (session?.user as { id?: string } | undefined)?.id ?? null;
 
   const initialPostcode = cookieStore.get(DELIVERY_POSTCODE_COOKIE)?.value ?? null;
+  const initialDiscountCode = cookieStore.get("aheed_referral_code")?.value ?? null;
 
   // #764 — a returning signed-in shopper is offered the addresses they have already confirmed,
   // rather than being made to retype one we hold. The service returns an empty list for a guest,
@@ -122,6 +123,7 @@ export default async function CheckoutPage() {
             initialPostcode={initialPostcode}
             savedAddresses={savedAddresses}
             method={fulfilmentMethod}
+            initialDiscountCode={initialDiscountCode}
           />
         </div>
 

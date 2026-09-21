@@ -8,6 +8,15 @@ every branch merges.
 
 ### Changed
 
+- **Shopper account upgrade, loyalty/rewards integration with referrals, and documentation reconciliation (`#836`).**
+  - **`specs/roadmap.md`**:
+    - Adds change-log row for PR #836 documentation reconciliation promotion (merge `8eaf21b`, 2026-09-20).
+    - Adds change-log row for `#836` shopper account upgrade and loyalty rewards integration (`specs/2026-09-20-p836-shopper-account-rewards/`, PR #837 merge `b969acd`, PR #838 merge `bec905e`).
+  - **`docs/model-handoff.md`**:
+    - Updates checkout alignment to `bec905e` (PR #838).
+    - Documents the upgraded Shopper Account hub, persistent `AccountNav` tab bar, Aheed brand-native floating rewards launcher and slide-out panel, session pre-hydration in `StorefrontChrome`, customer referral link generation, checkout discount pre-population from referral cookie, and automated bonus loyalty points attribution on completed orders.
+  - KMS index rebuilt (`ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`) and verified with `npm run sdd:audit`.
+
 - **Quick View product drawer and image carousel promoted to production (PR #834); roadmap and handoff reconciled to match (`#830`, `#832`).**
   - **`specs/roadmap.md`** gains four change-log rows: PR #829 documentation reconciliation promotion (merge `8df4efa`, 2026-09-20); `#830` Quick View product drawer slice (`specs/2026-09-20-p830-quick-view-product-drawer/`, PR #831 merge `fd79d22`); `#832` Quick View product image carousel slice (`specs/2026-09-20-p832-quick-view-image-carousel/`, PR #833 merge `d02ff8e`); and PR #834 promotion to production (merge `c18001b`, 2026-09-20). Records `#830` and `#832` as closed and Done.
   - **`docs/model-handoff.md`** reconciled with production reality: records checkout alignment at `c18001b`, documents Quick View drawer and horizontal image carousel live in production, and records `#830` and `#832` as closed and Done.
@@ -29,6 +38,16 @@ every branch merges.
   - **Preserved content and controls**: all review stars, "Verified customer" badges, comments, author names, relative dates, heading rating statistics, "Share your experience" link, and "X / total" navigation remain fully intact.
 
 ### Added
+
+- **Shopper Account Upgrade & Loyalty/Rewards Integration with Referrals (`#836`, `specs/2026-09-20-p836-shopper-account-rewards/`)**:
+  upgrades the Demo/Shopper "Your account" experience to visually match the Staff View / Store Admin layout, integrates the Loyalty & Rewards interaction into the account, adds a persistent floating Rewards launcher with a compact slide-out panel, and establishes a customer referral system.
+  - **Account Navigation Tab Bar Parity (`components/account/AccountNav.tsx`, `app/(storefront)/account/layout.tsx`)**: horizontal scrollable navigation tab bar matching Staff View's `PanelNav.tsx` with smooth chevron nudge controls and active indicator borders across Overview (`/account`), Orders (`/account/orders`), Lists (`/account/lists`), Loyalty & Rewards (`/account/loyalty`), Feedback (`/feedback`), and Data rights (`/account/data`). Standardizes all account sub-pages to `max-w-5xl px-4 py-8` container width.
+  - **Staff View Card-Grid Parity (`app/(storefront)/account/page.tsx`)**: full-width structure and spacing (`max-w-5xl px-4 py-8`) aligning "Your account" with Store Admin. Replaces the narrow vertical menu with a responsive 2-column card grid (Orders, Lists, Loyalty & Rewards, Feedback, and Data Rights) matching Staff View borders, radius (`rounded-2xl`), padding (`p-5`), typography, icons, and hover states (`hover:border-action`). Customer Name, Email, and Role displayed in a clean surface card near the top; Logout button clearly accessible below.
+  - **Upgraded Loyalty & Rewards Page (`app/(storefront)/account/loyalty/page.tsx`)**: redesigned to `max-w-5xl` layout with breadcrumb back link. Displays current points balance, cash discount value, expiration date (when inactivity expiry applies), current tier multiplier, and next tier spend progress.
+  - **Interactive Rewards Accordions & Vouchers**: adds expandable/collapsible accordions for "Ways to earn" and "Ways to redeem", plus an "Available rewards" section with unlock progress bars for grocery basket vouchers (£1, £5, £10 off).
+  - **Floating Rewards Launcher & Slide-out Panel (`components/rewards/`)**: persistent launcher pill button at `bottom-6 left-6` (`sm:bottom-8 sm:left-8`) styled in Aheed brand primary (`bg-primary text-white`). Slide-out panel styled in Aheed store branding (forest green header, white card dialog, `bg-surface-muted`, and light theme accordions/referral card). Captures incoming `?ref=...` query parameters to set the referral cookie across the storefront.
+  - **Server-Side Pre-hydration & Session Resolution (`lib/rewards-service.ts`, `components/layout/StorefrontChrome.tsx`, `app/api/rewards/route.ts`)**: pre-hydrates initial loyalty and referral data directly from the server session in `StorefrontChrome`, ensuring logged-in customers instantly see their points balance and referral link with zero loading delay or cookie-in-fetch discrepancies. Sets `Cache-Control: private, no-cache, no-store, must-revalidate` on the API route.
+  - **Customer Referral Subsystem & Points Attribution (`lib/referrals.ts`, `lib/referrals-service.ts`, `lib/repositories/orders.ts`, `lib/repositories/loyalty.ts`)**: deterministic customer referral codes (`REF-XXXXXXXX`), share links for Facebook, X, Email, and WhatsApp, and automatic checkout discount code prefilling from the referral cookie. When a referred friend's first order payment confirms, automatically awards 100 bonus loyalty points (`REFERRAL_REWARD_POINTS`) to the referrer's `LoyaltyAccount`. Protects against self-referrals and duplicate redemptions.
 
 - **Quick View product image carousel with horizontal swipe and arrows (`#832`, `specs/2026-09-20-p832-quick-view-image-carousel/`)**:
   upgrades the Quick View product drawer to display multiple product images in a compact horizontal carousel instead of stacking vertically.
