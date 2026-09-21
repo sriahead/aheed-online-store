@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.22.0"
+version: "1.23.0"
 updated: 2026-09-21
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,17 +40,16 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-21.
-- **Checkout:** `staging` is at **`bec905e`** (PR #838, "Merge pull request #838 from sriahead/feature/shopper-account-rewards-parity-fixes",
-  following PR #837 merge `b969acd`, `feature(#836)`). `main` is at **`8eaf21b`** (PR #836, "Promote Quick View
-  and carousel documentation reconciliation to production (#830, #832 docs)", `staging -> main`).
-  Staging carries the upgraded Shopper Account hub, persistent `AccountNav` tab bar matching Staff View / Store Admin,
-  Aheed brand-native floating rewards launcher and slide-out panel, session pre-hydration from Better Auth in
-  `StorefrontChrome`, customer referral link generation, checkout discount pre-population from referral cookie,
-  and automated bonus loyalty points attribution on completed orders.
-  Automated tests: 23 passing tests across `tests/account-nav.test.tsx`, `tests/referrals.test.ts`, and
-  `tests/rewards-components.test.tsx`.
-  `deploy-staging` (run `35546700793`) and `deploy-docs-internal` (run `35546700401`) succeeded; live on staging
-  at `https://staging.aheedfoodcentre.nocaped.com`. Production promotion is pending.
+- **Checkout:** `staging` is at **`e6a6a44`** (PR #843, "Merge pull request #843 from sriahead/feature/841-custom-rating-labels",
+  following PR #842 merge `d4e5c7c`, `feat(#841): Clickable star ratings for product reviews replacing select dropdown`).
+  `main` is at **`e3648bc`** (PR #840, "Promote shopper account upgrade, loyalty rewards integration and documentation reconciliation to production (#836)", `staging -> main`).
+  Staging carries the interactive clickable 5-star rating input (`components/product/StarRatingInput.tsx`) across both
+  the Quick View drawer (`components/product/QuickViewDrawer.tsx`) and product reviews form (`features/reviews/components/ReviewForm.tsx`),
+  with hover previews, scale animations, `motion-reduce` support, and custom descriptive rating labels ("Poor", "Fair",
+  "Good", "Very Good", "Excellent").
+  Automated tests: 17 passing tests across `tests/star-rating-input.test.tsx`, `tests/quick-view.test.tsx`, and `tests/review-form.test.tsx`.
+  `deploy-staging` (runs `35569041821` and `35570157837`) succeeded; live on staging at `https://staging.aheedfoodcentre.nocaped.com`.
+  Production promotion is pending for #841. Issue #841 is in `In Review` on Project #2.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
@@ -270,17 +269,24 @@ above describes (`#401`/`#402` shipped ahead of `#363`); their own zone-handling
 (`SlotPicker`'s window check, `ExpressCountdown`, `confirmPayment`'s 60-minute stamp) were not
 themselves part of `#363`'s scope and remain unverified against a genuinely non-UK vendor.
 
-**`#836` (Shopper Account Upgrade & Loyalty/Rewards Integration with Referrals)** is merged to staging
-(PR #837, merge `b969acd`, and PR #838, merge `bec905e`, 2026-09-21) and ready for production promotion.
-It upgrades the Shopper Account layout to match Staff View (`max-w-5xl px-4 py-8`, 2-column card grid,
-`hover:border-action`), adds persistent horizontal navigation tabs (`components/account/AccountNav.tsx`)
-matching `PanelNav.tsx` across all account pages and `/feedback`, integrates Loyalty & Rewards (`/account/loyalty`)
-with points/tier hero, available vouchers (£1, £5, £10 off), and referral invite, re-skins the floating
-rewards launcher and slide-out panel (`components/rewards/`) to Aheed's native brand palette (`bg-primary`,
-action green `#2e7d32`, white card dialog, `bg-surface-muted`), pre-hydrates initial rewards data from the Better Auth
-session in `StorefrontChrome` to eliminate unauthenticated flash, and introduces customer referral tracking
-(`REF-XXXXXXXX`), discount code checkout prefilling from cookie, and 100 bonus loyalty points attribution
-on confirmed orders. Zero DB schema migrations (pure relational 3NF).
+**`#836` (Shopper Account Upgrade & Loyalty/Rewards Integration with Referrals)** was promoted to production
+(PR #840, merge `e3648bc`, 2026-09-21, `staging -> main`). It upgraded the Shopper Account layout to match Staff View
+(`max-w-5xl px-4 py-8`, 2-column card grid, `hover:border-action`), added persistent horizontal navigation tabs
+(`components/account/AccountNav.tsx`) matching `PanelNav.tsx` across all account pages and `/feedback`, integrated
+Loyalty & Rewards (`/account/loyalty`) with points/tier hero, available vouchers (£1, £5, £10 off), and referral invite,
+re-skinned the floating rewards launcher and slide-out panel (`components/rewards/`) to Aheed's native brand palette
+(`bg-primary`, action green `#2e7d32`, white card dialog, `bg-surface-muted`), pre-hydrated initial rewards data from the Better Auth
+session in `StorefrontChrome` to eliminate unauthenticated flash, and introduced customer referral tracking (`REF-XXXXXXXX`),
+discount code checkout prefilling from cookie, and 100 bonus loyalty points attribution on confirmed orders. Zero DB schema
+migrations (pure relational 3NF).
+
+**`#841` (Clickable Star Ratings with Descriptive Labels for Product Reviews)** is merged to staging (PR #842, merge
+`d4e5c7c`, and PR #843, merge `e6a6a44`, 2026-09-21) and ready for production promotion. It replaces traditional rating `<select>`
+dropdowns across both `QuickViewDrawer.tsx` and `ReviewForm.tsx` with an accessible, interactive `StarRatingInput` component.
+Customers click stars (1–5) to set or update ratings, with dynamic hover previews, keyboard navigation, semantic `<fieldset>`/`<legend>`
+structure, invisible overlaid radio inputs satisfying Chromium focusability constraints on required inputs, and descriptive rating
+labels ("Poor", "Fair", "Good", "Very Good", "Excellent"). Zero DB schema migrations.
+
 
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
@@ -308,6 +314,10 @@ The live board showed open High-priority items, all with blank Complexity:
 - **Customer feedback & reviews and vibrant card-stack slider: DONE, 2026-09-20** — #818 and #406 both
   **closed → Done**, promoted to production via PR #822 (`specs/2026-09-19-p818-customer-feedback-reviews/`);
   #824 **closed → Done**, promoted to production via PR #826 (`specs/2026-09-20-p824-card-stack-reviews-upgrade/`).
+- **Shopper account upgrade and rewards integration: DONE, 2026-09-21** — #836 **closed → Done**, promoted
+  to production via PR #840 (`specs/2026-09-20-p836-shopper-account-rewards/`).
+- **Clickable star ratings for product reviews: IN REVIEW on staging, 2026-09-21** — #841 merged to staging
+  via PR #842 and PR #843 (`specs/2026-09-21-p841-clickable-review-stars/`).
   #695 is unchanged.
 - Data activation: #697.
 - Location decision reconciliation: #422.
@@ -335,6 +345,16 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **`#841` (clickable star ratings with descriptive labels for product reviews) is built and merged to staging — see Last Verified above.**
+  Merged to `staging` via PR #842 (merge `d4e5c7c`, 2026-09-21) and PR #843 (merge `e6a6a44`, 2026-09-21), `specs/2026-09-21-p841-clickable-review-stars/`.
+  Replaces the product review rating `<select>` dropdown menu with an interactive, accessible 5-star rating input component (`components/product/StarRatingInput.tsx`)
+  across both the Quick View drawer (`components/product/QuickViewDrawer.tsx`) and product reviews form (`features/reviews/components/ReviewForm.tsx`).
+  Features click-to-rate (1–5), hover preview, keyboard navigation, semantic `<fieldset>` and `<legend>` structure, overlaid full-size radio inputs
+  avoiding Chromium non-focusable form control errors, and custom descriptive rating labels ("Poor", "Fair", "Good", "Very Good", "Excellent").
+  Honors `motion-reduce:hover:scale-100 motion-reduce:active:scale-100`. 17 tests passing across `tests/star-rating-input.test.tsx`,
+  `tests/quick-view.test.tsx`, and `tests/review-form.test.tsx`. Deployed and verified live on staging. #841 moved to `In Review` on Project #2;
+  closes to `Done` on promotion to `main`.
 
 - **`#818` and `#406` (customer feedback and reviews) are DONE — see Last Verified above.**
   Promoted to production via PR #822 (merge `684e828`, 2026-09-20), carrying PR #821 (feature merge)
