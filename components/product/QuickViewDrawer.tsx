@@ -7,6 +7,7 @@ import { AlertTriangle, Eye, Loader2, X } from "lucide-react";
 import { useQuickView } from "./quick-view-context";
 import { ProductImageGallery } from "./ProductImageGallery";
 import { ProductRating } from "./ProductRating";
+import { StarRatingInput } from "./StarRatingInput";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { formatPrice } from "./format-price";
 import { deriveUnitPriceLabel, isNetContentUnit } from "./unit-price";
@@ -200,6 +201,11 @@ export function QuickViewDrawer() {
     if (!displayProduct) return;
     const form = e.currentTarget;
     const formData = new FormData(form);
+    const rating = formData.get("rating");
+    if (!rating) {
+      setReviewError("Please select a rating before submitting.");
+      return;
+    }
     setReviewError(null);
 
     startReviewTransition(async () => {
@@ -463,24 +469,11 @@ export function QuickViewDrawer() {
                         )}
                       </div>
 
-                      <label className="flex flex-col gap-1">
-                        <span className="text-xs font-semibold text-primary">Your rating</span>
-                        <select
-                          name="rating"
-                          required
-                          defaultValue={existingReview?.rating ?? ""}
-                          className="w-28 rounded-lg border border-black/20 bg-white px-3 py-2 text-sm text-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
-                        >
-                          <option value="" disabled>
-                            Select rating
-                          </option>
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <option key={n} value={n}>
-                              {n} {n === 1 ? "star" : "stars"}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                      <StarRatingInput
+                        name="rating"
+                        defaultValue={existingReview?.rating ?? null}
+                        required
+                      />
 
                       <label className="flex flex-col gap-1">
                         <span className="text-xs font-semibold text-primary">

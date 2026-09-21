@@ -8,6 +8,12 @@ every branch merges.
 
 ### Changed
 
+- **Clickable star ratings for product reviews replacing select dropdowns (`#841`)**:
+  - Replaces traditional rating `<select>` dropdowns in the Quick View drawer (`components/product/QuickViewDrawer.tsx`) and product details page (`features/reviews/components/ReviewForm.tsx`) with an accessible, interactive `StarRatingInput` component.
+  - Allows customers to simply click stars (1–5) to set or update their rating, with hover previews, scale animations, `motion-reduce` support, and clear live rating status labels.
+  - Backed by an accessible `<fieldset>` with radio inputs for keyboard navigation, screen reader support, and native form data serialization.
+  - Comprehensive unit tests added in `tests/star-rating-input.test.tsx` and `tests/review-form.test.tsx`, with updated Quick View tests in `tests/quick-view.test.tsx`.
+
 - **Shopper account upgrade, loyalty/rewards integration with referrals, and documentation reconciliation (`#836`).**
   - **`specs/roadmap.md`**:
     - Adds change-log row for PR #836 documentation reconciliation promotion (merge `8eaf21b`, 2026-09-20).
