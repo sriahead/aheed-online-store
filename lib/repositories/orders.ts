@@ -23,6 +23,7 @@ import {
 } from "@/lib/order-status";
 import { Prisma } from "@prisma/client";
 import {
+  awardReferralBonusPoints,
   earnPoints,
   getLoyaltyConfig,
   getTiers,
@@ -32,6 +33,7 @@ import {
   spendPoints,
   windowSpendPence,
 } from "@/lib/repositories/loyalty";
+import { extractReferrerUserId, REFERRAL_REWARD_POINTS } from "@/lib/referrals";
 import {
   DiscountClaimError,
   claimCode,
@@ -1775,6 +1777,18 @@ export async function confirmPayment(
       tiers,
       windowSpendPence: windowSpend,
     });
+
+    // Credit referral bonus points to the referrer if a referral discount code was redeemed
+    const discountRedemption = await tx.discountRedemption.findUnique({
+      where: { orderId: order.id },
+      include: { code: true },
+    });
+    if (discountRedemption?.code?.code?.startsWith("REF-")) {
+      const referrerUserId = extractReferrerUserId(discountRedemption.code.description);
+      if (referrerUserId && referrerUserId !== order.userId) {
+        await awardReferralBonusPoints(tx, order.vendorId, referrerUserId, REFERRAL_REWARD_POINTS);
+      }
+    }
 
     return { ok: true as const };
   });

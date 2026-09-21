@@ -65,53 +65,55 @@ export function RewardsPanel({
       role="dialog"
       aria-modal="true"
       aria-label="Loyalty and Rewards"
-      className="fixed bottom-20 left-4 z-50 sm:bottom-24 sm:left-8 w-[360px] max-w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto rounded-3xl bg-[#1c1c1e] text-white shadow-2xl border border-white/10 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+      className="fixed bottom-20 left-4 z-50 sm:bottom-24 sm:left-8 w-[360px] max-w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto rounded-3xl bg-white text-primary shadow-2xl border border-black/10 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
     >
-      {/* Yellow/Amber Brand Header matching the reference screenshot */}
-      <div className="bg-[#facc15] text-stone-900 p-6 rounded-t-3xl relative">
+      {/* Brand Header matching Aheed Food Centre identity */}
+      <div className="bg-primary text-white p-6 rounded-t-3xl relative">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-900 text-[#facc15]">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 text-amber-300">
               <Sparkles className="h-4 w-4" aria-hidden="true" />
             </span>
-            <span className="text-xs font-black tracking-wider uppercase">Aheed Club</span>
+            <span className="text-xs font-black tracking-wider uppercase text-white">
+              Aheed Club
+            </span>
           </div>
 
           <button
             type="button"
             onClick={onClose}
             aria-label="Close rewards panel"
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-900/10 hover:bg-stone-900/20 text-stone-900 transition"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-white transition"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
+          <p className="text-xs font-semibold uppercase tracking-wide text-white/80">
             {authenticated ? "Your Loyalty Points" : "Loyalty Rewards"}
           </p>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-4xl font-extrabold tracking-tight">
+            <span className="text-4xl font-extrabold tracking-tight text-white">
               {authenticated ? balancePoints : 0}
             </span>
-            <span className="text-sm font-semibold opacity-75">points</span>
+            <span className="text-sm font-semibold text-white/80">points</span>
           </div>
 
           {authenticated && expiryDate && (
-            <div className="mt-2.5 inline-flex items-center rounded-md bg-stone-900/15 px-2.5 py-1 text-[11px] font-medium text-stone-900">
+            <div className="mt-2.5 inline-flex items-center rounded-md bg-white/15 px-2.5 py-1 text-[11px] font-medium text-white">
               Expiration date: {expiryDate}
             </div>
           )}
 
           {authenticated && !expiryDate && balancePoints > 0 && (
-            <div className="mt-2.5 inline-flex items-center rounded-md bg-stone-900/15 px-2.5 py-1 text-[11px] font-medium text-stone-900">
+            <div className="mt-2.5 inline-flex items-center rounded-md bg-white/15 px-2.5 py-1 text-[11px] font-medium text-white">
               Points active
             </div>
           )}
 
           {tier && (
-            <div className="mt-2 text-xs font-medium text-stone-800">
+            <div className="mt-2 text-xs font-medium text-white/90">
               Tier: <strong>{tier.name}</strong> (
               {((tier.multiplierBps ?? 10000) / 10000).toFixed(2)}× points)
             </div>
@@ -121,13 +123,13 @@ export function RewardsPanel({
             <div className="mt-3 flex items-center gap-2">
               <Link
                 href="/login"
-                className="rounded-lg bg-stone-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-stone-800 transition"
+                className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-primary hover:bg-stone-100 transition"
               >
                 Sign in
               </Link>
               <Link
                 href="/register"
-                className="rounded-lg border border-stone-900/30 px-3 py-1.5 text-xs font-semibold text-stone-900 hover:bg-stone-900/10 transition"
+                className="rounded-lg border border-white/40 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/10 transition"
               >
                 Create account
               </Link>
@@ -136,20 +138,20 @@ export function RewardsPanel({
         </div>
       </div>
 
-      {/* Main Panel Content */}
-      <div className="p-4 space-y-3">
+      {/* Main Panel Content matching store surface aesthetics */}
+      <div className="p-4 space-y-3 bg-surface-muted/50">
         {/* Accordions */}
         <div className="space-y-2">
           <WaysToEarnAccordion
             pointsPerPoundEarned={pointsPerPoundEarned}
             rewardPoints={rewardPoints}
-            variant="dark"
+            variant="light"
           />
 
           <WaysToRedeemAccordion
             pencePerPointRedeemed={pencePerPointRedeemed}
             minRedeemPoints={minRedeemPoints}
-            variant="dark"
+            variant="light"
           />
         </div>
 
@@ -160,7 +162,7 @@ export function RewardsPanel({
           completedCount={referralsCompleted}
           discountOffPence={discountOffPence}
           rewardPoints={rewardPoints}
-          variant="dark"
+          variant="light"
           authenticated={authenticated}
         />
 
@@ -169,7 +171,7 @@ export function RewardsPanel({
           <Link
             href="/account/loyalty"
             onClick={onClose}
-            className="text-xs text-amber-400 hover:underline font-medium"
+            className="text-xs text-action hover:underline font-semibold"
           >
             View full loyalty account details →
           </Link>

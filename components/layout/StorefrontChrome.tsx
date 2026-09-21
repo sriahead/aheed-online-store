@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { headers } from "next/headers";
+import { getAuth } from "@/lib/auth";
+import { getRewardsDataForUser } from "@/lib/rewards-service";
 import { Header } from "@/components/layout/Header";
 import { FloatingContact } from "@/components/layout/FloatingContact";
 import { CookieBanner } from "@/components/consent/CookieBanner";
@@ -14,14 +17,8 @@ import type { VendorProfile } from "@/lib/repositories/vendor";
  * vendor's brand tokens. Extracted out of `app/(storefront)/layout.tsx` so
  * `app/(landing)/layout.tsx` can render the identical chrome for `/` while
  * passing `isLanding={true}` into `Header`, without duplicating any markup.
- *
- * Two route groups exist (rather than one layout deriving landing-ness from
- * the request) because a layout cannot see which page it wraps, and the
- * previous fix for that — a root `proxy.ts` — cannot be built for Cloudflare
- * Workers on this project's pinned `@opennextjs/cloudflare`. See
- * `specs/architecture.md` §2.1.
  */
-export function StorefrontChrome({
+export async function StorefrontChrome({
   children,
   profile,
   isLanding,
@@ -30,6 +27,13 @@ export function StorefrontChrome({
   profile: VendorProfile;
   isLanding: boolean;
 }) {
+  const requestHeaders = await headers();
+  const session = await (await getAuth()).api.getSession({ headers: requestHeaders });
+  const host = requestHeaders.get("host") ?? "staging.aheedfoodcentre.nocaped.com";
+  const proto = requestHeaders.get("x-forwarded-proto") ?? "https";
+  const baseUrl = `${proto}://${host}`;
+  const initialRewardsData = await getRewardsDataForUser(session?.user?.id ?? null, baseUrl);
+
   return (
     <QuickViewProvider>
       <div style={brandStyle(profile.primitives)} className="flex min-h-screen flex-col">
@@ -58,7 +62,7 @@ export function StorefrontChrome({
         />
         <CookieBanner />
         <QuickViewDrawer />
-        <RewardsLauncher />
+        <RewardsLauncher initialData={initialRewardsData} />
       </div>
     </QuickViewProvider>
   );

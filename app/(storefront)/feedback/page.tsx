@@ -5,6 +5,7 @@ import { getCustomerFeedbackRepository } from "@/lib/customer-feedback-service";
 import { getVendorReviewLinkRepository } from "@/lib/vendor-review-links-service";
 import { FeedbackForm } from "@/components/storefront/FeedbackForm";
 import { ReviewLinkGroup } from "@/components/storefront/CustomerFeedbackCards";
+import { AccountNav } from "@/components/account/AccountNav";
 
 /**
  * Where a customer leaves feedback about the shop (P9.2, #818).
@@ -53,28 +54,31 @@ export default async function FeedbackPage() {
   const existing = await getCustomerFeedbackRepository().getOwn(session.user.id);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-10">
-      <h1 className="text-2xl font-bold text-primary">Share your feedback</h1>
-      <p className="mt-2 text-sm text-primary-muted">
-        Tell us how we did. Every review is read by our team before it appears on the site.
-      </p>
-
-      {existing && (
-        <p
-          role="status"
-          className="mt-5 rounded-lg border border-black/10 bg-surface-muted px-4 py-3 text-sm text-primary"
-        >
-          {STATUS_COPY[existing.status] ?? ""} Editing it below replaces what you sent before and
-          sends it back to us to check.
+    <>
+      <AccountNav />
+      <main className="mx-auto w-full max-w-2xl px-4 py-10">
+        <h1 className="text-2xl font-bold text-primary">Share your feedback</h1>
+        <p className="mt-2 text-sm text-primary-muted">
+          Tell us how we did. Every review is read by our team before it appears on the site.
         </p>
-      )}
 
-      <div className="mt-6">
-        <FeedbackForm existing={existing} />
-      </div>
+        {existing && (
+          <p
+            role="status"
+            className="mt-5 rounded-lg border border-black/10 bg-surface-muted px-4 py-3 text-sm text-primary"
+          >
+            {STATUS_COPY[existing.status] ?? ""} Editing it below replaces what you sent before and
+            sends it back to us to check.
+          </p>
+        )}
 
-      <ExternalInvite />
-    </main>
+        <div className="mt-6">
+          <FeedbackForm existing={existing} />
+        </div>
+
+        <ExternalInvite />
+      </main>
+    </>
   );
 }
 

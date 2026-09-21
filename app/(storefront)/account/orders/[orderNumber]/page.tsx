@@ -38,7 +38,7 @@ export default async function AccountOrderPage({
   if (!order) notFound();
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <div className="mb-4 flex items-center justify-between">
         <Link
           href="/account/orders"

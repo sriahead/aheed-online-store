@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   generateReferralCode,
   extractReferralPrefix,
+  extractReferrerUserId,
   isSelfReferral,
   isUsersOwnReferralCode,
   buildReferralUrl,
@@ -22,6 +23,14 @@ describe("referral rules and helpers", () => {
     expect(extractReferralPrefix("ref-abc12345")).toBe("ABC12345");
     expect(extractReferralPrefix("INVALID")).toBeNull();
     expect(extractReferralPrefix("")).toBeNull();
+  });
+
+  it("extracts referrer user id from discount code description", () => {
+    expect(extractReferrerUserId("Referral from user usr_abc123")).toBe("usr_abc123");
+    expect(extractReferrerUserId("Referral from user   usr_999  ")).toBe("usr_999");
+    expect(extractReferrerUserId("Different description")).toBeNull();
+    expect(extractReferrerUserId("")).toBeNull();
+    expect(extractReferrerUserId(null)).toBeNull();
   });
 
   it("detects self-referrals", () => {
