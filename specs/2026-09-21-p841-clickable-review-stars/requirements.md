@@ -10,7 +10,7 @@ R3. A new component `components/product/StarRatingInput.tsx` is created, providi
 
 R4. Hovering over any star illuminates stars 1 through the hovered star with full amber fill/text, reverting to the selected rating upon mouse leave.
 
-R5. Clicking a star immediately sets or updates the selected rating (1–5) and updates the dynamic rating indicator label (e.g. "Select rating", "1 star", "5 stars").
+R5. Clicking a star immediately sets or updates the selected rating (1–5) and updates the dynamic rating indicator label (e.g. "Select rating", "Poor", "Fair", "Good", "Very Good", "Excellent").
 
 R6. The control is backed by an accessible `<fieldset>` with `<legend>` and hidden radio inputs, supporting keyboard navigation (Arrow keys / Tab), screen reader labels, and standard form data serialization (`formData.get("rating")`).
 

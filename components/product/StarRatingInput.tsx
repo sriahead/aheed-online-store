@@ -14,7 +14,16 @@ export interface StarRatingInputProps {
   labelClassName?: string;
   size?: "sm" | "md" | "lg";
   className?: string;
+  ratingLabels?: Record<number, string>;
 }
+
+export const DEFAULT_RATING_LABELS: Record<number, string> = {
+  1: "Poor",
+  2: "Fair",
+  3: "Good",
+  4: "Very Good",
+  5: "Excellent",
+};
 
 const STAR_SIZES = {
   sm: "h-5 w-5",
@@ -27,7 +36,7 @@ const STAR_SIZES = {
  *
  * Uses accessible radio inputs under the hood for keyboard navigation (arrows/Tab),
  * screen-reader support, and zero-JS form serialization, with an interactive
- * hover/click visual layer.
+ * hover/click visual layer and descriptive labels (Poor, Fair, Good, Very Good, Excellent).
  */
 export function StarRatingInput({
   name = "rating",
@@ -40,6 +49,7 @@ export function StarRatingInput({
   labelClassName = "text-xs font-semibold text-primary",
   size = "md",
   className = "",
+  ratingLabels = DEFAULT_RATING_LABELS,
 }: StarRatingInputProps) {
   const [internalRating, setInternalRating] = useState<number>(defaultValue ?? 0);
   const [hoveredRating, setHoveredRating] = useState<number>(0);
@@ -87,7 +97,7 @@ export function StarRatingInput({
                   onChange={() => handleSelect(star)}
                   required={required}
                   disabled={disabled}
-                  aria-label={`${star} ${star === 1 ? "star" : "stars"}`}
+                  aria-label={`${star} ${star === 1 ? "star" : "stars"} - ${ratingLabels[star] ?? ""}`}
                   className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                 />
                 <Star
@@ -102,9 +112,10 @@ export function StarRatingInput({
             );
           })}
         </div>
-        <span className="text-xs font-medium text-primary-muted min-w-[70px]" aria-live="polite">
+        <span className="text-xs font-medium text-primary-muted min-w-[75px]" aria-live="polite">
           {activeRating > 0
-            ? `${activeRating} ${activeRating === 1 ? "star" : "stars"}`
+            ? (ratingLabels[activeRating] ??
+              `${activeRating} ${activeRating === 1 ? "star" : "stars"}`)
             : "Select rating"}
         </span>
       </div>

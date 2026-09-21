@@ -16,11 +16,11 @@ describe("ReviewForm", () => {
     expect(screen.getByText("Your rating")).toBeTruthy();
     expect(screen.getByText("Select rating")).toBeTruthy();
 
-    const star4 = screen.getByRole("radio", { name: "4 stars" });
+    const star4 = screen.getByRole("radio", { name: /4 stars/ });
     fireEvent.click(star4);
 
     expect((star4 as HTMLInputElement).checked).toBe(true);
-    expect(screen.getByText("4 stars")).toBeTruthy();
+    expect(screen.getByText("Very Good")).toBeTruthy();
   });
 
   it("pre-fills existing rating and allows updating it", () => {
@@ -35,14 +35,14 @@ describe("ReviewForm", () => {
       />,
     );
 
-    expect(screen.getByText("3 stars")).toBeTruthy();
-    const star3 = screen.getByRole("radio", { name: "3 stars" });
+    expect(screen.getByText("Good")).toBeTruthy();
+    const star3 = screen.getByRole("radio", { name: /3 stars/ });
     expect((star3 as HTMLInputElement).checked).toBe(true);
 
-    const star5 = screen.getByRole("radio", { name: "5 stars" });
+    const star5 = screen.getByRole("radio", { name: /5 stars/ });
     fireEvent.click(star5);
 
     expect((star5 as HTMLInputElement).checked).toBe(true);
-    expect(screen.getByText("5 stars")).toBeTruthy();
+    expect(screen.getByText("Excellent")).toBeTruthy();
   });
 });
