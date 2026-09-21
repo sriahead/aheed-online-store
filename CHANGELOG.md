@@ -8,6 +8,15 @@ every branch merges.
 
 ### Changed
 
+- **Website Feedback rating UI upgraded to match Product Feedback with clickable star ratings (`#847`).**
+  - **Storefront Feedback UX**:
+    - Replaces the radio-button pill group in `components/storefront/FeedbackForm.tsx` on `/feedback` with the shared `StarRatingInput` component.
+    - Provides a consistent 1–5 clickable star rating experience across both product reviews and website feedback, complete with hover previews, scale animations, and descriptive rating labels ("Poor", "Fair", "Good", "Very Good", "Excellent").
+    - Pre-fills existing rating and descriptive label when editing an existing submission (`defaultValue={existing?.rating ?? null}`).
+    - Preserves all existing feedback functionality, comment handling, submission validation, rate limiting, and moderation workflows untouched.
+  - **Automated Tests**:
+    - `tests/feedback-form.test.tsx`: 5 passing tests covering default unrated render, pre-filled state, star click selection, hover preview, and form submission data serialization.
+
 - **Clickable star ratings with descriptive labels for product reviews promoted to production (PR #845); roadmap and handoff reconciled to match (`#841`).**
   - **Storefront Review UX**:
     - Replaces traditional rating `<select>` dropdowns in the Quick View drawer (`components/product/QuickViewDrawer.tsx`) and product reviews form (`features/reviews/components/ReviewForm.tsx`) with an accessible, interactive `StarRatingInput` component.
