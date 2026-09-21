@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { Gift, X } from "lucide-react";
 import { RewardsPanel, type RewardsData } from "@/components/rewards/RewardsPanel";
 
-export function RewardsLauncher() {
+export function RewardsLauncher({ initialData }: { initialData?: RewardsData | null }) {
   const [open, setOpen] = useState(false);
-  const [rewardsData, setRewardsData] = useState<RewardsData | null>(null);
+  const [overrideData, setOverrideData] = useState<RewardsData | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const rewardsData = overrideData ?? initialData ?? null;
 
   // Capture ?ref=... parameter from URL if present and persist in a cookie
   useEffect(() => {
@@ -22,17 +24,20 @@ export function RewardsLauncher() {
     }
   }, []);
 
-  // Fetch rewards data when opened or lazily
+  // Fetch rewards data when opened if not already present
   useEffect(() => {
     let ignore = false;
     async function loadData() {
       try {
         setLoading(true);
-        const res = await fetch("/api/rewards");
+        const res = await fetch("/api/rewards", {
+          cache: "no-store",
+          credentials: "include",
+        });
         if (res.ok) {
           const json = (await res.json()) as RewardsData;
           if (!ignore) {
-            setRewardsData(json);
+            setOverrideData(json);
           }
         }
       } catch {
@@ -60,17 +65,17 @@ export function RewardsLauncher() {
           aria-expanded={open}
           aria-label={open ? "Close rewards panel" : "Open rewards and loyalty panel"}
           title={open ? "Close rewards" : "Rewards"}
-          className={`flex items-center gap-2 rounded-full font-bold shadow-[0_8px_30px_rgb(0,0,0,0.25)] transition-all duration-200 hover:scale-105 motion-reduce:hover:scale-100 ${
+          className={`flex items-center gap-2 rounded-full font-bold shadow-[0_8px_30px_rgb(0,0,0,0.25)] border border-white/20 transition-all duration-200 hover:scale-105 motion-reduce:hover:scale-100 ${
             open
-              ? "h-12 w-12 justify-center bg-[#facc15] text-stone-900 hover:bg-[#eab308]"
-              : "bg-[#facc15] px-4 py-3 text-sm text-stone-900 hover:bg-[#eab308]"
+              ? "h-12 w-12 justify-center bg-primary text-white hover:bg-primary/90"
+              : "bg-primary px-4 py-3 text-sm text-white hover:bg-primary/90"
           }`}
         >
           {open ? (
             <X className="h-5 w-5" aria-hidden="true" />
           ) : (
             <>
-              <Gift className="h-4 w-4" aria-hidden="true" />
+              <Gift className="h-4 w-4 text-amber-300" aria-hidden="true" />
               <span>Rewards</span>
             </>
           )}

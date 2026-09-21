@@ -335,6 +335,50 @@ export async function earnPoints(
 }
 
 /**
+ * Award referral bonus points to a referrer's loyalty account upon a referred
+ * friend's successful qualifying order payment confirmation.
+ *
+ * Direct write to LoyaltyAccount inside confirmPayment's interactive transaction.
+ */
+export async function awardReferralBonusPoints(
+  tx: AnyDb,
+  vendorId: string,
+  referrerUserId: string,
+  points: number,
+  now: Date = new Date(),
+): Promise<number> {
+  if (points <= 0) return 0;
+
+  const existing = await tx.loyaltyAccount.findUnique({
+    where: { vendorId_userId: { vendorId, userId: referrerUserId } },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    await tx.loyaltyAccount.create({
+      data: {
+        vendorId,
+        userId: referrerUserId,
+        balancePoints: points,
+        lifetimePoints: points,
+        lastActivityAt: now,
+      },
+    });
+  } else {
+    await tx.loyaltyAccount.update({
+      where: { vendorId_userId: { vendorId, userId: referrerUserId } },
+      data: {
+        balancePoints: { increment: points },
+        lifetimePoints: { increment: points },
+        lastActivityAt: now,
+      },
+    });
+  }
+
+  return points;
+}
+
+/**
  * Give back points held by an order that is being cancelled. Call INSIDE
  * `releaseOrder`'s transaction.
  *

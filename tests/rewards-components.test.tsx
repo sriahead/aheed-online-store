@@ -6,6 +6,7 @@ import { WaysToRedeemAccordion } from "@/components/rewards/WaysToRedeemAccordio
 import { ReferralCard } from "@/components/rewards/ReferralCard";
 import { AvailableRewardsSection } from "@/components/rewards/AvailableRewardsSection";
 import { RewardsPanel } from "@/components/rewards/RewardsPanel";
+import { RewardsLauncher } from "@/components/rewards/RewardsLauncher";
 
 afterEach(cleanup);
 
@@ -135,5 +136,46 @@ describe("RewardsPanel", () => {
   it("does not render when open is false", () => {
     const { container } = render(<RewardsPanel open={false} onClose={vi.fn()} data={null} />);
     expect(container.firstChild).toBeNull();
+  });
+});
+
+describe("RewardsLauncher", () => {
+  it("renders launcher button with Aheed branding and opens panel with initialData", () => {
+    render(
+      <RewardsLauncher
+        initialData={{
+          authenticated: true,
+          loyaltyEnabled: true,
+          balancePoints: 100419,
+          expiryDate: null,
+          pointsPerPoundEarned: 1,
+          pencePerPointRedeemed: 1,
+          minRedeemPoints: 100,
+          tier: null,
+          referralCode: "REF-DEMO1234",
+          referralsCompleted: 3,
+          referralUrl: "https://staging.aheedfoodcentre.nocaped.com/?ref=REF-DEMO1234",
+          discountOffPence: 500,
+          rewardPoints: 100,
+        }}
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: /open rewards and loyalty panel/i });
+    expect(button).toBeTruthy();
+    expect(button.className).toContain("bg-primary");
+    expect(button.className).toContain("text-white");
+
+    // Click to open panel
+    fireEvent.click(button);
+
+    // Initial data should immediately be rendered without 0 points flash
+    expect(screen.getByText("Your Loyalty Points")).toBeTruthy();
+    expect(screen.getByText("100419")).toBeTruthy();
+    expect(screen.getByText("Points active")).toBeTruthy();
+    expect(screen.getByText("3 referrals completed")).toBeTruthy();
+    expect(
+      screen.getByText("https://staging.aheedfoodcentre.nocaped.com/?ref=REF-DEMO1234"),
+    ).toBeTruthy();
   });
 });

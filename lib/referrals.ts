@@ -33,6 +33,20 @@ export function extractReferralPrefix(code: string): string | null {
 }
 
 /**
+ * Extract the referrer user ID from a referral discount code's description string.
+ * Example: "Referral from user usr_12345" -> "usr_12345"
+ */
+export function extractReferrerUserId(description: string | null | undefined): string | null {
+  if (!description || typeof description !== "string") return null;
+  const prefix = "Referral from user ";
+  if (description.startsWith(prefix)) {
+    const id = description.slice(prefix.length).trim();
+    return id.length > 0 ? id : null;
+  }
+  return null;
+}
+
+/**
  * Check if a referral attempt is a self-referral.
  * Self-referrals are refused to protect reward integrity.
  */

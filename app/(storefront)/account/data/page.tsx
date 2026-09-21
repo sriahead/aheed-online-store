@@ -37,7 +37,7 @@ export default async function AccountDataPage() {
   ]);
 
   return (
-    <main className="mx-auto max-w-sm px-4 py-8">
+    <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold text-primary">Your data</h1>
 
       <section className="mb-6 rounded-2xl border border-black/10 bg-surface-muted p-5">

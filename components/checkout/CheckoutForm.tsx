@@ -38,6 +38,7 @@ export function CheckoutForm({
   timezone,
   method,
   savedAddresses = [],
+  initialDiscountCode,
 }: {
   signedInEmail: string | null;
   /**
@@ -73,6 +74,7 @@ export function CheckoutForm({
    * shopper did not choose is how an order goes to last year's flat.
    */
   savedAddresses?: CustomerAddressRow[];
+  initialDiscountCode?: string | null;
 }) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
   const [, startMethodTransition] = useTransition();
@@ -582,6 +584,7 @@ export function CheckoutForm({
           <input
             id="discountCode"
             name="discountCode"
+            defaultValue={initialDiscountCode ?? undefined}
             autoCapitalize="characters"
             autoComplete="off"
             spellCheck={false}

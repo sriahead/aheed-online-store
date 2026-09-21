@@ -28,7 +28,7 @@ export default async function AccountListsPage() {
   const lists = await getShoppingListService().list();
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <Link
         href="/account"
         className="mb-4 inline-flex items-center gap-1 text-sm text-primary-muted hover:text-primary"

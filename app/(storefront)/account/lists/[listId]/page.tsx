@@ -54,7 +54,7 @@ export default async function SavedListPage({ params }: { params: Promise<{ list
   const resolved = resolveLines(lines, candidates, aliases);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6">
+    <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <Link
         href="/account/lists"
         className="mb-4 inline-flex items-center gap-1 text-sm text-primary-muted hover:text-primary"
