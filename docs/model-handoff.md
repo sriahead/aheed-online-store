@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.21.0"
-updated: 2026-09-20
+version: "1.22.0"
+updated: 2026-09-21
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,15 +39,18 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-20.
-- **Checkout:** `staging` and `main` are **aligned at `c18001b`** (PR #834, "Promote Quick View product
-  drawer and image carousel to production (#830, #832)", `staging -> main`). This promotion carried
-  PR #831 (Quick View product drawer replacing drill-down navigation, `#830`) and PR #833 (Quick View
-  product image carousel with horizontal swipe and arrows, `#832`). Preceding this was PR #829
-  (merge `8df4efa`, 2026-09-20) reconciling docs, and PR #826 (merge `4aab0c8`, 2026-09-20), promoting
-  the vibrant card-stack review slider (`#824`). **`#830` and `#832` are DONE** — both closed on their
-  `main` merge, their Project #2 items auto-moved to `Done`. `deploy-production` (run `35523515823`)
-  succeeded; production `/api/health` confirmed live serving `c18001b` with `db.ok: true`.
+- **Date:** 2026-09-21.
+- **Checkout:** `staging` is at **`bec905e`** (PR #838, "Merge pull request #838 from sriahead/feature/shopper-account-rewards-parity-fixes",
+  following PR #837 merge `b969acd`, `feature(#836)`). `main` is at **`8eaf21b`** (PR #836, "Promote Quick View
+  and carousel documentation reconciliation to production (#830, #832 docs)", `staging -> main`).
+  Staging carries the upgraded Shopper Account hub, persistent `AccountNav` tab bar matching Staff View / Store Admin,
+  Aheed brand-native floating rewards launcher and slide-out panel, session pre-hydration from Better Auth in
+  `StorefrontChrome`, customer referral link generation, checkout discount pre-population from referral cookie,
+  and automated bonus loyalty points attribution on completed orders.
+  Automated tests: 23 passing tests across `tests/account-nav.test.tsx`, `tests/referrals.test.ts`, and
+  `tests/rewards-components.test.tsx`.
+  `deploy-staging` (run `35546700793`) and `deploy-docs-internal` (run `35546700401`) succeeded; live on staging
+  at `https://staging.aheedfoodcentre.nocaped.com`. Production promotion is pending.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
@@ -266,6 +269,18 @@ High-Priority Work above. This finally resolves the sequencing gap the P10 Deliv
 above describes (`#401`/`#402` shipped ahead of `#363`); their own zone-handling paths
 (`SlotPicker`'s window check, `ExpressCountdown`, `confirmPayment`'s 60-minute stamp) were not
 themselves part of `#363`'s scope and remain unverified against a genuinely non-UK vendor.
+
+**`#836` (Shopper Account Upgrade & Loyalty/Rewards Integration with Referrals)** is merged to staging
+(PR #837, merge `b969acd`, and PR #838, merge `bec905e`, 2026-09-21) and ready for production promotion.
+It upgrades the Shopper Account layout to match Staff View (`max-w-5xl px-4 py-8`, 2-column card grid,
+`hover:border-action`), adds persistent horizontal navigation tabs (`components/account/AccountNav.tsx`)
+matching `PanelNav.tsx` across all account pages and `/feedback`, integrates Loyalty & Rewards (`/account/loyalty`)
+with points/tier hero, available vouchers (£1, £5, £10 off), and referral invite, re-skins the floating
+rewards launcher and slide-out panel (`components/rewards/`) to Aheed's native brand palette (`bg-primary`,
+action green `#2e7d32`, white card dialog, `bg-surface-muted`), pre-hydrates initial rewards data from the Better Auth
+session in `StorefrontChrome` to eliminate unauthenticated flash, and introduces customer referral tracking
+(`REF-XXXXXXXX`), discount code checkout prefilling from cookie, and 100 bonus loyalty points attribution
+on confirmed orders. Zero DB schema migrations (pure relational 3NF).
 
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
