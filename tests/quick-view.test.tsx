@@ -168,6 +168,34 @@ describe("QuickViewDrawer", () => {
     });
   });
 
+  it("allows selecting a star rating by clicking stars (1–5)", async () => {
+    render(
+      <QuickViewProvider>
+        <TestComponent />
+      </QuickViewProvider>,
+    );
+
+    fireEvent.click(screen.getByText("Open Quick View"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Your rating")).toBeTruthy();
+      expect(screen.getByText("Select rating")).toBeTruthy();
+    });
+
+    const star4 = screen.getByRole("radio", { name: /4 stars/ });
+    fireEvent.click(star4);
+
+    expect((star4 as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByText("Very Good")).toBeTruthy();
+
+    // Click to update rating to 5 stars
+    const star5 = screen.getByRole("radio", { name: /5 stars/ });
+    fireEvent.click(star5);
+
+    expect((star5 as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByText("Excellent")).toBeTruthy();
+  });
+
   it("shows login link when user is not signed in", async () => {
     vi.stubGlobal(
       "fetch",
