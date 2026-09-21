@@ -1779,7 +1779,7 @@ export async function confirmPayment(
     });
 
     // Credit referral bonus points to the referrer if a referral discount code was redeemed
-    const discountRedemption = await tx.discountRedemption.findUnique({
+    const discountRedemption = await tx.discountRedemption?.findFirst({
       where: { orderId: order.id },
       include: { code: true },
     });
