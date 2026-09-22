@@ -8,6 +8,9 @@ every branch merges.
 
 ### Added
 
+- **KMS Navigation Categories (#851)**
+  - Updated kms:assemble:internal to construct folders per DocType, so that the Nextra KMS UI renders a categorized left navigation sidebar instead of a flat list.
+
 - **KMS Restructuring Pilot (Orders, Fulfilment & Payment Exceptions) (#851)**
   - Synthesized scattered historical specifications (`specs/`) into a single canonical operational runbook (`docs/operations-research/order-fulfilment-core.md`).
   - Added source-to-destination ledger and working register entries tracking unresolved defects (e.g. `#795` for cancelled order revenue).
