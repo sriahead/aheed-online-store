@@ -1,14 +1,3 @@
----
-id: 2026-09-12-staff-panel-operability-val
-title: Validation
-audience: [dev]
-type: spec
-status: approved
-version: "1.0.0"
-updated: 2026-09-12
-visibility: internal
-summary: "Validation for staff panel operability and search synonyms"
----
 # Validation: Staff Panel Operability & Search Synonyms
 
 Run against local preview (`npm run preview`) to ensure Workers boundaries and isolate behaviors are enforced.

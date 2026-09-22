@@ -1,15 +1,3 @@
-﻿---
-id: 2026-08-21-p8-storefront-branding-webp-validation
-title: Storefront Branding & WebP Compression Validation
-summary: Validation steps for the vendor branding admin UI and WebP compression.
-audience: [dev]
-type: spec
-version: 1.0.0
-updated: 2026-08-21
-status: approved
-visibility: internal
----
-
 # Validation
 
 | Step | Action | Expected Result |
