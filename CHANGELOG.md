@@ -6,6 +6,19 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **KMS strategy standard, restructuring pilot and navigation categories promoted to production (PR #858); roadmap and handoff reconciled to match.**
+  - Promoted to `main` via PR #858 (merge `2047d0a`, 2026-09-22), carrying PR #852 (`#851` pilot), PR #853 (nav categories), PR #855 and PR #856 (strategy standard), and PR #850 (prior `#847` reconciliation). 17 files, +1,841/−28.
+  - **No schema change, no migration** — the promotion diff touched no `prisma/` files and no `lib/`, `features/`, `components/` or storefront routes. One generated runtime file shipped: `app/(admin)/staff/runbook/docs.ts`, the `DOC_ARTICLES` payload served by `/staff/runbook`.
+  - Merged as a **merge commit, not a squash**, preserving `main`↔`staging` ancestry.
+  - `gates` (`docs-gates`, `quality/kms`, `quality/quality`) all green on PR #858; `deploy-production` (run `35711810410`) and `deploy-docs-internal` (run `35711810258`) both succeeded; production `/api/health` confirmed live serving `2047d0a` with `db.ok: true`, storage configured, reference reachable, `drift: false`.
+  - **Documentation Reconciliation**:
+    - `specs/roadmap.md` — five change-log rows added for PR #852, #853, #855, #856 and the #858 promotion; version bumped to 1.106.0. Rows are required: `scripts/sdd-check.ts` `reportPromotions()` fails `sdd:audit` for any `staging → main` promotion with no citing row.
+    - `docs/model-handoff.md` — Last Verified rewritten to record `main` at `2047d0a`, why `#851` stays open, the `#857` defect, and the squash-merge branch-reuse trap; version bumped to 1.26.0.
+    - KMS index rebuilt (`ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`).
+  - **`#851` deliberately NOT closed.** The pilot is in production, but the strategy it produced is `status: review`. §25's U8 (no KMS owner) and G1 (no authoritative security source) have no safe default, and the restructuring must not be specced until they are answered.
+
 ### Added
 
 - **KMS Strategy — Target Design and Governance Standard (v2.0.0)**
