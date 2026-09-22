@@ -140,3 +140,47 @@ None in substance. Three wording notes for the validator:
   committing assembled content** — it is generated output and `#857` is the real defect.
 - **The `docs.ts` diff is large and entirely generated.** 18 documents removed and 4 re-routed
   rewrites a lot of a 2.5 MB file. Nothing in it is hand-edited; `kms:check-generated` is the proof.
+
+## Fix — R20's own verification sequence dirtied the tree it claimed to leave clean
+
+Found at Validate, not flagged as a risk above: following R20's literal steps — `kms:build-index`,
+then `kms:assemble:internal`, then `kms:check-generated` — reproducibly left `ARTIFACT_INDEX.md`
+modified in `git status --porcelain --untracked-files=no`, footer only (fresh timestamp/commit
+SHA), even though `kms:check-generated` itself reported everything current and exited 0.
+
+**Root cause, confirmed before touching anything:** `checkGeneratedArtefacts()` snapshotted "before"
+with a plain `readFileSync` at the start of its own run, then compared that against its own fresh
+rebuild to decide what to restore. Manually running `kms:build-index` immediately beforehand — which
+is exactly what R20 prescribes — had already overwritten the file with a footer-dirtied version, so
+that dirty version became "before". `checkGeneratedArtefacts()`'s own rebuild matched it
+content-wise (footer normalised), so it "restored" that same dirty footer right back instead of the
+git-committed one, and `git status` stayed dirty. **This never affects CI**: `quality.yml`'s `kms`
+job calls `kms:check-generated` alone, never preceded by a manual `kms:build-index`, so "before" is
+already the committed content there and the bug can't fire. It only breaks the local, hand-run
+sequence R20 itself describes — verified by running `kms:check-generated` alone from a clean tree
+first (git status stayed clean) and only then reproducing the exact three-command sequence
+(git status came back dirty), isolating the manual pre-rebuild as the trigger.
+
+**Fix — root cause, not the check.** `requirements.md`/`validation.md`'s R20 wording was not
+touched: the sequence it prescribes is reasonable and the "git status ends up clean" outcome it
+promises is correct — the script just didn't deliver it. `checkGeneratedArtefacts()` in
+`kms/scripts/check-generated.ts` now reads the comparison baseline with `git show HEAD:<path>`
+instead of a pre-run `readFileSync`, and restores to those committed bytes rather than to whatever
+was already on disk. The result no longer depends on what ran immediately before it. Both callers
+(`quality.yml`'s `kms` job and `scripts/sdd-check.ts`'s `sdd:preclear`) already go through this one
+function, so neither needed a separate change.
+
+**A second, real bug surfaced while exercising the fix, fixed in the same change:** the first
+version of this fix threw `ENOBUFS` on `git show HEAD:app/(admin)/staff/runbook/docs.ts` —
+`execFileSync`'s default 1 MB buffer is smaller than that generated file (~2.7 MB). Raised
+`maxBuffer` to 64 MB on that call.
+
+**Re-verified after the fix**, not assumed: ran the exact R20 sequence twice in a row from a clean
+tree (idempotency) — `git status --porcelain --untracked-files=no` now reports nothing beyond this
+fix's own diff; `npm run sdd:preclear` still reports the generated-artefact check as "current
+(content-wise; the index footer is normalised)", so this branch's own Clear-safety check is
+unaffected; `lint` and `tsc --noEmit` stay clean.
+
+**Not a spec-level change.** No new decision was made — R20's requirement text already described
+the correct outcome; the generator just wasn't shaped to reliably produce it under its own
+prescribed verification steps. Nothing here changes what R20 asks for or what CI runs.

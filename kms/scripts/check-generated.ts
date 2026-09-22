@@ -25,6 +25,17 @@
  * work for its clean-tree check. So a file whose only difference is normalised away is
  * restored to its original bytes, and a file that genuinely drifted is left regenerated —
  * leaving it is the fix, since the instruction is "commit the result".
+ *
+ * WHY "ORIGINAL BYTES" MEANS `git show HEAD:<path>`, NOT A PRE-RUN DISK SNAPSHOT
+ *
+ * The comparison baseline is the committed blob, read fresh on every call, not whatever
+ * happened to be on disk when this function started. Reading a disk snapshot instead (#861
+ * Validate) meant a caller who ran `kms:build-index` by hand moments earlier handed this
+ * function an already footer-dirtied "before" — its own rebuild then matched that dirty
+ * snapshot, so nothing looked drifted and the dirty footer was "restored" right back,
+ * leaving `ARTIFACT_INDEX.md` modified in `git status` with no drift to explain it. Reading
+ * HEAD instead makes the result independent of anything that ran earlier in the same
+ * process or a preceding command.
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -56,9 +67,19 @@ export type ArtefactResult = { path: string; drifted: boolean };
  * than parsing stdout.
  */
 export function checkGeneratedArtefacts(): ArtefactResult[] {
-  const before = new Map<string, string>();
+  // The committed blob, not a pre-run disk snapshot — see WHY "ORIGINAL BYTES" above.
+  const committed = new Map<string, string>();
   for (const path of GENERATED_ARTIFACTS) {
-    before.set(path, readFileSync(join(ROOT, path), "utf8"));
+    committed.set(
+      path,
+      // maxBuffer: node's 1 MB default is smaller than the generated docs.ts blob
+      // (~2.7 MB and growing with every indexed document) — ENOBUFS otherwise.
+      execFileSync("git", ["show", `HEAD:${path}`], {
+        cwd: ROOT,
+        encoding: "utf8",
+        maxBuffer: 64 * 1024 * 1024,
+      }),
+    );
   }
 
   execFileSync("npx", ["tsx", join(ROOT, "kms/scripts/build-index.ts")], {
@@ -68,7 +89,7 @@ export function checkGeneratedArtefacts(): ArtefactResult[] {
   });
 
   return GENERATED_ARTIFACTS.map((path) => {
-    const original = before.get(path) as string;
+    const original = committed.get(path) as string;
     const rebuilt = readFileSync(join(ROOT, path), "utf8");
     const drifted = normalise(original, path) !== normalise(rebuilt, path);
     // Restore when the only difference is normalised away, so a footer-only rebuild does
