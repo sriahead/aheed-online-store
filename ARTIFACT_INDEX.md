@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-21T15:58:12.351Z` · commit `f6d00eb` · `208` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-22T05:55:56.027Z` · commit `9a03e07` · `211` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -39,6 +39,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Walking-Skeleton Runbook (M0)](docs/developer-portal/walking-skeleton-runbook.md) | runbook | 1.0.0 | 2026-08-06 | approved | internal | Step-by-step runbook to stand up the M0 walking skeleton — Cloudflare, R2, Neon, and GitHub environment provisioning through to a green production health check. |
 | [Marketing & Analytics Data Guide](docs/marketing-analytics/marketing-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for marketing analysts on how to track user behavior, promotions, and campaign performance. |
 | [Model handoff: repository orientation snapshot](docs/model-handoff.md) | doc | 1.25.0 | 2026-09-21 | approved | internal | Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live. |
+| [Source-to-Destination Ledger: Orders & Fulfilment Pilot](docs/operations-research/order-fulfilment-ledger.md) | doc | 1.0.0 | 2026-09-22 | approved | internal | Ledger mapping original SDLC artifacts to the synthesized canonical Order Fulfilment Operations document. |
 | [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.1.0 | 2026-09-06 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
 | [Research & retrospectives — what lives here](docs/research/README.md) | doc | 1.0.0 | 2026-09-02 | approved | internal | Explains what the Discover and Learn phases write into this directory, what belongs in a canonical project document instead, and the rule that nothing here is approved scope until it passes through /propose. |
 | [Discovery log](docs/research/discovery-log.md) | doc | 1.5.0 | 2026-09-07 | approved | internal | Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action. |
@@ -239,4 +240,6 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
+| [Order & Fulfilment Operations](docs/operations-research/order-fulfilment-core.md) | runbook | 1.0.0 | 2026-09-22 | approved | internal | Canonical rules for order status transitions, fulfilment slots, cancellations, and payment exceptions. |
 | [Shopping Guide & Help Center](docs/shopper-help/shopping-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | public | A complete guide for customers on how to browse, place orders, and manage their account. |
+| [KMS Pilot: Orders, Fulfilment & Payment Exceptions (plan)](specs/2026-09-22-kms-pilot-orders-fulfilment/plan.md) | spec | 1.1.0 | 2026-09-22 | draft | internal | Pilot for the revised KMS restructuring focusing on consolidating orders, fulfilment, and payment exceptions into a thematic, current-knowledge model. |

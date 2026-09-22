@@ -215,6 +215,8 @@ so a store that genuinely moves zone should check its weekly slots still say wha
 **What happens after changes are saved:** Effective immediately at checkout, for shoppers already
 mid-basket as well as new ones. Orders already placed against a slot keep it.
 
+> **Note on operational rules:** For details on how time slots interact with order states and cancellations, see the canonical [Order & Fulfilment Operations](../operations-research/order-fulfilment-core.md) guide.
+
 ## Reports — `/staff/reports`
 
 **Purpose:** The numbers for your shop — sales, catalogue health and loyalty liability.
@@ -323,6 +325,8 @@ not something you can action.
 to match reality — it never assumes. Recovering a genuinely paid order moves it into the normal flow,
 where it shows up in Fulfillment & Orders like any other confirmed order. Running the same action
 twice is safe and will not double-charge or double-confirm anything.
+
+> **Note on operational rules:** For details on how recovered payments enter the order lifecycle, see the canonical [Order & Fulfilment Operations](../operations-research/order-fulfilment-core.md) guide.
 
 
 

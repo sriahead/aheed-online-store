@@ -39,17 +39,10 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-21.
-- **Checkout:** `main` is at **`6a9db8b`** (PR #849, "Promote website feedback clickable star rating to production (#847)", `staging -> main`).
-  `staging` is at **`f6d00eb`** (PR #848 merge, carrying website feedback star rating).
-  Production carries the interactive clickable 5-star rating input (`components/product/StarRatingInput.tsx`) across both
-  product reviews (`ReviewForm.tsx` and `QuickViewDrawer.tsx`) and website feedback (`components/storefront/FeedbackForm.tsx`),
-  with hover previews, scale animations, `motion-reduce` support, and custom descriptive rating labels ("Poor", "Fair",
-  "Good", "Very Good", "Excellent").
-  Automated tests: 5 passing tests in `tests/feedback-form.test.tsx` (160 test files, 2,116 tests total).
-  `deploy-production` (run `35621757768`) and `deploy-docs-internal` (run `35621757321`) succeeded; production `/api/health` confirmed live
-  serving `6a9db8b` with `db.ok: true`.
-  **Issue #847 is CLOSED and moved to `Done` on Project #2.**
+- **Date:** 2026-09-22.
+- **Checkout:** `staging` is the active branch.
+  - Active Slice: `specs/2026-09-22-kms-pilot-orders-fulfilment`. The BUILD phase of the KMS restructuring pilot for Orders, Fulfilment & Payment Exceptions is complete.
+  - `build-notes.md` is drafted, and we are awaiting `CLEAR` and `VALIDATE`.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
