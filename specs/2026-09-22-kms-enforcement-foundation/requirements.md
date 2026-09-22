@@ -20,6 +20,21 @@ R2. `npm run kms:validate` reports a scanned-file count that includes no path be
     and that count is 700 or fewer (it is 628 plus whatever this slice itself adds; before this
     slice the same command reports 1,281).
 
+R2a. *(Prerequisite fix discovered mid-slice.)* `scripts/sdd-check.ts`'s pre-clear slice detection
+     selects only slice directories in which at least one of the four spec files was **added** on
+     this branch relative to its base, rather than every slice directory containing any changed
+     file. `npm run sdd:preclear` exits zero on this branch, and the only slice it reports is
+     `specs/2026-09-22-kms-enforcement-foundation/`.
+
+     Needed because R6 edits files inside 7 historical slice directories, which made the existing
+     detection demand the full four-file contract from slices that shipped in August — three of
+     which pre-date the convention. Verified pre-existing: `build-notes.md` and `validation.md` are
+     absent from those slices on `origin/staging`, and
+     `specs/2026-08-22-ui-polish-docs-integration/build-notes.md` has never carried the four
+     required headings. The gate's purpose is that the slice **under work** is fully on disk; a
+     months-old slice whose front-matter this branch strips is not under work. No historical spec
+     file is created, backfilled or modified to satisfy this requirement.
+
 R3. `kms/schema/repo.ts` exports a single predicate identifying a slice-local file, and
     `kms/schema/validate.ts` and the coverage ratchet of R11 both use that one exported predicate
     rather than each restating the rule.
