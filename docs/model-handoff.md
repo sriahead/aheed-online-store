@@ -41,8 +41,9 @@ reconciliation. If overall project state did not materially change, leave this f
 
 - **Date:** 2026-09-22.
 - **Checkout:** `staging` is the active branch.
-  - Active Slice: `specs/2026-09-22-kms-pilot-orders-fulfilment`. The BUILD phase of the KMS restructuring pilot for Orders, Fulfilment & Payment Exceptions is complete.
-  - `build-notes.md` is drafted, and we are awaiting `CLEAR` and `VALIDATE`.
+  - **Completed Slice:** `specs/2026-09-22-kms-pilot-orders-fulfilment` is validated, merged (PR #852), and deployed to staging.
+  - **Completed Slice:** KMS navigation categories fix (PR #853) is merged and deployed to staging.
+  - **Completed Task:** Generated the KMS Strategy and Evaluation artifact.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
