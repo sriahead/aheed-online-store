@@ -1,14 +1,3 @@
----
-id: p401-shared-fulfilment-slots-requirements
-title: P401 Shared Fulfilment Slots Requirements
-audience: [dev]
-type: spec
-status: approved
-version: "1.1.0"
-updated: 2026-09-13
-visibility: internal
-summary: Requirements for shared fulfilment slots.
----
 # Requirements
 
 R1. The Prisma schema must include a `VendorFulfilmentSlot` model with a `method` field (`DELIVERY | COLLECTION`), schedule fields (e.g., `dayOfWeek`, `startTime`, `endTime`), and a `capacity` integer.

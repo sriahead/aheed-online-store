@@ -26,7 +26,39 @@ const EXCLUDE_DIRS = new Set([
 // specs/templates/ holds copy-and-fill templates with deliberately invalid placeholder
 // values (id: REPLACE-ME-..., updated: REPLACE-ME-YYYY-MM-DD) — not a real doc, and
 // walking it would hard-fail kms:validate on the template itself once gate-wired.
-const EXCLUDE_PATH_PATTERN = /^(kms\/site-[^/]+\/content|specs\/templates)(\/|$)/;
+//
+// graft/ is a locally generated code-navigation index: gitignored (/graft/) and untracked,
+// so it exists on a machine that has run the graft indexer and NEVER exists on a CI
+// checkout. Walking it made every count this module feeds machine-dependent — measured
+// 2026-09-22 at b889d04, kms:validate scanned 1,281 files locally against ~628 in CI, with
+// 653 of the 1,069 "no front-matter" warnings being graft cards. A coverage ratchet cannot
+// be built on a denominator that differs between the two places it is checked (#861).
+// Root-anchored, matching .gitignore: a directory named `graft` nested elsewhere is not ours
+// to skip.
+const EXCLUDE_PATH_PATTERN = /^(kms\/site-[^/]+\/content|specs\/templates|graft)(\/|$)/;
+
+/**
+ * The three per-slice files that deliberately carry NO front-matter and get NO
+ * ARTIFACT_INDEX.md entry — `plan.md` carries the slice's single indexed entry instead.
+ *
+ * This is not a backlog. It is an existing, authoritative decision, stated in
+ * specs/templates/feature-spec/build-notes.md ("slice-local, not a KMS artifact") and in
+ * specs/sdd-workflow.md ("requirements.md/validation.md deliberately don't get their own
+ * front-matter/index entry"), which is the authoritative source for delivery process.
+ * kms:validate previously reported all 403 of them as warnings, which is how the KMS
+ * strategy came to describe a deliberate exclusion as a 17%-coverage gap (U7, #861).
+ *
+ * Deliberately matched by exact filename, never by "any file in a slice directory": the
+ * pilot's own kms-strategy-evaluation.md lives in a slice directory and IS a real indexed
+ * document, and so are rls-experiment.md and migration-ledger.md, which stay ordinary
+ * uncovered files in the ratchet baseline.
+ */
+const SLICE_LOCAL_PATTERN =
+  /^specs\/\d{4}-\d{2}-\d{2}[^/]*\/(requirements|validation|build-notes)\.md$/;
+
+export function isSliceLocal(rel: string): boolean {
+  return SLICE_LOCAL_PATTERN.test(rel);
+}
 
 // Sorted for deterministic output — readdirSync's order isn't guaranteed across
 // platforms/filesystems, and build-index.ts's output needs to be diff-stable.

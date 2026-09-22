@@ -1,16 +1,3 @@
----
-id: ui-polish-docs-integration-req
-title: "UI Polish & Docs Integration Requirements"
-audience: [dev]
-type: spec
-status: approved
-version: "1.1.0"
-updated: 2026-08-23
-visibility: internal
-summary: "Requirements for smooth interactive-state transitions that never animate layout, strict Staff Runbook audience filtering, and surfacing the Shopper Guide in the Help Centre."
-tags: ["ui", "docs", "help-centre", "runbook"]
----
-
 # UI Polish & Docs Integration (requirements)
 
 This slice addresses minor UI polish feedback and integrates the newly created role-based documentation into the application UI.

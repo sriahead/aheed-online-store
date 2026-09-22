@@ -1,13 +1,1 @@
----
-id: 2026-08-21-view-switcher
-title: View Switcher Requirements
-summary: Requirements for the Global View Switcher and FAB Cart.
-audience: [dev]
-type: spec
-version: 1.0.0
-updated: 2026-08-21
-status: approved
-visibility: internal
----
-
 # View Switcher

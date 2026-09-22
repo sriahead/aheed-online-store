@@ -1,14 +1,3 @@
----
-id: p402-express-sla-requirements
-title: P402 Express SLA Requirements
-audience: [dev]
-type: spec
-status: approved
-version: "1.1.0"
-updated: 2026-09-13
-visibility: internal
-summary: Requirements for Express SLA.
----
 # Requirements
 
 R1. The `VendorConfig` model must include an `expressCollectionEnabled` boolean.

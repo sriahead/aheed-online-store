@@ -1,16 +1,3 @@
----
-id: p7a-compliance-hardening-validation
-title: Phase 7a Validation & Acceptance Plan
-audience: [dev, admin]
-type: spec
-status: approved
-version: "1.1.0"
-updated: 2026-08-13
-visibility: internal
-summary: Validation steps, test cases, visual parity checks vs docs/ui-ref, and empirical criteria for Phase 7a compliance, operational closure, and UX hardening.
-tags: [p7, validation, compliance, testing, ui-ref]
----
-
 # Phase 7a — Validation & Acceptance Plan
 
 All criteria must be empirically verified before Phase 7a closes and merges.

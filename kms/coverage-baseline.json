@@ -1,0 +1,13 @@
+{
+  "total": 15,
+  "directories": {
+    ".": 5,
+    ".github": 2,
+    "docs/ui-ref": 1,
+    "docs/ui-ref-revised": 1,
+    "hooks": 1,
+    "kms/site-internal": 3,
+    "specs/2026-08-19-p7-closeout": 1,
+    "specs/2026-09-17-claude-md-guardrail-refactor": 1
+  }
+}

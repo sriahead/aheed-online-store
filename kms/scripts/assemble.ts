@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { FrontMatter, trackFor, type Track, DocType } from "../schema/frontmatter";
+import { FrontMatter, trackFor, TRACK_SITE, type Track, DocType } from "../schema/frontmatter";
 import { ROOT, walk, normalize, readFrontMatter } from "../schema/repo";
 
 /**
@@ -17,14 +17,40 @@ import { ROOT, walk, normalize, readFrontMatter } from "../schema/repo";
  * Usage: tsx kms/scripts/assemble.ts --visibility internal|public
  */
 
-// internal deploy serves tracks 1+2; public deploy serves track 3 only.
-const TRACK_TO_DIR: Record<Track, { site: "internal" | "public"; subdir: string } | null> = {
-  "internal-eng": { site: "internal", subdir: "dev" },
-  "staff-ops": { site: "internal", subdir: "staff" },
-  "customer-help": { site: "public", subdir: "customer" },
+// The content FOLDER each track assembles into. Which SITE a track belongs to is
+// TRACK_SITE in the schema, because kms:validate needs that same fact (#861).
+const TRACK_SUBDIR: Record<Track, string> = {
+  "internal-eng": "dev",
+  "staff-ops": "staff",
+  "customer-help": "customer",
 };
 
 const RESERVED = new Set(["index.mdx", "_meta.json"]);
+
+/**
+ * The whole routing rule, as a pure function, so it can be proven from a plain test with no
+ * filesystem and no assembled directory to inspect (#861 R14). Returns the content subdirectory
+ * this document belongs in for the site being assembled, or null when it belongs to neither.
+ *
+ * BOTH conditions matter, and the second one is the fix. This used to test only the track's site
+ * against the CLI flag and never read the document's own `visibility` field at all — the one
+ * field the schema comment says must never default was not consulted at the only point where it
+ * selects a deploy target. An `internal` document whose audience list happened to include
+ * `shopper` was therefore routed to the PUBLIC site. Nothing leaked only because
+ * kms/site-public/ has no app, no build and no deploy workflow.
+ *
+ * kms:validate now fails when a document's track and visibility disagree, so "belongs to
+ * neither" is a validation error rather than a file silently written nowhere.
+ */
+export function destinationFor(
+  fm: FrontMatter,
+  site: "internal" | "public",
+): { subdir: string } | null {
+  const track = trackFor(fm);
+  if (TRACK_SITE[track] !== site) return null;
+  if (fm.visibility !== site) return null;
+  return { subdir: TRACK_SUBDIR[track] };
+}
 
 /**
  * Raw HTML comments (`<!-- -->`) are valid Markdown but not valid MDX — Nextra's
@@ -69,8 +95,8 @@ function main() {
   const visibility = parseArgs();
   const contentRoot = join(ROOT, "kms", `site-${visibility}`, "content");
 
-  for (const dest of Object.values(TRACK_TO_DIR)) {
-    if (dest && dest.site === visibility) cleanGenerated(join(contentRoot, dest.subdir));
+  for (const [track, subdir] of Object.entries(TRACK_SUBDIR) as [Track, string][]) {
+    if (TRACK_SITE[track] === visibility) cleanGenerated(join(contentRoot, subdir));
   }
 
   const files = walk(ROOT);
@@ -85,9 +111,8 @@ function main() {
     if (!result.success) continue; // kms:validate reports these; assembly just skips them
 
     const fm = result.data;
-    const track = trackFor(fm);
-    const dest = TRACK_TO_DIR[track];
-    if (!dest || dest.site !== visibility) continue;
+    const dest = destinationFor(fm, visibility);
+    if (!dest) continue;
 
     const targetDir = join(contentRoot, dest.subdir, fm.type);
     mkdirSync(targetDir, { recursive: true });
@@ -98,4 +123,7 @@ function main() {
   console.log(`assemble --visibility ${visibility} — copied ${copied} doc(s) into ${contentRoot}`);
 }
 
-main();
+// Only run when invoked directly. tests/ imports `destinationFor` to prove the routing rule
+// without touching the filesystem (#861 R14); without this guard that import would execute the
+// whole assembly — and parseArgs() would process.exit(1) on the test runner's argv.
+if (require.main === module) main();

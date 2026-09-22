@@ -1,14 +1,3 @@
----
-id: p401-shared-fulfilment-slots-validation
-title: P401 Shared Fulfilment Slots Validation
-audience: [dev]
-type: spec
-status: approved
-version: "1.1.0"
-updated: 2026-09-13
-visibility: internal
-summary: Validation for shared fulfilment slots.
----
 | Req | How to verify |
 |---|---|
 | R1 | Inspect `prisma/schema.prisma` for the `VendorFulfilmentSlot` model and run `npx prisma migrate diff` to verify the migration. |

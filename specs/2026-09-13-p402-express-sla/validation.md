@@ -1,14 +1,3 @@
----
-id: p402-express-sla-validation
-title: P402 Express SLA Validation
-audience: [dev]
-type: spec
-status: approved
-version: "1.1.0"
-updated: 2026-09-13
-visibility: internal
-summary: Validation for Express SLA.
----
 | Req | How to verify |
 |---|---|
 | R1 | Inspect `prisma/schema.prisma` for `expressCollectionEnabled` on `VendorConfig`. |
