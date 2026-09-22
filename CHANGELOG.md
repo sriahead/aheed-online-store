@@ -8,6 +8,8 @@ every branch merges.
 
 ### Added
 
+- **KMS Strategy and Evaluation Document**
+  - Added a comprehensive guide on KMS strategy to the specs/2026-09-22-kms-pilot-orders-fulfilment slice.
 - **KMS Navigation Categories (#851)**
   - Updated kms:assemble:internal to construct folders per DocType, so that the Nextra KMS UI renders a categorized left navigation sidebar instead of a flat list.
 
