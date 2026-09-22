@@ -6,6 +6,18 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **KMS enforcement foundation — three broken controls repaired, U7 resolved, coverage ratchet landed** (issue `#861`, `specs/2026-09-22-kms-enforcement-foundation/`).
+  - **The walker was machine-dependent.** `kms/schema/repo.ts` never excluded `graft/`, which is gitignored and untracked, so `kms:validate` scanned 1,281 files locally against ~628 in CI — 653 of the 1,069 "no front-matter" warnings were graft cards absent from every CI checkout. No coverage baseline could be built on a denominator that differs between the two places it is checked.
+  - **`assemble.ts` never read a document's own `visibility`.** Routing tested only the derived track's site against the CLI flag, so the one field the schema requires and never defaults was not consulted where it selects a deploy target. Live effect: `docs/operations-research/order-fulfilment-core.md` (`visibility: internal`, audience including `shopper`) was routed to the **public** site and was absent from the internal docs site entirely — the `#851` pilot's canonical orders document, missing from the only deployed KMS surface. Nothing leaked only because `kms/site-public/` has no app, build or deploy workflow. The rule is now the pure exported `destinationFor()`, requiring track **and** visibility to agree.
+  - **`trackFor()` returned the first matching branch, not the most restrictive track**, and `platform-admin` was in the `Audience` enum and in no branch at all. Replaced with an exhaustive `Record<Audience, Track>` plus an explicit `staff-ops` → `internal-eng` → `customer-help` precedence list, both compiler-enforced; the unreachable case throws rather than defaulting. Four documents re-route, all corrections, and the customer track now holds exactly one document — the only `visibility: public` one in the repository.
+  - **U7 resolved as the authoritative rule already stated.** `requirements.md`, `validation.md` and `build-notes.md` inside a dated slice directory are slice-local, carry no front-matter and get no index entry (`specs/sdd-workflow.md`, `specs/templates/feature-spec/`). `kms:validate` reports them as their own category and now **fails** on one carrying front-matter; the 18 that had drifted are reverted (213 lines removed, 0 added, plus one UTF-8 BOM). `ARTIFACT_INDEX.md` goes 212 → **195**.
+  - **`kms:validate` gained a track/visibility disagreement check**, failing when a document's derived track renders on one site while its `visibility` names the other — a state in which it assembles nowhere. Passes on all 195 documents today, so it can only catch a regression.
+  - **New `kms:coverage` ratchet** with a checked-in per-directory baseline — **15 uncovered files across 8 directories**, against the 1,042 previously reported. Fails on drift in **either** direction, so a reduction cannot be silently given back. Runs in `quality.yml`'s `kms` job, never a caller (`#537`).
+  - **No schema change, no migration, no document body edited, no file moved, renamed or deleted.** The only `app/` path touched is the generated `app/(admin)/staff/runbook/docs.ts`.
+  - Verified: `kms:validate` 195 valid / 421 slice-local / 15 uncovered / 0 failing; `kms:check-generated` current; `kms:coverage` matches; 160 test files, 2,125 tests (`tests/kms-frontmatter.test.ts` 5 → 17); `lint`, `typecheck`, `format:check` green; `kms:assemble:internal` plus a real Nextra build of `kms/site-internal` exit 0 over 197 pages, with `order-fulfilment-core.mdx` now present under `content/staff/runbook/`.
+
 ### Changed
 
 - **KMS strategy standard, restructuring pilot and navigation categories promoted to production (PR #858); roadmap and handoff reconciled to match.**
