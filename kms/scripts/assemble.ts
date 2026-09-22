@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { FrontMatter, trackFor, type Track } from "../schema/frontmatter";
+import { FrontMatter, trackFor, type Track, DocType } from "../schema/frontmatter";
 import { ROOT, walk, normalize, readFrontMatter } from "../schema/repo";
 
 /**
@@ -56,6 +56,10 @@ function cleanGenerated(dir: string) {
     return; // doesn't exist yet — nothing to clean
   }
   for (const entry of entries) {
+    if (DocType.options.includes(entry as any)) {
+      rmSync(join(dir, entry), { recursive: true, force: true });
+      continue;
+    }
     if (RESERVED.has(entry) || !entry.endsWith(".mdx")) continue;
     rmSync(join(dir, entry), { force: true });
   }
@@ -85,7 +89,7 @@ function main() {
     const dest = TRACK_TO_DIR[track];
     if (!dest || dest.site !== visibility) continue;
 
-    const targetDir = join(contentRoot, dest.subdir);
+    const targetDir = join(contentRoot, dest.subdir, fm.type);
     mkdirSync(targetDir, { recursive: true });
     writeFileSync(join(targetDir, `${fm.id}.mdx`), toMdxSafeComments(raw));
     copied++;

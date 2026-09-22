@@ -6,9 +6,62 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **KMS Strategy — Target Design and Governance Standard (v2.0.0)**
+  - Rewrote `specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md` from an
+    evaluation note into the authoritative target design and governance standard for the KMS.
+    Status moved `approved` → `review`: the document now asks for the approval it previously
+    asserted. **Strategy and design only — no documentation was restructured, moved, renamed or
+    deleted by this change.**
+  - Added an explicit strategy-vs-implementation boundary and a Design / Verified / Example marker
+    applied to every substantive claim, so illustrative examples can no longer read as platform
+    capabilities.
+  - Added a measured current-state baseline (§2): 1,254 Markdown files scanned, 212 covered by
+    front-matter, 1,042 uncovered (403 of them under `specs/`), 165 of 212 documents typed `spec`,
+    117 at `status: draft`, 1 of 212 carrying an `owner`, and 1 document repo-wide at
+    `visibility: public`.
+  - Replaced the "the codebase rules supreme" source-of-truth hierarchy with a per-knowledge-type
+    matrix over ~25 knowledge types (§11), plus the intent-versus-implementation rule: code that
+    contradicts an approved requirement is a defect, not a silent redefinition.
+  - Expanded the audience vocabulary (7 new values, `shopper`/`admin` retired), moved to a
+    four-track model, and required track derivation to be exhaustive over the audience enum —
+    `platform-admin` currently falls through to `internal-eng`.
+  - Recommended a three-value visibility model (`public`/`internal`/`restricted`) with documented
+    triggers for expanding to five, rather than five values against two enforcement points.
+  - Recommended a 13-type taxonomy with an explicit "does it earn its place" test, retiring the
+    generic `doc` and the unused `prompt`, and rejecting `security` and `historical` as types with
+    reasons.
+  - Specified the full metadata schema per field (why, required, allowed values, CI disposition),
+    adding `last_reviewed`, `source_of_truth`, `canonical_source`, `supersedes`/`superseded_by` and
+    `applies_to`, and recommending `version` be demoted from required (U3).
+  - Added onboarding models with verifiable completion tests for ten audiences, the full runbook
+    standard, the SOP/runbook distinction, and deployment as a first-class domain —
+    discovery-then-classification, the required documentation set, a verified inventory of the
+    platform's actual deployment models, a decision guide and a 15-stage lifecycle.
+  - Added a 21-row CI validation matrix including the **coverage ratchet** — a per-directory
+    baseline that fails only on an *increase* in uncovered files, making the front-matter gap
+    strictly non-growing without blocking current work.
+  - Added the Documentation Impact Assessment model, stage-by-stage SDD integration attaching to
+    the four existing gates (no fifth gate), and a four-tier progressive context-retrieval contract
+    for AI agents.
+  - Recorded 8 unresolved decisions plus 1 gap requiring approval (§25) and an audit trail of every
+    unverified assumption removed from v1.0.0 (§26) — Docker, AWS, Jira, Slack, Datadog, container
+    images, ephemeral PR environments, self-hosted deployment, `npm run db:migrate`, `NODE_ENV`.
+  - Regenerated `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`; `kms:validate` clean
+    and `kms/site-internal` builds all 214 pages.
+- **KMS Navigation Categories (#851)**
+  - Updated kms:assemble:internal to construct folders per DocType, so that the Nextra KMS UI renders a categorized left navigation sidebar instead of a flat list.
+
+- **KMS Restructuring Pilot (Orders, Fulfilment & Payment Exceptions) (#851)**
+  - Synthesized scattered historical specifications (`specs/`) into a single canonical operational runbook (`docs/operations-research/order-fulfilment-core.md`).
+  - Added source-to-destination ledger and working register entries tracking unresolved defects (e.g. `#795` for cancelled order revenue).
+  - Cross-referenced the new unified guide from the Store Admin and Staff playbooks to maintain audience boundaries without duplicating rules.
+  - Successfully validated progressive disclosure pattern without introducing unproven schemas or relocating historical artifacts.
+
 ### Changed
 
-- **Website Feedback rating UI upgraded to match Product Feedback with clickable star ratings (`#847`).**
+- **Website Feedback clickable star ratings promoted to production (PR #849); roadmap and handoff reconciled to match (`#847`).**
   - **Storefront Feedback UX**:
     - Replaces the radio-button pill group in `components/storefront/FeedbackForm.tsx` on `/feedback` with the shared `StarRatingInput` component.
     - Provides a consistent 1–5 clickable star rating experience across both product reviews and website feedback, complete with hover previews, scale animations, and descriptive rating labels ("Poor", "Fair", "Good", "Very Good", "Excellent").
@@ -16,6 +69,13 @@ every branch merges.
     - Preserves all existing feedback functionality, comment handling, submission validation, rate limiting, and moderation workflows untouched.
   - **Automated Tests**:
     - `tests/feedback-form.test.tsx`: 5 passing tests covering default unrated render, pre-filled state, star click selection, hover preview, and form submission data serialization.
+  - **Production Promotion (PR #849)**:
+    - Promoted to `main` via PR #849 (merge `6a9db8b`, 2026-09-21) carrying PR #848 and PR #846.
+    - `deploy-production` (run `35621757768`) and `deploy-docs-internal` (run `35621757321`) succeeded; production `/api/health` confirmed live serving `6a9db8b` with `db.ok: true`. Closes #847 to `Done` on Project #2.
+  - **Documentation Reconciliation**:
+    - `specs/roadmap.md` updated with PR #848 and PR #849 rows; version bumped to 1.105.0.
+    - `docs/model-handoff.md` updated with `main` at `6a9db8b`; #847 marked as Done in production; version bumped to 1.25.0.
+    - KMS index rebuilt (`ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`) and verified with `npm run sdd:audit`.
 
 - **Clickable star ratings with descriptive labels for product reviews promoted to production (PR #845); roadmap and handoff reconciled to match (`#841`).**
   - **Storefront Review UX**:

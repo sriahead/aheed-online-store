@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.24.0"
+version: "1.25.0"
 updated: 2026-09-21
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,17 +39,11 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-21.
-- **Checkout:** `main` is at **`a579781`** (PR #845, "Promote clickable star ratings with descriptive labels for product reviews to production (#841)", `staging -> main`).
-  `staging` is at **`3747b23`** (PR #844 merge, carrying docs reconciliation, before post-promotion alignment).
-  Production carries the interactive clickable 5-star rating input (`components/product/StarRatingInput.tsx`) across both
-  the Quick View drawer (`components/product/QuickViewDrawer.tsx`) and product reviews form (`features/reviews/components/ReviewForm.tsx`),
-  with hover previews, scale animations, `motion-reduce` support, and custom descriptive rating labels ("Poor", "Fair",
-  "Good", "Very Good", "Excellent").
-  Automated tests: 17 passing tests across `tests/star-rating-input.test.tsx`, `tests/quick-view.test.tsx`, and `tests/review-form.test.tsx`.
-  `deploy-production` (run `35582384583`) and `deploy-docs-internal` (run `35582384156`) succeeded; production `/api/health` confirmed live
-  serving `a579781` with `db.ok: true`.
-  **Issue #841 is CLOSED and moved to `Done` on Project #2.**
+- **Date:** 2026-09-22.
+- **Checkout:** `staging` is the active branch.
+  - **Completed Slice:** `specs/2026-09-22-kms-pilot-orders-fulfilment` is validated, merged (PR #852), and deployed to staging.
+  - **Completed Slice:** KMS navigation categories fix (PR #853) is merged and deployed to staging.
+  - **Completed Task:** Generated the KMS Strategy and Evaluation artifact and moved it into version control at `specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md` (PR #855).
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
@@ -287,6 +281,14 @@ Customers click stars (1–5) to set or update ratings, with dynamic hover previ
 structure, invisible overlaid radio inputs satisfying Chromium focusability constraints on required inputs, and descriptive rating
 labels ("Poor", "Fair", "Good", "Very Good", "Excellent"). Zero DB schema migrations. Closes #841 to `Done`.
 
+**`#847` (Website Feedback Clickable Star Rating to Match Product Feedback)** was promoted to production
+(PR #849, merge `6a9db8b`, 2026-09-21, `staging -> main`). It replaced the radio-button pill group in
+`components/storefront/FeedbackForm.tsx` on `/feedback` with the shared `StarRatingInput` component.
+Customers click stars (1–5) to set or update ratings, with dynamic hover previews, keyboard navigation, semantic `<fieldset>`/`<legend>`
+structure, invisible overlaid radio inputs, and descriptive rating labels ("Poor", "Fair", "Good", "Very Good", "Excellent").
+Pre-fills existing rating when editing. Preserved all existing feedback functionality, comment handling, submission validation,
+rate limiting, and moderation workflows untouched. Zero DB schema migrations. Closes #847 to `Done`.
+
 
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
@@ -316,8 +318,9 @@ The live board showed open High-priority items, all with blank Complexity:
   #824 **closed → Done**, promoted to production via PR #826 (`specs/2026-09-20-p824-card-stack-reviews-upgrade/`).
 - **Shopper account upgrade and rewards integration: DONE, 2026-09-21** — #836 **closed → Done**, promoted
   to production via PR #840 (`specs/2026-09-20-p836-shopper-account-rewards/`).
-- **Clickable star ratings for product reviews: DONE, 2026-09-21** — #841 **closed → Done**, promoted
-  to production via PR #845 (`specs/2026-09-21-p841-clickable-review-stars/`).
+- **Clickable star ratings for product reviews and website feedback: DONE, 2026-09-21** — #841 and #847 both
+  **closed → Done**, promoted to production via PR #845 (`specs/2026-09-21-p841-clickable-review-stars/`) and
+  PR #849 (`specs/2026-09-21-p847-website-feedback-star-rating/`).
   #695 is unchanged.
 - Data activation: #697.
 - Location decision reconciliation: #422.
