@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-22T16:08:05.090Z` · commit `a801b56` · `195` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-22T18:22:09.392Z` · commit `875ddab` · `196` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -190,6 +190,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P841 — Clickable Star Ratings for Product Reviews (plan)](specs/2026-09-21-p841-clickable-review-stars/plan.md) | spec | 1.0.0 | 2026-09-21 | draft | internal | Replace rating select dropdowns with an accessible, interactive clickable star rating component across Quick View and product detail reviews. |
 | [P847 — Website Feedback Clickable Star Rating (plan)](specs/2026-09-21-p847-website-feedback-star-rating/plan.md) | spec | 1.0.0 | 2026-09-21 | draft | internal | Update the Website Feedback rating UI to reuse the accessible, interactive StarRatingInput component from Product Feedback, maintaining visual and behavioral parity while keeping all existing submission, moderation, and data handling logic unchanged. |
 | [KMS enforcement foundation (plan)](specs/2026-09-22-kms-enforcement-foundation/plan.md) | spec | 1.0.0 | 2026-09-22 | draft | internal | Repairs the three broken KMS enforcement controls — the machine-dependent walker, visibility-blind assembly and non-exhaustive track derivation — resolves U7, and lands the coverage ratchet before the section 24 migration is specified. |
+| [KMS internal docs site — build the Pagefind search index (plan)](specs/2026-09-22-kms-search-index/plan.md) | spec | 1.0.0 | 2026-09-22 | draft | internal | Generate Nextra's Pagefind search index during the internal KMS site build and fail the build when it is missing, replacing a search box that has thrown on every query since the site went live. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.30.0 | 2026-09-16 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

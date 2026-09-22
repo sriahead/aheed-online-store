@@ -11,11 +11,28 @@ npm install
 npm run dev
 ```
 
-`content/dev/*.mdx` is generated — run `npm run kms:assemble:internal` from the **repo root**
-first to populate it (see `kms/scripts/assemble.ts`). Edit the source doc (`specs/`, `docs/`,
-`CLAUDE.md`) and its front-matter, never a file under `content/dev/` directly — it's overwritten
-on the next assemble run. `content/index.mdx` and `content/staff/index.mdx` are hand-authored and
-tracked in git; the assemble script never touches them.
+`content/<track>/<type>/*.mdx` is generated — run `npm run kms:assemble:internal` from the **repo
+root** first to populate it (see `kms/scripts/assemble.ts`). Edit the source doc (`specs/`,
+`docs/`, `CLAUDE.md`) and its front-matter, never a file under `content/dev/` or `content/staff/`
+directly — it's overwritten on the next assemble run. `content/index.mdx`,
+`content/dev/index.mdx` and `content/staff/index.mdx` are hand-authored and tracked in git; the
+assemble script never touches them.
+
+### Search does not work under `npm run dev`
+
+That is expected, not a bug. Nextra 4 searches with **Pagefind**, which indexes built `.html`
+files, so there is nothing to search until a build has run — Nextra shows its own notice saying so.
+
+The index is produced by the `postbuild` script (`pagefind --site .next/server/app --output-path
+public/_pagefind`) and checked by `scripts/verify-search-index.mjs`, which **fails the build** if
+the index is missing or contains zero pages. `public/_pagefind/` is generated and git-ignored;
+`opennextjs-cloudflare build` copies it into the Worker's assets, where Nextra fetches it at
+runtime as `/_pagefind/pagefind.js`.
+
+To exercise search locally, run `npm run build` and then `npm run dev` (per Nextra's own notice),
+or `npm run preview` to serve the real Worker bundle. Before `#871` there was no index step at
+all, so search threw `Failed to load search index` on every query on the deployed site while every
+local check stayed green.
 
 ## Deploying
 
