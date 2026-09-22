@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-22T15:03:05.503Z` · commit `7194629` · `195` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-22T16:08:05.090Z` · commit `a801b56` · `195` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -219,7 +219,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.2.0 | 2026-09-12 | approved | internal | How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access. |
 | [Phase 6.5 — Autonomous Application Self-Review, Gap Detection & Hardening Plan](specs/2026-08-13-p6.5-self-review-hardening/plan.md) | spec | 1.0.0 | 2026-08-13 | approved | internal | Plan for Phase 6.5 autonomous self-review and hardening audit loop prior to Phase 7. |
 | [Phase 7a Implementation & Execution Plan](specs/2026-08-13-p7a-compliance-hardening/plan.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Step-by-step implementation plan for Phase 7a operational closure, UK compliance, security headers, and user-experience gaps. |
-| [KMS Strategy — Target Design and Governance Standard](specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md) | spec | 2.0.0 | 2026-09-22 | review | internal | The target architecture, documentation standard and governance model for the platform Knowledge Management System — audiences, taxonomy, metadata, source-of-truth, deployment documentation, runbooks, CI governance and SDD integration, with current-state facts separated from design intent. |
+| [KMS Strategy — Target Design and Governance Standard](specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md) | spec | 2.1.0 | 2026-09-22 | review | internal | The target architecture, documentation standard and governance model for the platform Knowledge Management System — audiences, taxonomy, metadata, source-of-truth, deployment documentation, runbooks, CI governance and SDD integration, with current-state facts separated from design intent. |
 | [KMS Pilot: Orders, Fulfilment & Payment Exceptions (plan)](specs/2026-09-22-kms-pilot-orders-fulfilment/plan.md) | spec | 1.1.0 | 2026-09-22 | draft | internal | Pilot for the revised KMS restructuring focusing on consolidating orders, fulfilment, and payment exceptions into a thematic, current-knowledge model. |
 
 ## Track 3 — Customer / Help Centre (`customer-help`)  ·  audience: customer
