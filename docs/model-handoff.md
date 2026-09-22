@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.25.0"
-updated: 2026-09-21
+version: "1.26.0"
+updated: 2026-09-22
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -40,10 +40,26 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-22.
-- **Checkout:** `staging` is the active branch.
-  - **Completed Slice:** `specs/2026-09-22-kms-pilot-orders-fulfilment` is validated, merged (PR #852), and deployed to staging.
-  - **Completed Slice:** KMS navigation categories fix (PR #853) is merged and deployed to staging.
-  - **Completed Task:** Generated the KMS Strategy and Evaluation artifact and moved it into version control at `specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md` (PR #855).
+- **Checkout:** `main` is at `2047d0a`; `staging` is at `8fc7b7c` and is its direct parent.
+  - **In production (PR #858, merge `2047d0a`, verified live):** the KMS restructuring pilot
+    (`#851`, PR #852), KMS navigation categories (PR #853), and the KMS strategy standard
+    (PR #855 then PR #856). `deploy-production` (run `35711810410`) and `deploy-docs-internal`
+    (run `35711810258`) both succeeded; production `/api/health` served `2047d0a` with
+    `db.ok: true`, storage configured, reference reachable, `drift: false`. No schema change and
+    no migration in this promotion.
+  - **`#851` is OPEN by design, not by oversight.** The pilot shipped, but the strategy it
+    produced — `specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md`, v2.0.0 —
+    is `status: review`, awaiting approval. **Do not spec the KMS restructuring until it is
+    approved.** §25 carries 8 unresolved decisions plus 1 gap; two have no safe default: **U8**
+    (no owner exists for the KMS itself, so the ownership model has no root) and **G1** (no
+    authoritative source for security requirements). **U1** asks whether the platform is really
+    called "SRIMART" — ADR-004 records SriMart as a *tenant*, not the platform, so the document
+    uses tenant-neutral naming throughout pending a decision.
+  - **Known defect filed, not fixed:** `#857` (Low) — `.gitignore` still matches the pre-`#853`
+    one-level content layout, so `npm run kms:assemble:internal` leaves ~209 generated `.mdx`
+    files untracked. Local-workflow only; CI is unaffected.
+  - **Branch-reuse trap, observed live:** PR #855 was squash-merged and the branch reused, which
+    broke ancestry with `staging` and collided every file `add/add`. Cut a fresh branch per slice.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
   2026-09-17).** Every rule was relocated to an authoritative destination first, not deleted — see
   `specs/2026-09-17-claude-md-guardrail-refactor/migration-ledger.md` for the line-by-line proof
