@@ -22,6 +22,16 @@ every branch merges.
 
 ### Changed
 
+- **`#861` merged to staging (PR #867); roadmap, handoff and PR #860's earlier promotion reconciled to match.**
+  - Merged via PR #867 (squash `7194629`, 2026-09-22) to `staging`; `docs-gates`, `quality/kms` and `quality/quality` all green; `deploy-staging` and `deploy-docs-internal` both succeeded. Issue **stays open**, moved to `In Review` in Project #2 — `Done` applies only on promotion to `main`.
+  - **Documentation Reconciliation**:
+    - `specs/roadmap.md` — two change-log rows added: the `#861`/PR #867 merge, and PR #860 (`staging -> main`, merge `c2a50e5`), the earlier docs-only promotion of `#859`'s reconciliation that `sdd:audit` reported as "merged after the last roadmap edit, row pending carry-forward." Version bumped to 1.107.0.
+    - `docs/model-handoff.md` — `#861`'s In-Flight Work entry rewritten from "BUILT, NOT YET VALIDATED OR SHIPPED" to "MERGED TO STAGING, NOT YET PROMOTED," the 421→**422** slice-local correction, and a new note on the Validate-stage `check-generated.ts` bug as a trap worth remembering. `Last Verified`'s Checkout line updated to `staging` at `7194629`. Version bumped to 1.28.0.
+    - `specs/sdd-workflow.md` — an eleventh instance added to Validate's diff-shape-check catalogue: `docs/model-handoff.md` was touched by a Build-stage commit outside `#861`'s stated scope, and neither `/validate` pass caught it because the R22-style check greps named path prefixes rather than eyeballing the full unfiltered diff against the scope statement's prose. Benign in this case, but the gap in the check was real. Version bumped to 2.35.0.
+    - **Delivery board**: `#862`–`#866` (filed mid-`#861`-Build, already `Backlog`) given `Phase: P10` — they had none.
+    - KMS index rebuilt (`ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`).
+  - **No schema change, no migration.** `npm run sdd:audit` exits 0, citing both PR #867 and PR #860.
+
 - **KMS strategy standard, restructuring pilot and navigation categories promoted to production (PR #858); roadmap and handoff reconciled to match.**
   - Promoted to `main` via PR #858 (merge `2047d0a`, 2026-09-22), carrying PR #852 (`#851` pilot), PR #853 (nav categories), PR #855 and PR #856 (strategy standard), and PR #850 (prior `#847` reconciliation). 17 files, +1,841/−28.
   - **No schema change, no migration** — the promotion diff touched no `prisma/` files and no `lib/`, `features/`, `components/` or storefront routes. One generated runtime file shipped: `app/(admin)/staff/runbook/docs.ts`, the `DOC_ARTICLES` payload served by `/staff/runbook`.

@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.27.0"
+version: "1.28.0"
 updated: 2026-09-22
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,7 +40,9 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-22.
-- **Checkout:** `main` is at `2047d0a`; `staging` is at `8fc7b7c` and is its direct parent.
+- **Checkout:** `main` is at `2047d0a`; `staging` is at `7194629`, ahead of `main` by one PR — #867
+  (`#861`, KMS enforcement foundation), merged to `staging` only, not yet promoted. See In-Flight
+  Work below for detail.
   - **In production (PR #858, merge `2047d0a`, verified live):** the KMS restructuring pilot
     (`#851`, PR #852), KMS navigation categories (PR #853), and the KMS strategy standard
     (PR #855 then PR #856). `deploy-production` (run `35711810410`) and `deploy-docs-internal`
@@ -365,10 +367,12 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#861` (KMS enforcement foundation) is BUILT, NOT YET VALIDATED OR SHIPPED.** Branch
-  `feature/861-kms-enforcement-foundation`, commits `dffa433` (spec) and `0fa1fca` (implementation),
-  cut fresh from `staging` at `b889d04`. No PR opened yet. Spec at
-  `specs/2026-09-22-kms-enforcement-foundation/`; build notes carry the known-shaky list.
+- **`#861` (KMS enforcement foundation) is MERGED TO STAGING, NOT YET PROMOTED TO `main`.**
+  Merged via PR #867 (squash `7194629`, 2026-09-22); `deploy-staging` and `deploy-docs-internal`
+  both succeeded. Issue **stays open** — moved to `In Review` in Project #2, since `Done` applies
+  only on promotion to `main`. Spec at `specs/2026-09-22-kms-enforcement-foundation/`; the full
+  technical narrative, every deliberate-break validation row and the Fix-stage root-cause writeup
+  live in that slice's `build-notes.md`, not repeated here.
   - Repairs three broken KMS controls: the walker excluded no `graft/` (gitignored, untracked, so
     `kms:validate` scanned 1,281 files locally against ~628 in CI); `assemble.ts` never read a
     document's own `visibility`; and `trackFor()` returned the first matching branch, leaving
@@ -378,11 +382,29 @@ All facts in this section require live verification:
     `shopper` audience and was therefore absent from the internal docs site entirely — the only
     deployed KMS surface. Nothing leaked only because `kms/site-public/` has no app or workflow.
   - **Numbers a future session will otherwise re-derive:** `ARTIFACT_INDEX.md` 212 → **195**;
-    `kms:validate` now reports 195 valid / 421 slice-local / **15** uncovered / 0 failing;
-    the coverage baseline is 15 files across 8 directories, not the 1,042 the strategy cites.
+    `kms:validate` now reports 195 valid / **422** slice-local / **15** uncovered / 0 failing (422,
+    not 421 — the slice's own `build-notes.md` is itself slice-local, and the count above includes
+    it); the coverage baseline is 15 files across 8 directories, not the 1,042 the strategy cites.
   - **U7 is resolved**: `requirements.md`, `validation.md` and `build-notes.md` in a dated slice
     directory are slice-local, carry no front-matter, and `kms:validate` now *fails* on one that
     does. This confirms the existing rule in `specs/sdd-workflow.md`; it did not change it.
+  - **A real bug found and fixed at Validate, not before shipping — worth remembering as a class of
+    trap.** `kms:check-generated`'s freshness check compared its rebuild against its own **pre-run
+    disk snapshot** rather than the git-committed content, so running the check's *own prescribed*
+    local verification sequence (`kms:build-index` then `kms:check-generated`) left
+    `ARTIFACT_INDEX.md`'s footer dirty in `git status` even though the check itself reported
+    everything current and exited 0. Never affected CI, which calls `kms:check-generated` alone
+    from a clean checkout — only a hand-run sequence matching the validation row triggered it.
+    Fixed in the same PR: `checkGeneratedArtefacts()` now reads and restores against
+    `git show HEAD:<path>`, independent of anything that ran before it.
+  - **A scope note for future Validate passes:** a Build-stage commit (`873cf58`, before this
+    document existed in its `.27.0` form) touched `docs/model-handoff.md` itself — outside this
+    slice's own stated scope (`kms/`, two generated artifacts, `quality.yml`, `tests/`). Neither
+    `/validate` pass caught this at the time; it surfaced only when reading the merge diff at Ship.
+    The content itself was benign (a status append, matching this file's own standing convention),
+    so nothing was rolled back, but a diff-shape check that greps specific path prefixes can still
+    miss a real out-of-scope file — worth eyeballing the full unfiltered `git diff --name-only`
+    against a slice's stated scope, not just its named restricted paths.
 
 - **KMS restructuring §24 Steps 1–4 are COMPLETE; the results are in `#863`, not in this repo.**
   Inventory, classification, gap analysis and migration map were produced 2026-09-22 and recorded
