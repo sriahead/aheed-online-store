@@ -6,6 +6,14 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **KMS Restructuring Pilot (Orders, Fulfilment & Payment Exceptions) (#851)**
+  - Synthesized scattered historical specifications (`specs/`) into a single canonical operational runbook (`docs/operations-research/order-fulfilment-core.md`).
+  - Added source-to-destination ledger and working register entries tracking unresolved defects (e.g. `#795` for cancelled order revenue).
+  - Cross-referenced the new unified guide from the Store Admin and Staff playbooks to maintain audience boundaries without duplicating rules.
+  - Successfully validated progressive disclosure pattern without introducing unproven schemas or relocating historical artifacts.
+
 ### Changed
 
 - **Website Feedback clickable star ratings promoted to production (PR #849); roadmap and handoff reconciled to match (`#847`).**

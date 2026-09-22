@@ -286,3 +286,26 @@ Two conditions remain: **GAP-005** (Resend sending domain, #104) and **GAP-006**
 > never been built. They are removed rather than restated: a readiness percentage that nothing
 > measures is exactly the kind of self-certification this register is being corrected for.
 
+
+## KMS Pilot: Orders & Fulfilment Findings (2026-09-22)
+
+### KMS-001 — Revenue limitation for cancelled-but-unrefunded orders (#795)
+- **Status:** [Unresolved]
+- **Sources:** lib/order-status.ts (REVENUE_STATUSES), specs/2026-09-17-p696-staff-cancel-confirmed-order/plan.md
+- **Reader Impact:** Staff reports do not count cancelled orders as revenue, even though the payment was captured and not refunded. The dashboard figures are technically an understatement of cash collected until refunds are implemented.
+- **Resolution Needed:** A product decision (Issue #606 / #795) on whether to derive revenue from the Payment state rather than the Order state, or to implement the refund workflow.
+- **Owner:** Product / Backend (Unassigned)
+
+### KMS-002 — Collection tier spend mismatch
+- **Status:** [Unresolved]
+- **Sources:** lib/repositories/loyalty.ts (windowSpendPence), specs/2026-09-17-p696-staff-cancel-confirmed-order/plan.md
+- **Reader Impact:** Click & Collect orders (COLLECTED, READY_FOR_COLLECTION) do not currently count towards a customer's loyalty tier progression, unlike Delivery orders.
+- **Resolution Needed:** Code fix to include collection statuses in the windowSpendPence calculation.
+- **Owner:** Backend (Unassigned)
+
+### KMS-003 — Missing paid-order cancellation guidance
+- **Status:** [Resolved]
+- **Sources:** docs/operations-research/order-fulfilment-core.md
+- **Reader Impact:** Staff previously lacked documentation on how cancelled orders interact with inventory, loyalty, and revenue.
+- **Resolution:** Consolidated the explicit rules into the new canonical order fulfilment guide.
+
