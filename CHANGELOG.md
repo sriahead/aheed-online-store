@@ -8,8 +8,48 @@ every branch merges.
 
 ### Added
 
-- **KMS Strategy and Evaluation Document**
-  - Added a comprehensive guide on KMS strategy to the specs/2026-09-22-kms-pilot-orders-fulfilment slice.
+- **KMS Strategy — Target Design and Governance Standard (v2.0.0)**
+  - Rewrote `specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md` from an
+    evaluation note into the authoritative target design and governance standard for the KMS.
+    Status moved `approved` → `review`: the document now asks for the approval it previously
+    asserted. **Strategy and design only — no documentation was restructured, moved, renamed or
+    deleted by this change.**
+  - Added an explicit strategy-vs-implementation boundary and a Design / Verified / Example marker
+    applied to every substantive claim, so illustrative examples can no longer read as platform
+    capabilities.
+  - Added a measured current-state baseline (§2): 1,254 Markdown files scanned, 212 covered by
+    front-matter, 1,042 uncovered (403 of them under `specs/`), 165 of 212 documents typed `spec`,
+    117 at `status: draft`, 1 of 212 carrying an `owner`, and 1 document repo-wide at
+    `visibility: public`.
+  - Replaced the "the codebase rules supreme" source-of-truth hierarchy with a per-knowledge-type
+    matrix over ~25 knowledge types (§11), plus the intent-versus-implementation rule: code that
+    contradicts an approved requirement is a defect, not a silent redefinition.
+  - Expanded the audience vocabulary (7 new values, `shopper`/`admin` retired), moved to a
+    four-track model, and required track derivation to be exhaustive over the audience enum —
+    `platform-admin` currently falls through to `internal-eng`.
+  - Recommended a three-value visibility model (`public`/`internal`/`restricted`) with documented
+    triggers for expanding to five, rather than five values against two enforcement points.
+  - Recommended a 13-type taxonomy with an explicit "does it earn its place" test, retiring the
+    generic `doc` and the unused `prompt`, and rejecting `security` and `historical` as types with
+    reasons.
+  - Specified the full metadata schema per field (why, required, allowed values, CI disposition),
+    adding `last_reviewed`, `source_of_truth`, `canonical_source`, `supersedes`/`superseded_by` and
+    `applies_to`, and recommending `version` be demoted from required (U3).
+  - Added onboarding models with verifiable completion tests for ten audiences, the full runbook
+    standard, the SOP/runbook distinction, and deployment as a first-class domain —
+    discovery-then-classification, the required documentation set, a verified inventory of the
+    platform's actual deployment models, a decision guide and a 15-stage lifecycle.
+  - Added a 21-row CI validation matrix including the **coverage ratchet** — a per-directory
+    baseline that fails only on an *increase* in uncovered files, making the front-matter gap
+    strictly non-growing without blocking current work.
+  - Added the Documentation Impact Assessment model, stage-by-stage SDD integration attaching to
+    the four existing gates (no fifth gate), and a four-tier progressive context-retrieval contract
+    for AI agents.
+  - Recorded 8 unresolved decisions plus 1 gap requiring approval (§25) and an audit trail of every
+    unverified assumption removed from v1.0.0 (§26) — Docker, AWS, Jira, Slack, Datadog, container
+    images, ephemeral PR environments, self-hosted deployment, `npm run db:migrate`, `NODE_ENV`.
+  - Regenerated `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`; `kms:validate` clean
+    and `kms/site-internal` builds all 214 pages.
 - **KMS Navigation Categories (#851)**
   - Updated kms:assemble:internal to construct folders per DocType, so that the Nextra KMS UI renders a categorized left navigation sidebar instead of a flat list.
 

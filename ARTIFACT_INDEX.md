@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-22T08:49:16.391Z` · commit `ec65c86` · `212` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-22T09:03:55.641Z` · commit `8f94a12` · `212` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -235,7 +235,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Phase 7a Implementation & Execution Plan](specs/2026-08-13-p7a-compliance-hardening/plan.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Step-by-step implementation plan for Phase 7a operational closure, UK compliance, security headers, and user-experience gaps. |
 | [Phase 7a — Compliance, Operational Closure & Application Hardening Requirements](specs/2026-08-13-p7a-compliance-hardening/requirements.md) | spec | 1.1.0 | 2026-08-13 | approved | internal | Spec and requirements for closing Phase 6 gaps, completing UK GDPR/PECR compliance, matching UI reference look-and-feel (docs/ui-ref), and de-risking operational launch prerequisites before Phase 8. |
 | [Phase 7a Validation & Acceptance Plan](specs/2026-08-13-p7a-compliance-hardening/validation.md) | spec | 1.1.0 | 2026-08-13 | approved | internal | Validation steps, test cases, visual parity checks vs docs/ui-ref, and empirical criteria for Phase 7a compliance, operational closure, and UX hardening. |
-| [KMS Strategy and Evaluation](specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md) | spec | 1.0.0 | 2026-09-22 | approved | internal | A comprehensive evaluation and strategic guide for designing a scalable, audience-centric Knowledge Management System (KMS). |
+| [KMS Strategy — Target Design and Governance Standard](specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md) | spec | 2.0.0 | 2026-09-22 | review | internal | The target architecture, documentation standard and governance model for the platform Knowledge Management System — audiences, taxonomy, metadata, source-of-truth, deployment documentation, runbooks, CI governance and SDD integration, with current-state facts separated from design intent. |
 
 ## Track 3 — Customer / Help Centre (`customer-help`)  ·  audience: customer
 
