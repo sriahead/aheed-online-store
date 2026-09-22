@@ -6,6 +6,21 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **`kms-strategy-evaluation.md` targeted maintenance pass (v2.0.0 → v2.1.0) — stale facts corrected after `#861` shipped, two content gaps closed, one architectural fork logged.** A correction pass, not a rewrite: no section restructured, `status` stays `review`, **U8 and G1 unaffected and still block approval**.
+  - **§2.2's measurement table re-run** against post-`#861` `staging`: 632 scanned (was 1,254), 195 valid (was 212), 15 uncovered (was 1,042), 422 slice-local (a category that didn't exist at v2.0.0), and the track/type/status/visibility distributions refreshed for the new denominator and the track-derivation fix.
+  - **§2.3 problem 1 marked resolved**: the 403 `specs/` files were never a coverage gap, they were a deliberate exclusion U7 now enforces in code (`#862`).
+  - **§2.3 problem 5's platform-admin fallthrough example, and §4.2's two required track-derivation corrections, marked resolved and shipped** — against the current three-track model; the four-track expansion further down §4.2 stays `Design`, unbuilt.
+  - **§19.2 rewritten from Design to Verified**: the coverage ratchet shipped, and fails in either direction (not increase-only, as originally designed).
+  - **§25 U7 marked resolved**, citing `#861`, rather than left reading as open.
+  - **The same corrected facts restated elsewhere in the document** (§12, §13.1, §24 step 1, §25 U4, §26) refreshed to match §2.2, rather than left self-contradictory.
+  - **§25 gains U9**: the audience-first (as written) vs. domain-first information-architecture fork, raised by a separate later documentation-architecture brief. Logged as an explicit open decision, matching U1–U8 — **not resolved, §8 unchanged**. Adopting either answer requires its own approval.
+  - **§14.2 gains a design note** naming the platform's existing product-search synonym system (`specs/2026-09-03-search-synonyms-and-relevance-recovery/`) as the candidate mechanism for KMS search synonyms, deferred to implementation since KMS search itself is unbuilt.
+  - **§9.1 gains a design note** specifying `configuration-reference` documents should be generated from `lib/config`'s schema, following the principle already used for `ARTIFACT_INDEX.md`, rather than hand-maintained.
+  - `#862` extended to cover all five stale-fact corrections (was three). New issue `#869` filed for the two content gaps, both closed here.
+  - No schema change, no migration, no application code. `kms:validate` unaffected (195/422/15/0); `kms:check-generated` current; `lint`/`typecheck`/`format:check` green.
+
 ### Fixed
 
 - **KMS enforcement foundation — three broken controls repaired, U7 resolved, coverage ratchet landed** (issue `#861`, `specs/2026-09-22-kms-enforcement-foundation/`).
