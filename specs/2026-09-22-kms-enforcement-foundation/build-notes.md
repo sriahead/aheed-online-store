@@ -83,9 +83,28 @@ rebuilt to match.
   This is within R6's "the block and its delimiters"; it is called out here so a validator reading
   the diff is not surprised by a 12-line removal where the front-matter was 11 lines.
 
+- **R2a was added to the spec mid-slice, not built silently.** `sdd:preclear` failed at this stage
+  with four errors, all in *historical* slice directories that R6's front-matter revert had touched:
+  `2026-08-21-view-switcher` has no `validation.md`, it and `2026-08-21-p8-storefront-branding-webp`
+  have no `build-notes.md`, and `2026-08-22-ui-polish-docs-integration`'s `build-notes.md` pre-dates
+  the four required headings. **All four gaps exist on `origin/staging`** — verified with
+  `git cat-file -e origin/staging:<path>` — and this branch's only change to those files is removing
+  front-matter, 213 lines deleted and 0 added.
+
+  The gate selected any slice directory containing a changed path. No slice had ever edited an older
+  slice's files before, so this shape of change had never exposed it. Backfilling would have meant
+  inventing a validation record for work nobody validated that way — the same objection `#864`
+  raises. The fix narrows selection to slices whose spec files were **added** on the branch, which is
+  what "the slice under work" has always meant. Written into `requirements.md` as **R2a** with its
+  own validation row first, then implemented, per the template's rule for a genuine prerequisite fix
+  discovered mid-slice.
+
 ## Deviations from the spec
 
-None in substance. Two wording notes for the validator:
+None in substance. Three wording notes for the validator:
+
+- **R2a is a mid-slice spec amendment**, numbered `R2a` rather than renumbering R3 onwards. It is a
+  real requirement with a real validation row, not a post-hoc description of what was built.
 
 - **R15 says "matching the table in `validation.md`".** The generated baseline matches that 8-row
   table exactly, including the two slice-directory entries (`rls-experiment.md`,
