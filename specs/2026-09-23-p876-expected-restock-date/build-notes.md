@@ -130,6 +130,15 @@ Full `npx vitest run` alone: **162 files, 2,142 tests, exit 0**. `lint`, `typech
   trigger. **Product creation from `/staff/products/new` is broken on every environment until this
   ships.**
 
+**R3 live evidence, recorded at `/validate` (2026-09-23):** signed in as `demo-store-admin@example.com`
+under `npm run preview` against dev `ep-dry-morning-zab7dx08`, on HEAD (post-fix, `1261c43`).
+`POST /staff/products/new` with a unique name, quantity `0`, restock day `2026-12-01` returned
+**303** (no error banner) to `/staff/products/a01a8f23-1e06-4f9a-9dcb-2dd1f1077c05`, slug
+`p876-r3-validate-1790165015737`. Confirmed against the DB: `Product` and `Inventory` rows exist,
+`Inventory.quantity = 0`, `Inventory.expectedRestockDate = 2026-12-01T00:00:00.000Z`. The product
+saved `isActive: false` by default (no checkbox submitted), which already satisfies "switch the test
+product off" — left as-is, ignorable like `p876-build-smoke`.
+
 ## Known-shaky areas
 
 - **The dev database is a new endpoint.** On 2026-09-23 Neon rejected the old dev endpoint
@@ -170,3 +179,14 @@ Full `npx vitest run` alone: **162 files, 2,142 tests, exit 0**. `lint`, `typech
   immediately, then `/api/products/quick-view`'s detail once fetched. Both pass through the facade's
   filter (`listByCategory`/`search`/`list`, then `getBySlug`), so they agree. The unit test asserts
   after the fetch resolves.
+- **The `snacks` department (and likely others) holds 224 active products in dev**, almost all from
+  the bulk scale-testing seed (`#489`, `gen-*` slugs). `/categories/snacks` at `/validate` (2026-09-23)
+  legitimately paginates a real product (`date-bites`) off page 1 — not a defect, just page-size vs.
+  a synthetic catalogue. Narrowing with `?minPrice=X&maxPrice=X` (the product's own price) is the
+  fastest way to isolate one specific product on that route without paging through cursors by hand.
+- **R16's driver script signed in and submitted the update form without an explicit `isActive`
+  field once, and the write silently flipped the product inactive** — `checkbox()` treats an absent
+  field as unchecked, exactly as R6/R8 already document, and a curl/`node:http` submit (unlike a
+  real browser) sends no field it wasn't told to. Re-submitting with `isActive: "on"` restored it.
+  Not a code defect; a reminder that every checked box on the real form must be listed explicitly
+  when reproducing a submit by hand, including ones the row under test doesn't mention.
