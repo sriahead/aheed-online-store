@@ -6,7 +6,17 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Expected restock date on out-of-stock products** (issue `#876`, split from `#400`; `specs/2026-09-23-p876-expected-restock-date/`). Staff can give an out-of-stock product the day it's expected back, and shoppers see "Back in stock" with that date (e.g. `Tue 1 Dec`) on the product card, the quick view and the product page.
+  - **New column `Inventory.expectedRestockDate`** (nullable, additive migration `20260923103000_p876_inventory_expected_restock_date`, no `DROP`). It stores a calendar **day** as its UTC midnight, the `Order.fulfilmentDate` convention since #811. Written from an optional `type="date"` field on the staff product form, which both STAFF and ADMIN can reach. An impossible day such as `2026-02-31` is refused rather than rolled over.
+  - **Shown only while stock is zero, and only until the day has passed in the vendor's own timezone.** The request-scoped product facade applies the check (`currentRestockDay` in `lib/restock.ts`, with the vendor's today from `getCurrentVendorProfile()`, already request-cached). The repository may not read request context, and a client component would use the shopper's clock. No extra query on any listing.
+  - **Async stock loading, #400's third item, was dropped on measurement, not deferred.** Its premise was that storefront HTML is edge-cached, so a server-rendered count goes stale. Measured on production and staging: every storefront route returns `private, no-cache, no-store` with no `cf-cache-status`/`Age`, so counts are already fresh. Recorded in `specs/architecture.md`. Per-store counts stay on `#400`, blocked on `#422`.
+  - Staff guide (`docs/staff-playbook/staff-tabs-guide.md` 2.4.0) documents the field and now recommends zero plus a restock date, rather than switching off, for a product that's coming back.
+
 ### Fixed
+
+- **Creating a product from the staff panel failed on every call** (issue `#878`, folded into `#876`'s branch as its prerequisite). `createProductForVendor` performs a `product.create` with nested inventory and tier creates, which opens an implicit transaction, and it ran over the HTTP client (`getPrisma()`). Reproduced before the fix under `npm run preview`: `POST /staff/products/new` → **500** with `Error: Transactions are not supported in HTTP mode`, no row written. Now uses `getPrismaWs()`, beside `updateProductForVendor` under the service's transaction-bearing banner. This is the shape `CLAUDE.md` names (measured under #116). The call site predated that measurement and was never moved. The platform has never traded, which is why nothing surfaced it.
 
 - **KMS internal docs site: search returned an error on every query, because the Pagefind index was never built** (issue `#871`, `specs/2026-09-22-kms-search-index/`). Not a regression — **search had never worked** since the site went live, and the box rendered and failed for every reader the whole time.
   - **Root cause.** Nextra 4 loads its index at runtime as a dynamic import of `/_pagefind/pagefind.js` (`nextra/dist/client/components/search.js:13`). Nothing here produced it: `pagefind` was not a dependency (0 matches in `kms/site-internal/package-lock.json`), there was no `public/` directory in that project, the string `pagefind` appeared nowhere outside `node_modules`, and `deploy-docs-internal.yml` ran `opennextjs-cloudflare build && wrangler deploy` with no index step. The asset 404'd and the client threw `TypeError: Failed to fetch dynamically imported module`.

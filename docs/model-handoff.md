@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.28.0"
-updated: 2026-09-22
+version: "1.29.0"
+updated: 2026-09-23
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -366,6 +366,31 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **2026-09-23 — `staging` fully promoted; two slices in flight on separate branches.** PR #875
+  promoted `staging` (`41e86dc`) to `main` (`2ff3e79`), closing `#861`/`#871`/`#857`. Production
+  `/api/health` was verified serving `2ff3e79` with `db.ok: true`. That supersedes the "staging ahead
+  by #867" state in Last Verified above. `/propose` then split `#400` and `#697`:
+  - **`#876` + `#878`**, branch `feature/876-expected-restock-date`, is **built and awaiting
+    `/validate`**. It adds the expected restock date. **`#878` is a live defect on every environment
+    until it ships:** `/staff/products/new` returns 500 (`Transactions are not supported in HTTP
+    mode`), because product create ran a nested create over `getPrisma()`. It was reproduced before
+    the fix; see that slice's `build-notes.md`.
+  - **`#877`**, branch `feature/877-generated-net-content`, has **only its spec committed** (net
+    content for the generated demo catalogue, plus a backfill for rows already present). Its Build
+    has not started.
+  - Both branches regenerate `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`. Whichever
+    merges second **will conflict on those two files**. Resolve by running `npm run kms:build-index`
+    on that branch, never by hand-merging.
+  - **Storefront HTML is not edge-cached** (measured production and staging, 2026-09-23; recorded in
+    `specs/architecture.md`). `#400`'s async-stock item was dropped on that basis, and `#400`
+    narrows to per-store counts, blocked on `#422`.
+  - **The dev Neon endpoint changed:** the old dev endpoint's credentials were rejected on
+    2026-09-23. `.env`/`.dev.vars` now point at `ep-dry-morning-zab7dx08` (owner-confirmed as dev,
+    migrated through `#876`'s migration). Anything naming `ep-sparkling-paper-za3j7xza` as current
+    dev is stale.
+  - Filed from this loop, not in any slice: `#879` (HMC verified-on date accepts impossible days)
+    and `#880` (the `next.config.mjs` comment claiming storefront edge caching).
 
 - **`#861` (KMS enforcement foundation) is MERGED TO STAGING, NOT YET PROMOTED TO `main`.**
   Merged via PR #867 (squash `7194629`, 2026-09-22); `deploy-staging` and `deploy-docs-internal`
