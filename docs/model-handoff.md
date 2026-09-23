@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.26.0"
+version: "1.28.0"
 updated: 2026-09-22
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,7 +40,9 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-22.
-- **Checkout:** `main` is at `2047d0a`; `staging` is at `8fc7b7c` and is its direct parent.
+- **Checkout:** `main` is at `2047d0a`; `staging` is at `7194629`, ahead of `main` by one PR — #867
+  (`#861`, KMS enforcement foundation), merged to `staging` only, not yet promoted. See In-Flight
+  Work below for detail.
   - **In production (PR #858, merge `2047d0a`, verified live):** the KMS restructuring pilot
     (`#851`, PR #852), KMS navigation categories (PR #853), and the KMS strategy standard
     (PR #855 then PR #856). `deploy-production` (run `35711810410`) and `deploy-docs-internal`
@@ -364,6 +366,61 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **`#861` (KMS enforcement foundation) is MERGED TO STAGING, NOT YET PROMOTED TO `main`.**
+  Merged via PR #867 (squash `7194629`, 2026-09-22); `deploy-staging` and `deploy-docs-internal`
+  both succeeded. Issue **stays open** — moved to `In Review` in Project #2, since `Done` applies
+  only on promotion to `main`. Spec at `specs/2026-09-22-kms-enforcement-foundation/`; the full
+  technical narrative, every deliberate-break validation row and the Fix-stage root-cause writeup
+  live in that slice's `build-notes.md`, not repeated here.
+  - Repairs three broken KMS controls: the walker excluded no `graft/` (gitignored, untracked, so
+    `kms:validate` scanned 1,281 files locally against ~628 in CI); `assemble.ts` never read a
+    document's own `visibility`; and `trackFor()` returned the first matching branch, leaving
+    `platform-admin` to fall through.
+  - **The live symptom worth remembering:** the `#851` pilot's canonical orders document
+    (`docs/operations-research/order-fulfilment-core.md`) was routed to the *public* site by its
+    `shopper` audience and was therefore absent from the internal docs site entirely — the only
+    deployed KMS surface. Nothing leaked only because `kms/site-public/` has no app or workflow.
+  - **Numbers a future session will otherwise re-derive:** `ARTIFACT_INDEX.md` 212 → **195**;
+    `kms:validate` now reports 195 valid / **422** slice-local / **15** uncovered / 0 failing (422,
+    not 421 — the slice's own `build-notes.md` is itself slice-local, and the count above includes
+    it); the coverage baseline is 15 files across 8 directories, not the 1,042 the strategy cites.
+  - **U7 is resolved**: `requirements.md`, `validation.md` and `build-notes.md` in a dated slice
+    directory are slice-local, carry no front-matter, and `kms:validate` now *fails* on one that
+    does. This confirms the existing rule in `specs/sdd-workflow.md`; it did not change it.
+  - **A real bug found and fixed at Validate, not before shipping — worth remembering as a class of
+    trap.** `kms:check-generated`'s freshness check compared its rebuild against its own **pre-run
+    disk snapshot** rather than the git-committed content, so running the check's *own prescribed*
+    local verification sequence (`kms:build-index` then `kms:check-generated`) left
+    `ARTIFACT_INDEX.md`'s footer dirty in `git status` even though the check itself reported
+    everything current and exited 0. Never affected CI, which calls `kms:check-generated` alone
+    from a clean checkout — only a hand-run sequence matching the validation row triggered it.
+    Fixed in the same PR: `checkGeneratedArtefacts()` now reads and restores against
+    `git show HEAD:<path>`, independent of anything that ran before it.
+  - **A scope note for future Validate passes:** a Build-stage commit (`873cf58`, before this
+    document existed in its `.27.0` form) touched `docs/model-handoff.md` itself — outside this
+    slice's own stated scope (`kms/`, two generated artifacts, `quality.yml`, `tests/`). Neither
+    `/validate` pass caught this at the time; it surfaced only when reading the merge diff at Ship.
+    The content itself was benign (a status append, matching this file's own standing convention),
+    so nothing was rolled back, but a diff-shape check that greps specific path prefixes can still
+    miss a real out-of-scope file — worth eyeballing the full unfiltered `git diff --name-only`
+    against a slice's stated scope, not just its named restricted paths.
+
+- **KMS restructuring §24 Steps 1–4 are COMPLETE; the results are in `#863`, not in this repo.**
+  Inventory, classification, gap analysis and migration map were produced 2026-09-22 and recorded
+  on that issue deliberately — writing them as a repository document would have changed the very
+  front-matter counts `#861` pins. **Read `#863` before specifying §24 step 5**; it carries the
+  43-document living corpus, the class-by-class migration map, and the decisions still required.
+  - **`#862` should land before the strategy is approved.** `kms-strategy-evaluation.md` v2.0.0 is
+    still `status: review` and carries three wrong figures: `owner` is **0** of 212, not 1 (its
+    measuring grep matched its own §10.3 worked example); the 1,042 baseline was machine-dependent;
+    and §2.3 problem 1 mischaracterises the slice-local files, which shipped code now contradicts.
+  - **U8 and G1 still have no safe default** and still gate step 6. U1 was investigated and needs
+    no action: the repo name, README title and the multi-tenant apex all show the platform wears
+    tenant #1's identity, there is no platform-level name, and ADR-004 contradicts "SRIMART".
+  - Also filed from that analysis: `#864` (one slice has no `validation.md`), `#865` (the staff
+    runbook bundles 2.5 MB of document bodies to render about eight), `#866` (stale
+    `kms/site-public` layout).
 
 - **`#841` (clickable star ratings with descriptive labels for product reviews) is DONE — see Last Verified above.**
   Promoted to production via PR #845 (merge `a579781`, 2026-09-21), carrying PR #842 (feature merge), PR #843 (custom descriptive labels),

@@ -1,16 +1,3 @@
----
-id: p7a-compliance-hardening-requirements
-title: Phase 7a — Compliance, Operational Closure & Application Hardening Requirements
-audience: [dev, admin]
-type: spec
-status: approved
-version: "1.1.0"
-updated: 2026-08-13
-visibility: internal
-summary: Spec and requirements for closing Phase 6 gaps, completing UK GDPR/PECR compliance, matching UI reference look-and-feel (docs/ui-ref), and de-risking operational launch prerequisites before Phase 8.
-tags: [p7, compliance, hardening, operational-closure, ui-ref, sdd]
----
-
 # Phase 7a — Compliance, Operational Closure & Application Hardening
 
 ## Overview

@@ -1,16 +1,3 @@
----
-id: ui-polish-docs-integration-build
-title: "UI Polish & Docs Integration Build Notes"
-audience: [dev]
-type: spec
-status: approved
-version: "1.1.0"
-updated: 2026-08-23
-visibility: internal
-summary: "Why the global CSS transition was reverted, how the transition-all sweep over-corrected the carousel dots, and the resolution of the KMS indexing bug for new audiences."
-tags: ["ui", "docs", "help-centre", "runbook", "build-notes"]
----
-
 # UI Polish & Docs Integration (build notes)
 
 - **UI Animations — the base-layer override was tried, and it was the wrong call.** The build first

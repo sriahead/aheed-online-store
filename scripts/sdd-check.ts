@@ -260,12 +260,40 @@ function preclear(): number {
   const porcelain = (sh("git status --porcelain") ?? "").split("\n").filter(Boolean);
   const dirtyPaths = porcelain.map((l) => l.slice(3).trim());
 
-  // Slice detection spans committed + uncommitted, so an uncommitted spec folder is
-  // still recognised as the slice under work (and then caught by the clean-tree check).
+  // A slice is "under work" when one of its FOUR SPEC FILES was ADDED on this branch — not
+  // merely when some file inside its directory changed (#861 R2a).
+  //
+  // The old rule matched any changed path under specs/<date-slug>/. That was fine while no slice
+  // had ever edited an older slice's files, and wrong the moment one did: #861's U7 revert stripped
+  // front-matter from 18 files across 7 historical slice directories, and pre-clear then demanded
+  // the full four-file contract from slices that shipped in August — 2026-08-21-view-switcher has
+  // no validation.md, two slices have no build-notes.md, and
+  // 2026-08-22-ui-polish-docs-integration's build-notes.md pre-dates the four required headings.
+  // All four gaps exist on origin/staging; none was introduced by the branch being checked.
+  //
+  // Turning those green would have meant inventing a validation record for work nobody validated
+  // that way. The gate's purpose is that the slice UNDER WORK is fully on disk before a Clear, and
+  // a months-old slice whose front-matter this branch happens to strip is not under work.
+  //
+  // Additions only, so a branch that merely edits an existing slice (a Document pass, a fix to an
+  // older spec) reports no slice and falls through to the not-blocking path below — while an
+  // uncommitted, still-untracked new spec folder is caught, preserving the original intent.
+  const committedAdds = (sh(`git diff --name-status --diff-filter=A ${base}...HEAD`) ?? "")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => line.split("\t")[1])
+    .filter(Boolean);
+  const uncommittedAdds = porcelain
+    .filter((line) => line.startsWith("??") || line.slice(0, 2).includes("A"))
+    .map((line) => line.slice(3).trim());
+
+  const sliceSpecFile = new RegExp(
+    `^specs/(\\d{4}-\\d{2}-\\d{2}-[^/]+)/(?:${REQUIRED_SPEC_FILES.join("|").replace(/\./g, "\\.")})$`,
+  );
   const slices = [
     ...new Set(
-      [...committed, ...dirtyPaths]
-        .map((p) => /^specs\/(\d{4}-\d{2}-\d{2}-[^/]+)\//.exec(p)?.[1])
+      [...committedAdds, ...uncommittedAdds]
+        .map((p) => sliceSpecFile.exec(p)?.[1])
         .filter((s): s is string => Boolean(s)),
     ),
   ].sort();

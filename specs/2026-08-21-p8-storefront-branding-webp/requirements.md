@@ -1,15 +1,3 @@
----
-id: 2026-08-21-p8-storefront-branding-webp-reqs
-title: Storefront Branding & WebP Compression Requirements
-summary: Requirements for the vendor branding admin UI and WebP compression.
-audience: [dev]
-type: spec
-version: 1.0.0
-updated: 2026-08-21
-status: approved
-visibility: internal
----
-
 # Requirements
 
 - **R1**: Provide an Admin UI (\/staff/storefront\) allowing vendors to update their branding (colors, logo) and storefront config (hero subtitle, banner note). (Closes #278)

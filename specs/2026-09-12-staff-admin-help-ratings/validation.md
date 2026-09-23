@@ -1,15 +1,3 @@
----
-id: 2026-09-12-staff-admin-help-ratings-val
-title: Validation
-audience: [dev]
-type: spec
-status: approved
-version: "1.1.0"
-updated: 2026-09-12
-visibility: internal
-summary: Verification criteria for Staff/Admin roles, Category Manager, Help Centre, and zero-review ratings.
----
-
 # Validation
 
 ## 1. Staff vs Admin Authorization

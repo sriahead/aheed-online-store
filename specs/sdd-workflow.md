@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.34.0"
-updated: 2026-09-16
+version: "2.35.0"
+updated: 2026-09-22
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -679,6 +679,24 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   **When a pathspec must reach every depth including the root of the directory it names, pair it
   with the single-level form** (`'docs/*.md' 'docs/**/*.md'`, not `'docs/**/*.md'` alone) or drop
   the glob entirely and grep the whole tree, then exclude what doesn't apply.
+- **An eleventh instance, `#861`'s `/ship` (2026-09-22), is a diff-shape check narrower than the
+  scope it was meant to prove.** `requirements.md`'s preamble stated a blanket scope ("nothing
+  outside `kms/`, two generated artifacts, `quality.yml` and `tests/` is touched; no document body
+  is edited"), but the only machine check for it (R22) greped `git diff --name-only` against four
+  named path prefixes (`prisma/`, `lib/`, `features/`, `components/`, plus `app/` with one named
+  exception) — a deliberate, narrower proxy for a subset of the scope statement, not the whole of
+  it. Both `/validate` passes ran that grep, both reported clean, and neither ever printed the full
+  unfiltered file list to eyeball against the preamble's actual "nothing outside..." wording. A
+  Build-stage commit had touched `docs/model-handoff.md` — outside every one of R22's four
+  prefixes, so the grep genuinely found nothing, and outside the stated scope, so it should have
+  been a finding. It surfaced only at `/ship`, reading the merge diff after the PR had already
+  merged. The content itself was benign (a routine handoff-log append, matching this repo's own
+  standing convention — see "Project-state handoff responsibilities" above), so nothing needed
+  rolling back, but the gap in the check was real: **a diff-shape row that names specific path
+  prefixes is a proxy for a broader prose scope statement, the same relationship every prior
+  instance in this list has to its own requirement — read the full unfiltered `git diff --name-only`
+  against the stated scope at least once, not just the named prefixes a `validation.md` row happens
+  to grep.**
 - UI changes: verify against rendered output (compiled CSS, rendered HTML, browser screenshot), not
   code review alone. DB-touching code: `npm run preview`, never `npm run dev` (see `CLAUDE.md`).
 - **Server actions can be driven headlessly against `npm run preview`** — no browser needed. Next

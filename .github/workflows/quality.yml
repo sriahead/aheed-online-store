@@ -58,3 +58,10 @@ jobs:
       # one went stale on staging and main with CI green).
       - name: KMS — generated artefacts are current
         run: npm run kms:check-generated
+      # The coverage ratchet (#861). Fails when the per-directory count of uncovered markdown
+      # files differs from the checked-in baseline in either direction, so the front-matter debt
+      # is strictly non-growing and a reduction cannot be silently given back. Lives here rather
+      # than in a caller for the same reason every other KMS check does — a check added to a
+      # caller makes the deploy paths run less than a pull request does (#537).
+      - name: KMS — coverage ratchet
+        run: npm run kms:coverage

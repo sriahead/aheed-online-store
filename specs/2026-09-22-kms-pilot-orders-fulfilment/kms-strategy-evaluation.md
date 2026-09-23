@@ -4,7 +4,7 @@ title: "KMS Strategy — Target Design and Governance Standard"
 audience: [dev, operations, product]
 type: spec
 status: review
-version: "2.0.0"
+version: "2.1.1"
 updated: 2026-09-22
 visibility: internal
 summary: "The target architecture, documentation standard and governance model for the platform Knowledge Management System — audiences, taxonomy, metadata, source-of-truth, deployment documentation, runbooks, CI governance and SDD integration, with current-state facts separated from design intent."
@@ -92,6 +92,11 @@ This section exists so that the rest of the document can be read as *design* wit
 is the measured baseline the strategy corrects. Every figure was taken from this repository at the
 commit this document was written; re-measure before acting on any of it.
 
+**§2.2 re-measured 2026-09-22, after `#861` shipped (PR #867, `staging` at `a801b56`).** `#861`
+repaired the walker's `graft/` exclusion and the `trackFor()` fallthrough this section originally
+measured *around* — the first re-measurement is therefore a real shift in the baseline, not drift to
+correct back. See `#862` for the full record of what changed and why.
+
 ### 2.1 What exists and works
 
 | Fact | Evidence | Basis |
@@ -110,41 +115,61 @@ commit this document was written; re-measure before acting on any of it.
 
 | Measurement | Value | Evidence | Basis |
 | :--- | :--- | :--- | :--- |
-| Markdown files scanned by `kms:validate` | 1,254 | `npm run kms:validate` | V |
-| Files carrying valid KMS front-matter | **212** | same | V |
-| Files carrying **no** front-matter (warned, non-blocking) | **1,042** | same | V |
-| Of those, files under `specs/` | **403** | same, bucketed by path | V |
+| Markdown files scanned by `kms:validate` | **632** | `npm run kms:validate` | V |
+| Files carrying valid KMS front-matter | **195** | same | V |
+| Files carrying **no** front-matter (warned, non-blocking) | **15** | same | V |
+| Slice-local files (`requirements.md`/`validation.md`/`build-notes.md` in a dated slice directory) — their own category, not counted as uncovered | **422** | same | V |
+| Of the 15 uncovered, files under `specs/` | **2** (`rls-experiment.md`, `migration-ledger.md` — not slice-local, ordinary uncovered documents) | same, bucketed by path | V |
 | Files with invalid front-matter (blocking) | 0 | same | V |
-| Indexed artifacts by track | `internal-eng` 197 · `staff-ops` 12 · `customer-help` 3 | `ARTIFACT_INDEX.md` | V |
-| Indexed artifacts by type | `spec` 165 · `doc` 28 · `guide` 7 · `runbook` 6 · `adr` 6 | `ARTIFACT_INDEX.md` | V |
+| Slice-local files carrying front-matter (blocking) | 0 | same | V |
+| Indexed artifacts by track | `internal-eng` 180 · `staff-ops` 14 · `customer-help` 1 | `ARTIFACT_INDEX.md` | V |
+| Indexed artifacts by type | `spec` 148 · `doc` 28 · `guide` 7 · `runbook` 6 · `adr` 6 | `ARTIFACT_INDEX.md` | V |
 | Declared types never used | `sop`, `faq`, `prompt` (0 each) | `ARTIFACT_INDEX.md` vs `DocType` enum | V |
-| Indexed artifacts by status | `draft` 117 · `approved` 95 · `review` 0 · `deprecated` 0 | `ARTIFACT_INDEX.md` | V |
-| Indexed artifacts by visibility | `internal` 211 · `public` **1** | `ARTIFACT_INDEX.md` | V |
-| Documents carrying an `owner` | **1 of 212** | `grep -rl '^owner:' specs/ docs/` | V |
-| Documents carrying `related` | 119 | same method | V |
-| Documents carrying `tags` | 191 | same method | V |
+| Indexed artifacts by status | `draft` 118 · `approved` 76 · `review` 1 · `deprecated` 0 | `ARTIFACT_INDEX.md` | V |
+| Indexed artifacts by visibility | `internal` 194 · `public` **1** | `ARTIFACT_INDEX.md` | V |
+| Documents carrying an `owner` | **0 of 195** — the `1` this table cited before was `grep -rl '^owner:' specs/ docs/` matching this very document's own §10.3 worked example, not a real document | `grep -rl '^owner:' specs/ docs/`, excluding this document | V |
+| Documents carrying `related` | not re-measured in this pass | same method | — |
+| Documents carrying `tags` | not re-measured in this pass | same method | — |
 
 ### 2.3 What this baseline tells us
 
-These are the eight problems the target design must solve. They are findings, not blame — most are
-the predictable result of a schema that was designed before there was enough content to test it.
+These were the eight problems the target design had to solve when this document was written. They
+are findings, not blame — most are the predictable result of a schema that was designed before there
+was enough content to test it. **Problem 1 is now RESOLVED** and **problem 5's platform-admin example
+is now fixed** — both by `#861`, which shipped after this document was written. Per §11.2, a
+contradiction between an approved document and running code is recorded, not silently reconciled;
+this update is that record. The other six problems are unaffected and still hold.
 
-1. **The KMS sees 17% of the repository's Markdown.** 403 files under `specs/` — every slice's
-   `requirements.md`, `validation.md` and `build-notes.md` — carry no front-matter and are invisible
-   to validation, the index, search and AI retrieval. `kms:validate` reports them as a warning and
-   passes. *A skip line is not a pass.*
-2. **The taxonomy is not discriminating.** 165 of 212 documents are `spec` and 28 are the catch-all
+1. **RESOLVED, `#861`.** The KMS does *not* have a 403-file coverage gap under `specs/`. This
+   document originally read the 403 un-front-mattered files under `specs/` as invisible-to-validation
+   ("the KMS sees 17% of the repository's Markdown"). They are a **deliberate exclusion**, already
+   stated in `specs/templates/feature-spec/build-notes.md` ("slice-local, not a KMS artifact") and
+   `specs/sdd-workflow.md`, which is authoritative for delivery process under this document's own
+   §11.3. `#861` resolved **U7** (§25) by enforcing that rule in code: `kms:validate` now reports
+   slice-local files (**422** of them) as their own category, separate from and not counted within
+   "no front-matter," and **fails** when one carries front-matter — proven live on all 18 files that
+   had drifted before `#861` reverted them. The real uncovered set, after removing the deliberate
+   exclusion, is **15 files**, not 403 and not 1,042. See `#862` for the full correction record.
+2. **The taxonomy is not discriminating.** 148 of 195 documents are `spec` and 28 are the catch-all
    `doc`; three declared types have never been used. Type therefore carries almost no navigational or
-   governance signal.
-3. **`status` does not track reality.** 117 documents sit at `draft` and none at `review` or
-   `deprecated`, on a platform where M0–P9 are in production. `draft` has become the default value
-   rather than a lifecycle state.
-4. **Ownership is declared but not practised.** 1 document in 212 names an owner, so no staleness or
-   escalation mechanism can route to anyone.
-5. **Visibility is doing two jobs.** `visibility` selects the *deploy target*; `audience` describes
-   *who it is for*; and `track` is derived from audience. A `platform-admin`-only document currently
-   derives to `internal-eng` because `trackFor()`'s cascade does not mention `platform-admin` — the
-   cascade is not exhaustive over its own enum.
+   governance signal. (Was 165 of 212 — the ratio, and the conclusion, are unchanged by `#861`.)
+3. **`status` does not track reality.** 118 documents sit at `draft` and only 1 at `review` — this
+   document itself — on a platform where M0–P9 are in production. `draft` has become the default
+   value rather than a lifecycle state. (Was 117 draft / 0 review; the `review` document `#861` fixed
+   nothing about this problem, it only moved the raw counts.)
+4. **Ownership is declared but not practised.** 0 of 195 documents name a real owner — not "1 of
+   212" as this table originally said; that `1` was a false match against this document's own §10.3
+   worked example (`#862`). No staleness or escalation mechanism can route to anyone.
+5. **Visibility is doing two jobs; the platform-admin fallthrough example is RESOLVED, `#861`.**
+   `visibility` selects the *deploy target*; `audience` describes *who it is for*; `track` is derived
+   from audience — that structural problem is unchanged. The example that followed it is not: a
+   `platform-admin`-only document no longer derives to `internal-eng`. `trackFor()` is now an
+   exhaustive `Record<Audience, Track>` plus an explicit precedence list, both compiler-enforced —
+   adding an audience without placing it in the mapping now fails `typecheck` rather than silently
+   falling through. Four documents actually re-routed: `docs/operations-research/order-fulfilment-core.md`,
+   `specs/2026-09-22-kms-pilot-orders-fulfilment/plan.md`, `docs/platform-admin-guide/platform-admin-guide.md`,
+   `docs/business-analysis/business-case.md` — all now `staff-ops`, each asserted by a real test
+   (`tests/kms-frontmatter.test.ts`).
 6. **The audience enum overlaps itself.** `customer` and `shopper` are synonyms; `admin`,
    `store-admin` and `platform-admin` are three overlapping values; and several real audiences
    (client, support, QA, DevOps, security) have no value at all.
@@ -230,13 +255,18 @@ request, offered for approval as **U6**.
 **Design.** `track` remains **derived**, never declared — that property is correct today and must be
 kept, because a declared track can disagree with audience and a derived one cannot.
 
-Two corrections are required:
+**Both corrections below are now RESOLVED and SHIPPED, `#861`** — against the *current* three-track,
+twelve-audience model, not yet against the four-track expansion recommended further down this
+section, which remains `Design`, unbuilt:
 
-1. The derivation must be **exhaustive over the audience enum**, with a compile-time exhaustiveness
+1. ~~The derivation must be **exhaustive over the audience enum**, with a compile-time exhaustiveness
    check, so that adding an audience value cannot silently fall through to `internal-eng` — which is
-   what happens to `platform-admin` today.
-2. Derivation must use **first match against an explicit ordered list**, and that list must be
-   stated in the schema file next to the enum, not inferred from the order of `if` statements.
+   what happens to `platform-admin` today.~~ **Done.** `AUDIENCE_TRACK` is a `Record<Audience,
+   Track>`; adding an audience without placing it in the mapping fails `typecheck`.
+2. ~~Derivation must use **first match against an explicit ordered list**, and that list must be
+   stated in the schema file next to the enum, not inferred from the order of `if` statements.~~
+   **Done.** `TRACK_PRECEDENCE`, exported next to `Audience` in `kms/schema/frontmatter.ts`, is
+   itself typed to cover every `Track` value.
 
 **Design — recommended track set.** Four tracks, one more than today:
 
@@ -477,6 +507,15 @@ not types. Applying that test to the fourteen candidates in the commissioning re
 | `release-note` | What changed in one release, per audience. | customer, client, staff, dev | delivery | historical the moment it publishes | immutable | none |
 | `roadmap` | Sequenced future intent. | product, delivery, client | product | authoritative for intent; the board is authoritative for status | living | every slice |
 
+**Design — how `configuration-reference` is derived.** "Derived from `lib/config`" names the source
+but not the mechanism. It should be **generated**, not hand-written: the same "generate, do not
+maintain" principle (section 3, principle 8) already used for `ARTIFACT_INDEX.md` and
+`app/(admin)/staff/runbook/docs.ts` (**Verified**, `kms/scripts/build-index.ts`, `#537`) applies here
+— a generator reads `lib/config`'s zod schema (name, required-ness, default, validation rule) and
+writes the reference document from it, the same way the artifact index is read from front-matter
+rather than typed by hand. Not built in this document; recorded so the intent is explicit rather than
+left to be inferred from "derived" alone when this type is first implemented.
+
 ### 9.2 Rejected candidates, with reasons
 
 | Candidate | Verdict | Reason |
@@ -640,8 +679,9 @@ reconciled (**Verified**, `specs/2026-09-22-kms-pilot-orders-fulfilment/requirem
 
 **Design.**
 
-- `owner` becomes **required** (section 10.1). Today 1 document in 212 carries one (**Verified**),
-  which means no staleness or escalation mechanism can route anywhere.
+- `owner` becomes **required** (section 10.1). Today 0 of 195 documents carry one (**Verified**;
+  originally reported as "1 of 212" — that `1` was a false match on this document's own §10.3 worked
+  example), which means no staleness or escalation mechanism can route anywhere.
 - Owners are **roles or teams**, never individuals — an individual's departure must not orphan a
   document.
 - Valid owners come from a **checked-in owner registry** listing, for each owner: the role, its
@@ -670,8 +710,9 @@ reconciled (**Verified**, `specs/2026-09-22-kms-pilot-orders-fulfilment/requirem
 | `superseded` | Replaced by a specific newer document. `superseded_by` required. | yes, marked | excluded unless explicitly requested | "Superseded by *X*" with a link |
 | `archived` | Retained as evidence only. Removed from active navigation. | index only | excluded unless explicitly requested | "Archived — historical evidence" |
 
-**Design.** `draft` must stop being the default. **Verified:** 117 of 212 documents are `draft` and
-zero are `review` or `deprecated`, on a platform with M0–P9 in production. The migration must set a
+**Design.** `draft` must stop being the default. **Verified:** 118 of 195 documents are `draft` and
+zero are `deprecated` — 1 is now `review`, this document itself — on a platform with M0–P9 in
+production. The migration must set a
 real status per document, and thereafter CI warns when a `draft` document has been unchanged for
 longer than its type's review cadence.
 
@@ -740,6 +781,19 @@ model above without a new mechanism:
 reader on the public surface can only ever filter within `visibility: public` — the facet index is
 built per surface, not filtered at query time, so a restricted title cannot leak through a facet
 count.
+
+**Design — search synonyms.** The platform already runs a working synonym system for storefront
+*product* search (**Verified**, `specs/2026-09-03-search-synonyms-and-relevance-recovery/`, managed
+at `/staff/search-synonyms`). That system, not a new one, is the candidate mechanism for KMS document
+search synonyms if KMS search ever needs one — the same "generate, do not maintain" and
+"reuse before create" principles that govern the rest of this document apply here too. This is
+deferred to implementation (section 24), not resolved now. **Correction (`#871`, 2026-09-22):** this
+paragraph previously said the search feature itself was still `Design`, with nothing to wire synonym
+data into. That was already wrong when written — a search UI has been deployed on the internal KMS
+site since it went live; only its Pagefind index was never built, so every query threw. `#871` fixed
+the index, not the UI. Search is now **Verified** working (Pagefind, no synonyms), and this synonym
+question is a real, live "if" rather than a hypothetical "once" — recorded here so it does not stay
+silent until someone reaches for it.
 
 ### 14.3 The Artifact Index is governance, not navigation
 
@@ -993,14 +1047,19 @@ pattern — one generator, one exported list, checkers deriving their file list 
 
 ### 19.2 The coverage ratchet
 
-**Design.** The single most important new check. Today `kms:validate` reports 1,042 files with no
-front-matter as a non-blocking warning and exits 0 (**Verified**). A warning that has been emitted
-1,042 times is not a warning.
+**RESOLVED, `#861` — SHIPPED, not just designed.** This section originally described a check that
+did not yet exist. `#861` landed `kms:coverage`, a real npm script wired into `quality.yml`'s `kms`
+job, against a checked-in baseline (`kms/coverage-baseline.json`) of **15 uncovered files across 8
+directories** — down from the 1,042 this section's own opening sentence still cited at design time.
 
-The ratchet: a checked-in baseline records the current count of un-covered files **per directory**.
-CI fails if any directory's count **increases**. It never fails for the existing backlog. This makes
-the debt strictly non-growing from the day it lands, without blocking any current work — and it means
-the migration in section 24 can reduce the baseline incrementally, each reduction locked in.
+**The ratchet fails in *either* direction, not increase-only.** A checked-in baseline records the
+measured count of un-covered, non-slice-local files **per directory**. CI fails if any directory's
+count **differs from the baseline at all** — including a directory present in one and absent from the
+other — naming both numbers. This is stricter than originally designed: a *decrease* is caught too,
+so a reduction can't be silently given back without updating the baseline deliberately (the script's
+own `--update` flag, the only way the baseline file is written). This makes the debt strictly
+non-growing **and** the baseline itself an honest, current record, not a floor that quietly rises
+again if someone reverts a fix.
 
 ### 19.3 Detectable missing documentation
 
@@ -1241,7 +1300,7 @@ Approved KMS strategy  (this document)
 
 | Step | Produces | Notes |
 | :--- | :--- | :--- |
-| 1. Inventory | Every Markdown artifact, whether covered by front-matter, its current type/audience/status, and where it is referenced. | Must include the 1,042 uncovered files, bucketed. |
+| 1. Inventory | Every Markdown artifact, whether covered by front-matter, its current type/audience/status, and where it is referenced. | Must include the 15 uncovered files, bucketed (the 422 slice-local files are correctly excluded by U7, not part of this inventory's gap). |
 | 2. Classification | For each artifact: target type, audience, visibility, status, owner, source-of-truth standing. | The first point at which the new taxonomy meets real content. |
 | 3. Gap analysis | Missing Start Here pages; missing owners; missing deployment guides; contradictions; unsupported claims. | Reuses the pilot's `Resolved` / `Superseded` / `Unresolved` register. |
 | 4. Migration map | Source-to-destination ledger covering **100%** of inventoried artifacts. | The pilot proved this shape (R7). |
@@ -1275,11 +1334,12 @@ taken.
 | **U1** | **What is the platform, and this KMS, actually called?** The commissioning request said "SRIMART"; the repository shows SriMart is a *tenant*, not the platform. | (a) keep tenant-neutral naming, (b) adopt a platform name, (c) confirm SRIMART is the intended platform name | (a) tenant-neutral — used throughout this document |
 | **U2** | **Visibility model**: three values now (`public`/`internal`/`restricted`) with a documented trigger for five, or five immediately? | 3-now (recommended) · 5-now | 3-now |
 | **U3** | **Retire the required `version` field?** 164 of 212 documents sit at `1.0.0`; nothing consumes it. Affects a rendered index column. | retire (recommended) · keep required · keep for `adr`/`release-note` only | keep required — no change without approval |
-| **U4** | **Is `owner` required from the start, or phased?** Making it required immediately fails 211 of 212 documents. | phase via the coverage ratchet (recommended) · require immediately | phased |
+| **U4** | **Is `owner` required from the start, or phased?** Making it required immediately fails all 195 documents — 0 carry one today (originally reported as 211 of 212; corrected in §2.2/§12). | phase via the coverage ratchet (recommended) · require immediately | phased |
 | **U5** | **Does a client-facing surface get built?** Section 8 assumes a client track; today only the internal site is deployed and the public site is not built. | build both · public first · internal only | public first — client track stays a design |
 | **U6** | **`ai-agent` as an audience value?** This document recommends *against* it (section 4.1). | omit (recommended) · add | omit |
-| **U7** | **Does `spec` split into `spec` and `plan`/`validation` types**, so the 403 uncovered `specs/` files can be typed meaningfully? Or do all four slice documents share `type: spec`? | one type with a sub-field · separate types · leave uncovered | one type — decided at step 2 of section 24 |
+| **U7** | **RESOLVED, `#861`.** Slice documents do not split into new types. `requirements.md`, `validation.md` and `build-notes.md` in a dated slice directory are `slice-local` — no `type`, no front-matter, no index entry at all; only `plan.md` keeps `type: spec` and an index entry. This is exactly the table's own stated default, implemented in code ahead of step 2 of section 24 rather than waiting for it, through the enforcement-repair work instead. `kms:validate` now reports the category separately and fails if one carries front-matter. | ~~one type with a sub-field · separate types · leave uncovered~~ | ~~one type — decided at step 2 of section 24~~ **implemented** |
 | **U8** | **Who owns the KMS itself?** No owner exists for the standard, the schema or the sites. Without this, section 12 has no root. | name an owner | **must be decided — no safe default** |
+| **U9** | **Information architecture: audience-first (as written, §3 principle 4 and §8) or domain-first?** A separate, later documentation-architecture brief proposed a domain-first tree instead — roughly twenty top-level categories organised by content area (Deployment & Environments, Developer Portal, Operations & Runbooks, Security & Compliance, and so on), rather than this document's four audience tracks (Public / Client / Staff & Operations / Engineering) with document type as the secondary axis inside each. Both are internally coherent; they optimise for different things — domain-first is easier to author into (one folder per topic), audience-first means a reader never has to walk through irrelevant sections to reach their own material, which is what §7's Start Here model and §6's audience map are built on top of. **This is a real fork, not a gap — changing it is out of scope for any maintenance pass and requires its own evaluation and explicit approval before §8 changes.** | (a) keep audience-first, as written · (b) adopt domain-first · (c) hybrid (audience-first at the top level, domain-first within `internal-eng`, where the volume is highest) | (a) audience-first — unchanged, since this document's own default is to leave §8 as written absent an approved decision |
 | **G1** | **Gap, not a choice: there is no authoritative source for security requirements.** Section 11.3 records the hole. Something must own it before security documentation can be `derived` from anything. | create one | **must be decided — no safe default** |
 
 ---
@@ -1307,7 +1367,7 @@ verified. Each is recorded here so the conversion is auditable rather than silen
 | "`visibility: internal \| public`" as sufficient | **Extended** to three values with an enforceable `restricted`, section 5. |
 | Deployment-options matrix presented without evidence | **Replaced** by the verified inventory, section 15.3, every row carrying its evidence. |
 | Document-type table including a generic `doc` | **Retired**, section 9.2. |
-| Ownership model stated as though practised | **Retained as design**, with the verified reality (1 of 212 documents) stated in section 2.2 and a phased adoption path in U4. |
+| Ownership model stated as though practised | **Retained as design**, with the verified reality (0 of 195 documents, corrected from an originally-misreported 1 of 212 — section 2.2) and a phased adoption path in U4. |
 
 ---
 
@@ -1358,6 +1418,59 @@ deployment journeys. All fourteen concepts survive; each is now testable.
 - `ARTIFACT_INDEX.md` reframed as governance and AI surface, explicitly *not* primary human
   navigation.
 - The runbook staleness signal moved from commit recency to `last_reviewed`.
+
+---
+
+## 27a. Change summary — v2.0.0 → v2.1.0 (targeted maintenance, not a rewrite)
+
+**A correction pass, not new strategy.** `#861` shipped after v2.0.0 was written and moved several
+facts this document measured. No section was restructured; `status` stays `review`; **U8 and G1 are
+unaffected and still block approval**. Full record: `#862`.
+
+**Corrected**
+
+- §2.2's entire measurement table re-run against the post-`#861` repository: 632 scanned (was 1,254),
+  195 valid (was 212), 15 uncovered (was 1,042), 422 slice-local (a category that didn't exist at
+  v2.0.0), and the track/type/status/visibility distributions, all shifted by the denominator change
+  and the track-derivation fix.
+- §2.3 problem 1 rewritten from open to **resolved**: the 403 `specs/` files were never a coverage
+  gap, they were a deliberate exclusion U7 now enforces in code.
+- §2.3 problem 5's platform-admin fallthrough example, and §4.2's two required track-derivation
+  corrections, both marked **resolved and shipped** — against the current three-track model; the
+  four-track expansion further down §4.2 remains `Design`, unbuilt. §2.3's "visibility does two
+  jobs" framing is structural and unchanged.
+- §2.3 problems 2–4's inline figures refreshed to match §2.2 (148/195 spec, 118 draft / 1 review, 0
+  real owners — a *stronger* finding than the "1" this document originally cited, which was a false
+  match on its own §10.3 worked example).
+- §19.2 rewritten from a **Design** proposal to a **Verified**, shipped check — and corrected from
+  increase-only to fails-in-either-direction, which is stricter than originally designed.
+- §25 U7 marked resolved, citing `#861`, rather than left reading as still open.
+- The same corrected facts (owner count, draft/review split, the 1,042 figure) restated elsewhere in
+  the document — §12, §13.1, §24 step 1's Inventory row, §25 U4, §26's assumptions table — refreshed
+  to match §2.2 rather than left self-contradictory within one document.
+
+**Added**
+
+- §25 **U9**: the audience-first (as written) vs. domain-first information-architecture fork, raised
+  by a separate later brief. Logged as an explicit open decision, matching how U1–U8 are already
+  tracked — **not resolved, and §8 is unchanged**. Adopting either answer requires its own approval.
+- §14.2: a design note naming the platform's existing product-search synonym system as the candidate
+  mechanism for KMS search synonyms, deferred to implementation since KMS search itself is unbuilt.
+- §9.1: a design note specifying that `configuration-reference` documents should be *generated* from
+  `lib/config`'s schema, following the same principle already used for `ARTIFACT_INDEX.md`, rather
+  than hand-maintained.
+
+## 27b. Change summary — v2.1.0 → v2.1.1 (single fact correction)
+
+**Corrected**
+
+- §14.2: the synonym-deferral paragraph said the search feature itself was still `Design`, with
+  nothing to wire synonym data into. That was already wrong when written at v2.0.0 — a search UI has
+  been deployed on the internal KMS site since it went live; only its Pagefind index was never built
+  (`#871`, shipped 2026-09-22), so every query threw. Search is now **Verified** working, and the
+  synonym question is live, not hypothetical. Found at `#871`'s Orient, deliberately not fixed from
+  that code slice (`status: review` document, out of that slice's stated scope), corrected here at
+  its Document (final) stage instead.
 
 ---
 

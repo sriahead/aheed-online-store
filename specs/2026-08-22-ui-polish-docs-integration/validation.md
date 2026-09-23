@@ -1,16 +1,3 @@
----
-id: ui-polish-docs-integration-val
-title: "UI Polish & Docs Integration Validation"
-audience: [dev]
-type: spec
-status: approved
-version: "1.1.0"
-updated: 2026-08-23
-visibility: internal
-summary: "Re-run validation for the UI transition rules (compiled against Tailwind v4 directly) and the documentation integrations, replacing checks that had been ticked against reverted code."
-tags: ["ui", "docs", "help-centre", "runbook", "validation"]
----
-
 # UI Polish & Docs Integration (validation)
 
 V1. [x] **UI Micro-Interactions:** Inspected `app/globals.css` — it declares **no** transition, `:active` or `cubic-bezier` rule; the file is 27 lines (`color-scheme`, `body` colours, `.no-scrollbar`). Grepped `app/`, `components/` and `features/` for `transition-all`: **zero** hits outside `docs/ui-ref/`, which is excluded from lint, typecheck and Prettier and is never built. Per-component transitions name their properties.
