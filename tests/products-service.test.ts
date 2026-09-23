@@ -50,6 +50,11 @@ vi.mock("next/headers", () => ({
   headers: vi.fn(async () => new Headers({ "cf-connecting-ip": "203.0.113.5" })),
 }));
 vi.mock("@/lib/repositories/search-query-log", () => ({ recordSearchQuery }));
+// #876 — the facade reads the vendor's timezone to hide a passed restock day. Not what this file
+// tests, so it gets a fixed profile rather than a real tenant lookup.
+vi.mock("@/lib/vendor-service", () => ({
+  getCurrentVendorProfile: vi.fn(async () => ({ timezone: "Europe/London" })),
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();

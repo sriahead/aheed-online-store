@@ -308,6 +308,7 @@ async function main() {
         isActive: false,
         quantity: 1,
         lowStockThreshold: 1,
+        expectedRestockDay: null,
         tier: null,
       });
       if (!created.ok) throw new Error(`create refused: ${created.error}`);

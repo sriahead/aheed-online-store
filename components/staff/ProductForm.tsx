@@ -322,6 +322,32 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
                 {...fieldProps("lowStockThreshold")}
               />
             </div>
+
+            {/*
+              #876 — a calendar DAY, `type="date"`: the vendor's own day the product is expected
+              back, stored as that day's UTC midnight. Optional; blank clears it.
+            */}
+            <div>
+              <label className={labelClass} htmlFor="expectedRestockDay">
+                Expected restock date (optional)
+              </label>
+              <input
+                id="expectedRestockDay"
+                name="expectedRestockDay"
+                type="date"
+                defaultValue={product?.expectedRestockDay ?? ""}
+                {...fieldProps("expectedRestockDay")}
+                aria-describedby={
+                  state.field === "expectedRestockDay"
+                    ? "expectedRestockDay-hint product-form-error"
+                    : "expectedRestockDay-hint"
+                }
+              />
+              <p id="expectedRestockDay-hint" className="mt-1 text-xs text-black/60">
+                Shoppers see &ldquo;Back in stock&rdquo; with this date only while stock is 0, and
+                only until the date has passed.
+              </p>
+            </div>
           </div>
         </section>
 
