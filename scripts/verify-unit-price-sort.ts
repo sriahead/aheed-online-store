@@ -139,6 +139,7 @@ async function main() {
         isActive: true,
         quantity: 1,
         lowStockThreshold: 1,
+        expectedRestockDay: null,
         tier: null,
       });
       if (!created.ok) throw new Error(`create refused for ${fixture.label}: ${created.error}`);

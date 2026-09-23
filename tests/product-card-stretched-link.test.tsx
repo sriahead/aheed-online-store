@@ -53,6 +53,7 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
     inStock: true,
     stockQuantity: 20,
     lowStockThreshold: 3,
+    expectedRestockDay: null,
     tier: null,
     ...overrides,
   };

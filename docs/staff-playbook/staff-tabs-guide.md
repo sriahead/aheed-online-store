@@ -4,8 +4,8 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.3.0"
-updated: "2026-09-19"
+version: "2.4.0"
+updated: "2026-09-23"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
 tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback"]
@@ -43,9 +43,11 @@ shoppers. You cannot change a price, a name, a photo or which department a produ
 this page — those changes are made under Catalogue (`/staff/products`).
 
 **Typical workflow:** You spot a gap on the shelf during a shift. Search for the product by name,
-correct its quantity to what is really there, and carry on. If the item has gone entirely and you do
-not expect it back today, switch it off rather than setting it to zero — a switched-off product
-disappears from the shop instead of showing as unavailable.
+correct its quantity to what is really there, and carry on. If the item has gone and you know when
+it is coming back, set it to zero and give it an **expected restock date** on its Catalogue page
+(`/staff/products`), so shoppers see "Back in stock" with that date instead of just "Out of stock".
+If you do not expect it back at all, switch it off rather than setting it to zero — a switched-off
+product disappears from the shop instead of showing as unavailable.
 
 **Important fields and filters:** There is a single search box that matches on the product name. The
 page loads the first 100 products and does not paginate, so **use the search box rather than
@@ -258,7 +260,11 @@ amount** and **Net content unit** are the pair that matter for pricing law: fill
 example `500` and `Grams` — and the shop works out the price per kilogram itself and shows that
 instead of your unit label, so it can never drift from the price you charge. Leave them empty and
 nothing changes: the product goes on showing the unit label you typed. The amount is a whole number
-in the unit you pick, so enter half a kilo as `500` grams rather than `0.5` kilograms. **Unlike the
+in the unit you pick, so enter half a kilo as `500` grams rather than `0.5` kilograms. **Expected
+restock date** is optional: give the day you expect an out-of-stock product back, and shoppers see
+"Back in stock" with that date on the product card, the quick view and the product page. It shows
+only while stock is zero, and only until that date has passed, so a date you forget to clear never
+tells a shopper something stale. Clearing the field removes it. **Unlike the
 shop itself, this list shows switched-off products too** — that is deliberate, because otherwise you
 could never find a product to switch back on.
 

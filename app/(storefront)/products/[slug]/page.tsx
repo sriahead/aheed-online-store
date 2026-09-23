@@ -8,6 +8,7 @@ import { getEnv } from "@/lib/config";
 import { formatPrice } from "@/components/product/format-price";
 import { deriveUnitPriceLabel } from "@/components/product/unit-price";
 import { ProductImageGallery } from "@/components/product/ProductImageGallery";
+import { RestockNotice } from "@/components/product/RestockNotice";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { ReviewForm } from "@/features/reviews/components/ReviewForm";
 import { deleteReview } from "@/features/reviews/delete-review";
@@ -70,6 +71,15 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <p className={product.inStock ? "text-action" : "text-danger"}>
           {product.inStock ? "In stock" : "Out of stock"}
         </p>
+        {!product.inStock && product.expectedRestockDay !== null && (
+          <p>
+            <RestockNotice
+              day={product.expectedRestockDay}
+              className="text-sm"
+              iconClassName="h-4 w-4"
+            />
+          </p>
+        )}
 
         {/*
           #608 — this page rendered NO facet at all before now, not even Halal or Fresh, which the

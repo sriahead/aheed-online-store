@@ -1,6 +1,9 @@
 import { headers } from "next/headers";
 import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { calendarDayInZone, STORE_TIMEZONE } from "@/lib/local-datetime";
+import { currentRestockDay } from "@/lib/restock";
 import { recordSearchQuery } from "@/lib/repositories/search-query-log";
 import { listApprovedAliasMap } from "@/lib/repositories/search-synonyms";
 import {
@@ -30,6 +33,7 @@ import {
   type AdminProductDetail,
   type AdminProductPage,
   type CatalogueWriteResult,
+  type ProductPage,
   type ProductRepository,
   type ProductWriteInput,
   type RemoveImageResult,
@@ -45,6 +49,29 @@ import {
 async function resolveClientIp(): Promise<string> {
   const h = await headers();
   return h.get("cf-connecting-ip") ?? h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
+
+/**
+ * #876 — hides an expected restock day that has already passed. "Passed" is judged against the
+ * VENDOR's today, which only request scope can know: a client component would use the shopper's
+ * clock, and the repository may not read request context. `getCurrentVendorProfile()` is
+ * `React.cache`d and already called by the storefront layout, so this adds no query.
+ */
+async function vendorToday(): Promise<string> {
+  const profile = await getCurrentVendorProfile();
+  return calendarDayInZone(new Date(), profile?.timezone ?? STORE_TIMEZONE);
+}
+
+function withCurrentRestock<T extends { expectedRestockDay: string | null }>(
+  product: T,
+  today: string,
+): T {
+  return { ...product, expectedRestockDay: currentRestockDay(product.expectedRestockDay, today) };
+}
+
+async function withCurrentRestockPage(page: ProductPage): Promise<ProductPage> {
+  const today = await vendorToday();
+  return { ...page, items: page.items.map((item) => withCurrentRestock(item, today)) };
 }
 
 /**
@@ -78,11 +105,13 @@ export function getProductRepository(): ProductRepository {
 
   return {
     async listByCategory(categoryIds, opts) {
-      return listProductsByCategory(prisma, await vendorId(), categoryIds, opts);
+      return withCurrentRestockPage(
+        await listProductsByCategory(prisma, await vendorId(), categoryIds, opts),
+      );
     },
 
     async list(opts) {
-      return listProducts(prisma, await vendorId(), opts);
+      return withCurrentRestockPage(await listProducts(prisma, await vendorId(), opts));
     },
 
     async search(query, opts) {
@@ -101,11 +130,12 @@ export function getProductRepository(): ProductRepository {
           result.directNameMatch,
         );
       }
-      return result;
+      return withCurrentRestockPage(result);
     },
 
     async getBySlug(slug) {
-      return getProductBySlug(prisma, await vendorId(), slug);
+      const product = await getProductBySlug(prisma, await vendorId(), slug);
+      return product === null ? null : withCurrentRestock(product, await vendorToday());
     },
 
     async availableFacets(context) {

@@ -723,14 +723,18 @@ model ProductImage {
 }
 
 model Inventory {
-  id                String   @id @default(uuid())
-  vendorId          String
-  vendor            Vendor   @relation(fields: [vendorId], references: [id])
-  productId         String   @unique
-  product           Product  @relation(fields: [productId], references: [id])
-  quantity          Int      @default(0)
-  lowStockThreshold Int      @default(3)
-  updatedAt         DateTime @updatedAt
+  id                  String    @id @default(uuid())
+  vendorId            String
+  vendor              Vendor    @relation(fields: [vendorId], references: [id])
+  productId           String    @unique
+  product             Product   @relation(fields: [productId], references: [id])
+  quantity            Int       @default(0)
+  lowStockThreshold   Int       @default(3)
+  // #876 — a CALENDAR DAY, not an instant: the UTC midnight of the vendor-local day staff expect
+  // the product back, the same convention as Order.fulfilmentDate (#811). Read and write it only
+  // through lib/local-datetime.ts's calendar-day helpers. Null = no expected date.
+  expectedRestockDate DateTime?
+  updatedAt           DateTime  @updatedAt
 
   @@index([vendorId])
 }

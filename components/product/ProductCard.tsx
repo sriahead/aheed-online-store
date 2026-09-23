@@ -3,6 +3,7 @@
 import { AlertTriangle, Eye } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { CartQuantityStepper } from "@/components/cart/CartQuantityStepper";
+import { RestockNotice } from "@/components/product/RestockNotice";
 import { Card } from "@/components/ui/Card";
 import { ProductImage } from "./ProductImage";
 import { ProductRating } from "./ProductRating";
@@ -230,6 +231,15 @@ export function ProductCard({
               <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-danger">
                 <AlertTriangle className="h-3 w-3" aria-hidden />
                 Only {product.stockQuantity} left
+              </p>
+            )}
+            {!product.inStock && product.expectedRestockDay !== null && (
+              <p className="mt-1.5">
+                <RestockNotice
+                  day={product.expectedRestockDay}
+                  className="text-[11px]"
+                  iconClassName="h-3 w-3"
+                />
               </p>
             )}
           </div>
