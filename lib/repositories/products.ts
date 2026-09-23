@@ -9,6 +9,8 @@ import {
   type NetContentUnit,
 } from "@/components/product/unit-price";
 import { effectiveStock } from "@/lib/cart-rules";
+import { restockDayFromStored } from "@/lib/restock";
+import { calendarDayToUtcMidnight } from "@/lib/local-datetime";
 import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
 import { parseSearchQuery } from "@/lib/search-query";
 import { hasNameTierCandidate, rankSearchCandidates } from "@/lib/search-ranking";
@@ -93,6 +95,12 @@ export interface ProductSummary {
    */
   stockQuantity: number;
   lowStockThreshold: number;
+  /**
+   * #876 — the vendor-local day (`YYYY-MM-DD`) the product is expected back, or null. Mapped here
+   * from the same joined `Inventory` row as `inStock`. The repository returns whatever is stored;
+   * hiding a day that has passed needs the vendor's "today", so `lib/products-service.ts` does it.
+   */
+  expectedRestockDay: string | null;
   /**
    * P8.5d (#348) — the product's active multi-buy tier, or null.
    *
@@ -486,7 +494,7 @@ const productSummarySelect = {
   averageRating: true,
   reviewCount: true,
   images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
-  inventory: { select: { quantity: true, lowStockThreshold: true } },
+  inventory: { select: { quantity: true, lowStockThreshold: true, expectedRestockDate: true } },
 } as const;
 
 /** A row as selected by `productSummarySelect`. */
@@ -527,6 +535,7 @@ function toProductSummary(row: ProductSummaryRow, tier: ProductTier | null): Pro
     inStock: (row.inventory?.quantity ?? 0) > 0,
     stockQuantity: effectiveStock(row.inventory?.quantity),
     lowStockThreshold: row.inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
+    expectedRestockDay: restockDayFromStored(row.inventory?.expectedRestockDate),
     tier,
   };
 }
@@ -1110,7 +1119,9 @@ export async function getProductBySlug(
       averageRating: true,
       reviewCount: true,
       images: { orderBy: { sortOrder: "asc" }, select: productImageSelect },
-      inventory: { select: { quantity: true, lowStockThreshold: true } },
+      inventory: {
+        select: { quantity: true, lowStockThreshold: true, expectedRestockDate: true },
+      },
     },
   });
   if (!product) return null;
@@ -1124,6 +1135,7 @@ export async function getProductBySlug(
     inStock: (inventory?.quantity ?? 0) > 0,
     stockQuantity: effectiveStock(inventory?.quantity),
     lowStockThreshold: inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
+    expectedRestockDay: restockDayFromStored(inventory?.expectedRestockDate),
     tier: tiers.get(product.id) ?? null,
   };
 }
@@ -1445,6 +1457,8 @@ export interface AdminProductDetail {
   isActive: boolean;
   quantity: number;
   lowStockThreshold: number;
+  /** #876 — the stored expected restock day (`YYYY-MM-DD`), past or not, for the edit form. */
+  expectedRestockDay: string | null;
   imageNeedsReview: boolean;
   /** Read here; written by setPrimaryProductImage/addProductImage/etc. (P6b2, #211). */
   images: AdminProductImage[];
@@ -1484,6 +1498,8 @@ export interface ProductWriteInput {
   isActive: boolean;
   quantity: number;
   lowStockThreshold: number;
+  /** #876 — a `YYYY-MM-DD` day already validated by the form parser, or null to clear it. */
+  expectedRestockDay: string | null;
   /** P8.5d (#348) — the multi-buy tier, or null to remove it entirely. */
   tier: { groupQuantity: number; groupPricePence: number; isActive: boolean } | null;
 }
@@ -1672,7 +1688,9 @@ export async function getProductForAdmin(
       isFeatured: true,
       isActive: true,
       imageNeedsReview: true,
-      inventory: { select: { quantity: true, lowStockThreshold: true } },
+      inventory: {
+        select: { quantity: true, lowStockThreshold: true, expectedRestockDate: true },
+      },
       images: { orderBy: { sortOrder: "asc" }, select: adminProductImageSelect },
     },
   });
@@ -1689,8 +1707,14 @@ export async function getProductForAdmin(
     // shows zeroes and the first save creates it (see updateProductForVendor).
     quantity: inventory?.quantity ?? 0,
     lowStockThreshold: inventory?.lowStockThreshold ?? 3,
+    expectedRestockDay: restockDayFromStored(inventory?.expectedRestockDate),
     tier,
   };
+}
+
+/** #876 — a form day to its stored instant: that day's UTC midnight (the #811 convention). */
+function toRestockDate(day: string | null): Date | null {
+  return day === null ? null : calendarDayToUtcMidnight(day);
 }
 
 /**
@@ -1786,6 +1810,7 @@ export async function createProductForVendor(
             vendorId,
             quantity: input.quantity,
             lowStockThreshold: input.lowStockThreshold,
+            expectedRestockDate: toRestockDate(input.expectedRestockDay),
           },
         },
         // Nested for the same reason Inventory is: one implicit transaction, so
@@ -1874,8 +1899,13 @@ export async function updateProductForVendor(
           productId: id,
           quantity: input.quantity,
           lowStockThreshold: input.lowStockThreshold,
+          expectedRestockDate: toRestockDate(input.expectedRestockDay),
         },
-        update: { quantity: input.quantity, lowStockThreshold: input.lowStockThreshold },
+        update: {
+          quantity: input.quantity,
+          lowStockThreshold: input.lowStockThreshold,
+          expectedRestockDate: toRestockDate(input.expectedRestockDay),
+        },
       });
 
       // P8.5d (#348). Clearing both multi-buy fields DELETES the row rather than

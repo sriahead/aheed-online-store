@@ -1,5 +1,6 @@
 import { parsePriceInput } from "@/components/product/parse-price-input";
 import { isNetContentUnit, type NetContentUnit } from "@/components/product/unit-price";
+import { calendarDayToUtcMidnight } from "@/lib/local-datetime";
 
 /**
  * Catalogue admin field rules (P6b1, #159) — pure, DB-free, unit-tested.
@@ -67,6 +68,11 @@ export interface ProductFormValues {
   isActive: boolean;
   quantity: number;
   lowStockThreshold: number;
+  /**
+   * #876 — the vendor-local calendar day (`YYYY-MM-DD`) the product is expected back, or null.
+   * A day label, not an instant: the repository stores it as that day's UTC midnight.
+   */
+  expectedRestockDay: string | null;
   /**
    * P8.5d (#348) — the product's multi-buy tier, or null to clear it.
    *
@@ -261,6 +267,20 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
   const lowStockThreshold = wholeNumber(raw, "lowStockThreshold", "Low-stock threshold", 0);
   if (!lowStockThreshold.ok) return lowStockThreshold;
 
+  // #876 — `calendarDayToUtcMidnight` rather than `new Date(...)`: it refuses a well-shaped but
+  // impossible day (`2026-02-31`) instead of rolling it into March. A past day is accepted: the
+  // storefront hides it, and refusing it here would need the vendor's "today" in a pure parser.
+  const restockRaw = text(raw, "expectedRestockDay");
+  if (restockRaw !== "" && calendarDayToUtcMidnight(restockRaw) === null) {
+    return {
+      ok: false,
+      error: {
+        field: "expectedRestockDay",
+        message: "Enter a valid expected restock date, like 2026-10-01 — or leave it blank.",
+      },
+    };
+  }
+
   const netContent = parseNetContentFields(raw);
   if (!netContent.ok) return netContent;
 
@@ -297,6 +317,7 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
       isActive: checkbox(raw, "isActive"),
       quantity: quantity.value,
       lowStockThreshold: lowStockThreshold.value,
+      expectedRestockDay: restockRaw === "" ? null : restockRaw,
       tier: tier.value,
     },
   };
@@ -565,6 +586,7 @@ export const PRODUCT_FIELDS = [
   "isActive",
   "quantity",
   "lowStockThreshold",
+  "expectedRestockDay",
   "tierGroupQuantity",
   "tierGroupPrice",
   "tierIsActive",

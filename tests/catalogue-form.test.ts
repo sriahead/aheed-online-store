@@ -141,6 +141,28 @@ describe("parseProductForm — field rules (R5)", () => {
     expect(() => parseProductForm(productForm({ name: "" }))).not.toThrow();
   });
 
+  // #876 (R7) — the expected restock day is optional, a real calendar day, and kept as a label.
+  it("maps a blank expected restock date to null", () => {
+    const parsed = parseProductForm(productForm({ expectedRestockDay: "" }));
+    expect(parsed.ok && parsed.value.expectedRestockDay).toBeNull();
+    const absent = parseProductForm(productForm());
+    expect(absent.ok && absent.value.expectedRestockDay).toBeNull();
+  });
+
+  it("keeps a valid expected restock date as its YYYY-MM-DD label", () => {
+    const parsed = parseProductForm(productForm({ expectedRestockDay: "2026-10-01" }));
+    expect(parsed.ok && parsed.value.expectedRestockDay).toBe("2026-10-01");
+  });
+
+  it("rejects an impossible or non-date expected restock date on its own field", () => {
+    expect(rejectedField(parseProductForm(productForm({ expectedRestockDay: "2026-02-31" })))).toBe(
+      "expectedRestockDay",
+    );
+    expect(rejectedField(parseProductForm(productForm({ expectedRestockDay: "tomorrow" })))).toBe(
+      "expectedRestockDay",
+    );
+  });
+
   it("parses pounds into integer pence", () => {
     const value = accepted(parseProductForm(productForm({ basePrice: "2.40" })));
     expect(value.basePrice).toBe(240);

@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.30.0"
-updated: 2026-09-16
+version: "1.31.0"
+updated: 2026-09-23
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -403,6 +403,7 @@ model Inventory {
   product           Product  @relation(fields: [productId], references: [id])
   quantity          Int      @default(0)
   lowStockThreshold Int      @default(3)
+  expectedRestockDate DateTime? // #876 — a calendar DAY: UTC midnight of the vendor-local day
   updatedAt         DateTime @updatedAt
 }
 
@@ -596,6 +597,16 @@ database rather than the app.
   explicitly** — `force-dynamic` governs Next's rendering, not what sits in front of the Worker, and
   the two are easy to confuse because the symptom (a stale page) looks identical. Storefront routes
   are deliberately left cacheable.
+- **Storefront HTML is NOT edge-cached today, measured 2026-09-23 (#876).** "Deliberately left
+  cacheable" above means only that `next.config.mjs` adds no `Cache-Control` to them. It does not
+  mean anything caches them. On production and staging, `/`, two category pages and
+  `/search?q=rice` all return `Cache-Control: private, no-cache, no-store, max-age=0,
+  must-revalidate` (Next's own header for per-request dynamic rendering), with no `cf-cache-status`
+  and no `Age`. So a server-rendered stock count or price is fresh at render time. `#400`'s
+  proposal to move stock badges to an async fetch rested on the opposite assumption and was dropped
+  on this measurement. Re-measure before designing anything around storefront edge caching.
+  `docs/developer-portal/runtime-pitfalls.md`'s edge-caching section explains why a header alone
+  never proves a cache forms.
 - Optional **edge KV** for hot reads (categories, homepage rails) behind a `CacheService` port; if
   absent it falls through to the DB. KV ↔ Redis is a one-file swap.
 - The **database is always the source of truth**; caches are accelerators with explicit TTLs and

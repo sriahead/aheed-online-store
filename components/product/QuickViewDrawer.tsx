@@ -15,6 +15,7 @@ import { tierThresholdQuantity } from "@/lib/tier-pricing";
 import { submitReview } from "@/features/reviews/submit-review";
 import { deleteReview } from "@/features/reviews/delete-review";
 import type { ProductDetail } from "@/lib/repositories/products";
+import { RestockNotice } from "@/components/product/RestockNotice";
 import type { ReviewSummary, ReviewInput } from "@/lib/repositories/reviews";
 
 const FOCUSABLE =
@@ -374,6 +375,13 @@ export function QuickViewDrawer() {
                         <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
                         Only {displayProduct.stockQuantity} left
                       </span>
+                    )}
+                    {!displayProduct.inStock && displayProduct.expectedRestockDay !== null && (
+                      <RestockNotice
+                        day={displayProduct.expectedRestockDay}
+                        className="text-xs"
+                        iconClassName="h-3.5 w-3.5"
+                      />
                     )}
                   </div>
                 </div>
