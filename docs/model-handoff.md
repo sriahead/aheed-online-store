@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.29.0"
+version: "1.30.0"
 updated: 2026-09-23
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,10 +39,13 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-22.
-- **Checkout:** `main` is at `2047d0a`; `staging` is at `7194629`, ahead of `main` by one PR — #867
-  (`#861`, KMS enforcement foundation), merged to `staging` only, not yet promoted. See In-Flight
-  Work below for detail.
+- **Date:** 2026-09-23.
+- **Checkout:** `main` is at `5f1e14f`; `staging` matches it content-for-content (`33fdb1b` on
+  `staging`'s own history, merged into `main` unchanged by PR #882). Two promotions landed today:
+  PR #875 (`#861`/`#871`/`#857`, KMS enforcement + search index) and PR #882 (`#876`/`#878`,
+  expected restock date + product-create HTTP-transaction fix) — see Project Position below for
+  what each shipped. Production `/api/health` confirmed serving `5f1e14f`, `db.ok: true`,
+  `drift: false`, post both promotions.
   - **In production (PR #858, merge `2047d0a`, verified live):** the KMS restructuring pilot
     (`#851`, PR #852), KMS navigation categories (PR #853), and the KMS strategy standard
     (PR #855 then PR #856). `deploy-production` (run `35711810410`) and `deploy-docs-internal`
@@ -307,6 +310,25 @@ structure, invisible overlaid radio inputs, and descriptive rating labels ("Poor
 Pre-fills existing rating when editing. Preserved all existing feedback functionality, comment handling, submission validation,
 rate limiting, and moderation workflows untouched. Zero DB schema migrations. Closes #847 to `Done`.
 
+**`#861`/`#871`/`#857` (KMS enforcement foundation + internal-docs search index) are BOTH now
+promoted to production** (PR #875, merge `2ff3e79`, 2026-09-23, `staging -> main`). Repairs three
+broken KMS controls (`graft/` walker exclusion, `visibility`-aware `assemble.ts` routing, correct
+`trackFor()` matching) and builds the Pagefind search index the internal docs site had never had.
+See the KMS technical detail, numbers and the Validate-stage `kms:check-generated` bug fix in
+`specs/2026-09-22-kms-enforcement-foundation/build-notes.md` and
+`specs/2026-09-22-kms-search-index/build-notes.md` — not repeated here.
+
+**`#876`/`#878` (expected restock date + product-create HTTP-transaction fix) are BOTH now promoted
+to production** (PR #882, merge `5f1e14f`, 2026-09-23, `staging -> main`; PR #881 carried the
+feature into `staging`). Staff give an out-of-stock product an optional expected-back day on the
+product form; shoppers see "Back in stock \<date\>" on the product card, quick view and product
+page, only while stock is zero and only until that day has passed in the vendor's own timezone.
+`#878` (folded in as a prerequisite) fixed `createProductForVendor`'s nested `product.create`,
+which crashed on every call over `getPrisma()` — **`/staff/products/new` was broken on every
+environment until this shipped**, invisible only because the platform has never traded. One
+additive migration (`Inventory.expectedRestockDate DateTime?`, no `DROP`). Full live-validation
+detail in `specs/2026-09-23-p876-expected-restock-date/build-notes.md`. Production confirmed live
+post-merge: `/api/health` served `5f1e14f`, `db.ok: true`, `drift: false`.
 
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
@@ -367,21 +389,14 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **2026-09-23 — `staging` fully promoted; two slices in flight on separate branches.** PR #875
-  promoted `staging` (`41e86dc`) to `main` (`2ff3e79`), closing `#861`/`#871`/`#857`. Production
-  `/api/health` was verified serving `2ff3e79` with `db.ok: true`. That supersedes the "staging ahead
-  by #867" state in Last Verified above. `/propose` then split `#400` and `#697`:
-  - **`#876` + `#878`**, branch `feature/876-expected-restock-date`, is **built and awaiting
-    `/validate`**. It adds the expected restock date. **`#878` is a live defect on every environment
-    until it ships:** `/staff/products/new` returns 500 (`Transactions are not supported in HTTP
-    mode`), because product create ran a nested create over `getPrisma()`. It was reproduced before
-    the fix; see that slice's `build-notes.md`.
+- **2026-09-23 — `#876`/`#878` shipped; `#877` is the one remaining slice in flight.** `/propose`
+  (2026-09-23) split `#400` and `#697` into `#876`/`#878` and `#877`. `#876`/`#878` are now DONE —
+  see Project Position and Last Verified above, not repeated here.
   - **`#877`**, branch `feature/877-generated-net-content`, has **only its spec committed** (net
     content for the generated demo catalogue, plus a backfill for rows already present). Its Build
-    has not started.
-  - Both branches regenerate `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`. Whichever
-    merges second **will conflict on those two files**. Resolve by running `npm run kms:build-index`
-    on that branch, never by hand-merging.
+    has not started. Regenerate `ARTIFACT_INDEX.md`/`app/(admin)/staff/runbook/docs.ts` via
+    `npm run kms:build-index` on that branch if it starts to conflict with anything else landing on
+    `staging` first — never hand-merge those two generated files.
   - **Storefront HTML is not edge-cached** (measured production and staging, 2026-09-23; recorded in
     `specs/architecture.md`). `#400`'s async-stock item was dropped on that basis, and `#400`
     narrows to per-store counts, blocked on `#422`.
@@ -392,12 +407,11 @@ All facts in this section require live verification:
   - Filed from this loop, not in any slice: `#879` (HMC verified-on date accepts impossible days)
     and `#880` (the `next.config.mjs` comment claiming storefront edge caching).
 
-- **`#861` (KMS enforcement foundation) is MERGED TO STAGING, NOT YET PROMOTED TO `main`.**
-  Merged via PR #867 (squash `7194629`, 2026-09-22); `deploy-staging` and `deploy-docs-internal`
-  both succeeded. Issue **stays open** — moved to `In Review` in Project #2, since `Done` applies
-  only on promotion to `main`. Spec at `specs/2026-09-22-kms-enforcement-foundation/`; the full
-  technical narrative, every deliberate-break validation row and the Fix-stage root-cause writeup
-  live in that slice's `build-notes.md`, not repeated here.
+- **`#861` (KMS enforcement foundation) is DONE — see Project Position and Last Verified above.**
+  Promoted to production via PR #875 (merge `2ff3e79`, 2026-09-23). Spec at
+  `specs/2026-09-22-kms-enforcement-foundation/`; the full technical narrative, every
+  deliberate-break validation row and the Fix-stage root-cause writeup live in that slice's
+  `build-notes.md`, not repeated here.
   - Repairs three broken KMS controls: the walker excluded no `graft/` (gitignored, untracked, so
     `kms:validate` scanned 1,281 files locally against ~628 in CI); `assemble.ts` never read a
     document's own `visibility`; and `trackFor()` returned the first matching branch, leaving
