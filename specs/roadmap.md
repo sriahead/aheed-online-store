@@ -4,7 +4,7 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.107.0"
+version: "1.108.0"
 updated: 2026-09-22
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P10, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is now a historical record; launch work lives in P9 and post-launch work in P10.
