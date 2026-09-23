@@ -20,6 +20,11 @@ every branch merges.
 
 ### Changed
 
+- **Document-stage reconciliation for `#871`/`#857` (KMS search index), closing a gap left open across a Clear.** `npm run sdd:audit` found `specs/2026-09-22-kms-search-index/` (merged to `staging` via PR #873, `cd9058a`) had no citing row in `specs/roadmap.md`'s change-log, and a prior session's Document-stage work had been drafted but never committed.
+  - `specs/roadmap.md` — added the missing change-log row citing `specs/2026-09-22-kms-search-index/`.
+  - `kms-strategy-evaluation.md` (v2.1.0 → v2.1.1) — retained and verified accurate: §14.2's synonym-deferral paragraph previously said the search feature itself was still `Design`; corrected to record that a search UI has been live since the KMS site shipped and only its Pagefind index was missing, which `#871` fixed.
+  - `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts` — regenerated via `npm run kms:build-index`, not hand-edited.
+  - No schema change, no migration, no application code. `kms:validate` (0 failing), `kms:coverage` (baseline matches), `kms:check-generated` (current post-commit) and `npm run sdd:audit` (zero gaps) all verified.
 - **`kms-strategy-evaluation.md` targeted maintenance pass (v2.0.0 → v2.1.0) — stale facts corrected after `#861` shipped, two content gaps closed, one architectural fork logged.** A correction pass, not a rewrite: no section restructured, `status` stays `review`, **U8 and G1 unaffected and still block approval**.
   - **§2.2's measurement table re-run** against post-`#861` `staging`: 632 scanned (was 1,254), 195 valid (was 212), 15 uncovered (was 1,042), 422 slice-local (a category that didn't exist at v2.0.0), and the track/type/status/visibility distributions refreshed for the new denominator and the track-derivation fix.
   - **§2.3 problem 1 marked resolved**: the 403 `specs/` files were never a coverage gap, they were a deliberate exclusion U7 now enforces in code (`#862`).

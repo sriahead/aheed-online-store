@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-22T18:22:09.392Z` · commit `875ddab` · `196` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-23T00:07:37.959Z` · commit `6ff97d5` · `196` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -200,7 +200,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [ADR-006 — Store locations (multi-branch shape)](specs/decisions/ADR-006-store-locations.md) | adr | 1.0.0 | 2026-08-28 | approved | internal | If a vendor ever trades from more than one physical site, a location is a child of Vendor and never a second tenancy axis — vendorId stays the sole mandatory repository filter. Rules the shape so |
 | [Design System](specs/design-system.md) | doc | 1.13.0 | 2026-09-09 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases. |
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
-| [Roadmap](specs/roadmap.md) | doc | 1.107.0 | 2026-09-22 | approved | internal | Master backlog and phase sequencing (M0, P0-P10, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is now a historical record; launch work lives in P9 and post-launch work in P10. |
+| [Roadmap](specs/roadmap.md) | doc | 1.108.0 | 2026-09-22 | approved | internal | Master backlog and phase sequencing (M0, P0-P10, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is now a historical record; launch work lives in P9 and post-launch work in P10. |
 | [SDD Workflow](specs/sdd-workflow.md) | doc | 2.35.0 | 2026-09-22 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands. |
 | [Tech Stack](specs/tech-stack.md) | doc | 1.5.0 | 2026-09-07 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
 
@@ -220,7 +220,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.2.0 | 2026-09-12 | approved | internal | How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access. |
 | [Phase 6.5 — Autonomous Application Self-Review, Gap Detection & Hardening Plan](specs/2026-08-13-p6.5-self-review-hardening/plan.md) | spec | 1.0.0 | 2026-08-13 | approved | internal | Plan for Phase 6.5 autonomous self-review and hardening audit loop prior to Phase 7. |
 | [Phase 7a Implementation & Execution Plan](specs/2026-08-13-p7a-compliance-hardening/plan.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Step-by-step implementation plan for Phase 7a operational closure, UK compliance, security headers, and user-experience gaps. |
-| [KMS Strategy — Target Design and Governance Standard](specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md) | spec | 2.1.0 | 2026-09-22 | review | internal | The target architecture, documentation standard and governance model for the platform Knowledge Management System — audiences, taxonomy, metadata, source-of-truth, deployment documentation, runbooks, CI governance and SDD integration, with current-state facts separated from design intent. |
+| [KMS Strategy — Target Design and Governance Standard](specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md) | spec | 2.1.1 | 2026-09-22 | review | internal | The target architecture, documentation standard and governance model for the platform Knowledge Management System — audiences, taxonomy, metadata, source-of-truth, deployment documentation, runbooks, CI governance and SDD integration, with current-state facts separated from design intent. |
 | [KMS Pilot: Orders, Fulfilment & Payment Exceptions (plan)](specs/2026-09-22-kms-pilot-orders-fulfilment/plan.md) | spec | 1.1.0 | 2026-09-22 | draft | internal | Pilot for the revised KMS restructuring focusing on consolidating orders, fulfilment, and payment exceptions into a thematic, current-knowledge model. |
 
 ## Track 3 — Customer / Help Centre (`customer-help`)  ·  audience: customer

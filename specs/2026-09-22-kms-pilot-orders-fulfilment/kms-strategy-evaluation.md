@@ -4,7 +4,7 @@ title: "KMS Strategy — Target Design and Governance Standard"
 audience: [dev, operations, product]
 type: spec
 status: review
-version: "2.1.0"
+version: "2.1.1"
 updated: 2026-09-22
 visibility: internal
 summary: "The target architecture, documentation standard and governance model for the platform Knowledge Management System — audiences, taxonomy, metadata, source-of-truth, deployment documentation, runbooks, CI governance and SDD integration, with current-state facts separated from design intent."
@@ -785,12 +785,15 @@ count.
 **Design — search synonyms.** The platform already runs a working synonym system for storefront
 *product* search (**Verified**, `specs/2026-09-03-search-synonyms-and-relevance-recovery/`, managed
 at `/staff/search-synonyms`). That system, not a new one, is the candidate mechanism for KMS document
-search synonyms once KMS search is actually built — the same "generate, do not maintain" and
+search synonyms if KMS search ever needs one — the same "generate, do not maintain" and
 "reuse before create" principles that govern the rest of this document apply here too. This is
-deferred to implementation (section 24), not resolved now, because the search feature itself is still
-`Design` in this section: there is nothing to wire the synonym data into yet. Recorded explicitly so
-the question does not stay silent until search is built and someone has to rediscover this system
-exists.
+deferred to implementation (section 24), not resolved now. **Correction (`#871`, 2026-09-22):** this
+paragraph previously said the search feature itself was still `Design`, with nothing to wire synonym
+data into. That was already wrong when written — a search UI has been deployed on the internal KMS
+site since it went live; only its Pagefind index was never built, so every query threw. `#871` fixed
+the index, not the UI. Search is now **Verified** working (Pagefind, no synonyms), and this synonym
+question is a real, live "if" rather than a hypothetical "once" — recorded here so it does not stay
+silent until someone reaches for it.
 
 ### 14.3 The Artifact Index is governance, not navigation
 
@@ -1456,6 +1459,18 @@ unaffected and still block approval**. Full record: `#862`.
 - §9.1: a design note specifying that `configuration-reference` documents should be *generated* from
   `lib/config`'s schema, following the same principle already used for `ARTIFACT_INDEX.md`, rather
   than hand-maintained.
+
+## 27b. Change summary — v2.1.0 → v2.1.1 (single fact correction)
+
+**Corrected**
+
+- §14.2: the synonym-deferral paragraph said the search feature itself was still `Design`, with
+  nothing to wire synonym data into. That was already wrong when written at v2.0.0 — a search UI has
+  been deployed on the internal KMS site since it went live; only its Pagefind index was never built
+  (`#871`, shipped 2026-09-22), so every query threw. Search is now **Verified** working, and the
+  synonym question is live, not hypothetical. Found at `#871`'s Orient, deliberately not fixed from
+  that code slice (`status: review` document, out of that slice's stated scope), corrected here at
+  its Document (final) stage instead.
 
 ---
 
