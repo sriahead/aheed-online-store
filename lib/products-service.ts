@@ -203,13 +203,6 @@ export async function getProductForAdmin(
   return getProductForAdminRepo(getPrisma(), vendorId, id);
 }
 
-export async function createProductForVendor(
-  vendorId: string,
-  input: ProductWriteInput,
-): Promise<CatalogueWriteResult> {
-  return createProductForVendorRepo(getPrisma(), vendorId, input);
-}
-
 /**
  * #523 — record one failed image-pipeline attempt, so the bounded selection can
  * eventually give up on a product Workers AI permanently refuses.
@@ -254,6 +247,18 @@ export async function approveProductImageRow(
 }
 
 /* --- transaction-bearing writes: WebSocket client only (#382) ------------- */
+
+/**
+ * #878 — a singular `product.create` with NESTED inventory (and tier) creates opens an implicit
+ * transaction, so it belongs here. Over `getPrisma()` it failed on every call with "Transactions
+ * are not supported in HTTP mode" (reproduced under `npm run preview`, 2026-09-23).
+ */
+export async function createProductForVendor(
+  vendorId: string,
+  input: ProductWriteInput,
+): Promise<CatalogueWriteResult> {
+  return createProductForVendorRepo(getPrismaWs(), vendorId, input);
+}
 
 export async function updateProductForVendor(
   vendorId: string,
