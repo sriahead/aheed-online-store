@@ -3,7 +3,7 @@ id: p877-generated-net-content
 title: "P877 — Net Content for the Generated Demo Catalogue (plan)"
 audience: [dev]
 type: spec
-status: draft
+status: approved
 version: "1.0.0"
 updated: 2026-09-23
 visibility: internal
