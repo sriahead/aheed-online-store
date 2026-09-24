@@ -1,7 +1,10 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   GENERATED_SLUG_PREFIX,
   GENERATOR_SEED,
+  PACK_NET_CONTENT,
+  PACKS,
   generateProducts,
 } from "../prisma/generate-catalogue";
 
@@ -92,5 +95,69 @@ describe("generateProducts", () => {
   it("rejects a negative count and an empty category list", () => {
     expect(() => generateProducts(-1, CATEGORIES)).toThrow(/count must be/);
     expect(() => generateProducts(10, [])).toThrow(/at least one category/);
+  });
+});
+
+/**
+ * #877 — net content for the generated catalogue (R3, R4).
+ */
+describe("generateProducts net content (#877)", () => {
+  it("has a lookup-table entry for every pack in the pool (R3)", () => {
+    for (const pack of PACKS) {
+      expect(Object.hasOwn(PACK_NET_CONTENT, pack), `no PACK_NET_CONTENT entry for "${pack}"`).toBe(
+        true,
+      );
+    }
+  });
+
+  it("gives each row the net content its pack's table entry says (R3)", () => {
+    const products = generateProducts(2000, CATEGORIES);
+    for (const p of products) {
+      // The pack is the name's tail: longest match first, so "10kg" never reads as "0kg".
+      const pack = [...PACKS]
+        .sort((a, b) => b.length - a.length)
+        .find((candidate) => p.name.endsWith(` ${candidate}`));
+      expect(pack, `no pack found in "${p.name}"`).toBeDefined();
+      const entry = PACK_NET_CONTENT[pack as string] ?? null;
+      expect([p.netContentAmount, p.netContentUnit]).toEqual([
+        entry?.amount ?? null,
+        entry?.unit ?? null,
+      ]);
+    }
+  });
+
+  it("never sets exactly one of the two net content fields (R3)", () => {
+    const products = generateProducts(2000, CATEGORIES);
+    const halfSet = products.filter(
+      (p) => (p.netContentAmount === null) !== (p.netContentUnit === null),
+    );
+    expect(halfSet).toEqual([]);
+  });
+
+  it("leaves every pre-existing field byte-identical to the pre-#877 generator (R4)", () => {
+    // The literal was computed from the generator as it stood BEFORE #877 (the parent of this
+    // branch's first generator change), not from the current code — recomputing it here would
+    // prove nothing. It pins the latency measurement's substrate (nfr-baseline.md).
+    const hash = createHash("sha256");
+    for (const p of generateProducts(500, ["a", "b", "c"])) {
+      hash.update(
+        JSON.stringify([
+          p.slug,
+          p.name,
+          p.description,
+          p.categorySlug,
+          p.basePrice,
+          p.unitLabel,
+          p.quantity,
+          p.origin,
+          p.isHalal,
+          p.isFresh,
+          p.isOrganic,
+        ]) + "\n",
+      );
+    }
+    expect(hash.digest("hex")).toBe(
+      "6acab641e19234bd6a2612b057020ae4e93c9fe1748ff5652ec6048f49344424",
+    );
   });
 });
