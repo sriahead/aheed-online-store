@@ -139,6 +139,7 @@ model Vendor {
   config                    VendorConfig?
   location                  VendorLocation?
   deliveryAreas             VendorDeliveryArea[]
+  deliveryRefusalCounts     DeliveryRefusalCount[]
   fulfilmentSlots           VendorFulfilmentSlot[]
   categories                Category[]
   products                  Product[]
@@ -415,9 +416,36 @@ model VendorDeliveryArea {
   id       String @id @default(uuid())
   vendorId String
   vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  prefix   String // postcode district prefix, e.g. "MK"
+  prefix   String // postcode area ("MK", every district in it) or district ("MK9", exactly that one)
+
+  // #890 — per-area delivery money overrides, integer pence. null = use the matching VendorConfig
+  // default. 0 keeps VendorConfig's meaning: free delivery / no minimum / free delivery never
+  // offered here. Resolved by lib/delivery-pricing.ts; a district row beats an area row.
+  deliveryFeePence           Int?
+  minimumOrderPence          Int?
+  freeDeliveryThresholdPence Int?
 
   @@unique([vendorId, prefix])
+}
+
+// #889 — how often a real postcode this vendor does not serve was entered, per outward-code
+// district per vendor-local day per surface. Aggregate only: no user, session, full postcode,
+// cookie or IP, so it is not personal data and sits outside data-rights export/erasure.
+model DeliveryRefusalCount {
+  id       String                @id @default(uuid())
+  vendorId String
+  vendor   Vendor                @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  district String
+  day      DateTime              @db.Date
+  source   DeliveryRefusalSource
+  count    Int                   @default(0)
+
+  @@unique([vendorId, district, day, source])
+}
+
+enum DeliveryRefusalSource {
+  HEADER
+  CHECKOUT
 }
 
 // ADR-006: Physical store location. Enforced 1:1 via unique(vendorId) for #402.

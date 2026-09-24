@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.31.0"
-updated: 2026-09-23
+version: "1.32.0"
+updated: 2026-09-24
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -277,6 +277,41 @@ there.
   surprises people: because a tier is inside the subtotal rather than a deduction from it, the
   vendor's `minimumOrderPence` and the free-delivery threshold are judged on the *tier-reduced*
   figure — the opposite of how discount codes and loyalty redemption behave, and deliberate.
+
+### 3.1a Delivery areas, per-area pricing and refusal counts (#613, #890, #889 — 2026-09-24)
+
+- **Geography is postcode strings on `VendorDeliveryArea`.** A row is an AREA (`MK`, every
+  district in it) or a DISTRICT (`MK9`, exactly that outward code), compared as strings by
+  `lib/delivery.ts` — never interpreted as a pattern. When both match, the district row wins
+  (`matchDeliveryArea`). Ranges and comma lists (`MK1-MK10`) are an **input convenience only**,
+  expanded to ordinary rows by `lib/delivery-area-form.ts`; nothing stores a range or an exclusion.
+  ADR-004's `Region`/`Location` tables remain unbuilt (ADR-006, note of 2026-09-24).
+- **Per-area delivery money is three nullable override columns on the same row** —
+  `deliveryFeePence`, `minimumOrderPence`, `freeDeliveryThresholdPence`, integer pence; `null` =
+  the `VendorConfig` default, field by field. `0` keeps `VendorConfig`'s meaning (free delivery /
+  no minimum / free delivery not offered), which is how an area opts out of a store-wide offer.
+  Delivery only: Click & Collect always uses the vendor defaults.
+- **One resolver decides a shopper's charges:** `lib/delivery-pricing.ts`'s pure
+  `resolveDeliveryRules(vendorDefaults, areas, postcode, method)`. Every surface showing or charging
+  delivery money calls it — the checkout page, `place-order`, the cart drawer, `/cart`, the landing
+  banner — through `lib/delivery-pricing-service.ts` (the `delivery-postcode` cookie) or, in
+  `place-order`, with the delivery ADDRESS postcode. No surface reads the vendor-wide fields
+  directly.
+- **No silent price change at checkout.** The checkout page carries the charges it quoted
+  (`quotedDeliveryRules`, `<fee>:<minimum>:<threshold>`); `place-order` refuses, moves the cookie,
+  and asks the shopper to review when the address resolves to different **values**. Comparing values
+  rather than the matched row is deliberate: a shopper with no cookie whose area has no overrides is
+  never refused.
+- **`DeliveryRefusalCount`** holds out-of-area demand: one row per vendor, outward-code district,
+  vendor-local day (`@db.Date`) and source (`HEADER` / `CHECKOUT`), incremented by an `upsert`.
+  Recorded only for `OUTSIDE_DELIVERY_AREA` (a real postcode, confirmed by the reference database,
+  that the vendor does not serve); never from the public lookup API. It carries **no personal
+  data** — no user, session, full postcode, cookie or IP — and so sits outside data-rights export
+  and erasure; adding any such column would change that. A failed count is logged and never
+  changes the shopper's response.
+- **Client choice:** the bulk insert (`createMany`) and the charges update (`updateMany`) take the
+  WebSocket client (#382); the refusal `upsert` and the single-row `create` use HTTP.
+  `scripts/verify-delivery-areas.ts` proves both adapters against a real database.
 
 ### 3.2 Core schema (representative Prisma excerpt)
 

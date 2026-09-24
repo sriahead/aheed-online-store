@@ -12,7 +12,11 @@ import {
   applyStorefrontTheme,
   saveStorefrontTheme,
 } from "@/features/admin/storefront";
-import { addDeliveryArea, removeDeliveryArea } from "@/features/admin/delivery-areas";
+import {
+  addDeliveryArea,
+  removeDeliveryArea,
+  updateDeliveryAreaCharges,
+} from "@/features/admin/delivery-areas";
 import { saveLoyaltyConfig } from "@/features/admin/loyalty-config";
 import { createDiscountCode, deactivateDiscountCode } from "@/features/admin/discount-codes";
 import { reconcileRefusal, recoverRefusedOrder } from "@/features/payments/reconcile-refusal";
@@ -62,6 +66,9 @@ describe("Admin-only Server Actions", () => {
 
     const resRemove = await removeDeliveryArea({} as any, formData);
     expect(resRemove.error).toMatch(/permission/i);
+
+    const resCharges = await updateDeliveryAreaCharges({} as any, formData);
+    expect(resCharges.error).toMatch(/permission/i);
   });
 
   it("denies STAFF from executing Loyalty actions", async () => {
