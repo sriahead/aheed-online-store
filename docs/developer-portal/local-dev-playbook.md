@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.4.0"
-updated: 2026-09-23
+version: "1.5.0"
+updated: 2026-09-24
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, silently-ignored TZ overrides, the dev machine's BST clock as a free browser timezone override, curl-driven server actions, grep-vs-rendered-HTML pitfalls.
 tags: [local-dev, windows, validation, playbook]
@@ -230,6 +230,19 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   that payload) — the visible sentence just needs a JS-executing client to materialise. **Parse the
   `self.__next_f.push(...)` JSON for the action's own state field when a `useActionState` result's
   visible text comes up empty**, rather than concluding the UI failed to render it.
+- **A plain-quote regex against a fetched RSC page (`grep -oE '"name":"([^"]+)"'` or the JS
+  equivalent) silently matches nothing, even when the data is right there** — the page's flight
+  payload is JSON serialised *inside* a JS string literal, so every quote is backslash-escaped
+  (`\"name\":\"...\"`, two characters, not one) in the raw response body. Hit at `#877`'s `/validate`
+  (2026-09-24), narrowing a category page to `?packSize=1-KILOGRAM` with no Chrome extension
+  available: a `/"name":"([^"]+)"/g` regex against the saved HTML returned zero matches on a page
+  that visibly (per a plain `curl | grep` text search moments earlier) held real product names,
+  reading as "the filter returned nothing" rather than "the regex is checking for the wrong bytes."
+  Confirmed by locating the same product by a plain substring search first (which matches, because
+  it looks for exact bytes) and only then reading the surrounding backslash-escaped context.
+  **Match the literal escaped marker (`\\"name\\":\\"` in a JS string, i.e. `\"name\":\"` as actual
+  file bytes) instead of a bare-quote regex** when parsing a saved RSC response for structured
+  field values.
 - **A server action a client component calls directly (`await someAction(arg1, arg2)`, e.g.
   `addToCart`) rather than binding to a `<form action={...}>` is ALSO curl-drivable, but as a
   wholly different wire protocol — neither `$ACTION_ID_<hash>` nor the `useActionState` four-field
