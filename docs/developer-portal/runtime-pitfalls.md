@@ -4,8 +4,8 @@ title: "Runtime Pitfalls — code that passes every check and still fails on Wor
 audience: [dev]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-09-17
+version: "1.1.0"
+updated: 2026-09-24
 visibility: internal
 summary: The failure catalogue for this stack — Prisma and Neon on V8 isolates, storage credentials, edge caching, dependency traps, Workers AI and Better Auth. Everything here passes lint, typecheck, test and build, and fails at runtime anyway.
 tags: [runtime, workers, prisma, troubleshooting]
@@ -122,6 +122,24 @@ are in `local-dev-playbook.md`. Design intent — what was decided and why — s
   have no such requirement and may use either client per the normal read/write split. Full
   investigation: `specs/2026-08-26-auth-http-transaction-fix/build-notes.md`.
 
+- **A `$transaction([...])` array of many operations is NOT one round-trip, and its default timeout
+  is 5000ms.** Easy to conflate with `createMany`/`updateMany` (a single bulk statement, genuinely
+  one round-trip) if the two are batched the same way in source — they are not the same shape.
+  `prisma/seed.ts`'s generated-catalogue net-content backfill (#877) wrapped 500 individual
+  `product.update()` calls per batch in one `$transaction([...])`, on the reasoning "batched into
+  array transactions so ~2,000 rows is a handful of round-trips... safe here for the same reason as
+  `createMany`." That reasoning was wrong: each `update()` in the array is still its own round-trip
+  to Neon, just wrapped in one Postgres transaction, and 500 sequential round-trips do not fit in
+  Prisma's default batch-transaction timeout. Failed with `P2028` (*"the timeout for this
+  transaction was 5000ms, however 5057ms passed"*) on the **first** batch every time it ran against
+  real dev latency — invisible to `lint`/`typecheck`/`npx vitest run`/`npm run build`, because no
+  test exercises the seed against a real database with real network latency. Confirmed the rollback
+  itself left zero partial rows both times (no data corruption, just a script that could never
+  finish). Fixed by dropping the transaction wrapper: each row's own `where` already guards against
+  a stale row, so there was no cross-row invariant the transaction was protecting in the first
+  place. If a batch of independent writes genuinely needs the atomicity `$transaction([...])` buys,
+  raise its `timeout` option or shrink the batch size — don't assume "batched" means "cheap".
+  Full detail: `specs/2026-09-23-p877-generated-net-content/build-notes.md`.
 
 ## The second database (`uk-location-reference`)
 

@@ -230,8 +230,11 @@ cat <<'EOF'
   The public Projects V2 API exposes no mutations for built-in workflows or view
   creation, so these are UI-only. This script does not pretend otherwise.
 
-  1. Status options — rename to:  Backlog · In Progress · In Review · Done
-     (Project ▸ ⋯ ▸ Settings ▸ Status field)
+  1. Status options — rename to:  Backlog · In Progress · In Review · Done · Deferred
+     (Project ▸ ⋯ ▸ Settings ▸ Status field). Deferred = parked by the owner,
+     waiting on a decision or outside input; see specs/sdd-workflow.md. The API
+     can also do this (updateProjectV2Field), but it REPLACES the whole option
+     set — pass every existing option with its id, or every item loses its Status.
 
   2. Workflows (Project ▸ ⋯ ▸ Workflows) — enable the built-ins:
        • Item added to project  -> set Status = Backlog

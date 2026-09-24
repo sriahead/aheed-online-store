@@ -36,6 +36,14 @@ every branch merges.
 
 ### Changed
 
+- **Project #2 gains a `Deferred` status, and the Document-stage reconciliation for `#877` (net content for the generated demo catalogue, merged to `staging` in PR #885).**
+  - **Board:** a fifth Status option, `Deferred`, and a new milestone, **"Deferred — owner/external gated"** (#23). By owner decision (2026-09-24), `#422` (the multi-site decision) and `#400` (per-store counts, blocked on `#422`) moved there with Priority cleared. Both stay open. The option was added through `updateProjectV2Field` with every existing option's `id` preserved; the item count per status was the same before and after.
+  - `specs/sdd-workflow.md` 2.36.0: what `Deferred` means and who sets it (the owner only), a new row in the board-action table, and the Orient step lists Deferred items separately. It also corrects the claim that Status options are UI-only, and records the replace-the-whole-set trap. `.claude/commands/orient.md` and `scripts/provision-project.sh`'s manual-step text match.
+  - `specs/roadmap.md` 1.110.0: change-log rows for PR #884 (the carry-forward the audit reported) and PR #885 (`#877` to `staging`).
+  - `docs/developer-portal/runtime-pitfalls.md` 1.1.0: a `$transaction([...])` array is one round-trip per operation, under a 5s default timeout. This is `#877`'s `P2028` defect found at `/validate`.
+  - `docs/developer-portal/local-dev-playbook.md` 1.5.0: a plain-quote regex silently matches nothing against a saved RSC page, because the flight payload's quotes are backslash-escaped.
+  - `docs/model-handoff.md`: `#877` is merged to `staging`, and `#400`/`#422` are Deferred.
+
 - **Document-stage reconciliation for `#875` (KMS enforcement + search index promotion) and `#876`/`#878` (expected restock date + product-create fix, built, validated, shipped and promoted).** `npm run sdd:audit` found PR #875 (merge `2ff3e79`, 2026-09-23) had no citing row in `specs/roadmap.md`'s change-log; this closes that gap and records `#876`/`#878`'s full staging-merge-then-promotion cycle in the same pass, per the carry-forward rule (doc changes after a slice's PR merges ride the next slice's branch, not a PR of their own).
   - `specs/roadmap.md` — four change-log rows added: the `#875` promotion (`#861`/`#871`/`#857` to production), `#876`/`#878` built and merged to `staging` (PR #881), and `#876`/`#878` promoted to production (PR #882). The P10 candidate list's "Stock badges" item corrected from a forward-looking plan to a shipped/closed record. Version bumped to 1.109.0.
   - `docs/model-handoff.md` — `Last Verified` rewritten to record `main` at `5f1e14f`; two new `Project Position` bullets for the `#875` and `#882` promotions; the `In-Flight Work` section's `#876`/`#878` bullet and the stale `#861` "merged to staging, not yet promoted" bullet both corrected to point at the now-DONE record instead of repeating superseded status. Version bumped to 1.30.0.
