@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.30.0"
-updated: 2026-09-23
+version: "1.31.0"
+updated: 2026-09-24
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -341,8 +341,10 @@ The live board showed open High-priority items, all with blank Complexity:
 - Brand safety & staff operability: #714 (promoted via PR #732), #733 (promoted via PR #736), and #737 (merged via PR #738, **closed** 2026-09-12 — see In-Flight Work below, this line was stale as of the 2026-09-14 handoff).
 - **Stock and fulfilment: DONE, 2026-09-15** — #401, #402, #748, #749, #750, #751 all **closed →
   Done**, promoted to production via PR #759. (`#613` was never part of this — see Project Position
-  above.) #422 remains genuinely open/unresolved (multi-site location decision). #400 remains split:
-  the async-loading half still open, the per-store half still blocked on #422.
+  above.) **#422 and #400 are DEFERRED (owner decision, 2026-09-24)**: board Status `Deferred`,
+  milestone "Deferred — owner/external gated", Priority cleared, both still open. #400's restock
+  date shipped (#876) and its async half was dropped on measurement; only per-store counts remain,
+  blocked on #422. Not `/propose` candidates until the owner revives them.
 - **Vendor timezone and the BST slot-picker defect: DONE, 2026-09-19** — #363 and #811 both
   **closed → Done**, promoted to production via PR #815 — see Checkout above and In-Flight Work
   below. `#402` had shipped without this (flagged as known-shaky timezone handling); that gap is
@@ -363,7 +365,10 @@ The live board showed open High-priority items, all with blank Complexity:
   PR #849 (`specs/2026-09-21-p847-website-feedback-star-rating/`).
   #695 is unchanged.
 - Data activation: #697.
-- Location decision reconciliation: #422.
+- Location decision reconciliation: #422 — now Deferred, see above.
+- **Remaining open High items (2026-09-24):** #613 (needs Aheed's van/round inputs; the district
+  granularity mechanism is arguably buildable without them), #695 (Meta approval), #697 (real-product
+  net content, a data job for Aheed).
 - Exposed credential rotation: **#219 is CLOSED** (rotated, verified 2026-09-16). Its step 3 — the
   per-environment token split — is now **#783**.
 
@@ -392,11 +397,13 @@ All facts in this section require live verification:
 - **2026-09-23 — `#876`/`#878` shipped; `#877` is the one remaining slice in flight.** `/propose`
   (2026-09-23) split `#400` and `#697` into `#876`/`#878` and `#877`. `#876`/`#878` are now DONE —
   see Project Position and Last Verified above, not repeated here.
-  - **`#877`**, branch `feature/877-generated-net-content`, has **only its spec committed** (net
-    content for the generated demo catalogue, plus a backfill for rows already present). Its Build
-    has not started. Regenerate `ARTIFACT_INDEX.md`/`app/(admin)/staff/runbook/docs.ts` via
-    `npm run kms:build-index` on that branch if it starts to conflict with anything else landing on
-    `staging` first — never hand-merge those two generated files.
+  - **`#877`** (net content for the generated demo catalogue, plus a backfill for rows already
+    present) is **validated, fixed and merged to `staging`** (PR #885, merge `3425a36`, 2026-09-24;
+    `deploy-staging` success, staging `/api/health` serving `3425a36`). **Not yet promoted to
+    `main`**; the board shows it In Review. `/validate` found a real defect: the backfill's batch
+    `$transaction` blew Prisma's 5s timeout (`P2028`), fixed in `5021bad`. The lesson is in
+    `runtime-pitfalls.md`. The backfill only runs with `SEED_SCALE_PRODUCTS` set, which no env file
+    sets. `#697` stays open for real products.
   - **Storefront HTML is not edge-cached** (measured production and staging, 2026-09-23; recorded in
     `specs/architecture.md`). `#400`'s async-stock item was dropped on that basis, and `#400`
     narrows to per-store counts, blocked on `#422`.

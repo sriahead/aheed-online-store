@@ -32,7 +32,9 @@ Follow the **Orient** stage of `specs/sdd-workflow.md` (read it if not already i
    default page silently truncates this board, giving a confident wrong answer). Scope comes from
    `specs/` and the filesystem, never the board — if they disagree, the board needs reconciling.
    Read the owner-maintained `Priority` field and filter on `priority == "High"`; an open High item
-   goes to `/propose` ahead of an assistant-generated ranking. The board also carries Complexity
+   goes to `/propose` ahead of an assistant-generated ranking. Items with Status `Deferred` (in the
+   "Deferred — owner/external gated" milestone) are parked by the owner: list them apart from
+   Backlog and never treat them as `/propose` candidates. The board also carries Complexity
    (`S`/`M`/`L`) and the current Phase options, but neither replaces scope in `specs/`.
 8. Reverify open PRs, relevant GitHub state, current deployments and any environment fact the next
    scope depends on. A value copied from the handoff is not verification.

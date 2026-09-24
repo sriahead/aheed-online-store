@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.35.0"
-updated: 2026-09-22
+version: "2.36.0"
+updated: 2026-09-24
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -177,13 +177,25 @@ why open issues for shipped slices are expected rather than a backlog leak.
 | Ship — merged to `staging` | move to **In Review** (*not* Done — it isn't in production yet) |
 | Ship — promoted to `main` | issue closes → **Done** |
 | Document (final) | reconcile the board against reality; it's the status-layer twin of the roadmap update |
+| Owner defers an issue | Status **Deferred**, milestone **Deferred — owner/external gated**, Priority cleared, a comment saying what it waits on; the issue stays **open** |
 
-> **Prerequisite, now met** (corrected 2026-08-11). The Status field's one-time UI rename — listed
-> in `scripts/provision-project.sh`'s manual steps, and UI-only because Projects V2 exposes no API
-> for it — **is done**. All four options `Backlog` / `In Progress` / `In Review` / `Done` exist on
-> Project #2, so the table above is usable as written. This blockquote previously said the opposite
-> and told the reader to substitute `Todo`; it had gone stale, and a reader following it would have
-> filed status wrongly.
+**`Deferred` is a fifth Status, outside the loop, and set only by the owner** (added 2026-09-24).
+It parks an open issue that is waiting on an owner decision or outside input rather than on code —
+`#422` (the multi-site decision) and `#400` (per-store counts, blocked on `#422`) were the first
+two. A Deferred issue is **not closed and not Backlog**: Orient lists it apart from both, and it is
+never a `/propose` candidate until the owner revives it. To pick one up again, move it back to a
+phase milestone and set Status to **Backlog**. Never defer an issue on your own judgement; that call
+belongs to the owner, as does its Priority.
+
+> **Prerequisite, now met** (corrected 2026-08-11, extended 2026-09-24). All five options —
+> `Backlog` / `In Progress` / `In Review` / `Done` / `Deferred` — exist on Project #2, so the table
+> above is usable as written. An earlier version of this blockquote said the opposite and told the
+> reader to substitute `Todo`; it had gone stale, and a reader following it would have filed status
+> wrongly. It also said the Status options are UI-only. **That is no longer true:**
+> `updateProjectV2Field` accepts `singleSelectOptions`, but it **replaces the whole option set**.
+> Pass every existing option **with its `id`**, or each existing option is recreated under a new ID
+> and every item on the board loses its Status. `Deferred` was added this way, and the item count
+> per status was the same before and after.
 
 ## Scale the loop to the change
 
@@ -239,7 +251,8 @@ Check the actual repo before proposing or building anything — not what a doc *
   truncates this board. Trust `specs/` and the filesystem for scope; a board that disagrees with the
   repo needs reconciling. Lead the orientation report with open items whose Priority is `High`, then
   give sequencing, blocker and owner-gated commentary within that set rather than replacing it with
-  an assistant-generated priority list.
+  an assistant-generated priority list. Report `Deferred` items separately, as parked by the owner
+  and not next up.
 - Reverify open PRs, relevant GitHub state, current deployments and any environment fact the next
   scope depends on. A previous handoff's values are evidence of what to check, never current truth.
 
