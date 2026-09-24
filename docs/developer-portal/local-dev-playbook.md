@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.3.0"
-updated: 2026-09-19
+version: "1.4.0"
+updated: 2026-09-23
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, silently-ignored TZ overrides, the dev machine's BST clock as a free browser timezone override, curl-driven server actions, grep-vs-rendered-HTML pitfalls.
 tags: [local-dev, windows, validation, playbook]
@@ -337,4 +337,28 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   local host is single-label (`localhost:8787`) and works fine with a jar; SriMart's
   (`srimart.localhost`) does not, so a validator who only smoke-tested the jar approach against
   Aheed would trust it for both.
+- **Replaying an existing record's edit form by hand must name every checked box explicitly, not
+  just the field(s) the row under test cares about — an absent field is indistinguishable from an
+  unchecked one.** Hit at `#876`'s `/validate` (2026-09-23), driving `/staff/products/<id>`'s
+  `useActionState` update form for R16's live cycle: the hand-built submission set `quantity` and
+  `expectedRestockDay` (the two fields R16 was actually proving) but omitted `isActive`, which the
+  real form always sends as `"on"` when its checkbox is checked. `checkbox()` in
+  `lib/catalogue-form.ts` treats an absent field as unchecked by construction (the same rule R6/R8
+  document for the feature itself) — the product silently went inactive. Not a code defect; the fix
+  was re-submitting with every field the real form renders checked, not only the ones under test.
+  Confirm this by diffing the edit page's actual `defaultChecked`/`defaultValue` set against the
+  hand-built field list before trusting a live edit's result, the same discipline the `$ACTION_KEY`
+  four-field recipe above already requires for the action metadata.
+- **A department/category page's real product count can be far larger than what a validator expects
+  to page through by eye, entirely from prior scale-testing seed data — not a defect in whatever
+  slice is being validated.** Hit at `#876`'s `/validate` (2026-09-23): `/categories/snacks` legitimately
+  holds 224 active products, almost all `gen-*`-slugged rows from the catalogue-depth-and-scale seed
+  (`#489`), so a real seeded product (`date-bites`) never appeared on page 1 and a plain
+  `curl`/`grep` of the category page found nothing — reading as a broken facade rather than
+  ordinary pagination. Confirmed the true product count with a direct DB query before concluding
+  anything was wrong, then narrowed the live page itself with the product's own price
+  (`?minPrice=X&maxPrice=X`, a filter the category route already supports) to isolate it in one
+  request rather than paging through cursors by hand. Worth checking a department's real row count
+  before trusting a "product not found on this page" result as a code defect, on any dev checkout
+  that has run the scale-testing seed.
 
