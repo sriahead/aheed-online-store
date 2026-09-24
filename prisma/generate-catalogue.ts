@@ -17,6 +17,8 @@
  * platforms and Node versions.
  */
 
+import type { NetContentUnit } from "../components/product/unit-price";
+
 /** Prefix on every generated slug. No curated fixture slug uses it — that is what makes the
  *  generated set identifiable for both the idempotency check and the removal path (R7). */
 export const GENERATED_SLUG_PREFIX = "gen-";
@@ -37,6 +39,9 @@ export type GeneratedProduct = {
   isHalal: boolean;
   isFresh: boolean;
   isOrganic: boolean;
+  /** #877 — both null or both set, from `PACK_NET_CONTENT`; never parsed from the pack text. */
+  netContentAmount: number | null;
+  netContentUnit: NetContentUnit | null;
 };
 
 /** mulberry32 — small, fast, seedable. Returns a function yielding [0, 1). */
@@ -92,7 +97,40 @@ const NOUNS = [
   "Semolina",
 ];
 
-const PACKS = ["250g", "500g", "1kg", "2kg", "5kg", "10kg", "Pack of 4", "Pack of 6", "1L", "2L"];
+export const PACKS = [
+  "250g",
+  "500g",
+  "1kg",
+  "2kg",
+  "5kg",
+  "10kg",
+  "Pack of 4",
+  "Pack of 6",
+  "1L",
+  "2L",
+];
+
+/**
+ * #877 — net content for each pack, as a FIXED LOOKUP keyed by the pack string, not a parser.
+ * Parsing free text can guess wrong and put a wrong price per kg in front of a shopper (#697's
+ * Price Marking Order risk); looking up strings this module itself defines cannot. A test asserts
+ * every `PACKS` entry has an entry here, so a pack added without one fails CI rather than quietly
+ * producing nulls. Amounts stay in the label's own unit (`1kg` is `1 KILOGRAM`, not `1000 GRAM`)
+ * so the pack-size facet's options read the way the product names do. `Pack of N` stays null:
+ * pricing a generated "Pack of 4 Rice" per item would demonstrate nothing.
+ */
+export const PACK_NET_CONTENT: Record<string, { amount: number; unit: NetContentUnit } | null> = {
+  "250g": { amount: 250, unit: "GRAM" },
+  "500g": { amount: 500, unit: "GRAM" },
+  "1kg": { amount: 1, unit: "KILOGRAM" },
+  "2kg": { amount: 2, unit: "KILOGRAM" },
+  "5kg": { amount: 5, unit: "KILOGRAM" },
+  "10kg": { amount: 10, unit: "KILOGRAM" },
+  "Pack of 4": null,
+  "Pack of 6": null,
+  "1L": { amount: 1, unit: "LITRE" },
+  "2L": { amount: 2, unit: "LITRE" },
+};
 
 /** Country of origin. `null` is in the pool on purpose — `Product.origin` is nullable and the
  *  catalogue filter has to behave when it is absent, not only when it is set. */
@@ -152,6 +190,10 @@ export function generateProducts(
     // ~8% out of stock, so `inStockOnly` and the low-stock badge both have something to exclude.
     const quantity = rng() < 0.08 ? 0 : 1 + Math.floor(rng() * 120);
 
+    // #877 — derived from the already-picked `pack` with no further `rng()` call, so every other
+    // field of every row stays byte-identical to what the recorded measurements were taken on.
+    const netContent = PACK_NET_CONTENT[pack] ?? null;
+
     const name = `${qualifier} ${noun} ${pack}`;
     // The index guarantees uniqueness against Product's @@unique([vendorId, slug]) without
     // needing to track collisions between generated names, which repeat by design.
@@ -171,6 +213,8 @@ export function generateProducts(
       isHalal,
       isFresh,
       isOrganic,
+      netContentAmount: netContent?.amount ?? null,
+      netContentUnit: netContent?.unit ?? null,
     });
   }
 

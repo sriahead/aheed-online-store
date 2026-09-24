@@ -392,9 +392,10 @@ All facts in this section require live verification:
 - **2026-09-23 — `#876`/`#878` shipped; `#877` is the one remaining slice in flight.** `/propose`
   (2026-09-23) split `#400` and `#697` into `#876`/`#878` and `#877`. `#876`/`#878` are now DONE —
   see Project Position and Last Verified above, not repeated here.
-  - **`#877`**, branch `feature/877-generated-net-content`, has **only its spec committed** (net
-    content for the generated demo catalogue, plus a backfill for rows already present). Its Build
-    has not started. Regenerate `ARTIFACT_INDEX.md`/`app/(admin)/staff/runbook/docs.ts` via
+  - **`#877`**, branch `feature/877-generated-net-content` (pushed 2026-09-24; until then it existed
+    only locally), is **built and awaiting a fresh-context `/validate`** (net content for the
+    generated demo catalogue, plus a backfill for rows already present). Read its `build-notes.md`
+    first: the backfill only runs with `SEED_SCALE_PRODUCTS` set, which no env file sets. Regenerate `ARTIFACT_INDEX.md`/`app/(admin)/staff/runbook/docs.ts` via
     `npm run kms:build-index` on that branch if it starts to conflict with anything else landing on
     `staging` first — never hand-merge those two generated files.
   - **Storefront HTML is not edge-cached** (measured production and staging, 2026-09-23; recorded in

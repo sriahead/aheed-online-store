@@ -5,7 +5,12 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { getStorage } from "@/lib/storage";
-import { GENERATED_SLUG_PREFIX, generateProducts } from "./generate-catalogue";
+import { deriveUnitPricePenceForSort } from "@/components/product/unit-price";
+import {
+  GENERATED_SLUG_PREFIX,
+  type GeneratedProduct,
+  generateProducts,
+} from "./generate-catalogue";
 
 // Seed runs in Node (locally or CI) — prefers DIRECT_URL.
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
@@ -1192,6 +1197,85 @@ function chunk<T>(items: T[], size: number): T[][] {
 }
 
 /**
+ * #877 — the three net-content columns a generated row is written with, together. The sort key is
+ * always derived from the row's own price and net content with the same function the repository
+ * write path uses (#398 R31), never supplied independently: a net content without its sort key
+ * would make unit-price sorting silently skip the row.
+ */
+function generatedNetContentColumns(
+  basePrice: number,
+  product: Pick<GeneratedProduct, "netContentAmount" | "netContentUnit">,
+) {
+  const netContent =
+    product.netContentAmount !== null && product.netContentUnit !== null
+      ? { amount: product.netContentAmount, unit: product.netContentUnit }
+      : null;
+  return {
+    netContentAmount: netContent?.amount ?? null,
+    netContentUnit: netContent?.unit ?? null,
+    unitPricePencePerBaseUnit: deriveUnitPricePenceForSort(basePrice, netContent),
+  };
+}
+
+/**
+ * #877 — give generated rows that ALREADY exist their net content.
+ *
+ * Row creation is skipped once a database holds the requested count, so writing net content only
+ * on creation would change no database that matters. This regenerates the catalogue
+ * deterministically and matches by SLUG: a generated slug embeds its row index, and neither the
+ * slug nor the pack depends on the category list, so the same index yields the same slug and pack
+ * whatever `categorySlugs` is passed. It touches only this vendor's `gen-` rows whose
+ * `netContentAmount` is still null — never a curated or real product, and never a row staff have
+ * since given net content — so a second run updates zero rows. The sort key is derived from the
+ * row's own stored `basePrice`, not the regenerated one.
+ */
+async function backfillGeneratedNetContent(vendorId: string, categorySlugs: string[]) {
+  const existingRows = await prisma.product.findMany({
+    where: { vendorId, slug: { startsWith: GENERATED_SLUG_PREFIX } },
+    select: { id: true, slug: true, basePrice: true, netContentAmount: true },
+  });
+  if (existingRows.length === 0) return;
+
+  // Index-derived slugs mean the highest index present bounds how many rows to regenerate.
+  const highestIndex = existingRows.reduce((max, row) => {
+    const index = Number.parseInt(row.slug.slice(GENERATED_SLUG_PREFIX.length), 10);
+    return Number.isFinite(index) && index > max ? index : max;
+  }, -1);
+  const regeneratedBySlug = new Map(
+    generateProducts(highestIndex + 1, categorySlugs).map((p) => [p.slug, p]),
+  );
+
+  const unmatched = existingRows.filter((row) => !regeneratedBySlug.has(row.slug)).length;
+  const updates = existingRows.flatMap((row) => {
+    const product = regeneratedBySlug.get(row.slug);
+    if (row.netContentAmount !== null || product === undefined) return [];
+    if (product.netContentAmount === null) return []; // `Pack of N` — nothing to write
+    return [{ id: row.id, data: generatedNetContentColumns(row.basePrice, product) }];
+  });
+
+  if (updates.length > 0) {
+    console.log(
+      `\n>>> backfilling net content on ${updates.length} generated products for vendor ${vendorId} in database host: ${resolvedDbHost()}\n`,
+    );
+  }
+  // One `update` per row, awaited in plain sequence — deliberately NOT wrapped in `$transaction`.
+  // There is no cross-row invariant to protect: each write already refuses a stale row on its own
+  // via the extended where (`netContentAmount: null`), and no nested writes mean no implicit
+  // transaction (CLAUDE.md's `getPrismaWs()` rule doesn't apply to a singular `update` like this).
+  // Batching ~500 of these inside one `$transaction([...])` array — as this used to — is not one
+  // round-trip the way `createMany` is; it is 500 sequential round-trips inside a single Postgres
+  // transaction, and blew Prisma's default 5s batch-transaction timeout (`P2028`) on the very first
+  // batch against real dev latency (measured 2026-09-24). A few extra seconds of sequential wall
+  // time is fine for a dev-only backfill; a broken transaction that writes zero rows is not.
+  for (const { id, data } of updates) {
+    await prisma.product.update({ where: { id, vendorId, netContentAmount: null }, data });
+  }
+  console.log(
+    `net content backfill for ${vendorId}: ${updates.length} generated row(s) updated, ${unmatched} generated row(s) with no matching regenerated slug`,
+  );
+}
+
+/**
  * #489 — the generated catalogue, for scale testing only.
  *
  * Three deliberate departures from `seedCatalogue`, each answering a specific way that function
@@ -1288,6 +1372,10 @@ async function seedGeneratedCatalogue(
   }
   console.log(`refreshed ${storageKeyBySlug.size} generated placeholder image(s)`);
 
+  // #877: also before the guard, for the same reason as the uploads above — a database that
+  // already holds the rows would otherwise never receive their net content.
+  await backfillGeneratedNetContent(vendorId, usableSlugs);
+
   const existing = await prisma.product.count({
     where: { vendorId, slug: { startsWith: GENERATED_SLUG_PREFIX } },
   });
@@ -1325,6 +1413,7 @@ async function seedGeneratedCatalogue(
         isHalal: product.isHalal,
         isFresh: product.isFresh,
         isOrganic: product.isOrganic,
+        ...generatedNetContentColumns(product.basePrice, product),
       })),
     });
   }
