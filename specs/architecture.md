@@ -258,6 +258,12 @@ there.
      own `_prisma_migrations` checksum for that file — delete the stale row and
      `prisma migrate resolve --applied <name>` — since editing an already-applied migration leaves
      the recorded checksum stale.
+  3. **When `migrate dev` refuses and offers a reset, never accept it** (dev, 2026-09-24, `#895`:
+     checksum drift on `20260820200500_p8_image_needs_review`). Generate the SQL without a database
+     instead — `prisma migrate diff --from-schema-datamodel <base-branch schema.prisma>
+     --to-schema-datamodel prisma/schema.prisma --script` — write it into a hand-named, correctly
+     sorting migration directory, read it, then `prisma migrate deploy`. Neither datamodel contains
+     the `pg_trgm` indexes, so this diff cannot propose dropping them. Used by `#876` and `#613`.
 - **Money as integer minor units (pence).** Currency stored explicitly (`GBP` default). Avoids
   float drift and locale-bound types.
 - **Images/large files never in the DB.** Only a **relative storage key** (e.g.

@@ -136,7 +136,8 @@ postcode.
 Backlog issue, **`#891`** (owner, 2026-09-24). It needs consent handling, data-rights coverage,
 and a verified sending domain (`#104`), so it is kept out of this slice.
 - Redundancy warnings, range shorthand (`MK1-10`), bulk removal, per-area charges for Click &
-  Collect, and changing the landing banner's wording.
+  Collect, and changing the landing banner's wording — **`#893`** (Deferred).
+- Refusal-count retention, lookup-API counting and per-area slot capacity — **`#894`** (Deferred).
 - `#761`'s folder-name citation cleanup.
 
 ## Open items carried forward
