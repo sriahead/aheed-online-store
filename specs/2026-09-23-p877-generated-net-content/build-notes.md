@@ -68,6 +68,40 @@ Branch `feature/877-generated-net-content`. Spec commits `87c9854`/`9c5fdc2`/`f6
 
 None.
 
+## Fix (post-/validate, 2026-09-24)
+
+`/validate` ran the seed live against dev and it crashed on the very first backfill batch:
+`PrismaClientKnownRequestError P2028` — *"the timeout for this transaction was 5000ms, however
+5057ms passed"*. Reproduced twice, deterministically; 0 rows were ever written both times (the
+transaction rolled back cleanly, so no partial/inconsistent state reached the database).
+
+**Root cause:** the build's own safety argument for
+`prisma.$transaction(batch.map(...update...))` (500 rows per batch) — *"safe here for the same
+reason as `createMany` above"* — was wrong. `createMany` is **one** bulk-insert statement, one
+round trip. Batching 500 `update()` calls inside `$transaction([...])` is still **500 sequential
+round trips**, just wrapped in a single Postgres transaction, and Prisma's default batch-transaction
+timeout (5s) is nowhere near enough for 500 round trips to Neon. It failed on the first batch every
+time, so this was never going to complete against a real database, live network latency or not.
+
+**Fix:** dropped the `$transaction` wrapper entirely. Each `product.update()` in
+`backfillGeneratedNetContent` now runs as a plain sequential `await`, no batching. This is correct
+because no cross-row invariant needs the atomicity a transaction would buy — each row's own write
+already refuses a stale row via the extended `where: { id, vendorId, netContentAmount: null }` — and
+it carries no nested writes, so CLAUDE.md's `getPrismaWs()`-for-implicit-transactions rule doesn't
+apply to it either. `GENERATED_BATCH`/`chunk()` stay as they were for the `createMany` call sites
+elsewhere in the file, which are genuinely single-statement and unaffected.
+
+**Re-verified live against dev after the fix:**
+- Seed run: backfill completed, no crash — `net content backfill for a4ed0000-…: 1606 generated
+  row(s) updated, 0 generated row(s) with no matching regenerated slug`.
+- R8 script post-seed: vendor `a4ed0000-…` — 2000 generated rows, 1606 with net content (80.3%,
+  inside the predicted 1606/2000), (b)/(c)/(d) all 0, script exits 0.
+- Second seed run: backfill logs `0 generated row(s) updated` (R7 idempotency confirmed).
+
+No CHANGELOG change: the fix is an internal implementation correction (how the backfill writes),
+not a change to any behaviour the CHANGELOG entry describes (it still writes all three columns
+together, runs before the skip guard, matches by slug, and is idempotent on a second run).
+
 ## Known-shaky areas
 
 - **The backfill only runs when `SEED_SCALE_PRODUCTS` is set.** It lives inside

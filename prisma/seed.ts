@@ -1258,14 +1258,17 @@ async function backfillGeneratedNetContent(vendorId: string, categorySlugs: stri
       `\n>>> backfilling net content on ${updates.length} generated products for vendor ${vendorId} in database host: ${resolvedDbHost()}\n`,
     );
   }
-  // One `update` per row, batched into array transactions so ~2,000 rows is a handful of
-  // round-trips. Safe here for the same reason as `createMany` above: real Node, WebSocket adapter.
-  for (const batch of chunk(updates, GENERATED_BATCH)) {
-    await prisma.$transaction(
-      batch.map(({ id, data }) =>
-        prisma.product.update({ where: { id, vendorId, netContentAmount: null }, data }),
-      ),
-    );
+  // One `update` per row, awaited in plain sequence — deliberately NOT wrapped in `$transaction`.
+  // There is no cross-row invariant to protect: each write already refuses a stale row on its own
+  // via the extended where (`netContentAmount: null`), and no nested writes mean no implicit
+  // transaction (CLAUDE.md's `getPrismaWs()` rule doesn't apply to a singular `update` like this).
+  // Batching ~500 of these inside one `$transaction([...])` array — as this used to — is not one
+  // round-trip the way `createMany` is; it is 500 sequential round-trips inside a single Postgres
+  // transaction, and blew Prisma's default 5s batch-transaction timeout (`P2028`) on the very first
+  // batch against real dev latency (measured 2026-09-24). A few extra seconds of sequential wall
+  // time is fine for a dev-only backfill; a broken transaction that writes zero rows is not.
+  for (const { id, data } of updates) {
+    await prisma.product.update({ where: { id, vendorId, netContentAmount: null }, data });
   }
   console.log(
     `net content backfill for ${vendorId}: ${updates.length} generated row(s) updated, ${unmatched} generated row(s) with no matching regenerated slug`,
