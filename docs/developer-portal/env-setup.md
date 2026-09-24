@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.11.0"
-updated: 2026-09-16
+version: "1.12.0"
+updated: 2026-09-24
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -182,7 +182,11 @@ SEED_REMOVE_GENERATED=1 npm run db:seed
 
 - Generated products carry a `gen-` slug prefix; that prefix is what both the idempotency check and
   the removal path key on. No curated fixture slug uses it.
-- Re-running with the same `SEED_SCALE_PRODUCTS` is a no-op, so it is safe in a loop.
+- Re-running with the same `SEED_SCALE_PRODUCTS` creates no rows, so it is safe in a loop. The one
+  write it can still make is the **net-content backfill** (`#877`): generated weight and volume packs
+  carry net content (`250g`–`10kg`, `1L`/`2L`; `Pack of N` stays empty), and a re-run fills it on
+  generated rows that predate it, then updates nothing on the run after. It only runs when
+  `SEED_SCALE_PRODUCTS` is set — a plain `npm run db:seed` leaves generated rows untouched.
 - Rows are **deterministic** — the same value always produces the same products — because the
   figures in `nfr-baseline.md` are only meaningful if the catalogue behind them is reproducible.
 - Image objects are shared one-per-subcategory rather than one-per-product, so 2,000 products cost
