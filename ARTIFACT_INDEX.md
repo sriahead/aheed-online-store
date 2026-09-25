@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-25T09:49:52.722Z` · commit `5061f05` · `199` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-25T14:35:58.835Z` · commit `2838905` · `200` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -194,6 +194,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P876 — Expected Restock Date on Out-of-Stock Products (plan)](specs/2026-09-23-p876-expected-restock-date/plan.md) | spec | 1.0.0 | 2026-09-23 | draft | internal | Staff can record when an out-of-stock product is expected back, and shoppers see "Back in stock" with that date on the card, quick view and product page until it passes. Also fixes the product-create path (#878). |
 | [P877 — Net Content for the Generated Demo Catalogue (plan)](specs/2026-09-23-p877-generated-net-content/plan.md) | spec | 1.0.0 | 2026-09-23 | approved | internal | Gives the seed's generated demo catalogue real net content for its weight and volume packs, including rows already in a database, so the pack-size facet and derived unit prices are visible in dev. Real products are untouched. |
 | [P10 #613/#890/#889 — Delivery areas: district ranges, per-area pricing, refusal counts (plan)](specs/2026-09-24-p613-delivery-areas-ranges-fees-refusals/plan.md) | spec | 1.0.0 | 2026-09-24 | draft | internal | Store admins enter postcode districts as lists or ranges, give any area or district its own delivery charge, minimum order and free-delivery threshold, and see which out-of-area districts shoppers tried; also specifies the district matching #402 shipped unspecified. |
+| [#900 — AI-suggested net content with image provenance (plan)](specs/2026-09-25-p900-ai-net-content-suggestions/plan.md) | spec | 1.0.0 | 2026-09-25 | draft | internal | An offline, model-agnostic AI step suggests each product's net content from its name, unit label and confirmed real photos. Staff accept, edit or reject each suggestion; nothing writes to a product without them. Image provenance becomes data. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.32.0 | 2026-09-24 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
