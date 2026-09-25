@@ -11,6 +11,7 @@ import { CartContents } from "@/components/cart/CartContents";
 import { MergePrompt } from "@/components/cart/MergePrompt";
 import { parseUnavailableNames } from "@/lib/bundle-notice";
 import { getFulfilmentMethod } from "@/lib/fulfilment-service";
+import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
 
 /**
  * Canonical cart URL (P3a, #93). The drawer is the primary surface, but this
@@ -33,6 +34,8 @@ export default async function CartPage({
   ]);
   const summary = await getCartRepository().getSummary(identity);
   const fulfilmentMethod = await getFulfilmentMethod();
+  // #890 — this shopper's own area's minimum and free-delivery threshold.
+  const deliveryRules = await getShopperDeliveryRules(vendor, fulfilmentMethod);
   // P10 (#116) — saving needs an account, so the control is resolved here rather than rendered
   // and then refused. Guests keep the cart exactly as it was.
   const canSaveList = (await getUserId()) !== null;
@@ -85,8 +88,8 @@ export default async function CartPage({
         <CartContents
           summary={summary}
           method={fulfilmentMethod}
-          minimumOrderPence={vendor?.minimumOrderPence ?? 0}
-          freeDeliveryThresholdPence={vendor?.freeDeliveryThresholdPence ?? null}
+          minimumOrderPence={deliveryRules.minimumOrderPence}
+          freeDeliveryThresholdPence={deliveryRules.freeDeliveryThresholdPence}
           localityName={vendor?.localityName ?? ""}
           cdnBaseUrl={cdnBaseUrl}
         />

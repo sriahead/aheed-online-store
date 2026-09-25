@@ -67,8 +67,20 @@ export interface VendorProfile {
   facebookUrl: string | null;
   instagramUrl: string | null;
   whatsappNumber: string | null;
+  /** Always `deliveryAreas.map(a => a.prefix)` — kept for the eligibility check's callers. */
   deliveryPrefixes: string[];
-  // P3a — delivery rules as vendor data. P3a reads only the threshold (cart
+  /**
+   * #890 — every delivery area/district with its per-area money overrides (`null` = the vendor
+   * default below). Resolve a shopper's actual charges with `lib/delivery-pricing.ts`'s
+   * `resolveDeliveryRules`, never by reading the three vendor-wide fields directly.
+   */
+  deliveryAreas: {
+    prefix: string;
+    deliveryFeePence: number | null;
+    minimumOrderPence: number | null;
+    freeDeliveryThresholdPence: number | null;
+  }[];
+  // P3a — delivery rules as vendor data (the DEFAULTS since #890). P3a reads only the threshold (cart
   // banner); applying fee/minimum to a payable total is P3b.
   deliveryFeePence: number;
   freeDeliveryThresholdPence: number | null;
@@ -152,7 +164,14 @@ export async function fetchVendorProfile(
           expressCollectionEnabled: true,
         },
       },
-      deliveryAreas: { select: { prefix: true } },
+      deliveryAreas: {
+        select: {
+          prefix: true,
+          deliveryFeePence: true,
+          minimumOrderPence: true,
+          freeDeliveryThresholdPence: true,
+        },
+      },
       vendorExpressSchedules: {
         select: { dayOfWeek: true, openTime: true, closeTime: true },
       },
@@ -195,6 +214,7 @@ export async function fetchVendorProfile(
     instagramUrl: vendor?.config?.instagramUrl ?? null,
     whatsappNumber: vendor?.config?.whatsappNumber ?? null,
     deliveryPrefixes: (vendor?.deliveryAreas ?? []).map((a) => a.prefix),
+    deliveryAreas: vendor?.deliveryAreas ?? [],
     // Fall back to the schema defaults when the config satellite is unseeded,
     // matching the deploy-before-seed safety the rest of this file uses.
     deliveryFeePence: vendor?.config?.deliveryFeePence ?? 349,

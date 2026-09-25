@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.2.0"
-updated: "2026-09-12"
+version: "2.3.0"
+updated: "2026-09-24"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -147,25 +147,56 @@ as quickly.
 
 ## Delivery areas — `/staff/delivery-areas`
 
-**Purpose:** The postcode areas your shop delivers to. This is a hard gate on checkout, not a
+**Purpose:** The postcode areas and districts your shop delivers to, what delivery costs in each,
+and which districts outside them customers have tried. The list is a hard gate on checkout, not a
 guideline.
 
 **Who can access:** Store admins only
 
-**What you can do:** Add a postcode area prefix, and remove one.
+**What you can do:** Add postcode areas or districts — one at a time, as a comma-separated list, or
+as a range; give any area or district its own delivery charge, minimum order and free-delivery
+threshold; remove an area; and see the districts you turned away in the last 30 days.
 
-**Typical workflow:** You extend delivery to a new town. Add its postcode prefix here, and customers
-in that area can immediately check out.
+**Typical workflow:** You extend delivery to part of a new town. Add its districts here (for example
+`MK1-MK10`), and customers in them can immediately check out. If the outlying ones cost more to
+reach, open **Edit charges** on those rows and set a higher delivery charge. Check the
+**Districts you turned away** table now and then to see where customers are asking for delivery.
 
-**Important fields and filters:** A prefix is the letters at the start of a postcode, such as `MK`.
-It is matched against the start of the shopper's postcode.
+**Important fields and filters:**
 
-**Common mistakes and limitations:** **A customer whose postcode does not match any prefix here
-cannot complete checkout at all** — they can browse and fill a basket but will be refused at the end.
+- **Area or district.** An area is the letters at the start of a postcode, such as `MK`, and covers
+  every district in it. A district is an area plus its number, such as `MK9`, and covers only that
+  one — `MK9` does not include `MK91` or `MK17`. If both an area and one of its districts are
+  listed, the district's charges apply to it.
+- **Lists and ranges.** Separate several entries with commas (`MK1, MK3, MK5`), or give a range with
+  both ends written in full (`MK1-MK10`). A range covers every numbered district between the two,
+  inclusive. You can add at most 100 in one go. Districts ending in a letter, such as `EC1A`, must be
+  added one at a time.
+- **Leaving a district out.** There is no "exclude" setting. To deliver to all of an area except one
+  district, list the districts you do serve instead of the area itself — `MK1-MK16, MK18, MK19`
+  rather than `MK`.
+- **Charges per area (optional).** Delivery charge, minimum order and "free delivery over". Leave a
+  field blank to use the store's defaults from **Storefront** — each field falls back on its own, so
+  you can raise just the delivery charge. `£0` means: free delivery (charge), no minimum (minimum),
+  or free delivery **not offered** in that area (free-delivery threshold). Charges apply to
+  delivery orders only; Click & Collect always uses the store defaults. When you add several areas
+  at once, the charges you enter apply to every new one; any that were already listed keep their
+  existing charges, and the confirmation says so.
+
+**Common mistakes and limitations:** **A customer whose postcode matches nothing here cannot complete
+a delivery order at all** — they can browse and fill a basket but will be refused at the end.
 Removing an area is therefore an immediate loss of trade in it, not a soft change. You cannot remove
 your last remaining area: with none left, every postcode would be undeliverable and no customer could
-order. Prefixes are whole postcode areas, so you cannot currently include one district of an area
-while excluding another.
+order. Replacing `MK` with a list of districts is safest done by adding the districts first and
+removing `MK` last. If a customer's checkout address is in an area with different charges from the
+postcode they entered earlier, checkout stops and asks them to review the updated total before
+placing the order.
+
+**Districts you turned away:** Counts, per district, of real postcodes outside your list that
+customers entered — in the header postcode box or at checkout — over the last 30 days. Mistyped or
+unrecognised postcodes are not counted. It holds **no personal data**: only the district (such as
+`MK17`) and the day, never a full postcode, a name, an account or an IP address, so it does not
+appear in customer data exports or erasure requests.
 
 **What happens after changes are saved:** Effective immediately for every shopper, including ones
 already mid-basket.

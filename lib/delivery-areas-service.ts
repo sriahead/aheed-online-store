@@ -2,8 +2,10 @@ import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import {
   createDeliveryAreaForVendor,
+  createDeliveryAreasForVendor,
   listDeliveryAreasForVendor,
   removeDeliveryAreaForVendor,
+  updateDeliveryAreaChargesForVendor,
   type DeliveryAreaRepository,
 } from "@/lib/repositories/delivery-areas";
 
@@ -21,9 +23,9 @@ import {
  *
  * Both clients are constructed fresh per call and never cached across requests — a cached client
  * throws "Cannot perform I/O on behalf of a different request" on Workers, and caching this wrapper
- * would pin the first request's clients inside it just the same. `getPrismaWs()` is reached only by
- * `remove`, which needs an interactive transaction for its last-area guard; see the repository's
- * header for why nothing else here does.
+ * would pin the first request's clients inside it just the same. `getPrismaWs()` is reached by
+ * `createMany` and `updateCharges` (`createMany`/`updateMany` crash over HTTP, #382) and by `remove`
+ * (its last-area guard is an interactive transaction); see the repository's header.
  */
 export function getDeliveryAreaRepository(): DeliveryAreaRepository {
   const prisma = getPrisma();
@@ -35,8 +37,14 @@ export function getDeliveryAreaRepository(): DeliveryAreaRepository {
     async list() {
       return listDeliveryAreasForVendor(prisma, await vendorId());
     },
-    async create(prefix: string) {
-      return createDeliveryAreaForVendor(prisma, await vendorId(), prefix);
+    async create(prefix, charges) {
+      return createDeliveryAreaForVendor(prisma, await vendorId(), prefix, charges);
+    },
+    async createMany(prefixes, charges) {
+      return createDeliveryAreasForVendor(prismaWs, await vendorId(), prefixes, charges);
+    },
+    async updateCharges(id, charges) {
+      return updateDeliveryAreaChargesForVendor(prismaWs, await vendorId(), id, charges);
     },
     async remove(id: string) {
       return removeDeliveryAreaForVendor(prismaWs, await vendorId(), id);

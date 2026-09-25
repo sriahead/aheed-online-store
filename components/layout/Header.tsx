@@ -25,6 +25,7 @@ import { CartDrawerShell } from "@/components/cart/CartDrawerShell";
 import { CartContents } from "@/components/cart/CartContents";
 import { LocationControl } from "./LocationControl";
 import { getFulfilmentMethod } from "@/lib/fulfilment-service";
+import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
 import { SearchSuggest } from "./SearchSuggest";
 import { ViewSwitcher } from "./ViewSwitcher";
 
@@ -115,6 +116,8 @@ export async function Header({
   // #748 — one resolved answer for the whole render. Both LocationControl
   // instances and the cart drawer read this same value, so they cannot disagree.
   const fulfilmentMethod = await getFulfilmentMethod();
+  // #890 — the drawer's minimum and free-delivery prompts use this shopper's own area's rules.
+  const deliveryRules = await getShopperDeliveryRules(profile, fulfilmentMethod);
 
   // P8.5a (#345): routed through the request-memoised reader so the header and
   // a product grid on the same page share ONE getSummary() call. The identity
@@ -316,8 +319,8 @@ export async function Header({
               <CartContents
                 summary={cartSummary}
                 method={fulfilmentMethod}
-                minimumOrderPence={profile?.minimumOrderPence ?? 0}
-                freeDeliveryThresholdPence={profile?.freeDeliveryThresholdPence ?? null}
+                minimumOrderPence={deliveryRules.minimumOrderPence}
+                freeDeliveryThresholdPence={deliveryRules.freeDeliveryThresholdPence}
                 localityName={localityName}
                 cdnBaseUrl={CDN_BASE_URL ?? ""}
                 showViewCartLink

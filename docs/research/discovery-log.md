@@ -4,8 +4,8 @@ title: "Discovery log"
 audience: [dev, product]
 type: doc
 status: approved
-version: "1.5.0"
-updated: 2026-09-07
+version: "1.6.0"
+updated: 2026-09-24
 visibility: internal
 summary: "Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action."
 tags: [research, discovery, opportunities, risk, sdd]
@@ -35,6 +35,183 @@ milestone close). Nothing here is approved scope — see `docs/research/README.m
 
 **Next action:** RESEARCH MORE | PROPOSE | ADD TO ROADMAP/BACKLOG | READY FOR SPEC | DO NOT PURSUE
 ```
+
+---
+
+## 2026-09-24 — sixth Discover pass (delivery-area geography, `#613`)
+
+An explicit `/discover` on `#613`: what exists, what is left, what competitors do, and what open
+source could supply. It ran while `#613`'s `/propose` (exclusions plus ranges) awaited approval, so
+it doubles as a challenge to that proposal. **Three genuinely unowned findings**, one already
+tracked item with new evidence, and one `DO NOT PURSUE`.
+
+**External reference points, labelled as such.** Shopify local delivery defines a zone as a
+postcode-prefix list (asterisk or trailing space for a group) **or** a radius from the store
+(up to 160 km), with a minimum order price and up to three price rules **per zone**, ten zones per
+location ([Shopify Help Center](https://help.shopify.com/en/manual/fulfillment/setup/delivery-methods/local-delivery)).
+WooCommerce zones take exact postcodes, wildcards and numeric ranges, and handle exclusion by
+*absence* or by an empty zone rather than by a negative rule
+([WooCommerce docs](https://woocommerce.com/document/setting-up-shipping-zones/)). UK supermarkets
+vary the delivery charge by postcode and slot, and apply small-basket charges below a threshold
+([Sainsbury's help](https://help.sainsburys.co.uk/help/delivery-collection/grocery-delivery-times)).
+Open-source routing engines — Valhalla and OpenRouteService for drive-time isochrones, VROOM for
+round optimisation — all consume OpenStreetMap and are **self-hosted servers**
+([Valhalla](https://github.com/valhalla/valhalla), [VROOM](https://github.com/VROOM-Project/vroom/blob/master/README.md)).
+None of this was measured against Aheed; it is what the market treats as normal.
+
+**Already tracked, with new evidence: `#613` itself is largely implemented.** `lib/delivery.ts:21-34`
+matches a stored district (`MK9`) exactly against the shopper's outward code and a stored area
+(`MK`) against every district in it; `lib/delivery-area-form.ts:39` accepts both shapes; the staff
+form explains both (`components/staff/DeliveryAreaManager.tsx:58`); tests pin `MK9` versus `MK17`
+(`tests/delivery-eligibility.test.ts:96`, `tests/is-deliverable.test.ts:38`). All of it arrived
+unspecified inside `#402`'s build commit `2f0f20c` (2026-09-12) — `#402`'s spec never mentions it.
+Every consumer (checkout, header badge, `/api/address/lookup`) goes through the one matcher. Stale
+prose still describes the old behaviour: the header comment of `lib/delivery-area-form.ts` (a
+`RegExp` matcher and a letters-only allow-list, both gone), `prisma/schema.prisma:418` ("district
+prefix, e.g. MK" — that is an area), and `#613`'s own body. `#761`'s premise that the delivery
+cluster never touched `#613` is **partly wrong**: the mechanism did ship with that cluster, just
+not under its own spec. Evidence goes to `#613`, not a new issue.
+
+**Challenge to the pending `#613` proposal.** "All of MK except MK17" is already expressible today
+as a list of MK's districts minus MK17 — roughly eighteen rows, which a range-input shortcut would
+make a one-line entry with **no schema change**. Neither reference platform models a negative rule.
+An `excluded` column on `VendorDeliveryArea` is also the wrong shape if per-zone charges (finding
+below) ever land, because those want a *zone* that owns fee, minimum and member districts — at
+which point exclusion is again just absence. Recommendation for `/propose` to weigh, not a
+decision: ship ranges as input expansion plus the documentation fixes now, and defer the
+exclusion column until a zone model is decided. Confidence: **Known** for the code facts,
+**Inferred** for the modelling argument.
+
+**Already tracked, evidence added: per-area capacity.** The 2026-09-02 entry below ("an order
+carries no delivery date, slot or capacity ceiling") is still `RESEARCH MORE`. `#401` has since
+shipped slots with a capacity, but `VendorFulfilmentSlot` (`prisma/schema.prisma:274-287`) carries
+no area link — capacity is per vendor per window, so one far-flung district can consume a van
+round meant for the town centre. Same conversation with Aheed about vans and rounds; not a new
+finding.
+
+### 2026-09-24 — radius-from-store eligibility is buildable from data already in production
+
+**Trigger:** explicit `/discover` on `#613`.
+**Status of the area:** genuinely unowned. No issue mentions a radius or distance-based delivery
+area (searched open and closed). `#613` is prefix granularity only; ADR-004's `Region`/`Location`
+tables are named places, not distance.
+
+**Observed (verifiable today):** `PostcodeReference` in the reference database stores OS
+eastings/northings for every materialised postcode (`prisma/reference/schema.prisma:170-185`), and
+`lib/reference/postcode-reference-service.ts:158` already converts them. `VendorLocation` holds the
+store's own `postcode` (`prisma/schema.prisma:424-434`). British National Grid coordinates are
+metres, so a straight-line distance is plain Pythagoras — no PostGIS, no external API, no new data.
+Shopify offers radius as one of its two zone types.
+
+**Interpretation:** a vendor could say "within 8 km of the shop" instead of curating a district
+list, which matches how a single-van independent grocer actually thinks about reach better than
+postcode geography does (districts are irregular; `MK17` spans rural villages several times
+further out than its number suggests). It could sit beside prefix rules rather than replace them.
+
+**Confidence:** Known for the data. **Needs validation** for usefulness: crow-flies distance
+ignores rivers, the M1 and one-way systems, and Aheed has not said how it plans rounds. Two hard
+edges: coverage is only `MK` and `RG` today, so a radius crossing into an unmaterialised area must
+degrade to `UNVERIFIED` (the standing rule) rather than refuse; and a radius needs the store's
+coordinates, which exist only while its own postcode is inside materialised coverage.
+
+**Why it matters commercially:** removes the most error-prone configuration a vendor does
+(guessing which districts are reachable) and makes onboarding a second vendor a one-number
+setting. Wrong reach either loses orders or commits the van to unprofitable drops.
+**Options considered:** do nothing (districts are sufficient for one vendor with one van); radius
+only; radius plus prefix override; drive-time isochrones (see the `DO NOT PURSUE` entry below).
+**Cost of delay:** low while one vendor trades from one site. Rises with the second vendor, and
+with `#422` if Aheed ever trades from a second site.
+
+**Next action:** PROPOSE
+
+### 2026-09-24 — refused postcodes are discarded, so the district list is set by guesswork
+
+**Trigger:** explicit `/discover` on `#613`.
+**Status of the area:** genuinely unowned. Nothing records an out-of-area refusal: the only trace
+is the message returned by `lib/delivery-eligibility.ts:137` ("Sorry — we don't deliver to ... yet").
+No issue covers a waitlist, demand capture or out-of-area analytics.
+
+**Observed (verifiable today):** eligibility is computed and returned per request (header badge,
+checkout, `/api/address/lookup`) and nothing persists the refused postcode. `#613` and the
+2026-09-02 capacity finding both say the district list needs "operational input from Aheed" — but
+the platform holds no demand evidence to give that conversation.
+
+**Interpretation:** a count of refusals per postcode **district** per day — no full postcode, no
+identity, no cookie — would tell Aheed which excluded districts customers actually try, which is
+exactly the input `#613`'s own decision lacks. District-level aggregates are not personal data, so
+this stays clear of PECR consent and of `#104` (no email). A "tell me when you deliver here" email
+list is the richer competitor pattern but needs consent handling and a working sending domain, so
+it is the second step, not the first.
+
+**Confidence:** Known that nothing is recorded. **Inferred** that the signal will be useful: the
+platform has never traded, so volumes will be tiny until launch.
+
+**Why it matters commercially:** turns "should we deliver to MK17?" from a guess into a number,
+and costs almost nothing per request. A grocer extending reach one district at a time is the
+normal growth path.
+**Options considered:** do nothing; aggregate district counts (cheapest, privacy-neutral);
+consented email waitlist (needs `#104`); full postcode logging (needless personal-data risk).
+**Cost of delay:** every day of trading without it is demand evidence permanently lost; before
+launch the cost is near zero, which makes pre-launch the cheap moment to add it.
+
+**Next action:** PROPOSE
+
+### 2026-09-24 — delivery charge and minimum order are vendor-wide, so far districts are subsidised
+
+**Trigger:** explicit `/discover` on `#613`.
+**Status of the area:** genuinely unowned. `#634` (closed) made the three values editable but kept
+them vendor-wide; no issue proposes varying them by area.
+
+**Observed (verifiable today):** `VendorConfig.deliveryFeePence` (default 349),
+`freeDeliveryThresholdPence` and `minimumOrderPence` are single per-vendor columns
+(`prisma/schema.prisma:372-374`). Shopify allows a minimum and price rules per zone; UK
+supermarkets vary charge by postcode and slot.
+
+**Interpretation:** with a flat fee, a drop in an outlying village costs the same to the customer
+as one next to the shop while costing the van several times the time. For heavy, low-margin
+grocery baskets that is where delivery economics break first. The honest counter-position: at one
+van and pre-launch volumes, a flat fee is simpler to explain, and complexity here may cost more
+conversions than it recovers.
+
+**Confidence:** Known for the schema. **Needs validation** for the economics — no order has been
+placed, so there is no cost-per-drop figure, and none should be invented.
+
+**Why it matters commercially:** margin per delivery on the edge of the footprint; it is also the
+main reason a zone model (fee and minimum owned by a zone, districts as members) might be needed —
+which is why it bears on the `#613` schema shape now.
+**Options considered:** do nothing; a per-area surcharge column; a zone entity owning fee, minimum
+and member districts; distance-based pricing off the radius finding above.
+**Cost of delay:** low until trading. The one near-term cost is designing `#613`'s schema without
+considering it.
+
+**Next action:** RESEARCH MORE
+
+### 2026-09-24 — drive-time isochrones and route optimisation (OpenRouteService, Valhalla, VROOM)
+
+**Trigger:** explicit `/discover` on `#613`, asked directly whether open source could do this.
+**Status of the area:** genuinely unowned; recorded so it is not rediscovered.
+
+**Observed (verifiable today):** all three are self-hosted server processes built on
+OpenStreetMap extracts (OpenRouteService has the highest memory needs of the engines compared).
+None runs inside a Cloudflare Worker. The runtime is Workers-only (`CLAUDE.md`), and the project
+is explicitly cost-effective and vendor-agnostic (ADR-004).
+
+**Interpretation:** a drive-time polygon ("20 minutes from the shop") is the most accurate
+delivery-area model available, and VROOM would plan van rounds with time windows and capacity.
+Both need an always-on server to host, patch and refresh with map data — new infrastructure for a
+platform with one vendor, one van, zero orders. The radius finding above captures most of the
+benefit with data already owned.
+
+**Confidence:** Known for the hosting constraint; Inferred for the cost/benefit.
+
+**Why it matters commercially:** would matter at multi-van volume; does not before launch.
+**Options considered:** self-host ORS or Valhalla; a hosted routing API (a new vendor and per-call
+cost on the request path); precompute isochrones offline and store them (needs polygon storage,
+which the no-`Json` rule and the absence of PostGIS make awkward); do nothing.
+**Cost of delay:** none now. Revisit trigger: more than one van, or order volume where manual
+round planning visibly costs time.
+
+**Next action:** DO NOT PURSUE
 
 ---
 

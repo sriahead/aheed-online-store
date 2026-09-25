@@ -3,11 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getDeliveryAreaRepository } from "@/lib/delivery-areas-service";
-import { parsePrefixInput, type DeliveryAreaFormState } from "@/lib/delivery-area-form";
+import {
+  AREA_FEE_FIELD,
+  AREA_MINIMUM_FIELD,
+  AREA_THRESHOLD_FIELD,
+  bulkAddMessage,
+  parseAreaChargesInput,
+  parsePrefixListInput,
+  type DeliveryAreaFormState,
+} from "@/lib/delivery-area-form";
 import type { CatalogueWriteResult } from "@/lib/repositories/products";
 
 /**
- * Delivery-area admin actions (P9.2, #612) — the write half of /staff/delivery-areas.
+ * Delivery-area admin actions (P9.2 #612; lists, ranges and per-area charges #613/#890) — the write
+ * half of /staff/delivery-areas.
+ *
+ * A row is a postcode AREA (`MK` — every district in it) or a DISTRICT (`MK9` — exactly that
+ * outward code); `lib/delivery.ts` matches them by string comparison, a district row beating an
+ * area row. `addDeliveryArea` accepts one entry, a comma list or a range (`MK1-MK10`), each stored
+ * as ordinary rows; `updateDeliveryAreaCharges` sets a row's optional delivery charge, minimum
+ * order and free-delivery threshold (blank = the store default).
  *
  * Each action runs `requireVendorRole("ADMIN")` ITSELF rather than trusting the page that rendered
  * the form. A server action is a public endpoint at a stable id: anyone who has loaded the page
@@ -34,11 +49,27 @@ function refusal(status: number): DeliveryAreaFormState {
         : "You don't have permission to manage this store's delivery areas.",
     field: null,
     saved: false,
+    message: null,
   };
 }
 
 function failure(result: Extract<CatalogueWriteResult, { ok: false }>): DeliveryAreaFormState {
-  return { error: result.error, field: result.field ?? null, saved: false };
+  return { error: result.error, field: result.field ?? null, saved: false, message: null };
+}
+
+function fieldError(error: { field: string; message: string }): DeliveryAreaFormState {
+  return { error: error.message, field: error.field, saved: false, message: null };
+}
+
+const SAVED: DeliveryAreaFormState = { error: null, field: null, saved: true, message: null };
+
+/** The three optional money fields shared by the add form and each row's edit form (#890). */
+function chargesFrom(form: FormData) {
+  return parseAreaChargesInput({
+    deliveryFee: String(form.get(AREA_FEE_FIELD) ?? ""),
+    minimumOrder: String(form.get(AREA_MINIMUM_FIELD) ?? ""),
+    freeDeliveryThreshold: String(form.get(AREA_THRESHOLD_FIELD) ?? ""),
+  });
 }
 
 /**
@@ -63,19 +94,57 @@ export async function addDeliveryArea(
   const auth = await requireVendorRole("ADMIN");
   if (!auth.ok) return refusal(auth.status);
 
-  // Parsed BEFORE the repository is touched. An unvalidated string in this column is a
-  // checkout-path hazard, not a cosmetic one — `lib/delivery.ts` interpolates the stored value
-  // straight into a RegExp, so a metacharacter would throw for every shopper of this vendor.
-  const parsed = parsePrefixInput(String(form.get("prefix") ?? ""));
-  if (!parsed.ok) {
-    return { error: parsed.error.message, field: parsed.error.field, saved: false };
+  // Parsed BEFORE the repository is touched. These rows gate checkout, so only a well-formed area
+  // (`MK`) or district (`MK9`) may be stored — `lib/delivery-area-form.ts` explains the allow-list.
+  // A comma list or a range (`MK1-MK10`, #613) expands here into individual districts.
+  const parsed = parsePrefixListInput(String(form.get("prefix") ?? ""));
+  if (!parsed.ok) return fieldError(parsed.error);
+
+  // #890 — optional per-area charges, applied to every district in this submission.
+  const charges = chargesFrom(form);
+  if (!charges.ok) return fieldError(charges.error);
+
+  const repository = getDeliveryAreaRepository();
+
+  // One value keeps the original single-row path exactly, including its duplicate field error.
+  if (parsed.value.length === 1) {
+    const result = await repository.create(parsed.value[0], charges.value);
+    if (!result.ok) return failure(result);
+    revalidateDeliverySurfaces();
+    return SAVED;
   }
 
-  const result = await getDeliveryAreaRepository().create(parsed.value);
+  const { added, alreadyListed } = await repository.createMany(parsed.value, charges.value);
+  if (added > 0) revalidateDeliverySurfaces();
+  return { error: null, field: null, saved: true, message: bulkAddMessage(added, alreadyListed) };
+}
+
+/** Replace one area's per-area charges (#890). Blank = the store default. */
+export async function updateDeliveryAreaCharges(
+  _prev: DeliveryAreaFormState,
+  form: FormData,
+): Promise<DeliveryAreaFormState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return refusal(auth.status);
+
+  const id = String(form.get("areaId") ?? "").trim();
+  if (id === "") {
+    return {
+      error: "That delivery area no longer exists.",
+      field: null,
+      saved: false,
+      message: null,
+    };
+  }
+
+  const charges = chargesFrom(form);
+  if (!charges.ok) return fieldError(charges.error);
+
+  const result = await getDeliveryAreaRepository().updateCharges(id, charges.value);
   if (!result.ok) return failure(result);
 
   revalidateDeliverySurfaces();
-  return { error: null, field: null, saved: true };
+  return SAVED;
 }
 
 export async function removeDeliveryArea(
@@ -87,12 +156,17 @@ export async function removeDeliveryArea(
 
   const id = String(form.get("areaId") ?? "").trim();
   if (id === "") {
-    return { error: "That delivery area no longer exists.", field: null, saved: false };
+    return {
+      error: "That delivery area no longer exists.",
+      field: null,
+      saved: false,
+      message: null,
+    };
   }
 
   const result = await getDeliveryAreaRepository().remove(id);
   if (!result.ok) return failure(result);
 
   revalidateDeliverySurfaces();
-  return { error: null, field: null, saved: true };
+  return SAVED;
 }

@@ -13,6 +13,8 @@ import { CheckoutSummary } from "@/components/checkout/CheckoutSummary";
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
 import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 import { fulfilmentProgress } from "@/lib/cart-rules";
+import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
+import { encodeDeliveryQuote } from "@/lib/delivery-pricing";
 
 // Prisma's @prisma/client/wasm can't load during next build's Node-based
 // static prerendering — same reason as the other DB-backed storefront routes.
@@ -71,13 +73,17 @@ export default async function CheckoutPage() {
   // computeTotals is what stops a collection order being priced with a delivery
   // fee; the argument already existed and simply was not being supplied.
   const fulfilmentMethod = await getFulfilmentMethod();
-  const minimumOrderPence = vendor?.minimumOrderPence ?? 0;
+  // #890 — priced for the postcode in the `delivery-postcode` cookie. The order itself is priced from
+  // the address postcode; the form carries this quote so `place-order` refuses rather than silently
+  // charging a different amount when the two resolve to different charges.
+  const deliveryRules = await getShopperDeliveryRules(vendor, fulfilmentMethod);
+  const minimumOrderPence = deliveryRules.minimumOrderPence;
 
   const totals = computeTotals(
     summary.lines,
     {
-      deliveryFeePence: vendor?.deliveryFeePence ?? 0,
-      freeDeliveryThresholdPence: vendor?.freeDeliveryThresholdPence ?? null,
+      deliveryFeePence: deliveryRules.deliveryFeePence,
+      freeDeliveryThresholdPence: deliveryRules.freeDeliveryThresholdPence,
     },
     0,
     fulfilmentMethod,
@@ -88,7 +94,7 @@ export default async function CheckoutPage() {
   const progress = fulfilmentProgress(totals.subtotalPence, {
     method: fulfilmentMethod,
     minimumOrderPence,
-    freeDeliveryThresholdPence: vendor?.freeDeliveryThresholdPence ?? null,
+    freeDeliveryThresholdPence: deliveryRules.freeDeliveryThresholdPence,
   });
 
   return (
@@ -124,6 +130,7 @@ export default async function CheckoutPage() {
             savedAddresses={savedAddresses}
             method={fulfilmentMethod}
             initialDiscountCode={initialDiscountCode}
+            quotedDeliveryRules={encodeDeliveryQuote(deliveryRules)}
           />
         </div>
 

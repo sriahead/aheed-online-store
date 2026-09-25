@@ -47,6 +47,15 @@ describe("computeTotals — delivery fee boundary", () => {
     expect(computeTotals([line(100000, 1)], NO_FREE).deliveryFeePence).toBe(299);
   });
 
+  // #890 R20 — a per-area threshold of 0 is how an area opts out of free delivery
+  // (lib/delivery-pricing.ts relies on this meaning).
+  it("never goes free when the threshold is 0", () => {
+    expect(
+      computeTotals([line(10000, 1)], { deliveryFeePence: 599, freeDeliveryThresholdPence: 0 })
+        .deliveryFeePence,
+    ).toBe(599);
+  });
+
   it("charges no delivery on an empty subtotal", () => {
     expect(computeTotals([], AHEED).deliveryFeePence).toBe(0);
     expect(computeTotals([line(500, 1, false)], AHEED).deliveryFeePence).toBe(0);

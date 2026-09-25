@@ -4,8 +4,8 @@ title: "ADR-006 — Store locations (multi-branch shape)"
 audience: [dev, architect]
 type: adr
 status: approved
-version: "1.0.0"
-updated: 2026-08-28
+version: "1.1.0"
+updated: 2026-09-24
 visibility: internal
 summary: If a vendor ever trades from more than one physical site, a location is a child of Vendor and never a second tenancy axis — vendorId stays the sole mandatory repository filter. Rules the shape so #400 and #402 can be sized; leaves the business question open.
 tags: [adr, multi-tenancy, locations, fulfilment, architecture]
@@ -121,3 +121,22 @@ can be placed in P8.7 with a known shape rather than left unscheduled with an un
 ## Implementation Note
 
 In `#402 Fulfilment Foundation`, `VendorLocation` was implemented exactly as specified: a 1:1 row per `Vendor` used as the physical store reference for Collection orders. The immutable snapshotting is handled by passing the `VendorLocation` coordinates into an `Address` row linked to the `Order` with a null `userId`.
+
+## Note — 2026-09-24: delivery geography and per-area charges stay on `VendorDeliveryArea` (#613, #890)
+
+`#613` was expected (in its own body, and in the `#612` plan) to be the trigger for ADR-004's
+`Region`/`Location` reference tables. It was not. Delivery geography remains **postcode areas and
+districts stored directly on `VendorDeliveryArea`**: an area row (`MK`) covers every district in it,
+a district row (`MK9`) covers exactly that outward code, and the district row wins when both match.
+District matching itself shipped with `#402` (commit `2f0f20c`); `#613` specified and documented it.
+
+- **Ranges are an input convenience only.** `MK1-MK10` is expanded into ten ordinary rows when an
+  admin submits it; nothing stores a range.
+- **No exclusion rule exists.** "All of MK except MK17" is expressed by listing the districts
+  served. An exclusion column was proposed and dropped at `#613`'s `/propose`.
+- **Per-area charges (`#890`) are three nullable override columns on the same row**
+  (`deliveryFeePence`, `minimumOrderPence`, `freeDeliveryThresholdPence`; `null` = the `VendorConfig`
+  default), resolved by `lib/delivery-pricing.ts`. A separate delivery-zone table was considered and
+  not chosen (owner, 2026-09-24).
+- ADR-004's `Region`/`Location` tables therefore **remain unbuilt**, and the naming guidance above
+  still stands if they are ever needed. See `specs/architecture.md` §3.1a.

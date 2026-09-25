@@ -11,6 +11,9 @@ import { getDeliveryEligibility } from "@/lib/delivery-eligibility-service";
 import { blocksCheckout, eligibilityMessage } from "@/lib/delivery-eligibility";
 import { getCustomerAddressService } from "@/lib/customer-addresses-service";
 import { calendarDayToUtcMidnight } from "@/lib/local-datetime";
+import { quoteMatches, resolveDeliveryRules } from "@/lib/delivery-pricing";
+import { recordRefusalIfOutside } from "@/lib/delivery-refusals-service";
+import { setDeliveryPostcode } from "@/features/storefront/delivery";
 
 /**
  * Checkout server action (P3b, #96).
@@ -109,6 +112,11 @@ export async function placeOrderAction(
     }
     const fulfilmentMethod = rawMethod as "DELIVERY" | "COLLECTION";
 
+    // #890 — Click & Collect is outside per-area pricing and resolves to the vendor defaults (the
+    // profile carries them); a delivery order is re-resolved below from the ADDRESS postcode, the
+    // one actually charged.
+    let deliveryRules = resolveDeliveryRules(vendor, [], null, "COLLECTION");
+
     let addressInput;
     if (fulfilmentMethod === "DELIVERY") {
       const postcode = required(form, "postcode");
@@ -122,8 +130,25 @@ export async function placeOrderAction(
       // "we could not check", never to a rejected order.
       const eligibility = await getDeliveryEligibility(postcode);
       if (blocksCheckout(eligibility)) {
+        // #889 — counts only OUTSIDE_DELIVERY_AREA, and never changes this response if it fails.
+        await recordRefusalIfOutside(eligibility, "CHECKOUT");
         return { error: eligibilityMessage(eligibility) ?? "We can't deliver to that postcode." };
       }
+
+      // #890 R23 — the summary the shopper saw was priced from the `delivery-postcode` cookie, and
+      // the address postcode above may differ. Values, not area names, are compared, so a shopper
+      // whose area carries no overrides is never refused. On a mismatch nothing is placed: the
+      // cookie moves to the address postcode so the re-rendered summary shows the real charges.
+      deliveryRules = resolveDeliveryRules(vendor, vendor.deliveryAreas, postcode, "DELIVERY");
+      if (!quoteMatches(optional(form, "quotedDeliveryRules"), deliveryRules)) {
+        const moved = new FormData();
+        moved.set("postcode", postcode);
+        await setDeliveryPostcode(moved);
+        return {
+          error: `The delivery charge for ${eligibility.postcode} is different. Please review your updated total and place the order again.`,
+        };
+      }
+
       addressInput = {
         recipientName: required(form, "recipientName"),
         phone: required(form, "phone"),
@@ -184,9 +209,9 @@ export async function placeOrderAction(
       fulfilmentDate,
       isExpress,
       rules: {
-        deliveryFeePence: vendor.deliveryFeePence,
-        freeDeliveryThresholdPence: vendor.freeDeliveryThresholdPence,
-        minimumOrderPence: vendor.minimumOrderPence,
+        deliveryFeePence: deliveryRules.deliveryFeePence,
+        freeDeliveryThresholdPence: deliveryRules.freeDeliveryThresholdPence,
+        minimumOrderPence: deliveryRules.minimumOrderPence,
       },
       redeemPoints: redeemPointsIntent(form),
       discountCode: discountCodeIntent(form),

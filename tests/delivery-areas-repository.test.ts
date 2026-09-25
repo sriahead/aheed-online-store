@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createDeliveryAreaForVendor,
+  createDeliveryAreasForVendor,
   listDeliveryAreasForVendor,
   removeDeliveryAreaForVendor,
+  updateDeliveryAreaChargesForVendor,
 } from "@/lib/repositories/delivery-areas";
 
 /**
@@ -151,6 +153,70 @@ describe("removeDeliveryAreaForVendor (R8, R9, R10)", () => {
     expect(countArgs.where.vendorId).toBe(VENDOR);
     expect(deleteArgs.where.vendorId).toBe(VENDOR);
     expect(deleteArgs.where.id).toBe(OTHER_VENDOR_AREA);
+  });
+});
+
+describe("createDeliveryAreasForVendor (#613 R9)", () => {
+  it("issues one createMany, skipping duplicates, every row scoped and carrying the charges", async () => {
+    const createMany = vi.fn(async (_args: unknown) => ({ count: 7 }));
+    const client = { vendorDeliveryArea: { createMany } } as never;
+    const prefixes = Array.from({ length: 10 }, (_, i) => `MK${i + 1}`);
+    const charges = {
+      deliveryFeePence: 599,
+      minimumOrderPence: null,
+      freeDeliveryThresholdPence: 0,
+    };
+
+    const result = await createDeliveryAreasForVendor(client, VENDOR, prefixes, charges);
+
+    expect(createMany).toHaveBeenCalledTimes(1);
+    const args = createMany.mock.calls[0][0] as {
+      skipDuplicates: boolean;
+      data: { vendorId: string; prefix: string; deliveryFeePence: number | null }[];
+    };
+    expect(args.skipDuplicates).toBe(true);
+    expect(args.data).toHaveLength(10);
+    for (const row of args.data) {
+      expect(row).toMatchObject({ vendorId: VENDOR, ...charges });
+    }
+    expect(result).toEqual({ added: 7, alreadyListed: 3 });
+  });
+});
+
+describe("updateDeliveryAreaChargesForVendor (#890 R24)", () => {
+  it("updates by id AND vendor, so another vendor's id changes nothing", async () => {
+    const updateMany = vi.fn(async (_args: unknown) => ({ count: 1 }));
+    const client = { vendorDeliveryArea: { updateMany } } as never;
+    const charges = {
+      deliveryFeePence: 599,
+      minimumOrderPence: 3000,
+      freeDeliveryThresholdPence: 0,
+    };
+
+    const result = await updateDeliveryAreaChargesForVendor(client, VENDOR, "area-1", charges);
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: "area-1", vendorId: VENDOR },
+      data: charges,
+    });
+    expect(result).toEqual({ ok: true, id: "area-1" });
+  });
+
+  it("zero rows updated is the 'no longer exists' failure", async () => {
+    const updateMany = vi.fn(async (_args: unknown) => ({ count: 0 }));
+    const client = { vendorDeliveryArea: { updateMany } } as never;
+
+    const result = await updateDeliveryAreaChargesForVendor(client, VENDOR, OTHER_VENDOR_AREA, {
+      deliveryFeePence: null,
+      minimumOrderPence: null,
+      freeDeliveryThresholdPence: null,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "That delivery area no longer exists.",
+      field: "id",
+    });
   });
 });
 

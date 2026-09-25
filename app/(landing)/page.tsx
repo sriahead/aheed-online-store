@@ -5,6 +5,7 @@ import { getEnv } from "@/lib/config";
 import { DepartmentHero } from "@/components/layout/DepartmentHero";
 import { formatPrice } from "@/components/product/format-price";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
 import { getCampaignsForHero } from "@/lib/campaigns-service";
 import { isCampaignLive } from "@/lib/campaign-liveness";
 import {
@@ -88,8 +89,15 @@ export default async function HomePage() {
   // the vendor it was written for and wrong for SriMart, whose threshold is
   // £50 — the string was hiding a data bug, not just a copy one. Both badges
   // now read the vendor's own config and disappear when the rule doesn't apply.
-  const freeDeliveryThresholdPence = profile?.freeDeliveryThresholdPence ?? null;
-  const minimumOrderPence = profile?.minimumOrderPence ?? 0;
+  // #890: resolved for this shopper's own delivery area (the `delivery-postcode` cookie), so a
+  // district that charges differently never sees the store-wide claim. A threshold of 0 means free
+  // delivery is not offered there, so it hides the badge exactly as null does.
+  const deliveryRules = await getShopperDeliveryRules(profile, "DELIVERY");
+  const freeDeliveryThresholdPence =
+    deliveryRules.freeDeliveryThresholdPence && deliveryRules.freeDeliveryThresholdPence > 0
+      ? deliveryRules.freeDeliveryThresholdPence
+      : null;
+  const minimumOrderPence = deliveryRules.minimumOrderPence;
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 space-y-8">
