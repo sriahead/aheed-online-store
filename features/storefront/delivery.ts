@@ -34,6 +34,7 @@ import { revalidatePath } from "next/cache";
  */
 
 import { DELIVERY_POSTCODE_COOKIE, normalisePostcodeInput } from "@/lib/delivery-cookie";
+import { recordRefusalForPostcode } from "@/lib/delivery-refusals-service";
 import { FULFILMENT_METHOD_COOKIE, parseFulfilmentMethod } from "@/lib/fulfilment-cookie";
 
 const THIRTY_DAYS_SECONDS = 60 * 60 * 24 * 30;
@@ -62,6 +63,10 @@ export async function setDeliveryPostcode(formData: FormData): Promise<void> {
       maxAge: THIRTY_DAYS_SECONDS,
     });
   }
+
+  // #889 — a real postcode this store does not serve is counted, by district and day only. The
+  // helper swallows its own failures, so the cookie and re-render below never depend on it.
+  await recordRefusalForPostcode(submitted, "HEADER");
 
   // The Header lives in the storefront LAYOUT, not a page, so the layout is what
   // has to re-render for the badge to change — on whichever route the form was

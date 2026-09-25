@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.31.0"
-updated: 2026-09-24
+version: "1.33.0"
+updated: 2026-09-25
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -366,9 +366,12 @@ The live board showed open High-priority items, all with blank Complexity:
   #695 is unchanged.
 - Data activation: #697.
 - Location decision reconciliation: #422 — now Deferred, see above.
-- **Remaining open High items (2026-09-24):** #613 (needs Aheed's van/round inputs; the district
-  granularity mechanism is arguably buildable without them), #695 (Meta approval), #697 (real-product
-  net content, a data job for Aheed).
+- **Remaining open High items (2026-09-24):** #613 (IN FLIGHT — see In-Flight Work), #695 (Meta
+  approval), #697 (real-product net content, a data job for Aheed).
+- **`#613`'s own premise was stale.** District-level delivery areas (`MK9` exact, `MK` whole area)
+  already shipped unspecified inside `#402`'s build commit `2f0f20c` (2026-09-12) and are in
+  production. `#761`'s claim that the delivery cluster never touched `#613` is partly wrong for the
+  same reason (commented on `#761`). What `#613` still lacked — ranges, docs, proof — is in flight.
 - Exposed credential rotation: **#219 is CLOSED** (rotated, verified 2026-09-16). Its step 3 — the
   per-environment token split — is now **#783**.
 
@@ -394,7 +397,35 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **2026-09-23 — `#876`/`#878` shipped; `#877` is the one remaining slice in flight.** `/propose`
+- **2026-09-24/25 — `#613`/`#890`/`#889` validated and merged to `staging`.** PR #896 (merge
+  `e54ed44`, `staging`), spec `specs/2026-09-24-p613-delivery-areas-ranges-fees-refusals/` — read
+  its `build-notes.md` first. `deploy-staging` and `deploy-docs-internal` both succeeded; staging
+  `/api/health` served `e54ed44`, `db.ok: true`. **Not yet promoted to `main`**; the board shows
+  all three In Review. In summary:
+  - district lists/ranges on `/staff/delivery-areas`;
+  - per-area delivery charge, minimum and free-delivery threshold as nullable overrides on
+    `VendorDeliveryArea`, resolved by `lib/delivery-pricing.ts`;
+  - `DeliveryRefusalCount` (out-of-area demand, no personal data).
+
+  **It carries a migration, applied to dev at Build and confirmed still applied at Validate.**
+  Deferred alongside it: `#888` (radius), `#893`, `#894`. Separate Backlog issues: `#891`
+  (notify-me emails), `#892` (a £0-threshold doc contradiction), `#895`.
+  - **Dev-database trap (`#895`), reconfirmed at this slice's own Build:** `prisma migrate dev
+    --create-only` against dev refuses and offers a **reset** (checksum drift on
+    `20260820200500_p8_image_needs_review`). Never accept it. Generate migrations with
+    `prisma migrate diff --from-schema-datamodel <base schema> --to-schema-datamodel
+    prisma/schema.prisma --script`, as `#876` and this slice did.
+  - **A new curl-driving trap found at this slice's `/validate`** — a server action called
+    directly with a `FormData` argument from inside a client `action={(fd) => ...}` closure (not a
+    primitive-args direct call, not a plain `<form action={fn}>`) resists both curl techniques
+    `docs/developer-portal/local-dev-playbook.md` already documented. Full detail and the
+    workaround (a browser extension, or fall back to a plain-form sibling control when one exists)
+    now lives there (v1.6.0) rather than here. Consequence for this slice: the CHECKOUT-source
+    half of the out-of-area refusal count was proven live; the HEADER-source half stayed at
+    unit-test-only proof (exact-assertion coverage, not re-driven live this session).
+- **`#877` is DONE** — promoted to production via PR #887 (merge `3b85289`, 2026-09-24), production
+  `/api/health` serving it; the bullet below is its pre-promotion history.
+- **2026-09-23 — `#876`/`#878` shipped; `#877` was the one remaining slice in flight.** `/propose`
   (2026-09-23) split `#400` and `#697` into `#876`/`#878` and `#877`. `#876`/`#878` are now DONE —
   see Project Position and Last Verified above, not repeated here.
   - **`#877`** (net content for the generated demo catalogue, plus a backfill for rows already

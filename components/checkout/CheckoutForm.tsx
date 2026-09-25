@@ -39,6 +39,7 @@ export function CheckoutForm({
   method,
   savedAddresses = [],
   initialDiscountCode,
+  quotedDeliveryRules,
 }: {
   signedInEmail: string | null;
   /**
@@ -75,6 +76,12 @@ export function CheckoutForm({
    */
   savedAddresses?: CustomerAddressRow[];
   initialDiscountCode?: string | null;
+  /**
+   * #890 R23 — the delivery charges this page was priced with (`encodeDeliveryQuote`). Submitted
+   * unchanged so `place-order` can refuse, rather than silently charge a different amount, when the
+   * address postcode typed below resolves to different per-area charges.
+   */
+  quotedDeliveryRules: string;
 }) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
   const [, startMethodTransition] = useTransition();
@@ -331,6 +338,7 @@ export function CheckoutForm({
         </section>
       )}
       {!offerCollection && <input type="hidden" name="fulfilmentMethod" value="DELIVERY" />}
+      <input type="hidden" name="quotedDeliveryRules" value={quotedDeliveryRules} />
 
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
