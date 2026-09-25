@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.32.0"
-updated: 2026-09-24
+version: "1.33.0"
+updated: 2026-09-25
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -772,6 +772,25 @@ S3 API rather than an R2-specific SDK.
      deterministic parse.
 
   A proposed AI call on a public path that cannot answer all four belongs offline, as `#571` said.
+
+  **Net-content suggestions (`#900`, 2026-09-25) follow the default, not the exception.** Three
+  things are established:
+  - **Offline and proposed, never applied.** `scripts/suggest-net-content.ts` asks a model to read
+    a product's pack size and stores each answer as a `NetContentSuggestion` row. It is bounded by
+    `--limit` and a neuron budget. Only a staff Accept or Edit on `/staff/net-content` copies a
+    value onto `Product`, in a compare-and-set transaction that never overwrites a net content a
+    person entered.
+  - **Model-agnostic.** Callers depend on the `NetContentSuggester` interface in
+    `lib/net-content-suggester.ts`. The model id is data: `--model`, then `NET_CONTENT_AI_MODEL`,
+    then the default `@cf/google/gemma-4-26b-a4b-it`. Any per-model request options sit in a table
+    beside the id, never in code branches, and every row records its model. The reply is validated
+    like any untrusted input: quoted evidence must literally occur in the name or unit label, and a
+    count (`EACH`) must be stated.
+  - **Image provenance is data (`ProductImage.source`).** Only `STAFF_UPLOAD` and
+    `STAFF_CONFIRMED_PHOTO` images may be read as evidence. An `AI_GENERATED` image was rendered
+    from the product's own name, so reading a size off it only echoes the name. An
+    `OPEN_FOOD_FACTS` keyword match may be another product. Rows that predate `#900` stay
+    `UNKNOWN` and are never backfilled by guessing.
 - **A public unauthenticated read endpoint is bounded by its inputs and its cache, not by a
   per-request throttle row.** Established by P2.6 slice 5 (`#568`) for
   `app/api/search/suggest/route.ts`, the first public JSON route this storefront serves. The three

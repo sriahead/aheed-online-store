@@ -1,15 +1,9 @@
 import type { getPrisma, getPrismaWs } from "@/lib/db";
-import {
-  deriveUnitPricePenceForSort,
-  type NetContentUnit,
-} from "@/components/product/unit-price";
+import { deriveUnitPricePenceForSort, type NetContentUnit } from "@/components/product/unit-price";
 import type { NetContentEvidenceSource } from "@/lib/net-content-suggester";
 import type { UnitLabelCheck } from "@/lib/net-content-label-check";
 import type { ProductImageSource } from "@/lib/product-image";
-import {
-  buildEligibleProductWhere,
-  type EligibilityOptions,
-} from "@/lib/net-content-eligibility";
+import { buildEligibleProductWhere, type EligibilityOptions } from "@/lib/net-content-eligibility";
 import type { SummaryRow } from "@/lib/net-content-pilot-summary";
 
 /**
@@ -177,8 +171,7 @@ export async function listNetContentSummaryRows(
 }
 
 export type ReviewDecision =
-  | { kind: "accept" }
-  | { kind: "edit"; amount: number; unit: NetContentUnit };
+  { kind: "accept" } | { kind: "edit"; amount: number; unit: NetContentUnit };
 
 export type ReviewResult =
   | { ok: true; productId: string; status: "ACCEPTED" | "EDITED" | "REJECTED" }

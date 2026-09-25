@@ -70,10 +70,7 @@ async function main() {
   }
 
   const rawBudget = flagValue("--neuron-budget");
-  const {
-    DEFAULT_NEURON_BUDGET,
-    NET_CONTENT_MODEL_RATES,
-  } = await import("@/lib/net-content-run");
+  const { DEFAULT_NEURON_BUDGET, NET_CONTENT_MODEL_RATES } = await import("@/lib/net-content-run");
   const neuronBudget = rawBudget === undefined ? DEFAULT_NEURON_BUDGET : Number(rawBudget);
   if (!Number.isFinite(neuronBudget) || neuronBudget <= 0) {
     fail(`--neuron-budget must be a positive number — got "${rawBudget}"`);
@@ -91,9 +88,8 @@ async function main() {
   console.log(`env file: ${envPath}`);
   console.log(`database: ${hostOf(directUrl)}`);
 
-  const { resolveNetContentModel, createWorkersAiNetContentSuggester } = await import(
-    "@/lib/net-content-suggester"
-  );
+  const { resolveNetContentModel, createWorkersAiNetContentSuggester } =
+    await import("@/lib/net-content-suggester");
   const { getAiEnv } = await import("@/lib/config");
   const model = resolveNetContentModel(flagValue("--model"), getAiEnv().NET_CONTENT_AI_MODEL);
   const rate = NET_CONTENT_MODEL_RATES[model] ?? null;
@@ -112,9 +108,8 @@ async function main() {
 
   const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString: directUrl }) });
   try {
-    const { listEligibleProductsForNetContent, createNetContentSuggestion } = await import(
-      "@/lib/repositories/net-content-suggestions"
-    );
+    const { listEligibleProductsForNetContent, createNetContentSuggestion } =
+      await import("@/lib/repositories/net-content-suggestions");
     const { runNetContentSuggestions } = await import("@/lib/net-content-run");
     const { getStorage } = await import("@/lib/storage");
     const storage = getStorage();
@@ -185,7 +180,9 @@ async function main() {
       totals.latencyWeighted += (summary.meanLatencyMs ?? 0) * summary.attempted;
 
       if (summary.outcome === "not-configured") {
-        fail("CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN is missing from the env file; nothing written.");
+        fail(
+          "CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN is missing from the env file; nothing written.",
+        );
       }
       if (summary.outcome !== "completed") stopReason = summary.outcome;
     }

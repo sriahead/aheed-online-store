@@ -294,7 +294,9 @@ export function ProductImageManager({
                   Set primary
                 </button>
               )}
-              <p className="text-xs text-primary-muted">{PRODUCT_IMAGE_SOURCE_LABELS[image.source]}</p>
+              <p className="text-xs text-primary-muted">
+                {PRODUCT_IMAGE_SOURCE_LABELS[image.source]}
+              </p>
               {nextConfirmedPhotoSource(image.source) !== null && (
                 <button
                   type="button"

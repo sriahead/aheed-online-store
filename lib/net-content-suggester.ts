@@ -199,8 +199,7 @@ export function readWorkersAiReply(payload: unknown): {
 } {
   const result = (payload as { result?: Record<string, unknown> } | null)?.result ?? {};
   const choices = result.choices as
-    | Array<{ message?: { content?: unknown }; finish_reason?: unknown }>
-    | undefined;
+    Array<{ message?: { content?: unknown }; finish_reason?: unknown }> | undefined;
   const choiceText = choices?.[0]?.message?.content;
   const text =
     typeof choiceText === "string"

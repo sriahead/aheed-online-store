@@ -165,7 +165,9 @@ export async function runNetContentSuggestions(deps: RunDependencies): Promise<R
     else summary.noAnswer += 1;
     log(
       `  ${saved.status === "PENDING" ? "suggested" : "no answer"} ${product.name}` +
-        (validated ? ` -> ${validated.amount} ${validated.unit} (${validated.evidenceSource})` : ""),
+        (validated
+          ? ` -> ${validated.amount} ${validated.unit} (${validated.evidenceSource})`
+          : ""),
     );
   }
 

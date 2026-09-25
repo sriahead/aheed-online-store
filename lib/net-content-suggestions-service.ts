@@ -27,7 +27,13 @@ export function reviewNetContentSuggestionForVendor(
   reviewerUserId: string,
   decision: ReviewDecision,
 ) {
-  return reviewNetContentSuggestion(getPrismaWs(), vendorId, suggestionId, reviewerUserId, decision);
+  return reviewNetContentSuggestion(
+    getPrismaWs(),
+    vendorId,
+    suggestionId,
+    reviewerUserId,
+    decision,
+  );
 }
 
 export function rejectNetContentSuggestionForVendor(

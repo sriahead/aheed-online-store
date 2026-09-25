@@ -59,7 +59,7 @@ export function NetContentReviewRow({ row }: { row: NetContentReviewRowData }) {
         {row.photoUrl && (
           <img
             src={row.photoUrl}
-            alt={`Photo used as evidence for ${row.productName}`}
+            alt={`Packaging of ${row.productName}, read as evidence`}
             className="h-20 w-20 shrink-0 rounded-lg border border-black/10 object-cover"
           />
         )}
