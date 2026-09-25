@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.33.0"
+version: "1.34.0"
 updated: 2026-09-25
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,13 +39,14 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-23.
-- **Checkout:** `main` is at `5f1e14f`; `staging` matches it content-for-content (`33fdb1b` on
-  `staging`'s own history, merged into `main` unchanged by PR #882). Two promotions landed today:
-  PR #875 (`#861`/`#871`/`#857`, KMS enforcement + search index) and PR #882 (`#876`/`#878`,
-  expected restock date + product-create HTTP-transaction fix) — see Project Position below for
-  what each shipped. Production `/api/health` confirmed serving `5f1e14f`, `db.ok: true`,
-  `drift: false`, post both promotions.
+- **Date:** 2026-09-25.
+- **Checkout:** `main` is at `9b1de27`; `staging` matches it content-for-content (`5061f05` on
+  `staging`'s own history, merged into `main` unchanged by PR #898). Two promotions have landed
+  since this section's prior `5f1e14f` snapshot: PR #887 (`#877`, net content for the generated
+  demo catalogue) and PR #898 (`#613`/`#890`/`#889`, delivery-area ranges, per-area pricing,
+  out-of-area refusal counts) — see Project Position below for what each shipped. Production
+  `/api/health` confirmed serving `9b1de27`, `db.ok: true`, `reference.drift: false`, post both
+  promotions.
   - **In production (PR #858, merge `2047d0a`, verified live):** the KMS restructuring pilot
     (`#851`, PR #852), KMS navigation categories (PR #853), and the KMS strategy standard
     (PR #855 then PR #856). `deploy-production` (run `35711810410`) and `deploy-docs-internal`
@@ -330,6 +331,21 @@ additive migration (`Inventory.expectedRestockDate DateTime?`, no `DROP`). Full 
 detail in `specs/2026-09-23-p876-expected-restock-date/build-notes.md`. Production confirmed live
 post-merge: `/api/health` served `5f1e14f`, `db.ok: true`, `drift: false`.
 
+**`#877` (net content for the generated demo catalogue) is now promoted to production** (PR #887,
+merge `3b85289`, 2026-09-24, `staging -> main`; PR #885 carried the feature into `staging`). See
+In-Flight Work above for detail; not repeated here.
+
+**`#613`/`#890`/`#889` (delivery-area district ranges, per-area pricing, out-of-area refusal
+counts) are now promoted to production** (PR #898, merge `9b1de27`, 2026-09-25, `staging -> main`;
+PR #896 carried the feature into `staging`, PR #897 its own Document-stage reconciliation). Store
+admins enter postcode districts as comma lists or ranges on `/staff/delivery-areas`; any area or
+district can carry its own delivery charge, minimum order and free-delivery threshold, resolved by
+one pure `lib/delivery-pricing.ts` function that feeds checkout, `place-order`, the cart drawer,
+`/cart` and the landing banner; out-of-area postcodes are counted per district with no personal
+data. One additive migration. Full validation detail in
+`specs/2026-09-24-p613-delivery-areas-ranges-fees-refusals/build-notes.md`. Production confirmed
+live post-merge: `/api/health` served `9b1de27`, `db.ok: true`, `reference.drift: false`.
+
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
 in scope.
@@ -366,8 +382,9 @@ The live board showed open High-priority items, all with blank Complexity:
   #695 is unchanged.
 - Data activation: #697.
 - Location decision reconciliation: #422 — now Deferred, see above.
-- **Remaining open High items (2026-09-24):** #613 (IN FLIGHT — see In-Flight Work), #695 (Meta
-  approval), #697 (real-product net content, a data job for Aheed).
+- **Remaining open High items (2026-09-25):** #695 (Meta approval), #697 (real-product net
+  content, a data job for Aheed). **#613 shipped and promoted to production 2026-09-25** (PR #898
+  — see In-Flight Work and Project Position) and is removed from this list.
 - **`#613`'s own premise was stale.** District-level delivery areas (`MK9` exact, `MK` whole area)
   already shipped unspecified inside `#402`'s build commit `2f0f20c` (2026-09-12) and are in
   production. `#761`'s claim that the delivery cluster never touched `#613` is partly wrong for the
@@ -397,11 +414,13 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **`#613`/`#890`/`#889` are DONE** — promoted to production via PR #898 (merge `9b1de27`,
+  2026-09-25), production `/api/health` serving it, `db.ok: true`, `reference.drift: false`; the
+  board shows all three Done. The bullet below is its pre-promotion history.
 - **2026-09-24/25 — `#613`/`#890`/`#889` validated and merged to `staging`.** PR #896 (merge
   `e54ed44`, `staging`), spec `specs/2026-09-24-p613-delivery-areas-ranges-fees-refusals/` — read
   its `build-notes.md` first. `deploy-staging` and `deploy-docs-internal` both succeeded; staging
-  `/api/health` served `e54ed44`, `db.ok: true`. **Not yet promoted to `main`**; the board shows
-  all three In Review. In summary:
+  `/api/health` served `e54ed44`, `db.ok: true`. In summary:
   - district lists/ranges on `/staff/delivery-areas`;
   - per-area delivery charge, minimum and free-delivery threshold as nullable overrides on
     `VendorDeliveryArea`, resolved by `lib/delivery-pricing.ts`;
