@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.5.0"
-updated: 2026-09-24
+version: "1.6.0"
+updated: 2026-09-25
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, silently-ignored TZ overrides, the dev machine's BST clock as a free browser timezone override, curl-driven server actions, grep-vs-rendered-HTML pitfalls.
 tags: [local-dev, windows, validation, playbook]
@@ -259,6 +259,23 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   guest cart (`features/cart/add-to-cart.ts`'s `addToCart`) with no browser and no client JS, so
   `features/checkout/place-order.ts`'s delivery-postcode refusal (R24) could be driven end-to-end
   against a real cart rather than stopping at the cheaper storefront-header signal (R23).
+- **A direct server-action call whose sole argument is a `FormData` object — as opposed to
+  primitive args (the `addToCart` case above) or a plain `<form action={fn}>` — is NOT
+  reproducible with either curl technique above, at least not without reverse-engineering React's
+  FormData-specific flight encoding.** Hit at `#613`'s `/validate` (2026-09-24) trying to drive the
+  header's postcode control: `components/layout/LocationControl.tsx` and
+  `components/checkout/CheckoutForm.tsx`'s "forget postcode" button both call
+  `setDeliveryPostcode(formData)` from inside a client `action={(formData) => { startTransition(...)
+  }}` closure — not a server-reference `<form action={setDeliveryPostcode}>`, so it never renders
+  the `$ACTION_REF_<hash>` progressive-enhancement fields, and not a call with primitive
+  arguments, so the plain `Next-Action` + JSON-array body used for `addToCart` doesn't apply
+  either. Sending the action id via `Next-Action` with a `multipart/form-data` body containing the
+  raw field(s) (`-F 'postcode=MK17 8NL'`, no wrapping) returns an opaque `500` with only a
+  numeric `digest`, no message. **Use a connected browser extension for this class of control** —
+  a plain `useActionState`-bound `<form>` elsewhere on the same page (e.g. the checkout form
+  itself) stays fully curl-drivable and was used instead to prove the CHECKOUT-source half of the
+  same feature; only the HEADER-source half needed a browser and fell back to unit-test-only proof
+  that session.
 - **`npm run preview`'s `next build` step type-checks every `.ts` file its tsconfig includes —
   which, by default, means the repo root — so a type error in a scratch validation script placed
   at the repo root (rather than under `lib/`, `app/`, etc.) fails the WHOLE build**, not just that

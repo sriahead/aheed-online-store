@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.32.0"
-updated: 2026-09-24
+version: "1.33.0"
+updated: 2026-09-25
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -397,22 +397,32 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **2026-09-24 — `#613`/`#890`/`#889` built, NOT yet validated.** Branch
-  `feature/613-delivery-area-geography` (unpushed at the Build→Validate Clear), spec
-  `specs/2026-09-24-p613-delivery-areas-ranges-fees-refusals/`, and read its `build-notes.md` first.
-  In summary:
+- **2026-09-24/25 — `#613`/`#890`/`#889` validated and merged to `staging`.** PR #896 (merge
+  `e54ed44`, `staging`), spec `specs/2026-09-24-p613-delivery-areas-ranges-fees-refusals/` — read
+  its `build-notes.md` first. `deploy-staging` and `deploy-docs-internal` both succeeded; staging
+  `/api/health` served `e54ed44`, `db.ok: true`. **Not yet promoted to `main`**; the board shows
+  all three In Review. In summary:
   - district lists/ranges on `/staff/delivery-areas`;
   - per-area delivery charge, minimum and free-delivery threshold as nullable overrides on
     `VendorDeliveryArea`, resolved by `lib/delivery-pricing.ts`;
   - `DeliveryRefusalCount` (out-of-area demand, no personal data).
 
-  **It carries a migration, already applied to dev only.** Deferred alongside it: `#888` (radius),
-  `#893`, `#894`. Separate Backlog issues: `#891` (notify-me emails), `#892` (a £0-threshold doc
-  contradiction), `#895`.
-  - **Dev-database trap (`#895`):** `prisma migrate dev --create-only` against dev now refuses and
-    offers a **reset** (checksum drift on `20260820200500_p8_image_needs_review`). Never accept it.
-    Generate migrations with `prisma migrate diff --from-schema-datamodel <base schema>
-    --to-schema-datamodel prisma/schema.prisma --script`, as `#876` and this slice did.
+  **It carries a migration, applied to dev at Build and confirmed still applied at Validate.**
+  Deferred alongside it: `#888` (radius), `#893`, `#894`. Separate Backlog issues: `#891`
+  (notify-me emails), `#892` (a £0-threshold doc contradiction), `#895`.
+  - **Dev-database trap (`#895`), reconfirmed at this slice's own Build:** `prisma migrate dev
+    --create-only` against dev refuses and offers a **reset** (checksum drift on
+    `20260820200500_p8_image_needs_review`). Never accept it. Generate migrations with
+    `prisma migrate diff --from-schema-datamodel <base schema> --to-schema-datamodel
+    prisma/schema.prisma --script`, as `#876` and this slice did.
+  - **A new curl-driving trap found at this slice's `/validate`** — a server action called
+    directly with a `FormData` argument from inside a client `action={(fd) => ...}` closure (not a
+    primitive-args direct call, not a plain `<form action={fn}>`) resists both curl techniques
+    `docs/developer-portal/local-dev-playbook.md` already documented. Full detail and the
+    workaround (a browser extension, or fall back to a plain-form sibling control when one exists)
+    now lives there (v1.6.0) rather than here. Consequence for this slice: the CHECKOUT-source
+    half of the out-of-area refusal count was proven live; the HEADER-source half stayed at
+    unit-test-only proof (exact-assertion coverage, not re-driven live this session).
 - **`#877` is DONE** — promoted to production via PR #887 (merge `3b85289`, 2026-09-24), production
   `/api/health` serving it; the bullet below is its pre-promotion history.
 - **2026-09-23 — `#876`/`#878` shipped; `#877` was the one remaining slice in flight.** `/propose`
