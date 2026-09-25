@@ -14,6 +14,7 @@ import {
   Megaphone,
   MessageSquareQuote,
   Package,
+  Ruler,
   ShieldAlert,
   Sparkles,
   Store,
@@ -174,6 +175,17 @@ export default async function StaffHomePage() {
           <p className="font-semibold text-primary">Search dictionary</p>
           <p className="mt-1 text-sm text-primary-muted">
             Words your shoppers use that your product names don&apos;t.
+          </p>
+        </Link>
+
+        <Link
+          href="/staff/net-content"
+          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+        >
+          <Ruler className="mb-3 h-6 w-6 text-accent" aria-hidden />
+          <p className="font-semibold text-primary">Net content review</p>
+          <p className="mt-1 text-sm text-primary-muted">
+            Check AI-suggested pack sizes before they reach a product.
           </p>
         </Link>
 

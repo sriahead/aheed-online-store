@@ -395,8 +395,11 @@ function parseHmcFields(raw: RawForm): ParseResult<{
  * `netContentAmount` is a WHOLE NUMBER (`wholeNumber`, min 1) in the chosen unit's own scale —
  * see the schema comment on `Product.netContentAmount` for why a fractional amount in a coarser
  * unit (e.g. "0.5 KILOGRAM") is never accepted; a half-kilogram product is typed as 500 GRAM.
+ *
+ * Exported for #900 (R20): editing an AI suggestion on /staff/net-content validates with exactly
+ * these rules, so the queue can never store a net content the product form would refuse.
  */
-function parseNetContentFields(
+export function parseNetContentFields(
   raw: RawForm,
 ): ParseResult<{ netContentAmount: number | null; netContentUnit: NetContentUnit | null }> {
   const amountRaw = text(raw, "netContentAmount");
