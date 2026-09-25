@@ -32,10 +32,26 @@ export const DEFAULT_NET_CONTENT_MODEL = "@cf/google/gemma-4-26b-a4b-it";
 export const NET_CONTENT_TIMEOUT_MS = 60_000;
 
 /**
- * Output ceiling per call. The model reasons before answering and the reasoning counts toward
- * this, so 200 truncated a real reply mid-answer at Build (`finish_reason: "length"`).
+ * Output ceiling per call. The answer itself is one short JSON object (about 50 tokens with
+ * reasoning off); the headroom covers a model with no request options below, whose reasoning
+ * counts toward the ceiling.
  */
 export const NET_CONTENT_MAX_TOKENS = 800;
+
+/**
+ * Extra request fields per model — the model-specific half of a model-agnostic design, kept as
+ * data beside the model id rather than as branches in code. A model not listed gets none.
+ *
+ * Gemma 4 runs with reasoning OFF. Measured at Build (2026-09-25, dev credentials): with its
+ * default reasoning on, every ambiguous product (`Whole Milk / 2pt`, `Still Water 6 x 1.5L`,
+ * `Fast Phone Charger`) reasoned in circles until the token ceiling — at 800 and again at 2,500 —
+ * returning NO content at ~25-71 neurons a call. With reasoning off the same calls answer in about
+ * 50 tokens at ~4 neurons. Reasoning off was also more willing to CONVERT (it answered 568 ml for
+ * "2pt"), which is why the prompt below forbids conversion outside metric scale changes.
+ */
+export const NET_CONTENT_MODEL_REQUEST_OPTIONS: Record<string, Record<string, unknown>> = {
+  "@cf/google/gemma-4-26b-a4b-it": { chat_template_kwargs: { enable_thinking: false } },
+};
 
 /** The longest quoted evidence a suggestion may carry (R11). */
 export const MAX_EVIDENCE_CHARS = 200;
@@ -115,6 +131,9 @@ export function buildNetContentPrompt(input: {
     "",
     "Rules:",
     "- amount must be a whole number. Use the smaller unit for fractions: 0.5kg is 500 GRAM, 1.5L is 1500 MILLILITRE.",
+    "- Only use a size written in metric units (g, kg, ml, cl, l) or a stated count of items.",
+    '- If the size is only given in other units (pints, oz, lb), reply {"amount": null}. Do not convert it.',
+    '- If working out the size would mean multiplying (for example "6 x 1.5L"), reply {"amount": null}.',
     "- evidenceSource NAME or UNIT_LABEL means evidence is copied exactly from that text above.",
     input.hasPhoto
       ? "- evidenceSource PHOTO means evidence is the text you read on the packaging."
@@ -137,7 +156,10 @@ function toBase64(bytes: Uint8Array): string {
 }
 
 /** The request body. Exported so a unit test can assert an image travels only when given one. */
-export function buildNetContentRequestBody(input: SuggesterInput): Record<string, unknown> {
+export function buildNetContentRequestBody(
+  input: SuggesterInput,
+  model: string = DEFAULT_NET_CONTENT_MODEL,
+): Record<string, unknown> {
   const prompt = buildNetContentPrompt({
     name: input.name,
     unitLabel: input.unitLabel,
@@ -154,7 +176,11 @@ export function buildNetContentRequestBody(input: SuggesterInput): Record<string
         },
       ]
     : prompt;
-  return { messages: [{ role: "user", content }], max_tokens: NET_CONTENT_MAX_TOKENS };
+  return {
+    ...(NET_CONTENT_MODEL_REQUEST_OPTIONS[model] ?? {}),
+    messages: [{ role: "user", content }],
+    max_tokens: NET_CONTENT_MAX_TOKENS,
+  };
 }
 
 function numberOrNull(value: unknown): number | null {
@@ -166,9 +192,15 @@ function numberOrNull(value: unknown): number | null {
  * measured) answer in `result.choices[0].message.content`; older text models answer in
  * `result.response`. Both are read so swapping the model id is enough.
  */
-export function readWorkersAiReply(payload: unknown): { text: string; usage: SuggesterUsage } {
+export function readWorkersAiReply(payload: unknown): {
+  text: string;
+  usage: SuggesterUsage;
+  truncated: boolean;
+} {
   const result = (payload as { result?: Record<string, unknown> } | null)?.result ?? {};
-  const choices = result.choices as Array<{ message?: { content?: unknown } }> | undefined;
+  const choices = result.choices as
+    | Array<{ message?: { content?: unknown }; finish_reason?: unknown }>
+    | undefined;
   const choiceText = choices?.[0]?.message?.content;
   const text =
     typeof choiceText === "string"
@@ -179,6 +211,7 @@ export function readWorkersAiReply(payload: unknown): { text: string; usage: Sug
   const usage = (result.usage ?? {}) as Record<string, unknown>;
   return {
     text,
+    truncated: choices?.[0]?.finish_reason === "length",
     usage: {
       inputTokens: numberOrNull(usage.prompt_tokens),
       outputTokens: numberOrNull(usage.completion_tokens),
@@ -225,7 +258,7 @@ export function createWorkersAiNetContentSuggester(
               Authorization: `Bearer ${credentials.apiToken}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(buildNetContentRequestBody(input)),
+            body: JSON.stringify(buildNetContentRequestBody(input, model)),
             signal: controller.signal,
           },
         );
@@ -237,7 +270,16 @@ export function createWorkersAiNetContentSuggester(
           };
         }
         const payload: unknown = await response.json();
-        const { text, usage } = readWorkersAiReply(payload);
+        const { text, usage, truncated } = readWorkersAiReply(payload);
+        if (truncated) {
+          // A reply cut off at the token ceiling is not an answer — storing it as NO_ANSWER would
+          // permanently mark the product attempted over a budget artefact (measured at Build).
+          return {
+            kind: "transport-error",
+            message: `Reply truncated at ${NET_CONTENT_MAX_TOKENS} tokens`,
+            latencyMs: Date.now() - started,
+          };
+        }
         return { kind: "reply", text, latencyMs: Date.now() - started, usage };
       } catch (error) {
         return {
