@@ -58,6 +58,7 @@ export async function POST(request: Request) {
           result.imageKey,
           product.name,
           result.needsReview,
+          result.source,
         );
         processed++;
       }

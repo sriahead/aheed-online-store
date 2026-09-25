@@ -1,11 +1,17 @@
 import { getProductMetadataService } from "./product-metadata";
 import { getImageGenerationService } from "./image-generation";
 import { getStorage } from "./storage";
-import { buildProductImageKey, IMAGE_CONTENT_TYPE } from "./product-image";
+import {
+  buildProductImageKey,
+  IMAGE_CONTENT_TYPE,
+  type GeneratedImageSource,
+} from "./product-image";
 
 export interface PipelineResult {
   imageKey: string;
   needsReview: boolean;
+  /** #900 — which path produced the bytes, recorded on the ProductImage row. */
+  source: GeneratedImageSource;
 }
 
 export interface PipelineOptions {
@@ -36,6 +42,7 @@ export async function runProductImagePipeline(
 
   let imageBuffer: ArrayBuffer | null = null;
   let contentType = IMAGE_CONTENT_TYPE;
+  let source: GeneratedImageSource = "AI_GENERATED";
 
   // 1. Try Open Food Facts, unless the operator switched it off for this run.
   if (useOpenFoodFacts) {
@@ -45,6 +52,7 @@ export async function runProductImagePipeline(
       if (res.ok) {
         imageBuffer = await res.arrayBuffer();
         contentType = res.headers.get("content-type") || IMAGE_CONTENT_TYPE;
+        source = "OPEN_FOOD_FACTS";
       }
     }
   }
@@ -86,5 +94,6 @@ export async function runProductImagePipeline(
      * never seen the product, so every image it produces is flagged.
      */
     needsReview: true,
+    source,
   };
 }

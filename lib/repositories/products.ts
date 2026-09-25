@@ -26,6 +26,8 @@ import {
   MAX_IMAGE_ATTEMPT_FAILURES,
   PLACEHOLDER_IMAGE_SUFFIX,
   isPlaceholderImageKey,
+  nextConfirmedPhotoSource,
+  type ProductImageSource,
 } from "@/lib/product-image";
 import type { ProductTier } from "@/lib/tier-pricing";
 import {
@@ -49,6 +51,8 @@ export interface ProductImageSummary {
 export interface AdminProductImage extends ProductImageSummary {
   id: string;
   sortOrder: number;
+  /** #900 — provenance, shown to staff and gating the confirm-as-real-photo control. */
+  source: ProductImageSource;
 }
 
 export interface ProductSummary {
@@ -400,6 +404,7 @@ const adminProductImageSelect = {
   alt: true,
   isPrimary: true,
   sortOrder: true,
+  source: true,
 } as const;
 
 /**
@@ -1965,14 +1970,23 @@ export async function setPrimaryProductImage(
       select: { id: true },
     });
 
+    // #900 — a staff upload, on both branches: replacing the primary's bytes replaces what the
+    // row depicts, so its old provenance (e.g. AI_GENERATED) must not survive the swap.
     if (existing) {
       await tx.productImage.update({
         where: { id: existing.id },
-        data: { storageKey, alt: altText },
+        data: { storageKey, alt: altText, source: "STAFF_UPLOAD" },
       });
     } else {
       await tx.productImage.create({
-        data: { productId, storageKey, alt: altText, isPrimary: true, sortOrder: 0 },
+        data: {
+          productId,
+          storageKey,
+          alt: altText,
+          isPrimary: true,
+          sortOrder: 0,
+          source: "STAFF_UPLOAD",
+        },
       });
     }
 
@@ -2016,6 +2030,7 @@ export async function addProductImage(
         alt: altText,
         isPrimary: existing.length === 0,
         sortOrder: nextSortOrder,
+        source: "STAFF_UPLOAD", // #900
       },
     });
 
@@ -2209,6 +2224,8 @@ export async function saveGeneratedProductImage(
   storageKey: string,
   alt: string,
   needsReview: boolean,
+  // #900 — REQUIRED so the compiler finds every caller: provenance is recorded, never defaulted.
+  source: ProductImageSource,
 ): Promise<void> {
   const existing = await prisma.productImage.findMany({
     where: { productId },
@@ -2221,6 +2238,7 @@ export async function saveGeneratedProductImage(
       storageKey,
       alt,
       isPrimary: true,
+      source,
     },
   });
 
@@ -2355,4 +2373,40 @@ export async function approveProductImageRow(
   });
 
   return { ok: true as const, id: productId };
+}
+
+/**
+ * #900 (R8) — staff vouch for an image as a real photo of this product's pack, or withdraw that.
+ *
+ * Moves ONLY between UNKNOWN and STAFF_CONFIRMED_PHOTO (`nextConfirmedPhotoSource`). Any other
+ * source is refused with no write: an AI-generated image was rendered from the product's own name
+ * and an Open Food Facts match may be another product, so neither can be vouched for.
+ *
+ * A plain read-then-write, deliberately not compare-and-set: two staff toggling the same image at
+ * once is harmless (the last click wins, and the control shows the result), whereas catching a
+ * not-found code on a conditional update would need both adapters' codes verified live
+ * (CLAUDE.md). Singular `update`, no nested writes, so the HTTP client is fine.
+ */
+export async function toggleProductImageConfirmedPhoto(
+  prisma: Db,
+  vendorId: string,
+  productId: string,
+  imageId: string,
+): Promise<{ ok: true; source: ProductImageSource } | { ok: false; error: string }> {
+  const image = await prisma.productImage.findFirst({
+    where: { id: imageId, productId, product: { vendorId } },
+    select: { id: true, source: true },
+  });
+  if (!image) return { ok: false, error: "That image no longer exists." };
+
+  const next = nextConfirmedPhotoSource(image.source);
+  if (next === null) {
+    return {
+      ok: false,
+      error: "Only an image of unknown source can be confirmed as a real photo of this product.",
+    };
+  }
+
+  await prisma.productImage.update({ where: { id: image.id }, data: { source: next } });
+  return { ok: true, source: next };
 }
