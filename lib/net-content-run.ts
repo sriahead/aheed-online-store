@@ -117,7 +117,9 @@ export async function runNetContentSuggestions(deps: RunDependencies): Promise<R
     latencyTotal += result.latencyMs;
 
     if (result.kind === "transport-error") {
-      // No row: a transient fault must not mark the product as attempted (R15).
+      // No row: a transient fault must not mark the product as attempted (R15). A truncated reply
+      // was still billed — the most expensive kind of call — so its usage counts (R16).
+      if (result.usage) addUsage(summary, result.usage, deps.rate);
       summary.failed += 1;
       consecutiveTransportErrors += 1;
       log(`  failed ${product.name}: ${result.message}`);
@@ -129,12 +131,7 @@ export async function runNetContentSuggestions(deps: RunDependencies): Promise<R
       continue;
     }
     consecutiveTransportErrors = 0;
-
-    summary.inputTokens += result.usage.inputTokens ?? 0;
-    summary.outputTokens += result.usage.outputTokens ?? 0;
-    const neurons = neuronsForCall(result.usage, deps.rate);
-    if (neurons === null) summary.neuronsIncomplete = true;
-    else summary.neurons += neurons;
+    addUsage(summary, result.usage, deps.rate);
 
     const photoSent = photo !== null;
     const validated = validateNetContentReply(result.text, {
@@ -172,6 +169,18 @@ export async function runNetContentSuggestions(deps: RunDependencies): Promise<R
   }
 
   return finish(summary, latencyTotal);
+}
+
+function addUsage(
+  summary: RunSummary,
+  usage: SuggesterUsage,
+  rate: { input: number; output: number } | null,
+): void {
+  summary.inputTokens += usage.inputTokens ?? 0;
+  summary.outputTokens += usage.outputTokens ?? 0;
+  const neurons = neuronsForCall(usage, rate);
+  if (neurons === null) summary.neuronsIncomplete = true;
+  else summary.neurons += neurons;
 }
 
 function finish(summary: RunSummary, latencyTotal: number): RunSummary {

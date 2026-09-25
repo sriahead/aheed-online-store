@@ -275,17 +275,35 @@ describe("createWorkersAiNetContentSuggester (R10)", () => {
     expect(result).toMatchObject({ kind: "transport-error", message: "No reply within 10 ms" });
   });
 
-  it("treats a truncated reply as a transport error, so no row is written for it", async () => {
+  it("treats a truncated reply as a transport error that still reports its usage", async () => {
+    // Shape measured at Build: a truncated Gemma call still bills the whole token ceiling.
     const fetchImpl = vi.fn(async () =>
       Response.json({
-        result: { choices: [{ message: { content: "" }, finish_reason: "length" }] },
+        result: {
+          choices: [{ message: { content: "" }, finish_reason: "length" }],
+          usage: { prompt_tokens: 327, completion_tokens: 800, neurons: 24.79 },
+        },
       }),
     );
     const suggester = createWorkersAiNetContentSuggester("m", {
       fetchImpl: fetchImpl as unknown as typeof fetch,
       credentials,
     });
-    expect((await suggester.suggest(input)).kind).toBe("transport-error");
+    expect(await suggester.suggest(input)).toMatchObject({
+      kind: "transport-error",
+      usage: { inputTokens: 327, outputTokens: 800, neurons: 24.79 },
+    });
+  });
+
+  it("reports no usage for a non-OK status, which returns no billed reply", async () => {
+    const fetchImpl = vi.fn(async () => new Response("rate limited", { status: 429 }));
+    const suggester = createWorkersAiNetContentSuggester("m", {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      credentials,
+    });
+    const result = await suggester.suggest(input);
+    expect(result.kind).toBe("transport-error");
+    expect(result).not.toHaveProperty("usage");
   });
 
   it("returns the reply text and usage, posting to the model's own URL", async () => {

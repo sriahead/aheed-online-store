@@ -172,6 +172,48 @@ describe("the neuron budget (R16)", () => {
     expect(summary.neurons).toBe(10);
   });
 
+  it("counts a truncated call's neurons toward the budget, though it writes no row", async () => {
+    const truncated: SuggesterResult = {
+      kind: "transport-error",
+      message: "Reply truncated at 800 tokens",
+      latencyMs: 5,
+      usage: { inputTokens: 327, outputTokens: 800, neurons: 25 },
+    };
+    const suggester = suggesterReturning(truncated, RICE_REPLY, RICE_REPLY);
+    const d = deps({
+      products: [product("a"), product("b"), product("c")],
+      suggester,
+      neuronBudget: 28,
+    });
+    const summary = await runNetContentSuggestions(d);
+
+    // 25 (truncated) + 5 = 30 >= 28, so the third call never starts.
+    expect(suggester.suggest).toHaveBeenCalledTimes(2);
+    expect(summary).toMatchObject({
+      outcome: "budget-reached",
+      failed: 1,
+      pending: 1,
+      neurons: 30,
+      inputTokens: 727,
+      outputTokens: 850,
+    });
+    expect(d.saveSuggestion).toHaveBeenCalledTimes(1);
+  });
+
+  it("estimates a truncated call from the rate table when no neurons are reported", async () => {
+    const truncated: SuggesterResult = {
+      kind: "transport-error",
+      message: "Reply truncated at 800 tokens",
+      latencyMs: 5,
+      usage: { inputTokens: 1_000_000, outputTokens: 0, neurons: null },
+    };
+    const summary = await runNetContentSuggestions(
+      deps({ products: [product("a")], suggester: suggesterReturning(truncated) }),
+    );
+    expect(summary.neurons).toBe(9091);
+    expect(summary.neuronsIncomplete).toBe(false);
+  });
+
   it("prefers reported neurons, then estimates from the rate table", () => {
     const rate = { input: 9091, output: 27273 };
     expect(neuronsForCall({ inputTokens: 400, outputTokens: 50, neurons: 4.9 }, rate)).toBe(4.9);

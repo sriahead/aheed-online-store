@@ -135,7 +135,8 @@ with this body shape (the one the suggester now sends):
   - **Why:** `NO_ANSWER` permanently marks a product attempted, so a budget artefact would have
     hidden the product from every future default run. Build found and deleted five dev-only rows
     stored that way.
-  - **Cost side effect:** see Known-shaky areas, first item.
+  - **Cost:** the truncated call's usage still counts toward the budget (fixed before Validate,
+    see "Fixed before Validate" under Known-shaky areas).
 - **The prompt's multipack rule narrows the plan's stance.** `plan.md` ("Deliberately excluded")
   says that for multipacks "the model proposes and staff decide". The prompt now tells the model to
   give no answer when the size needs multiplying (`6 x 1.5L`). No rule is encoded in the
@@ -144,17 +145,31 @@ with this body shape (the one the suggester now sends):
 
 ## Known-shaky areas
 
-1. **A truncated call's neurons are not counted toward `--neuron-budget` (likely a defect against
-   R16).** The `transport-error` result type (`lib/net-content-suggester.ts:87`) carries no
-   `usage`, so the run loop (`lib/net-content-run.ts:118-130`) adds neither tokens nor neurons for
-   a truncated reply. Yet a truncated call is the *most* expensive kind: it spends the whole
-   800-token ceiling, about 25 neurons.
-   - The budget stop therefore under-counts, and the final summary under-reports.
-   - Three truncations in a row also end the run as "transport errors".
-   - A product that always truncates is retried, and paid for, on every run.
-   - With reasoning off, truncation wasn't seen again on dev, so the exposure is small. It is
-     still a gap against R16's "estimated neurons used so far". **Validate should judge it
-     against R16 and send it to `/fix` if it fails.**
+1. **Fixed before Validate: a truncated call's neurons were not counted toward
+   `--neuron-budget` (R16).** Found while writing these notes, and fixed in the same Build
+   context at the owner's direction (2026-09-25) rather than left for Validate to fail.
+   - **The defect:** the `transport-error` result carried no `usage`, so the run loop added
+     neither tokens nor neurons for a truncated reply. Yet a truncated call is the most expensive
+     kind: it spends the whole 800-token ceiling, about 25 neurons. The budget stop under-counted,
+     and the summary under-reported.
+   - **The fix:**
+     - `SuggesterResult`'s `transport-error` gains an optional `usage`, set only on truncation.
+       A non-OK status, a thrown fetch or a timeout has no billed body, so it reports none.
+     - `runNetContentSuggestions` counts that usage (reported neurons, else the rate-table
+       estimate) through a shared `addUsage` helper, then still writes no row and still counts
+       the call as failed.
+   - **Tests:** four new tests.
+     - `tests/net-content-suggester.test.ts`: truncation carries the measured usage; a 429
+       carries none.
+     - `tests/net-content-run.test.ts`: a truncated 25-neuron call plus a 5-neuron reply reaches
+       a 28 budget and stops the third call; a truncated call with no reported neurons is
+       estimated from the rate table.
+     - With the `lib/` change reverted, three of the four fail. The 429 case passes either way,
+       because it pins behaviour that was already correct.
+   - **Unchanged, and still worth a look:** three truncations in a row end the run as "transport
+     errors", which is the intended guard against a model that can't answer. A product that
+     always truncates is still retried, and paid for, on every run, but now at a counted cost.
+     With reasoning off, truncation wasn't seen again on dev.
 2. **Image + reasoning-off is unproven** (R27 above). R29 is the first real run of it. Check the
    row's `productImageId`, `evidenceSource = PHOTO`, and that the answer matches the printed size.
 3. **The label check's parser** (`lib/net-content-label-check.ts`) was tested against R12's table

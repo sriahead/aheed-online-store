@@ -419,7 +419,8 @@ All facts in this section require live verification:
   `feature/900-ai-net-content-suggestions`, not yet PR'd. Spec
   `specs/2026-09-25-p900-ai-net-content-suggestions/`: **read its `build-notes.md` first.** It
   records the R27 image probe (Gemma 4 accepts WebP), one spec deviation (a truncated reply writes
-  no row) and a likely R16 defect (a truncated call's neurons are not counted toward the budget).
+  no row), plus an R16 budget gap found and fixed before Validate (a truncated call's neurons now
+  count toward the budget).
   - **It carries a migration** (`20260925150000_p900_net_content_suggestions`, additive), applied
     to dev only.
   - The production pilot is an owner action after promotion, tracked in **`#901`** (Backlog,

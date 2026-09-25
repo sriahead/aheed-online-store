@@ -81,10 +81,14 @@ export interface SuggesterUsage {
  * Three outcomes, kept apart on purpose (R15): a missing credential stops the whole run, a
  * transport fault writes NO row (so a transient throttle never marks a product attempted), and
  * only a genuine reply becomes a stored suggestion or NO_ANSWER.
+ *
+ * A transport error carries `usage` only when the call was billed despite failing — a reply cut
+ * off at the token ceiling spends the whole ceiling (R16: it must count toward the budget). A
+ * non-OK status, a thrown fetch or a timeout returns no body, so there is no usage to report.
  */
 export type SuggesterResult =
   | { kind: "not-configured" }
-  | { kind: "transport-error"; message: string; latencyMs: number }
+  | { kind: "transport-error"; message: string; latencyMs: number; usage?: SuggesterUsage }
   | { kind: "reply"; text: string; latencyMs: number; usage: SuggesterUsage };
 
 export interface NetContentSuggester {
@@ -277,6 +281,7 @@ export function createWorkersAiNetContentSuggester(
             kind: "transport-error",
             message: `Reply truncated at ${NET_CONTENT_MAX_TOKENS} tokens`,
             latencyMs: Date.now() - started,
+            usage,
           };
         }
         return { kind: "reply", text, latencyMs: Date.now() - started, usage };
