@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.39.0"
+version: "1.40.0"
 updated: 2026-09-26
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -50,8 +50,11 @@ reconciliation. If overall project state did not materially change, leave this f
   `556e273`, `db.ok: true`, `reference.drift: false` (re-verified at the following `/orient`).
   `main` and `staging` were content-identical at that point. `#729` is closed. `#901` (production
   pilot for `#900`) stays open, Backlog, owner-gated. **`#729` slice 2 (`#905`, with `#907`) is
-  in Build** on `feature/905-vendor-product-labels`; `#912` (vendor-defined filters) is the next
-  slice and `#911` (reference coverage as one platform-wide list) is Backlog.
+  built, validated and merged to `staging`** (PR #913, merge `62514aa`, 2026-09-26).
+  `deploy-staging` (run `36272013144`) succeeded; staging `/api/health` served `62514aa`,
+  `db.ok: true`, `reference.drift: false`. `#905` and `#907` moved to `In Review`; close to `Done`
+  only on promotion to `main`. `#912` (vendor-defined filters) is the owner-chosen next slice and
+  `#911` (reference coverage as one platform-wide list) is Backlog.
   - **In production (PR #858, merge `2047d0a`, verified live):** the KMS restructuring pilot
     (`#851`, PR #852), KMS navigation categories (PR #853), and the KMS strategy standard
     (PR #855 then PR #856). `deploy-production` (run `35711810410`) and `deploy-docs-internal`
@@ -443,12 +446,30 @@ All facts in this section require live verification:
     `lib/repositories/vendor.ts` change. Both are now `docs/developer-portal/local-dev-playbook.md`
     entries (v1.8.0) so the next validator doesn't re-hit them.
   - **`#729` is closed** (promoted via PR #910).
-  - **`#905`** (slice 2 — per-vendor product labels/HMC, store description in AI prompts, with
-    `#907` and delivery-area examples folded in) went through `/propose` and `/spec` on 2026-09-26
-    (`specs/2026-09-26-p905-vendor-product-labels/`) and is in Build. `#912` (vendor-defined
-    product filters for SriMart) is the owner-chosen next slice; `#911` (reference-data postcode
-    coverage is one platform-wide list) was filed from the same `/propose`. `#906` (Open Food Facts
-    for non-food vendors) stays Deferred.
+
+- **`#729` slice 2 (`#905`, with `#907`) is built, validated and merged to `staging`** — see `Last
+  Verified` above; not repeated here. Per-vendor product labels/HMC (six new `VendorConfig`
+  booleans gating the staff product form only, stripped server-side on a disabled save rather than
+  cleared), a `storeDescription` that replaces the hardcoded grocery framing in three AI prompts,
+  and vendor-sourced delivery-area/help-page examples. Spec
+  `specs/2026-09-26-p905-vendor-product-labels/`; read its `build-notes.md` first for the Build,
+  Fix and Ship/Document records. One additive migration
+  (`20260926180000_p905_vendor_product_label_settings`), applied to `staging`.
+  - **One regression found at `/validate`, fixed at `/fix`:** a pre-existing test's mock of
+    `lib/delivery-areas-service` predated R27's new `exampleDeliveryAreaForVendor` call and threw on
+    every case; the missing mock was the root cause, not the production code — fixed there only.
+  - **R35a (SriMart's own signed-in staff check) run live at this Document stage, closing the one
+    row `/validate` had deferred.** `demo-srimart-admin@example.com` already existed on staging
+    (since 2026-08-17, predating production's copy) with an unrecorded password; after the owner
+    confirmed resetting it (`npm run demo:accounts -- remove` then `add`, which resets all five
+    staging demo accounts to one password — there is no per-account password), `/staff/products/new`
+    showed none of the six label controls and `/staff/delivery-areas` showed `RG` examples with no
+    `MK`, both on `srimart-staging.nocaped.com`. Both staging demo passwords are now recorded in
+    `secrets/staging.vars`/`secrets/production.vars` (`DEMO_SRIMART_ADMIN_PASSWORD`, reference-only,
+    never pushed anywhere) rather than lost again.
+  - **`#912`** (vendor-defined product filters for SriMart) is the owner-chosen next slice;
+    **`#911`** (reference-data postcode coverage as one platform-wide list) is Backlog. **`#906`**
+    (Open Food Facts for non-food vendors) stays Deferred.
 
 - **`#900` is DONE, promoted to production** (PR #904, merge `a156039`, 2026-09-26) — see `Last
   Verified` and `Project Position` above; not repeated here. AI-suggested net content with image
