@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.33.0"
-updated: 2026-09-25
+version: "1.34.0"
+updated: 2026-09-26
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -791,6 +791,13 @@ S3 API rather than an R2-specific SDK.
     from the product's own name, so reading a size off it only echoes the name. An
     `OPEN_FOOD_FACTS` keyword match may be another product. Rows that predate `#900` stay
     `UNKNOWN` and are never backfilled by guessing.
+
+  **A prompt learns what the shop sells only from the vendor (`#905`, 2026-09-26).** No prompt
+  may assume a product category. Every prompt builder opens neutrally and takes the vendor's
+  `VendorConfig.storeDescription` as a **required** `string | null` argument. It is inserted through
+  `lib/store-description.ts`'s `storeDescriptionPromptLine` as one quoted line of at most 200
+  characters, as data after a fixed label, so admin-written text cannot add instructions of its
+  own. `null` means neutral wording, never a grocery default.
 - **A public unauthenticated read endpoint is bounded by its inputs and its cache, not by a
   per-request throttle row.** Established by P2.6 slice 5 (`#568`) for
   `app/api/search/suggest/route.ts`, the first public JSON route this storefront serves. The three
