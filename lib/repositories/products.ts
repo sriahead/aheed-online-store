@@ -30,6 +30,7 @@ import {
   type ProductImageSource,
 } from "@/lib/product-image";
 import type { ProductTier } from "@/lib/tier-pricing";
+import type { AttributeValueWrite } from "@/lib/product-attribute-form";
 import {
   deleteProductTier,
   getTierForProduct,
@@ -1469,6 +1470,8 @@ export interface AdminProductDetail {
   images: AdminProductImage[];
   /** P8.5d (#348) — the multi-buy tier, active or not, so the form can re-enable one. */
   tier: ProductTier | null;
+  /** #912 — attribute id → option id, for each vendor filter this product carries a value for. */
+  attributeValues: Record<string, string>;
 }
 
 /** Everything a product write needs, already validated by lib/catalogue-form.ts. */
@@ -1512,6 +1515,13 @@ export interface ProductWriteInput {
   expectedRestockDay: string | null;
   /** P8.5d (#348) — the multi-buy tier, or null to remove it entirely. */
   tier: { groupQuantity: number; groupPricePence: number; isActive: boolean } | null;
+  /**
+   * #912 — this product's vendor-filter values, ONLY for the filters the form submitted
+   * (`lib/product-attribute-form.ts`). `optionId: null` clears that filter's value; a filter absent
+   * from this list is left untouched by an update. Ownership is checked here, not by the caller —
+   * see `assertOwnAttributeValues`.
+   */
+  attributeValues: AttributeValueWrite[];
 }
 
 export type CatalogueWriteResult =
@@ -1702,11 +1712,12 @@ export async function getProductForAdmin(
         select: { quantity: true, lowStockThreshold: true, expectedRestockDate: true },
       },
       images: { orderBy: { sortOrder: "asc" }, select: adminProductImageSelect },
+      attributeValues: { select: { attributeId: true, optionId: true } },
     },
   });
   if (!row) return null;
 
-  const { inventory, ...product } = row;
+  const { inventory, attributeValues, ...product } = row;
   // Active OR inactive: the form has to be able to re-activate a switched-off
   // multi-buy without the owner retyping its numbers, so this read is
   // deliberately not the active-only one the storefront uses.
@@ -1719,6 +1730,9 @@ export async function getProductForAdmin(
     lowStockThreshold: inventory?.lowStockThreshold ?? 3,
     expectedRestockDay: restockDayFromStored(inventory?.expectedRestockDate),
     tier,
+    attributeValues: Object.fromEntries(
+      attributeValues.map((value) => [value.attributeId, value.optionId]),
+    ),
   };
 }
 
@@ -1743,6 +1757,44 @@ async function assertOwnCategory(
     select: { id: true },
   });
   return category !== null;
+}
+
+/**
+ * #912 — every submitted vendor-filter value must name one of THIS vendor's attributes and, when
+ * set, one of THAT attribute's options. The composite foreign keys would reject a mismatched pair
+ * too, but as a 500 from a constraint violation; checking here turns a crafted or stale submission
+ * into a field error, and resolves ownership by vendor, which the option row cannot (it carries no
+ * `vendorId`). One query for the whole submission.
+ *
+ * Returns the refusal, or `null` when every entry is valid.
+ */
+async function assertOwnAttributeValues(
+  db: AnyDb,
+  vendorId: string,
+  values: readonly AttributeValueWrite[],
+): Promise<Extract<CatalogueWriteResult, { ok: false }> | null> {
+  if (values.length === 0) return null;
+  const attributes = await db.vendorAttribute.findMany({
+    where: { vendorId, id: { in: values.map((value) => value.attributeId) } },
+    select: { id: true, options: { select: { id: true } } },
+  });
+  const optionsByAttribute = new Map(
+    attributes.map((attribute) => [
+      attribute.id,
+      new Set(attribute.options.map((option) => option.id)),
+    ]),
+  );
+  for (const value of values) {
+    const options = optionsByAttribute.get(value.attributeId);
+    if (!options || (value.optionId !== null && !options.has(value.optionId))) {
+      return {
+        ok: false,
+        error: "Choose a value from this store's list.",
+        field: `attribute_${value.attributeId}`,
+      };
+    }
+  }
+  return null;
 }
 
 const WRONG_CATEGORY = {
@@ -1777,6 +1829,8 @@ export async function createProductForVendor(
 ): Promise<CatalogueWriteResult> {
   try {
     if (!(await assertOwnCategory(prisma, vendorId, input.categoryId))) return WRONG_CATEGORY;
+    const badAttribute = await assertOwnAttributeValues(prisma, vendorId, input.attributeValues);
+    if (badAttribute) return badAttribute;
 
     // #398 (derivation half), R31 — computed HERE, from this write's own basePrice and net
     // content, never accepted from the caller (ProductWriteInput has no such field), so it can
@@ -1837,6 +1891,17 @@ export async function createProductForVendor(
               },
             }
           : {}),
+        // #912 — nested too, so a product never exists with half its filter values written. A
+        // `null` ("Not set") has nothing to create on a new product. This nesting is exactly why the
+        // create must reach Prisma through `getPrismaWs()` (lib/products-service.ts): a nested
+        // create is several inserts in an implicit transaction.
+        attributeValues: {
+          create: input.attributeValues.flatMap((value) =>
+            value.optionId === null
+              ? []
+              : [{ vendorId, attributeId: value.attributeId, optionId: value.optionId }],
+          ),
+        },
       },
       select: { id: true },
     });
@@ -1863,6 +1928,8 @@ export async function updateProductForVendor(
       if (!existing) return { ok: false as const, error: "That product no longer exists." };
 
       if (!(await assertOwnCategory(tx, vendorId, input.categoryId))) return WRONG_CATEGORY;
+      const badAttribute = await assertOwnAttributeValues(tx, vendorId, input.attributeValues);
+      if (badAttribute) return badAttribute;
 
       // #398 (derivation half), R31 — same computation as createProductForVendor, from this
       // write's own basePrice and net content, never from a caller-supplied value.
@@ -1927,6 +1994,29 @@ export async function updateProductForVendor(
         await upsertProductTier(tx, vendorId, id, input.tier);
       } else {
         await deleteProductTier(tx, vendorId, id);
+      }
+
+      // #912 — only the filters the form submitted. A set value is upserted on the
+      // (product, attribute) unique; "Not set" deletes that one row; an attribute absent from
+      // `attributeValues` is not touched at all. Inside the transaction, so the product and its
+      // filter values commit or roll back together.
+      for (const value of input.attributeValues) {
+        if (value.optionId === null) {
+          await tx.productAttributeValue.deleteMany({
+            where: { productId: id, attributeId: value.attributeId, vendorId },
+          });
+        } else {
+          await tx.productAttributeValue.upsert({
+            where: { productId_attributeId: { productId: id, attributeId: value.attributeId } },
+            create: {
+              vendorId,
+              productId: id,
+              attributeId: value.attributeId,
+              optionId: value.optionId,
+            },
+            update: { optionId: value.optionId },
+          });
+        }
       }
 
       return { ok: true as const, id };

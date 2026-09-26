@@ -310,6 +310,7 @@ async function main() {
         lowStockThreshold: 1,
         expectedRestockDay: null,
         tier: null,
+        attributeValues: [],
       });
       if (!created.ok) throw new Error(`create refused: ${created.error}`);
       createdProductId = created.id;

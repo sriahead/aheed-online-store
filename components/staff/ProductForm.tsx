@@ -16,6 +16,7 @@ import type { BrandSummary } from "@/lib/repositories/brands";
 import { errorInputClass, inputClass, labelClass } from "@/lib/form-classes";
 import { NET_CONTENT_UNIT_LABELS, NET_CONTENT_UNITS } from "@/components/product/unit-price";
 import type { ProductLabelSettings } from "@/lib/product-label-settings";
+import type { AttributeDefinition } from "@/lib/repositories/attributes";
 
 /**
  * Product create/edit form (P6b1, #159).
@@ -56,9 +57,21 @@ export interface ProductFormProps {
    * missing checkbox as false. Required: a default would decide a vendor's labels silently.
    */
   labels: ProductLabelSettings;
+  /**
+   * #912 — the vendor's own filters (/staff/attributes) with their values, one select each.
+   * Required, like `labels`: which filters a vendor has is vendor data, never a default.
+   */
+  attributes: AttributeDefinition[];
 }
 
-export function ProductForm({ product, categories, brands, imageUrls, labels }: ProductFormProps) {
+export function ProductForm({
+  product,
+  categories,
+  brands,
+  imageUrls,
+  labels,
+  attributes,
+}: ProductFormProps) {
   const anyLabel =
     labels.halal || labels.fresh || labels.organic || labels.vegetarian || labels.glutenFree;
   const [state, action, saving] = useActionState(saveProduct, initialCatalogueState);
@@ -362,6 +375,48 @@ export function ProductForm({ product, categories, brands, imageUrls, labels }: 
             </div>
           </div>
         </section>
+
+        {/*
+          #912 — the vendor's own filters, one select each. Rendered only when the vendor has
+          defined at least one at /staff/attributes: an empty section would be a heading with
+          nothing to act on. The select's NAME carries the attribute id, because the set of filters
+          is vendor data and cannot join the form's fixed field list; `readAttributeValues` reads
+          them back. "Not set" (value "") clears the product's value for that filter.
+        */}
+        {attributes.length > 0 && (
+          <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
+            <h2 className="text-sm font-bold text-primary">Product filters</h2>
+            <p className="text-xs text-black/60">
+              The values shoppers can filter by. Manage the filters themselves on the Product
+              filters page.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {attributes.map((attribute) => {
+                const name = `attribute_${attribute.id}`;
+                return (
+                  <div key={attribute.id}>
+                    <label className={labelClass} htmlFor={name}>
+                      {attribute.name}
+                    </label>
+                    <select
+                      id={name}
+                      name={name}
+                      defaultValue={product?.attributeValues[attribute.id] ?? ""}
+                      {...fieldProps(name)}
+                    >
+                      <option value="">Not set</option>
+                      {attribute.options.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/*
           P8.5d (#348) — the multi-buy tier. Its own section rather than another
