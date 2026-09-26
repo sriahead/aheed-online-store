@@ -14,6 +14,9 @@ import { SubcategoryLinks } from "@/components/product/SubcategoryLinks";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
 import { nextCategoryPageHref, prevCategoryPageHref } from "@/components/product/category-href";
+import type { FilterParamValue } from "@/components/product/filter-params";
+import { listCurrentVendorAttributeDefinitions } from "@/lib/attributes-service";
+import { resolveAttributeFilters } from "@/lib/attribute-filters";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
 // can't load during next build's Node-based static prerendering.
@@ -41,6 +44,8 @@ type SearchParams = {
   cursor?: string;
   /** #498 — the cursor stack for "Previous"; see `components/product/category-href.ts`. */
   back?: string;
+  /** #912 — vendor-defined filters; unknown slugs apply nothing and render no chip. */
+  [attributeKey: `attr_${string}`]: FilterParamValue;
 };
 
 /*
@@ -76,6 +81,11 @@ export default async function CategoryPage({
   const categoryIds = [category.id, ...category.children.map((child) => child.id)];
   // #569 — resolve the brand slug to an id before the query, mirroring /search.
   const selectedBrand = query.brand ? await getBrandRepository().getBySlug(query.brand) : null;
+  // #912 — the vendor's own filters: one resolution feeds both the predicate and the chips.
+  const attributeFilters = resolveAttributeFilters(
+    query,
+    await listCurrentVendorAttributeDefinitions(),
+  );
 
   const { items, nextCursor } = await products.listByCategory(categoryIds, {
     take: PAGE_SIZE,
@@ -93,6 +103,7 @@ export default async function CategoryPage({
     origin: query.origin || undefined,
     brandId: selectedBrand?.id,
     packSize: parsePackSizeParam(query.packSize),
+    attributeOptionIds: attributeFilters.optionIds,
   });
   /*
    * #568 — facets narrow to this category's own products (and its subcategories'), so a department
@@ -158,6 +169,7 @@ export default async function CategoryPage({
             // #569 — an unresolved brand slug applies no predicate, so it must not render a chip.
             params={{ ...query, brand: selectedBrand ? query.brand : undefined }}
             brandLabel={selectedBrand?.name}
+            attributeLabels={attributeFilters.labels}
           />
           <h2 className="sr-only">Products</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

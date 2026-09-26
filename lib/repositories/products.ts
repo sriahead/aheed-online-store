@@ -134,6 +134,12 @@ export interface ProductDetail extends ProductSummary {
    * HMC claim with nothing behind it.
    */
   hmcReference: string | null;
+  /**
+   * #912 — the product's vendor-filter values ("Colour: Black"), in the vendor's filter order, so
+   * a shopper who filtered by one sees the same value on the product they open (the display gap
+   * #569's facets shipped with). Detail page only; empty when the product carries none.
+   */
+  specifications: { name: string; value: string }[];
 }
 
 export interface ProductPage {
@@ -280,6 +286,13 @@ export interface ProductFilters {
    * expression of that, and narrowing on it would silently empty the catalogue instead.
    */
   categoryIds?: readonly string[];
+  /**
+   * #912 — vendor-defined filter values, ONE option id per filter the shopper applied, already
+   * resolved from `attr_*` slugs by the page (`lib/attribute-filters.ts`). A product must carry
+   * EVERY listed option (filters narrow; they never widen). Absent or empty emits nothing — an
+   * unresolved slug reaches here as no id at all, never as a value that would empty the catalogue.
+   */
+  attributeOptionIds?: readonly string[];
 }
 
 /**
@@ -325,6 +338,17 @@ export interface AvailableFacets {
    * `1kg`. Empty when no product in context carries net content, which hides the control entirely.
    */
   packSizes: NetContent[];
+  /**
+   * #912 — the vendor's own filters that at least one product in this context carries a value for,
+   * each listing only the values actually carried, in the vendor's order. Empty hides them all.
+   */
+  attributes: FacetAttribute[];
+}
+
+export interface FacetAttribute {
+  slug: string;
+  name: string;
+  options: { slug: string; name: string }[];
 }
 
 export interface ProductRepository {
@@ -462,9 +486,18 @@ export function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereIn
    * rejects a was-price at or below the current price, so a non-null value always means a real
    * markdown. That matters because Prisma cannot compare two columns in a `where` at all.
    */
+  // #912 — both `onOffer` and the vendor filters need `AND`, so they share ONE array rather than
+  // each assigning it: a second assignment would silently discard the first, the exact collision
+  // specs/architecture.md's `combineWhere` rule exists for, one level down. Each vendor filter is
+  // its own `some` clause because they all use the same `attributeValues` relation key.
+  const and: Prisma.ProductWhereInput[] = [];
   if (filters.onOffer) {
-    where.AND = [{ OR: [{ originalPrice: { not: null } }, { priceTier: { isNot: null } }] }];
+    and.push({ OR: [{ originalPrice: { not: null } }, { priceTier: { isNot: null } }] });
   }
+  for (const optionId of filters.attributeOptionIds ?? []) {
+    and.push({ attributeValues: { some: { optionId } } });
+  }
+  if (and.length > 0) where.AND = and;
   // #568 — an empty array emits NOTHING, deliberately. See ProductFilters.categoryIds: an unknown
   // slug resolves to no ids, and `categoryId: { in: [] }` would match zero rows rather than
   // leaving the catalogue unfiltered.
@@ -1128,15 +1161,27 @@ export async function getProductBySlug(
       inventory: {
         select: { quantity: true, lowStockThreshold: true, expectedRestockDate: true },
       },
+      // #912 — same query as the rest of the product; ordered below, since Prisma cannot order a
+      // relation list by a field of a further relation.
+      attributeValues: {
+        select: {
+          attribute: { select: { name: true, sortOrder: true } },
+          option: { select: { name: true } },
+        },
+      },
     },
   });
   if (!product) return null;
 
-  const { inventory, images, ...rest } = product;
+  const { inventory, images, attributeValues, ...rest } = product;
   const tiers = await listActiveTiersForProducts(prisma, vendorId, [product.id]);
   return {
     ...rest,
     images,
+    specifications: attributeValues
+      .map((value) => ({ ...value.attribute, value: value.option.name }))
+      .sort(bySortOrderThenName)
+      .map(({ name, value }) => ({ name, value })),
     primaryImage: images.find((i) => i.isPrimary) ?? images[0] ?? null,
     inStock: (inventory?.quantity ?? 0) > 0,
     stockQuantity: effectiveStock(inventory?.quantity),
@@ -1207,6 +1252,7 @@ export async function getAvailableFacets(
     originRows,
     brandRows,
     packSizeRows,
+    attributeRows,
   ] = await Promise.all([
     flagProbe({ isHalal: true }),
     flagProbe({ isFresh: true }),
@@ -1243,6 +1289,18 @@ export async function getAvailableFacets(
       select: { netContentAmount: true, netContentUnit: true },
       distinct: ["netContentAmount", "netContentUnit"],
     }),
+    // #912 — every OPTION any in-context product carries, with its attribute, in one query. Like
+    // every probe above it excludes all facet filters (`FacetContext` cannot carry
+    // `attributeOptionIds`), so an applied vendor filter never hides its own control. `distinct`
+    // for the same reason origin uses it: the facet needs values, not counts.
+    prisma.productAttributeValue.findMany({
+      where: { vendorId, product: base },
+      select: {
+        option: { select: { slug: true, name: true, sortOrder: true } },
+        attribute: { select: { id: true, slug: true, name: true, sortOrder: true } },
+      },
+      distinct: ["optionId"],
+    }),
   ]);
 
   return {
@@ -1266,7 +1324,43 @@ export async function getAvailableFacets(
           : [],
       )
       .sort(comparePackSizes),
+    attributes: groupFacetAttributes(attributeRows),
   };
+}
+
+type Ordered = { sortOrder: number; name: string };
+const bySortOrderThenName = (a: Ordered, b: Ordered) =>
+  a.sortOrder - b.sortOrder || a.name.localeCompare(b.name);
+
+/**
+ * #912 — flat (attribute, option) rows into one entry per attribute, each ordered the way the
+ * vendor ordered them at /staff/attributes (`sortOrder`, then name). Ordered here rather than in
+ * SQL because `distinct` over options and an order over their parent attribute do not compose.
+ */
+function groupFacetAttributes(
+  rows: {
+    option: Ordered & { slug: string };
+    attribute: Ordered & { id: string; slug: string };
+  }[],
+): FacetAttribute[] {
+  const byAttribute = new Map<
+    string,
+    { attribute: Ordered & { slug: string }; options: (Ordered & { slug: string })[] }
+  >();
+  for (const row of rows) {
+    const entry = byAttribute.get(row.attribute.id) ?? { attribute: row.attribute, options: [] };
+    entry.options.push(row.option);
+    byAttribute.set(row.attribute.id, entry);
+  }
+  return [...byAttribute.values()]
+    .sort((a, b) => bySortOrderThenName(a.attribute, b.attribute))
+    .map(({ attribute, options }) => ({
+      slug: attribute.slug,
+      name: attribute.name,
+      options: options
+        .sort(bySortOrderThenName)
+        .map((option) => ({ slug: option.slug, name: option.name })),
+    }));
 }
 
 /** One autocomplete product suggestion — the smallest shape a suggestion row can render from. */

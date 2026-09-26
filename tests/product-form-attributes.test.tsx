@@ -58,7 +58,9 @@ describe("ProductForm vendor filters", () => {
     const headings = [...container.querySelectorAll("h2")].map((h) => h.textContent);
     expect(headings).toContain("Product filters");
 
-    const select = (container.querySelector(`select[name="attribute_${COLOUR.id}"]`) as HTMLSelectElement | null);
+    const select = container.querySelector(
+      `select[name="attribute_${COLOUR.id}"]`,
+    ) as HTMLSelectElement | null;
     expect(select).not.toBeNull();
     const options = [...select!.options].map((o) => [o.value, o.textContent]);
     expect(options).toEqual([
@@ -77,7 +79,9 @@ describe("ProductForm vendor filters", () => {
       attributeValues: { [COLOUR.id]: COLOUR.options[1].id },
     } as unknown as AdminProductDetail;
     const container = renderForm([COLOUR], product);
-    const select = (container.querySelector(`select[name="attribute_${COLOUR.id}"]`) as HTMLSelectElement | null);
+    const select = container.querySelector(
+      `select[name="attribute_${COLOUR.id}"]`,
+    ) as HTMLSelectElement | null;
     expect(select!.value).toBe(COLOUR.options[1].id);
   });
 });

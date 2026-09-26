@@ -122,6 +122,28 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           and rendering it here is what makes the badge above an attributable claim rather than a
           decoration.
         */}
+        {/*
+          #912 — the vendor's own filter values ("Colour: Black"), so a shopper who narrowed a
+          listing by one sees why this product matched — the display half #569's facets lacked.
+          A description list because each entry IS a name/value pair; rendered only when the
+          product carries at least one, never as an empty heading.
+        */}
+        {product.specifications.length > 0 && (
+          <section aria-labelledby="specifications-heading">
+            <h2 id="specifications-heading" className="text-sm font-semibold text-primary">
+              Specifications
+            </h2>
+            <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+              {product.specifications.map((spec) => (
+                <div key={spec.name} className="contents">
+                  <dt className="text-primary-muted">{spec.name}</dt>
+                  <dd className="text-primary">{spec.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
+
         {product.isHmcCertified && product.hmcReference && (
           <p className="text-sm text-primary-muted">
             HMC certification reference: {product.hmcReference}

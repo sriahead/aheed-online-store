@@ -20,16 +20,13 @@ export interface AttributeValueWrite {
 }
 
 export type AttributeValuesResult =
-  | { ok: true; value: AttributeValueWrite[] }
-  | { ok: false; field: string; error: string };
+  { ok: true; value: AttributeValueWrite[] } | { ok: false; field: string; error: string };
 
 const ATTRIBUTE_FIELD = /^attribute_([0-9a-f-]{36})$/;
 const UUID_SHAPED = /^[0-9a-f-]{36}$/;
 
 /** Accepts anything with `FormData`'s iteration shape, so a test can pass a real `FormData`. */
-export function readAttributeValues(
-  form: Pick<FormData, "entries">,
-): AttributeValuesResult {
+export function readAttributeValues(form: Pick<FormData, "entries">): AttributeValuesResult {
   const values: AttributeValueWrite[] = [];
   for (const [key, raw] of form.entries()) {
     const match = ATTRIBUTE_FIELD.exec(key);

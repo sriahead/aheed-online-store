@@ -48,7 +48,9 @@ describe("readAttributeValues", () => {
 
   it("ignores keys that are not attribute keys", () => {
     expect(
-      readAttributeValues(form({ attribute_colour: OPTION, attributeId: ATTRIBUTE, isHalal: "on" })),
+      readAttributeValues(
+        form({ attribute_colour: OPTION, attributeId: ATTRIBUTE, isHalal: "on" }),
+      ),
     ).toEqual({ ok: true, value: [] });
   });
 });

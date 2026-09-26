@@ -18,6 +18,9 @@ import { SearchRecoveryNotice } from "@/components/product/SearchRecoveryNotice"
 import { SearchSuggestionsNotice } from "@/components/product/SearchSuggestionsNotice";
 import { parseSearchQuery } from "@/lib/search-query";
 import { expandSearchTerms } from "@/lib/search-expansion";
+import { listCurrentVendorAttributeDefinitions } from "@/lib/attributes-service";
+import { resolveAttributeFilters } from "@/lib/attribute-filters";
+import type { FilterParamValue } from "@/components/product/filter-params";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
 // can't load during next build's Node-based static prerendering.
@@ -59,6 +62,8 @@ type SearchParams = {
   cursor?: string;
   /** #568 — category drill-down from within results. A slug; unknown values are ignored. */
   category?: string;
+  /** #912 — vendor-defined filters; unknown slugs are ignored, like `brand` and `category`. */
+  [attributeKey: `attr_${string}`]: FilterParamValue;
 };
 
 export default async function SearchPage({
@@ -102,6 +107,16 @@ export default async function SearchPage({
   const selectedBrand = params.brand ? await getBrandRepository().getBySlug(params.brand) : null;
 
   /*
+   * #912 — the vendor's own filters, resolved the same way: the predicate (`optionIds`) and the
+   * chips (`labels`) come from ONE resolution, so an unknown filter or value applies nothing and
+   * shows nothing. One query for all of this vendor's filters.
+   */
+  const attributeFilters = resolveAttributeFilters(
+    params,
+    await listCurrentVendorAttributeDefinitions(),
+  );
+
+  /*
    * #501 — BROWSE MODE. This page used to run its query inside `if (query)` and
    * gate the grid on `query &&`, so a bare `/search` returned 200 with an empty
    * content column. That made the shop page's only "View all" (a bare
@@ -139,6 +154,7 @@ export default async function SearchPage({
     // the filter off, so a stray `?featured=0` browses the full catalogue.
     isFeatured: params.featured === "1",
     categoryIds,
+    attributeOptionIds: attributeFilters.optionIds,
   };
 
   const result = query ? await products.search(query, options) : await products.list(options);
@@ -235,6 +251,7 @@ export default async function SearchPage({
             }}
             categoryLabel={selectedCategory?.name}
             brandLabel={selectedBrand?.name}
+            attributeLabels={attributeFilters.labels}
           />
 
           <SearchTruncationNotice truncated={truncated} />
