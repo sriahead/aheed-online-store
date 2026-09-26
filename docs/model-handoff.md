@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.35.0"
-updated: 2026-09-25
+version: "1.36.0"
+updated: 2026-09-26
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,14 +39,14 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-25.
-- **Checkout:** `main` is at `9b1de27`; `staging` matches it content-for-content (`5061f05` on
-  `staging`'s own history, merged into `main` unchanged by PR #898). Two promotions have landed
-  since this section's prior `5f1e14f` snapshot: PR #887 (`#877`, net content for the generated
-  demo catalogue) and PR #898 (`#613`/`#890`/`#889`, delivery-area ranges, per-area pricing,
-  out-of-area refusal counts) — see Project Position below for what each shipped. Production
-  `/api/health` confirmed serving `9b1de27`, `db.ok: true`, `reference.drift: false`, post both
-  promotions.
+- **Date:** 2026-09-26.
+- **Checkout:** `main` is still at `9b1de27` — no promotion since the prior snapshot. `staging` has
+  since moved ahead of it with a docs-only promotion-record commit (PR #899, `2838905`) and
+  `#900`'s own feature merge (PR #902, `42dd3fa`), so `main` and `staging` are **not**
+  content-for-content right now — `#900` (AI-suggested net content) is live on staging only.
+  Production `/api/health` still confirmed serving `9b1de27`, `db.ok: true`, `reference.drift:
+  false`, unchanged since the prior snapshot. Staging `/api/health` confirmed serving `42dd3fa`,
+  `db.ok: true`, `reference.drift: false`, post `#900`'s merge.
   - **In production (PR #858, merge `2047d0a`, verified live):** the KMS restructuring pilot
     (`#851`, PR #852), KMS navigation categories (PR #853), and the KMS strategy standard
     (PR #855 then PR #856). `deploy-production` (run `35711810410`) and `deploy-docs-internal`
@@ -414,19 +414,25 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **2026-09-25 — `#900` built, build notes written, awaiting Validate.** This is AI-suggested net
-  content with image provenance, split from `#697`, which stays open. Branch
-  `feature/900-ai-net-content-suggestions`, not yet PR'd. Spec
-  `specs/2026-09-25-p900-ai-net-content-suggestions/`: **read its `build-notes.md` first.** It
-  records the R27 image probe (Gemma 4 accepts WebP), one spec deviation (a truncated reply writes
-  no row), plus an R16 budget gap found and fixed before Validate (a truncated call's neurons now
-  count toward the budget).
-  - **It carries a migration** (`20260925150000_p900_net_content_suggestions`, additive), applied
-    to dev only.
-  - The production pilot is an owner action after promotion, tracked in **`#901`** (Backlog,
-    P9.2).
-  - Gemma's reasoning-off finding is now in `docs/developer-portal/runtime-pitfalls.md` (Workers AI
-    section).
+- **`#900` is DONE at the staging layer** — validated and merged to `staging` (**PR #902**, merge
+  `42dd3fa`, 2026-09-26). AI-suggested net content with image provenance, split from `#697`, which
+  stays open. Spec `specs/2026-09-25-p900-ai-net-content-suggestions/`: read its `build-notes.md`
+  first — it now carries both the Build-time record (R27's image probe, the reasoning-off decision,
+  the R16 budget fix) and a later Validate pass's live re-proof.
+  - **It carries a migration** (`20260925150000_p900_net_content_suggestions`, additive), applied to
+    dev and, via `deploy-staging`'s own migrate step, to staging.
+  - **R29's evidence gap (flagged in an earlier Validate pass as ungathered for lack of network
+    access) is closed**: a later pass downloaded the same Nutella photo Build used for R27, uploaded
+    it through the real presigned-upload flow, and the suggester correctly read `400 GRAM` off it
+    with `evidenceSource: PHOTO` — this also closes R27's "image + reasoning-off is unproven" note.
+  - **Reconfirmed live, out of scope for this slice**: dev's three `pg_trgm` trigram indexes
+    (`20260820143949_p7_5de_order_search_trigram`) are missing despite `prisma migrate status`
+    reporting that migration applied (`GAP-011`, pre-existing drift, needs its own `/propose`).
+  - **`#900` moved to `In Review`** on Project #2; closes to `Done` only on promotion to `main`. The
+    production pilot is an owner action after promotion, tracked in **`#901`** (Backlog, P9.2).
+  - Gemma's reasoning-off finding is in `docs/developer-portal/runtime-pitfalls.md` (Workers AI
+    section); the Windows-curl-presigned-PUT trap found while closing R29 is in
+    `docs/developer-portal/local-dev-playbook.md` (v1.7.0).
 - **Production demo accounts were incomplete (found and fixed 2026-09-25, at the owner's
   request).** `demo-srimart-admin@example.com` and `demo-store-admin@example.com` did not exist in
   production (`ep-young-glitter`). Both were created with the roster's roles: SriMart vendor ADMIN,
