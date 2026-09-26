@@ -4,7 +4,17 @@ import { useEffect, useState } from "react";
 import { Gift, X } from "lucide-react";
 import { RewardsPanel, type RewardsData } from "@/components/rewards/RewardsPanel";
 
-export function RewardsLauncher({ initialData }: { initialData?: RewardsData | null }) {
+/**
+ * `vendorName` comes from the storefront layout (`StorefrontChrome`) as a prop — CLAUDE.md rules
+ * out a middleware to carry it, and a client component cannot resolve the vendor itself (#729).
+ */
+export function RewardsLauncher({
+  initialData,
+  vendorName,
+}: {
+  initialData?: RewardsData | null;
+  vendorName: string;
+}) {
   const [open, setOpen] = useState(false);
   const [overrideData, setOverrideData] = useState<RewardsData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -82,7 +92,12 @@ export function RewardsLauncher({ initialData }: { initialData?: RewardsData | n
         </button>
       </div>
 
-      <RewardsPanel open={open} onClose={() => setOpen(false)} data={rewardsData} />
+      <RewardsPanel
+        open={open}
+        onClose={() => setOpen(false)}
+        data={rewardsData}
+        vendorName={vendorName}
+      />
     </>
   );
 }

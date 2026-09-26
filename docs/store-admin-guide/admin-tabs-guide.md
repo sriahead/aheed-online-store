@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.3.0"
-updated: "2026-09-24"
+version: "2.4.0"
+updated: "2026-09-26"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -86,8 +86,8 @@ rules every order is charged by, and the social and contact links shoppers use t
 **Who can access:** Store admins only
 
 **What you can do:** Pick a ready-made colour theme, set all eight of your brand colours
-individually, upload your logo, edit the homepage hero subtitle and the notice in the header banner,
-set your delivery fee, your free delivery threshold and your minimum order value, and enter your
+individually, upload your logo, edit the homepage hero subtitle, the notice in the header banner and
+the search box text shown in the header's search box, set your delivery fee, your free delivery threshold and your minimum order value, and enter your
 Facebook page address, your Instagram profile address and your WhatsApp number.
 
 **Typical workflow:** You do the branding at setup and when it changes. The quickest start is to
@@ -104,7 +104,9 @@ a product page as well as the homepage. There are eight of them and they do diff
 **primary** colours carry headings and text, **accent** and **danger** carry buttons and alerts,
 **cream** is the page background, and the three **tint** colours are the pale backgrounds behind
 badges and notices. Applying a theme overwrites all eight at once. The banner note is a short line
-in the site header — a good place for opening hours over a bank holiday. The three delivery amounts
+in the site header — a good place for opening hours over a bank holiday. The search box text is the
+hint inside the header's search box, up to 80 characters — name a few things you sell, such as
+"Search chargers, earbuds, lamps…"; leaving it empty shows "Search products…". The three delivery amounts
 are entered in pounds:
 **Delivery fee** is what a shopper pays for delivery; **Free delivery over** is the basket value at
 which that fee is waived, and leaving it **blank** means free delivery is never offered — which is

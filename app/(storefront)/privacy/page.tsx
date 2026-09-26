@@ -52,9 +52,9 @@ export default async function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">3. How We Use Your Data</h2>
           <p className="text-sm text-primary-muted leading-relaxed">
-            Your data is used solely to process payments (via Stripe), arrange grocery fulfillment,
-            deliver orders, and send order confirmations and updates. We do not sell your personal
-            data to third parties.
+            Your data is used solely to process payments (via Stripe), fulfil and deliver your
+            orders, and send order confirmations and updates. We do not sell your personal data to
+            third parties.
           </p>
         </section>
 

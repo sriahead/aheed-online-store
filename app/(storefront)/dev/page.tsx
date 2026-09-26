@@ -3,11 +3,16 @@ import { redirect } from "next/navigation";
 import { Check, X, ExternalLink } from "lucide-react";
 import { requireRole } from "@/lib/auth-rbac";
 import { getDevDiagnostics } from "@/lib/dev-diagnostics";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 
 // Reads the session (requireRole) — must render per-request, never prerender.
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Dev — Aheed Food Centre" };
+/** #729 — was a hardcoded "Dev — Aheed Food Centre", which rendered under every vendor. */
+export async function generateMetadata() {
+  const profile = await getCurrentVendorProfile();
+  return { title: `Dev — ${profile?.name ?? "Aheed Food Centre"}` };
+}
 
 function environmentName(host: string): string {
   if (host.includes("staging")) return "Staging";

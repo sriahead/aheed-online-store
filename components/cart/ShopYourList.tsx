@@ -6,6 +6,7 @@ import { ListReview } from "@/components/cart/ListReview";
 import { matchList } from "@/features/cart/match-list";
 import { saveListFromMatch } from "@/features/lists/save-list-from-match";
 import { EMPTY_MATCH_STATE, MAX_LIST_LINES } from "@/lib/shopping-list";
+import { buildListExamples } from "@/lib/shopping-list-examples";
 import { EMPTY_SAVE_STATE, MAX_LIST_NAME_LENGTH, MAX_SAVED_LISTS } from "@/lib/saved-list";
 
 /**
@@ -23,14 +24,21 @@ import { EMPTY_SAVE_STATE, MAX_LIST_NAME_LENGTH, MAX_SAVED_LISTS } from "@/lib/s
  * button lives inside the one `ListReview` renders.
  */
 
-const PLACEHOLDER = `2x chicken breast
-5kg basmati rice
-milk
-apples x 3`;
-
-export function ShopYourList({ canSave = false }: { canSave?: boolean }) {
+/**
+ * `exampleNames` are the current vendor's own in-stock product names, fetched by the page (#729) —
+ * a client component cannot resolve the vendor. `buildListExamples` falls back to neutral wording
+ * when there are none.
+ */
+export function ShopYourList({
+  canSave = false,
+  exampleNames,
+}: {
+  canSave?: boolean;
+  exampleNames: string[];
+}) {
   const [state, formAction, pending] = useActionState(matchList, EMPTY_MATCH_STATE);
   const [saveState, saveAction, saving] = useActionState(saveListFromMatch, EMPTY_SAVE_STATE);
+  const { placeholder, exampleName } = buildListExamples(exampleNames);
 
   const lines = state.lines;
 
@@ -44,14 +52,21 @@ export function ShopYourList({ canSave = false }: { canSave?: boolean }) {
           id="list"
           name="list"
           rows={8}
-          placeholder={PLACEHOLDER}
+          placeholder={placeholder}
           className="w-full rounded-2xl border border-black/10 bg-white p-3 text-sm text-primary placeholder:text-primary-muted focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
         />
-        <p className="text-xs text-primary-muted">
-          Quantities are understood — <span className="font-semibold">2x apples</span>,{" "}
-          <span className="font-semibold">3 apples</span> or{" "}
-          <span className="font-semibold">apples x3</span>. Up to {MAX_LIST_LINES} lines.
-        </p>
+        {exampleName !== null ? (
+          <p className="text-xs text-primary-muted">
+            Quantities are understood — <span className="font-semibold">2x {exampleName}</span>,{" "}
+            <span className="font-semibold">3 {exampleName}</span> or{" "}
+            <span className="font-semibold">{exampleName} x3</span>. Up to {MAX_LIST_LINES} lines.
+          </p>
+        ) : (
+          <p className="text-xs text-primary-muted">
+            Quantities are understood — write 2x or 3 before an item, or x3 after it. Up to{" "}
+            {MAX_LIST_LINES} lines.
+          </p>
+        )}
         <button
           type="submit"
           disabled={pending}

@@ -63,8 +63,8 @@ export default async function TermsPage() {
           <h2 className="text-lg font-semibold text-primary">4. Order Cancellations & Refunds</h2>
           <p className="text-sm text-primary-muted leading-relaxed">
             Orders can be cancelled before picking commences by contacting customer support. For
-            fresh or perishable grocery items, cancellations after processing are subject to
-            verification under UK Consumer Rights Law.
+            fresh or perishable items, cancellations after processing are subject to verification
+            under UK Consumer Rights Law.
           </p>
         </section>
 

@@ -27,10 +27,13 @@ export function RewardsPanel({
   open,
   onClose,
   data,
+  vendorName,
 }: {
   open: boolean;
   onClose: () => void;
   data: RewardsData | null;
+  /** #729 — the current vendor's display name, so the header reads "{vendorName} Club". */
+  vendorName: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -67,7 +70,7 @@ export function RewardsPanel({
       aria-label="Loyalty and Rewards"
       className="fixed bottom-20 left-4 z-50 sm:bottom-24 sm:left-8 w-[360px] max-w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto rounded-3xl bg-white text-primary shadow-2xl border border-black/10 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
     >
-      {/* Brand Header matching Aheed Food Centre identity */}
+      {/* Brand header in the current vendor's colours and name (#729: the label used to hardcode one vendor's name) */}
       <div className="bg-primary text-white p-6 rounded-t-3xl relative">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
@@ -75,7 +78,7 @@ export function RewardsPanel({
               <Sparkles className="h-4 w-4" aria-hidden="true" />
             </span>
             <span className="text-xs font-black tracking-wider uppercase text-white">
-              Aheed Club
+              {vendorName} Club
             </span>
           </div>
 
@@ -164,6 +167,7 @@ export function RewardsPanel({
           rewardPoints={rewardPoints}
           variant="light"
           authenticated={authenticated}
+          storeName={vendorName}
         />
 
         {/* Account Link */}

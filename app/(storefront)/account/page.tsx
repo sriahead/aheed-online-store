@@ -5,10 +5,15 @@ import { Bookmark, ClipboardList, MessageSquareQuote, ShieldCheck, Sparkles } fr
 import { getAuth } from "@/lib/auth";
 import { LogoutButton } from "@/features/auth/components/LogoutButton";
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Your account — Aheed Food Centre" };
+/** #729 — was a hardcoded "Your account — Aheed Food Centre", which rendered under every vendor. */
+export async function generateMetadata() {
+  const profile = await getCurrentVendorProfile();
+  return { title: `Your account — ${profile?.name ?? "Aheed Food Centre"}` };
+}
 
 /**
  * Shopper Account Hub.
@@ -42,7 +47,7 @@ export default async function AccountPage() {
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Your account</h1>
       <p className="mb-6 text-sm text-primary-muted">
-        Manage your orders, grocery lists, loyalty rewards, customer feedback, and personal data.
+        Manage your orders, shopping lists, loyalty rewards, customer feedback, and personal data.
       </p>
 
       {/* Account Info near the top */}
@@ -87,7 +92,7 @@ export default async function AccountPage() {
           <Bookmark className="mb-3 h-6 w-6 text-accent" aria-hidden="true" />
           <p className="font-semibold text-primary">Your lists</p>
           <p className="mt-1 text-sm text-primary-muted">
-            Manage saved items, recurring grocery lists, and quick shopping.
+            Manage saved items, recurring shopping lists, and quick shopping.
           </p>
         </Link>
 

@@ -135,7 +135,7 @@ export function BundleImageUploader({
           type="text"
           value={altText}
           onChange={(event) => setAltText(event.target.value)}
-          placeholder="e.g. A box of fresh halal lamb, chicken and beef mince"
+          placeholder="e.g. The products in this bundle arranged together"
           className="rounded-xl border border-black/15 bg-white px-3 py-2 text-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
         />
 

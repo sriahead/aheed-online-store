@@ -14,11 +14,16 @@ import { ReferralCard } from "@/components/rewards/ReferralCard";
 import { AvailableRewardsSection } from "@/components/rewards/AvailableRewardsSection";
 import { getReferralStats, ensureReferralDiscountCode } from "@/lib/referrals-service";
 import { buildReferralUrl } from "@/lib/referrals";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 
 // Reads the session and this vendor's live loyalty rows — must render per-request.
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Loyalty & Rewards — Aheed Food Centre" };
+/** #729 — was a hardcoded "Loyalty & Rewards — Aheed Food Centre", which rendered under every vendor. */
+export async function generateMetadata(): Promise<Metadata> {
+  const profile = await getCurrentVendorProfile();
+  return { title: `Loyalty & Rewards — ${profile?.name ?? "Aheed Food Centre"}` };
+}
 
 export default async function LoyaltyPage() {
   const requestHeaders = await headers();
@@ -32,12 +37,13 @@ export default async function LoyaltyPage() {
   // A vendor that doesn't run a loyalty scheme has no such page.
   if (!config.loyaltyEnabled) notFound();
 
-  const [balance, tiers, windowSpend, ledger, referralStats] = await Promise.all([
+  const [balance, tiers, windowSpend, ledger, referralStats, profile] = await Promise.all([
     loyalty.balance(userId, config),
     loyalty.tiers(),
     loyalty.windowSpend(userId, config.tierWindowDays),
     loyalty.ledger(userId),
     getReferralStats(userId),
+    getCurrentVendorProfile(),
   ]);
 
   // Ensure referral discount code exists in background
@@ -85,7 +91,7 @@ export default async function LoyaltyPage() {
 
       <h1 className="mb-1 text-2xl font-semibold text-primary">Loyalty & Rewards</h1>
       <p className="mb-6 text-sm text-primary-muted">
-        Earn points on every order you pay for, unlock grocery vouchers, and refer friends.
+        Earn points on every order you pay for, unlock vouchers, and refer friends.
       </p>
 
       {/* Hero Points Card */}
@@ -101,7 +107,7 @@ export default async function LoyaltyPage() {
             </div>
             <p className="mt-1 text-sm font-medium text-action">
               Worth {formatPrice(balance.balancePoints * config.pencePerPointRedeemed)} off your
-              next grocery basket
+              next order
             </p>
 
             {expiryDate && (
@@ -191,6 +197,7 @@ export default async function LoyaltyPage() {
           rewardPoints={referralStats.rewardPoints}
           variant="light"
           authenticated={true}
+          storeName={profile?.name ?? "Aheed Food Centre"}
         />
       </section>
 

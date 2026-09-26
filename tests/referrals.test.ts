@@ -59,4 +59,17 @@ describe("referral rules and helpers", () => {
     expect(share.email).toContain("mailto:");
     expect(share.whatsapp).toContain("wa.me");
   });
+
+  // #729 R5 — every share message names the vendor passed in and assumes no product category.
+  it("names the given store and never says grocery, for a non-grocery vendor", () => {
+    const share = buildShareLinks("https://srimart.example/?ref=REF-1234", "SriMart");
+    for (const link of Object.values(share)) {
+      const decoded = decodeURIComponent(link);
+      expect(decoded).not.toMatch(/grocer/i);
+    }
+    // facebook's sharer carries only the URL, so the name is asserted on the three with text.
+    for (const link of [share.twitter, share.email, share.whatsapp]) {
+      expect(decodeURIComponent(link)).toContain("SriMart");
+    }
+  });
 });
