@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.34.0"
-updated: 2026-09-26
+version: "1.35.0"
+updated: 2026-09-27
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -596,6 +596,30 @@ Two rules follow, and the second is the one that generalises:
 This is the same failure shape as `#568`'s `categoryId`-ordering trap in the same function, and the
 reason to write it here rather than only in that slice's `plan.md`: the next person to add a filter
 will read this file, not a dated spec folder.
+
+### Vendor-defined filters sit beside the label booleans (`#912`)
+
+Added 1.35.0. A product has **two** filter mechanisms, on purpose:
+
+- **The six label booleans** on `Product` (`isHalal`, `isFresh`, `isOrganic`, `isVegetarian`,
+  `isGlutenFree`, `isHmcCertified`). These are platform-defined yes/no columns, each switchable per
+  vendor (`#905`). They stay columns for the reason `#569` gave: a boolean needs no join and indexes
+  simply.
+- **Vendor-defined filters.** `VendorAttribute`, `VendorAttributeOption` and
+  `ProductAttributeValue` hold value filters a vendor invents ("Colour: Black"), with at most one
+  value per product per filter. Composite foreign keys make "this option belongs to this filter,
+  and this filter belongs to this vendor" a database fact.
+
+Do not migrate one mechanism into the other as a side effect. Merging them is a decision of its own.
+
+A vendor filter travels in the URL as **`attr_<attributeSlug>=<optionSlug>`**. Slugs never change
+on rename, so shared links keep working. An unknown slug or a repeated parameter applies no
+predicate and renders no chip.
+
+**`components/product/filter-params.ts` is the only place a filter key is defined.** It holds the
+fixed keys plus the `attr_` prefix rule. Every href builder and the chip module derive from it
+(`#601`). Before `#912`, a key had to be registered in three unsynchronised lists, and forgetting
+one silently dropped the filter on "Next page".
 
 **This does not reopen `OFFSET`.** The prohibition above exists because `OFFSET` degrades linearly:
 page ten reads and discards nine pages of rows. Here the database query is **bounded and identical
