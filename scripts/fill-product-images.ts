@@ -151,6 +151,7 @@ async function main() {
             result.imageKey,
             product.name,
             result.needsReview,
+            result.source,
           );
           console.log(`  filled ${product.name} -> ${result.imageKey}`);
           filled++;

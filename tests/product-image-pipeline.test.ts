@@ -59,6 +59,8 @@ describe("runProductImagePipeline", () => {
     expect(result).not.toBeNull();
     expect(result!.needsReview).toBe(true);
     expect(generateImage).not.toHaveBeenCalled();
+    // #900 (R5) — provenance travels with the result, so the row records where it came from.
+    expect(result!.source).toBe("OPEN_FOOD_FACTS");
   });
 
   it("flags an AI-generated image as needing review", async () => {
@@ -67,6 +69,20 @@ describe("runProductImagePipeline", () => {
     expect(result).not.toBeNull();
     expect(result!.needsReview).toBe(true);
     expect(generateImage).toHaveBeenCalledOnce();
+    expect(result!.source).toBe("AI_GENERATED");
+  });
+
+  it("reports AI_GENERATED when Open Food Facts matched but its image could not be fetched", async () => {
+    fetchImageUrl.mockResolvedValue("https://images.openfoodfacts.org/paneer.jpg");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, headers: new Headers() })),
+    );
+
+    const result = await runProductImagePipeline("p1", "Golden Paneer 500g");
+
+    expect(generateImage).toHaveBeenCalledOnce();
+    expect(result!.source).toBe("AI_GENERATED");
   });
 
   it("consults Open Food Facts by default", async () => {

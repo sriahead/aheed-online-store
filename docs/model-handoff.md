@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.34.0"
+version: "1.35.0"
 updated: 2026-09-25
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -413,6 +413,30 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **2026-09-25 — `#900` built, build notes written, awaiting Validate.** This is AI-suggested net
+  content with image provenance, split from `#697`, which stays open. Branch
+  `feature/900-ai-net-content-suggestions`, not yet PR'd. Spec
+  `specs/2026-09-25-p900-ai-net-content-suggestions/`: **read its `build-notes.md` first.** It
+  records the R27 image probe (Gemma 4 accepts WebP), one spec deviation (a truncated reply writes
+  no row), plus an R16 budget gap found and fixed before Validate (a truncated call's neurons now
+  count toward the budget).
+  - **It carries a migration** (`20260925150000_p900_net_content_suggestions`, additive), applied
+    to dev only.
+  - The production pilot is an owner action after promotion, tracked in **`#901`** (Backlog,
+    P9.2).
+  - Gemma's reasoning-off finding is now in `docs/developer-portal/runtime-pitfalls.md` (Workers AI
+    section).
+- **Production demo accounts were incomplete (found and fixed 2026-09-25, at the owner's
+  request).** `demo-srimart-admin@example.com` and `demo-store-admin@example.com` did not exist in
+  production (`ep-young-glitter`). Both were created with the roster's roles: SriMart vendor ADMIN,
+  and first-active-vendor (Aheed) ADMIN respectively. The other three demo accounts already
+  existed and sign in with `DEMO_ACCOUNT_PASSWORD`'s local value.
+  - The SriMart account's password is **different** and owner-chosen. It is not recorded in the
+    repository.
+  - `scripts/demo-accounts.ts add` would not have fixed a missing password on an existing account:
+    it only sets a password when it creates the user.
+  - Staging's demo accounts were not checked.
 
 - **`#613`/`#890`/`#889` are DONE** — promoted to production via PR #898 (merge `9b1de27`,
   2026-09-25), production `/api/health` serving it, `db.ok: true`, `reference.drift: false`; the

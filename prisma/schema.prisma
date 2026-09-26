@@ -47,14 +47,14 @@ enum VendorRole {
 }
 
 model User {
-  id                  String               @id
+  id                  String                 @id
   name                String
-  email               String               @unique
-  emailVerified       Boolean              @default(false)
+  email               String                 @unique
+  emailVerified       Boolean                @default(false)
   image               String?
-  role                Role                 @default(CUSTOMER)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  role                Role                   @default(CUSTOMER)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
   sessions            Session[]
   accounts            Account[]
   reviews             Review[]
@@ -62,16 +62,17 @@ model User {
   carts               Cart[]
   addresses           Address[]
   orders              Order[]
-  statusChanges       OrderStatusEvent[]   @relation("OrderStatusEventActor")
+  statusChanges       OrderStatusEvent[]     @relation("OrderStatusEventActor")
   loyaltyAccounts     LoyaltyAccount[]
   loyaltyEntries      LoyaltyLedgerEntry[]
   discountUses        DiscountRedemption[]
-  roleChangesTargeted VendorRoleAuditLog[] @relation("TargetUser")
-  roleChangesActedOn  VendorRoleAuditLog[] @relation("ActorUser")
+  roleChangesTargeted VendorRoleAuditLog[]   @relation("TargetUser")
+  roleChangesActedOn  VendorRoleAuditLog[]   @relation("ActorUser")
   customerAddresses   CustomerAddress[]
   shoppingLists       ShoppingList[]
   feedback            CustomerFeedback[]
-  feedbackModerated   CustomerFeedback[]   @relation("FeedbackModerator")
+  feedbackModerated   CustomerFeedback[]     @relation("FeedbackModerator")
+  netContentReviews   NetContentSuggestion[] @relation("NetContentReviewer")
 }
 
 model Session {
@@ -168,6 +169,7 @@ model Vendor {
   bindingRefusals           PaymentBindingRefusal[]
   searchQueryLogs           SearchQueryLog[]
   searchSynonyms            SearchSynonym[]
+  netContentSuggestions     NetContentSuggestion[]
   listNormalisationAttempts ListNormalisationAttempt[]
   brands                    Brand[]
   vendorThemes              VendorTheme[]
@@ -581,14 +583,14 @@ enum NetContentUnit {
 }
 
 model Product {
-  id                        String            @id @default(uuid())
+  id                        String                 @id @default(uuid())
   vendorId                  String
-  vendor                    Vendor            @relation(fields: [vendorId], references: [id])
+  vendor                    Vendor                 @relation(fields: [vendorId], references: [id])
   slug                      String
   name                      String
   description               String
   categoryId                String
-  category                  Category          @relation(fields: [categoryId, vendorId], references: [id, vendorId])
+  category                  Category               @relation(fields: [categoryId, vendorId], references: [id, vendorId])
   basePrice                 Int // pence
   unitLabel                 String // "£2.40 / kg"
   // #398 (derivation half, P9.3) — net content, so unitLabel's implied price can be CHECKED
@@ -606,47 +608,48 @@ model Product {
   // deriveUnitPriceLabel(), directly from basePrice and net content, so a rounding artefact in
   // this column can never reach a price a shopper actually reads. Null whenever net content is.
   unitPricePencePerBaseUnit Int?
-  isActive                  Boolean           @default(true)
-  createdAt                 DateTime          @default(now())
+  isActive                  Boolean                @default(true)
+  createdAt                 DateTime               @default(now())
   images                    ProductImage[]
+  netContentSuggestions     NetContentSuggestion[]
   inventory                 Inventory?
   reviews                   Review[]
   cartItems                 CartItem[]
   orderItems                OrderItem[]
   bundleItems               BundleItem[]
   priceTier                 ProductPriceTier?
-  averageRating             Float             @default(0) // denormalized, recomputed on every review write
-  reviewCount               Int               @default(0)
+  averageRating             Float                  @default(0) // denormalized, recomputed on every review write
+  reviewCount               Int                    @default(0)
   // P2.5b1 — visual redesign foundation (specs/2026-08-07-p2-5b1-visual-foundation/).
   // originalPrice, when set, is basePrice's pre-discount price — a discount badge is
   // derived from the difference at render time, not a separate boolean flag that could
   // drift out of sync with the actual prices.
   origin                    String?
   originalPrice             Int? // pence, pre-discount price
-  isHalal                   Boolean           @default(false)
-  isFresh                   Boolean           @default(false)
-  isOrganic                 Boolean           @default(false)
+  isHalal                   Boolean                @default(false)
+  isFresh                   Boolean                @default(false)
+  isOrganic                 Boolean                @default(false)
   // P2.6 slice 6 (#569) — dietary facets, deliberately the same boolean shape as the
   // three flags above rather than a generic attribute model. An attribute table would
   // make every facet an EXISTS join, harder to index, and would fork the codebase so
   // isHalal and isVegetarian are queried two different ways for no gain a shopper sees.
-  isVegetarian              Boolean           @default(false)
-  isGlutenFree              Boolean           @default(false)
+  isVegetarian              Boolean                @default(false)
+  isGlutenFree              Boolean                @default(false)
   // HMC is a NAMED THIRD-PARTY CERTIFYING BODY, not a synonym for isHalal, and #239 was
   // a real incident where this codebase asserted "100% Certified HMC Halal" for a vendor
   // with no basis for it. So the flag never travels alone: lib/catalogue-form.ts requires
   // both fields below when it is ticked, and nulls both when it is not. A certification
   // claim with no provenance behind it is exactly what that rule exists to prevent.
-  isHmcCertified            Boolean           @default(false)
+  isHmcCertified            Boolean                @default(false)
   hmcReference              String?
   hmcVerifiedAt             DateTime?
   brandId                   String?
-  brand                     Brand?            @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  brand                     Brand?                 @relation(fields: [brandId], references: [id], onDelete: SetNull)
   // #211 — vendor curation flag driving the homepage "Featured Products" rail.
   // Independent of originalPrice's discount-badge derivation: featured and
   // "on offer" are two separate concepts.
-  isFeatured                Boolean           @default(false)
-  imageNeedsReview          Boolean           @default(false)
+  isFeatured                Boolean                @default(false)
+  imageNeedsReview          Boolean                @default(false)
   // #523 — how many times the image pipeline has tried this product and failed.
   //
   // Workers AI permanently refuses some legitimate names: `Halal Chicken Thighs 1kg`
@@ -658,7 +661,7 @@ model Product {
   //
   // Reset to 0 whenever an image is successfully saved, so a product that later loses
   // its image is retried rather than being permanently excluded by a historic failure.
-  imageAttemptFailures      Int               @default(0)
+  imageAttemptFailures      Int                    @default(0)
 
   @@unique([vendorId, slug])
   @@index([vendorId, categoryId, isActive])
@@ -738,16 +741,92 @@ model ProductPriceTier {
   @@index([vendorId, isActive])
 }
 
+// #900 — where an image came from, so an AI step can tell a real photo of the pack from an
+// image generated FROM the product's own name (reading a size off that just echoes the name) or
+// an Open Food Facts keyword match (possibly another product or size). Only STAFF_UPLOAD and
+// STAFF_CONFIRMED_PHOTO count as photo evidence. Every row that existed before #900 is UNKNOWN:
+// provenance is never backfilled by guessing from a storage key.
+enum ProductImageSource {
+  UNKNOWN
+  STAFF_UPLOAD
+  STAFF_CONFIRMED_PHOTO
+  OPEN_FOOD_FACTS
+  AI_GENERATED
+  PLACEHOLDER
+}
+
 model ProductImage {
-  id         String  @id @default(uuid())
-  productId  String
-  product    Product @relation(fields: [productId], references: [id])
-  storageKey String // RELATIVE key only — never a URL
-  alt        String
-  sortOrder  Int     @default(0)
-  isPrimary  Boolean @default(false)
+  id                    String                 @id @default(uuid())
+  productId             String
+  product               Product                @relation(fields: [productId], references: [id])
+  storageKey            String // RELATIVE key only — never a URL
+  alt                   String
+  sortOrder             Int                    @default(0)
+  isPrimary             Boolean                @default(false)
+  source                ProductImageSource     @default(UNKNOWN)
+  netContentSuggestions NetContentSuggestion[]
 
   @@index([productId, sortOrder])
+}
+
+enum NetContentSuggestionStatus {
+  PENDING
+  ACCEPTED
+  EDITED
+  REJECTED
+  NO_ANSWER
+}
+
+enum NetContentEvidenceSource {
+  PHOTO
+  NAME
+  UNIT_LABEL
+}
+
+enum UnitLabelCheck {
+  AGREES
+  DISAGREES
+  NOT_CHECKABLE
+}
+
+/// #900 — an AI-proposed net content for one product, PROPOSED, NEVER APPLIED: nothing reaches
+/// Product.netContentAmount/Unit until a staff member accepts or edits it on /staff/net-content.
+/// Written only by scripts/suggest-net-content.ts (offline, bounded), one row per model reply.
+///
+/// NO_ANSWER rows carry null value fields and exist so coverage is measurable and a product is
+/// not re-attempted on every run. A transport failure (throttle, timeout) writes NO row, so a
+/// transient fault never marks a product as attempted.
+///
+/// `model` is recorded per row so two models can be compared on the same catalogue — the
+/// suggester is model-agnostic by design (lib/net-content-suggester.ts).
+model NetContentSuggestion {
+  id               String                     @id @default(uuid())
+  vendorId         String
+  vendor           Vendor                     @relation(fields: [vendorId], references: [id])
+  productId        String
+  product          Product                    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productImageId   String?
+  productImage     ProductImage?              @relation(fields: [productImageId], references: [id], onDelete: SetNull)
+  amount           Int?
+  unit             NetContentUnit?
+  confidence       Int?
+  evidenceSource   NetContentEvidenceSource?
+  evidenceText     String?
+  unitLabelCheck   UnitLabelCheck?
+  model            String
+  latencyMs        Int
+  inputTokens      Int?
+  outputTokens     Int?
+  status           NetContentSuggestionStatus
+  finalAmount      Int?
+  finalUnit        NetContentUnit?
+  reviewedByUserId String?
+  reviewedBy       User?                      @relation("NetContentReviewer", fields: [reviewedByUserId], references: [id])
+  reviewedAt       DateTime?
+  createdAt        DateTime                   @default(now())
+
+  @@index([vendorId, status])
+  @@index([productId])
 }
 
 model Inventory {

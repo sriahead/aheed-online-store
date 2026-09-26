@@ -25,6 +25,7 @@ import {
   Truck,
   CalendarClock,
   MessageSquareQuote,
+  Ruler,
 } from "lucide-react";
 
 export interface PanelNavProps {
@@ -108,6 +109,7 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
               />
               <NavLink href="/staff/orders" icon={ClipboardList} label="Fulfillment & Orders" />
               <NavLink href="/staff/products" icon={Package} label="Catalogue" />
+              <NavLink href="/staff/net-content" icon={Ruler} label="Net Content" />
               <NavLink href="/staff/categories" icon={LayoutDashboard} label="Categories" />
               <NavLink href="/staff/brands" icon={Tag} label="Brands" />
               <NavLink href="/staff/promotions" icon={Megaphone} label="Promotions" />
@@ -128,6 +130,7 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
               <NavLink href="/staff/fulfilment" icon={CalendarClock} label="Fulfilment" />
               <NavLink href="/staff/payments" icon={ShieldAlert} label="Payment Issues" />
               <NavLink href="/staff/products" icon={Package} label="Catalogue" />
+              <NavLink href="/staff/net-content" icon={Ruler} label="Net Content" />
               <NavLink href="/staff/categories" icon={LayoutDashboard} label="Categories" />
               <NavLink href="/staff/brands" icon={Tag} label="Brands" />
               <NavLink href="/staff/promotions" icon={Megaphone} label="Promotions" />

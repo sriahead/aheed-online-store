@@ -27,6 +27,7 @@ export async function POST(request: Request) {
       result.imageKey,
       productName,
       result.needsReview,
+      result.source,
     );
 
     return NextResponse.json(result);

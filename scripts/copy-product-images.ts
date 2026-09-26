@@ -171,7 +171,7 @@ async function main() {
         select: {
           imageNeedsReview: true,
           images: {
-            select: { storageKey: true, alt: true, isPrimary: true },
+            select: { storageKey: true, alt: true, isPrimary: true, source: true },
             orderBy: { isPrimary: "desc" },
           },
         },
@@ -222,6 +222,9 @@ async function main() {
         destKey,
         sourceImage.alt ?? product.name,
         sourceProduct.imageNeedsReview,
+        // #900 — the copy depicts exactly what the origin row did, so its provenance travels
+        // with it. Inventing one here would be the guess the source column exists to prevent.
+        sourceImage.source,
       );
 
       console.log(`  copied ${product.slug} -> ${destKey} (${bytes.byteLength} bytes)`);

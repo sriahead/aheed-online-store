@@ -1068,6 +1068,7 @@ async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
                 storageKey: `products/${product.slug}/main.svg`,
                 alt: product.name,
                 isPrimary: true,
+                source: "PLACEHOLDER", // #900
               },
             },
             inventory: {
@@ -1425,6 +1426,7 @@ async function seedGeneratedCatalogue(
         storageKey: storageKeyBySlug.get(product.categorySlug) as string,
         alt: product.name,
         isPrimary: true,
+        source: "PLACEHOLDER" as const, // #900
       })),
     });
   }
@@ -2509,6 +2511,7 @@ async function seedSubcategoryProducts(vendorId: string, map: Record<string, Cat
               storageKey: `products/${product.slug}/main.svg`,
               alt: product.name,
               isPrimary: true,
+              source: "PLACEHOLDER", // #900
             },
           },
           inventory: { create: { vendorId, quantity: product.quantity } },

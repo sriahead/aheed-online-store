@@ -4,6 +4,7 @@ import { getCurrentVendorId } from "@/lib/tenant";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { calendarDayInZone, STORE_TIMEZONE } from "@/lib/local-datetime";
 import { currentRestockDay } from "@/lib/restock";
+import type { GeneratedImageSource } from "@/lib/product-image";
 import { recordSearchQuery } from "@/lib/repositories/search-query-log";
 import { listApprovedAliasMap } from "@/lib/repositories/search-synonyms";
 import {
@@ -28,6 +29,7 @@ import {
   saveGeneratedProductImage as saveGeneratedProductImageRepo,
   searchProducts,
   setPrimaryProductImage as setPrimaryProductImageRepo,
+  toggleProductImageConfirmedPhoto as toggleProductImageConfirmedPhotoRepo,
   suggestProducts as suggestProductsRepo,
   updateProductForVendor as updateProductForVendorRepo,
   type AdminProductDetail,
@@ -224,6 +226,7 @@ export async function saveGeneratedProductImage(
   storageKey: string,
   alt: string,
   needsReview: boolean,
+  source: GeneratedImageSource,
 ): Promise<void> {
   return saveGeneratedProductImageRepo(
     getPrisma(),
@@ -232,7 +235,17 @@ export async function saveGeneratedProductImage(
     storageKey,
     alt,
     needsReview,
+    source,
   );
+}
+
+/** #900 (R8) — singular update, no nested writes: HTTP client. */
+export async function toggleProductImageConfirmedPhoto(
+  vendorId: string,
+  productId: string,
+  imageId: string,
+) {
+  return toggleProductImageConfirmedPhotoRepo(getPrisma(), vendorId, productId, imageId);
 }
 
 export async function getProductsWithoutImages(vendorId: string, limit: number) {

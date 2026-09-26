@@ -222,6 +222,59 @@ export function hasExhaustedImageAttempts(failures: number): boolean {
   return failures >= MAX_IMAGE_ATTEMPT_FAILURES;
 }
 
+/**
+ * #900 — mirrors `prisma/schema.prisma`'s `ProductImageSource` exactly. Kept as a plain union
+ * here, like `NetContentUnit` in `components/product/unit-price.ts`, so pure code and unit tests
+ * can use it with no Prisma import.
+ */
+export type ProductImageSource =
+  | "UNKNOWN"
+  | "STAFF_UPLOAD"
+  | "STAFF_CONFIRMED_PHOTO"
+  | "OPEN_FOOD_FACTS"
+  | "AI_GENERATED"
+  | "PLACEHOLDER";
+
+/** What the automatic image pipeline can produce — never a staff-sourced value. */
+export type GeneratedImageSource = Extract<ProductImageSource, "OPEN_FOOD_FACTS" | "AI_GENERATED">;
+
+/**
+ * The ONLY sources an AI step may read as photo evidence of a product's pack (#900).
+ *
+ * AI_GENERATED is excluded because the image was rendered FROM the product's name, so a size read
+ * off it merely echoes the name back. OPEN_FOOD_FACTS is excluded because a keyword match can be a
+ * different product or pack size. UNKNOWN covers every image that predates #900.
+ */
+export const PHOTO_EVIDENCE_SOURCES: readonly ProductImageSource[] = [
+  "STAFF_UPLOAD",
+  "STAFF_CONFIRMED_PHOTO",
+];
+
+export function isPhotoEvidenceSource(source: ProductImageSource): boolean {
+  return PHOTO_EVIDENCE_SOURCES.includes(source);
+}
+
+/** Staff-facing wording for each source, shown on the product page's image manager. */
+export const PRODUCT_IMAGE_SOURCE_LABELS: Record<ProductImageSource, string> = {
+  UNKNOWN: "Source unknown",
+  STAFF_UPLOAD: "Uploaded by staff",
+  STAFF_CONFIRMED_PHOTO: "Confirmed real photo",
+  OPEN_FOOD_FACTS: "Open Food Facts match",
+  AI_GENERATED: "AI-generated",
+  PLACEHOLDER: "Placeholder",
+};
+
+/**
+ * The staff confirm/unconfirm toggle (#900, R8) only moves between these two values. Any other
+ * starting source is refused: an AI-generated or Open Food Facts image cannot be vouched for as a
+ * photo of this product's pack.
+ */
+export function nextConfirmedPhotoSource(current: ProductImageSource): ProductImageSource | null {
+  if (current === "UNKNOWN") return "STAFF_CONFIRMED_PHOTO";
+  if (current === "STAFF_CONFIRMED_PHOTO") return "UNKNOWN";
+  return null;
+}
+
 /** What `requestImageUpload` hands back on success. */
 export interface UploadTicket {
   /** Presigned, short-lived, single-key PUT URL. */
