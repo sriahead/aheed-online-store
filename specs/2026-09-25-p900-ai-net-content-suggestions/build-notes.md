@@ -170,8 +170,7 @@ with this body shape (the one the suggester now sends):
      errors", which is the intended guard against a model that can't answer. A product that
      always truncates is still retried, and paid for, on every run, but now at a counted cost.
      With reasoning off, truncation wasn't seen again on dev.
-2. **Image + reasoning-off is unproven** (R27 above). R29 is the first real run of it. Check the
-   row's `productImageId`, `evidenceSource = PHOTO`, and that the answer matches the printed size.
+2. **Image + reasoning-off, proven at Validate (2026-09-26) — see R29 below.** No longer shaky.
 3. **The label check's parser** (`lib/net-content-label-check.ts`) was tested against R12's table
    and the dev catalogue's own label shapes (`£8.99 / 5kg`, `£4.49 / 2L`, `£7.48 / litre`).
    Production's 80 Aheed products have their own labels, 41 of which state a pack size, and they
@@ -184,3 +183,71 @@ with this body shape (the one the suggester now sends):
    (`evidence` vs `evidenceSource`, and a null `amount` with `unit: "EACH"`). The validator is the
    guard, so a new shape becomes `NO_ANSWER`, not a bad row. A spike in `NO_ANSWER` on a later run
    more likely means shape drift than hard products.
+
+## Fix (2026-09-25, from a fresh Validate pass)
+
+- **R34 — `tests/product-image.test.ts` failed `npx vitest run`.** `it("exports exactly the seven
+  actions", ...)` hard-coded the file's export list and was never updated for `toggleConfirmedPhoto`
+  (R8), so it asserted seven names against an eight-name module. **This was the check, not the
+  artifact** — `toggleConfirmedPhoto` is a real, required action (R8's gating gate and vendor scope
+  were already correct and unit-tested elsewhere); nothing in `features/admin/product-image.ts`
+  changed. Fixed by adding `"toggleConfirmedPhoto"` to the expected array and renaming the test to
+  "exports exactly the eight actions". Confirmed alone (`npx vitest run tests/product-image.test.ts`,
+  34/34) before the full re-run. No `CHANGELOG.md` entry: no observable behaviour changed.
+- **`validation.md`'s R32 row named a grep pattern that could never match.** It grepped
+  `ARTIFACT_INDEX.md` for the literal string `p900-ai-net-content-suggestions-plan` — a front-matter
+  `id` value — but `kms/scripts/build-index.ts` never renders a doc's front-matter `id` as text
+  anywhere in its output; it lists the title as a link to the file's path instead. Checked against
+  four other specs' `id` values in the current `ARTIFACT_INDEX.md`: none appear literally either, so
+  this is a pre-existing characteristic of the generator, not something this slice changed. **The
+  row itself was wrong, not the artifact** — R32's actual requirement ("`ARTIFACT_INDEX.md` listing
+  this slice's `plan.md`") was already satisfied (confirmed live: the row is present, linking
+  `specs/2026-09-25-p900-ai-net-content-suggestions/plan.md`). Fixed the row's command to grep the
+  file path instead, which does match.
+- **Not fixed, flagged instead: dev's three `pg_trgm` indexes are missing.** R3's verification step
+  (`scripts/verify-unit-price-sort.ts`) failed on `Order_guestEmail_trgm_idx` being absent; a direct
+  query confirmed all three indexes from `20260820143949_p7_5de_order_search_trigram` are gone from
+  `ep-dry-morning-zab7dx08`, even though `prisma migrate status` still lists that migration as
+  applied. `#900`'s own migration contains no `DROP` and never touches `Order`/`User` (confirmed by
+  reading its SQL), so this is pre-existing dev-environment drift, not something this branch caused
+  or can fix by editing this slice's code — it is the exact GAP-011 trap CLAUDE.md warns about, just
+  discovered here. Left as-is and reported to the owner rather than "fixed" under this issue's scope;
+  it needs its own `/propose` (re-run the hand-authored migration's `CREATE INDEX IF NOT EXISTS`
+  statements against dev, or open an issue to do so) rather than an improvised fix inside `#900`'s
+  Fix stage.
+- **R29 — closed at Validate (2026-09-25 session), evidence gap only, no code defect.** That pass
+  proved the upload → `STAFF_UPLOAD` → `choosePhotoEvidence` → `productImageId` wiring live
+  end-to-end, using a placeholder image in place of a real front-of-pack photo (that environment had
+  no outbound access to fetch one).
+
+## Validate (2026-09-26) — R29 re-run with a genuine photo, and R27's open question closed
+
+A later Validate pass had outbound network access, so R29 was re-run for real rather than left as a
+wiring-only proof.
+
+- **Downloaded the exact photo Build used for R27** (Open Food Facts, Nutella, barcode
+  `3017620422003`, front JPEG — 33,108 bytes, byte-identical to Build's own record), converted it to
+  WebP with `sharp` at the same 1200px edge the client does (`fitWithinEdge`), which produced a
+  17,650-byte file — again byte-identical to Build's R27 measurement, confirming the conversion path
+  is deterministic.
+- **Uploaded it through the real flow, not a shortcut**: `requestImageUpload` for a dev Aheed product
+  with null net content (`Extra Paneer Pack of 4`), a real presigned PUT to R2, then `addProductImage`
+  — all three driven live via curl (`Next-Action` + JSON-array body, the direct-call protocol
+  `docs/developer-portal/local-dev-playbook.md` documents), no browser. The resulting `ProductImage`
+  row reads `source = STAFF_UPLOAD`, exactly as R4/R29 require.
+- **Ran `scripts/suggest-net-content.ts --product <id> --include-attempted --limit 1`.** Result:
+  `400 GRAM`, `evidenceSource: PHOTO`, `evidenceText: "400G"`, `productImageId` equal to the upload's
+  own id — matching the printed pack size (Nutella is sold in 400 g jars) and closing R29's evidence
+  condition for real.
+- **This also closes R27's open question ("image + reasoning-off has never been run").** Latency was
+  10.0 s (higher than R27's reasoning-on ~3.2 s figure, but reasoning was off here as it is for every
+  production run), 689 input / 44 output tokens, ~7.5 neurons, no truncation. Gemma 4 correctly reads
+  a real photo with reasoning off.
+- **Tooling note, not a repo defect:** the presigned PUT's binary body failed silently under this
+  Windows curl build (`schannel`, exit 43, `PUT status: 000`) — no response, no error body. A small
+  Node `fetch()` script sending the identical bytes to the identical URL succeeded immediately
+  (`200`). Worth remembering as a curl-on-Windows trap for any future presigned-upload proof, separate
+  from the existing FormData-closure trap the playbook already documents.
+- **Left as found:** the test upload and its resulting suggestion row were left in dev rather than
+  reverted, consistent with how R28/R30's own live evidence was left in place — this is pilot data by
+  design, not a side effect to clean up.
