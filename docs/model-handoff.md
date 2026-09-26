@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.36.0"
+version: "1.37.0"
 updated: 2026-09-26
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -413,6 +413,20 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **2026-09-26 — `#900` reached production; `main` and `staging` are content-equal again.** PR #904
+  (merge `a156039`) promoted it; production `/api/health` served `a156039`, `db.ok: true`,
+  `reference.drift: false`; `#900` closed. This supersedes `Last Verified`'s "`main` is still at
+  `9b1de27`" line below, which is kept only until the next Document (final) rewrites that section.
+- **`#729` slice 1 (vendor-neutral UI copy) is BUILT on `feature/729-vendor-neutral-ui-copy`,
+  awaiting `/validate`** — spec `specs/2026-09-26-p729-vendor-neutral-ui-copy/`, read its
+  `build-notes.md` first. No schema change. The standing rule it produced ("UI copy comes from the
+  vendor or is neutral") now lives in `docs/developer-portal/app-conventions.md` with a CLAUDE.md
+  pointer. **Owner sequencing: `#905` (slice 2 — per-vendor product labels/HMC on the staff form,
+  and vendor context in AI prompts) is picked up after slice 1 ships and starts at `/propose`**,
+  because it needs a new vendor setting; a single "vertical" enum was argued against at orient
+  (breaks at the third kind of shop). `#906` (Open Food Facts for non-food vendors) is Deferred;
+  `#907` (referral share text hardcodes "£5") is a small Backlog defect.
 
 - **`#900` is DONE at the staging layer** — validated and merged to `staging` (**PR #902**, merge
   `42dd3fa`, 2026-09-26). AI-suggested net content with image provenance, split from `#697`, which
