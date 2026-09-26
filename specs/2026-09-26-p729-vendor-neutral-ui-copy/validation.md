@@ -13,8 +13,16 @@
 - **Two vendors matter here.** Run the live rows against **both** local hosts under
   `npm run preview`:
   - Aheed: `curl -s -H "Host: localhost:8787" http://127.0.0.1:8787/<path>`
-  - SriMart: `curl -s -H "Host: srimart.localhost" http://127.0.0.1:8787/<path>`
+  - SriMart: `curl -s -H "Host: srimart.localhost:8787" http://127.0.0.1:8787/<path>`
 
+  **The SriMart header needs the `:8787` port.** `lib/tenant.ts`'s exact-match `VendorDomain` query
+  only strips the port from the *first* lookup (matching a real deployment's bare host); its `#514`
+  fallback for local preview matches the raw header including the port, and the seeded local row is
+  `srimart.localhost:8787`, not `srimart.localhost`. Without the port, SriMart's host resolves to
+  nothing and falls through to the "single active vendor" default (Aheed, the oldest), so every
+  SriMart row silently renders Aheed's copy instead of failing loudly — confirmed at `#729`'s
+  `/validate` (2026-09-26). Aheed's own bare `localhost:8787` header already carries the port for a
+  different reason (it's the literal `Host` a browser sends there) and is unaffected.
   Several rows pass trivially against Aheed alone, because the old copy *was* Aheed's.
 - Use `npm run preview`, never `npm run dev`. `next dev` cannot load `@prisma/client/wasm` and
   silently renders an error state (CLAUDE.md, Database).
@@ -31,16 +39,16 @@
 | Req | Testing Area | How to verify |
 |-----|--------------|---------------|
 | R1  | Unit | For each of the seven files named in R1, `grep -n "export const metadata" <file>` prints nothing, and `grep -n "export async function generateMetadata" <file>` prints one line. Read each function: it calls `getCurrentVendorProfile()`, keeps the R1 text before the dash, and falls back to `"Aheed Food Centre"` only on a null profile. |
-| R2  | E2E | Under `npm run preview`, for `/login` and `/register`: `curl -s -H "Host: srimart.localhost" http://127.0.0.1:8787/login \| grep -o "<title>[^<]*</title>"` prints a title containing `SriMart` and not `Aheed`. The same command with `-H "Host: localhost:8787"` prints a title containing `Aheed Food Centre`. |
+| R2  | E2E | Under `npm run preview`, for `/login` and `/register`: `curl -s -H "Host: srimart.localhost:8787" http://127.0.0.1:8787/login \| grep -o "<title>[^<]*</title>"` prints a title containing `SriMart` and not `Aheed`. The same command with `-H "Host: localhost:8787"` prints a title containing `Aheed Food Centre`. |
 | R3  | Unit | `grep -rn "Aheed Club" components/` prints nothing. Read `StorefrontChrome.tsx`, `RewardsLauncher.tsx` and `RewardsPanel.tsx`: `vendorName` is passed through, typed `string`, and not optional. The new `RewardsPanel` test in R24 renders `SriMart Club`. |
 | R4  | Unit | Read `ReferralCard.tsx`: `storeName: string` is a required prop, `buildShareLinks(displayUrl, storeName)` is called, the share `title` is `` `${storeName} referral` ``, and `grep -n -i "grocer" components/rewards/ReferralCard.tsx` prints nothing. `grep -n "storeName=" components/rewards/RewardsPanel.tsx "app/(storefront)/account/loyalty/page.tsx"` prints one line in each file. |
 | R5  | Unit | `grep -n 'storeName = ' lib/referrals.ts` prints nothing. `tests/referrals.test.ts` asserts that each of the four decoded links contains the passed store name and does not match `/grocer/i`. `npx vitest run tests/referrals.test.ts` passes. |
-| R6  | E2E | `curl -s -H "Host: srimart.localhost" http://127.0.0.1:8787/orders/lookup \| grep -c "Delivery progress"` prints `1` or more. `grep -rn "Delivery Pipeline" app/ components/` prints nothing. |
+| R6  | E2E | `curl -s -H "Host: srimart.localhost:8787" http://127.0.0.1:8787/orders/lookup \| grep -c "Delivery progress"` prints `1` or more. `grep -rn "Delivery Pipeline" app/ components/` prints nothing. |
 | R7  | Unit | `grep -n "We automatically adjust them to guarantee they are" components/staff/StorefrontConfigForm.tsx` prints one line. `grep -n "Aheed automatically" components/staff/StorefrontConfigForm.tsx` prints nothing. |
 | R8  | Unit | `grep -n "A multi-vendor online store with local delivery." app/layout.tsx` prints one line. `grep -n '"Aheed Online Store"' app/layout.tsx` prints one line. `git diff origin/staging -- app/layout.tsx` shows only the description line changed. |
 | R9  | Unit | `grep -n '^"use server"' lib/shopping-list-examples.ts` prints nothing. The new unit test covers: (a) trim, empty-drop, case-insensitive dedupe and the cap of 3, including 5 names in with only 3 used; (b) 1, 2 and 3 names each produce the exact placeholder and `exampleName`; (c) `[]` produces exactly `"2x first item\nsecond item\nthird item x 3"` and `null`. `npx vitest run tests/shopping-list-examples.test.ts` passes. |
 | R10 | Unit | `grep -n -E "PLACEHOLDER\|chicken\|basmati\|milk\|apples" components/cart/ShopYourList.tsx` prints nothing. Read the hint JSX: both R10 branches are present, with `MAX_LIST_LINES` interpolated. |
-| R11 | E2E | Read `app/(storefront)/shop-your-list/page.tsx`: it makes the R11 `list(...)` call and passes `exampleNames`. `git diff --name-only origin/staging -- lib/repositories/ prisma/` prints nothing. Under `npm run preview`, `curl -s -H "Host: srimart.localhost" http://127.0.0.1:8787/shop-your-list \| grep -o 'placeholder="[^"]*"'` shows a textarea placeholder starting `2x ` followed by a real SriMart product name, not `chicken`. The same command on the Aheed host shows an Aheed product name. |
+| R11 | E2E | Read `app/(storefront)/shop-your-list/page.tsx`: it makes the R11 `list(...)` call and passes `exampleNames`, and no line in that diff touches `lib/repositories/products.ts` or any file under `prisma/` (a repository-directory-wide `git diff --name-only` is **not** a safe proxy here: `lib/repositories/vendor.ts` legitimately changes for R19's `searchPlaceholder` in the same slice, so a whole-directory check false-positives). Under `npm run preview`, save the page to a file and read it rather than piping through `grep -o` — the textarea's `placeholder` attribute is genuinely multi-line (one product name per line), and curl's raw response carries that as a literal embedded newline, so a single-line-oriented `grep -o 'placeholder="[^"]*"'` silently stops at the first embedded newline with no error, matching only the page's *other*, single-line placeholders (e.g. the postcode field, the header search box) and skipping this one entirely. `curl -s -H "Host: srimart.localhost:8787" http://127.0.0.1:8787/shop-your-list > out.html`, then read the `id="list"` textarea's `placeholder` value directly: it starts `2x ` and is followed by real SriMart product names, not `chicken`. The same check on the Aheed host (`Host: localhost:8787`) shows Aheed product names. |
 | R12 | Unit | `grep -n "That search is too short. Try at least two characters.</" "app/(storefront)/search/page.tsx"` prints one line (whitespace between the text and the tag may differ after formatting; confirm by reading the line). `grep -n "atta" "app/(storefront)/search/page.tsx"` prints nothing. |
 | R13 | Unit | Each new string in R13 is found by `grep -n` in its file, and `grep -rn -i "grocer" "app/(storefront)/account/" components/rewards/ "app/(storefront)/orders/lookup/page.tsx"` prints nothing. |
 | R14 | Unit | Read `app/(storefront)/terms/page.tsx` §4: the sentence matches R14 (it may wrap across lines). `git diff origin/staging -- "app/(storefront)/terms/page.tsx"` touches only that sentence's lines. |

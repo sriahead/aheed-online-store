@@ -4,10 +4,10 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.7.0"
+version: "1.8.0"
 updated: 2026-09-26
 visibility: internal
-summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions and presigned uploads, grep-vs-rendered-HTML pitfalls.
+summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions and presigned uploads, grep-vs-rendered-HTML pitfalls, local vendor-host resolution.
 tags: [local-dev, windows, validation, playbook]
 ---
 
@@ -359,13 +359,27 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   match something unrelated that has its own legitimate reason to look identical — scope the search
   to the specific element a requirement is actually about, not the whole rendered page, whenever
   more than one thing on that page could plausibly carry the same attribute.
+- **`grep -o` against a raw HTML response silently skips a match whose attribute value contains a
+  literal embedded newline, with no error and no indication anything was skipped** — grep is
+  line-based, so a pattern that needs a closing `"` on the same line it started matching never
+  completes when that `"` is on the next line, and moves on rather than failing. Hit at `#729`'s
+  `/validate` (2026-09-26) reading `/shop-your-list`'s textarea `placeholder`, which is deliberately
+  multi-line (one example product per line, joined with `\n`): `curl ... \| grep -o
+  'placeholder="[^"]*"'` returned real matches — just the page's *other*, single-line placeholders
+  (the postcode field, the header search box) — with the multi-line one silently absent, reading as
+  "the feature renders the wrong placeholder" rather than "grep never saw this one." Confirmed by
+  saving the response to a file and reading the `id="list"` textarea's `placeholder` attribute
+  directly instead of piping through `grep -o`. **Before trusting a `grep -o` row's result count
+  against live HTML, check whether the attribute being matched can legitimately contain a newline**
+  (a multi-line placeholder, a textarea's rendered content, anything built by joining lines with
+  `\n`) — if so, save the response and read the attribute directly rather than grep it.
 - **`curl -b jar.txt -c jar.txt` combined with a custom `-H "Host: ..."` header can silently fail
   to persist a `Secure`-flagged `Set-Cookie` for a multi-label local hostname, while the same
   pattern works fine for a single-label one — with no error, just an empty jar file.** Hit at
   `#748`'s `/validate` (2026-09-14), testing both seeded local vendor hosts under `npm run
   preview`: `curl -c jar.txt -H "Host: localhost:8787" http://127.0.0.1:8787/...` correctly wrote
   the returned `aheed_cart` cookie into the jar (domain `localhost`, `Secure` flag preserved), but
-  the identical pattern against `-H "Host: srimart.localhost"` produced a jar containing only the
+  the identical pattern against `-H "Host: srimart.localhost:8787"` produced a jar containing only the
   file header comments — no cookie line at all — even though the response's `Set-Cookie` header was
   present and well-formed. Every subsequent request replaying that empty jar got a **fresh**
   guest-cart id each time (the server correctly treats "no cookie" as "no identity" and mints a new
@@ -376,8 +390,26 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   ..."`, rather than relying on `-b`/`-c` at all. This matters specifically for this repo's own
   documented two-vendor testing pattern (`validation.md`'s "Two vendors matter here" rule) — Aheed's
   local host is single-label (`localhost:8787`) and works fine with a jar; SriMart's
-  (`srimart.localhost`) does not, so a validator who only smoke-tested the jar approach against
+  (`srimart.localhost:8787`) does not, so a validator who only smoke-tested the jar approach against
   Aheed would trust it for both.
+- **A SriMart `Host:` header missing its `:8787` port resolves to no vendor at all under `npm run
+  preview`, and the request does NOT fail loudly — it silently falls through to Aheed's copy.**
+  Hit at `#729`'s `/validate` (2026-09-26): `curl -H "Host: srimart.localhost" ...` (no port)
+  rendered `<title>Sign in — Aheed Food Centre</title>` on every page, including pages this slice
+  never touched (`/search`), which first read as a real cross-tenant regression rather than a bad
+  header. `lib/tenant.ts`'s exact `VendorDomain` lookup strips the port from the raw `Host` header
+  before its first query — right for a real deployment, where `staging.aheedfoodcentre.nocaped.com`
+  never carries one — then, only if that port-stripped lookup misses, falls back to a **second**
+  query against the **raw, unstripped** header (`#514`, added because the local preview server sees
+  `srimart.localhost:8787` as its literal `Host`). The seeded local row is `srimart.localhost:8787`
+  (confirmed via a direct `VendorDomain` query against `.env`'s `DIRECT_URL`), so a bare
+  `srimart.localhost` header matches neither query, and `getCurrentVendorIdOrNull` falls through to
+  its last resort — "no host match, exactly one active vendor" — which finds **more** than one
+  active vendor (real ones plus leftover `concurrency-test-*`/`express-test-*` rows from other
+  suites) and returns `null`, at which point every `?? "Aheed Food Centre"` fallback fires. **Always
+  include the port for SriMart's local host** (`srimart.localhost:8787`), matching the seeded row —
+  Aheed's `localhost:8787` already does this for the unrelated reason above, so only SriMart's
+  header was ever missing it in this doc's own examples.
 - **Replaying an existing record's edit form by hand must name every checked box explicitly, not
   just the field(s) the row under test cares about — an absent field is indistinguishable from an
   unchecked one.** Hit at `#876`'s `/validate` (2026-09-23), driving `/staff/products/<id>`'s
