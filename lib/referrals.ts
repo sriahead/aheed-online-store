@@ -6,6 +6,8 @@
  * without network or database.
  */
 
+import { formatPrice } from "@/components/product/format-price";
+
 export const REFERRAL_DISCOUNT_PENCE = 500; // £5.00 off for referred friend
 export const REFERRAL_REWARD_POINTS = 100; // 100 points reward for referrer
 export const MIN_REFERRAL_ORDER_PENCE = 2000; // £20.00 minimum order
@@ -13,9 +15,13 @@ export const MIN_REFERRAL_ORDER_PENCE = 2000; // £20.00 minimum order
 /**
  * Generate a deterministic, human-readable referral code from a user ID.
  * Example: `REF-A1B2C3D4`
+ *
+ * #905 — the no-user fallback is platform-level (`REF_NOCAPED`), no longer one vendor's name. The
+ * underscore is deliberate: it does not match `extractReferralPrefix`'s `REF-…` pattern, so the
+ * fallback can never be redeemed as, or mistaken for, a real shopper's code.
  */
 export function generateReferralCode(userId: string): string {
-  if (!userId || typeof userId !== "string") return "REF-AHEED";
+  if (!userId || typeof userId !== "string") return "REF_NOCAPED";
   // Clean non-alphanumeric chars, take 8 chars uppercase
   const cleaned = userId.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
   const slice = cleaned.padEnd(8, "0").slice(0, 8);
@@ -95,10 +101,17 @@ export interface ShareLinks {
  * #729 — `storeName` is required: it used to default to one vendor's name, so any caller that
  * forgot it advertised that vendor on every other vendor's storefront.
  */
-export function buildShareLinks(referralUrl: string, storeName: string): ShareLinks {
-  const shareMessage = `Join me on ${storeName}! Use my invite link to get £5 off your first order:`;
+export function buildShareLinks(
+  referralUrl: string,
+  storeName: string,
+  // #907 — required, from the same value the card and the discount code use, so a share message
+  // can never promise a different amount from the one the friend actually gets.
+  discountOffPence: number,
+): ShareLinks {
+  const discount = formatPrice(discountOffPence);
+  const shareMessage = `Join me on ${storeName}! Use my invite link to get ${discount} off your first order:`;
   const emailSubject = `Special invitation to shop at ${storeName}`;
-  const emailBody = `Hi,\n\nI thought you would like ${storeName}. Use my personal referral link to get £5 off your first order:\n\n${referralUrl}\n\nHappy shopping!`;
+  const emailBody = `Hi,\n\nI thought you would like ${storeName}. Use my personal referral link to get ${discount} off your first order:\n\n${referralUrl}\n\nHappy shopping!`;
 
   return {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralUrl)}`,

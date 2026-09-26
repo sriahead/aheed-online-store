@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Truck } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getDeliveryAreaRepository } from "@/lib/delivery-areas-service";
+import {
+  exampleDeliveryAreaForVendor,
+  getDeliveryAreaRepository,
+} from "@/lib/delivery-areas-service";
+import { deliveryAreaExamples } from "@/lib/delivery-area-examples";
 import { listRecentRefusalsForCurrentVendor } from "@/lib/delivery-refusals-service";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
@@ -45,11 +49,15 @@ export default async function StaffDeliveryAreasPage() {
     );
   }
 
-  const [areas, refusals, profile] = await Promise.all([
+  const [areas, refusals, profile, exampleArea] = await Promise.all([
     getDeliveryAreaRepository().list(),
     listRecentRefusalsForCurrentVendor(),
     getCurrentVendorProfile(),
+    exampleDeliveryAreaForVendor(auth.vendorId),
   ]);
+  // #905 — examples from this vendor's own geography (store postcode, else its first area), never
+  // a fixed town. With none, each sentence states its rule without an example.
+  const examples = deliveryAreaExamples(exampleArea);
   const defaults: StoreDefaultCharges = {
     deliveryFeePence: profile?.deliveryFeePence ?? 0,
     minimumOrderPence: profile?.minimumOrderPence ?? 0,
@@ -63,16 +71,18 @@ export default async function StaffDeliveryAreasPage() {
         Delivery areas
       </h1>
       <p className="mb-6 text-sm text-primary-muted">
-        The postcode areas and districts this store delivers to. An area such as MK covers every
-        district in it; a district such as MK9 covers only that one. Any area or district can have
-        its own delivery charge, minimum order and free-delivery threshold — leave them blank to use
-        the store&apos;s defaults. A customer whose postcode falls outside every entry here cannot
-        complete a delivery order.
+        The postcode areas and districts this store delivers to.{" "}
+        {examples
+          ? `An area such as ${examples.area} covers every district in it; a district such as ${examples.district} covers only that one.`
+          : "An area covers every district in it; a district covers only that one."}{" "}
+        Any area or district can have its own delivery charge, minimum order and free-delivery
+        threshold — leave them blank to use the store&apos;s defaults. A customer whose postcode
+        falls outside every entry here cannot complete a delivery order.
       </p>
 
       <section className="mb-8 rounded-2xl border border-black/10 bg-white p-5">
         <h2 className="mb-3 text-sm font-bold text-primary">Add areas or districts</h2>
-        <AddDeliveryAreaForm />
+        <AddDeliveryAreaForm examples={examples} />
       </section>
 
       <section className="mb-8 rounded-2xl border border-black/10 bg-white p-5">

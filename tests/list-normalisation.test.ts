@@ -210,13 +210,13 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
     const lines = parseList(Array.from({ length: 100 }, (_, i) => `item${i}`).join("\n"));
     expect(lines).toHaveLength(100);
 
-    await normaliseList(lines);
+    await normaliseList(lines, null);
     expect(calls).toHaveLength(1);
   });
 
   it("targets the documented model endpoint with a bearer token", async () => {
     stubFetch(async () => okBody("[]"));
-    await normaliseList(THREE_LINES);
+    await normaliseList(THREE_LINES, null);
 
     expect(calls[0].url).toContain(`/ai/run/${NORMALISATION_MODEL}`);
     expect(NORMALISATION_MODEL).toBe("@cf/meta/llama-3.1-8b-instruct");
@@ -226,7 +226,7 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
 
   it("passes an abort signal derived from the timeout", async () => {
     stubFetch(async () => okBody("[]"));
-    await normaliseList(THREE_LINES);
+    await normaliseList(THREE_LINES, null);
 
     expect(NORMALISATION_TIMEOUT_MS).toBe(6000);
     expect(calls[0].init.signal).toBeDefined();
@@ -235,20 +235,20 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
   it("returns null without fetching when no account id is configured", async () => {
     vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
     stubFetch(async () => okBody("[]"));
-    expect(await normaliseList(THREE_LINES)).toBeNull();
+    expect(await normaliseList(THREE_LINES, null)).toBeNull();
     expect(calls).toHaveLength(0);
   });
 
   it("returns null without fetching when no api token is configured", async () => {
     vi.stubEnv("CLOUDFLARE_API_TOKEN", "");
     stubFetch(async () => okBody("[]"));
-    expect(await normaliseList(THREE_LINES)).toBeNull();
+    expect(await normaliseList(THREE_LINES, null)).toBeNull();
     expect(calls).toHaveLength(0);
   });
 
   it("returns null on a non-OK response", async () => {
     stubFetch(async () => ({ ok: false, status: 429 }) as Response);
-    expect(await normaliseList(THREE_LINES)).toBeNull();
+    expect(await normaliseList(THREE_LINES, null)).toBeNull();
   });
 
   it("returns null when the body will not parse", async () => {
@@ -262,21 +262,21 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
           },
         }) as unknown as Response,
     );
-    expect(await normaliseList(THREE_LINES)).toBeNull();
+    expect(await normaliseList(THREE_LINES, null)).toBeNull();
   });
 
   it("returns null when fetch itself rejects", async () => {
     stubFetch(async () => {
       throw new Error("network down");
     });
-    expect(await normaliseList(THREE_LINES)).toBeNull();
+    expect(await normaliseList(THREE_LINES, null)).toBeNull();
   });
 
   it("does not throw on any failure mode", async () => {
     stubFetch(async () => {
       throw new Error("network down");
     });
-    await expect(normaliseList(THREE_LINES)).resolves.toBeNull();
+    await expect(normaliseList(THREE_LINES, null)).resolves.toBeNull();
   });
 
   it("enforces MAX_AI_INPUT_CHARS without issuing a fetch", async () => {
@@ -284,9 +284,9 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
     stubFetch(async () => okBody("[]"));
 
     const lines = parseList(Array.from({ length: 100 }, () => "x".repeat(60)).join("\n"));
-    expect(buildNormalisationPrompt(lines).length).toBeGreaterThan(MAX_AI_INPUT_CHARS);
+    expect(buildNormalisationPrompt(lines, null).length).toBeGreaterThan(MAX_AI_INPUT_CHARS);
 
-    expect(await normaliseList(lines)).toBeNull();
+    expect(await normaliseList(lines, null)).toBeNull();
     expect(calls).toHaveLength(0);
   });
 
@@ -294,7 +294,7 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
     stubFetch(async () =>
       okBody('[{"index":0,"name":"chapati flour","quantity":1,"measure":"2kg","brand":null}]'),
     );
-    const items = await normaliseList(THREE_LINES);
+    const items = await normaliseList(THREE_LINES, null);
     expect(items).toHaveLength(1);
     expect(items?.[0].measure).toBe("2kg");
   });
@@ -322,7 +322,7 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
           }),
         }) as unknown as Response,
     );
-    const items = await normaliseList(THREE_LINES);
+    const items = await normaliseList(THREE_LINES, null);
     expect(items).toHaveLength(1);
     expect(items?.[0].measure).toBe("2kg");
   });
@@ -347,7 +347,7 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
           }),
         }) as unknown as Response,
     );
-    const items = await normaliseList(THREE_LINES);
+    const items = await normaliseList(THREE_LINES, null);
     expect(items).toHaveLength(1);
     expect(items?.[0].measure).toBe("2kg");
   });
@@ -356,7 +356,7 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
     stubFetch(
       async () => ({ ok: true, status: 200, json: async () => ({ result: {} }) }) as Response,
     );
-    const items = await normaliseList(THREE_LINES);
+    const items = await normaliseList(THREE_LINES, null);
     expect(items).toEqual([]);
   });
 
@@ -375,7 +375,7 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
         });
       }) as unknown as typeof fetch;
 
-      const result = await normaliseList(THREE_LINES);
+      const result = await normaliseList(THREE_LINES, null);
       expect(result).toBeNull();
       expect(calls[0].init.signal?.aborted).toBe(true);
     },
@@ -384,13 +384,13 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
 
 describe("buildNormalisationPrompt", () => {
   it("numbers each line so the model's index can be checked against it", () => {
-    const prompt = buildNormalisationPrompt(THREE_LINES);
+    const prompt = buildNormalisationPrompt(THREE_LINES, null);
     expect(prompt).toContain("0. atta");
     expect(prompt).toContain("1. haldi");
     expect(prompt).toContain("2. bhindi");
   });
 
   it("tells the model a weight is a measure and not a count", () => {
-    expect(buildNormalisationPrompt(THREE_LINES)).toContain("It is not two of anything.");
+    expect(buildNormalisationPrompt(THREE_LINES, null)).toContain("It is not two of anything.");
   });
 });

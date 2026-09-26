@@ -18,6 +18,10 @@ import type { VendorStorefrontConfigInput, BrandPrimitives } from "@/lib/reposit
 import { parseDeliveryRules, type DeliveryRulesFormState } from "@/lib/delivery-rules-form";
 import { parseSocialContact, type SocialContactFormState } from "@/lib/social-contact-form";
 import {
+  parseCatalogueSettings,
+  type CatalogueSettingsFormState,
+} from "@/lib/catalogue-settings-form";
+import {
   parseBrandColourForm,
   parseBrandPrimitives,
   type BrandColourFormState,
@@ -248,6 +252,53 @@ export async function updateSocialContact(
   await updateVendorStorefrontConfig(auth.vendorId, parsed.value);
 
   revalidatePath("/staff/storefront");
+  revalidatePath("/", "layout");
+  return { error: null, field: null, saved: true };
+}
+
+/**
+ * Save which product labels the staff product form offers, and the store description the AI
+ * prompts are given (#905).
+ *
+ * Its own action and its own form, for the same reason `updateDeliveryRules` and
+ * `updateSocialContact` are separate: every other form submits without these seven fields and must
+ * keep leaving them alone. Validation (HMC needs Halal; a one-line description of at most 200
+ * characters) lives in `lib/catalogue-settings-form.ts`, DB-free and unit-tested.
+ *
+ * Switching a label off here changes what the product form OFFERS, not what any product stores —
+ * `saveProduct` strips a disabled label from its write, so nothing is cleared by this save.
+ *
+ * The vendor comes from the session — `requireVendorRole("ADMIN")` — never from the submission.
+ */
+export async function updateCatalogueSettings(
+  _prev: CatalogueSettingsFormState,
+  formData: FormData,
+): Promise<CatalogueSettingsFormState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { error: refusal(auth.status), field: null, saved: false };
+
+  const checkbox = (name: string) => {
+    const value = formData.get(name);
+    return typeof value === "string" ? value : null;
+  };
+  const parsed = parseCatalogueSettings({
+    showHalalLabel: checkbox("showHalalLabel"),
+    showFreshLabel: checkbox("showFreshLabel"),
+    showOrganicLabel: checkbox("showOrganicLabel"),
+    showVegetarianLabel: checkbox("showVegetarianLabel"),
+    showGlutenFreeLabel: checkbox("showGlutenFreeLabel"),
+    showHmcCertification: checkbox("showHmcCertification"),
+    storeDescription: String(formData.get("storeDescription") ?? ""),
+  });
+
+  if (!parsed.ok) {
+    return { error: parsed.error.message, field: parsed.error.field, saved: false };
+  }
+
+  await updateVendorStorefrontConfig(auth.vendorId, parsed.value);
+
+  revalidatePath("/staff/storefront");
+  revalidatePath("/staff/products", "layout");
   revalidatePath("/", "layout");
   return { error: null, field: null, saved: true };
 }

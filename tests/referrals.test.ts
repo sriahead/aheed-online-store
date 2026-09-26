@@ -53,7 +53,7 @@ describe("referral rules and helpers", () => {
   });
 
   it("builds valid social share links", () => {
-    const share = buildShareLinks("https://aheed.co.uk/?ref=REF-1234", "Aheed Food Centre");
+    const share = buildShareLinks("https://aheed.co.uk/?ref=REF-1234", "Aheed Food Centre", 500);
     expect(share.facebook).toContain("facebook.com/sharer");
     expect(share.twitter).toContain("twitter.com/intent/tweet");
     expect(share.email).toContain("mailto:");
@@ -62,7 +62,7 @@ describe("referral rules and helpers", () => {
 
   // #729 R5 — every share message names the vendor passed in and assumes no product category.
   it("names the given store and never says grocery, for a non-grocery vendor", () => {
-    const share = buildShareLinks("https://srimart.example/?ref=REF-1234", "SriMart");
+    const share = buildShareLinks("https://srimart.example/?ref=REF-1234", "SriMart", 500);
     for (const link of Object.values(share)) {
       const decoded = decodeURIComponent(link);
       expect(decoded).not.toMatch(/grocer/i);
@@ -71,5 +71,21 @@ describe("referral rules and helpers", () => {
     for (const link of [share.twitter, share.email, share.whatsapp]) {
       expect(decodeURIComponent(link)).toContain("SriMart");
     }
+  });
+
+  // #907 R23 — every share message quotes the discount it is given, never a fixed "£5".
+  it("formats the given discount in the X, WhatsApp and email messages", () => {
+    const share = buildShareLinks("https://srimart.example/?ref=REF-1234", "SriMart", 750);
+    for (const link of [share.twitter, share.email, share.whatsapp]) {
+      const decoded = decodeURIComponent(link);
+      expect(decoded).toContain("£7.50");
+      expect(decoded).not.toContain("£5");
+    }
+  });
+
+  // #905 R23a — the no-user fallback names no vendor and can never pass as a real code.
+  it("falls back to REF_NOCAPED, which is not a redeemable referral code", () => {
+    expect(generateReferralCode("")).toBe("REF_NOCAPED");
+    expect(extractReferralPrefix("REF_NOCAPED")).toBeNull();
   });
 });

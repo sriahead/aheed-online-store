@@ -18,7 +18,8 @@ import { describe, expect, it } from "vitest";
  *
  * WHAT IT CHECKS
  *
- * Every `app/**\/*.tsx`, every `components/**\/*.tsx`, and `lib/referrals.ts`, with comments
+ * Every `app/**\/*.tsx`, every `components/**\/*.tsx`, `lib/referrals.ts` and (#905) the four
+ * lib modules whose strings reach a staff member or an AI prompt, with comments
  * removed by the TypeScript printer (not a regex, so a `//` inside a URL string cannot hide
  * anything). Comments are excluded on purpose: several quote the old copy as the record of why it
  * was removed. The generated `app/(admin)/staff/runbook/docs.ts` is a `.ts` file outside the glob,
@@ -54,6 +55,14 @@ const FORBIDDEN = [
   "brands/shan",
   '"bhindi"',
   '"okra"',
+  // #905 — the grocery framing the AI prompts assumed for every vendor, one town's postcodes as
+  // every vendor's examples, and a fixed referral amount.
+  "UK grocery",
+  "South Asian grocery",
+  "Milton Keynes",
+  "MK1-MK10",
+  "MK9 3QA",
+  "£5 off",
 ];
 
 function listTsx(dir: string): string[] {
@@ -84,6 +93,11 @@ const FILES = [
   ...listTsx(join(ROOT, "app")),
   ...listTsx(join(ROOT, "components")),
   join(ROOT, "lib", "referrals.ts"),
+  // #905 — lib modules whose strings reach a staff member or a model.
+  join(ROOT, "lib", "list-normalisation.ts"),
+  join(ROOT, "lib", "search-synonym-proposals.ts"),
+  join(ROOT, "lib", "net-content-suggester.ts"),
+  join(ROOT, "lib", "delivery-area-form.ts"),
 ];
 
 describe("vendor-neutral UI copy (#729)", () => {

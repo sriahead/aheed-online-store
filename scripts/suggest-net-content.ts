@@ -117,7 +117,7 @@ async function main() {
     const vendorSlug = flagValue("--vendor");
     const vendors = await prisma.vendor.findMany({
       where: vendorSlug ? { slug: vendorSlug } : {},
-      select: { id: true, slug: true },
+      select: { id: true, slug: true, config: { select: { storeDescription: true } } },
       orderBy: { slug: "asc" },
     });
     if (vendors.length === 0) fail(`no vendor matches ${vendorSlug ?? "(any)"}`);
@@ -151,6 +151,8 @@ async function main() {
       const summary = await runNetContentSuggestions({
         products,
         suggester,
+        // #905 — each vendor's own description, so a non-grocery vendor isn't prompted as a grocer.
+        storeDescription: vendor.config?.storeDescription ?? null,
         neuronBudget: neuronBudget - totals.neurons,
         rate,
         log: (line) => console.log(line),

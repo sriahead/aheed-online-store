@@ -82,7 +82,7 @@ function main() {
 
   console.log("--- prompt (first 3 numbered lines) ---");
   console.log(
-    buildNormalisationPrompt(parsed)
+    buildNormalisationPrompt(parsed, null)
       .split("\n")
       .filter((l) => /^\d+\. /.test(l))
       .slice(0, 3)

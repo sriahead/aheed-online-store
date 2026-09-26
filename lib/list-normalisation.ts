@@ -1,5 +1,6 @@
 import { getAiEnv } from "@/lib/config";
 import { MAX_LINE_QUANTITY, type ParsedLine } from "@/lib/shopping-list";
+import { storeDescriptionPromptLine } from "@/lib/store-description";
 
 /**
  * AI normalisation pre-pass for "Shop your list" (P2.6 slice 4, #567).
@@ -93,9 +94,16 @@ export function isNormalisationConfigured(): boolean {
  * `normaliseList` anyway. `normaliseList` re-applies the cap regardless, so the bound holds even
  * for a caller that skips this.
  */
-export function buildNormalisationPrompt(lines: readonly ParsedLine[]): string {
+export function buildNormalisationPrompt(
+  lines: readonly ParsedLine[],
+  // #905 — required, never defaulted: the vendor's own description replaces the grocery framing
+  // this prompt used to assume for every vendor. `null` keeps the prompt neutral.
+  storeDescription: string | null,
+): string {
+  const describe = storeDescriptionPromptLine(storeDescription);
   return [
-    "You read UK grocery shopping lists, including South Asian terms and transliterations.",
+    "You read UK shopping lists that shoppers typed for an online shop.",
+    ...(describe ? [describe] : []),
     "Each numbered line below is one item a shopper typed. Interpret it.",
     "",
     ...lines.map((line, index) => `${index}. ${line.original}`),
@@ -267,10 +275,13 @@ export function mergeNormalisedItems(
  * Exactly one fetch per invocation regardless of list length: the whole list goes in one prompt.
  * A 100-line list must not become 100 AI calls, for the same reason it must not become 100 queries.
  */
-export async function normaliseList(lines: ParsedLine[]): Promise<NormalisedItem[] | null> {
+export async function normaliseList(
+  lines: ParsedLine[],
+  storeDescription: string | null,
+): Promise<NormalisedItem[] | null> {
   if (lines.length === 0) return null;
 
-  const prompt = buildNormalisationPrompt(lines);
+  const prompt = buildNormalisationPrompt(lines, storeDescription);
   if (prompt.length > MAX_AI_INPUT_CHARS) return null;
 
   const env = getAiEnv();

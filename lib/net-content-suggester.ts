@@ -1,5 +1,6 @@
 import { getAiEnv } from "@/lib/config";
 import { isNetContentUnit, type NetContentUnit } from "@/components/product/unit-price";
+import { storeDescriptionPromptLine } from "@/lib/store-description";
 
 /**
  * AI-suggested net content (#900) — PROPOSED, NEVER APPLIED.
@@ -68,6 +69,8 @@ export interface SuggesterInput {
   unitLabel: string;
   /** Only ever a STAFF_UPLOAD / STAFF_CONFIRMED_PHOTO image — see lib/net-content-eligibility.ts. */
   photo: SuggesterPhoto | null;
+  /** #905 — the vendor's own "what this store sells"; `null` keeps the prompt neutral. */
+  storeDescription: string | null;
 }
 
 export interface SuggesterUsage {
@@ -118,9 +121,13 @@ export function buildNetContentPrompt(input: {
   name: string;
   unitLabel: string;
   hasPhoto: boolean;
+  /** #905 — required, never defaulted; replaces the grocery framing this used to assume. */
+  storeDescription: string | null;
 }): string {
+  const describe = storeDescriptionPromptLine(input.storeDescription);
   return [
-    "You read the net content (pack size) of one UK grocery product for a shop's catalogue.",
+    "You read the net content (pack size) of one product for a UK shop's catalogue.",
+    ...(describe ? [describe] : []),
     "",
     `Product name: ${input.name}`,
     `Unit label: ${input.unitLabel}`,
@@ -168,6 +175,7 @@ export function buildNetContentRequestBody(
     name: input.name,
     unitLabel: input.unitLabel,
     hasPhoto: input.photo !== null,
+    storeDescription: input.storeDescription,
   });
   const content = input.photo
     ? [

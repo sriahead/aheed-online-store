@@ -13,6 +13,7 @@ import {
 } from "@/lib/repositories/search-synonyms";
 import { listCurationCandidateQueries } from "@/lib/repositories/search-query-log";
 import { listProductNameTokens } from "@/lib/repositories/products";
+import { getVendorConfig } from "@/lib/repositories/vendor";
 import { PROPOSAL_QUERY_LIMIT, proposeSynonyms } from "@/lib/search-synonym-proposals";
 
 /**
@@ -98,12 +99,14 @@ export async function generateSynonymProposals(
 ): Promise<{ ok: true; created: number; considered: number } | { ok: false; error: string }> {
   const prisma = getPrisma();
 
-  const [queries, vocabulary] = await Promise.all([
+  const [queries, vocabulary, config] = await Promise.all([
     listCurationCandidateQueries(prisma, vendorId, PROPOSAL_QUERY_LIMIT),
     listProductNameTokens(prisma, vendorId),
+    getVendorConfig(prisma, vendorId),
   ]);
 
-  const result = await proposeSynonyms(queries, [...vocabulary]);
+  // #905 — the vendor's own description replaces the grocery framing the prompt used to assume.
+  const result = await proposeSynonyms(queries, [...vocabulary], config?.storeDescription ?? null);
   if (!result.ok) return result;
 
   const created = await createProposedSynonyms(vendorId, result.proposals);

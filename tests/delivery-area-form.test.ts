@@ -34,7 +34,7 @@ describe("parsePrefixInput normalises a valid postcode area (R2)", () => {
     ["w", "W"],
     ["  e  ", "E"],
   ])("maps %j to %j", (input, expected) => {
-    const result = parsePrefixInput(input);
+    const result = parsePrefixInput(input, null);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.value).toBe(expected);
   });
@@ -42,34 +42,34 @@ describe("parsePrefixInput normalises a valid postcode area (R2)", () => {
 
 describe("parsePrefixInput rejects anything that is not a postcode area (R3)", () => {
   it("rejects the empty string, and names the field so the form can point at it", () => {
-    const result = parsePrefixInput("");
+    const result = parsePrefixInput("", null);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.field).toBe("prefix");
   });
 
   it("rejects whitespace that trims to nothing", () => {
-    expect(parsePrefixInput("   ").ok).toBe(false);
+    expect(parsePrefixInput("   ", null).ok).toBe(false);
   });
 
   it.each(["MKXX", "ABCDE", "1M", "M K"])("rejects %j", (input) => {
-    expect(parsePrefixInput(input).ok).toBe(false);
+    expect(parsePrefixInput(input, null).ok).toBe(false);
   });
 
   it.each(["M1", "MK9", "EC1A", "W1A"])("accepts district codes %j", (input) => {
-    expect(parsePrefixInput(input).ok).toBe(true);
+    expect(parsePrefixInput(input, null).ok).toBe(true);
   });
 
   it.each(METACHARACTERS)("rejects the bare metacharacter %j", (char) => {
-    expect(parsePrefixInput(char).ok).toBe(false);
+    expect(parsePrefixInput(char, null).ok).toBe(false);
   });
 
   it.each(METACHARACTERS)("rejects %j appended to an otherwise valid area", (char) => {
-    expect(parsePrefixInput(`MK${char}`).ok).toBe(false);
+    expect(parsePrefixInput(`MK${char}`, null).ok).toBe(false);
   });
 
   it("names the prefix field on every rejection, not just the empty one", () => {
     for (const input of ["MKX", "1M", ...METACHARACTERS]) {
-      const result = parsePrefixInput(input);
+      const result = parsePrefixInput(input, null);
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error.field).toBe("prefix");
     }
@@ -77,17 +77,49 @@ describe("parsePrefixInput rejects anything that is not a postcode area (R3)", (
 });
 
 function listOf(raw: string): string[] {
-  const result = parsePrefixListInput(raw);
+  const result = parsePrefixListInput(raw, null);
   if (!result.ok)
     throw new Error(`expected success for ${JSON.stringify(raw)}: ${result.error.message}`);
   return result.value;
 }
 
-function listError(raw: string): { field: string; message: string } {
-  const result = parsePrefixListInput(raw);
+function listError(
+  raw: string,
+  exampleArea: string | null = null,
+): { field: string; message: string } {
+  const result = parsePrefixListInput(raw, exampleArea);
   if (result.ok) throw new Error(`expected failure for ${JSON.stringify(raw)}`);
   return result.error;
 }
+
+describe("error examples come from the vendor's own area (#905 R27)", () => {
+  it("a backwards range names the vendor's example range", () => {
+    expect(listError("RG1-RG0", "RG").message).toBe(
+      '"RG1-RG0" runs backwards. Put the lower district first, like RG1-RG10.',
+    );
+  });
+
+  it("an invalid entry names the vendor's area and district", () => {
+    expect(listError("RGXX", "RG").message).toContain("(e.g. RG or RG1), or a range like RG1-RG10");
+  });
+
+  it.each(["RG1-RG0", "RG1-MK5", "RG1-10", "RGXX"])(
+    "with no example area, %j's message has no example clause",
+    (input) => {
+      const message = listError(input, null).message;
+      expect(message).not.toContain("e.g.");
+      expect(message).not.toContain("like");
+      expect(message).toContain(input);
+    },
+  );
+
+  it("the single-entry parser follows the same rule", () => {
+    const withArea = parsePrefixInput("RG!", "RG");
+    const without = parsePrefixInput("RG!", null);
+    expect(!withArea.ok && withArea.error.message).toContain("(e.g. RG or RG1)");
+    expect(!without.ok && without.error.message).not.toContain("e.g.");
+  });
+});
 
 describe("parsePrefixListInput — lists (#613 R1-R3)", () => {
   it("names the prefix field on failure (R1)", () => {
