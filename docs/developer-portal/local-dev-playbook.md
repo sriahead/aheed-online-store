@@ -4,10 +4,10 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.6.0"
-updated: 2026-09-25
+version: "1.7.0"
+updated: 2026-09-26
 visibility: internal
-summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, silently-ignored TZ overrides, the dev machine's BST clock as a free browser timezone override, curl-driven server actions, grep-vs-rendered-HTML pitfalls.
+summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions and presigned uploads, grep-vs-rendered-HTML pitfalls.
 tags: [local-dev, windows, validation, playbook]
 ---
 
@@ -276,6 +276,17 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   itself) stays fully curl-drivable and was used instead to prove the CHECKOUT-source half of the
   same feature; only the HEADER-source half needed a browser and fell back to unit-test-only proof
   that session.
+- **A presigned-URL `PUT` with a binary body fails silently on this Windows curl build — no
+  server response at all, just `exit 43` ("A libcurl function was given a bad argument") and
+  `%{http_code}` printing `000`.** Hit at `#900`'s `/validate` (2026-09-26) uploading a real photo
+  through `requestImageUpload`'s presigned R2 URL: `curl -X PUT -H "Content-Type: image/webp"
+  --data-binary @photo.webp "<presigned-url>"` connects (TLS handshake succeeds, visible with
+  `-v`), then fails with no server response. **Not a signature or app-side problem** — a small Node
+  script
+  (`fetch(url, { method: "PUT", headers: {...}, body: readFileSync(path) })`) against the exact
+  same URL and bytes succeeded immediately (`200`). Prefer a Node `fetch()` one-liner over `curl
+  -T`/`--data-binary` for any presigned-upload proof on this platform; curl's `-F` multipart
+  technique used elsewhere in this section (server actions, not raw storage PUTs) is unaffected.
 - **`npm run preview`'s `next build` step type-checks every `.ts` file its tsconfig includes —
   which, by default, means the repo root — so a type error in a scratch validation script placed
   at the repo root (rather than under `lib/`, `app/`, etc.) fails the WHOLE build**, not just that
