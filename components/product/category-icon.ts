@@ -8,7 +8,7 @@ import {
   Coffee,
   Cookie,
   Home,
-  ShoppingBasket,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
 
@@ -17,8 +17,12 @@ import {
  * (docs/ui-ref/src/data/products.ts) mapped onto our real DB slugs — note our
  * `fruit-veg` is the mockup's `fresh-produce`, and `bakery` has no mockup
  * equivalent. Any slug not listed (e.g. a category added later in the DB)
- * falls back to a generic basket, so a new category still renders an icon —
+ * falls back to a generic tag, so a new category still renders an icon —
  * no schema `iconName` field needed.
+ *
+ * #729 — the fallback was a shopping basket, which read as groceries on every
+ * category of a non-grocery vendor (every SriMart category rendered one). The
+ * nine mappings below only fire for a vendor that uses these slugs.
  */
 const ICONS_BY_SLUG: Record<string, LucideIcon> = {
   "fruit-veg": Apple,
@@ -33,5 +37,5 @@ const ICONS_BY_SLUG: Record<string, LucideIcon> = {
 };
 
 export function categoryIcon(slug: string): LucideIcon {
-  return ICONS_BY_SLUG[slug] ?? ShoppingBasket;
+  return ICONS_BY_SLUG[slug] ?? Tag;
 }

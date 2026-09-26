@@ -46,7 +46,13 @@ export function AddBrandForm() {
         <label className={labelClass} htmlFor="new-brand-name">
           Brand name
         </label>
-        <input id="new-brand-name" name="name" placeholder="Shan" className={inputClass} required />
+        <input
+          id="new-brand-name"
+          name="name"
+          placeholder="Brand name"
+          className={inputClass}
+          required
+        />
       </div>
       <Button disabled={pending}>
         <Plus className="h-4 w-4" aria-hidden="true" />
@@ -116,7 +122,7 @@ export function BrandRowForms({ brand }: { brand: AdminBrandRow }) {
           <input
             id={`image-${brand.id}`}
             name="imageKey"
-            placeholder="brands/shan/logo.webp"
+            placeholder="brands/brand-name/logo.webp"
             defaultValue={brand.imageKey ?? ""}
             className={inputClass}
           />

@@ -91,11 +91,14 @@ export interface ShareLinks {
 
 /**
  * Construct social share URLs for referral link.
+ *
+ * #729 — `storeName` is required: it used to default to one vendor's name, so any caller that
+ * forgot it advertised that vendor on every other vendor's storefront.
  */
-export function buildShareLinks(referralUrl: string, storeName = "Aheed Food Centre"): ShareLinks {
-  const shareMessage = `Join me on ${storeName}! Use my invite link to get £5 off your first grocery order:`;
+export function buildShareLinks(referralUrl: string, storeName: string): ShareLinks {
+  const shareMessage = `Join me on ${storeName}! Use my invite link to get £5 off your first order:`;
   const emailSubject = `Special invitation to shop at ${storeName}`;
-  const emailBody = `Hi,\n\nI thought you would like ${storeName}. Use my personal referral link to get £5 off your first grocery order:\n\n${referralUrl}\n\nHappy shopping!`;
+  const emailBody = `Hi,\n\nI thought you would like ${storeName}. Use my personal referral link to get £5 off your first order:\n\n${referralUrl}\n\nHappy shopping!`;
 
   return {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralUrl)}`,

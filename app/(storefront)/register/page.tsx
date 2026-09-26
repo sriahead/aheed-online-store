@@ -1,6 +1,7 @@
 import { RegisterForm } from "@/features/auth/components/RegisterForm";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { getEnv } from "@/lib/config";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 
 // getEnv() reads GOOGLE_CLIENT_ID from the Cloudflare request-scoped binding,
 // which only exists at runtime (wrangler secrets aren't available at build
@@ -8,7 +9,11 @@ import { getEnv } from "@/lib/config";
 // build-time (always-false) value instead of checking it per request.
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Create account — Aheed Food Centre" };
+/** #729 — was a hardcoded "Create account — Aheed Food Centre", which rendered under every vendor. */
+export async function generateMetadata() {
+  const profile = await getCurrentVendorProfile();
+  return { title: `Create account — ${profile?.name ?? "Aheed Food Centre"}` };
+}
 
 export default function RegisterPage() {
   const env = getEnv();

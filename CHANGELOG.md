@@ -8,6 +8,15 @@ every branch merges.
 
 ### Added
 
+- **Vendor-neutral UI copy, slice 1** (issue `#729`; `specs/2026-09-26-p729-vendor-neutral-ui-copy/`). No vendor's name and no grocery-only wording is hardcoded in the surfaces below, so SriMart (electronics) and any future vendor read correct copy. No schema change.
+  - **Vendor name, not Aheed's.** Titles of `/login`, `/register`, `/forgot-password`, `/reset-password`, `/dev`, `/account` and `/account/loyalty` come from the current vendor (forgot/reset now render per request). The rewards panel reads "{vendor} Club". Referral share text names the vendor; `buildShareLinks`' `storeName` is now required instead of defaulting to Aheed.
+  - **Shop your list** examples are built from the vendor's own in-stock products (`lib/shopping-list-examples.ts`), with neutral wording when it has none.
+  - **Neutral wording** on account, loyalty, rewards, order lookup ("Delivery progress"), the too-short search hint, terms ("fresh or perishable items") and privacy ("fulfil and deliver your orders"). Staff placeholders no longer use grocery examples: product, category and bundle slugs, image prompts, hero subtitle, brand, synonyms.
+  - **Search box text** is editable on `/staff/storefront` (existing `VendorConfig.searchPlaceholder`, up to 80 characters; empty shows "Search products…"). Admin guide 2.4.0.
+  - Category icon fallback is a neutral tag rather than a shopping basket.
+  - `tests/vendor-neutral-copy.test.ts` fails if any removed literal returns. The rule itself is now in `docs/developer-portal/app-conventions.md` 1.1.0 ("User-facing copy"), with a one-line pointer in `CLAUDE.md`. `docs/model-handoff.md` 1.37.0 records `#900`'s promotion and the `#905` sequencing.
+  - `specs/roadmap.md` carries PR #904's change-log row. Follow-ups: `#905` (per-vendor product labels and AI prompt context), `#906` (deferred), `#907` (referral "£5").
+
 - **Document-stage reconciliation for `#900` (AI-suggested net content, built, validated and merged to `staging` in PR #902).**
   - `specs/roadmap.md`: change-log row for PR #902 (merge `42dd3fa`, `staging`), closing the carry-forward gap `sdd:audit` reported for this slice's own spec citation.
   - `docs/developer-portal/local-dev-playbook.md` 1.7.0: a new Windows-curl trap — a presigned-URL `PUT` with a binary body fails silently (`exit 43`, no server response), where a Node `fetch()` against the identical URL and bytes succeeds immediately; found closing R29's photo-upload evidence gap.

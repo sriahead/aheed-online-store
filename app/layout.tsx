@@ -27,7 +27,7 @@ export async function generateMetadata() {
   }
   return {
     title: "Aheed Online Store",
-    description: "A multi-vendor grocery platform with local delivery.",
+    description: "A multi-vendor online store with local delivery.",
   };
 }
 

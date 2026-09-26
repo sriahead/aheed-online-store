@@ -350,7 +350,7 @@ export function StorefrontConfigForm({
             type="text"
             defaultValue={initialConfig.heroSubtitle || ""}
             className="rounded-lg border border-black/20 p-3"
-            placeholder="e.g. 100% Certified HMC Halal Fresh Meat Cut Daily"
+            placeholder="e.g. Quality products at fair prices, delivered locally"
           />
         </div>
 
@@ -366,6 +366,30 @@ export function StorefrontConfigForm({
             className="rounded-lg border border-black/20 p-3"
             placeholder="e.g. Same-Day Local Dispatch"
           />
+        </div>
+
+        {/*
+          #729 — the header search box's hint text. The column always existed but could only be
+          set by seeding. Empty clears it, and the header then shows the platform's neutral
+          "Search products…".
+        */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="searchPlaceholder" className="font-bold text-black">
+            Search box text
+          </label>
+          <input
+            id="searchPlaceholder"
+            name="searchPlaceholder"
+            type="text"
+            defaultValue={initialConfig.searchPlaceholder || ""}
+            className={`rounded-lg border p-3 ${
+              brandingState.field === "searchPlaceholder" ? "border-danger" : "border-black/20"
+            }`}
+            placeholder="e.g. Search our products…"
+          />
+          {brandingState.field === "searchPlaceholder" && (
+            <p className="text-sm font-semibold text-danger">{brandingState.error}</p>
+          )}
         </div>
 
         {BRAND_COLOR_FIELDS.map((field) => {
@@ -428,8 +452,8 @@ export function StorefrontConfigForm({
         <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-black/10 p-6">
           <h3 className="font-bold text-black">Live Preview</h3>
           <p className="text-sm text-black/60">
-            This shows what your colours will look like to shoppers. Aheed automatically adjusts
-            them to guarantee they are readable.
+            This shows what your colours will look like to shoppers. We automatically adjust them to
+            guarantee they are readable.
           </p>
           <div
             style={brandStyle(livePrimitives)}

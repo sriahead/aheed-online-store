@@ -62,7 +62,7 @@ export async function StorefrontChrome({
         />
         <CookieBanner />
         <QuickViewDrawer />
-        <RewardsLauncher initialData={initialRewardsData} />
+        <RewardsLauncher initialData={initialRewardsData} vendorName={profile.name} />
       </div>
     </QuickViewProvider>
   );

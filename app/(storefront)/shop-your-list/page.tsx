@@ -4,6 +4,8 @@ import { ChevronRight, ListChecks } from "lucide-react";
 import { getUserId } from "@/lib/cart-identity";
 import { getShoppingListService } from "@/lib/shopping-lists-service";
 import { ShopYourList } from "@/components/cart/ShopYourList";
+import { getProductRepository } from "@/lib/products-service";
+import { MAX_EXAMPLE_NAMES } from "@/lib/shopping-list-examples";
 
 /**
  * "Shop your list" (P3d, #114) — the second way to fill a cart, alongside
@@ -25,7 +27,12 @@ export default async function ShopYourListPage() {
   // is a client component and cannot read the session, and CLAUDE.md rules out a middleware.ts or
   // proxy.ts to carry it. Matching and adding stay available to guests exactly as before (#116).
   const canSave = (await getUserId()) !== null;
-  const savedLists = canSave ? await getShoppingListService().list() : [];
+  const [savedLists, examples] = await Promise.all([
+    canSave ? getShoppingListService().list() : [],
+    // #729 — the textarea's examples come from this vendor's own in-stock products rather than a
+    // fixed grocery list; see lib/shopping-list-examples.ts.
+    getProductRepository().list({ take: MAX_EXAMPLE_NAMES, inStockOnly: true }),
+  ]);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
@@ -70,7 +77,7 @@ export default async function ShopYourListPage() {
         </div>
       )}
 
-      <ShopYourList canSave={canSave} />
+      <ShopYourList canSave={canSave} exampleNames={examples.items.map((item) => item.name)} />
 
       <Link href="/cart" className="mt-6 inline-block text-xs font-semibold text-primary underline">
         Back to your cart

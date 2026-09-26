@@ -117,7 +117,7 @@ export function BundleForm({
             name="slug"
             label="Web address"
             defaultValue={bundle?.slug ?? ""}
-            placeholder="weekly-meat-box"
+            placeholder="bundle-name"
             error={isInvalid("slug")}
             errorId="bundle-form-error"
             required

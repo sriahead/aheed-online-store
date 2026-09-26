@@ -241,7 +241,7 @@ export default async function SearchPage({
 
           {queryTooShort ? (
             <p className="text-primary-muted">
-              That search is too short. Try at least two characters, like “rice” or “atta”.
+              That search is too short. Try at least two characters.
             </p>
           ) : items.length === 0 ? (
             recovery?.rung === "none" ? (
