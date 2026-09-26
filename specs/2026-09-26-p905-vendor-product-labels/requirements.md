@@ -326,9 +326,17 @@ R33. In the "User-facing copy" section of `docs/developer-portal/app-conventions
 
 ## Live proof
 
-R34. Under `npm run preview` against the dev database, as a store admin:
-     - (a) On the SriMart host, `/staff/products/new` shows none of Halal, Fresh, Organic,
-       Vegetarian, Gluten free or the HMC section. On the Aheed host it shows all of them.
+R34. Under `npm run preview` against the dev database, signed in as the Aheed store admin on the
+     Aheed host:
+     - (a) `/staff/products/new` shows all of Halal, Fresh, Organic, Vegetarian, Gluten free and
+       the HMC section. After switching all six labels off at `/staff/storefront`, it shows none of
+       them, and its section heading reads `Visibility`.
+
+     *Amended at Build (2026-09-26): this row originally said "on the SriMart host". Better Auth
+     refuses sign-in on the made-up `srimart.localhost` alias (`local-dev-playbook.md`, the
+     Better-Auth-origin entry), so no local signed-in SriMart check is possible. The gate is
+     per-vendor data, so switching Aheed's own settings off proves the same code path. SriMart
+     itself is proven by R35a.*
      - (b) On the Aheed host, switching Organic off at `/staff/storefront` and then saving, unchanged,
        a product whose `isOrganic` is `true` leaves `isOrganic` `true` in the database. That
        product's storefront page still shows its Organic badge.
@@ -338,10 +346,18 @@ R34. Under `npm run preview` against the dev database, as a store admin:
      - (e) Every setting changed in (b) to (d) is restored afterwards.
 
 R35. Under `npm run preview`:
-     - signed in as the SriMart admin, `/staff/delivery-areas` on the SriMart host shows `RG`
-       examples and no `MK`;
-     - signed in as the Aheed admin, the same page on the Aheed host shows `MK` examples;
-     - `/help` on the SriMart host contains `Reading` and not `Milton Keynes`.
+     - signed in as the Aheed admin, `/staff/delivery-areas` on the Aheed host shows `MK`
+       examples;
+     - `/help` on the SriMart host (signed out) contains `Reading` and not `Milton Keynes`.
+
+R35a. After this slice merges to `staging`, on SriMart's staging host, signed in as a SriMart
+      admin:
+      - `/staff/products/new` shows none of the six label controls;
+      - `/staff/delivery-areas` shows `RG` examples and no `MK`.
+
+      *Added at Build (2026-09-26), replacing R35's original signed-in SriMart row for the reason in
+      R34's note. It runs at Ship, after the staging deploy. If no SriMart admin account exists on
+      staging, record that as the finding and do not create one without the owner.*
 
 ## Carry-forward, KMS, gates
 
