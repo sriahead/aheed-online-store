@@ -47,6 +47,7 @@ export function ReferralCard({
   rewardPoints = 100,
   variant = "light",
   authenticated = true,
+  storeName,
 }: {
   referralUrl?: string;
   referralCode?: string;
@@ -55,12 +56,14 @@ export function ReferralCard({
   rewardPoints?: number;
   variant?: "light" | "dark";
   authenticated?: boolean;
+  /** #729 — the current vendor's display name, used in every share message. */
+  storeName: string;
 }) {
   const [copied, setCopied] = useState(false);
 
   const isDark = variant === "dark";
   const displayUrl = referralUrl || (typeof window !== "undefined" ? window.location.origin : "");
-  const shareLinks = buildShareLinks(displayUrl, "Aheed Food Centre");
+  const shareLinks = buildShareLinks(displayUrl, storeName);
 
   const handleCopy = async () => {
     if (!displayUrl) return;
@@ -77,8 +80,8 @@ export function ReferralCard({
     if (typeof navigator !== "undefined" && navigator.share && displayUrl) {
       try {
         await navigator.share({
-          title: "Aheed Food Centre Referral",
-          text: `Use my invite link to get ${formatPrice(discountOffPence)} off your first grocery order!`,
+          title: `${storeName} referral`,
+          text: `Use my invite link to get ${formatPrice(discountOffPence)} off your first order at ${storeName}!`,
           url: displayUrl,
         });
       } catch {

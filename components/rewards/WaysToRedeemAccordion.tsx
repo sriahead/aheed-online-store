@@ -62,8 +62,7 @@ export function WaysToRedeemAccordion({
                 Instant checkout discount
               </p>
               <p>
-                Every 100 points equals {formatPrice(100 * pencePerPointRedeemed)} off your grocery
-                basket.
+                Every 100 points equals {formatPrice(100 * pencePerPointRedeemed)} off your basket.
               </p>
             </div>
           </div>

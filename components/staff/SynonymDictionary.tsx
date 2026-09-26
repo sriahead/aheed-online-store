@@ -60,7 +60,7 @@ export function AddSynonymForm() {
           <input
             name="alias"
             required
-            placeholder="bhindi"
+            placeholder="What shoppers type"
             className="w-full rounded-lg border border-black/15 px-3 py-2"
             aria-invalid={state.field === "alias" ? true : undefined}
           />
@@ -70,7 +70,7 @@ export function AddSynonymForm() {
           <input
             name="canonical"
             required
-            placeholder="okra"
+            placeholder="What your catalogue calls it"
             className="w-full rounded-lg border border-black/15 px-3 py-2"
             aria-invalid={state.field === "canonical" ? true : undefined}
           />

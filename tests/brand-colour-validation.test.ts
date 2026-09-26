@@ -23,6 +23,45 @@ describe("brand colour validation", () => {
     }
   });
 
+  // #729 R18 — the header search-box text, edited on the same branding form.
+  describe("searchPlaceholder", () => {
+    function parseWith(value: string | null) {
+      const formData = new FormData();
+      if (value !== null) formData.append("searchPlaceholder", value);
+      return parseBrandColourForm(formData);
+    }
+
+    test("trims a value and keeps it", () => {
+      const result = parseWith("  Find it  ");
+      expect(result.ok && result.value.searchPlaceholder).toBe("Find it");
+    });
+
+    test("accepts exactly 80 characters", () => {
+      const value = "a".repeat(80);
+      const result = parseWith(value);
+      expect(result.ok && result.value.searchPlaceholder).toBe(value);
+    });
+
+    test("refuses 81 characters with a field error", () => {
+      const result = parseWith("a".repeat(81));
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          field: "searchPlaceholder",
+          message: "Search box text must be 80 characters or fewer.",
+        },
+      });
+    });
+
+    test("empty, whitespace-only or absent clears it to null", () => {
+      for (const value of ["", "   ", null]) {
+        const result = parseWith(value);
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.value.searchPlaceholder).toBe(null);
+      }
+    });
+  });
+
   test("rejects malformed hex codes and never throws", () => {
     const formData = new FormData();
     formData.append("brandGreen", "green");

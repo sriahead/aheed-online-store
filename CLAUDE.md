@@ -199,6 +199,10 @@ Policy: `specs/tech-stack.md`. Failures: `docs/developer-portal/runtime-pitfalls
   properties inline, and inline beats `:root`. Check whether `brandStyle()` lists the token too, and
   verify against a **second vendor**: SriMart's colours differ, and several checks false-positive
   against Aheed's.
+- **UI copy comes from the vendor or is neutral** — vendors sell different things (Aheed groceries,
+  SriMart electronics). Never write a vendor's name or a grocery example into a component or a
+  default parameter; make the prop required. Rule and its guard test:
+  `docs/developer-portal/app-conventions.md` ("User-facing copy").
 
 ## React & Next.js Hooks
 

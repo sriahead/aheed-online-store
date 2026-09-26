@@ -60,7 +60,7 @@ export function WaysToEarnAccordion({
             />
             <div>
               <p className={`font-semibold ${isDark ? "text-white" : "text-primary"}`}>
-                Order groceries
+                Place an order
               </p>
               <p>
                 Earn {pointsPerPoundEarned} point for every £1 spent on eligible items across the

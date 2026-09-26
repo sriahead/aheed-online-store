@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Track Your Order — Guest Order Lookup",
-  description: "Track your grocery order status using your Order Number and Email.",
+  description: "Track your order status using your Order Number and Email.",
 };
 
 interface LookupPageProps {
@@ -94,7 +94,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
         {/* Header */}
         <div className="p-6 bg-primary text-white">
           <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-200">
-            Aheed Store Delivery Pipeline
+            Delivery progress
           </span>
           <h1 className="text-xl font-extrabold mt-0.5">Track Your Order</h1>
         </div>

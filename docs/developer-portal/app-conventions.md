@@ -4,10 +4,10 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.0.0"
-updated: 2026-09-17
+version: "1.1.0"
+updated: 2026-09-26
 visibility: internal
-summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), and React hooks — together with the tests that enforce each invariant mechanically.
+summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), vendor-neutral user-facing copy, and React hooks — together with the tests that enforce each invariant mechanically.
 tags: [conventions, repositories, server-actions, staff-panel]
 ---
 
@@ -231,6 +231,36 @@ Runtime failures that survive a green build are in `runtime-pitfalls.md`. Folder
   `auth.via !== "platform-admin"` (#508 — a stack trace can reveal internal paths a vendor-scoped
   account has no reason to see), so gating its card on `isAdmin` would render a link every store
   admin can see and none of them can open. Gate a platform-admin-only card on `auth.via` directly.
+
+## User-facing copy (storefront and staff panel)
+
+The platform is multi-tenant (ADR-004) and its vendors do not sell the same things: Aheed sells
+groceries, SriMart sells electronics, and more vendors are planned. Every string a shopper or a
+store's staff reads must be right for **any** vendor.
+
+- **Copy comes from the vendor, or it is neutral.** Take the vendor's name from
+  `getCurrentVendorProfile()` (or `profile.name` passed down as a prop into a client component —
+  no middleware can carry it). Take examples from the vendor's own data (e.g. `/shop-your-list`
+  builds its placeholder from the vendor's in-stock product names, `lib/shopping-list-examples.ts`).
+  Otherwise write neutral wording that names no product category ("order", not "grocery order";
+  `product-name`, not `basmati-rice-5kg`).
+- **Never write a vendor's name into a component or a default parameter.** A default is worse than
+  a literal: every caller that forgets the argument silently advertises that vendor on every other
+  storefront (`buildShareLinks`' old `storeName = "Aheed Food Centre"`, `#729`). Make the prop or
+  parameter required instead.
+- **Marketing claims are the vendor's, never the platform's.** A vendor copy setting that is unset
+  **hides** its element rather than falling back to platform filler (`#239`; the `VendorConfig`
+  model comment). Platform-written marketing is still a claim made on a vendor's behalf.
+- The one sanctioned fallback is the no-vendor case (`profile?.name ?? "Aheed Food Centre"` in
+  page metadata), which only a vendorless host reaches, and those are redirected to
+  `/coming-soon`. The platform has no name of its own yet (KMS strategy U1).
+- **Enforced by `tests/vendor-neutral-copy.test.ts`**: a denylist of the literals `#729` removed,
+  scanned across `app/**/*.tsx`, `components/**/*.tsx` and `lib/referrals.ts` with comments
+  stripped. It catches those strings returning, **not** new vendor-specific copy — that is still a
+  review question. Check a new string against a second vendor (SriMart) before shipping it.
+- **Grocery attributes on the staff product form** (Halal, Fresh, Organic, Vegetarian, Gluten free,
+  HMC) and the "UK grocery" framing inside AI prompts are still shown or sent for every vendor.
+  Gating them needs a vendor setting; tracked as `#905`, not a copy fix.
 
 
 ## React and Next.js hooks

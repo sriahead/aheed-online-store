@@ -121,7 +121,7 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
               name="slug"
               autoComplete="off"
               spellCheck={false}
-              placeholder="basmati-rice-5kg"
+              placeholder="product-name"
               defaultValue={product?.slug ?? ""}
               {...fieldProps("slug")}
             />

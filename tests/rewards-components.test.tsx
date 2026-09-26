@@ -15,18 +15,18 @@ describe("WaysToEarnAccordion", () => {
     render(<WaysToEarnAccordion pointsPerPoundEarned={1} rewardPoints={100} />);
 
     expect(screen.getByText("Ways to earn")).toBeTruthy();
-    expect(screen.queryByText("Order groceries")).toBeNull();
+    expect(screen.queryByText("Place an order")).toBeNull();
 
     // Click to expand
     fireEvent.click(screen.getByRole("button", { name: /ways to earn/i }));
-    expect(screen.getByText("Order groceries")).toBeTruthy();
+    expect(screen.getByText("Place an order")).toBeTruthy();
     expect(screen.getByText(/Earn 1 point for every £1 spent/)).toBeTruthy();
     expect(screen.getByText("Refer your friends")).toBeTruthy();
     expect(screen.getByText(/Earn 100 bonus points/)).toBeTruthy();
 
     // Click to collapse
     fireEvent.click(screen.getByRole("button", { name: /ways to earn/i }));
-    expect(screen.queryByText("Order groceries")).toBeNull();
+    expect(screen.queryByText("Place an order")).toBeNull();
   });
 });
 
@@ -86,6 +86,7 @@ describe("ReferralCard", () => {
         completedCount={2}
         discountOffPence={500}
         rewardPoints={100}
+        storeName="Aheed Food Centre"
       />,
     );
 
@@ -118,9 +119,12 @@ describe("RewardsPanel", () => {
           discountOffPence: 500,
           rewardPoints: 100,
         }}
+        vendorName="SriMart"
       />,
     );
 
+    // #729 R3 — the header names the CURRENT vendor, not a hardcoded one.
+    expect(screen.getByText("SriMart Club")).toBeTruthy();
     expect(screen.getByText("Your Loyalty Points")).toBeTruthy();
     expect(screen.getByText("60")).toBeTruthy();
     expect(screen.getByText("Expiration date: July 22, 2027")).toBeTruthy();
@@ -134,7 +138,9 @@ describe("RewardsPanel", () => {
   });
 
   it("does not render when open is false", () => {
-    const { container } = render(<RewardsPanel open={false} onClose={vi.fn()} data={null} />);
+    const { container } = render(
+      <RewardsPanel open={false} onClose={vi.fn()} data={null} vendorName="SriMart" />,
+    );
     expect(container.firstChild).toBeNull();
   });
 });
@@ -158,6 +164,7 @@ describe("RewardsLauncher", () => {
           discountOffPence: 500,
           rewardPoints: 100,
         }}
+        vendorName="Aheed Food Centre"
       />,
     );
 
@@ -171,6 +178,7 @@ describe("RewardsLauncher", () => {
 
     // Initial data should immediately be rendered without 0 points flash
     expect(screen.getByText("Your Loyalty Points")).toBeTruthy();
+    expect(screen.getByText("Aheed Food Centre Club")).toBeTruthy();
     expect(screen.getByText("100419")).toBeTruthy();
     expect(screen.getByText("Points active")).toBeTruthy();
     expect(screen.getByText("3 referrals completed")).toBeTruthy();

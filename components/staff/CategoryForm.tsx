@@ -82,7 +82,7 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
           label={`Web address ${isNew ? "(leave blank to build it from the name)" : ""}`}
           autoComplete="off"
           spellCheck={false}
-          placeholder="rice-grains"
+          placeholder="category-name"
           defaultValue={category?.slug ?? ""}
           error={isInvalid("slug")}
           errorId="category-form-error"

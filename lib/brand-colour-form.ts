@@ -4,6 +4,8 @@ import type { BrandPrimitives } from "@/lib/repositories/vendor";
 export interface BrandColourInput {
   bannerNote: string | null;
   heroSubtitle: string | null;
+  /** #729 — header search-box hint; `null` shows the platform default "Search products…". */
+  searchPlaceholder: string | null;
   brandGreenDark?: string;
   brandGreen?: string;
   brandOrange?: string;
@@ -27,6 +29,9 @@ export const initialBrandColourState: BrandColourFormState = {
 };
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
+
+/** #729 — the search box is one line of header chrome; longer text is cut off on a phone. */
+export const MAX_SEARCH_PLACEHOLDER_LENGTH = 80;
 
 function parseHex(
   raw: string | undefined | null,
@@ -115,9 +120,21 @@ export function parseBrandColourForm(formData: FormData): ParseResult<BrandColou
     { key: "brandRedTint", label: "Accent Tint" },
   ];
 
+  const searchPlaceholder = ((formData.get("searchPlaceholder") as string | null) ?? "").trim();
+  if (searchPlaceholder.length > MAX_SEARCH_PLACEHOLDER_LENGTH) {
+    return {
+      ok: false,
+      error: {
+        field: "searchPlaceholder",
+        message: `Search box text must be ${MAX_SEARCH_PLACEHOLDER_LENGTH} characters or fewer.`,
+      },
+    };
+  }
+
   const parsed: Partial<BrandColourInput> = {
     bannerNote: bannerNote || null,
     heroSubtitle: heroSubtitle || null,
+    searchPlaceholder: searchPlaceholder || null,
   };
 
   for (const { key, label } of fields) {

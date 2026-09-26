@@ -283,6 +283,12 @@ export interface VendorStorefrontConfigInput {
   bannerNote?: string | null;
   heroSubtitle?: string | null;
   /**
+   * #729 — header search-box hint, edited on the branding form. Same optionality rule: `null`
+   * clears it (the profile then falls back to `DEFAULT_SEARCH_PLACEHOLDER`), `undefined` leaves it
+   * alone, so the delivery-rules and social-links forms never touch it.
+   */
+  searchPlaceholder?: string | null;
+  /**
    * P9.2 (#407, #405) — same optionality rule as the copy fields above, and it matters for the
    * same reason: the branding form and the delivery-rules form both submit without these, and
    * omitting them must leave a vendor's social links alone rather than clearing them. `null` is
@@ -343,6 +349,7 @@ export async function updateVendorStorefrontConfig(
       data: {
         bannerNote: data.bannerNote,
         heroSubtitle: data.heroSubtitle,
+        searchPlaceholder: data.searchPlaceholder,
         // Direct assignment, like the two above and unlike the delivery numbers below: Prisma
         // reads `undefined` in an `update` as "no change", which is exactly the semantics these
         // need, so no conditional spread is required to keep absent distinct from cleared.
