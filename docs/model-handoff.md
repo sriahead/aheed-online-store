@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.37.0"
+version: "1.38.0"
 updated: 2026-09-26
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,13 +40,16 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-26.
-- **Checkout:** `main` is still at `9b1de27` — no promotion since the prior snapshot. `staging` has
-  since moved ahead of it with a docs-only promotion-record commit (PR #899, `2838905`) and
-  `#900`'s own feature merge (PR #902, `42dd3fa`), so `main` and `staging` are **not**
-  content-for-content right now — `#900` (AI-suggested net content) is live on staging only.
-  Production `/api/health` still confirmed serving `9b1de27`, `db.ok: true`, `reference.drift:
-  false`, unchanged since the prior snapshot. Staging `/api/health` confirmed serving `42dd3fa`,
-  `db.ok: true`, `reference.drift: false`, post `#900`'s merge.
+- **Checkout:** `main` is now at `a156039` — `#900` (AI-suggested net content with image
+  provenance) promoted via PR #904 (`staging -> main`), carrying PR #902 (`#900`'s own feature
+  merge, `42dd3fa`) and PR #903 (its Document-stage reconciliation, `786649f`). Production
+  `/api/health` confirmed serving `a156039`, `db.ok: true`, `reference.drift: false`. `#900` closed.
+  **`staging` has since moved ahead of `main` again**: `#729` (vendor-neutral UI copy, slice 1)
+  merged via PR #908 (`87ecdc1`), and a docs-only Document-stage reconciliation branch (this one)
+  follows it — so `main` and `staging` are **not** content-for-content right now. `deploy-staging`
+  confirmed for `87ecdc1`; staging `/api/health` served `87ecdc1`, `db.ok: true`, `reference.drift:
+  false`. `#729` moved to `In Review` on Project #2; it closes to `Done` only on promotion to
+  `main`. `#901` (production pilot for `#900`) stays open, Backlog, owner-gated.
   - **In production (PR #858, merge `2047d0a`, verified live):** the KMS restructuring pilot
     (`#851`, PR #852), KMS navigation categories (PR #853), and the KMS strategy standard
     (PR #855 then PR #856). `deploy-production` (run `35711810410`) and `deploy-docs-internal`
@@ -346,6 +349,15 @@ data. One additive migration. Full validation detail in
 `specs/2026-09-24-p613-delivery-areas-ranges-fees-refusals/build-notes.md`. Production confirmed
 live post-merge: `/api/health` served `9b1de27`, `db.ok: true`, `reference.drift: false`.
 
+**`#900` (AI-suggested net content with image provenance) is now promoted to production** (PR #904,
+merge `a156039`, 2026-09-26, `staging -> main`; PR #902 carried the feature into `staging`, PR #903
+its own Document-stage reconciliation). See In-Flight Work above for detail; not repeated here.
+Production confirmed live post-merge: `/api/health` served `a156039`, `db.ok: true`,
+`reference.drift: false`. `#901` (production pilot) stays Backlog, owner-gated.
+
+**`#729` (vendor-neutral UI copy, slice 1) is merged to `staging`** (PR #908, merge `87ecdc1`,
+2026-09-26), **not yet promoted to `main`.** See In-Flight Work above for detail; not repeated here.
+
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
 in scope.
@@ -414,27 +426,34 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **2026-09-26 — `#900` reached production; `main` and `staging` are content-equal again.** PR #904
-  (merge `a156039`) promoted it; production `/api/health` served `a156039`, `db.ok: true`,
-  `reference.drift: false`; `#900` closed. This supersedes `Last Verified`'s "`main` is still at
-  `9b1de27`" line below, which is kept only until the next Document (final) rewrites that section.
-- **`#729` slice 1 (vendor-neutral UI copy) is BUILT on `feature/729-vendor-neutral-ui-copy`,
-  awaiting `/validate`** — spec `specs/2026-09-26-p729-vendor-neutral-ui-copy/`, read its
-  `build-notes.md` first. No schema change. The standing rule it produced ("UI copy comes from the
-  vendor or is neutral") now lives in `docs/developer-portal/app-conventions.md` with a CLAUDE.md
-  pointer. **Owner sequencing: `#905` (slice 2 — per-vendor product labels/HMC on the staff form,
-  and vendor context in AI prompts) is picked up after slice 1 ships and starts at `/propose`**,
-  because it needs a new vendor setting; a single "vertical" enum was argued against at orient
-  (breaks at the third kind of shop). `#906` (Open Food Facts for non-food vendors) is Deferred;
-  `#907` (referral share text hardcodes "£5") is a small Backlog defect.
+- **`#729` slice 1 (vendor-neutral UI copy) is DONE at the staging layer** — validated (every row
+  of `specs/2026-09-26-p729-vendor-neutral-ui-copy/validation.md` confirmed live, including both
+  local vendor hosts under `npm run preview`) and merged to `staging` (PR #908, merge `87ecdc1`,
+  2026-09-26). Spec `specs/2026-09-26-p729-vendor-neutral-ui-copy/`; read its `build-notes.md` first
+  for the Build-time record. No schema change. The standing rule it produced ("UI copy comes from
+  the vendor or is neutral") now lives in `docs/developer-portal/app-conventions.md` with a
+  CLAUDE.md pointer.
+  - **Two `validation.md` wording gaps found live, not code defects — fixed on this Document-stage
+    branch.** SriMart's local host needs its port (`srimart.localhost:8787`, matching the seeded
+    `VendorDomain` row) or it silently falls through to Aheed's copy instead of failing loudly; and
+    R11's repository-directory-wide diff check collided with R19's own legitimate
+    `lib/repositories/vendor.ts` change. Both are now `docs/developer-portal/local-dev-playbook.md`
+    entries (v1.8.0) so the next validator doesn't re-hit them.
+  - **`#729` moved to `In Review`** on Project #2; closes to `Done` only on promotion to `main`.
+  - **Owner sequencing unchanged: `#905`** (slice 2 — per-vendor product labels/HMC on the staff
+    form, and vendor context in AI prompts) **starts at `/propose`**, because it needs a new vendor
+    setting; a single "vertical" enum was argued against at orient (breaks at the third kind of
+    shop). `#906` (Open Food Facts for non-food vendors) is Deferred; `#907` (referral share text
+    hardcodes "£5") is a small Backlog defect.
 
-- **`#900` is DONE at the staging layer** — validated and merged to `staging` (**PR #902**, merge
-  `42dd3fa`, 2026-09-26). AI-suggested net content with image provenance, split from `#697`, which
-  stays open. Spec `specs/2026-09-25-p900-ai-net-content-suggestions/`: read its `build-notes.md`
-  first — it now carries both the Build-time record (R27's image probe, the reasoning-off decision,
-  the R16 budget fix) and a later Validate pass's live re-proof.
-  - **It carries a migration** (`20260925150000_p900_net_content_suggestions`, additive), applied to
-    dev and, via `deploy-staging`'s own migrate step, to staging.
+- **`#900` is DONE, promoted to production** (PR #904, merge `a156039`, 2026-09-26) — see `Last
+  Verified` and `Project Position` above; not repeated here. AI-suggested net content with image
+  provenance, split from `#697`, which stays open. Spec
+  `specs/2026-09-25-p900-ai-net-content-suggestions/`; read its `build-notes.md` first — it carries
+  the Build-time record, a Validate pass's live re-proof, and the Document-stage reconciliation
+  (PR #903).
+  - **It carried a migration** (`20260925150000_p900_net_content_suggestions`, additive), applied
+    to dev, staging and now production.
   - **R29's evidence gap (flagged in an earlier Validate pass as ungathered for lack of network
     access) is closed**: a later pass downloaded the same Nutella photo Build used for R27, uploaded
     it through the real presigned-upload flow, and the suggester correctly read `400 GRAM` off it
@@ -442,8 +461,7 @@ All facts in this section require live verification:
   - **Reconfirmed live, out of scope for this slice**: dev's three `pg_trgm` trigram indexes
     (`20260820143949_p7_5de_order_search_trigram`) are missing despite `prisma migrate status`
     reporting that migration applied (`GAP-011`, pre-existing drift, needs its own `/propose`).
-  - **`#900` moved to `In Review`** on Project #2; closes to `Done` only on promotion to `main`. The
-    production pilot is an owner action after promotion, tracked in **`#901`** (Backlog, P9.2).
+  - The production pilot is an owner action after promotion, tracked in **`#901`** (Backlog, P9.2).
   - Gemma's reasoning-off finding is in `docs/developer-portal/runtime-pitfalls.md` (Workers AI
     section); the Windows-curl-presigned-PUT trap found while closing R29 is in
     `docs/developer-portal/local-dev-playbook.md` (v1.7.0).
