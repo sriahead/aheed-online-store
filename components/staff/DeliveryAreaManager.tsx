@@ -16,6 +16,7 @@ import {
 } from "@/lib/delivery-area-form";
 import { penceToPoundsValue } from "@/lib/delivery-rules-form";
 import type { DeliveryAreaRow } from "@/lib/repositories/delivery-areas";
+import type { DeliveryAreaExamples } from "@/lib/delivery-area-examples";
 import { formatPrice } from "@/components/product/format-price";
 import {
   inputClass as plainInputClass,
@@ -106,7 +107,12 @@ function ChargeFields({
   );
 }
 
-export function AddDeliveryAreaForm() {
+/**
+ * #905 — `examples` is this vendor's own example area (`lib/delivery-area-examples.ts`), or null
+ * when it has none; then each rule is stated without an example. Required, so no caller can fall
+ * back to one town's postcodes for every vendor.
+ */
+export function AddDeliveryAreaForm({ examples }: { examples: DeliveryAreaExamples | null }) {
   const [state, action, pending] = useActionState(addDeliveryArea, initialDeliveryAreaState);
 
   return (
@@ -119,7 +125,11 @@ export function AddDeliveryAreaForm() {
           <input
             id="new-delivery-prefix"
             name="prefix"
-            placeholder="MK, MK9 or MK1-MK10"
+            placeholder={
+              examples
+                ? `${examples.area}, ${examples.district} or ${examples.range}`
+                : "Postcode areas, districts or a range"
+            }
             maxLength={200}
             className={inputClass}
             required
@@ -130,12 +140,21 @@ export function AddDeliveryAreaForm() {
           {pending ? "Adding…" : "Add"}
         </Button>
       </div>
-      <p className="-mt-2 text-xs text-primary-muted">
-        Enter an area (e.g. <strong>MK</strong>) to cover all of its districts, or a district (e.g.{" "}
-        <strong>MK9</strong>) to cover just that one. Add several at once as a comma-separated list
-        (<strong>MK1, MK3, MK5</strong>) or a range (<strong>MK1-MK10</strong>). To leave a district
-        out, list the districts you do serve instead of the whole area.
-      </p>
+      {examples ? (
+        <p className="-mt-2 text-xs text-primary-muted">
+          Enter an area (e.g. <strong>{examples.area}</strong>) to cover all of its districts, or a
+          district (e.g. <strong>{examples.district}</strong>) to cover just that one. Add several
+          at once as a comma-separated list (<strong>{examples.list}</strong>) or a range (
+          <strong>{examples.range}</strong>). To leave a district out, list the districts you do
+          serve instead of the whole area.
+        </p>
+      ) : (
+        <p className="-mt-2 text-xs text-primary-muted">
+          Enter an area to cover all of its districts, or a district to cover just that one. Add
+          several at once as a comma-separated list or a range. To leave a district out, list the
+          districts you do serve instead of the whole area.
+        </p>
+      )}
       <details>
         <summary className="cursor-pointer text-sm font-semibold text-primary">
           Charges for these districts (optional)

@@ -19,7 +19,12 @@ const { requireVendorRoleMock, repo } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/auth-rbac", () => ({ requireVendorRole: requireVendorRoleMock }));
-vi.mock("@/lib/delivery-areas-service", () => ({ getDeliveryAreaRepository: () => repo }));
+vi.mock("@/lib/delivery-areas-service", () => ({
+  getDeliveryAreaRepository: () => repo,
+  // #905 — addDeliveryArea resolves this before parsing (R27); null keeps every existing
+  // assertion here unaffected, since none of these submissions exercise the example text.
+  exampleDeliveryAreaForVendor: vi.fn().mockResolvedValue(null),
+}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }));
 
 import { addDeliveryArea, updateDeliveryAreaCharges } from "@/features/admin/delivery-areas";

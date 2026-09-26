@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getDeliveryAreaRepository } from "@/lib/delivery-areas-service";
+import {
+  exampleDeliveryAreaForVendor,
+  getDeliveryAreaRepository,
+} from "@/lib/delivery-areas-service";
 import {
   AREA_FEE_FIELD,
   AREA_MINIMUM_FIELD,
@@ -97,7 +100,9 @@ export async function addDeliveryArea(
   // Parsed BEFORE the repository is touched. These rows gate checkout, so only a well-formed area
   // (`MK`) or district (`MK9`) may be stored — `lib/delivery-area-form.ts` explains the allow-list.
   // A comma list or a range (`MK1-MK10`, #613) expands here into individual districts.
-  const parsed = parsePrefixListInput(String(form.get("prefix") ?? ""));
+  // #905 — error examples come from this vendor's own area, as on the page, never a fixed MK.
+  const exampleArea = await exampleDeliveryAreaForVendor(auth.vendorId);
+  const parsed = parsePrefixListInput(String(form.get("prefix") ?? ""), exampleArea);
   if (!parsed.ok) return fieldError(parsed.error);
 
   // #890 — optional per-area charges, applied to every district in this submission.

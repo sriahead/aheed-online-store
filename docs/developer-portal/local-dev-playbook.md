@@ -4,7 +4,7 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.8.0"
+version: "1.9.0"
 updated: 2026-09-26
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions and presigned uploads, grep-vs-rendered-HTML pitfalls, local vendor-host resolution.
@@ -287,6 +287,25 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   same URL and bytes succeeded immediately (`200`). Prefer a Node `fetch()` one-liner over `curl
   -T`/`--data-binary` for any presigned-upload proof on this platform; curl's `-F` multipart
   technique used elsewhere in this section (server actions, not raw storage PUTs) is unaffected.
+- **The same silent failure (`exit 43`/`000`, TLS handshake completes then the connection closes
+  with no request sent) also hits plain `curl` `GET`/`POST` against a real HTTPS host** — not just
+  presigned `PUT`s, and not just `npm run preview`'s local `:8787`. Hit at `#905`'s `/document`
+  (2026-09-26) against `srimart-staging.nocaped.com` (Cloudflare-fronted): both a JSON `POST` to
+  `/api/auth/sign-in/email` and a plain `GET` of a signed-in page failed this way, while an
+  identical Node `fetch()` (with the session cookie in a `Cookie` header for the `GET`) succeeded
+  every time. `curl`'s own `-v` output shows a normal-looking handshake — this is not a proxy,
+  DNS or credential problem, and adding `-v` before assuming one is diagnostic time wasted.
+  **Default to a Node `fetch()` script for any request against a real (non-`:8787`) host on this
+  platform**, not just uploads; fall back to curl only for the local preview server, where it
+  still works.
+- **A `tsx` script placed outside the repo (e.g. this session's scratchpad directory on a
+  different drive) cannot resolve `node_modules` — `Cannot find module '@prisma/client'` even
+  though it's installed.** Node's `require`/import resolution walks up from the *script's own*
+  directory, not the current working directory, so a script that never lives under
+  `E:\GitRepositories\aheed-online-store` never reaches its `node_modules`. Copy the script into a
+  throwaway directory inside the repo first (e.g. `.scratch/`, not committed — `git status`
+  after, and `rm -rf` it when done) before running `npx tsx` on it; the scratchpad is fine for
+  everything that isn't itself a Node module resolution root.
 - **`npm run preview`'s `next build` step type-checks every `.ts` file its tsconfig includes —
   which, by default, means the repo root — so a type error in a scratch validation script placed
   at the repo root (rather than under `lib/`, `app/`, etc.) fails the WHOLE build**, not just that

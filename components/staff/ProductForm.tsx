@@ -15,6 +15,7 @@ import type { AdminCategoryRow } from "@/lib/repositories/categories";
 import type { BrandSummary } from "@/lib/repositories/brands";
 import { errorInputClass, inputClass, labelClass } from "@/lib/form-classes";
 import { NET_CONTENT_UNIT_LABELS, NET_CONTENT_UNITS } from "@/components/product/unit-price";
+import type { ProductLabelSettings } from "@/lib/product-label-settings";
 
 /**
  * Product create/edit form (P6b1, #159).
@@ -49,9 +50,17 @@ export interface ProductFormProps {
    * component; this one cannot.
    */
   imageUrls: ProductImageManagerImage[];
+  /**
+   * #905 — which labels this vendor offers (`/staff/storefront`). A label switched off is not
+   * rendered at all; `saveProduct` then leaves its stored value alone rather than reading the
+   * missing checkbox as false. Required: a default would decide a vendor's labels silently.
+   */
+  labels: ProductLabelSettings;
 }
 
-export function ProductForm({ product, categories, brands, imageUrls }: ProductFormProps) {
+export function ProductForm({ product, categories, brands, imageUrls, labels }: ProductFormProps) {
+  const anyLabel =
+    labels.halal || labels.fresh || labels.organic || labels.vegetarian || labels.glutenFree;
   const [state, action, saving] = useActionState(saveProduct, initialCatalogueState);
   const isNew = product === null;
 
@@ -412,25 +421,37 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
         </section>
 
         <section className="space-y-3 rounded-2xl border border-black/10 bg-white p-5">
-          <h2 className="text-sm font-bold text-primary">Labels &amp; visibility</h2>
+          <h2 className="text-sm font-bold text-primary">
+            {anyLabel ? <>Labels &amp; visibility</> : "Visibility"}
+          </h2>
           <div className="flex flex-wrap gap-x-6 gap-y-3">
-            <Checkbox name="isHalal" label="Halal" defaultChecked={product?.isHalal ?? false} />
-            <Checkbox name="isFresh" label="Fresh" defaultChecked={product?.isFresh ?? false} />
-            <Checkbox
-              name="isOrganic"
-              label="Organic"
-              defaultChecked={product?.isOrganic ?? false}
-            />
-            <Checkbox
-              name="isVegetarian"
-              label="Vegetarian"
-              defaultChecked={product?.isVegetarian ?? false}
-            />
-            <Checkbox
-              name="isGlutenFree"
-              label="Gluten free"
-              defaultChecked={product?.isGlutenFree ?? false}
-            />
+            {labels.halal && (
+              <Checkbox name="isHalal" label="Halal" defaultChecked={product?.isHalal ?? false} />
+            )}
+            {labels.fresh && (
+              <Checkbox name="isFresh" label="Fresh" defaultChecked={product?.isFresh ?? false} />
+            )}
+            {labels.organic && (
+              <Checkbox
+                name="isOrganic"
+                label="Organic"
+                defaultChecked={product?.isOrganic ?? false}
+              />
+            )}
+            {labels.vegetarian && (
+              <Checkbox
+                name="isVegetarian"
+                label="Vegetarian"
+                defaultChecked={product?.isVegetarian ?? false}
+              />
+            )}
+            {labels.glutenFree && (
+              <Checkbox
+                name="isGlutenFree"
+                label="Gluten free"
+                defaultChecked={product?.isGlutenFree ?? false}
+              />
+            )}
             <Checkbox
               name="isFeatured"
               label="Featured on homepage"
@@ -450,54 +471,57 @@ export function ProductForm({ product, categories, brands, imageUrls }: ProductF
           was a real incident of asserting "100% Certified HMC Halal" with no basis; the reference
           and verified date are what stop this being the same thing one product at a time.
           lib/catalogue-form.ts rejects the save if the box is ticked and either field is blank, and
-          nulls both when it is unticked.
+          nulls both when it is unticked. #905 — rendered only while the vendor offers HMC (which
+          needs Halal); when hidden, saveProduct leaves all three stored fields alone.
         */}
-        <section className="space-y-3 rounded-2xl border border-black/10 bg-white p-5">
-          <h2 className="text-sm font-bold text-primary">HMC certification</h2>
-          <p className="text-xs text-primary-muted">
-            Only tick this when you hold a current HMC certificate for the product. Both fields
-            below are required when it is ticked.
-          </p>
-          <Checkbox
-            name="isHmcCertified"
-            label="HMC certified"
-            defaultChecked={product?.isHmcCertified ?? false}
-          />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={labelClass} htmlFor="hmcReference">
-                Certificate reference
-              </label>
-              <input
-                id="hmcReference"
-                name="hmcReference"
-                placeholder="HMC/2026/01234"
-                defaultValue={product?.hmcReference ?? ""}
-                {...fieldProps("hmcReference")}
-              />
-            </div>
-            <div>
-              <label className={labelClass} htmlFor="hmcVerifiedAt">
-                Verified on
-              </label>
-              {/*
+        {labels.hmc && (
+          <section className="space-y-3 rounded-2xl border border-black/10 bg-white p-5">
+            <h2 className="text-sm font-bold text-primary">HMC certification</h2>
+            <p className="text-xs text-primary-muted">
+              Only tick this when you hold a current HMC certificate for the product. Both fields
+              below are required when it is ticked.
+            </p>
+            <Checkbox
+              name="isHmcCertified"
+              label="HMC certified"
+              defaultChecked={product?.isHmcCertified ?? false}
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelClass} htmlFor="hmcReference">
+                  Certificate reference
+                </label>
+                <input
+                  id="hmcReference"
+                  name="hmcReference"
+                  placeholder="HMC/2026/01234"
+                  defaultValue={product?.hmcReference ?? ""}
+                  {...fieldProps("hmcReference")}
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="hmcVerifiedAt">
+                  Verified on
+                </label>
+                {/*
                 `type="date"`, NOT datetime-local: a date-only ISO value has no timezone ambiguity,
                 so this needs none of lib/local-datetime.ts's machinery. See parseHmcFields.
               */}
-              <input
-                id="hmcVerifiedAt"
-                name="hmcVerifiedAt"
-                type="date"
-                defaultValue={
-                  product?.hmcVerifiedAt
-                    ? new Date(product.hmcVerifiedAt).toISOString().slice(0, 10)
-                    : ""
-                }
-                {...fieldProps("hmcVerifiedAt")}
-              />
+                <input
+                  id="hmcVerifiedAt"
+                  name="hmcVerifiedAt"
+                  type="date"
+                  defaultValue={
+                    product?.hmcVerifiedAt
+                      ? new Date(product.hmcVerifiedAt).toISOString().slice(0, 10)
+                      : ""
+                  }
+                  {...fieldProps("hmcVerifiedAt")}
+                />
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         <div className="flex items-center gap-3">
           <button

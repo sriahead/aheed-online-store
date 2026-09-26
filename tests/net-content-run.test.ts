@@ -52,11 +52,20 @@ function deps(overrides: Partial<RunDependencies>): RunDependencies & {
     saveSuggestion,
     neuronBudget: 5000,
     rate: NET_CONTENT_MODEL_RATES["@cf/google/gemma-4-26b-a4b-it"],
+    storeDescription: null,
     ...overrides,
   } as RunDependencies & { saveSuggestion: ReturnType<typeof vi.fn> };
 }
 
 describe("runNetContentSuggestions (R15)", () => {
+  it("passes the vendor's store description into every suggest call (#905 R19)", async () => {
+    const d = deps({ storeDescription: "Phones & chargers" });
+    await runNetContentSuggestions(d);
+    expect(d.suggester.suggest).toHaveBeenCalledWith(
+      expect.objectContaining({ storeDescription: "Phones & chargers" }),
+    );
+  });
+
   it("writes a PENDING row with its label check for a valid reply", async () => {
     const d = deps({});
     const summary = await runNetContentSuggestions(d);

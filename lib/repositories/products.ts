@@ -1489,15 +1489,20 @@ export interface ProductWriteInput {
   netContentAmount: number | null;
   netContentUnit: NetContentUnit | null;
   origin: string | null;
-  isHalal: boolean;
-  isFresh: boolean;
-  isOrganic: boolean;
+  /**
+   * #905 — the eight label fields may be `undefined`: `lib/product-label-settings.ts` strips a
+   * label the vendor has switched off, and both writes below pass it to Prisma as-is, so an update
+   * leaves the stored value alone and a create takes the column default. Never coerce with `??`.
+   */
+  isHalal: boolean | undefined;
+  isFresh: boolean | undefined;
+  isOrganic: boolean | undefined;
   /** #569 — dietary facets, HMC provenance and brand. */
-  isVegetarian: boolean;
-  isGlutenFree: boolean;
-  isHmcCertified: boolean;
-  hmcReference: string | null;
-  hmcVerifiedAt: Date | null;
+  isVegetarian: boolean | undefined;
+  isGlutenFree: boolean | undefined;
+  isHmcCertified: boolean | undefined;
+  hmcReference: string | null | undefined;
+  hmcVerifiedAt: Date | null | undefined;
   brandId: string | null;
   isFeatured: boolean;
   isActive: boolean;

@@ -1,6 +1,7 @@
 "use server";
 
 import { getProductRepository } from "@/lib/products-service";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { checkListNormalisationAllowed } from "@/lib/list-normalisation-service";
 import {
   buildNormalisationPrompt,
@@ -79,7 +80,9 @@ async function normaliseParsed(parsed: ReturnType<typeof parseList>) {
   // admits a caller. Consulting it first would spend a shopper's budget on a submission that was
   // never going to reach the model — on an environment with no AI credential, it would spend it
   // on every submission forever (R22).
-  if (buildNormalisationPrompt(parsed).length > MAX_AI_INPUT_CHARS) {
+  // #905 — the vendor's own description goes into the prompt, so the cap measures it too.
+  const storeDescription = (await getCurrentVendorProfile())?.storeDescription ?? null;
+  if (buildNormalisationPrompt(parsed, storeDescription).length > MAX_AI_INPUT_CHARS) {
     logSkip("over-input-cap", parsed.length);
     return parsed;
   }
@@ -95,7 +98,7 @@ async function normaliseParsed(parsed: ReturnType<typeof parseList>) {
     return parsed;
   }
 
-  const items = await normaliseList(parsed);
+  const items = await normaliseList(parsed, storeDescription);
   if (items === null) {
     // No credential, non-OK response, timeout, unparseable body — all one thing to the shopper.
     logSkip("unavailable", parsed.length);

@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { requireVendorRole } from "@/lib/auth-rbac";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import Link from "next/link";
 import { ShieldAlert, MapPin, Sparkles, TicketPercent, Lock } from "lucide-react";
 import { DocumentSectionRenderer } from "@/components/ui/DocumentSectionRenderer";
@@ -10,8 +11,12 @@ export const metadata: Metadata = {
 };
 
 export default async function HelpPage() {
-  const auth = await requireVendorRole("STAFF", "ADMIN");
+  const [auth, profile] = await Promise.all([
+    requireVendorRole("STAFF", "ADMIN"),
+    getCurrentVendorProfile(),
+  ]);
   const isStaff = auth.ok;
+  const localityName = profile?.localityName.trim() ?? "";
 
   const shopperDocs = (DOC_ARTICLES as any[]).filter(
     (doc) =>
@@ -71,8 +76,13 @@ export default async function HelpPage() {
           </div>
           <div className="space-y-3 text-sm text-black/70">
             <p>
-              <strong>Delivery Zones:</strong> We currently deliver across Milton Keynes and
-              surrounding local areas. Eligibility is verified at checkout using your postcode.
+              {/* #905 — the vendor's own locality, never a fixed town: this sentence used to name
+                  one vendor's town on every storefront, including a Reading store's. */}
+              <strong>Delivery Zones:</strong>{" "}
+              {localityName
+                ? `We currently deliver across ${localityName} and surrounding local areas.`
+                : "We deliver to the postcode areas this store serves."}{" "}
+              Eligibility is verified at checkout using your postcode.
             </p>
             <p>
               <strong>Minimum Order:</strong> A minimum order value is required for delivery, which

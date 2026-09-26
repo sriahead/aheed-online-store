@@ -8,6 +8,8 @@ import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { getBrandRepository } from "@/lib/brands-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { ProductForm } from "@/components/staff/ProductForm";
+import { fetchVendorProfile } from "@/lib/vendor-service";
+import { labelSettingsFromProfile } from "@/lib/product-label-settings";
 
 // Reads the session and one live product — must render per-request.
 export const dynamic = "force-dynamic";
@@ -42,10 +44,11 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     );
   }
 
-  const [product, categories, brands] = await Promise.all([
+  const [product, categories, brands, profile] = await Promise.all([
     getProductForAdmin(auth.vendorId, id),
     listCategoriesForAdmin(auth.vendorId),
     getBrandRepository().listSummaries(),
+    fetchVendorProfile(auth.vendorId),
   ]);
   if (!product) notFound();
 
@@ -68,6 +71,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         product={product}
         categories={categories}
         brands={brands}
+        labels={labelSettingsFromProfile(profile)}
         imageUrls={imageUrls}
       />
     </main>

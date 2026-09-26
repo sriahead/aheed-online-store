@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.38.0"
+version: "1.40.0"
 updated: 2026-09-26
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -44,12 +44,17 @@ reconciliation. If overall project state did not materially change, leave this f
   provenance) promoted via PR #904 (`staging -> main`), carrying PR #902 (`#900`'s own feature
   merge, `42dd3fa`) and PR #903 (its Document-stage reconciliation, `786649f`). Production
   `/api/health` confirmed serving `a156039`, `db.ok: true`, `reference.drift: false`. `#900` closed.
-  **`staging` has since moved ahead of `main` again**: `#729` (vendor-neutral UI copy, slice 1)
-  merged via PR #908 (`87ecdc1`), and a docs-only Document-stage reconciliation branch (this one)
-  follows it — so `main` and `staging` are **not** content-for-content right now. `deploy-staging`
-  confirmed for `87ecdc1`; staging `/api/health` served `87ecdc1`, `db.ok: true`, `reference.drift:
-  false`. `#729` moved to `In Review` on Project #2; it closes to `Done` only on promotion to
-  `main`. `#901` (production pilot for `#900`) stays open, Backlog, owner-gated.
+  **`#729` (vendor-neutral UI copy, slice 1) is now in production too**: PR #908 (`87ecdc1`) and its
+  Document-stage reconciliation PR #909 (`11bf51d`) were promoted via PR #910 (merge `556e273`,
+  2026-09-26). `deploy-production` run `36258438395` succeeded; production `/api/health` served
+  `556e273`, `db.ok: true`, `reference.drift: false` (re-verified at the following `/orient`).
+  `main` and `staging` were content-identical at that point. `#729` is closed. `#901` (production
+  pilot for `#900`) stays open, Backlog, owner-gated. **`#729` slice 2 (`#905`, with `#907`) is
+  built, validated and merged to `staging`** (PR #913, merge `62514aa`, 2026-09-26).
+  `deploy-staging` (run `36272013144`) succeeded; staging `/api/health` served `62514aa`,
+  `db.ok: true`, `reference.drift: false`. `#905` and `#907` moved to `In Review`; close to `Done`
+  only on promotion to `main`. `#912` (vendor-defined filters) is the owner-chosen next slice and
+  `#911` (reference coverage as one platform-wide list) is Backlog.
   - **In production (PR #858, merge `2047d0a`, verified live):** the KMS restructuring pilot
     (`#851`, PR #852), KMS navigation categories (PR #853), and the KMS strategy standard
     (PR #855 then PR #856). `deploy-production` (run `35711810410`) and `deploy-docs-internal`
@@ -355,8 +360,8 @@ its own Document-stage reconciliation). See In-Flight Work above for detail; not
 Production confirmed live post-merge: `/api/health` served `a156039`, `db.ok: true`,
 `reference.drift: false`. `#901` (production pilot) stays Backlog, owner-gated.
 
-**`#729` (vendor-neutral UI copy, slice 1) is merged to `staging`** (PR #908, merge `87ecdc1`,
-2026-09-26), **not yet promoted to `main`.** See In-Flight Work above for detail; not repeated here.
+**`#729` (vendor-neutral UI copy, slice 1) is promoted to production** (PR #910, merge `556e273`,
+2026-09-26, carrying PR #908 and PR #909). See In-Flight Work above for detail; not repeated here.
 
 Do not recover architecture from this handoff. Read `CLAUDE.md`, `specs/architecture.md`,
 `specs/tech-stack.md`, `specs/decisions/ADR-001..006` and `specs/sdd-workflow.md` when their areas are
@@ -426,7 +431,8 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#729` slice 1 (vendor-neutral UI copy) is DONE at the staging layer** — validated (every row
+- **`#729` slice 1 (vendor-neutral UI copy) is DONE, in production via PR #910 (`556e273`)** — the
+  history below is its staging-layer record. Validated (every row
   of `specs/2026-09-26-p729-vendor-neutral-ui-copy/validation.md` confirmed live, including both
   local vendor hosts under `npm run preview`) and merged to `staging` (PR #908, merge `87ecdc1`,
   2026-09-26). Spec `specs/2026-09-26-p729-vendor-neutral-ui-copy/`; read its `build-notes.md` first
@@ -439,12 +445,31 @@ All facts in this section require live verification:
     R11's repository-directory-wide diff check collided with R19's own legitimate
     `lib/repositories/vendor.ts` change. Both are now `docs/developer-portal/local-dev-playbook.md`
     entries (v1.8.0) so the next validator doesn't re-hit them.
-  - **`#729` moved to `In Review`** on Project #2; closes to `Done` only on promotion to `main`.
-  - **Owner sequencing unchanged: `#905`** (slice 2 — per-vendor product labels/HMC on the staff
-    form, and vendor context in AI prompts) **starts at `/propose`**, because it needs a new vendor
-    setting; a single "vertical" enum was argued against at orient (breaks at the third kind of
-    shop). `#906` (Open Food Facts for non-food vendors) is Deferred; `#907` (referral share text
-    hardcodes "£5") is a small Backlog defect.
+  - **`#729` is closed** (promoted via PR #910).
+
+- **`#729` slice 2 (`#905`, with `#907`) is built, validated and merged to `staging`** — see `Last
+  Verified` above; not repeated here. Per-vendor product labels/HMC (six new `VendorConfig`
+  booleans gating the staff product form only, stripped server-side on a disabled save rather than
+  cleared), a `storeDescription` that replaces the hardcoded grocery framing in three AI prompts,
+  and vendor-sourced delivery-area/help-page examples. Spec
+  `specs/2026-09-26-p905-vendor-product-labels/`; read its `build-notes.md` first for the Build,
+  Fix and Ship/Document records. One additive migration
+  (`20260926180000_p905_vendor_product_label_settings`), applied to `staging`.
+  - **One regression found at `/validate`, fixed at `/fix`:** a pre-existing test's mock of
+    `lib/delivery-areas-service` predated R27's new `exampleDeliveryAreaForVendor` call and threw on
+    every case; the missing mock was the root cause, not the production code — fixed there only.
+  - **R35a (SriMart's own signed-in staff check) run live at this Document stage, closing the one
+    row `/validate` had deferred.** `demo-srimart-admin@example.com` already existed on staging
+    (since 2026-08-17, predating production's copy) with an unrecorded password; after the owner
+    confirmed resetting it (`npm run demo:accounts -- remove` then `add`, which resets all five
+    staging demo accounts to one password — there is no per-account password), `/staff/products/new`
+    showed none of the six label controls and `/staff/delivery-areas` showed `RG` examples with no
+    `MK`, both on `srimart-staging.nocaped.com`. Both staging demo passwords are now recorded in
+    `secrets/staging.vars`/`secrets/production.vars` (`DEMO_SRIMART_ADMIN_PASSWORD`, reference-only,
+    never pushed anywhere) rather than lost again.
+  - **`#912`** (vendor-defined product filters for SriMart) is the owner-chosen next slice;
+    **`#911`** (reference-data postcode coverage as one platform-wide list) is Backlog. **`#906`**
+    (Open Food Facts for non-food vendors) stays Deferred.
 
 - **`#900` is DONE, promoted to production** (PR #904, merge `a156039`, 2026-09-26) — see `Last
   Verified` and `Project Position` above; not repeated here. AI-suggested net content with image

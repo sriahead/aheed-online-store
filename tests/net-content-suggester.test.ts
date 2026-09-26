@@ -153,21 +153,27 @@ describe("buildNetContentPrompt", () => {
       name: "Charger",
       unitLabel: "£9 each",
       hasPhoto: false,
+      storeDescription: null,
     });
     expect(prompt).toContain('reply {"amount": null}. Never answer 1 EACH');
     expect(prompt).toContain("Use EACH only when a count of items is stated");
   });
 
   it("forbids converting non-metric units and multiplying packs", () => {
-    const prompt = buildNetContentPrompt({ name: "Milk", unitLabel: "£1 / 2pt", hasPhoto: false });
+    const prompt = buildNetContentPrompt({
+      name: "Milk",
+      unitLabel: "£1 / 2pt",
+      hasPhoto: false,
+      storeDescription: null,
+    });
     expect(prompt).toContain("Do not convert it.");
     expect(prompt).toContain("multiplying");
   });
 
   it("forbids PHOTO evidence when there is no photo", () => {
-    expect(buildNetContentPrompt({ name: "x", unitLabel: "y", hasPhoto: false })).toContain(
-      "Do not use evidenceSource PHOTO",
-    );
+    expect(
+      buildNetContentPrompt({ name: "x", unitLabel: "y", hasPhoto: false, storeDescription: null }),
+    ).toContain("Do not use evidenceSource PHOTO");
   });
 });
 
@@ -175,24 +181,35 @@ describe("buildNetContentRequestBody (R10)", () => {
   const photo = { bytes: new Uint8Array([1, 2, 3]), contentType: "image/webp" };
 
   it("sends plain text when there is no photo", () => {
-    const body = buildNetContentRequestBody({ name: "Rice 5kg", unitLabel: "£1", photo: null });
+    const body = buildNetContentRequestBody({
+      name: "Rice 5kg",
+      unitLabel: "£1",
+      photo: null,
+      storeDescription: null,
+    });
     const [message] = body.messages as Array<{ content: unknown }>;
     expect(typeof message.content).toBe("string");
   });
 
   it("sends the photo as an image_url data URI when given one", () => {
-    const body = buildNetContentRequestBody({ name: "Rice 5kg", unitLabel: "£1", photo });
+    const body = buildNetContentRequestBody({
+      name: "Rice 5kg",
+      unitLabel: "£1",
+      photo,
+      storeDescription: null,
+    });
     const [message] = body.messages as Array<{ content: Array<Record<string, any>> }>;
     const image = message.content.find((part) => part.type === "image_url");
     expect(image?.image_url.url).toBe("data:image/webp;base64,AQID");
   });
 
   it("applies the model's own request options, and none for an unlisted model", () => {
-    const gemma = buildNetContentRequestBody({ name: "a", unitLabel: "b", photo: null });
+    const input = { name: "a", unitLabel: "b", photo: null, storeDescription: null };
+    const gemma = buildNetContentRequestBody(input);
     expect(gemma.chat_template_kwargs).toEqual({ enable_thinking: false });
     expect(NET_CONTENT_MODEL_REQUEST_OPTIONS[DEFAULT_NET_CONTENT_MODEL]).toBeDefined();
 
-    const other = buildNetContentRequestBody({ name: "a", unitLabel: "b", photo: null }, "@cf/x/y");
+    const other = buildNetContentRequestBody(input, "@cf/x/y");
     expect(other.chat_template_kwargs).toBeUndefined();
   });
 });
@@ -225,7 +242,12 @@ describe("readWorkersAiReply", () => {
 });
 
 describe("createWorkersAiNetContentSuggester (R10)", () => {
-  const input = { name: "Rice 5kg", unitLabel: "£8.99 / 5kg", photo: null };
+  const input = {
+    name: "Rice 5kg",
+    unitLabel: "£8.99 / 5kg",
+    photo: null,
+    storeDescription: null,
+  };
   const credentials = { accountId: "acct", apiToken: "tok" };
 
   it("returns not-configured without calling fetch when a credential is missing", async () => {

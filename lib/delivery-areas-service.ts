@@ -8,6 +8,8 @@ import {
   updateDeliveryAreaChargesForVendor,
   type DeliveryAreaRepository,
 } from "@/lib/repositories/delivery-areas";
+import { getVendorLocation } from "@/lib/repositories/vendor";
+import { exampleAreaFor } from "@/lib/delivery-area-examples";
 
 /**
  * Request-scoped wrapper around `lib/repositories/delivery-areas.ts`'s pure functions (#252, #612)
@@ -27,6 +29,23 @@ import {
  * `createMany` and `updateCharges` (`createMany`/`updateMany` crash over HTTP, #382) and by `remove`
  * (its last-area guard is an interactive transaction); see the repository's header.
  */
+/**
+ * #905 — the example postcode area the delivery-area admin shows this vendor: its store postcode's
+ * area, else its first delivery area's letters, else none (`lib/delivery-area-examples.ts`). The
+ * page and the add action both call this, so the placeholder, help text and error messages agree.
+ */
+export async function exampleDeliveryAreaForVendor(vendorId: string): Promise<string | null> {
+  const prisma = getPrisma();
+  const [location, areas] = await Promise.all([
+    getVendorLocation(prisma, vendorId),
+    listDeliveryAreasForVendor(prisma, vendorId),
+  ]);
+  return exampleAreaFor({
+    storePostcode: location?.postcode ?? null,
+    deliveryPrefixes: areas.map((area) => area.prefix),
+  });
+}
+
 export function getDeliveryAreaRepository(): DeliveryAreaRepository {
   const prisma = getPrisma();
   const prismaWs = getPrismaWs();
