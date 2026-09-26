@@ -6,6 +6,8 @@ import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { getBrandRepository } from "@/lib/brands-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { ProductForm } from "@/components/staff/ProductForm";
+import { fetchVendorProfile } from "@/lib/vendor-service";
+import { labelSettingsFromProfile } from "@/lib/product-label-settings";
 
 // Reads the session and this vendor's categories — must render per-request.
 export const dynamic = "force-dynamic";
@@ -34,9 +36,11 @@ export default async function NewProductPage() {
     );
   }
 
-  const categories = await listCategoriesForAdmin(auth.vendorId);
-
-  const brands = await getBrandRepository().listSummaries();
+  const [categories, brands, profile] = await Promise.all([
+    listCategoriesForAdmin(auth.vendorId),
+    getBrandRepository().listSummaries(),
+    fetchVendorProfile(auth.vendorId),
+  ]);
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
@@ -58,7 +62,13 @@ export default async function NewProductPage() {
           </Link>
         </div>
       ) : (
-        <ProductForm product={null} categories={categories} brands={brands} imageUrls={[]} />
+        <ProductForm
+          product={null}
+          categories={categories}
+          brands={brands}
+          imageUrls={[]}
+          labels={labelSettingsFromProfile(profile)}
+        />
       )}
     </main>
   );

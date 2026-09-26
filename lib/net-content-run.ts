@@ -51,6 +51,8 @@ export interface RunProduct {
 export interface RunDependencies {
   products: readonly RunProduct[];
   suggester: NetContentSuggester;
+  /** #905 — the products' vendor's own description, given to every call; null = neutral prompt. */
+  storeDescription: string | null;
   /** Fetches a chosen photo's bytes; null when the object is missing (then no photo is sent). */
   loadPhoto(image: CandidateImage): Promise<SuggesterPhoto | null>;
   saveSuggestion(input: NewSuggestion): Promise<{ status: "PENDING" | "NO_ANSWER" }>;
@@ -105,6 +107,7 @@ export async function runNetContentSuggestions(deps: RunDependencies): Promise<R
       name: product.name,
       unitLabel: product.unitLabel,
       photo,
+      storeDescription: deps.storeDescription,
     });
 
     if (result.kind === "not-configured") {

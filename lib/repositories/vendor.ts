@@ -67,6 +67,19 @@ export interface VendorProfile {
   facebookUrl: string | null;
   instagramUrl: string | null;
   whatsappNumber: string | null;
+  /**
+   * #905 — which label controls the staff product form offers (`lib/product-label-settings.ts`
+   * turns these into `ProductLabelSettings`). They never gate the storefront. `false` for a vendor
+   * with no config row, so an unseeded vendor is offered none rather than another vendor's set.
+   */
+  showHalalLabel: boolean;
+  showFreshLabel: boolean;
+  showOrganicLabel: boolean;
+  showVegetarianLabel: boolean;
+  showGlutenFreeLabel: boolean;
+  showHmcCertification: boolean;
+  /** #905 — what the store sells, in its own words; the AI prompts' context. `null` = neutral. */
+  storeDescription: string | null;
   /** Always `deliveryAreas.map(a => a.prefix)` — kept for the eligibility check's callers. */
   deliveryPrefixes: string[];
   /**
@@ -154,6 +167,13 @@ export async function fetchVendorProfile(
           facebookUrl: true,
           instagramUrl: true,
           whatsappNumber: true,
+          showHalalLabel: true,
+          showFreshLabel: true,
+          showOrganicLabel: true,
+          showVegetarianLabel: true,
+          showGlutenFreeLabel: true,
+          showHmcCertification: true,
+          storeDescription: true,
           deliveryFeePence: true,
           freeDeliveryThresholdPence: true,
           minimumOrderPence: true,
@@ -213,6 +233,13 @@ export async function fetchVendorProfile(
     facebookUrl: vendor?.config?.facebookUrl ?? null,
     instagramUrl: vendor?.config?.instagramUrl ?? null,
     whatsappNumber: vendor?.config?.whatsappNumber ?? null,
+    showHalalLabel: vendor?.config?.showHalalLabel ?? false,
+    showFreshLabel: vendor?.config?.showFreshLabel ?? false,
+    showOrganicLabel: vendor?.config?.showOrganicLabel ?? false,
+    showVegetarianLabel: vendor?.config?.showVegetarianLabel ?? false,
+    showGlutenFreeLabel: vendor?.config?.showGlutenFreeLabel ?? false,
+    showHmcCertification: vendor?.config?.showHmcCertification ?? false,
+    storeDescription: vendor?.config?.storeDescription ?? null,
     deliveryPrefixes: (vendor?.deliveryAreas ?? []).map((a) => a.prefix),
     deliveryAreas: vendor?.deliveryAreas ?? [],
     // Fall back to the schema defaults when the config satellite is unseeded,
@@ -298,6 +325,18 @@ export interface VendorStorefrontConfigInput {
   instagramUrl?: string | null;
   whatsappNumber?: string | null;
   /**
+   * #905 — the six product-label settings and the store description, owned by the
+   * catalogue-settings form alone. Same optionality rule: every other form omits them, so saving
+   * branding, delivery or social links never touches them. `storeDescription: null` clears it.
+   */
+  showHalalLabel?: boolean;
+  showFreshLabel?: boolean;
+  showOrganicLabel?: boolean;
+  showVegetarianLabel?: boolean;
+  showGlutenFreeLabel?: boolean;
+  showHmcCertification?: boolean;
+  storeDescription?: string | null;
+  /**
    * #634 — the three delivery rules. Optional as a group: the branding half of
    * this form submits without them, and omitting them must leave the stored
    * values alone rather than reset them to a default.
@@ -356,6 +395,14 @@ export async function updateVendorStorefrontConfig(
         facebookUrl: data.facebookUrl,
         instagramUrl: data.instagramUrl,
         whatsappNumber: data.whatsappNumber,
+        // #905 — same direct assignment: only the catalogue-settings form supplies these.
+        showHalalLabel: data.showHalalLabel,
+        showFreshLabel: data.showFreshLabel,
+        showOrganicLabel: data.showOrganicLabel,
+        showVegetarianLabel: data.showVegetarianLabel,
+        showGlutenFreeLabel: data.showGlutenFreeLabel,
+        showHmcCertification: data.showHmcCertification,
+        storeDescription: data.storeDescription,
         // #634 — written only when supplied. `freeDeliveryThresholdPence` is
         // explicitly nullable, so `undefined` (absent) and `null` (free
         // delivery never offered) must stay distinguishable here; spreading a

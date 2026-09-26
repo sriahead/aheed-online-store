@@ -9,6 +9,7 @@ import { brandStyle } from "@/lib/vendor-theme";
 import {
   applyStorefrontTheme,
   saveStorefrontTheme,
+  updateCatalogueSettings,
   updateDeliveryRules,
   updateSocialContact,
   updateStorefrontConfig,
@@ -27,6 +28,10 @@ import {
   initialSocialContactState,
 } from "@/lib/social-contact-form";
 import { initialBrandColourState } from "@/lib/brand-colour-form";
+import {
+  STORE_DESCRIPTION_FIELD,
+  initialCatalogueSettingsState,
+} from "@/lib/catalogue-settings-form";
 import { VendorLogoUploader } from "@/components/staff/VendorLogoUploader";
 
 /** The eight `VendorBranding` brand primitives — every column that is a hex string. */
@@ -122,6 +127,11 @@ export function StorefrontConfigForm({
   const [socialState, saveSocialContact, socialPending] = useActionState(
     updateSocialContact,
     initialSocialContactState,
+  );
+
+  const [catalogueState, saveCatalogueSettings, cataloguePending] = useActionState(
+    updateCatalogueSettings,
+    initialCatalogueSettingsState,
   );
 
   const [savingTheme, setSavingTheme] = useState(false);
@@ -634,7 +644,7 @@ export function StorefrontConfigForm({
                 name="collectionCity"
                 defaultValue={initialLocation?.city ?? ""}
                 className={fieldClass(deliveryState.field === "collectionCity")}
-                placeholder="e.g. Milton Keynes"
+                placeholder="Town or city"
               />
             </div>
 
@@ -647,7 +657,7 @@ export function StorefrontConfigForm({
                 name="collectionPostcode"
                 defaultValue={initialLocation?.postcode ?? ""}
                 className={fieldClass(deliveryState.field === "collectionPostcode")}
-                placeholder="e.g. MK9 3QA"
+                placeholder="Full postcode"
                 onBlur={(e) => void lookUpStorePostcode(e.target.value, "collectionCity")}
               />
               {locationLookingUp && (
@@ -762,9 +772,92 @@ export function StorefrontConfigForm({
           {socialPending ? "Saving…" : "Save Social & Contact Links"}
         </button>
       </form>
+
+      {/* #905 — a fourth sibling <form>, never nested. The labels gate the staff product form only;
+          switching one off never clears a product's stored value (saveProduct strips it). */}
+      <form action={saveCatalogueSettings} className="flex flex-col gap-6">
+        <div>
+          <h2 className="font-bold text-black">Product labels &amp; store description</h2>
+          <p className="mt-1 text-sm text-black/60">
+            Choose which labels your staff can set on a product. Switching a label off hides it on
+            the product form but keeps the value already saved on each product, and your storefront
+            keeps showing a label only on products that carry it.
+          </p>
+        </div>
+
+        <fieldset className="flex flex-col gap-3">
+          <legend className="mb-2 font-bold text-black">Labels offered on the product form</legend>
+          <div className="flex flex-wrap gap-x-6 gap-y-3">
+            {CATALOGUE_LABEL_FIELDS.map((label) => (
+              <label key={label.name} className="flex items-center gap-2 text-sm text-black">
+                <input
+                  type="checkbox"
+                  name={label.name}
+                  defaultChecked={initialConfig[label.name]}
+                  className="h-5 w-5 rounded border-black/20 text-primary focus:ring-primary"
+                  aria-invalid={catalogueState.field === label.name || undefined}
+                />
+                {label.label}
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-black/60">
+            HMC certification needs Halal: it is only offered on the product form while Halal is.
+          </p>
+        </fieldset>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="storeDescription" className="font-bold text-black">
+            What this store sells
+          </label>
+          <textarea
+            id="storeDescription"
+            name="storeDescription"
+            rows={2}
+            maxLength={200}
+            defaultValue={initialConfig.storeDescription ?? ""}
+            className={fieldClass(catalogueState.field === STORE_DESCRIPTION_FIELD)}
+            aria-invalid={catalogueState.field === STORE_DESCRIPTION_FIELD || undefined}
+          />
+          <p className="text-xs text-black/60">
+            One or two sentences, up to 200 characters. This is given to the store&apos;s AI
+            features — shopping-list matching, search-word suggestions and pack-size suggestions —
+            so they understand what you sell. Leave it blank and they use neutral wording.
+          </p>
+        </div>
+
+        {catalogueState.error && (
+          <p className="rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger">
+            {catalogueState.error}
+          </p>
+        )}
+        {catalogueState.saved && !catalogueState.error && (
+          <p className="rounded-xl bg-action-tint px-4 py-3 text-sm font-medium text-primary">
+            Product labels &amp; store description saved.
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={cataloguePending}
+          className="rounded-full bg-primary py-3 font-bold text-white hover:bg-primary/90 disabled:opacity-50"
+        >
+          {cataloguePending ? "Saving…" : "Save Product Labels & Description"}
+        </button>
+      </form>
     </div>
   );
 }
+
+/** #905 — the six label settings, in the order the product form shows the labels. */
+const CATALOGUE_LABEL_FIELDS = [
+  { name: "showHalalLabel", label: "Halal" },
+  { name: "showFreshLabel", label: "Fresh" },
+  { name: "showOrganicLabel", label: "Organic" },
+  { name: "showVegetarianLabel", label: "Vegetarian" },
+  { name: "showGlutenFreeLabel", label: "Gluten free" },
+  { name: "showHmcCertification", label: "HMC certification" },
+] as const satisfies readonly { name: keyof VendorConfig; label: string }[];
 
 /** Delivery-rule input styling, with the offending field outlined on a refusal. */
 function fieldClass(hasError: boolean): string {

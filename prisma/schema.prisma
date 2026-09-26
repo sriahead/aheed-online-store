@@ -390,6 +390,22 @@ model VendorConfig {
   minRedeemPoints            Int      @default(100) // below this, redemption isn't offered
   tierWindowDays             Int      @default(30) // rolling window tier qualification looks back over
   pointsExpiryMonths         Int? // null = points never expire
+  // #905 — which of Product's six label booleans this vendor's staff product form offers. They
+  // gate the STAFF FORM only: the storefront stays data-driven (a badge/facet shows only where a
+  // product carries the flag), and switching one off keeps every product's stored value —
+  // features/admin/catalogue.ts strips a disabled label from the write rather than saving false.
+  // Default false, so a new vendor sees none until an admin opts in; the migration backfilled
+  // existing vendors from their own products. HMC is only offered while Halal is too.
+  showHalalLabel             Boolean  @default(false)
+  showFreshLabel             Boolean  @default(false)
+  showOrganicLabel           Boolean  @default(false)
+  showVegetarianLabel        Boolean  @default(false)
+  showGlutenFreeLabel        Boolean  @default(false)
+  showHmcCertification       Boolean  @default(false)
+  // #905 — what this store sells, in the admin's own words (max 200 chars, one line). Given to
+  // the AI prompts (list normalisation, synonym proposals, net-content suggestions) in place of
+  // a hardcoded "grocery" framing; null = neutral wording.
+  storeDescription           String?
   createdAt                  DateTime @default(now())
   updatedAt                  DateTime @updatedAt
 }

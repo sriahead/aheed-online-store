@@ -1,5 +1,6 @@
 import type { ParseResult } from "@/lib/catalogue-form";
 import { parseOptionalPoundsToPence } from "@/lib/delivery-rules-form";
+import { deliveryAreaExamples } from "@/lib/delivery-area-examples";
 
 /**
  * Delivery-area field rules (P9.2 #612; lists, ranges and charges #613/#890) — pure, DB-free,
@@ -83,7 +84,7 @@ export const initialDeliveryAreaState: DeliveryAreaFormState = {
  * `" Mk "` and `"MK"` all yield `"MK"`. Everything else is a field error. This is the per-entry rule
  * `parsePrefixListInput` applies to every non-range entry.
  */
-export function parsePrefixInput(raw: string): ParseResult<string> {
+export function parsePrefixInput(raw: string, exampleArea: string | null): ParseResult<string> {
   const normalised = raw.trim().toUpperCase();
 
   if (normalised === "") {
@@ -94,12 +95,14 @@ export function parsePrefixInput(raw: string): ParseResult<string> {
   }
 
   if (!POSTCODE_AREA.test(normalised)) {
+    const ex = deliveryAreaExamples(exampleArea);
     return {
       ok: false,
       error: {
         field: PREFIX_FIELD,
-        message:
-          "A postcode area is 1-2 letters, optionally followed by numbers (e.g. MK or MK9) — no spaces or symbols.",
+        message: `A postcode area is 1-2 letters, optionally followed by numbers${
+          ex ? ` (e.g. ${ex.area} or ${ex.district})` : ""
+        } — no spaces or symbols.`,
       },
     };
   }
@@ -111,24 +114,40 @@ function entryError(message: string): ParseResult<string[]> {
   return { ok: false, error: { field: PREFIX_FIELD, message } };
 }
 
+/**
+ * #905 — `, like RG1-RG10` from the vendor's own example area, or nothing when it has none: the
+ * rule the message states stands on its own, and another town's postcode would only mislead.
+ */
+function likeRange(exampleArea: string | null): string {
+  const ex = deliveryAreaExamples(exampleArea);
+  return ex ? `, like ${ex.range}` : "";
+}
+
 /** Expand `MK1-MK10` into `MK1`…`MK10`, or explain which range rule the entry broke. */
-function expandRange(entry: string, start: string, end: string): ParseResult<string[]> {
+function expandRange(
+  entry: string,
+  start: string,
+  end: string,
+  exampleArea: string | null,
+): ParseResult<string[]> {
   const from = RANGE_END.exec(start);
   const to = RANGE_END.exec(end);
   if (!from || !to) {
     return entryError(
-      `"${entry}" is not a range we can expand. Write both ends in full with 1-2 digit districts, like MK1-MK10.`,
+      `"${entry}" is not a range we can expand. Write both ends in full with 1-2 digit districts${likeRange(exampleArea)}.`,
     );
   }
   if (from[1] !== to[1]) {
     return entryError(
-      `"${entry}" spans two postcode areas. Both ends need the same letters, like MK1-MK10.`,
+      `"${entry}" spans two postcode areas. Both ends need the same letters${likeRange(exampleArea)}.`,
     );
   }
   const first = Number(from[2]);
   const last = Number(to[2]);
   if (first > last) {
-    return entryError(`"${entry}" runs backwards. Put the lower district first, like MK1-MK10.`);
+    return entryError(
+      `"${entry}" runs backwards. Put the lower district first${likeRange(exampleArea)}.`,
+    );
   }
   const districts: string[] = [];
   for (let n = first; n <= last; n += 1) districts.push(`${from[1]}${n}`);
@@ -143,7 +162,12 @@ function expandRange(entry: string, start: string, end: string): ParseResult<str
  * de-duplicated in first-seen order. One bad entry fails the whole submission, naming that entry —
  * a partially applied list would leave the admin guessing which half landed.
  */
-export function parsePrefixListInput(raw: string): ParseResult<string[]> {
+export function parsePrefixListInput(
+  raw: string,
+  // #905 — the vendor's own example area for error messages (`lib/delivery-area-examples.ts`), or
+  // null to state each rule without an example. Required so no caller falls back to MK silently.
+  exampleArea: string | null,
+): ParseResult<string[]> {
   const entries = raw
     .toUpperCase()
     .split(",")
@@ -164,16 +188,19 @@ export function parsePrefixListInput(raw: string): ParseResult<string[]> {
   for (const entry of entries) {
     const range = RANGE.exec(entry);
     if (range) {
-      const expanded = expandRange(entry, range[1], range[2]);
+      const expanded = expandRange(entry, range[1], range[2], exampleArea);
       if (!expanded.ok) return expanded;
       expanded.value.forEach(add);
       continue;
     }
 
-    const single = parsePrefixInput(entry);
+    const single = parsePrefixInput(entry, exampleArea);
     if (!single.ok) {
+      const ex = deliveryAreaExamples(exampleArea);
       return entryError(
-        `"${entry}" is not a postcode area or district. Use 1-2 letters, optionally followed by numbers (e.g. MK or MK9), or a range like MK1-MK10.`,
+        ex
+          ? `"${entry}" is not a postcode area or district. Use 1-2 letters, optionally followed by numbers (e.g. ${ex.area} or ${ex.district}), or a range like ${ex.range}.`
+          : `"${entry}" is not a postcode area or district. Use 1-2 letters, optionally followed by numbers, or a range of districts.`,
       );
     }
     add(single.value);

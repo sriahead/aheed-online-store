@@ -6,6 +6,7 @@ import { X, Sparkles } from "lucide-react";
 import { WaysToEarnAccordion } from "@/components/rewards/WaysToEarnAccordion";
 import { WaysToRedeemAccordion } from "@/components/rewards/WaysToRedeemAccordion";
 import { ReferralCard } from "@/components/rewards/ReferralCard";
+import { REFERRAL_DISCOUNT_PENCE } from "@/lib/referrals";
 
 export interface RewardsData {
   authenticated: boolean;
@@ -59,7 +60,7 @@ export function RewardsPanel({
   const referralCode = data?.referralCode ?? "";
   const referralsCompleted = data?.referralsCompleted ?? 0;
   const referralUrl = data?.referralUrl ?? "";
-  const discountOffPence = data?.discountOffPence ?? 500;
+  const discountOffPence = data?.discountOffPence ?? REFERRAL_DISCOUNT_PENCE;
   const rewardPoints = data?.rewardPoints ?? 100;
 
   return (

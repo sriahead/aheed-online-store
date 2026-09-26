@@ -261,6 +261,16 @@ type VendorSatellites = {
     minRedeemPoints: number;
     tierWindowDays: number;
     pointsExpiryMonths: number | null;
+    // #905 — which product labels the staff form offers, and the store description the AI
+    // prompts are given. Deliberately opposite per vendor: Aheed (grocer) offers all six,
+    // SriMart (electronics) none, which is what proves the gate is per-vendor data.
+    showHalalLabel: boolean;
+    showFreshLabel: boolean;
+    showOrganicLabel: boolean;
+    showVegetarianLabel: boolean;
+    showGlutenFreeLabel: boolean;
+    showHmcCertification: boolean;
+    storeDescription: string | null;
   };
   deliveryPrefixes: string[];
   loyaltyTiers: {
@@ -471,6 +481,15 @@ const AHEED_SATELLITES: VendorSatellites = {
     minRedeemPoints: 100,
     tierWindowDays: 30,
     pointsExpiryMonths: 12,
+    showHalalLabel: true,
+    showFreshLabel: true,
+    showOrganicLabel: true,
+    showVegetarianLabel: true,
+    showGlutenFreeLabel: true,
+    showHmcCertification: true,
+    // The South Asian context the AI prompts used to hardcode for every vendor, now Aheed's own.
+    storeDescription:
+      "South Asian groceries, halal meat and fresh produce. Shoppers often use Hindi, Urdu and Punjabi names and transliterations.",
   },
   deliveryPrefixes: ["MK"],
   loyaltyTiers: [
@@ -1519,6 +1538,14 @@ const SRIMART_SATELLITES: VendorSatellites = {
     minRedeemPoints: 100,
     tierWindowDays: 30,
     pointsExpiryMonths: null,
+    showHalalLabel: false,
+    showFreshLabel: false,
+    showOrganicLabel: false,
+    showVegetarianLabel: false,
+    showGlutenFreeLabel: false,
+    showHmcCertification: false,
+    storeDescription:
+      "Consumer electronics and accessories: phone chargers, cables, earbuds, lamps and small home gadgets.",
   },
   deliveryPrefixes: ["RG"],
   loyaltyTiers: [],

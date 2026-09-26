@@ -4,7 +4,7 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.1.0"
+version: "1.2.0"
 updated: 2026-09-26
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), vendor-neutral user-facing copy, and React hooks — together with the tests that enforce each invariant mechanically.
@@ -258,9 +258,19 @@ store's staff reads must be right for **any** vendor.
   scanned across `app/**/*.tsx`, `components/**/*.tsx` and `lib/referrals.ts` with comments
   stripped. It catches those strings returning, **not** new vendor-specific copy — that is still a
   review question. Check a new string against a second vendor (SriMart) before shipping it.
-- **Grocery attributes on the staff product form** (Halal, Fresh, Organic, Vegetarian, Gluten free,
-  HMC) and the "UK grocery" framing inside AI prompts are still shown or sent for every vendor.
-  Gating them needs a vendor setting; tracked as `#905`, not a copy fix.
+- **What a vendor sells is vendor data (`#905`).** Six `VendorConfig` label settings
+  (`showHalalLabel` … `showHmcCertification`, edited on `/staff/storefront`) decide which label
+  controls the staff product form renders; HMC needs Halal. They gate the staff form only — the
+  storefront stays data-driven. A disabled label is **stripped server-side in `saveProduct`**
+  (`lib/product-label-settings.ts`), so a save leaves its stored value alone instead of reading the
+  unrendered checkbox as `false`. `VendorConfig.storeDescription` is the one place an AI prompt
+  learns what the shop sells: every prompt builder takes it as a **required** `string | null` and
+  inserts it through `storeDescriptionPromptLine` (quoted, one line, capped); `null` means neutral
+  wording, never a grocery default.
+- **Example values come from the vendor's own data**, not one vendor's geography: the delivery-area
+  admin's examples are built from the store postcode or its first delivery area
+  (`lib/delivery-area-examples.ts`), and `/help` names the vendor's `localityName`. With no data,
+  state the rule without an example rather than borrowing another town's.
 
 
 ## React and Next.js hooks

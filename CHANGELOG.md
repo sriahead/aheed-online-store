@@ -8,6 +8,14 @@ every branch merges.
 
 ### Added
 
+- **Per-vendor product labels, store description for AI, and vendor-sourced examples** (issues `#905` — `#729` slice 2 — and `#907`; `specs/2026-09-26-p905-vendor-product-labels/`). One additive migration (`20260926180000_p905_vendor_product_label_settings`).
+  - **Product labels are vendor data.** Six `VendorConfig` settings (Halal, Fresh, Organic, Vegetarian, Gluten free, HMC certification) decide which label controls the staff product form offers; HMC needs Halal. Edited in a new "Product labels & store description" form on `/staff/storefront`. Existing vendors were backfilled from their own products (a label is on if any product carries it); new vendors start with none. The storefront is unchanged — badges and facets stay data-driven.
+  - **A disabled label is never cleared by a save.** `saveProduct` strips a disabled label's fields server-side (`lib/product-label-settings.ts`), so an update leaves the stored value alone and a crafted field cannot set it.
+  - **AI prompts use the vendor's own description.** `VendorConfig.storeDescription` (one line, 200 characters) replaces the hardcoded "UK grocery"/"South Asian grocery" framing in list normalisation, synonym proposals and net-content suggestions; blank means neutral wording. Aheed's South Asian context moved into Aheed's seeded description.
+  - **Referral share text (`#907`)** formats the real discount rather than a literal "£5"; the no-user referral-code fallback is `REF_NOCAPED` instead of a vendor's name.
+  - **Examples come from the vendor.** `/staff/delivery-areas` examples, placeholder and error messages use the store's own postcode area (store postcode, else its first delivery area, else no example); `/help` names the vendor's own town instead of Milton Keynes; the store-address placeholders are neutral.
+  - `tests/vendor-neutral-copy.test.ts` now also scans four lib modules and denylists the removed literals. Carried forward: the `specs/roadmap.md` row for PR #910 and the `docs/model-handoff.md` correction that `#729` is in production.
+
 - **Document-stage reconciliation for `#729` (vendor-neutral UI copy, slice 1, built, validated and merged to `staging` in PR #908).**
   - `specs/2026-09-26-p729-vendor-neutral-ui-copy/validation.md`: two live-validation findings corrected — SriMart's local host needs its seeded `:8787` port (`srimart.localhost:8787`) or vendor resolution silently falls through to Aheed's copy instead of failing loudly; R11's repository-directory-wide `git diff` check is replaced with one scoped to the actual product repository, since a whole-directory check collided with R19's own legitimate `lib/repositories/vendor.ts` change.
   - `docs/developer-portal/local-dev-playbook.md` 1.8.0: the SriMart-port trap above, plus a `grep -o` pitfall against a genuinely multi-line HTML attribute (the shop-your-list textarea's placeholder) silently matching nothing with no error.

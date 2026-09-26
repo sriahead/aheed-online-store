@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check, Copy, Share2, Users } from "lucide-react";
-import { buildShareLinks } from "@/lib/referrals";
+import { buildShareLinks, REFERRAL_DISCOUNT_PENCE } from "@/lib/referrals";
 import { formatPrice } from "@/components/product/format-price";
 
 function FacebookIcon({ className = "h-4 w-4" }: { className?: string }) {
@@ -43,7 +43,7 @@ export function ReferralCard({
   referralUrl,
   referralCode,
   completedCount = 0,
-  discountOffPence = 500,
+  discountOffPence = REFERRAL_DISCOUNT_PENCE,
   rewardPoints = 100,
   variant = "light",
   authenticated = true,
@@ -63,7 +63,7 @@ export function ReferralCard({
 
   const isDark = variant === "dark";
   const displayUrl = referralUrl || (typeof window !== "undefined" ? window.location.origin : "");
-  const shareLinks = buildShareLinks(displayUrl, storeName);
+  const shareLinks = buildShareLinks(displayUrl, storeName, discountOffPence);
 
   const handleCopy = async () => {
     if (!displayUrl) return;

@@ -1,4 +1,5 @@
 import { getAiEnv } from "@/lib/config";
+import { storeDescriptionPromptLine } from "@/lib/store-description";
 
 /**
  * AI-proposed synonyms for staff approval (P2.6 slice 3, #566).
@@ -37,9 +38,20 @@ export interface SynonymProposal {
 export type ProposalResult =
   { ok: true; proposals: SynonymProposal[] } | { ok: false; error: string };
 
-function buildPrompt(queries: readonly string[], vocabulary: readonly string[]): string {
+/**
+ * The prompt. Exported so the #905 prompt test can assert its framing. `storeDescription` is
+ * required, never defaulted: the vendor's own words replace the grocery framing this used to assume
+ * for every vendor, and `null` keeps it neutral.
+ */
+export function buildSynonymPrompt(
+  queries: readonly string[],
+  vocabulary: readonly string[],
+  storeDescription: string | null,
+): string {
+  const describe = storeDescriptionPromptLine(storeDescription);
   return [
-    "You map words UK grocery shoppers type into the words a South Asian grocery catalogue uses.",
+    "You map words UK shoppers type into the words this shop's catalogue uses.",
+    ...(describe ? [describe] : []),
     "",
     "Failed or near-miss searches:",
     ...queries.map((query) => `- ${query}`),
@@ -98,6 +110,7 @@ export function parseProposalResponse(raw: string): SynonymProposal[] {
 export async function proposeSynonyms(
   queries: readonly string[],
   vocabulary: readonly string[],
+  storeDescription: string | null,
 ): Promise<ProposalResult> {
   if (queries.length === 0) {
     return { ok: false, error: "No failed searches to learn from yet." };
@@ -121,7 +134,9 @@ export async function proposeSynonyms(
         method: "POST",
         headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [{ role: "user", content: buildPrompt(queries, vocabulary) }],
+          messages: [
+            { role: "user", content: buildSynonymPrompt(queries, vocabulary, storeDescription) },
+          ],
         }),
       },
     );

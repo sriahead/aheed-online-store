@@ -4,7 +4,7 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.4.0"
+version: "2.5.0"
 updated: "2026-09-26"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
@@ -81,14 +81,18 @@ the redemption value applies to every existing balance.
 ## Storefront — `/staff/storefront`
 
 **Purpose:** Your shop's own identity — its branding colours, logo and homepage copy — the delivery
-rules every order is charged by, and the social and contact links shoppers use to reach you.
+rules every order is charged by, the social and contact links shoppers use to reach you, and which
+product labels your staff can set, plus a short description of what you sell.
 
 **Who can access:** Store admins only
 
 **What you can do:** Pick a ready-made colour theme, set all eight of your brand colours
 individually, upload your logo, edit the homepage hero subtitle, the notice in the header banner and
 the search box text shown in the header's search box, set your delivery fee, your free delivery threshold and your minimum order value, and enter your
-Facebook page address, your Instagram profile address and your WhatsApp number.
+Facebook page address, your Instagram profile address and your WhatsApp number. In the **Product
+labels & store description** form at the bottom of the page, choose which of the six product labels
+(Halal, Fresh, Organic, Vegetarian, Gluten free, HMC certification) your staff see on the product
+form, and write what your store sells.
 
 **Typical workflow:** You do the branding at setup and when it changes. The quickest start is to
 choose a theme from the **Select a theme** list and press **Apply Theme** — that fills all eight
@@ -121,6 +125,17 @@ configured. There is no separate row of icons, and nothing social appears in the
 **Facebook page address** and **Instagram profile address** must both be full web addresses
 starting with `https://`. **WhatsApp number** is entered as digits only in international format —
 `447700900123`, not `+44 7700 900123`.
+**Product labels** decide what the product form offers your staff, nothing more. Switching a label
+off hides its tick box on the product form, but **every product keeps the value it already has** —
+saving a product afterwards does not clear it — and your storefront is unchanged: a label still
+shows on exactly the products that carry it. A shop that sells no food can switch all six off.
+**HMC certification needs Halal**: saving it switched on while Halal is off is refused with the
+field marked. When this page was first introduced, each label started switched on only if at least
+one of your products already carried it, so switch on any you need that are off. **What this store
+sells** is one or two sentences, up to 200 characters, such as "Consumer electronics and
+accessories". It is given to the shop's AI features — shopping-list matching, search-word
+suggestions and pack-size suggestions — so they understand what you sell. Leave it blank and they
+use neutral wording.
 
 **Common mistakes and limitations:** Colour choices affect the readability of text sitting on them.
 After changing a brand colour, look at a real page rather than only the colour swatch. Because your
@@ -160,7 +175,9 @@ as a range; give any area or district its own delivery charge, minimum order and
 threshold; remove an area; and see the districts you turned away in the last 30 days.
 
 **Typical workflow:** You extend delivery to part of a new town. Add its districts here (for example
-`MK1-MK10`), and customers in them can immediately check out. If the outlying ones cost more to
+`MK1-MK10`), and customers in them can immediately check out. The examples shown on the page itself
+use your own shop's postcode area — your store postcode's area, or else the first area you already
+deliver to. If the outlying ones cost more to
 reach, open **Edit charges** on those rows and set a higher delivery charge. Check the
 **Districts you turned away** table now and then to see where customers are asking for delivery.
 
