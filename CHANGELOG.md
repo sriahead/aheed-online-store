@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Document-stage reconciliation for `#905`/`#907` (built, validated, fixed and merged to `staging` in PR #913, merge `62514aa`).**
+  - `specs/2026-09-26-p905-vendor-product-labels/build-notes.md`: the ship (`deploy-staging` confirmed) and a live-run of R35a — closed at this stage rather than left to promotion, since staging's `demo-srimart-admin@example.com` account turned out to predate production's copy and needed its password reset (owner-confirmed) before it could sign in.
+  - `docs/developer-portal/local-dev-playbook.md` 1.9.0: two new traps — plain `curl` failing silently (exit `43`/`000`, no server response) against a real HTTPS host generally, not just presigned uploads; and a `tsx` script placed outside the repo (e.g. the session scratchpad on another drive) failing to resolve `node_modules` because Node resolves relative to the script's own path, not the working directory.
+  - `docs/model-handoff.md` 1.40.0: `#905`/`#907` corrected from "in Build" to built-validated-merged-to-staging, with the fix, the deploy confirmation, and R35a's live result.
+  - `specs/roadmap.md`: the `#905`/`#907` change-log row now reflects the full Validate→Fix→Ship→Document record, including the regression found and fixed and R35a's live confirmation.
+  - `secrets/staging.vars`/`secrets/production.vars` (gitignored, not in this diff): both now record `DEMO_SRIMART_ADMIN_PASSWORD` as a reference-only key so it isn't lost again.
+
 - **Per-vendor product labels, store description for AI, and vendor-sourced examples** (issues `#905` — `#729` slice 2 — and `#907`; `specs/2026-09-26-p905-vendor-product-labels/`). One additive migration (`20260926180000_p905_vendor_product_label_settings`).
   - **Product labels are vendor data.** Six `VendorConfig` settings (Halal, Fresh, Organic, Vegetarian, Gluten free, HMC certification) decide which label controls the staff product form offers; HMC needs Halal. Edited in a new "Product labels & store description" form on `/staff/storefront`. Existing vendors were backfilled from their own products (a label is on if any product carries it); new vendors start with none. The storefront is unchanged — badges and facets stay data-driven.
   - **A disabled label is never cleared by a save.** `saveProduct` strips a disabled label's fields server-side (`lib/product-label-settings.ts`), so an update leaves the stored value alone and a crafted field cannot set it.

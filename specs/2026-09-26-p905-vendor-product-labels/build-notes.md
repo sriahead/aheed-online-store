@@ -194,3 +194,32 @@ Also resolved by `/validate`'s live pass, superseding the two bullets above it w
 `isOrganic: true` product left it `true` in the database and the storefront still showed the
 Organic badge) — the create-path-with-labels-off risk was not separately exercised and remains
 open.
+
+## Ship and Document (2026-09-26, Sonnet 5)
+
+Shipped as PR #913 (`staging`, merge `62514aa`); `deploy-staging` (run `36272013144`) completed
+**success**; staging `/api/health` confirmed serving `62514aa` with `db.ok: true`,
+`reference.drift: false`. `#905` and `#907` moved to `In Review` on Project #2 (issues stay open —
+`staging` isn't the default branch, so `Closes #NN` didn't fire).
+
+**R35a run live at Document, closing the one row `/validate` had deferred.** `demo-srimart-admin@
+example.com` turned out to exist on staging already (created 2026-08-17, long before production's
+copy of the same account, 2026-09-25) — the owner's first password guess (production's
+`Demo-Srimart-2026!`) and the generic `Demo-Aheed-2026!` convention both got `401`. Rather than
+keep guessing against a live auth endpoint, the account (and, since `demo:accounts` has no
+per-account password, all five staging demo accounts) was reset: `npm run demo:accounts --
+remove` then `add` with `DEMO_ACCOUNT_PASSWORD=Demo-Aheed-2026!` against staging's `DIRECT_URL`
+(owner-confirmed first — this touches live staging user rows, not code). Signed in afterward on
+`srimart-staging.nocaped.com`: `/staff/products/new` renders none of the six label checkbox names;
+`/staff/delivery-areas` shows `RG` examples with zero occurrences of `MK`. Both staging demo
+passwords are now recorded in `secrets/staging.vars`/`secrets/production.vars` as
+`DEMO_SRIMART_ADMIN_PASSWORD` (a reference-only key `configure-env.mjs` ignores, never pushed
+anywhere) so this doesn't need re-discovering next time.
+
+**Windows curl trap, same family as the presigned-PUT one already in `local-dev-playbook.md`:**
+plain `curl` POSTs and GETs against `srimart-staging.nocaped.com` (a real HTTPS/Cloudflare host,
+not the local `npm run preview` server) failed with exit `43`/`000` and no server response —
+TLS handshake completed (visible with `-v`), then the connection closed before the request went
+out. A Node `fetch()` one-liner against the identical URL succeeded immediately every time. Added
+to `local-dev-playbook.md` as a second instance of the same class of problem, now generalised
+beyond presigned uploads.
