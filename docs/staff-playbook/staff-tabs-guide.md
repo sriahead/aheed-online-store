@@ -4,10 +4,10 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.5.0"
-updated: "2026-09-25"
+version: "2.6.0"
+updated: "2026-09-27"
 visibility: internal
-summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
+summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
 tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback"]
 ---
 
@@ -181,6 +181,38 @@ separate filter options.
 
 **What happens after changes are saved:** The brand becomes available in the Catalogue product form
 straight away, and appears as a shopper-facing filter once a product carries it.
+
+
+## Product filters — `/staff/attributes`
+
+**Purpose:** Your shop's own filters, such as Colour or Connectivity. Each filter has a list of values
+(Black, White) that shoppers pick from to narrow the catalogue.
+
+**Who can access:** Staff and store admins
+
+**What you can do:** Add a filter. Rename a filter or change its position. Add values to a filter,
+and rename a value or change its position. Delete a value or a whole filter.
+
+**Typical workflow:** You want shoppers to filter headphones by colour. Add a filter called Colour,
+then add the values Black and White to it. Open each product on the Catalogue page and pick its
+colour under **Product filters**. The Colour filter appears in the shop once at least one product
+carries a value.
+
+**Important fields and filters:** A filter or value name can be up to 40 characters. A shop can have
+up to 20 filters, and each filter up to 50 values. **Position** sets the order: lower numbers show
+first, in the shop and on this page. The short code under each name (for example `attr_colour`) is
+the web address shoppers' filter links use. It is fixed when you create the filter and does not
+change when you rename it, so links shoppers have shared keep working.
+
+**Common mistakes and limitations:** A filter shows in the shop only where a product in view carries
+a value for it. A new filter with no products behind it is invisible to shoppers. Each product holds
+one value per filter, so a product cannot be both Black and White. List the two colours as separate
+products instead. Deleting a value or filter that products use asks you to tick **Also remove it
+from N products** first. The products stay in the shop; they lose only that value.
+
+**What happens after changes are saved:** Changes show on the Catalogue product form straight away.
+In the shop, the filter lists, applied-filter chips and each product's **Specifications** list
+follow on their next page load.
 
 
 ## Promotions — `/staff/promotions`
