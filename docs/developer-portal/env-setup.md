@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.12.0"
-updated: 2026-09-24
+version: "1.13.0"
+updated: 2026-09-25
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -193,6 +193,44 @@ SEED_REMOVE_GENERATED=1 npm run db:seed
   27 uploads, not 2,000. The seed prints its total `putObject` count on completion.
 - **Use a dev database.** The seed prints the resolved host before the first generated write so it
   can be eyeballed; making it *refuse* a staging/production host outright is tracked as **#490**.
+
+### AI net-content suggestions (#900)
+
+`scripts/suggest-net-content.ts` asks a Workers AI model to **suggest** the net content (pack
+size) of products that have none. It writes only `NetContentSuggestion` rows. Staff accept, edit or
+reject each one on `/staff/net-content`, and nothing reaches a product without that step.
+
+```bash
+# dev: try five products
+npx tsx scripts/suggest-net-content.ts --env-file .dev.vars --limit 5
+
+# one product, even if it was attempted before (for example after staff confirm a real photo)
+npx tsx scripts/suggest-net-content.ts --env-file .dev.vars --product <id> --include-attempted --limit 1
+```
+
+- **Credentials:** the existing `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, read from the
+  env file you name. No new secret is needed. Without them the script refuses before writing
+  anything.
+- **`NET_CONTENT_AI_MODEL`** (optional) overrides the default model,
+  `@cf/google/gemma-4-26b-a4b-it`. A `--model` flag overrides both. A model missing from the rate
+  table in `lib/net-content-run.ts` is refused unless `--unpriced-ok` is passed, because its spend
+  cannot be budgeted.
+- **Two bounds on every run:**
+  - `--limit`: 1–100, default 10.
+  - `--neuron-budget`: default 5000. The script starts no new call once the neurons spent reach
+    it.
+
+  Every account gets 10,000 neurons a day free, **shared** with the image pipeline, the synonym
+  proposals and the shop-your-list pre-pass. With Gemma 4 and reasoning off, a text-only
+  suggestion costs about 5 neurons (measured 2026-09-25).
+- **Photos:** only images whose `ProductImage.source` is `STAFF_UPLOAD` or `STAFF_CONFIRMED_PHOTO`
+  are sent. Every image that predates `#900` is `UNKNOWN` until staff press **Confirm real photo**
+  on the product page.
+- **Re-runs:** a product with any earlier suggestion is skipped unless `--include-attempted` is
+  passed. A throttle, timeout or truncated reply writes **no** row, so a transient fault never
+  marks a product as attempted.
+- **The environment you name is the one written to.** Running it with `secrets/production.vars` is
+  the production pilot, and that is an owner action.
 
 ### Per-vendor branding/config/delivery (ADR-004 slice 4)
 

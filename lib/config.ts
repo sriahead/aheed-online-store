@@ -148,6 +148,9 @@ export function getPaymentEnv(): PaymentEnv {
 const aiSchema = z.object({
   CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
   CLOUDFLARE_API_TOKEN: z.string().optional(),
+  // #900 — overrides the net-content suggester's default model (lib/net-content-suggester.ts).
+  // Optional: unset means DEFAULT_NET_CONTENT_MODEL; a script's --model flag overrides both.
+  NET_CONTENT_AI_MODEL: z.string().min(1).optional(),
 });
 
 export type AiEnv = z.infer<typeof aiSchema>;
@@ -156,6 +159,7 @@ export function getAiEnv(): AiEnv {
   return aiSchema.parse({
     CLOUDFLARE_ACCOUNT_ID: readEnv("CLOUDFLARE_ACCOUNT_ID"),
     CLOUDFLARE_API_TOKEN: readEnv("CLOUDFLARE_API_TOKEN"),
+    NET_CONTENT_AI_MODEL: readEnv("NET_CONTENT_AI_MODEL") || undefined,
   });
 }
 

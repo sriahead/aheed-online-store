@@ -6,7 +6,10 @@ import { Save } from "lucide-react";
 import { saveProduct } from "@/features/admin/catalogue";
 import { initialCatalogueState, toCategoryOptionGroups } from "@/lib/catalogue-form";
 import { ProductImageUploader } from "@/components/staff/ProductImageUploader";
-import { ProductImageManager } from "@/components/staff/ProductImageManager";
+import {
+  ProductImageManager,
+  type ProductImageManagerImage,
+} from "@/components/staff/ProductImageManager";
 import type { AdminProductDetail } from "@/lib/repositories/products";
 import type { AdminCategoryRow } from "@/lib/repositories/categories";
 import type { BrandSummary } from "@/lib/repositories/brands";
@@ -45,7 +48,7 @@ export interface ProductFormProps {
    * bundle. The storefront's ProductCard can import it because it is a server
    * component; this one cannot.
    */
-  imageUrls: { id: string; url: string; alt: string; isPrimary: boolean }[];
+  imageUrls: ProductImageManagerImage[];
 }
 
 export function ProductForm({ product, categories, brands, imageUrls }: ProductFormProps) {

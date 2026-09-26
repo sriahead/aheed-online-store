@@ -4,8 +4,8 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.4.0"
-updated: "2026-09-23"
+version: "2.5.0"
+updated: "2026-09-25"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
 tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback"]
@@ -311,6 +311,46 @@ before approving, because an incorrect mapping will surface products a shopper d
 
 **What happens after changes are saved:** Approved entries affect shopper searches immediately;
 rejected proposals are removed from the queue.
+
+
+
+
+## Net content review — `/staff/net-content`
+
+**Purpose:** Check the pack size (net content) an AI suggested for a product before it is saved.
+The shop works out the price per kg, per litre or per item that shoppers see from this value, so a
+wrong one shows a wrong price.
+
+**Who can access:** Staff and store admins
+
+**What you can do:** For each suggestion, accept it as it stands, correct the amount or unit and
+save your corrected value, or reject it. The page also shows a pilot summary: how many suggestions
+were accepted, corrected, rejected or unanswered, how often the suggestion agreed with the
+product's unit label, how long the AI took and which AI model made them.
+
+**Typical workflow:** Suggestions are created by a script that someone with access to the servers
+runs; this page has no button that asks the AI. Open the page, read the suggestion and the text the
+AI quoted as its evidence, compare it with the packaging if you can, then accept, correct or
+reject it. If it quoted a photo, the photo is shown beside it.
+
+**Important fields and filters:** **Suggested** is the pack size, with the price shoppers would
+see. **Confidence** is the AI's own estimate, not a guarantee. **From the product name / unit
+label / photo** shows where it found the value, with the exact text it quoted. The coloured badge
+compares the suggestion with the price written in the unit label: **Matches** is reassuring,
+**Does NOT match** means look carefully, and **can't be checked** means the label states no size or
+price per kg.
+
+**Common mistakes and limitations:** The AI never changes a product by itself, and it is not given
+a pack size for products where one does not apply (such as an electrical item sold singly): those
+get no suggestion and stay without a value. Accept and Save refuse if the product already has a
+net content — change it on the product's own page instead. The AI only reads photos that staff
+uploaded or confirmed as a real photo of the pack (**Confirm real photo** on the product page);
+AI-generated and automatically matched images are never used.
+
+**What happens after changes are saved:** Accepting or saving writes the net content to the
+product straight away, and shoppers see the derived unit price and the product appears under the
+pack-size filter. Rejecting changes nothing on the product; the suggestion leaves the queue either
+way.
 
 
 

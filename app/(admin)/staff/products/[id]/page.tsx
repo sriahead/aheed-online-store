@@ -55,6 +55,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     url: composePublicUrl(cdnBaseUrl, image.storageKey),
     alt: image.alt,
     isPrimary: image.isPrimary,
+    source: image.source,
   }));
 
   return (

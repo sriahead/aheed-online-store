@@ -10,12 +10,16 @@ import {
   reorderProductImages,
   requestImageUpload,
   approveProductImage,
+  toggleConfirmedPhoto,
 } from "@/features/admin/product-image";
 import {
   IMAGE_CONTENT_TYPE,
   IMAGE_QUALITY,
   MAX_IMAGE_EDGE_PX,
+  PRODUCT_IMAGE_SOURCE_LABELS,
   fitWithinEdge,
+  nextConfirmedPhotoSource,
+  type ProductImageSource,
 } from "@/lib/product-image";
 
 /**
@@ -42,6 +46,8 @@ export interface ProductImageManagerImage {
   url: string;
   alt: string;
   isPrimary: boolean;
+  /** #900 — where the image came from; see lib/product-image.ts. */
+  source: ProductImageSource;
 }
 
 export interface ProductImageManagerProps {
@@ -169,6 +175,14 @@ export function ProductImageManager({
     });
   }
 
+  function toggleConfirmed(imageId: string) {
+    setError(null);
+    startTransition(async () => {
+      const result = await toggleConfirmedPhoto(productId, imageId);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
   function approve() {
     setError(null);
     startTransition(async () => {
@@ -278,6 +292,19 @@ export function ProductImageManager({
                   className="w-full rounded-lg bg-surface-muted px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Set primary
+                </button>
+              )}
+              <p className="text-xs text-primary-muted">
+                {PRODUCT_IMAGE_SOURCE_LABELS[image.source]}
+              </p>
+              {nextConfirmedPhotoSource(image.source) !== null && (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => toggleConfirmed(image.id)}
+                  className="w-full rounded-lg bg-surface-muted px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {image.source === "UNKNOWN" ? "Confirm real photo" : "Unconfirm photo"}
                 </button>
               )}
             </li>

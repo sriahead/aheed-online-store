@@ -19,6 +19,7 @@ import {
   reorderProductImages as reorderProductImagesRow,
   setPrimaryProductImage,
   approveProductImageRow,
+  toggleProductImageConfirmedPhoto as toggleProductImageConfirmedPhotoRow,
 } from "@/lib/products-service";
 
 /**
@@ -252,6 +253,26 @@ export async function reorderProductImages(
   if (!auth.ok) return { ok: false, error: refusal(auth.status) };
 
   const result = await reorderProductImagesRow(auth.vendorId, productId, orderedImageIds);
+  if (!result.ok) return { ok: false, error: result.error };
+
+  const product = await getProductForAdmin(auth.vendorId, productId);
+  if (product) revalidateProductSurfaces(product.id, product.slug);
+  return { ok: true, value: null };
+}
+
+/**
+ * #900 (R8) — confirm an image of unknown source as a real photo of this product's pack, or
+ * withdraw that confirmation. Only a confirmed or staff-uploaded image may ever be read as
+ * evidence by the net-content suggester; the repository refuses every other starting source.
+ */
+export async function toggleConfirmedPhoto(
+  productId: string,
+  imageId: string,
+): Promise<ImageActionResult<null>> {
+  const auth = await requireVendorRole("STAFF", "ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  const result = await toggleProductImageConfirmedPhotoRow(auth.vendorId, productId, imageId);
   if (!result.ok) return { ok: false, error: result.error };
 
   const product = await getProductForAdmin(auth.vendorId, productId);

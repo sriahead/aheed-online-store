@@ -239,7 +239,7 @@ describe('features/admin/product-image.ts is a valid "use server" module', () =>
     }
   });
 
-  it("exports exactly the seven actions", () => {
+  it("exports exactly the eight actions", () => {
     expect(Object.keys(imageActions).sort()).toEqual([
       "addProductImage",
       "approveProductImage",
@@ -248,6 +248,7 @@ describe('features/admin/product-image.ts is a valid "use server" module', () =>
       "removeProductImage",
       "reorderProductImages",
       "requestImageUpload",
+      "toggleConfirmedPhoto",
     ]);
   });
 });

@@ -4,8 +4,8 @@ title: "Runtime Pitfalls — code that passes every check and still fails on Wor
 audience: [dev]
 type: doc
 status: approved
-version: "1.1.0"
-updated: 2026-09-24
+version: "1.2.0"
+updated: 2026-09-25
 visibility: internal
 summary: The failure catalogue for this stack — Prisma and Neon on V8 isolates, storage credentials, edge caching, dependency traps, Workers AI and Better Auth. Everything here passes lint, typecheck, test and build, and fails at runtime anyway.
 tags: [runtime, workers, prisma, troubleshooting]
@@ -423,6 +423,25 @@ version-adjacent facts that break a build or a runtime rather than a policy.
   against a real call under `npm run preview`** (`.dev.vars` needs `CLOUDFLARE_ACCOUNT_ID`/
   `CLOUDFLARE_API_TOKEN` — see the Config section above for precedence) — a green unit suite proves
   nothing here, exactly as it didn't for the Prisma error-code case.
+- **A reasoning model can spend its entire `max_tokens` thinking and return HTTP 200 with no
+  answer.** On `@cf/google/gemma-4-26b-a4b-it` the separate `reasoning_content` counts toward
+  `max_tokens`. Measured at `#900`'s Build (2026-09-25): with the default reasoning on, ambiguous
+  products (`Whole Milk / 2pt`, `Still Water 6 x 1.5L`, `Fast Phone Charger`) reasoned until the
+  ceiling, at 800 and again at 2,500 tokens. Each came back with `finish_reason: "length"`,
+  `content` empty or null, and 25–71 neurons spent. `reasoning_effort: "low"` did not help;
+  `chat_template_kwargs: { enable_thinking: false }` did, bringing replies down to ~50 tokens at
+  ~4–5 neurons. Three rules follow:
+  - Check `finish_reason`. A `"length"` reply is not an answer, and must not be stored as "the
+    model had nothing to say", or the item is marked attempted over a budget artefact.
+  - Keep model-specific request fields as data beside the model id
+    (`NET_CONTENT_MODEL_REQUEST_OPTIONS` in `lib/net-content-suggester.ts`), not as code branches.
+  - Reasoning off made Gemma **more willing to convert units** (it answered 568 ml for "2pt", which
+    is half the true 1,136 ml). A prompt that relies on reasoning to refuse a conversion needs that
+    refusal stated explicitly once reasoning is off.
+
+  The response is OpenAI-shaped: `result.choices[0].message.content`, `finish_reason`,
+  `result.usage.{prompt_tokens, completion_tokens, neurons}`. Image input is accepted as an
+  `image_url` content part carrying a `data:image/webp;base64,…` or `data:image/jpeg;base64,…` URL.
 
 
 ## Better Auth (`lib/auth.ts`, ADR-002)
