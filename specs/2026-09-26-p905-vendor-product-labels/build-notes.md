@@ -169,3 +169,28 @@ These existing tests were updated for the new signatures, and some gained cases:
 - **The R30 denylist includes `Milton Keynes`, scanned across `app/**/*.tsx`.** Any future
   legitimate Aheed-specific literal in a `.tsx` would trip it. Today, Aheed's locality comes from
   the DB, so none exists.
+
+## Fix (2026-09-26, Sonnet 5)
+
+`/validate` ran the full suite alone (never done at Build — see above) and found one regression:
+`tests/delivery-areas-actions.test.ts` (5 tests, pre-existing, untouched by this branch's diff)
+threw `No "exampleDeliveryAreaForVendor" export is defined on the "@/lib/delivery-areas-service"
+mock` on every `addDeliveryArea` case. R27's own change — `features/admin/delivery-areas.ts` now
+calls that function before parsing — was correct; the test's `vi.mock("@/lib/delivery-areas-service",
+...)` factory simply predated it and only stubbed `getDeliveryAreaRepository`.
+
+**Root cause, not the check:** the missing coverage was the mock, not the production code, so the
+fix is entirely in the test file — `exampleDeliveryAreaForVendor: vi.fn().mockResolvedValue(null)`
+added to that mock factory. `null` matches what every case in that file already exercises (valid
+single prefixes, ranges, and charge validation, none of which reach the example text), so no
+existing assertion changed. `npx vitest run tests/delivery-areas-actions.test.ts` now passes (8/8),
+and `npx vitest run` (alone, full suite) passes at 180/180 files, 2378/2378 tests — no other row
+regressed.
+
+No observable behaviour changed (test-only fix), so no `CHANGELOG.md` entry.
+
+Also resolved by `/validate`'s live pass, superseding the two bullets above it were raised against:
+**R34(b) and R35's core promise were proven live** (Organic disabled, an unchanged save of a real
+`isOrganic: true` product left it `true` in the database and the storefront still showed the
+Organic badge) — the create-path-with-labels-off risk was not separately exercised and remains
+open.
