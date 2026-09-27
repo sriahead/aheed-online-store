@@ -113,6 +113,7 @@ async function main() {
     await upsertVendorSatellites(SRIMART_VENDOR_ID, SRIMART_SATELLITES);
     await seedBundles(SRIMART_VENDOR_ID, SRIMART_BUNDLES);
     await seedPriceTiers(SRIMART_VENDOR_ID, SRIMART_PRICE_TIERS);
+    await seedAttributes(SRIMART_VENDOR_ID, SRIMART_ATTRIBUTES);
     await seedSearchSynonyms(SRIMART_VENDOR_ID);
     await upsertVendorDomain(SRIMART_VENDOR_ID, srimartHost);
   } else if (srimartHost && !aheedHost) {
@@ -1798,6 +1799,111 @@ async function seedPriceTiers(vendorId: string, fixtures: PriceTierFixture[]) {
 /** "Buy 2 x 5kg Basmati for £16.50" — the P8.5 brief's own worked example. */
 const AHEED_PRICE_TIERS: PriceTierFixture[] = [
   { productSlug: "basmati-rice-5kg", groupQuantity: 2, groupPricePence: 1650 },
+];
+
+/**
+ * #912 — vendor-defined product filters. Each attribute lists its values in order; `values` maps a
+ * product slug to the option name it carries for that attribute.
+ */
+interface AttributeFixture {
+  name: string;
+  slug: string;
+  options: { name: string; slug: string }[];
+  values: Record<string, string>;
+}
+
+/**
+ * #912 — SriMart only, and only on its audio and charger products. Its lighting and home products
+ * get none, which is what proves a filter HIDES where nothing in view carries it (/categories/
+ * sri-home shows no Colour or Connectivity control). Aheed gets none, so its storefront is
+ * unchanged. Every write is an upsert on the model's own unique key, so re-running leaves the same
+ * row counts; `update: {}` on the definitions means a re-run never undoes a demo edit made at
+ * /staff/attributes.
+ */
+async function seedAttributes(vendorId: string, fixtures: AttributeFixture[]) {
+  let values = 0;
+  for (const [position, fixture] of fixtures.entries()) {
+    const attribute = await prisma.vendorAttribute.upsert({
+      where: { vendorId_slug: { vendorId, slug: fixture.slug } },
+      create: { vendorId, name: fixture.name, slug: fixture.slug, sortOrder: position },
+      update: {},
+      select: { id: true },
+    });
+    const optionIds = new Map<string, string>();
+    for (const [optionPosition, option] of fixture.options.entries()) {
+      const row = await prisma.vendorAttributeOption.upsert({
+        where: { attributeId_slug: { attributeId: attribute.id, slug: option.slug } },
+        create: {
+          attributeId: attribute.id,
+          name: option.name,
+          slug: option.slug,
+          sortOrder: optionPosition,
+        },
+        update: {},
+        select: { id: true },
+      });
+      optionIds.set(option.name, row.id);
+    }
+
+    const products = await prisma.product.findMany({
+      where: { vendorId, slug: { in: Object.keys(fixture.values) } },
+      select: { id: true, slug: true },
+    });
+    const bySlug = new Map(products.map((p) => [p.slug, p.id]));
+    for (const [productSlug, optionName] of Object.entries(fixture.values)) {
+      const productId = bySlug.get(productSlug);
+      const optionId = optionIds.get(optionName);
+      if (!productId || !optionId) {
+        // Loud, not silent — the #276 lesson, same as seedPriceTiers above.
+        console.log(
+          `WARNING: skipping ${fixture.name} for ${vendorId} — no product ${productSlug} or value ${optionName}`,
+        );
+        continue;
+      }
+      await prisma.productAttributeValue.upsert({
+        where: { productId_attributeId: { productId, attributeId: attribute.id } },
+        create: { vendorId, productId, attributeId: attribute.id, optionId },
+        update: { optionId },
+      });
+      values += 1;
+    }
+  }
+  console.log(`seeded ${fixtures.length} product filter(s), ${values} value(s) for ${vendorId}`);
+}
+
+const SRIMART_ATTRIBUTES: AttributeFixture[] = [
+  {
+    name: "Colour",
+    slug: "colour",
+    options: [
+      { name: "Black", slug: "black" },
+      { name: "White", slug: "white" },
+    ],
+    values: {
+      "sri-over-ear-headphones": "Black",
+      "sri-earbuds": "White",
+      "sri-bluetooth-speaker": "Black",
+      "sri-usb-c-cable-2m": "Black",
+      "sri-phone-charger": "White",
+      "sri-gan-charger-65w": "White",
+    },
+  },
+  {
+    name: "Connectivity",
+    slug: "connectivity",
+    options: [
+      { name: "Wired", slug: "wired" },
+      { name: "Wireless", slug: "wireless" },
+    ],
+    values: {
+      "sri-over-ear-headphones": "Wireless",
+      "sri-earbuds": "Wireless",
+      "sri-bluetooth-speaker": "Wireless",
+      "sri-usb-c-cable-2m": "Wired",
+      "sri-phone-charger": "Wired",
+      "sri-gan-charger-65w": "Wired",
+    },
+  },
 ];
 
 /** 3500 / 3 is not an integer — the case a per-unit tier price gets wrong. */

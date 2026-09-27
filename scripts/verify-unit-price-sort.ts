@@ -141,6 +141,7 @@ async function main() {
         lowStockThreshold: 1,
         expectedRestockDay: null,
         tier: null,
+        attributeValues: [],
       });
       if (!created.ok) throw new Error(`create refused for ${fixture.label}: ${created.error}`);
       createdIds.push(created.id);

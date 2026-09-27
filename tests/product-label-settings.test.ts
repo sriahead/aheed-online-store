@@ -39,6 +39,7 @@ const VALUES: ProductWriteInput = {
   lowStockThreshold: 0,
   expectedRestockDay: null,
   tier: null,
+  attributeValues: [],
 };
 
 const ALL_ON: ProductLabelSettings = {

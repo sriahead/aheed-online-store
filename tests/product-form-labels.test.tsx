@@ -20,7 +20,14 @@ const LABEL_INPUTS = ["isHalal", "isFresh", "isOrganic", "isVegetarian", "isGlut
 
 function renderWith(labels: ProductLabelSettings) {
   const { container } = render(
-    <ProductForm product={null} categories={[]} brands={[]} imageUrls={[]} labels={labels} />,
+    <ProductForm
+      product={null}
+      categories={[]}
+      brands={[]}
+      imageUrls={[]}
+      labels={labels}
+      attributes={[]}
+    />,
   );
   const has = (name: string) => container.querySelector(`input[name="${name}"]`) !== null;
   const headings = [...container.querySelectorAll("h2")].map((h) => h.textContent);

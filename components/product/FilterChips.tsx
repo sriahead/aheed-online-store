@@ -17,6 +17,7 @@ export function FilterChips({
   params,
   categoryLabel,
   brandLabel,
+  attributeLabels,
 }: {
   basePath: string;
   params: FilterChipParams;
@@ -24,8 +25,13 @@ export function FilterChips({
   categoryLabel?: string;
   /** Resolved brand NAME (#569), so the chip reads "Shan" rather than "shan". */
   brandLabel?: string;
+  /**
+   * #912 — `"Colour: Black"` per RESOLVED `attr_*` key (`lib/attribute-filters.ts`). A key with no
+   * label renders no chip: it applied no filter.
+   */
+  attributeLabels?: Readonly<Record<string, string>>;
 }) {
-  const chips = activeFilterChips(basePath, params, categoryLabel, brandLabel);
+  const chips = activeFilterChips(basePath, params, categoryLabel, brandLabel, attributeLabels);
   if (chips.length === 0) return null;
 
   return (

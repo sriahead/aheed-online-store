@@ -16,6 +16,7 @@ import type { CatalogueWriteResult } from "@/lib/repositories/products";
 import { createCategoryForVendor, updateCategoryForVendor } from "@/lib/categories-service";
 import { fetchVendorProfile } from "@/lib/vendor-service";
 import { applyProductLabelSettings, labelSettingsFromProfile } from "@/lib/product-label-settings";
+import { readAttributeValues } from "@/lib/product-attribute-form";
 
 /**
  * Catalogue admin actions (P6b1, #159) — the write half of /staff/products and
@@ -71,13 +72,22 @@ export async function saveProduct(
   if (!parsed.ok) {
     return { error: parsed.error.message, field: parsed.error.field, saved: false };
   }
+  // #912 — the vendor-filter selects. Only the submitted ones; the repository checks that each
+  // names this vendor's own attribute and option before writing anything.
+  const attributeValues = readAttributeValues(form);
+  if (!attributeValues.ok) {
+    return { error: attributeValues.error, field: attributeValues.field, saved: false };
+  }
 
   // #905 — a label this vendor has switched off is not on the form, so the parser reads its
   // absent checkbox as false. Strip those fields so the write leaves them alone rather than
   // clearing them. The settings come from the vendor's own config, never from the submission.
   // Keyed on the vendor the session is authorised for, the same id the write below uses.
   const profile = await fetchVendorProfile(auth.vendorId);
-  const values = applyProductLabelSettings(parsed.value, labelSettingsFromProfile(profile));
+  const values = applyProductLabelSettings(
+    { ...parsed.value, attributeValues: attributeValues.value },
+    labelSettingsFromProfile(profile),
+  );
 
   const productId = String(form.get("productId") ?? "").trim();
   const result =

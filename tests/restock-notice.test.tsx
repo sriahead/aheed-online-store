@@ -85,6 +85,7 @@ describe("#876 — QuickViewDrawer restock notice (R13)", () => {
       description: "Fresh paneer.",
       images: [],
       hmcReference: null,
+      specifications: [],
     };
     vi.stubGlobal(
       "fetch",

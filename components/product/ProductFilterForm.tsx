@@ -1,5 +1,6 @@
 import { formatPackSize, packSizeParamValue } from "@/components/product/unit-price";
 import type { AvailableFacets } from "@/lib/repositories/products";
+import { ATTRIBUTE_PARAM_PREFIX, type FilterParamValue } from "@/components/product/filter-params";
 
 /**
  * Plain <form method="GET"> — no client-side JS. Submitting it is a real page
@@ -34,6 +35,8 @@ export function ProductFilterForm({
     category?: string;
     /** #397 — the wire form is `<amount>-<UNIT>`, e.g. `500-GRAM`. */
     packSize?: string;
+    /** #912 — the vendor's own filters, `attr_<attributeSlug>=<optionSlug>`. */
+    [attributeKey: `attr_${string}`]: FilterParamValue;
   };
   // Per-vendor filter visibility (ADR-004 follow-up): only offer a filter the vendor's catalogue
   // actually uses, narrowed since #568 to the current result context. Defaults to none.
@@ -50,6 +53,7 @@ export function ProductFilterForm({
     origins: [],
     brands: [],
     packSizes: [],
+    attributes: [],
   };
   return (
     <form method="GET" className="flex flex-col gap-5">
@@ -288,6 +292,35 @@ export function ProductFilterForm({
           </select>
         </label>
       )}
+
+      {/*
+        #912 — the vendor's OWN filters, one select each, after every platform facet. Same shape
+        as brand and origin above: single-select (one removable chip per filter), an empty first
+        option that submits `attr_<slug>=` and reads as "no filter", the option SLUG as the value
+        (it is what a shared URL carries), and no `id` (FilterPanel renders this form twice). A
+        filter is listed only when a product in the current context carries one of its values.
+      */}
+      {spec.attributes.map((attribute) => {
+        const name = `${ATTRIBUTE_PARAM_PREFIX}${attribute.slug}`;
+        const current = searchParams[`${ATTRIBUTE_PARAM_PREFIX}${attribute.slug}` as const];
+        return (
+          <label key={attribute.slug} className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-primary">{attribute.name}</span>
+            <select
+              name={name}
+              defaultValue={typeof current === "string" ? current : ""}
+              className="w-full rounded-lg border border-black/20 px-3 py-2"
+            >
+              <option value="">Any {attribute.name}</option>
+              {attribute.options.map((option) => (
+                <option key={option.slug} value={option.slug}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        );
+      })}
 
       {/*
         #512 — this was a hardcoded `bg-[#2E7D32] hover:bg-[#1b5e20]`. Two things were wrong with

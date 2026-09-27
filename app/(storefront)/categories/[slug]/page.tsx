@@ -13,6 +13,10 @@ import { FilterChips } from "@/components/product/FilterChips";
 import { SubcategoryLinks } from "@/components/product/SubcategoryLinks";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
+import { nextCategoryPageHref, prevCategoryPageHref } from "@/components/product/category-href";
+import type { FilterParamValue } from "@/components/product/filter-params";
+import { listCurrentVendorAttributeDefinitions } from "@/lib/attributes-service";
+import { resolveAttributeFilters } from "@/lib/attribute-filters";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
 // can't load during next build's Node-based static prerendering.
@@ -38,71 +42,18 @@ type SearchParams = {
   /** #397 — pack size as `<amount>-<UNIT>`, e.g. `500-GRAM`. */
   packSize?: string;
   cursor?: string;
-  /**
-   * #498 — the stack of cursors used to reach every PRIOR page, comma-joined,
-   * so "Previous" can navigate backwards without an OFFSET query (this app's
-   * pagination is keyset-only, per specs/architecture.md) or a second,
-   * separate COUNT query for absolute page numbers. Page 1 in the stack is
-   * represented as an empty segment (no cursor was used to reach it).
-   */
+  /** #498 — the cursor stack for "Previous"; see `components/product/category-href.ts`. */
   back?: string;
+  /** #912 — vendor-defined filters; unknown slugs apply nothing and render no chip. */
+  [attributeKey: `attr_${string}`]: FilterParamValue;
 };
 
-function parseBack(back?: string): string[] {
-  return back ? back.split(",") : [];
-}
-
-function buildHref(
-  slug: string,
-  params: SearchParams,
-  overrides: { cursor?: string; back: string[] },
-): string {
-  const qs = new URLSearchParams();
-  if (params.minPrice) qs.set("minPrice", params.minPrice);
-  if (params.maxPrice) qs.set("maxPrice", params.maxPrice);
-  if (params.inStock) qs.set("inStock", params.inStock);
-  if (params.isHalal) qs.set("isHalal", params.isHalal);
-  if (params.isFresh) qs.set("isFresh", params.isFresh);
-  if (params.isOrganic) qs.set("isOrganic", params.isOrganic);
-  /*
-   * #569 — the six new facets. THIS IS THE THIRD PLACE a filter key must be registered, after
-   * `filter-chips.ts`'s REMOVABLE and `search-href.ts`'s CARRIED, and it is the one most easily
-   * missed because it is a hand-written chain rather than a list. Omit a key here and the facet is
-   * silently dropped the moment a shopper clicks "Next" on a category listing, leaving them on a
-   * wider result set than the chips above claim is applied.
-   */
-  if (params.isVegetarian) qs.set("isVegetarian", params.isVegetarian);
-  if (params.isGlutenFree) qs.set("isGlutenFree", params.isGlutenFree);
-  if (params.isHmcCertified) qs.set("isHmcCertified", params.isHmcCertified);
-  if (params.onOffer) qs.set("onOffer", params.onOffer);
-  if (params.origin) qs.set("origin", params.origin);
-  if (params.brand) qs.set("brand", params.brand);
-  // #397 — pack size. Present here for the same reason every key above is: this is the third place
-  // (see the comment above) a filter key must be registered, and this one was missed at Build —
-  // found live at /validate (a "Next page" click on a category listing silently dropped an active
-  // pack-size filter), fixed here rather than in validation.md, since the code was wrong.
-  if (params.packSize) qs.set("packSize", params.packSize);
-  if (overrides.cursor) qs.set("cursor", overrides.cursor);
-  // A lone "" entry means "page 1 had no cursor" and nothing else — not worth
-  // a query param at all, so the very first "Next" click stays a clean URL.
-  const joinedBack = overrides.back.join(",");
-  if (joinedBack !== "") qs.set("back", joinedBack);
-  return `/categories/${slug}?${qs.toString()}`;
-}
-
-function nextPageHref(slug: string, params: SearchParams, nextCursor: string): string {
-  const back = [...parseBack(params.back), params.cursor ?? ""];
-  return buildHref(slug, params, { cursor: nextCursor, back });
-}
-
-function prevPageHref(slug: string, params: SearchParams): string {
-  const back = parseBack(params.back);
-  const prevCursor = back[back.length - 1] ?? "";
-  return buildHref(slug, params, {
-    cursor: prevCursor || undefined,
-    back: back.slice(0, -1),
-  });
-}
+/*
+ * #601 — the Previous/Next hrefs used to be built by a hand-written `if (params.X) qs.set(...)`
+ * chain HERE, the third place a filter key had to be registered and the one no test could reach.
+ * They now live in `components/product/category-href.ts`, carrying exactly the keys
+ * `filter-params.ts` defines — including #912's vendor-defined `attr_*` filters.
+ */
 
 export default async function CategoryPage({
   params,
@@ -130,6 +81,11 @@ export default async function CategoryPage({
   const categoryIds = [category.id, ...category.children.map((child) => child.id)];
   // #569 — resolve the brand slug to an id before the query, mirroring /search.
   const selectedBrand = query.brand ? await getBrandRepository().getBySlug(query.brand) : null;
+  // #912 — the vendor's own filters: one resolution feeds both the predicate and the chips.
+  const attributeFilters = resolveAttributeFilters(
+    query,
+    await listCurrentVendorAttributeDefinitions(),
+  );
 
   const { items, nextCursor } = await products.listByCategory(categoryIds, {
     take: PAGE_SIZE,
@@ -147,6 +103,7 @@ export default async function CategoryPage({
     origin: query.origin || undefined,
     brandId: selectedBrand?.id,
     packSize: parsePackSizeParam(query.packSize),
+    attributeOptionIds: attributeFilters.optionIds,
   });
   /*
    * #568 — facets narrow to this category's own products (and its subcategories'), so a department
@@ -212,6 +169,7 @@ export default async function CategoryPage({
             // #569 — an unresolved brand slug applies no predicate, so it must not render a chip.
             params={{ ...query, brand: selectedBrand ? query.brand : undefined }}
             brandLabel={selectedBrand?.name}
+            attributeLabels={attributeFilters.labels}
           />
           <h2 className="sr-only">Products</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -228,7 +186,7 @@ export default async function CategoryPage({
             <div className="mt-6 flex gap-3">
               {!isFirstPage && (
                 <Link
-                  href={prevPageHref(slug, query)}
+                  href={prevCategoryPageHref(slug, query)}
                   className="inline-block rounded-full border border-black/10 bg-white px-4 py-2 font-semibold text-primary hover:bg-surface-muted"
                 >
                   Previous page
@@ -236,7 +194,7 @@ export default async function CategoryPage({
               )}
               {nextCursor && (
                 <Link
-                  href={nextPageHref(slug, query, nextCursor)}
+                  href={nextCategoryPageHref(slug, query, nextCursor)}
                   className="inline-block rounded-full bg-action px-4 py-2 font-semibold text-white"
                 >
                   Next page

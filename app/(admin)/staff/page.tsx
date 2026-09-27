@@ -16,6 +16,7 @@ import {
   Package,
   Ruler,
   ShieldAlert,
+  SlidersHorizontal,
   Sparkles,
   Store,
   Tag,
@@ -142,6 +143,17 @@ export default async function StaffHomePage() {
           <p className="font-semibold text-primary">Brands</p>
           <p className="mt-1 text-sm text-primary-muted">
             The brands shoppers can filter by, and which products carry them.
+          </p>
+        </Link>
+
+        <Link
+          href="/staff/attributes"
+          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+        >
+          <SlidersHorizontal className="mb-3 h-6 w-6 text-accent" aria-hidden />
+          <p className="font-semibold text-primary">Product filters</p>
+          <p className="mt-1 text-sm text-primary-muted">
+            Your own shopper filters, such as Colour or Size, and the values each one offers.
           </p>
         </Link>
 
