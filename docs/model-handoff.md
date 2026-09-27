@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.41.0"
-updated: 2026-09-26
+version: "1.42.0"
+updated: 2026-09-27
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -433,6 +433,19 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **`#912` (vendor-defined product filters, folding `#601` and `#916`) is BUILT and awaiting
+  `/validate`.** It's on branch `feature/912-vendor-defined-filters`, which has not been pushed or
+  opened as a PR as of 2026-09-27. Spec: `specs/2026-09-27-p912-vendor-defined-filters/`. Read its
+  `build-notes.md` first.
+  - **The dev database is ahead of `staging`.** Migration `20260927000000_p912_vendor_attributes`
+    (additive: three new tables) was applied to dev (`ep-dry-morning-zab7dx08`) at Build.
+    Abandoning the branch would leave three unused tables on dev. Don't read them as drift from
+    another cause.
+  - **Filed from this Build:** `#917` (the staff guide promises brand removal, and no control
+    exists) and `#918` (filter follow-ups deferred from `#912`). `#538` gained two more
+    full-suite timeout files.
+  - Board: `#912`, `#601` and `#916` are `In Progress`.
 
 - **`#729` slice 1 (vendor-neutral UI copy) is DONE, in production via PR #910 (`556e273`)** — the
   history below is its staging-layer record. Validated (every row
