@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.9.0"
-updated: 2026-09-26
+version: "1.10.0"
+updated: 2026-09-27
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions and presigned uploads, grep-vs-rendered-HTML pitfalls, local vendor-host resolution.
 tags: [local-dev, windows, validation, playbook]
@@ -453,4 +453,18 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   request rather than paging through cursors by hand. Worth checking a department's real row count
   before trusting a "product not found on this page" result as a code defect, on any dev checkout
   that has run the scale-testing seed.
+- **Submitting a non-ASCII character (e.g. `£`) as a `curl -F` field value from this Windows Git Bash
+  session can silently corrupt it to the UTF-8 replacement character on write, even though the same
+  shell's `echo`/locale report correct UTF-8 handling.** Hit live at `#917`/`#918`'s `/validate`
+  (2026-09-27): a product's `unitLabel` (`£4.49 / 2L`) round-tripped through a `curl -F` product-save
+  submission came back as `efbfbd...` (U+FFFD) instead of `c2a3...` (£'s real UTF-8 bytes) — reading
+  correctly-typed £ signs on the way in and on the way out of `console.log`, because the replacement
+  character *displays* as something easy to misread as fine. Only caught by comparing
+  `Buffer.from(value, "utf8").toString("hex")` against the expected bytes. Root cause not isolated
+  (curl's own multipart encoding on this platform, or how the harness passes the command through, is
+  the suspect); the practical fix was restoring the value with a direct write rather than chasing the
+  cause. **Prefer a Node `fetch()`/`FormData` script over `curl -F` for any field that carries a
+  non-ASCII character** — it did not reproduce the corruption for the same field on the same host.
+  When `curl -F` must be used with such a field, verify the stored value's byte hex afterward rather
+  than trusting a rendered read-back.
 

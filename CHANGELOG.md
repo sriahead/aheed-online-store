@@ -17,6 +17,11 @@ every branch merges.
   - `specs/architecture.md` 1.36.0 records the two kinds, the repeated-parameter exception to `#689`, range keys, card display and search; it also moves the search-pagination `OFFSET` paragraphs back out of the `#912` subsection. Staff guide 2.7.0. Seed: SriMart's Colour shows on cards, and a `Power` number filter is set on three products.
   - Deferred follow-ups filed as `#923`; SriMart's production filter data is owner action `#922`. Carried forward: the `specs/roadmap.md` row for PR #921 and the `docs/model-handoff.md` correction that `#912` is in production.
 
+- **Document-stage reconciliation for `#917`/`#918` (built, validated and merged to `staging` in PR #924, merge `26abc0ca`).**
+  - `specs/roadmap.md`: the `#917`/`#918` change-log row now reflects the full Validate → Ship record, including R38's live SriMart-staging proof and a `curl -F`/`£` encoding trap found along the way (not a code defect).
+  - `docs/model-handoff.md` 1.45.0: `#917`/`#918` corrected from "built, awaiting `/validate`" to validated-and-merged-to-staging, with the deploy confirmation and R38's live result; the superseded `#912`-reached-staging detail is compressed into a "Previous promotion" record now that `#912` is in production.
+  - `docs/developer-portal/local-dev-playbook.md` 1.10.0: documents the `curl -F` non-ASCII corruption trap and the Node `fetch`/`FormData` workaround.
+
 - **Vendor-defined product filters** (issue `#912`, folding in `#601` and `#916`; `specs/2026-09-27-p912-vendor-defined-filters/`). One additive migration (`20260927000000_p912_vendor_attributes`).
   - **Each store defines its own filters as data.** `VendorAttribute`, `VendorAttributeOption` and `ProductAttributeValue` (one value per product per filter), with composite foreign keys that tie an option to its filter and a filter to its vendor in the database itself. They sit beside the six label booleans, not in place of them (`specs/architecture.md` 1.35.0).
   - **`/staff/attributes` ("Product filters")** for staff and store admins: add, rename and reposition filters and their values; delete one, with an "Also remove it from N products" tick when products use it. On the staff nav, the hub and the staff guide.

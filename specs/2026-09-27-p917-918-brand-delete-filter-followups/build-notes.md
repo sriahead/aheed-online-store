@@ -159,3 +159,48 @@ None. Two wording notes for the validator:
   matches, autocomplete over filter values, and removing a deleted brand's stored image.
 - The local `staging` branch in this checkout is stale (pre-`#912`). Not a repository defect; recorded in
   `validation.md`'s "Before you start".
+
+## Validate record (2026-09-27, fresh context, Sonnet 5)
+
+Every row R1–R43 checked; no defects found. All ten "Known-shaky areas" above got a live run and
+closed clean: the CHECK constraint fired correctly in a rolled-back transaction (R9); `13.3` round-tripped
+through `Decimal` and back as a string with no drift (R35(b)/(e)); the range `where` with string bounds
+matched correctly live (R35(d)/R36(c)); the number facet probe correctly listed `Power` on
+`sri-electronics` and not `sri-home` (R36(a)); `hasFilterValueMatch` correctly found `sri-usb-c-cable-2m`,
+`sri-phone-charger` and `sri-gan-charger-65w` for `q=wired`, none of which have "wired" in their name or
+description (R36(g)); repeated `attr_colour` params resolved correctly as `string[]` (R36(b)); the seed
+ran twice against dev, idempotent (R33); brand `deleteMany` on the HTTP client worked live (R34(c)). The
+one full-suite flake (`tests/vendor-neutral-copy.test.ts`) reproduced exactly as predicted and passed
+alone.
+
+**Tooling finding, not an artifact defect:** submitting a form field containing `£` via `curl -F` from
+this Windows Git Bash session silently replaced it with the UTF-8 replacement character
+(`0xEFBFBD` instead of `0xC2A3`) in two products' `unitLabel` during live proof (R34(a), R35(b)).
+Caught by comparing stored byte hex against the expected encoding, not by reading the value back with
+`console.log` (which renders the replacement character in a way that's easy to misread as correct).
+Both restored to their exact original bytes via a direct Prisma `update`, verified byte-for-byte
+afterward. Node's `fetch`/`FormData` (used for the R38 staging proof below) did not reproduce this —
+prefer it over `curl -F` for any field carrying a non-ASCII character.
+
+## Ship record (2026-09-27)
+
+PR #924 (`feature/917-918-brand-delete-filter-followups -> staging`, `closes #917`, mentions `#918`
+and `#922`) — `docs-gates`, `quality/kms` and `quality/quality` all green; merged (`26abc0ca`);
+`deploy-staging` (run `36352280570`) completed **success**; staging `/api/health` confirmed serving
+`26abc0c` with `db.ok: true`, `reference.drift: false`. `#917` moved to **In Review** on Project #2
+(`#918` stays where it was — this PR doesn't close it; item 5, owner action `#922`, is still open).
+
+**R38 run live**, signed in as `demo-srimart-admin@example.com` on `srimart-staging.nocaped.com`
+(Node `fetch`, not `curl` — see the tooling finding above) via the `$ACTION_*` progressive-enhancement
+protocol, same as local proof:
+- Added and deleted an unused brand ("R38 Throwaway Brand", 0 products, no confirmation needed).
+- Added a `NUMBER` filter ("R38 Weight", unit `g`), ticked `Show on product cards`, set it to `250`
+  on a real catalogue product (`LED Desk Lamp`, `sri-home`).
+- Confirmed live: the card's `data-card-specs` title read `R38 Weight: 250 g` on
+  `/categories/sri-home`; `/products/led-desk-lamp` showed `Specifications` with `R38 Weight` /
+  `250 g`; `/search?attr_r38-weight_min=200&attr_r38-weight_max=300` listed exactly
+  `led-desk-lamp` with both range chips.
+- Deleted the filter with the confirmation tick (it showed "1 product" first, confirming the tick
+  was actually required). Afterward: the filter and brand are both gone, and `LED Desk Lamp`'s
+  other fields (`name`, `slug`, `basePrice`, `unitLabel` — byte-verified `£18.99 each` — `quantity`,
+  `lowStockThreshold`) are unchanged from before the row began.
