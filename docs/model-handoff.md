@@ -477,6 +477,18 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **`#917` + `#918` items 1–4 are BUILT, awaiting `/validate`** on
+  `feature/917-918-brand-delete-filter-followups` (not pushed at build-notes time; no upstream set, so
+  push with `-u origin <branch>`). Spec `specs/2026-09-27-p917-918-brand-delete-filter-followups/` —
+  read its `build-notes.md` first. Brand deletion; LIST/NUMBER vendor filters; multi-select via repeated
+  `attr_<slug>`; `_min`/`_max` ranges; `showOnCard`; search over option names.
+  - **One additive migration, `20260927140000_p918_attribute_kinds_numbers`, is applied to dev only**
+    (`ep-dry-morning-zab7dx08`). Staging and production get it through their deploy workflows.
+  - **The local `staging` branch in this checkout is stale (pre-`#912`).** Diff against
+    `origin/staging`; a `prisma migrate diff` from local `staging` re-creates all of `#912`'s tables.
+  - Board: `#917`/`#918` In Progress. Filed: `#922` (SriMart production filter data, owner action),
+    `#923` (deferred follow-ups). `#918` closes only once items 1–4 reach production.
+
 - **`#912` (vendor-defined product filters, folding `#601` and `#916`) is DONE, in production via
   PR #921 (`646f14d`).** The rest of this bullet is its staging-layer record. See `Last Verified`
   above for the full Validate/Ship record. Spec:
