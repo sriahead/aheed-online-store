@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.44.0"
+version: "1.45.0"
 updated: 2026-09-27
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,49 +40,46 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-27.
-- **`main` is at `646f14d`, content-identical to `staging` (`a090b30`)** — `#912`, `#601` and
-  `#916` were promoted via PR #921 (2026-09-27, carrying PR #919 and its Document PR #920);
-  `deploy-production` (run `36313086202`) **success**, production `/api/health` serving `646f14d`,
-  `db.ok: true`, `reference.drift: false`. All three issues closed → `Done`. Production SriMart shows
-  no vendor filters until its admin enters them (owner action `#922`). The next slice is `#917`
-  (brand deletion) plus `#918` items 1–4 (multi-select, number ranges, values on cards, search on
-  filter values), spec `specs/2026-09-27-p917-918-brand-delete-filter-followups/`. The history below
-  is `#912`'s staging-layer record.
-- **`#912` reached `staging` at `68e1ff8`** — (vendor-defined product filters, folding `#601` and
-  `#916`) merged via PR #919 (`feature/912-vendor-defined-filters -> staging`). Fully validated live
-  from a fresh context against every row of `requirements.md` (R1–R32), including a real signed-in
-  Aheed-admin session on `npm run preview` (create/rename/reposition/delete with and without the
-  confirmation tick, the product save/clear round-trip, a cross-attribute option-id misuse correctly
-  refused with no row written) and the unauthenticated SriMart storefront (facet hide/show, `attr_`
-  filtering, chip resolution, Specifications, pagination carrying an unknown `attr_` param). CI
-  (`docs-gates`, `quality/kms`, `quality/quality`) green on PR #919; `deploy-staging` (run
-  `36306058968`) completed **success**; staging `/api/health` served `68e1ff8` with `db.ok: true`.
-  **R28 (SriMart's own signed-in staff proof) run live at this Ship**, closing the row `/validate`
-  had deferred: created a filter, set it on a real catalogue product, saw it as a storefront filter
-  and in that product's Specifications, then deleted it with the confirmation tick — the product and
-  every other field it carried were restored exactly (see "Demo-account password correction" below
-  for a mid-proof mistake caught and fixed in the same pass). **`#912`, `#601` and `#916` are now
-  `In Review`** on the board — merging to `staging` doesn't close them; that happens on promotion to
-  `main`, its own deliberate PR, not yet opened. Spec: `specs/2026-09-27-p912-vendor-defined-filters/`.
-  One additive migration (`20260927000000_p912_vendor_attributes`), applied through to staging; `dev`
-  and `staging` schemas are now aligned (no more drift to account for).
-  - **Two `validation.md` wording gaps found live, not code defects.** R23 undercounts the seeded
-    `ProductAttributeValue` row total (says 6; two attributes × six products is 12, matching both the
-    seed's own log line and a DB query). R30 asked `sdd:audit` for a zero-gap result that cannot
-    exist for the slice's own not-yet-written roadmap row until this very Document pass runs — the
-    exact pattern `specs/sdd-workflow.md` already documents from `#411`/`#412`, recurring because
-    this slice's `validation.md` copied the row forward without pinning it to a specific prior PR.
-    Neither needed a `/fix`; `ddf3f60` (this branch's carried-forward `#905` reconciliation) confirmed
-    as its first commit satisfied R30's other half.
-  - **Demo-account password correction, found mid-R28.** `secrets/staging.vars`' recorded
-    `DEMO_SRIMART_ADMIN_PASSWORD` (`Demo-Srimart-2026!`, from `#905`'s `/document`) no longer signed
-    in. The account row's `createdAt`/`updatedAt` prove no reset has touched it since — so that
-    record was never correct for staging, not a value that drifted; most likely conflated with
-    production's separately owner-set password for the same email. The actual staging value,
-    confirmed by live sign-in on three of the five demo accounts, is the shared
-    `DEMO_ACCOUNT_PASSWORD` (`Demo-Aheed-2026!`) every staging demo account carries — there is no
-    per-account override in `npm run demo:accounts`. Corrected in `secrets/staging.vars` and
-    documented in `docs/developer-portal/env-setup.md` 1.14.0 ("Demo accounts").
+- **`staging` is now at `26abc0c`** — `#917` (brand deletion) and `#918` items 1–4 (multi-select,
+  numeric ranges, values on cards, search on filter values) merged via PR #924
+  (`feature/917-918-brand-delete-filter-followups -> staging`). Fully validated live from a fresh
+  context against every row of `requirements.md` (R1–R43), including a real signed-in Aheed-admin
+  session on `npm run preview` (brand add/delete-without-tick/delete-with-tick with the stale
+  `brand=` search param resolving cleanly, a full `NUMBER` filter lifecycle including a live
+  cross-kind-mismatch refusal) and the unauthenticated SriMart storefront (facet visibility,
+  multi-select colour chips with correct pair-omitting hrefs, power-range filtering, a filter-value
+  search match on "wired"). CI (`docs-gates`, `quality/kms`, `quality/quality`) green on PR #924;
+  `deploy-staging` (run `36352280570`) completed **success**; staging `/api/health` served `26abc0c`
+  with `db.ok: true`, `reference.drift: false`. **R38 (SriMart's own signed-in staff proof) run live
+  at this Ship**: added a `NUMBER` filter with a unit and `Show on product cards` ticked, set it on a
+  real catalogue product, saw it on that product's card, in its Specifications, and as a working
+  range filter, then deleted it with the confirmation tick — every other field the product carried
+  was unchanged. **`#917` moved to `In Review`** on the board; `#918` stays where it was — this PR
+  closes only items 1–4, not the issue itself, since item 5 (real SriMart production data entry) is
+  owner action `#922`. Spec: `specs/2026-09-27-p917-918-brand-delete-filter-followups/`. One
+  additive migration (`20260927140000_p918_attribute_kinds_numbers`), applied through to staging;
+  `dev` and `staging` schemas are aligned. `main` is still at `646f14d` — promotion to `main` for
+  this slice is its own deliberate PR, not yet opened. Deferred follow-ups filed as `#923`.
+  - **Tooling trap found live, not a code defect.** Submitting a form field containing `£` via
+    `curl -F` on this Windows checkout silently replaced it with the UTF-8 replacement character
+    (`0xEFBFBD` instead of `0xC2A3`) in two products' `unitLabel` during live proof, caught only by
+    comparing stored byte hex against the expected encoding — a normal read-back renders the
+    replacement character in a way that's easy to misread as correct. Both restored to their exact
+    original bytes. Node's `fetch`/`FormData` (used for the R38 staging proof) did not reproduce
+    this; documented in `docs/developer-portal/local-dev-playbook.md` 1.10.0.
+- **Previous promotion, `646f14d`** — `#912`, `#601` and `#916` (vendor-defined product filters,
+  folding `#601`'s one-filter-key-definition and `#916`'s nested-create proof) promoted via PR #921
+  (`staging -> main`, 2026-09-27), carrying PR #919 (the feature merge, `68e1ff8`) and PR #920 (its
+  Document-stage reconciliation, `a090b30`). `deploy-production` (run `36313086202`) built, migrated
+  (`20260927000000_p912_vendor_attributes`, additive) and deployed — all **success**; production
+  `/api/health` served `646f14d`, `db.ok: true`, `reference.drift: false`. `#912`, `#601` and `#916`
+  auto-closed to `Done`. Production SriMart shows no vendor filters until its admin enters them
+  (owner action `#922`). Two `validation.md` wording gaps were found live at that slice's own
+  `/validate` (a row undercounting a seed total; a row asking `sdd:audit` for a zero-gap result that
+  couldn't exist until its own Document pass ran) — both spec imprecision, not code defects, and not
+  repeated by this slice's `validation.md`. The `secrets/staging.vars` demo-password correction found
+  mid-way is standing fact now, documented in `docs/developer-portal/env-setup.md` 1.14.0 ("Demo
+  accounts").
 - **Previous promotion, `f53913e`** — `#905` (per-vendor product labels/HMC gating, vendor
   store description for AI prompts, delivery-area examples — `#729` slice 2) and `#907` (referral
   share text using the vendor's real configured discount) promoted via PR #915 (`staging -> main`,
@@ -477,17 +474,19 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#917` + `#918` items 1–4 are BUILT, awaiting `/validate`** on
-  `feature/917-918-brand-delete-filter-followups` (not pushed at build-notes time; no upstream set, so
-  push with `-u origin <branch>`). Spec `specs/2026-09-27-p917-918-brand-delete-filter-followups/` —
-  read its `build-notes.md` first. Brand deletion; LIST/NUMBER vendor filters; multi-select via repeated
-  `attr_<slug>`; `_min`/`_max` ranges; `showOnCard`; search over option names.
-  - **One additive migration, `20260927140000_p918_attribute_kinds_numbers`, is applied to dev only**
-    (`ep-dry-morning-zab7dx08`). Staging and production get it through their deploy workflows.
+- **`#917` and `#918` items 1–4 are IN REVIEW, merged to `staging` via PR #924 (`26abc0c`).**
+  Promotion to `main` is its own deliberate PR, not yet opened. See `Last Verified` above for the
+  full Validate/Ship record, including R38's live SriMart-staging proof. Spec
+  `specs/2026-09-27-p917-918-brand-delete-filter-followups/` — read its `build-notes.md` first.
+  Brand deletion; LIST/NUMBER vendor filters; multi-select via repeated `attr_<slug>`; `_min`/`_max`
+  ranges; `showOnCard`; search over option names.
+  - **The migration, `20260927140000_p918_attribute_kinds_numbers`, is now applied through to
+    staging** (dev and staging schemas aligned). Production gets it on promotion.
   - **The local `staging` branch in this checkout is stale (pre-`#912`).** Diff against
     `origin/staging`; a `prisma migrate diff` from local `staging` re-creates all of `#912`'s tables.
-  - Board: `#917`/`#918` In Progress. Filed: `#922` (SriMart production filter data, owner action),
-    `#923` (deferred follow-ups). `#918` closes only once items 1–4 reach production.
+  - Board: `#917` `In Review`; `#918` stays `In Progress` (item 5 is owner action, not code). Filed:
+    `#922` (SriMart production filter data, owner action), `#923` (deferred follow-ups). `#918`
+    closes only once item 5 is done too.
 
 - **`#912` (vendor-defined product filters, folding `#601` and `#916`) is DONE, in production via
   PR #921 (`646f14d`).** The rest of this bullet is its staging-layer record. See `Last Verified`
