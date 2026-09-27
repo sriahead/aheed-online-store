@@ -17,6 +17,12 @@ every branch merges.
   - **Seed:** SriMart gets demo Colour and Connectivity filters on its audio and charger products; Aheed gets none.
   - Carried forward: the `specs/roadmap.md` row for PR #915 and the matching `docs/model-handoff.md` refresh.
 
+- **Document-stage reconciliation for `#912`/`#601`/`#916` (built, validated and merged to `staging` in PR #919, merge `68e1ff8`).**
+  - `specs/roadmap.md`: the `#912` change-log row now reflects the full Validate → Ship record, including R28's live SriMart-staging proof and the two `validation.md` wording gaps found along the way (neither a code defect).
+  - `docs/model-handoff.md` 1.43.0: `#912`/`#601`/`#916` corrected from "built, awaiting `/validate`" to validated-and-merged-to-staging, with the deploy confirmation, R28's live result and the demo-account correction below.
+  - `docs/developer-portal/env-setup.md` 1.14.0 ("Demo accounts"): corrected the account roster (five, not three — `demo-store-admin`/`demo-srimart-admin` were undocumented) and recorded the single-shared-`DEMO_ACCOUNT_PASSWORD` trap found live at R28: a `remove`+`add` reset sets every demo account's password to the same value, silently overwriting one an owner had set independently.
+  - `secrets/staging.vars` (gitignored, not in this diff): `DEMO_SRIMART_ADMIN_PASSWORD` corrected — the value recorded at `#905`'s `/document` was never actually right for staging.
+
 - **Document-stage reconciliation for `#905`/`#907` (built, validated, fixed and merged to `staging` in PR #913, merge `62514aa`).**
   - `specs/2026-09-26-p905-vendor-product-labels/build-notes.md`: the ship (`deploy-staging` confirmed) and a live-run of R35a — closed at this stage rather than left to promotion, since staging's `demo-srimart-admin@example.com` account turned out to predate production's copy and needed its password reset (owner-confirmed) before it could sign in.
   - `docs/developer-portal/local-dev-playbook.md` 1.9.0: two new traps — plain `curl` failing silently (exit `43`/`000`, no server response) against a real HTTPS host generally, not just presigned uploads; and a `tsx` script placed outside the repo (e.g. the session scratchpad on another drive) failing to resolve `node_modules` because Node resolves relative to the script's own path, not the working directory.
