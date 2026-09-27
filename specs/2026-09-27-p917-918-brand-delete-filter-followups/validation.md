@@ -40,8 +40,9 @@ Every feature should have appropriate **Unit** and **Integration** testing, foll
 - Run `npx vitest run` **alone**, never beside or straight after a build.
 - After stopping `npm run preview`, kill the leftover `node`/`workerd` processes before building
   again.
-- Compare branch state against `staging` (`git diff staging -- <path>`), since the branch was cut
-  from `origin/staging` at `a090b30`.
+- **`staging` in every row below means `origin/staging`** (run `git fetch` first). The branch was cut
+  from `origin/staging` at `a090b30`. The local `staging` branch in this checkout is stale (it predates
+  `#912`), so `git diff staging` against it shows `#912`'s whole diff as if it were this slice's.
 
 ## Validation Steps
 
