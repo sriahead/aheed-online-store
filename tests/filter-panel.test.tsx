@@ -28,6 +28,7 @@ const NO_FACETS = {
   origins: [],
   brands: [],
   packSizes: [],
+  attributes: [],
 };
 
 function renderPanel() {

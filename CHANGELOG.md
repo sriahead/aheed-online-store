@@ -8,6 +8,15 @@ every branch merges.
 
 ### Added
 
+- **Vendor-defined product filters** (issue `#912`, folding in `#601` and `#916`; `specs/2026-09-27-p912-vendor-defined-filters/`). One additive migration (`20260927000000_p912_vendor_attributes`).
+  - **Each store defines its own filters as data.** `VendorAttribute`, `VendorAttributeOption` and `ProductAttributeValue` (one value per product per filter), with composite foreign keys that tie an option to its filter and a filter to its vendor in the database itself. They sit beside the six label booleans, not in place of them (`specs/architecture.md` 1.35.0).
+  - **`/staff/attributes` ("Product filters")** for staff and store admins: add, rename and reposition filters and their values; delete one, with an "Also remove it from N products" tick when products use it. On the staff nav, the hub and the staff guide.
+  - **Product form:** one select per filter ("Not set" clears it). Every value is checked against the store's own filter before the product and its values are written together.
+  - **Shop front:** one select per filter, shown only where a product in view carries a value. The URL key is `attr_<filter>=<value>`; chips read "Colour: Black"; an unknown value applies nothing and shows no chip. The product page gains a "Specifications" list.
+  - **`#601`:** every storefront filter key is now defined once (`components/product/filter-params.ts`); the category page's Previous/Next links moved to `components/product/category-href.ts` and are tested like `/search`'s.
+  - **Seed:** SriMart gets demo Colour and Connectivity filters on its audio and charger products; Aheed gets none.
+  - Carried forward: the `specs/roadmap.md` row for PR #915 and the matching `docs/model-handoff.md` refresh.
+
 - **Document-stage reconciliation for `#905`/`#907` (built, validated, fixed and merged to `staging` in PR #913, merge `62514aa`).**
   - `specs/2026-09-26-p905-vendor-product-labels/build-notes.md`: the ship (`deploy-staging` confirmed) and a live-run of R35a — closed at this stage rather than left to promotion, since staging's `demo-srimart-admin@example.com` account turned out to predate production's copy and needed its password reset (owner-confirmed) before it could sign in.
   - `docs/developer-portal/local-dev-playbook.md` 1.9.0: two new traps — plain `curl` failing silently (exit `43`/`000`, no server response) against a real HTTPS host generally, not just presigned uploads; and a `tsx` script placed outside the repo (e.g. the session scratchpad on another drive) failing to resolve `node_modules` because Node resolves relative to the script's own path, not the working directory.

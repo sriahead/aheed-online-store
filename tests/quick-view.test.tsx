@@ -52,6 +52,7 @@ const mockProductDetail: ProductDetail = {
     { storageKey: "products/paneer-2.webp", alt: "Paneer Back", isPrimary: false },
   ],
   hmcReference: "HMC-12345",
+  specifications: [],
 };
 
 const mockApiResponse = {

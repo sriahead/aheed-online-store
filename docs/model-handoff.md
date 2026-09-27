@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.40.0"
-updated: 2026-09-26
+version: "1.42.0"
+updated: 2026-09-27
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -40,21 +40,24 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-26.
-- **Checkout:** `main` is now at `a156039` — `#900` (AI-suggested net content with image
-  provenance) promoted via PR #904 (`staging -> main`), carrying PR #902 (`#900`'s own feature
-  merge, `42dd3fa`) and PR #903 (its Document-stage reconciliation, `786649f`). Production
-  `/api/health` confirmed serving `a156039`, `db.ok: true`, `reference.drift: false`. `#900` closed.
-  **`#729` (vendor-neutral UI copy, slice 1) is now in production too**: PR #908 (`87ecdc1`) and its
-  Document-stage reconciliation PR #909 (`11bf51d`) were promoted via PR #910 (merge `556e273`,
-  2026-09-26). `deploy-production` run `36258438395` succeeded; production `/api/health` served
-  `556e273`, `db.ok: true`, `reference.drift: false` (re-verified at the following `/orient`).
-  `main` and `staging` were content-identical at that point. `#729` is closed. `#901` (production
-  pilot for `#900`) stays open, Backlog, owner-gated. **`#729` slice 2 (`#905`, with `#907`) is
-  built, validated and merged to `staging`** (PR #913, merge `62514aa`, 2026-09-26).
-  `deploy-staging` (run `36272013144`) succeeded; staging `/api/health` served `62514aa`,
-  `db.ok: true`, `reference.drift: false`. `#905` and `#907` moved to `In Review`; close to `Done`
-  only on promotion to `main`. `#912` (vendor-defined filters) is the owner-chosen next slice and
-  `#911` (reference coverage as one platform-wide list) is Backlog.
+- **Checkout:** `main` is now at `f53913e` — `#905` (per-vendor product labels/HMC gating, vendor
+  store description for AI prompts, delivery-area examples — `#729` slice 2) and `#907` (referral
+  share text using the vendor's real configured discount) promoted via PR #915 (`staging -> main`,
+  2026-09-26), carrying PR #913 (the feature merge, `62514aa`) and PR #914 (its Document-stage
+  reconciliation, `2432ac0`). `deploy-production` (run `36276095967`) built, migrated
+  (`20260926180000_p905_vendor_product_label_settings`, additive) and deployed — all **success**;
+  production `/api/health` served `f53913e`, `db.ok: true`, `reference.drift: false`. `main` and
+  `staging` are content-identical at that point. `#905` and `#907` auto-closed to `Done`. A
+  read-only check of the live homepage confirmed the label backfill ran correctly against real
+  production data: `aheedfoodcentre.nocaped.com` renders Halal and Fresh badges,
+  `srimart.nocaped.com` renders none of the six. **`#916`** (new, Backlog, Phase P10) tracks the one
+  build-notes risk that stayed unverified through Ship and this promotion: the new-product
+  **create** path with a label disabled has only the update path's live proof (R34(b)); Prisma's
+  `undefined`-defaulting on a nested `create` was never exercised. `#912` (vendor-defined filters)
+  is the owner-chosen next slice and `#911` (reference coverage as one platform-wide list) is
+  Backlog. `#901` (production pilot for `#900`) stays open, Backlog, owner-gated. `#729` and `#900`
+  are both closed, promoted (PR #910 `556e273`, PR #904 `a156039` respectively) — see `In-Flight
+  Work` below only if their staging-layer detail is needed.
   - **In production (PR #858, merge `2047d0a`, verified live):** the KMS restructuring pilot
     (`#851`, PR #852), KMS navigation categories (PR #853), and the KMS strategy standard
     (PR #855 then PR #856). `deploy-production` (run `35711810410`) and `deploy-docs-internal`
@@ -431,6 +434,19 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **`#912` (vendor-defined product filters, folding `#601` and `#916`) is BUILT and awaiting
+  `/validate`.** It's on branch `feature/912-vendor-defined-filters`, which has not been pushed or
+  opened as a PR as of 2026-09-27. Spec: `specs/2026-09-27-p912-vendor-defined-filters/`. Read its
+  `build-notes.md` first.
+  - **The dev database is ahead of `staging`.** Migration `20260927000000_p912_vendor_attributes`
+    (additive: three new tables) was applied to dev (`ep-dry-morning-zab7dx08`) at Build.
+    Abandoning the branch would leave three unused tables on dev. Don't read them as drift from
+    another cause.
+  - **Filed from this Build:** `#917` (the staff guide promises brand removal, and no control
+    exists) and `#918` (filter follow-ups deferred from `#912`). `#538` gained two more
+    full-suite timeout files.
+  - Board: `#912`, `#601` and `#916` are `In Progress`.
+
 - **`#729` slice 1 (vendor-neutral UI copy) is DONE, in production via PR #910 (`556e273`)** — the
   history below is its staging-layer record. Validated (every row
   of `specs/2026-09-26-p729-vendor-neutral-ui-copy/validation.md` confirmed live, including both
@@ -447,14 +463,15 @@ All facts in this section require live verification:
     entries (v1.8.0) so the next validator doesn't re-hit them.
   - **`#729` is closed** (promoted via PR #910).
 
-- **`#729` slice 2 (`#905`, with `#907`) is built, validated and merged to `staging`** — see `Last
-  Verified` above; not repeated here. Per-vendor product labels/HMC (six new `VendorConfig`
-  booleans gating the staff product form only, stripped server-side on a disabled save rather than
-  cleared), a `storeDescription` that replaces the hardcoded grocery framing in three AI prompts,
-  and vendor-sourced delivery-area/help-page examples. Spec
-  `specs/2026-09-26-p905-vendor-product-labels/`; read its `build-notes.md` first for the Build,
-  Fix and Ship/Document records. One additive migration
-  (`20260926180000_p905_vendor_product_label_settings`), applied to `staging`.
+- **`#729` slice 2 (`#905`, with `#907`) is DONE, in production via PR #915 (`f53913e`)** — see
+  `Last Verified` above for the promotion; the history below is its staging-layer record.
+  Per-vendor product labels/HMC (six new `VendorConfig` booleans gating the staff product form
+  only, stripped server-side on a disabled save rather than cleared), a `storeDescription` that
+  replaces the hardcoded grocery framing in three AI prompts, and vendor-sourced delivery-area/
+  help-page examples. Spec `specs/2026-09-26-p905-vendor-product-labels/`; read its
+  `build-notes.md` first for the Build, Fix and Ship/Document records. One additive migration
+  (`20260926180000_p905_vendor_product_label_settings`), applied through to production.
+  - **`#905` and `#907` are closed** (promoted via PR #915).
   - **One regression found at `/validate`, fixed at `/fix`:** a pre-existing test's mock of
     `lib/delivery-areas-service` predated R27's new `exampleDeliveryAreaForVendor` call and threw on
     every case; the missing mock was the root cause, not the production code — fixed there only.

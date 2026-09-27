@@ -155,10 +155,13 @@ describe("clearAllHref (R8)", () => {
  * the shopper on a wider result set than the chips claim is applied — exactly the bug #501 fixed
  * for `featured` and #568 for `category`, which is twice now.
  *
- * This pins the two LIST-shaped ones against each other so the next facet cannot repeat it. The
- * third is a hand-written chain a test cannot reach without importing a page module, so it stays
- * covered by R29's live pagination check instead — worth knowing when reading this file, because
- * two of three being pinned is not three.
+ * This pins the two LIST-shaped ones against each other so the next facet cannot repeat it.
+ *
+ * #601 (folded into #912) has since made all three derive from one definition,
+ * `components/product/filter-params.ts`, and moved the category page's chain into
+ * `components/product/category-href.ts`. `tests/filter-params.test.ts` now asserts all three —
+ * plus vendor-defined `attr_*` keys — against that one list; this test is kept as a cheap second
+ * guard.
  */
 describe("#569 facet chips", () => {
   it("keeps REMOVABLE and search-href's CARRIED describing the same filter keys (R30)", () => {

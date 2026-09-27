@@ -23,8 +23,17 @@
 
 import { parsePriceInput } from "./parse-price-input";
 import { formatPackSize, parsePackSizeParam } from "./unit-price";
+import {
+  FIXED_FILTER_KEYS,
+  filterEntries,
+  isAttributeParamKey,
+  type FilterParamValue,
+  type FixedFilterKey,
+} from "./filter-params";
 
 export type FilterChipParams = {
+  /** #912 — a vendor-defined filter, `attr_<attributeSlug>=<optionSlug>`. See filter-params.ts. */
+  [attributeKey: `attr_${string}`]: FilterParamValue;
   q?: string;
   minPrice?: string;
   maxPrice?: string;
@@ -53,42 +62,23 @@ export type FilterChip = {
 };
 
 /**
- * Every removable filter key, in the order chips render. `q`, `cursor` and `back` are deliberately
- * absent: the first is not a filter (ruling 2 above), the other two are pagination (ruling 1).
+ * Every removable FIXED filter key, in the order chips render — derived from `filter-params.ts`
+ * (#601), never listed here. `q`, `cursor` and `back` are absent: the first is not a filter
+ * (ruling 2 above), the other two are pagination (ruling 1). Vendor-defined `attr_*` keys are
+ * removable too, but cannot be listed at all; `filterEntries` carries them by rule.
  */
-export const REMOVABLE: (keyof FilterChipParams)[] = [
-  "category",
-  "brand",
-  "origin",
-  "packSize",
-  "inStock",
-  "onOffer",
-  "isHalal",
-  "isFresh",
-  "isOrganic",
-  "isVegetarian",
-  "isGlutenFree",
-  "isHmcCertified",
-  "featured",
-  "minPrice",
-  "maxPrice",
-];
+export const REMOVABLE: readonly FixedFilterKey[] = FIXED_FILTER_KEYS;
 
-/** Pagination keys, dropped by every href this module builds. */
-const PAGINATION: (keyof FilterChipParams)[] = ["cursor", "back"];
-
-function buildHref(
-  basePath: string,
-  params: FilterChipParams,
-  omit: readonly (keyof FilterChipParams)[],
-): string {
+/**
+ * `q` first, then every carried filter minus `omit`. Pagination (`cursor`, `back`) is never carried
+ * — `filterEntries` does not know those keys — which is ruling 1 above.
+ */
+function buildHref(basePath: string, params: FilterChipParams, omit: readonly string[]): string {
   const qs = new URLSearchParams();
-  const keys: (keyof FilterChipParams)[] = ["q", ...REMOVABLE];
-  for (const key of keys) {
-    if (omit.includes(key)) continue;
-    const value = params[key];
-    if (value) qs.set(key, value);
+  if (!omit.includes("q") && typeof params.q === "string" && params.q !== "") {
+    qs.set("q", params.q);
   }
+  for (const [key, value] of filterEntries(params, omit)) qs.set(key, value);
   const query = qs.toString();
   return query ? `${basePath}?${query}` : basePath;
 }
@@ -110,7 +100,7 @@ function formatPricePence(pence: number): string {
  * therefore not render a chip claiming a price filter the shopper cannot see the effect of.
  */
 function labelFor(
-  key: keyof FilterChipParams,
+  key: FixedFilterKey,
   value: string,
   categoryLabel?: string,
   brandLabel?: string,
@@ -183,29 +173,32 @@ function labelFor(
  *
  * `categoryLabel` and `brandLabel` are the resolved NAMES — the caller has already looked each up
  * to build the predicate, so passing the name avoids a second query just to render a chip.
+ *
+ * `attributeLabels` (#912) maps each RESOLVED `attr_*` key to its `"<Filter>: <Value>"` label. An
+ * attribute key missing from it renders NO chip: it named a filter or value this vendor does not
+ * have, so it applies no predicate, and a chip would claim a filter that is not running — the
+ * `category`/`brand` rule. It is still carried in every href, harmlessly, like any other no-op.
  */
 export function activeFilterChips(
   basePath: string,
   params: FilterChipParams,
   categoryLabel?: string,
   brandLabel?: string,
+  attributeLabels?: Readonly<Record<string, string>>,
 ): FilterChip[] {
   const chips: FilterChip[] = [];
-  for (const key of REMOVABLE) {
-    const value = params[key];
-    if (!value) continue;
-    const label = labelFor(key, value, categoryLabel, brandLabel);
+  for (const [key, value] of filterEntries(params)) {
+    const label = isAttributeParamKey(key)
+      ? (attributeLabels?.[key] ?? null)
+      : labelFor(key as FixedFilterKey, value, categoryLabel, brandLabel);
     if (label === null) continue;
-    chips.push({
-      key,
-      label,
-      href: buildHref(basePath, params, [key, ...PAGINATION]),
-    });
+    chips.push({ key, label, href: buildHref(basePath, params, [key]) });
   }
   return chips;
 }
 
-/** Every filter dropped, `q` kept, pagination reset. */
+/** Every filter dropped — fixed and `attr_*` alike — `q` kept, pagination reset. */
 export function clearAllHref(basePath: string, params: FilterChipParams): string {
-  return buildHref(basePath, params, [...REMOVABLE, ...PAGINATION]);
+  const everyFilter = filterEntries(params).map(([key]) => key);
+  return buildHref(basePath, params, everyFilter);
 }

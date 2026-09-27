@@ -11,8 +11,16 @@
  *
  * `cursor` is set from the argument, never carried over from `params`: the
  * caller always knows the cursor for the page it is linking to.
+ *
+ * #601/#912 — WHICH keys are carried is no longer decided here. `filterEntries` in
+ * `filter-params.ts` is the single definition, shared with the chips and the category page, and it
+ * is the only thing that can carry a vendor-defined `attr_*` filter, whose key no list could hold.
  */
+import { FIXED_FILTER_KEYS, filterEntries, type FilterParamValue } from "./filter-params";
+
 export type SearchHrefParams = {
+  /** #912 — a vendor-defined filter, `attr_<attributeSlug>=<optionSlug>`. */
+  [attributeKey: `attr_${string}`]: FilterParamValue;
   q?: string;
   minPrice?: string;
   maxPrice?: string;
@@ -31,41 +39,23 @@ export type SearchHrefParams = {
   packSize?: string;
 };
 
-export const CARRIED: (keyof SearchHrefParams)[] = [
-  "q",
-  "minPrice",
-  "maxPrice",
-  "inStock",
-  "isHalal",
-  "isFresh",
-  "isOrganic",
-  // #569 — six new facets. Each MUST be here: this list is what survives a "Next page" click, and
-  // a key present in the chips but missing here is dropped one click into pagination, leaving the
-  // shopper on a wider result set than the chips claim. Exactly the bug #501 fixed for `featured`
-  // and #568 for `category`. `tests/filter-chips.test.ts` pins this list against REMOVABLE.
-  "isVegetarian",
-  "isGlutenFree",
-  "isHmcCertified",
-  "onOffer",
-  "origin",
-  "brand",
-  // #397 — pack size. Present here for the same reason every key above is: this list is what
-  // survives a "Next page" click, and a key in the chips but missing here is dropped one click
-  // into pagination, leaving the shopper on a wider result set than the chips claim.
-  "packSize",
-  "featured",
-  // #568 — category drill-down is a filter like any other here, so it must survive pagination for
-  // the same reason every key above does: dropping it one click into "Next page" silently widens
-  // the result set back to the whole catalogue.
-  "category",
-];
+/**
+ * The fixed keys a "Next page" link carries: the query plus every fixed filter key. DERIVED, not
+ * listed (#601) — kept as an export only because `tests/filter-chips.test.ts` still pins it against
+ * `REMOVABLE`. `attr_*` keys are carried too, by rule, and so cannot appear here.
+ */
+export const CARRIED: readonly string[] = ["q", ...FIXED_FILTER_KEYS];
+
+/** `q` first, then every filter `filterEntries` carries, minus `omit`. */
+function carriedQuery(params: SearchHrefParams, omit: readonly string[] = []): URLSearchParams {
+  const qs = new URLSearchParams();
+  if (typeof params.q === "string" && params.q !== "") qs.set("q", params.q);
+  for (const [key, value] of filterEntries(params, omit)) qs.set(key, value);
+  return qs;
+}
 
 export function searchPageHref(params: SearchHrefParams, cursor: string): string {
-  const qs = new URLSearchParams();
-  for (const key of CARRIED) {
-    const value = params[key];
-    if (value) qs.set(key, value);
-  }
+  const qs = carriedQuery(params);
   qs.set("cursor", cursor);
   return `/search?${qs.toString()}`;
 }
@@ -79,12 +69,7 @@ export function searchPageHref(params: SearchHrefParams, cursor: string): string
  * at an arbitrary point in the new results, or past the end of them.
  */
 export function categoryFilterHref(params: SearchHrefParams, categorySlug: string): string {
-  const qs = new URLSearchParams();
-  for (const key of CARRIED) {
-    if (key === "category") continue;
-    const value = params[key];
-    if (value) qs.set(key, value);
-  }
+  const qs = carriedQuery(params, ["category"]);
   qs.set("category", categorySlug);
   return `/search?${qs.toString()}`;
 }
