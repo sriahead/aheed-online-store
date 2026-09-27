@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.13.0"
-updated: 2026-09-25
+version: "1.14.0"
+updated: 2026-09-27
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -501,10 +501,14 @@ standing directive, keep these present in **both production and staging until al
 complete**, and re-run `add` after any DB reset (e.g. the staging Neon-project move, or the ADR-004
 `vendorId` migration) so they aren't lost.
 
-It manages three accounts, one per RBAC role: `demo-admin@example.com` (ADMIN),
-`demo-staff@example.com` (STAFF), `demo-customer@example.com` (CUSTOMER). They are created **through
-Better Auth** (hashed password, real sign-in) with `emailVerified` forced true and **no** verification
-email sent.
+It manages a **fixed roster of five** (`DEMO_ACCOUNTS` in the script, one per RBAC/vendor-scope
+case): `demo-admin@example.com` (platform ADMIN), `demo-staff@example.com` (vendor STAFF),
+`demo-customer@example.com` (plain shopper), `demo-store-admin@example.com` (vendor ADMIN — needed
+because a platform admin's `vendorRole` is never actually read, `#190`), and
+`demo-srimart-admin@example.com` (vendor ADMIN on SriMart specifically, the platform's second
+vendor — needed to test a cross-vendor write refusal in both directions, `#141`). They are created
+**through Better Auth** (hashed password, real sign-in) with `emailVerified` forced true and **no**
+verification email sent.
 
 ```bash
 # targets whichever environment's DIRECT_URL you provide (like db:seed); password never committed
@@ -516,6 +520,22 @@ DIRECT_URL=<env-direct-url> npm run demo:accounts -- remove
 - `<env-direct-url>` is the target environment's **direct** (non-pooled) Neon URL, from
   `secrets/<env>.vars`. Run against **both** staging and production to satisfy the directive.
 - `remove` exists for later cleanup; do **not** run it until all phases are complete.
+- **All five accounts share the ONE `DEMO_ACCOUNT_PASSWORD` value for that run — there is no
+  per-account password.** `add` only sets a password when it *creates* a user, so once an account
+  exists, whatever it was created with is the only record of it. A `remove` then `add` cycle (the
+  documented way to reset the roster) sets **every** account's password to whichever
+  `DEMO_ACCOUNT_PASSWORD` that one run used, including any account whose password an owner had
+  meant to set independently — there is nowhere in the tool to override just one. Hit live at
+  `#912`'s `/ship` R28 proof (2026-09-27): staging's `demo-srimart-admin@example.com` had been
+  recorded as `Demo-Srimart-2026!` after `#905`'s `/document` reset it the day before, but that
+  never actually signed in — the account row's `createdAt`/`updatedAt` prove no second reset
+  happened since, so the recorded value was wrong from the moment it was written (most likely
+  conflated with production's separately owner-set password for the same email, which genuinely
+  is `Demo-Srimart-2026!`), not a value that later drifted. The account's actual password was the
+  same shared `DEMO_ACCOUNT_PASSWORD` every other staging demo account got that day. **Confirm a
+  recorded demo password with a live sign-in before relying on it**, and do it again after every
+  reset — a note that a password "was confirmed working" is only as trustworthy as the environment
+  it was actually tested against.
 
 ## Troubleshooting
 
