@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.43.0"
+version: "1.44.0"
 updated: 2026-09-27
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,7 +40,15 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-09-27.
-- **`staging` is now at `68e1ff8`** — `#912` (vendor-defined product filters, folding `#601` and
+- **`main` is at `646f14d`, content-identical to `staging` (`a090b30`)** — `#912`, `#601` and
+  `#916` were promoted via PR #921 (2026-09-27, carrying PR #919 and its Document PR #920);
+  `deploy-production` (run `36313086202`) **success**, production `/api/health` serving `646f14d`,
+  `db.ok: true`, `reference.drift: false`. All three issues closed → `Done`. Production SriMart shows
+  no vendor filters until its admin enters them (owner action `#922`). The next slice is `#917`
+  (brand deletion) plus `#918` items 1–4 (multi-select, number ranges, values on cards, search on
+  filter values), spec `specs/2026-09-27-p917-918-brand-delete-filter-followups/`. The history below
+  is `#912`'s staging-layer record.
+- **`#912` reached `staging` at `68e1ff8`** — (vendor-defined product filters, folding `#601` and
   `#916`) merged via PR #919 (`feature/912-vendor-defined-filters -> staging`). Fully validated live
   from a fresh context against every row of `requirements.md` (R1–R32), including a real signed-in
   Aheed-admin session on `npm run preview` (create/rename/reposition/delete with and without the
@@ -75,7 +83,7 @@ reconciliation. If overall project state did not materially change, leave this f
     `DEMO_ACCOUNT_PASSWORD` (`Demo-Aheed-2026!`) every staging demo account carries — there is no
     per-account override in `npm run demo:accounts`. Corrected in `secrets/staging.vars` and
     documented in `docs/developer-portal/env-setup.md` 1.14.0 ("Demo accounts").
-- **`main` is still at `f53913e`** — `#905` (per-vendor product labels/HMC gating, vendor
+- **Previous promotion, `f53913e`** — `#905` (per-vendor product labels/HMC gating, vendor
   store description for AI prompts, delivery-area examples — `#729` slice 2) and `#907` (referral
   share text using the vendor's real configured discount) promoted via PR #915 (`staging -> main`,
   2026-09-26), carrying PR #913 (the feature merge, `62514aa`) and PR #914 (its Document-stage
@@ -469,14 +477,14 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#912` (vendor-defined product filters, folding `#601` and `#916`) is validated and merged to
-  `staging` only (PR #919, merge `68e1ff8`) — promotion to `main` is its own deliberate PR, not yet
-  opened.** See `Last Verified` above for the full Validate/Ship record. Spec:
+- **`#912` (vendor-defined product filters, folding `#601` and `#916`) is DONE, in production via
+  PR #921 (`646f14d`).** The rest of this bullet is its staging-layer record. See `Last Verified`
+  above for the full Validate/Ship record. Spec:
   `specs/2026-09-27-p912-vendor-defined-filters/`; read its `build-notes.md` first for the Build
   record.
   - **Filed from Build:** `#917` (the staff guide promises brand removal, and no control exists) and
     `#918` (filter follow-ups deferred from `#912`). `#538` gained two more full-suite timeout files.
-  - Board: `#912`, `#601` and `#916` are `In Review`.
+  - Board: `#912`, `#601` and `#916` are `Done` (closed on PR #921).
 
 - **`#729` slice 1 (vendor-neutral UI copy) is DONE, in production via PR #910 (`556e273`)** — the
   history below is its staging-layer record. Validated (every row
