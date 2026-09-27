@@ -20,7 +20,7 @@ describe("readAttributeValues", () => {
   it("reads an empty value as a clear", () => {
     expect(readAttributeValues(form({ [`attribute_${ATTRIBUTE}`]: "" }))).toEqual({
       ok: true,
-      value: [{ attributeId: ATTRIBUTE, optionId: null }],
+      value: [{ kind: "LIST", attributeId: ATTRIBUTE, optionId: null }],
     });
   });
 
@@ -32,8 +32,8 @@ describe("readAttributeValues", () => {
     ).toEqual({
       ok: true,
       value: [
-        { attributeId: ATTRIBUTE, optionId: OPTION },
-        { attributeId: OTHER_ATTRIBUTE, optionId: null },
+        { kind: "LIST", attributeId: ATTRIBUTE, optionId: OPTION },
+        { kind: "LIST", attributeId: OTHER_ATTRIBUTE, optionId: null },
       ],
     });
   });
@@ -52,5 +52,33 @@ describe("readAttributeValues", () => {
         form({ attribute_colour: OPTION, attributeId: ATTRIBUTE, isHalal: "on" }),
       ),
     ).toEqual({ ok: true, value: [] });
+  });
+});
+
+/** #918, R16 — a NUMBER filter's input, `attributeNumber_<uuid>`. */
+describe("readAttributeValues — number filters", () => {
+  const key = `attributeNumber_${ATTRIBUTE}`;
+  const MESSAGE = "Enter a number from 0 to 99999999.99, with at most 2 decimal places.";
+
+  it("reads a valid number as its trimmed string", () => {
+    expect(readAttributeValues(form({ [key]: " 13.3 " }))).toEqual({
+      ok: true,
+      value: [{ kind: "NUMBER", attributeId: ATTRIBUTE, numericValue: "13.3" }],
+    });
+  });
+
+  it("reads an empty number as a clear", () => {
+    expect(readAttributeValues(form({ [key]: "" }))).toEqual({
+      ok: true,
+      value: [{ kind: "NUMBER", attributeId: ATTRIBUTE, numericValue: null }],
+    });
+  });
+
+  it.each([["abc"], ["-1"], ["1.234"], ["123456789"]])("refuses %s on that field", (raw) => {
+    expect(readAttributeValues(form({ [key]: raw }))).toEqual({
+      ok: false,
+      field: key,
+      error: MESSAGE,
+    });
   });
 });

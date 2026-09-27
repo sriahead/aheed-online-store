@@ -35,7 +35,8 @@ function categoryPageHref(
   overrides: { cursor?: string; back: string[] },
 ): string {
   const qs = new URLSearchParams();
-  for (const [key, value] of filterEntries(params)) qs.set(key, value);
+  // `append`, never `set` (#918): a list filter may carry several values under one key.
+  for (const [key, value] of filterEntries(params)) qs.append(key, value);
   if (overrides.cursor) qs.set("cursor", overrides.cursor);
   // A lone "" entry means "page 1 had no cursor" and nothing else — not worth a query param at
   // all, so the very first "Next" click stays a clean URL.

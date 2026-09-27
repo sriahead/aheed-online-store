@@ -8,6 +8,7 @@ vi.mock("@/components/staff/ProductImageManager", () => ({ ProductImageManager: 
 
 import { ProductForm } from "@/components/staff/ProductForm";
 import type { AdminProductDetail } from "@/lib/repositories/products";
+import type { AttributeDefinition } from "@/lib/repositories/attributes";
 
 /** #912 R16 — one select per vendor filter, and no section at all without filters. */
 
@@ -22,17 +23,29 @@ const LABELS = {
   hmc: false,
 };
 
-const COLOUR = {
+const COLOUR: AttributeDefinition = {
   id: "11111111-1111-4111-8111-111111111111",
   name: "Colour",
   slug: "colour",
+  kind: "LIST",
+  unit: null,
   options: [
     { id: "22222222-2222-4222-8222-222222222222", name: "Black", slug: "black" },
     { id: "33333333-3333-4333-8333-333333333333", name: "White", slug: "white" },
   ],
 };
 
-function renderForm(attributes: (typeof COLOUR)[], product: AdminProductDetail | null = null) {
+/** #918 R18 — a NUMBER filter renders a number input under its own key prefix. */
+const POWER: AttributeDefinition = {
+  id: "44444444-4444-4444-8444-444444444444",
+  name: "Power",
+  slug: "power",
+  kind: "NUMBER",
+  unit: "W",
+  options: [],
+};
+
+function renderForm(attributes: AttributeDefinition[], product: AdminProductDetail | null = null) {
   return render(
     <ProductForm
       product={product}
@@ -77,11 +90,33 @@ describe("ProductForm vendor filters", () => {
     const product = {
       id: "p1",
       attributeValues: { [COLOUR.id]: COLOUR.options[1].id },
+      attributeNumbers: {},
     } as unknown as AdminProductDetail;
     const container = renderForm([COLOUR], product);
     const select = container.querySelector(
       `select[name="attribute_${COLOUR.id}"]`,
     ) as HTMLSelectElement | null;
     expect(select!.value).toBe(COLOUR.options[1].id);
+  });
+
+  it("renders a number input for a NUMBER filter, labelled with its unit, defaulting to the stored value", () => {
+    const product = {
+      id: "p1",
+      attributeValues: {},
+      attributeNumbers: { [POWER.id]: "65" },
+    } as unknown as AdminProductDetail;
+    const container = renderForm([POWER], product);
+    const input = container.querySelector(
+      `input[name="attributeNumber_${POWER.id}"]`,
+    ) as HTMLInputElement | null;
+    expect(input).not.toBeNull();
+    expect(input!.type).toBe("number");
+    expect(input!.step).toBe("0.01");
+    expect(input!.min).toBe("0");
+    expect(input!.value).toBe("65");
+    expect(container.querySelector(`label[for="attributeNumber_${POWER.id}"]`)?.textContent).toBe(
+      "Power (W)",
+    );
+    expect(container.querySelector(`select[name="attribute_${POWER.id}"]`)).toBeNull();
   });
 });

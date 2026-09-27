@@ -42,6 +42,7 @@ const mockProductSummary: ProductSummary = {
   lowStockThreshold: 3,
   expectedRestockDay: null,
   tier: null,
+  cardSpecifications: [],
 };
 
 const mockProductDetail: ProductDetail = {

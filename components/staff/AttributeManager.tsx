@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, type ReactNode } from "react";
 import { Plus, Save, Trash2 } from "lucide-react";
 import {
   createAttribute,
@@ -56,11 +56,15 @@ function usage(productCount: number): string {
   return `${productCount} ${productCount === 1 ? "product" : "products"}`;
 }
 
+/**
+ * #918 — the filter's TYPE is chosen here and never again: a list filter's values have no number
+ * mapping. The unit applies to a number filter only; the action discards it for a list filter.
+ */
 export function AddAttributeForm() {
   const [state, action, pending] = useActionState(createAttribute, initialCatalogueState);
 
   return (
-    <form action={action} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+    <form action={action} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
       <div className="flex-1">
         <label className={labelClass} htmlFor="new-attribute-name">
           Filter name
@@ -72,6 +76,27 @@ export function AddAttributeForm() {
           maxLength={40}
           className={inputClass}
           required
+        />
+      </div>
+      <div className="sm:w-44">
+        <label className={labelClass} htmlFor="new-attribute-kind">
+          Type
+        </label>
+        <select id="new-attribute-kind" name="kind" defaultValue="LIST" className={inputClass}>
+          <option value="LIST">Pick from a list</option>
+          <option value="NUMBER">Number</option>
+        </select>
+      </div>
+      <div className="sm:w-44">
+        <label className={labelClass} htmlFor="new-attribute-unit">
+          Unit (number filters only, optional)
+        </label>
+        <input
+          id="new-attribute-unit"
+          name="unit"
+          placeholder="e.g. W"
+          maxLength={10}
+          className={inputClass}
         />
       </div>
       <Button disabled={pending}>
@@ -96,6 +121,7 @@ function RenameForm({
   name,
   sortOrder,
   pending,
+  children,
 }: {
   action: (form: FormData) => void;
   idName: "attributeId" | "optionId";
@@ -103,9 +129,11 @@ function RenameForm({
   name: string;
   sortOrder: number;
   pending: boolean;
+  /** #918 — a filter's extra fields (unit, show on cards), saved with its name and position. */
+  children?: ReactNode;
 }) {
   return (
-    <form action={action} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+    <form action={action} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
       <input type="hidden" name={idName} value={id} />
       <div className="flex-1">
         <label className={labelClass} htmlFor={`rename-${id}`}>
@@ -136,6 +164,7 @@ function RenameForm({
           required
         />
       </div>
+      {children}
       <Button disabled={pending}>
         <Save className="h-4 w-4" aria-hidden="true" />
         {pending ? "Saving…" : "Save"}
@@ -254,12 +283,15 @@ export function AttributeCard({ attribute }: { attribute: AttributeRow }) {
     initialCatalogueState,
   );
 
+  const isNumber = attribute.kind === "NUMBER";
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-semibold text-primary">{attribute.name}</h3>
         <p className="text-xs text-primary-muted">
-          <code>attr_{attribute.slug}</code> · {usage(attribute.productCount)}
+          {isNumber ? "Number filter" : "List filter"} · <code>attr_{attribute.slug}</code> ·{" "}
+          {usage(attribute.productCount)}
         </p>
       </div>
 
@@ -270,23 +302,48 @@ export function AttributeCard({ attribute }: { attribute: AttributeRow }) {
         name={attribute.name}
         sortOrder={attribute.sortOrder}
         pending={renaming}
-      />
+      >
+        {isNumber && (
+          <div className="sm:w-28">
+            <label className={labelClass} htmlFor={`unit-${attribute.id}`}>
+              Unit
+            </label>
+            <input
+              id={`unit-${attribute.id}`}
+              name="unit"
+              defaultValue={attribute.unit ?? ""}
+              maxLength={10}
+              className={inputClass}
+            />
+          </div>
+        )}
+        {/* A plain checkbox saved with the name: unticked submits nothing, which turns it off. */}
+        <label className="flex items-center gap-2 text-sm text-primary sm:pb-2">
+          <input type="checkbox" name="showOnCard" defaultChecked={attribute.showOnCard} />
+          Show on product cards
+        </label>
+      </RenameForm>
       <Feedback state={renameState} />
 
-      <div>
-        <h4 className="mb-2 text-sm font-bold text-primary">
-          {attribute.options.length === 0 ? "No values yet" : "Values"}
-        </h4>
-        {attribute.options.length > 0 && (
-          <ul className="flex flex-col gap-3">
-            {attribute.options.map((option) => (
-              <OptionRow key={option.id} option={option} />
-            ))}
-          </ul>
-        )}
-      </div>
+      {/* #918 — a number filter holds one number per product, so it has no values to list. */}
+      {!isNumber && (
+        <>
+          <div>
+            <h4 className="mb-2 text-sm font-bold text-primary">
+              {attribute.options.length === 0 ? "No values yet" : "Values"}
+            </h4>
+            {attribute.options.length > 0 && (
+              <ul className="flex flex-col gap-3">
+                {attribute.options.map((option) => (
+                  <OptionRow key={option.id} option={option} />
+                ))}
+              </ul>
+            )}
+          </div>
 
-      <AddOptionForm attributeId={attribute.id} />
+          <AddOptionForm attributeId={attribute.id} />
+        </>
+      )}
 
       <div className="border-t border-black/10 pt-3">
         <DeleteForm

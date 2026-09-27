@@ -109,20 +109,39 @@ describe("getAvailableFacets context (R18)", () => {
       ]);
     // #912 — returned out of order on purpose: attributes and options must come back in the
     // vendor's (sortOrder, name) order, grouped one entry per attribute.
-    const attributeFindMany = vi.fn().mockResolvedValueOnce([
-      {
-        option: { slug: "wired", name: "Wired", sortOrder: 0 },
-        attribute: { id: "a2", slug: "connectivity", name: "Connectivity", sortOrder: 1 },
-      },
-      {
-        option: { slug: "white", name: "White", sortOrder: 1 },
-        attribute: { id: "a1", slug: "colour", name: "Colour", sortOrder: 0 },
-      },
-      {
-        option: { slug: "black", name: "Black", sortOrder: 0 },
-        attribute: { id: "a1", slug: "colour", name: "Colour", sortOrder: 0 },
-      },
-    ]);
+    const colour = {
+      id: "a1",
+      slug: "colour",
+      name: "Colour",
+      sortOrder: 0,
+      kind: "LIST",
+      unit: null,
+    };
+    const connectivity = {
+      id: "a2",
+      slug: "connectivity",
+      name: "Connectivity",
+      sortOrder: 2,
+      kind: "LIST",
+      unit: null,
+    };
+    // #918 — a NUMBER filter positioned BETWEEN the two list filters, to pin one combined order.
+    const power = {
+      id: "a3",
+      slug: "power",
+      name: "Power",
+      sortOrder: 1,
+      kind: "NUMBER",
+      unit: "W",
+    };
+    const attributeFindMany = vi
+      .fn()
+      .mockResolvedValueOnce([
+        { option: { slug: "wired", name: "Wired", sortOrder: 0 }, attribute: connectivity },
+        { option: { slug: "white", name: "White", sortOrder: 1 }, attribute: colour },
+        { option: { slug: "black", name: "Black", sortOrder: 0 }, attribute: colour },
+      ])
+      .mockResolvedValueOnce([{ attribute: power }]);
     const client = {
       product: { findFirst, findMany },
       productAttributeValue: { findMany: attributeFindMany },
@@ -150,12 +169,21 @@ describe("getAvailableFacets context (R18)", () => {
         {
           slug: "colour",
           name: "Colour",
+          kind: "LIST",
+          unit: null,
           options: [
             { slug: "black", name: "Black" },
             { slug: "white", name: "White" },
           ],
         },
-        { slug: "connectivity", name: "Connectivity", options: [{ slug: "wired", name: "Wired" }] },
+        { slug: "power", name: "Power", kind: "NUMBER", unit: "W", options: [] },
+        {
+          slug: "connectivity",
+          name: "Connectivity",
+          kind: "LIST",
+          unit: null,
+          options: [{ slug: "wired", name: "Wired" }],
+        },
       ],
     });
   });
@@ -259,28 +287,39 @@ describe("#569 widened facet probes", () => {
   it("issues every probe in one Promise.all rather than sequentially (R19)", async () => {
     const { client, findFirst, findMany, attributeFindMany } = makeStub();
     await getAvailableFacets(client, VENDOR);
-    // Eleven probes total: seven findFirst, three product findMany, and #912's one vendor-filter
-    // probe. If they were awaited in sequence the counts would be identical — what this pins is the
-    // probe SET, so a facet added without extending the Promise.all shows up here as a count change
-    // rather than passing silently.
+    // Twelve probes total: seven findFirst, three product findMany, #912's list-filter probe and
+    // #918's number-filter probe. If they were awaited in sequence the counts would be identical —
+    // what this pins is the probe SET, so a facet added without extending the Promise.all shows up
+    // here as a count change rather than passing silently.
     expect(
       findFirst.mock.calls.length +
         findMany.mock.calls.length +
         attributeFindMany.mock.calls.length,
-    ).toBe(11);
+    ).toBe(12);
   });
 
-  it("#912 — the vendor-filter probe is vendor-scoped, keeps the context, and carries no filter value", async () => {
-    const { client, attributeFindMany } = makeStub();
-    await getAvailableFacets(client, VENDOR, { categoryIds: ["cat-1"], inStockOnly: true });
+  it.each([
+    ["#912 list", 0, { optionId: { not: null } }],
+    ["#918 number", 1, { numericValue: { not: null } }],
+  ])(
+    "%s-filter probe is vendor-scoped, keeps the context, and carries no filter VALUE",
+    async (_label, callIndex, presence) => {
+      const { client, attributeFindMany } = makeStub();
+      await getAvailableFacets(client, VENDOR, { categoryIds: ["cat-1"], inStockOnly: true });
 
-    const where = (attributeFindMany.mock.calls[0][0] as { where: Record<string, unknown> }).where;
-    expect(where.vendorId).toBe(VENDOR);
-    const serialised = JSON.stringify(where);
-    expect(serialised).toContain("cat-1");
-    // FacetContext cannot carry attributeOptionIds, so an applied vendor filter never narrows its
-    // own control away.
-    expect(serialised).not.toContain("optionId");
-    expect(serialised).not.toContain("attributeValues");
-  });
+      const where = (
+        attributeFindMany.mock.calls[callIndex][0] as { where: Record<string, unknown> }
+      ).where;
+      expect(where.vendorId).toBe(VENDOR);
+      // The only value condition is "carries one at all" — never a specific option or number.
+      expect(where).toMatchObject(presence);
+      const { product } = where as { product: unknown };
+      const serialised = JSON.stringify(product);
+      expect(serialised).toContain("cat-1");
+      // FacetContext cannot carry vendor-filter values, so an applied vendor filter never narrows
+      // its own control away.
+      expect(serialised).not.toContain("optionId");
+      expect(serialised).not.toContain("attributeValues");
+    },
+  );
 });
