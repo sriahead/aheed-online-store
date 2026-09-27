@@ -48,6 +48,8 @@ function revalidateBrandSurfaces(): void {
   // Brands are a storefront facet, so both browse pages' filter panels change with them.
   revalidatePath("/search");
   revalidatePath("/categories", "layout");
+  // Product pages and cards show the brand name, so a rename or a delete changes them too (#917).
+  revalidatePath("/products", "layout");
 }
 
 export async function createBrand(
@@ -104,6 +106,27 @@ export async function setBrandImage(
   if (id === "") return { error: "That brand no longer exists.", field: null, saved: false };
 
   const result = await getBrandRepository().setImageKey(id, imageKey === "" ? null : imageKey);
+  if (!result.ok) return failure(result);
+
+  revalidateBrandSurfaces();
+  return { error: null, field: null, saved: true };
+}
+
+/**
+ * Delete a brand (#917). A brand some products carry needs the form's `confirmDelete` tick; the
+ * repository refuses without it. Its products are kept, with no brand.
+ */
+export async function deleteBrand(
+  _prev: CatalogueFormState,
+  form: FormData,
+): Promise<CatalogueFormState> {
+  const auth = await requireVendorRole("STAFF", "ADMIN");
+  if (!auth.ok) return refusal(auth.status);
+
+  const id = String(form.get("brandId") ?? "").trim();
+  if (id === "") return { error: "That brand no longer exists.", field: null, saved: false };
+
+  const result = await getBrandRepository().delete(id, form.get("confirmDelete") === "on");
   if (!result.ok) return failure(result);
 
   revalidateBrandSurfaces();
