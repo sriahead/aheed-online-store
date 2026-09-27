@@ -4,7 +4,7 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.6.0"
+version: "2.7.0"
 updated: "2026-09-27"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
@@ -177,42 +177,56 @@ links. Both must be unique within your shop.
 **Common mistakes and limitations:** Creating a brand does nothing visible on its own — a brand with
 no products behind it is invisible in the shop. The work that makes it appear is setting the brand on
 products. Avoid creating near-duplicates ("TRS" and "T.R.S."), because shoppers will see both as
-separate filter options.
+separate filter options. Removing a brand that products use asks you to tick **Also remove it from N
+products** first. Those products stay in the shop, with no brand; set a new brand on them from the
+Catalogue page if they need one.
 
 **What happens after changes are saved:** The brand becomes available in the Catalogue product form
-straight away, and appears as a shopper-facing filter once a product carries it.
+straight away, and appears as a shopper-facing filter once a product carries it. A removed brand
+disappears from the product form, the shop's brand filter, and every product that carried it.
 
 
 ## Product filters — `/staff/attributes`
 
-**Purpose:** Your shop's own filters, such as Colour or Connectivity. Each filter has a list of values
-(Black, White) that shoppers pick from to narrow the catalogue.
+**Purpose:** Your shop's own filters. A **list** filter, such as Colour, has values (Black, White)
+that shoppers tick to narrow the catalogue. A **number** filter, such as Power in watts, holds a
+number on each product, and shoppers give a from/to range.
 
 **Who can access:** Staff and store admins
 
-**What you can do:** Add a filter. Rename a filter or change its position. Add values to a filter,
-and rename a value or change its position. Delete a value or a whole filter.
+**What you can do:** Add a filter, choosing its type: **Pick from a list** or **Number**, with an
+optional unit for a number filter. Rename a filter or change its position, change a number filter's
+unit, and choose whether the filter shows on product cards. Add values to a list filter, and rename
+a value or change its position. Delete a value or a whole filter.
 
 **Typical workflow:** You want shoppers to filter headphones by colour. Add a filter called Colour,
 then add the values Black and White to it. Open each product on the Catalogue page and pick its
 colour under **Product filters**. The Colour filter appears in the shop once at least one product
-carries a value.
+carries a value. For chargers, add a **Number** filter called Power with the unit `W`, then type each
+charger's wattage on its product page.
 
-**Important fields and filters:** A filter or value name can be up to 40 characters. A shop can have
-up to 20 filters, and each filter up to 50 values. **Position** sets the order: lower numbers show
-first, in the shop and on this page. The short code under each name (for example `attr_colour`) is
-the web address shoppers' filter links use. It is fixed when you create the filter and does not
-change when you rename it, so links shoppers have shared keep working.
+**Important fields and filters:** A filter or value name can be up to 40 characters, and a unit up to
+10. A shop can have up to 20 filters, and each list filter up to 50 values. A number can have up to
+8 digits and 2 decimal places, and cannot be negative. **Position** sets the order: lower numbers
+show first, in the shop and on this page. The short code under each name (for example
+`attr_colour`) is the web address shoppers' filter links use. It is fixed when you create the filter
+and does not change when you rename it, so links shoppers have shared keep working. **Show on
+product cards** puts the filter's value on each product's card in the shop, not only on its product
+page.
 
-**Common mistakes and limitations:** A filter shows in the shop only where a product in view carries
-a value for it. A new filter with no products behind it is invisible to shoppers. Each product holds
-one value per filter, so a product cannot be both Black and White. List the two colours as separate
-products instead. Deleting a value or filter that products use asks you to tick **Also remove it
-from N products** first. The products stay in the shop; they lose only that value.
+**Common mistakes and limitations:** A filter's type is chosen when you add it and cannot be changed
+later; delete it and add it again as the other type. A number filter has no values list. A filter
+shows in the shop only where a product in view carries a value for it, so a new filter with no
+products behind it is invisible to shoppers. Each product holds one value per filter, so a product
+cannot be both Black and White; list the two colours as separate products instead. Shoppers can
+tick several values of one list filter to see products with any of them. **Show on product cards**
+is saved with the name and position, so saving with it unticked turns it off. Deleting a value or
+filter that products use asks you to tick **Also remove it from N products** first. The products stay
+in the shop; they lose only that value.
 
 **What happens after changes are saved:** Changes show on the Catalogue product form straight away.
-In the shop, the filter lists, applied-filter chips and each product's **Specifications** list
-follow on their next page load.
+In the shop, the filter lists, applied-filter chips, product cards and each product's
+**Specifications** list follow on their next page load.
 
 
 ## Promotions — `/staff/promotions`

@@ -32,7 +32,7 @@ import {
 } from "./filter-params";
 
 export type FilterChipParams = {
-  /** #912 — a vendor-defined filter, `attr_<attributeSlug>=<optionSlug>`. See filter-params.ts. */
+  /** #912/#918 — a vendor-defined filter (list or range key). See filter-params.ts. */
   [attributeKey: `attr_${string}`]: FilterParamValue;
   q?: string;
   minPrice?: string;
@@ -55,7 +55,10 @@ export type FilterChipParams = {
 };
 
 export type FilterChip = {
-  /** The query-string key this chip removes — also a stable React key. */
+  /**
+   * The query-string key this chip removes — also a stable React key. For a vendor filter (#918)
+   * it is the pair, `attr_colour=black`, because one key can carry several values.
+   */
   key: string;
   label: string;
   href: string;
@@ -72,15 +75,31 @@ export const REMOVABLE: readonly FixedFilterKey[] = FIXED_FILTER_KEYS;
 /**
  * `q` first, then every carried filter minus `omit`. Pagination (`cursor`, `back`) is never carried
  * — `filterEntries` does not know those keys — which is ruling 1 above.
+ *
+ * #918 — `omitPair` drops ONE `[key, value]` pair rather than a whole key, so removing the "Black"
+ * chip keeps `attr_colour=white`. Pairs are appended, never set, for the same reason.
  */
-function buildHref(basePath: string, params: FilterChipParams, omit: readonly string[]): string {
+function buildHref(
+  basePath: string,
+  params: FilterChipParams,
+  omit: readonly string[],
+  omitPair?: readonly [string, string],
+): string {
   const qs = new URLSearchParams();
   if (!omit.includes("q") && typeof params.q === "string" && params.q !== "") {
     qs.set("q", params.q);
   }
-  for (const [key, value] of filterEntries(params, omit)) qs.set(key, value);
+  for (const [key, value] of filterEntries(params, omit)) {
+    if (omitPair && key === omitPair[0] && value === omitPair[1]) continue;
+    qs.append(key, value);
+  }
   const query = qs.toString();
   return query ? `${basePath}?${query}` : basePath;
+}
+
+/** #918 — the key of one attribute pair in the labels map and on its chip: `attr_colour=black`. */
+export function attributePairKey(key: string, value: string): string {
+  return `${key}=${value}`;
 }
 
 /**
@@ -174,10 +193,14 @@ function labelFor(
  * `categoryLabel` and `brandLabel` are the resolved NAMES — the caller has already looked each up
  * to build the predicate, so passing the name avoids a second query just to render a chip.
  *
- * `attributeLabels` (#912) maps each RESOLVED `attr_*` key to its `"<Filter>: <Value>"` label. An
- * attribute key missing from it renders NO chip: it named a filter or value this vendor does not
- * have, so it applies no predicate, and a chip would claim a filter that is not running — the
- * `category`/`brand` rule. It is still carried in every href, harmlessly, like any other no-op.
+ * `attributeLabels` (#912, keyed by PAIR since #918 — `attributePairKey`) maps each RESOLVED
+ * `attr_*` pair to its label ("Colour: Black", "Power: from 15 W"). A pair missing from it renders
+ * NO chip: it named a filter or value this vendor does not have, so it applies no predicate, and a
+ * chip would claim a filter that is not running — the `category`/`brand` rule. It is still carried
+ * in every href, harmlessly, like any other no-op.
+ *
+ * #918 — one chip per attribute PAIR, since one list key can carry several values. Its `key` is the
+ * pair (unique where the query key is not), and its href drops only that pair.
  */
 export function activeFilterChips(
   basePath: string,
@@ -188,9 +211,14 @@ export function activeFilterChips(
 ): FilterChip[] {
   const chips: FilterChip[] = [];
   for (const [key, value] of filterEntries(params)) {
-    const label = isAttributeParamKey(key)
-      ? (attributeLabels?.[key] ?? null)
-      : labelFor(key as FixedFilterKey, value, categoryLabel, brandLabel);
+    if (isAttributeParamKey(key)) {
+      const pairKey = attributePairKey(key, value);
+      const label = attributeLabels?.[pairKey];
+      if (label === undefined) continue;
+      chips.push({ key: pairKey, label, href: buildHref(basePath, params, [], [key, value]) });
+      continue;
+    }
+    const label = labelFor(key as FixedFilterKey, value, categoryLabel, brandLabel);
     if (label === null) continue;
     chips.push({ key, label, href: buildHref(basePath, params, [key]) });
   }

@@ -1,6 +1,10 @@
 import { formatPackSize, packSizeParamValue } from "@/components/product/unit-price";
 import type { AvailableFacets } from "@/lib/repositories/products";
-import { ATTRIBUTE_PARAM_PREFIX, type FilterParamValue } from "@/components/product/filter-params";
+import {
+  ATTRIBUTE_PARAM_PREFIX,
+  attributeParamValues,
+  type FilterParamValue,
+} from "@/components/product/filter-params";
 
 /**
  * Plain <form method="GET"> — no client-side JS. Submitting it is a real page
@@ -35,7 +39,7 @@ export function ProductFilterForm({
     category?: string;
     /** #397 — the wire form is `<amount>-<UNIT>`, e.g. `500-GRAM`. */
     packSize?: string;
-    /** #912 — the vendor's own filters, `attr_<attributeSlug>=<optionSlug>`. */
+    /** #912/#918 — the vendor's own filters: list keys (may repeat) and range keys. */
     [attributeKey: `attr_${string}`]: FilterParamValue;
   };
   // Per-vendor filter visibility (ADR-004 follow-up): only offer a filter the vendor's catalogue
@@ -294,31 +298,68 @@ export function ProductFilterForm({
       )}
 
       {/*
-        #912 — the vendor's OWN filters, one select each, after every platform facet. Same shape
-        as brand and origin above: single-select (one removable chip per filter), an empty first
-        option that submits `attr_<slug>=` and reads as "no filter", the option SLUG as the value
-        (it is what a shared URL carries), and no `id` (FilterPanel renders this form twice). A
-        filter is listed only when a product in the current context carries one of its values.
+        #912 — the vendor's OWN filters, after every platform facet, each listed only when a product
+        in the current context carries a value for it. No `id` on any control: FilterPanel renders
+        this form twice, so every label WRAPS its control instead.
+
+        #918 — a LIST filter is a checkbox group, not a select: ticking two boxes with one name makes
+        this plain GET form submit `attr_<slug>` twice, which the page reads as "either value" — the
+        only way a no-JavaScript form can express multi-select. The option SLUG is the value (it is
+        what a shared URL carries). A NUMBER filter is a from/to pair, `attr_<slug>_min`/`_max`,
+        shaped like the price range above; an empty input submits `=` and reads as no bound.
       */}
       {spec.attributes.map((attribute) => {
         const name = `${ATTRIBUTE_PARAM_PREFIX}${attribute.slug}`;
-        const current = searchParams[`${ATTRIBUTE_PARAM_PREFIX}${attribute.slug}` as const];
+        if (attribute.kind === "NUMBER") {
+          const min = searchParams[`${name}_min` as `attr_${string}`];
+          const max = searchParams[`${name}_max` as `attr_${string}`];
+          return (
+            <fieldset key={attribute.slug} className="flex flex-col gap-2">
+              <legend className="mb-1 text-sm font-semibold text-primary">
+                {attribute.unit ? `${attribute.name} (${attribute.unit})` : attribute.name}
+              </legend>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  name={`${name}_min`}
+                  step="0.01"
+                  min="0"
+                  aria-label={`Minimum ${attribute.name}`}
+                  placeholder="Min"
+                  defaultValue={typeof min === "string" ? min : ""}
+                  className="w-full rounded-lg border border-black/20 px-3 py-2"
+                />
+                <span className="text-primary-muted">–</span>
+                <input
+                  type="number"
+                  name={`${name}_max`}
+                  step="0.01"
+                  min="0"
+                  aria-label={`Maximum ${attribute.name}`}
+                  placeholder="Max"
+                  defaultValue={typeof max === "string" ? max : ""}
+                  className="w-full rounded-lg border border-black/20 px-3 py-2"
+                />
+              </div>
+            </fieldset>
+          );
+        }
+        const current = attributeParamValues(name, searchParams[name as `attr_${string}`]);
         return (
-          <label key={attribute.slug} className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-primary">{attribute.name}</span>
-            <select
-              name={name}
-              defaultValue={typeof current === "string" ? current : ""}
-              className="w-full rounded-lg border border-black/20 px-3 py-2"
-            >
-              <option value="">Any {attribute.name}</option>
-              {attribute.options.map((option) => (
-                <option key={option.slug} value={option.slug}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <fieldset key={attribute.slug} className="flex flex-col gap-2">
+            <legend className="mb-1 text-sm font-semibold text-primary">{attribute.name}</legend>
+            {attribute.options.map((option) => (
+              <label key={option.slug} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name={name}
+                  value={option.slug}
+                  defaultChecked={current.includes(option.slug)}
+                />
+                <span className="text-sm text-primary">{option.name}</span>
+              </label>
+            ))}
+          </fieldset>
         );
       })}
 

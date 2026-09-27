@@ -10,6 +10,7 @@ import {
   renameAttributeForVendor,
   renameAttributeOptionForVendor,
   type AttributeDefinition,
+  type AttributeKind,
   type AttributeRow,
 } from "@/lib/repositories/attributes";
 import type { CatalogueWriteResult } from "@/lib/repositories/products";
@@ -42,14 +43,14 @@ export async function listAttributesForVendor(vendorId: string): Promise<Attribu
 
 export async function createAttribute(
   vendorId: string,
-  input: { name: string; slug: string },
+  input: { name: string; slug: string; kind: AttributeKind; unit: string | null },
 ): Promise<CatalogueWriteResult> {
   return createAttributeForVendor(getPrisma(), vendorId, input);
 }
 
 export async function renameAttribute(
   vendorId: string,
-  input: { id: string; name: string; sortOrder: number },
+  input: { id: string; name: string; sortOrder: number; showOnCard: boolean; unit: string | null },
 ): Promise<CatalogueWriteResult> {
   return renameAttributeForVendor(getPrismaWs(), vendorId, input);
 }

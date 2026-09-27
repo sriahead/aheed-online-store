@@ -8,6 +8,15 @@ every branch merges.
 
 ### Added
 
+- **Brand deletion and vendor-filter follow-ups** (issues `#917` and `#918` items 1–4; `specs/2026-09-27-p917-918-brand-delete-filter-followups/`). One additive migration (`20260927140000_p918_attribute_kinds_numbers`).
+  - **`#917` — staff can delete a brand** at `/staff/brands`, with an "Also remove it from N products" tick when products use it. Those products stay, with no brand (`ON DELETE SET NULL`). The staff guide's promise to "remove" a brand now traces to a real control.
+  - **Two kinds of vendor filter.** A filter is a **list** (pick from values) or a **number** (a decimal with an optional unit, such as `W`), chosen when it is added and never changed. A value row holds exactly one of the two, enforced by a database `CHECK`. The product form shows a number input for a number filter.
+  - **Shop front:** several values of one list filter can be ticked (`attr_colour=black&attr_colour=white` means either); number filters take a from/to range (`attr_<slug>_min`/`_max`). One chip per value or bound. Every "Next page", chip and clear-all link keeps repeated values.
+  - **Values on product cards:** a filter marked "Show on product cards" shows its value on each card (up to three; the full list in the hover text). Off by default, so grocery cards are unchanged.
+  - **Search matches filter values:** typing "wired" finds products whose Connectivity is Wired, and such results are no longer called "loosely related".
+  - `specs/architecture.md` 1.36.0 records the two kinds, the repeated-parameter exception to `#689`, range keys, card display and search; it also moves the search-pagination `OFFSET` paragraphs back out of the `#912` subsection. Staff guide 2.7.0. Seed: SriMart's Colour shows on cards, and a `Power` number filter is set on three products.
+  - Deferred follow-ups filed as `#923`; SriMart's production filter data is owner action `#922`. Carried forward: the `specs/roadmap.md` row for PR #921 and the `docs/model-handoff.md` correction that `#912` is in production.
+
 - **Vendor-defined product filters** (issue `#912`, folding in `#601` and `#916`; `specs/2026-09-27-p912-vendor-defined-filters/`). One additive migration (`20260927000000_p912_vendor_attributes`).
   - **Each store defines its own filters as data.** `VendorAttribute`, `VendorAttributeOption` and `ProductAttributeValue` (one value per product per filter), with composite foreign keys that tie an option to its filter and a filter to its vendor in the database itself. They sit beside the six label booleans, not in place of them (`specs/architecture.md` 1.35.0).
   - **`/staff/attributes` ("Product filters")** for staff and store admins: add, rename and reposition filters and their values; delete one, with an "Also remove it from N products" tick when products use it. On the staff nav, the hub and the staff guide.

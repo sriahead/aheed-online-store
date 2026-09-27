@@ -3,6 +3,7 @@ import { getCurrentVendorId } from "@/lib/tenant";
 import { slugify } from "@/lib/catalogue-form";
 import {
   createBrandForVendor,
+  deleteBrandForVendor,
   getBrandBySlug,
   listBrandsForAdmin as listBrandsForAdminRepo,
   listBrandSummaries as listBrandSummariesRepo,
@@ -53,6 +54,10 @@ export function getBrandRepository(): BrandRepository {
     },
     async setImageKey(id: string, imageKey: string | null) {
       return setBrandImageKeyRepo(prismaWs, await vendorId(), { id, imageKey });
+    },
+    async delete(id: string, confirmed: boolean) {
+      // `deleteMany` is safe on the HTTP client; see deleteBrandForVendor.
+      return deleteBrandForVendor(prisma, await vendorId(), { id, confirmed });
     },
   };
 }

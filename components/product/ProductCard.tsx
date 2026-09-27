@@ -227,6 +227,26 @@ export function ProductCard({
 
             <p className="mt-0.5 text-xs text-black/60">{unitDisplay}</p>
 
+            {/*
+              #918 — values of the filters the vendor marked "Show on product cards". Up to three
+              on the line (a card has room for no more); the full "Name: Value" list is in the
+              title. Absent entirely when there are none, so a grocery card is unchanged.
+            */}
+            {product.cardSpecifications.length > 0 && (
+              <p
+                data-card-specs
+                className="mt-0.5 truncate text-[11px] text-black/60"
+                title={product.cardSpecifications
+                  .map((spec) => `${spec.name}: ${spec.value}`)
+                  .join(" · ")}
+              >
+                {product.cardSpecifications
+                  .slice(0, 3)
+                  .map((spec) => spec.value)
+                  .join(" · ")}
+              </p>
+            )}
+
             {isLowStock && (
               <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-danger">
                 <AlertTriangle className="h-3 w-3" aria-hidden />

@@ -46,6 +46,30 @@ export function parseSortOrder(raw: string): ParseResult<number> {
   return value <= MAX_SORT_ORDER ? { ok: true, value } : refused;
 }
 
+export const ATTRIBUTE_UNIT_MAX_LENGTH = 10;
+
+export type AttributeKindValue = "LIST" | "NUMBER";
+
+/**
+ * #918 — the add-filter form's type choice. Refused rather than defaulted: the form always submits
+ * one, so anything else is a crafted request.
+ */
+export function parseAttributeKind(raw: string): ParseResult<AttributeKindValue> {
+  const trimmed = raw.trim();
+  if (trimmed === "LIST" || trimmed === "NUMBER") return { ok: true, value: trimmed };
+  return { ok: false, field: "kind", error: "Choose a filter type." };
+}
+
+/** #918 — a number filter's optional unit ("W", "in"). Blank means none. */
+export function parseAttributeUnit(raw: string): ParseResult<string | null> {
+  const trimmed = raw.trim();
+  if (trimmed === "") return { ok: true, value: null };
+  if (trimmed.length > ATTRIBUTE_UNIT_MAX_LENGTH) {
+    return { ok: false, field: "unit", error: "Keep the unit to 10 characters or fewer." };
+  }
+  return { ok: true, value: trimmed };
+}
+
 /** The delete form's confirmation label — "Also remove it from 1 product" / "… from 3 products". */
 export function confirmDeleteLabel(productCount: number): string {
   return `Also remove it from ${productCount} ${productCount === 1 ? "product" : "products"}`;

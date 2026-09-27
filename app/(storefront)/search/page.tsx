@@ -107,7 +107,7 @@ export default async function SearchPage({
   const selectedBrand = params.brand ? await getBrandRepository().getBySlug(params.brand) : null;
 
   /*
-   * #912 — the vendor's own filters, resolved the same way: the predicate (`optionIds`) and the
+   * #912 — the vendor's own filters, resolved the same way: the predicate (`optionGroups`/`ranges`) and the
    * chips (`labels`) come from ONE resolution, so an unknown filter or value applies nothing and
    * shows nothing. One query for all of this vendor's filters.
    */
@@ -154,7 +154,9 @@ export default async function SearchPage({
     // the filter off, so a stray `?featured=0` browses the full catalogue.
     isFeatured: params.featured === "1",
     categoryIds,
-    attributeOptionIds: attributeFilters.optionIds,
+    // #918 — ticked values of one list filter are one group (any of them); number filters are ranges.
+    attributeOptionGroups: attributeFilters.optionGroups,
+    attributeRanges: attributeFilters.ranges,
   };
 
   const result = query ? await products.search(query, options) : await products.list(options);

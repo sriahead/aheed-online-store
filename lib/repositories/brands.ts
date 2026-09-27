@@ -43,6 +43,7 @@ export interface BrandRepository {
   create(name: string): Promise<CatalogueWriteResult>;
   rename(id: string, name: string): Promise<CatalogueWriteResult>;
   setImageKey(id: string, imageKey: string | null): Promise<CatalogueWriteResult>;
+  delete(id: string, confirmed: boolean): Promise<CatalogueWriteResult>;
 }
 
 const DUPLICATE: CatalogueWriteResult = {
@@ -55,6 +56,12 @@ const NOT_FOUND: CatalogueWriteResult = {
   ok: false,
   error: "That brand no longer exists.",
   field: "id",
+};
+
+const NOT_CONFIRMED: CatalogueWriteResult = {
+  ok: false,
+  error: "Tick the box to confirm.",
+  field: "confirmDelete",
 };
 
 /** Every brand for the vendor, with product counts, for the staff admin list. */
@@ -175,5 +182,30 @@ export async function setBrandImageKey(
     data: { imageKey: input.imageKey },
   });
   if (updated.count === 0) return NOT_FOUND;
+  return { ok: true, id: input.id };
+}
+
+/**
+ * Delete a brand (#917). No product is deleted: `Product_brandId_fkey` is `ON DELETE SET NULL`
+ * (migration `20260905130349_p2_6_catalogue_filter_facets`), so every product that carried the brand
+ * keeps existing with no brand. A brand in use needs `confirmed` — the staff page shows how many
+ * products it is about to be removed from, the same rule `deleteAttributeForVendor` follows.
+ *
+ * `deleteMany`, scoped by `vendorId`, is safe on the HTTP client (only `updateMany`/`createMany`
+ * open the implicit transaction #382 found). A shopper's old `?brand=<slug>` link then resolves to
+ * nothing in `getBrandBySlug`, so it applies no filter and renders no chip.
+ */
+export async function deleteBrandForVendor(
+  prisma: Db,
+  vendorId: string,
+  input: { id: string; confirmed: boolean },
+): Promise<CatalogueWriteResult> {
+  const row = await prisma.brand.findFirst({
+    where: { id: input.id, vendorId },
+    select: { _count: { select: { products: true } } },
+  });
+  if (!row) return NOT_FOUND;
+  if (row._count.products > 0 && !input.confirmed) return NOT_CONFIRMED;
+  await prisma.brand.deleteMany({ where: { id: input.id, vendorId } });
   return { ok: true, id: input.id };
 }

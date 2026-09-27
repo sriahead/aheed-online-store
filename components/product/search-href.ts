@@ -19,7 +19,7 @@
 import { FIXED_FILTER_KEYS, filterEntries, type FilterParamValue } from "./filter-params";
 
 export type SearchHrefParams = {
-  /** #912 — a vendor-defined filter, `attr_<attributeSlug>=<optionSlug>`. */
+  /** #912/#918 — a vendor-defined filter (list or range key); see filter-params.ts. */
   [attributeKey: `attr_${string}`]: FilterParamValue;
   q?: string;
   minPrice?: string;
@@ -50,7 +50,8 @@ export const CARRIED: readonly string[] = ["q", ...FIXED_FILTER_KEYS];
 function carriedQuery(params: SearchHrefParams, omit: readonly string[] = []): URLSearchParams {
   const qs = new URLSearchParams();
   if (typeof params.q === "string" && params.q !== "") qs.set("q", params.q);
-  for (const [key, value] of filterEntries(params, omit)) qs.set(key, value);
+  // `append`, never `set` (#918): a list filter may carry several values under one key.
+  for (const [key, value] of filterEntries(params, omit)) qs.append(key, value);
   return qs;
 }
 
