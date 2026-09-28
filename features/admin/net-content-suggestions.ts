@@ -3,10 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { parseNetContentFields } from "@/lib/catalogue-form";
-import type { NetContentReviewState } from "@/lib/net-content-review-form";
+import {
+  describeStaffNetContentRun,
+  type NetContentReviewState,
+} from "@/lib/net-content-review-form";
 import {
   rejectNetContentSuggestionForVendor,
   reviewNetContentSuggestionForVendor,
+  runNetContentSuggestionsForVendor,
 } from "@/lib/net-content-suggestions-service";
 
 /**
@@ -84,6 +88,33 @@ export async function reviewNetContent(
   }
 
   return { error: "Unknown action.", notice: null };
+}
+
+/**
+ * #927 — the "Suggest net content" button: one bounded batch of AI suggestions for the signed-in
+ * vendor. ADMIN only, like `proposeSynonymsFromLog` and the image backfill, because it spends the
+ * shared Workers AI allowance; reviewing stays open to STAFF. The vendor comes from the session —
+ * no form field is read. It writes suggestion rows only; a product changes only through
+ * `reviewNetContent` above.
+ */
+export async function suggestNetContent(
+  _prev: NetContentReviewState,
+  _form: FormData,
+): Promise<NetContentReviewState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) {
+    return {
+      error:
+        auth.status === 401
+          ? "Please sign in as a store admin to ask for suggestions."
+          : "Only a store admin can ask the AI for suggestions.",
+      notice: null,
+    };
+  }
+
+  const result = await runNetContentSuggestionsForVendor(auth.vendorId);
+  if (result.kind === "ran") revalidatePath("/staff/net-content");
+  return describeStaffNetContentRun(result);
 }
 
 function revalidateAfterWrite() {
