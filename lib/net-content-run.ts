@@ -1,6 +1,7 @@
 import { checkSuggestionAgainstUnitLabel } from "@/lib/net-content-label-check";
 import { choosePhotoEvidence, type CandidateImage } from "@/lib/net-content-eligibility";
 import {
+  descriptionExcerpt,
   validateNetContentReply,
   type NetContentSuggester,
   type SuggesterPhoto,
@@ -44,6 +45,7 @@ export interface RunProduct {
   id: string;
   name: string;
   unitLabel: string;
+  description: string;
   basePrice: number;
   images: CandidateImage[];
 }
@@ -102,10 +104,13 @@ export async function runNetContentSuggestions(deps: RunDependencies): Promise<R
 
     const image = choosePhotoEvidence(product.images);
     const photo = image ? await deps.loadPhoto(image) : null;
+    // #928 (R9) — computed once: the quote is checked against exactly what the model saw.
+    const descriptionSent = descriptionExcerpt(product.description);
 
     const result = await deps.suggester.suggest({
       name: product.name,
       unitLabel: product.unitLabel,
+      description: descriptionSent,
       photo,
       storeDescription: deps.storeDescription,
     });
@@ -140,6 +145,7 @@ export async function runNetContentSuggestions(deps: RunDependencies): Promise<R
     const validated = validateNetContentReply(result.text, {
       name: product.name,
       unitLabel: product.unitLabel,
+      descriptionSent,
       photoSent,
     });
 

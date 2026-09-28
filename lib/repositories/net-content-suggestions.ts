@@ -22,6 +22,7 @@ export interface EligibleProduct {
   id: string;
   name: string;
   unitLabel: string;
+  description: string;
   basePrice: number;
   images: { id: string; storageKey: string; sortOrder: number; source: ProductImageSource }[];
 }
@@ -41,6 +42,7 @@ export async function listEligibleProductsForNetContent(
       id: true,
       name: true,
       unitLabel: true,
+      description: true,
       basePrice: true,
       images: { select: { id: true, storageKey: true, sortOrder: true, source: true } },
     },

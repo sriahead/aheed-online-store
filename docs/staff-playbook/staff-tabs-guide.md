@@ -4,7 +4,7 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.8.0"
+version: "2.9.0"
 updated: "2026-09-28"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
@@ -384,7 +384,10 @@ is shown beside it.
 
 **Important fields and filters:** **Suggested** is the pack size, with the price shoppers would
 see. **Confidence** is the AI's own estimate, not a guarantee. **From the product name / unit
-label / photo** shows where it found the value, with the exact text it quoted. The coloured badge
+label / description / photo** shows where it found the value, with the exact text it quoted. The
+AI also reads the start of the product's description, so a size written only there can be
+suggested; when it quotes the description, check the quoted text really is this product's pack
+size. The coloured badge
 compares the suggestion with the price written in the unit label: **Matches** is reassuring,
 **Does NOT match** means look carefully, and **can't be checked** means the label states no size or
 price per kg.

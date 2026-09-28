@@ -8,11 +8,22 @@ every branch merges.
 
 ### Added
 
+- **Product description as net-content evidence** (issue `#928`, refs `#697`; `specs/2026-09-28-p928-net-content-description-evidence/`). One additive migration (`20260928160000_p928_net_content_description_evidence`, enum value only).
+  - The net-content suggester (the `#900` script and `#927`'s button) also reads the first **500 characters** of a product's description, so a size stated only there, such as "400ml tin" or "pack of 4", can become a suggestion quoting it. The review page shows "from the description".
+  - The quote must occur in the text actually sent. Description evidence is refused when the product name states a metric size of its own, or when the description states more than one. With no description the prompt is unchanged.
+  - Suggestions still reach a product only on a staff Accept or Edit. `specs/architecture.md` 1.38.0, staff guide 2.9.0.
+  - Earlier "no answer" products are retried by running the script once with `--include-attempted` after deploy; no retry button.
+
 - **"Suggest net content" button on `/staff/net-content`** (issue `#927`; `specs/2026-09-28-p927-net-content-suggest-button/`). No schema change.
   - Store admins ask the AI for net-content suggestions from the staff panel instead of running `scripts/suggest-net-content.ts` from a terminal. One click covers at most **10 products** and **150 neurons**, never-attempted products only, for the signed-in store. A model with no cost rate is refused before any call.
   - It reuses `#900`'s run loop, eligibility, validation and review unchanged, and it writes suggestion rows only: a product still changes only on a staff Accept or Edit. Staff (non-admin) see a note instead of the button.
   - `specs/architecture.md` 1.37.0 names the button as the second entry point, under the existing "authenticated staff action, proposed never applied" default. Staff guide 2.8.0, env-setup 1.15.0.
   - Filed from the `#901` production pilot: `#928` (the product description as evidence). `#697` stays open.
+
+- **Document-stage reconciliation for `#927`, plus the carried-forward `#917`/`#918` and `#927` promotion rows (`#927` promoted to production in PR #930, merge `1297f02`; `#917`/`#918` promoted earlier in PR #926, merge `1bedf96`).**
+  - `specs/roadmap.md`: three change-log rows — the `#917`/`#918` promotion, the `#927` build/validate/ship-to-staging record, and the `#927` promotion — none of which `sdd:audit` had a row for yet.
+  - `docs/model-handoff.md` 1.47.0: `#927` corrected from "built, awaiting `/validate`" to closed/in-production; `#917`/`#918` corrected from "in review" to `#917` closed/in-production with `#918` still open (owner action `#922`).
+  - `docs/developer-portal/local-dev-playbook.md` 1.11.0: documents that a `useActionState` action's curl fields, captured from one render, can be replayed against a session where the page never renders that form at all — used live to prove `suggestNetContent`'s ADMIN-only guard from a STAFF session with no button in its own HTML.
 
 - **Brand deletion and vendor-filter follow-ups** (issues `#917` and `#918` items 1–4; `specs/2026-09-27-p917-918-brand-delete-filter-followups/`). One additive migration (`20260927140000_p918_attribute_kinds_numbers`).
   - **`#917` — staff can delete a brand** at `/staff/brands`, with an "Also remove it from N products" tick when products use it. Those products stay, with no brand (`ON DELETE SET NULL`). The staff guide's promise to "remove" a brand now traces to a real control.

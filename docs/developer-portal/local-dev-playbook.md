@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.10.0"
-updated: 2026-09-27
+version: "1.11.0"
+updated: 2026-09-28
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions and presigned uploads, grep-vs-rendered-HTML pitfalls, local vendor-host resolution.
 tags: [local-dev, windows, validation, playbook]
@@ -216,6 +216,22 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   add/edit/remove/approve/reject forms end-to-end with no Chrome extension available — same
   `curl -F` approach as the plain-form case, just with these four fields instead of one, plus the
   named fields the action actually reads (e.g. `alias`, `canonical`, `intent`).
+- **A `useActionState`-bound action's curl fields can be reused against a page that never renders
+  that form, to prove the guard refuses a caller the UI never shows the control to.** Next dispatches
+  by the action's build-time id hash (the same `{"id":"<hash>",...}` value in every render of that
+  action, regardless of which page renders it), not by whether the current page's HTML happens to
+  contain a matching `$ACTION_REF_<N>` field — so the four fields captured from one signed-in
+  session's render of a form can be POSTed as-is against a *different* signed-in session where that
+  component never appears at all. Confirmed live at `#927`'s `/validate` (2026-09-28): `/staff/net-
+  content`'s `suggestNetContent` action (ADMIN-only) is bound to a form the page conditionally omits
+  for a STAFF viewer, so a STAFF session's fetch of that page carries no `$ACTION_REF_*`/`$ACTION_KEY`
+  fields for it at all — captured the four fields from an earlier ADMIN-signed-in render instead
+  (same action id, same static `$ACTION_KEY`, since neither is session-scoped) and POSTed them
+  against the STAFF-signed-in cookie jar; the server-side `requireVendorRole("ADMIN")` guard still
+  fired correctly (403 refusal text, zero rows written), proving the guard rather than assuming it
+  from the missing button alone. Useful specifically for proving a role guard on an action whose own
+  form the UI hides from the very role being tested — the alternative (a browser, manually editing
+  the DOM to inject the form) is strictly more work for the same proof.
 - **A `useActionState` result can come back correctly WITHOUT ever appearing as literal text in the
   curl response — check the flight payload, not just the rendered HTML, before calling a row
   failed.** Confirmed at `#116`'s `/validate` (2026-09-19) on `/shop-your-list`'s two stacked
