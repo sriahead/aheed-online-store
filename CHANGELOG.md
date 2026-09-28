@@ -14,6 +14,11 @@ every branch merges.
   - `specs/architecture.md` 1.37.0 names the button as the second entry point, under the existing "authenticated staff action, proposed never applied" default. Staff guide 2.8.0, env-setup 1.15.0.
   - Filed from the `#901` production pilot: `#928` (the product description as evidence). `#697` stays open.
 
+- **Document-stage reconciliation for `#927`, plus the carried-forward `#917`/`#918` and `#927` promotion rows (`#927` promoted to production in PR #930, merge `1297f02`; `#917`/`#918` promoted earlier in PR #926, merge `1bedf96`).**
+  - `specs/roadmap.md`: three change-log rows — the `#917`/`#918` promotion, the `#927` build/validate/ship-to-staging record, and the `#927` promotion — none of which `sdd:audit` had a row for yet.
+  - `docs/model-handoff.md` 1.47.0: `#927` corrected from "built, awaiting `/validate`" to closed/in-production; `#917`/`#918` corrected from "in review" to `#917` closed/in-production with `#918` still open (owner action `#922`).
+  - `docs/developer-portal/local-dev-playbook.md` 1.11.0: documents that a `useActionState` action's curl fields, captured from one render, can be replayed against a session where the page never renders that form at all — used live to prove `suggestNetContent`'s ADMIN-only guard from a STAFF session with no button in its own HTML.
+
 - **Brand deletion and vendor-filter follow-ups** (issues `#917` and `#918` items 1–4; `specs/2026-09-27-p917-918-brand-delete-filter-followups/`). One additive migration (`20260927140000_p918_attribute_kinds_numbers`).
   - **`#917` — staff can delete a brand** at `/staff/brands`, with an "Also remove it from N products" tick when products use it. Those products stay, with no brand (`ON DELETE SET NULL`). The staff guide's promise to "remove" a brand now traces to a real control.
   - **Two kinds of vendor filter.** A filter is a **list** (pick from values) or a **number** (a decimal with an optional unit, such as `W`), chosen when it is added and never changed. A value row holds exactly one of the two, enforced by a database `CHECK`. The product form shows a number input for a number filter.

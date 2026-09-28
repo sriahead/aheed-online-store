@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.46.0"
+version: "1.47.0"
 updated: 2026-09-28
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,34 +39,38 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-27.
-- **`staging` is now at `26abc0c`** — `#917` (brand deletion) and `#918` items 1–4 (multi-select,
-  numeric ranges, values on cards, search on filter values) merged via PR #924
-  (`feature/917-918-brand-delete-filter-followups -> staging`). Fully validated live from a fresh
-  context against every row of `requirements.md` (R1–R43), including a real signed-in Aheed-admin
-  session on `npm run preview` (brand add/delete-without-tick/delete-with-tick with the stale
-  `brand=` search param resolving cleanly, a full `NUMBER` filter lifecycle including a live
-  cross-kind-mismatch refusal) and the unauthenticated SriMart storefront (facet visibility,
-  multi-select colour chips with correct pair-omitting hrefs, power-range filtering, a filter-value
-  search match on "wired"). CI (`docs-gates`, `quality/kms`, `quality/quality`) green on PR #924;
-  `deploy-staging` (run `36352280570`) completed **success**; staging `/api/health` served `26abc0c`
-  with `db.ok: true`, `reference.drift: false`. **R38 (SriMart's own signed-in staff proof) run live
-  at this Ship**: added a `NUMBER` filter with a unit and `Show on product cards` ticked, set it on a
-  real catalogue product, saw it on that product's card, in its Specifications, and as a working
-  range filter, then deleted it with the confirmation tick — every other field the product carried
-  was unchanged. **`#917` moved to `In Review`** on the board; `#918` stays where it was — this PR
-  closes only items 1–4, not the issue itself, since item 5 (real SriMart production data entry) is
-  owner action `#922`. Spec: `specs/2026-09-27-p917-918-brand-delete-filter-followups/`. One
-  additive migration (`20260927140000_p918_attribute_kinds_numbers`), applied through to staging;
-  `dev` and `staging` schemas are aligned. `main` is still at `646f14d` — promotion to `main` for
-  this slice is its own deliberate PR, not yet opened. Deferred follow-ups filed as `#923`.
-  - **Tooling trap found live, not a code defect.** Submitting a form field containing `£` via
-    `curl -F` on this Windows checkout silently replaced it with the UTF-8 replacement character
-    (`0xEFBFBD` instead of `0xC2A3`) in two products' `unitLabel` during live proof, caught only by
-    comparing stored byte hex against the expected encoding — a normal read-back renders the
-    replacement character in a way that's easy to misread as correct. Both restored to their exact
-    original bytes. Node's `fetch`/`FormData` (used for the R38 staging proof) did not reproduce
-    this; documented in `docs/developer-portal/local-dev-playbook.md` 1.10.0.
+- **Date:** 2026-09-28.
+- **`main` is now at `1297f02`** — `#927` ("Suggest net content" staff button) promoted via PR #930
+  ("Promote \"Suggest net content\" button to production (#927)", `staging -> main`, 2026-09-28),
+  carrying PR #929 (the feature + docs merge, `18d2f0a`) alone — no other work was queued on
+  `staging` at promotion time (`git log origin/main..origin/staging` showed exactly `#927`'s four
+  commits before this merge). A store admin can now ask the AI for net-content suggestions from
+  `/staff/net-content` (`runNetContentSuggestionsForVendor`, `lib/net-content-suggestions-service.ts`)
+  instead of running `scripts/suggest-net-content.ts` from a terminal — 10 products and 150 neurons
+  per click, `#900`'s run loop entirely unchanged, writing suggestion rows only; a staff-only
+  (non-admin) viewer sees a note instead of the button. No schema change. **Validated from a
+  genuinely fresh context** against every row of `requirements.md`/`validation.md` (R1–R20),
+  including live curl-driven proof against dev under `npm run preview`: two consecutive clicks as
+  `demo-store-admin@example.com` each created 10 new rows for entirely disjoint products (0
+  duplicates, 0 overlap), and the ADMIN-only guard was proven live as `demo-staff@example.com`
+  (refused with the exact copy, no row written, no button in the rendered HTML). CI (`docs-gates`,
+  `quality/kms`, `quality/quality`) green on PR #929; `deploy-production` (run `36428229632`) and
+  `deploy-docs-internal` both completed **success**; production `/api/health` confirmed serving
+  `1297f02` with `db.ok: true`, `reference.drift: false`. **`#927` closed** on the `main` merge, its
+  Project #2 item auto-moving to `Done`. Spec: `specs/2026-09-28-p927-net-content-suggest-button/`;
+  read its `build-notes.md` first. Filed from the `#901` production pilot: `#928` (the product
+  description as suggestion evidence, Backlog, Phase P9.2). `#697` stays open.
+- **Previous promotion, `1bedf96`** — `#917` (brand deletion) and `#918` items 1–4 (multi-select,
+  numeric ranges, values on cards, search on filter values) promoted via PR #926 ("Promote brand
+  deletion and vendor-filter follow-ups to production (#917, #918)", `staging -> main`,
+  2026-09-28), carrying PR #924 (the feature merge, `26abc0ca`) and PR #925 (its Document-stage
+  reconciliation, `4caf3cf`). `deploy-production` (run `36362598107`) and `deploy-docs-internal`
+  both completed **success**. **`#917` closed** on the `main` merge, its Project #2 item auto-moving
+  to `Done`; **`#918` stays open** — item 5 (real SriMart production filter data entry) is owner
+  action `#922`, unaffected by this promotion. Full Validate/Ship record (every row of R1–R43, the
+  live SriMart-staging proof, the `curl -F`/`£` encoding trap now in
+  `docs/developer-portal/local-dev-playbook.md` 1.10.0): see
+  `specs/2026-09-27-p917-918-brand-delete-filter-followups/build-notes.md`.
 - **Previous promotion, `646f14d`** — `#912`, `#601` and `#916` (vendor-defined product filters,
   folding `#601`'s one-filter-key-definition and `#916`'s nested-create proof) promoted via PR #921
   (`staging -> main`, 2026-09-27), carrying PR #919 (the feature merge, `68e1ff8`) and PR #920 (its
@@ -477,33 +481,31 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#927` ("Suggest net content" staff button) is BUILT, awaiting `/validate`.** Branch
-  `feature/927-net-content-suggest-button` (spec `c981e03`, build `b06f055`), not yet pushed. Spec
-  `specs/2026-09-28-p927-net-content-suggest-button/`; read its `build-notes.md` first. An
-  ADMIN-only server action runs `#900`'s unchanged loop for the signed-in vendor, 10 products and
-  150 neurons per click. No schema change. The live rows R13–R15 run on dev under `npm run preview`.
-  Board: `#927` `In Progress`.
+- **`#927` ("Suggest net content" staff button) is DONE, in production via PR #930 (`1297f02`)** —
+  the rest of this bullet is its staging-layer record. See `Last Verified` above for the full
+  Validate/Ship/promotion record. Spec `specs/2026-09-28-p927-net-content-suggest-button/`; read its
+  `build-notes.md` first.
   - **Why it exists: the `#901` production pilot, 2026-09-28.** The owner ran two batches with
     `!` from this session, because auto mode refuses production-DB commands even after chat
     approval. Results: 35 Aheed products attempted, 25 PENDING suggestions (all literal
     name/unit-label matches), 10 NO_ANSWER (all correct by design), 0 failed, ≈174 neurons. Recorded
-    as two comments on `#901`. The owner then stopped the CLI runs: the remaining ~45 products run
-    through this button once it reaches production. The 25 PENDING rows still await staff review on
-    production `/staff/net-content`.
+    as two comments on `#901`. The 25 PENDING rows still await staff review on production
+    `/staff/net-content`; the remaining ~45 unattempted products can now be picked up through the
+    button in production instead of a further CLI batch.
   - **Filed:** `#928`, sending the product description as evidence. Three pilot products (Coconut
-    Milk, Croissants, Eggs) state their size only there.
+    Milk, Croissants, Eggs) state their size only there. Backlog, Phase P9.2.
 
-- **`#917` and `#918` items 1–4 are IN REVIEW, merged to `staging` via PR #924 (`26abc0c`).**
-  Promotion to `main` is its own deliberate PR, not yet opened. See `Last Verified` above for the
-  full Validate/Ship record, including R38's live SriMart-staging proof. Spec
+- **`#917` is DONE, in production via PR #926 (`1bedf96`); `#918` stays `In Progress`** — the rest
+  of this bullet is `#917`/`#918`'s staging-layer record. See `Last Verified` above for the full
+  Validate/Ship/promotion record. Spec
   `specs/2026-09-27-p917-918-brand-delete-filter-followups/` — read its `build-notes.md` first.
   Brand deletion; LIST/NUMBER vendor filters; multi-select via repeated `attr_<slug>`; `_min`/`_max`
   ranges; `showOnCard`; search over option names.
   - **The migration, `20260927140000_p918_attribute_kinds_numbers`, is now applied through to
-    staging** (dev and staging schemas aligned). Production gets it on promotion.
+    production** (dev, staging and production schemas aligned).
   - **The local `staging` branch in this checkout is stale (pre-`#912`).** Diff against
     `origin/staging`; a `prisma migrate diff` from local `staging` re-creates all of `#912`'s tables.
-  - Board: `#917` `In Review`; `#918` stays `In Progress` (item 5 is owner action, not code). Filed:
+  - Board: `#917` `Done`; `#918` stays `In Progress` (item 5 is owner action, not code). Filed:
     `#922` (SriMart production filter data, owner action), `#923` (deferred follow-ups). `#918`
     closes only once item 5 is done too.
 
