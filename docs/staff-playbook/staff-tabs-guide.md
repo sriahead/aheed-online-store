@@ -4,8 +4,8 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.7.0"
-updated: "2026-09-27"
+version: "2.8.0"
+updated: "2026-09-28"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
 tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback"]
@@ -374,10 +374,13 @@ save your corrected value, or reject it. The page also shows a pilot summary: ho
 were accepted, corrected, rejected or unanswered, how often the suggestion agreed with the
 product's unit label, how long the AI took and which AI model made them.
 
-**Typical workflow:** Suggestions are created by a script that someone with access to the servers
-runs; this page has no button that asks the AI. Open the page, read the suggestion and the text the
-AI quoted as its evidence, compare it with the packaging if you can, then accept, correct or
-reject it. If it quoted a photo, the photo is shown beside it.
+**Typical workflow:** A store admin presses **Suggest net content** at the top of the page. Only
+store admins see this button; staff see a note instead. One click asks the AI about at most 10
+products that have no pack size and have never been asked about before, and a line under the
+button says how many got a suggestion, how many got no answer and how many failed. Click again for
+the next 10. Then, for each suggestion, read it and the text the AI quoted as its evidence, compare
+it with the packaging if you can, and accept, correct or reject it. If it quoted a photo, the photo
+is shown beside it.
 
 **Important fields and filters:** **Suggested** is the pack size, with the price shoppers would
 see. **Confidence** is the AI's own estimate, not a guarantee. **From the product name / unit

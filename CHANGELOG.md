@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **"Suggest net content" button on `/staff/net-content`** (issue `#927`; `specs/2026-09-28-p927-net-content-suggest-button/`). No schema change.
+  - Store admins ask the AI for net-content suggestions from the staff panel instead of running `scripts/suggest-net-content.ts` from a terminal. One click covers at most **10 products** and **150 neurons**, never-attempted products only, for the signed-in store. A model with no cost rate is refused before any call.
+  - It reuses `#900`'s run loop, eligibility, validation and review unchanged, and it writes suggestion rows only: a product still changes only on a staff Accept or Edit. Staff (non-admin) see a note instead of the button.
+  - `specs/architecture.md` 1.37.0 names the button as the second entry point, under the existing "authenticated staff action, proposed never applied" default. Staff guide 2.8.0, env-setup 1.15.0.
+  - Filed from the `#901` production pilot: `#928` (the product description as evidence). `#697` stays open.
+
 - **Brand deletion and vendor-filter follow-ups** (issues `#917` and `#918` items 1–4; `specs/2026-09-27-p917-918-brand-delete-filter-followups/`). One additive migration (`20260927140000_p918_attribute_kinds_numbers`).
   - **`#917` — staff can delete a brand** at `/staff/brands`, with an "Also remove it from N products" tick when products use it. Those products stay, with no brand (`ON DELETE SET NULL`). The staff guide's promise to "remove" a brand now traces to a real control.
   - **Two kinds of vendor filter.** A filter is a **list** (pick from values) or a **number** (a decimal with an optional unit, such as `W`), chosen when it is added and never changed. A value row holds exactly one of the two, enforced by a database `CHECK`. The product form shows a number input for a number filter.
