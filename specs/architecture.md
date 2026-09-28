@@ -4,7 +4,7 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.37.0"
+version: "1.38.0"
 updated: 2026-09-28
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
@@ -837,8 +837,11 @@ S3 API rather than an R2-specific SDK.
     `lib/net-content-suggester.ts`. The model id is data: `--model`, then `NET_CONTENT_AI_MODEL`,
     then the default `@cf/google/gemma-4-26b-a4b-it`. Any per-model request options sit in a table
     beside the id, never in code branches, and every row records its model. The reply is validated
-    like any untrusted input: quoted evidence must literally occur in the name or unit label, and a
-    count (`EACH`) must be stated.
+    like any untrusted input: quoted evidence must literally occur in the name, the unit label, or
+    the description excerpt actually sent (its first 500 characters, `#928`), and a count (`EACH`)
+    must be stated. Description evidence is also refused when the name states a metric size of its
+    own, or when the excerpt states more than one; both are checked in code, not only asked for in
+    the prompt.
   - **Image provenance is data (`ProductImage.source`).** Only `STAFF_UPLOAD` and
     `STAFF_CONFIRMED_PHOTO` images may be read as evidence. An `AI_GENERATED` image was rendered
     from the product's own name, so reading a size off it only echoes the name. An

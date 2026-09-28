@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_NET_CONTENT_MODEL,
+  DESCRIPTION_EXCERPT_CHARS,
   NET_CONTENT_MODEL_REQUEST_OPTIONS,
   buildNetContentPrompt,
   buildNetContentRequestBody,
   createWorkersAiNetContentSuggester,
+  descriptionExcerpt,
+  metricSizesIn,
   readWorkersAiReply,
   resolveNetContentModel,
   statesCount,
@@ -19,8 +22,18 @@ import {
  * false confidence. No test here calls a real model.
  */
 
-const CRISPS = { name: "Salted Crisps 6 pack", unitLabel: "£1.79 / 6 pack", photoSent: false };
-const RICE = { name: "Basmati Rice 5kg", unitLabel: "£8.99 / 5kg", photoSent: false };
+const CRISPS = {
+  name: "Salted Crisps 6 pack",
+  unitLabel: "£1.79 / 6 pack",
+  descriptionSent: "",
+  photoSent: false,
+};
+const RICE = {
+  name: "Basmati Rice 5kg",
+  unitLabel: "£8.99 / 5kg",
+  descriptionSent: "",
+  photoSent: false,
+};
 
 function reply(fields: Record<string, unknown>): string {
   return JSON.stringify(fields);
@@ -116,7 +129,12 @@ describe("validateNetContentReply (R11)", () => {
     });
 
     it("rejects 1 EACH for a product whose evidence states no count", () => {
-      const charger = { name: "Fast Phone Charger", unitLabel: "£12.99 each", photoSent: false };
+      const charger = {
+        name: "Fast Phone Charger",
+        unitLabel: "£12.99 each",
+        descriptionSent: "",
+        photoSent: false,
+      };
       expect(
         validateNetContentReply(
           reply({ ...each, amount: 1, evidence: "Fast Phone Charger" }),
@@ -126,7 +144,12 @@ describe("validateNetContentReply (R11)", () => {
     });
 
     it("rejects 6 EACH quoting '16 pack'", () => {
-      const sixteen = { name: "Tea Bags 16 pack", unitLabel: "£1.00 / pack", photoSent: false };
+      const sixteen = {
+        name: "Tea Bags 16 pack",
+        unitLabel: "£1.00 / pack",
+        descriptionSent: "",
+        photoSent: false,
+      };
       expect(
         validateNetContentReply(reply({ ...each, amount: 6, evidence: "16 pack" }), sixteen),
       ).toBeNull();
@@ -153,6 +176,7 @@ describe("buildNetContentPrompt", () => {
       name: "Charger",
       unitLabel: "£9 each",
       hasPhoto: false,
+      description: "",
       storeDescription: null,
     });
     expect(prompt).toContain('reply {"amount": null}. Never answer 1 EACH');
@@ -164,6 +188,7 @@ describe("buildNetContentPrompt", () => {
       name: "Milk",
       unitLabel: "£1 / 2pt",
       hasPhoto: false,
+      description: "",
       storeDescription: null,
     });
     expect(prompt).toContain("Do not convert it.");
@@ -172,7 +197,13 @@ describe("buildNetContentPrompt", () => {
 
   it("forbids PHOTO evidence when there is no photo", () => {
     expect(
-      buildNetContentPrompt({ name: "x", unitLabel: "y", hasPhoto: false, storeDescription: null }),
+      buildNetContentPrompt({
+        name: "x",
+        unitLabel: "y",
+        description: "",
+        hasPhoto: false,
+        storeDescription: null,
+      }),
     ).toContain("Do not use evidenceSource PHOTO");
   });
 });
@@ -185,6 +216,7 @@ describe("buildNetContentRequestBody (R10)", () => {
       name: "Rice 5kg",
       unitLabel: "£1",
       photo: null,
+      description: "",
       storeDescription: null,
     });
     const [message] = body.messages as Array<{ content: unknown }>;
@@ -196,6 +228,7 @@ describe("buildNetContentRequestBody (R10)", () => {
       name: "Rice 5kg",
       unitLabel: "£1",
       photo,
+      description: "",
       storeDescription: null,
     });
     const [message] = body.messages as Array<{ content: Array<Record<string, any>> }>;
@@ -204,7 +237,13 @@ describe("buildNetContentRequestBody (R10)", () => {
   });
 
   it("applies the model's own request options, and none for an unlisted model", () => {
-    const input = { name: "a", unitLabel: "b", photo: null, storeDescription: null };
+    const input = {
+      name: "a",
+      unitLabel: "b",
+      photo: null,
+      description: "",
+      storeDescription: null,
+    };
     const gemma = buildNetContentRequestBody(input);
     expect(gemma.chat_template_kwargs).toEqual({ enable_thinking: false });
     expect(NET_CONTENT_MODEL_REQUEST_OPTIONS[DEFAULT_NET_CONTENT_MODEL]).toBeDefined();
@@ -246,6 +285,7 @@ describe("createWorkersAiNetContentSuggester (R10)", () => {
     name: "Rice 5kg",
     unitLabel: "£8.99 / 5kg",
     photo: null,
+    description: "",
     storeDescription: null,
   };
   const credentials = { accountId: "acct", apiToken: "tok" };
@@ -349,6 +389,219 @@ describe("createWorkersAiNetContentSuggester (R10)", () => {
     });
     expect(fetchImpl.mock.calls[0][0]).toBe(
       "https://api.cloudflare.com/client/v4/accounts/acct/ai/run/@cf/some/model",
+    );
+  });
+});
+
+/**
+ * #928 — the product description as a fourth evidence source. The literal-quote rule is the
+ * safety net; the two size guards keep the name first and refuse an ambiguous description.
+ */
+describe("descriptionExcerpt (#928 R3)", () => {
+  it("is 500 characters", () => {
+    expect(DESCRIPTION_EXCERPT_CHARS).toBe(500);
+  });
+
+  it("returns an empty string for an empty or whitespace-only description", () => {
+    expect(descriptionExcerpt("")).toBe("");
+    expect(descriptionExcerpt("   ")).toBe("");
+  });
+
+  it("returns a short description trimmed and otherwise unchanged", () => {
+    expect(descriptionExcerpt("  Rich, creamy coconut milk, 400ml tin.  ")).toBe(
+      "Rich, creamy coconut milk, 400ml tin.",
+    );
+  });
+
+  it("cuts a long description back to the last whitespace, never mid-word", () => {
+    // "400ml" straddles the cut: it occupies indices 497-501, and the cut keeps indices 0-499.
+    const long = "a".repeat(496) + " 400ml tin " + "b".repeat(94);
+    expect(long.length).toBeGreaterThan(600);
+    const excerpt = descriptionExcerpt(long);
+    expect(excerpt.length).toBeLessThanOrEqual(500);
+    expect(excerpt).toBe("a".repeat(496));
+    expect(excerpt).not.toMatch(/40$/);
+  });
+
+  it("returns the first 500 characters when there is no whitespace to cut back to", () => {
+    const solid = "x".repeat(600);
+    expect(descriptionExcerpt(solid)).toBe("x".repeat(500));
+  });
+});
+
+describe("metricSizesIn (#928 R4)", () => {
+  it.each([
+    ["Rich, creamy coconut milk, 400ml tin.", ["400ml"]],
+    ["400 ml tin, also 400ML", ["400ml"]],
+    ["400ml tin, also available in 1L", ["400ml", "1l"]],
+    ["Free range eggs, box of 6.", []],
+    ["1lb bag", []],
+    ["1,5 l bottle", ["1.5l"]],
+    ["2 litres, 250 grams", ["2litres", "250grams"]],
+  ])("%s", (text, expected) => {
+    expect(metricSizesIn(text)).toEqual(expected);
+  });
+});
+
+describe("validateNetContentReply — DESCRIPTION evidence (#928 R5)", () => {
+  const COCONUT = {
+    name: "Coconut Milk",
+    unitLabel: "£1.29 / tin",
+    descriptionSent: "Rich, creamy coconut milk, 400ml tin.",
+    photoSent: false,
+  };
+  const good = {
+    amount: 400,
+    unit: "MILLILITRE",
+    confidence: 90,
+    evidenceSource: "DESCRIPTION",
+    evidence: "400ml tin",
+  };
+
+  it("accepts a quote from the description when all four rules hold", () => {
+    expect(validateNetContentReply(reply(good), COCONUT)).toEqual({
+      amount: 400,
+      unit: "MILLILITRE",
+      confidence: 90,
+      evidenceSource: "DESCRIPTION",
+      evidenceText: "400ml tin",
+    });
+  });
+
+  it("(a) rejects DESCRIPTION when no description was sent", () => {
+    expect(validateNetContentReply(reply(good), { ...COCONUT, descriptionSent: "" })).toBeNull();
+  });
+
+  it("(b) rejects a quote that is not in the description sent", () => {
+    expect(validateNetContentReply(reply({ ...good, evidence: "500ml tin" }), COCONUT)).toBeNull();
+  });
+
+  it("(c) rejects DESCRIPTION when the name states a metric size", () => {
+    expect(
+      validateNetContentReply(reply(good), { ...COCONUT, name: "Coconut Milk 400ml" }),
+    ).toBeNull();
+  });
+
+  it("(d) rejects DESCRIPTION when the description states two distinct sizes", () => {
+    expect(
+      validateNetContentReply(reply(good), {
+        ...COCONUT,
+        descriptionSent: "Rich coconut milk, 400ml tin, also available in 1L",
+      }),
+    ).toBeNull();
+  });
+
+  it("keeps the EACH rule: 4 EACH quoting 'pack of 4' passes, 1 EACH fails", () => {
+    const croissants = {
+      name: "Croissants",
+      unitLabel: "£2.40 / pack",
+      descriptionSent: "Buttery, flaky croissants, pack of 4.",
+      photoSent: false,
+    };
+    const each = {
+      unit: "EACH",
+      confidence: 85,
+      evidenceSource: "DESCRIPTION",
+      evidence: "pack of 4",
+    };
+    expect(validateNetContentReply(reply({ ...each, amount: 4 }), croissants)).not.toBeNull();
+    expect(validateNetContentReply(reply({ ...each, amount: 1 }), croissants)).toBeNull();
+  });
+});
+
+describe("buildNetContentPrompt with a description (#928 R7)", () => {
+  const prompt = buildNetContentPrompt({
+    name: "Free Range Eggs",
+    unitLabel: "£2.10 / box",
+    description: "Free range eggs, box of 6.",
+    hasPhoto: false,
+    storeDescription: null,
+  });
+  const lines = prompt.split("\n");
+
+  it("places the Description line after the Unit label line", () => {
+    const unitLabel = lines.indexOf("Unit label: £2.10 / box");
+    const description = lines.indexOf("Description: Free range eggs, box of 6.");
+    expect(unitLabel).toBeGreaterThan(-1);
+    expect(description).toBe(unitLabel + 1);
+  });
+
+  it("allows DESCRIPTION as an evidence source and states its three rules", () => {
+    expect(prompt).toContain('"PHOTO"|"NAME"|"UNIT_LABEL"|"DESCRIPTION"');
+    expect(prompt).toContain(
+      "Use the description only when the name, unit label and photo state no size.",
+    );
+    expect(prompt).toContain(
+      "evidenceSource DESCRIPTION means evidence is copied exactly from the description text above.",
+    );
+    expect(prompt).toContain(
+      'If the description states more than one size, reply {"amount": null}.',
+    );
+  });
+
+  it("no longer tells the model to use only the name and unit label", () => {
+    expect(prompt).not.toContain("use only the name and unit label");
+  });
+});
+
+describe("buildNetContentPrompt with no description is unchanged (#928 R8)", () => {
+  // Written out from origin/staging's buildNetContentPrompt before #928, for the same input.
+  const before = (photoLines: [string, string]) =>
+    [
+      "You read the net content (pack size) of one product for a UK shop's catalogue.",
+      "",
+      "Product name: Test",
+      "Unit label: £1 / each",
+      photoLines[0],
+      "",
+      "Reply with ONE JSON object and nothing else:",
+      '{"amount": <whole number or null>, "unit": "GRAM"|"KILOGRAM"|"MILLILITRE"|"LITRE"|"EACH",',
+      ' "confidence": <whole number 0-100>, "evidenceSource": "PHOTO"|"NAME"|"UNIT_LABEL",',
+      ' "evidence": "<the exact text you relied on, copied character for character>"}',
+      "",
+      "Rules:",
+      "- amount must be a whole number. Use the smaller unit for fractions: 0.5kg is 500 GRAM, 1.5L is 1500 MILLILITRE.",
+      "- Only use a size written in metric units (g, kg, ml, cl, l) or a stated count of items.",
+      '- If the size is only given in other units (pints, oz, lb), reply {"amount": null}. Do not convert it.',
+      '- If working out the size would mean multiplying (for example "6 x 1.5L"), reply {"amount": null}.',
+      "- evidenceSource NAME or UNIT_LABEL means evidence is copied exactly from that text above.",
+      photoLines[1],
+      "- Use EACH only when a count of items is stated, such as '6 pack' or 'pack of 4'.",
+      '- If net content does not apply to this product (for example an electrical item sold singly), reply {"amount": null}. Never answer 1 EACH for that.',
+      '- If the pack size is not stated anywhere you can see, reply {"amount": null}. Do not guess.',
+    ].join("\n");
+
+  it("matches the pre-#928 prompt exactly without a photo", () => {
+    expect(
+      buildNetContentPrompt({
+        name: "Test",
+        unitLabel: "£1 / each",
+        description: "",
+        hasPhoto: false,
+        storeDescription: null,
+      }),
+    ).toBe(
+      before([
+        "No photo is available; use only the name and unit label.",
+        "- Do not use evidenceSource PHOTO: there is no photo.",
+      ]),
+    );
+  });
+
+  it("matches the pre-#928 prompt exactly with a photo", () => {
+    expect(
+      buildNetContentPrompt({
+        name: "Test",
+        unitLabel: "£1 / each",
+        description: "",
+        hasPhoto: true,
+        storeDescription: null,
+      }),
+    ).toBe(
+      before([
+        "A photo of the product's packaging is attached.",
+        "- evidenceSource PHOTO means evidence is the text you read on the packaging.",
+      ]),
     );
   });
 });

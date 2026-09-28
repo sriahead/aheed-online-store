@@ -23,7 +23,12 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Net content review" };
 
-const EVIDENCE_TEXT = { PHOTO: "photo", NAME: "product name", UNIT_LABEL: "unit label" } as const;
+const EVIDENCE_TEXT = {
+  PHOTO: "photo",
+  NAME: "product name",
+  UNIT_LABEL: "unit label",
+  DESCRIPTION: "description",
+} as const;
 
 function percent(value: number | null): string {
   return value === null ? "n/a" : `${Math.round(value * 100)}%`;
