@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.45.0"
-updated: 2026-09-27
+version: "1.46.0"
+updated: 2026-09-28
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -461,7 +461,10 @@ Dependencies and scope boundaries worth preserving:
 - #400 is three concerns: the low-stock badge exists; restock dates and async loading do not;
   per-store stock depends on location modelling.
 - #697 is not missing code. The net-content columns, form, unit-price derivation and pack-size facet
-  exist, but dev measurement found zero populated products. Production was not measured.
+  exist, but dev measurement found zero populated products. Production has ~80 Aheed products
+  (measured 2026-09-25). The `#901` pilot (2026-09-28) left 25 PENDING suggestions there, and none is
+  on a product until staff accept it. The first batches were all `prisma/seed.ts` fixtures, so the
+  real-stock share is still unknown.
 - #406 settled by #818: first-party feedback with staff moderation, outbound review links, and 3D
   Cards Stack Slider adopted instead of third-party widgets, preserving CSP and PECR privacy postures.
 - #695 needs Meta approval, inbound webhook design and phone-to-user identity; it is not
@@ -473,6 +476,22 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **`#927` ("Suggest net content" staff button) is BUILT, awaiting `/validate`.** Branch
+  `feature/927-net-content-suggest-button` (spec `c981e03`, build `b06f055`), not yet pushed. Spec
+  `specs/2026-09-28-p927-net-content-suggest-button/`; read its `build-notes.md` first. An
+  ADMIN-only server action runs `#900`'s unchanged loop for the signed-in vendor, 10 products and
+  150 neurons per click. No schema change. The live rows R13–R15 run on dev under `npm run preview`.
+  Board: `#927` `In Progress`.
+  - **Why it exists: the `#901` production pilot, 2026-09-28.** The owner ran two batches with
+    `!` from this session, because auto mode refuses production-DB commands even after chat
+    approval. Results: 35 Aheed products attempted, 25 PENDING suggestions (all literal
+    name/unit-label matches), 10 NO_ANSWER (all correct by design), 0 failed, ≈174 neurons. Recorded
+    as two comments on `#901`. The owner then stopped the CLI runs: the remaining ~45 products run
+    through this button once it reaches production. The 25 PENDING rows still await staff review on
+    production `/staff/net-content`.
+  - **Filed:** `#928`, sending the product description as evidence. Three pilot products (Coconut
+    Milk, Croissants, Eggs) state their size only there.
 
 - **`#917` and `#918` items 1–4 are IN REVIEW, merged to `staging` via PR #924 (`26abc0c`).**
   Promotion to `main` is its own deliberate PR, not yet opened. See `Last Verified` above for the
@@ -553,7 +572,8 @@ All facts in this section require live verification:
   - **Reconfirmed live, out of scope for this slice**: dev's three `pg_trgm` trigram indexes
     (`20260820143949_p7_5de_order_search_trigram`) are missing despite `prisma migrate status`
     reporting that migration applied (`GAP-011`, pre-existing drift, needs its own `/propose`).
-  - The production pilot is an owner action after promotion, tracked in **`#901`** (Backlog, P9.2).
+  - The production pilot is tracked in **`#901`** (now `In Progress`, P9.2). It is partly run: 35
+    of ~80 products as of 2026-09-28. See the `#927` bullet above.
   - Gemma's reasoning-off finding is in `docs/developer-portal/runtime-pitfalls.md` (Workers AI
     section); the Windows-curl-presigned-PUT trap found while closing R29 is in
     `docs/developer-portal/local-dev-playbook.md` (v1.7.0).
@@ -891,7 +911,8 @@ Not verified by the latest orientation:
   whether the OLD token was deleted rather than merely superseded — a dashboard-only fact.)
 - Neon plan limits, backup retention and an actual isolated restore.
 - Persisted Workers Logs, alert-channel delivery and scheduler executions.
-- Production/staging net-content row counts for #697.
+- Production/staging net-content row counts for #697. Production suggestion rows are known only
+  from the `#901` pilot output (2026-09-28); populated `Product.netContentAmount` was not measured.
 - Whether the internal KMS Worker has an Access-protected route despite the workflow comment.
 
 Public health checks verified Aheed and SriMart staging/production Workers at the expected commits,
