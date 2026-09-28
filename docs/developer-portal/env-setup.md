@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.14.0"
-updated: 2026-09-27
+version: "1.15.0"
+updated: 2026-09-28
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -231,6 +231,12 @@ npx tsx scripts/suggest-net-content.ts --env-file .dev.vars --product <id> --inc
   marks a product as attempted.
 - **The environment you name is the one written to.** Running it with `secrets/production.vars` is
   the production pilot, and that is an owner action.
+- **The staff button (`#927`).** Store admins can run the same suggestion step from the
+  **Suggest net content** button on `/staff/net-content`: 10 products and 150 neurons per click,
+  never-attempted products only. On a Worker it reads the existing `CLOUDFLARE_ACCOUNT_ID` and
+  `CLOUDFLARE_API_TOKEN` Worker secrets, which both deploy workflows already
+  `wrangler secret put`, plus the optional `NET_CONTENT_AI_MODEL`. No new secret is needed. A model
+  missing from the rate table is refused (the button has no `--unpriced-ok`).
 
 ### Per-vendor branding/config/delivery (ADR-004 slice 4)
 

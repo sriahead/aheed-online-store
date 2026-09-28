@@ -12,6 +12,7 @@ import { summariseNetContentPilot, type PilotSummary } from "@/lib/net-content-p
 import { formatPrice } from "@/components/product/format-price";
 import { deriveUnitPriceLabel, formatPackSize } from "@/components/product/unit-price";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
+import { SuggestNetContentForm } from "@/components/staff/SuggestNetContentForm";
 import {
   NetContentReviewRow,
   type NetContentReviewRowData,
@@ -31,8 +32,9 @@ function percent(value: number | null): string {
 /**
  * AI-suggested net content, reviewed by a person (#900).
  *
- * `scripts/suggest-net-content.ts` asks a model to read each product's pack size from its name,
- * unit label and any staff-sourced photo, and stores the answer here as a PENDING suggestion.
+ * The "Suggest net content" button (#927, store admins) or `scripts/suggest-net-content.ts` asks a
+ * model to read each product's pack size from its name, unit label and any staff-sourced photo,
+ * and stores the answer here as a PENDING suggestion.
  * NOTHING reaches a product until someone on this page accepts or edits it — that is the whole
  * safety property, since a wrong net content shows shoppers a wrong price per kg or litre.
  */
@@ -85,6 +87,15 @@ export default async function StaffNetContentPage() {
         value, so check it against the packaging.
       </p>
 
+      {/* #927 — asking the AI spends the shared Workers AI allowance, so ADMIN only; STAFF review. */}
+      {auth.via === "STAFF" ? (
+        <p className="mb-6 text-sm text-primary-muted">
+          A store admin can ask the AI for more suggestions.
+        </p>
+      ) : (
+        <SuggestNetContentForm />
+      )}
+
       <PilotSummaryPanel summary={summary} />
 
       <section>
@@ -95,7 +106,7 @@ export default async function StaffNetContentPage() {
           <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
             <Ruler className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
             <p className="text-sm text-primary-muted">
-              No suggestions waiting. New ones appear after the suggestion script is run.
+              No suggestions waiting. New ones appear here when a store admin asks the AI.
             </p>
           </div>
         ) : (
