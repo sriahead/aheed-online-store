@@ -130,3 +130,38 @@ The **full** suite was not run at Build; R20 runs it alone.
   confined to the staff guide's entry and the artifact list, not a wholesale re-encoding. The file
   already carried mojibake such as `â€”` on `origin/staging`, so compare against that, not against
   clean UTF-8.
+
+## R13 live results (Validate, 2026-09-28)
+
+All three target products were eligible (before-snapshot: all active, `netContentAmount` null, no
+PENDING row — only settled `NO_ANSWER` rows from earlier slices). None of the "known-shaky areas"
+above materialised: Gemma 4 answered `DESCRIPTION` for all three EACH/ml cases on the first try, no
+prompt fix was needed.
+
+```
+-- coconut-milk --
+  suggested Coconut Milk -> 400 MILLILITRE (DESCRIPTION)
+attempted: 1  pending: 1  no answer: 0  failed: 0  tokens in/out: 775/43  neurons (est.): 8.2  mean latency: 1605 ms
+
+-- croissants --
+  suggested Croissants -> 4 EACH (DESCRIPTION)
+attempted: 1  pending: 1  no answer: 0  failed: 0  tokens in/out: 509/38  neurons (est.): 5.7  mean latency: 986 ms
+
+-- free-range-eggs --
+  suggested Free Range Eggs -> 6 EACH (DESCRIPTION)
+attempted: 1  pending: 1  no answer: 0  failed: 0  tokens in/out: 508/38  neurons (est.): 5.7  mean latency: 1668 ms
+```
+
+(a) all three rows carry the expected value, unit and `DESCRIPTION` evidence — none wrong. (b) 3/3
+PENDING (only 2 required). (c) all three products' `netContentAmount` re-read as still `null`
+afterward.
+
+**R15:** ran against `Apple Juice 1L` (id `945a184a-2969-4892-9d15-c4fac3d6efd2`, `metricSizesIn(name)
+= ["1l"]`, chosen over the spec's `Orange Juice 1L` example because that exact product does not
+exist in the Aheed catalogue) — result `1 LITRE`, `evidenceSource: "NAME"`, not `DESCRIPTION`.
+
+**R14:** curl against `npm run preview` on `:8787`, signed in as `demo-store-admin@example.com`. The
+rendered HTML contains `from the <!-- -->description<!-- -->: "<!-- -->400ml tin<!-- -->"` (and the
+same for `pack of 4` / `box of 6`) — React SSR splits static text from interpolated values with
+`<!-- -->` comment markers, so a literal `grep -o "from the description"` finds nothing even though
+the page is correct; grep for `from the <!-- -->description` instead.
