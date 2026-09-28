@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.47.0"
+version: "1.48.0"
 updated: 2026-09-28
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -446,8 +446,10 @@ The live board showed open High-priority items, all with blank Complexity:
   #695 is unchanged.
 - Data activation: #697.
 - Location decision reconciliation: #422 — now Deferred, see above.
-- **Remaining open High items (2026-09-25):** #695 (Meta approval), #697 (real-product net
-  content, a data job for Aheed). **#613 shipped and promoted to production 2026-09-25** (PR #898
+- **Remaining open High item (verified 2026-09-28):** #697 (real-product net content, a data job
+  for Aheed) is the ONLY one. **#695 is Deferred** (owner decision 2026-09-26: Status `Deferred`,
+  Priority cleared, "Deferred — owner/external gated" milestone) — not a `/propose` candidate.
+  Earlier revisions of this line listed it as High. **#613 shipped and promoted to production 2026-09-25** (PR #898
   — see In-Flight Work and Project Position) and is removed from this list.
 - **`#613`'s own premise was stale.** District-level delivery areas (`MK9` exact, `MK` whole area)
   already shipped unspecified inside `#402`'s build commit `2f0f20c` (2026-09-12) and are in
@@ -480,6 +482,18 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **`#928` (product description as net-content evidence, refs `#697`) is BUILT, awaiting
+  `/validate`** on `feature/928-net-content-description-evidence` (spec `c1a0b5b`, build
+  `25b2b3a`). Spec `specs/2026-09-28-p928-net-content-description-evidence/`; read its
+  `build-notes.md` first. One additive migration (enum value `DESCRIPTION`), **applied to dev
+  only**. Board: `#928` In Progress.
+  - **`#901` IS PAUSED until `#928` reaches production** (owner-approved at Gate 1, 2026-09-28):
+    no further CLI batches and no "Suggest net content" clicks on production, because a product
+    whose size is only in its description would be marked NO_ANSWER and need a retry. After
+    promotion: owner reviews the 25 PENDING rows, runs `scripts/suggest-net-content.ts --env-file
+    secrets/production.vars --include-attempted` once via `!` (~12 NO_ANSWER products), then the
+    button walks the ~45 never-attempted products.
 
 - **`#927` ("Suggest net content" staff button) is DONE, in production via PR #930 (`1297f02`)** —
   the rest of this bullet is its staging-layer record. See `Last Verified` above for the full
