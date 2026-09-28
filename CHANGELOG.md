@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **Document-stage reconciliation for `#928`, now promoted to production in PR #933 (merge `91b1d8e`), carrying the doc-only `#927` reconciliation (PR #931, merge `b59e815`).**
+  - `specs/roadmap.md`: two change-log rows — the `#928` build/validate/ship-to-staging record and the `#928` promotion — neither of which `sdd:audit` had a row for yet.
+  - `docs/model-handoff.md` 1.49.0: `#928` corrected from "built, awaiting `/validate`" to closed/in-production; the `#901` pilot pause is recorded as lifted.
+  - `docs/developer-portal/local-dev-playbook.md` 1.12.0: documents that React's server renderer splits static JSX text from an interpolated value with an `<!-- -->` comment marker, so a literal `grep` for the combined sentence finds nothing on a correctly-rendered page — hit live proving `/staff/net-content`'s "from the description" text.
+
 - **Product description as net-content evidence** (issue `#928`, refs `#697`; `specs/2026-09-28-p928-net-content-description-evidence/`). One additive migration (`20260928160000_p928_net_content_description_evidence`, enum value only).
   - The net-content suggester (the `#900` script and `#927`'s button) also reads the first **500 characters** of a product's description, so a size stated only there, such as "400ml tin" or "pack of 4", can become a suggestion quoting it. The review page shows "from the description".
   - The quote must occur in the text actually sent. Description evidence is refused when the product name states a metric size of its own, or when the description states more than one. With no description the prompt is unchanged.

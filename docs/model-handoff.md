@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.48.0"
-updated: 2026-09-28
+version: "1.49.0"
+updated: 2026-09-29
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,27 +39,43 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-28.
-- **`main` is now at `1297f02`** — `#927` ("Suggest net content" staff button) promoted via PR #930
-  ("Promote \"Suggest net content\" button to production (#927)", `staging -> main`, 2026-09-28),
-  carrying PR #929 (the feature + docs merge, `18d2f0a`) alone — no other work was queued on
-  `staging` at promotion time (`git log origin/main..origin/staging` showed exactly `#927`'s four
-  commits before this merge). A store admin can now ask the AI for net-content suggestions from
-  `/staff/net-content` (`runNetContentSuggestionsForVendor`, `lib/net-content-suggestions-service.ts`)
-  instead of running `scripts/suggest-net-content.ts` from a terminal — 10 products and 150 neurons
-  per click, `#900`'s run loop entirely unchanged, writing suggestion rows only; a staff-only
-  (non-admin) viewer sees a note instead of the button. No schema change. **Validated from a
-  genuinely fresh context** against every row of `requirements.md`/`validation.md` (R1–R20),
-  including live curl-driven proof against dev under `npm run preview`: two consecutive clicks as
-  `demo-store-admin@example.com` each created 10 new rows for entirely disjoint products (0
-  duplicates, 0 overlap), and the ADMIN-only guard was proven live as `demo-staff@example.com`
-  (refused with the exact copy, no row written, no button in the rendered HTML). CI (`docs-gates`,
-  `quality/kms`, `quality/quality`) green on PR #929; `deploy-production` (run `36428229632`) and
+- **Date:** 2026-09-29.
+- **`main` is now at `91b1d8e`** — `#928` (product description as a fourth net-content evidence
+  source, refs `#697`) promoted via PR #933 ("Promote product description as net-content evidence
+  to production (#928)", `staging -> main`, 2026-09-29), carrying PR #932 (the spec + build + docs
+  merge, `0b57f99`) and PR #931 (`#927`'s doc-only Document-stage reconciliation, `b59e815`,
+  already on `staging` before this slice started) — `git log origin/main..origin/staging` showed
+  exactly these commits before the promotion merge. The `#900` suggester (its script and `#927`'s
+  button, unchanged) now also reads the first 500 characters of a product's description, so a pack
+  size stated only there — never in the name or unit label — can become a PENDING suggestion
+  quoting it; the validator refuses it when the product's own name states a metric size or the
+  excerpt states more than one. One additive migration (`NetContentEvidenceSource` enum value
+  `DESCRIPTION`), applied through to production. **Validated from a genuinely fresh context**
+  against every row of `requirements.md`/`validation.md` (R1–R20), including live proof against dev
+  with real Workers AI calls: `coconut-milk`, `croissants` and `free-range-eggs` each came back
+  PENDING/`DESCRIPTION` with exactly the expected value on the first try (400 MILLILITRE / 4 EACH /
+  6 EACH), no product's `netContentAmount` changed; `Apple Juice 1L` (a name-stated size) correctly
+  came back `NAME`, not `DESCRIPTION`. CI (`docs-gates`, `quality/kms`, `quality/quality`) green on
+  both PR #932 and PR #933; `deploy-staging` (run `36493415282`) and `deploy-production` (run
+  `36497769197`) both completed **success**; production `/api/health` confirmed serving `91b1d8e`
+  with `db.ok: true`, `reference.drift: false`. **`#928` closed** on the `main` merge, its
+  Project #2 item auto-moving to `Done`. Spec: `specs/2026-09-28-p928-net-content-description-evidence/`;
+  read its `build-notes.md` first — it also records a new grep pitfall (React SSR's `<!-- -->`
+  text-node comment markers splitting an interpolated sentence), now in
+  `docs/developer-portal/local-dev-playbook.md` 1.12.0. **`#901` is UNPAUSED**: the owner can now
+  review the 25 PENDING rows already sitting on production and resume CLI batches / "Suggest net
+  content" clicks — see the In-Flight Work note. `#697` stays open.
+- **Previous promotion, `1297f02`** — `#927` ("Suggest net content" staff button) promoted via
+  PR #930 ("Promote \"Suggest net content\" button to production (#927)", `staging -> main`,
+  2026-09-28), carrying PR #929 (the feature + docs merge, `18d2f0a`) alone. A store admin can ask
+  the AI for net-content suggestions from `/staff/net-content`
+  (`runNetContentSuggestionsForVendor`, `lib/net-content-suggestions-service.ts`) instead of running
+  `scripts/suggest-net-content.ts` from a terminal — 10 products and 150 neurons per click, `#900`'s
+  run loop entirely unchanged, writing suggestion rows only; a staff-only (non-admin) viewer sees a
+  note instead of the button. No schema change. `deploy-production` (run `36428229632`) and
   `deploy-docs-internal` both completed **success**; production `/api/health` confirmed serving
-  `1297f02` with `db.ok: true`, `reference.drift: false`. **`#927` closed** on the `main` merge, its
-  Project #2 item auto-moving to `Done`. Spec: `specs/2026-09-28-p927-net-content-suggest-button/`;
-  read its `build-notes.md` first. Filed from the `#901` production pilot: `#928` (the product
-  description as suggestion evidence, Backlog, Phase P9.2). `#697` stays open.
+  `1297f02`. **`#927` closed** on the `main` merge. Spec:
+  `specs/2026-09-28-p927-net-content-suggest-button/`; read its `build-notes.md` first.
 - **Previous promotion, `1bedf96`** — `#917` (brand deletion) and `#918` items 1–4 (multi-select,
   numeric ranges, values on cards, search on filter values) promoted via PR #926 ("Promote brand
   deletion and vendor-filter follow-ups to production (#917, #918)", `staging -> main`,
@@ -483,17 +499,18 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#928` (product description as net-content evidence, refs `#697`) is BUILT, awaiting
-  `/validate`** on `feature/928-net-content-description-evidence` (spec `c1a0b5b`, build
-  `25b2b3a`). Spec `specs/2026-09-28-p928-net-content-description-evidence/`; read its
-  `build-notes.md` first. One additive migration (enum value `DESCRIPTION`), **applied to dev
-  only**. Board: `#928` In Progress.
-  - **`#901` IS PAUSED until `#928` reaches production** (owner-approved at Gate 1, 2026-09-28):
-    no further CLI batches and no "Suggest net content" clicks on production, because a product
-    whose size is only in its description would be marked NO_ANSWER and need a retry. After
-    promotion: owner reviews the 25 PENDING rows, runs `scripts/suggest-net-content.ts --env-file
-    secrets/production.vars --include-attempted` once via `!` (~12 NO_ANSWER products), then the
-    button walks the ~45 never-attempted products.
+- **`#928` (product description as net-content evidence, refs `#697`) is DONE, in production via
+  PR #933 (`91b1d8e`)** — the rest of this bullet is its staging-layer record. See `Last Verified`
+  above for the full Validate/Ship/promotion record. Spec
+  `specs/2026-09-28-p928-net-content-description-evidence/`; read its `build-notes.md` first. One
+  additive migration (enum value `DESCRIPTION`), applied through to production.
+  - **`#901` is UNPAUSED** (the owner-approved pause from Gate 1, 2026-09-28, was scoped to "until
+    `#928` reaches production" — that condition is now met). Next owner action: review the 25
+    PENDING rows already on production, run `scripts/suggest-net-content.ts --env-file
+    secrets/production.vars --include-attempted` once via `!` (~12 NO_ANSWER products, now
+    retryable against the description), then the button walks the ~45 never-attempted products.
+    This has not yet been re-verified live — confirm the pause is actually lifted (no code gate
+    enforces it; it was a process decision) before running a production batch.
 
 - **`#927` ("Suggest net content" staff button) is DONE, in production via PR #930 (`1297f02`)** —
   the rest of this bullet is its staging-layer record. See `Last Verified` above for the full
