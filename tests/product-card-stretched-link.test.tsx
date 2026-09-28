@@ -55,6 +55,7 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
     lowStockThreshold: 3,
     expectedRestockDay: null,
     tier: null,
+    cardSpecifications: [],
     ...overrides,
   };
 }

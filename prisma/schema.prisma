@@ -227,14 +227,27 @@ model Brand {
 //
 // Slugs are IMMUTABLE after creation: they are what a shopper's URL carries
 // (`attr_<attributeSlug>=<optionSlug>`), so a rename changes the name only and shared links survive.
+//
+// #918 — a filter is a LIST (pick from its options) or a NUMBER (a decimal per product, with an
+// optional unit such as "W"). The kind is set at creation and never changes: a list filter's values
+// have no meaningful number mapping. `showOnCard` also puts the filter's value on product cards.
+enum AttributeKind {
+  LIST
+  NUMBER
+}
+
 model VendorAttribute {
-  id        String   @id @default(uuid())
-  vendorId  String
-  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  name      String
-  slug      String
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
+  id         String        @id @default(uuid())
+  vendorId   String
+  vendor     Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  name       String
+  slug       String
+  sortOrder  Int           @default(0)
+  createdAt  DateTime      @default(now())
+  kind       AttributeKind @default(LIST)
+  /// Shown after a NUMBER filter's value ("65 W"). Always null for a LIST filter.
+  unit       String?
+  showOnCard Boolean       @default(false)
 
   options       VendorAttributeOption[]
   productValues ProductAttributeValue[]
@@ -259,22 +272,32 @@ model VendorAttributeOption {
   @@unique([id, attributeId])
 }
 
-// One product's value for one vendor filter. At most one per product per attribute (v1 filters are
-// single-valued), which the unique below enforces. Deleting an attribute or an option removes these
-// rows by cascade; it never touches the Product itself.
+// One product's value for one vendor filter. At most one per product per attribute, which the unique
+// below enforces. Deleting an attribute or an option removes these rows by cascade; it never touches
+// the Product itself.
+//
+// #918 — a row holds EITHER `optionId` (a LIST filter) OR `numericValue` (a NUMBER filter), never
+// both and never neither. The migration adds a CHECK for that ("ProductAttributeValue_one_value_check")
+// because Prisma cannot declare one. With `optionId` null, the composite option foreign key is not
+// checked (Postgres MATCH SIMPLE), which is the intended behaviour for a number. Which kind a value
+// may take is checked against its filter in lib/repositories/products.ts. `numericValue` is a
+// measurement, not money, so Decimal rather than integer pence.
 model ProductAttributeValue {
-  id          String                @id @default(uuid())
-  vendorId    String
-  productId   String
-  product     Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
-  attributeId String
-  attribute   VendorAttribute       @relation(fields: [attributeId, vendorId], references: [id, vendorId], onDelete: Cascade)
-  optionId    String
-  option      VendorAttributeOption @relation(fields: [optionId, attributeId], references: [id, attributeId], onDelete: Cascade)
+  id           String                 @id @default(uuid())
+  vendorId     String
+  productId    String
+  product      Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributeId  String
+  attribute    VendorAttribute        @relation(fields: [attributeId, vendorId], references: [id, vendorId], onDelete: Cascade)
+  optionId     String?
+  option       VendorAttributeOption? @relation(fields: [optionId, attributeId], references: [id, attributeId], onDelete: Cascade)
+  numericValue Decimal?               @db.Decimal(10, 2)
 
   @@unique([productId, attributeId])
   // The storefront filter predicate: `attributeValues: { some: { optionId } }`, vendor-scoped.
   @@index([vendorId, optionId, productId])
+  // #918 — the range predicate: `attributeValues: { some: { attributeId, numericValue: { gte, lte } } }`.
+  @@index([vendorId, attributeId, numericValue])
 }
 
 // Host→tenant resolution (ADR-004 slice 3b). One row per hostname a vendor answers on

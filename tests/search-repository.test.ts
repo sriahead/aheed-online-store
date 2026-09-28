@@ -46,6 +46,8 @@ function row(i: number, over: Partial<{ name: string; quantity: number | null }>
     images: [] as { storageKey: string; alt: string; isPrimary: boolean }[],
     inventory:
       over.quantity === null ? null : { quantity: over.quantity ?? 5, lowStockThreshold: 3 },
+    // #918 — `productSummarySelect` now selects the card-display filter values.
+    attributeValues: [] as never[],
   };
 }
 
@@ -69,6 +71,9 @@ function makeStub(rows: Row[], aliases: { alias: string; canonical: string }[] =
     // Defaults to empty, which is what keeps every pre-existing case below asserting #564's
     // unchanged behaviour rather than quietly testing an expanded predicate.
     synonymFindMany: vi.fn(async (_args: unknown) => aliases),
+    // #918 R32 — "did a candidate match through a filter value?", asked only when no name matched.
+    // Defaults to no match, which keeps every pre-existing thin-result case unchanged.
+    attributeValueFindFirst: vi.fn(async (_args: unknown) => null as { id: string } | null),
   };
 
   const client = {
@@ -81,12 +86,20 @@ function makeStub(rows: Row[], aliases: { alias: string; canonical: string }[] =
     },
     productPriceTier: { findMany: spies.tierFindMany },
     searchSynonym: { findMany: spies.synonymFindMany },
+    productAttributeValue: { findFirst: spies.attributeValueFindFirst },
   };
 
   return { client: client as never, spies };
 }
 
 const VENDOR = "vendor-1";
+
+/** #918 R31 — the clause each search variant gains: a list-filter value whose option name matches. */
+function filterValueClause(term: string) {
+  return {
+    attributeValues: { some: { option: { name: { contains: term, mode: "insensitive" } } } },
+  };
+}
 
 type Spies = ReturnType<typeof makeStub>["spies"];
 
@@ -108,9 +121,12 @@ function capturedWhere(spies: Spies) {
  * the one #564 built. That is exactly what this assertion says, so it is left byte-for-byte as
  * written and the stub simply returns an empty dictionary — a shape change here would be the
  * regression R11 is about.
+ *
+ * #918 R31 changed the shape ON PURPOSE, once: each term's OR gains a third clause matching a
+ * list-filter value's option name. The one-group-per-term structure R11 protects is unchanged.
  */
-describe("searchProducts predicate (R6, R11)", () => {
-  it("ANDs one clause per term, each matching name OR description", async () => {
+describe("searchProducts predicate (R6, R11, #918 R31)", () => {
+  it("ANDs one clause per term, each matching name OR description OR a filter value", async () => {
     const { client, spies } = makeStub([row(1)]);
     await searchProducts(client, VENDOR, "basmati rice", { take: 12 });
 
@@ -121,9 +137,41 @@ describe("searchProducts predicate (R6, R11)", () => {
         OR: [
           { name: { contains: term, mode: "insensitive" } },
           { description: { contains: term, mode: "insensitive" } },
+          filterValueClause(term),
         ],
       });
     }
+  });
+});
+
+describe("a filter-value match counts as a direct match (#918 R32)", () => {
+  it("asks once, and suppresses thin-result suggestions, when no candidate matched on name", async () => {
+    // "wired" appears in no product name here, so the name check fails and the extra query runs.
+    const { client, spies } = makeStub([row(1), row(2)]);
+    spies.attributeValueFindFirst.mockResolvedValueOnce({ id: "value-1" });
+
+    const page = await searchProducts(client, VENDOR, "wired", { take: 12 });
+
+    expect(spies.attributeValueFindFirst).toHaveBeenCalledTimes(1);
+    const args = spies.attributeValueFindFirst.mock.calls[0][0] as {
+      where: { vendorId: string; productId: { in: string[] } };
+    };
+    expect(args.where.vendorId).toBe(VENDOR);
+    expect(args.where.productId.in).toEqual(["p001", "p002"]);
+    expect(page.directNameMatch).toBe(true);
+    expect(page.suggestions).toBeNull();
+  });
+
+  it("does not ask when a candidate already matched on name", async () => {
+    const { client, spies } = makeStub([row(1)]);
+    await searchProducts(client, VENDOR, "basmati", { take: 12 });
+    expect(spies.attributeValueFindFirst).not.toHaveBeenCalled();
+  });
+
+  it("does not ask when there are no candidates", async () => {
+    const { client, spies } = makeStub([]);
+    await searchProducts(client, VENDOR, "wired", { take: 12 });
+    expect(spies.attributeValueFindFirst).not.toHaveBeenCalled();
   });
 });
 
@@ -418,6 +466,7 @@ describe("rung 1: typo correction (R10)", () => {
       OR: [
         { name: { contains: "rice", mode: "insensitive" } },
         { description: { contains: "rice", mode: "insensitive" } },
+        filterValueClause("rice"),
       ],
     });
   });
@@ -464,6 +513,8 @@ describe("rung 4: broad match — name or description (R12)", () => {
     const where = (calls[2][0] as { where: { OR: unknown[] } }).where;
     expect(where.OR).toContainEqual({ name: { contains: "xyz", mode: "insensitive" } });
     expect(where.OR).toContainEqual({ description: { contains: "xyz", mode: "insensitive" } });
+    // #918 R31 — the broad rung also matches a list-filter value.
+    expect(where.OR).toContainEqual(filterValueClause("xyz"));
   });
 });
 
@@ -534,8 +585,10 @@ describe("synonym expansion widens the direct predicate (R11)", () => {
       OR: [
         { name: { contains: "haldi", mode: "insensitive" } },
         { description: { contains: "haldi", mode: "insensitive" } },
+        filterValueClause("haldi"),
         { name: { contains: "turmeric", mode: "insensitive" } },
         { description: { contains: "turmeric", mode: "insensitive" } },
+        filterValueClause("turmeric"),
       ],
     });
   });

@@ -10,7 +10,12 @@ import {
   renameAttribute as renameAttributeRow,
   renameAttributeOption as renameAttributeOptionRow,
 } from "@/lib/attributes-service";
-import { parseAttributeName, parseSortOrder } from "@/lib/attribute-form";
+import {
+  parseAttributeKind,
+  parseAttributeName,
+  parseAttributeUnit,
+  parseSortOrder,
+} from "@/lib/attribute-form";
 import type { CatalogueFormState } from "@/lib/catalogue-form";
 import type { CatalogueWriteResult } from "@/lib/repositories/products";
 
@@ -79,8 +84,19 @@ export async function createAttribute(
 
   const name = parseAttributeName(field(form, "name"));
   if (!name.ok) return invalid(name.field, name.error);
+  // #918 — the type is chosen here, once; nothing afterwards can change it.
+  const kind = parseAttributeKind(field(form, "kind"));
+  if (!kind.ok) return invalid(kind.field, kind.error);
+  const unit = parseAttributeUnit(field(form, "unit"));
+  if (!unit.ok) return invalid(unit.field, unit.error);
 
-  return finish(await createAttributeRow(auth.vendorId, name.value));
+  return finish(
+    await createAttributeRow(auth.vendorId, {
+      ...name.value,
+      kind: kind.value,
+      unit: kind.value === "NUMBER" ? unit.value : null,
+    }),
+  );
 }
 
 export async function renameAttribute(
@@ -94,12 +110,18 @@ export async function renameAttribute(
   if (!name.ok) return invalid(name.field, name.error);
   const sortOrder = parseSortOrder(field(form, "sortOrder"));
   if (!sortOrder.ok) return invalid(sortOrder.field, sortOrder.error);
+  // Only a NUMBER filter's form carries `unit`; the repository ignores it for a LIST filter.
+  const unit = parseAttributeUnit(field(form, "unit"));
+  if (!unit.ok) return invalid(unit.field, unit.error);
 
   return finish(
     await renameAttributeRow(auth.vendorId, {
       id: field(form, "attributeId"),
       name: name.value.name,
       sortOrder: sortOrder.value,
+      // A plain checkbox: unticked submits nothing, which means off.
+      showOnCard: field(form, "showOnCard") === "on",
+      unit: unit.value,
     }),
   );
 }

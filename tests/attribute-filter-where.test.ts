@@ -7,7 +7,7 @@ import {
 } from "@/lib/repositories/products";
 
 /**
- * #912, R17 — vendor-filter predicates compose with `onOffer` instead of colliding with it.
+ * #912 R17, #918 R23 — vendor-filter predicates compose with `onOffer` instead of colliding with it.
  *
  * Both need `AND` (several vendor filters share the one `attributeValues` relation key, and
  * `onOffer` must never emit a top-level `OR` — specs/architecture.md). Assigning `where.AND` twice
@@ -18,17 +18,40 @@ import {
  */
 
 const OFFER_CLAUSE = { OR: [{ originalPrice: { not: null } }, { priceTier: { isNot: null } }] };
-const clauseFor = (optionId: string) => ({ attributeValues: { some: { optionId } } });
+/** #918 — one clause per list filter, `in` over every ticked value. */
+const groupClause = (...optionIds: string[]) => ({
+  attributeValues: { some: { optionId: { in: optionIds } } },
+});
+/** #918 — one clause per number filter, both bounds on the same value row. */
+const RANGE = { attributeId: "attr-power", min: "15", max: "65" };
+const RANGE_CLAUSE = {
+  attributeValues: {
+    some: { attributeId: "attr-power", numericValue: { gte: "15", lte: "65" } },
+  },
+};
 
 describe("buildFilterWhere", () => {
-  it("puts onOffer and two vendor filters in ONE top-level AND of three clauses", () => {
-    const where = buildFilterWhere({ onOffer: true, attributeOptionIds: ["opt-a", "opt-b"] });
-    expect(where.AND).toEqual([OFFER_CLAUSE, clauseFor("opt-a"), clauseFor("opt-b")]);
+  it("puts onOffer, one two-value group and one range in ONE top-level AND of three clauses", () => {
+    const where = buildFilterWhere({
+      onOffer: true,
+      attributeOptionGroups: [["opt-a", "opt-b"]],
+      attributeRanges: [RANGE],
+    });
+    expect(where.AND).toEqual([OFFER_CLAUSE, groupClause("opt-a", "opt-b"), RANGE_CLAUSE]);
     expect(where).not.toHaveProperty("OR");
   });
 
-  it("emits nothing for an empty or absent list", () => {
-    expect(buildFilterWhere({ attributeOptionIds: [] })).toEqual({});
+  it("emits only the bound a range carries", () => {
+    const where = buildFilterWhere({ attributeRanges: [{ attributeId: "attr-power", min: "15" }] });
+    expect(where.AND).toEqual([
+      { attributeValues: { some: { attributeId: "attr-power", numericValue: { gte: "15" } } } },
+    ]);
+  });
+
+  it("emits nothing for empty or absent groups and ranges", () => {
+    expect(buildFilterWhere({ attributeOptionGroups: [], attributeRanges: [] })).toEqual({});
+    expect(buildFilterWhere({ attributeOptionGroups: [[]] })).toEqual({});
+    expect(buildFilterWhere({ attributeRanges: [{ attributeId: "attr-power" }] })).toEqual({});
     expect(buildFilterWhere({})).toEqual({});
   });
 });
@@ -53,7 +76,11 @@ function allWheres(spy: ReturnType<typeof makeStub>["productFindMany"]): string 
 }
 
 describe("every listing path keeps the vendor-filter clauses", () => {
-  const filters = { onOffer: true, attributeOptionIds: ["opt-a", "opt-b"] };
+  const filters = {
+    onOffer: true,
+    attributeOptionGroups: [["opt-a", "opt-b"]],
+    attributeRanges: [RANGE],
+  };
 
   it.each([
     [
@@ -69,8 +96,8 @@ describe("every listing path keeps the vendor-filter clauses", () => {
     const { client, productFindMany } = makeStub();
     await run(client);
     const where = allWheres(productFindMany);
-    expect(where).toContain(JSON.stringify(clauseFor("opt-a")));
-    expect(where).toContain(JSON.stringify(clauseFor("opt-b")));
+    expect(where).toContain(JSON.stringify(groupClause("opt-a", "opt-b")));
+    expect(where).toContain(JSON.stringify(RANGE_CLAUSE));
     expect(where).toContain(JSON.stringify(OFFER_CLAUSE));
   });
 });

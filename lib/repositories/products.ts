@@ -31,6 +31,7 @@ import {
 } from "@/lib/product-image";
 import type { ProductTier } from "@/lib/tier-pricing";
 import type { AttributeValueWrite } from "@/lib/product-attribute-form";
+import { formatAttributeNumber } from "@/lib/attribute-number";
 import {
   deleteProductTier,
   getTierForProduct,
@@ -115,6 +116,11 @@ export interface ProductSummary {
    * arithmetic wherever a quantity actually exists (the cart, the order).
    */
   tier: ProductTier | null;
+  /**
+   * #918 — the product's values for filters the vendor marked "Show on product cards", in the
+   * vendor's filter order, already formatted ("White", "65 W"). Empty when there are none.
+   */
+  cardSpecifications: { name: string; value: string }[];
 }
 
 /**
@@ -287,12 +293,18 @@ export interface ProductFilters {
    */
   categoryIds?: readonly string[];
   /**
-   * #912 — vendor-defined filter values, ONE option id per filter the shopper applied, already
-   * resolved from `attr_*` slugs by the page (`lib/attribute-filters.ts`). A product must carry
-   * EVERY listed option (filters narrow; they never widen). Absent or empty emits nothing — an
+   * #912/#918 — vendor LIST filters, ONE GROUP per filter the shopper applied, holding the option
+   * ids of every value they ticked in it — already resolved from `attr_*` slugs by the page
+   * (`lib/attribute-filters.ts`). A product must carry ANY option of a group (values within one
+   * filter widen) and match EVERY group (filters narrow). Absent or empty emits nothing — an
    * unresolved slug reaches here as no id at all, never as a value that would empty the catalogue.
    */
-  attributeOptionIds?: readonly string[];
+  attributeOptionGroups?: readonly (readonly string[])[];
+  /**
+   * #918 — vendor NUMBER filters, one entry per filter with a from and/or to bound, each bound a
+   * string passing lib/attribute-number.ts's rule. A product must carry a number within every range.
+   */
+  attributeRanges?: readonly { attributeId: string; min?: string; max?: string }[];
 }
 
 /**
@@ -348,6 +360,10 @@ export interface AvailableFacets {
 export interface FacetAttribute {
   slug: string;
   name: string;
+  /** #918 — LIST renders a checkbox per option; NUMBER renders a from/to pair. */
+  kind: "LIST" | "NUMBER";
+  unit: string | null;
+  /** Always empty for a NUMBER filter. */
   options: { slug: string; name: string }[];
 }
 
@@ -490,12 +506,30 @@ export function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereIn
   // each assigning it: a second assignment would silently discard the first, the exact collision
   // specs/architecture.md's `combineWhere` rule exists for, one level down. Each vendor filter is
   // its own `some` clause because they all use the same `attributeValues` relation key.
+  //
+  // #918 — a list filter's ticked values are ONE clause (`in`: any of them), and a number range is
+  // one clause holding both bounds, so both bounds apply to the same value row.
   const and: Prisma.ProductWhereInput[] = [];
   if (filters.onOffer) {
     and.push({ OR: [{ originalPrice: { not: null } }, { priceTier: { isNot: null } }] });
   }
-  for (const optionId of filters.attributeOptionIds ?? []) {
-    and.push({ attributeValues: { some: { optionId } } });
+  for (const group of filters.attributeOptionGroups ?? []) {
+    if (group.length === 0) continue;
+    and.push({ attributeValues: { some: { optionId: { in: [...group] } } } });
+  }
+  for (const range of filters.attributeRanges ?? []) {
+    if (range.min === undefined && range.max === undefined) continue;
+    and.push({
+      attributeValues: {
+        some: {
+          attributeId: range.attributeId,
+          numericValue: {
+            ...(range.min !== undefined ? { gte: range.min } : {}),
+            ...(range.max !== undefined ? { lte: range.max } : {}),
+          },
+        },
+      },
+    });
   }
   if (and.length > 0) where.AND = and;
   // #568 — an empty array emits NOTHING, deliberately. See ProductFilters.categoryIds: an unknown
@@ -505,6 +539,43 @@ export function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereIn
     where.categoryId = { in: [...filters.categoryIds] };
   }
   return where;
+}
+
+/**
+ * #912/#918 — what a product's filter value needs to be DISPLAYED ("Colour: Black", "Power: 65 W"),
+ * shared by the detail page's Specifications and the card's `cardSpecifications`.
+ */
+const attributeValueDisplaySelect = {
+  attribute: { select: { name: true, sortOrder: true, unit: true, showOnCard: true } },
+  option: { select: { name: true } },
+  numericValue: true,
+} as const;
+
+type AttributeValueDisplayRow = Prisma.ProductAttributeValueGetPayload<{
+  select: typeof attributeValueDisplaySelect;
+}>;
+
+/**
+ * Display rows in the vendor's filter order (`sortOrder`, then name) — ordered here because Prisma
+ * cannot order a relation list by a field of a further relation. A number is formatted from its
+ * STRING form, so no Prisma `Decimal` leaves this module (lib/attribute-number.ts). A row with
+ * neither value cannot exist (ProductAttributeValue_one_value_check); it is skipped, not rendered.
+ */
+function toSpecifications(
+  rows: readonly AttributeValueDisplayRow[],
+): { name: string; value: string }[] {
+  return rows
+    .flatMap((row) => {
+      const value =
+        row.option !== null
+          ? row.option.name
+          : row.numericValue !== null
+            ? formatAttributeNumber(row.numericValue.toString(), row.attribute.unit)
+            : null;
+      return value === null ? [] : [{ ...row.attribute, value }];
+    })
+    .sort(bySortOrderThenName)
+    .map(({ name, value }) => ({ name, value }));
 }
 
 /**
@@ -534,6 +605,12 @@ const productSummarySelect = {
   reviewCount: true,
   images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
   inventory: { select: { quantity: true, lowStockThreshold: true, expectedRestockDate: true } },
+  // #918 — only the values of filters the vendor marked "Show on product cards". A vendor with no
+  // such filter (Aheed today) gets an empty list back from the same query.
+  attributeValues: {
+    where: { attribute: { showOnCard: true } },
+    select: attributeValueDisplaySelect,
+  },
 } as const;
 
 /** A row as selected by `productSummarySelect`. */
@@ -576,6 +653,7 @@ function toProductSummary(row: ProductSummaryRow, tier: ProductTier | null): Pro
     lowStockThreshold: row.inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
     expectedRestockDay: restockDayFromStored(row.inventory?.expectedRestockDate),
     tier,
+    cardSpecifications: toSpecifications(row.attributeValues),
   };
 }
 
@@ -891,9 +969,56 @@ export function buildDirectSearchWhere(
       OR: group.variants.flatMap((variant) => [
         { name: { contains: variant, mode: "insensitive" as const } },
         { description: { contains: variant, mode: "insensitive" as const } },
+        filterValueMatch(variant),
       ]),
     })),
   };
+}
+
+/**
+ * #918 — a product whose LIST filter value's option name contains the term: typing "wired" finds
+ * the products whose Connectivity is Wired even when neither name nor description says so. Number
+ * values are not text-searched. The relation is vendor-scoped through the product itself, which
+ * every caller already scopes to one vendor.
+ */
+function filterValueMatch(variant: string): Prisma.ProductWhereInput {
+  return {
+    attributeValues: {
+      some: { option: { name: { contains: variant, mode: "insensitive" as const } } },
+    },
+  };
+}
+
+/**
+ * #918 — did any candidate match THROUGH A FILTER VALUE? Only asked once the name check has already
+ * failed (the `||` in `searchProducts` short-circuits), so a query answered by names costs nothing
+ * extra.
+ *
+ * Without this, `/search?q=wired` on a store whose Wired products never say "wired" in their name
+ * would be treated as a thin result, and `SearchSuggestionsNotice` would call three exactly-Wired
+ * products "loosely related". A filter value is a structured fact the vendor entered, as strong a
+ * signal as a name, so it counts as a direct match; `SearchQueryLog.directNameMatch` inherits that
+ * wider meaning. Ranking (`lib/search-ranking.ts`) is deliberately unchanged.
+ */
+async function hasFilterValueMatch(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  candidates: readonly { id: string }[],
+  groups: readonly SearchTermGroup[],
+): Promise<boolean> {
+  const variants = flattenVariants(groups);
+  if (variants.length === 0) return false;
+  const match = await prisma.productAttributeValue.findFirst({
+    where: {
+      vendorId,
+      productId: { in: candidates.map((candidate) => candidate.id) },
+      OR: variants.map((variant) => ({
+        option: { name: { contains: variant, mode: "insensitive" as const } },
+      })),
+    },
+    select: { id: true },
+  });
+  return match !== null;
 }
 
 /**
@@ -910,12 +1035,16 @@ function identitySearchPredicate(groups: readonly SearchTermGroup[]): Prisma.Pro
   };
 }
 
-/** Ladder rung "broad" (#565): the widest net — `OR` across terms, `name` or `description`. */
+/**
+ * Ladder rung "broad" (#565): the widest net — `OR` across terms, `name`, `description`, or (#918)
+ * a list-filter value.
+ */
 function broadSearchPredicate(groups: readonly SearchTermGroup[]): Prisma.ProductWhereInput {
   return {
     OR: flattenVariants(groups).flatMap((variant) => [
       { name: { contains: variant, mode: "insensitive" as const } },
       { description: { contains: variant, mode: "insensitive" as const } },
+      filterValueMatch(variant),
     ]),
   };
 }
@@ -1003,7 +1132,9 @@ export async function searchProducts(
   // Captured BEFORE any ladder rung runs, regardless of what happens next — this is what the
   // search query log (lib/products-service.ts) reports as the direct search's own outcome.
   const directResultCount = candidates.length;
-  const directNameMatch = hasNameTierCandidate(candidates, groups);
+  const directNameMatch =
+    hasNameTierCandidate(candidates, groups) ||
+    (candidates.length > 0 && (await hasFilterValueMatch(prisma, vendorId, candidates, groups)));
   let rankingGroups = groups;
   let recovery: SearchRecoveryInfo | null = null;
   let suggestions: SearchSuggestions | null = null;
@@ -1163,12 +1294,7 @@ export async function getProductBySlug(
       },
       // #912 — same query as the rest of the product; ordered below, since Prisma cannot order a
       // relation list by a field of a further relation.
-      attributeValues: {
-        select: {
-          attribute: { select: { name: true, sortOrder: true } },
-          option: { select: { name: true } },
-        },
-      },
+      attributeValues: { select: attributeValueDisplaySelect },
     },
   });
   if (!product) return null;
@@ -1178,10 +1304,12 @@ export async function getProductBySlug(
   return {
     ...rest,
     images,
-    specifications: attributeValues
-      .map((value) => ({ ...value.attribute, value: value.option.name }))
-      .sort(bySortOrderThenName)
-      .map(({ name, value }) => ({ name, value })),
+    specifications: toSpecifications(attributeValues),
+    // The detail page reads every value; the card subset is the same rows, filtered the way
+    // `productSummarySelect` filters them, so a quick-view card and a grid card agree.
+    cardSpecifications: toSpecifications(
+      attributeValues.filter((value) => value.attribute.showOnCard),
+    ),
     primaryImage: images.find((i) => i.isPrimary) ?? images[0] ?? null,
     inStock: (inventory?.quantity ?? 0) > 0,
     stockQuantity: effectiveStock(inventory?.quantity),
@@ -1253,6 +1381,7 @@ export async function getAvailableFacets(
     brandRows,
     packSizeRows,
     attributeRows,
+    numberAttributeRows,
   ] = await Promise.all([
     flagProbe({ isHalal: true }),
     flagProbe({ isFresh: true }),
@@ -1293,13 +1422,22 @@ export async function getAvailableFacets(
     // every probe above it excludes all facet filters (`FacetContext` cannot carry
     // `attributeOptionIds`), so an applied vendor filter never hides its own control. `distinct`
     // for the same reason origin uses it: the facet needs values, not counts.
+    //
+    // #918 — `optionId: { not: null }` because a NUMBER value has no option, and `distinct` would
+    // otherwise return one null-option row.
     prisma.productAttributeValue.findMany({
-      where: { vendorId, product: base },
+      where: { vendorId, optionId: { not: null }, product: base },
       select: {
         option: { select: { slug: true, name: true, sortOrder: true } },
-        attribute: { select: { id: true, slug: true, name: true, sortOrder: true } },
+        attribute: { select: facetAttributeSelect },
       },
       distinct: ["optionId"],
+    }),
+    // #918 — every NUMBER filter an in-context product carries a number for: one row per filter.
+    prisma.productAttributeValue.findMany({
+      where: { vendorId, numericValue: { not: null }, product: base },
+      select: { attribute: { select: facetAttributeSelect } },
+      distinct: ["attributeId"],
     }),
   ]);
 
@@ -1324,7 +1462,7 @@ export async function getAvailableFacets(
           : [],
       )
       .sort(comparePackSizes),
-    attributes: groupFacetAttributes(attributeRows),
+    attributes: groupFacetAttributes(attributeRows, numberAttributeRows),
   };
 }
 
@@ -1332,31 +1470,56 @@ type Ordered = { sortOrder: number; name: string };
 const bySortOrderThenName = (a: Ordered, b: Ordered) =>
   a.sortOrder - b.sortOrder || a.name.localeCompare(b.name);
 
+const facetAttributeSelect = {
+  id: true,
+  slug: true,
+  name: true,
+  sortOrder: true,
+  kind: true,
+  unit: true,
+} as const;
+
+type FacetAttributeRow = Ordered & {
+  id: string;
+  slug: string;
+  kind: "LIST" | "NUMBER";
+  unit: string | null;
+};
+
 /**
  * #912 — flat (attribute, option) rows into one entry per attribute, each ordered the way the
  * vendor ordered them at /staff/attributes (`sortOrder`, then name). Ordered here rather than in
  * SQL because `distinct` over options and an order over their parent attribute do not compose.
+ *
+ * #918 — NUMBER filters join the same list with no options, and the whole list keeps one order, so
+ * a list and a number filter sit where the vendor positioned them relative to each other.
  */
 function groupFacetAttributes(
-  rows: {
-    option: Ordered & { slug: string };
-    attribute: Ordered & { id: string; slug: string };
-  }[],
+  rows: { option: (Ordered & { slug: string }) | null; attribute: FacetAttributeRow }[],
+  numberRows: { attribute: FacetAttributeRow }[],
 ): FacetAttribute[] {
   const byAttribute = new Map<
     string,
-    { attribute: Ordered & { slug: string }; options: (Ordered & { slug: string })[] }
+    { attribute: FacetAttributeRow; options: (Ordered & { slug: string })[] }
   >();
   for (const row of rows) {
+    if (row.option === null) continue;
     const entry = byAttribute.get(row.attribute.id) ?? { attribute: row.attribute, options: [] };
     entry.options.push(row.option);
     byAttribute.set(row.attribute.id, entry);
+  }
+  for (const row of numberRows) {
+    if (row.attribute.kind === "NUMBER" && !byAttribute.has(row.attribute.id)) {
+      byAttribute.set(row.attribute.id, { attribute: row.attribute, options: [] });
+    }
   }
   return [...byAttribute.values()]
     .sort((a, b) => bySortOrderThenName(a.attribute, b.attribute))
     .map(({ attribute, options }) => ({
       slug: attribute.slug,
       name: attribute.name,
+      kind: attribute.kind,
+      unit: attribute.unit,
       options: options
         .sort(bySortOrderThenName)
         .map((option) => ({ slug: option.slug, name: option.name })),
@@ -1564,8 +1727,10 @@ export interface AdminProductDetail {
   images: AdminProductImage[];
   /** P8.5d (#348) — the multi-buy tier, active or not, so the form can re-enable one. */
   tier: ProductTier | null;
-  /** #912 — attribute id → option id, for each vendor filter this product carries a value for. */
+  /** #912 — attribute id → option id, for each LIST filter this product carries a value for. */
   attributeValues: Record<string, string>;
+  /** #918 — attribute id → stored number as a string, for each NUMBER filter. */
+  attributeNumbers: Record<string, string>;
 }
 
 /** Everything a product write needs, already validated by lib/catalogue-form.ts. */
@@ -1806,7 +1971,7 @@ export async function getProductForAdmin(
         select: { quantity: true, lowStockThreshold: true, expectedRestockDate: true },
       },
       images: { orderBy: { sortOrder: "asc" }, select: adminProductImageSelect },
-      attributeValues: { select: { attributeId: true, optionId: true } },
+      attributeValues: { select: { attributeId: true, optionId: true, numericValue: true } },
     },
   });
   if (!row) return null;
@@ -1825,7 +1990,15 @@ export async function getProductForAdmin(
     expectedRestockDay: restockDayFromStored(inventory?.expectedRestockDate),
     tier,
     attributeValues: Object.fromEntries(
-      attributeValues.map((value) => [value.attributeId, value.optionId]),
+      attributeValues.flatMap((value) =>
+        value.optionId === null ? [] : [[value.attributeId, value.optionId]],
+      ),
+    ),
+    // #918 — a string, never a Prisma Decimal (see lib/attribute-number.ts).
+    attributeNumbers: Object.fromEntries(
+      attributeValues.flatMap((value) =>
+        value.numericValue === null ? [] : [[value.attributeId, value.numericValue.toString()]],
+      ),
     ),
   };
 }
@@ -1860,6 +2033,10 @@ async function assertOwnCategory(
  * into a field error, and resolves ownership by vendor, which the option row cannot (it carries no
  * `vendorId`). One query for the whole submission.
  *
+ * #918 — and each entry's KIND must match its attribute's. This is the only thing stopping a number
+ * being stored against a list filter (or an option against a number filter): the database CHECK
+ * constrains the row's shape, not which filter it points at.
+ *
  * Returns the refusal, or `null` when every entry is valid.
  */
 async function assertOwnAttributeValues(
@@ -1870,21 +2047,28 @@ async function assertOwnAttributeValues(
   if (values.length === 0) return null;
   const attributes = await db.vendorAttribute.findMany({
     where: { vendorId, id: { in: values.map((value) => value.attributeId) } },
-    select: { id: true, options: { select: { id: true } } },
+    select: { id: true, kind: true, options: { select: { id: true } } },
   });
-  const optionsByAttribute = new Map(
+  const byId = new Map(
     attributes.map((attribute) => [
       attribute.id,
-      new Set(attribute.options.map((option) => option.id)),
+      { kind: attribute.kind, options: new Set(attribute.options.map((option) => option.id)) },
     ]),
   );
   for (const value of values) {
-    const options = optionsByAttribute.get(value.attributeId);
-    if (!options || (value.optionId !== null && !options.has(value.optionId))) {
+    const attribute = byId.get(value.attributeId);
+    const valid =
+      attribute !== undefined &&
+      attribute.kind === value.kind &&
+      (value.kind === "NUMBER" || value.optionId === null || attribute.options.has(value.optionId));
+    if (!valid) {
       return {
         ok: false,
         error: "Choose a value from this store's list.",
-        field: `attribute_${value.attributeId}`,
+        field:
+          value.kind === "LIST"
+            ? `attribute_${value.attributeId}`
+            : `attributeNumber_${value.attributeId}`,
       };
     }
   }
@@ -1990,10 +2174,18 @@ export async function createProductForVendor(
         // create must reach Prisma through `getPrismaWs()` (lib/products-service.ts): a nested
         // create is several inserts in an implicit transaction.
         attributeValues: {
-          create: input.attributeValues.flatMap((value) =>
-            value.optionId === null
-              ? []
-              : [{ vendorId, attributeId: value.attributeId, optionId: value.optionId }],
+          create: input.attributeValues.flatMap(
+            (value): Prisma.ProductAttributeValueUncheckedCreateWithoutProductInput[] => {
+              if (value.kind === "LIST") {
+                return value.optionId === null
+                  ? []
+                  : [{ vendorId, attributeId: value.attributeId, optionId: value.optionId }];
+              }
+              // #918 — a number value, same nested create.
+              return value.numericValue === null
+                ? []
+                : [{ vendorId, attributeId: value.attributeId, numericValue: value.numericValue }];
+            },
           ),
         },
       },
@@ -2094,23 +2286,27 @@ export async function updateProductForVendor(
       // (product, attribute) unique; "Not set" deletes that one row; an attribute absent from
       // `attributeValues` is not touched at all. Inside the transaction, so the product and its
       // filter values commit or roll back together.
+      //
+      // #918 — a NUMBER entry writes `numericValue` and nulls `optionId` (and a LIST entry the
+      // reverse), so the row always satisfies ProductAttributeValue_one_value_check.
       for (const value of input.attributeValues) {
-        if (value.optionId === null) {
+        const cleared =
+          value.kind === "LIST" ? value.optionId === null : value.numericValue === null;
+        if (cleared) {
           await tx.productAttributeValue.deleteMany({
             where: { productId: id, attributeId: value.attributeId, vendorId },
           });
-        } else {
-          await tx.productAttributeValue.upsert({
-            where: { productId_attributeId: { productId: id, attributeId: value.attributeId } },
-            create: {
-              vendorId,
-              productId: id,
-              attributeId: value.attributeId,
-              optionId: value.optionId,
-            },
-            update: { optionId: value.optionId },
-          });
+          continue;
         }
+        const data =
+          value.kind === "LIST"
+            ? { optionId: value.optionId, numericValue: null }
+            : { optionId: null, numericValue: value.numericValue };
+        await tx.productAttributeValue.upsert({
+          where: { productId_attributeId: { productId: id, attributeId: value.attributeId } },
+          create: { vendorId, productId: id, attributeId: value.attributeId, ...data },
+          update: data,
+        });
       }
 
       return { ok: true as const, id };

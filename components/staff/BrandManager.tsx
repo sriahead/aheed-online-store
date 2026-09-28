@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { Plus, Save } from "lucide-react";
-import { createBrand, renameBrand, setBrandImage } from "@/features/admin/brands";
+import { Plus, Save, Trash2 } from "lucide-react";
+import { createBrand, deleteBrand, renameBrand, setBrandImage } from "@/features/admin/brands";
 import { initialCatalogueState } from "@/lib/catalogue-form";
+import { confirmDeleteLabel } from "@/lib/attribute-form";
 import type { AdminBrandRow } from "@/lib/repositories/brands";
 import { inputClass, labelClass } from "@/lib/form-classes";
 import { Button } from "@/components/ui/Button";
@@ -21,7 +22,16 @@ import { Button } from "@/components/ui/Button";
  * (#159).
  *
  * Colours are semantic tokens per design-system.md, never raw hex.
+ *
+ * DELETE (#917) NEEDS A TICK WHEN IN USE, NOT A DIALOG — the same rule as `AttributeManager.tsx`:
+ * the consequence is stated in the form, and the server refuses without the tick too. No browser
+ * confirmation dialog, which a no-JavaScript submit and the curl-driven checks could not see.
  */
+
+const DELETE_BUTTON_CLASS =
+  "inline-flex items-center justify-center gap-2 rounded-2xl border border-danger px-4 py-2 " +
+  "text-sm font-semibold text-danger transition hover:bg-danger-tint disabled:cursor-not-allowed " +
+  "disabled:opacity-60";
 
 function Feedback({ state }: { state: typeof initialCatalogueState }) {
   if (state.error) {
@@ -81,6 +91,7 @@ export function BrandRowForms({ brand }: { brand: AdminBrandRow }) {
     setBrandImage,
     initialCatalogueState,
   );
+  const [deleteState, deleteAction, deleting] = useActionState(deleteBrand, initialCatalogueState);
 
   return (
     <div className="flex flex-col gap-4">
@@ -137,6 +148,21 @@ export function BrandRowForms({ brand }: { brand: AdminBrandRow }) {
         </Button>
       </form>
       <Feedback state={imageState} />
+
+      <form action={deleteAction} className="flex flex-wrap items-center gap-3">
+        <input type="hidden" name="brandId" value={brand.id} />
+        {brand.productCount > 0 && (
+          <label className="flex items-center gap-2 text-sm text-primary">
+            <input type="checkbox" name="confirmDelete" required />
+            {confirmDeleteLabel(brand.productCount)}
+          </label>
+        )}
+        <button type="submit" disabled={deleting} className={DELETE_BUTTON_CLASS}>
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
+          {deleting ? "Deleting…" : "Delete brand"}
+        </button>
+      </form>
+      <Feedback state={deleteState} />
     </div>
   );
 }

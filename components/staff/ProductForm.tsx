@@ -392,6 +392,28 @@ export function ProductForm({
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               {attributes.map((attribute) => {
+                // #918 — a NUMBER filter is a number input under its own key prefix, so the save
+                // path knows each value's kind from its key before reading the database. Empty
+                // clears it, like "Not set".
+                if (attribute.kind === "NUMBER") {
+                  const numberName = `attributeNumber_${attribute.id}`;
+                  return (
+                    <div key={attribute.id}>
+                      <label className={labelClass} htmlFor={numberName}>
+                        {attribute.unit ? `${attribute.name} (${attribute.unit})` : attribute.name}
+                      </label>
+                      <input
+                        id={numberName}
+                        name={numberName}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        defaultValue={product?.attributeNumbers[attribute.id] ?? ""}
+                        {...fieldProps(numberName)}
+                      />
+                    </div>
+                  );
+                }
                 const name = `attribute_${attribute.id}`;
                 return (
                   <div key={attribute.id}>

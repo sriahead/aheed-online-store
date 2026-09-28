@@ -1,5 +1,46 @@
 import { describe, expect, it } from "vitest";
-import { confirmDeleteLabel, parseAttributeName, parseSortOrder } from "@/lib/attribute-form";
+import {
+  confirmDeleteLabel,
+  parseAttributeKind,
+  parseAttributeName,
+  parseAttributeUnit,
+  parseSortOrder,
+} from "@/lib/attribute-form";
+
+/** #918, R10 — the filter's type and a number filter's unit. */
+describe("parseAttributeKind", () => {
+  it("accepts LIST and NUMBER", () => {
+    expect(parseAttributeKind("LIST")).toEqual({ ok: true, value: "LIST" });
+    expect(parseAttributeKind(" NUMBER ")).toEqual({ ok: true, value: "NUMBER" });
+  });
+
+  it.each([[""], ["number"], ["RANGE"]])("refuses %j", (raw) => {
+    expect(parseAttributeKind(raw)).toEqual({
+      ok: false,
+      field: "kind",
+      error: "Choose a filter type.",
+    });
+  });
+});
+
+describe("parseAttributeUnit", () => {
+  it("reads blank as no unit", () => {
+    expect(parseAttributeUnit("  ")).toEqual({ ok: true, value: null });
+  });
+
+  it("accepts a unit up to 10 characters, trimmed", () => {
+    expect(parseAttributeUnit(" W ")).toEqual({ ok: true, value: "W" });
+    expect(parseAttributeUnit("abcdefghij")).toEqual({ ok: true, value: "abcdefghij" });
+  });
+
+  it("refuses an 11-character unit", () => {
+    expect(parseAttributeUnit("abcdefghijk")).toEqual({
+      ok: false,
+      field: "unit",
+      error: "Keep the unit to 10 characters or fewer.",
+    });
+  });
+});
 
 /** #912, R8 — field rules for vendor-defined filters and their values. */
 describe("parseAttributeName", () => {

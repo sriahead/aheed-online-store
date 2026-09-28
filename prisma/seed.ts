@@ -1805,12 +1805,27 @@ const AHEED_PRICE_TIERS: PriceTierFixture[] = [
  * #912 — vendor-defined product filters. Each attribute lists its values in order; `values` maps a
  * product slug to the option name it carries for that attribute.
  */
-interface AttributeFixture {
-  name: string;
-  slug: string;
-  options: { name: string; slug: string }[];
-  values: Record<string, string>;
-}
+type AttributeFixture =
+  | {
+      kind: "LIST";
+      name: string;
+      slug: string;
+      /** #918 — also shown on product cards. Set on create AND on a re-run (see below). */
+      showOnCard?: boolean;
+      options: { name: string; slug: string }[];
+      /** Product slug → option name. */
+      values: Record<string, string>;
+    }
+  | {
+      /** #918 — a number per product, with a unit; no options. */
+      kind: "NUMBER";
+      name: string;
+      slug: string;
+      unit: string;
+      showOnCard?: boolean;
+      /** Product slug → number, as the string `Decimal` takes. */
+      values: Record<string, string>;
+    };
 
 /**
  * #912 — SriMart only, and only on its audio and charger products. Its lighting and home products
@@ -1818,17 +1833,55 @@ interface AttributeFixture {
  * sri-home shows no Colour or Connectivity control). Aheed gets none, so its storefront is
  * unchanged. Every write is an upsert on the model's own unique key, so re-running leaves the same
  * row counts; `update: {}` on the definitions means a re-run never undoes a demo edit made at
- * /staff/attributes.
+ * /staff/attributes — apart from `showOnCard` (#918), which a re-run sets back to the fixture's
+ * value so the card-display proof always has data.
+ *
+ * #918 — a NUMBER fixture creates the filter with its kind and unit and writes `numericValue`
+ * rows; the kind is only ever set on create, matching the app (it never changes afterwards).
  */
 async function seedAttributes(vendorId: string, fixtures: AttributeFixture[]) {
   let values = 0;
   for (const [position, fixture] of fixtures.entries()) {
+    const showOnCard = fixture.showOnCard ?? false;
     const attribute = await prisma.vendorAttribute.upsert({
       where: { vendorId_slug: { vendorId, slug: fixture.slug } },
-      create: { vendorId, name: fixture.name, slug: fixture.slug, sortOrder: position },
-      update: {},
+      create: {
+        vendorId,
+        name: fixture.name,
+        slug: fixture.slug,
+        sortOrder: position,
+        kind: fixture.kind,
+        unit: fixture.kind === "NUMBER" ? fixture.unit : null,
+        showOnCard,
+      },
+      update: { showOnCard },
       select: { id: true },
     });
+
+    if (fixture.kind === "NUMBER") {
+      const products = await prisma.product.findMany({
+        where: { vendorId, slug: { in: Object.keys(fixture.values) } },
+        select: { id: true, slug: true },
+      });
+      const bySlug = new Map(products.map((p) => [p.slug, p.id]));
+      for (const [productSlug, numericValue] of Object.entries(fixture.values)) {
+        const productId = bySlug.get(productSlug);
+        if (!productId) {
+          console.log(
+            `WARNING: skipping ${fixture.name} for ${vendorId} — no product ${productSlug}`,
+          );
+          continue;
+        }
+        await prisma.productAttributeValue.upsert({
+          where: { productId_attributeId: { productId, attributeId: attribute.id } },
+          create: { vendorId, productId, attributeId: attribute.id, numericValue },
+          update: { numericValue, optionId: null },
+        });
+        values += 1;
+      }
+      continue;
+    }
+
     const optionIds = new Map<string, string>();
     for (const [optionPosition, option] of fixture.options.entries()) {
       const row = await prisma.vendorAttributeOption.upsert({
@@ -1863,7 +1916,7 @@ async function seedAttributes(vendorId: string, fixtures: AttributeFixture[]) {
       await prisma.productAttributeValue.upsert({
         where: { productId_attributeId: { productId, attributeId: attribute.id } },
         create: { vendorId, productId, attributeId: attribute.id, optionId },
-        update: { optionId },
+        update: { optionId, numericValue: null },
       });
       values += 1;
     }
@@ -1873,8 +1926,11 @@ async function seedAttributes(vendorId: string, fixtures: AttributeFixture[]) {
 
 const SRIMART_ATTRIBUTES: AttributeFixture[] = [
   {
+    kind: "LIST",
     name: "Colour",
     slug: "colour",
+    // #918 — the one filter shown on cards, so /categories/sri-chargers-cables proves it.
+    showOnCard: true,
     options: [
       { name: "Black", slug: "black" },
       { name: "White", slug: "white" },
@@ -1889,6 +1945,7 @@ const SRIMART_ATTRIBUTES: AttributeFixture[] = [
     },
   },
   {
+    kind: "LIST",
     name: "Connectivity",
     slug: "connectivity",
     options: [
@@ -1902,6 +1959,19 @@ const SRIMART_ATTRIBUTES: AttributeFixture[] = [
       "sri-usb-c-cable-2m": "Wired",
       "sri-phone-charger": "Wired",
       "sri-gan-charger-65w": "Wired",
+    },
+  },
+  {
+    // #918 — a NUMBER filter. 15–65 W selects exactly the two chargers; the speaker (10) falls
+    // outside it, which is what proves the lower bound applies.
+    kind: "NUMBER",
+    name: "Power",
+    slug: "power",
+    unit: "W",
+    values: {
+      "sri-phone-charger": "20",
+      "sri-gan-charger-65w": "65",
+      "sri-bluetooth-speaker": "10",
     },
   },
 ];

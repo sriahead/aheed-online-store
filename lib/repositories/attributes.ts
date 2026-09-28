@@ -34,11 +34,18 @@ export interface AttributeOptionRow {
   productCount: number;
 }
 
+/** #918 — `LIST` picks from `options`; `NUMBER` holds a decimal per product and has no options. */
+export type AttributeKind = "LIST" | "NUMBER";
+
 export interface AttributeRow {
   id: string;
   name: string;
   slug: string;
   sortOrder: number;
+  kind: AttributeKind;
+  /** A NUMBER filter's unit ("W"); always null for LIST. */
+  unit: string | null;
+  showOnCard: boolean;
   /** Products carrying ANY value of this filter (one value per product per filter, so rows = products). */
   productCount: number;
   options: AttributeOptionRow[];
@@ -49,6 +56,9 @@ export interface AttributeDefinition {
   id: string;
   name: string;
   slug: string;
+  kind: AttributeKind;
+  unit: string | null;
+  /** Always empty for a NUMBER filter. */
   options: { id: string; name: string; slug: string }[];
 }
 
@@ -87,6 +97,11 @@ const NOT_CONFIRMED = {
   error: "Tick the box to confirm.",
   field: "confirmDelete",
 };
+const NUMBER_HAS_NO_OPTIONS = {
+  ok: false as const,
+  error: "This filter takes a number, not a list of values.",
+  field: "name",
+};
 
 const ORDER = [{ sortOrder: "asc" as const }, { name: "asc" as const }];
 
@@ -103,6 +118,9 @@ export async function listAttributesForVendor(
       name: true,
       slug: true,
       sortOrder: true,
+      kind: true,
+      unit: true,
+      showOnCard: true,
       _count: { select: { productValues: true } },
       options: {
         orderBy: ORDER,
@@ -121,6 +139,9 @@ export async function listAttributesForVendor(
     name: row.name,
     slug: row.slug,
     sortOrder: row.sortOrder,
+    kind: row.kind,
+    unit: row.unit,
+    showOnCard: row.showOnCard,
     productCount: row._count.productValues,
     options: row.options.map((option) => ({
       id: option.id,
@@ -147,6 +168,8 @@ export async function listAttributeDefinitions(
       id: true,
       name: true,
       slug: true,
+      kind: true,
+      unit: true,
       options: { orderBy: ORDER, select: { id: true, name: true, slug: true } },
     },
   });
@@ -162,13 +185,21 @@ export async function listAttributeDefinitions(
 export async function createAttributeForVendor(
   prisma: Db,
   vendorId: string,
-  input: { name: string; slug: string },
+  input: { name: string; slug: string; kind: AttributeKind; unit: string | null },
 ): Promise<CatalogueWriteResult> {
   const existing = await prisma.vendorAttribute.count({ where: { vendorId } });
   if (existing >= MAX_ATTRIBUTES_PER_VENDOR) return TOO_MANY_ATTRIBUTES;
   try {
     const created = await prisma.vendorAttribute.create({
-      data: { vendorId, name: input.name, slug: input.slug, sortOrder: existing },
+      // #918 — the ONLY write of `kind`; a LIST filter never carries a unit.
+      data: {
+        vendorId,
+        name: input.name,
+        slug: input.slug,
+        sortOrder: existing,
+        kind: input.kind,
+        unit: input.kind === "NUMBER" ? input.unit : null,
+      },
       select: { id: true },
     });
     return { ok: true, id: created.id };
@@ -178,15 +209,32 @@ export async function createAttributeForVendor(
   }
 }
 
-/** Rename and reposition a filter. The SLUG never changes: shoppers' shared links carry it. */
+/**
+ * Rename and reposition a filter, and set whether it shows on product cards (#918). The SLUG never
+ * changes: shoppers' shared links carry it. Nor does the KIND — nothing but the create writes it.
+ *
+ * `unit` is written only for a NUMBER filter, so a LIST filter's unit stays null whatever was
+ * submitted. That needs the kind, hence the read first; the write stays one `updateMany` scoped by
+ * vendor, so another vendor's id still updates nothing.
+ */
 export async function renameAttributeForVendor(
   prismaWs: DbWs,
   vendorId: string,
-  input: { id: string; name: string; sortOrder: number },
+  input: { id: string; name: string; sortOrder: number; showOnCard: boolean; unit: string | null },
 ): Promise<CatalogueWriteResult> {
+  const existing = await prismaWs.vendorAttribute.findFirst({
+    where: { id: input.id, vendorId },
+    select: { kind: true },
+  });
+  if (!existing) return ATTRIBUTE_NOT_FOUND;
   const updated = await prismaWs.vendorAttribute.updateMany({
     where: { id: input.id, vendorId },
-    data: { name: input.name, sortOrder: input.sortOrder },
+    data: {
+      name: input.name,
+      sortOrder: input.sortOrder,
+      showOnCard: input.showOnCard,
+      ...(existing.kind === "NUMBER" ? { unit: input.unit } : {}),
+    },
   });
   if (updated.count === 0) return ATTRIBUTE_NOT_FOUND;
   return { ok: true, id: input.id };
@@ -220,9 +268,11 @@ export async function createAttributeOptionForVendor(
 ): Promise<CatalogueWriteResult> {
   const attribute = await prisma.vendorAttribute.findFirst({
     where: { id: input.attributeId, vendorId },
-    select: { _count: { select: { options: true } } },
+    select: { kind: true, _count: { select: { options: true } } },
   });
   if (!attribute) return ATTRIBUTE_NOT_FOUND;
+  // #918 — a number filter holds a number per product, never a list of values.
+  if (attribute.kind === "NUMBER") return NUMBER_HAS_NO_OPTIONS;
   if (attribute._count.options >= MAX_OPTIONS_PER_ATTRIBUTE) return TOO_MANY_OPTIONS;
   try {
     const created = await prisma.vendorAttributeOption.create({

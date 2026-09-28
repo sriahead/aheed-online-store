@@ -4,7 +4,7 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.35.0"
+version: "1.36.0"
 updated: 2026-09-27
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
@@ -568,6 +568,20 @@ The reason keyset cannot serve it: a cursor's ordering key has to *be* the sort 
 not a stored column. Prisma cannot express the ranking in `orderBy`, and computing it in SQL would
 need `$queryRaw`, which `CLAUDE.md` forbids in `lib/repositories/*`.
 
+**This does not reopen `OFFSET`.** The prohibition above exists because `OFFSET` degrades linearly:
+page ten reads and discards nine pages of rows. Here the database query is **bounded and identical
+for every page** — it always fetches at most 201 rows and the slicing happens in memory — so page ten
+costs exactly what page one costs. The rule's stated rationale is not engaged.
+
+What *is* given up, and is not hidden: a query matching more than 200 products cannot reach the rest,
+and which 200 are ranked is decided by the fetch's own `createdAt desc, id desc` order rather than
+by relevance. `ProductPage.truncated` carries that fact to the UI so the shopper is told the list is
+partial — set from a **sentinel row** (the fetch asks for one more than the cap) so it means "more
+matches provably exist", not merely "the cap was reached", which would misreport a catalogue holding
+exactly 200 matches. Raising the cap needs either an index that can serve ranking or the `pg_trgm` work in
+`#286`; until then the bound is deliberate, and this exception must not be cited to justify offset
+pagination over an **unbounded** query anywhere else.
+
 ### Composing `where` fragments: never emit a bare top-level `OR` from a filter
 
 **A filter predicate must not put `OR` (or `AND`) at the top level of the object it returns.** Added
@@ -612,28 +626,38 @@ Added 1.35.0. A product has **two** filter mechanisms, on purpose:
 
 Do not migrate one mechanism into the other as a side effect. Merging them is a decision of its own.
 
-A vendor filter travels in the URL as **`attr_<attributeSlug>=<optionSlug>`**. Slugs never change
-on rename, so shared links keep working. An unknown slug or a repeated parameter applies no
-predicate and renders no chip.
+**Two kinds of vendor filter** (1.36.0, `#918`). `VendorAttribute.kind` is `LIST` (pick from the
+filter's values) or `NUMBER` (a decimal, with an optional `unit` such as `W` or `in`). The kind is
+set at creation and never changes. A value row holds **either** `optionId` **or** `numericValue`
+(`Decimal(10,2)`; measurements are not money, so the pence rule does not apply), and the database
+`CHECK` `ProductAttributeValue_one_value_check` enforces exactly one. Which kind a value may take is
+checked in the repository, against its filter. No Prisma `Decimal` leaves `lib/repositories/`:
+numbers travel as strings and render through `lib/attribute-number.ts`.
+
+A vendor filter travels in the URL as:
+
+- **`attr_<attributeSlug>=<optionSlug>`** for a list filter. **The parameter may repeat**
+  (`attr_colour=black&attr_colour=white`), meaning either value, because a plain GET form with
+  ticked checkboxes submits it that way. Values of one filter combine with OR; filters combine with
+  AND. This is the one deliberate exception to `#689`: every fixed key, and every range key, still
+  treats a repeated parameter as applying nothing. Every href builder therefore **appends**, never
+  sets, filter pairs.
+- **`attr_<attributeSlug>_min` / `_max`** for a number filter, one chip per bound, like
+  `minPrice`/`maxPrice`. Slugs are `[a-z0-9-]`, so the suffix cannot collide with one.
+
+Slugs never change on rename, so shared links keep working. An unknown slug, a value that fails
+its kind's rule, or a key naming a filter of the other kind applies no predicate and renders no
+chip.
+
+A filter with **`showOnCard`** set is also shown on product cards, through `productSummarySelect`,
+so every card path gets it from the one select. Text search (the direct and broad rungs) also
+matches list-filter **option names**, and a candidate matched that way counts as a direct match
+for the thin-result notice. Number values are not text-searched.
 
 **`components/product/filter-params.ts` is the only place a filter key is defined.** It holds the
-fixed keys plus the `attr_` prefix rule. Every href builder and the chip module derive from it
-(`#601`). Before `#912`, a key had to be registered in three unsynchronised lists, and forgetting
+fixed keys plus the `attr_` list and range rules. Every href builder and the chip module derive from
+it (`#601`). Before `#912`, a key had to be registered in three unsynchronised lists, and forgetting
 one silently dropped the filter on "Next page".
-
-**This does not reopen `OFFSET`.** The prohibition above exists because `OFFSET` degrades linearly:
-page ten reads and discards nine pages of rows. Here the database query is **bounded and identical
-for every page** — it always fetches at most 201 rows and the slicing happens in memory — so page ten
-costs exactly what page one costs. The rule's stated rationale is not engaged.
-
-What *is* given up, and is not hidden: a query matching more than 200 products cannot reach the rest,
-and which 200 are ranked is decided by the fetch's own `createdAt desc, id desc` order rather than
-by relevance. `ProductPage.truncated` carries that fact to the UI so the shopper is told the list is
-partial — set from a **sentinel row** (the fetch asks for one more than the cap) so it means "more
-matches provably exist", not merely "the cap was reached", which would misreport a catalogue holding
-exactly 200 matches. Raising the cap needs either an index that can serve ranking or the `pg_trgm` work in
-`#286`; until then the bound is deliberate, and this exception must not be cited to justify offset
-pagination over an **unbounded** query anywhere else.
 
 **Query optimization.** Explicit `select`/`include` (never over-fetch); batch relations to kill
 N+1; per-request memoization with React `cache()`; wrap order creation in a single

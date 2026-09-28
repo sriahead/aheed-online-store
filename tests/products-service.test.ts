@@ -27,6 +27,8 @@ function row(i: number) {
     reviewCount: 0,
     images: [] as { storageKey: string; alt: string; isPrimary: boolean }[],
     inventory: null,
+    // #918 — `productSummarySelect` now selects the card-display filter values.
+    attributeValues: [] as never[],
   };
 }
 
@@ -43,6 +45,8 @@ vi.mock("@/lib/db", () => ({
     // #566 — searchProducts reads the approved dictionary before searching. Empty here: this file
     // is about the query-log guard, not about expansion.
     searchSynonym: { findMany: synonymFindMany },
+    // #918 — asked only when no candidate matched on name; no filter-value match here.
+    productAttributeValue: { findFirst: vi.fn(async () => null) },
   }),
   getPrismaWs: () => ({}),
 }));

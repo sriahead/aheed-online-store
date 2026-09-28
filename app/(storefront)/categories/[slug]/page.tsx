@@ -103,7 +103,8 @@ export default async function CategoryPage({
     origin: query.origin || undefined,
     brandId: selectedBrand?.id,
     packSize: parsePackSizeParam(query.packSize),
-    attributeOptionIds: attributeFilters.optionIds,
+    attributeOptionGroups: attributeFilters.optionGroups,
+    attributeRanges: attributeFilters.ranges,
   });
   /*
    * #568 — facets narrow to this category's own products (and its subcategories'), so a department
