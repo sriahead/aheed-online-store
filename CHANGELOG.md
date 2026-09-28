@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Product description as net-content evidence** (issue `#928`, refs `#697`; `specs/2026-09-28-p928-net-content-description-evidence/`). One additive migration (`20260928160000_p928_net_content_description_evidence`, enum value only).
+  - The net-content suggester (the `#900` script and `#927`'s button) also reads the first **500 characters** of a product's description, so a size stated only there, such as "400ml tin" or "pack of 4", can become a suggestion quoting it. The review page shows "from the description".
+  - The quote must occur in the text actually sent. Description evidence is refused when the product name states a metric size of its own, or when the description states more than one. With no description the prompt is unchanged.
+  - Suggestions still reach a product only on a staff Accept or Edit. `specs/architecture.md` 1.38.0, staff guide 2.9.0.
+  - Earlier "no answer" products are retried by running the script once with `--include-attempted` after deploy; no retry button.
+
 - **"Suggest net content" button on `/staff/net-content`** (issue `#927`; `specs/2026-09-28-p927-net-content-suggest-button/`). No schema change.
   - Store admins ask the AI for net-content suggestions from the staff panel instead of running `scripts/suggest-net-content.ts` from a terminal. One click covers at most **10 products** and **150 neurons**, never-attempted products only, for the signed-in store. A model with no cost rate is refused before any call.
   - It reuses `#900`'s run loop, eligibility, validation and review unchanged, and it writes suggestion rows only: a product still changes only on a staff Accept or Edit. Staff (non-admin) see a note instead of the button.

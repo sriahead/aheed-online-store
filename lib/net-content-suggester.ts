@@ -5,8 +5,8 @@ import { storeDescriptionPromptLine } from "@/lib/store-description";
 /**
  * AI-suggested net content (#900) — PROPOSED, NEVER APPLIED.
  *
- * A model reads a product's name, its free-text unit label and, when one exists, a photo that
- * STAFF sourced, and proposes the pack size. Nothing here writes to a product:
+ * A model reads a product's name, its free-text unit label, the start of its description (#928)
+ * and, when one exists, a photo that STAFF sourced, and proposes the pack size. Nothing here writes to a product:
  * `scripts/suggest-net-content.ts` stores each reply as a `NetContentSuggestion` row and a person
  * accepts, edits or rejects it on `/staff/net-content`. Same posture as
  * `lib/search-synonym-proposals.ts` and `specs/architecture.md`'s AI rule: offline, bounded,
@@ -57,7 +57,46 @@ export const NET_CONTENT_MODEL_REQUEST_OPTIONS: Record<string, Record<string, un
 /** The longest quoted evidence a suggestion may carry (R11). */
 export const MAX_EVIDENCE_CHARS = 200;
 
-export type NetContentEvidenceSource = "PHOTO" | "NAME" | "UNIT_LABEL";
+export type NetContentEvidenceSource = "PHOTO" | "NAME" | "UNIT_LABEL" | "DESCRIPTION";
+
+/**
+ * #928 — how much of a product's description the model is shown. All three pilot descriptions
+ * that stated a size only there were under 45 characters; 500 (~125 tokens, ~1 neuron on Gemma 4)
+ * keeps a long description from dominating the prompt or the per-click budget.
+ */
+export const DESCRIPTION_EXCERPT_CHARS = 500;
+
+/**
+ * #928 (R3) — the description text actually sent. The run loop computes it ONCE and gives the same
+ * string to the prompt and to the validator, so a quote is always checked against what the model
+ * saw. A cut goes back to the last whitespace, so no partial word (`400m` of `400ml`) is sent.
+ */
+export function descriptionExcerpt(description: string): string {
+  const trimmed = description.trim();
+  if (trimmed.length <= DESCRIPTION_EXCERPT_CHARS) return trimmed;
+  const head = trimmed.slice(0, DESCRIPTION_EXCERPT_CHARS);
+  const lastWhitespace = head.search(/\s\S*$/);
+  if (lastWhitespace === -1) return head;
+  return head.slice(0, lastWhitespace).trimEnd();
+}
+
+// Longest unit first within each family, and no letter may follow, so `2 litres` is one match
+// and `1lb` is none.
+const METRIC_SIZE =
+  /(?<![\p{L}\d])\d+(?:[.,]\d+)?\s*(?:kg|grams|gram|g|ml|cl|litres|litre|l)(?!\p{L})/giu;
+
+/**
+ * #928 (R4) — the DISTINCT metric sizes stated in `text`, normalised (`400 ML` -> `400ml`,
+ * `1,5 l` -> `1.5l`). Used only to REFUSE description evidence, never to produce a value:
+ * extracting a size from free text without the model is the guessing #697 rejected.
+ */
+export function metricSizesIn(text: string): string[] {
+  const sizes = new Set<string>();
+  for (const match of text.matchAll(METRIC_SIZE)) {
+    sizes.add(match[0].toLowerCase().replace(/\s+/g, "").replace(",", "."));
+  }
+  return [...sizes];
+}
 
 export interface SuggesterPhoto {
   bytes: Uint8Array;
@@ -67,6 +106,8 @@ export interface SuggesterPhoto {
 export interface SuggesterInput {
   name: string;
   unitLabel: string;
+  /** #928 — `descriptionExcerpt(product.description)`; `""` sends no description. */
+  description: string;
   /** Only ever a STAFF_UPLOAD / STAFF_CONFIRMED_PHOTO image — see lib/net-content-eligibility.ts. */
   photo: SuggesterPhoto | null;
   /** #905 — the vendor's own "what this store sells"; `null` keeps the prompt neutral. */
@@ -120,24 +161,32 @@ export function resolveNetContentModel(
 export function buildNetContentPrompt(input: {
   name: string;
   unitLabel: string;
+  /** #928 — the excerpt; `""` leaves the prompt exactly as it was before #928 (R8). */
+  description: string;
   hasPhoto: boolean;
   /** #905 — required, never defaulted; replaces the grocery framing this used to assume. */
   storeDescription: string | null;
 }): string {
   const describe = storeDescriptionPromptLine(input.storeDescription);
+  const hasDescription = input.description !== "";
   return [
     "You read the net content (pack size) of one product for a UK shop's catalogue.",
     ...(describe ? [describe] : []),
     "",
     `Product name: ${input.name}`,
     `Unit label: ${input.unitLabel}`,
+    ...(hasDescription ? [`Description: ${input.description}`] : []),
     input.hasPhoto
       ? "A photo of the product's packaging is attached."
-      : "No photo is available; use only the name and unit label.",
+      : hasDescription
+        ? "No photo is available; use only the name, unit label and description."
+        : "No photo is available; use only the name and unit label.",
     "",
     "Reply with ONE JSON object and nothing else:",
     '{"amount": <whole number or null>, "unit": "GRAM"|"KILOGRAM"|"MILLILITRE"|"LITRE"|"EACH",',
-    ' "confidence": <whole number 0-100>, "evidenceSource": "PHOTO"|"NAME"|"UNIT_LABEL",',
+    hasDescription
+      ? ' "confidence": <whole number 0-100>, "evidenceSource": "PHOTO"|"NAME"|"UNIT_LABEL"|"DESCRIPTION",'
+      : ' "confidence": <whole number 0-100>, "evidenceSource": "PHOTO"|"NAME"|"UNIT_LABEL",',
     ' "evidence": "<the exact text you relied on, copied character for character>"}',
     "",
     "Rules:",
@@ -146,6 +195,13 @@ export function buildNetContentPrompt(input: {
     '- If the size is only given in other units (pints, oz, lb), reply {"amount": null}. Do not convert it.',
     '- If working out the size would mean multiplying (for example "6 x 1.5L"), reply {"amount": null}.',
     "- evidenceSource NAME or UNIT_LABEL means evidence is copied exactly from that text above.",
+    ...(hasDescription
+      ? [
+          "- evidenceSource DESCRIPTION means evidence is copied exactly from the description text above.",
+          "- Use the description only when the name, unit label and photo state no size.",
+          '- If the description states more than one size, reply {"amount": null}.',
+        ]
+      : []),
     input.hasPhoto
       ? "- evidenceSource PHOTO means evidence is the text you read on the packaging."
       : "- Do not use evidenceSource PHOTO: there is no photo.",
@@ -174,6 +230,7 @@ export function buildNetContentRequestBody(
   const prompt = buildNetContentPrompt({
     name: input.name,
     unitLabel: input.unitLabel,
+    description: input.description,
     hasPhoto: input.photo !== null,
     storeDescription: input.storeDescription,
   });
@@ -318,7 +375,12 @@ export interface ValidatedSuggestion {
   evidenceText: string;
 }
 
-const EVIDENCE_SOURCES: readonly NetContentEvidenceSource[] = ["PHOTO", "NAME", "UNIT_LABEL"];
+const EVIDENCE_SOURCES: readonly NetContentEvidenceSource[] = [
+  "PHOTO",
+  "NAME",
+  "UNIT_LABEL",
+  "DESCRIPTION",
+];
 
 function normaliseText(value: string): string {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
@@ -339,12 +401,16 @@ function isWholeNumberInRange(value: unknown, min: number, max: number): value i
 /**
  * R11 — the model's reply is untrusted input. Returns a suggestion only when every rule holds,
  * otherwise null (stored as NO_ANSWER). The two checks that matter most are anti-hallucination:
- * quoted NAME/UNIT_LABEL evidence must literally occur in that text, and PHOTO is only possible
- * when a photo was actually sent.
+ * quoted NAME/UNIT_LABEL/DESCRIPTION evidence must literally occur in that text, and PHOTO is only
+ * possible when a photo was actually sent.
+ *
+ * #928 (R5) — DESCRIPTION also needs the name to state no metric size of its own (the model should
+ * have quoted the name) and the excerpt to state at most one (staff prose like "also available in
+ * 1L" is ambiguous). The prompt asks for both; these checks make them hold.
  */
 export function validateNetContentReply(
   raw: string,
-  context: { name: string; unitLabel: string; photoSent: boolean },
+  context: { name: string; unitLabel: string; descriptionSent: string; photoSent: boolean },
 ): ValidatedSuggestion | null {
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
@@ -383,6 +449,12 @@ export function validateNetContentReply(
     !normaliseText(context.unitLabel).includes(normaliseText(evidenceText))
   ) {
     return null;
+  }
+  if (source === "DESCRIPTION") {
+    if (context.descriptionSent === "") return null;
+    if (!normaliseText(context.descriptionSent).includes(normaliseText(evidenceText))) return null;
+    if (metricSizesIn(context.name).length > 0) return null;
+    if (metricSizesIn(context.descriptionSent).length >= 2) return null;
   }
   // Owner decision (2026-09-25): EACH only for a stated count, never "1 each" by default.
   if (unit === "EACH" && !statesCount(evidenceText, amount)) return null;

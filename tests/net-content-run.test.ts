@@ -7,7 +7,11 @@ import {
   type RunDependencies,
   type RunProduct,
 } from "@/lib/net-content-run";
-import type { NetContentSuggester, SuggesterResult } from "@/lib/net-content-suggester";
+import {
+  descriptionExcerpt,
+  type NetContentSuggester,
+  type SuggesterResult,
+} from "@/lib/net-content-suggester";
 
 /**
  * #900 (R15, R16) — the run loop's stop rules, with a stubbed suggester and store. What matters
@@ -19,6 +23,7 @@ const rice: RunProduct = {
   id: "p-rice",
   name: "Basmati Rice 5kg",
   unitLabel: "£8.99 / 5kg",
+  description: "",
   basePrice: 899,
   images: [],
 };
@@ -241,5 +246,76 @@ describe("the neuron budget (R16)", () => {
       input: 24545,
       output: 77273,
     });
+  });
+});
+
+describe("the description excerpt is shared by prompt and validator (#928 R9)", () => {
+  // The only metric size, "1L", lies after character 500; "400ml" lies inside the excerpt.
+  const longDescription =
+    "Rich, creamy coconut milk, 400ml tin. " +
+    "x".repeat(480) +
+    " also sold as 1L carton " +
+    "y".repeat(90);
+  const coconut: RunProduct = {
+    id: "p-coconut",
+    name: "Coconut Milk",
+    unitLabel: "£1.29 / tin",
+    description: longDescription,
+    basePrice: 129,
+    images: [],
+  };
+
+  function descriptionReply(evidence: string, amount: number, unit: string): SuggesterResult {
+    return {
+      kind: "reply",
+      text: JSON.stringify({
+        amount,
+        unit,
+        confidence: 80,
+        evidenceSource: "DESCRIPTION",
+        evidence,
+      }),
+      latencyMs: 100,
+      usage: { inputTokens: 500, outputTokens: 50, neurons: 5 },
+    };
+  }
+
+  it("sends the cut excerpt, not the full description", async () => {
+    const d = deps({ products: [coconut], suggester: suggesterReturning(RICE_REPLY) });
+    await runNetContentSuggestions(d);
+    const sent = vi.mocked(d.suggester.suggest).mock.calls[0][0].description;
+    expect(longDescription.length).toBeGreaterThan(600);
+    expect(sent.length).toBeLessThanOrEqual(500);
+    expect(sent).toBe(descriptionExcerpt(longDescription));
+    expect(sent).not.toContain("1L");
+  });
+
+  it("stores a quote from beyond the excerpt as NO_ANSWER", async () => {
+    const d = deps({
+      products: [coconut],
+      suggester: suggesterReturning(descriptionReply("1L carton", 1, "LITRE")),
+    });
+    const summary = await runNetContentSuggestions(d);
+    expect(summary).toMatchObject({ pending: 0, noAnswer: 1 });
+    expect(d.saveSuggestion).toHaveBeenCalledWith(expect.objectContaining({ value: null }));
+  });
+
+  it("stores a quote from inside the excerpt as PENDING with DESCRIPTION evidence", async () => {
+    const d = deps({
+      products: [coconut],
+      suggester: suggesterReturning(descriptionReply("400ml tin", 400, "MILLILITRE")),
+    });
+    const summary = await runNetContentSuggestions(d);
+    expect(summary).toMatchObject({ pending: 1, noAnswer: 0 });
+    expect(d.saveSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        value: expect.objectContaining({
+          amount: 400,
+          unit: "MILLILITRE",
+          evidenceSource: "DESCRIPTION",
+          evidenceText: "400ml tin",
+        }),
+      }),
+    );
   });
 });

@@ -19,6 +19,7 @@ const BUILDERS: [string, (description: string | null) => string][] = [
       buildNetContentPrompt({
         name: "Fast Charger",
         unitLabel: "£9 each",
+        description: "",
         hasPhoto: false,
         storeDescription: d,
       }),
