@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.5.0"
-updated: "2026-09-26"
+version: "2.6.0"
+updated: "2026-09-29"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -353,7 +353,8 @@ this page an affected order sits in *Pending payment* forever, quietly holding i
 **Who can access:** Store admins only
 
 **What you can do:** See each payment event the system refused, re-check it against the payment
-provider, and recover the order it left stranded.
+provider, and recover the order it left stranded. See the orders the scheduled payment check stopped
+retrying, and retry them.
 
 **Typical workflow:** A customer says they paid but their order still shows as awaiting payment.
 Open this page, find their order, and use the reconcile control to ask the payment provider what
@@ -363,6 +364,14 @@ reaches your picking queue.
 **Important fields and filters:** The page lists the 50 most recent refusals for this store. Each row
 shows the order it relates to and the amount, so you can match a customer's phone enquiry to a row
 quickly.
+
+**Orders the payment sweep stopped retrying:** A second list, below the refusals. A scheduled check
+asks the payment provider about orders that are still awaiting payment. If the provider keeps failing,
+or rejects the lookup outright, the check stops asking and the order appears here with the reason, the
+provider's error code, how many times it tried, and when it stopped. Nothing has been charged or
+cancelled because of this. Check the order at the payment provider first, then press **Retry** to make
+the scheduled check ask again on its next run (within about 15 minutes). The order number links to the
+order's own page.
 
 **Common mistakes and limitations:** This page shows payments the system actively **refused**, not
 every order stuck in *Pending payment*. An order whose payment notification simply never arrived is
