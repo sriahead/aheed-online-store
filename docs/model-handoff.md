@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.51.0"
+version: "1.52.0"
 updated: 2026-09-29
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -173,6 +173,9 @@ reconciliation. If overall project state did not materially change, leave this f
 - **NEW INFRASTRUCTURE — a second Neon project now exists, and is live in production.** See the
   dedicated section below. This is the most consequential project-level change since multi-tenancy.
 - **Worktrees:** only the main checkout.
+- **UPDATE 2026-09-29: PR #722 and PR #725 are now CLOSED** (owner decision at Orient, closing
+  comment on each). Their branches were kept and still show as `not merged` in the prune's REVIEW
+  list. The rest of this bullet is the original reasoning.
 - **PR #725 and PR #722 are OBSOLETE — stop protecting them.** Verified live 2026-09-17: both are
   open, both are `CONFLICTING`, and both touch `CLAUDE.md`, which `#786` rewrote from 149,380 to
   13,925 characters underneath them. Their substance has already landed by other routes — #725's
@@ -509,6 +512,11 @@ All facts in this section require live verification:
     against this repo. Run `npm run branches:prune` (dry run), read DELETE and REVIEW, give an
     explicit yes, then `-- --apply`. `#722` and `#725` are open PR heads: they stay in REVIEW, and
     deleting either branch closes its PR.
+  - **Measured at Orient 2026-09-29, after `#935` reached production (PR #941, `924cf24`): the dry
+    run shows DELETE 0, REVIEW 40.** Every branch outside the newest 12 reads as `not merged`,
+    because squash-merged branches are not ancestors of `origin/staging`. So `--apply` would delete
+    nothing today. That is tracked as `#942`. `#938` and `#939` are being fixed on
+    `feature/938-939-local-tooling-fixes` (`specs/2026-09-29-p938-939-local-tooling-fixes/`).
   - Even after that prune, about 37 local and 32 origin branches stay, because the unmerged and
     open-PR REVIEW branches are protected. The `/orient` reminder keeps firing until the owner
     decides on them. That is expected, not a defect.

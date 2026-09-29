@@ -25,6 +25,9 @@ sets it.
 3. **Never delete a REVIEW entry** unless the user names that specific branch. When they do, delete
    only the named copy: `git push origin --delete <name>` for origin, `git branch -D <name>` for
    local. An `open PR` entry is still in use. Say so before deleting it, because deleting a PR's
-   head branch closes the PR.
+   head branch closes the PR. A local entry marked `checked out in worktree <path>` (#939) is
+   merged but still open in that worktree, and git refuses to delete it. Do not force it by hand:
+   ask the user whether the worktree is finished. If so, remove it with `git worktree remove
+   <path>` (or `git worktree prune` when the folder no longer exists), then re-run the dry run.
 4. **Report the counts after deletion.** Report the `Branches now: local <n>, origin <m>` line
    from `--apply`, or the output of `npm run branches:count`, and any deletion that failed.
