@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **Branch hygiene: `/prune-branches` and an Orient reminder** (issue `#935`; `specs/2026-09-29-p935-branch-hygiene/`). Tooling only.
+  - `npm run branches:prune` keeps the 12 newest branch names plus `main`, `staging` and the current branch, and deletes an older local or origin copy only when it is merged into `origin/staging` or `origin/main` and is not an open PR's head. Anything else is listed for review. It is a dry run by default; `-- --apply` deletes, and `-- --keep N` changes the 12.
+  - `npm run branches:count` prints the local and origin counts and an `ACTION:` line at 30 or more. `/orient` runs it as step 10, which warns only and blocks nothing.
+  - `.claude/commands/prune-branches.md` runs the dry run and gets an explicit yes before `--apply`. `specs/sdd-workflow.md` 2.37.0.
+
 - **Document-stage reconciliation for `#928`, now promoted to production in PR #933 (merge `91b1d8e`), carrying the doc-only `#927` reconciliation (PR #931, merge `b59e815`).**
   - `specs/roadmap.md`: two change-log rows — the `#928` build/validate/ship-to-staging record and the `#928` promotion — neither of which `sdd:audit` had a row for yet.
   - `docs/model-handoff.md` 1.49.0: `#928` corrected from "built, awaiting `/validate`" to closed/in-production; the `#901` pilot pause is recorded as lifted.
