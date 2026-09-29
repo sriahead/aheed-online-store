@@ -116,5 +116,7 @@ describe("vendor-neutral UI copy (#729)", () => {
       }
     }
     expect(hits).toEqual([]);
-  });
+    // #938 — parsing every file takes ~1.3s alone but overran Vitest's 5s default under full-suite
+    // load on Windows. A longer timeout for this test only; the scan itself is deliberately unchanged.
+  }, 30_000);
 });

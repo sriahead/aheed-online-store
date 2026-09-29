@@ -10,7 +10,9 @@
  * The rule itself lives in scripts/branch-hygiene.ts. Runs against the git repo in the
  * current directory (not ROOT), so the integration test can point it at a throwaway repo.
  * BRANCH_HYGIENE_OPEN_PRS (a JSON array of {number, headRefName}) replaces the gh call —
- * for tests only.
+ * for tests only. `prune` also reads `git worktree list --porcelain` (#939): a local branch
+ * checked out in a worktree is listed under REVIEW rather than deleted, because git refuses
+ * `branch -D` for it.
  */
 import { execFileSync } from "node:child_process";
 import {
@@ -96,6 +98,24 @@ function openPrHeads(): Map<string, number> {
   return new Map(prs.map((p) => [p.headRefName, p.number]));
 }
 
+/**
+ * Branch name → worktree path, from `git worktree list --porcelain` (#939). Each worktree is a
+ * block whose first line is `worktree <path>`; a detached or bare block has no `branch` line.
+ * Throws if git fails, so `prune` never plans without it.
+ */
+function worktreeBranches(): Map<string, string> {
+  const out = run("git", ["worktree", "list", "--porcelain"]);
+  const map = new Map<string, string>();
+  let path: string | null = null;
+  for (const line of out.split(/\r?\n/)) {
+    if (line.startsWith("worktree ")) path = line.slice("worktree ".length);
+    else if (line.startsWith("branch refs/heads/") && path !== null) {
+      map.set(line.slice("branch refs/heads/".length), path);
+    }
+  }
+  return map;
+}
+
 function fetchPrune(): boolean {
   return tryRun("git", ["fetch", "--prune", "--quiet", "origin"]) !== null;
 }
@@ -155,6 +175,18 @@ function prune(args: string[]): number {
     return 1;
   }
 
+  let worktrees: Map<string, string>;
+  try {
+    worktrees = worktreeBranches();
+  } catch (err) {
+    console.error(
+      "`git worktree list --porcelain` failed — nothing deleted. Without it a branch checked out" +
+        " in another worktree could land on the DELETE list, and git would refuse the delete.",
+    );
+    console.error(String(err instanceof Error ? err.message : err));
+    return 1;
+  }
+
   const merged = mergedRefnames();
   const copies: BranchCopy[] = readRefs().map((r) => ({
     name: r.name,
@@ -163,7 +195,7 @@ function prune(args: string[]): number {
     merged: merged.has(r.refname),
   }));
   const current = tryRun("git", ["symbolic-ref", "--short", "-q", "HEAD"]) || null;
-  const plan = planPrune(copies, openPrs, current, keep);
+  const plan = planPrune(copies, openPrs, current, keep, worktrees);
 
   console.log(`KEEP (${plan.keep.length})`);
   for (const c of plan.keep) console.log(`  ${label(c)}`);

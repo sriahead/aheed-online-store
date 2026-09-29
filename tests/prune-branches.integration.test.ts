@@ -14,6 +14,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  *   unmerged    (09-04)  never merged                   → REVIEW, survives
  *   pr-head     (09-05)  merged, but heads an open PR   → REVIEW, survives
  *   new-1/new-2 (09-08/09) merged, newest two           → kept with --keep 2
+ *   wt-held     (09-06)  merged, checked out in a second worktree (#939, last test only)
+ *                        → local copy REVIEW, origin copy deleted
  */
 
 const REPO_ROOT = join(__dirname, "..");
@@ -124,5 +126,23 @@ describe("prune-branches CLI", () => {
     const out = cli(["count"]);
     expect(out).toContain("Branches: local 6, origin 6 (reminder at 30)");
     expect(out).not.toContain("ACTION:");
+  }, 60_000);
+
+  // Last on purpose: it adds a local branch, which would change the counts asserted above.
+  it("#939: --apply leaves a branch checked out in another worktree to REVIEW and exits 0", () => {
+    // 09-06: older than the kept new-1/new-2, so --keep 2 does not keep it.
+    branch("wt-held", "2026-09-06T00:00:00Z", true);
+    git(work, ["checkout", "-q", "main"]);
+    git(work, ["fetch", "-q", "origin"]);
+    git(work, ["worktree", "add", "-q", join(base, "wt-held"), "wt-held"]);
+
+    // The premise: git refuses to delete a branch checked out in another worktree.
+    expect(() => git(work, ["branch", "-D", "wt-held"])).toThrow();
+
+    // cli() throws on a non-zero exit, so reaching the assertions means --apply exited 0.
+    const out = cli(["prune", "--apply", "--keep", "2"]);
+    expect(out).toMatch(/local wt-held\s+2026-09-06\s+checked out in worktree /);
+    expect(branchNames(work, "refs/heads", "refs/heads/")).toContain("wt-held");
+    expect(branchNames(origin, "refs/heads", "refs/heads/")).not.toContain("wt-held");
   }, 60_000);
 });
