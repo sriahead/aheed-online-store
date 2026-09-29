@@ -133,6 +133,10 @@ every branch merges.
 
 ### Fixed
 
+- **Two local-tooling defects found at `#935`'s Validate** (issues `#938`, `#939`; `specs/2026-09-29-p938-939-local-tooling-fixes/`). Tooling and tests only; CI was never affected.
+  - `#938`: `tests/vendor-neutral-copy.test.ts`'s file-scanning test has an explicit 30-second timeout. Under full local suite load on Windows it overran Vitest's 5-second default and failed. The scan itself is unchanged.
+  - `#939`: `npm run branches:prune` reads `git worktree list --porcelain`. A merged local branch that is checked out in a worktree is now listed under REVIEW as `checked out in worktree <path>`, instead of making `--apply`'s whole local `git branch -D` fail. Its origin copy is judged as before. `.claude/commands/prune-branches.md` says how to clear it.
+
 - **The staff delivery-area form hid its own errors and confirmations on desktop** (`#613`). Its feedback sat inside `sm:sr-only`, so at 640px and wider a refused entry showed nothing visible. Now visible at every width.
 
 - **Creating a product from the staff panel failed on every call** (issue `#878`, folded into `#876`'s branch as its prerequisite). `createProductForVendor` performs a `product.create` with nested inventory and tier creates, which opens an implicit transaction, and it ran over the HTTP client (`getPrisma()`). Reproduced before the fix under `npm run preview`: `POST /staff/products/new` → **500** with `Error: Transactions are not supported in HTTP mode`, no row written. Now uses `getPrismaWs()`, beside `updateProductForVendor` under the service's transaction-bearing banner. This is the shape `CLAUDE.md` names (measured under #116). The call site predated that measurement and was never moved. The platform has never traded, which is why nothing surfaced it.
