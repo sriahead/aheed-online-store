@@ -8,6 +8,10 @@ every branch merges.
 
 ### Added
 
+- **Document-stage reconciliation for `#938` and `#939` (PR #943, merge `dcbe8ce`, `staging`), and the `#935` promotion (PR #941, `924cf24`).** Docs only.
+  - `specs/roadmap.md` 1.122.0: one row for the `#941` promotion, which `sdd:audit` reported as pending, and for `#938`/`#939` validated and merged to `staging`.
+  - `docs/model-handoff.md` 1.53.0: `#935` corrected from "not yet in production" to done; `#938`/`#939` moved from "being fixed" to merged to `staging`; `#942` named as the blocker on a useful first prune.
+
 - **Document-stage reconciliation for `#935` (branch hygiene), merged to `staging` in PR #937 (merge `bf30680`).** Docs only.
   - `specs/roadmap.md` 1.121.0: the `#935` build/validate/ship-to-staging row, which `sdd:audit` had reported as missing.
   - `docs/model-handoff.md` 1.51.0: `#935` corrected from "built, awaiting `/validate`" to merged to `staging`; the owner's first real `--apply` and the `#936`, `#938` and `#939` follow-ups are recorded.
