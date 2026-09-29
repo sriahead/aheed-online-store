@@ -76,7 +76,7 @@ list that long, the few branches that still matter are hard to spot.
 **Deliberately excluded:**
 - GitHub's "Automatically delete head branches" repository setting. It would stop most of the
   build-up at the source, but it is a repository-level decision with its own trade-offs.
-  Tracked separately if the user wants it.
+  Deferred to #936.
 - Changes to rulesets or protection for `main`/`staging`.
 - Pruning remotes other than `origin`, and tags.
 - An automatic or scheduled prune. Deleting branches stays a user-approved action.
