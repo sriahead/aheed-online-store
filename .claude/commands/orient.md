@@ -41,7 +41,11 @@ Follow the **Orient** stage of `specs/sdd-workflow.md` (read it if not already i
 9. **Read `docs/research/discovery-log.md`** for any open finding touching this area. A finding
    there is evidence, not scope — but starting a slice while an unread finding contradicts its
    premise is exactly the waste the Discover phase exists to prevent.
-10. Report a short grounding summary: what you found to be true vs. what the docs/roadmap assumed,
+10. **Run `npm run branches:count`** (#935). If it prints an `ACTION:` line (30 or more local or
+    origin branches), report it in the grounding summary and suggest `/prune-branches`. This step
+    warns only and blocks nothing, and it never deletes anything; pruning stays a user-approved
+    action.
+11. Report a short grounding summary: what you found to be true vs. what the docs/roadmap assumed,
     and any discrepancy worth flagging before moving to `/propose`.
     Lead with the board's open `High` items. Give sequencing, blocker and owner-gated commentary
     within that set rather than replacing it with a competing priority list.

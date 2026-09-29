@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.11.0"
-updated: 2026-09-28
+version: "1.12.0"
+updated: 2026-09-29
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions and presigned uploads, grep-vs-rendered-HTML pitfalls, local vendor-host resolution.
 tags: [local-dev, windows, validation, playbook]
@@ -408,6 +408,17 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   against live HTML, check whether the attribute being matched can legitimately contain a newline**
   (a multi-line placeholder, a textarea's rendered content, anything built by joining lines with
   `\n`) — if so, save the response and read the attribute directly rather than grep it.
+- **A literal `grep` for a sentence built from static text plus an interpolated value finds nothing
+  on a correctly-rendered page, because React's server renderer inserts an `<!-- -->` comment
+  between adjacent text and expression children to keep them separate for hydration.** Hit at
+  `#928`'s `/validate` (2026-09-28): `/staff/net-content` renders `from the {row.evidenceSourceText}:`
+  in JSX, and a plain `grep -o "from the description"` against the live HTML returned zero matches
+  even though the row was correct — the actual bytes are `from the <!-- -->description<!-- -->: `.
+  Confirmed by grepping the wider context (`grep -o '.\{60\}from the.\{80\}'`) and seeing the comment
+  markers, then re-running with `from the <!-- -->description` instead. **Before treating a grep
+  match count of zero as a failure against a page whose text mixes static JSX strings with `{...}`
+  expressions, widen the grep to show 60–80 characters of context first** — a `<!-- -->` between two
+  words that read as one sentence in the browser is the tell, not a sign the feature is broken.
 - **`curl -b jar.txt -c jar.txt` combined with a custom `-H "Host: ..."` header can silently fail
   to persist a `Secure`-flagged `Set-Cookie` for a multi-label local hostname, while the same
   pattern works fine for a single-label one — with no error, just an empty jar file.** Hit at

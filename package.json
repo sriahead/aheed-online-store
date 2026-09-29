@@ -18,6 +18,8 @@
     "nfr:measure": "tsx scripts/measure-nfr.ts",
     "sdd:preclear": "tsx scripts/sdd-check.ts preclear",
     "sdd:audit": "tsx scripts/sdd-check.ts audit",
+    "branches:count": "tsx scripts/prune-branches.ts count",
+    "branches:prune": "tsx scripts/prune-branches.ts prune",
     "kms:validate": "tsx kms/schema/validate.ts",
     "kms:build-index": "tsx kms/scripts/build-index.ts",
     "kms:check-generated": "tsx kms/scripts/check-generated.ts",
