@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.50.0"
+version: "1.51.0"
 updated: 2026-09-29
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -499,14 +499,22 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#935` (branch hygiene: `/prune-branches` + Orient reminder at 30 branches) is BUILT and
-  awaiting `/validate`** on `feature/935-branch-hygiene`. Spec
-  `specs/2026-09-29-p935-branch-hygiene/`; read its `build-notes.md` first.
-  - **Validate must never run `--apply` against this repo.** The first real prune is the owner's
-    after the merge to staging: run the dry run, get an explicit yes, then `--apply`.
+- **`#935` (branch hygiene: `/prune-branches` + Orient reminder at 30 branches) is MERGED to
+  `staging`** (PR #937, `bf30680`; `deploy-staging` succeeded), **not yet in production**, and is
+  `In Review` on the board. Tooling only: no schema, runtime or UI change. Spec
+  `specs/2026-09-29-p935-branch-hygiene/`; read its `build-notes.md` first. The rule and commands
+  live in `scripts/branch-hygiene.ts`, `npm run branches:prune` / `branches:count` and
+  `.claude/commands/prune-branches.md`.
+  - **The owner has not yet run the first real prune.** Nothing has ever been run with `--apply`
+    against this repo. Run `npm run branches:prune` (dry run), read DELETE and REVIEW, give an
+    explicit yes, then `-- --apply`. `#722` and `#725` are open PR heads: they stay in REVIEW, and
+    deleting either branch closes its PR.
   - Even after that prune, about 37 local and 32 origin branches stay, because the unmerged and
     open-PR REVIEW branches are protected. The `/orient` reminder keeps firing until the owner
-    decides on them. That is expected.
+    decides on them. That is expected, not a defect.
+  - Follow-ups: `#936` (owner decision: GitHub's "Automatically delete head branches" setting),
+    `#938` (`vendor-neutral-copy` test times out under full local suite load; CI is fine), `#939`
+    (`--apply` fails the whole local delete if a branch is checked out in another worktree).
 
 - **`#928` (product description as net-content evidence, refs `#697`) is DONE, in production via
   PR #933 (`91b1d8e`)** — the rest of this bullet is its staging-layer record. See `Last Verified`
