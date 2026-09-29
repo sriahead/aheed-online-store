@@ -83,9 +83,18 @@ export const STRIPE_PAYMENT_PROVIDER = "stripe";
 const STRIPE_SESSIONS_URL = "https://api.stripe.com/v1/checkout/sessions";
 
 export class PaymentProviderError extends Error {
-  constructor(message: string) {
+  /**
+   * The provider's HTTP status, when the failure was an HTTP response (#945).
+   * Null when there was no response to read one from. Structured rather than
+   * parsed out of `message` so the payment sweep can tell "try later" (5xx, 429,
+   * a wrong key) from "will never work" (400, 404) without string matching.
+   */
+  readonly status: number | null;
+
+  constructor(message: string, status: number | null = null) {
     super(message);
     this.name = "PaymentProviderError";
+    this.status = status;
   }
 }
 
@@ -194,6 +203,7 @@ export function createStripePaymentService(secretKey: string): PaymentService {
       if (!response.ok) {
         throw new PaymentProviderError(
           `Stripe session retrieval failed: ${response.status} ${await response.text()}`,
+          response.status,
         );
       }
 

@@ -2035,9 +2035,13 @@ export async function findOrderForGuestLookup(
  * no-binding cancellation path can ever resolve it.
  */
 export interface StalePendingOrder {
+  /** The order's id, which keys its `PaymentReconciliation` row (#945). */
+  orderId: string;
   orderNumber: string;
   createdAt: Date;
   providerReference: string | null;
+  /** Retryable provider failures since the last definitive answer; 0 when never swept (#945). */
+  consecutiveFailures: number;
 }
 
 /**
@@ -2057,11 +2061,18 @@ export interface StalePendingOrder {
  * Ordered oldest first so a backlog larger than `limit` drains deterministically
  * across successive scheduled runs instead of the same newest rows being
  * re-examined while the oldest starve.
+ *
+ * Only orders that are DUE (#945): never swept, or swept with a
+ * `PaymentReconciliation` row that is not exhausted and whose `nextAttemptAt`
+ * has passed. That filter is what stops an order the sweep cannot resolve from
+ * sitting at the head of this oldest-first list on every tick — before it, fifty
+ * such orders blocked every newer one indefinitely.
  */
 export async function listStalePendingOrders(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
   olderThan: Date,
+  now: Date,
   limit: number,
 ): Promise<StalePendingOrder[]> {
   const rows = await prisma.order.findMany({
@@ -2069,19 +2080,27 @@ export async function listStalePendingOrders(
       vendorId,
       status: "PENDING_PAYMENT",
       createdAt: { lt: olderThan },
+      OR: [
+        { reconciliation: { is: null } },
+        { reconciliation: { is: { exhaustedAt: null, nextAttemptAt: { lte: now } } } },
+      ],
     },
     orderBy: { createdAt: "asc" },
     take: limit,
     select: {
+      id: true,
       orderNumber: true,
       createdAt: true,
       payment: { select: { providerReference: true } },
+      reconciliation: { select: { consecutiveFailures: true } },
     },
   });
 
   return rows.map((row) => ({
+    orderId: row.id,
     orderNumber: row.orderNumber,
     createdAt: row.createdAt,
     providerReference: row.payment?.providerReference ?? null,
+    consecutiveFailures: row.reconciliation?.consecutiveFailures ?? 0,
   }));
 }

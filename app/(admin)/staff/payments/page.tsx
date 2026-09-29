@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
@@ -6,6 +7,9 @@ import { getBindingRefusalService } from "@/lib/payment-binding-refusals-service
 import { formatPrice } from "@/components/product/format-price";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { reconcileRefusal, recoverRefusedOrder } from "@/features/payments/reconcile-refusal";
+import { retryReconciliation } from "@/features/payments/retry-reconciliation";
+import { getPaymentReconciliationService } from "@/lib/payment-reconciliation-service";
+import type { ReconciliationOutcome } from "@/lib/repositories/payment-reconciliations";
 
 // Reads the session and this vendor's live refusal rows — must render per-request.
 export const dynamic = "force-dynamic";
@@ -13,6 +17,17 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Payment issues" };
 
 const LIMIT = 50;
+
+/** Only the two provider-failure outcomes are ever listed; the rest are here for type completeness. */
+const OUTCOME_LABELS: Record<ReconciliationOutcome, string> = {
+  RETRYABLE_ERROR: "Payment provider kept failing",
+  PERMANENT_ERROR: "Payment provider rejected the lookup",
+  DEFERRED: "Waiting",
+  REFUSED: "Refused",
+  CONFIRMED: "Confirmed",
+  RELEASED: "Released",
+  ALREADY_HANDLED: "Already handled",
+};
 
 /**
  * The stranded-order recovery worklist (#454, P9.2).
@@ -46,7 +61,10 @@ export default async function StaffPaymentsPage() {
     );
   }
 
-  const refusals = await getBindingRefusalService().list(LIMIT);
+  const [refusals, exhausted] = await Promise.all([
+    getBindingRefusalService().list(LIMIT),
+    getPaymentReconciliationService().listExhausted(LIMIT),
+  ]);
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8">
@@ -160,6 +178,57 @@ export default async function StaffPaymentsPage() {
               </li>
             );
           })}
+        </ul>
+      )}
+
+      <h2 className="mb-2 mt-10 text-xl font-semibold text-primary">
+        Orders the payment sweep stopped retrying
+      </h2>
+      <p className="mb-6 max-w-3xl text-sm text-primary-muted">
+        The scheduled payment sweep asks the payment provider about orders still awaiting payment.
+        These are orders where the provider kept failing, or could not find the payment session at
+        all, so the sweep stopped asking. Nothing has been charged or cancelled because of that.
+        Check the order at the payment provider first; Retry makes the sweep ask again on its next
+        run.
+      </p>
+
+      {exhausted.length === 0 ? (
+        <p className="rounded-2xl border border-black/10 bg-white px-4 py-8 text-center text-sm text-primary-muted">
+          No orders are waiting on a retry.
+        </p>
+      ) : (
+        <ul className="space-y-4">
+          {exhausted.map((row) => (
+            <li
+              key={row.orderNumber}
+              className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-black/10 bg-white p-5 shadow-sm"
+            >
+              <div>
+                <p className="font-semibold text-primary">
+                  <Link href={`/staff/orders/${row.orderNumber}`} className="hover:underline">
+                    Order {row.orderNumber}
+                  </Link>
+                </p>
+                <p className="mt-1 text-sm text-primary-muted">
+                  {row.outcome ? OUTCOME_LABELS[row.outcome] : "Unknown"}
+                  {" · "}
+                  {row.lastErrorStatus === null ? "no HTTP status" : `HTTP ${row.lastErrorStatus}`}
+                  {" · "}
+                  {row.attemptCount} {row.attemptCount === 1 ? "attempt" : "attempts"}
+                  {row.exhaustedAt && <> · stopped {row.exhaustedAt.toLocaleString("en-GB")}</>}
+                </p>
+              </div>
+              <form action={retryReconciliation}>
+                <input type="hidden" name="orderNumber" value={row.orderNumber} />
+                <button
+                  type="submit"
+                  className="rounded-full border border-action px-4 py-2 text-sm font-medium text-action hover:bg-action hover:text-white"
+                >
+                  Retry
+                </button>
+              </form>
+            </li>
+          ))}
         </ul>
       )}
     </main>
