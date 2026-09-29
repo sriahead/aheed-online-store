@@ -116,7 +116,8 @@ Detail and the deployed-binding traps: `docs/developer-portal/env-setup.md`.
 
 `npm run lint` · `typecheck` · `format:check` · `npx vitest run` · `build` (pinned `--webpack`;
 Turbopack cannot resolve `@prisma/client/wasm`) · `preview` · `db:generate` (after every `npm ci`) ·
-`kms:validate` · `kms:build-index` · `kms:check-generated` · `sdd:audit` · `sdd:preclear`.
+`kms:validate` · `kms:build-index` · `kms:check-generated` · `sdd:audit` · `sdd:preclear` ·
+`branches:count` · `branches:prune` (dry run; `-- --apply` deletes — see `/prune-branches`).
 After editing `docs/` or `specs/`, also run `kms:assemble:internal` **and** a real Next build in
 `kms/site-internal` — `gates` never builds the docs site.
 

@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.36.0"
-updated: 2026-09-24
+version: "2.37.0"
+updated: 2026-09-29
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -255,6 +255,12 @@ Check the actual repo before proposing or building anything — not what a doc *
   and not next up.
 - Reverify open PRs, relevant GitHub state, current deployments and any environment fact the next
   scope depends on. A previous handoff's values are evidence of what to check, never current truth.
+- **Run `npm run branches:count`** (#935). Every loop leaves a `feature/*` and a `docs/*` branch
+  behind, and by 2026-09-29 that had built up to 229 local and 245 origin branches. When either
+  count reaches 30, the script prints an `ACTION:` line. Report it in the orientation summary and
+  suggest `/prune-branches`, which keeps the 12 newest names plus `main`, `staging` and the current
+  branch, and deletes only merged copies with no open PR. The step warns and never blocks. Pruning
+  itself needs the user's explicit yes after a dry run.
 
 ## Propose
 

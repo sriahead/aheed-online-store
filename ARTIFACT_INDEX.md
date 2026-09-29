@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-09-28T23:41:27.191Z` · commit `0b57f99` · `206` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-09-29T09:22:48.089Z` · commit `431316a` · `207` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -201,6 +201,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [#917/#918 — Brand deletion and vendor-filter follow-ups (plan)](specs/2026-09-27-p917-918-brand-delete-filter-followups/plan.md) | spec | 1.0.0 | 2026-09-27 | draft | internal | Staff can delete a brand (with an in-use confirmation). Vendor filters gain multi-select, number ranges, an opt-in display on product cards, and text search over their values. One additive migration. |
 | [#927 — Staff button to run net-content suggestions (plan)](specs/2026-09-28-p927-net-content-suggest-button/plan.md) | spec | 1.0.0 | 2026-09-28 | draft | internal | A store admin asks the AI for net-content suggestions from /staff/net-content, 10 products per click with a per-click neuron budget, instead of running the |
 | [#928 — Product description as net-content evidence (plan)](specs/2026-09-28-p928-net-content-description-evidence/plan.md) | spec | 1.0.0 | 2026-09-28 | draft | internal | The net-content suggester also reads the first 500 characters of a product's description, so a size stated only there becomes a suggestion quoting it. Two deterministic guards keep the name first and refuse an ambiguous description. One additive enum value. |
+| [#935 — Branch hygiene: /prune-branches and an Orient reminder (plan)](specs/2026-09-29-p935-branch-hygiene/plan.md) | spec | 1.0.0 | 2026-09-29 | draft | internal | A reusable /prune-branches command keeps the 12 newest branches plus main, staging and the current branch, and deletes older branches, local and on origin, only when they are merged and have no open PR. /orient warns when either branch count reaches 30. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.38.0 | 2026-09-28 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
@@ -211,7 +212,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Design System](specs/design-system.md) | doc | 1.13.0 | 2026-09-09 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases. |
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
 | [Roadmap](specs/roadmap.md) | doc | 1.120.0 | 2026-09-29 | approved | internal | Master backlog and phase sequencing (M0, P0-P10, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is now a historical record; launch work lives in P9 and post-launch work in P10. |
-| [SDD Workflow](specs/sdd-workflow.md) | doc | 2.36.0 | 2026-09-24 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands. |
+| [SDD Workflow](specs/sdd-workflow.md) | doc | 2.37.0 | 2026-09-29 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands. |
 | [Tech Stack](specs/tech-stack.md) | doc | 1.5.0 | 2026-09-07 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
 
 ## Track 2 — Staff / Operations (`staff-ops`)  ·  audience: staff
