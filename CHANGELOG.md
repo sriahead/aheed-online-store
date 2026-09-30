@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Payment reconciliation hardening: attempt tracking, bounded backoff, error classification** (issue `#945`, absorbing `#619` and `#620`; `specs/2026-09-29-p945-payment-reconciliation-hardening/`). One additive migration (`20260929190000_p945_payment_reconciliation`: new enum and table, no change to existing columns).
+  - The `#618` payment sweep now claims each order on a `PaymentReconciliation` row before asking Stripe, and records what it concluded. Orders only come back when due, so an order it cannot resolve no longer blocks the oldest-first queue.
+  - Retryable provider failures (5xx, 429, 401/403, network) back off from 15 minutes, doubling, and stop after the 8th in a row. A 400/404 or a refused payment binding stops at once, so a refused order writes its `PaymentBindingRefusal` row once instead of every 15 minutes.
+  - `PaymentProviderError` carries the HTTP `status`. Sweep logs use a `payment-reconciliation event=` prefix and no longer include Stripe's response body.
+  - The batch cap of 50 is shared round-robin across vendors (`#619`). The staff order page says when the sweep, not the webhook, confirmed a payment (`#620`). `/staff/payments` lists orders the sweep stopped retrying, with a **Retry** button.
+  - `confirmPayment`, `failPayment`, `releaseOrder`, the Stripe webhook route and the scheduler Worker are unchanged. ADR-005 1.9.0 implementation note. Follow-ups: `#948` (staff release for an exhausted order), `#949` (a throw outside the provider call aborts the run).
+
 - **Document-stage reconciliation for `#938` and `#939` (PR #943, merge `dcbe8ce`, `staging`), and the `#935` promotion (PR #941, `924cf24`).** Docs only.
   - `specs/roadmap.md` 1.122.0: one row for the `#941` promotion, which `sdd:audit` reported as pending, and for `#938`/`#939` validated and merged to `staging`.
   - `docs/model-handoff.md` 1.53.0: `#935` corrected from "not yet in production" to done; `#938`/`#939` moved from "being fixed" to merged to `staging`; `#942` named as the blocker on a useful first prune.

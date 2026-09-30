@@ -4,8 +4,8 @@ title: "ADR-005 — Payments & multi-vendor money flow"
 audience: [dev]
 type: adr
 status: approved
-version: "1.8.0"
-updated: 2026-09-06
+version: "1.9.0"
+updated: 2026-09-29
 visibility: internal
 summary: Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite.
 tags: [adr, payments, stripe, multi-tenancy, compliance]
@@ -308,6 +308,32 @@ that cutoff can still be paid.
 for. It is *hazardous* here, because this path's risk runs the opposite way — "unpaid" is what
 authorizes cancellation — so the job route refuses to run at all when `STRIPE_SECRET_KEY` is unset.
 A safety property that holds in one direction on this port does not automatically hold in the other.
+
+## Implementation note (P10, 2026-09-29, #945)
+
+**The scheduled sweep now remembers each order between runs.** No numbered decision is reopened,
+and the `#618` note above still describes what the sweep decides. What changes is how often it
+asks, and when it stops.
+
+**A per-order reconciliation record.** The first time the sweep claims a `PENDING_PAYMENT` order it
+creates a `PaymentReconciliation` row. A claim pushes the row's `nextAttemptAt` forward by a
+10-minute lease before the provider is asked anything; the outcome is written only while the row's
+`lastAttemptAt` still equals that claim instant. So a Worker that dies mid-attempt leaves the order
+due again on the next tick, and a slow run cannot overwrite a newer attempt. The sweep only selects
+orders that are due, so an order it is backing off, or has given up on, no longer blocks newer
+orders at the head of its oldest-first queue.
+
+**Retries are bounded.** A retryable provider failure (5xx, 429, network, and deliberately `401`/`403`,
+which mean our own key is wrong and affect every order at once) backs off from 15 minutes, doubling,
+and the 8th consecutive one exhausts the order. A `400`/`404`, or a refused binding, exhausts it at
+once. Exhaustion stops the retries and shows the order to staff on `/staff/payments`, where a Retry
+re-arms it.
+
+**The sweep still acts only on the provider's own answer.** An exhausted order is never released
+because of the exhaustion: a `404` means "we could not find out", not "unpaid", and only the latter
+authorizes cancelling an order and restocking it. The concurrency guarantee is still the bound
+compare-and-set out of `PENDING_PAYMENT` in `confirmPayment`/`failPayment`/`releaseOrder`, which this
+slice does not touch; the claim adds bookkeeping, not a second lock.
 
 ## Implementation note (P9.2, 2026-09-17, #696)
 

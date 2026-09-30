@@ -167,6 +167,7 @@ model Vendor {
   priceTiers                ProductPriceTier[]
   authenticationAttempts    AuthenticationAttempt[]
   bindingRefusals           PaymentBindingRefusal[]
+  paymentReconciliations    PaymentReconciliation[]
   searchQueryLogs           SearchQueryLog[]
   searchSynonyms            SearchSynonym[]
   netContentSuggestions     NetContentSuggestion[]
@@ -1224,6 +1225,7 @@ model Order {
   loyaltyEntries       LoyaltyLedgerEntry[]
   discountUse          DiscountRedemption?
   bindingRefusals      PaymentBindingRefusal[]
+  reconciliation       PaymentReconciliation?
 
   @@index([vendorId, createdAt])
   @@index([vendorId, status, createdAt])
@@ -1596,6 +1598,49 @@ model PaymentBindingRefusal {
 
   @@index([vendorId, createdAt])
   @@index([createdAt])
+}
+
+// What the scheduled payment sweep concluded on its latest attempt at one order (#945).
+// DEFERRED and RETRYABLE_ERROR are rescheduled; REFUSED and PERMANENT_ERROR (and a
+// RETRYABLE_ERROR on its last allowed attempt) exhaust the row; the other three are terminal
+// because the order has left PENDING_PAYMENT.
+enum PaymentReconciliationOutcome {
+  DEFERRED
+  RETRYABLE_ERROR
+  PERMANENT_ERROR
+  REFUSED
+  CONFIRMED
+  RELEASED
+  ALREADY_HANDLED
+}
+
+// The sweep's memory of one order between runs (#945). Created the first time the sweep claims
+// the order, so it exists only for orders that reached the sweep at all.
+//
+// nextAttemptAt is both eligibility and the claim's lease: a claim pushes it forward, so a Worker
+// that dies mid-attempt leaves the row due again once the lease runs out. lastAttemptAt is the
+// fencing token — an outcome is written only while it still equals the claim instant.
+// consecutiveFailures counts retryable provider failures since the last definitive answer and is
+// kept apart from attemptCount so a long-open checkout is not exhausted by one transient error.
+// See specs/2026-09-29-p945-payment-reconciliation-hardening/plan.md for every field's reason.
+model PaymentReconciliation {
+  id                  String                        @id @default(uuid())
+  orderId             String                        @unique
+  order               Order                         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendorId            String
+  vendor              Vendor                        @relation(fields: [vendorId], references: [id])
+  attemptCount        Int                           @default(0)
+  consecutiveFailures Int                           @default(0)
+  lastAttemptAt       DateTime?
+  nextAttemptAt       DateTime
+  lastOutcome         PaymentReconciliationOutcome?
+  lastErrorStatus     Int?
+  exhaustedAt         DateTime?
+  createdAt           DateTime                      @default(now())
+  updatedAt           DateTime                      @updatedAt
+
+  // Serves the staff "stopped retrying" list (vendor + exhausted).
+  @@index([vendorId, exhaustedAt])
 }
 
 // Search query log (#565, P2.6 slice 2) — every storefront search submission's outcome, so staff

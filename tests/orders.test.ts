@@ -1307,11 +1307,12 @@ describe("listStalePendingOrders", () => {
 
   beforeEach(() => findMany.mockReset());
 
-  it("scopes to the vendor, to PENDING_PAYMENT, and to orders older than the cutoff", async () => {
+  it("R10: scopes to the vendor, PENDING_PAYMENT, the cutoff, and only DUE orders", async () => {
     findMany.mockResolvedValue([]);
     const cutoff = new Date("2026-09-06T11:30:00.000Z");
+    const now = new Date("2026-09-06T12:00:00.000Z");
 
-    await listStalePendingOrders(stub, "v-aheed", cutoff, 50);
+    await listStalePendingOrders(stub, "v-aheed", cutoff, now, 50);
 
     const args = findMany.mock.calls[0][0];
     expect(args.where).toMatchObject({
@@ -1319,6 +1320,12 @@ describe("listStalePendingOrders", () => {
       status: "PENDING_PAYMENT",
       createdAt: { lt: cutoff },
     });
+    // #945: never swept, or swept and due — an exhausted or backed-off order
+    // must not come back to the head of the queue on every tick.
+    expect(args.where.OR).toEqual([
+      { reconciliation: { is: null } },
+      { reconciliation: { is: { exhaustedAt: null, nextAttemptAt: { lte: now } } } },
+    ]);
     // Matches @@index([vendorId, status, createdAt]) — the reason this slice
     // needed no migration.
     expect(args.take).toBe(50);
@@ -1327,21 +1334,51 @@ describe("listStalePendingOrders", () => {
     expect(args.orderBy).toEqual({ createdAt: "asc" });
   });
 
-  it("flattens the payment's provider reference, preserving a null", async () => {
+  it("R10: flattens the provider reference and failure count, defaulting both when absent", async () => {
     const createdAt = new Date("2026-09-01T00:00:00.000Z");
     findMany.mockResolvedValue([
-      { orderNumber: "AH-1", createdAt, payment: { providerReference: "cs_live_1" } },
-      { orderNumber: "AH-2", createdAt, payment: { providerReference: null } },
+      {
+        id: "o1",
+        orderNumber: "AH-1",
+        createdAt,
+        payment: { providerReference: "cs_live_1" },
+        reconciliation: { consecutiveFailures: 3 },
+      },
+      {
+        id: "o2",
+        orderNumber: "AH-2",
+        createdAt,
+        payment: { providerReference: null },
+        reconciliation: null,
+      },
       // No Payment row at all — Order.payment is optional in the schema.
-      { orderNumber: "AH-3", createdAt, payment: null },
+      { id: "o3", orderNumber: "AH-3", createdAt, payment: null, reconciliation: null },
     ]);
 
-    const rows = await listStalePendingOrders(stub, "v-aheed", new Date(), 50);
+    const rows = await listStalePendingOrders(stub, "v-aheed", new Date(), new Date(), 50);
 
     expect(rows).toEqual([
-      { orderNumber: "AH-1", createdAt, providerReference: "cs_live_1" },
-      { orderNumber: "AH-2", createdAt, providerReference: null },
-      { orderNumber: "AH-3", createdAt, providerReference: null },
+      {
+        orderId: "o1",
+        orderNumber: "AH-1",
+        createdAt,
+        providerReference: "cs_live_1",
+        consecutiveFailures: 3,
+      },
+      {
+        orderId: "o2",
+        orderNumber: "AH-2",
+        createdAt,
+        providerReference: null,
+        consecutiveFailures: 0,
+      },
+      {
+        orderId: "o3",
+        orderNumber: "AH-3",
+        createdAt,
+        providerReference: null,
+        consecutiveFailures: 0,
+      },
     ]);
   });
 });

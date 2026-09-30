@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.53.0"
+version: "1.54.0"
 updated: 2026-09-29
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -501,6 +501,24 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **The `#618` stranded-payment sweep never ran anywhere until 2026-09-29.** It shipped in P9.2,
+  but `JOB_INVOCATION_TOKEN` had never been set on any Worker (staging answered `503 "Job
+  invocation is not configured"`), and it was in neither `secrets/*.vars` file. The owner set it on
+  all four Workers under **`#947`** (High) on 2026-09-29. Staging's first tick (17:45 local)
+  succeeded: 15 stale orders released, 74 guest carts reaped. Production's first tick returned
+  **401** on all three jobs (the two Workers held different values); the owner re-set both — its
+  first `ok` tick is still to be confirmed with `wrangler tail --config
+  workers/scheduler/wrangler.toml --env production`, then `#947` can close. **Lesson:** a
+  scheduled job that needs a secret on two Workers can ship green and never run; nothing alerts.
+  `#946` adds a job-run heartbeat for exactly this.
+- **`#945` (payment reconciliation hardening, absorbing `#619`/`#620`) is BUILT, awaiting
+  `/validate`** on `feature/945-payment-reconciliation-hardening` (spec `19b9753`, build `e341ebf`).
+  One additive migration, **not yet applied to any database**. Spec
+  `specs/2026-09-29-p945-payment-reconciliation-hardening/`; read its `build-notes.md` first.
+  `#946` (durable confirmation email + `JobRun` heartbeat) is slice B, sequenced after it.
+  Follow-ups `#948` (staff release for an exhausted order) and `#949` (a throw outside the provider
+  call aborts the whole sweep run) are Backlog.
 
 - **`#935` (branch hygiene: `/prune-branches` + Orient reminder at 30 branches) is DONE, in
   production** (PR #937 to `staging`, promoted by PR #941, `924cf24`, 2026-09-29). Tooling only: no
