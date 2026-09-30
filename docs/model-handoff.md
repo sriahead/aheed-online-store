@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.51.0"
-updated: 2026-09-29
+version: "1.55.0"
+updated: 2026-09-30
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -173,6 +173,9 @@ reconciliation. If overall project state did not materially change, leave this f
 - **NEW INFRASTRUCTURE — a second Neon project now exists, and is live in production.** See the
   dedicated section below. This is the most consequential project-level change since multi-tenancy.
 - **Worktrees:** only the main checkout.
+- **UPDATE 2026-09-29: PR #722 and PR #725 are now CLOSED** (owner decision at Orient, closing
+  comment on each). Their branches were kept and still show as `not merged` in the prune's REVIEW
+  list. The rest of this bullet is the original reasoning.
 - **PR #725 and PR #722 are OBSOLETE — stop protecting them.** Verified live 2026-09-17: both are
   open, both are `CONFLICTING`, and both touch `CLAUDE.md`, which `#786` rewrote from 149,380 to
   13,925 characters underneath them. Their substance has already landed by other routes — #725's
@@ -499,9 +502,34 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`#935` (branch hygiene: `/prune-branches` + Orient reminder at 30 branches) is MERGED to
-  `staging`** (PR #937, `bf30680`; `deploy-staging` succeeded), **not yet in production**, and is
-  `In Review` on the board. Tooling only: no schema, runtime or UI change. Spec
+- **The `#618` stranded-payment sweep never ran anywhere until 2026-09-29.** It shipped in P9.2,
+  but `JOB_INVOCATION_TOKEN` had never been set on any Worker (staging answered `503 "Job
+  invocation is not configured"`), and it was in neither `secrets/*.vars` file. The owner set it on
+  all four Workers under **`#947`** (High) on 2026-09-29. Staging's first tick (17:45 local)
+  succeeded: 15 stale orders released, 74 guest carts reaped. Production's first tick returned
+  **401** on all three jobs (the two Workers held different values); the owner re-set both — its
+  first `ok` tick is still to be confirmed with `wrangler tail --config
+  workers/scheduler/wrangler.toml --env production`, then `#947` can close. **Lesson:** a
+  scheduled job that needs a secret on two Workers can ship green and never run; nothing alerts.
+  `#946` adds a job-run heartbeat for exactly this.
+- **`#945` (payment reconciliation hardening, absorbing `#619`/`#620`) is MERGED TO `staging` and
+  deployed, NOT yet in production** (PR #950, merge `36f8363`, 2026-09-30). The `#618` sweep now
+  claims each order on a `PaymentReconciliation` row, backs off and exhausts, and records what it
+  concluded; the migration (`20260929190000_p945_payment_reconciliation`) was applied by the staging
+  deploy, and staging's first post-deploy tick logged `reconcile-payments ok:` with all seven keys.
+  Validated from a fresh context, live rows R40–R46 all passed. **Unverified:** `/staff/payments`'s
+  empty-state text and second-vendor isolation (`#951`). **Promotion carries a real migration**,
+  and is worth little until production's first `ok` tick (`#947`, above) is confirmed. Spec
+  `specs/2026-09-29-p945-payment-reconciliation-hardening/`; its `build-notes.md` holds the live
+  evidence and deviations. `#946` (durable confirmation email + `JobRun` heartbeat) is slice B,
+  sequenced after it. Follow-ups `#948` (staff release for an exhausted order) and `#949` (a throw
+  outside the provider call aborts the whole sweep run) are Backlog. **Trap:** a full `npx vitest run`
+  writes fixture orders into the dev database (`#797`), which the sweep then processes; see
+  `docs/developer-portal/local-dev-playbook.md` before running sweep rows.
+
+- **`#935` (branch hygiene: `/prune-branches` + Orient reminder at 30 branches) is DONE, in
+  production** (PR #937 to `staging`, promoted by PR #941, `924cf24`, 2026-09-29). Tooling only: no
+  schema, runtime or UI change. Spec
   `specs/2026-09-29-p935-branch-hygiene/`; read its `build-notes.md` first. The rule and commands
   live in `scripts/branch-hygiene.ts`, `npm run branches:prune` / `branches:count` and
   `.claude/commands/prune-branches.md`.
@@ -509,12 +537,20 @@ All facts in this section require live verification:
     against this repo. Run `npm run branches:prune` (dry run), read DELETE and REVIEW, give an
     explicit yes, then `-- --apply`. `#722` and `#725` are open PR heads: they stay in REVIEW, and
     deleting either branch closes its PR.
-  - Even after that prune, about 37 local and 32 origin branches stay, because the unmerged and
+  - **Measured 2026-09-29: the dry run shows DELETE 0, REVIEW 40.** Every branch outside the newest
+    12 reads as `not merged`, because squash-merged branches are not ancestors of `origin/staging`.
+    So `--apply` would delete nothing today. That is tracked as `#942`; fix it before the owner's
+    first real prune is worth running.
+  - Even after a prune, about 37 local and 32 origin branches stay, because the unmerged and
     open-PR REVIEW branches are protected. The `/orient` reminder keeps firing until the owner
     decides on them. That is expected, not a defect.
-  - Follow-ups: `#936` (owner decision: GitHub's "Automatically delete head branches" setting),
-    `#938` (`vendor-neutral-copy` test times out under full local suite load; CI is fine), `#939`
-    (`--apply` fails the whole local delete if a branch is checked out in another worktree).
+  - **`#938` and `#939` are MERGED to `staging`** (PR #943, `dcbe8ce`; `deploy-staging` succeeded),
+    **not yet in production**, and `In Review`. `#938` is a 30-second timeout on the
+    `vendor-neutral-copy` scanning test; `#939` puts a local branch checked out in a worktree under
+    REVIEW instead of failing `--apply`. Spec `specs/2026-09-29-p938-939-local-tooling-fixes/`. The
+    next promotion PR must say `closes #938, closes #939`.
+  - Follow-ups: `#936` (owner decision: GitHub's "Automatically delete head branches" setting) and
+    `#942`.
 
 - **`#928` (product description as net-content evidence, refs `#697`) is DONE, in production via
   PR #933 (`91b1d8e`)** — the rest of this bullet is its staging-layer record. See `Last Verified`

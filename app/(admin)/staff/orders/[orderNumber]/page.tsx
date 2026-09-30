@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
+import { getPaymentReconciliationService } from "@/lib/payment-reconciliation-service";
 import { canCancel, formatOrderDate, nextStatus, orderStatusLabel } from "@/lib/order-status";
 import { OrderItemsCard } from "@/components/orders/OrderItemsCard";
 import { OrderAddressCard } from "@/components/orders/OrderAddressCard";
@@ -47,6 +48,7 @@ export default async function StaffOrderDetailPage({
 
   const order = await getOrderRepository().getForStaff(orderNumber);
   if (!order) notFound();
+  const reconciliationOutcome = await getPaymentReconciliationService().outcomeFor(orderNumber);
 
   const next = nextStatus(order.status, order.fulfilmentMethod);
 
@@ -88,6 +90,16 @@ export default async function StaffOrderDetailPage({
       )}
 
       <StaffOrderTimeline timeline={order.timeline} />
+
+      {/* #620 (via #945): confirmPayment writes the same "Payment confirmed." note
+          whoever called it, so the timeline alone cannot say. The sweep records
+          CONFIRMED only when its own confirm performed the transition, so a
+          webhook-confirmed order never shows this. */}
+      {reconciliationOutcome === "CONFIRMED" && (
+        <p className="mb-6 rounded-xl bg-surface-muted px-3 py-2 text-sm text-primary-muted">
+          Payment confirmed by the scheduled payment sweep, not by the payment webhook.
+        </p>
+      )}
 
       {/* P7.5b (#150): the same attributed breakdown the customer sees. Staff
           answering "why was I only charged £35?" need the identical rows — two

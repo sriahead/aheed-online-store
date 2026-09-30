@@ -7,6 +7,10 @@
  * towards `keep`. Every other copy is judged on its own — a local copy can carry commits
  * its origin copy doesn't — and is deleted only when it is merged and its name is not
  * the head of an open PR. Everything else is listed for a human to decide.
+ *
+ * (#939) A local copy that would be deleted but is checked out in a worktree goes to REVIEW
+ * instead: git refuses `branch -D` for it, and it is plausibly work in progress. Its origin
+ * copy is judged normally — deleting a remote ref never touches a worktree.
  */
 
 export type Location = "local" | "origin";
@@ -42,6 +46,8 @@ export function planPrune(
   openPrs: ReadonlyMap<string, number>,
   currentBranch: string | null,
   keep: number,
+  /** Branch name → path of the worktree it is checked out in. */
+  worktrees: ReadonlyMap<string, string> = new Map(),
 ): PrunePlan {
   const nameDates = new Map<string, Date>();
   for (const c of copies) {
@@ -66,7 +72,16 @@ export function planPrune(
     }
     const pr = openPrs.get(copy.name);
     if (copy.merged && pr === undefined) {
-      plan.delete.push(copy);
+      const worktree = copy.location === "local" ? worktrees.get(copy.name) : undefined;
+      if (worktree === undefined) {
+        plan.delete.push(copy);
+      } else {
+        plan.review.push({
+          copy,
+          nameDate: nameDates.get(copy.name)!,
+          reason: `checked out in worktree ${worktree}`,
+        });
+      }
       continue;
     }
     plan.review.push({

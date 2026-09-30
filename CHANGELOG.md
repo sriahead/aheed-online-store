@@ -8,6 +8,22 @@ every branch merges.
 
 ### Added
 
+- **Document-stage reconciliation for `#945` (PR #950, merge `36f8363`, `staging`).** Docs only.
+  - `specs/roadmap.md` 1.123.0: the `#945` build/validate/ship-to-staging row, which `sdd:audit` reported as missing.
+  - `docs/model-handoff.md` 1.55.0: `#945` corrected from "built, awaiting `/validate`" to merged to `staging` and deployed, with what is still unverified.
+  - `docs/developer-portal/local-dev-playbook.md` 1.13.0: what a session can and cannot drive when proving a payment path live (Stripe surfaces, fixture orders the sweep picks up, slow hydration, the log-store query shape).
+
+- **Payment reconciliation hardening: attempt tracking, bounded backoff, error classification** (issue `#945`, absorbing `#619` and `#620`; `specs/2026-09-29-p945-payment-reconciliation-hardening/`). One additive migration (`20260929190000_p945_payment_reconciliation`: new enum and table, no change to existing columns).
+  - The `#618` payment sweep now claims each order on a `PaymentReconciliation` row before asking Stripe, and records what it concluded. Orders only come back when due, so an order it cannot resolve no longer blocks the oldest-first queue.
+  - Retryable provider failures (5xx, 429, 401/403, network) back off from 15 minutes, doubling, and stop after the 8th in a row. A 400/404 or a refused payment binding stops at once, so a refused order writes its `PaymentBindingRefusal` row once instead of every 15 minutes.
+  - `PaymentProviderError` carries the HTTP `status`. Sweep logs use a `payment-reconciliation event=` prefix and no longer include Stripe's response body.
+  - The batch cap of 50 is shared round-robin across vendors (`#619`). The staff order page says when the sweep, not the webhook, confirmed a payment (`#620`). `/staff/payments` lists orders the sweep stopped retrying, with a **Retry** button.
+  - `confirmPayment`, `failPayment`, `releaseOrder`, the Stripe webhook route and the scheduler Worker are unchanged. ADR-005 1.9.0 implementation note. Follow-ups: `#948` (staff release for an exhausted order), `#949` (a throw outside the provider call aborts the run).
+
+- **Document-stage reconciliation for `#938` and `#939` (PR #943, merge `dcbe8ce`, `staging`), and the `#935` promotion (PR #941, `924cf24`).** Docs only.
+  - `specs/roadmap.md` 1.122.0: one row for the `#941` promotion, which `sdd:audit` reported as pending, and for `#938`/`#939` validated and merged to `staging`.
+  - `docs/model-handoff.md` 1.53.0: `#935` corrected from "not yet in production" to done; `#938`/`#939` moved from "being fixed" to merged to `staging`; `#942` named as the blocker on a useful first prune.
+
 - **Document-stage reconciliation for `#935` (branch hygiene), merged to `staging` in PR #937 (merge `bf30680`).** Docs only.
   - `specs/roadmap.md` 1.121.0: the `#935` build/validate/ship-to-staging row, which `sdd:audit` had reported as missing.
   - `docs/model-handoff.md` 1.51.0: `#935` corrected from "built, awaiting `/validate`" to merged to `staging`; the owner's first real `--apply` and the `#936`, `#938` and `#939` follow-ups are recorded.
@@ -132,6 +148,10 @@ every branch merges.
   - Staff guide (`docs/staff-playbook/staff-tabs-guide.md` 2.4.0) documents the field and now recommends zero plus a restock date, rather than switching off, for a product that's coming back.
 
 ### Fixed
+
+- **Two local-tooling defects found at `#935`'s Validate** (issues `#938`, `#939`; `specs/2026-09-29-p938-939-local-tooling-fixes/`). Tooling and tests only; CI was never affected.
+  - `#938`: `tests/vendor-neutral-copy.test.ts`'s file-scanning test has an explicit 30-second timeout. Under full local suite load on Windows it overran Vitest's 5-second default and failed. The scan itself is unchanged.
+  - `#939`: `npm run branches:prune` reads `git worktree list --porcelain`. A merged local branch that is checked out in a worktree is now listed under REVIEW as `checked out in worktree <path>`, instead of making `--apply`'s whole local `git branch -D` fail. Its origin copy is judged as before. `.claude/commands/prune-branches.md` says how to clear it.
 
 - **The staff delivery-area form hid its own errors and confirmations on desktop** (`#613`). Its feedback sat inside `sm:sr-only`, so at 640px and wider a refused entry showed nothing visible. Now visible at every width.
 

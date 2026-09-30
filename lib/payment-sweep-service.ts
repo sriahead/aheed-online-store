@@ -2,6 +2,10 @@ import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getPaymentService, STRIPE_PAYMENT_PROVIDER } from "@/lib/payments";
 import { getWebhookOrderService } from "@/lib/orders-service";
 import { cancelUnpaidOrder, listStalePendingOrders } from "@/lib/repositories/orders";
+import {
+  claimPaymentReconciliation,
+  recordPaymentReconciliationOutcome,
+} from "@/lib/repositories/payment-reconciliations";
 import { listActiveVendorIds } from "@/lib/repositories/vendor";
 import { sendOrderConfirmationEmail } from "@/features/checkout/send-confirmation";
 import { runPaymentSweep, type SweepConfig, type SweepSummary } from "@/lib/payment-sweep";
@@ -31,7 +35,8 @@ export function getPaymentSweepService() {
       const prisma = getPrisma();
       // Always the WEBSOCKET client for writes: confirmPayment runs an
       // interactive transaction, and releaseOrder uses updateMany, which
-      // crashes outright on the HTTP adapter (#382).
+      // crashes outright on the HTTP adapter (#382). The reconciliation claim
+      // and record are createMany/updateMany too (#945).
       const prismaWs = getPrismaWs();
       const orders = getWebhookOrderService();
 
@@ -44,9 +49,15 @@ export function getPaymentSweepService() {
             cancelUnpaid: (vendorId, orderNumber, reason) =>
               cancelUnpaidOrder(prismaWs, vendorId, orderNumber, reason),
           },
+          reconciliation: {
+            claim: (vendorId, orderId, claimedAt, leaseUntil) =>
+              claimPaymentReconciliation(prismaWs, vendorId, orderId, claimedAt, leaseUntil),
+            record: (vendorId, orderId, claimedAt, record) =>
+              recordPaymentReconciliationOutcome(prismaWs, vendorId, orderId, claimedAt, record),
+          },
           listVendorIds: () => listActiveVendorIds(prisma),
-          listCandidates: (vendorId, olderThan, limit) =>
-            listStalePendingOrders(prisma, vendorId, olderThan, limit),
+          listCandidates: (vendorId, olderThan, now, limit) =>
+            listStalePendingOrders(prisma, vendorId, olderThan, now, limit),
           sendConfirmation: async (orderNumber) => {
             const order = await orders.findOrder(orderNumber);
             if (order) await sendOrderConfirmationEmail(order);

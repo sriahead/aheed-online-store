@@ -234,6 +234,22 @@ describe("Stripe adapter — retrieveSession (#454)", () => {
       createStripePaymentService("sk_test_x").retrieveSession("cs_missing"),
     ).rejects.toBeInstanceOf(PaymentProviderError);
   });
+
+  it("R5: carries the HTTP status as a structured field (#945)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("no such session", { status: 404 })),
+    );
+    const error = await createStripePaymentService("sk_test_x")
+      .retrieveSession("cs_missing")
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(PaymentProviderError);
+    expect((error as InstanceType<typeof PaymentProviderError>).status).toBe(404);
+  });
+
+  it("R5: defaults status to null when constructed without one", () => {
+    expect(new PaymentProviderError("no response").status).toBeNull();
+  });
 });
 
 describe("stub adapter — retrieveSession (#454)", () => {

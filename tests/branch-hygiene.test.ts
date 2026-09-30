@@ -85,6 +85,18 @@ describe("planPrune", () => {
     expect(plan.review[0].nameDate).toEqual(day(2));
   });
 
+  it("(h) #939: lists a worktree's local copy for review; its origin copy is still deleted", () => {
+    const copies = [copy("wt", day(1), true, "local"), copy("wt", day(1), true, "origin")];
+    const worktrees = new Map([["wt", "C:/repo/.claude/worktrees/wt"]]);
+    const plan = planPrune(copies, noPrs, null, 0, worktrees);
+    expect(names(plan.delete)).toEqual(["origin:wt"]);
+    expect(plan.review).toHaveLength(1);
+    expect(plan.review[0].copy.location).toBe("local");
+    expect(plan.review[0].reason).toBe("checked out in worktree C:/repo/.claude/worktrees/wt");
+    // Without the worktree map, both copies are deleted as before #939.
+    expect(names(planPrune(copies, noPrs, null, 0).delete)).toEqual(["local:wt", "origin:wt"]);
+  });
+
   it("places every input copy in exactly one list", () => {
     const copies = [
       copy("main", day(1)),

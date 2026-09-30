@@ -4,10 +4,10 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.12.0"
-updated: 2026-09-29
+version: "1.13.0"
+updated: 2026-09-30
 visibility: internal
-summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions and presigned uploads, grep-vs-rendered-HTML pitfalls, local vendor-host resolution.
+summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
 ---
 
@@ -494,4 +494,42 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   non-ASCII character** — it did not reproduce the corruption for the same field on the same host.
   When `curl -F` must be used with such a field, verify the stored value's byte hex afterward rather
   than trusting a rendered read-back.
+
+## Proving a payment path live: what an assistant session can and cannot drive
+
+Paid at `#945`'s `/validate` (2026-09-29/30), which ran the payment sweep's live rows against the
+dev Neon branch in Stripe test mode. Most of it is drivable; four things are not, or bite.
+
+- **Two Stripe surfaces are out of an assistant session's reach, so those steps are a human's.** The
+  Chrome extension has no permission on `checkout.stripe.com`, so paying a test session (card
+  `4242 4242 4242 4242`) cannot be done by it; and `curl` to `api.stripe.com` from the Bash sandbox
+  returns `http=000`, so expiring a session (`POST /v1/checkout/sessions/<id>/expire`) cannot either.
+  Hand the user a `! curl ... -u "$(grep -h '^STRIPE_SECRET_KEY' .dev.vars | ...):"` one-liner that
+  reads the key inside the shell, and **make them paste the output**: twice a "done" arrived with the
+  session still `open`, which the sweep's own `provider-state` log line (`status=open
+  paymentStatus=unpaid`) is what exposed. The Worker itself reaches Stripe fine, so the job route
+  works. Read the session's real state from that log line, never from the user's report.
+- **A full `npx vitest run` writes fixture orders into whatever database `.env` points at**
+  (`tests/express-sla.test.ts` and its siblings skip only when `DATABASE_URL` is unset; tracked as
+  `#797`). Each run leaves old `PENDING_PAYMENT` orders, so the **first job-route invocation after a
+  test run sweeps all of them** (50 per run) and any per-invocation count you expected ("`deferred`
+  is 1") is wrong. Invoke repeatedly until `scanned` is 0 **before** the targeted rows, and read
+  per-order rows rather than the summary. A slice's own orders become candidates 30 minutes after
+  creation, so to keep one from being swept early, move its `createdAt` forward and restore it after.
+- **Browser-driven checkout under `npm run preview` is fragile, in specific ways.** The category and
+  checkout pages hydrate for tens of seconds. A tab the extension opened does not paint, so **does
+  not hydrate, until a screenshot renders it**: a click before that silently does nothing (the cart
+  label stays "empty"), which reads as a selector problem and is not one. Two heavy tabs at once
+  freeze the renderer (`Page.captureScreenshot timed out`). Place-order takes about ten seconds, so
+  wait twenty before deciding it failed, and check the database for a new order rather than
+  clicking again. The checkout form remembers its last values, so typing **appends**; select the
+  field's text first. After paying, the redirect back to the local site can show
+  `ERR_CONNECTION_CLOSED` while the payment is recorded correctly at Stripe.
+- **The local log store keeps each message as a JSON array, and `console.log` is level `info`.** A
+  prefix-anchored `like 'payment-reconciliation%'` matches nothing; use `like '%payment-reconciliation
+  event=%'`. `console.error` lines are level `error`, which is what a "no error lines" row filters on.
+- **A replayed webhook does not need the `stripe` CLI.** `scripts/sign-stripe-event.ts` signs a chosen
+  `checkout.session.completed` with the local webhook secret and posts it to the real route, through
+  the real adapter and Postgres. It is not Stripe's own `events resend`, so record it as a deviation
+  when a validation row names the CLI.
 
