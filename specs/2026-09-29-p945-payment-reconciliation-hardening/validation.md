@@ -61,7 +61,10 @@ before the next preview build, because a stray scratch file breaks the build. Re
 kind of script or the Neon SQL editor on the development branch.
 
 **P6. Logs.** Query the local Worker log store rather than reading the terminal:
-`curl -s -X POST 'http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query' -H 'content-type: application/json' -d '{"sql":"select ts_ms, level, message from logs where message like '"'"'payment-reconciliation%'"'"' order by ts_ms desc limit 100"}'`.
+`curl -s -X POST 'http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query' -H 'content-type: application/json' -d '{"sql":"select ts_ms, level, message from logs where message like '"'"'%payment-reconciliation event=%'"'"' order by ts_ms desc limit 100"}'`. The leading `%` is required: the
+local store records each message as a JSON array (`["payment-reconciliation event=…"]`), so a
+prefix-anchored `like 'payment-reconciliation%'` matches nothing (found at `/validate`, 2026-09-29).
+`console.log` lines are stored at level `info`.
 
 **P7. Placing a test order.** Check out through `npm run preview` in a browser as a signed-in demo
 customer. To pay, use Stripe's test card `4242 4242 4242 4242`; to leave a session open, close the
@@ -87,7 +90,7 @@ line's `Inventory.quantity` **before** checkout when a row needs it restored.
 | R11 | Unit | `tests/payment-reconciliations.test.ts`: the rearm `updateMany` `where` requires `vendorId`, `exhaustedAt` not null, `lastOutcome` in the two error outcomes and the order's `orderNumber` with `status: "PENDING_PAYMENT"`; its `data` sets `exhaustedAt: null`, `consecutiveFailures: 0`, `nextAttemptAt` = `now`. `-t "R11:"` passes. R43 is the live proof. |
 | R12 | Regression | `npx vitest run tests/repository-purity.test.ts tests/repository-client-injection.test.ts tests/repository-vendor-scoping.test.ts` exits 0, and `git diff origin/staging...HEAD -- tests/repository-vendor-scoping.test.ts` shows no change to the `ALLOWED` map. |
 | R13 | Regression | `npx vitest run tests/repository-transaction-safety.test.ts` exits 0 (its pass 2 catches a literal `getPrisma()` handed to a function that issues `updateMany`/`createMany`). It cannot see a `getPrisma()` held in a variable, so also: `grep -rn -E "claimPaymentReconciliation\|recordPaymentReconciliationOutcome\|rearmPaymentReconciliation" lib app features --include=*.ts --include=*.tsx`, excluding the repository file's own definitions: at each call site, read which client is passed and confirm it came from `getPrismaWs()`. The live rows are the runtime proof — an HTTP client would crash every claim. |
-| R14 | Regression | `grep -n "^import" lib/payment-sweep.ts`: every line is `import type`. `grep -n "vi.mock" tests/payment-sweep.test.ts` prints nothing. |
+| R14 | Regression | `grep -n "^import" lib/payment-sweep.ts`: every line is `import type`. `grep -n "vi\.mock(" tests/payment-sweep.test.ts` prints nothing (the file's header comment names `vi.mock` in prose to say it is absent, so a bare `vi.mock` match is expected and is not a call). |
 | R15 | Unit | Read the exported defaults in `lib/payment-sweep.ts`: 10 min, 30 min, 15 min, 8, and #618's 30 min / 7 days / 50 unchanged. `-t "R15:"` asserts the values. |
 | R16 | Unit | `-t "R16:"` passes: a fake claim returning `false` produces zero provider, confirm, fail, cancel calls for that order, `skipped` is 1, and the claim received a lease expiry of now + 10 min. |
 | R17 | Unit | `-t "R17:"` passes: paid session, confirm `ok: true` gives one email call and a recorded `CONFIRMED`; the binding's values come from the session, not the order (use different values so the source is provable). |

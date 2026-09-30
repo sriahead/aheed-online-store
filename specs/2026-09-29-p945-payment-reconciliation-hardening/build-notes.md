@@ -111,3 +111,62 @@ R47–R50 are written in this stage.
   staging and production `JOB_INVOCATION_TOKEN`s were set under **#947** on 2026-09-29; staging's
   first-ever tick (17:45 local) released 15 orders; production's first `ok` tick had not yet been
   observed when this was written.
+
+## Fix stage (after the first `/validate`, 2026-09-29)
+
+Two `validation.md` rows were wrong; the artifact was not. No code changed, so no CHANGELOG change.
+
+- **P6 log query** matched nothing: the local log store records messages as a JSON array
+  (`["payment-reconciliation event=…"]`), so a prefix `like` cannot match. Now `%payment-reconciliation
+  event=%`, with a note that `console.log` lines are level `info`. This was the row being wrong.
+- **R14's `grep "vi.mock"`** matched the test file's own header comment, which says `vi.mock` is
+  absent. The requirement is about calls; the row now greps `vi\.mock(`. Also the row being wrong.
+
+Live evidence gathered at that `/validate` (dev branch, migration applied, Stripe test key): the claim,
+record and fence path works over the WebSocket client (every swept row had a non-null `lastOutcome`, so
+the `lastAttemptAt` equality holds at ms precision); `createMany … skipDuplicates` returned count 0
+rather than throwing; the response had exactly the seven keys; an invocation with no candidates
+scanned 0 and logged no `error`. **Still unverified:** R37 live, R39–R46 — they need placed and paid
+test orders, and the browser extension was not connected. The first live invocation also released or
+deferred ~130 old `PENDING_PAYMENT` orders already on the dev branch.
+
+### Live rows R40–R46 (second `/validate` pass, 2026-09-30, dev branch, Stripe test mode)
+
+Migration applied to the dev branch (`ep-dry-morning…`, distinct from staging and production). All
+of R40–R46 passed:
+
+- **R40** paid, no webhook: the sweep logged `status=complete paymentStatus=paid`, confirmed it;
+  order `CONFIRMED`, payment `SUCCEEDED`, row `CONFIRMED`, `/staff/orders/<n>` shows the R39 line.
+- **R41** expired session: `CANCELLED`, stock +1, events 1→2; a second invocation scanned 0.
+- **R42** open session: `DEFERRED`, `nextAttemptAt` exactly +30:00, `attemptCount` 1 after an
+  immediate second invocation.
+- **R43** unknown session: `PERMANENT_ERROR`, `lastErrorStatus` 404, `exhaustedAt` set, order stayed
+  `PENDING_PAYMENT`; listed on `/staff/payments`; staff Retry cleared `exhaustedAt`; next run took
+  `attemptCount` 1→2 and exhausted it again.
+- **R44** amount mismatch: `REFUSED`, `exhaustedAt` set, still `PENDING_PAYMENT`, one
+  `PaymentBindingRefusal` after two invocations, one `error` line `event=unrecoverable`.
+- **R45** two concurrent invocations: one released (`released` 1 + 0), the other `skipped` 1; one new
+  event, stock restored once, `attemptCount` 1.
+- **R46** replay after sweep confirmation: 200, event count unchanged.
+- **R32/R34** live: exactly the seven keys and `scanned` = sum; sweep log lines were `info`
+  for release/defer/empty runs and `error` only for `retry-exhausted`/`unrecoverable`.
+- **R39** both ways: sweep-confirmed order shows the sentence, a webhook-confirmed one does not.
+- **R37** (this vendor): heading, order link, outcome, HTTP 404, attempts, stopped time, Retry.
+
+**Deviations from `validation.md`.** (1) R46 replayed a *locally signed* `checkout.session.completed`
+with `scripts/sign-stripe-event.ts` through the real route, not Stripe's `events resend` (no
+`stripe` CLI reachable from the sandbox). (2) To keep R45's order from being swept during R44, its
+`createdAt` was temporarily moved forward and restored. (3) Rows were made due by editing
+`nextAttemptAt` directly where a prior invocation had parked them.
+
+**Not verified.** R37's empty-state text (a row was present) and its second-vendor isolation
+(`srimart.localhost:8787` needs that vendor's ADMIN login). Both are code paths that were read.
+
+**Side effects on the dev branch.** The first invocation swept ~130 old `PENDING_PAYMENT` orders
+already there (released or deferred). Six test orders were placed; `QSKNPV` (exhausted, still
+listed on `/staff/payments`), `TKXYGN` (refused) and `PRQS86` (deferred) remain by design.
+
+**Findings for later.** The checkout and category pages hydrate very slowly under `npm run preview`
+(a background tab does not hydrate until it is painted), so browser-driven checkout is fragile.
+The Chrome extension has no permission on `checkout.stripe.com`, so paying test sessions needs a
+human.
