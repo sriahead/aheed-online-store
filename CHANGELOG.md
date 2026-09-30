@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **Document-stage reconciliation for `#945` (PR #950, merge `36f8363`, `staging`).** Docs only.
+  - `specs/roadmap.md` 1.123.0: the `#945` build/validate/ship-to-staging row, which `sdd:audit` reported as missing.
+  - `docs/model-handoff.md` 1.55.0: `#945` corrected from "built, awaiting `/validate`" to merged to `staging` and deployed, with what is still unverified.
+  - `docs/developer-portal/local-dev-playbook.md` 1.13.0: what a session can and cannot drive when proving a payment path live (Stripe surfaces, fixture orders the sweep picks up, slow hydration, the log-store query shape).
+
 - **Payment reconciliation hardening: attempt tracking, bounded backoff, error classification** (issue `#945`, absorbing `#619` and `#620`; `specs/2026-09-29-p945-payment-reconciliation-hardening/`). One additive migration (`20260929190000_p945_payment_reconciliation`: new enum and table, no change to existing columns).
   - The `#618` payment sweep now claims each order on a `PaymentReconciliation` row before asking Stripe, and records what it concluded. Orders only come back when due, so an order it cannot resolve no longer blocks the oldest-first queue.
   - Retryable provider failures (5xx, 429, 401/403, network) back off from 15 minutes, doubling, and stop after the 8th in a row. A 400/404 or a refused payment binding stops at once, so a refused order writes its `PaymentBindingRefusal` row once instead of every 15 minutes.
