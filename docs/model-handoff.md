@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.54.0"
-updated: 2026-09-29
+version: "1.55.0"
+updated: 2026-09-30
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -512,13 +512,20 @@ All facts in this section require live verification:
   workers/scheduler/wrangler.toml --env production`, then `#947` can close. **Lesson:** a
   scheduled job that needs a secret on two Workers can ship green and never run; nothing alerts.
   `#946` adds a job-run heartbeat for exactly this.
-- **`#945` (payment reconciliation hardening, absorbing `#619`/`#620`) is BUILT, awaiting
-  `/validate`** on `feature/945-payment-reconciliation-hardening` (spec `19b9753`, build `e341ebf`).
-  One additive migration, **not yet applied to any database**. Spec
-  `specs/2026-09-29-p945-payment-reconciliation-hardening/`; read its `build-notes.md` first.
-  `#946` (durable confirmation email + `JobRun` heartbeat) is slice B, sequenced after it.
-  Follow-ups `#948` (staff release for an exhausted order) and `#949` (a throw outside the provider
-  call aborts the whole sweep run) are Backlog.
+- **`#945` (payment reconciliation hardening, absorbing `#619`/`#620`) is MERGED TO `staging` and
+  deployed, NOT yet in production** (PR #950, merge `36f8363`, 2026-09-30). The `#618` sweep now
+  claims each order on a `PaymentReconciliation` row, backs off and exhausts, and records what it
+  concluded; the migration (`20260929190000_p945_payment_reconciliation`) was applied by the staging
+  deploy, and staging's first post-deploy tick logged `reconcile-payments ok:` with all seven keys.
+  Validated from a fresh context, live rows R40–R46 all passed. **Unverified:** `/staff/payments`'s
+  empty-state text and second-vendor isolation (`#951`). **Promotion carries a real migration**,
+  and is worth little until production's first `ok` tick (`#947`, above) is confirmed. Spec
+  `specs/2026-09-29-p945-payment-reconciliation-hardening/`; its `build-notes.md` holds the live
+  evidence and deviations. `#946` (durable confirmation email + `JobRun` heartbeat) is slice B,
+  sequenced after it. Follow-ups `#948` (staff release for an exhausted order) and `#949` (a throw
+  outside the provider call aborts the whole sweep run) are Backlog. **Trap:** a full `npx vitest run`
+  writes fixture orders into the dev database (`#797`), which the sweep then processes; see
+  `docs/developer-portal/local-dev-playbook.md` before running sweep rows.
 
 - **`#935` (branch hygiene: `/prune-branches` + Orient reminder at 30 branches) is DONE, in
   production** (PR #937 to `staging`, promoted by PR #941, `924cf24`, 2026-09-29). Tooling only: no
