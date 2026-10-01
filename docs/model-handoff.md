@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.55.0"
+version: "1.56.0"
 updated: 2026-09-30
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,8 +39,21 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-29.
-- **`main` is now at `91b1d8e`** — `#928` (product description as a fourth net-content evidence
+- **Date:** 2026-09-30.
+- **`main` is now at `ee6eccb`** — `#945` (payment reconciliation hardening, absorbing `#619`/`#620`)
+  and `#938`/`#939` (local tooling fixes) promoted via PR #953 (`staging -> main`, 2026-09-30),
+  carrying PR #950/#952 and PR #943/#944. The additive migration
+  `20260929190000_p945_payment_reconciliation` is applied in production; `deploy-production` (run
+  `36687776410`) **success**; production `/api/health` (Aheed and SriMart) serves `ee6eccb`,
+  `db.ok: true`, `reference.drift: false`. **The production payment sweep is running for the first
+  time**: `#947` closed on the 08:00 UTC tick (`ok` on all three jobs), and the 08:15/08:30 ticks
+  logged the new seven-key `reconcile-payments ok:` summary. **PR #953's closing keywords linked
+  nothing** (one-line `closes A, closes B`); all five issues were closed by hand — the rule and the
+  pre-merge `closingIssuesReferences` check are now in `specs/sdd-workflow.md` 2.38.0 and
+  `.claude/commands/ship.md`. `main` and `staging` are content-identical. Roadmap row:
+  `specs/roadmap.md` 1.124.0.
+- **Previous promotion, `924cf24`** — `#935` (branch hygiene) via PR #941, 2026-09-29.
+- **Previous promotion, `91b1d8e`** — `#928` (product description as a fourth net-content evidence
   source, refs `#697`) promoted via PR #933 ("Promote product description as net-content evidence
   to production (#928)", `staging -> main`, 2026-09-29), carrying PR #932 (the spec + build + docs
   merge, `0b57f99`) and PR #931 (`#927`'s doc-only Document-stage reconciliation, `b59e815`,
@@ -132,9 +145,7 @@ reconciliation. If overall project state did not materially change, leave this f
     authoritative source for security requirements). **U1** asks whether the platform is really
     called "SRIMART" — ADR-004 records SriMart as a *tenant*, not the platform, so the document
     uses tenant-neutral naming throughout pending a decision.
-  - **Known defect filed, not fixed:** `#857` (Low) — `.gitignore` still matches the pre-`#853`
-    one-level content layout, so `npm run kms:assemble:internal` leaves ~209 generated `.mdx`
-    files untracked. Local-workflow only; CI is unaffected.
+  - `#857` (`.gitignore` missing the assembled KMS content after `#853`) is **closed, `Done`**.
   - **Branch-reuse trap, observed live:** PR #855 was squash-merged and the branch reused, which
     broke ancestry with `staging` and collided every file `add/add`. Cut a fresh branch per slice.
 - **`CLAUDE.md` was reduced from 149,380 to 13,925 characters (`#786`, PR #787/#788,
@@ -503,23 +514,17 @@ mistake them for backlog.
 All facts in this section require live verification:
 
 - **The `#618` stranded-payment sweep never ran anywhere until 2026-09-29.** It shipped in P9.2,
-  but `JOB_INVOCATION_TOKEN` had never been set on any Worker (staging answered `503 "Job
-  invocation is not configured"`), and it was in neither `secrets/*.vars` file. The owner set it on
-  all four Workers under **`#947`** (High) on 2026-09-29. Staging's first tick (17:45 local)
-  succeeded: 15 stale orders released, 74 guest carts reaped. Production's first tick returned
-  **401** on all three jobs (the two Workers held different values); the owner re-set both — its
-  first `ok` tick is still to be confirmed with `wrangler tail --config
-  workers/scheduler/wrangler.toml --env production`, then `#947` can close. **Lesson:** a
-  scheduled job that needs a secret on two Workers can ship green and never run; nothing alerts.
-  `#946` adds a job-run heartbeat for exactly this.
-- **`#945` (payment reconciliation hardening, absorbing `#619`/`#620`) is MERGED TO `staging` and
-  deployed, NOT yet in production** (PR #950, merge `36f8363`, 2026-09-30). The `#618` sweep now
-  claims each order on a `PaymentReconciliation` row, backs off and exhausts, and records what it
-  concluded; the migration (`20260929190000_p945_payment_reconciliation`) was applied by the staging
-  deploy, and staging's first post-deploy tick logged `reconcile-payments ok:` with all seven keys.
-  Validated from a fresh context, live rows R40–R46 all passed. **Unverified:** `/staff/payments`'s
-  empty-state text and second-vendor isolation (`#951`). **Promotion carries a real migration**,
-  and is worth little until production's first `ok` tick (`#947`, above) is confirmed. Spec
+  but `JOB_INVOCATION_TOKEN` had never been set on any Worker, and it was in neither
+  `secrets/*.vars` file. The owner set it on all four Workers under **`#947`**; production's first
+  ticks returned **401** (the two Workers held different values) until both were re-set. **`#947`
+  is CLOSED** (2026-09-30): production's 08:00 UTC tick returned `ok` on all three jobs.
+  **Lesson:** a scheduled job that needs a secret on two Workers can ship green and never run;
+  nothing alerts. `#946` adds a job-run heartbeat for exactly this.
+- **`#945` (payment reconciliation hardening, absorbing `#619`/`#620`) is DONE, in production**
+  (PR #950 to `staging`, promoted by PR #953, `ee6eccb`, 2026-09-30; `#945`/`#619`/`#620` closed).
+  The `#618` sweep claims each order on a `PaymentReconciliation` row, backs off and exhausts, and
+  records what it concluded; production ticks log the seven-key summary. **Unverified:**
+  `/staff/payments`'s empty-state text and second-vendor isolation (`#951`). Spec
   `specs/2026-09-29-p945-payment-reconciliation-hardening/`; its `build-notes.md` holds the live
   evidence and deviations. `#946` (durable confirmation email + `JobRun` heartbeat) is slice B,
   sequenced after it. Follow-ups `#948` (staff release for an exhausted order) and `#949` (a throw
@@ -544,11 +549,10 @@ All facts in this section require live verification:
   - Even after a prune, about 37 local and 32 origin branches stay, because the unmerged and
     open-PR REVIEW branches are protected. The `/orient` reminder keeps firing until the owner
     decides on them. That is expected, not a defect.
-  - **`#938` and `#939` are MERGED to `staging`** (PR #943, `dcbe8ce`; `deploy-staging` succeeded),
-    **not yet in production**, and `In Review`. `#938` is a 30-second timeout on the
-    `vendor-neutral-copy` scanning test; `#939` puts a local branch checked out in a worktree under
-    REVIEW instead of failing `--apply`. Spec `specs/2026-09-29-p938-939-local-tooling-fixes/`. The
-    next promotion PR must say `closes #938, closes #939`.
+  - **`#938` and `#939` are DONE, in production** (PR #943 to `staging`, promoted by PR #953,
+    `ee6eccb`, 2026-09-30; both closed). `#938` is a 30-second timeout on the `vendor-neutral-copy`
+    scanning test; `#939` puts a local branch checked out in a worktree under REVIEW instead of
+    failing `--apply`. Spec `specs/2026-09-29-p938-939-local-tooling-fixes/`.
   - Follow-ups: `#936` (owner decision: GitHub's "Automatically delete head branches" setting) and
     `#942`.
 
@@ -991,7 +995,8 @@ Not verified by the latest orientation:
 
 - Whether production Stripe credentials are test or live.
 - Resend domain verification and real external delivery.
-- Cloudflare Worker secret presence, including scheduler/application token parity.
+- Cloudflare Worker secret presence. (Scheduler/application `JOB_INVOCATION_TOKEN` parity **is**
+  answered for staging and production: both return `ok` ticks as of 2026-09-30, `#947`.)
 - Whether the **#175** rotation happened outside GitHub issue state. (**#219** is answered: rotated,
   confirmed by the owner, GitHub secret timestamps post-date the exposure. Still unverified is
   whether the OLD token was deleted rather than merely superseded — a dashboard-only fact.)
