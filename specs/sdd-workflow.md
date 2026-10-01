@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.37.0"
-updated: 2026-09-29
+version: "2.38.0"
+updated: 2026-09-30
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -882,6 +882,13 @@ named gates, but the part of this repo's actual history most prone to drift.
   or warning (#112, found on PR #108). This bites specifically here because slice PRs merge into
   `staging`, never the default branch, so every issue closure is deferred to a promotion PR — which
   is exactly where several `Closes` references pile up at once.
+  **Put each keyword on its own line, and prove the link before merging.** PR #953 (2026-09-30)
+  wrote `closes #938, closes #939, closes #945, closes #619, closes #620` on one line and GitHub
+  linked **none** of them — `closingIssuesReferences` was empty and all five stayed open on merge,
+  again with no warning. Every earlier multi-issue promotion that linked (PR #915, PR #921) had one
+  `closes #NN` per line. The cause was not confirmed, so do not rely on either form by eye: run
+  `gh pr view <N> --json closingIssuesReferences` before asking for the merge and check it lists
+  every issue, then confirm each issue is `CLOSED` after the deploy.
 - If a PR merges before a fix/follow-up commit lands, don't force-push or rewrite history to patch it
   in retroactively — open a tracking issue and land the fix as its own proper follow-up PR.
 - **A PR body referencing an issue that must stay open is a closing-keyword trap, independent of the

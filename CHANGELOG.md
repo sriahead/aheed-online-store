@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **Document-stage reconciliation for the PR #953 promotion (`#945`, `#619`, `#620`, `#938`, `#939` to production, merge `ee6eccb`).** Docs only.
+  - `specs/roadmap.md` 1.124.0: the promotion row, which `sdd:audit` reported as pending carry-forward, including `#947`'s production tick confirmed before the promotion.
+  - `specs/sdd-workflow.md` 2.38.0 and `.claude/commands/ship.md`: one closing keyword per line, and check `gh pr view <N> --json closingIssuesReferences` before merging. PR #953's one-line `closes #A, closes #B` linked no issue, so all five stayed open on merge and were closed by hand.
+  - `docs/model-handoff.md` 1.56.0: `main` at `ee6eccb`; `#945`, `#938`, `#939` and `#947` done; production scheduler token parity answered; the stale `#857` line corrected.
+
 - **Document-stage reconciliation for `#945` (PR #950, merge `36f8363`, `staging`).** Docs only.
   - `specs/roadmap.md` 1.123.0: the `#945` build/validate/ship-to-staging row, which `sdd:audit` reported as missing.
   - `docs/model-handoff.md` 1.55.0: `#945` corrected from "built, awaiting `/validate`" to merged to `staging` and deployed, with what is still unverified.
