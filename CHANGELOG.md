@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **Seventh Discover pass: external mobile-first redesign brief.** Docs only. No scope change.
+  - `docs/research/discovery-log.md` 1.7.0: maps a roughly fifty-section mobile redesign brief against the code and live production. Most of it is already built, and is recorded as such so it isn't rediscovered.
+  - Nine genuinely unowned findings. Eight are filed: `#955` crawlers can't reach product pages (sitemap is only `/`, listings link to no product, `robots.txt` de-indexes non-Aheed vendors), `#956` a false "Added" confirmation and unnamed Add buttons, `#957` reorder silently drops unavailable lines, `#958` no `autocomplete` tokens (WCAG 1.3.5), `#959` checkout step numbers and total placement, `#960` a 232px sticky mobile header, `#961` 24–32px shopping controls, and `#962` even product-grid columns with vendor density presets. A homepage "buy again" surface stays `RESEARCH MORE`, gated on `#607`.
+  - Evidence added to `#439` (2.6 MB of 1024px product images on one category page), `#100` (the cancel page's "keep it" link lands on an empty basket) and `#664` (no sort control at all), plus a challenge on `#395` (bottom navigation).
+
 - **Document-stage reconciliation for the PR #953 promotion (`#945`, `#619`, `#620`, `#938`, `#939` to production, merge `ee6eccb`).** Docs only.
   - `specs/roadmap.md` 1.124.0: the promotion row, which `sdd:audit` reported as pending carry-forward, including `#947`'s production tick confirmed before the promotion.
   - `specs/sdd-workflow.md` 2.38.0 and `.claude/commands/ship.md`: one closing keyword per line, and check `gh pr view <N> --json closingIssuesReferences` before merging. PR #953's one-line `closes #A, closes #B` linked no issue, so all five stayed open on merge and were closed by hand.

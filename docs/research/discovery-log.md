@@ -4,8 +4,8 @@ title: "Discovery log"
 audience: [dev, product]
 type: doc
 status: approved
-version: "1.6.0"
-updated: 2026-09-24
+version: "1.7.0"
+updated: 2026-10-02
 visibility: internal
 summary: "Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action."
 tags: [research, discovery, opportunities, risk, sdd]
@@ -35,6 +35,302 @@ milestone close). Nothing here is approved scope — see `docs/research/README.m
 
 **Next action:** RESEARCH MORE | PROPOSE | ADD TO ROADMAP/BACKLOG | READY FOR SPEC | DO NOT PURSUE
 ```
+
+---
+
+## 2026-10-02 — seventh Discover pass (external mobile-first redesign brief)
+
+An explicit `/discover` over an external, roughly fifty-section brief for a mobile-first redesign of
+the storefront: header, navigation, homepage, search, filters, product card, quick add, basket,
+checkout, reorder, states, accessibility, performance. Treated as evidence, not scope. Every ask was
+mapped against the code and, where it mattered, against live production. **Nine genuinely unowned
+findings** (eight filed as `#955`–`#962`, one `RESEARCH MORE`), new evidence on four tracked
+issues, and a set of challenges to the brief itself.
+
+**Method and its limit.** Code was read first. Live measurements were taken in Chrome against
+`aheedfoodcentre.nocaped.com`. The desktop browser cannot be narrower than 501px, so every
+"mobile" measurement below was taken at 501×694. That is still under Tailwind's `sm` breakpoint
+(640px), so the mobile layout is what rendered. Behaviour at 320–430px is **inferred, not
+measured**. Measuring at real device widths needs the Playwright harness `#440` has not built yet.
+
+**Most of the brief is already built, and is recorded as such so it is not rediscovered.**
+
+- *Header basket with count and subtotal:* `CartDrawerShell` renders both, and the aria-label says
+  "Cart, N items".
+- *Add then quantity stepper on the card:* `ProductCard` swaps `AddToCartButton` for
+  `CartQuantityStepper` once a product is in the cart (`#345`). The stepper names the product in its
+  labels and coalesces writes.
+- *One source of truth for delivery rules:* the brief's §22 and §44. The hero, cart drawer and
+  checkout all read `getShopperDeliveryRules` and `fulfilmentProgress` (`#890`, `#748`). The
+  hardcoded "Free Delivery Over £30" was removed in `#239`.
+- *Search:* autocomplete and suggestions (`#568`), a staff-approved synonym dictionary (`#566`),
+  zero-result recovery (`#580`) and the AI shop list (`#567`).
+- *Guest checkout, saved addresses (`#764`), slot capacity shown in `SlotPicker`, loyalty
+  redemption and discount codes* all exist.
+- *Restoring the basket after a cancelled Stripe payment:* the `cancel` page puts the lines back
+  (`#428`).
+- *Reorder from a past order:* `#124`.
+- *Multi-buy on the card:* `#348`.
+
+**Already tracked, so not findings:**
+
+- Typo tolerance: `#286`.
+- Unit pricing: `#398`. It is inert because no product carries net content (`#697`).
+- Sort control: `#664`, with new evidence added.
+- Resuming payment: `#100`, with new evidence added.
+- Image weight: `#439`, with new evidence added.
+- Bottom navigation: `#395`, challenged below.
+- Accessibility launch validation: `#442`. Prior contrast, focus and motion findings: the 2026-09-07
+  pass.
+- Hardcoded currency: `#654`.
+- Desktop mega-menu: `#394`.
+
+**Challenges to the brief.**
+
+- *"Pay £X" as the final button.* The total depends on a discount code and loyalty points, both
+  validated on the server in `place-order`, and the next screen is Stripe's hosted page. The label
+  cannot be exact before submission. Show the total above a "Continue to payment" button (`#959`).
+- *A bottom-sheet filter panel.* `FilterPanel` is a native `details` disclosure **by recorded
+  decision**, so filters keep working with JavaScript off. A sheet would undo that. The brief's
+  goal (filters not dominating the page) is already met on mobile.
+- *A product detail page with a sticky Add CTA (§18–19)* conflicts with `#830`, which removed
+  drill-down from the card in favour of Quick View. Whether the product page is a destination is an
+  owner ruling. `#955` shows the SEO cost of the current answer.
+- *Bottom navigation (§42):* the brief argues against it by default, which supports challenging
+  open `#395`. A comment has been added there.
+- *As a whole,* the brief is a redesign programme, not a slice. Its P0 list spans header,
+  search, card, basket and checkout at once. Taking it as a single milestone would break "build
+  only what the stage requires". The findings below are the defects worth carving out first.
+
+### 2026-10-02 — product pages are invisible to crawlers, and robots.txt de-indexes every vendor but Aheed
+
+**Trigger:** explicit /discover (mobile redesign brief, §47 "preserve SEO-friendly URLs")
+**Status of the area:** genuinely unowned. Filed as `#955`.
+
+**Observed (verifiable today):** `app/sitemap.ts` returns only `/`, and live `/sitemap.xml` on both
+production hosts holds a single URL. Since `#830`, the `ProductCard` title is a `button` that opens
+Quick View, and `QuickViewDrawer` links only to `/login`. Live `/categories/fruit-veg` contains
+**zero** `href="/products/…"` links. `#830`'s plan (line 46) claims the product route stays
+reachable for "SEO … and sitemap crawling". `app/robots.ts` hardcodes
+`PRODUCTION_HOST = "aheedfoodcentre.nocaped.com"`, and live `srimart.nocaped.com/robots.txt` returns
+`Disallow: /`.
+**Interpretation:** crawlers can reach the homepage and category pages, and nothing below them.
+Every vendor other than Aheed is de-indexed in production by a hostname literal, which breaks
+ADR-004's "nothing vendor-specific in code".
+**Confidence:** Known for the facts. The commercial size is Inferred: no search-console data exists.
+
+**Why it matters commercially:** a local grocer's cheapest acquisition is people searching for an
+item and a town. Indexing takes weeks, so the gap costs most just after trading starts (`#113`).
+**Options considered:** build the sitemap from data (cheap, no UI change). Restore a real product
+link under Quick View using the stretched-link pattern `ProductCard`'s stale doc comment still
+describes (this partly reverses `#830`, so it is an owner ruling). Decide robots from environment
+or `VendorDomain`. Doing nothing is only tenable while the platform has not traded.
+**Cost of delay:** low until launch, then rising week by week.
+
+**Next action:** PROPOSE
+
+### 2026-10-02 — add to cart says "Added" when the server added nothing, and every card's button is named "Add"
+
+**Trigger:** explicit /discover (brief §13–15, §35)
+**Status of the area:** genuinely unowned. Filed as `#956`.
+
+**Observed (verifiable today):** `AddToCartButton` sets `added` as soon as `addToCart` resolves.
+`addCartItem` (`lib/repositories/cart.ts:314-324`) returns normally when stock is 0, and clamps a
+request above stock without saying so. The card variant ignores its `label` prop, so live
+`/categories/fruit-veg` has 8 buttons whose accessible name is just "Add", and pre-add buttons named
+"Decrease quantity" with no product. There is no live-region announcement on add, and no `catch`
+around the action.
+**Interpretation:** a product that sells out between render and tap, or a request for more than
+remain, shows a false "✓ Added". Screen-reader users cannot tell the grid's Add buttons apart.
+**Confidence:** Known (code path read). The sold-out race was not reproduced live.
+
+**Why it matters commercially:** fresh stock is volatile. A shopper who saw "Added" does not check
+again, and the item is missing at checkout or at the door, which is a first-order trust failure.
+**Options considered:** have the action return the outcome (added, quantity, reason) and render it.
+Name the button from the existing `label` prop. Add a `role="status"` region. Doing nothing leaves
+a false confirmation in the most-used control on the site.
+**Cost of delay:** grows with real stock movement after launch.
+
+**Next action:** PROPOSE
+
+### 2026-10-02 — reorder silently drops unavailable lines and clamps quantities
+
+**Trigger:** explicit /discover (brief §31 "do not add unavailable products silently")
+**Status of the area:** genuinely unowned. Reorder itself was built in `#124`. Filed as `#957`.
+
+**Observed (verifiable today):** `features/orders/reorder-items.ts` passes every line of a past
+order to `addCartItems` and redirects to `/cart` with no message. `addCartItems`
+(`lib/repositories/cart.ts:353`, `:363-368`) drops inactive or out-of-stock products and clamps the
+rest to stock. Lines whose product was deleted are filtered out earlier. `cancel-order.ts:55`
+restores an unpaid order through the same path.
+**Interpretation:** the grocery case is a weekly shop of about 20 lines that comes back as 18, with
+nothing telling the shopper which 2 are missing.
+**Confidence:** Known.
+
+**Why it matters commercially:** "same as last time" is the whole value of reorder, and a forgotten
+item is the most common grocery complaint. Customers who rely on reorder are the repeat customers.
+**Options considered:** a one-time notice on `/cart` listing what was skipped or reduced (cheap).
+Suggested substitutes (larger, overlaps `#606`). Doing nothing.
+**Cost of delay:** none before launch. After launch it lands squarely on repeat customers.
+
+**Next action:** PROPOSE
+
+### 2026-10-02 — checkout and sign-in fields carry no autocomplete tokens
+
+**Trigger:** explicit /discover (brief §23, §35)
+**Status of the area:** genuinely unowned. Filed as `#958`.
+
+**Observed (verifiable today):** in `components/checkout/CheckoutForm.tsx`, name, email, phone,
+both address lines, city, county and postcode have no `autoComplete` attribute. Neither do
+`LoginForm`, `RegisterForm` or `ResetPasswordForm`. There are 5 `autoComplete` attributes in the
+whole storefront.
+**Interpretation:** a WCAG 2.2 SC 1.3.5 (Level AA) failure. It is also the largest avoidable cost in
+mobile checkout: phone autofill and password managers key off these tokens.
+**Confidence:** Known.
+
+**Why it matters commercially:** a guest on a phone types about 8 fields by hand, where autofill
+would take one tap. That is the classic point of checkout abandonment.
+**Options considered:** add the standard tokens and a guard test asserting they are present. Very
+small. No credible reason not to.
+**Cost of delay:** none to fix later, but every pre-fix order pays the friction.
+
+**Next action:** READY FOR SPEC
+
+### 2026-10-02 — checkout step numbers repeat or skip, and on mobile the total sits below the submit button
+
+**Trigger:** explicit /discover (brief §23, §25)
+**Status of the area:** genuinely unowned. Filed as `#959`.
+
+**Observed (verifiable today):** `CheckoutForm.tsx` numbers contact `offerCollection ? "1" : "1"`
+and address `offerCollection ? "2" : "2"`; time is `"3"` or `"2"`; discount `redeemable ? "4" : "3"`.
+The sequences shown:
+
+- Delivery with slots: 1, 2, 3, 3.
+- With loyalty: 1, 2, 3, 4, 4.
+- Click & Collect: 1, 3, 3.
+
+`checkout/page.tsx` renders the form and then `CheckoutSummary` in a grid that stacks below `md`,
+so on mobile the total comes after "Place order".
+**Interpretation:** the only progress cue on a phone reads as broken, and the amount is not visible
+before the shopper commits on mobile. Stripe does show it on the next screen.
+**Confidence:** Known for the code. Which sequence Aheed shows depends on its live configuration
+(Inferred).
+
+**Why it matters commercially:** this is checkout trust at the last step. Small to fix.
+**Options considered:** compute the numbers from the sections actually rendered. Move or duplicate
+the total above the button on mobile. Label the button "Continue to payment". Not "Pay £X", as
+argued in the challenges above.
+**Cost of delay:** low, but it is visible to every shopper who reaches checkout.
+
+**Next action:** PROPOSE
+
+### 2026-10-02 — the mobile sticky header is a third of the viewport
+
+**Trigger:** explicit /discover (brief §4, §41)
+**Status of the area:** genuinely unowned. `#395` is a bottom bar, which is a different thing.
+`#333` was header-row reflow. Filed as `#960`.
+
+**Observed (verifiable today):** live at 501×694 in the mobile layout, `header` measures **232px**
+and is `sticky top-0`. That is 33% of the viewport, made up of the banner, the logo and nav row,
+and a mobile row holding `LocationControl` and search. On `/categories/fruit-veg` the first
+product card starts at **y=757**, below the first screen.
+**Interpretation:** while scrolling a category, roughly one row of products is visible at a time.
+At 360–390px the wrapped banner and toggle likely make it taller.
+**Confidence:** Known at 501px. Needs validation at real device widths.
+
+**Why it matters commercially:** browsing is the main grocery mode after search, and screen space
+taken by chrome directly reduces how many products are seen.
+**Options considered:** make only logo + search + basket sticky (cheap, no JS). Compact the header
+on scroll (needs client JS in a zero-JS server header). Do nothing (needs `#607` data to defend).
+**Cost of delay:** low. The cost is UX that compounds with `#961`.
+
+**Next action:** PROPOSE
+
+### 2026-10-02 — primary mobile shopping controls are 24 to 32px
+
+**Trigger:** explicit /discover (brief §15, §35, §41)
+**Status of the area:** genuinely unowned. `#665` is primitive adoption, not sizing. Filed as `#961`.
+
+**Observed (verifiable today):** live bounding boxes in the mobile layout:
+
+- Card Add button: 108×32.
+- Pre-add minus and plus: 28×30.
+- In-cart stepper: 24×24 (`h-6 w-6`).
+- Mobile Quick View: 29×28.
+- Header Shop and Shop List: 34×34.
+
+62 of 79 header and main controls are under 44px on at least one side.
+**Interpretation:** this is **not** a WCAG AA failure. SC 2.5.8 needs 24×24, which all of them
+meet. It falls short of SC 2.5.5 (AAA), Apple's 44pt and Material's 48dp, and the most-tapped
+controls are the smallest.
+**Confidence:** Known for the measurements. The user impact Needs validation: no usability data
+exists.
+
+**Why it matters commercially:** older shoppers and one-handed use are the brief's named audiences.
+Mis-taps on adjacent minus and plus controls produce wrong quantities.
+**Options considered:** a shared minimum-size token through `#665`'s primitives. Larger only for
+the in-cart stepper (the 24px outlier). Doing nothing is defensible on conformance grounds.
+**Cost of delay:** low. The trade-off is card height against `#960`.
+
+**Next action:** PROPOSE
+
+### 2026-10-02 — the product grid has an odd-column tablet step and no configuration
+
+**Trigger:** explicit /discover (an owner follow-up during the same review: "make the cards
+configurable, even numbers would be better")
+**Status of the area:** genuinely unowned. Filed as `#962`.
+
+**Observed (verifiable today):** listings hardcode `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4` in
+three places: category (`categories/[slug]/page.tsx:176`), search (`search/page.tsx:292`) and
+bundles (`bundles/page.tsx:82`). `PAGE_SIZE` is 12, so full pages fill evenly at 2, 3 or 4 columns.
+Short pages do not: live `/categories/fruit-veg` has 8 products, which the 3-column step renders as
+3 + 3 + 2. `FilterPanel`'s 240px sidebar from `md` leaves about 500px for the grid at 768–1023px.
+**Interpretation:** the 3-column step is what produces ragged rows and a second change in card width.
+Even steps (2 then 4) avoid both. Four columns cannot start at `md`, because each card would be
+about 110px wide beside the sidebar.
+**Confidence:** Known for the layout. The owner's preference for even counts is stated direction,
+not measured user behaviour.
+
+**Why it matters commercially:** cleaner rows read as a tidier shop. Per-vendor density matters
+because grocery cards and electronics cards want different widths.
+**Options considered:**
+
+- Even columns only (2 below `lg`, 4 from `lg`). Cheapest.
+- Vendor density presets stored as an enum, mapped to static class strings, because Tailwind cannot
+  build `grid-cols-` classes from runtime values. One shared `ProductGrid` component, so the three
+  call sites cannot drift.
+- A free per-vendor column number, rejected: it allows layouts that break the card.
+- A shopper-side grid/list toggle, deferred until analytics exist (`#607`).
+
+**Cost of delay:** low. Interacts with `#960` and `#961`: all three decide how many products fit
+on a phone screen.
+
+**Next action:** PROPOSE
+
+### 2026-10-02 — the homepage has no shoppable product and nothing for a returning customer
+
+**Trigger:** explicit /discover (brief §6, §31)
+**Status of the area:** genuinely unowned as a question. The landing layout was a deliberate P8.5f
+decision.
+
+**Observed (verifiable today):** live `/` in the mobile layout has three blocks below the header: a
+596px hero, a department strip, and customer testimonials. It has **no product card and no add
+control**. Reorder is reachable only from `/account/orders/[orderNumber]`. There is no "buy again"
+or recently-purchased surface anywhere.
+**Interpretation:** a repeat weekly shopper, the core grocery customer, starts every visit from a
+brand page and has to search again or dig into their order history.
+**Confidence:** Inferred. Whether returning customers land on `/` at all is unknown, because no
+analytics exist (`#607`).
+
+**Why it matters commercially:** a buy-again surface is the highest-leverage repeat-purchase
+feature in grocery. Whether the homepage is the right place for it depends on traffic data that
+does not exist.
+**Options considered:** a signed-in "buy again" rail built from past order lines (the data exists).
+Popular products on `/`. Waiting for `#607`. Not filed: the first question is where returning
+customers actually arrive, and that needs data.
+**Cost of delay:** none before launch. After launch, `#607` should land first.
+
+**Next action:** RESEARCH MORE
 
 ---
 
