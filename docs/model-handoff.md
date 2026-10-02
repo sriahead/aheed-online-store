@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.56.0"
-updated: 2026-09-30
+version: "1.57.0"
+updated: 2026-10-02
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -512,6 +512,23 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **The mobile programme is the owner's chosen direction (2026-10-02).** It comes from the seventh
+  Discover pass, `docs/research/discovery-log.md` 1.7.0, merged to `staging` via PR #963. Its
+  issues are `#955`–`#962`, all Phase P10.
+  - **Slice 1, `#960`/`#961`/`#962` (mobile browse density):** built on
+    `feature/960-962-mobile-browse-density` and **awaiting `/validate`** from a fresh context. Read
+    `specs/2026-10-02-p960-962-mobile-browse-density/build-notes.md` first. It carries an additive
+    migration (`20261002120000_p962_product_grid_density`), applied to dev only. Staging and
+    production get it through CI on deploy.
+  - **Queued:** slice 2 is mobile checkout (`#958` autocomplete tokens, `#959` step numbers and
+    total placement), then `#956` (honest add-to-cart feedback, which builds on slice 1's resized
+    button).
+  - `#955` (crawlability) and `#957` (reorder notices) are not layout work and stay in Backlog.
+  - `#964` is the slice-1 follow-up: the `tap` token on the remaining controls.
+  - **Phone-width measurement now exists:** `scripts/verify-mobile-layout.ts`, using headless Chrome
+    over CDP. Desktop Chrome can't go below 501px, and the app forbids framing. Its traps are in
+    `docs/developer-portal/local-dev-playbook.md` 1.14.0.
 
 - **The `#618` stranded-payment sweep never ran anywhere until 2026-09-29.** It shipped in P9.2,
   but `JOB_INVOCATION_TOKEN` had never been set on any Worker, and it was in neither
