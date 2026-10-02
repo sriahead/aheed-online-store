@@ -16,8 +16,10 @@ section 4 (the measuring script) before validating.
   `scripts/verify-mobile-layout.ts`.
 - **Below `sm`** means under 640px wide, **below `lg`** under 1024px, and **`xl`** 1280px and up.
 - **Category page** means `/categories/<slug>` for a top-level category of that vendor that renders
-  at least 3 product cards on its first page. For Aheed in the seeded dev database that is
-  `/categories/fruit-veg`.
+  at least 6 product cards on its first page (R18's six columns need six cards). In the seeded dev
+  database that is `/categories/fruit-veg` for Aheed (12 cards) and `/categories/sri-electronics`
+  for SriMart (6 cards). _Amended at Build: this read "at least 3", which would let a validator pick
+  SriMart's 5-card `sri-home` and fail R18 for want of products, not for a defect._
 - **Aheed** is `http://localhost:8787` and **SriMart** is `http://srimart.localhost:8787` (port
   included; see `docs/developer-portal/local-dev-playbook.md`), both under `npm run preview`.
 
@@ -92,8 +94,10 @@ R7. On the Aheed category page at viewport 390×844, with no item of the first c
     - The `/account` link (signed in) gets the same treatment in code; R7 does not measure it,
       because the script runs signed out.
 R8. On the same page at viewport 390×844 with `--add-first`, `firstCardStepperLabel` starts with
-    `1 ` and ends with `in cart`. The first card's buttons whose names start `Decrease quantity of`
-    / `Increase quantity of` each report `width` ≥ 44 and `height` ≥ 44.
+    `1 ` and ends with `in cart`. The first card's stepper decrease button (named `Remove <product> from cart` at quantity 1,
+    `Decrease quantity of <product>` above it) and its button named `Increase quantity of <product>`
+    each report `width` ≥ 44 and `height` ≥ 44. _Amended at Build: this named only the
+    `Decrease quantity of` form, which the stepper never uses at quantity 1._
 R9. On the same page at viewport 768×844 with no item of that product in the cart:
     - the first card's pre-add "Decrease quantity" and "Increase quantity" buttons report
       `displayed: true`, with `width` ≥ 44 and `height` ≥ 44;

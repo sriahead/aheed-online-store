@@ -11,6 +11,7 @@ import {
   updateSocialContact,
   applyStorefrontTheme,
   saveStorefrontTheme,
+  updateProductGridDensity,
 } from "@/features/admin/storefront";
 import {
   addDeliveryArea,
@@ -58,6 +59,13 @@ describe("Admin-only Server Actions", () => {
 
     const resSaveTheme = await saveStorefrontTheme("Theme", {} as any);
     expect(resSaveTheme.error).toMatch(/permission/i);
+
+    // #962 — refused before the form is even parsed, so a valid preset changes nothing either.
+    const gridForm = new FormData();
+    gridForm.set("productGridDensity", "SPACIOUS");
+    const resGrid = await updateProductGridDensity({ error: null, saved: false }, gridForm);
+    expect(resGrid.error).toMatch(/permission/i);
+    expect(resGrid.saved).toBe(false);
   });
 
   it("denies STAFF from executing Delivery Areas actions", async () => {

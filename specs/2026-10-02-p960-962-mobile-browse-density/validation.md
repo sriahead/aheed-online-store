@@ -35,9 +35,16 @@ This slice is a UI and layout change with one additive migration and one staff w
    ```
 
 5. **Category paths:**
-   - Aheed: `--base http://localhost:8787 --path /categories/fruit-veg`.
-   - SriMart: open `http://srimart.localhost:8787/categories` and take the first top-level category
-     whose page shows at least 3 product cards. Record the slug in the validation report.
+   - Aheed: `--base http://localhost:8787 --path categories/fruit-veg`.
+   - SriMart: `--base http://srimart.localhost:8787 --path categories/sri-electronics`. If the
+     seed has changed, take any top-level SriMart category with at least 6 product cards on its first
+     page, and record the slug in the validation report.
+   - **Write `--path` without its leading slash in Git Bash.** MSYS rewrites a bare `/categories/x`
+     argument into `C:/Program Files/Git/categories/x`. The script refuses such a path with exit 2,
+     but the slash-less form avoids it. PowerShell is unaffected.
+   - `srimart.localhost` resolves inside Chrome but not necessarily for `curl` on Windows. For any
+     non-browser request to SriMart, use `127.0.0.1:8787` with a `Host: srimart.localhost:8787`
+     header.
 6. **Cart state:** the Aheed guest cart must not contain the first card's product before R7 and R9.
    The script uses a fresh browser profile per run, so a run without `--add-first` starts with an
    empty cart.
@@ -57,7 +64,7 @@ This slice is a UI and layout change with one additive migration and one staff w
 | R5  | Unit | `grep -n 'aspect-9/5' components/layout/Header.tsx` matches the logo `<img>`. Its nearest enclosing `div` has a class list containing both `h-10` and `overflow-clip`; read the lines to confirm. |
 | R6  | Unit | `grep -n -- '--spacing-tap: 2.75rem;' design-system/tokens/tokens.css` matches inside the `@theme` block. After `npm run build`, `grep -rl 'spacing-tap' .next/static/css` returns at least one file. |
 | R7  | E2E | Run `M --widths 390` against Aheed, without `--add-first`. In `controls`: the first card's add control and its Quick View control each have `displayed: true`, `width` ≥ 44 and `height` ≥ 44. The entries named `Decrease quantity` and `Increase quantity` for that card have `displayed: false`. The entries named `/categories`, `/shop-your-list` and `/login` each have `width` ≥ 44 and `height` ≥ 44. Read `Header.tsx` and confirm the `/account` link uses the same `tap` sizing below `lg`. |
-| R8  | E2E | Run `M --widths 390 --add-first` against Aheed. `firstCardStepperLabel` starts with `1 ` and ends with `in cart`. The two `controls` entries whose names start `Decrease quantity of` and `Increase quantity of` each have `width` ≥ 44 and `height` ≥ 44. |
+| R8  | E2E | Run `M --widths 390 --add-first` against Aheed. `firstCardStepperLabel` starts with `1 ` and ends with `in cart`. The stepper's two `controls` entries, named `Remove <product> from cart` (the decrease button at quantity 1) and `Increase quantity of <product>`, each have `width` ≥ 44 and `height` ≥ 44. |
 | R9  | E2E | Run `M --widths 768` against Aheed, without `--add-first`. The first card's pre-add `Decrease quantity` and `Increase quantity` have `displayed: true`, `width` ≥ 44 and `height` ≥ 44, and its add control has `height` ≥ 44. |
 | R10 | E2E | Run `M --widths 1280` against Aheed: the first card's add control `height` is 32±1. Then run `M --widths 1280 --add-first`: both stepper buttons have `height` 24±1. |
 | R11 | Unit | `head -3 lib/product-grid-density.ts` shows no `"use server"`. `npx vitest run tests/product-grid-density.test.ts` passes. Read the test and confirm it asserts all three class strings character-for-character against `plan.md`'s table, plus the parse cases `COMPACT`, `STANDARD`, `SPACIOUS`, `""`, `"standard"` and `null`. |

@@ -105,5 +105,13 @@
   --radius-3xl: 1.5rem;
   --radius-full: 9999px;
 
+  /*
+   * #961 — the minimum touch target, 44px (WCAG 2.5.5 AAA, Apple's 44pt). It generates
+   * h-tap / w-tap / size-tap / min-h-tap / min-w-tap. The storefront's primary shopping controls
+   * use it below `lg`; see specs/design-system.md, "Touch targets". It is a size, not a colour,
+   * so brandStyle() never overrides it.
+   */
+  --spacing-tap: 2.75rem;
+
   --font-sans: var(--font-poppins), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }

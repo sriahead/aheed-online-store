@@ -6,6 +6,8 @@ import { getBrandRepository } from "@/lib/brands-service";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getEnv } from "@/lib/config";
 import { ProductCard } from "@/components/product/ProductCard";
+import { ProductGrid } from "@/components/product/ProductGrid";
+import { DEFAULT_PRODUCT_GRID_DENSITY } from "@/lib/product-grid-density";
 import { FilterPanel } from "@/components/product/FilterPanel";
 import { FilterChips } from "@/components/product/FilterChips";
 import { CollectionNav } from "@/components/product/CollectionNav";
@@ -202,6 +204,9 @@ export default async function SearchPage({
   const cartQuantities = await getRequestCartQuantities();
 
   const { CDN_BASE_URL } = getEnv();
+  // #962 — request-memoised; the header already resolved this profile in the same render.
+  const gridDensity =
+    (await getCurrentVendorProfile())?.productGridDensity ?? DEFAULT_PRODUCT_GRID_DENSITY;
 
   const heading = query ? `Results for “${query}”` : "All products";
 
@@ -289,7 +294,7 @@ export default async function SearchPage({
                 categories={allCategories}
               />
               <SearchSuggestionsNotice suggestions={suggestions} categories={allCategories} />
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              <ProductGrid density={gridDensity}>
                 {items.map((product) => (
                   <ProductCard
                     key={product.id}
@@ -298,7 +303,7 @@ export default async function SearchPage({
                     cartQuantity={cartQuantities.get(product.id) ?? 0}
                   />
                 ))}
-              </div>
+              </ProductGrid>
             </>
           )}
 
