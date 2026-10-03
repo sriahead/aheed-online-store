@@ -8,6 +8,10 @@ every branch merges.
 
 ### Added
 
+- **Document-stage reconciliation for the PR #970 promotion (`#958`–`#962` to production, merge `20ff789`).** Docs only.
+  - `specs/roadmap.md` 1.126.0: the mobile-checkout row for PR #969. 1.127.0: the promotion row, with `deploy-production` run `37129181574` and production `/api/health` serving `20ff789` on both vendors.
+  - `docs/model-handoff.md` 1.61.0: `main` at `20ff789`; both mobile-programme slices in production and their issues closed.
+
 - **Mobile checkout: autofill tokens, honest step numbers, total before payment** (issues `#958`, `#959`; `specs/2026-10-03-p958-959-mobile-checkout/`). No schema or server change.
   - `#958`: the eight checkout contact and address fields, and the login, register, reset and forgot-password forms, carry HTML `autocomplete` tokens (WCAG 2.2 SC 1.3.5). Guarded by `tests/autocomplete-tokens.test.ts`; the rule is in `docs/developer-portal/app-conventions.md` 1.3.0.
   - `#959`: checkout section numbers come from the sections actually rendered (`lib/checkout-sections.ts`), so they no longer repeat or skip, and Fulfilment Method is numbered. Below `md` the order total sits just above the button, now "Continue to payment", with a note that any code or points come off before payment.
