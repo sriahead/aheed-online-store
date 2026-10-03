@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.58.0"
+version: "1.59.0"
 updated: 2026-10-03
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -522,14 +522,20 @@ All facts in this section require live verification:
     `staging -> main` promotion PR is outstanding** and carries that migration to production, so it
     needs one `closes` line per issue. SriMart's admin save through its own UI was never run
     (local sign-in is refused); see the roadmap row dated 2026-10-03.
-  - **Queued:** slice 2 is mobile checkout (`#958` autocomplete tokens, `#959` step numbers and
-    total placement), then `#956` (honest add-to-cart feedback, which builds on slice 1's resized
-    button).
+  - **Slice 2, `#958`/`#959` (mobile checkout):** **built, awaiting `/validate`**, on
+    `feature/958-959-mobile-checkout` (2026-10-03). It is not pushed and has no PR. Spec:
+    `specs/2026-10-03-p958-959-mobile-checkout/`; read its `build-notes.md` first. There is no
+    schema or server change.
+    - **Build found a pre-existing defect and fixed it as R18a:** `/checkout` rendered zoomed out
+      on every phone and tablet. The slot picker's day strip widened the page grid's column.
+    - That branch also carries slice 1's Document commit (`2d8bd29`), which was never pushed.
+    - Follow-ups: `#966`, `#967`, `#968`.
+  - **Queued:** `#956` (honest add-to-cart feedback, which builds on slice 1's resized button).
   - `#955` (crawlability) and `#957` (reorder notices) are not layout work and stay in Backlog.
   - `#964` is the slice-1 follow-up: the `tap` token on the remaining controls.
   - **Phone-width measurement now exists:** `scripts/verify-mobile-layout.ts`, using headless Chrome
     over CDP. Desktop Chrome can't go below 501px, and the app forbids framing. Its traps are in
-    `docs/developer-portal/local-dev-playbook.md` 1.14.0.
+    `docs/developer-portal/local-dev-playbook.md` 1.16.0.
 
 - **The `#618` stranded-payment sweep never ran anywhere until 2026-09-29.** It shipped in P9.2,
   but `JOB_INVOCATION_TOKEN` had never been set on any Worker, and it was in neither

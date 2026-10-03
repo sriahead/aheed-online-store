@@ -4,7 +4,7 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.15.0"
+version: "1.16.0"
 updated: 2026-10-03
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
@@ -580,3 +580,19 @@ Traps found while building it (2026-10-02):
   not hang again. Check for orphans anyway before blaming a slow build. Separately, a clean
   `npm run build` on this machine spends several minutes on that same line even with nothing
   orphaned. "Slow" is not "stuck" until something is holding the files.
+
+Added for `#958`/`#959` (2026-10-03):
+
+- **`--then <path>` measures a page that needs a cart.** With `--add-first`, every width is
+  measured at `<path>` once the item is in the cart. This is how to reach `/checkout`, which
+  redirects an empty cart to `/cart`. Each object also lists `formInputs` (every visible input's
+  `autocomplete`) and, on checkout, a `checkout` block.
+- **Check `viewportWidth` first. If it is wider than the width you asked for, every other number
+  describes a zoomed-out page.** With `mobile: true`, Chrome widens the layout viewport to fit
+  overflowing content, as a phone does. The first `/checkout` run reported `viewportWidth` 961 at
+  390 on both vendors. Its positions and visibility looked plausible, and that was wrong. The cause
+  was a CSS grid track (`1fr`, or the implicit `auto` column) that cannot shrink below its
+  content's min-content width, widened by `SlotPicker`'s ~900px day strip. Use
+  `minmax(0,1fr)` / `grid-cols-1` for any grid column that holds a horizontally scrolling strip.
+  To find the culprit, list elements inside the page whose own box is wider than the viewport but
+  whose children are not.
