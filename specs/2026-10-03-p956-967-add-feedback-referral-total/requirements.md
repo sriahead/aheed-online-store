@@ -89,7 +89,8 @@ R10. The region is one element carrying `data-cart-feedback`, `role="status"` an
 
 R11. `scripts/verify-mobile-layout.ts` additionally prints, for each width, `documentScrollWidth`
      (`document.documentElement.scrollWidth`). With `--add-first` it also prints `cartFeedback`:
-     the region's text and its `left`/`right`, read within 1 s of the click. Its `--add-first`
+     the region's text and its `left`/`right`, read as soon as the region has text after the
+     click (polled for up to 10 s, since the text appears only once the server action returns). Its `--add-first`
      click still finds the first card's Add button. Run at width 360 with `--add-first` against a
      category page in preview, it reports a non-empty `cartFeedback.text`, `cartFeedback.left >= 0`,
      `cartFeedback.right <= 360` and `documentScrollWidth <= 360`.
