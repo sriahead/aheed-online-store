@@ -4,7 +4,7 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.3.0"
+version: "1.4.0"
 updated: 2026-10-03
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), vendor-neutral user-facing copy, form-field autocomplete tokens, and React hooks — together with the tests that enforce each invariant mechanically.
@@ -286,6 +286,25 @@ store's staff reads must be right for **any** vendor.
   `tests/autocomplete-tokens.test.ts`**, which reads the checkout form and the four auth forms
   (`features/auth/components/`) and asserts each field's token. Add a new form that collects the
   user's own data to that test.
+
+## Add-to-cart feedback (`#956`)
+
+- **An add-to-cart control reports its outcome through the shared cart-feedback region
+  (`data-cart-feedback`), never only inside the button.** `components/cart/CartFeedback.tsx`
+  mounts the region once, from `StorefrontChrome`, outside every product card; a control calls
+  `useCartFeedback()` and announces one message per click. The reason is a re-render, not style:
+  `addToCart` revalidates the layout, and in that same re-render `ProductCard` swaps a successful
+  card's `AddToCartButton` for `CartQuantityStepper` (and a sold-out card's for the disabled
+  "Out of stock" button). Anything the button rendered, a live region included, is unmounted
+  before it can be seen or heard, and a freshly mounted live region does not reliably announce.
+- **Say what the server did.** `addToCart` resolves to an `AddOutcome` (`lib/cart-rules.ts`):
+  `added`, `partial` (clamped to stock) or `none` with a reason. The strings live in
+  `components/cart/add-feedback-copy.ts`. Never show "Added" for anything but `added`.
+- **The region sits inside the `brandStyle()` div** in `StorefrontChrome`, because it is painted
+  with `bg-primary`: outside that div the token falls back to `:root`, and SriMart would get
+  Aheed's colour.
+- Enforced by `tests/add-to-cart-feedback.test.tsx` (messages, names, the rejected-call path) and
+  `tests/cart-add-outcome.test.ts` (outcomes, and no write for any `none`).
 
 ## React and Next.js hooks
 

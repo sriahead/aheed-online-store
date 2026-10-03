@@ -8,6 +8,7 @@ import { FloatingContact } from "@/components/layout/FloatingContact";
 import { CookieBanner } from "@/components/consent/CookieBanner";
 import { QuickViewProvider } from "@/components/product/quick-view-context";
 import { QuickViewDrawer } from "@/components/product/QuickViewDrawer";
+import { CartFeedbackProvider } from "@/components/cart/CartFeedback";
 import { RewardsLauncher } from "@/components/rewards/RewardsLauncher";
 import { brandStyle } from "@/lib/vendor-theme";
 import type { VendorProfile } from "@/lib/repositories/vendor";
@@ -37,32 +38,39 @@ export async function StorefrontChrome({
   return (
     <QuickViewProvider>
       <div style={brandStyle(profile.primitives)} className="flex min-h-screen flex-col">
-        <Header isLanding={isLanding} />
-        <div className="flex-1">{children}</div>
-        <footer className="border-t border-black/10 bg-white py-6 text-xs text-primary">
-          <div className="mx-auto flex max-w-5xl flex-col sm:flex-row items-center justify-between gap-4 px-4">
-            <p>
-              © {new Date().getFullYear()} {profile.name}. All rights reserved.
-            </p>
-            <div className="flex items-center gap-4 font-medium">
-              <Link href="/terms" className="hover:underline">
-                Terms of Service
-              </Link>
-              <Link href="/privacy" className="hover:underline">
-                Privacy Policy
-              </Link>
+        {/*
+          #956 — inside the brand-style div, not around it: the feedback region
+          is painted with `bg-primary`, and `brandStyle()` sets that token inline
+          here, so outside this div SriMart would get the :root (Aheed) colour.
+        */}
+        <CartFeedbackProvider>
+          <Header isLanding={isLanding} />
+          <div className="flex-1">{children}</div>
+          <footer className="border-t border-black/10 bg-white py-6 text-xs text-primary">
+            <div className="mx-auto flex max-w-5xl flex-col sm:flex-row items-center justify-between gap-4 px-4">
+              <p>
+                © {new Date().getFullYear()} {profile.name}. All rights reserved.
+              </p>
+              <div className="flex items-center gap-4 font-medium">
+                <Link href="/terms" className="hover:underline">
+                  Terms of Service
+                </Link>
+                <Link href="/privacy" className="hover:underline">
+                  Privacy Policy
+                </Link>
+              </div>
             </div>
-          </div>
-        </footer>
-        <FloatingContact
-          vendorName={profile.name}
-          facebookUrl={profile.facebookUrl}
-          instagramUrl={profile.instagramUrl}
-          whatsappNumber={profile.whatsappNumber}
-        />
-        <CookieBanner />
-        <QuickViewDrawer />
-        <RewardsLauncher initialData={initialRewardsData} vendorName={profile.name} />
+          </footer>
+          <FloatingContact
+            vendorName={profile.name}
+            facebookUrl={profile.facebookUrl}
+            instagramUrl={profile.instagramUrl}
+            whatsappNumber={profile.whatsappNumber}
+          />
+          <CookieBanner />
+          <QuickViewDrawer />
+          <RewardsLauncher initialData={initialRewardsData} vendorName={profile.name} />
+        </CartFeedbackProvider>
       </div>
     </QuickViewProvider>
   );

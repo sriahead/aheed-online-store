@@ -23,10 +23,17 @@ export function CheckoutSummary({
   lines,
   totals,
   method,
+  discountLabel = "Discount",
 }: {
   lines: { productId: string; name: string; quantity: number; lineTotalPence: number }[];
   totals: OrderTotals;
   method: FulfilmentMethodChoice;
+  /**
+   * #967 — names what the discount assumes, e.g. `Discount (REF-…)` for a code pre-filled from the
+   * referral cookie. This summary is server-rendered and cannot follow edits to the code field, so
+   * the label says which code its figure is for.
+   */
+  discountLabel?: string;
 }) {
   const isCollection = method === "COLLECTION";
 
@@ -56,7 +63,7 @@ export function CheckoutSummary({
 
         {totals.discountPence > 0 && (
           <div className="flex justify-between">
-            <dt className="text-primary-muted">Discount</dt>
+            <dt className="text-primary-muted">{discountLabel}</dt>
             <dd className="font-medium text-action">−{formatPrice(totals.discountPence)}</dd>
           </div>
         )}

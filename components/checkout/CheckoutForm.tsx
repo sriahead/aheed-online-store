@@ -9,6 +9,7 @@ import { setDeliveryPostcode, setFulfilmentMethod } from "@/features/storefront/
 import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
 import type { CustomerAddressRow } from "@/lib/repositories/customer-addresses";
 import { formatPrice } from "@/components/product/format-price";
+import { normaliseCode } from "@/lib/discounts";
 import {
   CHECKOUT_SECTION_TITLES,
   checkoutSections,
@@ -31,6 +32,14 @@ import { SlotPicker } from "./SlotPicker";
 
 const initialState: CheckoutState = { error: null };
 
+/**
+ * #967 — the referral cookie's pre-filled code as the page previewed it (read-only; nothing is
+ * reserved). `code` is normalised. `totalPence` is the order total with the code applied.
+ */
+export type PrefilledCode =
+  | { code: string; ok: true; discountPence: number; totalPence: number }
+  | { code: string; ok: false; message: string };
+
 export function CheckoutForm({
   signedInEmail,
   redeemable,
@@ -47,6 +56,7 @@ export function CheckoutForm({
   initialDiscountCode,
   quotedDeliveryRules,
   totalPence,
+  prefilledCode = null,
 }: {
   signedInEmail: string | null;
   /**
@@ -95,8 +105,19 @@ export function CheckoutForm({
    * points typed into this form; `place-order` validates both, and Stripe shows the exact amount.
    */
   totalPence: number;
+  /**
+   * #967 — the cookie's code, previewed. While the field still holds it, the total row shows its
+   * discount (or, if refused, why under the field). Once the shopper edits the field the row falls
+   * back to `totalPence`, which is always the total before any code.
+   */
+  prefilledCode?: PrefilledCode | null;
 }) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
+  const [discountCodeValue, setDiscountCodeValue] = useState(initialDiscountCode ?? "");
+  const prefilledMatches =
+    prefilledCode !== null && normaliseCode(discountCodeValue) === prefilledCode.code;
+  const appliedCode = prefilledMatches && prefilledCode.ok ? prefilledCode : null;
+  const refusedCode = prefilledMatches && !prefilledCode.ok ? prefilledCode : null;
   const [, startMethodTransition] = useTransition();
 
   const chooseMethod = (next: FulfilmentMethodChoice) => {
@@ -654,13 +675,24 @@ export function CheckoutForm({
           <input
             id="discountCode"
             name="discountCode"
-            defaultValue={initialDiscountCode ?? undefined}
+            value={discountCodeValue}
+            onChange={(event) => setDiscountCodeValue(event.target.value)}
+            aria-describedby={refusedCode ? "discountCode-note" : undefined}
             autoCapitalize="characters"
             autoComplete="off"
             spellCheck={false}
             className={`${inputClass} uppercase`}
             placeholder="WELCOME10"
           />
+          {refusedCode && (
+            <p
+              id="discountCode-note"
+              data-discount-code-note
+              className="mt-1.5 text-xs font-medium text-danger"
+            >
+              {refusedCode.message}
+            </p>
+          )}
         </div>
       </section>
 
@@ -673,13 +705,26 @@ export function CheckoutForm({
       <div data-checkout-total className="rounded-xl bg-surface-muted px-4 py-3 md:hidden">
         <p className="flex justify-between text-sm font-bold text-primary">
           <span>Total</span>
-          <span>{formatPrice(totalPence)}</span>
+          <span>{formatPrice(appliedCode ? appliedCode.totalPence : totalPence)}</span>
         </p>
-        <p className="mt-1 text-xs text-primary-muted">
-          {redeemable
-            ? "Any discount code or points you use come off before payment."
-            : "Any discount code you enter comes off before payment."}
-        </p>
+        {appliedCode ? (
+          <>
+            <p className="mt-1 text-xs text-primary-muted">
+              Includes code {appliedCode.code} (−{formatPrice(appliedCode.discountPence)}).
+            </p>
+            {redeemable && (
+              <p className="mt-1 text-xs text-primary-muted">
+                Any points you use come off before payment.
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="mt-1 text-xs text-primary-muted">
+            {redeemable
+              ? "Any discount code or points you use come off before payment."
+              : "Any discount code you enter comes off before payment."}
+          </p>
+        )}
       </div>
 
       <button

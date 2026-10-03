@@ -306,6 +306,7 @@ export function ProductCard({
             ) : (
               <AddToCartButton
                 productId={product.id}
+                productName={product.name}
                 disabled={!product.inStock}
                 label={`Add ${product.name} to cart`}
                 variant="card"
