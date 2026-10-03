@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.13.0"
-updated: 2026-09-30
+version: "1.16.0"
+updated: 2026-10-03
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -345,6 +345,11 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   would hit. Cross-tenant **read/list** scoping (a page never showing another vendor's rows) is
   provable the same way, from one side only: confirm your own vendor's list excludes a row you
   know belongs to someone else, rather than trying to view the other vendor's own list.
+  **The same limit stops a `validation.md` row from signing in as a second vendor's admin
+  locally** (`#960`–`#962` assumed it and had to substitute). Prove the render side by setting that
+  vendor's row in the dev database, and the write side by submitting the same action as the vendor
+  you *can* sign in as. Report the second vendor's own-UI save as unverified rather than counting
+  it. Reset the dev row to its default first: the previous run's value is still there.
 - **A `grep` pattern written against a literal string (e.g. a doc title containing `&`) can silently
   false-negative against a page's real, rendered HTML, because HTML-escapes it as `&amp;` — and a
   `validation.md` row's own example command is not exempt from this.** Hit at `#633`'s `/validate`
@@ -533,3 +538,61 @@ dev Neon branch in Stripe test mode. Most of it is drivable; four things are not
   the real adapter and Postgres. It is not Stripe's own `events resend`, so record it as a deviation
   when a validation row names the CLI.
 
+## Measuring the storefront at real phone widths (#960, #961, #962)
+
+Desktop Chrome, including a Claude in Chrome session, cannot be resized below 501px. A same-origin
+`<iframe>` of a set width does not work either, because `next.config.mjs` sends `X-Frame-Options`
+and `frame-ancestors 'none'`. Do not weaken those headers to measure.
+
+**What works:** `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768`.
+It drives the locally installed Chrome headless over the DevTools protocol, with
+`Emulation.setDeviceMetricsOverride` and `mobile: true`. It needs no dependency, because Node 22
+has a built-in `WebSocket`. It works against `npm run preview` (`http://localhost:8787` and
+`http://srimart.localhost:8787`) and against a deployed host.
+
+- It **prints measurements only**: header height after scrolling, the banner's position, grid
+  columns, and the first card's and the header's control sizes. The pass/fail thresholds live in
+  the slice's `requirements.md`.
+- `--add-first` adds the first card's product once, to measure the in-cart stepper. Each run uses
+  a fresh browser profile, so the cart starts empty.
+
+Traps found while building it (2026-10-02):
+
+- **In Git Bash, write `--path` without the leading slash** (`categories/fruit-veg`). MSYS
+  rewrites a bare `/categories/x` argument into `C:/Program Files/Git/categories/x`. That produced
+  a DNS failure that first looked like a page with every value `null`. The script now refuses a
+  drive-letter path with exit 2 and treats Chrome's error page as a failed load (exit 1).
+  PowerShell is unaffected.
+- **`srimart.localhost` resolves inside Chrome, not necessarily for `curl` or Node on Windows.**
+  For a non-browser request to SriMart, use `127.0.0.1:8787` with `Host: srimart.localhost:8787`
+  (the port is required; see the SriMart host-header notes above).
+- **An orphaned headless Chrome can stall a concurrent `next build` at "Collecting build traces"
+  indefinitely.** Stopping a background shell does not kill its `tsx` and `chrome.exe`
+  grandchildren. A stuck run left Chrome alive, and `npm run preview`'s build sat on that line for
+  over ten minutes, then finished seconds after the processes were killed:
+
+  ```powershell
+  Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'verify-mobile-layout' } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+  ```
+
+  The script now has a 30s timeout on every DevTools call and an overall watchdog, so it should
+  not hang again. Check for orphans anyway before blaming a slow build. Separately, a clean
+  `npm run build` on this machine spends several minutes on that same line even with nothing
+  orphaned. "Slow" is not "stuck" until something is holding the files.
+
+Added for `#958`/`#959` (2026-10-03):
+
+- **`--then <path>` measures a page that needs a cart.** With `--add-first`, every width is
+  measured at `<path>` once the item is in the cart. This is how to reach `/checkout`, which
+  redirects an empty cart to `/cart`. Each object also lists `formInputs` (every visible input's
+  `autocomplete`) and, on checkout, a `checkout` block.
+- **Check `viewportWidth` first. If it is wider than the width you asked for, every other number
+  describes a zoomed-out page.** With `mobile: true`, Chrome widens the layout viewport to fit
+  overflowing content, as a phone does. The first `/checkout` run reported `viewportWidth` 961 at
+  390 on both vendors. Its positions and visibility looked plausible, and that was wrong. The cause
+  was a CSS grid track (`1fr`, or the implicit `auto` column) that cannot shrink below its
+  content's min-content width, widened by `SlotPicker`'s ~900px day strip. Use
+  `minmax(0,1fr)` / `grid-cols-1` for any grid column that holds a horizontally scrolling strip.
+  To find the culprit, list elements inside the page whose own box is wider than the viewport but
+  whose children are not.

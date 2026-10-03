@@ -4,6 +4,8 @@ import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getEnv } from "@/lib/config";
 import { BundleCard } from "@/components/bundle/BundleCard";
 import { CollectionNav } from "@/components/product/CollectionNav";
+import { ProductGrid } from "@/components/product/ProductGrid";
+import { DEFAULT_PRODUCT_GRID_DENSITY } from "@/lib/product-grid-density";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { hasAvailableItems } from "@/lib/bundle-pricing";
 
@@ -44,6 +46,9 @@ export default async function BundlesPage() {
   ]);
   const renderable = bundles.filter((bundle) => hasAvailableItems(bundle.items));
   const { CDN_BASE_URL } = getEnv();
+  // #962 — request-memoised; the header already resolved this profile in the same render.
+  const gridDensity =
+    (await getCurrentVendorProfile())?.productGridDensity ?? DEFAULT_PRODUCT_GRID_DENSITY;
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-6">
@@ -79,20 +84,22 @@ export default async function BundlesPage() {
           {renderable.length === 0 ? (
             <p className="mt-6 text-primary-muted">No bundles are available right now.</p>
           ) : (
-            <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {renderable.map((bundle) => (
-                <BundleCard
-                  key={bundle.id}
-                  id={bundle.id}
-                  name={bundle.name}
-                  tagline={bundle.tagline}
-                  imageKey={bundle.imageKey}
-                  altText={bundle.altText}
-                  items={bundle.items}
-                  cdnBaseUrl={CDN_BASE_URL ?? ""}
-                />
-              ))}
-            </ul>
+            <div className="mt-6">
+              <ProductGrid as="ul" density={gridDensity}>
+                {renderable.map((bundle) => (
+                  <BundleCard
+                    key={bundle.id}
+                    id={bundle.id}
+                    name={bundle.name}
+                    tagline={bundle.tagline}
+                    imageKey={bundle.imageKey}
+                    altText={bundle.altText}
+                    items={bundle.items}
+                    cdnBaseUrl={CDN_BASE_URL ?? ""}
+                  />
+                ))}
+              </ProductGrid>
+            </div>
           )}
         </div>
       </div>

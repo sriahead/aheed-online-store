@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.13.0"
-updated: 2026-09-09
+version: "1.14.0"
+updated: 2026-10-02
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -179,6 +179,67 @@ family registers `themeKeys: ["--radius"]`, so leaving it undeclared would make 
 in use still depending on a Tailwind default.
 
 Spacing scale and breakpoints are **not brand-derived** — Tailwind v4's defaults are used as-is.
+The one named spacing step is `tap` (below).
+
+## Touch targets (#961, 2026-10-02)
+
+`--spacing-tap: 2.75rem` (44px) in `design-system/tokens/tokens.css` generates `h-tap`, `w-tap`,
+`size-tap`, `min-h-tap` and `min-w-tap`. It is a size, not a colour, so `brandStyle()` never
+overrides it and it needs no second-vendor check.
+
+**The storefront's primary shopping controls are at least 44×44 CSS px below `lg`** and keep their
+compact desktop size from `lg`. Those controls are:
+
+- the product card's Add button and its pre-add minus and plus;
+- the in-cart `CartQuantityStepper`'s minus and plus;
+- the card's mobile Quick View button;
+- the header's Shop, Shop List, Sign In and Account links.
+
+Some facts behind the rule:
+
+- **The breakpoint is `lg`, not `sm`.** A 640–1023px viewport is a tablet, and a tablet is a touch
+  device. `pointer-coarse:` would be more exact, but no tool available to validation can emulate a
+  coarse pointer, so it could not be measured.
+- **This is above the conformance floor, by choice.** WCAG 2.2 SC 2.5.8 (AA) needs only 24×24, which
+  every control already met. 44px is SC 2.5.5 (AAA) and Apple's 44pt, chosen because the
+  most-tapped controls were the smallest and adjacent minus and plus mis-taps change quantities.
+- **A small visual can keep a large hit area.** The Quick View button is a 44px button around a
+  28px circle. Make the *button* `tap`-sized, not the icon.
+- **Below `sm` the card hides its pre-add quantity picker.** About 128px of card content cannot
+  hold two 44px buttons, a quantity and Add. One tap adds one, and the in-cart stepper takes over.
+- **Not yet adopted everywhere.** `LocationControl`, filter chips, subcategory tabs, pagination and
+  the cart drawer's own controls are still under 44px. Adopting `tap` there is follow-up work, not
+  an oversight to "fix" in passing.
+
+Measure at real widths with `scripts/verify-mobile-layout.ts` (headless Chrome over the DevTools
+protocol). Desktop Chrome cannot go below 501px, and the app's `frame-ancestors 'none'` rules out
+an iframe.
+
+## Product grids (#962, 2026-10-02)
+
+**Every product listing renders through `components/product/ProductGrid.tsx`**, never through a
+`grid-cols-*` class written at the call site. Today that covers the category, search and bundles
+pages; `tests/product-grid-usage.test.ts` fails if one of them writes its own columns, or if the
+old `2 / 3 / 4` string reappears anywhere. Columns come from the vendor's
+`VendorConfig.productGridDensity` preset, mapped to literal class strings in
+`lib/product-grid-density.ts`. Tailwind only emits classes it finds as source text, so a column
+count computed at runtime would silently never reach the stylesheet. That is why a vendor picks a
+preset, never a number.
+
+| Preset | Below `sm` | `sm` | `md` | `lg` | `xl` |
+|---|---|---|---|---|---|
+| `COMPACT` | 2 | 2 | 2 | 4 | 6 |
+| `STANDARD` (default) | 2 | 2 | 2 | 4 | 4 |
+| `SPACIOUS` | 1 | 2 | 2 | 2 | 4 |
+
+Rules for any future preset:
+
+- **Every multi-column step is even.** An odd step leaves short pages ragged (a 3-column step
+  rendered 8 products as 3 + 3 + 2).
+- **Four columns never start before `lg`.** `FilterPanel`'s 240px sidebar from `md` leaves about
+  500px, roughly 110px per card at four.
+- **Six only from `xl`.**
+- **No free per-vendor column count.** It allows layouts that break the card.
 
 ## Accessibility & Compliance
 

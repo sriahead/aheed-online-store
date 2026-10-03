@@ -135,10 +135,21 @@ export async function Header({
       ? composePublicUrl(CDN_BASE_URL, profile.logoStorageKey)
       : null;
 
+  // #960 — three SIBLINGS, not one sticky <header> wrapping everything. The whole header used to
+  // be sticky, and at phone widths that pinned 234px (a third of the screen) over the product
+  // grid. Only the logo/nav row and the phone search row stay pinned now; the trust banner and
+  // the phone location row scroll away with the page.
+  //
+  // They must be siblings: a `position: sticky` element sticks only within its parent's box, so a
+  // sticky row inside a non-sticky <header> would scroll off with it. The parent here is the
+  // layout's full-height flex column (StorefrontChrome / the admin layout), so the <header>
+  // sticks for the whole page. `display: contents` on an outer <header> was rejected: it has a
+  // history of dropping element semantics in shipped browsers, and this is the banner landmark.
+  // The data-header-* attributes are stable hooks for scripts/verify-mobile-layout.ts.
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-black/10 shadow-sm">
-      {/* Top Banner - Delivery Promise & Trust bar */}
-      <div className="bg-primary text-white text-xs py-1.5 px-4">
+    <>
+      {/* Top Banner - Delivery Promise & Trust bar (scrolls away) */}
+      <div data-header-banner="" className="bg-primary text-white text-xs py-1.5 px-4">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           {/* P7.5c+f (#239): both lines used to be Aheed's. The first named a
               trade ("Local Grocery & Self-Delivery") and the second was a
@@ -176,185 +187,192 @@ export async function Header({
         </div>
       </div>
 
-      {/* Main Nav Header */}
-      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-        {/* Brand Logo. h-10 overflow-clip caps this container at the logo's own
+      <header className="sticky top-0 z-40 bg-white border-b border-black/10 shadow-sm">
+        {/* Main Nav Header */}
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          {/* Brand Logo. h-10 overflow-clip caps this container at the logo's own
             height so a third-party browser extension's content script injecting
             an element inside it (confirmed: Coupert, #333) cannot stretch it and
             reflow the row. Deliberately NOT applied to the row or <nav> below —
             ViewSwitcher's dropdown (components/layout/ViewSwitcher.tsx) renders
             below the row via `absolute top-full` and an ancestor overflow-clip
             would cut it off. */}
-        <div className="flex items-center gap-3 shrink-0 h-10 overflow-clip">
-          <Link
-            href={isPortal ? "/staff" : "/"}
-            className="flex items-center gap-2.5 group text-left"
-          >
-            {logoUrl ? (
-              // Plain <img> by decision — see #46 / eslint.config.mjs. NOTE: this logo is
-              // the storefront's dominant byte cost (1.9 MB, 83% of page weight, rendered
-              // into a 40px box) and the whole of the ~12s LCP breach — tracked as #243.
-              //
-              // `aspect-9/5` (= 1.8) reserves the box BEFORE the bytes land. Without it, `w-auto`
-              // gave the element zero width until the image decoded, and it then snapped to
-              // ~72px and shoved the whole header row sideways — the visible "jerk on
-              // refresh". That shift was invisible to the transition sweeps in #323/#324
-              // because it is a layout shift, not an animation, and it is made far worse by
-              // the 1.9 MB payload above: the bigger the file, the later the jolt.
-              // Dimensions cannot come from the DB — VendorBranding stores only
-              // logoStorageKey, no width/height — so the ratio is pinned in CSS instead.
-              // 1.8 matches both seeded logos (298x160 and 1664x928); `object-contain` means
-              // a vendor whose logo is a different shape is letterboxed inside the reserved
-              // box rather than distorted, and still never shifts. If #243 later stores real
-              // dimensions, replace this with width/height attributes.
-              <img
-                src={logoUrl}
-                alt={`${name} — Your Local Store`}
-                className="h-10 w-auto aspect-9/5 object-contain rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"
-              />
-            ) : (
-              <>
-                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-xl shadow-md group-hover:bg-primary/90 transition-colors">
-                  {name.charAt(0)}
-                </div>
-                <div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-bold text-xl text-primary tracking-tight group-hover:text-primary-muted transition-colors">
-                      {name.split(" ")[0]}
-                    </span>
-                    <span className="font-semibold text-xs text-accent uppercase tracking-wider">
-                      {name.split(" ").slice(1).join(" ")}
-                    </span>
+          <div className="flex items-center gap-3 shrink-0 h-10 overflow-clip">
+            <Link
+              href={isPortal ? "/staff" : "/"}
+              className="flex items-center gap-2.5 group text-left"
+            >
+              {logoUrl ? (
+                // Plain <img> by decision — see #46 / eslint.config.mjs. NOTE: this logo is
+                // the storefront's dominant byte cost (1.9 MB, 83% of page weight, rendered
+                // into a 40px box) and the whole of the ~12s LCP breach — tracked as #243.
+                //
+                // `aspect-9/5` (= 1.8) reserves the box BEFORE the bytes land. Without it, `w-auto`
+                // gave the element zero width until the image decoded, and it then snapped to
+                // ~72px and shoved the whole header row sideways — the visible "jerk on
+                // refresh". That shift was invisible to the transition sweeps in #323/#324
+                // because it is a layout shift, not an animation, and it is made far worse by
+                // the 1.9 MB payload above: the bigger the file, the later the jolt.
+                // Dimensions cannot come from the DB — VendorBranding stores only
+                // logoStorageKey, no width/height — so the ratio is pinned in CSS instead.
+                // 1.8 matches both seeded logos (298x160 and 1664x928); `object-contain` means
+                // a vendor whose logo is a different shape is letterboxed inside the reserved
+                // box rather than distorted, and still never shifts. If #243 later stores real
+                // dimensions, replace this with width/height attributes.
+                <img
+                  src={logoUrl}
+                  alt={`${name} — Your Local Store`}
+                  className="h-10 w-auto aspect-9/5 object-contain rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"
+                />
+              ) : (
+                <>
+                  <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-xl shadow-md group-hover:bg-primary/90 transition-colors">
+                    {name.charAt(0)}
                   </div>
-                  {/* #239: was "{localityName} Groceries", which rendered
+                  <div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-bold text-xl text-primary tracking-tight group-hover:text-primary-muted transition-colors">
+                        {name.split(" ")[0]}
+                      </span>
+                      <span className="font-semibold text-xs text-accent uppercase tracking-wider">
+                        {name.split(" ").slice(1).join(" ")}
+                      </span>
+                    </div>
+                    {/* #239: was "{localityName} Groceries", which rendered
                       "Reading Groceries" under SriMart's wordmark. Only shown
                       in the logo fallback (a vendor with no logoStorageKey), so
                       it was easy to miss — the locality alone names no trade. */}
-                  <p className="text-[10px] text-black/60 font-medium tracking-wide uppercase">
-                    {localityName}
-                  </p>
-                </div>
-              </>
-            )}
-          </Link>
-        </div>
-
-        {/* Location Control (Desktop) */}
-        {!isPortal && (
-          <div className="hidden sm:block h-full">
-            <LocationControl
-              postcode={storedPostcode}
-              deliverable={deliverable}
-              offerCollection={offerCollection}
-              method={fulfilmentMethod}
-            />
+                    <p className="text-[10px] text-black/60 font-medium tracking-wide uppercase">
+                      {localityName}
+                    </p>
+                  </div>
+                </>
+              )}
+            </Link>
           </div>
-        )}
 
-        {/* Search */}
-        {!isPortal && (
-          <div className="flex-1 max-w-md hidden sm:block">
-            <SearchForm placeholder={searchPlaceholder} />
-          </div>
-        )}
+          {/* Location Control (Desktop) */}
+          {!isPortal && (
+            <div className="hidden sm:block h-full">
+              <LocationControl
+                postcode={storedPostcode}
+                deliverable={deliverable}
+                offerCollection={offerCollection}
+                method={fulfilmentMethod}
+              />
+            </div>
+          )}
 
-        {/* Action Controls & Navigation */}
-        <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          {/* #496 — the landing page's header had no path at all to the
+          {/* Search */}
+          {!isPortal && (
+            <div className="flex-1 max-w-md hidden sm:block">
+              <SearchForm placeholder={searchPlaceholder} />
+            </div>
+          )}
+
+          {/* Action Controls & Navigation */}
+          <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            {/* #496 — the landing page's header had no path at all to the
               catalogue: "Shop List" (below) is deliberately hidden there
               (P8.5f), and the only other route in was the hero's rotating
               per-department "Shop {Department}" button. Unlike "Shop List",
               this stays visible on every non-portal route, landing included. */}
-          {!isPortal && (
-            <Link
-              href="/categories"
-              className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
-              title="Browse all departments"
-            >
-              <Store className="w-4 h-4 text-primary" />
-              <span className="hidden sm:inline">Shop</span>
-            </Link>
-          )}
+            {!isPortal && (
+              <Link
+                href="/categories"
+                className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
+                title="Browse all departments"
+              >
+                <Store className="w-4 h-4 text-primary" />
+                <span className="hidden sm:inline">Shop</span>
+              </Link>
+            )}
 
-          {/* P8.5f: hidden on the landing page (see the search slot above); the
+            {/* P8.5f: hidden on the landing page (see the search slot above); the
               standing postcode answer takes this space instead. */}
-          {!isPortal && !isLanding && (
-            <Link
-              href="/shop-your-list"
-              className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
-              title="Shop by pasting your list"
-            >
-              <ShoppingBag className="w-4 h-4 text-primary" />
-              <span className="hidden sm:inline">Shop List</span>
-            </Link>
-          )}
+            {!isPortal && !isLanding && (
+              <Link
+                href="/shop-your-list"
+                className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
+                title="Shop by pasting your list"
+              >
+                <ShoppingBag className="w-4 h-4 text-primary" />
+                <span className="hidden sm:inline">Shop List</span>
+              </Link>
+            )}
 
-          {/* Account / Sign In & Sign Out Controls */}
-          {user ? (
-            <Link
-              href="/account"
-              className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 p-1 pr-3 rounded-xl border border-black/10 transition-colors text-xs font-bold text-black/80 hover:text-primary"
-            >
-              <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
-                {firstName?.charAt(0) ?? <User className="h-3.5 w-3.5" />}
+            {/* Account / Sign In & Sign Out Controls */}
+            {user ? (
+              <Link
+                href="/account"
+                className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 p-1 pr-3 rounded-xl border border-black/10 transition-colors text-xs font-bold text-black/80 hover:text-primary"
+              >
+                <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
+                  {firstName?.charAt(0) ?? <User className="h-3.5 w-3.5" />}
+                </div>
+                <span className="hidden sm:inline">{firstName}</span>
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
+              >
+                <LogIn className="w-4 h-4 text-primary" />
+                <span className="hidden sm:inline">Sign In</span>
+              </Link>
+            )}
+
+            {/* Cart Trigger */}
+            {!isPortal && (
+              <CartDrawerShell
+                itemCount={cartSummary.itemCount}
+                subtotalPence={cartSummary.subtotalPence}
+              >
+                <CartContents
+                  summary={cartSummary}
+                  method={fulfilmentMethod}
+                  minimumOrderPence={deliveryRules.minimumOrderPence}
+                  freeDeliveryThresholdPence={deliveryRules.freeDeliveryThresholdPence}
+                  localityName={localityName}
+                  cdnBaseUrl={CDN_BASE_URL ?? ""}
+                  showViewCartLink
+                />
+              </CartDrawerShell>
+            )}
+
+            {/* View Switcher (Anchored Far Right) */}
+            {isStaffOrAdmin && (
+              <div className="border-l border-black/10 pl-2 ml-1">
+                <ViewSwitcher
+                  canSeeAdmin={canSeeAdmin}
+                  currentTier={currentTier}
+                  isPortal={isPortal}
+                />
               </div>
-              <span className="hidden sm:inline">{firstName}</span>
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
-            >
-              <LogIn className="w-4 h-4 text-primary" />
-              <span className="hidden sm:inline">Sign In</span>
-            </Link>
-          )}
+            )}
+          </nav>
+        </div>
 
-          {/* Cart Trigger */}
-          {!isPortal && (
-            <CartDrawerShell
-              itemCount={cartSummary.itemCount}
-              subtotalPence={cartSummary.subtotalPence}
-            >
-              <CartContents
-                summary={cartSummary}
-                method={fulfilmentMethod}
-                minimumOrderPence={deliveryRules.minimumOrderPence}
-                freeDeliveryThresholdPence={deliveryRules.freeDeliveryThresholdPence}
-                localityName={localityName}
-                cdnBaseUrl={CDN_BASE_URL ?? ""}
-                showViewCartLink
-              />
-            </CartDrawerShell>
-          )}
-
-          {/* View Switcher (Anchored Far Right) */}
-          {isStaffOrAdmin && (
-            <div className="border-l border-black/10 pl-2 ml-1">
-              <ViewSwitcher
-                canSeeAdmin={canSeeAdmin}
-                currentTier={currentTier}
-                isPortal={isPortal}
-              />
-            </div>
-          )}
-        </nav>
-      </div>
-
-      {/* Mobile row: Location & Search stacked */}
-      {!isPortal && (
-        <div className="flex flex-col gap-2 px-4 pb-3 sm:hidden">
-          <div className="w-full">
-            <LocationControl
-              postcode={storedPostcode}
-              deliverable={deliverable}
-              offerCollection={offerCollection}
-              method={fulfilmentMethod}
-            />
+        {/* Mobile search row — stays pinned with the logo/nav row (#960). */}
+        {!isPortal && (
+          <div className="px-4 pb-3 sm:hidden">
+            <SearchForm placeholder={searchPlaceholder} />
           </div>
-          <SearchForm placeholder={searchPlaceholder} />
+        )}
+      </header>
+
+      {/* Mobile location row — below the pinned header, scrolls away (#960). From `sm` the
+          same control sits inline in the pinned row instead. */}
+      {!isPortal && (
+        <div data-header-location="" className="bg-white px-4 py-2 sm:hidden">
+          <LocationControl
+            postcode={storedPostcode}
+            deliverable={deliverable}
+            offerCollection={offerCollection}
+            method={fulfilmentMethod}
+          />
         </div>
       )}
-    </header>
+    </>
   );
 }

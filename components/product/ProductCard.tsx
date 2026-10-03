@@ -174,7 +174,10 @@ export function ProductCard({
             </button>
           </div>
 
-          {/* Mobile / Touch: Always show a compact Quick View button/icon */}
+          {/* Mobile / Touch: Always show a compact Quick View button/icon.
+              #961 — the BUTTON is the 44px (`tap`) hit area; the visible circle inside it stays
+              28px. Anchored at top-0/right-0, the 44px box centres the circle 8px in from the
+              corner, exactly where the old top-2/right-2 placed it. */}
           <button
             type="button"
             onClick={(e) => {
@@ -182,9 +185,11 @@ export function ProductCard({
               openQuickView(product.slug, product);
             }}
             aria-label={`Quick view ${product.name}`}
-            className="sm:hidden absolute top-2 right-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs transition active:scale-95 motion-reduce:active:scale-100"
+            className="group/qv sm:hidden absolute top-0 right-0 z-20 flex size-tap items-center justify-center rounded-full"
           >
-            <Eye className="h-4 w-4" aria-hidden />
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs transition group-active/qv:scale-95 motion-reduce:group-active/qv:scale-100">
+              <Eye className="h-4 w-4" aria-hidden />
+            </span>
           </button>
         </div>
 

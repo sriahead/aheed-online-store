@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.6.0"
-updated: "2026-09-29"
+version: "2.7.0"
+updated: "2026-10-02"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -92,7 +92,8 @@ the search box text shown in the header's search box, set your delivery fee, you
 Facebook page address, your Instagram profile address and your WhatsApp number. In the **Product
 labels & store description** form at the bottom of the page, choose which of the six product labels
 (Halal, Fresh, Organic, Vegetarian, Gluten free, HMC certification) your staff see on the product
-form, and write what your store sells.
+form, and write what your store sells. In the **Product grid layout** form below that, choose how
+many product cards sit side by side on your category, search and bundle pages.
 
 **Typical workflow:** You do the branding at setup and when it changes. The quickest start is to
 choose a theme from the **Select a theme** list and press **Apply Theme** — that fills all eight
@@ -136,6 +137,14 @@ sells** is one or two sentences, up to 200 characters, such as "Consumer electro
 accessories". It is given to the shop's AI features — shopping-list matching, search-word
 suggestions and pack-size suggestions — so they understand what you sell. Leave it blank and they
 use neutral wording.
+**Product grid layout** has three options, each saved with its own **Save Product Grid Layout**
+button. **Standard** is what every shop starts with: 2 cards per row on phones and tablets, 4 on
+laptops and wider screens. **Compact** fits more, smaller cards: 2 per row on phones and tablets, 4
+on laptops and 6 on the widest screens. **Spacious** shows fewer, larger cards: 1 per row on phones,
+2 on tablets and laptops, and 4 on the widest screens. It applies to your category pages, your
+search results and your Value Bundles page, and it changes the layout only: every product still
+shows, and nothing about a product changes. Saving any other form on this page leaves your choice
+alone.
 
 **Common mistakes and limitations:** Colour choices affect the readability of text sitting on them.
 After changing a brand colour, look at a real page rather than only the colour swatch. Because your

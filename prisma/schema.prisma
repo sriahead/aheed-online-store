@@ -430,16 +430,16 @@ model VendorBranding {
 }
 
 model VendorConfig {
-  id                         String   @id @default(uuid())
-  vendorId                   String   @unique
-  vendor                     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  id                         String             @id @default(uuid())
+  vendorId                   String             @unique
+  vendor                     Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   localityName               String // e.g. "Milton Keynes"
   // #363 — the store's IANA timezone, region-shaped vendor data for the same reason
   // localityName above is. Interprets every datetime-local field (campaign windows,
   // discount-code windows) and decides which calendar day "today" is when the checkout
   // slot picker offers dates. Default keeps every existing row, and any vendor created
   // before a zone is chosen, on the platform default — see lib/local-datetime.ts.
-  timezone                   String   @default("Europe/London")
+  timezone                   String             @default("Europe/London")
   senderName                 String // transactional email sender identity
   senderEmail                String
   searchPlaceholder          String? // header search-box copy, e.g. "Search halal lamb, basmati, lentils…"
@@ -462,23 +462,23 @@ model VendorConfig {
   // £30 threshold). Prisma-level defaults mean a newly-inserted vendor is valid without the
   // seed supplying values. P3a reads only the threshold (cart banner); applying the fee and
   // the minimum to a payable total is P3b.
-  deliveryFeePence           Int      @default(349)
+  deliveryFeePence           Int                @default(349)
   freeDeliveryThresholdPence Int? // null = free delivery never offered
-  minimumOrderPence          Int      @default(0) // 0 = no minimum
-  offerCollection            Boolean  @default(false)
+  minimumOrderPence          Int                @default(0) // 0 = no minimum
+  offerCollection            Boolean            @default(false)
   // P5a — loyalty settings are vendor data for the same reason the delivery rules
   // above are (#135). Defaults mean an existing VendorConfig row stays valid with
   // no backfill, and loyaltyEnabled defaults OFF so the feature ships dark for any
   // vendor that hasn't opted in.
-  loyaltyEnabled             Boolean  @default(false)
-  bookingWindowDays          Int      @default(14)
-  slotHoldDurationMinutes    Int      @default(15)
-  offerDeliverySlots         Boolean  @default(false)
-  expressCollectionEnabled   Boolean  @default(false)
-  pointsPerPoundEarned       Int      @default(1) // points per whole £1 of eligible spend
-  pencePerPointRedeemed      Int      @default(1) // 100 points = £1
-  minRedeemPoints            Int      @default(100) // below this, redemption isn't offered
-  tierWindowDays             Int      @default(30) // rolling window tier qualification looks back over
+  loyaltyEnabled             Boolean            @default(false)
+  bookingWindowDays          Int                @default(14)
+  slotHoldDurationMinutes    Int                @default(15)
+  offerDeliverySlots         Boolean            @default(false)
+  expressCollectionEnabled   Boolean            @default(false)
+  pointsPerPoundEarned       Int                @default(1) // points per whole £1 of eligible spend
+  pencePerPointRedeemed      Int                @default(1) // 100 points = £1
+  minRedeemPoints            Int                @default(100) // below this, redemption isn't offered
+  tierWindowDays             Int                @default(30) // rolling window tier qualification looks back over
   pointsExpiryMonths         Int? // null = points never expire
   // #905 — which of Product's six label booleans this vendor's staff product form offers. They
   // gate the STAFF FORM only: the storefront stays data-driven (a badge/facet shows only where a
@@ -486,18 +486,29 @@ model VendorConfig {
   // features/admin/catalogue.ts strips a disabled label from the write rather than saving false.
   // Default false, so a new vendor sees none until an admin opts in; the migration backfilled
   // existing vendors from their own products. HMC is only offered while Halal is too.
-  showHalalLabel             Boolean  @default(false)
-  showFreshLabel             Boolean  @default(false)
-  showOrganicLabel           Boolean  @default(false)
-  showVegetarianLabel        Boolean  @default(false)
-  showGlutenFreeLabel        Boolean  @default(false)
-  showHmcCertification       Boolean  @default(false)
+  showHalalLabel             Boolean            @default(false)
+  showFreshLabel             Boolean            @default(false)
+  showOrganicLabel           Boolean            @default(false)
+  showVegetarianLabel        Boolean            @default(false)
+  showGlutenFreeLabel        Boolean            @default(false)
+  showHmcCertification       Boolean            @default(false)
   // #905 — what this store sells, in the admin's own words (max 200 chars, one line). Given to
   // the AI prompts (list normalisation, synonym proposals, net-content suggestions) in place of
   // a hardcoded "grocery" framing; null = neutral wording.
   storeDescription           String?
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  // #962 — how dense this vendor's product listings are. A preset, never a free column count:
+  // Tailwind cannot build grid-cols-* from runtime values, and a free number allows layouts that
+  // break the card. Each preset maps to one static class string in lib/product-grid-density.ts.
+  productGridDensity         ProductGridDensity @default(STANDARD)
+  createdAt                  DateTime           @default(now())
+  updatedAt                  DateTime           @updatedAt
+}
+
+// #962 — product listing density presets; see VendorConfig.productGridDensity.
+enum ProductGridDensity {
+  COMPACT
+  STANDARD
+  SPACIOUS
 }
 
 // P5a — per-vendor loyalty tiers (#135). A shopper's tier is resolved from their

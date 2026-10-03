@@ -114,7 +114,13 @@ export default async function CheckoutPage() {
         </p>
       )}
 
-      <div className="grid gap-6 md:grid-cols-[1fr_18rem]">
+      {/*
+        #959 R18a — minmax(0, …), not the implicit `auto`/`1fr` track, which cannot shrink below its
+        content's min-content width. SlotPicker's day strip is about 900px of non-shrinking buttons,
+        so the column grew to ~944px and the whole page rendered zoomed out at phone and tablet
+        widths. With the track allowed to shrink, the strip scrolls inside its own overflow-x-auto.
+      */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="rounded-2xl border border-black/10 bg-white p-5">
           <CheckoutForm
             vendorId={vendor?.id ?? ""}
@@ -131,6 +137,7 @@ export default async function CheckoutPage() {
             method={fulfilmentMethod}
             initialDiscountCode={initialDiscountCode}
             quotedDeliveryRules={encodeDeliveryQuote(deliveryRules)}
+            totalPence={totals.totalPence}
           />
         </div>
 

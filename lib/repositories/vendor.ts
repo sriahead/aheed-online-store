@@ -1,5 +1,6 @@
 import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { STORE_TIMEZONE } from "@/lib/local-datetime";
+import { DEFAULT_PRODUCT_GRID_DENSITY, type ProductGridDensity } from "@/lib/product-grid-density";
 
 /**
  * Re-exported so the app/UI/feature layers can type a prop against the real
@@ -80,6 +81,11 @@ export interface VendorProfile {
   showHmcCertification: boolean;
   /** #905 — what the store sells, in its own words; the AI prompts' context. `null` = neutral. */
   storeDescription: string | null;
+  /**
+   * #962 — the product listing density preset, rendered by `components/product/ProductGrid.tsx`.
+   * `STANDARD` for a vendor with no config row, which is also the column default.
+   */
+  productGridDensity: ProductGridDensity;
   /** Always `deliveryAreas.map(a => a.prefix)` — kept for the eligibility check's callers. */
   deliveryPrefixes: string[];
   /**
@@ -174,6 +180,7 @@ export async function fetchVendorProfile(
           showGlutenFreeLabel: true,
           showHmcCertification: true,
           storeDescription: true,
+          productGridDensity: true,
           deliveryFeePence: true,
           freeDeliveryThresholdPence: true,
           minimumOrderPence: true,
@@ -240,6 +247,7 @@ export async function fetchVendorProfile(
     showGlutenFreeLabel: vendor?.config?.showGlutenFreeLabel ?? false,
     showHmcCertification: vendor?.config?.showHmcCertification ?? false,
     storeDescription: vendor?.config?.storeDescription ?? null,
+    productGridDensity: vendor?.config?.productGridDensity ?? DEFAULT_PRODUCT_GRID_DENSITY,
     deliveryPrefixes: (vendor?.deliveryAreas ?? []).map((a) => a.prefix),
     deliveryAreas: vendor?.deliveryAreas ?? [],
     // Fall back to the schema defaults when the config satellite is unseeded,
@@ -337,6 +345,11 @@ export interface VendorStorefrontConfigInput {
   showHmcCertification?: boolean;
   storeDescription?: string | null;
   /**
+   * #962 — owned by the product-grid form alone. Same optionality rule: every other form omits it,
+   * so saving any of them leaves the vendor's chosen density alone.
+   */
+  productGridDensity?: ProductGridDensity;
+  /**
    * #634 — the three delivery rules. Optional as a group: the branding half of
    * this form submits without them, and omitting them must leave the stored
    * values alone rather than reset them to a default.
@@ -403,6 +416,8 @@ export async function updateVendorStorefrontConfig(
         showGlutenFreeLabel: data.showGlutenFreeLabel,
         showHmcCertification: data.showHmcCertification,
         storeDescription: data.storeDescription,
+        // #962 — same direct assignment: only the product-grid form supplies it.
+        productGridDensity: data.productGridDensity,
         // #634 — written only when supplied. `freeDeliveryThresholdPence` is
         // explicitly nullable, so `undefined` (absent) and `null` (free
         // delivery never offered) must stay distinguishable here; spreading a
