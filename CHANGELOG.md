@@ -19,6 +19,10 @@ every branch merges.
   - `docs/model-handoff.md` 1.62.0: slice 3 recorded as merged to `staging` only, promotion outstanding; `#956` no longer queued.
   - `docs/developer-portal/local-dev-playbook.md` 1.17.0: five traps found proving the slice live (wrangler dev dying and leaving `:8787` held, driving the browser from page JavaScript, the pre-discount minimum-order check, the cart-merge prompt, scratch database scripts).
 
+- **Document-stage reconciliation for the PR #976 promotion (`#956`, `#967` to production, merge `9e2afac`).** Docs only.
+  - `specs/roadmap.md` 1.129.0: the promotion row, with `deploy-production` run `37152345619` and production `/api/health` serving `9e2afac` on both vendors.
+  - `docs/model-handoff.md` 1.63.0: `main` at `9e2afac`; slice 3 of the mobile programme in production and its issues closed.
+
 - **Document-stage reconciliation for the PR #970 promotion (`#958`–`#962` to production, merge `20ff789`).** Docs only.
   - `specs/roadmap.md` 1.126.0: the mobile-checkout row for PR #969. 1.127.0: the promotion row, with `deploy-production` run `37129181574` and production `/api/health` serving `20ff789` on both vendors.
   - `docs/model-handoff.md` 1.61.0: `main` at `20ff789`; both mobile-programme slices in production and their issues closed.
