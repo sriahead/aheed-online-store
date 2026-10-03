@@ -4,7 +4,7 @@ title: "Shopping Guide & Help Center"
 audience: [shopper]
 type: guide
 status: approved
-version: "1.1.0"
+version: "1.2.0"
 updated: 2026-10-03
 visibility: public
 summary: "A complete guide for customers on how to browse, place orders, and manage their account."
@@ -23,12 +23,14 @@ Welcome! This guide explains how to find what you need, place orders, and make t
 
 ## Cart & Checkout
 - **Adding to Cart:** Adjust the quantity and click "Add to Cart". Your cart will save your items while you continue shopping.
+- **What was added:** After you add something, a short message at the bottom of the screen confirms how many were actually added. If fewer were left in stock than you asked for, it says how many went in; if the item has sold out, or your cart already holds all we have, it says nothing was added.
 - **Guest Checkout:** You can checkout quickly as a guest without creating an account.
 - **Delivery Rules:** 
   - Some stores have a minimum order amount.
   - A delivery fee may apply, but you might qualify for free delivery if your order is above a certain amount.
   - Delivery is restricted to specific postcode areas.
 - **Discounts:** If you have a promotional code, you can apply it in your cart before paying.
+- **Referral links:** If you arrived through a friend's referral link, its code is already filled in at checkout and the total you see includes its discount. If the code can't be used for this order (for example, you need to sign in first, or the order is below its minimum), the reason is shown under the code field.
 - **Paying:** Your browser can fill in the name, phone, email and address you have saved on your device. On a phone, the order total shows just above **Continue to payment**. You then pay on a secure payment page, which shows the exact amount after any discount code or loyalty points.
 
 ## Managing Your Orders

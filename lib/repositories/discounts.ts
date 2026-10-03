@@ -49,6 +49,12 @@ export interface ClaimedCode {
 export type ClaimResult =
   { ok: true; claim: ClaimedCode } | { ok: false; reason: CodeRefusalReason };
 
+/**
+ * #967 — what `previewCode` concludes: the same answer `claimCode` would reach,
+ * without reserving anything.
+ */
+export type PreviewResult = ({ ok: true } & ClaimedCode) | { ok: false; reason: CodeRefusalReason };
+
 export interface ClaimCodeInput {
   code: string;
   userId: string | null;
@@ -59,28 +65,25 @@ export interface ClaimCodeInput {
 }
 
 /**
- * Reserve one use of a code for this checkout. Call INSIDE `placeOrder`'s
- * transaction, before the Order row is written, so an order can never carry a
- * discount whose use was not actually reserved.
+ * #967 — whether a code applies to this checkout and for how much, WITHOUT
+ * reserving a use. Reads only: the code row and, for a signed-in shopper, their
+ * redemption rows. The checkout page calls it for a code pre-filled from the
+ * referral cookie, so the total it shows is the total `claimCode` will reach.
  *
- * The reservation is a compare-and-set on a counter that runs DOWN — the same
- * technique as P3b's `quantity: { gte: qty }` stock decrement and P5a's
- * `balancePoints: { gte: n }`. `remainingRedemptions` counts down rather than up
- * because `usedCount < maxRedemptions` is a column-to-column comparison Prisma
- * cannot express in a `where`, and raw SQL is forbidden in application code.
- *
- * `null` means unlimited: the OR admits it, and `decrement` leaves it null,
- * because Postgres arithmetic on NULL is NULL.
+ * `claimCode` calls this for its own decision, so the two share one lookup and
+ * one evaluation. A preview is a snapshot, not a hold: another checkout can
+ * still take the last use before this one submits, and `claimCode`'s
+ * compare-and-set below is what decides that.
  */
-export async function claimCode(
-  tx: AnyDb,
+export async function previewCode(
+  db: AnyDb,
   vendorId: string,
   input: ClaimCodeInput,
-): Promise<ClaimResult> {
+): Promise<PreviewResult> {
   const code = normaliseCode(input.code);
   if (code === "") return { ok: false, reason: "UNKNOWN" };
 
-  const row = await tx.discountCode.findUnique({
+  const row = await db.discountCode.findUnique({
     where: { vendorId_code: { vendorId, code } },
     select: {
       id: true,
@@ -120,12 +123,12 @@ export async function claimCode(
       ? { seq: 0, uses: 0 }
       : await (async () => {
           const [highest, used] = await Promise.all([
-            tx.discountRedemption.findFirst({
+            db.discountRedemption.findFirst({
               where: { vendorId, codeId: row.id, userId: input.userId },
               orderBy: { seq: "desc" },
               select: { seq: true },
             }),
-            tx.discountRedemption.count({
+            db.discountRedemption.count({
               where: { vendorId, codeId: row.id, userId: input.userId, reversedAt: null },
             }),
           ]);
@@ -149,9 +152,37 @@ export async function claimCode(
   });
   if (!evaluation.ok) return { ok: false, reason: evaluation.reason };
 
+  return { ok: true, codeId: row.id, discountPence: evaluation.discountPence, seq };
+}
+
+/**
+ * Reserve one use of a code for this checkout. Call INSIDE `placeOrder`'s
+ * transaction, before the Order row is written, so an order can never carry a
+ * discount whose use was not actually reserved.
+ *
+ * The reservation is a compare-and-set on a counter that runs DOWN — the same
+ * technique as P3b's `quantity: { gte: qty }` stock decrement and P5a's
+ * `balancePoints: { gte: n }`. `remainingRedemptions` counts down rather than up
+ * because `usedCount < maxRedemptions` is a column-to-column comparison Prisma
+ * cannot express in a `where`, and raw SQL is forbidden in application code.
+ *
+ * `null` means unlimited: the OR admits it, and `decrement` leaves it null,
+ * because Postgres arithmetic on NULL is NULL.
+ */
+export async function claimCode(
+  tx: AnyDb,
+  vendorId: string,
+  input: ClaimCodeInput,
+): Promise<ClaimResult> {
+  // #967 — the lookup, the per-customer counts and the evaluation are
+  // `previewCode`'s, shared verbatim, so what checkout shows before submit and
+  // what this claim decides cannot drift apart. Only the reservation is here.
+  const preview = await previewCode(tx, vendorId, input);
+  if (!preview.ok) return preview;
+
   const { count } = await tx.discountCode.updateMany({
     where: {
-      id: row.id,
+      id: preview.codeId,
       vendorId,
       isActive: true,
       OR: [{ remainingRedemptions: null }, { remainingRedemptions: { gt: 0 } }],
@@ -162,7 +193,10 @@ export async function claimCode(
   // above saw stock; this is the check that is actually authoritative.
   if (count === 0) return { ok: false, reason: "USAGE_LIMIT_REACHED" };
 
-  return { ok: true, claim: { codeId: row.id, discountPence: evaluation.discountPence, seq } };
+  return {
+    ok: true,
+    claim: { codeId: preview.codeId, discountPence: preview.discountPence, seq: preview.seq },
+  };
 }
 
 /**

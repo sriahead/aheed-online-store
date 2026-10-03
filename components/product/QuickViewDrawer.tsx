@@ -431,6 +431,7 @@ export function QuickViewDrawer() {
                 <div className="border-t border-black/10 pt-4">
                   <AddToCartButton
                     productId={displayProduct.id}
+                    productName={displayProduct.name}
                     disabled={!displayProduct.inStock}
                     variant="drawer"
                     label={`Add ${displayProduct.name} to cart`}

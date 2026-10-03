@@ -15,6 +15,8 @@ import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 import { fulfilmentProgress } from "@/lib/cart-rules";
 import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
 import { encodeDeliveryQuote } from "@/lib/delivery-pricing";
+import { getDiscountRepository } from "@/lib/discounts-service";
+import { normaliseCode, refusalMessage } from "@/lib/discounts";
 
 // Prisma's @prisma/client/wasm can't load during next build's Node-based
 // static prerendering — same reason as the other DB-backed storefront routes.
@@ -79,15 +81,26 @@ export default async function CheckoutPage() {
   const deliveryRules = await getShopperDeliveryRules(vendor, fulfilmentMethod);
   const minimumOrderPence = deliveryRules.minimumOrderPence;
 
-  const totals = computeTotals(
-    summary.lines,
-    {
-      deliveryFeePence: deliveryRules.deliveryFeePence,
-      freeDeliveryThresholdPence: deliveryRules.freeDeliveryThresholdPence,
-    },
-    0,
-    fulfilmentMethod,
+  const totalsRules = {
+    deliveryFeePence: deliveryRules.deliveryFeePence,
+    freeDeliveryThresholdPence: deliveryRules.freeDeliveryThresholdPence,
+  };
+  const preDiscount = computeTotals(summary.lines, totalsRules, 0, fulfilmentMethod);
+
+  // #967 — a code pre-filled from the referral cookie is previewed (read-only, nothing is
+  // reserved) against the same pre-discount subtotal and delivery fee `placeOrder` claims
+  // against, so the total shown here is the total the order will carry. A preview that throws
+  // must never break checkout: it renders as if there were no cookie, and `placeOrder` still
+  // decides the code on submit.
+  const prefilledCode = await previewPrefilledCode(
+    initialDiscountCode,
+    signedInUserId,
+    preDiscount.subtotalPence,
+    preDiscount.deliveryFeePence,
   );
+  const totals = prefilledCode?.ok
+    ? computeTotals(summary.lines, totalsRules, prefilledCode.discountPence, fulfilmentMethod)
+    : preDiscount;
 
   // The same pure function the cart and drawer render from, so the shopper is
   // told the same thing about the same cart wherever they are looking.
@@ -137,12 +150,54 @@ export default async function CheckoutPage() {
             method={fulfilmentMethod}
             initialDiscountCode={initialDiscountCode}
             quotedDeliveryRules={encodeDeliveryQuote(deliveryRules)}
-            totalPence={totals.totalPence}
+            totalPence={preDiscount.totalPence}
+            prefilledCode={
+              prefilledCode?.ok
+                ? { ...prefilledCode, totalPence: totals.totalPence }
+                : prefilledCode
+            }
           />
         </div>
 
-        <CheckoutSummary lines={summary.lines} totals={totals} method={fulfilmentMethod} />
+        <CheckoutSummary
+          lines={summary.lines}
+          totals={totals}
+          method={fulfilmentMethod}
+          discountLabel={prefilledCode?.ok ? `Discount (${prefilledCode.code})` : undefined}
+        />
       </div>
     </main>
   );
+}
+
+/**
+ * #967 — the referral cookie's code, previewed. `null` when there is no code to preview, or when
+ * the preview itself failed (logged, then treated as no cookie).
+ */
+async function previewPrefilledCode(
+  rawCode: string | null,
+  userId: string | null,
+  subtotalPence: number,
+  deliveryFeePence: number,
+): Promise<
+  | { code: string; ok: true; discountPence: number }
+  | { code: string; ok: false; message: string }
+  | null
+> {
+  const code = normaliseCode(rawCode ?? "");
+  if (code === "") return null;
+  try {
+    const preview = await getDiscountRepository().preview({
+      code,
+      userId,
+      subtotalPence,
+      deliveryFeePence,
+    });
+    return preview.ok
+      ? { code, ok: true, discountPence: preview.discountPence }
+      : { code, ok: false, message: refusalMessage(preview.reason) };
+  } catch (error) {
+    console.error("Checkout: previewing the pre-filled discount code failed", error);
+    return null;
+  }
 }
