@@ -53,21 +53,25 @@ export function AddToCartButton({
         <button
           type="button"
           disabled
-          className="flex w-full items-center justify-center rounded-xl bg-surface-muted px-4 py-2 text-xs font-bold text-black/60 cursor-not-allowed"
+          className="flex w-full min-h-tap lg:min-h-0 items-center justify-center rounded-xl bg-surface-muted px-4 py-2 text-xs font-bold text-black/60 cursor-not-allowed"
         >
           Out of stock
         </button>
       );
     }
 
+    // #961 — every control here is 44px (`tap`) below `lg`, today's 32px from `lg`. Below `sm` a
+    // 2-column card has about 128px of content width, which cannot hold a 44px minus, a quantity,
+    // a 44px plus AND the Add button, so the pre-add picker is hidden there: one tap adds one, and
+    // ProductCard then swaps in CartQuantityStepper (#345), which carries its own 44px controls.
     return (
       <div className="flex items-center justify-between gap-2 mt-1">
-        <div className="flex items-center rounded-xl border border-black/10 bg-surface-muted overflow-hidden h-8">
+        <div className="hidden sm:flex items-center rounded-xl border border-black/10 bg-surface-muted overflow-hidden lg:h-8">
           <button
             type="button"
             onClick={onClickMinus}
             aria-label="Decrease quantity"
-            className="px-2 h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
+            className="size-tap lg:w-auto lg:px-2 lg:h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
           >
             <Minus className="w-3 h-3" aria-hidden="true" />
           </button>
@@ -76,7 +80,7 @@ export function AddToCartButton({
             type="button"
             onClick={onClickPlus}
             aria-label="Increase quantity"
-            className="px-2 h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
+            className="size-tap lg:w-auto lg:px-2 lg:h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
           >
             <Plus className="w-3 h-3" aria-hidden="true" />
           </button>
@@ -85,7 +89,7 @@ export function AddToCartButton({
           type="button"
           onClick={onClickAdd}
           disabled={pending}
-          className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl bg-primary text-white text-xs font-bold transition hover:bg-primary/90 active:scale-95 motion-reduce:active:scale-100 shadow-sm"
+          className="flex-1 flex items-center justify-center gap-1.5 h-tap lg:h-8 rounded-xl bg-primary text-white text-xs font-bold transition hover:bg-primary/90 active:scale-95 motion-reduce:active:scale-100 shadow-sm"
         >
           <Icon className={`w-3.5 h-3.5 ${pending ? "animate-spin" : ""}`} />
           {added ? "Added" : "Add"}

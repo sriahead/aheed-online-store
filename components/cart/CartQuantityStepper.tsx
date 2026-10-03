@@ -115,15 +115,18 @@ export function CartQuantityStepper({
     coalescer.current?.set(next);
   }
 
+  // #961 — the two buttons are 44px (`tap`) below `lg` and today's 24px from `lg`. At 360px a
+  // 2-column card has about 128px of content width; two 44px buttons, the readout, `p-1` and the
+  // border fit only with the tighter `gap-1` there.
   return (
-    <div className="flex items-center gap-1.5 rounded-xl border border-primary/30 bg-action-tint p-1">
+    <div className="flex items-center gap-1 lg:gap-1.5 rounded-xl border border-primary/30 bg-action-tint p-1">
       <button
         type="button"
         onClick={(event) => step(event, -1)}
         aria-label={
           displayed <= 1 ? `Remove ${productName} from cart` : `Decrease quantity of ${productName}`
         }
-        className="flex h-6 w-6 items-center justify-center rounded-lg bg-white text-primary transition-colors hover:bg-surface-muted"
+        className="flex size-tap lg:size-6 items-center justify-center rounded-lg bg-white text-primary transition-colors hover:bg-surface-muted"
       >
         <Minus className="h-3.5 w-3.5" aria-hidden />
       </button>
@@ -141,7 +144,7 @@ export function CartQuantityStepper({
         onClick={(event) => step(event, 1)}
         disabled={displayed >= stock}
         aria-label={`Increase quantity of ${productName}`}
-        className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex size-tap lg:size-6 items-center justify-center rounded-lg bg-primary text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
       >
         <Plus className="h-3.5 w-3.5" aria-hidden />
       </button>

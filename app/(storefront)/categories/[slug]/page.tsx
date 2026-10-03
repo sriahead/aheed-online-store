@@ -4,7 +4,10 @@ import { getCategoryRepository } from "@/lib/categories-service";
 import { getProductRepository } from "@/lib/products-service";
 import { getRequestCartQuantities } from "@/lib/cart-summary";
 import { getEnv } from "@/lib/config";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { DEFAULT_PRODUCT_GRID_DENSITY } from "@/lib/product-grid-density";
 import { ProductCard } from "@/components/product/ProductCard";
+import { ProductGrid } from "@/components/product/ProductGrid";
 import { CollectionNav } from "@/components/product/CollectionNav";
 import { parsePackSizeParam } from "@/components/product/unit-price";
 import { FilterPanel } from "@/components/product/FilterPanel";
@@ -122,6 +125,9 @@ export default async function CategoryPage({
   // rather than issuing a second identical query.
   const cartQuantities = await getRequestCartQuantities();
   const { CDN_BASE_URL } = getEnv();
+  // #962 — request-memoised; the header already resolved this profile in the same render.
+  const gridDensity =
+    (await getCurrentVendorProfile())?.productGridDensity ?? DEFAULT_PRODUCT_GRID_DENSITY;
 
   // #498 — a subcategory has no children of its own (two-level cap), so its
   // own tab row is its PARENT's children — its siblings, itself included —
@@ -173,7 +179,7 @@ export default async function CategoryPage({
             attributeLabels={attributeFilters.labels}
           />
           <h2 className="sr-only">Products</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <ProductGrid density={gridDensity}>
             {items.map((product) => (
               <ProductCard
                 key={product.id}
@@ -182,7 +188,7 @@ export default async function CategoryPage({
                 cartQuantity={cartQuantities.get(product.id) ?? 0}
               />
             ))}
-          </div>
+          </ProductGrid>
           {(nextCursor || !isFirstPage) && (
             <div className="mt-6 flex gap-3">
               {!isFirstPage && (

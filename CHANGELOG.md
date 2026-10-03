@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Mobile browse density: header split, 44px touch targets, shared product grid with vendor presets** (issues `#960`, `#961`, `#962`; `specs/2026-10-02-p960-962-mobile-browse-density/`). One additive migration (`20261002120000_p962_product_grid_density`: a new enum and a defaulted column).
+  - `#960`: only the logo/nav row and the phone search stay sticky. The trust banner and the phone location row scroll away. The pinned header at 360–390px drops from 234px to 119px.
+  - `#961`: a `tap` spacing token (44px). Below `lg` it applies to the card Add, pre-add and in-cart quantity buttons, mobile Quick View, and the header Shop / Shop List / Sign In / Account links. Desktop sizes are unchanged. On phones the card shows Add alone, and the in-cart stepper takes over after the first tap.
+  - `#962`: category, search and bundles render through one `ProductGrid`, so the odd 3-column step is gone. Each vendor chooses Compact, Standard (default) or Spacious under "Product grid layout" on `/staff/storefront`; every multi-column step is even.
+  - `scripts/verify-mobile-layout.ts` measures real phone widths with headless Chrome over the DevTools protocol. `specs/design-system.md` 1.14.0, `docs/store-admin-guide/admin-tabs-guide.md` 2.7.0 and `docs/developer-portal/local-dev-playbook.md` 1.14.0 are updated. Follow-up: `#964` (the `tap` token on the remaining controls).
+
 - **Seventh Discover pass: external mobile-first redesign brief.** Docs only. No scope change.
   - `docs/research/discovery-log.md` 1.7.0: maps a roughly fifty-section mobile redesign brief against the code and live production. Most of it is already built, and is recorded as such so it isn't rediscovered.
   - Nine genuinely unowned findings. Eight are filed: `#955` crawlers can't reach product pages (sitemap is only `/`, listings link to no product, `robots.txt` de-indexes non-Aheed vendors), `#956` a false "Added" confirmation and unnamed Add buttons, `#957` reorder silently drops unavailable lines, `#958` no `autocomplete` tokens (WCAG 1.3.5), `#959` checkout step numbers and total placement, `#960` a 232px sticky mobile header, `#961` 24–32px shopping controls, and `#962` even product-grid columns with vendor density presets. A homepage "buy again" surface stays `RESEARCH MORE`, gated on `#607`.

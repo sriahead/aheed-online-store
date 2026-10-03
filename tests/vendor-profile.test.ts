@@ -138,3 +138,37 @@ describe("fetchVendorProfile timezone", () => {
     expect(profile.timezone).toBe("Europe/London");
   });
 });
+
+/**
+ * #962 — the product listing density preset. The three listing pages render whatever this
+ * returns, so a vendor with no config row must still get a real preset, and it must be the same
+ * STANDARD the column defaults to.
+ */
+describe("fetchVendorProfile productGridDensity", () => {
+  it("returns the configured preset and selects the column", async () => {
+    findUnique.mockResolvedValue({
+      name: "SriMart",
+      branding: null,
+      config: { productGridDensity: "SPACIOUS" },
+      deliveryAreas: [],
+      vendorExpressSchedules: [],
+    });
+
+    const profile = await fetchVendorProfile(prisma, "v1");
+    expect(profile.productGridDensity).toBe("SPACIOUS");
+    expect(findUnique.mock.calls[0][0].select.config.select.productGridDensity).toBe(true);
+  });
+
+  it("falls back to STANDARD when there is no config row", async () => {
+    findUnique.mockResolvedValue({
+      name: "SriMart",
+      branding: null,
+      config: null,
+      deliveryAreas: [],
+      vendorExpressSchedules: [],
+    });
+
+    const profile = await fetchVendorProfile(prisma, "v1");
+    expect(profile.productGridDensity).toBe("STANDARD");
+  });
+});

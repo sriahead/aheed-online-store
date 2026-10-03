@@ -26,6 +26,10 @@ import {
   parseBrandPrimitives,
   type BrandColourFormState,
 } from "@/lib/brand-colour-form";
+import {
+  parseProductGridDensity,
+  type ProductGridDensityFormState,
+} from "@/lib/product-grid-density";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import crypto from "crypto";
 
@@ -301,4 +305,31 @@ export async function updateCatalogueSettings(
   revalidatePath("/staff/products", "layout");
   revalidatePath("/", "layout");
   return { error: null, field: null, saved: true };
+}
+
+/**
+ * Save this vendor's product listing density (#962), one of the presets in
+ * `lib/product-grid-density.ts`.
+ *
+ * Its own action and its own form, for the same reason `updateCatalogueSettings` is: every other
+ * storefront form submits without this field and must keep leaving it alone. An unknown value is
+ * refused, not coerced, and nothing is written.
+ *
+ * The vendor comes from the session — `requireVendorRole("ADMIN")` — never from the submission.
+ */
+export async function updateProductGridDensity(
+  _prev: ProductGridDensityFormState,
+  formData: FormData,
+): Promise<ProductGridDensityFormState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { error: refusal(auth.status), saved: false };
+
+  const parsed = parseProductGridDensity(formData.get("productGridDensity"));
+  if (!parsed.ok) return { error: parsed.error.message, saved: false };
+
+  await updateVendorStorefrontConfig(auth.vendorId, { productGridDensity: parsed.value });
+
+  revalidatePath("/staff/storefront");
+  revalidatePath("/", "layout");
+  return { error: null, saved: true };
 }

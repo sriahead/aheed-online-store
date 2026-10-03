@@ -11,6 +11,7 @@ import {
   saveStorefrontTheme,
   updateCatalogueSettings,
   updateDeliveryRules,
+  updateProductGridDensity,
   updateSocialContact,
   updateStorefrontConfig,
 } from "@/features/admin/storefront";
@@ -32,6 +33,12 @@ import {
   STORE_DESCRIPTION_FIELD,
   initialCatalogueSettingsState,
 } from "@/lib/catalogue-settings-form";
+import {
+  PRODUCT_GRID_DENSITIES,
+  PRODUCT_GRID_DENSITY_FIELD,
+  PRODUCT_GRID_DENSITY_OPTIONS,
+  initialProductGridDensityState,
+} from "@/lib/product-grid-density";
 import { VendorLogoUploader } from "@/components/staff/VendorLogoUploader";
 
 /** The eight `VendorBranding` brand primitives — every column that is a hex string. */
@@ -132,6 +139,11 @@ export function StorefrontConfigForm({
   const [catalogueState, saveCatalogueSettings, cataloguePending] = useActionState(
     updateCatalogueSettings,
     initialCatalogueSettingsState,
+  );
+
+  const [gridState, saveGridDensity, gridPending] = useActionState(
+    updateProductGridDensity,
+    initialProductGridDensityState,
   );
 
   const [savingTheme, setSavingTheme] = useState(false);
@@ -843,6 +855,62 @@ export function StorefrontConfigForm({
           className="rounded-full bg-primary py-3 font-bold text-white hover:bg-primary/90 disabled:opacity-50"
         >
           {cataloguePending ? "Saving…" : "Save Product Labels & Description"}
+        </button>
+      </form>
+
+      {/* #962 — a fifth sibling <form>, never nested, so no other form above ever submits
+          productGridDensity and none of them can change it. */}
+      <form action={saveGridDensity} className="flex flex-col gap-6">
+        <div>
+          <h2 className="font-bold text-black">Product grid layout</h2>
+          <p className="mt-1 text-sm text-black/60">
+            How many product cards sit side by side on your category, search and bundle pages. It
+            changes the layout only; every product still shows.
+          </p>
+        </div>
+
+        <fieldset className="flex flex-col gap-3">
+          <legend className="sr-only">Grid layout</legend>
+          {PRODUCT_GRID_DENSITIES.map((density) => (
+            <div key={density} className="flex items-start gap-3 text-sm text-black">
+              <input
+                type="radio"
+                id={`productGridDensity-${density}`}
+                name={PRODUCT_GRID_DENSITY_FIELD}
+                value={density}
+                defaultChecked={initialConfig.productGridDensity === density}
+                aria-describedby={`productGridDensity-${density}-description`}
+                className="mt-0.5 h-5 w-5 border-black/20 text-primary focus:ring-primary"
+              />
+              <div>
+                <label htmlFor={`productGridDensity-${density}`} className="font-bold">
+                  {PRODUCT_GRID_DENSITY_OPTIONS[density].label}
+                </label>
+                <p id={`productGridDensity-${density}-description`} className="text-black/60">
+                  {PRODUCT_GRID_DENSITY_OPTIONS[density].description}
+                </p>
+              </div>
+            </div>
+          ))}
+        </fieldset>
+
+        {gridState.error && (
+          <p className="rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger">
+            {gridState.error}
+          </p>
+        )}
+        {gridState.saved && !gridState.error && (
+          <p className="rounded-xl bg-action-tint px-4 py-3 text-sm font-medium text-primary">
+            Product grid layout saved.
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={gridPending}
+          className="rounded-full bg-primary py-3 font-bold text-white hover:bg-primary/90 disabled:opacity-50"
+        >
+          {gridPending ? "Saving…" : "Save Product Grid Layout"}
         </button>
       </form>
     </div>
