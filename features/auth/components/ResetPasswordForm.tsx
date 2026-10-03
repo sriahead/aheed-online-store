@@ -36,6 +36,7 @@ export function ResetPasswordForm() {
       <label className="flex flex-col gap-1">
         <span className="text-sm font-semibold text-primary">New password</span>
         <input
+          autoComplete="new-password"
           type="password"
           required
           minLength={8}

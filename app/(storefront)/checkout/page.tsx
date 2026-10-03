@@ -131,6 +131,7 @@ export default async function CheckoutPage() {
             method={fulfilmentMethod}
             initialDiscountCode={initialDiscountCode}
             quotedDeliveryRules={encodeDeliveryQuote(deliveryRules)}
+            totalPence={totals.totalPence}
           />
         </div>
 

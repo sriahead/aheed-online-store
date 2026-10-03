@@ -8,6 +8,12 @@ import { lookupAddressForCheckout } from "@/features/checkout/address-lookup";
 import { setDeliveryPostcode, setFulfilmentMethod } from "@/features/storefront/delivery";
 import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
 import type { CustomerAddressRow } from "@/lib/repositories/customer-addresses";
+import { formatPrice } from "@/components/product/format-price";
+import {
+  CHECKOUT_SECTION_TITLES,
+  checkoutSections,
+  type CheckoutSectionKey,
+} from "@/lib/checkout-sections";
 import { SlotPicker } from "./SlotPicker";
 
 /**
@@ -40,6 +46,7 @@ export function CheckoutForm({
   savedAddresses = [],
   initialDiscountCode,
   quotedDeliveryRules,
+  totalPence,
 }: {
   signedInEmail: string | null;
   /**
@@ -82,6 +89,12 @@ export function CheckoutForm({
    * address postcode typed below resolves to different per-area charges.
    */
   quotedDeliveryRules: string;
+  /**
+   * #959 — the same `totals.totalPence` the page hands `CheckoutSummary`, shown again just above the
+   * submit button below `md`, where the summary stacks under the form. It cannot include a code or
+   * points typed into this form; `place-order` validates both, and Stripe shows the exact amount.
+   */
+  totalPence: number;
 }) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
   const [, startMethodTransition] = useTransition();
@@ -268,6 +281,16 @@ export function CheckoutForm({
     }
   }, []);
 
+  // #959 — numbered from the sections that actually render, so the sequence never repeats or skips.
+  const sections = checkoutSections({
+    offerCollection,
+    method,
+    offerDeliverySlots,
+    hasRedeemable: redeemable !== null,
+  });
+  const heading = (key: CheckoutSectionKey) =>
+    `${sections.indexOf(key) + 1}. ${CHECKOUT_SECTION_TITLES[key]}`;
+
   const handleFormChange = (e: React.FormEvent<HTMLFormElement>) => {
     // #764 — remember which address fields the shopper has touched, so a later lookup cannot
     // overwrite them. Recorded here rather than per-input because this handler already sees every
@@ -289,7 +312,13 @@ export function CheckoutForm({
   };
 
   return (
-    <form ref={formRef} action={formAction} onChange={handleFormChange} className="space-y-6">
+    <form
+      ref={formRef}
+      action={formAction}
+      onChange={handleFormChange}
+      className="space-y-6"
+      data-checkout-form
+    >
       {state.error && (
         <p
           role="alert"
@@ -303,7 +332,7 @@ export function CheckoutForm({
         <section className="space-y-3">
           <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
             <MapPin className="h-4 w-4" aria-hidden />
-            Fulfilment Method
+            {heading("fulfilment")}
           </h2>
           <div className="flex flex-col gap-3 sm:flex-row">
             <label
@@ -343,14 +372,20 @@ export function CheckoutForm({
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
           <User className="h-4 w-4" aria-hidden />
-          {offerCollection ? "1" : "1"}. Contact information
+          {heading("contact")}
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={labelClass} htmlFor="recipientName">
               Full name
             </label>
-            <input id="recipientName" name="recipientName" required className={inputClass} />
+            <input
+              id="recipientName"
+              name="recipientName"
+              autoComplete="name"
+              required
+              className={inputClass}
+            />
           </div>
           {signedInEmail ? (
             // Signed-in shoppers are never asked for their email again.
@@ -371,14 +406,28 @@ export function CheckoutForm({
               <label className={labelClass} htmlFor="email">
                 Email (order confirmation)
               </label>
-              <input id="email" name="email" type="email" required className={inputClass} />
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className={inputClass}
+              />
             </div>
           )}
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="phone">
               Phone number ({method === "DELIVERY" ? "driver updates" : "collection updates"})
             </label>
-            <input id="phone" name="phone" type="tel" required className={inputClass} />
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              required
+              className={inputClass}
+            />
           </div>
         </div>
       </section>
@@ -387,7 +436,7 @@ export function CheckoutForm({
         <section className="space-y-3 border-t border-black/5 pt-5">
           <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
             <MapPin className="h-4 w-4" aria-hidden />
-            {offerCollection ? "2" : "2"}. Delivery address &amp; instructions
+            {heading("address")}
           </h2>
           {savedAddresses.length > 0 && (
             <div className="rounded-xl border border-black/10 bg-surface-muted p-4">
@@ -434,6 +483,7 @@ export function CheckoutForm({
               <input
                 id="line1"
                 name="line1"
+                autoComplete="address-line1"
                 required={method === "DELIVERY"}
                 className={inputClass}
                 // #764 — nearby street names offered as browser suggestions. A datalist SUGGESTS
@@ -461,19 +511,30 @@ export function CheckoutForm({
               <label className={labelClass} htmlFor="line2">
                 Flat, building (optional)
               </label>
-              <input id="line2" name="line2" className={inputClass} />
+              <input id="line2" name="line2" autoComplete="address-line2" className={inputClass} />
             </div>
             <div>
               <label className={labelClass} htmlFor="city">
                 Town or city
               </label>
-              <input id="city" name="city" required className={inputClass} />
+              <input
+                id="city"
+                name="city"
+                autoComplete="address-level2"
+                required
+                className={inputClass}
+              />
             </div>
             <div>
               <label className={labelClass} htmlFor="county">
                 County (optional)
               </label>
-              <input id="county" name="county" className={inputClass} />
+              <input
+                id="county"
+                name="county"
+                autoComplete="address-level1"
+                className={inputClass}
+              />
             </div>
             <div className="sm:col-span-2 space-y-2">
               <label className={labelClass} htmlFor="postcode">
@@ -484,6 +545,7 @@ export function CheckoutForm({
                 <input
                   id="postcode"
                   name="postcode"
+                  autoComplete="postal-code"
                   defaultValue={initialPostcode || ""}
                   required
                   className={inputClass}
@@ -530,7 +592,7 @@ export function CheckoutForm({
         <section className="space-y-3 border-t border-black/5 pt-5">
           <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
             <Clock className="h-4 w-4" aria-hidden />
-            {offerCollection ? "3" : "2"}. Choose a Time
+            {heading("time")}
           </h2>
           <SlotPicker
             vendorId={vendorId}
@@ -548,7 +610,7 @@ export function CheckoutForm({
         <section className="space-y-3 border-t border-black/5 pt-5">
           <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
             <Sparkles className="h-4 w-4" aria-hidden />
-            {offerCollection ? "4" : "3"}. Loyalty points
+            {heading("loyalty")}
           </h2>
           <p className="text-xs text-primary-muted">
             You have <strong className="text-primary">{redeemable.balancePoints} points</strong>{" "}
@@ -583,7 +645,7 @@ export function CheckoutForm({
       <section className="space-y-3 border-t border-black/5 pt-5">
         <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
           <Tag className="h-4 w-4" aria-hidden />
-          {redeemable ? "4" : "3"}. Discount code
+          {heading("discount")}
         </h2>
         <div className="max-w-[16rem]">
           <label className={labelClass} htmlFor="discountCode">
@@ -602,13 +664,31 @@ export function CheckoutForm({
         </div>
       </section>
 
+      {/*
+        #959 — below md the order summary stacks under the form, so without this the shopper would
+        reach the button before seeing what they will pay. Hidden from md, where the summary sits
+        beside the form. Not "Pay £X" on the button: a code or points typed above are validated on
+        the server, so the exact amount is only known on the payment page.
+      */}
+      <div data-checkout-total className="rounded-xl bg-surface-muted px-4 py-3 md:hidden">
+        <p className="flex justify-between text-sm font-bold text-primary">
+          <span>Total</span>
+          <span>{formatPrice(totalPence)}</span>
+        </p>
+        <p className="mt-1 text-xs text-primary-muted">
+          {redeemable
+            ? "Any discount code or points you use come off before payment."
+            : "Any discount code you enter comes off before payment."}
+        </p>
+      </div>
+
       <button
         type="submit"
         disabled={pending}
         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <ShieldCheck className="h-4 w-4" aria-hidden />
-        {pending ? "Placing order…" : "Place order"}
+        {pending ? "Continuing to payment…" : "Continue to payment"}
       </button>
     </form>
   );

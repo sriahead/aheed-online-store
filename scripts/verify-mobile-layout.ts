@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 /**
  * Measure the storefront at real phone and tablet widths:
- * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first]`.
+ * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]]`.
  *
  * ## Why this exists (#960, #961, #962)
  *
@@ -26,10 +26,16 @@ import { join } from "node:path";
  * `--add-first` clicks the first card's Add button once (at the first width), waits for the cart
  * stepper, reloads, and keeps that cart for the remaining widths.
  *
+ * `--then <path>` (#958, #959) needs `--add-first`. Once the item is in the cart, every width (the
+ * first included) is measured at `<path>` instead of `--path`. That is how it reaches `/checkout`,
+ * which redirects an empty cart to `/cart`.
+ *
  * ## What it reads
  *
  * Stable hooks added for it: `[data-header-banner]`, `[data-header-location]` and
- * `[data-product-grid]`. The sticky header is the page's `header` element. It is not a
+ * `[data-product-grid]`; for checkout, `[data-checkout-form]`, `[data-checkout-total]`,
+ * `[data-checkout-summary]` and `[data-checkout-summary-total]`. Every printed object also lists
+ * each visible form input's `autocomplete` attribute (`formInputs`). The sticky header is the page's `header` element. It is not a
  * replacement for `#440`'s Playwright harness.
  */
 
@@ -41,6 +47,7 @@ interface Args {
   path: string;
   widths: number[];
   addFirst: boolean;
+  then: string | null;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -50,30 +57,39 @@ function parseArgs(argv: string[]): Args {
   };
   const base = value("--base");
   const path = value("--path");
+  const then = value("--then") ?? null;
+  const addFirst = argv.includes("--add-first");
   const widths = (value("--widths") ?? "")
     .split(",")
     .map((w) => Number(w.trim()))
     .filter((w) => Number.isInteger(w) && w > 0);
-  if (!base || !path || widths.length === 0) {
+  if (!base || !path || widths.length === 0 || (then !== null && !addFirst)) {
     console.error(
-      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first]",
+      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]]",
     );
     process.exit(2);
   }
   // Git Bash (MSYS) rewrites a bare `/categories/x` argument into `C:/Program Files/Git/categories/x`
   // before Node sees it, which turns the URL into a DNS failure that looks like a layout result
   // with every value null. Refuse it loudly; a path without the leading slash is never rewritten.
-  if (/^[A-Za-z]:[\\/]/.test(path)) {
-    console.error(
-      `--path looks like a Windows path (${path}): Git Bash rewrote it. Pass it without the leading slash (categories/x) or set MSYS_NO_PATHCONV=1.`,
-    );
-    process.exit(2);
+  for (const [flag, given] of [
+    ["--path", path],
+    ["--then", then],
+  ] as const) {
+    if (given !== null && /^[A-Za-z]:[\\/]/.test(given)) {
+      console.error(
+        `${flag} looks like a Windows path (${given}): Git Bash rewrote it. Pass it without the leading slash (categories/x) or set MSYS_NO_PATHCONV=1.`,
+      );
+      process.exit(2);
+    }
   }
+  const absolute = (p: string) => (p.startsWith("/") ? p : `/${p}`);
   return {
     base: base.replace(/\/$/, ""),
-    path: path.startsWith("/") ? path : `/${path}`,
+    path: absolute(path),
     widths,
-    addFirst: argv.includes("--add-first"),
+    addFirst,
+    then: then === null ? null : absolute(then),
   };
 }
 
@@ -209,6 +225,40 @@ const MEASURE = `(async () => {
       )
     : null;
 
+  // #958 — every visible field's autocomplete token, exactly as written (null when absent).
+  const formInputs = [...document.querySelectorAll("form input")]
+    .filter((input) => input.type !== "hidden")
+    .map((input) => ({
+      id: input.id || null,
+      name: input.getAttribute("name"),
+      type: input.type,
+      autocomplete: input.getAttribute("autocomplete"),
+    }));
+
+  // #959 — checkout headings, and where the total sits relative to the button. Document
+  // coordinates (viewport box plus scrollY), so values compare regardless of scroll.
+  const docBox = (el) => {
+    const r = el.getBoundingClientRect();
+    return { top: Math.round(r.top + window.scrollY), bottom: Math.round(r.bottom + window.scrollY) };
+  };
+  const checkoutForm = document.querySelector("[data-checkout-form]");
+  let checkout = null;
+  if (checkoutForm) {
+    const totalRow = checkoutForm.querySelector("[data-checkout-total]");
+    const submit = checkoutForm.querySelector("button[type=submit]");
+    const summary = document.querySelector("[data-checkout-summary]");
+    const summaryTotal = document.querySelector("[data-checkout-summary-total]");
+    checkout = {
+      headings: [...checkoutForm.querySelectorAll("h2")].map((h) => h.textContent.trim()),
+      totalRow: totalRow
+        ? { displayed: shown(totalRow), ...docBox(totalRow), text: totalRow.textContent.trim() }
+        : null,
+      submit: submit ? { ...docBox(submit), text: submit.textContent.trim() } : null,
+      summaryTop: summary ? docBox(summary).top : null,
+      summaryTotal: summaryTotal ? summaryTotal.textContent.trim() : null,
+    };
+  }
+
   window.scrollTo(0, ${SCROLL_Y});
   await sleep(400);
   const headerAfter = header ? header.getBoundingClientRect() : null;
@@ -225,6 +275,8 @@ const MEASURE = `(async () => {
     gridColumns,
     controls,
     firstCardStepperLabel: readout ? readout.getAttribute("aria-label") : null,
+    formInputs,
+    checkout,
   };
 })()`;
 
@@ -293,14 +345,14 @@ async function main() {
     const cdp = new Cdp(socket);
     await cdp.send("Page.enable");
 
-    const load = async () => {
+    const load = async (path: string) => {
       const loaded = cdp.once("Page.loadEventFired", 30_000);
-      await cdp.send("Page.navigate", { url: `${args.base}${args.path}` });
-      if (!(await loaded)) throw new Error(`Timed out loading ${args.base}${args.path}`);
+      await cdp.send("Page.navigate", { url: `${args.base}${path}` });
+      if (!(await loaded)) throw new Error(`Timed out loading ${args.base}${path}`);
       await sleep(1500); // let client islands hydrate
       const landed = await cdp.evaluate<string>("location.href");
       if (landed.startsWith("chrome-error:")) {
-        throw new Error(`Could not load ${args.base}${args.path} (Chrome error page).`);
+        throw new Error(`Could not load ${args.base}${path} (Chrome error page).`);
       }
     };
 
@@ -312,7 +364,7 @@ async function main() {
         deviceScaleFactor: 2,
         mobile: true,
       });
-      await load();
+      await load(added && args.then ? args.then : args.path);
 
       if (args.addFirst && !added) {
         if (!(await cdp.evaluate<boolean>(CLICK_FIRST_ADD))) {
@@ -322,7 +374,7 @@ async function main() {
           await sleep(250);
         }
         added = true;
-        await load();
+        await load(args.then ?? args.path);
       }
 
       console.log(JSON.stringify(await cdp.evaluate(MEASURE)));
