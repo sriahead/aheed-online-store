@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.57.0"
-updated: 2026-10-02
+version: "1.58.0"
+updated: 2026-10-03
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -516,11 +516,12 @@ All facts in this section require live verification:
 - **The mobile programme is the owner's chosen direction (2026-10-02).** It comes from the seventh
   Discover pass, `docs/research/discovery-log.md` 1.7.0, merged to `staging` via PR #963. Its
   issues are `#955`–`#962`, all Phase P10.
-  - **Slice 1, `#960`/`#961`/`#962` (mobile browse density):** built on
-    `feature/960-962-mobile-browse-density` and **awaiting `/validate`** from a fresh context. Read
-    `specs/2026-10-02-p960-962-mobile-browse-density/build-notes.md` first. It carries an additive
-    migration (`20261002120000_p962_product_grid_density`), applied to dev only. Staging and
-    production get it through CI on deploy.
+  - **Slice 1, `#960`/`#961`/`#962` (mobile browse density):** validated and **merged to
+    `staging`** (PR #965, 2026-10-03), `deploy-staging` green, issues **In Review**. Its additive
+    migration (`20261002120000_p962_product_grid_density`) is applied to dev and staging. **A
+    `staging -> main` promotion PR is outstanding** and carries that migration to production, so it
+    needs one `closes` line per issue. SriMart's admin save through its own UI was never run
+    (local sign-in is refused); see the roadmap row dated 2026-10-03.
   - **Queued:** slice 2 is mobile checkout (`#958` autocomplete tokens, `#959` step numbers and
     total placement), then `#956` (honest add-to-cart feedback, which builds on slice 1's resized
     button).
