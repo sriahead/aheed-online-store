@@ -127,6 +127,21 @@ already beside the form, so the row is hidden there.
 `CheckoutSummary`'s Total `<dd>` gets a `data-checkout-summary-total` attribute so the measuring
 script can compare the two amounts.
 
+### 3a. The checkout page overflowed every narrow screen (added at Build)
+
+Found during Build's first measurement on 2026-10-03, and already present before this slice. At
+390px both vendors reported `viewportWidth` 961 on `/checkout`, and 1272 at 768px. The form and
+summary grid (`grid gap-6 md:grid-cols-[1fr_18rem]`) has an implicit `auto` column below `md` and
+`1fr` at `md`. Neither can shrink below its content's min-content width. `SlotPicker`'s day strip
+(`components/checkout/SlotPicker.tsx`) holds about 14 non-shrinking day buttons, roughly 900px,
+so the column grew to about 944px. Chrome then rendered the whole page zoomed out, with tiny text,
+on any phone. The strip's own `overflow-x-auto` never engaged.
+
+The fix is one class on the page grid: `grid-cols-1 md:grid-cols-[minmax(0,1fr)_18rem]`. It is in
+this slice, as R18a, because without it the mobile checkout this slice exists to fix still renders
+at the wrong scale, and R18's measurements would describe a zoomed-out page. `SlotPicker` itself is
+unchanged.
+
 ### 4. Button label
 
 "Place order" becomes **"Continue to payment"**, and the pending label "Placing order…" becomes

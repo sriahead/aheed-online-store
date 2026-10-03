@@ -132,6 +132,14 @@ R17. `CheckoutForm` renders an element with `data-checkout-total` whose class li
 R18. Aheed and SriMart checkout runs at widths `360,390` each show: `checkout.totalRow.displayed`
     is `true`; `totalRow.bottom` ≤ `submit.top`; `submit.bottom` ≤ `summaryTop`; and the amount
     in `totalRow.text` (its `£` figure) equals `summaryTotal`.
+R18a. _Added at Build (2026-10-03), a prerequisite found mid-slice._ The checkout page's
+form/summary grid is `grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_18rem]`, so its column
+can shrink below its content's width. Aheed and SriMart checkout runs at widths `360,390,768`
+each report `viewportWidth` equal to the requested width, meaning nothing on `/checkout` is wider
+than the screen. Before this fix both vendors reported `viewportWidth` 961 at 390 and 1272 at 768:
+`SlotPicker`'s day strip, about 900px of non-shrinking buttons, widened the grid column, and the
+whole page rendered zoomed out. R18 and R19 are only meaningful once this holds.
+
 R19. Aheed and SriMart checkout runs at widths `768,1280` each show `checkout.totalRow.displayed`
     `false` and a non-null `summaryTop`.
 
