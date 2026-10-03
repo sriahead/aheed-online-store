@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Honest add-to-cart feedback, and a checkout total that includes a pre-filled referral code** (issues `#956`, `#967`; `specs/2026-10-03-p956-967-add-feedback-referral-total/`). No schema change.
+  - `#956`: `addToCart` resolves to what it actually did: added, partly added (clamped to stock), or nothing (sold out, cart already holds all the stock, invalid quantity). Every add button reports that in one shared `role="status"` message at the bottom of the screen (`components/cart/CartFeedback.tsx`, mounted once in `StorefrontChrome`), because a card's button is swapped for the quantity stepper on the re-render after an add. A failed call shows "Try again" instead of the error page. Each card's Add, pre-add −/+ and out-of-stock button is named for its product.
+  - Fixed on the way: adding to a cart that held more than the current stock lowered the cart's quantity to stock. An add now writes nothing in any refused case.
+  - `#967`: `previewCode` is `claimCode`'s lookup and evaluation without the reservation, and `claimCode` now calls it. Checkout previews the referral cookie's code, so the summary and the mobile total include its discount (`Discount (CODE)`), or the reason it can't apply (for example, sign in first) shows under the field. Rendering checkout never uses a code up.
+  - `scripts/verify-mobile-layout.ts` gains `documentScrollWidth` and `cartFeedback`. `docs/shopper-help/shopping-guide.md` 1.2.0 and `docs/developer-portal/app-conventions.md` 1.4.0 are updated. Follow-ups: `#972` (a shopper can redeem their own referral code) and `#973` (live preview of a typed code and of points).
+
 - **Document-stage reconciliation for the PR #970 promotion (`#958`–`#962` to production, merge `20ff789`).** Docs only.
   - `specs/roadmap.md` 1.126.0: the mobile-checkout row for PR #969. 1.127.0: the promotion row, with `deploy-production` run `37129181574` and production `/api/health` serving `20ff789` on both vendors.
   - `docs/model-handoff.md` 1.61.0: `main` at `20ff789`; both mobile-programme slices in production and their issues closed.

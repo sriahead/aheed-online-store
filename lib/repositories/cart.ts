@@ -2,10 +2,13 @@ import type { getPrisma, getPrismaWs } from "@/lib/db";
 import {
   assertSingleIdentity,
   clampQuantity,
+  classifyAdd,
   effectiveStock,
   isMergePending,
+  isValidAddDelta,
   resolveMerge,
   sumLinesByProduct,
+  type AddOutcome,
   type MergeLine,
   type MergeResolution,
 } from "@/lib/cart-rules";
@@ -100,7 +103,8 @@ export const EMPTY_CART: CartSummary = {
 
 export interface CartRepository {
   getSummary(identity: CartIdentity): Promise<CartSummary>;
-  addItem(identity: CartIdentity, productId: string, delta?: number): Promise<void>;
+  /** #956 — resolves to what the add actually did, never just "done". */
+  addItem(identity: CartIdentity, productId: string, delta?: number): Promise<AddOutcome>;
   /**
    * Bulk add for "Shop your list" (P3d, #114) — one cart resolution and one
    * transaction for the whole list, not N sequential addItem() calls.
@@ -310,23 +314,30 @@ export async function addCartItem(
   identity: CartIdentity,
   productId: string,
   delta = 1,
-): Promise<void> {
+): Promise<AddOutcome> {
+  // #956 — both refusals are decided before a cart exists, so a refused add
+  // never creates a Cart row. `classifyAdd` applies the same two checks first.
+  if (!isValidAddDelta(delta)) return { kind: "none", reason: "INVALID_QUANTITY" };
   const stock = (await stockMap(prisma, vendorId, [productId])).get(productId) ?? 0;
-  if (stock <= 0) return; // out of stock (or no Inventory row) — refuse
+  if (stock <= 0) return { kind: "none", reason: "SOLD_OUT" }; // or no Inventory row
 
   const cartId = await ensureCart(prisma, prismaWs, vendorId, identity);
-  await prismaWs.$transaction(async (tx: Tx) => {
+  return prismaWs.$transaction(async (tx: Tx) => {
     const existing = await tx.cartItem.findUnique({
       where: { cartId_productId: { cartId, productId } },
       select: { quantity: true },
     });
-    const next = clampQuantity(existing?.quantity ?? 0, delta, stock);
-    if (next <= 0) return;
-    await tx.cartItem.upsert({
-      where: { cartId_productId: { cartId, productId } },
-      create: { cartId, vendorId, productId, quantity: next },
-      update: { quantity: next },
-    });
+    // Classified from the quantity read inside the transaction, so the outcome
+    // describes the write that actually happens.
+    const { write, outcome } = classifyAdd(existing?.quantity ?? 0, delta, stock);
+    if (write !== null) {
+      await tx.cartItem.upsert({
+        where: { cartId_productId: { cartId, productId } },
+        create: { cartId, vendorId, productId, quantity: write },
+        update: { quantity: write },
+      });
+    }
+    return outcome;
   });
 }
 

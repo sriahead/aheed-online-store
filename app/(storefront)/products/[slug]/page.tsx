@@ -150,7 +150,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </p>
         )}
         {/* Real add-to-cart (P3a) — full-width variant, no wrapping <Link> here. */}
-        <AddToCartButton productId={product.id} disabled={!product.inStock} variant="full" />
+        <AddToCartButton
+          productId={product.id}
+          productName={product.name}
+          disabled={!product.inStock}
+          variant="full"
+        />
       </div>
 
       <section className="col-span-full flex flex-col gap-4">

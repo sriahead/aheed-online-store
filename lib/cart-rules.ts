@@ -33,6 +33,56 @@ export function clampQuantity(current: number, delta: number, stock: number): nu
   return Math.min(next, stock);
 }
 
+/** The largest quantity one add may request — the pre-add picker's own upper bound. */
+export const MAX_ADD_QUANTITY = 99;
+
+/**
+ * #956 — what one add actually did, so the button can say so. Before this the
+ * add returned nothing and every resolved call read "Added", including a
+ * sold-out product and a request clamped to the stock that was left.
+ */
+export type AddOutcome =
+  | { kind: "added"; added: number; inCart: number }
+  | { kind: "partial"; added: number; requested: number; inCart: number }
+  | { kind: "none"; reason: "SOLD_OUT" | "INVALID_QUANTITY" }
+  | { kind: "none"; reason: "AT_STOCK_LIMIT"; inCart: number };
+
+export function isValidAddDelta(delta: number): boolean {
+  return Number.isInteger(delta) && delta >= 1 && delta <= MAX_ADD_QUANTITY;
+}
+
+/**
+ * #956 — the quantity an add should write (`null` = write nothing) and what to
+ * tell the shopper.
+ *
+ * Unlike `clampQuantity`, this never writes a quantity at or below `current`.
+ * When the cart already holds at least all the stock (stock can fall after an
+ * add), an add used to write `stock` back — LOWERING the cart — while saying
+ * "Added". An add now leaves the line alone and says nothing more fits; the
+ * cart's own availability handling deals with a line above stock.
+ */
+export function classifyAdd(
+  current: number,
+  delta: number,
+  stock: number,
+): { write: number | null; outcome: AddOutcome } {
+  if (!isValidAddDelta(delta)) {
+    return { write: null, outcome: { kind: "none", reason: "INVALID_QUANTITY" } };
+  }
+  if (stock <= 0) return { write: null, outcome: { kind: "none", reason: "SOLD_OUT" } };
+  if (current >= stock) {
+    return { write: null, outcome: { kind: "none", reason: "AT_STOCK_LIMIT", inCart: current } };
+  }
+  if (current + delta <= stock) {
+    const inCart = current + delta;
+    return { write: inCart, outcome: { kind: "added", added: delta, inCart } };
+  }
+  return {
+    write: stock,
+    outcome: { kind: "partial", added: stock - current, requested: delta, inCart: stock },
+  };
+}
+
 export interface MergeLine {
   productId: string;
   quantity: number;

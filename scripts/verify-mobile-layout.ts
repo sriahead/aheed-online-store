@@ -37,6 +37,11 @@ import { join } from "node:path";
  * `[data-checkout-summary]` and `[data-checkout-summary-total]`. Every printed object also lists
  * each visible form input's `autocomplete` attribute (`formInputs`). The sticky header is the page's `header` element. It is not a
  * replacement for `#440`'s Playwright harness.
+ *
+ * #956 adds `documentScrollWidth` (`document.documentElement.scrollWidth`) to every object, and,
+ * with `--add-first`, `cartFeedback` to the first width's: the `[data-cart-feedback]` region's text
+ * and its message's `left`/`right`, read as soon as the region fills after the click (it empties
+ * 4 s later), or `null` if it never filled within 10 s.
  */
 
 const HEIGHT = 844;
@@ -266,6 +271,7 @@ const MEASURE = `(async () => {
 
   return {
     viewportWidth: window.innerWidth,
+    documentScrollWidth: document.documentElement.scrollWidth,
     scrollYAfterScroll: Math.round(window.scrollY),
     headerTopAfterScroll: headerAfter ? Math.round(headerAfter.top) : null,
     headerHeightAfterScroll: headerAfter ? Math.round(headerAfter.height) : null,
@@ -280,7 +286,10 @@ const MEASURE = `(async () => {
   };
 })()`;
 
-/** Clicks the first card's Add button. Its accessible name is its text ("Add") until #956. */
+/**
+ * Clicks the first card's Add button, found by its visible text ("Add"). Since #956 its accessible
+ * name is "Add <product> to cart", but its text content is still "Add".
+ */
 const CLICK_FIRST_ADD = `(() => {
   const card = document.querySelector("[data-product-grid]")?.children[0];
   const button = card
@@ -289,6 +298,16 @@ const CLICK_FIRST_ADD = `(() => {
   if (!button) return false;
   button.click();
   return true;
+})()`;
+
+/** #956 — the shared cart-feedback region, once it has text: its text and horizontal extent. */
+const READ_CART_FEEDBACK = `(() => {
+  const region = document.querySelector("[data-cart-feedback]");
+  const text = region ? region.textContent.trim() : "";
+  if (!text) return null;
+  const pill = region.firstElementChild ?? region;
+  const box = pill.getBoundingClientRect();
+  return { text, left: Math.round(box.left), right: Math.round(box.right) };
 })()`;
 
 const HAS_STEPPER = `(() => {
@@ -357,6 +376,8 @@ async function main() {
     };
 
     let added = false;
+    let cartFeedback: unknown = null;
+    let printedFeedback = false;
     for (const width of args.widths) {
       await cdp.send("Emulation.setDeviceMetricsOverride", {
         width,
@@ -370,6 +391,12 @@ async function main() {
         if (!(await cdp.evaluate<boolean>(CLICK_FIRST_ADD))) {
           throw new Error("--add-first: no Add button in the first card");
         }
+        // #956 — the region fills only once the server action returns, and empties 4 s later, so
+        // it is read the moment it has text.
+        for (let i = 0; i < 100 && cartFeedback === null; i++) {
+          cartFeedback = await cdp.evaluate(READ_CART_FEEDBACK);
+          if (cartFeedback === null) await sleep(100);
+        }
         for (let i = 0; i < 40 && !(await cdp.evaluate<boolean>(HAS_STEPPER)); i++) {
           await sleep(250);
         }
@@ -377,7 +404,11 @@ async function main() {
         await load(args.then ?? args.path);
       }
 
-      console.log(JSON.stringify(await cdp.evaluate(MEASURE)));
+      const measured = await cdp.evaluate<Record<string, unknown>>(MEASURE);
+      // Printed on the width whose click produced it; every other width has none to report.
+      const feedbackHere = args.addFirst && !printedFeedback;
+      if (feedbackHere) printedFeedback = true;
+      console.log(JSON.stringify(feedbackHere ? { ...measured, cartFeedback } : measured));
     }
     socket.close();
   } catch (error) {

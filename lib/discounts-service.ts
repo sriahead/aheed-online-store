@@ -4,8 +4,11 @@ import {
   createCode,
   deactivateCode,
   listCodes,
+  previewCode,
+  type ClaimCodeInput,
   type CodeListRow,
   type CreateCodeInput,
+  type PreviewResult,
 } from "@/lib/repositories/discounts";
 
 /**
@@ -38,6 +41,14 @@ export function getDiscountRepository() {
   return {
     async list(): Promise<CodeListRow[]> {
       return listCodes(prisma, await vendorId());
+    },
+
+    /**
+     * #967 — read-only: the checkout page's preview of a pre-filled code. Over
+     * `getPrisma()` (HTTP), since it opens no transaction.
+     */
+    async preview(input: ClaimCodeInput): Promise<PreviewResult> {
+      return previewCode(prisma, await vendorId(), input);
     },
   };
 }
