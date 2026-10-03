@@ -40,6 +40,7 @@ export function ForgotPasswordForm() {
       <label className="flex flex-col gap-1">
         <span className="text-sm font-semibold text-primary">Email</span>
         <input
+          autoComplete="email"
           type="email"
           required
           value={email}

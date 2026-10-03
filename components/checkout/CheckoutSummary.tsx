@@ -31,7 +31,10 @@ export function CheckoutSummary({
   const isCollection = method === "COLLECTION";
 
   return (
-    <aside className="h-fit rounded-2xl border border-black/10 bg-surface-muted p-5">
+    <aside
+      data-checkout-summary
+      className="h-fit rounded-2xl border border-black/10 bg-surface-muted p-5"
+    >
       <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-primary">Order summary</h2>
       <ul className="mb-3 space-y-2">
         {lines.map((line) => (
@@ -77,7 +80,9 @@ export function CheckoutSummary({
 
         <div className="flex justify-between border-t border-black/10 pt-2 text-sm font-bold">
           <dt className="text-primary">Total</dt>
-          <dd className="text-primary">{formatPrice(totals.totalPence)}</dd>
+          <dd data-checkout-summary-total className="text-primary">
+            {formatPrice(totals.totalPence)}
+          </dd>
         </div>
       </dl>
     </aside>

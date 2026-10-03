@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Mobile checkout: autofill tokens, honest step numbers, total before payment** (issues `#958`, `#959`; `specs/2026-10-03-p958-959-mobile-checkout/`). No schema or server change.
+  - `#958`: the eight checkout contact and address fields, and the login, register, reset and forgot-password forms, carry HTML `autocomplete` tokens (WCAG 2.2 SC 1.3.5). Guarded by `tests/autocomplete-tokens.test.ts`; the rule is in `docs/developer-portal/app-conventions.md` 1.3.0.
+  - `#959`: checkout section numbers come from the sections actually rendered (`lib/checkout-sections.ts`), so they no longer repeat or skip, and Fulfilment Method is numbered. Below `md` the order total sits just above the button, now "Continue to payment", with a note that any code or points come off before payment.
+  - Fixed on the way: `/checkout` rendered zoomed out on every phone and tablet. The slot picker's day strip widened the page grid's column to about 944px; the column now uses `minmax(0,1fr)`.
+  - `scripts/verify-mobile-layout.ts` gains `--then <path>`, `formInputs` and a `checkout` block. `docs/shopper-help/shopping-guide.md` 1.1.0 and `docs/developer-portal/local-dev-playbook.md` 1.16.0 are updated. Follow-ups: `#966`, `#967`, `#968`.
+
 - **Mobile browse density: header split, 44px touch targets, shared product grid with vendor presets** (issues `#960`, `#961`, `#962`; `specs/2026-10-02-p960-962-mobile-browse-density/`). One additive migration (`20261002120000_p962_product_grid_density`: a new enum and a defaulted column).
   - `#960`: only the logo/nav row and the phone search stay sticky. The trust banner and the phone location row scroll away. The pinned header at 360–390px drops from 234px to 119px.
   - `#961`: a `tap` spacing token (44px). Below `lg` it applies to the card Add, pre-add and in-cart quantity buttons, mobile Quick View, and the header Shop / Shop List / Sign In / Account links. Desktop sizes are unchanged. On phones the card shows Add alone, and the in-cart stepper takes over after the first tap.

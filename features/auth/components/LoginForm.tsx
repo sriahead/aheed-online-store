@@ -32,6 +32,7 @@ export function LoginForm() {
       <label className="flex flex-col gap-1">
         <span className="text-sm font-semibold text-primary">Email</span>
         <input
+          autoComplete="email"
           type="email"
           required
           value={email}
@@ -42,6 +43,7 @@ export function LoginForm() {
       <label className="flex flex-col gap-1">
         <span className="text-sm font-semibold text-primary">Password</span>
         <input
+          autoComplete="current-password"
           type="password"
           required
           value={password}

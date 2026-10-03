@@ -4,10 +4,10 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.2.0"
-updated: 2026-09-26
+version: "1.3.0"
+updated: 2026-10-03
 visibility: internal
-summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), vendor-neutral user-facing copy, and React hooks — together with the tests that enforce each invariant mechanically.
+summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), vendor-neutral user-facing copy, form-field autocomplete tokens, and React hooks — together with the tests that enforce each invariant mechanically.
 tags: [conventions, repositories, server-actions, staff-panel]
 ---
 
@@ -272,6 +272,20 @@ store's staff reads must be right for **any** vendor.
   (`lib/delivery-area-examples.ts`), and `/help` names the vendor's `localityName`. With no data,
   state the rule without an example rather than borrowing another town's.
 
+## Form fields that collect the user's own data
+
+- **Every input that collects the user's own name, contact details, address or credentials
+  carries the matching HTML `autocomplete` token** (`name`, `email`, `tel`, `address-line1`,
+  `address-line2`, `address-level2` for the post town, `address-level1` for the county,
+  `postal-code`, `current-password`, `new-password`). WCAG 2.2 SC 1.3.5 (Identify Input Purpose,
+  AA) requires it, and on a phone it is what lets the browser fill a guest's details in one tap
+  instead of eight fields on a small keyboard (`#958`).
+- **A field that is not the user's own data gets `autoComplete="off"` or nothing** — a discount
+  code, a search box, a staff product form. Don't invent a token for it.
+- A missing token fails nothing: the form still submits and every build stays green. **Enforced by
+  `tests/autocomplete-tokens.test.ts`**, which reads the checkout form and the four auth forms
+  (`features/auth/components/`) and asserts each field's token. Add a new form that collects the
+  user's own data to that test.
 
 ## React and Next.js hooks
 

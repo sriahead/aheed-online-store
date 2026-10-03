@@ -4,8 +4,8 @@ title: "Shopping Guide & Help Center"
 audience: [shopper]
 type: guide
 status: approved
-version: "1.0.0"
-updated: 2026-08-22
+version: "1.1.0"
+updated: 2026-10-03
 visibility: public
 summary: "A complete guide for customers on how to browse, place orders, and manage their account."
 tags: ["shopper", "help", "orders", "loyalty"]
@@ -29,6 +29,7 @@ Welcome! This guide explains how to find what you need, place orders, and make t
   - A delivery fee may apply, but you might qualify for free delivery if your order is above a certain amount.
   - Delivery is restricted to specific postcode areas.
 - **Discounts:** If you have a promotional code, you can apply it in your cart before paying.
+- **Paying:** Your browser can fill in the name, phone, email and address you have saved on your device. On a phone, the order total shows just above **Continue to payment**. You then pay on a secure payment page, which shows the exact amount after any discount code or loyalty points.
 
 ## Managing Your Orders
 - **Order Status:** After placing an order, its status will update from *Pending Payment* to *Confirmed*. When the store prepares it, it will change to *Out for Delivery*, and finally *Delivered*.

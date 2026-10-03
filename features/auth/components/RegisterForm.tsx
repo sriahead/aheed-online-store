@@ -39,6 +39,7 @@ export function RegisterForm() {
       <label className="flex flex-col gap-1">
         <span className="text-sm font-semibold text-primary">Name</span>
         <input
+          autoComplete="name"
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -48,6 +49,7 @@ export function RegisterForm() {
       <label className="flex flex-col gap-1">
         <span className="text-sm font-semibold text-primary">Email</span>
         <input
+          autoComplete="email"
           type="email"
           required
           value={email}
@@ -58,6 +60,7 @@ export function RegisterForm() {
       <label className="flex flex-col gap-1">
         <span className="text-sm font-semibold text-primary">Password</span>
         <input
+          autoComplete="new-password"
           type="password"
           required
           minLength={8}
