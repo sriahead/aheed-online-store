@@ -4,7 +4,7 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.16.0"
+version: "1.17.0"
 updated: 2026-10-03
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
@@ -580,6 +580,29 @@ Traps found while building it (2026-10-02):
   not hang again. Check for orphans anyway before blaming a slow build. Separately, a clean
   `npm run build` on this machine spends several minutes on that same line even with nothing
   orphaned. "Slow" is not "stuck" until something is holding the files.
+
+Added for `#956`/`#967` (2026-10-03), found while proving them live:
+
+- **`wrangler dev` under `npm run preview` can die with an empty `[ERROR]` and no stack**
+  (`castErrorCause` in the wrangler log), three times in one session, minutes after start and not
+  tied to any one request. It left `:8787` held by an orphaned `workerd`, so the next start silently
+  took `:8788`, and Better Auth only trusts `:8787`. Kill every `node` whose command line matches
+  `wrangler|opennextjs` plus `workerd`, confirm nothing listens on 8787, then restart with
+  `npx opennextjs-cloudflare preview` (the build output is already there; no rebuild).
+- **Drive a drawer, card or checkout from page JavaScript, not by coordinates.** A tab the extension
+  opened does not paint until a screenshot renders it (and screenshots can time out at 30s), but
+  `javascript_exec` runs fine. Sign in with `fetch('/api/auth/sign-in/email')` (Better Auth accepts it
+  on `localhost:8787`), click buttons by `aria-label`, and read `[data-cart-feedback]` in a polling
+  loop, because it empties after 4 seconds. Fill React inputs with the native value setter and an
+  `input` event, not `.value =`. The tool blocks output that looks like a cookie or query string.
+- **Checkout's minimum-order check runs on the pre-discount subtotal**, so proving a small code needs
+  a cart above the store minimum (£15.00 for Aheed) and a chosen slot. A cart below it refuses to
+  submit, which reads as a broken form.
+- **Signing in with a guest cart sends `/checkout` to `/cart` with a merge prompt** when the account
+  already has a saved cart. Choose "Keep my saved cart" before reading the checkout.
+- **A scratch script for the dev database belongs outside the repo** (the scratchpad), importing
+  `@neondatabase/serverless` by `file:///` URL and refusing to run unless `DIRECT_URL` contains the
+  dev project's host. Set stock or deactivate test codes there, then restore.
 
 Added for `#958`/`#959` (2026-10-03):
 
