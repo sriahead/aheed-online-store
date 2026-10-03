@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.61.0"
+version: "1.62.0"
 updated: 2026-10-03
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -47,6 +47,7 @@ reconciliation. If overall project state did not materially change, leave this f
   `deploy-production` (run `37129181574`) **success**. Production `/api/health` (Aheed and SriMart)
   serves `20ff789`, `db.ok: true`, `reference.drift: false`. One `closes` line per issue linked all
   five, and `#958`–`#962` closed on the merge. Roadmap row: `specs/roadmap.md` 1.127.0.
+  `staging` has since moved ahead of `main` by PR #974 (`2258976`, `#956`/`#967`), not yet promoted.
 - **Previous promotion, `ee6eccb`** — `#945` (payment reconciliation hardening, absorbing
   `#619`/`#620`) and `#938`/`#939` via PR #953, 2026-09-30. Its closing keywords linked nothing
   (one-line `closes A, closes B`); the rule is in `specs/sdd-workflow.md` 2.38.0.
@@ -524,8 +525,16 @@ All facts in this section require live verification:
     `specs/2026-10-03-p958-959-mobile-checkout/`.
     - Validation found no defect. Not seen live: the signed-in loyalty note string. Real-device
       autofill (iOS Safari, Android Chrome) is post-deploy evidence, with no issue.
-    - Follow-ups: `#966`, `#967`, `#968`.
-  - **Queued:** `#956` (honest add-to-cart feedback, which builds on slice 1's resized button).
+    - Follow-ups: `#966`, `#968` (`#967` was built as part of slice 3).
+  - **Slice 3, `#956`/`#967` (honest add-to-cart feedback; checkout total includes a pre-filled
+    code):** **merged to `staging` only** (PR #974, merge `2258976`, 2026-10-03; `deploy-staging`
+    green), issues In Review. **A `staging -> main` promotion PR is outstanding**, and its body must
+    repeat a `closes` line for each of `#956` and `#967`. No schema change. Spec:
+    `specs/2026-10-03-p956-967-add-feedback-referral-total/`.
+    - Validation found no defect; the live proof ran against the dev database, and a
+      `PENDING_PAYMENT` fixture order from it remains there.
+    - Follow-ups: `#972` (self-referral not refused), `#973` (live preview of a typed code and of
+      points).
   - `#955` (crawlability) and `#957` (reorder notices) are not layout work and stay in Backlog.
   - `#964` is the slice-1 follow-up: the `tap` token on the remaining controls.
   - **Phone-width measurement now exists:** `scripts/verify-mobile-layout.ts`, using headless Chrome

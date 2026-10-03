@@ -14,6 +14,11 @@ every branch merges.
   - `#967`: `previewCode` is `claimCode`'s lookup and evaluation without the reservation, and `claimCode` now calls it. Checkout previews the referral cookie's code, so the summary and the mobile total include its discount (`Discount (CODE)`), or the reason it can't apply (for example, sign in first) shows under the field. Rendering checkout never uses a code up.
   - `scripts/verify-mobile-layout.ts` gains `documentScrollWidth` and `cartFeedback`. `docs/shopper-help/shopping-guide.md` 1.2.0 and `docs/developer-portal/app-conventions.md` 1.4.0 are updated. Follow-ups: `#972` (a shopper can redeem their own referral code) and `#973` (live preview of a typed code and of points).
 
+- **Document-stage reconciliation for PR #974 (`#956`, `#967` merged to `staging`, merge `2258976`).** Docs only.
+  - `specs/roadmap.md` 1.128.0: the row for PR #974, with the live-proof results and the two deviations.
+  - `docs/model-handoff.md` 1.62.0: slice 3 recorded as merged to `staging` only, promotion outstanding; `#956` no longer queued.
+  - `docs/developer-portal/local-dev-playbook.md` 1.17.0: five traps found proving the slice live (wrangler dev dying and leaving `:8787` held, driving the browser from page JavaScript, the pre-discount minimum-order check, the cart-merge prompt, scratch database scripts).
+
 - **Document-stage reconciliation for the PR #970 promotion (`#958`–`#962` to production, merge `20ff789`).** Docs only.
   - `specs/roadmap.md` 1.126.0: the mobile-checkout row for PR #969. 1.127.0: the promotion row, with `deploy-production` run `37129181574` and production `/api/health` serving `20ff789` on both vendors.
   - `docs/model-handoff.md` 1.61.0: `main` at `20ff789`; both mobile-programme slices in production and their issues closed.
