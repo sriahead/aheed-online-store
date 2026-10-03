@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.60.0"
+version: "1.61.0"
 updated: 2026-10-03
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,19 +39,17 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-09-30.
-- **`main` is now at `ee6eccb`** — `#945` (payment reconciliation hardening, absorbing `#619`/`#620`)
-  and `#938`/`#939` (local tooling fixes) promoted via PR #953 (`staging -> main`, 2026-09-30),
-  carrying PR #950/#952 and PR #943/#944. The additive migration
-  `20260929190000_p945_payment_reconciliation` is applied in production; `deploy-production` (run
-  `36687776410`) **success**; production `/api/health` (Aheed and SriMart) serves `ee6eccb`,
-  `db.ok: true`, `reference.drift: false`. **The production payment sweep is running for the first
-  time**: `#947` closed on the 08:00 UTC tick (`ok` on all three jobs), and the 08:15/08:30 ticks
-  logged the new seven-key `reconcile-payments ok:` summary. **PR #953's closing keywords linked
-  nothing** (one-line `closes A, closes B`); all five issues were closed by hand — the rule and the
-  pre-merge `closingIssuesReferences` check are now in `specs/sdd-workflow.md` 2.38.0 and
-  `.claude/commands/ship.md`. `main` and `staging` are content-identical. Roadmap row:
-  `specs/roadmap.md` 1.124.0.
+- **Date:** 2026-10-03.
+- **`main` is now at `20ff789`.** The first two mobile-programme slices were promoted via PR #970
+  (`staging -> main`, 2026-10-03): mobile browse density (`#960`/`#961`/`#962`, PR #965) and mobile
+  checkout (`#958`/`#959`, PR #969), with the seventh Discover pass (PR #963). The additive
+  migration `20261002120000_p962_product_grid_density` is applied in production.
+  `deploy-production` (run `37129181574`) **success**. Production `/api/health` (Aheed and SriMart)
+  serves `20ff789`, `db.ok: true`, `reference.drift: false`. One `closes` line per issue linked all
+  five, and `#958`–`#962` closed on the merge. Roadmap row: `specs/roadmap.md` 1.127.0.
+- **Previous promotion, `ee6eccb`** — `#945` (payment reconciliation hardening, absorbing
+  `#619`/`#620`) and `#938`/`#939` via PR #953, 2026-09-30. Its closing keywords linked nothing
+  (one-line `closes A, closes B`); the rule is in `specs/sdd-workflow.md` 2.38.0.
 - **Previous promotion, `924cf24`** — `#935` (branch hygiene) via PR #941, 2026-09-29.
 - **Previous promotion, `91b1d8e`** — `#928` (product description as a fourth net-content evidence
   source, refs `#697`) promoted via PR #933 ("Promote product description as net-content evidence
@@ -516,18 +514,14 @@ All facts in this section require live verification:
 - **The mobile programme is the owner's chosen direction (2026-10-02).** It comes from the seventh
   Discover pass, `docs/research/discovery-log.md` 1.7.0, merged to `staging` via PR #963. Its
   issues are `#955`–`#962`, all Phase P10.
-  - **Slice 1, `#960`/`#961`/`#962` (mobile browse density):** validated and **merged to
-    `staging`** (PR #965, 2026-10-03), `deploy-staging` green, issues **In Review**. Its additive
-    migration (`20261002120000_p962_product_grid_density`) is applied to dev and staging. **A
-    `staging -> main` promotion PR is outstanding** and carries that migration to production, so it
-    needs one `closes` line per issue. SriMart's admin save through its own UI was never run
-    (local sign-in is refused); see the roadmap row dated 2026-10-03.
-  - **Slice 2, `#958`/`#959` (mobile checkout):** validated from a fresh context and **merged to
-    `staging`** (PR #969, 2026-10-03, merge `e2e0905`), `deploy-staging` green, issues **In
-    Review**. No schema or server change. Spec: `specs/2026-10-03-p958-959-mobile-checkout/`; the
-    roadmap row dated 2026-10-03 has the detail. **The `staging -> main` promotion PR for both
-    slices is still outstanding**: one `closes` line each for `#958`, `#959`, `#960`, `#961`,
-    `#962`, then check `closingIssuesReferences` before asking for the merge.
+  - **Slice 1, `#960`/`#961`/`#962` (mobile browse density):** **in production** (PR #965, then
+    promotion PR #970, 2026-10-03, `main` at `20ff789`), issues closed. Its additive migration
+    (`20261002120000_p962_product_grid_density`) is applied in production. SriMart's admin save
+    through its own UI was never run (local sign-in is refused); see the roadmap row dated
+    2026-10-03.
+  - **Slice 2, `#958`/`#959` (mobile checkout):** **in production** (PR #969, then promotion PR
+    #970, 2026-10-03), issues closed. No schema or server change. Spec:
+    `specs/2026-10-03-p958-959-mobile-checkout/`.
     - Validation found no defect. Not seen live: the signed-in loyalty note string. Real-device
       autofill (iOS Safari, Android Chrome) is post-deploy evidence, with no issue.
     - Follow-ups: `#966`, `#967`, `#968`.
