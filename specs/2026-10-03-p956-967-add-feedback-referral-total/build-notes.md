@@ -128,8 +128,9 @@ points, deferred from `#967`). Both are on Project #2, Phase P10, Status Backlog
   `/categories/fruit-veg` returned 200, with one `data-cart-feedback` and no duplicate
   `aria-label="Add … to cart"` values. `MSYS_NO_PATHCONV=1 npx tsx scripts/verify-mobile-layout.ts
   --base http://localhost:8787 --path /categories/fruit-veg --widths 360 --add-first --then
-  /checkout` printed `documentScrollWidth: 360` and `cartFeedback: { text: "Added Baby Spinach 200g
-  to your cart (1 in cart).", left: 16, right: 344 }`, and `/checkout` rendered.
+  /checkout` printed `documentScrollWidth` 360, and a `cartFeedback` whose text was
+  `Added Baby Spinach 200g to your cart (1 in cart).` with `left` 16 and `right` 344; `/checkout`
+  rendered.
   **Git Bash trap:** without `MSYS_NO_PATHCONV=1`, `--path /categories/…` is rewritten into a
   Windows path, and the script refuses it with a message saying so.
 - **`#797`:** a full `npx vitest run` writes fixture orders into the dev database. Run R25–R29
