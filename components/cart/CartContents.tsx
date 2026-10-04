@@ -151,7 +151,7 @@ export function CartContents({
                   </p>
                 )}
 
-                <div className="mt-2 flex items-center gap-2">
+                <div data-tap-surface="cart-line-controls" className="mt-2 flex items-center gap-2">
                   <div className="flex items-center rounded-lg border border-black/10 bg-surface-muted">
                     <form
                       action={async () => {

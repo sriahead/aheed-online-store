@@ -35,7 +35,7 @@ export function FilterChips({
   if (chips.length === 0) return null;
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-2">
+    <div data-tap-surface="filter-chips" className="mb-4 flex flex-wrap items-center gap-2">
       <h2 className="sr-only">Applied filters</h2>
       {chips.map((chip) => (
         <Link

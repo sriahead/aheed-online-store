@@ -190,7 +190,7 @@ export default async function CategoryPage({
             ))}
           </ProductGrid>
           {(nextCursor || !isFirstPage) && (
-            <div className="mt-6 flex gap-3">
+            <div data-tap-surface="pagination" className="mt-6 flex gap-3">
               {!isFirstPage && (
                 <Link
                   href={prevCategoryPageHref(slug, query)}

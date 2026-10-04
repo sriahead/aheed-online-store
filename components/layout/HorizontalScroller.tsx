@@ -81,6 +81,7 @@ export function HorizontalScroller({
       <button
         type="button"
         aria-label={`Scroll ${itemLabel} left`}
+        data-tap-surface="scroller-arrow"
         onClick={() => nudge(-1)}
         className={`left-0 -translate-x-1/2 ${arrowClassName}`}
       >
@@ -100,6 +101,7 @@ export function HorizontalScroller({
       <button
         type="button"
         aria-label={`Scroll ${itemLabel} right`}
+        data-tap-surface="scroller-arrow"
         onClick={() => nudge(1)}
         className={`right-0 translate-x-1/2 ${arrowClassName}`}
       >

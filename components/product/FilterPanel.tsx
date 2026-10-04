@@ -36,7 +36,10 @@ export function FilterPanel({ heading, ...formProps }: FilterPanelProps) {
     <>
       {/* Below md: a disclosure. `open` is deliberately never set — see the docstring. */}
       <details className="md:hidden rounded-xl border border-black/10 bg-white">
-        <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 font-semibold text-primary">
+        <summary
+          data-tap-surface="filter-panel"
+          className="flex cursor-pointer items-center gap-2 px-4 py-3 font-semibold text-primary"
+        >
           <SlidersHorizontal className="h-4 w-4" aria-hidden />
           {heading}
         </summary>

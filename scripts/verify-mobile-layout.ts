@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 /**
  * Measure the storefront at real phone and tablet widths:
- * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]]`.
+ * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location]`.
  *
  * ## Why this exists (#960, #961, #962)
  *
@@ -42,6 +42,17 @@ import { join } from "node:path";
  * with `--add-first`, `cartFeedback` to the first width's: the `[data-cart-feedback]` region's text
  * and its message's `left`/`right`, read as soon as the region fills after the click (it empties
  * 4 s later), or `null` if it never filled within 10 s.
+ *
+ * #964 adds three things:
+ * - `tapTargets`: every `a`, `button`, `summary` and visible `input` that carries
+ *   `data-tap-surface` or sits inside an element that does, as `{ surface, name, width, height,
+ *   displayed }`. `surface` is the nearest `data-tap-surface` value, the element's own included.
+ *   `name` is the `aria-label`, else the trimmed text, else the `name` attribute.
+ * - `firstCardTop`: the first `[data-product-grid]` child's top in document coordinates, read at
+ *   scroll 0, or `null` with no grid.
+ * - `--open-location`: before measuring each width, calls `showModal()` on the first
+ *   `dialog[data-location-dialog]` whose parent is displayed (the header mounts `LocationControl`
+ *   twice, one per breakpoint), then waits 300 ms.
  */
 
 const HEIGHT = 844;
@@ -53,6 +64,7 @@ interface Args {
   widths: number[];
   addFirst: boolean;
   then: string | null;
+  openLocation: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -64,13 +76,14 @@ function parseArgs(argv: string[]): Args {
   const path = value("--path");
   const then = value("--then") ?? null;
   const addFirst = argv.includes("--add-first");
+  const openLocation = argv.includes("--open-location");
   const widths = (value("--widths") ?? "")
     .split(",")
     .map((w) => Number(w.trim()))
     .filter((w) => Number.isInteger(w) && w > 0);
   if (!base || !path || widths.length === 0 || (then !== null && !addFirst)) {
     console.error(
-      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]]",
+      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location]",
     );
     process.exit(2);
   }
@@ -95,6 +108,7 @@ function parseArgs(argv: string[]): Args {
     widths,
     addFirst,
     then: then === null ? null : absolute(then),
+    openLocation,
   };
 }
 
@@ -198,6 +212,10 @@ const MEASURE = `(async () => {
   await sleep(300);
   const headerBottomAtTop = header ? header.getBoundingClientRect().bottom : null;
   const locationTopAtTop = shown(location) ? location.getBoundingClientRect().top : null;
+  const firstChild = grid ? grid.children[0] : null;
+  const firstCardTop = firstChild
+    ? Math.round(firstChild.getBoundingClientRect().top + window.scrollY)
+    : null;
 
   const cards = grid ? [...grid.children] : [];
   let gridColumns = 0;
@@ -224,6 +242,23 @@ const MEASURE = `(async () => {
       size(a, a.getAttribute("href")),
     ),
   ];
+  // #964 — every tappable element in a marked surface.
+  const tapTargets = [
+    ...document.querySelectorAll(
+      ["a", "button", "summary", "input:not([type=hidden])"]
+        .flatMap((tag) => [tag + "[data-tap-surface]", "[data-tap-surface] " + tag])
+        .join(", "),
+    ),
+  ].map((el) => {
+    const r = el.getBoundingClientRect();
+    return {
+      surface: el.closest("[data-tap-surface]").getAttribute("data-tap-surface"),
+      name: el.getAttribute("aria-label") || el.textContent.trim() || el.getAttribute("name"),
+      width: Math.round(r.width),
+      height: Math.round(r.height),
+      displayed: shown(el),
+    };
+  });
   const readout = firstCard
     ? [...firstCard.querySelectorAll("[aria-label]")].find((el) =>
         el.getAttribute("aria-label").endsWith("in cart"),
@@ -279,7 +314,9 @@ const MEASURE = `(async () => {
     headerBottomAtTop: headerBottomAtTop === null ? null : Math.round(headerBottomAtTop),
     locationTopAtTop: locationTopAtTop === null ? null : Math.round(locationTopAtTop),
     gridColumns,
+    firstCardTop,
     controls,
+    tapTargets,
     firstCardStepperLabel: readout ? readout.getAttribute("aria-label") : null,
     formInputs,
     checkout,
@@ -308,6 +345,18 @@ const READ_CART_FEEDBACK = `(() => {
   const pill = region.firstElementChild ?? region;
   const box = pill.getBoundingClientRect();
   return { text, left: Math.round(box.left), right: Math.round(box.right) };
+})()`;
+
+/** #964 — opens the displayed LocationControl's dialog; false when there is none. */
+const OPEN_LOCATION = `(() => {
+  const dialog = [...document.querySelectorAll("dialog[data-location-dialog]")].find((d) => {
+    const parent = d.parentElement;
+    const r = parent.getBoundingClientRect();
+    return getComputedStyle(parent).display !== "none" && r.width > 0 && r.height > 0;
+  });
+  if (!dialog) return false;
+  if (!dialog.open) dialog.showModal();
+  return true;
 })()`;
 
 const HAS_STEPPER = `(() => {
@@ -402,6 +451,13 @@ async function main() {
         }
         added = true;
         await load(args.then ?? args.path);
+      }
+
+      if (args.openLocation) {
+        if (!(await cdp.evaluate<boolean>(OPEN_LOCATION))) {
+          throw new Error("--open-location: no displayed LocationControl dialog");
+        }
+        await sleep(300);
       }
 
       const measured = await cdp.evaluate<Record<string, unknown>>(MEASURE);

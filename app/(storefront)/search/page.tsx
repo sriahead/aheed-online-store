@@ -310,6 +310,7 @@ export default async function SearchPage({
           {nextCursor && (
             <Link
               href={searchPageHref(params, nextCursor)}
+              data-tap-surface="pagination"
               className="mt-6 inline-block rounded-full bg-action px-4 py-2 font-semibold text-white"
             >
               Next page

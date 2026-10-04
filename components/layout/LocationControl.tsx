@@ -65,7 +65,7 @@ export function LocationControl({
     method === "DELIVERY" && hasDeliverablePostcode ? `Delivery · ${postcode}` : "Delivery";
 
   return (
-    <div className="flex h-full items-center">
+    <div data-tap-surface="location" className="flex h-full items-center">
       {offerCollection ? (
         <div className="flex bg-surface-muted rounded-xl p-1 border border-black/10">
           {/*
@@ -158,6 +158,7 @@ export function LocationControl({
 
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
       <dialog
+        data-location-dialog
         ref={dialogRef}
         onCancel={(e) => {
           e.preventDefault();
@@ -170,7 +171,7 @@ export function LocationControl({
         }}
         className="backdrop:bg-black/50 p-0 rounded-2xl shadow-2xl border border-black/10 m-auto w-[calc(100vw-2rem)] sm:w-[28rem] overflow-hidden"
       >
-        <div className="bg-white p-6 flex flex-col">
+        <div data-tap-surface="location-dialog" className="bg-white p-6 flex flex-col">
           <h2 className="text-lg font-extrabold text-primary mb-2">Check delivery availability</h2>
           <p className="text-sm text-black/70 mb-5">
             Enter your postcode to check whether we deliver to your area.

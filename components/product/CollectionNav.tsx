@@ -37,7 +37,7 @@ const COLLECTIONS = [
 
 export function CollectionNav({ activeHref }: { activeHref?: string }) {
   return (
-    <nav aria-label="Collections" className="mb-6">
+    <nav aria-label="Collections" data-tap-surface="collections" className="mb-6">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
         Browse
       </h2>
