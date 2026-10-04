@@ -162,7 +162,7 @@ export function CartContents({
                       <button
                         type="submit"
                         aria-label={`Decrease quantity of ${line.name}`}
-                        className="p-1 text-primary-muted hover:text-primary"
+                        className="flex size-tap items-center justify-center p-1 text-primary-muted hover:text-primary lg:size-auto"
                       >
                         <Minus className="h-3 w-3" aria-hidden />
                       </button>
@@ -178,7 +178,7 @@ export function CartContents({
                         type="submit"
                         disabled={!line.available || line.quantity >= line.stock}
                         aria-label={`Increase quantity of ${line.name}`}
-                        className="p-1 text-primary-muted hover:text-primary disabled:opacity-30"
+                        className="flex size-tap items-center justify-center p-1 text-primary-muted hover:text-primary disabled:opacity-30 lg:size-auto"
                       >
                         <Plus className="h-3 w-3" aria-hidden />
                       </button>
@@ -194,7 +194,7 @@ export function CartContents({
                     <button
                       type="submit"
                       aria-label={`Remove ${line.name}`}
-                      className="p-1 text-primary-subtle transition-colors hover:text-danger"
+                      className="flex size-tap items-center justify-center p-1 text-primary-subtle transition-colors hover:text-danger lg:size-auto"
                     >
                       <Trash2 className="h-3.5 w-3.5" aria-hidden />
                     </button>

@@ -107,10 +107,11 @@ R11 and R12 compare against that recorded baseline.
 
 **Density cost.** Taller pills and chips push the product grid down, which works against `#960`'s
 header trim. On the Aheed category page with a filter applied, R11 caps the first card's downward
-move at **40px at 390px wide**. The estimate from the classes is about 14px for chips, 6px for
-subcategories and 8px per collection row. 40px is the ceiling the owner approves here. If Build
-cannot meet it without dropping a control, that goes back to `/spec`. Build does not drop a control
-to meet it.
+move at **60px at 390px wide**. The cap was 40px at `/spec`. Build measured +56 (Aheed) and
++46 (SriMart): about 14px for the location row, 14px for the chips, 6px per subcategory row and
+8px per collection row. Tightening `gap-*` recovers only about 8px. On 2026-10-04 the owner chose
+to accept the measured cost and set the cap at 60, rather than make the collection links a
+swipeable row. Build does not drop a control to meet the cap.
 
 ## 4. Deliberately excluded
 

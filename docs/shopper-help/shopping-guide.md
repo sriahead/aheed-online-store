@@ -4,8 +4,8 @@ title: "Shopping Guide & Help Center"
 audience: [shopper]
 type: guide
 status: approved
-version: "1.2.0"
-updated: 2026-10-03
+version: "1.3.0"
+updated: 2026-10-04
 visibility: public
 summary: "A complete guide for customers on how to browse, place orders, and manage their account."
 tags: ["shopper", "help", "orders", "loyalty"]
@@ -29,7 +29,7 @@ Welcome! This guide explains how to find what you need, place orders, and make t
   - Some stores have a minimum order amount.
   - A delivery fee may apply, but you might qualify for free delivery if your order is above a certain amount.
   - Delivery is restricted to specific postcode areas.
-- **Discounts:** If you have a promotional code, you can apply it in your cart before paying.
+- **Discounts:** If you have a promotional code, enter it in the **Discount code** section of the checkout page before paying.
 - **Referral links:** If you arrived through a friend's referral link, its code is already filled in at checkout and the total you see includes its discount. If the code can't be used for this order (for example, you need to sign in first, or the order is below its minimum), the reason is shown under the code field.
 - **Paying:** Your browser can fill in the name, phone, email and address you have saved on your device. On a phone, the order total shows just above **Continue to payment**. You then pay on a secure payment page, which shows the exact amount after any discount code or loyalty points.
 

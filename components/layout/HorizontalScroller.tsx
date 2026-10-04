@@ -74,7 +74,13 @@ export function HorizontalScroller({
     trackRef.current = element;
   };
 
-  const arrowClassName = `absolute z-10 flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-primary shadow hover:bg-surface-muted ${arrowPositionClassName}`;
+  // #964 — the button is the 44px hit area below `lg`; the 32px circle inside it is what shows,
+  // so the arrow looks the same at every width (specs/design-system.md, "Touch targets"). Below
+  // `lg` the button overhangs the track by 16px (`translate-x-4`), as the 32px arrow did at
+  // `translate-x-1/2`: half of 44 would push 6px past the page gutter and widen a phone page.
+  const arrowClassName = `group absolute z-10 flex size-tap items-center justify-center lg:size-8 ${arrowPositionClassName}`;
+  const arrowCircleClassName =
+    "flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-primary shadow group-hover:bg-surface-muted";
 
   return (
     <div className="relative">
@@ -83,9 +89,11 @@ export function HorizontalScroller({
         aria-label={`Scroll ${itemLabel} left`}
         data-tap-surface="scroller-arrow"
         onClick={() => nudge(-1)}
-        className={`left-0 -translate-x-1/2 ${arrowClassName}`}
+        className={`left-0 -translate-x-4 lg:-translate-x-1/2 ${arrowClassName}`}
       >
-        <ChevronLeft className="h-4 w-4" aria-hidden />
+        <span className={arrowCircleClassName}>
+          <ChevronLeft className="h-4 w-4" aria-hidden />
+        </span>
       </button>
 
       {as === "ul" ? (
@@ -103,9 +111,11 @@ export function HorizontalScroller({
         aria-label={`Scroll ${itemLabel} right`}
         data-tap-surface="scroller-arrow"
         onClick={() => nudge(1)}
-        className={`right-0 translate-x-1/2 ${arrowClassName}`}
+        className={`right-0 translate-x-4 lg:translate-x-1/2 ${arrowClassName}`}
       >
-        <ChevronRight className="h-4 w-4" aria-hidden />
+        <span className={arrowCircleClassName}>
+          <ChevronRight className="h-4 w-4" aria-hidden />
+        </span>
       </button>
     </div>
   );

@@ -19,9 +19,11 @@ baseline that R11 and R12 compare against.
 - **Below `lg`** means under 1024px wide.
 - **Passes 44** means an entry has `width` ≥ 44 and `height` ≥ 44.
 - **Displayed entries** means the `tapTargets` entries with `displayed: true`.
-- **Baseline** means the JSON lines `build-notes.md` records under "Baseline". Build measures them
-  after the R1–R4 hooks and script changes exist, and before any class change (`plan.md`
-  section 3).
+- **Baseline** means the JSON lines in this folder's `baseline/<run>.jsonl` (one file per run
+  below), which `build-notes.md` points to under "Baseline". Build measured them at commit
+  `bde6457`, after the R1–R4 hooks and script changes existed and before any class change
+  (`plan.md` section 3). _Amended at Build: this said the lines were inside `build-notes.md`
+  itself. They are about 50 KB, so they live beside it._
 - **Runs**, each at the widths the requirement names:
   - **A-cat**: `M --base http://localhost:8787 --path "categories/fruit-veg?inStock=1"`
   - **S-cat**: `M --base http://srimart.localhost:8787 --path "categories/sri-electronics?inStock=1"`
@@ -87,13 +89,21 @@ R8. **A-cart** at widths `360,390`: displayed `cart-line-controls` entries named
 R9. **A-loc** at widths `360,390`: displayed entries with `surface` `location-dialog` include the
     input named `postcode` and at least two buttons. Every displayed `location-dialog` entry passes
     44.
-R10. In every run of R5–R9, at widths `360` and `390`, `documentScrollWidth` equals `viewportWidth`.
-    Nothing makes the page scroll sideways.
+R10. In every run of R5–R9, at widths `360` and `390`, `viewportWidth` equals the requested width
+    **and** `documentScrollWidth` equals it too. Nothing makes the page scroll sideways.
+    _Amended at Build (2026-10-04): this compared `documentScrollWidth` with `viewportWidth` only.
+    Under `mobile: true` emulation an overflowing page widens the layout viewport itself, so both
+    read 366 at a requested 360 and the check passed vacuously. The 44px scroller arrows did exactly
+    that before they were inset (`build-notes.md`)._
 
 ## What it costs, and what must not change
 
 R11. **A-cat** and **S-cat** at width `390`: `firstCardTop` is at most the baseline's `firstCardTop`
-    for the same run and width, plus 40.
+    for the same run and width, plus 60.
+    _Amended at Build (2026-10-04), owner decision: the cap was 40. Measured with every control at
+    44px, the first card moved +56 on Aheed and +46 on SriMart. Tightening `gap-*` recovers only
+    about 8px. The owner chose to accept the measured cost and raise the cap, rather than change the
+    collection row's layout (`build-notes.md`)._
 R12. **A-cat**, **A-search** and **A-cart** at widths `1024,1280`: each displayed entry's `width`
     and `height` equal (±1) those of the baseline entry with the same `surface` and `name`. Desktop
     sizes are unchanged.

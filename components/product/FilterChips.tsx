@@ -45,7 +45,7 @@ export function FilterChips({
           // control DOES — otherwise every chip announces as its own label with no hint that
           // following it removes the filter.
           aria-label={`Remove filter: ${chip.label}`}
-          className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-surface-muted px-3 py-1 text-sm text-primary transition-colors hover:bg-black/5"
+          className="inline-flex min-h-tap items-center gap-1.5 rounded-full border border-black/10 bg-surface-muted px-3 py-1 text-sm lg:min-h-0 text-primary transition-colors hover:bg-black/5"
         >
           {chip.label}
           <X className="h-3.5 w-3.5 text-primary-muted" aria-hidden />
@@ -53,7 +53,7 @@ export function FilterChips({
       ))}
       <Link
         href={clearAllHref(basePath, params)}
-        className="rounded-full px-3 py-1 text-sm font-semibold text-action underline underline-offset-2 hover:text-action-hover"
+        className="inline-flex min-h-tap items-center rounded-full px-3 py-1 text-sm font-semibold text-action lg:min-h-0 underline underline-offset-2 hover:text-action-hover"
       >
         Clear all
       </Link>

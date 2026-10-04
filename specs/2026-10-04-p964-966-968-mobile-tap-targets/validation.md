@@ -17,7 +17,7 @@ means SC 2.5.5 (AAA) target size and SC 1.3.5 (AA) input purpose.
    (CLAUDE.md, "Windows shell & local development"). Both `http://localhost:8787` and
    `http://srimart.localhost:8787` load.
 2. Read `requirements.md`'s **Definitions** (run names A-cat, S-cat, A-search, A-cart, A-loc) and
-   `build-notes.md`'s **Baseline** section.
+   `build-notes.md`'s **Baseline** section, which points to `baseline/<run>.jsonl` in this folder.
 3. Each run prints one JSON object per width. Pipe it through `node -e` or `jq` to filter
    `tapTargets` by `displayed`. Compare numbers against `requirements.md`, never against a verdict
    the script prints (it prints none).
@@ -36,8 +36,8 @@ means SC 2.5.5 (AAA) target size and SC 1.3.5 (AA) input purpose.
 | R7  | System | **A-search** `--widths 360,390`: a displayed entry with `surface: "pagination"` and `name: "Next page"` exists and passes 44. Every displayed entry passes 44. |
 | R8  | System | **A-cart** `--widths 360,390`: displayed `cart-line-controls` entries for the first line, named `Decrease quantity of …`, `Increase quantity of …` and `Remove …`, each pass 44. |
 | R9  | System | **A-loc** `--widths 360,390`: displayed `location-dialog` entries include `name: "postcode"` and at least two buttons. Every one passes 44. |
-| R10 | System | In every output from R5–R9 at `360` and `390`, `documentScrollWidth === viewportWidth`. |
-| R11 | System | **A-cat** and **S-cat** `--widths 390`: `firstCardTop` ≤ the `build-notes.md` baseline value for that run at 390, plus 40. Write down both numbers. |
+| R10 | System | In every output from R5–R9 requested at `360` and `390`, `viewportWidth` is exactly 360 or 390 (not wider) **and** `documentScrollWidth === viewportWidth`. A wider `viewportWidth` means the page overflowed and the emulator widened the layout viewport. That is a failure. |
+| R11 | System | **A-cat** and **S-cat** `--widths 390`: `firstCardTop` ≤ the baseline value for that run at 390 (`baseline/<run>.jsonl`), plus 60 (amended from 40 at Build). Write down both numbers. |
 | R12 | System | **A-cat**, **A-search**, **A-cart** `--widths 1024,1280`: for each displayed entry, find the baseline entry with the same `surface` and `name` at the same width. `width` and `height` each differ by at most 1. An entry with no baseline match is a failure, unless `build-notes.md` explains it. |
 | R13 | Unit | `npx vitest run tests/tap-targets.test.ts` passes. Read it: it covers every file in R4's table, both pagination pages included, and asserts both the hook and a `tap` utility (or only the hook for `FilterPanel`, if `build-notes.md` records that it already passed 44). |
 | R14 | Unit | `grep -n 'postal-code' components/layout/LocationControl.tsx` hits the `name="postcode"` input. `npx vitest run tests/autocomplete-tokens.test.ts` passes and includes `LocationControl.tsx`. |
