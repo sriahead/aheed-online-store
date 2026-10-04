@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **44px tap targets on the remaining storefront controls, postcode autofill in the header, and the right page for discount codes in the shopper guide** (issues `#964`, `#966`, `#968`; `specs/2026-10-04-p964-966-968-mobile-tap-targets/`). No schema or server change.
+  - `#964`: below `lg`, the location toggles and postcode dialog, filter chips, subcategory pills, collection links, Previous/Next page, cart line decrease/increase/remove, and the `HorizontalScroller` arrows are at least 44×44. From `lg` each keeps its exact earlier size. The arrows are a 44px button around the same 32px circle. The mobile filter summary was already 50px.
+  - `#966`: the header postcode input carries `autocomplete="postal-code"`.
+  - `#968`: the shopper guide says a code is entered on the checkout page, not in the cart.
+  - `scripts/verify-mobile-layout.ts` gains `tapTargets`, `firstCardTop` and `--open-location`. New `tests/tap-targets.test.ts`. `specs/design-system.md` 1.15.0. Follow-up `#979` (controls left out of scope).
+
 - **Honest add-to-cart feedback, and a checkout total that includes a pre-filled referral code** (issues `#956`, `#967`; `specs/2026-10-03-p956-967-add-feedback-referral-total/`). No schema change.
   - `#956`: `addToCart` resolves to what it actually did: added, partly added (clamped to stock), or nothing (sold out, cart already holds all the stock, invalid quantity). Every add button reports that in one shared `role="status"` message at the bottom of the screen (`components/cart/CartFeedback.tsx`, mounted once in `StorefrontChrome`), because a card's button is swapped for the quantity stepper on the re-render after an add. A failed call shows "Try again" instead of the error page. Each card's Add, pre-add −/+ and out-of-stock button is named for its product.
   - Fixed on the way: adding to a cart that held more than the current stock lowered the cart's quantity to stock. An add now writes nothing in any refused case.
