@@ -132,6 +132,10 @@ All three are recorded in place in `requirements.md`/`validation.md` as "_Amende
 - **Homepage rows (`ProductRow`, `BundleRow`) were not measured.** They share the arrow change, and
   no R covers the homepage. Their overhang is 16px, as before, so overflow there is unlikely but
   unproven. `M --path "" --widths 390` would show `viewportWidth`.
+  _Corrected at Validate: the script rejects an empty `--path`. Use
+  `MSYS_NO_PATHCONV=1 … --path / --widths 360,390`. That run showed no overflow, and no displayed
+  `scroller-arrow` entry on `/` at all, so the homepage arrows are still unmeasured (tracked in
+  `#979`)._
 - **R15 (live `postal-code` in `formInputs`) and R20's `npm run build` / `kms/site-internal` build
   were not run in Build.** `lint`, `typecheck`, `format:check`, `kms:validate`,
   `kms:check-generated` and the full `npx vitest run` (204 files, 2,686 tests, run alone) all passed.

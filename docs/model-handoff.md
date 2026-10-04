@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.64.0"
+version: "1.65.0"
 updated: 2026-10-04
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -46,7 +46,9 @@ reconciliation. If overall project state did not materially change, leave this f
   `deploy-production` (run `37152345619`) **success**. Production `/api/health` (Aheed and SriMart)
   serves `9e2afac`, `db.ok: true`, `reference.drift: false`. One `closes` line per issue linked
   both, and `#956`/`#967` closed on the merge. Roadmap row: `specs/roadmap.md` 1.129.0. `main` and
-  `staging` carry the same content at this point.
+  `staging` carried the same content at this point. Since then PR #978 (docs only, merge
+  `5a6d8a1`) moved `main`, and `staging` is ahead of it by slice 4 (PR #980); the health figures
+  above were read on 2026-10-03 and not re-read.
 - **Previous promotion, `20ff789`** — the first two mobile-programme slices via PR #970
   (`staging -> main`, 2026-10-03): mobile browse density (`#960`/`#961`/`#962`, PR #965) and mobile
   checkout (`#958`/`#959`, PR #969), with the seventh Discover pass (PR #963). The additive
@@ -542,12 +544,17 @@ All facts in this section require live verification:
       points).
   - `#955` (crawlability) and `#957` (reorder notices) are not layout work and stay in Backlog.
   - **Slice 4, `#964`/`#966`/`#968` (44px tap targets on the remaining storefront controls,
-    header postcode autofill, shopper-guide discount copy):** **built, not yet validated**, on
-    branch `feature/964-966-968-mobile-tap-targets` (unpushed at the Build Clear, 2026-10-04),
-    issues In Progress. Spec: `specs/2026-10-04-p964-966-968-mobile-tap-targets/`. Read its
-    `build-notes.md` first: two requirements were amended at Build (R10 viewport check, R11's cap
-    raised to 60 by the owner). The baseline measurements are in that folder's `baseline/`.
-    Follow-up `#979` (controls left out of scope).
+    header postcode autofill, shopper-guide discount copy):** **merged to `staging`** (PR #980,
+    merge `83da2ce`, 2026-10-04; `deploy-staging` green), issues **In Review**, **awaiting a
+    `staging -> main` promotion PR** whose body must repeat a `closes` line for each of the three.
+    No schema or server change. Spec: `specs/2026-10-04-p964-966-968-mobile-tap-targets/`.
+    - Validation found no defect in the artifact. Two requirements were amended at Build (R10's
+      viewport check, R11's cap raised to 60 by the owner) and one reworded at Validate (R9). The
+      baseline measurements are in that folder's `baseline/`. R11 has only 4px of headroom on
+      Aheed at 390, so any added row above the product grid fails it.
+    - Not verified: the homepage rows' scroller arrows, the department row's arrow placement, and
+      real-device tap and autofill behaviour. Follow-up `#979` holds the first two and the controls
+      this slice left out.
   - **Phone-width measurement now exists:** `scripts/verify-mobile-layout.ts`, using headless Chrome
     over CDP. Desktop Chrome can't go below 501px, and the app forbids framing. Its traps are in
     `docs/developer-portal/local-dev-playbook.md` 1.16.0.

@@ -4,7 +4,7 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.18.0"
+version: "1.19.0"
 updated: 2026-10-04
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
@@ -635,3 +635,11 @@ Added for `#964` (2026-10-04):
 - **Before each run of a long batch, check the server is up** (`curl -s -m 20 http://localhost:8787/api/health`).
   When `wrangler dev` dies mid-batch, every later run fails on a Chrome error page and leaves an empty
   output file, which is easy to mistake for a page with nothing on it.
+- **The homepage is `--path /`, and only with `MSYS_NO_PATHCONV=1`.** The script refuses an empty
+  `--path`, and Git Bash rewrites a bare `/` into a Windows path. Every other path goes without a
+  leading slash. On `/` at 360 and 390 the script reports no displayed `scroller-arrow`, so it
+  cannot size the homepage rows' arrows (`#979`).
+- **A requirement that names an element must use the name the script reports.** `name` is the
+  `aria-label` first, then the text, then the `name` attribute. `#964`'s R9 asked for an entry named
+  `postcode`, which no entry could carry, because the input's label is "Delivery postcode".
+  Check a requirement's names against one real run's output at Spec time.
