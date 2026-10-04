@@ -73,6 +73,8 @@ import { join } from "node:path";
  * - `displayed` (and every other "shown" check in the measurement) is now also false when
  *   `checkVisibility()` says so: a closed `<details>` keeps laying out its content, so before this
  *   the filter form inside the closed mobile panel read as displayed.
+ * - `cardsWithoutImage`: how many `[data-product-grid]` children contain no `img`. With nothing
+ *   blocked it must not rise against a baseline, or a fallback is hiding images that load.
  * - `brokenImages`, always printed: `{ alt, src }` for each `img` with a non-empty `src` that is
  *   `complete` with `naturalWidth` 0, which is how a browser shows a broken-image icon.
  */
@@ -335,6 +337,9 @@ const MEASURE = `(async () => {
   const brokenImages = [...document.querySelectorAll("img")]
     .filter((img) => img.getAttribute("src") && img.complete && img.naturalWidth === 0)
     .map((img) => ({ alt: img.getAttribute("alt"), src: img.getAttribute("src") }));
+  // #655 — the other direction: a card that shows no image at all. With nothing blocked, this
+  // must not rise, or a fallback is replacing images that load fine.
+  const cardsWithoutImage = cards.filter((card) => !card.querySelector("img")).length;
   const readout = firstCard
     ? [...firstCard.querySelectorAll("[aria-label]")].find((el) =>
         el.getAttribute("aria-label").endsWith("in cart"),
@@ -395,6 +400,7 @@ const MEASURE = `(async () => {
     tapTargets,
     scrollerArrows,
     brokenImages,
+    cardsWithoutImage,
     firstCardStepperLabel: readout ? readout.getAttribute("aria-label") : null,
     formInputs,
     checkout,
