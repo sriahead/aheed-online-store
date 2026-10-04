@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.14.0"
-updated: 2026-10-02
+version: "1.15.0"
+updated: 2026-10-04
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -181,7 +181,7 @@ in use still depending on a Tailwind default.
 Spacing scale and breakpoints are **not brand-derived** — Tailwind v4's defaults are used as-is.
 The one named spacing step is `tap` (below).
 
-## Touch targets (#961, 2026-10-02)
+## Touch targets (#961, 2026-10-02; #964, 2026-10-04)
 
 `--spacing-tap: 2.75rem` (44px) in `design-system/tokens/tokens.css` generates `h-tap`, `w-tap`,
 `size-tap`, `min-h-tap` and `min-w-tap`. It is a size, not a colour, so `brandStyle()` never
@@ -195,6 +195,23 @@ compact desktop size from `lg`. Those controls are:
 - the card's mobile Quick View button;
 - the header's Shop, Shop List, Sign In and Account links.
 
+`#964` extended the rule to the rest of the storefront's tappable controls. Each area carries a
+`data-tap-surface` hook that the measuring script groups by, and `tests/tap-targets.test.ts` guards
+both the hook and the `tap` class:
+
+- `location`: `LocationControl`'s Collect/Delivery toggles, its change-postcode pencil, and the
+  single Delivery button;
+- `location-dialog`: the postcode dialog's input, its Check postcode button and Cancel;
+- `filter-chips`: each applied-filter chip and "Clear all";
+- `filter-panel`: the mobile filter disclosure's `<summary>`, which was already 50px tall and
+  carries the hook only;
+- `subcategories` and `collections`: the subcategory pills and the collection links;
+- `pagination`: Previous page and Next page on the category and search pages;
+- `cart-line-controls`: each cart line's decrease, increase and remove buttons, in the drawer and on
+  `/cart`;
+- `scroller-arrow`: `HorizontalScroller`'s left and right arrows. Every row that uses it gets
+  them: departments, product rows and bundle rows.
+
 Some facts behind the rule:
 
 - **The breakpoint is `lg`, not `sm`.** A 640–1023px viewport is a tablet, and a tablet is a touch
@@ -204,12 +221,14 @@ Some facts behind the rule:
   every control already met. 44px is SC 2.5.5 (AAA) and Apple's 44pt, chosen because the
   most-tapped controls were the smallest and adjacent minus and plus mis-taps change quantities.
 - **A small visual can keep a large hit area.** The Quick View button is a 44px button around a
-  28px circle. Make the *button* `tap`-sized, not the icon.
+  28px circle, and each scroller arrow is a 44px button around its 32px circle. Make the *button*
+  `tap`-sized, not the icon.
 - **Below `sm` the card hides its pre-add quantity picker.** About 128px of card content cannot
   hold two 44px buttons, a quantity and Add. One tap adds one, and the in-cart stepper takes over.
-- **Not yet adopted everywhere.** `LocationControl`, filter chips, subcategory tabs, pagination and
-  the cart drawer's own controls are still under 44px. Adopting `tap` there is follow-up work, not
-  an oversight to "fix" in passing.
+- **The pattern is `min-h-tap … lg:min-h-0`** (or `size-tap … lg:size-auto` for an icon button).
+  The control grows to at least 44px below `lg` and keeps its exact pre-`#964` size from `lg`.
+- **Still outside the rule:** the controls inside the opened mobile filter panel, the cart drawer's
+  close button, and the staff panel. A new storefront control should adopt `tap` from the start.
 
 Measure at real widths with `scripts/verify-mobile-layout.ts` (headless Chrome over the DevTools
 protocol). Desktop Chrome cannot go below 501px, and the app's `frame-ancestors 'none'` rules out

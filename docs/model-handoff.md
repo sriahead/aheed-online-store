@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.63.0"
-updated: 2026-10-03
+version: "1.64.0"
+updated: 2026-10-04
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -541,7 +541,13 @@ All facts in this section require live verification:
     - Follow-ups: `#972` (self-referral not refused), `#973` (live preview of a typed code and of
       points).
   - `#955` (crawlability) and `#957` (reorder notices) are not layout work and stay in Backlog.
-  - `#964` is the slice-1 follow-up: the `tap` token on the remaining controls.
+  - **Slice 4, `#964`/`#966`/`#968` (44px tap targets on the remaining storefront controls,
+    header postcode autofill, shopper-guide discount copy):** **built, not yet validated**, on
+    branch `feature/964-966-968-mobile-tap-targets` (unpushed at the Build Clear, 2026-10-04),
+    issues In Progress. Spec: `specs/2026-10-04-p964-966-968-mobile-tap-targets/`. Read its
+    `build-notes.md` first: two requirements were amended at Build (R10 viewport check, R11's cap
+    raised to 60 by the owner). The baseline measurements are in that folder's `baseline/`.
+    Follow-up `#979` (controls left out of scope).
   - **Phone-width measurement now exists:** `scripts/verify-mobile-layout.ts`, using headless Chrome
     over CDP. Desktop Chrome can't go below 501px, and the app forbids framing. Its traps are in
     `docs/developer-portal/local-dev-playbook.md` 1.16.0.

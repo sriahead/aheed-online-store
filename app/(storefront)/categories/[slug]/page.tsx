@@ -190,11 +190,11 @@ export default async function CategoryPage({
             ))}
           </ProductGrid>
           {(nextCursor || !isFirstPage) && (
-            <div className="mt-6 flex gap-3">
+            <div data-tap-surface="pagination" className="mt-6 flex gap-3">
               {!isFirstPage && (
                 <Link
                   href={prevCategoryPageHref(slug, query)}
-                  className="inline-block rounded-full border border-black/10 bg-white px-4 py-2 font-semibold text-primary hover:bg-surface-muted"
+                  className="inline-flex min-h-tap items-center rounded-full border border-black/10 bg-white px-4 py-2 font-semibold text-primary hover:bg-surface-muted lg:min-h-0"
                 >
                   Previous page
                 </Link>
@@ -202,7 +202,7 @@ export default async function CategoryPage({
               {nextCursor && (
                 <Link
                   href={nextCategoryPageHref(slug, query, nextCursor)}
-                  className="inline-block rounded-full bg-action px-4 py-2 font-semibold text-white"
+                  className="inline-flex min-h-tap items-center rounded-full bg-action px-4 py-2 font-semibold text-white lg:min-h-0"
                 >
                   Next page
                 </Link>

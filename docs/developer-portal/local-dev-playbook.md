@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.17.0"
-updated: 2026-10-03
+version: "1.18.0"
+updated: 2026-10-04
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -619,3 +619,19 @@ Added for `#958`/`#959` (2026-10-03):
   `minmax(0,1fr)` / `grid-cols-1` for any grid column that holds a horizontally scrolling strip.
   To find the culprit, list elements inside the page whose own box is wider than the viewport but
   whose children are not.
+
+Added for `#964` (2026-10-04):
+
+- **`tapTargets` measures every tappable element in a `data-tap-surface` area**, grouped by that
+  value. `--open-location` opens the displayed `LocationControl` dialog first. `firstCardTop` gives
+  the first product card's document position, which shows what taller controls cost in grid height.
+  Take a baseline with the hooks in place **before** changing any class, because old code has
+  nothing to group by.
+- **Never write a requirement as `documentScrollWidth === viewportWidth` alone.** It is the
+  `viewportWidth` trap above, frozen into a spec. An overflowing page widens the emulated layout
+  viewport, so both read 366 at a requested 360 and the check passes. Compare both with the width
+  you asked for. In `#964`, 44px scroller arrows at `translate-x-1/2` overhung 22px against a 16px
+  gutter and widened every category page by 6px.
+- **Before each run of a long batch, check the server is up** (`curl -s -m 20 http://localhost:8787/api/health`).
+  When `wrangler dev` dies mid-batch, every later run fails on a Chrome error page and leaves an empty
+  output file, which is easy to mistake for a page with nothing on it.
