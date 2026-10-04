@@ -104,7 +104,13 @@ surface's own existing no-image branch, so a missing object looks exactly like n
 | Bundle card | `components/bundle/BundleCard.tsx` | the existing `Package` icon box |
 | Department hero, campaign photo | `components/layout/DepartmentHero.tsx` | nothing; the panel's colour and the scrim stay, so the white text stays legible |
 | Department hero, corner thumbnail | same file | the department's icon, as the no-image branch renders |
-| Header logo | `components/layout/Header.tsx` | the existing initial-letter tile and name |
+| Header logo | `components/layout/Header.tsx` | the vendor's initial in a box of the logo's own size (`h-10 aspect-9/5`), with the logo's text alternative |
+
+_Amended at Build (2026-10-04): the logo's fallback was the logo-less wordmark (initial tile and
+name). Aheed's dev logo genuinely returns 404, and that wordmark is far wider than the 72×40 logo
+box: it overflowed a 360px header by 22px and squeezed the search field at 1024. The fallback for a
+stored logo that fails now keeps the logo's footprint. A vendor with no logo still gets the
+wordmark, unchanged._
 
 **The hydration race is a real risk, and the live check is designed to catch it.** If an image fails
 before React hydrates, the `error` event has already fired, and `onError` may never run. The live
@@ -112,7 +118,9 @@ check blocks the CDN at the network layer, so images fail almost at once, almost
 hydration. If Build's baseline shows `ProductCard` itself broken under that check, the race is real
 for `#502`'s fallback too. The fix (for example, on mount, treat `complete && naturalWidth === 0` as
 failed) goes into `ImageWithFallback` and so covers every surface. The baseline decides; this plan
-does not guess.
+does not guess. _Build (2026-10-04): the baseline showed it. With the CDN blocked, all 12 product
+cards on the category page kept a broken-image icon, so the mount check is in. `cardsWithoutImage`
+(R18a) proves it does not hide images that load._
 
 ## 3. Measuring, and the baseline
 

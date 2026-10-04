@@ -4,7 +4,7 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.15.0"
+version: "1.16.0"
 updated: 2026-10-04
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
@@ -181,7 +181,7 @@ in use still depending on a Tailwind default.
 Spacing scale and breakpoints are **not brand-derived** — Tailwind v4's defaults are used as-is.
 The one named spacing step is `tap` (below).
 
-## Touch targets (#961, 2026-10-02; #964, 2026-10-04)
+## Touch targets (#961, 2026-10-02; #964 and #979, 2026-10-04)
 
 `--spacing-tap: 2.75rem` (44px) in `design-system/tokens/tokens.css` generates `h-tap`, `w-tap`,
 `size-tap`, `min-h-tap` and `min-w-tap`. It is a size, not a colour, so `brandStyle()` never
@@ -212,6 +212,20 @@ both the hook and the `tap` class:
 - `scroller-arrow`: `HorizontalScroller`'s left and right arrows. Every row that uses it gets
   them: departments, product rows and bundle rows.
 
+`#979` covered the controls `#964` left out, with the same hooks and test:
+
+- `search`: the header search input. It has no submit button; Enter submits. On a phone it sits in
+  its own header row, which gives back the 6px the input grew, so the product grid does not move;
+- `filter-form`: every field, select, checkbox label and the Apply button in `ProductFilterForm`,
+  in the mobile panel and the `md`+ sidebar. A checkbox is hit through its wrapping `<label>`, so
+  the label carries the size;
+- `cart-drawer-close` and `quick-view-close`: the two drawers' close buttons;
+- `quick-view-add`: Quick View's pre-add minus and plus (the `drawer` variant of
+  `AddToCartButton`). The stepper's 1px border made them 42px tall in the old fixed 44px row, so
+  below `lg` the row takes its height from them and Add stretches to match;
+- `gallery-arrow`: the Quick View carousel's previous and next arrows, a 44px button around the same
+  32px circle.
+
 Some facts behind the rule:
 
 - **The breakpoint is `lg`, not `sm`.** A 640–1023px viewport is a tablet, and a tablet is a touch
@@ -227,8 +241,10 @@ Some facts behind the rule:
   hold two 44px buttons, a quantity and Add. One tap adds one, and the in-cart stepper takes over.
 - **The pattern is `min-h-tap … lg:min-h-0`** (or `size-tap … lg:size-auto` for an icon button).
   The control grows to at least 44px below `lg` and keeps its exact pre-`#964` size from `lg`.
-- **Still outside the rule:** the controls inside the opened mobile filter panel, the cart drawer's
-  close button, and the staff panel. A new storefront control should adopt `tap` from the start.
+- **Still outside the rule:** Quick View's review form, Delete, Try again and Log in controls
+  (`#981`); the gallery's dot buttons, which the arrows and swiping duplicate (SC 2.5.5's
+  "equivalent" exception); and the staff panel. A new storefront control should adopt `tap` from the
+  start.
 
 Measure at real widths with `scripts/verify-mobile-layout.ts` (headless Chrome over the DevTools
 protocol). Desktop Chrome cannot go below 501px, and the app's `frame-ancestors 'none'` rules out

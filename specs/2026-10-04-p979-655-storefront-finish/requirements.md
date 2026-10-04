@@ -24,8 +24,13 @@ Section 3 explains the baseline.
 - **Below `lg`** means under 1024px wide. **Passes 44** means an entry has `width` ≥ 44 and
   `height` ≥ 44. **Displayed entries** means `tapTargets` entries with `displayed: true`.
 - **Baseline** means the JSON lines in this folder's `baseline/<run>.jsonl`, one file per run below,
-  at every width any requirement uses for that run, measured by Build at the commit that has the R1–R7 hooks and script changes and no class or
-  component change (`plan.md` section 3). `build-notes.md` names that commit.
+  at every width any requirement uses for that run. Build measured them at the commit that has
+  the R1–R7 hooks and script changes and no class or component change (`plan.md` section 3).
+  `build-notes.md` names that commit.
+  _Amended at Build (2026-10-04): there are two script-only commits. `a-cat` and `s-cat` were
+  measured at `20ea79c`, every other run at `fa6454f`. They differ only in `cardsWithoutImage`
+  (R18a), which only `a-cat` and `s-cat` use. `<baseline commit>` in `validation.md` means
+  `20ea79c`._
 - **Runs** (widths are given per requirement):
   - **A-cat**: `M --base <Aheed> --path "categories/fruit-veg?inStock=1"`
   - **S-cat**: `M --base <SriMart> --path "categories/sri-electronics?inStock=1"`
@@ -48,6 +53,10 @@ Section 3 explains the baseline.
 R1. `scripts/verify-mobile-layout.ts` accepts `--open-filters`. Before measuring each width, it sets
     `open` on every `details` element that contains a `[data-tap-surface="filter-panel"]` element,
     then waits at least 200 ms.
+    _Amended at Build (2026-10-04): the first baseline showed the closed panel's form as
+    displayed. Chrome lays out a closed `<details>`' content (`content-visibility: hidden`) with a
+    real box, so the script's `displayed` rule now also requires `checkVisibility()` to be true.
+    This applies to every "displayed" check in the script, `#964`'s surfaces included._
 R2. In every printed object, `tapTargets` also covers `select` elements, using the same surface rule
     as `#964`'s R1 (the element carries `data-tap-surface` or has an ancestor that does). For an
     `input` of type `checkbox` or `radio` that has an ancestor `label`, the entry's `width` and
@@ -100,7 +109,11 @@ R8. At widths `360,390`, every displayed entry with each surface below passes 44
     | A-filters, S-filters | `filter-form`. The entries include the Apply button and, on A-filters, at least one entry with `hitArea: "label"` |
     | A-drawer | `cart-drawer-close` |
     | A-qv | `quick-view-close`, `quick-view-add` (its minus and plus, if the product is in stock), and `gallery-arrow` **only if** that run shows one (if not, `build-notes.md` says the product had one image) |
-    | A-shop | `scroller-arrow`, with entries named `Scroll departments right`, `Scroll products right` and `Scroll bundles right` |
+    | A-shop | `scroller-arrow`, with an entry named `Scroll departments right`, an entry for the bundle row and at least one for a product row (on Aheed dev: `Scroll value bundles right`, `Scroll new arrivals right`, `Scroll featured products right`) |
+
+    _Amended at Build (2026-10-04): the A-shop names said `Scroll products right` and
+    `Scroll bundles right`. Each row's arrow is named after its heading, so those names never
+    exist._
 
 R9. In every R8 run at widths `360` and `390`, `viewportWidth` and `documentScrollWidth` both equal
     the requested width.
@@ -141,6 +154,15 @@ R17. `tests/storefront-image-fallback.test.ts` exists and passes. It reads every
     match). It also asserts that each file in `plan.md` section 2's #655 table imports
     `ImageWithFallback` or `ProductImage`.
 R18. In every **I-** run at widths `360,390`, `brokenImages` is an empty array.
+R18a. Every printed object carries `cardsWithoutImage`: how many `[data-product-grid]` children
+    contain no `img`. In **A-cat** and **S-cat** at widths `360,390,768` (nothing blocked), it
+    equals the number of the baseline's `brokenImages` entries at the same width whose `src`
+    contains `/products/`. A card loses its `<img>` only where the baseline showed that image
+    broken, so no fallback hides an image that loads.
+    _Added at Build (2026-10-04): the mount check R14's component gained (`plan.md` section 2,
+    "hydration race") could in principle treat an image that loads as failed, and R18 cannot see
+    that. Several dev product images, and Aheed's dev logo, genuinely return 404, so the expected
+    count is not zero._
 R19. The baseline of each I- run, at width `390`, has a non-empty `brokenImages`. It proves the
     block reaches the page. `build-notes.md` lists, per I- run, which surfaces (`plan.md` section 2's
     #655 table, plus product cards) the baseline showed broken. A surface that no baseline reached
@@ -151,7 +173,9 @@ R19. The baseline of each I- run, at width `390`, has a non-empty `brokenImages`
 R20. `specs/design-system.md`'s "Touch targets" section lists R7's six surfaces alongside `#964`'s.
     Its "Still outside the rule" sentence no longer names the filter panel's controls or the cart
     drawer's close button. It does name the gallery dots and Quick View's body controls, and `#981`, which
-    tracks the latter. The front-matter `version` is bumped and `updated` is changed.
+    tracks the latter. The front-matter `version` is bumped and `updated` is `2026-10-04`.
+    _Amended at Build (2026-10-04): this said `updated` is changed. Slice 4 had already set it to
+    `2026-10-04`, today's date._
 R21. `docs/developer-portal/runtime-pitfalls.md`'s `#502` bullet states that every storefront image
     of a stored object renders through `components/ui/ImageWithFallback.tsx`, and that
     `tests/storefront-image-fallback.test.ts` guards it. The front-matter `version` is bumped and

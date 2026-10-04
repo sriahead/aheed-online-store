@@ -136,9 +136,22 @@ export async function Header({
       ? composePublicUrl(CDN_BASE_URL, profile.logoStorageKey)
       : null;
 
-  // The logo's no-image look: the initial tile and the name. Also the fallback when the stored
-  // logo is missing (#655), so a broken object looks like a vendor without a logo.
-  const logoFallback = (
+  // #655 — a vendor HAS a logo, but its stored object failed to load. Not the logo-less wordmark
+  // below: that is far wider than the 72×40 logo box, and swapping it in overflowed a 360px header
+  // by 22px and squeezed the search field at 1024 (measured, build-notes.md). This keeps the logo's
+  // exact footprint (`h-10 aspect-9/5`) and its text alternative, so nothing around it moves.
+  const missingLogo = (
+    <span
+      role="img"
+      aria-label={`${name} — Your Local Store`}
+      className="flex h-10 aspect-9/5 items-center justify-center rounded-xl bg-primary text-xl font-extrabold text-white shadow-sm group-hover:opacity-90 transition-opacity"
+    >
+      {name.charAt(0)}
+    </span>
+  );
+
+  // The logo-less vendor's wordmark: the initial tile and the name.
+  const wordmark = (
     <>
       <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-xl shadow-md group-hover:bg-primary/90 transition-colors">
         {name.charAt(0)}
@@ -251,10 +264,10 @@ export async function Header({
                   src={logoUrl}
                   alt={`${name} — Your Local Store`}
                   className="h-10 w-auto aspect-9/5 object-contain rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"
-                  fallback={logoFallback}
+                  fallback={missingLogo}
                 />
               ) : (
-                logoFallback
+                wordmark
               )}
             </Link>
           </div>

@@ -4,8 +4,8 @@ title: "Runtime Pitfalls — code that passes every check and still fails on Wor
 audience: [dev]
 type: doc
 status: approved
-version: "1.2.0"
-updated: 2026-09-25
+version: "1.3.0"
+updated: 2026-10-04
 visibility: internal
 summary: The failure catalogue for this stack — Prisma and Neon on V8 isolates, storage credentials, edge caching, dependency traps, Workers AI and Better Auth. Everything here passes lint, typecheck, test and build, and fails at runtime anyway.
 tags: [runtime, workers, prisma, troubleshooting]
@@ -272,10 +272,21 @@ pitfalls rather than in `specs/architecture.md` §3.1.
   that actually serves it** (`curl -I "${CDN_BASE_URL}/${key}"`) rather than against dev — the same
   key legitimately returns 200 in one environment and 404 in another, which is exactly the case no
   local check can see. `scripts/restore-placeholder-images.ts` repairs a database whose rows already
-  exist; the seed fix alone cannot, since it only helps databases seeded after it. Storefront cards
-  now degrade a missing object to the "no image" box (`components/product/ProductImage.tsx`) rather
-  than a broken-image icon, so this class of gap is no longer *visibly* broken — which makes
-  checking the CDN, not the page, the way to catch the next one.
+  exist; the seed fix alone cannot, since it only helps databases seeded after it. **Every storefront
+  image of a stored object renders through `components/ui/ImageWithFallback.tsx`** (`#655`): the
+  product card (via `ProductImage`), the product page and Quick View gallery, the cart line, the
+  bundle card, the department hero and the header logo. A missing object shows that surface's own
+  no-image look rather than a broken-image icon, and `tests/storefront-image-fallback.test.ts`
+  refuses a bare `<img>` anywhere else on the storefront. So this class of gap is no longer
+  *visibly* broken, which makes checking the CDN, not the page, the way to catch the next one.
+- **An image that fails before React hydrates never reaches `onError`.** Its `error` event fires
+  before the handler is attached. Measured in `#655`: with the CDN blocked
+  (`scripts/verify-mobile-layout.ts --block-urls`), every product card on a category page kept its
+  broken-image icon although `ProductImage` had had `onError` since `#502`. `ImageWithFallback`
+  therefore also treats `complete && naturalWidth === 0` on mount as a failure. A lazy image that
+  has not started loading reports `complete === false`, so it is not mistaken for a broken one;
+  the script's `cardsWithoutImage` guards that direction. Any other client component that swaps
+  content on an `<img>` error needs the same mount check.
 
 
 ## Cloudflare edge caching of Worker routes
