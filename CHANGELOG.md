@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **44px tap targets on the controls `#964` left out, and no broken-image icons on the storefront** (issues `#979`, `#655`; `specs/2026-10-04-p979-655-storefront-finish/`). No schema or server change.
+  - `#979`: below `lg`, the header search input, every filter-form field, checkbox label and Apply, the cart drawer and Quick View close buttons, Quick View's minus and plus, and the Quick View gallery arrows are at least 44×44. Desktop is unchanged. The phone search row gives back the 6px the input grew, so the product grid does not move.
+  - `#655`: new `components/ui/ImageWithFallback.tsx`. The product card, product page and Quick View gallery, cart line, bundle card, department hero and header logo render through it, so a missing stored object shows that surface's no-image look. It also catches an image that failed before hydration, which `#502`'s `onError` never saw. A failed stored logo keeps the logo's own size.
+  - `scripts/verify-mobile-layout.ts` gains `--open-filters`, `--open-cart`, `--open-quick-view`, `--block-urls`, `brokenImages`, `cardsWithoutImage` and `scrollerArrows`, and a closed `<details>` no longer counts as displayed. New `tests/image-with-fallback.test.tsx` and `tests/storefront-image-fallback.test.ts`. `specs/design-system.md` 1.16.0, `docs/developer-portal/runtime-pitfalls.md` 1.3.0, `docs/developer-portal/local-dev-playbook.md` 1.20.0. Follow-ups: `#981` (Quick View review-form controls), `#982` (logo-less wordmark overflows a phone header), `#983` (flaky add-to-cart test).
+
 - **44px tap targets on the remaining storefront controls, postcode autofill in the header, and the right page for discount codes in the shopper guide** (issues `#964`, `#966`, `#968`; `specs/2026-10-04-p964-966-968-mobile-tap-targets/`). No schema or server change.
   - `#964`: below `lg`, the location toggles and postcode dialog, filter chips, subcategory pills, collection links, Previous/Next page, cart line decrease/increase/remove, and the `HorizontalScroller` arrows are at least 44×44. From `lg` each keeps its exact earlier size. The arrows are a 44px button around the same 32px circle. The mobile filter summary was already 50px.
   - `#966`: the header postcode input carries `autocomplete="postal-code"`.

@@ -4,7 +4,7 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.18.0"
+version: "1.20.0"
 updated: 2026-10-04
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
@@ -635,3 +635,24 @@ Added for `#964` (2026-10-04):
 - **Before each run of a long batch, check the server is up** (`curl -s -m 20 http://localhost:8787/api/health`).
   When `wrangler dev` dies mid-batch, every later run fails on a Chrome error page and leaves an empty
   output file, which is easy to mistake for a page with nothing on it.
+- **The homepage is `--path /`, and only with `MSYS_NO_PATHCONV=1`.** The script refuses an empty
+  `--path`, and Git Bash rewrites a bare `/` into a Windows path. Every other path goes without a
+  leading slash. `/` renders no `HorizontalScroller` at all: the product and bundle rows that use
+  it are on `/categories`, which is where `#979` measured them.
+- **A run can exit 0 with a line for a page that never rendered** (`#979`). When `wrangler dev`
+  dies *during* a run rather than before it, the script can still print a JSON line, with
+  `headerBottomAtTop: null` and empty `tapTargets`. That reads as "nothing on the page", not as an
+  error. Check every line for `headerBottomAtTop` before trusting a run, and rerun after a restart.
+  The `--block-urls` runs crashed `wrangler dev` most often (`Network connection lost`).
+- **The dev bucket genuinely lacks some objects.** Aheed's dev `logo.png` and several product
+  `.webp` keys return 404 from `images.dev.aheedfoodcentre.nocaped.com` (2026-10-04). So an
+  unblocked run on dev already reports broken images, and since `#655` the logo shows as its
+  fallback box. Compare image checks against a baseline, never against zero. Check an object with
+  PowerShell `Invoke-WebRequest` (TLS 1.2): Git Bash `curl` gets a TLS reset from these hosts.
+- **A closed `<details>` lays out its content** (`content-visibility: hidden`), so its controls
+  have real boxes. The script's `displayed` uses `checkVisibility()` since `#979`. Any new check
+  of "is this visible" needs the same.
+- **A requirement that names an element must use the name the script reports.** `name` is the
+  `aria-label` first, then the text, then the `name` attribute. `#964`'s R9 asked for an entry named
+  `postcode`, which no entry could carry, because the input's label is "Delivery postcode".
+  Check a requirement's names against one real run's output at Spec time.

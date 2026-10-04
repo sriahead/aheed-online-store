@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { categoryIcon } from "@/components/product/category-icon";
 import { formatPrice } from "@/components/product/format-price";
+import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { composePublicUrl } from "@/lib/storage";
 
 /**
@@ -175,10 +176,13 @@ export function DepartmentHero({
                 // for text legibility, replacing the chevron + corner-icon
                 // layout for this panel only. Plain <img> by decision (#46).
                 <>
-                  <img
+                  {/* #655: a missing photo renders nothing. The panel's tone and the scrim below
+                      stay, so the white text keeps its contrast. */}
+                  <ImageWithFallback
                     src={campaignImageUrl}
                     alt={campaign?.altText ?? ""}
                     className="absolute inset-0 h-full w-full object-cover"
+                    fallback={null}
                   />
                   <div
                     className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/10"
@@ -260,13 +264,21 @@ export function DepartmentHero({
                     {imageUrl ? (
                       // Plain <img> by decision (#46), like every other storefront
                       // image. Empty alt when the row supplies none: the heading
-                      // beside it already carries the meaning.
-                      <img
+                      // beside it already carries the meaning. #655: a missing
+                      // object shows the department's icon, as no image does.
+                      <ImageWithFallback
                         src={imageUrl}
                         alt={department.altText ?? ""}
                         width={160}
                         height={160}
                         className="h-32 w-32 rounded-2xl object-cover md:h-40 md:w-40"
+                        fallback={
+                          <Icon
+                            className="h-24 w-24 text-white/85 md:h-32 md:w-32"
+                            strokeWidth={1.25}
+                            aria-hidden
+                          />
+                        }
                       />
                     ) : (
                       <Icon

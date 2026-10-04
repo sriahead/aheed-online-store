@@ -87,8 +87,11 @@ R8. **A-cart** at widths `360,390`: displayed `cart-line-controls` entries named
     `Decrease quantity of <product>`, `Increase quantity of <product>` and `Remove <product>` each
     exist for the first cart line, and each passes 44.
 R9. **A-loc** at widths `360,390`: displayed entries with `surface` `location-dialog` include the
-    input named `postcode` and at least two buttons. Every displayed `location-dialog` entry passes
-    44.
+    input named `Delivery postcode` and at least two buttons. Every displayed `location-dialog`
+    entry passes 44.
+    _Amended at Validate (2026-10-04): this said the input is named `postcode`. R1 defines `name` as
+    the `aria-label` first, and the input's label is "Delivery postcode", so no entry could ever
+    carry the name `postcode`. The input with `name="postcode"` is the one R15 reads._
 R10. In every run of R5–R9, at widths `360` and `390`, `viewportWidth` equals the requested width
     **and** `documentScrollWidth` equals it too. Nothing makes the page scroll sideways.
     _Amended at Build (2026-10-04): this compared `documentScrollWidth` with `viewportWidth` only.

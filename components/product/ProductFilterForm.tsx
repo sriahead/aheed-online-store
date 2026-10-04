@@ -60,7 +60,7 @@ export function ProductFilterForm({
     attributes: [],
   };
   return (
-    <form method="GET" className="flex flex-col gap-5">
+    <form method="GET" data-tap-surface="filter-form" className="flex flex-col gap-5">
       {/*
         #501 — a GET form submits ONLY the fields it contains, replacing the
         whole query string. `featured` has no visible control (it is reached
@@ -93,7 +93,7 @@ export function ProductFilterForm({
             type="text"
             name="q"
             defaultValue={searchParams.q ?? ""}
-            className="w-full rounded-lg border border-black/20 px-3 py-2"
+            className="w-full min-h-tap lg:min-h-0 rounded-lg border border-black/20 px-3 py-2"
           />
         </label>
       )}
@@ -109,7 +109,7 @@ export function ProductFilterForm({
             aria-label="Minimum price"
             placeholder="Min"
             defaultValue={searchParams.minPrice ?? ""}
-            className="w-full rounded-lg border border-black/20 px-3 py-2"
+            className="w-full min-h-tap lg:min-h-0 rounded-lg border border-black/20 px-3 py-2"
           />
           <span className="text-primary-muted">–</span>
           <input
@@ -120,14 +120,14 @@ export function ProductFilterForm({
             aria-label="Maximum price"
             placeholder="Max"
             defaultValue={searchParams.maxPrice ?? ""}
-            className="w-full rounded-lg border border-black/20 px-3 py-2"
+            className="w-full min-h-tap lg:min-h-0 rounded-lg border border-black/20 px-3 py-2"
           />
         </div>
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold text-primary">Filter by</legend>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
           <input
             type="checkbox"
             name="inStock"
@@ -137,7 +137,7 @@ export function ProductFilterForm({
           <span className="text-sm text-primary">In stock only</span>
         </label>
         {spec.halal && (
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
             <input
               type="checkbox"
               name="isHalal"
@@ -148,7 +148,7 @@ export function ProductFilterForm({
           </label>
         )}
         {spec.fresh && (
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
             <input
               type="checkbox"
               name="isFresh"
@@ -159,7 +159,7 @@ export function ProductFilterForm({
           </label>
         )}
         {spec.organic && (
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
             <input
               type="checkbox"
               name="isOrganic"
@@ -171,7 +171,7 @@ export function ProductFilterForm({
         )}
         {/* #569 — dietary facets, same conditional-visibility rule as the three above. */}
         {spec.vegetarian && (
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
             <input
               type="checkbox"
               name="isVegetarian"
@@ -182,7 +182,7 @@ export function ProductFilterForm({
           </label>
         )}
         {spec.glutenFree && (
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
             <input
               type="checkbox"
               name="isGlutenFree"
@@ -193,7 +193,7 @@ export function ProductFilterForm({
           </label>
         )}
         {spec.hmcCertified && (
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
             <input
               type="checkbox"
               name="isHmcCertified"
@@ -204,7 +204,7 @@ export function ProductFilterForm({
           </label>
         )}
         {spec.onOffer && (
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
             <input
               type="checkbox"
               name="onOffer"
@@ -233,7 +233,7 @@ export function ProductFilterForm({
           <select
             name="origin"
             defaultValue={searchParams.origin ?? ""}
-            className="w-full rounded-lg border border-black/20 px-3 py-2"
+            className="w-full min-h-tap lg:min-h-0 rounded-lg border border-black/20 px-3 py-2"
           >
             <option value="">Any origin</option>
             {spec.origins.map((origin) => (
@@ -251,7 +251,7 @@ export function ProductFilterForm({
           <select
             name="brand"
             defaultValue={searchParams.brand ?? ""}
-            className="w-full rounded-lg border border-black/20 px-3 py-2"
+            className="w-full min-h-tap lg:min-h-0 rounded-lg border border-black/20 px-3 py-2"
           >
             <option value="">Any brand</option>
             {/* Value is the SLUG, not the id: it is what appears in a shopper's URL, and a slug
@@ -282,7 +282,7 @@ export function ProductFilterForm({
           <select
             name="packSize"
             defaultValue={searchParams.packSize ?? ""}
-            className="w-full rounded-lg border border-black/20 px-3 py-2"
+            className="w-full min-h-tap lg:min-h-0 rounded-lg border border-black/20 px-3 py-2"
           >
             <option value="">Any pack size</option>
             {spec.packSizes.map((packSize) => {
@@ -327,7 +327,7 @@ export function ProductFilterForm({
                   aria-label={`Minimum ${attribute.name}`}
                   placeholder="Min"
                   defaultValue={typeof min === "string" ? min : ""}
-                  className="w-full rounded-lg border border-black/20 px-3 py-2"
+                  className="w-full min-h-tap lg:min-h-0 rounded-lg border border-black/20 px-3 py-2"
                 />
                 <span className="text-primary-muted">–</span>
                 <input
@@ -338,7 +338,7 @@ export function ProductFilterForm({
                   aria-label={`Maximum ${attribute.name}`}
                   placeholder="Max"
                   defaultValue={typeof max === "string" ? max : ""}
-                  className="w-full rounded-lg border border-black/20 px-3 py-2"
+                  className="w-full min-h-tap lg:min-h-0 rounded-lg border border-black/20 px-3 py-2"
                 />
               </div>
             </fieldset>
@@ -349,7 +349,7 @@ export function ProductFilterForm({
           <fieldset key={attribute.slug} className="flex flex-col gap-2">
             <legend className="mb-1 text-sm font-semibold text-primary">{attribute.name}</legend>
             {attribute.options.map((option) => (
-              <label key={option.slug} className="flex items-center gap-2">
+              <label key={option.slug} className="flex min-h-tap lg:min-h-0 items-center gap-2">
                 <input
                   type="checkbox"
                   name={name}
@@ -373,7 +373,7 @@ export function ProductFilterForm({
       */}
       <button
         type="submit"
-        className="w-full rounded-full bg-action hover:bg-action-hover transition-colors px-4 py-2 font-semibold text-white"
+        className="w-full min-h-tap lg:min-h-0 rounded-full bg-action hover:bg-action-hover transition-colors px-4 py-2 font-semibold text-white"
       >
         Apply
       </button>

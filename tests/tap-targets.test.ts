@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, it, expect } from "vitest";
 
 /**
- * #964 — the storefront controls that `#961` left under 44px now carry the `tap` spacing token
+ * #964, #979 — the storefront controls that `#961` left under 44px now carry the `tap` spacing token
  * below `lg`. Nothing fails when a class is dropped: the control still works, just smaller, so this
  * reads the source. `scripts/verify-mobile-layout.ts` finds each surface by its `data-tap-surface`
  * hook, so the hook is asserted too. Rule: specs/design-system.md, "Touch targets".
@@ -24,6 +24,13 @@ const surfaces: Record<string, string[]> = {
   "app/(storefront)/search/page.tsx": ["pagination"],
   "components/cart/CartContents.tsx": ["cart-line-controls"],
   "components/layout/HorizontalScroller.tsx": ["scroller-arrow"],
+  // #979 — the controls #964 left out.
+  "components/layout/SearchSuggest.tsx": ["search"],
+  "components/product/ProductFilterForm.tsx": ["filter-form"],
+  "components/cart/CartDrawerShell.tsx": ["cart-drawer-close"],
+  "components/product/QuickViewDrawer.tsx": ["quick-view-close"],
+  "components/product/ProductImageGallery.tsx": ["gallery-arrow"],
+  "components/cart/AddToCartButton.tsx": ["quick-view-add"],
 };
 
 /**
