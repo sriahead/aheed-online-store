@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.65.0"
+version: "1.66.0"
 updated: 2026-10-04
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -555,6 +555,19 @@ All facts in this section require live verification:
     - Not verified: the homepage rows' scroller arrows, the department row's arrow placement, and
       real-device tap and autofill behaviour. Follow-up `#979` holds the first two and the controls
       this slice left out.
+  - **The owner approved three more bundled slices on 2026-10-04** (Gate 1 recorded as a comment on
+    each issue): **slice 5** `#979` + `#655`; **slice 6** `#973` + `#957` + `#753` + `#972`
+    (checkout preview of a typed code and points, a reorder notice on `/cart`, the live R14/R18
+    browser check, refusing a shopper's own referral code); **slice 7** `#955` (crawlability).
+    `#665` (UI primitives) is a separate later track, one route group per PR.
+    - **Owner ruling for `#955`:** the product card's title becomes a real `<a href>` to the product
+      page again, with Quick View layered on top as a JavaScript enhancement. This deliberately
+      reverses part of `#830`'s markup.
+  - **Slice 5, `#979`/`#655`, is BUILT, not validated or pushed** (branch
+    `feature/979-655-storefront-finish`, 2026-10-04). It also carries slice 4's two Document-pass
+    commits. Spec: `specs/2026-10-04-p979-655-storefront-finish/`; read its `build-notes.md` first.
+    Follow-ups filed: `#981`, `#982`, `#983`. Slice 4's `staging -> main` promotion was still not
+    opened at that point.
   - **Phone-width measurement now exists:** `scripts/verify-mobile-layout.ts`, using headless Chrome
     over CDP. Desktop Chrome can't go below 501px, and the app forbids framing. Its traps are in
     `docs/developer-portal/local-dev-playbook.md` 1.16.0.
