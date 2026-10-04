@@ -196,6 +196,7 @@ export function SearchSuggest({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         aria-label="Search products"
+        data-tap-surface="search"
         className="w-full bg-surface-muted hover:bg-black/5 focus-visible:bg-white pl-10 pr-4 py-2 rounded-xl text-sm border border-black/10 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 transition"
       />
 

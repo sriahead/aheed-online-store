@@ -158,7 +158,7 @@ export function AddToCartButton({
     }
 
     return (
-      <div className="flex items-center gap-3">
+      <div data-tap-surface="quick-view-add" className="flex items-center gap-3">
         <div className="flex items-center rounded-xl border border-black/10 bg-surface-muted overflow-hidden h-11">
           <button
             type="button"

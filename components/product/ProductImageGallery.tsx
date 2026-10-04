@@ -136,6 +136,7 @@ export function ProductImageGallery({
             onClick={goToPrev}
             onKeyDown={handleButtonKeyDown}
             aria-label="Previous product image"
+            data-tap-surface="gallery-arrow"
             className="absolute left-2.5 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs transition hover:bg-white hover:scale-105 active:scale-95 motion-reduce:hover:scale-100 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
           >
             <ChevronLeft className="h-5 w-5" aria-hidden />
@@ -145,6 +146,7 @@ export function ProductImageGallery({
             onClick={goToNext}
             onKeyDown={handleButtonKeyDown}
             aria-label="Next product image"
+            data-tap-surface="gallery-arrow"
             className="absolute right-2.5 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs transition hover:bg-white hover:scale-105 active:scale-95 motion-reduce:hover:scale-100 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
           >
             <ChevronRight className="h-5 w-5" aria-hidden />

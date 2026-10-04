@@ -60,7 +60,7 @@ export function ProductFilterForm({
     attributes: [],
   };
   return (
-    <form method="GET" className="flex flex-col gap-5">
+    <form method="GET" data-tap-surface="filter-form" className="flex flex-col gap-5">
       {/*
         #501 — a GET form submits ONLY the fields it contains, replacing the
         whole query string. `featured` has no visible control (it is reached

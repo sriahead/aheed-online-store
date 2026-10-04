@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 /**
  * Measure the storefront at real phone and tablet widths:
- * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location]`.
+ * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location] [--open-filters] [--open-cart] [--open-quick-view] [--block-urls <pattern>]`.
  *
  * ## Why this exists (#960, #961, #962)
  *
@@ -53,6 +53,25 @@ import { join } from "node:path";
  * - `--open-location`: before measuring each width, calls `showModal()` on the first
  *   `dialog[data-location-dialog]` whose parent is displayed (the header mounts `LocationControl`
  *   twice, one per breakpoint), then waits 300 ms.
+ *
+ * #979 and #655 add:
+ * - `tapTargets` also covers `select`. A checkbox or radio inside a `label` is reported with the
+ *   label's box and name, plus `hitArea: "label"`, because the label is what a finger hits.
+ * - `scrollerArrows`: per displayed `[data-tap-surface="scroller-arrow"]`, `{ name,
+ *   circleCentreOffset }`, the distance from the top of the arrow's parent (the row) to the centre
+ *   of its visible circle (the button's first element child).
+ * - `--open-filters`: before measuring, sets `open` on every `details` that holds the mobile filter
+ *   `<summary>` (`[data-tap-surface="filter-panel"]`), then waits 300 ms.
+ * - `--open-cart`: clicks the floating cart button (`aria-haspopup="dialog"`, label starting
+ *   `Cart,`) and waits up to 5 s for `[data-tap-surface="cart-drawer-close"]` to show. Combines with
+ *   `--add-first`.
+ * - `--open-quick-view`: clicks the first card's `Quick view …` button and waits up to 10 s for
+ *   `[data-tap-surface="quick-view-close"]` to show, then 1 s more for its content.
+ * - `--block-urls <pattern>`: blocks matching requests with `Network.setBlockedURLs` before the first
+ *   navigation (pass `<cdnBase>/*` to make every stored image fail). Before measuring each width it
+ *   sets `loading="eager"` on every `img` and waits 2 s, so lazy images are requested too.
+ * - `brokenImages`, always printed: `{ alt, src }` for each `img` with a non-empty `src` that is
+ *   `complete` with `naturalWidth` 0, which is how a browser shows a broken-image icon.
  */
 
 const HEIGHT = 844;
@@ -65,6 +84,10 @@ interface Args {
   addFirst: boolean;
   then: string | null;
   openLocation: boolean;
+  openFilters: boolean;
+  openCart: boolean;
+  openQuickView: boolean;
+  blockUrls: string | null;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -77,13 +100,23 @@ function parseArgs(argv: string[]): Args {
   const then = value("--then") ?? null;
   const addFirst = argv.includes("--add-first");
   const openLocation = argv.includes("--open-location");
+  const openFilters = argv.includes("--open-filters");
+  const openCart = argv.includes("--open-cart");
+  const openQuickView = argv.includes("--open-quick-view");
+  const blockUrls = value("--block-urls") ?? null;
   const widths = (value("--widths") ?? "")
     .split(",")
     .map((w) => Number(w.trim()))
     .filter((w) => Number.isInteger(w) && w > 0);
-  if (!base || !path || widths.length === 0 || (then !== null && !addFirst)) {
+  if (
+    !base ||
+    !path ||
+    widths.length === 0 ||
+    (then !== null && !addFirst) ||
+    (argv.includes("--block-urls") && !blockUrls)
+  ) {
     console.error(
-      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location]",
+      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location] [--open-filters] [--open-cart] [--open-quick-view] [--block-urls <pattern>]",
     );
     process.exit(2);
   }
@@ -109,6 +142,10 @@ function parseArgs(argv: string[]): Args {
     addFirst,
     then: then === null ? null : absolute(then),
     openLocation,
+    openFilters,
+    openCart,
+    openQuickView,
+    blockUrls,
   };
 }
 
@@ -242,23 +279,56 @@ const MEASURE = `(async () => {
       size(a, a.getAttribute("href")),
     ),
   ];
-  // #964 — every tappable element in a marked surface.
+  // #964 — every tappable element in a marked surface. #979 adds select, and measures a checkbox
+  // or radio by its wrapping label, which is the box a finger actually hits.
   const tapTargets = [
     ...document.querySelectorAll(
-      ["a", "button", "summary", "input:not([type=hidden])"]
+      ["a", "button", "summary", "select", "input:not([type=hidden])"]
         .flatMap((tag) => [tag + "[data-tap-surface]", "[data-tap-surface] " + tag])
         .join(", "),
     ),
   ].map((el) => {
+    const surface = el.closest("[data-tap-surface]").getAttribute("data-tap-surface");
+    const label =
+      el.tagName === "INPUT" && (el.type === "checkbox" || el.type === "radio")
+        ? el.closest("label")
+        : null;
+    if (label) {
+      const r = label.getBoundingClientRect();
+      return {
+        surface,
+        name: label.textContent.trim(),
+        width: Math.round(r.width),
+        height: Math.round(r.height),
+        displayed: shown(label),
+        hitArea: "label",
+      };
+    }
     const r = el.getBoundingClientRect();
     return {
-      surface: el.closest("[data-tap-surface]").getAttribute("data-tap-surface"),
+      surface,
       name: el.getAttribute("aria-label") || el.textContent.trim() || el.getAttribute("name"),
       width: Math.round(r.width),
       height: Math.round(r.height),
       displayed: shown(el),
     };
   });
+  // #979 — where each arrow's visible circle sits within its row.
+  const scrollerArrows = [...document.querySelectorAll('[data-tap-surface="scroller-arrow"]')]
+    .filter((el) => shown(el))
+    .map((el) => {
+      const circle = el.firstElementChild ?? el;
+      const c = circle.getBoundingClientRect();
+      const row = el.parentElement.getBoundingClientRect();
+      return {
+        name: el.getAttribute("aria-label"),
+        circleCentreOffset: Math.round(c.top + c.height / 2 - row.top),
+      };
+    });
+  // #655 — an image the browser gave up on: loaded (complete) with no pixels.
+  const brokenImages = [...document.querySelectorAll("img")]
+    .filter((img) => img.getAttribute("src") && img.complete && img.naturalWidth === 0)
+    .map((img) => ({ alt: img.getAttribute("alt"), src: img.getAttribute("src") }));
   const readout = firstCard
     ? [...firstCard.querySelectorAll("[aria-label]")].find((el) =>
         el.getAttribute("aria-label").endsWith("in cart"),
@@ -317,6 +387,8 @@ const MEASURE = `(async () => {
     firstCardTop,
     controls,
     tapTargets,
+    scrollerArrows,
+    brokenImages,
     firstCardStepperLabel: readout ? readout.getAttribute("aria-label") : null,
     formInputs,
     checkout,
@@ -356,6 +428,52 @@ const OPEN_LOCATION = `(() => {
   });
   if (!dialog) return false;
   if (!dialog.open) dialog.showModal();
+  return true;
+})()`;
+
+/** #979 — opens the mobile filter disclosure(s); false when the page has none. */
+const OPEN_FILTERS = `(() => {
+  const panels = [...document.querySelectorAll("details")].filter((d) =>
+    d.querySelector('[data-tap-surface="filter-panel"]'),
+  );
+  panels.forEach((d) => { d.open = true; });
+  return panels.length > 0;
+})()`;
+
+/** #979 — clicks the floating cart button; false when there is none. */
+const OPEN_CART = `(() => {
+  const button = [...document.querySelectorAll('button[aria-haspopup="dialog"]')].find((b) =>
+    (b.getAttribute("aria-label") || "").startsWith("Cart,"),
+  );
+  if (!button) return false;
+  button.click();
+  return true;
+})()`;
+
+/** #979 — clicks the first card's Quick View button; false when there is none. */
+const OPEN_QUICK_VIEW = `(() => {
+  const card = document.querySelector("[data-product-grid]")?.children[0];
+  const button = card
+    ? [...card.querySelectorAll("button")].find((b) =>
+        (b.getAttribute("aria-label") || "").startsWith("Quick view "),
+      )
+    : null;
+  if (!button) return false;
+  button.click();
+  return true;
+})()`;
+
+/** Whether an element matching the selector is displayed. */
+const isDisplayed = (selector: string) => `(() => {
+  const el = document.querySelector(${JSON.stringify(selector)});
+  if (!el) return false;
+  const r = el.getBoundingClientRect();
+  return getComputedStyle(el).display !== "none" && r.width > 0 && r.height > 0;
+})()`;
+
+/** #655 — asks every lazy image to load now, so a blocked one fails before measuring. */
+const EAGER_IMAGES = `(() => {
+  document.querySelectorAll("img").forEach((img) => img.setAttribute("loading", "eager"));
   return true;
 })()`;
 
@@ -412,6 +530,19 @@ async function main() {
     });
     const cdp = new Cdp(socket);
     await cdp.send("Page.enable");
+    if (args.blockUrls) {
+      await cdp.send("Network.enable");
+      await cdp.send("Network.setBlockedURLs", { urls: [args.blockUrls] });
+    }
+
+    /** Polls until the selector is displayed; throws naming the flag if it never is. */
+    const waitDisplayed = async (selector: string, timeoutMs: number, flag: string) => {
+      for (let waited = 0; waited <= timeoutMs; waited += 250) {
+        if (await cdp.evaluate<boolean>(isDisplayed(selector))) return;
+        await sleep(250);
+      }
+      throw new Error(`${flag}: ${selector} was not displayed within ${timeoutMs / 1000}s`);
+    };
 
     const load = async (path: string) => {
       const loaded = cdp.once("Page.loadEventFired", 30_000);
@@ -458,6 +589,33 @@ async function main() {
           throw new Error("--open-location: no displayed LocationControl dialog");
         }
         await sleep(300);
+      }
+
+      if (args.openFilters) {
+        if (!(await cdp.evaluate<boolean>(OPEN_FILTERS))) {
+          throw new Error("--open-filters: no filter disclosure on the page");
+        }
+        await sleep(300);
+      }
+
+      if (args.openCart) {
+        if (!(await cdp.evaluate<boolean>(OPEN_CART))) {
+          throw new Error("--open-cart: no floating cart button on the page");
+        }
+        await waitDisplayed('[data-tap-surface="cart-drawer-close"]', 5_000, "--open-cart");
+      }
+
+      if (args.openQuickView) {
+        if (!(await cdp.evaluate<boolean>(OPEN_QUICK_VIEW))) {
+          throw new Error("--open-quick-view: no Quick view button in the first card");
+        }
+        await waitDisplayed('[data-tap-surface="quick-view-close"]', 10_000, "--open-quick-view");
+        await sleep(1000);
+      }
+
+      if (args.blockUrls) {
+        await cdp.evaluate<boolean>(EAGER_IMAGES);
+        await sleep(2000);
       }
 
       const measured = await cdp.evaluate<Record<string, unknown>>(MEASURE);
