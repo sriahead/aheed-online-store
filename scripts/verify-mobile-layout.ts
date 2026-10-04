@@ -70,6 +70,9 @@ import { join } from "node:path";
  * - `--block-urls <pattern>`: blocks matching requests with `Network.setBlockedURLs` before the first
  *   navigation (pass `<cdnBase>/*` to make every stored image fail). Before measuring each width it
  *   sets `loading="eager"` on every `img` and waits 2 s, so lazy images are requested too.
+ * - `displayed` (and every other "shown" check in the measurement) is now also false when
+ *   `checkVisibility()` says so: a closed `<details>` keeps laying out its content, so before this
+ *   the filter form inside the closed mobile panel read as displayed.
  * - `brokenImages`, always printed: `{ alt, src }` for each `img` with a non-empty `src` that is
  *   `complete` with `naturalWidth` 0, which is how a browser shows a broken-image icon.
  */
@@ -237,6 +240,9 @@ const MEASURE = `(async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const shown = (el) => {
     if (!el) return false;
+    // #979 — a closed <details> lays its content out (content-visibility: hidden) without showing
+    // it, so a non-zero box is not enough; checkVisibility() also refuses that case.
+    if (el.checkVisibility && !el.checkVisibility()) return false;
     const r = el.getBoundingClientRect();
     return getComputedStyle(el).display !== "none" && r.width > 0 && r.height > 0;
   };
