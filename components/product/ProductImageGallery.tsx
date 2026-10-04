@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { composePublicUrl } from "@/lib/storage";
 import type { ProductImageSummary } from "@/lib/repositories/products";
 
@@ -37,8 +38,9 @@ export function ProductImageGallery({
         {images.map((image, index) => (
           // P7d (#218/#46): intrinsic dimensions for the aspect ratio; CSS still drives layout.
           // The first image is the product page's above-the-fold hero, so it loads eagerly and
-          // at high priority — the rest are below it and lazy-load.
-          <img
+          // at high priority — the rest are below it and lazy-load. #655: a missing object shows
+          // the same grey square as a product with no image at all.
+          <ImageWithFallback
             key={image.storageKey}
             src={composePublicUrl(cdnBaseUrl, image.storageKey)}
             alt={image.alt}
@@ -47,6 +49,7 @@ export function ProductImageGallery({
             loading={index === 0 ? "eager" : "lazy"}
             fetchPriority={index === 0 ? "high" : undefined}
             className="aspect-square w-full rounded-2xl object-cover"
+            fallback={<div className="aspect-square w-full rounded-2xl bg-surface-muted" />}
           />
         ))}
       </div>
@@ -114,7 +117,8 @@ export function ProductImageGallery({
             key={image.storageKey || index}
             className="relative h-full w-full shrink-0 aspect-square"
           >
-            <img
+            {/* #655: a missing object leaves the slot empty, so the region's own grey shows. */}
+            <ImageWithFallback
               src={composePublicUrl(cdnBaseUrl, image.storageKey)}
               alt={image.alt}
               width={800}
@@ -123,12 +127,16 @@ export function ProductImageGallery({
               fetchPriority={index === 0 ? "high" : undefined}
               className="h-full w-full object-cover select-none pointer-events-none"
               draggable={false}
+              fallback={null}
             />
           </div>
         ))}
       </div>
 
-      {/* Navigation arrows (only if multiple images) */}
+      {/* Navigation arrows (only if multiple images). #979: below `lg` each button is the 44px
+          (`tap`) hit area around the same 32px circle, and sits 4px in so the circle's centre stays
+          26px from the edge, where `left-2.5`/`right-2.5` put the 32px button. From `lg` the button
+          is the circle again (specs/design-system.md, "Touch targets"). */}
       {hasMultiple && (
         <>
           <button
@@ -137,9 +145,11 @@ export function ProductImageGallery({
             onKeyDown={handleButtonKeyDown}
             aria-label="Previous product image"
             data-tap-surface="gallery-arrow"
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs transition hover:bg-white hover:scale-105 active:scale-95 motion-reduce:hover:scale-100 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+            className="left-1 lg:left-2.5 group/arrow absolute top-1/2 -translate-y-1/2 z-10 flex size-tap items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action lg:size-8"
           >
-            <ChevronLeft className="h-5 w-5" aria-hidden />
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs transition group-hover/arrow:bg-white group-hover/arrow:scale-105 group-active/arrow:scale-95 motion-reduce:group-hover/arrow:scale-100 motion-reduce:group-active/arrow:scale-100">
+              <ChevronLeft className="h-5 w-5" aria-hidden />
+            </span>
           </button>
           <button
             type="button"
@@ -147,9 +157,11 @@ export function ProductImageGallery({
             onKeyDown={handleButtonKeyDown}
             aria-label="Next product image"
             data-tap-surface="gallery-arrow"
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs transition hover:bg-white hover:scale-105 active:scale-95 motion-reduce:hover:scale-100 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+            className="right-1 lg:right-2.5 group/arrow absolute top-1/2 -translate-y-1/2 z-10 flex size-tap items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action lg:size-8"
           >
-            <ChevronRight className="h-5 w-5" aria-hidden />
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs transition group-hover/arrow:bg-white group-hover/arrow:scale-105 group-active/arrow:scale-95 motion-reduce:group-hover/arrow:scale-100 motion-reduce:group-active/arrow:scale-100">
+              <ChevronRight className="h-5 w-5" aria-hidden />
+            </span>
           </button>
 
           {/* Dots and Counter indicator bar */}

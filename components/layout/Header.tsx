@@ -17,6 +17,7 @@ import { getAuth } from "@/lib/auth";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
+import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getRequestCartSummary } from "@/lib/cart-summary";
 import { isPostcodeDeliverable } from "@/lib/delivery-eligibility-service";
@@ -135,6 +136,33 @@ export async function Header({
       ? composePublicUrl(CDN_BASE_URL, profile.logoStorageKey)
       : null;
 
+  // The logo's no-image look: the initial tile and the name. Also the fallback when the stored
+  // logo is missing (#655), so a broken object looks like a vendor without a logo.
+  const logoFallback = (
+    <>
+      <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-xl shadow-md group-hover:bg-primary/90 transition-colors">
+        {name.charAt(0)}
+      </div>
+      <div>
+        <div className="flex items-baseline gap-1">
+          <span className="font-bold text-xl text-primary tracking-tight group-hover:text-primary-muted transition-colors">
+            {name.split(" ")[0]}
+          </span>
+          <span className="font-semibold text-xs text-accent uppercase tracking-wider">
+            {name.split(" ").slice(1).join(" ")}
+          </span>
+        </div>
+        {/* #239: was "{localityName} Groceries", which rendered
+        "Reading Groceries" under SriMart's wordmark. Only shown
+        in the logo fallback (a vendor with no logoStorageKey), so
+        it was easy to miss — the locality alone names no trade. */}
+        <p className="text-[10px] text-black/60 font-medium tracking-wide uppercase">
+          {localityName}
+        </p>
+      </div>
+    </>
+  );
+
   // #960 — three SIBLINGS, not one sticky <header> wrapping everything. The whole header used to
   // be sticky, and at phone widths that pinned 234px (a third of the screen) over the product
   // grid. Only the logo/nav row and the phone search row stay pinned now; the trust banner and
@@ -219,34 +247,14 @@ export async function Header({
                 // a vendor whose logo is a different shape is letterboxed inside the reserved
                 // box rather than distorted, and still never shifts. If #243 later stores real
                 // dimensions, replace this with width/height attributes.
-                <img
+                <ImageWithFallback
                   src={logoUrl}
                   alt={`${name} — Your Local Store`}
                   className="h-10 w-auto aspect-9/5 object-contain rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"
+                  fallback={logoFallback}
                 />
               ) : (
-                <>
-                  <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-xl shadow-md group-hover:bg-primary/90 transition-colors">
-                    {name.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="font-bold text-xl text-primary tracking-tight group-hover:text-primary-muted transition-colors">
-                        {name.split(" ")[0]}
-                      </span>
-                      <span className="font-semibold text-xs text-accent uppercase tracking-wider">
-                        {name.split(" ").slice(1).join(" ")}
-                      </span>
-                    </div>
-                    {/* #239: was "{localityName} Groceries", which rendered
-                      "Reading Groceries" under SriMart's wordmark. Only shown
-                      in the logo fallback (a vendor with no logoStorageKey), so
-                      it was easy to miss — the locality alone names no trade. */}
-                    <p className="text-[10px] text-black/60 font-medium tracking-wide uppercase">
-                      {localityName}
-                    </p>
-                  </div>
-                </>
+                logoFallback
               )}
             </Link>
           </div>
@@ -353,9 +361,11 @@ export async function Header({
           </nav>
         </div>
 
-        {/* Mobile search row — stays pinned with the logo/nav row (#960). */}
+        {/* Mobile search row — stays pinned with the logo/nav row (#960). #979: pb-1.5, not pb-3.
+            The search input grew 6px to the 44px `tap` size below `lg`, and this row gives those
+            6px back so the product grid does not move. */}
         {!isPortal && (
-          <div className="px-4 pb-3 sm:hidden">
+          <div className="px-4 pb-1.5 sm:hidden">
             <SearchForm placeholder={searchPlaceholder} />
           </div>
         )}

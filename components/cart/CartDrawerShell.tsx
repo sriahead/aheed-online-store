@@ -169,7 +169,7 @@ export function CartDrawerShell({
                   onClick={close}
                   aria-label="Close cart"
                   data-tap-surface="cart-drawer-close"
-                  className="rounded-full p-1.5 text-white transition-colors hover:bg-black/15"
+                  className="flex size-tap items-center justify-center rounded-full p-1.5 text-white transition-colors hover:bg-black/15 lg:size-auto"
                 >
                   <X className="h-5 w-5" aria-hidden />
                 </button>

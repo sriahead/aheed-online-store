@@ -1,6 +1,7 @@
 import { Minus, Plus, ShoppingBag, Sparkles, Store, Trash2, Truck } from "lucide-react";
 import Link from "next/link";
 import { formatPrice } from "@/components/product/format-price";
+import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { composePublicUrl } from "@/lib/storage";
 import { fulfilmentProgress } from "@/lib/cart-rules";
 import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
@@ -125,10 +126,12 @@ export function CartContents({
                 // Plain <img> by decision, not omission — #46 settled at P7d (#218):
                 // Image Transformations aren't enabled on this zone, so a next/image
                 // loader would ship identical bytes. Rule is off in eslint.config.mjs.
-                <img
+                // #655: a missing object shows the same grey box as a line with no image.
+                <ImageWithFallback
                   src={composePublicUrl(cdnBaseUrl, line.imageKey)}
                   alt=""
                   className="h-16 w-16 shrink-0 rounded-xl border border-black/5 bg-surface-muted object-cover"
+                  fallback={<div className="h-16 w-16 shrink-0 rounded-xl bg-surface-muted" />}
                 />
               ) : (
                 <div className="h-16 w-16 shrink-0 rounded-xl bg-surface-muted" />

@@ -157,14 +157,17 @@ export function AddToCartButton({
       );
     }
 
+    // #979 — below `lg`, minus and plus are 44px (`tap`) each way. The stepper's 1px border made
+    // them 42px tall inside the old fixed `h-11`, so the row now takes its height from them (46px)
+    // and Add stretches to match. From `lg`, everything is the old 44px row.
     return (
       <div data-tap-surface="quick-view-add" className="flex items-center gap-3">
-        <div className="flex items-center rounded-xl border border-black/10 bg-surface-muted overflow-hidden h-11">
+        <div className="flex items-center rounded-xl border border-black/10 bg-surface-muted overflow-hidden lg:h-11">
           <button
             type="button"
             onClick={onClickMinus}
             aria-label={`Decrease quantity of ${productName}`}
-            className="px-3 h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
+            className="min-h-tap min-w-tap lg:min-h-0 lg:min-w-0 px-3 h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
           >
             <Minus className="w-4 h-4" aria-hidden="true" />
           </button>
@@ -173,7 +176,7 @@ export function AddToCartButton({
             type="button"
             onClick={onClickPlus}
             aria-label={`Increase quantity of ${productName}`}
-            className="px-3 h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
+            className="min-h-tap min-w-tap lg:min-h-0 lg:min-w-0 px-3 h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
           >
             <Plus className="w-4 h-4" aria-hidden="true" />
           </button>
@@ -182,7 +185,7 @@ export function AddToCartButton({
           type="button"
           onClick={onClickAdd}
           disabled={pending}
-          className="flex-1 flex items-center justify-center gap-2 h-11 rounded-2xl bg-primary px-4 text-white text-sm font-bold transition hover:bg-primary/90 active:scale-95 motion-reduce:active:scale-100 shadow-sm"
+          className="flex-1 flex items-center justify-center gap-2 self-stretch lg:self-auto lg:h-11 rounded-2xl bg-primary px-4 text-white text-sm font-bold transition hover:bg-primary/90 active:scale-95 motion-reduce:active:scale-100 shadow-sm"
         >
           <Icon className={`w-4 h-4 ${pending ? "animate-spin" : ""}`} />
           <span>{added ? "Added to cart" : (outcomeText ?? label)}</span>
