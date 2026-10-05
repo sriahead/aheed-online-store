@@ -4,8 +4,8 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.4.0"
-updated: 2026-10-03
+version: "1.5.0"
+updated: 2026-10-05
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), vendor-neutral user-facing copy, form-field autocomplete tokens, and React hooks — together with the tests that enforce each invariant mechanically.
 tags: [conventions, repositories, server-actions, staff-panel]
@@ -305,6 +305,26 @@ store's staff reads must be right for **any** vendor.
   Aheed's colour.
 - Enforced by `tests/add-to-cart-feedback.test.tsx` (messages, names, the rejected-call path) and
   `tests/cart-add-outcome.test.ts` (outcomes, and no write for any `none`).
+- **The bulk add says what it did too (`#957`).** `addCartItems` (behind bundles, Shop your list,
+  reorder and unpaid-order cancel) returns one `BulkAddLine` per merged line (`added`, `partial`,
+  `unavailable`, `at_limit`), classified by `classifyBulkAdd` inside its transaction. Like the
+  single add, it **never writes a line at or below its current quantity**. A caller that puts a
+  past basket back must tell the shopper about the short lines: reorder and cancel redirect through
+  `lib/restore-notice.ts`, and `/cart` renders `RestoreNotice`. Enforced by
+  `tests/cart-bulk-add-report.test.ts` and `tests/restore-notice.test.tsx`.
+
+## Checkout pricing (`#973`)
+
+- **Every money figure on `/checkout` renders from `CheckoutPricingProvider`**
+  (`components/checkout/CheckoutPricing.tsx`). `CheckoutForm`'s total row and `CheckoutSummary`
+  both read it, and both throw without it, so the two totals cannot disagree. Nothing in it decides
+  money: a code's discount is the server's answer, and points use `clampRedemption`, the function
+  `spendPoints` applies on submit.
+- **A code is previewed in one place, `previewCheckoutCode` (`lib/checkout-preview-service.ts`),**
+  for both the page's cookie code and the Apply action (`features/checkout/preview-code.ts`). It
+  takes only the code string and resolves the cart, method, delivery rules and shopper itself. Do not
+  add a second preview path, and do not let a client send a subtotal or fee.
+- Enforced by `tests/checkout-code-apply.test.tsx` and `tests/checkout-prefilled-code.test.tsx`.
 
 ## React and Next.js hooks
 

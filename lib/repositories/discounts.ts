@@ -6,6 +6,7 @@ import {
   type CodeRefusalReason,
   type DiscountKind,
 } from "@/lib/discounts";
+import { extractReferralPrefix, extractReferrerUserId, isSelfReferral } from "@/lib/referrals";
 
 /**
  * Discount-code read/write path (P5b, #145) — the ONLY DB access for codes.
@@ -95,11 +96,27 @@ export async function previewCode(
       remainingRedemptions: true,
       maxPerCustomer: true,
       isActive: true,
+      description: true,
     },
   });
   // A code belonging to another vendor is indistinguishable from one that does
   // not exist — the vendor is in the lookup key, not checked afterwards.
   if (!row) return { ok: false, reason: "UNKNOWN" };
+
+  // #972 — a shopper's own referral code. Its owner is read from the row's
+  // description (`ensureReferralDiscountCode` writes `Referral from user <id>`),
+  // not re-derived from the code: `generateReferralCode` keeps only 8 characters
+  // of the id, so two users can derive the same code, and the row belongs to
+  // whoever created it first. The `REF-` shape is required too, so an admin code
+  // whose description happens to read the same way is untouched. Checked before
+  // `evaluateCode` because nothing the shopper can do fixes it, so it outranks
+  // every other reason.
+  if (
+    extractReferralPrefix(code) !== null &&
+    isSelfReferral(extractReferrerUserId(row.description), input.userId)
+  ) {
+    return { ok: false, reason: "OWN_REFERRAL_CODE" };
+  }
 
   // Two DIFFERENT numbers, split apart by #696. They were one `count` until a
   // reversed-but-retained redemption row existed, at which point one value could

@@ -1,6 +1,8 @@
+"use client";
+
 import { formatPrice } from "@/components/product/format-price";
-import type { OrderTotals } from "@/lib/order-totals";
 import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
+import { useCheckoutPricing } from "./CheckoutPricing";
 
 /**
  * Order summary beside the checkout form.
@@ -14,27 +16,29 @@ import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
  * placed at; and that second implementation ignored `discountPence` entirely, so
  * loyalty redemptions and discount codes never appeared at all.
  *
- * It is now a Server Component that renders the totals it is handed. The page
- * computes them once, through `computeTotals`, with the method resolved from the
- * shared cookie. The method arrives here only to LABEL the fee row — no money
- * decision is made in this file.
+ * The page computes the pre-discount figures once, through `computeTotals`, with
+ * the method resolved from the shared cookie. The method arrives here only to
+ * LABEL the fee row — no money decision is made in this file.
+ *
+ * #973 — a client component again, but for the opposite reason to the one #748
+ * removed: it renders `CheckoutPricing`'s figures, the same ones the form's total
+ * row shows, so a code the shopper applies or points they enter appear here too.
+ * It still computes nothing itself. (#967's server-rendered version kept the
+ * pre-filled code's discount after the field was edited.)
  */
 export function CheckoutSummary({
   lines,
-  totals,
   method,
-  discountLabel = "Discount",
 }: {
   lines: { productId: string; name: string; quantity: number; lineTotalPence: number }[];
-  totals: OrderTotals;
   method: FulfilmentMethodChoice;
-  /**
-   * #967 — names what the discount assumes, e.g. `Discount (REF-…)` for a code pre-filled from the
-   * referral cookie. This summary is server-rendered and cannot follow edits to the code field, so
-   * the label says which code its figure is for.
-   */
-  discountLabel?: string;
 }) {
+  const pricing = useCheckoutPricing();
+  const totals = {
+    subtotalPence: pricing.basis.subtotalPence,
+    deliveryFeePence: pricing.basis.deliveryFeePence,
+    totalPence: pricing.totalPence,
+  };
   const isCollection = method === "COLLECTION";
 
   return (
@@ -61,10 +65,19 @@ export function CheckoutSummary({
           <dd className="font-medium text-primary">{formatPrice(totals.subtotalPence)}</dd>
         </div>
 
-        {totals.discountPence > 0 && (
+        {pricing.currentCode?.ok && pricing.codeDiscountPence > 0 && (
           <div className="flex justify-between">
-            <dt className="text-primary-muted">{discountLabel}</dt>
-            <dd className="font-medium text-action">−{formatPrice(totals.discountPence)}</dd>
+            <dt className="text-primary-muted">Discount ({pricing.currentCode.code})</dt>
+            <dd className="font-medium text-action">−{formatPrice(pricing.codeDiscountPence)}</dd>
+          </div>
+        )}
+
+        {pricing.points.discountPence > 0 && (
+          <div className="flex justify-between">
+            <dt className="text-primary-muted">Points ({pricing.points.pointsSpent})</dt>
+            <dd className="font-medium text-action">
+              −{formatPrice(pricing.points.discountPence)}
+            </dd>
           </div>
         )}
 

@@ -15,8 +15,8 @@ import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 import { fulfilmentProgress } from "@/lib/cart-rules";
 import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
 import { encodeDeliveryQuote } from "@/lib/delivery-pricing";
-import { getDiscountRepository } from "@/lib/discounts-service";
-import { normaliseCode, refusalMessage } from "@/lib/discounts";
+import { previewCheckoutCode } from "@/lib/checkout-preview-service";
+import { CheckoutPricingProvider } from "@/components/checkout/CheckoutPricing";
 
 // Prisma's @prisma/client/wasm can't load during next build's Node-based
 // static prerendering — same reason as the other DB-backed storefront routes.
@@ -67,6 +67,7 @@ export default async function CheckoutPage() {
           balancePoints: balance.balancePoints,
           valueLabel: formatPrice(balance.balancePoints * loyaltyConfig.pencePerPointRedeemed),
           minRedeemPoints: loyaltyConfig.minRedeemPoints,
+          pencePerPointRedeemed: loyaltyConfig.pencePerPointRedeemed,
         }
       : null;
 
@@ -87,24 +88,16 @@ export default async function CheckoutPage() {
   };
   const preDiscount = computeTotals(summary.lines, totalsRules, 0, fulfilmentMethod);
 
-  // #967 — a code pre-filled from the referral cookie is previewed (read-only, nothing is
-  // reserved) against the same pre-discount subtotal and delivery fee `placeOrder` claims
-  // against, so the total shown here is the total the order will carry. A preview that throws
-  // must never break checkout: it renders as if there were no cookie, and `placeOrder` still
-  // decides the code on submit.
-  const prefilledCode = await previewPrefilledCode(
-    initialDiscountCode,
-    signedInUserId,
-    preDiscount.subtotalPence,
-    preDiscount.deliveryFeePence,
-  );
-  const totals = prefilledCode?.ok
-    ? computeTotals(summary.lines, totalsRules, prefilledCode.discountPence, fulfilmentMethod)
-    : preDiscount;
+  // #967/#973 — a code pre-filled from the referral cookie is previewed (read-only, nothing is
+  // reserved) by the same function the form's Apply control calls, against the same pre-discount
+  // subtotal and delivery fee `placeOrder` claims against. A preview that throws never breaks
+  // checkout: it comes back as a refusal the shopper can read, and `placeOrder` still decides the
+  // code on submit. The summary and the form's total row take it from `CheckoutPricingProvider`.
+  const prefilledCode = await previewCheckoutCode(initialDiscountCode);
 
   // The same pure function the cart and drawer render from, so the shopper is
   // told the same thing about the same cart wherever they are looking.
-  const progress = fulfilmentProgress(totals.subtotalPence, {
+  const progress = fulfilmentProgress(preDiscount.subtotalPence, {
     method: fulfilmentMethod,
     minimumOrderPence,
     freeDeliveryThresholdPence: deliveryRules.freeDeliveryThresholdPence,
@@ -133,71 +126,37 @@ export default async function CheckoutPage() {
         so the column grew to ~944px and the whole page rendered zoomed out at phone and tablet
         widths. With the track allowed to shrink, the strip scrolls inside its own overflow-x-auto.
       */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="rounded-2xl border border-black/10 bg-white p-5">
-          <CheckoutForm
-            vendorId={vendor?.id ?? ""}
-            bookingWindowDays={vendor?.bookingWindowDays ?? 14}
-            offerDeliverySlots={vendor?.offerDeliverySlots ?? false}
-            expressCollectionEnabled={vendor?.expressCollectionEnabled ?? false}
-            expressSchedules={vendor?.expressSchedules ?? []}
-            timezone={vendor?.timezone ?? STORE_TIMEZONE}
-            signedInEmail={signedInEmail}
-            redeemable={redeemable}
-            offerCollection={vendor?.offerCollection ?? false}
-            initialPostcode={initialPostcode}
-            savedAddresses={savedAddresses}
-            method={fulfilmentMethod}
-            initialDiscountCode={initialDiscountCode}
-            quotedDeliveryRules={encodeDeliveryQuote(deliveryRules)}
-            totalPence={preDiscount.totalPence}
-            prefilledCode={
-              prefilledCode?.ok
-                ? { ...prefilledCode, totalPence: totals.totalPence }
-                : prefilledCode
-            }
-          />
-        </div>
+      <CheckoutPricingProvider
+        basis={{
+          subtotalPence: preDiscount.subtotalPence,
+          deliveryFeePence: preDiscount.deliveryFeePence,
+        }}
+        initialDiscountCode={initialDiscountCode}
+        prefilledCode={prefilledCode}
+        redeemable={redeemable}
+      >
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="rounded-2xl border border-black/10 bg-white p-5">
+            <CheckoutForm
+              vendorId={vendor?.id ?? ""}
+              bookingWindowDays={vendor?.bookingWindowDays ?? 14}
+              offerDeliverySlots={vendor?.offerDeliverySlots ?? false}
+              expressCollectionEnabled={vendor?.expressCollectionEnabled ?? false}
+              expressSchedules={vendor?.expressSchedules ?? []}
+              timezone={vendor?.timezone ?? STORE_TIMEZONE}
+              signedInEmail={signedInEmail}
+              redeemable={redeemable}
+              offerCollection={vendor?.offerCollection ?? false}
+              initialPostcode={initialPostcode}
+              savedAddresses={savedAddresses}
+              method={fulfilmentMethod}
+              quotedDeliveryRules={encodeDeliveryQuote(deliveryRules)}
+            />
+          </div>
 
-        <CheckoutSummary
-          lines={summary.lines}
-          totals={totals}
-          method={fulfilmentMethod}
-          discountLabel={prefilledCode?.ok ? `Discount (${prefilledCode.code})` : undefined}
-        />
-      </div>
+          <CheckoutSummary lines={summary.lines} method={fulfilmentMethod} />
+        </div>
+      </CheckoutPricingProvider>
     </main>
   );
-}
-
-/**
- * #967 — the referral cookie's code, previewed. `null` when there is no code to preview, or when
- * the preview itself failed (logged, then treated as no cookie).
- */
-async function previewPrefilledCode(
-  rawCode: string | null,
-  userId: string | null,
-  subtotalPence: number,
-  deliveryFeePence: number,
-): Promise<
-  | { code: string; ok: true; discountPence: number }
-  | { code: string; ok: false; message: string }
-  | null
-> {
-  const code = normaliseCode(rawCode ?? "");
-  if (code === "") return null;
-  try {
-    const preview = await getDiscountRepository().preview({
-      code,
-      userId,
-      subtotalPence,
-      deliveryFeePence,
-    });
-    return preview.ok
-      ? { code, ok: true, discountPence: preview.discountPence }
-      : { code, ok: false, message: refusalMessage(preview.reason) };
-  } catch (error) {
-    console.error("Checkout: previewing the pre-filled discount code failed", error);
-    return null;
-  }
 }
