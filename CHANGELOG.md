@@ -233,6 +233,11 @@ every branch merges.
 
 ### Changed
 
+- **Document-stage reconciliation for PR #990 (checkout and cart honesty, `#973`, `#957`, `#753`, `#972`, merged to `staging`) and the PR #986 promotion.** Docs only: no code, schema or runtime change.
+  - `specs/roadmap.md` 1.133.0: change-log rows for PR #986 (slices 4 and 5 promoted to production, `#964`, `#966`, `#968`, `#979`, `#655` closed) and PR #990.
+  - `docs/model-handoff.md` 1.69.0: slices 4 and 5 are in production; slice 6 is merged to `staging` awaiting promotion.
+  - New follow-up `#991`: the loyalty page's unawaited referral-code upsert left no row under preview.
+
 - **Project #2 gains a `Deferred` status, and the Document-stage reconciliation for `#877` (net content for the generated demo catalogue, merged to `staging` in PR #885).**
   - **Board:** a fifth Status option, `Deferred`, and a new milestone, **"Deferred — owner/external gated"** (#23). By owner decision (2026-09-24), `#422` (the multi-site decision) and `#400` (per-store counts, blocked on `#422`) moved there with Priority cleared. Both stay open. The option was added through `updateProjectV2Field` with every existing option's `id` preserved; the item count per status was the same before and after.
   - `specs/sdd-workflow.md` 2.36.0: what `Deferred` means and who sets it (the owner only), a new row in the board-action table, and the Orient step lists Deferred items separately. It also corrects the claim that Status options are UI-only, and records the replace-the-whole-set trap. `.claude/commands/orient.md` and `scripts/provision-project.sh`'s manual-step text match.
