@@ -255,6 +255,44 @@ export function getJobsEnv(): JobsEnv {
 }
 
 /**
+ * #955 — whether this environment may be indexed by search engines.
+ *
+ * KEPT OUT OF `schema`/`getEnv()` ABOVE, for the same reason email and payments are: that schema
+ * requires `DATABASE_URL` and `BETTER_AUTH_SECRET`, and `app/robots.ts` touches neither. Joining it
+ * would mean an unrelated missing secret turned `/robots.txt` into an uncaught `ZodError`, i.e. a
+ * bare 500 on the one route whose job is to answer a crawler.
+ *
+ * ABSENT IS THE SAFE VALUE, and it is why this is a tri-state string rather than a boolean: only
+ * the exact string `"true"` opts an environment in, so staging, preview and local are
+ * non-indexable by being unconfigured rather than by naming a host. `app/robots.ts` previously
+ * decided this by comparing the request host against a hardcoded
+ * `PRODUCTION_HOST = "aheedfoodcentre.nocaped.com"`, which de-indexed every other vendor in
+ * production — ADR-004 says nothing vendor-specific lives in code, and a hostname literal is
+ * exactly that.
+ *
+ * It is a committed `wrangler.toml` `[env.production.vars]` entry, NOT a secret: there is nothing
+ * confidential about it, and `wrangler deploy` rebuilds a Worker's `vars` wholesale from that file
+ * — a dashboard-only var is silently dropped on the next deploy, which is how
+ * `UK_LOCATION_REF_POSTCODE_AREAS` disappeared from the deployed staging Worker once.
+ */
+const seoSchema = z.object({
+  SEO_INDEXABLE: z.string().optional(),
+});
+
+export type SeoEnv = z.infer<typeof seoSchema>;
+
+export function getSeoEnv(): SeoEnv {
+  return seoSchema.parse({
+    SEO_INDEXABLE: readEnv("SEO_INDEXABLE"),
+  });
+}
+
+/** True only when this environment has explicitly opted in. See `seoSchema` for why. */
+export function isIndexable(): boolean {
+  return getSeoEnv().SEO_INDEXABLE === "true";
+}
+
+/**
  * Calls `read` and returns its result, or `undefined` if it threw (P9.2, #621).
  *
  * WHY THIS EXISTS. The accessors above are deliberately fail-hard: each one's

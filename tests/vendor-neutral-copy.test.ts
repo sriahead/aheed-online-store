@@ -93,6 +93,14 @@ const FILES = [
   ...listTsx(join(ROOT, "app")),
   ...listTsx(join(ROOT, "components")),
   join(ROOT, "lib", "referrals.ts"),
+  // #955 — the two SEO routes. Named explicitly because they are `.ts`, and `listTsx` only walks
+  // `.tsx`: that gap is exactly how `app/robots.ts` carried
+  // `const PRODUCTION_HOST = "aheedfoodcentre.nocaped.com"` — which de-indexed every vendor but
+  // the first in production — while this guard stayed green. The glob is NOT widened to all `.ts`
+  // under `app/`, because the generated `app/(admin)/staff/runbook/docs.ts` is deliberately
+  // outside it (see the docstring above) and quotes spec prose, including this slice's own.
+  join(ROOT, "app", "robots.ts"),
+  join(ROOT, "app", "sitemap.ts"),
   // #905 — lib modules whose strings reach a staff member or a model.
   join(ROOT, "lib", "list-normalisation.ts"),
   join(ROOT, "lib", "search-synonym-proposals.ts"),
@@ -104,6 +112,28 @@ describe("vendor-neutral UI copy (#729)", () => {
   it("scans a real set of files", () => {
     // A glob that silently matched nothing would make every assertion below vacuous.
     expect(FILES.length).toBeGreaterThan(100);
+  });
+
+  /**
+   * #955 — the two SEO routes carry no vendor hostname.
+   *
+   * A separate assertion rather than a `FORBIDDEN` entry, and that is deliberate: adding a bare
+   * `nocaped.com` to the denylist would fail on `components/layout/StorefrontChrome.tsx`, which
+   * still falls back to one vendor's staging host when a request carries no `Host` header. That is
+   * a real defect — tracked as `#997`, and the prerequisite for making the denylist cover host
+   * literals platform-wide — but it is referral behaviour, not crawlability, so it is out of this
+   * slice's scope. Scoping the check to these two files protects what this slice fixed without
+   * pretending the wider problem is solved.
+   */
+  it("the sitemap and robots routes contain no vendor hostname literal", () => {
+    const hits: string[] = [];
+    for (const file of [join(ROOT, "app", "robots.ts"), join(ROOT, "app", "sitemap.ts")]) {
+      const code = withoutComments(file);
+      if (/nocaped\.com/.test(code)) {
+        hits.push(relative(ROOT, file).split(sep).join("/"));
+      }
+    }
+    expect(hits).toEqual([]);
   });
 
   it("no shipped UI file contains a removed vendor- or grocery-specific literal", () => {

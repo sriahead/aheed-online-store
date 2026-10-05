@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { buildCategoryMetadata } from "@/lib/page-metadata";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { getProductRepository } from "@/lib/products-service";
 import { getRequestCartQuantities } from "@/lib/cart-summary";
@@ -26,6 +28,29 @@ import { resolveAttributeFilters } from "@/lib/attribute-filters";
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 12;
+
+/**
+ * #996 — this route's own title, description and canonical. See the twin in
+ * `app/(storefront)/products/[slug]/page.tsx` for the full reasoning, including why this returns
+ * `{}` rather than naming a vendor when a read fails.
+ *
+ * The description is composed rather than read: `Category` has no description column.
+ */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  try {
+    const { slug } = await params;
+    const host = (await headers()).get("host");
+    const [category, profile] = await Promise.all([
+      getCategoryRepository().getBySlug(slug),
+      getCurrentVendorProfile(),
+    ]);
+    if (!host || !category || !profile) return {};
+
+    return buildCategoryMetadata({ host, slug, name: category.name, vendorName: profile.name });
+  } catch {
+    return {};
+  }
+}
 
 type SearchParams = {
   minPrice?: string;
