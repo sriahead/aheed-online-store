@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.67.0"
+version: "1.68.0"
 updated: 2026-10-05
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -574,6 +574,16 @@ All facts in this section require live verification:
       `DepartmentHero`'s images (no dev data). Production's logo was never checked.
     - Follow-ups: `#981` (Quick View review-form controls), `#982` (logo-less wordmark overflows a
       phone header), `#983` (flaky add-to-cart test).
+  - **Slice 6, `#973`/`#957`/`#753`/`#972` (checkout and cart honesty):** **built, awaiting a
+    fresh-context `/validate`** on `feature/973-957-753-972-checkout-cart-honesty` (not yet a PR).
+    Issues **In Progress**. No schema change. Spec and build notes:
+    `specs/2026-10-05-p973-957-753-972-checkout-cart-honesty/`.
+    - New standing rules in `docs/developer-portal/app-conventions.md` 1.5.0. Every `/checkout`
+      money figure comes from `CheckoutPricingProvider`. A code is previewed only through
+      `previewCheckoutCode`. `addCartItems` returns a per-line report and never lowers a line.
+    - `#753` (R14/R18 in a real browser) is a `/validate` row (R22), not code.
+    - Follow-ups: `#987` (two users can derive one referral code), `#988` (unthrottled code checks),
+      `#989` (the bundle notice could use the new report).
   - **Phone-width measurement now exists:** `scripts/verify-mobile-layout.ts`, using headless Chrome
     over CDP. Desktop Chrome can't go below 501px, and the app forbids framing. Its traps are in
     `docs/developer-portal/local-dev-playbook.md` 1.16.0.

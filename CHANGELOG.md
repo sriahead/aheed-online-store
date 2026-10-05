@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Checkout and cart honesty: a typed code and points in the total, no own referral code, and a notice when a reorder or cancel puts back less** (issues `#973`, `#957`, `#753`, `#972`; `specs/2026-10-05-p973-957-753-972-checkout-cart-honesty/`). No schema change.
+  - `#972`: `previewCode` refuses a `REF-` code whose description names the claiming shopper (`OWN_REFERRAL_CODE`, "You can't use your own referral code."), ahead of every other reason, so `claimCode`, `placeOrder` and the checkout preview all refuse it.
+  - `#973`: an Apply control (and Enter, which no longer submits the order) checks a typed code through a read-only server action, `previewDiscountCode`, which shares one pricing function (`lib/checkout-preview-service.ts`) with the page. Points are previewed with `clampRedemption`. `CheckoutPricingProvider` feeds both the mobile total row and the order summary (`Discount (CODE)`, `Points (N)`), so the summary now follows the field. A checked code is re-checked when the subtotal or delivery fee changes.
+  - `#957`: `addCartItems` reports what it did per line (`added`, `partial`, `unavailable`, `at_limit`) and never lowers a line already in the cart. Reorder and unpaid-order cancel redirect to `/cart?restored=…`, and `/cart` lists what could not go back in full (`components/cart/RestoreNotice.tsx`).
+  - `#753`: `#748`'s R14 and R18 are re-checked live in a browser at `/validate`.
+  - `docs/shopper-help/shopping-guide.md` 1.4.0, `docs/developer-portal/app-conventions.md` 1.5.0. Follow-ups: `#987` (shared referral codes; owner only in a description), `#988` (unthrottled code checks), `#989` (bundle notice could use the new report).
+
 - **44px tap targets on the controls `#964` left out, and no broken-image icons on the storefront** (issues `#979`, `#655`; `specs/2026-10-04-p979-655-storefront-finish/`). No schema or server change.
   - `#979`: below `lg`, the header search input, every filter-form field, checkbox label and Apply, the cart drawer and Quick View close buttons, Quick View's minus and plus, and the Quick View gallery arrows are at least 44×44. Desktop is unchanged. The phone search row gives back the 6px the input grew, so the product grid does not move.
   - `#655`: new `components/ui/ImageWithFallback.tsx`. The product card, product page and Quick View gallery, cart line, bundle card, department hero and header logo render through it, so a missing stored object shows that surface's no-image look. It also catches an image that failed before hydration, which `#502`'s `onError` never saw. A failed stored logo keeps the logo's own size.
