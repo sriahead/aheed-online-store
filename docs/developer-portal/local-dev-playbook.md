@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.20.0"
-updated: 2026-10-04
+version: "1.21.0"
+updated: 2026-10-05
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -656,3 +656,8 @@ Added for `#964` (2026-10-04):
   `aria-label` first, then the text, then the `name` attribute. `#964`'s R9 asked for an entry named
   `postcode`, which no entry could carry, because the input's label is "Delivery postcode".
   Check a requirement's names against one real run's output at Spec time.
+- **Matching a run to its baseline by `surface` and `name` must match displayed entries only**
+  (`#979`'s R12). `ProductFilterForm` is mounted twice, in the phone panel and the `md`+ sidebar,
+  with identical names. At 1024 and above the panel's copy is hidden, so a first-match lookup hits
+  the baseline's `0x0` entry and reports every sidebar control as changed. Validate's first pass
+  reported 8 false failures this way; none was real. Filter both sides on `displayed: true`.
