@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.68.0"
+version: "1.69.0"
 updated: 2026-10-05
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,15 +40,17 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-10-03.
-- **`main` is now at `9e2afac`.** The third mobile-programme slice was promoted via PR #976
+- **`main` is now at `656a441`** (see the end of this bullet); `9e2afac` was the PR #976 promotion. The third mobile-programme slice was promoted via PR #976
   (`staging -> main`, 2026-10-03): honest add-to-cart feedback and a checkout total that includes a
   pre-filled code (`#956`/`#967`, PR #974, with its Document pass PR #975). No migration.
   `deploy-production` (run `37152345619`) **success**. Production `/api/health` (Aheed and SriMart)
   serves `9e2afac`, `db.ok: true`, `reference.drift: false`. One `closes` line per issue linked
   both, and `#956`/`#967` closed on the merge. Roadmap row: `specs/roadmap.md` 1.129.0. `main` and
   `staging` carried the same content at this point. Since then PR #978 (docs only, merge
-  `5a6d8a1`) moved `main`, and `staging` is ahead of it by slices 4 and 5 (PRs #980, #984); the
-  health figures above were read on 2026-10-03 and not re-read.
+  `5a6d8a1`) and PR #986 (slices 4 and 5, merge `656a441`, 2026-10-05; `deploy-production` run
+  `37254548166` success; `#964`, `#966`, `#968`, `#979`, `#655` closed) moved `main`. `staging` is
+  ahead of it by slice 6 (PR #990, merge `cd813e7`). The health figures above were read on
+  2026-10-03 and not re-read.
 - **Previous promotion, `20ff789`** — the first two mobile-programme slices via PR #970
   (`staging -> main`, 2026-10-03): mobile browse density (`#960`/`#961`/`#962`, PR #965) and mobile
   checkout (`#958`/`#959`, PR #969), with the seventh Discover pass (PR #963). The additive
@@ -544,9 +546,8 @@ All facts in this section require live verification:
       points).
   - `#955` (crawlability) and `#957` (reorder notices) are not layout work and stay in Backlog.
   - **Slice 4, `#964`/`#966`/`#968` (44px tap targets on the remaining storefront controls,
-    header postcode autofill, shopper-guide discount copy):** **merged to `staging`** (PR #980,
-    merge `83da2ce`, 2026-10-04; `deploy-staging` green), issues **In Review**, **awaiting a
-    `staging -> main` promotion PR** whose body must repeat a `closes` line for each of the three.
+    header postcode autofill, shopper-guide discount copy):** **in production** (PR #980, then
+    promotion PR #986, 2026-10-05, `main` at `656a441`), issues closed.
     No schema or server change. Spec: `specs/2026-10-04-p964-966-968-mobile-tap-targets/`.
     - Validation found no defect in the artifact. Two requirements were amended at Build (R10's
       viewport check, R11's cap raised to 60 by the owner) and one reworded at Validate (R9). The
@@ -564,9 +565,7 @@ All facts in this section require live verification:
       page again, with Quick View layered on top as a JavaScript enhancement. This deliberately
       reverses part of `#830`'s markup.
   - **Slice 5, `#979`/`#655` (remaining tap targets; no broken-image icons on the storefront):**
-    **merged to `staging`** (PR #984, merge `e79203e`, 2026-10-04; `deploy-staging` green), issues
-    **In Review**, **awaiting a `staging -> main` promotion PR** that can carry slice 4 with it and
-    must repeat a `closes` line for each of `#964`, `#966`, `#968`, `#979`, `#655`. No schema or
+    **in production** (PR #984, then promotion PR #986, 2026-10-05), issues closed. No schema or
     server change. Spec: `specs/2026-10-04-p979-655-storefront-finish/`.
     - Validation found no defect in the artifact. The header logo's fallback keeps the logo's
       footprint, not the wordmark the plan described (Deviation 1 in `build-notes.md`).
@@ -574,16 +573,22 @@ All facts in this section require live verification:
       `DepartmentHero`'s images (no dev data). Production's logo was never checked.
     - Follow-ups: `#981` (Quick View review-form controls), `#982` (logo-less wordmark overflows a
       phone header), `#983` (flaky add-to-cart test).
-  - **Slice 6, `#973`/`#957`/`#753`/`#972` (checkout and cart honesty):** **built, awaiting a
-    fresh-context `/validate`** on `feature/973-957-753-972-checkout-cart-honesty` (not yet a PR).
-    Issues **In Progress**. No schema change. Spec and build notes:
+  - **Slice 6, `#973`/`#957`/`#753`/`#972` (checkout and cart honesty):** **merged to `staging`**
+    (PR #990, merge `cd813e7`, 2026-10-05; `deploy-staging` run `37291105370` green), issues **In
+    Review**, **awaiting a `staging -> main` promotion PR** whose body must repeat a `closes` line
+    for each of the four. No schema change. Spec and build notes:
     `specs/2026-10-05-p973-957-753-972-checkout-cart-honesty/`.
     - New standing rules in `docs/developer-portal/app-conventions.md` 1.5.0. Every `/checkout`
       money figure comes from `CheckoutPricingProvider`. A code is previewed only through
       `previewCheckoutCode`. `addCartItems` returns a per-line report and never lowers a line.
-    - `#753` (R14/R18 in a real browser) is a `/validate` row (R22), not code.
-    - Follow-ups: `#987` (two users can derive one referral code), `#988` (unthrottled code checks),
-      `#989` (the bundle notice could use the new report).
+    - Validation found no defect in the artifact and drove every live row in Chrome, including
+      `#753`'s R14 and R18. Not verified live: R14's re-check on a changed delivery fee (both fees
+      were £0), which rests on the component test.
+    - **`#991`:** the loyalty page's unawaited `ensureReferralDiscountCode` left no `REF-` row
+      under preview, which would make every referral link dead if it also happens in production.
+      Check production before assuming referral links work.
+    - Follow-ups: `#987` (two users can derive one referral code), `#988` (unthrottled code
+      checks), `#989` (the bundle notice could use the new report), `#991`.
   - **Phone-width measurement now exists:** `scripts/verify-mobile-layout.ts`, using headless Chrome
     over CDP. Desktop Chrome can't go below 501px, and the app forbids framing. Its traps are in
     `docs/developer-portal/local-dev-playbook.md` 1.16.0.
