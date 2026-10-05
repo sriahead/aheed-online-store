@@ -26,7 +26,7 @@ export function DepartmentScroller({
     <HorizontalScroller
       itemLabel="departments"
       step={260}
-      arrowPositionClassName="top-8"
+      arrowPositionClassName="top-6.5 lg:top-8"
       itemWidthClassName="px-6"
     >
       {categories.map((category) => {

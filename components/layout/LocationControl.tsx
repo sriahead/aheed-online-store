@@ -55,7 +55,7 @@ export function LocationControl({
   const closeModal = () => dialogRef.current?.close();
 
   const toggleClass = (active: boolean) =>
-    `flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
+    `flex min-h-tap items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-colors lg:min-h-0 ${
       active
         ? "bg-white text-primary shadow-sm border border-black/5"
         : "text-black/60 hover:text-black"
@@ -65,7 +65,7 @@ export function LocationControl({
     method === "DELIVERY" && hasDeliverablePostcode ? `Delivery · ${postcode}` : "Delivery";
 
   return (
-    <div className="flex h-full items-center">
+    <div data-tap-surface="location" className="flex h-full items-center">
       {offerCollection ? (
         <div className="flex bg-surface-muted rounded-xl p-1 border border-black/10">
           {/*
@@ -129,7 +129,7 @@ export function LocationControl({
               onClick={openModal}
               aria-label={`Change delivery postcode (currently ${postcode})`}
               title="Change postcode"
-              className="flex items-center px-2 text-black/60 transition-colors hover:text-primary"
+              className="flex min-h-tap min-w-tap items-center justify-center px-2 text-black/60 transition-colors hover:text-primary lg:min-h-0 lg:min-w-0"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
@@ -139,7 +139,7 @@ export function LocationControl({
         <button
           type="button"
           onClick={openModal}
-          className="flex items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10 w-full sm:w-auto h-full"
+          className="flex min-h-tap items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10 w-full sm:w-auto h-full lg:min-h-0"
           title={hasDeliverablePostcode ? "Change postcode" : "Check availability"}
         >
           {hasDeliverablePostcode ? (
@@ -158,6 +158,7 @@ export function LocationControl({
 
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
       <dialog
+        data-location-dialog
         ref={dialogRef}
         onCancel={(e) => {
           e.preventDefault();
@@ -170,7 +171,7 @@ export function LocationControl({
         }}
         className="backdrop:bg-black/50 p-0 rounded-2xl shadow-2xl border border-black/10 m-auto w-[calc(100vw-2rem)] sm:w-[28rem] overflow-hidden"
       >
-        <div className="bg-white p-6 flex flex-col">
+        <div data-tap-surface="location-dialog" className="bg-white p-6 flex flex-col">
           <h2 className="text-lg font-extrabold text-primary mb-2">Check delivery availability</h2>
           <p className="text-sm text-black/70 mb-5">
             Enter your postcode to check whether we deliver to your area.
@@ -194,18 +195,19 @@ export function LocationControl({
                 <input
                   type="text"
                   name="postcode"
+                  autoComplete="postal-code"
                   defaultValue={postcode ?? ""}
                   onChange={() => setIsDirty(true)}
                   aria-label="Delivery postcode"
                   placeholder="Enter postcode"
-                  className="w-full rounded-xl border border-black/10 bg-surface-muted py-2.5 pl-9 pr-3 text-sm font-semibold text-black transition focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:bg-white"
+                  className="min-h-tap w-full rounded-xl border border-black/10 bg-surface-muted py-2.5 pl-9 pr-3 text-sm font-semibold text-black transition focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:bg-white lg:min-h-0"
                   required
                 />
               </div>
               <button
                 type="submit"
                 disabled={isPending}
-                className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                className="min-h-tap rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary/90 disabled:opacity-50 lg:min-h-0"
               >
                 {isPending ? "Checking..." : "Check postcode"}
               </button>
@@ -229,7 +231,7 @@ export function LocationControl({
               <button
                 type="button"
                 onClick={closeModal}
-                className="text-sm font-bold text-black/60 hover:text-black transition-colors px-4 py-2"
+                className="min-h-tap text-sm font-bold text-black/60 hover:text-black transition-colors px-4 py-2 lg:min-h-0"
               >
                 Cancel
               </button>

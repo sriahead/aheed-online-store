@@ -272,7 +272,8 @@ export function QuickViewDrawer() {
               type="button"
               onClick={closeQuickView}
               aria-label="Close Quick View"
-              className="rounded-full p-1.5 text-white transition-colors hover:bg-black/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              data-tap-surface="quick-view-close"
+              className="flex size-tap items-center justify-center rounded-full p-1.5 text-white transition-colors hover:bg-black/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white lg:size-auto"
             >
               <X className="h-5 w-5" aria-hidden />
             </button>

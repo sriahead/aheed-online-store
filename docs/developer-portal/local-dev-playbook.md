@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.17.0"
-updated: 2026-10-03
+version: "1.21.0"
+updated: 2026-10-05
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -619,3 +619,45 @@ Added for `#958`/`#959` (2026-10-03):
   `minmax(0,1fr)` / `grid-cols-1` for any grid column that holds a horizontally scrolling strip.
   To find the culprit, list elements inside the page whose own box is wider than the viewport but
   whose children are not.
+
+Added for `#964` (2026-10-04):
+
+- **`tapTargets` measures every tappable element in a `data-tap-surface` area**, grouped by that
+  value. `--open-location` opens the displayed `LocationControl` dialog first. `firstCardTop` gives
+  the first product card's document position, which shows what taller controls cost in grid height.
+  Take a baseline with the hooks in place **before** changing any class, because old code has
+  nothing to group by.
+- **Never write a requirement as `documentScrollWidth === viewportWidth` alone.** It is the
+  `viewportWidth` trap above, frozen into a spec. An overflowing page widens the emulated layout
+  viewport, so both read 366 at a requested 360 and the check passes. Compare both with the width
+  you asked for. In `#964`, 44px scroller arrows at `translate-x-1/2` overhung 22px against a 16px
+  gutter and widened every category page by 6px.
+- **Before each run of a long batch, check the server is up** (`curl -s -m 20 http://localhost:8787/api/health`).
+  When `wrangler dev` dies mid-batch, every later run fails on a Chrome error page and leaves an empty
+  output file, which is easy to mistake for a page with nothing on it.
+- **The homepage is `--path /`, and only with `MSYS_NO_PATHCONV=1`.** The script refuses an empty
+  `--path`, and Git Bash rewrites a bare `/` into a Windows path. Every other path goes without a
+  leading slash. `/` renders no `HorizontalScroller` at all: the product and bundle rows that use
+  it are on `/categories`, which is where `#979` measured them.
+- **A run can exit 0 with a line for a page that never rendered** (`#979`). When `wrangler dev`
+  dies *during* a run rather than before it, the script can still print a JSON line, with
+  `headerBottomAtTop: null` and empty `tapTargets`. That reads as "nothing on the page", not as an
+  error. Check every line for `headerBottomAtTop` before trusting a run, and rerun after a restart.
+  The `--block-urls` runs crashed `wrangler dev` most often (`Network connection lost`).
+- **The dev bucket genuinely lacks some objects.** Aheed's dev `logo.png` and several product
+  `.webp` keys return 404 from `images.dev.aheedfoodcentre.nocaped.com` (2026-10-04). So an
+  unblocked run on dev already reports broken images, and since `#655` the logo shows as its
+  fallback box. Compare image checks against a baseline, never against zero. Check an object with
+  PowerShell `Invoke-WebRequest` (TLS 1.2): Git Bash `curl` gets a TLS reset from these hosts.
+- **A closed `<details>` lays out its content** (`content-visibility: hidden`), so its controls
+  have real boxes. The script's `displayed` uses `checkVisibility()` since `#979`. Any new check
+  of "is this visible" needs the same.
+- **A requirement that names an element must use the name the script reports.** `name` is the
+  `aria-label` first, then the text, then the `name` attribute. `#964`'s R9 asked for an entry named
+  `postcode`, which no entry could carry, because the input's label is "Delivery postcode".
+  Check a requirement's names against one real run's output at Spec time.
+- **Matching a run to its baseline by `surface` and `name` must match displayed entries only**
+  (`#979`'s R12). `ProductFilterForm` is mounted twice, in the phone panel and the `md`+ sidebar,
+  with identical names. At 1024 and above the panel's copy is hidden, so a first-match lookup hits
+  the baseline's `0x0` entry and reports every sidebar control as changed. Validate's first pass
+  reported 8 false failures this way; none was real. Filter both sides on `displayed: true`.

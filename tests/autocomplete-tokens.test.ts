@@ -55,3 +55,14 @@ describe("checkout form", () => {
     expect(tokenOf(element!)).toBe(token);
   });
 });
+
+// #966 — the header's postcode checker. `Header.tsx` mounts `LocationControl` twice (inline from
+// `sm`, and the phone row), so this one element is both postcode inputs a page shows.
+describe("header postcode checker", () => {
+  it("LocationControl's postcode input carries postal-code", () => {
+    const inputs = inputElements(read("components/layout/LocationControl.tsx"));
+    const element = inputs.find((input) => input.includes('name="postcode"'));
+    expect(element, 'no <input name="postcode"> in LocationControl.tsx').toBeDefined();
+    expect(tokenOf(element!)).toBe("postal-code");
+  });
+});

@@ -1,6 +1,7 @@
 import { Minus, Plus, ShoppingBag, Sparkles, Store, Trash2, Truck } from "lucide-react";
 import Link from "next/link";
 import { formatPrice } from "@/components/product/format-price";
+import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { composePublicUrl } from "@/lib/storage";
 import { fulfilmentProgress } from "@/lib/cart-rules";
 import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
@@ -125,10 +126,12 @@ export function CartContents({
                 // Plain <img> by decision, not omission — #46 settled at P7d (#218):
                 // Image Transformations aren't enabled on this zone, so a next/image
                 // loader would ship identical bytes. Rule is off in eslint.config.mjs.
-                <img
+                // #655: a missing object shows the same grey box as a line with no image.
+                <ImageWithFallback
                   src={composePublicUrl(cdnBaseUrl, line.imageKey)}
                   alt=""
                   className="h-16 w-16 shrink-0 rounded-xl border border-black/5 bg-surface-muted object-cover"
+                  fallback={<div className="h-16 w-16 shrink-0 rounded-xl bg-surface-muted" />}
                 />
               ) : (
                 <div className="h-16 w-16 shrink-0 rounded-xl bg-surface-muted" />
@@ -151,7 +154,7 @@ export function CartContents({
                   </p>
                 )}
 
-                <div className="mt-2 flex items-center gap-2">
+                <div data-tap-surface="cart-line-controls" className="mt-2 flex items-center gap-2">
                   <div className="flex items-center rounded-lg border border-black/10 bg-surface-muted">
                     <form
                       action={async () => {
@@ -162,7 +165,7 @@ export function CartContents({
                       <button
                         type="submit"
                         aria-label={`Decrease quantity of ${line.name}`}
-                        className="p-1 text-primary-muted hover:text-primary"
+                        className="flex size-tap items-center justify-center p-1 text-primary-muted hover:text-primary lg:size-auto"
                       >
                         <Minus className="h-3 w-3" aria-hidden />
                       </button>
@@ -178,7 +181,7 @@ export function CartContents({
                         type="submit"
                         disabled={!line.available || line.quantity >= line.stock}
                         aria-label={`Increase quantity of ${line.name}`}
-                        className="p-1 text-primary-muted hover:text-primary disabled:opacity-30"
+                        className="flex size-tap items-center justify-center p-1 text-primary-muted hover:text-primary disabled:opacity-30 lg:size-auto"
                       >
                         <Plus className="h-3 w-3" aria-hidden />
                       </button>
@@ -194,7 +197,7 @@ export function CartContents({
                     <button
                       type="submit"
                       aria-label={`Remove ${line.name}`}
-                      className="p-1 text-primary-subtle transition-colors hover:text-danger"
+                      className="flex size-tap items-center justify-center p-1 text-primary-subtle transition-colors hover:text-danger lg:size-auto"
                     >
                       <Trash2 className="h-3.5 w-3.5" aria-hidden />
                     </button>

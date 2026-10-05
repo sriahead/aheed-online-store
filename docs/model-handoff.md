@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.63.0"
-updated: 2026-10-03
+version: "1.67.0"
+updated: 2026-10-05
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -46,7 +46,9 @@ reconciliation. If overall project state did not materially change, leave this f
   `deploy-production` (run `37152345619`) **success**. Production `/api/health` (Aheed and SriMart)
   serves `9e2afac`, `db.ok: true`, `reference.drift: false`. One `closes` line per issue linked
   both, and `#956`/`#967` closed on the merge. Roadmap row: `specs/roadmap.md` 1.129.0. `main` and
-  `staging` carry the same content at this point.
+  `staging` carried the same content at this point. Since then PR #978 (docs only, merge
+  `5a6d8a1`) moved `main`, and `staging` is ahead of it by slices 4 and 5 (PRs #980, #984); the
+  health figures above were read on 2026-10-03 and not re-read.
 - **Previous promotion, `20ff789`** — the first two mobile-programme slices via PR #970
   (`staging -> main`, 2026-10-03): mobile browse density (`#960`/`#961`/`#962`, PR #965) and mobile
   checkout (`#958`/`#959`, PR #969), with the seventh Discover pass (PR #963). The additive
@@ -541,7 +543,37 @@ All facts in this section require live verification:
     - Follow-ups: `#972` (self-referral not refused), `#973` (live preview of a typed code and of
       points).
   - `#955` (crawlability) and `#957` (reorder notices) are not layout work and stay in Backlog.
-  - `#964` is the slice-1 follow-up: the `tap` token on the remaining controls.
+  - **Slice 4, `#964`/`#966`/`#968` (44px tap targets on the remaining storefront controls,
+    header postcode autofill, shopper-guide discount copy):** **merged to `staging`** (PR #980,
+    merge `83da2ce`, 2026-10-04; `deploy-staging` green), issues **In Review**, **awaiting a
+    `staging -> main` promotion PR** whose body must repeat a `closes` line for each of the three.
+    No schema or server change. Spec: `specs/2026-10-04-p964-966-968-mobile-tap-targets/`.
+    - Validation found no defect in the artifact. Two requirements were amended at Build (R10's
+      viewport check, R11's cap raised to 60 by the owner) and one reworded at Validate (R9). The
+      baseline measurements are in that folder's `baseline/`. R11 has only 4px of headroom on
+      Aheed at 390, so any added row above the product grid fails it.
+    - Not verified: the homepage rows' scroller arrows, the department row's arrow placement, and
+      real-device tap and autofill behaviour. Follow-up `#979` holds the first two and the controls
+      this slice left out.
+  - **The owner approved three more bundled slices on 2026-10-04** (Gate 1 recorded as a comment on
+    each issue): **slice 5** `#979` + `#655`; **slice 6** `#973` + `#957` + `#753` + `#972`
+    (checkout preview of a typed code and points, a reorder notice on `/cart`, the live R14/R18
+    browser check, refusing a shopper's own referral code); **slice 7** `#955` (crawlability).
+    `#665` (UI primitives) is a separate later track, one route group per PR.
+    - **Owner ruling for `#955`:** the product card's title becomes a real `<a href>` to the product
+      page again, with Quick View layered on top as a JavaScript enhancement. This deliberately
+      reverses part of `#830`'s markup.
+  - **Slice 5, `#979`/`#655` (remaining tap targets; no broken-image icons on the storefront):**
+    **merged to `staging`** (PR #984, merge `e79203e`, 2026-10-04; `deploy-staging` green), issues
+    **In Review**, **awaiting a `staging -> main` promotion PR** that can carry slice 4 with it and
+    must repeat a `closes` line for each of `#964`, `#966`, `#968`, `#979`, `#655`. No schema or
+    server change. Spec: `specs/2026-10-04-p979-655-storefront-finish/`.
+    - Validation found no defect in the artifact. The header logo's fallback keeps the logo's
+      footprint, not the wordmark the plan described (Deviation 1 in `build-notes.md`).
+    - Not verified live: the Quick View gallery arrows (the dev product has one image) and
+      `DepartmentHero`'s images (no dev data). Production's logo was never checked.
+    - Follow-ups: `#981` (Quick View review-form controls), `#982` (logo-less wordmark overflows a
+      phone header), `#983` (flaky add-to-cart test).
   - **Phone-width measurement now exists:** `scripts/verify-mobile-layout.ts`, using headless Chrome
     over CDP. Desktop Chrome can't go below 501px, and the app forbids framing. Its traps are in
     `docs/developer-portal/local-dev-playbook.md` 1.16.0.

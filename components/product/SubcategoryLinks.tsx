@@ -35,11 +35,15 @@ export function SubcategoryLinks({
 
   const pill = (isActive: boolean) =>
     isActive
-      ? "rounded-full border border-action bg-action px-4 py-2 text-sm font-medium text-white"
-      : "rounded-full border border-black/10 bg-action-tint px-4 py-2 text-sm font-medium text-primary hover:bg-action/10";
+      ? "inline-flex min-h-tap items-center rounded-full border border-action bg-action px-4 py-2 text-sm font-medium text-white lg:min-h-0"
+      : "inline-flex min-h-tap items-center rounded-full border border-black/10 bg-action-tint px-4 py-2 text-sm font-medium text-primary hover:bg-action/10 lg:min-h-0";
 
   return (
-    <nav aria-label="Subcategories" className="mb-6 flex flex-wrap gap-2">
+    <nav
+      aria-label="Subcategories"
+      data-tap-surface="subcategories"
+      className="mb-6 flex flex-wrap gap-2"
+    >
       <Link
         href={`/categories/${parentSlug}`}
         aria-current={activeSlug === parentSlug ? "page" : undefined}

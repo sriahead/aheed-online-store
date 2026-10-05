@@ -1,6 +1,7 @@
 import { Package } from "lucide-react";
 import { addBundleToCart } from "@/features/cart/add-bundle-to-cart";
 import { formatPrice } from "@/components/product/format-price";
+import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { availableBundleItems, bundleTotalPence, type BundleItemInput } from "@/lib/bundle-pricing";
 
 interface BundleCardProps {
@@ -46,6 +47,15 @@ interface BundleCardProps {
  * component bolted on beside it. There's no bundle detail page to link to, so
  * unlike `ProductCard` the skewed element is a `<div>`, not a `<Link>`.
  */
+/** A bundle with no photo, or whose stored photo is missing (#655): the same box either way. */
+function NoBundleImage() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-surface-muted">
+      <Package className="h-10 w-10 text-primary-subtle" aria-hidden />
+    </div>
+  );
+}
+
 export function BundleCard({
   id,
   name,
@@ -67,15 +77,15 @@ export function BundleCard({
         <div className="relative aspect-4/3 w-full shrink-0 overflow-hidden bg-surface-muted">
           <div className="skew-card-inner h-full w-full">
             {imageKey && cdnBaseUrl ? (
-              <img
+              // #655: a missing object shows the same Package box as a bundle with no image.
+              <ImageWithFallback
                 src={`${cdnBaseUrl}/${imageKey}`}
                 alt={altText ?? ""}
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
+                fallback={<NoBundleImage />}
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center bg-surface-muted">
-                <Package className="h-10 w-10 text-primary-subtle" aria-hidden />
-              </div>
+              <NoBundleImage />
             )}
           </div>
         </div>

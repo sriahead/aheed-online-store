@@ -37,7 +37,7 @@ const COLLECTIONS = [
 
 export function CollectionNav({ activeHref }: { activeHref?: string }) {
   return (
-    <nav aria-label="Collections" className="mb-6">
+    <nav aria-label="Collections" data-tap-surface="collections" className="mb-6">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-muted">
         Browse
       </h2>
@@ -51,8 +51,8 @@ export function CollectionNav({ activeHref }: { activeHref?: string }) {
                 aria-current={active ? "page" : undefined}
                 className={
                   active
-                    ? "inline-flex items-center gap-2 rounded-2xl bg-action-tint px-3 py-2 text-sm font-semibold text-primary"
-                    : "inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-primary hover:bg-surface-muted"
+                    ? "inline-flex min-h-tap items-center gap-2 rounded-2xl bg-action-tint px-3 py-2 text-sm font-semibold text-primary lg:min-h-0"
+                    : "inline-flex min-h-tap items-center gap-2 rounded-2xl px-3 py-2 text-sm text-primary hover:bg-surface-muted lg:min-h-0"
                 }
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden />

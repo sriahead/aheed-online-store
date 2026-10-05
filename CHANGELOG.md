@@ -8,11 +8,27 @@ every branch merges.
 
 ### Added
 
+- **44px tap targets on the controls `#964` left out, and no broken-image icons on the storefront** (issues `#979`, `#655`; `specs/2026-10-04-p979-655-storefront-finish/`). No schema or server change.
+  - `#979`: below `lg`, the header search input, every filter-form field, checkbox label and Apply, the cart drawer and Quick View close buttons, Quick View's minus and plus, and the Quick View gallery arrows are at least 44×44. Desktop is unchanged. The phone search row gives back the 6px the input grew, so the product grid does not move.
+  - `#655`: new `components/ui/ImageWithFallback.tsx`. The product card, product page and Quick View gallery, cart line, bundle card, department hero and header logo render through it, so a missing stored object shows that surface's no-image look. It also catches an image that failed before hydration, which `#502`'s `onError` never saw. A failed stored logo keeps the logo's own size.
+  - `scripts/verify-mobile-layout.ts` gains `--open-filters`, `--open-cart`, `--open-quick-view`, `--block-urls`, `brokenImages`, `cardsWithoutImage` and `scrollerArrows`, and a closed `<details>` no longer counts as displayed. New `tests/image-with-fallback.test.tsx` and `tests/storefront-image-fallback.test.ts`. `specs/design-system.md` 1.16.0, `docs/developer-portal/runtime-pitfalls.md` 1.3.0, `docs/developer-portal/local-dev-playbook.md` 1.20.0. Follow-ups: `#981` (Quick View review-form controls), `#982` (logo-less wordmark overflows a phone header), `#983` (flaky add-to-cart test).
+
+- **44px tap targets on the remaining storefront controls, postcode autofill in the header, and the right page for discount codes in the shopper guide** (issues `#964`, `#966`, `#968`; `specs/2026-10-04-p964-966-968-mobile-tap-targets/`). No schema or server change.
+  - `#964`: below `lg`, the location toggles and postcode dialog, filter chips, subcategory pills, collection links, Previous/Next page, cart line decrease/increase/remove, and the `HorizontalScroller` arrows are at least 44×44. From `lg` each keeps its exact earlier size. The arrows are a 44px button around the same 32px circle. The mobile filter summary was already 50px.
+  - `#966`: the header postcode input carries `autocomplete="postal-code"`.
+  - `#968`: the shopper guide says a code is entered on the checkout page, not in the cart.
+  - `scripts/verify-mobile-layout.ts` gains `tapTargets`, `firstCardTop` and `--open-location`. New `tests/tap-targets.test.ts`. `specs/design-system.md` 1.15.0. Follow-up `#979` (controls left out of scope).
+
 - **Honest add-to-cart feedback, and a checkout total that includes a pre-filled referral code** (issues `#956`, `#967`; `specs/2026-10-03-p956-967-add-feedback-referral-total/`). No schema change.
   - `#956`: `addToCart` resolves to what it actually did: added, partly added (clamped to stock), or nothing (sold out, cart already holds all the stock, invalid quantity). Every add button reports that in one shared `role="status"` message at the bottom of the screen (`components/cart/CartFeedback.tsx`, mounted once in `StorefrontChrome`), because a card's button is swapped for the quantity stepper on the re-render after an add. A failed call shows "Try again" instead of the error page. Each card's Add, pre-add −/+ and out-of-stock button is named for its product.
   - Fixed on the way: adding to a cart that held more than the current stock lowered the cart's quantity to stock. An add now writes nothing in any refused case.
   - `#967`: `previewCode` is `claimCode`'s lookup and evaluation without the reservation, and `claimCode` now calls it. Checkout previews the referral cookie's code, so the summary and the mobile total include its discount (`Discount (CODE)`), or the reason it can't apply (for example, sign in first) shows under the field. Rendering checkout never uses a code up.
   - `scripts/verify-mobile-layout.ts` gains `documentScrollWidth` and `cartFeedback`. `docs/shopper-help/shopping-guide.md` 1.2.0 and `docs/developer-portal/app-conventions.md` 1.4.0 are updated. Follow-ups: `#972` (a shopper can redeem their own referral code) and `#973` (live preview of a typed code and of points).
+
+- **Document-stage reconciliation for PR #984 (`#979`, `#655` merged to `staging`, merge `e79203e`).** Docs only.
+  - `specs/roadmap.md` 1.132.0: the row for PR #984, with the validation result and the header-logo fallback deviation.
+  - `docs/model-handoff.md` 1.67.0: slice 5 recorded as merged to `staging` only, promotion outstanding; follow-ups `#981`, `#982`, `#983`.
+  - `docs/developer-portal/local-dev-playbook.md`: phone-width measurement traps. The rebuilt `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts` are included.
 
 - **Document-stage reconciliation for PR #974 (`#956`, `#967` merged to `staging`, merge `2258976`).** Docs only.
   - `specs/roadmap.md` 1.128.0: the row for PR #974, with the live-proof results and the two deviations.
