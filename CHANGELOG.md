@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Checkout and cart honesty: a typed code and points in the total, no own referral code, and a notice when a reorder or cancel puts back less** (issues `#973`, `#957`, `#753`, `#972`; `specs/2026-10-05-p973-957-753-972-checkout-cart-honesty/`). No schema change.
+  - `#972`: `previewCode` refuses a `REF-` code whose description names the claiming shopper (`OWN_REFERRAL_CODE`, "You can't use your own referral code."), ahead of every other reason, so `claimCode`, `placeOrder` and the checkout preview all refuse it.
+  - `#973`: an Apply control (and Enter, which no longer submits the order) checks a typed code through a read-only server action, `previewDiscountCode`, which shares one pricing function (`lib/checkout-preview-service.ts`) with the page. Points are previewed with `clampRedemption`. `CheckoutPricingProvider` feeds both the mobile total row and the order summary (`Discount (CODE)`, `Points (N)`), so the summary now follows the field. A checked code is re-checked when the subtotal or delivery fee changes.
+  - `#957`: `addCartItems` reports what it did per line (`added`, `partial`, `unavailable`, `at_limit`) and never lowers a line already in the cart. Reorder and unpaid-order cancel redirect to `/cart?restored=…`, and `/cart` lists what could not go back in full (`components/cart/RestoreNotice.tsx`).
+  - `#753`: `#748`'s R14 and R18 are re-checked live in a browser at `/validate`.
+  - `docs/shopper-help/shopping-guide.md` 1.4.0, `docs/developer-portal/app-conventions.md` 1.5.0. Follow-ups: `#987` (shared referral codes; owner only in a description), `#988` (unthrottled code checks), `#989` (bundle notice could use the new report).
+
 - **44px tap targets on the controls `#964` left out, and no broken-image icons on the storefront** (issues `#979`, `#655`; `specs/2026-10-04-p979-655-storefront-finish/`). No schema or server change.
   - `#979`: below `lg`, the header search input, every filter-form field, checkbox label and Apply, the cart drawer and Quick View close buttons, Quick View's minus and plus, and the Quick View gallery arrows are at least 44×44. Desktop is unchanged. The phone search row gives back the 6px the input grew, so the product grid does not move.
   - `#655`: new `components/ui/ImageWithFallback.tsx`. The product card, product page and Quick View gallery, cart line, bundle card, department hero and header logo render through it, so a missing stored object shows that surface's no-image look. It also catches an image that failed before hydration, which `#502`'s `onError` never saw. A failed stored logo keeps the logo's own size.
@@ -225,6 +232,11 @@ every branch merges.
 - **Assembled KMS content stopped being git-ignored when `#853` moved it a directory deeper** (issue `#857`, folded into `#871`'s branch — same two lines of the same file). The rule `kms/site-*/content/*/*.mdx` matched exactly one level under `content/`, correct until assembled content became `content/<track>/<type>/<id>.mdx`. It then silently matched nothing `assemble.ts` writes, leaving ~194 generated files untracked in every working copy while CI stayed green (CI assembles into a throwaway checkout and never commits). Now depth-agnostic (`content/**/*.mdx`) with the `index.mdx` negation widened to match, and the block comment corrected — it still described the pre-`#853` layout. `kms/site-internal/README.md`'s `content/dev/*.mdx` path was stale from the same move and is corrected with it. Proven at the rule level with `git check-ignore -v`, and mirror-checked so the three hand-authored `index.mdx` files stay tracked.
 
 ### Changed
+
+- **Document-stage reconciliation for PR #990 (checkout and cart honesty, `#973`, `#957`, `#753`, `#972`, merged to `staging`) and the PR #986 promotion.** Docs only: no code, schema or runtime change.
+  - `specs/roadmap.md` 1.133.0: change-log rows for PR #986 (slices 4 and 5 promoted to production, `#964`, `#966`, `#968`, `#979`, `#655` closed) and PR #990.
+  - `docs/model-handoff.md` 1.69.0: slices 4 and 5 are in production; slice 6 is merged to `staging` awaiting promotion.
+  - New follow-up `#991`: the loyalty page's unawaited referral-code upsert left no row under preview.
 
 - **Project #2 gains a `Deferred` status, and the Document-stage reconciliation for `#877` (net content for the generated demo catalogue, merged to `staging` in PR #885).**
   - **Board:** a fifth Status option, `Deferred`, and a new milestone, **"Deferred — owner/external gated"** (#23). By owner decision (2026-09-24), `#422` (the multi-site decision) and `#400` (per-store counts, blocked on `#422`) moved there with Priority cleared. Both stay open. The option was added through `updateProjectV2Field` with every existing option's `id` preserved; the item count per status was the same before and after.

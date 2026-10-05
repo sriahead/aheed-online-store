@@ -28,6 +28,7 @@ type CodeRow = {
   remainingRedemptions: number | null;
   maxPerCustomer: number | null;
   isActive: boolean;
+  description?: string | null;
 };
 
 const aCode = (overrides: Partial<CodeRow> = {}): CodeRow => ({
@@ -149,5 +150,58 @@ describe("previewCode", () => {
       "CUSTOMER_LIMIT_REACHED",
       "ok:300",
     ]);
+  });
+});
+
+/**
+ * #972 (R2, R3) — a shopper's own `REF-` code is refused before any other
+ * evaluation, by `previewCode` and therefore by `claimCode`.
+ */
+describe("previewCode — own referral code (#972)", () => {
+  const OWNER = "user_abc123";
+  const referral = (overrides: Partial<CodeRow> = {}) =>
+    aCode({
+      value: 500,
+      minSubtotalPence: 2000,
+      maxPerCustomer: 1,
+      remainingRedemptions: null,
+      description: `Referral from user ${OWNER}`,
+      ...overrides,
+    });
+  const input = (userId: string | null, code = "ref-userabc1") => ({ ...base, code, userId });
+
+  it("refuses the owner's own code in previewCode", async () => {
+    const result = await previewCode(readOnlyDb(referral()) as never, VENDOR, input(OWNER));
+    expect(result).toEqual({ ok: false, reason: "OWN_REFERRAL_CODE" });
+  });
+
+  it("refuses it in claimCode with no reservation written", async () => {
+    const db = readOnlyDb(referral()); // updateMany throws if it is ever reached
+    const result = await claimCode(db as never, VENDOR, input(OWNER));
+    expect(result).toEqual({ ok: false, reason: "OWN_REFERRAL_CODE" });
+  });
+
+  it("outranks every evaluateCode reason, including INACTIVE", async () => {
+    const db = readOnlyDb(referral({ isActive: false, endsAt: new Date("2026-02-01") }));
+    const result = await previewCode(db as never, VENDOR, input(OWNER));
+    expect(result).toEqual({ ok: false, reason: "OWN_REFERRAL_CODE" });
+  });
+
+  it("(a) does not refuse another shopper's code for that reason", async () => {
+    const result = await previewCode(readOnlyDb(referral()) as never, VENDOR, input("user_other"));
+    expect(result).toEqual(expect.objectContaining({ ok: true, discountPence: 500 }));
+  });
+
+  it("(b) leaves a guest to the existing evaluation", async () => {
+    const result = await previewCode(readOnlyDb(referral()) as never, VENDOR, input(null));
+    expect(result).toEqual({ ok: false, reason: "SIGN_IN_REQUIRED" });
+  });
+
+  it("(c) does not refuse a non-REF code whose description names the shopper", async () => {
+    const result = await previewCode(readOnlyDb(referral()) as never, VENDOR, {
+      ...input(OWNER),
+      code: "WELCOME5",
+    });
+    expect(result).toEqual(expect.objectContaining({ ok: true, discountPence: 500 }));
   });
 });

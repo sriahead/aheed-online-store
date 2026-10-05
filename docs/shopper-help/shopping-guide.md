@@ -4,8 +4,8 @@ title: "Shopping Guide & Help Center"
 audience: [shopper]
 type: guide
 status: approved
-version: "1.3.0"
-updated: 2026-10-04
+version: "1.4.0"
+updated: 2026-10-05
 visibility: public
 summary: "A complete guide for customers on how to browse, place orders, and manage their account."
 tags: ["shopper", "help", "orders", "loyalty"]
@@ -29,8 +29,9 @@ Welcome! This guide explains how to find what you need, place orders, and make t
   - Some stores have a minimum order amount.
   - A delivery fee may apply, but you might qualify for free delivery if your order is above a certain amount.
   - Delivery is restricted to specific postcode areas.
-- **Discounts:** If you have a promotional code, enter it in the **Discount code** section of the checkout page before paying.
-- **Referral links:** If you arrived through a friend's referral link, its code is already filled in at checkout and the total you see includes its discount. If the code can't be used for this order (for example, you need to sign in first, or the order is below its minimum), the reason is shown under the code field.
+- **Discounts:** If you have a promotional code, type it in the **Discount code** section of the checkout page and press **Apply** (or Enter). The total then includes the discount, or the reason the code can't be used is shown under the field. If you change the code afterwards, press **Apply** again.
+- **Referral links:** If you arrived through a friend's referral link, its code is already filled in at checkout and the total you see includes its discount. If the code can't be used for this order (for example, you need to sign in first, or the order is below its minimum), the reason is shown under the code field. Your own referral code is for sharing with friends: it can't be used on your own orders.
+- **Reordering:** When you reorder a past order, or cancel a payment and your items go back into your cart, anything we couldn't add in full is listed at the top of your cart: items no longer available, and items where we had fewer in stock than before.
 - **Paying:** Your browser can fill in the name, phone, email and address you have saved on your device. On a phone, the order total shows just above **Continue to payment**. You then pay on a secure payment page, which shows the exact amount after any discount code or loyalty points.
 
 ## Managing Your Orders
@@ -41,7 +42,7 @@ Welcome! This guide explains how to find what you need, place orders, and make t
 ## Loyalty Program (If Enabled)
 If the store has opted into the rewards program:
 - **Earning Points:** You earn points for every pound spent.
-- **Redeeming Points:** Once you reach the minimum point threshold, you can apply your points at checkout for a discount.
+- **Redeeming Points:** Once you reach the minimum point threshold, you can apply your points at checkout for a discount. The checkout total updates as you enter points, and tells you if this order can only take some of them.
 - **Tiers:** High-spending customers may be placed into loyalty tiers (like Silver or Gold), which grant point multipliers so you earn rewards faster!
 - **Expiry:** Note that points may expire if your account is inactive for a certain number of months.
 

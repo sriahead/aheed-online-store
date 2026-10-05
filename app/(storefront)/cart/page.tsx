@@ -10,6 +10,8 @@ import { getEnv } from "@/lib/config";
 import { CartContents } from "@/components/cart/CartContents";
 import { MergePrompt } from "@/components/cart/MergePrompt";
 import { parseUnavailableNames } from "@/lib/bundle-notice";
+import { parseRestoreNotice } from "@/lib/restore-notice";
+import { RestoreNotice } from "@/components/cart/RestoreNotice";
 import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
 
@@ -25,7 +27,13 @@ export const metadata: Metadata = { title: "Your cart" };
 export default async function CartPage({
   searchParams,
 }: {
-  searchParams: Promise<{ unavailable?: string; list?: string }>;
+  searchParams: Promise<{
+    unavailable?: string;
+    list?: string;
+    restored?: string;
+    of?: string;
+    lines?: string;
+  }>;
 }) {
   const [identity, vendor, params] = await Promise.all([
     getCartIdentity(),
@@ -43,6 +51,8 @@ export default async function CartPage({
   // P8.5c (#347): "Add all N to basket" adds what it can and names what it
   // couldn't, rather than silently delivering a partial bundle.
   const unavailable = parseUnavailableNames(params.unavailable);
+  // #957 — the same, for a reorder or a cancelled unpaid order put back into the cart.
+  const restoreNotice = parseRestoreNotice(params);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
@@ -76,6 +86,8 @@ export default async function CartPage({
           <p className="mt-1 text-primary-muted">Everything else has been added to your cart.</p>
         </div>
       )}
+
+      {restoreNotice && <RestoreNotice notice={restoreNotice} />}
 
       {summary.mergePending && (
         <MergePrompt

@@ -229,9 +229,14 @@ describe("refusalMessage (R2)", () => {
       "CUSTOMER_LIMIT_REACHED",
       "SIGN_IN_REQUIRED",
       "NO_HEADROOM",
+      "OWN_REFERRAL_CODE",
     ];
     const messages = reasons.map(refusalMessage);
     expect(new Set(messages).size).toBe(reasons.length);
     for (const message of messages) expect(message.length).toBeGreaterThan(0);
+  });
+
+  it("#972 — names an own referral code exactly", () => {
+    expect(refusalMessage("OWN_REFERRAL_CODE")).toBe("You can't use your own referral code.");
   });
 });
