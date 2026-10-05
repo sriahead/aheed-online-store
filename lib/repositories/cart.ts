@@ -3,12 +3,14 @@ import {
   assertSingleIdentity,
   clampQuantity,
   classifyAdd,
+  classifyBulkAdd,
   effectiveStock,
   isMergePending,
   isValidAddDelta,
   resolveMerge,
   sumLinesByProduct,
   type AddOutcome,
+  type BulkAddLine,
   type MergeLine,
   type MergeResolution,
 } from "@/lib/cart-rules";
@@ -109,8 +111,9 @@ export interface CartRepository {
    * Bulk add for "Shop your list" (P3d, #114) — one cart resolution and one
    * transaction for the whole list, not N sequential addItem() calls.
    * Quantities ADD to what is already in the cart, like every other add path.
+   * #957 — resolves to what happened to each merged line (`classifyBulkAdd`).
    */
-  addItems(identity: CartIdentity, lines: MergeLine[]): Promise<void>;
+  addItems(identity: CartIdentity, lines: MergeLine[]): Promise<BulkAddLine[]>;
   setQuantity(identity: CartIdentity, productId: string, quantity: number): Promise<void>;
   removeItem(identity: CartIdentity, productId: string): Promise<void>;
   applyMerge(identity: CartIdentity, resolution: MergeResolution): Promise<void>;
@@ -347,11 +350,11 @@ export async function addCartItems(
   vendorId: string,
   identity: CartIdentity,
   lines: MergeLine[],
-): Promise<void> {
+): Promise<BulkAddLine[]> {
   // One entry per product: a pasted list can name the same product twice,
   // and two upserts of one row inside a transaction would fight.
   const merged = sumLinesByProduct(lines);
-  if (merged.length === 0) return;
+  if (merged.length === 0) return [];
 
   // stockMap is scoped to `vendorId`, so a productId belonging to
   // another vendor (or to nothing) simply has no row and resolves to 0 —
@@ -361,29 +364,43 @@ export async function addCartItems(
     vendorId,
     merged.map((line) => line.productId),
   );
-  const writable = merged.filter((line) => (stocks.get(line.productId) ?? 0) > 0);
-  if (writable.length === 0) return; // nothing addable — don't create a cart
+  const stockOf = (productId: string) => stocks.get(productId) ?? 0;
+  const unavailable = (line: MergeLine): BulkAddLine => ({
+    productId: line.productId,
+    ...classifyBulkAdd(0, line.quantity, 0).line,
+  });
+
+  const writable = merged.filter((line) => stockOf(line.productId) > 0);
+  // Nothing addable — don't create a cart, but still say what happened to every line (#957).
+  if (writable.length === 0) return merged.map(unavailable);
 
   const cartId = await ensureCart(prisma, prismaWs, vendorId, identity);
-  await prismaWs.$transaction(async (tx: Tx) => {
+  // #957 — each line is classified from the quantity read INSIDE the transaction, so the report
+  // describes the writes that actually happen rather than a guess made before them.
+  const written = await prismaWs.$transaction(async (tx: Tx) => {
+    const results = new Map<string, BulkAddLine>();
     for (const line of writable) {
       const existing = await tx.cartItem.findUnique({
         where: { cartId_productId: { cartId, productId: line.productId } },
         select: { quantity: true },
       });
-      const next = clampQuantity(
+      const { write, line: outcome } = classifyBulkAdd(
         existing?.quantity ?? 0,
         line.quantity,
-        stocks.get(line.productId) ?? 0,
+        stockOf(line.productId),
       );
-      if (next <= 0) continue;
+      results.set(line.productId, { productId: line.productId, ...outcome });
+      if (write === null) continue;
       await tx.cartItem.upsert({
         where: { cartId_productId: { cartId, productId: line.productId } },
-        create: { cartId, vendorId, productId: line.productId, quantity: next },
-        update: { quantity: next },
+        create: { cartId, vendorId, productId: line.productId, quantity: write },
+        update: { quantity: write },
       });
     }
+    return results;
   });
+
+  return merged.map((line) => written.get(line.productId) ?? unavailable(line));
 }
 
 export async function setCartQuantity(

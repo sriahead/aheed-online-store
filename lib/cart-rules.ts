@@ -83,6 +83,46 @@ export function classifyAdd(
   };
 }
 
+/**
+ * #957 — what a bulk add (`addCartItems`) did with one product line, so a reorder or a cancelled
+ * order's restore can say what it could not put back. Before this the bulk add returned nothing.
+ */
+export type BulkAddKind = "added" | "partial" | "unavailable" | "at_limit";
+
+export interface BulkAddLine {
+  productId: string;
+  requested: number;
+  added: number;
+  kind: BulkAddKind;
+}
+
+/**
+ * #957 — the bulk add's write rule and its report, for one merged line.
+ *
+ * The arithmetic is `clampQuantity`'s, with one change, the same one #956 made to the single add:
+ * a line already in the cart is never written at or below its current quantity. When stock has
+ * fallen below what the cart holds, `clampQuantity` returns `stock` and a bulk add used to LOWER the
+ * line, silently. It now leaves the line alone and reports `at_limit`.
+ */
+export function classifyBulkAdd(
+  existing: number,
+  requested: number,
+  stock: number,
+): { write: number | null; line: Omit<BulkAddLine, "productId"> } {
+  if (stock <= 0) {
+    return { write: null, line: { requested, added: 0, kind: "unavailable" } };
+  }
+  const next = clampQuantity(existing, requested, stock);
+  if (next <= existing) {
+    return { write: null, line: { requested, added: 0, kind: "at_limit" } };
+  }
+  const added = next - existing;
+  return {
+    write: next,
+    line: { requested, added, kind: added === requested ? "added" : "partial" },
+  };
+}
+
 export interface MergeLine {
   productId: string;
   quantity: number;

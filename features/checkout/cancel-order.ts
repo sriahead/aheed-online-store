@@ -5,6 +5,8 @@ import { getOrderCancelService, getOrderRepository } from "@/lib/orders-service"
 import { getCartRepository } from "@/lib/cart-service";
 import { getCartIdentity } from "@/lib/cart-identity";
 import { scopedToUser } from "@/features/cart/shared";
+import { restoredLines } from "@/lib/restore-lines";
+import { buildRestoreNoticeUrl } from "@/lib/restore-notice";
 
 /**
  * Cancel a still-unpaid order and put its lines back in the cart (P9.1, #428).
@@ -37,6 +39,8 @@ export async function cancelOrder(formData: FormData): Promise<void> {
   const userId = scoped.userId ?? null;
 
   const order = await getOrderRepository().getByOrderNumber(orderNumber, userId, token || null);
+  // Every path but a real cancel lands on plain `/cart`, which says nothing about the order.
+  let destination = "/cart";
 
   // Only PENDING_PAYMENT is cancellable. A paid or already-cancelled order is
   // left exactly as it is — the same guard the deleted route carried, and the
@@ -51,15 +55,16 @@ export async function cancelOrder(formData: FormData): Promise<void> {
       "Shopper cancelled payment at checkout",
     );
 
-    if (order.items.length > 0) {
-      await getCartRepository().addItems(
-        scoped,
-        order.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-      );
-    }
+    // #957 — and say what could not go back (a product deactivated since the order was placed, or
+    // stock taken by someone else after the release above), rather than handing back a short basket
+    // with no message.
+    const lines = await restoredLines(order.items, (toAdd) =>
+      getCartRepository().addItems(scoped, toAdd),
+    );
+    destination = buildRestoreNoticeUrl("cancelled", lines);
   }
 
   // Outside any try/catch: redirect() throws a control-flow signal that must not
   // be swallowed.
-  redirect("/cart");
+  redirect(destination);
 }
