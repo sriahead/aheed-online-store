@@ -6,7 +6,23 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **Document-stage reconciliation for PR #993 (`#973`, `#957`, `#753`, `#972` promoted to production, merge `6dca917`).** Docs only.
+  - `specs/roadmap.md` 1.134.0: the row for the PR #993 promotion — both deploys green, production `/api/health` serving `6dca917` on Aheed and SriMart, all four issues `CLOSED (COMPLETED)`, and the rows still without live proof.
+  - `docs/model-handoff.md` 1.70.0: `main` is `6dca917` and `Last Verified` is 2026-10-05 with health figures actually re-read; slice 6 recorded as in production rather than awaiting promotion; `#991` restated as load-bearing now that the referral behaviour is live; the stale claim that `#957` was still in Backlog corrected.
+  - `docs/developer-portal/local-dev-playbook.md` 1.22.0: Windows `curl`/schannel returns exit 35 or an empty body on a healthy endpoint, so a post-deploy health read must be retried before a vendor is called down.
+
 ### Added
+
+- **Crawlable product pages: a real link on every card, a per-vendor sitemap, robots by environment, and a title per page** (issues `#955`, `#996`, `#994`; `specs/2026-10-05-p955-996-994-crawlability/`). No schema change.
+  - `#955`: the product card's title is a real `<a href="/products/[slug]">` again, with Quick View layered on top as a JavaScript enhancement — a left-click still opens the drawer, while a crawler, a no-JS visitor, a middle-click and a ⌘/Ctrl-click reach the product page. Since `#830` a listing page carried **zero** `href="/products/…"`. Title-only; the stretched card-wide variant was rejected.
+  - `#955`: `app/sitemap.ts` listed only `/`. It now emits six static paths plus every active category and product for the vendor the request host resolves to, every URL built on **the requesting host**, with an empty document for a host that resolves to no vendor. No `lastModified` anywhere: `Product` has no `updatedAt`, so there is no truthful value — including on `/`, which previously claimed to change on every fetch.
+  - `#955`: `app/robots.ts` no longer compares the request host to a hardcoded `PRODUCTION_HOST`, which de-indexed **every vendor but the first** in production (`https://srimart.nocaped.com/robots.txt` served `Disallow: /`). Indexability now comes from `SEO_INDEXABLE`, a committed `wrangler.toml` var declared for production only, so staging and local stay closed by being unconfigured. The indexable response also disallows `/account`, `/cart`, `/checkout`, `/orders/lookup` and `/dev`; `/` was allowed wholesale before.
+  - `#996`: `generateMetadata` on `/products/[slug]` and `/categories/[slug]` — a title and description per record and an **absolute** canonical on the requesting host (no `metadataBase` exists, and a relative value is a build error in this Next version). Both routes previously inherited one vendor-level `<title>` for every product. Each returns `{}` rather than naming a vendor when a read fails, so a DB blip cannot turn a product page into a 500.
+  - `#994`: `hooks/pre-commit` exempts the generated `app/(admin)/staff/runbook/docs.ts` from its source-path test, resolving the dead end where committing the regenerated artefact failed Gate 2 and omitting it failed CI's `kms:check-generated`. Exact paths, not a pattern: a hand-authored file staged alongside is still refused.
+  - New `lib/page-metadata.ts`, `lib/repositories/products.ts`'s `listActiveProductSlugs`, `scripts/verify-crawlability.ts`, and `tests/{sitemap,robots,page-metadata,config-seo}.test.ts`. `tests/product-card-stretched-link.test.tsx` is rewritten as `tests/product-card-anchor.test.tsx` — its first case asserted "renders no link navigating to a separate product detail page", the `#830` regression itself. `app/robots.ts` and `app/sitemap.ts` are now in `tests/vendor-neutral-copy.test.ts`'s file list; being `.ts` is how a hardcoded vendor host survived that guard. `docs/developer-portal/env-setup.md` 1.16.0, `app-conventions.md` 1.6.0, `sdd/operator-runbook.md` 1.1.0.
+  - Found and filed, not fixed here: `#997` (`StorefrontChrome` falls back to one vendor's staging host, so referral links can name the wrong vendor) and `#998` (Gate 2 has no CI enforcement at all — `hooks/pre-commit` is the only check).
 
 - **Checkout and cart honesty: a typed code and points in the total, no own referral code, and a notice when a reorder or cancel puts back less** (issues `#973`, `#957`, `#753`, `#972`; `specs/2026-10-05-p973-957-753-972-checkout-cart-honesty/`). No schema change.
   - `#972`: `previewCode` refuses a `REF-` code whose description names the claiming shopper (`OWN_REFERRAL_CODE`, "You can't use your own referral code."), ahead of every other reason, so `claimCode`, `placeOrder` and the checkout preview all refuse it.

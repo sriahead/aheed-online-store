@@ -4,7 +4,7 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.5.0"
+version: "1.6.0"
 updated: 2026-10-05
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), vendor-neutral user-facing copy, form-field autocomplete tokens, and React hooks — together with the tests that enforce each invariant mechanically.
@@ -325,6 +325,45 @@ store's staff reads must be right for **any** vendor.
   takes only the code string and resolves the cart, method, delivery rules and shopper itself. Do not
   add a second preview path, and do not let a client send a subtotal or fee.
 - Enforced by `tests/checkout-code-apply.test.tsx` and `tests/checkout-prefilled-code.test.tsx`.
+
+## Crawlability: links, sitemap, robots and page metadata (`#955`, `#996`)
+
+- **A product card's title is a real `<a href="/products/[slug]">`, with Quick View layered on top
+  as a JavaScript enhancement.** `components/product/ProductCard.tsx`'s handler calls
+  `preventDefault()` and then `openQuickView()`, so a left-click opens the drawer and every path
+  that does not run the handler — a crawler, a visitor with JavaScript off, a middle-click, a
+  ⌘/Ctrl-click — follows the `href`. **Do not replace it with a `<button>` again:** `#830` did, and
+  for the next six weeks a listing page contained zero `href="/products/…"`, so the product route
+  existed with nothing on the site pointing at it. The anchor covers the **title text only**, with
+  no `after:inset-0` overlay; `tests/product-card-anchor.test.tsx` asserts both halves.
+- **`app/robots.ts` decides indexability from the environment, never from the request host.**
+  `isIndexable()` reads `SEO_INDEXABLE` (`lib/config.ts`); the request's own host only decides
+  which `Sitemap:` URL to publish. Comparing the host to a hardcoded production hostname makes "is
+  this production?" and "is this the first vendor?" one question, which de-indexed every other
+  vendor in production. See `docs/developer-portal/env-setup.md` for where the variable lives.
+- **`app/sitemap.ts` and `app/robots.ts` must keep reading request headers.** Next treats these as
+  Route Handlers that are **cached by default** unless they use a request-time API, so dropping the
+  header read makes them static: one vendor's URL list served to every host, with nothing failing
+  locally. `npm run build` labelling them `ƒ (Dynamic) server-rendered on demand` is the check.
+  Do not add a `revalidate` to either.
+- **`app/robots.ts` and `app/sitemap.ts` are named explicitly in
+  `tests/vendor-neutral-copy.test.ts`'s file list.** That guard walks `app/**/*.tsx`, and these are
+  `.ts` — which is precisely how `app/robots.ts` carried a hardcoded vendor hostname for months
+  with the guard green. **Do not widen the glob to all `.ts` under `app/`**: the generated
+  `app/(admin)/staff/runbook/docs.ts` is deliberately outside it because it quotes spec prose. Add
+  a new `.ts` file under `app/` to that list by hand if it emits user-visible strings or URLs.
+- **A sitemap entry carries no `lastModified`.** `Product` has `createdAt` and no `updatedAt`, and
+  `Category` has neither, so there is no truthful value; `createdAt` would assert a false date
+  after any edit. Publishing a trustworthy one needs a schema change, not a guess.
+- **A detail route's `generateMetadata` builds its canonical URL as an ABSOLUTE URL on the
+  requesting host.** No `metadataBase` is configured anywhere in this app, and in this version of
+  Next a relative value in a URL-based metadata field without `metadataBase` is a **build error**.
+  Both builders live in `lib/page-metadata.ts`, are pure, and take `vendorName` as a **required**
+  parameter — never defaulted, per the copy rule above.
+- **A `generateMetadata` that cannot read its record or the vendor returns `{}`**, letting the
+  layout's metadata stand, rather than throwing or naming a vendor. It runs on the request path, so
+  an uncaught rejection turns a product page from 200 into 500 because its `<head>` could not be
+  built.
 
 ## React and Next.js hooks
 
