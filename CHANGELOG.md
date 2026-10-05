@@ -6,6 +6,13 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **Document-stage reconciliation for PR #993 (`#973`, `#957`, `#753`, `#972` promoted to production, merge `6dca917`).** Docs only.
+  - `specs/roadmap.md` 1.134.0: the row for the PR #993 promotion — both deploys green, production `/api/health` serving `6dca917` on Aheed and SriMart, all four issues `CLOSED (COMPLETED)`, and the rows still without live proof.
+  - `docs/model-handoff.md` 1.70.0: `main` is `6dca917` and `Last Verified` is 2026-10-05 with health figures actually re-read; slice 6 recorded as in production rather than awaiting promotion; `#991` restated as load-bearing now that the referral behaviour is live; the stale claim that `#957` was still in Backlog corrected.
+  - `docs/developer-portal/local-dev-playbook.md` 1.22.0: Windows `curl`/schannel returns exit 35 or an empty body on a healthy endpoint, so a post-deploy health read must be retried before a vendor is called down.
+
 ### Added
 
 - **Checkout and cart honesty: a typed code and points in the total, no own referral code, and a notice when a reorder or cancel puts back less** (issues `#973`, `#957`, `#753`, `#972`; `specs/2026-10-05-p973-957-753-972-checkout-cart-honesty/`). No schema change.

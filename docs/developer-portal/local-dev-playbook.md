@@ -4,7 +4,7 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.21.0"
+version: "1.22.0"
 updated: 2026-10-05
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
@@ -32,6 +32,16 @@ the evidence and the recipe.
   Edit tool. **Use the Edit/Write tools for file content; keep PowerShell for git, npm and gh.**
 - **Check `git diff --numstat` after any scripted file rewrite.** A line count far larger than the
   edit is the cheapest possible signal that an encoding or line-ending rewrite happened.
+- **A `curl` read of a deployed `/api/health` intermittently fails on this machine, and the failure
+  impersonates an outage.** Windows `curl` uses schannel, which sometimes aborts a TLS
+  renegotiation: the call exits **35** (`curl: (35)`) or returns an **empty body** with no error at
+  all. Measured 2026-10-05 against `srimart.nocaped.com/api/health` — the same request under `-v`
+  logged `schannel: renegotiating SSL/TLS connection` and then `HTTP/1.1 200 OK`, and a plain retry
+  returned the full healthy body (`commit 6dca917`, `db.ok: true`). **Never report a vendor or
+  environment down on a single empty body or exit 35.** Retry two or three times, or read the
+  verbose output, before concluding anything; prefer a short retry loop when a `/validate` or
+  `/ship` row depends on the answer. The trap is worst at Ship, where a post-deploy health read is
+  the evidence that a promotion worked, and a false negative invites a rollback nobody needs.
 - **`format:check` failing on dozens of untouched files was the `core.autocrlf` artifact — FIXED in
   PR #328 (`.gitattributes`, #327), so it is no longer the expected explanation.** `eol=lf` now pins
   the working tree, which is what makes local Prettier agree with CI; `git add --renormalize .`
