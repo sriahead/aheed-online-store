@@ -5,6 +5,8 @@ import { getProductRepository } from "@/lib/products-service";
 import { getReviewRepository } from "@/lib/reviews-service";
 import { getAuth } from "@/lib/auth";
 import { getEnv } from "@/lib/config";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { buildProductMetadata } from "@/lib/page-metadata";
 import { formatPrice } from "@/components/product/format-price";
 import { deriveUnitPriceLabel } from "@/components/product/unit-price";
 import { ProductImageGallery } from "@/components/product/ProductImageGallery";
@@ -18,6 +20,44 @@ import { deleteReview } from "@/features/reviews/delete-review";
 export const dynamic = "force-dynamic";
 
 const REVIEWS_SHOWN = 20;
+
+/**
+ * #996 — this route's own title, description and canonical.
+ *
+ * Without it the page inherited `app/layout.tsx`'s vendor-level metadata, so every product on a
+ * vendor shared one `<title>`. The two reads here are request-memoised (`getCurrentVendorProfile`
+ * via React `cache()`, and the repository's own per-instance memoisation), so this costs the page
+ * no extra round-trip beyond what its body already issues.
+ *
+ * RETURNS `{}` RATHER THAN NAMING A VENDOR when anything cannot be read. `app/layout.tsx`'s
+ * metadata then stands, which is the same degradation it already performs for a DB hiccup — a
+ * database blip must not turn a product page from 200 into 500. It deliberately does NOT use the
+ * `profile?.name ?? "Aheed Food Centre"` fallback that `app/(storefront)/categories/page.tsx`
+ * uses: a host with no vendor is redirected to `/coming-soon`, so the fallback would never be read
+ * by a shopper, and naming one vendor on another's host is the defect this slice is removing
+ * elsewhere.
+ */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  try {
+    const { slug } = await params;
+    const host = (await headers()).get("host");
+    const [product, profile] = await Promise.all([
+      getProductRepository().getBySlug(slug),
+      getCurrentVendorProfile(),
+    ]);
+    if (!host || !product || !profile) return {};
+
+    return buildProductMetadata({
+      host,
+      slug,
+      name: product.name,
+      description: product.description,
+      vendorName: profile.name,
+    });
+  } catch {
+    return {};
+  }
+}
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

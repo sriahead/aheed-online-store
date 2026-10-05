@@ -4,8 +4,8 @@ title: SDD Operator Runbook
 audience: [dev]
 type: runbook
 status: approved
-version: "1.0.0"
-updated: 2026-08-25
+version: "1.1.0"
+updated: 2026-10-05
 visibility: internal
 summary: Human-executable manual for the SDD delivery loop — Orient, Propose, Spec, Build, Document, Validate, Fix, Ship, Document — covering what each stage does behind the scenes, how to run it by hand, how to verify it worked, and how to diagnose and recover when it doesn't.
 tags: [runbook, sdd, workflow, process, operations]
@@ -180,6 +180,16 @@ un-merge a stale artefact — it only withholds whatever fix that push carries. 
 shows as a red `kms` job with `::error::` annotations. Everything in the `quality` job stays
 blocking on both paths. Before this, `deploy-production` ran **no** KMS checks at all, on the
 strength of a claim that the staleness check needed `github.base_ref`; it never did.
+
+**Gate 2 has no CI check at all — `hooks/pre-commit` is its only enforcement** (verified
+2026-10-05, `#994`). No workflow in `.github/workflows/` references `requirements.md`. Until that
+date `hooks/pre-commit`'s own header claimed "local fast feedback; gates.yml is the real
+enforcement", which was false and invited exactly the wrong conclusion: a `--no-verify` on that
+hook is a bypass of the gate, not of a local convenience, and a contributor who has not run
+`scripts/bootstrap.sh` (so has no `core.hooksPath`) is not subject to Gate 2 in any form. The
+`#994` exemption for generated KMS artefacts is therefore written as a list of **exact paths**
+rather than a pattern. Adding a real CI check is tracked separately — see the issue referenced
+from `#994` — `#998`.
 
 **What it deliberately does not run**, because it would slow down every PR for something only a
 minority touch: the internal docs site build (`kms:assemble:internal` + a real Next build in

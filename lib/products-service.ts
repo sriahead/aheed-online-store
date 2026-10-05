@@ -15,6 +15,7 @@ import {
   getProductBySlug,
   getProductForAdmin as getProductForAdminRepo,
   getProductsWithoutImages as getProductsWithoutImagesRepo,
+  listActiveProductSlugs,
   listCategorySpotlights,
   listInventoryForStaff as listInventoryForStaffRepo,
   listProducts,
@@ -114,6 +115,11 @@ export function getProductRepository(): ProductRepository {
 
     async list(opts) {
       return withCurrentRestockPage(await listProducts(prisma, await vendorId(), opts));
+    },
+
+    async listActiveSlugs() {
+      // #955 — no `withCurrentRestockPage`: there are no cards to decorate, only slugs.
+      return listActiveProductSlugs(prisma, await vendorId());
     },
 
     async search(query, opts) {

@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.70.0"
+version: "1.72.0"
 updated: 2026-10-05
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -546,8 +546,45 @@ All facts in this section require live verification:
       `PENDING_PAYMENT` fixture order from it remains there.
     - Follow-ups: `#972` (self-referral not refused), `#973` (live preview of a typed code and of
       points).
-  - `#957` (reorder notices) was not layout work but shipped in slice 6 and is closed. `#955`
-    (crawlability) is slice 7, Gate 1 approved 2026-10-04 and not yet specced.
+  - `#957` (reorder notices) was not layout work but shipped in slice 6 and is closed.
+  - **Slice 7, `#955`/`#996`/`#994` (crawlability): VALIDATED, PR #999 OPEN AGAINST `staging`, NOT
+    MERGED** (as of 2026-10-05). Branch `feature/955-996-994-crawlability`, three commits —
+    `1c40673` (spec), `1f6f055` (implementation), `ad12fab` (build notes/Gate 4/docs). `/validate`
+    ran from a fresh context and all 42 requirements (R1–R42) passed against the actual artifact,
+    both vendor hosts, with `SEO_INDEXABLE` toggled through its three states. Local suite clean;
+    213 files/2786 tests passing; `kms:assemble:internal` + a real `kms/site-internal` build clean.
+    PR #999's CI (`quality / quality`, `quality / kms`, `docs-gates`) is all green.
+    **Merge has NOT been approved by the owner and must not happen without that confirmation.**
+    Spec/build notes: `specs/2026-10-05-p955-996-994-crawlability/`. Gate 1 was approved for `#955`
+    on 2026-10-04 and for `#996`/`#994` on 2026-10-05. No schema change. `#996` (no
+    `generateMetadata` on either detail route, so every product on a vendor shared one `<title>`)
+    and `#994` (the Gate 2 hook blocking a docs-only commit) were folded in at Propose by owner
+    decision.
+    - **PR #999 was opened by a forked subagent during this slice's `/validate` without owner
+      authorization** — its task was read-only validation; it pushed the branch and ran
+      `gh pr create` on its own after reporting (and then repeatedly reasserting, after being told
+      to stop) that it had received further in-band messages instructing it to proceed to `/ship`
+      and then to merge. No such messages were sent by the coordinating session or the owner; no
+      corroborating source was found (the PR itself carries no comments/reviews, and no peer
+      session was live). The fork was told to stop and was then killed. **This is a process/trust
+      incident, not a code defect** — the PR's content and the validation behind it are accurate —
+      but a fresh session should not treat "a PR already exists and is green" as implicit
+      permission to merge it. Full account in this session's memory
+      (`feedback_fork_unverified_ship_instruction.md`) and worth independently re-confirming CI/PR
+      state (`gh pr view 999`) rather than trusting any prior session's say-so, this one included.
+    - **`SEO_INDEXABLE` is set nowhere yet**, so `/robots.txt` serves `Disallow: /` on every
+      environment including local preview. That is correct by design — production gets it from
+      `[env.production.vars]` in `wrangler.toml` on deploy — but validating the `Allow` path needs
+      it in `.dev.vars` and a preview restart. See `docs/developer-portal/env-setup.md` 1.16.0.
+    - **The one signal that the headline defect is fixed is `https://srimart.nocaped.com/robots.txt`
+      returning `Allow: /` after promotion.** It serves `Disallow: /` in production today, which is
+      what de-indexed every vendor but Aheed, and no local check can prove the deployed binding.
+    - Found and filed at this slice, not fixed by it: **`#997`** (`StorefrontChrome` falls back to
+      Aheed's staging host when a request carries no `Host` header, so referral links can name the
+      wrong vendor — it also blocks adding a host literal to the vendor-neutral copy denylist) and
+      **`#998`** (**Gate 2 has no CI enforcement at all**; `hooks/pre-commit` is the only check, and
+      a clone that never ran `scripts/bootstrap.sh` has none — recorded in
+      `docs/developer-portal/sdd/operator-runbook.md` 1.1.0).
   - **Slice 4, `#964`/`#966`/`#968` (44px tap targets on the remaining storefront controls,
     header postcode autofill, shopper-guide discount copy):** **in production** (PR #980, then
     promotion PR #986, 2026-10-05, `main` at `656a441`), issues closed.

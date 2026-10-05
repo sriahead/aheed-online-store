@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { AlertTriangle, Eye } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { CartQuantityStepper } from "@/components/cart/CartQuantityStepper";
@@ -26,20 +27,29 @@ import type { ProductSummary } from "@/lib/repositories/products";
  * (`lib/cart-summary.ts`), so a grid of these costs no extra query — the header
  * on the same page already resolved the cart.
  *
- * #351/#656 — STRETCHED LINK, NOT A CARD-WIDE ANCHOR. `AddToCartButton` and
+ * #351/#656/#955 — TITLE-ONLY ANCHOR, NOT A CARD-WIDE ONE. `AddToCartButton` and
  * `CartQuantityStepper` render real `<button>` elements, and HTML forbids
  * interactive content inside `<a>`. The card used to wrap everything in one
  * `<Link>` and rely on every handler calling `preventDefault()`/
  * `stopPropagation()` to stop the click reaching the anchor — correctness
  * resting entirely on that discipline never lapsing. `Card`'s `variant="product"`
  * now carries `.skew-card` + `group` on a plain `<div>` (exactly the shape
- * `components/bundle/BundleCard.tsx` already uses in production), the title
- * is the only `<Link>` and covers the whole card via `after:absolute
- * after:inset-0` against `Card`'s `position: relative`, and the price/cart
- * controls are a SIBLING of that link carrying `relative z-10` so their
- * clicks land instead of being swallowed by the link's overlay — the standard
- * stretched-link technique. No JavaScript stopPropagation needed any more
- * (R13; `AddToCartButton`/`CartQuantityStepper` no longer call it).
+ * `components/bundle/BundleCard.tsx` already uses in production), and the
+ * price/cart controls stay a SIBLING of the title link rather than a
+ * descendant of it, carrying `relative z-10`.
+ *
+ * HISTORY WORTH KNOWING, because this comment has been wrong before. #351/#656
+ * made the title a stretched link covering the whole card via `after:absolute
+ * after:inset-0`. #830 then replaced the link with a `<button>` that opened
+ * Quick View and left this paragraph describing the stretched link as though it
+ * were still there — so the file simultaneously claimed the title was "the only
+ * `<Link>`" and, twelve lines above the markup, that there was "no navigation to
+ * separate product detail page". #955 restored a real `href` (a crawler and a
+ * no-JS visitor had no route to a product page at all), but deliberately
+ * WITHOUT the `after:inset-0` overlay, so the anchor is the title text only.
+ * The `relative z-10` on the price/cart row is therefore no longer load-bearing
+ * for click routing; it is kept because it is harmless and because a future
+ * slice may restore the stretched variant, which would need it again.
  */
 export function ProductCard({
   product,
@@ -219,15 +229,33 @@ export function ProductCard({
               </div>
             )}
 
-            {/* Title — triggers Quick View drawer; no navigation to separate product detail page */}
+            {/*
+              Title — a REAL link to the product page, with Quick View layered on top as a
+              JavaScript enhancement (#955, owner ruling 2026-10-04).
+
+              A left-click still opens the drawer, because the handler calls `preventDefault()`
+              first; everything that does not run that handler — a crawler, a visitor with
+              JavaScript off, a middle-click, a ⌘/Ctrl-click — follows the `href` to
+              `/products/[slug]` instead. That is the whole point: between #830 and this change a
+              listing page contained zero `href="/products/…"`, so product pages were unreachable
+              from anywhere a shopper or a crawler actually starts.
+
+              THE ANCHOR COVERS THE TITLE TEXT ONLY — no `after:absolute after:inset-0`. The
+              stretched variant described in this file's header comment was considered and
+              rejected at /propose: it would re-enable card-wide hit-testing that #830 removed and
+              that #964/#979 never measured in that shape.
+            */}
             <h3 className="line-clamp-2 text-sm leading-tight font-semibold text-black/90 transition-colors group-hover:text-primary">
-              <button
-                type="button"
-                onClick={() => openQuickView(product.slug, product)}
+              <Link
+                href={`/products/${product.slug}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  openQuickView(product.slug, product);
+                }}
                 className="text-left font-semibold text-black/90 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action rounded-xs"
               >
                 {product.name}
-              </button>
+              </Link>
             </h3>
 
             <p className="mt-0.5 text-xs text-black/60">{unitDisplay}</p>
@@ -269,10 +297,11 @@ export function ProductCard({
             )}
           </div>
 
-          {/* Price & cart controls — a SIBLING of the title's stretched link,
-              not a descendant of it (R11). `relative z-10` lifts this above
-              the link's `after:inset-0` overlay so a click on the stepper or
-              add-to-cart button registers instead of navigating. */}
+          {/* Price & cart controls — a SIBLING of the title link, never a descendant of it
+              (R11): these render real `<button>` elements and HTML forbids interactive content
+              inside an `<a>`. `relative z-10` no longer has an overlay to sit above, since
+              #955's anchor covers the title text only; it is kept deliberately — see this
+              file's header comment. */}
           <div className="relative z-10 mt-3 flex flex-col gap-2 border-t border-black/5 pt-2">
             <div className="skew-card-price flex flex-wrap items-baseline gap-1.5">
               <span className="text-base font-bold text-primary">

@@ -396,6 +396,11 @@ export interface ProductRepository {
   list(opts: { take: number; cursor?: string } & ProductFilters): Promise<ProductPage>;
   getBySlug(slug: string): Promise<ProductDetail | null>;
   /**
+   * #955 — every active product's slug, unpaginated, for `app/sitemap.ts`. See
+   * `listActiveProductSlugs` for why this is slug-only and why it takes no `take`/`cursor`.
+   */
+  listActiveSlugs(): Promise<string[]>;
+  /**
    * Drives per-vendor filter visibility — a food vendor shows Halal/Fresh/Organic; a tech one
    * shows none. Since #568 it also narrows to the CURRENT result context (search terms, category,
    * price, in-stock), so a control that would return nothing is not offered. Omit the argument for
@@ -742,6 +747,32 @@ export async function listProductsByUnitPrice(
   );
 
   return rows.map((r) => toProductSummary(r, tiers.get(r.id) ?? null));
+}
+
+/**
+ * #955 — every active product's slug for this vendor, for `app/sitemap.ts`.
+ *
+ * SLUG ONLY, AND DELIBERATELY NOT `productSummarySelect`. A sitemap needs one string per product
+ * and nothing else: no images, no price, no attribute values, and in particular no
+ * `listActiveTiersForProducts` follow-up query, which every other listing here pays for because it
+ * renders a card. It is also unpaginated, unlike `listProducts`, because a sitemap that stopped at
+ * a page boundary would silently hide the rest of the catalogue — which is the defect `#955` exists
+ * to fix, in a different form.
+ *
+ * No `lastModified` is derived from these rows on purpose: `Product` has `createdAt` and no
+ * `updatedAt`, so there is no truthful last-modified date to publish, and `createdAt` would assert
+ * a false one after any edit. See `app/sitemap.ts`.
+ */
+export async function listActiveProductSlugs(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+): Promise<string[]> {
+  const rows = await prisma.product.findMany({
+    where: { vendorId, isActive: true },
+    orderBy: { slug: "asc" },
+    select: { slug: true },
+  });
+  return rows.map((row) => row.slug);
 }
 
 /**
