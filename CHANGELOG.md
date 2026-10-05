@@ -25,6 +25,11 @@ every branch merges.
   - `#967`: `previewCode` is `claimCode`'s lookup and evaluation without the reservation, and `claimCode` now calls it. Checkout previews the referral cookie's code, so the summary and the mobile total include its discount (`Discount (CODE)`), or the reason it can't apply (for example, sign in first) shows under the field. Rendering checkout never uses a code up.
   - `scripts/verify-mobile-layout.ts` gains `documentScrollWidth` and `cartFeedback`. `docs/shopper-help/shopping-guide.md` 1.2.0 and `docs/developer-portal/app-conventions.md` 1.4.0 are updated. Follow-ups: `#972` (a shopper can redeem their own referral code) and `#973` (live preview of a typed code and of points).
 
+- **Document-stage reconciliation for PR #984 (`#979`, `#655` merged to `staging`, merge `e79203e`).** Docs only.
+  - `specs/roadmap.md` 1.132.0: the row for PR #984, with the validation result and the header-logo fallback deviation.
+  - `docs/model-handoff.md` 1.67.0: slice 5 recorded as merged to `staging` only, promotion outstanding; follow-ups `#981`, `#982`, `#983`.
+  - `docs/developer-portal/local-dev-playbook.md`: phone-width measurement traps. The rebuilt `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts` are included.
+
 - **Document-stage reconciliation for PR #974 (`#956`, `#967` merged to `staging`, merge `2258976`).** Docs only.
   - `specs/roadmap.md` 1.128.0: the row for PR #974, with the live-proof results and the two deviations.
   - `docs/model-handoff.md` 1.62.0: slice 3 recorded as merged to `staging` only, promotion outstanding; `#956` no longer queued.
