@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.15.0"
-updated: 2026-09-28
+version: "1.16.0"
+updated: 2026-10-05
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -31,6 +31,38 @@ Beyond the original list: **`S3_REGION`** is required by ADR-003's storage contr
 (keep it set as a safe default; it's used only when a request has no host header).
 `DIRECT_URL` (direct, non-pooled) is a **GitHub** secret for CI migrations; `DATABASE_URL` (pooled)
 is a **Worker** secret for runtime — never the reverse (see `CLAUDE.md`).
+
+### A third category: committed `wrangler.toml` vars (neither store)
+
+Two variables are in **neither** store, because they are not secrets and there is nothing
+confidential about either. They are declared in `wrangler.toml` under `[env.<env>.vars]`, so
+`wrangler deploy` carries them and **no `wrangler secret put` or `gh secret set` step exists for
+them at all**:
+
+| Variable | Declared for | Meaning |
+|---|---|---|
+| `UK_LOCATION_REF_POSTCODE_AREAS` | staging **and** production | the demand-driven postcode-area coverage list (`#767`/`#771`) |
+| `SEO_INDEXABLE` | **production only** | whether `app/robots.ts` serves `Allow: /` (`#955`) |
+
+**`SEO_INDEXABLE` is deliberately absent from `[env.staging.vars]`, and that asymmetry is the
+design, not an oversight.** `lib/config.ts`'s `isIndexable()` is true only when the value is
+exactly the string `"true"`, so staging, preview and local are non-indexable **by being
+unconfigured**. Adding it to the staging block would publish staging to search engines. Before
+`#955`, `app/robots.ts` decided indexability by comparing the request host against a hardcoded
+`PRODUCTION_HOST = "aheedfoodcentre.nocaped.com"`, which made "is this production?" and "is this
+the first vendor?" the same question and served `Disallow: /` to every other vendor in production.
+
+The reason these are committed rather than added through the Cloudflare dashboard is the trap
+recorded under "Config precedence" below: **`wrangler deploy` rebuilds a Worker's `vars` set
+entirely from `wrangler.toml`**, while secrets persist independently. A dashboard-added plain-text
+var does not survive the next deploy — which is exactly how `UK_LOCATION_REF_POSTCODE_AREAS` was
+silently dropped from the deployed staging Worker once.
+
+**To verify `SEO_INDEXABLE` reached a deployed environment, read the route, not the config.** A
+local env file proves nothing about a Worker: `curl -s https://<any vendor host>/robots.txt` should
+return `Allow: /` plus a `Sitemap:` line naming **that same host** in production, and `Disallow: /`
+everywhere else. Checking a single host cannot detect the multi-tenancy half, so check a second
+vendor.
 
 ## One Neon project per environment (isolation)
 
