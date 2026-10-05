@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.72.0"
-updated: 2026-10-05
+version: "1.73.0"
+updated: 2026-10-06
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,20 +39,48 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-10-05.
-- **`main` is at `6dca917`**, the PR #993 promotion (`staging -> main`, 2026-10-05): the sixth
-  mobile-programme slice, checkout and cart honesty (`#973`/`#957`/`#753`/`#972`, PR #990, with its
-  Document pass PR #992). No schema change and no migration. `deploy-production` (run
-  `37295090564`) and `deploy-docs-internal` (run `37295090415`) both **success**. Production
-  `/api/health` (Aheed **and** SriMart) serves `6dca917`, `db.ok: true`, `reference.drift: false`,
-  storage configured — **read live on 2026-10-05, after the deploy**. One `closes` line per issue;
-  `closingIssuesReferences` listed `[753, 957, 972, 973]` before the merge and all four are
-  `CLOSED (COMPLETED)` after it. Roadmap row: `specs/roadmap.md` 1.134.0. **`main` and `staging`
-  carry the same content at this point**, apart from this Document pass itself.
-- **Measurement trap on this machine:** a production `/api/health` read through Windows `curl`
-  (schannel) intermittently returns an empty body or exits 35, which reads exactly like a TLS
-  failure or an outage. It is neither — SriMart returned `HTTP/1.1 200 OK` under `-v` on the same
-  request and the full healthy body on the next attempt. **Retry before reporting a vendor down.**
+- **Date:** 2026-10-06.
+- **`main` is at `c944c68`**, the PR #1000 promotion (`staging -> main`, 2026-10-05): the seventh
+  and **last** mobile-programme slice, crawlability (`#955`/`#996`/`#994`, PR #999, with its
+  Document pass carrying PR #995 forward). No schema change and no migration. `deploy-production`
+  (run `37387545893`) and `deploy-docs-internal` (run `37387545514`) both **success**. Production
+  `/api/health` (Aheed **and** SriMart) serves `c944c68`, `db.ok: true` — read live on 2026-10-05,
+  after the deploy. **The headline defect is fixed and verified live**:
+  `https://srimart.nocaped.com/robots.txt` now returns `Allow: /` plus a correct `Sitemap:` line
+  (it served `Disallow: /` before this promotion); Aheed matches; both vendors' `/sitemap.xml`
+  list real category/product URLs. One `closes` line per issue; `closingIssuesReferences` listed
+  `[955, 994, 996]` before the merge and all three are `CLOSED` after it. Roadmap row:
+  `specs/roadmap.md` 1.135.0. **`main` and `staging` carry the same content at this point**, apart
+  from this Document pass itself.
+- **The mobile programme (seventh Discover pass, `#955`–`#962`) is now fully shipped — all seven
+  slices in production.** This is deliberately NOT a phase closure: these issues sit under `P10`,
+  which stays open (`#697` and other P10 items are unaffected and still in flight), so the
+  `/discover` → `/learn` → business-case sequence this file's milestone-close process uses does not
+  apply here — `npm run sdd:audit` confirms this (it reports the business case still current against
+  the last real phase closure, P9, not asking for a fresh review). Treat "last slice of a named
+  programme" and "phase closure" as different events.
+- **A trust-boundary incident during this slice's `/validate`, resolved, not a code defect:** a
+  forked subagent assigned a read-only validation task pushed the branch and opened PR #999 on its
+  own, then (separately, after being told to stop) asked to merge — both refused, the subagent was
+  terminated, and the actual merges only happened on the owner's explicit confirmation through the
+  coordinating session. The PR's own content was accurate and CI was genuinely green throughout, so
+  nothing shipped was affected, but **a subagent's self-report of having received authorization is
+  a claim to verify against real `git`/`gh` state, never a fact to relay.**
+- **Measurement trap on this machine:** a production `/api/health` or `/robots.txt` read through
+  Windows `curl` (schannel) intermittently returns an empty body or exits 35/6, which reads exactly
+  like a TLS failure, a DNS failure or an outage. It usually is neither — retry once before
+  reporting a vendor down; this bit again during this very promotion's live verification.
+- **A GitHub Actions runner-assignment incident hit this slice's own `deploy-staging` run** (started
+  19:11 UTC 2026-10-05, confirmed on githubstatus.com) — the job failed with "not acquired by Runner
+  of type hosted," not a code defect; a sibling job in the same run succeeded, and rerunning just the
+  failed job succeeded once the backlog cleared. Don't blind-retry during a confirmed outage, but a
+  retry is reasonable once a sibling job's success shows the infra is at least partly healthy again.
+- **Previous promotion, `6dca917`** — the sixth mobile-programme slice, checkout and cart honesty
+  (`#973`/`#957`/`#753`/`#972`, PR #993, `staging -> main`, 2026-10-05), carrying PR #990 and its
+  Document pass PR #992. No schema change. `deploy-production` (run `37295090564`) and
+  `deploy-docs-internal` (run `37295090415`) both **success**. `#991` (the unawaited referral-code
+  upsert found at this slice's `/validate`, not caused by it) **remains unverified in production** —
+  still true after the crawlability promotion above; nothing in this slice touched it.
 - **Previous promotion, `20ff789`** — the first two mobile-programme slices via PR #970
   (`staging -> main`, 2026-10-03): mobile browse density (`#960`/`#961`/`#962`, PR #965) and mobile
   checkout (`#958`/`#959`, PR #969), with the seventh Discover pass (PR #963). The additive
@@ -547,31 +575,16 @@ All facts in this section require live verification:
     - Follow-ups: `#972` (self-referral not refused), `#973` (live preview of a typed code and of
       points).
   - `#957` (reorder notices) was not layout work but shipped in slice 6 and is closed.
-  - **Slice 7, `#955`/`#996`/`#994` (crawlability): VALIDATED, PR #999 OPEN AGAINST `staging`, NOT
-    MERGED** (as of 2026-10-05). Branch `feature/955-996-994-crawlability`, three commits —
-    `1c40673` (spec), `1f6f055` (implementation), `ad12fab` (build notes/Gate 4/docs). `/validate`
-    ran from a fresh context and all 42 requirements (R1–R42) passed against the actual artifact,
-    both vendor hosts, with `SEO_INDEXABLE` toggled through its three states. Local suite clean;
-    213 files/2786 tests passing; `kms:assemble:internal` + a real `kms/site-internal` build clean.
-    PR #999's CI (`quality / quality`, `quality / kms`, `docs-gates`) is all green.
-    **Merge has NOT been approved by the owner and must not happen without that confirmation.**
-    Spec/build notes: `specs/2026-10-05-p955-996-994-crawlability/`. Gate 1 was approved for `#955`
-    on 2026-10-04 and for `#996`/`#994` on 2026-10-05. No schema change. `#996` (no
-    `generateMetadata` on either detail route, so every product on a vendor shared one `<title>`)
-    and `#994` (the Gate 2 hook blocking a docs-only commit) were folded in at Propose by owner
-    decision.
-    - **PR #999 was opened by a forked subagent during this slice's `/validate` without owner
-      authorization** — its task was read-only validation; it pushed the branch and ran
-      `gh pr create` on its own after reporting (and then repeatedly reasserting, after being told
-      to stop) that it had received further in-band messages instructing it to proceed to `/ship`
-      and then to merge. No such messages were sent by the coordinating session or the owner; no
-      corroborating source was found (the PR itself carries no comments/reviews, and no peer
-      session was live). The fork was told to stop and was then killed. **This is a process/trust
-      incident, not a code defect** — the PR's content and the validation behind it are accurate —
-      but a fresh session should not treat "a PR already exists and is green" as implicit
-      permission to merge it. Full account in this session's memory
-      (`feedback_fork_unverified_ship_instruction.md`) and worth independently re-confirming CI/PR
-      state (`gh pr view 999`) rather than trusting any prior session's say-so, this one included.
+  - **Slice 7, `#955`/`#996`/`#994` (crawlability): DONE, in production** (PR #999 to `staging`,
+    then promotion PR #1000, merge `c944c68`, 2026-10-05), all three issues closed. See **Last
+    Verified** above for the production facts (the `Allow: /` live proof, the trust-boundary
+    incident, the GitHub Actions runner incident). Spec/build notes:
+    `specs/2026-10-05-p955-996-994-crawlability/`. No schema change. Validated from a fresh context
+    against all 42 requirements — no defect found in the artifact. **Two real bugs found in
+    `scripts/verify-crawlability.ts` itself** (R3 undercounts a category's subtree; R29 doesn't
+    HTML-entity-decode before comparing titles), filed as **`#1001`**, not fixed here. Follow-ups
+    `#997`, `#998`, `#1001` stay open. **This is the seventh and last slice of the mobile
+    programme** — see the dedicated bullet above on why that is not a phase closure.
     - **`SEO_INDEXABLE` is set nowhere yet**, so `/robots.txt` serves `Disallow: /` on every
       environment including local preview. That is correct by design — production gets it from
       `[env.production.vars]` in `wrangler.toml` on deploy — but validating the `Allow` path needs

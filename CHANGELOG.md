@@ -8,6 +8,11 @@ every branch merges.
 
 ### Changed
 
+- **Document-stage reconciliation for PR #1000 (`#955`, `#996`, `#994` promoted to production, merge `c944c68`).** Docs only.
+  - `specs/roadmap.md` 1.135.0: rows for the PR #999 staging merge and the PR #1000 promotion — both CI runs green (the staging deploy's first attempt hit a live GitHub Actions runner-assignment incident, not a code defect, and succeeded on retry), production `/robots.txt` confirmed serving `Allow: /` on SriMart (the headline defect this slice fixes) and on Aheed, all three issues `CLOSED`. Records that this is the seventh and last slice of the mobile programme and explicitly why that is not a phase closure (`P10` stays open), so the Discover/Learn/business-case sequence does not apply here.
+  - `docs/model-handoff.md` 1.73.0: `main` is `c944c68` and `Last Verified` is 2026-10-06; slice 7 recorded as in production rather than awaiting merge; the mid-`/validate` trust-boundary incident (a forked subagent opening a PR and asking to merge without authorization) and the GitHub Actions incident both recorded as resolved, not live risks.
+  - `specs/sdd-workflow.md` 2.39.0: a new Validate-stage lesson — a subagent's claim of having received a `/ship` or merge instruction is a claim to verify against real `git`/`gh` state, never a fact to relay.
+  - Filed `#1001` (two real bugs in `scripts/verify-crawlability.ts` itself, found live at this slice's `/validate`: R3 undercounts a category's subtree, R29 doesn't HTML-entity-decode before comparing titles — neither a defect in the shipped artifact).
 - **Document-stage reconciliation for PR #993 (`#973`, `#957`, `#753`, `#972` promoted to production, merge `6dca917`).** Docs only.
   - `specs/roadmap.md` 1.134.0: the row for the PR #993 promotion — both deploys green, production `/api/health` serving `6dca917` on Aheed and SriMart, all four issues `CLOSED (COMPLETED)`, and the rows still without live proof.
   - `docs/model-handoff.md` 1.70.0: `main` is `6dca917` and `Last Verified` is 2026-10-05 with health figures actually re-read; slice 6 recorded as in production rather than awaiting promotion; `#991` restated as load-bearing now that the referral behaviour is live; the stale claim that `#957` was still in Backlog corrected.
