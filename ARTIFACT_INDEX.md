@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-05T01:09:35.344Z` · commit `e79203e` · `214` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-05T02:51:56.229Z` · commit `010bfbf` · `215` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -209,6 +209,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [#958, #959 — Mobile checkout: autofill tokens, step numbers, total before payment (plan)](specs/2026-10-03-p958-959-mobile-checkout/plan.md) | spec | 1.0.0 | 2026-10-03 | draft | internal | Checkout and sign-in fields get autocomplete tokens (WCAG 1.3.5). Checkout step numbers are counted from the sections actually shown. On mobile the order total sits just above a button relabelled "Continue to payment". No schema or server change. |
 | [#964, #966, #968 — Mobile tap targets, postcode autofill, discount-code copy (plan)](specs/2026-10-04-p964-966-968-mobile-tap-targets/plan.md) | spec | 1.0.0 | 2026-10-04 | draft | internal | The remaining storefront controls get a 44px hit area below lg, with desktop unchanged. The header postcode input gets autocomplete="postal-code", and the shopper guide stops saying discount codes go in the cart. |
 | [#979, #655 — Storefront finish: remaining tap targets and image fallbacks (plan)](specs/2026-10-04-p979-655-storefront-finish/plan.md) | spec | 1.0.0 | 2026-10-04 | draft | internal | The storefront controls |
+| [#973, #957, #753, #972 — Checkout and cart honesty (plan)](specs/2026-10-05-p973-957-753-972-checkout-cart-honesty/plan.md) | spec | 1.0.0 | 2026-10-05 | draft | internal | Checkout checks a typed discount code on Apply and shows points in the total, and the order summary follows both. A shopper's own referral code is refused. Reorder and unpaid-order cancel name what they could not put back. R14/R18 from |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.38.0 | 2026-09-28 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
