@@ -9,7 +9,7 @@ import { setDeliveryPostcode, setFulfilmentMethod } from "@/features/storefront/
 import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
 import type { CustomerAddressRow } from "@/lib/repositories/customer-addresses";
 import { formatPrice } from "@/components/product/format-price";
-import { normaliseCode } from "@/lib/discounts";
+import { useCheckoutPricing } from "./CheckoutPricing";
 import {
   CHECKOUT_SECTION_TITLES,
   checkoutSections,
@@ -32,14 +32,6 @@ import { SlotPicker } from "./SlotPicker";
 
 const initialState: CheckoutState = { error: null };
 
-/**
- * #967 — the referral cookie's pre-filled code as the page previewed it (read-only; nothing is
- * reserved). `code` is normalised. `totalPence` is the order total with the code applied.
- */
-export type PrefilledCode =
-  | { code: string; ok: true; discountPence: number; totalPence: number }
-  | { code: string; ok: false; message: string };
-
 export function CheckoutForm({
   signedInEmail,
   redeemable,
@@ -53,10 +45,7 @@ export function CheckoutForm({
   timezone,
   method,
   savedAddresses = [],
-  initialDiscountCode,
   quotedDeliveryRules,
-  totalPence,
-  prefilledCode = null,
 }: {
   signedInEmail: string | null;
   /**
@@ -65,7 +54,12 @@ export function CheckoutForm({
    * server clamps whatever is submitted regardless; this only decides whether to
    * offer the control.
    */
-  redeemable: { balancePoints: number; valueLabel: string; minRedeemPoints: number } | null;
+  redeemable: {
+    balancePoints: number;
+    valueLabel: string;
+    minRedeemPoints: number;
+    pencePerPointRedeemed: number;
+  } | null;
   offerCollection: boolean;
   initialPostcode?: string | null;
   vendorId: string;
@@ -92,32 +86,38 @@ export function CheckoutForm({
    * shopper did not choose is how an order goes to last year's flat.
    */
   savedAddresses?: CustomerAddressRow[];
-  initialDiscountCode?: string | null;
   /**
    * #890 R23 — the delivery charges this page was priced with (`encodeDeliveryQuote`). Submitted
    * unchanged so `place-order` can refuse, rather than silently charge a different amount, when the
    * address postcode typed below resolves to different per-area charges.
    */
   quotedDeliveryRules: string;
-  /**
-   * #959 — the same `totals.totalPence` the page hands `CheckoutSummary`, shown again just above the
-   * submit button below `md`, where the summary stacks under the form. It cannot include a code or
-   * points typed into this form; `place-order` validates both, and Stripe shows the exact amount.
-   */
-  totalPence: number;
-  /**
-   * #967 — the cookie's code, previewed. While the field still holds it, the total row shows its
-   * discount (or, if refused, why under the field). Once the shopper edits the field the row falls
-   * back to `totalPence`, which is always the total before any code.
-   */
-  prefilledCode?: PrefilledCode | null;
 }) {
   const [state, formAction, pending] = useActionState(placeOrderAction, initialState);
-  const [discountCodeValue, setDiscountCodeValue] = useState(initialDiscountCode ?? "");
-  const prefilledMatches =
-    prefilledCode !== null && normaliseCode(discountCodeValue) === prefilledCode.code;
-  const appliedCode = prefilledMatches && prefilledCode.ok ? prefilledCode : null;
-  const refusedCode = prefilledMatches && !prefilledCode.ok ? prefilledCode : null;
+  // #973 — the code, the points and every figure derived from them live in `CheckoutPricing`, which
+  // the order summary reads too, so the two totals on this page can never disagree.
+  const pricing = useCheckoutPricing();
+  const { currentCode, points } = pricing;
+  const codeBlank = pricing.codeValue.trim() === "";
+  const codeUnchecked = !codeBlank && currentCode === null;
+  const codeNote: { text: string; className: string } | null = currentCode
+    ? currentCode.ok
+      ? {
+          text: `Code ${currentCode.code} applied: −${formatPrice(currentCode.discountPence)}.`,
+          className: "text-action",
+        }
+      : { text: currentCode.message, className: "text-danger" }
+    : codeUnchecked && !pricing.pending
+      ? { text: "Press Apply to check this code.", className: "text-primary-muted" }
+      : null;
+  const pointsNote =
+    pricing.requestedPoints === 0
+      ? null
+      : points.pointsSpent === 0
+        ? "Those points can't be used on this order."
+        : points.pointsSpent === pricing.requestedPoints
+          ? `${points.pointsSpent} points: −${formatPrice(points.discountPence)}`
+          : `${points.pointsSpent} of ${pricing.requestedPoints} points can be used on this order: −${formatPrice(points.discountPence)}`;
   const [, startMethodTransition] = useTransition();
 
   const chooseMethod = (next: FulfilmentMethodChoice) => {
@@ -650,10 +650,21 @@ export function CheckoutForm({
               min={0}
               step={1}
               max={redeemable.balancePoints}
-              defaultValue={0}
+              value={pricing.pointsValue}
+              onChange={(event) => pricing.setPointsValue(event.target.value)}
+              aria-describedby={pointsNote ? "redeemPoints-note" : undefined}
               className={inputClass}
             />
           </div>
+          {pointsNote && (
+            <p
+              id="redeemPoints-note"
+              data-points-note
+              className="text-xs font-medium text-primary-muted"
+            >
+              {pointsNote}
+            </p>
+          )}
         </section>
       )}
 
@@ -668,61 +679,80 @@ export function CheckoutForm({
           <Tag className="h-4 w-4" aria-hidden />
           {heading("discount")}
         </h2>
-        <div className="max-w-[16rem]">
+        <div className="max-w-sm">
           <label className={labelClass} htmlFor="discountCode">
             Have a code? (optional)
           </label>
-          <input
-            id="discountCode"
-            name="discountCode"
-            value={discountCodeValue}
-            onChange={(event) => setDiscountCodeValue(event.target.value)}
-            aria-describedby={refusedCode ? "discountCode-note" : undefined}
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-            className={`${inputClass} uppercase`}
-            placeholder="WELCOME10"
-          />
-          {refusedCode && (
-            <p
-              id="discountCode-note"
-              data-discount-code-note
-              className="mt-1.5 text-xs font-medium text-danger"
+          <div className="flex gap-2">
+            <input
+              id="discountCode"
+              name="discountCode"
+              value={pricing.codeValue}
+              onChange={(event) => pricing.setCodeValue(event.target.value)}
+              onKeyDown={(event) => {
+                // #973 — Enter here checks the code. It must not place the order.
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  pricing.applyCode();
+                }
+              }}
+              aria-describedby={codeNote ? "discountCode-note" : undefined}
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
+              className={`${inputClass} uppercase`}
+              placeholder="WELCOME10"
+            />
+            <button
+              type="button"
+              data-discount-code-apply
+              aria-label="Apply discount code"
+              onClick={pricing.applyCode}
+              disabled={pricing.pending}
+              className="min-h-tap lg:min-h-0 shrink-0 rounded-lg bg-black/5 px-4 py-2 text-sm font-bold text-black transition-colors hover:bg-black/10 disabled:opacity-50"
             >
-              {refusedCode.message}
-            </p>
-          )}
+              {pricing.pending ? "Checking…" : "Apply"}
+            </button>
+          </div>
+          <div aria-live="polite">
+            {codeNote && (
+              <p
+                id="discountCode-note"
+                data-discount-code-note
+                className={`mt-1.5 text-xs font-medium ${codeNote.className}`}
+              >
+                {codeNote.text}
+              </p>
+            )}
+          </div>
         </div>
       </section>
 
       {/*
         #959 — below md the order summary stacks under the form, so without this the shopper would
         reach the button before seeing what they will pay. Hidden from md, where the summary sits
-        beside the form. Not "Pay £X" on the button: a code or points typed above are validated on
-        the server, so the exact amount is only known on the payment page.
+        beside the form. Not "Pay £X" on the button: `place-order` decides the code and points again
+        on the server, so the exact amount is only certain on the payment page. #973 — the figure here
+        is `CheckoutPricing`'s, the same one the summary shows.
       */}
       <div data-checkout-total className="rounded-xl bg-surface-muted px-4 py-3 md:hidden">
         <p className="flex justify-between text-sm font-bold text-primary">
           <span>Total</span>
-          <span>{formatPrice(appliedCode ? appliedCode.totalPence : totalPence)}</span>
+          <span>{formatPrice(pricing.totalPence)}</span>
         </p>
-        {appliedCode ? (
-          <>
-            <p className="mt-1 text-xs text-primary-muted">
-              Includes code {appliedCode.code} (−{formatPrice(appliedCode.discountPence)}).
-            </p>
-            {redeemable && (
-              <p className="mt-1 text-xs text-primary-muted">
-                Any points you use come off before payment.
-              </p>
-            )}
-          </>
-        ) : (
+        {currentCode?.ok && (
           <p className="mt-1 text-xs text-primary-muted">
-            {redeemable
-              ? "Any discount code or points you use come off before payment."
-              : "Any discount code you enter comes off before payment."}
+            Includes code {currentCode.code} (−{formatPrice(currentCode.discountPence)}).
+          </p>
+        )}
+        {points.discountPence > 0 && (
+          <p className="mt-1 text-xs text-primary-muted">
+            Includes {points.pointsSpent} points (−{formatPrice(points.discountPence)}).
+          </p>
+        )}
+        {codeUnchecked && (
+          <p className="mt-1 text-xs text-primary-muted">
+            Your code isn&apos;t included until you press Apply.
           </p>
         )}
       </div>

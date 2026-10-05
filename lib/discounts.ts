@@ -30,7 +30,12 @@ export type CodeRefusalReason =
   | "USAGE_LIMIT_REACHED"
   | "CUSTOMER_LIMIT_REACHED"
   | "SIGN_IN_REQUIRED"
-  | "NO_HEADROOM";
+  | "NO_HEADROOM"
+  /**
+   * #972 — a `REF-` code whose owner is the claiming shopper. Decided by the
+   * repository (it needs the code row's description), never by `evaluateCode`.
+   */
+  | "OWN_REFERRAL_CODE";
 
 export type CodeEvaluation =
   { ok: true; discountPence: number } | { ok: false; reason: CodeRefusalReason };
@@ -170,5 +175,7 @@ export function refusalMessage(reason: CodeRefusalReason): string {
       return "Please sign in to use that discount code.";
     case "NO_HEADROOM":
       return "That discount code can't be applied to this order.";
+    case "OWN_REFERRAL_CODE":
+      return "You can't use your own referral code.";
   }
 }
