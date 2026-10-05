@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-05T02:51:56.229Z` · commit `010bfbf` · `215` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-05T03:37:24.205Z` · commit `3b6f0c4` · `215` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -246,4 +246,4 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
-| [Shopping Guide & Help Center](docs/shopper-help/shopping-guide.md) | guide | 1.3.0 | 2026-10-04 | approved | public | A complete guide for customers on how to browse, place orders, and manage their account. |
+| [Shopping Guide & Help Center](docs/shopper-help/shopping-guide.md) | guide | 1.4.0 | 2026-10-05 | approved | public | A complete guide for customers on how to browse, place orders, and manage their account. |
