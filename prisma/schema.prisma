@@ -66,6 +66,8 @@ model User {
   loyaltyAccounts     LoyaltyAccount[]
   loyaltyEntries      LoyaltyLedgerEntry[]
   discountUses        DiscountRedemption[]
+  /// #987 — the referral codes this user owns, at most one per vendor.
+  referralCodes       DiscountCode[]         @relation("ReferralCodeOwner")
   roleChangesTargeted VendorRoleAuditLog[]   @relation("TargetUser")
   roleChangesActedOn  VendorRoleAuditLog[]   @relation("ActorUser")
   customerAddresses   CustomerAddress[]
@@ -162,6 +164,7 @@ model Vendor {
   discountUses              DiscountRedemption[]
   roleAuditLogs             VendorRoleAuditLog[]
   lookupAttempts            OrderLookupAttempt[]
+  codeAttempts              DiscountCodeAttempt[]
   campaigns                 DepartmentCampaign[]
   bundles                   Bundle[]
   priceTiers                ProductPriceTier[]
@@ -1436,11 +1439,22 @@ model DiscountCode {
   maxPerCustomer       Int?
   isActive             Boolean   @default(true)
 
+  /// #987 — the shopper a REFERRAL code belongs to; null for every staff-created code. It is the
+  /// one source of truth for "whose code is this": the own-code refusal and the referrer's bonus
+  /// points both read it (they used to parse `description`). SetNull, not Cascade: erasing the
+  /// owner must not delete the code, because its redemptions cascade from the code and belong to
+  /// other shoppers' order history. An ownerless code still redeems and credits nobody.
+  referrerUserId String?
+  referrer       User?   @relation("ReferralCodeOwner", fields: [referrerUserId], references: [id], onDelete: SetNull)
+
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
   redemptions DiscountRedemption[]
 
   @@unique([vendorId, code])
+  /// At most one referral code per shopper per vendor. Postgres allows many NULLs under a unique
+  /// index, so staff codes (no owner) are unaffected.
+  @@unique([vendorId, referrerUserId])
   @@index([vendorId, isActive])
 }
 
@@ -1512,6 +1526,21 @@ model OrderLookupAttempt {
   vendor    Vendor   @relation(fields: [vendorId], references: [id])
   // SHA-256 of the caller's IP, not the IP itself — this table exists purely as
   // a counter, so there is no reason to persist raw IPs at rest.
+  ipHash    String
+  createdAt DateTime @default(now())
+
+  @@index([vendorId, ipHash, createdAt])
+}
+
+/// #988 — one row per discount code a caller tried that did not exist, so the checkout's code
+/// checks cannot be used to test codes at the speed of a server action. Same shape and reasoning
+/// as OrderLookupAttempt: a counter keyed on vendor and a SHA-256 of the IP (never the raw IP),
+/// with a probabilistic one-hour retention sweep in lib/repositories/discount-code-throttle.ts.
+/// Only UNKNOWN results are recorded, so a shopper typing real codes is never throttled.
+model DiscountCodeAttempt {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
   ipHash    String
   createdAt DateTime @default(now())
 

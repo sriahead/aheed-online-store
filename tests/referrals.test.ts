@@ -1,21 +1,40 @@
 import { describe, expect, it } from "vitest";
 import {
-  generateReferralCode,
+  generateRandomReferralCode,
   extractReferralPrefix,
-  extractReferrerUserId,
   isSelfReferral,
-  isUsersOwnReferralCode,
+  referralBonusRecipient,
+  REFERRAL_CODE_ALPHABET,
   buildReferralUrl,
   buildShareLinks,
 } from "@/lib/referrals";
 
 describe("referral rules and helpers", () => {
-  it("generates deterministic referral codes for users", () => {
-    const code1 = generateReferralCode("user-12345-abcde");
-    const code2 = generateReferralCode("user-12345-abcde");
-    expect(code1).toBe(code2);
-    expect(code1.startsWith("REF-")).toBe(true);
-    expect(code1.length).toBe(12); // "REF-" + 8 chars
+  // #987 R7 — random, not derived from the user id, and from an alphabet with no 0/1/O/I.
+  it("generates random REF- codes from the unambiguous 32-character alphabet", () => {
+    const code = generateRandomReferralCode();
+    expect(code).toMatch(/^REF-[A-HJ-NP-Z2-9]{8}$/);
+    expect(extractReferralPrefix(code)).toBe(code.slice(4));
+    expect(REFERRAL_CODE_ALPHABET).toHaveLength(32);
+    expect(REFERRAL_CODE_ALPHABET).not.toMatch(/[01OI]/);
+  });
+
+  it("maps each random byte to one alphabet character (byte & 31)", () => {
+    const bytes = [0, 1, 31, 32, 255, 8, 16, 24];
+    const code = generateRandomReferralCode((buffer) => {
+      buffer.set(bytes);
+      return buffer;
+    });
+    expect(code).toBe(`REF-${bytes.map((b) => REFERRAL_CODE_ALPHABET[b & 31]).join("")}`);
+  });
+
+  it("asks the random source for exactly 8 bytes", () => {
+    const sizes: number[] = [];
+    generateRandomReferralCode((buffer) => {
+      sizes.push(buffer.length);
+      return buffer;
+    });
+    expect(sizes).toEqual([8]);
   });
 
   it("extracts referral prefix", () => {
@@ -25,14 +44,6 @@ describe("referral rules and helpers", () => {
     expect(extractReferralPrefix("")).toBeNull();
   });
 
-  it("extracts referrer user id from discount code description", () => {
-    expect(extractReferrerUserId("Referral from user usr_abc123")).toBe("usr_abc123");
-    expect(extractReferrerUserId("Referral from user   usr_999  ")).toBe("usr_999");
-    expect(extractReferrerUserId("Different description")).toBeNull();
-    expect(extractReferrerUserId("")).toBeNull();
-    expect(extractReferrerUserId(null)).toBeNull();
-  });
-
   it("detects self-referrals", () => {
     expect(isSelfReferral("user-1", "user-1")).toBe(true);
     expect(isSelfReferral("user-1", "user-2")).toBe(false);
@@ -40,11 +51,12 @@ describe("referral rules and helpers", () => {
     expect(isSelfReferral("user-1", null)).toBe(false);
   });
 
-  it("checks if code matches user's own referral code", () => {
-    const userCode = generateReferralCode("user-alice-999");
-    expect(isUsersOwnReferralCode(userCode, "user-alice-999")).toBe(true);
-    expect(isUsersOwnReferralCode(userCode, "user-bob-888")).toBe(false);
-    expect(isUsersOwnReferralCode("", "user-alice-999")).toBe(false);
+  // #987 R14 — who earns the referral bonus, decided from the code's referrerUserId FK.
+  it("credits the code's owner, never the ordering shopper, and nobody for an ownerless code", () => {
+    expect(referralBonusRecipient("owner-1", "buyer-2")).toBe("owner-1");
+    expect(referralBonusRecipient(null, "buyer-2")).toBeNull();
+    expect(referralBonusRecipient(undefined, "buyer-2")).toBeNull();
+    expect(referralBonusRecipient("owner-1", "owner-1")).toBeNull();
   });
 
   it("builds clean referral URLs", () => {
@@ -81,11 +93,5 @@ describe("referral rules and helpers", () => {
       expect(decoded).toContain("£7.50");
       expect(decoded).not.toContain("£5");
     }
-  });
-
-  // #905 R23a — the no-user fallback names no vendor and can never pass as a real code.
-  it("falls back to REF_NOCAPED, which is not a redeemable referral code", () => {
-    expect(generateReferralCode("")).toBe("REF_NOCAPED");
-    expect(extractReferralPrefix("REF_NOCAPED")).toBeNull();
   });
 });

@@ -62,6 +62,9 @@ export function ReferralCard({
   const [copied, setCopied] = useState(false);
 
   const isDark = variant === "dark";
+  // #991 — a signed-in shopper whose code could not be read or created. Without this the card fell
+  // back to the bare store URL below and offered to share it as a £5-off invite that credits nobody.
+  const unavailable = authenticated && !referralCode;
   const displayUrl = referralUrl || (typeof window !== "undefined" ? window.location.origin : "");
   const shareLinks = buildShareLinks(displayUrl, storeName, discountOffPence);
 
@@ -113,7 +116,7 @@ export function ReferralCard({
           </div>
         </div>
 
-        {typeof navigator !== "undefined" && "share" in navigator && (
+        {!unavailable && typeof navigator !== "undefined" && "share" in navigator && (
           <button
             type="button"
             onClick={handleNativeShare}
@@ -134,7 +137,11 @@ export function ReferralCard({
         and earn <strong>{rewardPoints} bonus points</strong> when they complete it.
       </p>
 
-      {authenticated ? (
+      {unavailable ? (
+        <p className={`mt-4 text-xs ${isDark ? "text-stone-300" : "text-primary-muted"}`}>
+          Your referral link isn&apos;t available right now. Please try again later.
+        </p>
+      ) : authenticated ? (
         <div className="mt-4 space-y-3">
           {/* Referral link box with copy button */}
           <div

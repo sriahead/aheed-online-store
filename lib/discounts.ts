@@ -35,7 +35,13 @@ export type CodeRefusalReason =
    * #972 — a `REF-` code whose owner is the claiming shopper. Decided by the
    * repository (it needs the code row's description), never by `evaluateCode`.
    */
-  | "OWN_REFERRAL_CODE";
+  | "OWN_REFERRAL_CODE"
+  /**
+   * #988 — this caller has tried too many codes that do not exist, so the code was not looked up
+   * at all. Decided by the discount-code throttle at the checkout's two entry points, never by
+   * `evaluateCode` or the repository.
+   */
+  | "TOO_MANY_ATTEMPTS";
 
 export type CodeEvaluation =
   { ok: true; discountPence: number } | { ok: false; reason: CodeRefusalReason };
@@ -177,5 +183,7 @@ export function refusalMessage(reason: CodeRefusalReason): string {
       return "That discount code can't be applied to this order.";
     case "OWN_REFERRAL_CODE":
       return "You can't use your own referral code.";
+    case "TOO_MANY_ATTEMPTS":
+      return "Too many code attempts. Please try again in a minute.";
   }
 }

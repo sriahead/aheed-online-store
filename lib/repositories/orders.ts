@@ -33,7 +33,7 @@ import {
   spendPoints,
   windowSpendPence,
 } from "@/lib/repositories/loyalty";
-import { extractReferrerUserId, REFERRAL_REWARD_POINTS } from "@/lib/referrals";
+import { referralBonusRecipient, REFERRAL_REWARD_POINTS } from "@/lib/referrals";
 import {
   DiscountClaimError,
   claimCode,
@@ -41,7 +41,7 @@ import {
   releaseCodeRedemption,
   reverseCodeRedemptionForPaidOrder,
 } from "@/lib/repositories/discounts";
-import { refusalMessage } from "@/lib/discounts";
+import { refusalMessage, type CodeRefusalReason } from "@/lib/discounts";
 import { tieredLineTotalPence } from "@/lib/tier-pricing";
 import { listActiveTiersForProducts } from "@/lib/repositories/product-tiers";
 
@@ -70,6 +70,11 @@ export class CheckoutError extends Error {
       | "DISCOUNT_CODE"
       | "SLOT_FULL",
     message: string,
+    /**
+     * #988 — why a `DISCOUNT_CODE` refusal happened, so the caller can tell an unknown code (which
+     * the discount-code throttle counts) from every other refusal without comparing message text.
+     */
+    readonly reason?: CodeRefusalReason,
   ) {
     super(message);
     this.name = "CheckoutError";
@@ -344,7 +349,7 @@ export async function placeOrder(
               deliveryFeePence: preDiscount.deliveryFeePence,
             });
       if (claimed && !claimed.ok) {
-        throw new CheckoutError("DISCOUNT_CODE", refusalMessage(claimed.reason));
+        throw new CheckoutError("DISCOUNT_CODE", refusalMessage(claimed.reason), claimed.reason);
       }
       const codeDiscountPence = claimed?.ok ? claimed.claim.discountPence : 0;
 
@@ -443,7 +448,7 @@ export async function placeOrder(
           });
         } catch (error) {
           if (error instanceof DiscountClaimError) {
-            throw new CheckoutError("DISCOUNT_CODE", refusalMessage(error.reason));
+            throw new CheckoutError("DISCOUNT_CODE", refusalMessage(error.reason), error.reason);
           }
           throw error;
         }
@@ -1778,16 +1783,19 @@ export async function confirmPayment(
       windowSpendPence: windowSpend,
     });
 
-    // Credit referral bonus points to the referrer if a referral discount code was redeemed
+    // Credit referral bonus points to the referrer if a referral discount code was redeemed.
+    // #987 — the referrer is the code's `referrerUserId` foreign key, no longer parsed from its
+    // free-text description; `referralBonusRecipient` makes the who-earns decision.
     const discountRedemption = await tx.discountRedemption?.findFirst({
       where: { orderId: order.id },
-      include: { code: true },
+      select: { code: { select: { referrerUserId: true } } },
     });
-    if (discountRedemption?.code?.code?.startsWith("REF-")) {
-      const referrerUserId = extractReferrerUserId(discountRedemption.code.description);
-      if (referrerUserId && referrerUserId !== order.userId) {
-        await awardReferralBonusPoints(tx, order.vendorId, referrerUserId, REFERRAL_REWARD_POINTS);
-      }
+    const referrerUserId = referralBonusRecipient(
+      discountRedemption?.code?.referrerUserId,
+      order.userId,
+    );
+    if (referrerUserId) {
+      await awardReferralBonusPoints(tx, order.vendorId, referrerUserId, REFERRAL_REWARD_POINTS);
     }
 
     return { ok: true as const };

@@ -12,7 +12,7 @@ import { WaysToEarnAccordion } from "@/components/rewards/WaysToEarnAccordion";
 import { WaysToRedeemAccordion } from "@/components/rewards/WaysToRedeemAccordion";
 import { ReferralCard } from "@/components/rewards/ReferralCard";
 import { AvailableRewardsSection } from "@/components/rewards/AvailableRewardsSection";
-import { getReferralStats, ensureReferralDiscountCode } from "@/lib/referrals-service";
+import { getReferralStats } from "@/lib/referrals-service";
 import { buildReferralUrl } from "@/lib/referrals";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 
@@ -46,9 +46,6 @@ export default async function LoyaltyPage() {
     getCurrentVendorProfile(),
   ]);
 
-  // Ensure referral discount code exists in background
-  ensureReferralDiscountCode(userId).catch(() => {});
-
   const tier = resolveTier(tiers, windowSpend);
   const nextTier = tiers
     .filter((t) => t.thresholdPence > windowSpend)
@@ -76,7 +73,10 @@ export default async function LoyaltyPage() {
   const host = requestHeaders.get("host") || "localhost";
   const proto = requestHeaders.get("x-forwarded-proto") || "https";
   const baseUrl = `${proto}://${host}`;
-  const referralUrl = buildReferralUrl(baseUrl, referralStats.referralCode);
+  // #991 — an empty code means it could not be read or created; share no link rather than `?ref=`.
+  const referralUrl = referralStats.referralCode
+    ? buildReferralUrl(baseUrl, referralStats.referralCode)
+    : "";
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
