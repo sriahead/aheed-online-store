@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.73.0"
+version: "1.74.0"
 updated: 2026-10-06
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -552,6 +552,24 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **Referral and discount-code integrity (`#991`/`#987`/`#988`): built, awaiting `/validate`
+  (2026-10-06).**
+  - Branch `feature/991-987-988-referral-code-integrity`, not yet pushed.
+  - Spec: `specs/2026-10-06-p991-987-988-referral-code-integrity/`. Read its `build-notes.md`
+    first.
+  - Owner choices at Gate 1: random stored codes; throttle unknown codes only.
+  - One additive migration with a backfill. It is applied on dev only.
+  - **The project-level finding: no shared environment has ever held a referral code row.**
+    Measured 2026-10-06, before the migration: 0 `REF-` rows on staging, production and dev. So
+    every referral code a shopper has been shown has been unredeemable. That is not a measured loss,
+    because the platform has never traded.
+  - **`#991`'s remaining Medium-priority note in this file is superseded by this slice** once it
+    ships.
+  - The dev database's `migrate dev --create-only` still demands a reset (`#895`). This slice's
+    `build-notes.md` records the non-destructive workaround: `migrate diff` against the datasource,
+    then `migrate deploy`.
+  - Follow-ups filed: `#1003` and `#1004`.
+  - The next slice the owner named is `#981` + `#982` (mobile finish). It needs its own `/propose`.
 - **The mobile programme is the owner's chosen direction (2026-10-02).** It comes from the seventh
   Discover pass, `docs/research/discovery-log.md` 1.7.0, merged to `staging` via PR #963. Its
   issues are `#955`–`#962`, all Phase P10.
