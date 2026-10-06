@@ -29,6 +29,7 @@ type CodeRow = {
   maxPerCustomer: number | null;
   isActive: boolean;
   description?: string | null;
+  referrerUserId?: string | null;
 };
 
 const aCode = (overrides: Partial<CodeRow> = {}): CodeRow => ({
@@ -154,8 +155,9 @@ describe("previewCode", () => {
 });
 
 /**
- * #972 (R2, R3) — a shopper's own `REF-` code is refused before any other
- * evaluation, by `previewCode` and therefore by `claimCode`.
+ * #972 (R2, R3) — a shopper's own referral code is refused before any other
+ * evaluation, by `previewCode` and therefore by `claimCode`. #987 — the owner is
+ * the code row's `referrerUserId` foreign key; the description is no longer read.
  */
 describe("previewCode — own referral code (#972)", () => {
   const OWNER = "user_abc123";
@@ -165,7 +167,8 @@ describe("previewCode — own referral code (#972)", () => {
       minSubtotalPence: 2000,
       maxPerCustomer: 1,
       remainingRedemptions: null,
-      description: `Referral from user ${OWNER}`,
+      description: "Customer referral code",
+      referrerUserId: OWNER,
       ...overrides,
     });
   const input = (userId: string | null, code = "ref-userabc1") => ({ ...base, code, userId });
@@ -197,11 +200,28 @@ describe("previewCode — own referral code (#972)", () => {
     expect(result).toEqual({ ok: false, reason: "SIGN_IN_REQUIRED" });
   });
 
-  it("(c) does not refuse a non-REF code whose description names the shopper", async () => {
-    const result = await previewCode(readOnlyDb(referral()) as never, VENDOR, {
+  it("(c) does not refuse a staff code (no owner) whose description names the shopper", async () => {
+    const staffCode = referral({
+      referrerUserId: null,
+      description: `Referral from user ${OWNER}`,
+    });
+    const result = await previewCode(readOnlyDb(staffCode) as never, VENDOR, {
       ...input(OWNER),
       code: "WELCOME5",
     });
     expect(result).toEqual(expect.objectContaining({ ok: true, discountPence: 500 }));
+  });
+
+  // #987 R13 — the description is no longer read, even on a REF- code.
+  it("does not refuse a REF- code with no owner whose description names the shopper", async () => {
+    const legacy = referral({ referrerUserId: null, description: "Referral from user u-1" });
+    const result = await previewCode(readOnlyDb(legacy) as never, VENDOR, input("u-1"));
+    expect(result).toEqual(expect.objectContaining({ ok: true, discountPence: 500 }));
+  });
+
+  it("refuses a code whose referrerUserId is the shopper, whatever its description says", async () => {
+    const owned = referral({ referrerUserId: "u-1", description: "Customer referral code" });
+    const result = await previewCode(readOnlyDb(owned) as never, VENDOR, input("u-1"));
+    expect(result).toEqual({ ok: false, reason: "OWN_REFERRAL_CODE" });
   });
 });

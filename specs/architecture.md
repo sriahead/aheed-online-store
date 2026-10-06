@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.38.0"
-updated: 2026-09-28
+version: "1.39.0"
+updated: 2026-10-06
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -785,6 +785,15 @@ S3 API rather than an R2-specific SDK.
   and which raw SQL is not permitted to rescue. A
   balance derived by `SUM()` cannot be guarded that way, which is why the counter exists alongside
   its ledger rather than instead of it.
+- **A referral code is owned by a foreign key, and unknown codes are throttled** (`#987`, `#988`,
+  `#991`). A referral code's owner is `DiscountCode.referrerUserId`, a nullable foreign key to
+  `User`: it is unique per vendor and set with `onDelete: SetNull`. The own-code refusal and the
+  referrer's bonus points both read it, never the free-text `description`. A shopper's code is
+  random (`REF-` plus 8 characters), looked up by its owner rather than derived from the user id,
+  and created, awaited, the first time it is shown (`getOrCreateReferralCode`). Unknown discount
+  codes are throttled per vendor and per hashed IP, at 10 per minute, through the
+  `DiscountCodeAttempt` table. The limit applies at both places a code is checked, the Apply
+  preview and order placement, and it fails open.
 - **Webhooks are idempotent.** Verify Stripe signatures; key side effects on the event id.
 - **AI does not sit on a public request path unless it is bounded, optional and argued.** The
   default established by `#571` (P2.6) and first implemented in slice 3 (`#566`) stands: a model

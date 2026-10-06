@@ -4,8 +4,8 @@ title: "Shopping Guide & Help Center"
 audience: [shopper]
 type: guide
 status: approved
-version: "1.4.0"
-updated: 2026-10-05
+version: "1.5.0"
+updated: 2026-10-06
 visibility: public
 summary: "A complete guide for customers on how to browse, place orders, and manage their account."
 tags: ["shopper", "help", "orders", "loyalty"]
@@ -29,7 +29,7 @@ Welcome! This guide explains how to find what you need, place orders, and make t
   - Some stores have a minimum order amount.
   - A delivery fee may apply, but you might qualify for free delivery if your order is above a certain amount.
   - Delivery is restricted to specific postcode areas.
-- **Discounts:** If you have a promotional code, type it in the **Discount code** section of the checkout page and press **Apply** (or Enter). The total then includes the discount, or the reason the code can't be used is shown under the field. If you change the code afterwards, press **Apply** again.
+- **Discounts:** If you have a promotional code, type it in the **Discount code** section of the checkout page and press **Apply** (or Enter). The total then includes the discount, or the reason the code can't be used is shown under the field. If you change the code afterwards, press **Apply** again. If you try several codes that aren't recognised, the checkout asks you to wait a minute before trying another.
 - **Referral links:** If you arrived through a friend's referral link, its code is already filled in at checkout and the total you see includes its discount. If the code can't be used for this order (for example, you need to sign in first, or the order is below its minimum), the reason is shown under the code field. Your own referral code is for sharing with friends: it can't be used on your own orders.
 - **Reordering:** When you reorder a past order, or cancel a payment and your items go back into your cart, anything we couldn't add in full is listed at the top of your cart: items no longer available, and items where we had fewer in stock than before.
 - **Paying:** Your browser can fill in the name, phone, email and address you have saved on your device. On a phone, the order total shows just above **Continue to payment**. You then pay on a secure payment page, which shows the exact amount after any discount code or loyalty points.

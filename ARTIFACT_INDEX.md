@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-06T08:59:08.071Z` · commit `dd6505b` · `217` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-06T09:51:03.439Z` · commit `ab1f96a` · `217` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -212,7 +212,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [#955, #996, #994 — Crawlability (plan)](specs/2026-10-05-p955-996-994-crawlability/plan.md) | spec | 1.0.0 | 2026-10-05 | draft | internal | Product pages become reachable from listings again, listed in a per-vendor sitemap, indexable on every vendor host rather than only Aheed's, and carry their own title, description and canonical. The Gate 2 hook stops blocking a docs-only commit that regenerates the KMS artefact. No schema change. |
 | [#973, #957, #753, #972 — Checkout and cart honesty (plan)](specs/2026-10-05-p973-957-753-972-checkout-cart-honesty/plan.md) | spec | 1.0.0 | 2026-10-05 | draft | internal | Checkout checks a typed discount code on Apply and shows points in the total, and the order summary follows both. A shopper's own referral code is refused. Reorder and unpaid-order cancel name what they could not put back. R14/R18 from |
 | [#991, #987, #988 — Referral and discount-code integrity (plan)](specs/2026-10-06-p991-987-988-referral-code-integrity/plan.md) | spec | 1.0.0 | 2026-10-06 | draft | internal | A shopper's referral code row is created reliably, owned by a real foreign key and random rather than derived from the user id, and unrecognised discount codes are throttled per vendor and hashed IP. One additive migration with a backfill. |
-| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.38.0 | 2026-09-28 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
+| [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.39.0 | 2026-10-06 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
 | [ADR-003 — Object Storage Abstraction (S3-compatible)](specs/decisions/ADR-003-storage-abstraction.md) | adr | 1.2.0 | 2026-08-17 | approved | internal | Access object storage only via the S3-compatible API behind a StorageService port; the DB stores relative keys and URLs are composed at read time. |
@@ -248,4 +248,4 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
-| [Shopping Guide & Help Center](docs/shopper-help/shopping-guide.md) | guide | 1.4.0 | 2026-10-05 | approved | public | A complete guide for customers on how to browse, place orders, and manage their account. |
+| [Shopping Guide & Help Center](docs/shopper-help/shopping-guide.md) | guide | 1.5.0 | 2026-10-06 | approved | public | A complete guide for customers on how to browse, place orders, and manage their account. |

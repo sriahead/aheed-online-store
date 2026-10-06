@@ -95,6 +95,43 @@ describe("ReferralCard", () => {
     expect(screen.getByText("https://aheed.co.uk/?ref=REF-12345678")).toBeTruthy();
     expect(screen.getByRole("button", { name: /copy referral link/i })).toBeTruthy();
   });
+
+  // #991 R18 — a signed-in shopper whose code could not be read or created is told so, and is never
+  // offered the bare store URL as a £5-off invite. navigator.share is stubbed so the header share
+  // button WOULD render if the card did not suppress it.
+  describe("with an empty code for a signed-in shopper", () => {
+    afterEach(() => {
+      delete (navigator as { share?: unknown }).share;
+    });
+
+    const renderCard = (referralCode: string) => {
+      Object.defineProperty(navigator, "share", { value: vi.fn(), configurable: true });
+      render(
+        <ReferralCard
+          referralUrl={referralCode ? `https://aheed.co.uk/?ref=${referralCode}` : ""}
+          referralCode={referralCode}
+          authenticated={true}
+          storeName="Aheed Food Centre"
+        />,
+      );
+    };
+
+    it("says the link is unavailable and offers no link, copy or share", () => {
+      renderCard("");
+      expect(
+        screen.getByText("Your referral link isn't available right now. Please try again later."),
+      ).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Share referral link" })).toBeNull();
+      expect(screen.queryByRole("button", { name: /copy referral link/i })).toBeNull();
+      expect(screen.queryAllByRole("link", { name: /share referral link/i })).toHaveLength(0);
+    });
+
+    it("still offers the share button and links when there is a code", () => {
+      renderCard("REF-ABCDEFGH");
+      expect(screen.getByRole("button", { name: "Share referral link" })).toBeTruthy();
+      expect(screen.getAllByRole("link", { name: /share referral link/i })).toHaveLength(3);
+    });
+  });
 });
 
 describe("RewardsPanel", () => {

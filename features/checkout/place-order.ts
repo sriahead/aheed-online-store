@@ -14,6 +14,11 @@ import { calendarDayToUtcMidnight } from "@/lib/local-datetime";
 import { quoteMatches, resolveDeliveryRules } from "@/lib/delivery-pricing";
 import { recordRefusalIfOutside } from "@/lib/delivery-refusals-service";
 import { setDeliveryPostcode } from "@/features/storefront/delivery";
+import { refusalMessage } from "@/lib/discounts";
+import {
+  isCallerThrottledForCodes,
+  recordCallerUnknownCode,
+} from "@/lib/discount-code-throttle-service";
 
 /**
  * Checkout server action (P3b, #96).
@@ -200,6 +205,13 @@ export async function placeOrderAction(
       return { error: "Please choose a delivery or collection date." };
     }
 
+    // #988 — the same unknown-code throttle as the Apply control: placing an order is the other way
+    // to ask whether a code exists. Only consulted when a code was submitted.
+    const discountCode = discountCodeIntent(form);
+    if (discountCode !== null && (await isCallerThrottledForCodes())) {
+      return { error: refusalMessage("TOO_MANY_ATTEMPTS") };
+    }
+
     const placed = await getOrderRepository().createOrder({
       cartId,
       userId: identity.userId,
@@ -214,7 +226,7 @@ export async function placeOrderAction(
         minimumOrderPence: deliveryRules.minimumOrderPence,
       },
       redeemPoints: redeemPointsIntent(form),
-      discountCode: discountCodeIntent(form),
+      discountCode,
       vendorSlug: vendor.slug,
       returnOrigin: await currentOrigin(),
       fulfilmentMethod,
@@ -253,7 +265,10 @@ export async function placeOrderAction(
       `/checkout/${placed.orderNumber}?t=${encodeURIComponent(placed.confirmationToken)}`;
   } catch (error) {
     if (error instanceof MissingFieldError) return { error: error.message };
-    if (error instanceof CheckoutError) return { error: error.message };
+    if (error instanceof CheckoutError) {
+      if (error.reason === "UNKNOWN") await recordCallerUnknownCode();
+      return { error: error.message };
+    }
     throw error;
   }
 

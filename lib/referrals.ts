@@ -1,7 +1,7 @@
 /**
  * Pure referral rules & helpers (Loyalty & Rewards integration).
  *
- * Deterministic customer referral codes, URL construction, self-referral
+ * Random customer referral codes (#987), URL construction, self-referral
  * detection, and share link generators. No I/O, no DB access — unit-testable
  * without network or database.
  */
@@ -13,19 +13,31 @@ export const REFERRAL_REWARD_POINTS = 100; // 100 points reward for referrer
 export const MIN_REFERRAL_ORDER_PENCE = 2000; // £20.00 minimum order
 
 /**
- * Generate a deterministic, human-readable referral code from a user ID.
- * Example: `REF-A1B2C3D4`
- *
- * #905 — the no-user fallback is platform-level (`REF_NOCAPED`), no longer one vendor's name. The
- * underscore is deliberate: it does not match `extractReferralPrefix`'s `REF-…` pattern, so the
- * fallback can never be redeemed as, or mistaken for, a real shopper's code.
+ * #987 — the 32 characters a referral code is drawn from: A–Z and 2–9 without `0`, `1`, `O` and
+ * `I`, so a code read aloud or retyped is not ambiguous. 32 is a power of two, so `byte & 31` picks
+ * every character with equal probability (no modulo bias).
  */
-export function generateReferralCode(userId: string): string {
-  if (!userId || typeof userId !== "string") return "REF_NOCAPED";
-  // Clean non-alphanumeric chars, take 8 chars uppercase
-  const cleaned = userId.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-  const slice = cleaned.padEnd(8, "0").slice(0, 8);
-  return `REF-${slice}`;
+export const REFERRAL_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+export const REFERRAL_CODE_LENGTH = 8;
+
+/**
+ * #987 — a fresh random referral code, `REF-` plus 8 characters from `REFERRAL_CODE_ALPHABET`.
+ *
+ * Random and STORED, never derived from the user id (owner choice at Gate 1, 2026-10-06). The old
+ * derivation kept only the first 8 characters of the id, so two users could derive the same code,
+ * and a code was predictable from its owner's id. A shopper's code is now looked up by its owner
+ * (`DiscountCode.referrerUserId`); uniqueness is settled by the database, which is why
+ * `getOrCreateReferralCode` retries on a collision rather than this function trying to avoid one.
+ *
+ * `fillRandom` exists for tests; production always uses `crypto.getRandomValues`.
+ */
+export function generateRandomReferralCode(
+  fillRandom: (bytes: Uint8Array) => Uint8Array = (bytes) => crypto.getRandomValues(bytes),
+): string {
+  const bytes = fillRandom(new Uint8Array(REFERRAL_CODE_LENGTH));
+  let suffix = "";
+  for (const byte of bytes) suffix += REFERRAL_CODE_ALPHABET[byte & 31];
+  return `REF-${suffix}`;
 }
 
 /**
@@ -36,20 +48,6 @@ export function extractReferralPrefix(code: string): string | null {
   const trimmed = code.trim().toUpperCase();
   const match = /^REF-([A-Z0-9]{4,16})$/.exec(trimmed);
   return match ? match[1] : null;
-}
-
-/**
- * Extract the referrer user ID from a referral discount code's description string.
- * Example: "Referral from user usr_12345" -> "usr_12345"
- */
-export function extractReferrerUserId(description: string | null | undefined): string | null {
-  if (!description || typeof description !== "string") return null;
-  const prefix = "Referral from user ";
-  if (description.startsWith(prefix)) {
-    const id = description.slice(prefix.length).trim();
-    return id.length > 0 ? id : null;
-  }
-  return null;
 }
 
 /**
@@ -65,12 +63,17 @@ export function isSelfReferral(
 }
 
 /**
- * Check if a code matches the user's own referral code.
+ * #987 — who earns the referral bonus for a confirmed order, or null for nobody. The owner is the
+ * redeemed code's `referrerUserId` foreign key (null for staff codes, and for a referral code whose
+ * owner was erased); a shopper never earns a bonus from their own order. `confirmPayment` calls this
+ * for exactly that decision, so it can be tested without a transaction.
  */
-export function isUsersOwnReferralCode(code: string, currentUserId: string | null): boolean {
-  if (!code || !currentUserId) return false;
-  const userCode = generateReferralCode(currentUserId);
-  return code.trim().toUpperCase() === userCode.toUpperCase();
+export function referralBonusRecipient(
+  referrerUserId: string | null | undefined,
+  orderUserId: string | null,
+): string | null {
+  if (!referrerUserId) return null;
+  return isSelfReferral(referrerUserId, orderUserId) ? null : referrerUserId;
 }
 
 /**

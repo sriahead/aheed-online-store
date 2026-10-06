@@ -9,6 +9,10 @@ import { computeTotals } from "@/lib/order-totals";
 import { getDiscountRepository } from "@/lib/discounts-service";
 import { normaliseCode, refusalMessage } from "@/lib/discounts";
 import { PREVIEW_FAILED_MESSAGE, type CodePreview } from "@/lib/checkout-code-preview";
+import {
+  isCallerThrottledForCodes,
+  recordCallerUnknownCode,
+} from "@/lib/discount-code-throttle-service";
 
 /**
  * #973 — the one place a checkout code is previewed (read-only; nothing is reserved), shared by the
@@ -34,6 +38,13 @@ export async function previewCheckoutCode(rawCode: string | null): Promise<CodeP
     const summary = await getCartRepository().getSummary(identity);
     if (summary.lines.length === 0 || summary.mergePending) return null;
 
+    // #988 — a caller over the unknown-code limit gets no lookup at all, so the answer reveals
+    // nothing about whether this code exists. Checked after the empty-cart return so a preview with
+    // nothing to price stays `null`, and before any pricing work.
+    if (await isCallerThrottledForCodes()) {
+      return { code, ok: false, message: refusalMessage("TOO_MANY_ATTEMPTS") };
+    }
+
     const [vendor, method, session] = await Promise.all([
       getCurrentVendorProfile(),
       getFulfilmentMethod(),
@@ -57,6 +68,7 @@ export async function previewCheckoutCode(rawCode: string | null): Promise<CodeP
       subtotalPence: preDiscount.subtotalPence,
       deliveryFeePence: preDiscount.deliveryFeePence,
     });
+    if (!preview.ok && preview.reason === "UNKNOWN") await recordCallerUnknownCode();
     return preview.ok
       ? { code, ok: true, discountPence: preview.discountPence }
       : { code, ok: false, message: refusalMessage(preview.reason) };
