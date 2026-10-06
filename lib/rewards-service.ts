@@ -1,6 +1,6 @@
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
 import { resolveTier } from "@/lib/loyalty";
-import { getReferralStats, ensureReferralDiscountCode } from "@/lib/referrals-service";
+import { getReferralStats } from "@/lib/referrals-service";
 import { buildReferralUrl, REFERRAL_DISCOUNT_PENCE, REFERRAL_REWARD_POINTS } from "@/lib/referrals";
 import type { RewardsData } from "@/components/rewards/RewardsPanel";
 
@@ -40,9 +40,6 @@ export async function getRewardsDataForUser(
     getReferralStats(userId),
   ]);
 
-  // Ensure their referral discount code is seeded in background
-  ensureReferralDiscountCode(userId).catch(() => {});
-
   const currentTier = resolveTier(tiers, windowSpend);
 
   let expiryDate: string | null = null;
@@ -61,7 +58,10 @@ export async function getRewardsDataForUser(
     });
   }
 
-  const referralUrl = buildReferralUrl(baseUrl, referralStats.referralCode);
+  // #991 — an empty code means it could not be read or created; share no link rather than `?ref=`.
+  const referralUrl = referralStats.referralCode
+    ? buildReferralUrl(baseUrl, referralStats.referralCode)
+    : "";
 
   return {
     authenticated: true,
