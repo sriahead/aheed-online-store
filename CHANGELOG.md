@@ -16,6 +16,11 @@ every branch merges.
 
 ### Changed
 
+- **Document-stage reconciliation for PR #1009 (`#981`, `#982` merged to `staging`, merge `41c181b`).** Docs only.
+  - `specs/roadmap.md` 1.137.0: the row for PR #1009, with the validation result (all 22 requirements, no defect found in the artifact), the CI/deploy facts, and the `#1010` follow-up.
+  - `docs/model-handoff.md` 1.77.0: the mobile-finish entry updated from "built, awaiting `/validate`" to merged/validated/deployed to staging, awaiting promotion; both issues `In Review`.
+  - `docs/developer-portal/local-dev-playbook.md` 1.23.0: two new traps — `--sign-in` combined with `--open-quick-view` can silently measure Quick View's signed-out branch when its client-fetched session lookup loses a race against local `wrangler dev`/Neon latency (`#1010`, tracked not fixed); and `gh issue create --body-file` can mojibake-corrupt non-ASCII punctuation even from a verified-UTF-8 source, while `gh pr create` with the identical sourcing did not. The rebuilt `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts` are included.
+
 - **Document-stage reconciliation for PR #1006 (`#991`, `#987`, `#988` promoted to production, merge `d9fac95`).** Docs only.
   - `specs/roadmap.md` 1.136.0: rows for the PR #1005 staging merge and the PR #1006 promotion — the staging deploy green, the production deploy's first attempt hit the already-known flaky test `#983` (not a code defect) and succeeded on `gh run rerun --failed`, production `/api/health` confirmed serving `d9fac95` on Aheed and SriMart, all three issues `CLOSED`. Records `#991` as now actually resolved and verified live (R15), not just fixed in code.
   - `docs/model-handoff.md` 1.75.0: `main` is `d9fac95` and `Last Verified` is 2026-10-06; the slice moved from In-Flight Work to Last Verified with its full live-proof record (R15/R25); the `6dca917` entry's "still unverified in production" note on `#991` corrected to resolved.

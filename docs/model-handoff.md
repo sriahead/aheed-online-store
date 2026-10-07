@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.76.0"
+version: "1.77.0"
 updated: 2026-10-07
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -570,24 +570,34 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Mobile finish (`#981`/`#982`): built, awaiting `/validate` (2026-10-07).**
-  - Branch `feature/981-982-mobile-finish`, cut from `origin/staging` at `85f55eb`. **Not pushed**,
-    no PR. Spec commit `5531f68`, implementation `d2de5f9`.
-  - Spec: `specs/2026-10-06-p981-982-mobile-finish/`. Read its `build-notes.md` first.
+- **Mobile finish (`#981`/`#982`): DONE, merged to staging** (PR #1009, merge `41c181b`,
+  2026-10-07), awaiting a `staging -> main` promotion. Spec/build notes:
+  `specs/2026-10-06-p981-982-mobile-finish/`. Both issues **In Review** on the delivery board.
+  - **Validated from a fresh context against all 22 requirements — no defect found in the
+    artifact.** CI (`docs-gates`, `quality / kms`, `quality / quality`) green on the PR;
+    `deploy-staging` (run `37613013578`) and `deploy-docs-internal` (run `37613013159`) both
+    **success**.
   - Owner choice at Gate 1: the logo-less wordmark **shrinks and truncates**; the name stays
     visible at every width. No schema change; `lg`+ is unchanged throughout.
-  - **`#982`'s filed repro is stale and the issue text is wrong on two points.** It says no
+  - **`#982`'s filed repro was stale and the issue text was wrong on two points.** It said no
     production vendor is logo-less — SriMart **is**, read live 2026-10-06. And its 382px overflow
-    with `Aheed Food Centre` no longer reproduces: that case now measures 360/360, because the
-    header changed after slice 5 observed it. The defect is real but needs a **longer** name — a
-    36-character logo-less name rendered a requested 360px viewport at **477px**. A validator who
-    tests with `Aheed Food Centre` alone measures a pass on unfixed code.
+    with `Aheed Food Centre` no longer reproduced: that case measures 360/360, because the header
+    changed after slice 5 observed it. The defect was real but needed a **longer** name — a
+    36-character logo-less name rendered a requested 360px viewport at **477px** before the fix,
+    exactly 360/390 after. Confirmed live on dev with a temporary `VendorBranding` fixture
+    (cleared and restored immediately; the restore was blocked for Bash auto mode and run by the
+    owner with `!`, as `plan.md` anticipated).
   - **`scripts/verify-mobile-layout.ts` gained `--sign-in <email>:<password>`**, which every later
     mobile slice touching a signed-in surface will want. Before it, the script was always a guest
     on a throwaway profile, and desktop Chrome cannot go below 501px — so a session-gated control
-    could not be measured at a phone width by anything.
-  - Follow-up filed: `#1008` (the product review form is implemented twice, which is why `#981`'s
-    defect existed on two surfaces). Backlog, P10.
+    could not be measured at a phone width by anything. **Validate found a gap in it, not in the
+    shipped code:** combined with `--open-quick-view`, it can silently measure Quick View's
+    signed-out branch instead of the signed-in one it was asked for, because that surface's review
+    form loads over a client fetch (unlike the product page's SSR-gated one) and the fetch can lose
+    a race against this machine's `wrangler dev`/Neon instability. Tracked as `#1010`
+    (`docs/developer-portal/local-dev-playbook.md` 1.23.0 has the detail); not fixed here.
+  - Follow-up filed at Build: `#1008` (the product review form is implemented twice, which is why
+    `#981`'s defect existed on two surfaces). Backlog, P10.
 - **Referral and discount-code integrity (`#991`/`#987`/`#988`): DONE, in production** (PR #1005 to
   `staging`, then promotion PR #1006, merge `d9fac95`, 2026-10-06), all three issues closed. See
   **Last Verified** above for the production facts (the backfill measurement, R15/R25 live proof,
