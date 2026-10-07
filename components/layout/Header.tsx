@@ -153,15 +153,22 @@ export async function Header({
   // The logo-less vendor's wordmark: the initial tile and the name.
   const wordmark = (
     <>
-      <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-xl shadow-md group-hover:bg-primary/90 transition-colors">
+      {/* #982 — `shrink-0` on the tile, because the initial must never be squashed; the NAME
+      block beside it is what gives way. */}
+      <div className="w-10 h-10 shrink-0 rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-xl shadow-md group-hover:bg-primary/90 transition-colors">
         {name.charAt(0)}
       </div>
-      <div>
+      {/* #982 — `min-w-0` lets this block shrink below its content width, which is what a flex
+      item refuses to do by default. Without it a long name widened the whole page (measured: a
+      36-character logo-less name rendered a requested 360px viewport at 477px) rather than
+      clipping. Every text node below truncates rather than wrapping, so the header keeps its
+      height. */}
+      <div className="min-w-0">
         <div className="flex items-baseline gap-1">
-          <span className="font-bold text-xl text-primary tracking-tight group-hover:text-primary-muted transition-colors">
+          <span className="truncate font-bold text-xl text-primary tracking-tight group-hover:text-primary-muted transition-colors">
             {name.split(" ")[0]}
           </span>
-          <span className="font-semibold text-xs text-accent uppercase tracking-wider">
+          <span className="truncate font-semibold text-xs text-accent uppercase tracking-wider">
             {name.split(" ").slice(1).join(" ")}
           </span>
         </div>
@@ -169,7 +176,7 @@ export async function Header({
         "Reading Groceries" under SriMart's wordmark. Only shown
         in the logo fallback (a vendor with no logoStorageKey), so
         it was easy to miss — the locality alone names no trade. */}
-        <p className="text-[10px] text-black/60 font-medium tracking-wide uppercase">
+        <p className="truncate text-[10px] text-black/60 font-medium tracking-wide uppercase">
           {localityName}
         </p>
       </div>
@@ -238,10 +245,14 @@ export async function Header({
             ViewSwitcher's dropdown (components/layout/ViewSwitcher.tsx) renders
             below the row via `absolute top-full` and an ancestor overflow-clip
             would cut it off. */}
-          <div className="flex items-center gap-3 shrink-0 h-10 overflow-clip">
+          {/* #982 — `min-w-0` replaces `shrink-0` here. `shrink-0` was not what protected the
+            Coupert case above (that is `h-10 overflow-clip`), but it did forbid this block from
+            giving way, so a long logo-less wordmark widened the whole page instead of clipping.
+            The logo itself now carries `shrink-0`, so the logo path keeps its exact footprint. */}
+          <div className="flex items-center gap-3 min-w-0 h-10 overflow-clip">
             <Link
               href={isPortal ? "/staff" : "/"}
-              className="flex items-center gap-2.5 group text-left"
+              className="flex min-w-0 items-center gap-2.5 group text-left"
             >
               {logoUrl ? (
                 // Plain <img> by decision — see #46 / eslint.config.mjs. NOTE: this logo is
@@ -263,7 +274,9 @@ export async function Header({
                 <ImageWithFallback
                   src={logoUrl}
                   alt={`${name} — Your Local Store`}
-                  className="h-10 w-auto aspect-9/5 object-contain rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"
+                  // #982 — `shrink-0` moved here from the container, so the logo keeps its exact
+                  // reserved footprint now that the container is allowed to shrink.
+                  className="h-10 w-auto shrink-0 aspect-9/5 object-contain rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"
                   fallback={missingLogo}
                 />
               ) : (

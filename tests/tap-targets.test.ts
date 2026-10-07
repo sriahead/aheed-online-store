@@ -28,9 +28,17 @@ const surfaces: Record<string, string[]> = {
   "components/layout/SearchSuggest.tsx": ["search"],
   "components/product/ProductFilterForm.tsx": ["filter-form"],
   "components/cart/CartDrawerShell.tsx": ["cart-drawer-close"],
-  "components/product/QuickViewDrawer.tsx": ["quick-view-close"],
+  "components/product/QuickViewDrawer.tsx": ["quick-view-close", "quick-view-body"],
   "components/product/ProductImageGallery.tsx": ["gallery-arrow"],
   "components/cart/AddToCartButton.tsx": ["quick-view-add"],
+  // #981 — the review controls #964 and #979 left behind, on BOTH surfaces that render them.
+  "app/(storefront)/products/[slug]/page.tsx": ["product-reviews"],
+  "components/storefront/FeedbackForm.tsx": ["feedback-form"],
+  // These two carry tap classes but no hook of their own: they render inside a hooked ancestor
+  // (`quick-view-body` / `product-reviews` / `feedback-form`), which is the surface the measuring
+  // script groups them under.
+  "components/product/StarRatingInput.tsx": [],
+  "features/reviews/components/ReviewForm.tsx": [],
 };
 
 /**
