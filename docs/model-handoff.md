@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.75.0"
-updated: 2026-10-06
+version: "1.76.0"
+updated: 2026-10-07
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -570,6 +570,24 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **Mobile finish (`#981`/`#982`): built, awaiting `/validate` (2026-10-07).**
+  - Branch `feature/981-982-mobile-finish`, cut from `origin/staging` at `85f55eb`. **Not pushed**,
+    no PR. Spec commit `5531f68`, implementation `d2de5f9`.
+  - Spec: `specs/2026-10-06-p981-982-mobile-finish/`. Read its `build-notes.md` first.
+  - Owner choice at Gate 1: the logo-less wordmark **shrinks and truncates**; the name stays
+    visible at every width. No schema change; `lg`+ is unchanged throughout.
+  - **`#982`'s filed repro is stale and the issue text is wrong on two points.** It says no
+    production vendor is logo-less — SriMart **is**, read live 2026-10-06. And its 382px overflow
+    with `Aheed Food Centre` no longer reproduces: that case now measures 360/360, because the
+    header changed after slice 5 observed it. The defect is real but needs a **longer** name — a
+    36-character logo-less name rendered a requested 360px viewport at **477px**. A validator who
+    tests with `Aheed Food Centre` alone measures a pass on unfixed code.
+  - **`scripts/verify-mobile-layout.ts` gained `--sign-in <email>:<password>`**, which every later
+    mobile slice touching a signed-in surface will want. Before it, the script was always a guest
+    on a throwaway profile, and desktop Chrome cannot go below 501px — so a session-gated control
+    could not be measured at a phone width by anything.
+  - Follow-up filed: `#1008` (the product review form is implemented twice, which is why `#981`'s
+    defect existed on two surfaces). Backlog, P10.
 - **Referral and discount-code integrity (`#991`/`#987`/`#988`): DONE, in production** (PR #1005 to
   `staging`, then promotion PR #1006, merge `d9fac95`, 2026-10-06), all three issues closed. See
   **Last Verified** above for the production facts (the backfill measurement, R15/R25 live proof,
@@ -580,7 +598,8 @@ All facts in this section require live verification:
   - The dev database's `migrate dev --create-only` still demands a reset (`#895`) — this slice
     worked around it non-destructively with `migrate diff` against the datasource, then
     `migrate deploy`; still unfixed for the next slice that touches the schema.
-  - The next slice the owner named is `#981` + `#982` (mobile finish). It needs its own `/propose`.
+  - The next slice the owner named, `#981` + `#982` (mobile finish), is now built — see the
+    In-Flight entry above it.
 - **The mobile programme is the owner's chosen direction (2026-10-02).** It comes from the seventh
   Discover pass, `docs/research/discovery-log.md` 1.7.0, merged to `staging` via PR #963. Its
   issues are `#955`–`#962`, all Phase P10.

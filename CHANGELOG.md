@@ -6,6 +6,14 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Mobile finish: every review control reaches 44×44 below `lg`, and a logo-less vendor's header wordmark truncates instead of widening the page** (issues `#981`, `#982`; `specs/2026-10-06-p981-982-mobile-finish/`). No schema change, no migration, no server change; desktop (`lg`+) is unchanged throughout.
+  - `#981`: `StarRatingInput`'s per-star `<label>` is now the 44px tap target — the radio fills it absolutely, and `STAR_SIZES` is untouched, so the visual star is the same size as before. That one component fixes the stars on all three surfaces that render them. Quick View's Submit/Update review, each review's Delete, the error state's Try again and the signed-out Log in link follow, as do the **product page's** own review form, Delete and Log in link: it renders the same `ReviewForm` and `StarRatingInput`, so the defect existed twice and `#981` had only named Quick View. `/feedback` shares `StarRatingInput`, so it is measured too rather than assumed. Three new `data-tap-surface` hooks (`quick-view-body`, `product-reviews`, `feedback-form`), because the measuring script reports a control only when it sits inside one.
+  - `#981`: the star row gained `flex-wrap`. Measured at 360px, Quick View's review form has 288px of content box; five 44px stars plus gaps are 228px, but the row gap plus the rating label's `min-w-[75px]` needs 313px. The label now drops to its own line instead of widening the page. At the old 32px stars that row was 253px, which is why this only appeared once the stars grew.
+  - `#982`: the header's brand container carries `min-w-0` instead of `shrink-0` and every wordmark text node truncates; the logo image takes the `shrink-0`, so the logo path keeps its reserved footprint. `shrink-0` was never what protected the extension case (`#333` — that is `h-10 overflow-clip`), but it did forbid the block from giving way. **Measured on dev: a 36-character logo-less name rendered a requested 360px viewport at 477px; after the fix it is exactly 360 and 390, header height unchanged.** `Aheed Food Centre` alone no longer overflowed — the header has changed since slice 5 observed 382px — so the defect was only reachable with a longer name.
+  - `scripts/verify-mobile-layout.ts` gains `--sign-in <email>:<password>`. Both review forms and `/feedback` are session-gated and the script was always a guest on a throwaway profile, while desktop Chrome cannot go below 501px — so those controls could not be measured at a phone width by any existing tool. `specs/design-system.md` 1.17.0 records both standing rules.
+
 ### Changed
 
 - **Document-stage reconciliation for PR #1006 (`#991`, `#987`, `#988` promoted to production, merge `d9fac95`).** Docs only.
