@@ -71,7 +71,11 @@ export function StarRatingInput({
   return (
     <fieldset className={`flex flex-col gap-1.5 border-0 p-0 m-0 ${className}`}>
       {label && <legend className={labelClassName}>{label}</legend>}
-      <div className="flex items-center gap-2.5">
+      {/* #981 — `flex-wrap` so the rating-label text drops to its own line when the 44px stars
+      leave it no room. Measured at 360px inside Quick View: the review form has 288px of content
+      box, five 44px stars plus their gaps are 228px (which fits), but adding this row's gap and
+      the label's `min-w-[75px]` needs 313px. Without the wrap that 25px widened the page. */}
+      <div className="flex flex-wrap items-center gap-2.5">
         <div
           data-testid="star-rating-container"
           className="flex items-center gap-0.5"
@@ -84,7 +88,10 @@ export function StarRatingInput({
             return (
               <label
                 key={star}
-                className={`group relative flex cursor-pointer items-center justify-center p-1 rounded transition-transform hover:scale-110 motion-reduce:hover:scale-100 active:scale-95 motion-reduce:active:scale-100 focus-within:ring-2 focus-within:ring-action ${
+                // #981 — the LABEL is the tap target (the radio is absolutely positioned to fill
+                // it), so it carries `tap` below `lg` while the Star icon keeps its own size.
+                // `lg:min-h-0 lg:min-w-0` restores the exact pre-#981 desktop box.
+                className={`group relative flex min-h-tap min-w-tap lg:min-h-0 lg:min-w-0 cursor-pointer items-center justify-center p-1 rounded transition-transform hover:scale-110 motion-reduce:hover:scale-100 active:scale-95 motion-reduce:active:scale-100 focus-within:ring-2 focus-within:ring-action ${
                   disabled ? "cursor-not-allowed opacity-50" : ""
                 }`}
                 onMouseEnter={() => !disabled && setHoveredRating(star)}

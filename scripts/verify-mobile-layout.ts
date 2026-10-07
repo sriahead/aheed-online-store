@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 /**
  * Measure the storefront at real phone and tablet widths:
- * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location] [--open-filters] [--open-cart] [--open-quick-view] [--block-urls <pattern>]`.
+ * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location] [--open-filters] [--open-cart] [--open-quick-view] [--block-urls <pattern>] [--sign-in <email>:<password>]`.
  *
  * ## Why this exists (#960, #961, #962)
  *
@@ -77,6 +77,20 @@ import { join } from "node:path";
  *   blocked it must not rise against a baseline, or a fallback is hiding images that load.
  * - `brokenImages`, always printed: `{ alt, src }` for each `img` with a non-empty `src` that is
  *   `complete` with `naturalWidth` 0, which is how a browser shows a broken-image icon.
+ *
+ * #981 adds:
+ * - `--sign-in <email>:<password>`: signs in before the first measured load, so a page gated on
+ *   `session?.user` renders its signed-in branch. Until this existed the script was always a
+ *   guest on a fresh throwaway profile, which made the review forms (Quick View's and the product
+ *   page's) and `/feedback` unmeasurable — they only render their controls to a signed-in shopper,
+ *   and desktop Chrome cannot go below 501px, so no other tool could reach them at phone widths.
+ *   It POSTs to `/api/auth/sign-in/email` from inside the page, so Better Auth's `Set-Cookie`
+ *   lands in the profile Chrome is already using. It throws with the HTTP status if sign-in fails,
+ *   rather than measuring a signed-out page and reporting an empty surface.
+ *   **The password is passed on the command line, so this is for local `npm run preview` only** —
+ *   never a deployed host, and never a real customer's credentials. The dev demo shopper is
+ *   `demo-customer@example.com` with `DEMO_ACCOUNT_PASSWORD` from `.dev.vars`. The split is on the
+ *   FIRST colon, so a password containing `:` still works.
  */
 
 const HEIGHT = 844;
@@ -93,6 +107,7 @@ interface Args {
   openCart: boolean;
   openQuickView: boolean;
   blockUrls: string | null;
+  signIn: { email: string; password: string } | null;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -109,6 +124,17 @@ function parseArgs(argv: string[]): Args {
   const openCart = argv.includes("--open-cart");
   const openQuickView = argv.includes("--open-quick-view");
   const blockUrls = value("--block-urls") ?? null;
+  // #981 — `--sign-in <email>:<password>`. The password may itself contain `:`, so split on the
+  // FIRST colon only.
+  const signInRaw = value("--sign-in") ?? null;
+  const signInSplit = signInRaw === null ? -1 : signInRaw.indexOf(":");
+  const signIn =
+    signInRaw === null || signInSplit <= 0
+      ? null
+      : {
+          email: signInRaw.slice(0, signInSplit),
+          password: signInRaw.slice(signInSplit + 1),
+        };
   const widths = (value("--widths") ?? "")
     .split(",")
     .map((w) => Number(w.trim()))
@@ -118,10 +144,11 @@ function parseArgs(argv: string[]): Args {
     !path ||
     widths.length === 0 ||
     (then !== null && !addFirst) ||
-    (argv.includes("--block-urls") && !blockUrls)
+    (argv.includes("--block-urls") && !blockUrls) ||
+    (argv.includes("--sign-in") && signIn === null)
   ) {
     console.error(
-      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location] [--open-filters] [--open-cart] [--open-quick-view] [--block-urls <pattern>]",
+      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location] [--open-filters] [--open-cart] [--open-quick-view] [--block-urls <pattern>] [--sign-in <email>:<password>]",
     );
     process.exit(2);
   }
@@ -151,6 +178,7 @@ function parseArgs(argv: string[]): Args {
     openCart,
     openQuickView,
     blockUrls,
+    signIn,
   };
 }
 
@@ -566,6 +594,29 @@ async function main() {
         throw new Error(`Could not load ${args.base}${path} (Chrome error page).`);
       }
     };
+
+    // #981 — sign in BEFORE the first measured load, so a page gated on `session?.user` renders
+    // its signed-in branch. Both review forms and /feedback are gated, and their controls are what
+    // this slice measures. The fetch runs in the page so Better Auth's Set-Cookie lands in the
+    // profile Chrome is already using; there is no cookie plumbing to get wrong.
+    if (args.signIn) {
+      await load("/");
+      const result = await cdp.evaluate<string>(`
+        fetch(${JSON.stringify("/api/auth/sign-in/email")}, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(${JSON.stringify(args.signIn)}),
+        })
+          .then((r) => r.ok ? "ok" : r.status + " " + r.statusText)
+          .catch((e) => "threw: " + e.message)
+      `);
+      if (result !== "ok") {
+        throw new Error(
+          `--sign-in: ${args.signIn.email} could not sign in (${result}). Check the account exists (npx tsx scripts/demo-accounts.ts add) and the password matches DEMO_ACCOUNT_PASSWORD.`,
+        );
+      }
+    }
 
     let added = false;
     let cartFeedback: unknown = null;

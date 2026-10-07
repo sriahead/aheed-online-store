@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.16.0"
-updated: 2026-10-04
+version: "1.17.0"
+updated: 2026-10-07
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -181,7 +181,7 @@ in use still depending on a Tailwind default.
 Spacing scale and breakpoints are **not brand-derived** — Tailwind v4's defaults are used as-is.
 The one named spacing step is `tap` (below).
 
-## Touch targets (#961, 2026-10-02; #964 and #979, 2026-10-04)
+## Touch targets (#961, 2026-10-02; #964 and #979, 2026-10-04; #981, 2026-10-06)
 
 `--spacing-tap: 2.75rem` (44px) in `design-system/tokens/tokens.css` generates `h-tap`, `w-tap`,
 `size-tap`, `min-h-tap` and `min-w-tap`. It is a size, not a colour, so `brandStyle()` never
@@ -226,6 +226,27 @@ both the hook and the `tap` class:
 - `gallery-arrow`: the Quick View carousel's previous and next arrows, a 44px button around the same
   32px circle.
 
+`#981` covered the review controls `#979` left out, on **both** surfaces that render them — Quick
+View and the product page, which share `ReviewForm` and `StarRatingInput`:
+
+- `quick-view-body`: Quick View's Submit/Update review, each review's Delete, the error state's
+  Try again, and the signed-out "Log in" link;
+- `product-reviews`: the product page's review form, its per-review Delete and its signed-out
+  "Log in" link;
+- `feedback-form`: `/feedback`'s star input and its submit button. It is here because it shares
+  `StarRatingInput`, not because `#981` named it — and sharing a component means sharing the
+  rule, so it is measured rather than assumed.
+- **`StarRatingInput`'s per-star `<label>` is the tap target**, not the `Star` icon. The radio is
+  absolutely positioned to fill the label, so the label is the box a finger hits; `STAR_SIZES`
+  (`h-5 w-5` / `h-6 w-6` / `h-7 w-7`) is unchanged, so the visual star is the same size it always
+  was. This is the "small visual, large hit area" rule below, applied to a label rather than a
+  button.
+- **A 44px star row does not fit beside its rating label at 360px, so the row wraps.** Measured
+  inside Quick View: the review form has 288px of content box, five 44px stars plus their gaps are
+  228px, but adding the row gap and the label's `min-w-[75px]` needs 313px. `flex-wrap` on that row
+  drops the label to its own line instead of widening the page. At the old 32px stars the same row
+  was 253px, which is why this only appeared once the stars grew.
+
 Some facts behind the rule:
 
 - **The breakpoint is `lg`, not `sm`.** A 640–1023px viewport is a tablet, and a tablet is a touch
@@ -241,14 +262,32 @@ Some facts behind the rule:
   hold two 44px buttons, a quantity and Add. One tap adds one, and the in-cart stepper takes over.
 - **The pattern is `min-h-tap … lg:min-h-0`** (or `size-tap … lg:size-auto` for an icon button).
   The control grows to at least 44px below `lg` and keeps its exact pre-`#964` size from `lg`.
-- **Still outside the rule:** Quick View's review form, Delete, Try again and Log in controls
-  (`#981`); the gallery's dot buttons, which the arrows and swiping duplicate (SC 2.5.5's
-  "equivalent" exception); and the staff panel. A new storefront control should adopt `tap` from the
-  start.
+- **Still outside the rule:** the gallery's dot buttons, which the arrows and swiping duplicate
+  (SC 2.5.5's "equivalent" exception); and the staff panel. A new storefront control should adopt
+  `tap` from the start.
 
 Measure at real widths with `scripts/verify-mobile-layout.ts` (headless Chrome over the DevTools
 protocol). Desktop Chrome cannot go below 501px, and the app's `frame-ancestors 'none'` rules out
-an iframe.
+an iframe. A control that only renders to a signed-in shopper needs the script's `--sign-in`
+(`#981`); before that existed the script was always a guest, and the review forms could not be
+measured at a phone width by any tool.
+
+## The header wordmark truncates (#982, 2026-10-06)
+
+**A vendor with no `logoStorageKey` gets a wordmark — an initial tile, the name in two spans and
+the locality — and that block must be allowed to shrink.** The brand container carries `min-w-0`
+rather than `shrink-0`, the logo image carries its own `shrink-0` so the logo path keeps its
+reserved footprint, and every text node in the wordmark truncates.
+
+The failure this prevents is not a clipped name, it is a **sideways scroll on every page**: a flex
+item refuses to shrink below its content width by default, so a long name widened the whole
+document instead. Measured on dev before the fix, with a 36-character logo-less name: a requested
+360px viewport rendered at **477px**. "Aheed Food Centre" alone no longer overflowed by this point,
+so the defect was only reachable with a longer name — which is exactly why it needs a structural
+fix rather than a name-length assumption.
+
+This matters for multi-tenancy (ADR-004): a new vendor onboarding without a logo is ordinary, not
+exceptional, and nothing validates a vendor's name length.
 
 ## Product grids (#962, 2026-10-02)
 

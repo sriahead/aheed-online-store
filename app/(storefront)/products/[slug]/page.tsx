@@ -198,14 +198,21 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         />
       </div>
 
-      <section className="col-span-full flex flex-col gap-4">
+      {/* #981 — `product-reviews` is the measuring hook. The product page carries the same
+      under-44px review controls as Quick View (it renders the same `ReviewForm` and the same
+      `StarRatingInput`), and `scripts/verify-mobile-layout.ts` reports a control only when it
+      sits inside a `data-tap-surface`. */}
+      <section data-tap-surface="product-reviews" className="col-span-full flex flex-col gap-4">
         <h2 className="text-xl font-semibold text-primary">Reviews</h2>
 
         {session?.user ? (
           <ReviewForm productId={product.id} productSlug={slug} existingReview={existingReview} />
         ) : (
           <p className="text-primary-muted">
-            <Link href="/login" className="font-semibold text-action">
+            <Link
+              href="/login"
+              className="inline-flex min-h-tap min-w-tap items-center justify-center font-semibold text-action lg:min-h-0 lg:min-w-0"
+            >
               Log in
             </Link>{" "}
             to leave a review.
@@ -223,7 +230,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   <form action={deleteReview}>
                     <input type="hidden" name="reviewId" value={review.id} />
                     <input type="hidden" name="productSlug" value={slug} />
-                    <button type="submit" className="text-sm text-danger">
+                    <button
+                      type="submit"
+                      className="flex min-h-tap min-w-tap items-center justify-center text-sm text-danger lg:min-h-0 lg:min-w-0"
+                    >
                       Delete
                     </button>
                   </form>

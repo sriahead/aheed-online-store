@@ -42,7 +42,7 @@ export function ReviewForm({
       </label>
       <button
         type="submit"
-        className="self-start rounded-full bg-action px-4 py-2 font-semibold text-white"
+        className="flex min-h-tap items-center justify-center self-start rounded-full bg-action px-4 py-2 font-semibold text-white lg:min-h-0"
       >
         {existingReview ? "Update review" : "Submit review"}
       </button>
