@@ -4,8 +4,8 @@ title: "Discovery log"
 audience: [dev, product]
 type: doc
 status: approved
-version: "1.7.0"
-updated: 2026-10-02
+version: "1.9.0"
+updated: 2026-10-10
 visibility: internal
 summary: "Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action."
 tags: [research, discovery, opportunities, risk, sdd]
@@ -35,6 +35,553 @@ milestone close). Nothing here is approved scope — see `docs/research/README.m
 
 **Next action:** RESEARCH MORE | PROPOSE | ADD TO ROADMAP/BACKLOG | READY FOR SPEC | DO NOT PURSUE
 ```
+
+---
+
+## 2026-10-10 — ninth Discover pass (owner ruling: first-party chatbot, `wa.me` context handoff — and its Workers AI feasibility)
+
+A continuation of the eighth pass below, after the owner **rejected** its WhatsApp Business
+Platform premise and named a different design, then asked for the technical feasibility and cost of
+running the bot on Cloudflare AI, and how it behaves for a standalone vendor versus a shared one.
+
+**The owner's ruling (2026-10-10):** a **first-party chatbot on the storefront** answers most FAQs
+from this platform's own per-vendor approved content; when it cannot answer, it **hands off to the
+store's existing WhatsApp number via a `wa.me` deep link carrying the conversation's context**. No
+Meta Business Platform, no API, no webhook, no template approval, no per-message billing.
+
+**That ruling is materially better than the design it replaced, and the record has been corrected
+to match it.** `#1015` was rewritten, `#1014` was rescoped and retitled, and `#695` carries a
+comment taking it off the support-deflection critical path. Four entries below are superseded in
+part and say so inline; nothing has been deleted.
+
+**Why the ruling is better, in this repo's own terms.**
+
+- *The handoff mechanism already ships.* `components/layout/FloatingContact.tsx:116` already builds
+  `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}` from
+  `VendorConfig.whatsappNumber` (`prisma/schema.prisma:463`). The only change is what goes in that
+  string — today a fixed `Hi ${vendorName}, I have a question about my order.`
+- *It needs no ADR and no mission change.* `specs/mission.md:60-64` already permits "a first-party
+  deep link a shopper chooses to tap — no API, no Meta Business account, no inbound webhook, and no
+  message this platform ever sends." The eighth pass's ADR-007 requirement is **withdrawn**.
+- *`#571`'s cost-bounding pattern now transfers.* A storefront bot has a session and an IP to hash,
+  so `lib/repositories/list-normalisation-rate-limit.ts` — already `vendorId` + `ipHash` scoped —
+  is a direct ratified precedent rather than a pattern that breaks.
+- *Meta's 24-hour window stops applying.* Those rules govern the Business *Platform* API. Staff
+  replying from the ordinary WhatsApp app have no window, no templates and no per-message billing.
+- *It is better for the shopper, not only cheaper.* The context is visible and editable before the
+  shopper taps, and nothing leaves the browser until they do — a consent property a server-side
+  integration does not give for free.
+
+**Four constraints the ruling does carry**, recorded on `#1015`: bound the `?text=` context in code
+(clients truncate silently, and the ceiling varies by platform); keep PII out of that URL (it lands
+in browser history — order number and topic only); call it a **handoff, not a transfer**, because
+the conversation does not move; and do not hardcode the model (see the first finding below).
+
+**What did not move.** `#1012` (a per-vendor approved-answer corpus) is still the real
+prerequisite and is design-independent. `#606` still caps the workload claim — substitution and
+cancelling a paid order cannot be *resolved* by anyone, bot or human — though for those two a
+context-rich handoff is the right answer and is strictly better than today's generic message.
+
+**Feasibility verdict: the AI is the cheap part, and the platform already runs three Workers AI
+features, so nothing here is new infrastructure.** Cost is not the constraint: computing from
+`NET_CONTENT_MODEL_RATES` against the published 10,000-neuron daily free allowance and the $0.011
+per 1,000 neurons overage rate (both re-confirmed 2026-10-10), a single store's support volume fits
+inside the **free** daily allowance even at the 1,000-orders/day throughput `specs/mission.md`
+designs for. The two findings below are what the feasibility check surfaced, and neither is about
+the chatbot: one is a scheduled risk in shipped code — **investigated as a suspected live outage
+and disproved by verification**, which is itself recorded — and the other is the multi-tenancy
+question the owner asked, which applies to the three AI features already in production.
+
+### 2026-10-10 — two shipped features hardcode a delisted, deprecated Workers AI model id; verified still serving, and its removal will be invisible
+
+**Trigger:** explicit /discover (feasibility check for `#1015`)
+**Status of the area:** genuinely unowned. Filed as `#1016`.
+
+> **This entry was rewritten the same day it was filed.** As first written it hypothesised that
+> `/shop-your-list`'s AI pre-pass had been silently dead since 2026-05-30. **Live verification
+> disproved that**, and the hypothesis is withdrawn. The record of the correction is kept
+> deliberately: the original reasoning was sound and the conclusion was still wrong, which is
+> exactly why `CLAUDE.md` requires a real failing request rather than an inference from a
+> deprecation notice.
+
+**Observed (verifiable today):** Cloudflare's changelog post of 2026-05-08 ("planned model
+deprecations") lists **`@cf/meta/llama-3.1-8b-instruct` as deprecated on 2026-05-30**. Two shipped
+call sites hardcode that id and neither is env-overridable: `lib/list-normalisation.ts:37`
+(`NORMALISATION_MODEL`, the "Shop your list" AI pre-pass, on the **public request path**) and
+`lib/search-synonym-proposals.ts:31` (`MODEL`, the staff-triggered synonym proposals). The newer
+net-content code already moved on and shows the correct pattern — `lib/net-content-suggester.ts:30`
+resolves `DEFAULT_NET_CONTENT_MODEL` through the `NET_CONTENT_AI_MODEL` config key
+(`lib/config.ts:153`), and every suggestion row records the model that produced it.
+
+**Verified live, 2026-10-10, against the platform's own Cloudflare account** (real
+`CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` from `.dev.vars`):
+
+1. `GET /accounts/{id}/ai/models/search?per_page=500` returned `success: true` and **70 models**.
+   `@cf/meta/llama-3.1-8b-instruct` is **absent from the catalogue**; the only surviving
+   `llama-3.1` entry is **`@cf/meta/llama-3.1-8b-instruct-fp8`**. The changelog summary suggested
+   `-fast` was the survivor — on this account it is `-fp8`, so a swap must target `-fp8`.
+2. `POST /accounts/{id}/ai/run/@cf/meta/llama-3.1-8b-instruct` with a trivial message returned
+   **`success: true`**. Controls `-fp8` and `@cf/google/gemma-4-26b-a4b-it` also both succeeded.
+
+**Interpretation:** the id is **delisted but still serving**, so the pre-pass is working today and
+`#591` stays conditional ("inert *whenever* the pre-pass degrades") rather than unconditional,
+while `#590` is filed against a pre-pass that *is* running. What remains is a deprecated, delisted
+id serving on borrowed time, hardcoded twice, with no env override and **no signal for the day it
+stops**. `lib/list-normalisation.ts` is documented to degrade invisibly — "every failure path
+returns null and the caller falls through to exactly the deterministic behaviour this feature
+shipped with in P3d" — nothing writes an `ErrorEvent` on that path, and `/api/health` does not
+cover Workers AI, so the eventual withdrawal would be undateable after the fact.
+**Confidence:** Known for both literals, for the published deprecation date, for the id's absence
+from this account's catalogue, and for its still answering a real call. **Unknowable from here:**
+when it actually stops. Both checks hit the REST API directly rather than a deployed Worker, so
+`#588` (the Workers AI credentials never reach the Worker runtime) remains a separate, untested
+failure path.
+
+**Why it matters commercially:** nothing is broken today, so this is a scheduled-risk item rather
+than an incident — but it is the kind that converts into an undateable regression. It also sets the
+rule for `#1015`: a chatbot that hardcodes a model id inherits this failure mode, except a
+conversation has no deterministic answer to degrade into, so there the failure is user-visible and
+unrecoverable rather than a lost enrichment.
+**Options considered:** move both sites to the net-content pattern (named default plus env
+override), defaulting to `-fp8` so observable behaviour barely moves, or to
+`@cf/google/gemma-4-26b-a4b-it`, which is already used here and already priced in
+`NET_CONTENT_MODEL_RATES`. Narrower: swap the two literals to `-fp8` and stop, which leaves the
+next deprecation to land identically. **Separately and regardless:** have the degradation path
+write an `ErrorEvent` — now the most valuable half, since the feature works and the real exposure
+is the undated future failure. Doing nothing is tenable only while an unlisted id keeps answering,
+which nobody here controls or monitors.
+**Cost of delay:** none today. It becomes unrecoverable context on the day the id stops.
+
+**Next action:** PROPOSE
+
+### 2026-10-10 — Workers AI is an unmetered shared commons: one account credential, one daily pool, no per-vendor figure
+
+**Trigger:** explicit /discover (the owner's standalone-versus-shared-vendor question)
+**Status of the area:** genuinely unowned. Filed as `#1017`.
+
+**Observed (verifiable today):** every Workers AI call in this repo goes to
+`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${MODEL}` using **one
+platform-level credential pair** — `getAiEnv()` reads a single `CLOUDFLARE_ACCOUNT_ID` and
+`CLOUDFLARE_API_TOKEN` (`lib/config.ts:158-164`) — so ADR-004's host-based tenant resolution does
+not reach the AI transport. Cloudflare's free allocation is **10,000 Neurons per day per account**,
+resetting 00:00 UTC, with overage on the Workers Paid plan at **$0.011 per 1,000 Neurons**, and
+exceeding the limits without that plan makes further requests **fail with an error rather than
+being charged**. Per-caller throttling is already vendor-aware (`ListNormalisationAttempt` carries
+`vendorId` + `ipHash`, `prisma/schema.prisma:1786`) but it **counts requests, not neurons**. A real
+neuron budget exists only inside a script: `DEFAULT_NEURON_BUDGET = 5000` and
+`NET_CONTENT_MODEL_RATES` (neurons per million tokens, read from Cloudflare's pricing page
+2026-09-25) with `neuronsForCall()` in `lib/net-content-run.ts:25-41`. **No table or column
+anywhere records neurons spent per vendor.**
+**Interpretation:** ADR-004 gives no infrastructure split between a standalone and a shared
+vendor — decision 2 is row-level tenancy in one database, decision 3 resolves the tenant from the
+request host, and a custom domain changes only the session cookie scope (decision 4). One Worker,
+one Neon database, **one AI account**. That is the right architecture, but it makes AI a shared,
+unmetered, unattributed commons with two consequences: one vendor can exhaust the platform's daily
+pool and silently degrade every other vendor's features — the same starvation shape as open `#619`,
+where a batch cap consumed in vendor order lets one vendor starve another's reconciliation
+candidates — and no vendor can be capped, charged or reported on. Storage is namespaced per vendor
+under ADR-003 (`vendors/{vendorId}/...`); AI is not. A chatbot makes this acute rather than
+creating it: the three shipped AI features are a staff-triggered step, an offline script and one
+call per list submission, whereas a conversation is several calls per shopper and is the first AI
+feature whose volume scales with **customer** traffic.
+**Confidence:** Known for the single-credential transport, the absent per-vendor record and the
+three code locations. **Needs validation** for the current rate card — third-party sources
+disagree, and Cloudflare has moved to more granular per-model unit pricing while still billing in
+neurons behind the scenes. **Needs validation** for real per-conversation cost: arithmetic on
+`NET_CONTENT_MODEL_RATES` for Gemma 4 puts a short turn in the region of a few tens of neurons,
+which would fit a single store's support volume inside the free daily pool — but that is a
+calculation on a published rate, not a measurement.
+
+**Why it matters commercially:** the platform's pitch is no per-store licence and no revenue share,
+on infrastructure costing tens of pounds a month. AI is the only component that can breach that
+quietly and the only one that cannot be attributed to the store that caused it. Metering before the
+chatbot is far cheaper than retrofitting it once several vendors are live.
+**Options considered:** record neurons per vendor per call from the same seam that already computes
+`neuronsForCall()`, then refuse a call that would exceed a per-vendor daily budget, exactly as the
+net-content run already refuses to start one past its budget. Cheaper: a per-vendor daily *call*
+cap reusing the `ListNormalisationAttempt` shape — approximate, stops exhaustion, gives no cost
+figure. Rejected and recorded so it is not revisited: per-vendor Cloudflare credentials, which
+would give true isolation and a real per-vendor bill but require each vendor to hold a Cloudflare
+account, breaking ADR-004 decision 7's "onboard with a row, no deploy". Doing nothing is tenable
+while only Aheed and SriMart exist and neither has traded.
+**Cost of delay:** none today; it becomes a billing problem at the first vendor onboarded on
+commercial terms, and a credibility problem if it is discovered then.
+
+**Next action:** ADD TO ROADMAP/BACKLOG
+
+---
+
+## 2026-10-09 — eighth Discover pass (owner proposal: AI chatbot with WhatsApp handoff)
+
+> **Superseded in part on 2026-10-10.** The owner rejected this pass's WhatsApp Business Platform
+> premise in favour of a first-party storefront chatbot handing off via a `wa.me` deep link. The
+> four entries marked below are superseded; the rest stand. See the ninth pass above.
+
+An explicit `/discover` over an owner proposal: a dedicated AI chatbot that asks qualifying
+questions, answers FAQs "using our approved information", and hands the conversation to a member of
+staff when it cannot answer — all over WhatsApp, so the shopper never leaves a familiar chat.
+Treated as evidence, not scope. Every element was mapped against the schema and the code first,
+then against the roadmap and the 141 open issues, then against `specs/mission.md` and the ADRs.
+
+**Result: four genuinely unowned findings (filed as `#1012`–`#1015`), two `RESEARCH MORE` entries
+that stay in this log, one `DO NOT PURSUE` on the programme shape, and new evidence on two tracked
+issues.** The proposal is not one feature. It is six, and they are already split across three
+different states.
+
+**Already implemented, recorded so it is not rediscovered.**
+
+- *A per-vendor WhatsApp contact surface.* `FloatingContact` renders a `wa.me` deep link with a
+  prefilled message (`components/layout/FloatingContact.tsx:116`), driven by
+  `VendorConfig.whatsappNumber` (`prisma/schema.prisma:463`), editable at `/staff/storefront`
+  (`components/staff/StorefrontConfigForm.tsx:750`), validated to E.164 digits on write with a real
+  error message for the national-format mistake (`lib/social-contact-form.ts:119`, `:133`), and a
+  null hides the link rather than falling back to a platform default
+  (`components/layout/FloatingContact.tsx:96`). The "simple, familiar WhatsApp" entry point the
+  proposal asks for already exists; what is missing is everything behind it.
+- *A vendor-agnostic AI prompt framing.* `VendorConfig.storeDescription` (`#905`) is already fed to
+  every AI prompt in place of a hardcoded grocery framing, via `storeDescriptionPromptLine`.
+- *A bounded AI call on a public request path.* `lib/list-normalisation.ts` runs
+  `@cf/meta/llama-3.1-8b-instruct` over the Cloudflare REST API with three independent bounds —
+  per-caller (`lib/repositories/list-normalisation-rate-limit.ts`), per-submission
+  (`MAX_AI_INPUT_CHARS` 4000), per-call (`NORMALISATION_TIMEOUT_MS` 6000) — and every failure path
+  returns null into a deterministic fallback.
+- *An inbound webhook precedent.* `app/api/webhooks/stripe/route.ts` already does
+  signature-verified inbound processing on this runtime, so that half of the channel work is
+  cheaper than `#695` implies.
+- *Postcode eligibility self-serve.* `components/layout/PostcodeChecker.tsx` in the header.
+- *One-click reorder* (`#124`), which is the capability `#695`'s chat entry point would front.
+
+**Already tracked, with evidence added rather than re-filed.**
+
+- **`#695`** owns the channel: WhatsApp Business Platform access, a verified Meta business, a
+  registered number, template approval, the inbound webhook and phone-to-`User` identity binding.
+  Milestone *Deferred — owner/external gated*. Two of its claims were re-verified and both still
+  hold: `User` carries no phone field at all (`prisma/schema.prisma:49-78`), and nothing links a
+  phone to an identity. `Address.phone` (`:1176`) and `CustomerAddress.phone` (`:1847`) exist and
+  are both required, but they are self-asserted delivery contacts captured at checkout — a match
+  against one is not authentication, and a reassigned or shared mobile makes it actively unsafe as
+  one. A comment recording this pass's constraints has been added there.
+- **`#606`** owns the reason the workload claim does not land yet (see the fourth entry below).
+- **`#104`** (no verified sending domain, so no customer email has ever been delivered) and
+  **`#113`** (production still on Stripe test keys, so the platform has never traded) are both
+  open.
+- **`specs/mission.md:60-64`** records the 2026-09-10 narrowing explicitly: the `wa.me` contact
+  link is in scope, and "everything that would make WhatsApp an outbound *channel* stays out of
+  scope: notifications, marketing automation, and the chat re-order flow (`#695`, which needs its
+  own `/propose` and almost certainly its own ADR)." This proposal reverses that narrowing
+  substantially, so it inherits that requirement.
+
+**Challenges to the proposal itself.**
+
+- *"Using our approved information" names a corpus that does not exist.* See the first entry below.
+- *"Reduce the workload on the support team" assumes the deflectable questions are the ones being
+  asked.* The two highest-volume grocery contact reasons have no system answer to give, so the bot
+  can only collect and escalate. See the fourth entry.
+- *The AI layer is the expensive part and the least of the value.* The questions a grocery shopper
+  actually asks first — minimum order, delivery charge, free-delivery threshold, do you collect,
+  do you deliver to my postcode — are all structured columns on `VendorConfig` today. A
+  deterministic answer path serves them exactly, with no model, no token cost and no hallucination
+  surface. See the second entry.
+- *A conversation is not a single-shot call.* `lib/list-normalisation.ts` is safe partly because it
+  is one call per submission with a real deterministic fallback. A multi-turn conversation is N
+  calls carrying history, and there is no deterministic "answer the shopper's question" path to
+  fall back to, so the degradation strategy that makes the existing AI call acceptable does not
+  transfer.
+- *As a whole,* this is a programme spanning a licensed external channel, a content model, a
+  conversation model, a staff surface and an AI layer. Taking it as one piece would break "build
+  only what the stage requires". See the last entry.
+
+### 2026-10-09 — a chatbot has no approved answers to give: one shopper-facing document exists, and it is deliberately hedged
+
+**Trigger:** explicit /discover (owner proposal, "answers using our approved information")
+**Status of the area:** genuinely unowned. Filed as `#1012`.
+
+**Observed (verifiable today):** the Help Centre at `app/(storefront)/help/page.tsx:21-24` filters
+`DOC_ARTICLES` for an audience containing `shopper` or `customer`. In the generated corpus
+(`app/(admin)/staff/runbook/docs.ts`) the audience tags count 209 `dev`, 9 `product`, 6 `admin`,
+3 `staff` and **1 `shopper`**. That one article is `docs/shopper-help/shopping-guide.md`, 52 lines
+including front matter, platform-authored and committed to this repo. Because it must serve every
+tenant, its answers are hedged by design: "Some stores have a minimum order amount", "A delivery
+fee may apply, but you might qualify for free delivery if your order is above a certain amount",
+"Loyalty Program (If Enabled)". There is no per-vendor content model anywhere in the schema — no
+FAQ, policy, answer or article table — and `VendorConfig` carries exactly four free-text
+shopper-facing strings (`searchPlaceholder`, `bannerNote`, `heroSubtitle`, `storeDescription`,
+`prisma/schema.prisma:435-510`), none of them an answer to a question.
+**Interpretation:** the phrase "our approved information" has no referent. The only corpus a bot
+could be pointed at is a 209-article engineering doc set with one hedged shopper page in it, and
+the obvious shortcut — retrieve over `DOC_ARTICLES` — would put `CLAUDE.md`, the ADRs and the
+runbook behind a customer-facing chat. Writing the answers as repo markdown instead would make the
+platform author claims on a vendor's behalf, which is exactly what `#239` fixed and what
+`ADR-004` forbids.
+**Confidence:** Known for every count and file above. That a retrieval bot would be pointed at
+`DOC_ARTICLES` is Inferred — it is the only corpus present.
+
+**Why it matters commercially:** this is the prerequisite for every later answering surface, AI or
+not, and it is also the cheapest item in the whole proposal. Aheed and SriMart sell different
+things under different delivery rules; one hedged page serves neither well, and a shopper who
+cannot find the answer contacts a human, which is the cost the proposal exists to remove.
+**Options considered:** a vendor-scoped FAQ aggregate (question, answer, sort order, active flag,
+`@@unique([vendorId, …])`, null-or-empty renders nothing per `#239`) with staff CRUD, reusing the
+`VendorReviewLink` shape that already solved "the vendor owns the rows, the platform compiles no
+names". Cheaper: keep the markdown guide and add a per-vendor override block. Cheapest: do
+nothing, and accept that no answering surface can be built honestly.
+**Cost of delay:** rises the moment trading starts, and gates `#1013`, `#1015` and `#695`'s
+successor. Writing it after a bot exists means the bot ships with placeholder answers.
+
+**Next action:** ADD TO ROADMAP/BACKLOG
+
+### 2026-10-09 — the Help Centre hedges five answers the database already knows exactly
+
+**Trigger:** explicit /discover (owner proposal, FAQ automation)
+**Status of the area:** genuinely unowned. Filed as `#1013`.
+
+**Observed (verifiable today):** `VendorConfig` holds `minimumOrderPence`, `deliveryFeePence`,
+`freeDeliveryThresholdPence` (null meaning free delivery is never offered) and `offerCollection`
+(`prisma/schema.prisma:435-510`); `VendorDeliveryArea` holds the postcode rules. Those values are
+already rendered precisely to shoppers — but only inside the cart and checkout
+(`components/cart/CartContents.tsx`, `components/checkout/CheckoutPricing.tsx`,
+`components/checkout/CheckoutSummary.tsx`, `lib/delivery-pricing.ts`, `lib/cart-rules.ts`), which
+means a shopper must already have items in a basket to learn them. The one shopper-facing help
+document states the same five facts as "some stores", "may apply", "a certain amount" and
+"specific postcode areas". Postcode eligibility is the exception and is already answerable without
+a basket (`components/layout/PostcodeChecker.tsx`).
+**Interpretation:** the platform's single help page is less accurate than its own database, for
+the questions most likely to be asked first, and for no reason other than that the page is prose.
+Rendering those five from `VendorConfig` on the existing `/help` route needs no model, no new
+channel, no migration and no content authoring, and it would be correct for every tenant
+automatically.
+**Confidence:** Known (every field and render site read). Which questions arrive most often is
+Needs validation — no support contact has ever been recorded, which is itself the subject of the
+last entry.
+
+**Why it matters commercially:** "do you deliver to me, what does it cost, what is the minimum" is
+the pre-basket decision. A shopper who cannot answer it without filling a basket either fills one
+speculatively or leaves. It is also the subset of the owner's proposal that can ship before any of
+its three external gates clear.
+**Options considered:** render the delivery and loyalty facts on `/help` from `VendorConfig` and
+`VendorDeliveryArea`, leaving the hedged prose for everything genuinely vendor-independent.
+Larger: fold it into `#1012`'s content model as computed rows. Doing nothing leaves a document
+that contradicts the checkout.
+**Cost of delay:** low before launch, immediate after — this is first-visit information.
+
+**Next action:** ADD TO ROADMAP/BACKLOG
+
+### 2026-10-09 — "transfer to a real person" has no destination: no conversation model, and no staff surface to transfer to
+
+> **SUPERSEDED IN PART 2026-10-10.** The destination problem is solved by the owner's design: the
+> handoff goes to the store's existing WhatsApp number, so no staff inbox, assignment model or
+> availability model is needed. `#1014` was rescoped and retitled to what survives — **no
+> conversation is logged, so FAQ deflection stays unmeasurable**, which keeps `#1012`'s FAQ set a
+> guess. The observed facts below are unchanged and still verifiable.
+
+**Trigger:** explicit /discover (owner proposal, seamless handoff to staff)
+**Status of the area:** genuinely unowned. Filed as `#1014`.
+
+**Observed (verifiable today):** `prisma/schema.prisma` declares no conversation, message, thread,
+ticket or case model — the nearest inbound-customer-writing aggregate is `CustomerFeedback`, which
+is a one-row-per-customer rating with a `PENDING`/`APPROVED`/`REJECTED` moderation state and a
+`@@unique([vendorId, userId])`, so it structurally cannot hold a second message from the same
+person, let alone a thread. `app/(admin)/staff/` carries twenty-two sections (orders, inventory,
+products, categories, brands, attributes, bundles, promotions, discounts, loyalty, customers,
+delivery-areas, fulfilment, payments, errors, feedback, net-content, reports, runbook,
+search-synonyms, storefront, team) and **none of them is a contact or conversation queue**. There
+is also no notion of staff availability anywhere in the schema: `VendorFulfilmentSlot` and
+`VendorExpressSchedule` model delivery and collection capacity, not working hours, and no field
+answers "is a human reachable now".
+**Interpretation:** the handoff is the load-bearing half of the proposal — it is what makes the
+bot safe to deploy, because it is the escape hatch for everything the bot gets wrong — and it is
+the half with no foundation at all. A bot that "transfers to a member of staff" with nowhere to
+transfer to transfers into the owner's personal WhatsApp, which is the status quo the proposal is
+trying to improve on, now with an AI layer in front of it and a shopper who has already answered
+three qualifying questions.
+**Confidence:** Known.
+
+**Why it matters commercially:** the collected-information benefit ("collect the necessary
+information before involving staff") is only realised if the information lands somewhere a human
+reads, next to the order it concerns. Without a queue, the qualifying questions cost the shopper
+time and save staff nothing. This is also the surface that would finally make support volume
+measurable, which every other finding here is currently guessing about.
+**Options considered:** a vendor-scoped conversation aggregate (conversation plus message, an
+assigned staff user, an open/closed state, an optional `orderId`) with a `/staff/` queue following
+the three-surface rule in `CLAUDE.md` and a `PanelRefusal` branch. Cheaper and channel-free: a
+contact form writing one row that `/staff/` lists, which delivers the collect-then-escalate
+benefit with no Meta dependency and no AI. Cheapest: do nothing and keep the `wa.me` link.
+**Cost of delay:** every month without it is a month with no support-volume data, so the FAQ set
+in `#1012` stays a guess.
+
+**Next action:** PROPOSE
+
+### 2026-10-09 — the deflection ceiling is set by #606, not by the bot: the top two grocery contact reasons have no answer to give
+
+**Trigger:** explicit /discover (owner proposal, "reduce the workload on the support team")
+**Status of the area:** **already tracked as `#606`** (open, no milestone) for the substitution and
+refund half. The customer-facing cancellation half sits inside the same undecided territory. No new
+issue filed; evidence added to `#606`.
+
+**Observed (verifiable today):** a grep for `substitut` across `app`, `lib`, `components`,
+`features` and `prisma` returns hits only in search, colour and theming code — there is no
+substitution concept in this platform, and `OrderItem` has no substitution, fulfilled-quantity or
+per-line note field. Order cancellation by the customer exists only on the unpaid checkout path
+(`app/(storefront)/checkout/[orderNumber]/cancel/page.tsx` calling
+`features/checkout/cancel-order.ts`); a confirmed order can be cancelled only by staff
+(`features/orders/cancel-order-staff.ts`, reached from
+`app/(admin)/staff/orders/[orderNumber]/page.tsx:131`). `PaymentStatus.REFUNDED` is declared and
+never written. The shopper guide says so itself, in one line: "**Cancellations:** If you need to
+cancel an order, please contact the store directly."
+**Interpretation:** the two questions a grocery support line actually receives — "my item was out
+of stock, can you substitute it" and "I need to change or cancel my order" — are precisely the two
+the platform cannot act on. The bot's honest behaviour for both is to collect details and escalate
+to a human, which is the outcome the proposal counts as a failure. Automating FAQs lowers the
+volume of the questions the website already answers; it does not touch the volume of the questions
+it cannot. `#606` is the gate on the workload benefit, and it is undecided `ADR-005` territory
+entangled with `#399`'s weight model, not a small piece of work.
+**Confidence:** Known for the code facts. The volume ranking is Inferred from grocery practice and
+from the guide's own escalation line — no observed contact data exists (see `#1014`).
+
+**Why it matters commercially:** this reorders the whole proposal. Resolving `#606` reduces support
+workload whether or not a bot exists; a bot without `#606` mostly changes who types the escalation.
+It is also the finding that stops the chatbot being funded on a benefit it cannot deliver.
+**Options considered:** sequence `#606` ahead of any conversational layer. Or scope the bot
+explicitly to the answerable subset and state the escalation rate as expected rather than as a
+defect. Doing nothing is tenable only while the platform has not traded.
+**Cost of delay:** `#606` gets more expensive after the first imperfect real order, not before.
+
+**Next action:** ADD TO ROADMAP/BACKLOG
+
+### 2026-10-09 — an AI call reachable from a phone number has no rate-limit anchor, and #571's bounds do not transfer
+
+> **SUPERSEDED 2026-10-10 for the chatbot, still live for `#695`.** The owner's first-party design
+> puts the bot on the storefront, where a session and an IP exist, so
+> `lib/repositories/list-normalisation-rate-limit.ts` applies directly. The finding stands
+> unchanged for anything that reads **inbound** WhatsApp messages, which still has neither. The
+> `#588` credential gap and the per-account pool problem both survive — the latter is now `#1017`.
+
+**Trigger:** explicit /discover (owner proposal, AI answering inbound messages)
+**Status of the area:** genuinely unowned, and deliberately left in this log rather than filed —
+it is a design constraint on `#695`'s successor, not separable work. Recorded as a comment on
+`#695`.
+
+**Observed (verifiable today):** `#571` ruled that an AI call reachable from a public,
+unauthenticated endpoint is attacker-controlled cost, and `#565` resolved it by moving AI offline
+behind a staff action. `lib/list-normalisation.ts` documents at length why its own call is the
+exception and how it is bounded: per-caller through
+`lib/repositories/list-normalisation-rate-limit.ts`, per-submission through `MAX_AI_INPUT_CHARS`
+(4000) and `MAX_LIST_LINES` (100), per-call through `NORMALISATION_TIMEOUT_MS` (6000) — and every
+failure returns null into the deterministic matcher that shipped in P3d. `lib/config.ts` holds no
+Cloudflare rate-limiting binding; the three existing throttles (`OrderLookupAttempt`,
+`AuthenticationAttempt`, `CustomerFeedbackAttempt`) all count hashed IPs in Postgres.
+**Interpretation:** every one of those bounds has an anchor that an inbound WhatsApp message does
+not supply. There is no IP to hash — the request arrives from Meta's webhook, not the shopper — so
+the only per-caller key is the phone number, which is attacker-chosen and cheap to rotate at
+scale. And the per-call fallback does not exist: a list normalisation that degrades still matches
+the list, whereas a conversation turn that degrades has no deterministic answer to fall back to, so
+the graceful path is silence or "a human will reply", which is the escalation the proposal is
+trying to avoid. `#588` additionally records that `configure-env` never pushes the Workers AI
+credentials to the Worker runtime, so the credential path this would depend on is itself unproven
+in a deployed environment.
+**Confidence:** Known for the code and the ruling. The abuse economics are Needs validation — they
+depend on Meta's current rate card and on whether a BSP sits in front, neither of which is settled
+(see the next entry).
+
+**Why it matters commercially:** an unbounded model call on an inbound channel is an open-ended
+bill on a platform explicitly chosen for costing tens of pounds a month. Discovering that after
+the Meta approval has been obtained would mean discovering it with the channel already live.
+**Options considered:** bound per phone number and per 24-hour window in Postgres, following the
+three existing attempt-counter tables, and cap turns per conversation. Or keep the AI entirely off
+the inbound path — classify and route deterministically, which needs no model at all. Or treat the
+whole inbound-AI question as the ADR `#695` already says this needs.
+**Cost of delay:** none today; it becomes a blocking design question the moment `#695`'s gates
+clear.
+
+**Next action:** RESEARCH MORE
+
+### 2026-10-09 — the 24-hour service window turns an out-of-hours handoff into a template-approval problem
+
+> **SUPERSEDED 2026-10-10 for the chatbot, still live for `#695`.** These are WhatsApp Business
+> *Platform* API rules. The owner's design touches no Meta API: staff reply from the ordinary
+> WhatsApp app, where there is no window, no template approval and no per-message billing. The
+> finding stands unchanged for `#695`. The owner research it asked for is no longer a prerequisite
+> to anything on the critical path.
+
+**Trigger:** explicit /discover (owner proposal, "staff stepping in only when human support is needed")
+**Status of the area:** genuinely unowned; external, so it stays in this log.
+
+**Observed (verifiable today):** Meta's customer service window is settled across every source
+checked on 2026-10-09: a customer's inbound message opens a 24-hour window, the window resets on
+each new inbound, free-form replies inside it need no template, and once it closes only a
+pre-approved template message may be sent. Whether service messages become billable from
+2026-10-01 is **disputed** between sources, and could not be confirmed on Meta's own pricing page.
+Against that, this platform has no concept of staff availability at all (previous entry), and no
+customer message of any kind has ever been delivered from it — `#104` (no verified sending domain)
+and `#113` (Stripe test keys) are both open.
+**Interpretation:** the window is favourable for the bot and hostile to the handoff. An AI
+answering a customer-initiated question lives entirely inside an open window, so the answers
+themselves need no template approval — that part of the proposal is cheaper than it looks. But
+"staff step in" is asynchronous by nature: a question arriving at 9pm and picked up at 10am the
+next day is inside the window; one left over a weekend is not, and the reply then requires an
+approved template, which is a Meta review cycle and a fixed form of words, not a staff member
+typing. The proposal's phrase "seamlessly transfer the conversation to a real person" therefore
+carries an unstated service-level commitment that nothing in the platform measures or enforces.
+**Confidence:** Known for the window mechanics (multiple independent sources agree). Needs
+validation for the billing change, the current rate card, and whether a BSP markup applies.
+Needs validation for the owner's actual staffing pattern, which nobody has stated.
+
+**Why it matters commercially:** a handoff that silently fails out of hours is worse than no
+handoff — the shopper has been told a human is coming. Confirming the rate card and the window
+rules against Meta directly is a prerequisite to budgeting any of this, and is an owner task, not
+a code task.
+**Options considered:** confirm the rules and rate card with Meta or a BSP before any proposal;
+state published support hours and have the bot say them; or keep replies inside the window by
+committing to a response time the owner can actually staff.
+**Cost of delay:** none — this is research that must precede `#1015`'s `/propose`, not work.
+
+**Next action:** RESEARCH MORE
+
+### 2026-10-09 — the proposal should not be carried as one programme: its AI-over-WhatsApp layer sits behind three gates, two of them not code
+
+> **SUPERSEDED IN PART 2026-10-10.** The decomposition stands and the sequencing recommendation
+> stands. What changed is the gating: the owner's first-party design removes the `#695` gate, the
+> Meta rate-card gate and the ADR-007 requirement entirely, so `#1015` is **no longer deferred** —
+> its milestone was cleared and it can be proposed alongside the rest. `#606` still caps the
+> workload claim. The `DO NOT PURSUE` verdict below applied to the *Meta-channel programme shape*
+> and is spent; it is not a verdict on the owner's current design.
+
+**Trigger:** explicit /discover (owner proposal, programme shape)
+**Status of the area:** the channel is tracked as `#695`; the AI and handoff layer on top of it was
+unowned and is now filed as `#1015`, gated and deferred, so the owner's actual ask has a home.
+
+**Observed (verifiable today):** the proposal decomposes into six parts in three different states.
+Implemented: the `wa.me` entry point. Tracked and owner-gated: the WhatsApp Business Platform
+channel (`#695`, milestone *Deferred — owner/external gated*). Unowned: the answer corpus
+(`#1012`), the deterministic answers (`#1013`), the conversation and handoff destination
+(`#1014`), and the AI layer itself (`#1015`). Three of its gates are not code: Meta business
+verification and template approval (`#695`), the `ADR-005` decision behind `#606`, and confirmation
+of Meta's current rules and rate card. `specs/mission.md:60-64` already requires that any
+reversal of the outbound-channel exclusion carry its own `/propose` and almost certainly its own
+ADR — the next free number is **ADR-007**.
+**Interpretation:** every part of the proposal that can be built today can be built without
+WhatsApp and without AI, and every part that needs WhatsApp or AI is blocked on something a human
+must obtain or decide. That is not an argument against the proposal; it is an argument against
+taking it as a single piece, because doing so would park the three cheap, unblocked, independently
+valuable parts behind a Meta approval queue. `#1012` → `#1013` → `#1014` is a coherent sequence
+that delivers the collect-then-escalate and FAQ-deflection benefits on the storefront, produces the
+first real support-volume data this project has ever had, and leaves `#1015` able to reuse all
+three once its gates clear.
+**Confidence:** Known for the states and the gates. That the storefront sequence would deflect
+meaningful volume is Inferred — `#1014` is what would measure it.
+
+**Why it matters commercially:** the proposal's benefits are real and mostly reachable without its
+most expensive component. Sequencing them the other way round spends the Meta approval effort
+first and discovers the FAQ set afterwards.
+**Options considered:** build `#1012`, `#1013`, `#1014` in that order and revisit `#1015` with
+real contact data. Or pursue `#1015` first, which means guessing the FAQ set, building the handoff
+queue anyway, and still being gated on `#606` for the workload claim. Or do nothing, which leaves
+the `wa.me` link as the entire support strategy.
+**Cost of delay:** the three storefront parts get cheaper the earlier they land, because each one
+informs the next. `#1015` cannot start regardless.
+
+**Next action:** DO NOT PURSUE — not as one undivided programme, and not as a pre-`#606`
+workload-reduction play. Its four parts are filed individually and `#1015` carries the rest.
 
 ---
 
