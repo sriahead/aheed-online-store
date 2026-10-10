@@ -184,6 +184,7 @@ model Vendor {
   customerFeedback          CustomerFeedback[]
   feedbackAttempts          CustomerFeedbackAttempt[]
   reviewLinks               VendorReviewLink[]
+  faqs                      VendorFaq[]
 }
 
 // P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
@@ -1092,6 +1093,43 @@ model VendorReviewLink {
   updatedAt DateTime @updatedAt
 
   @@unique([vendorId, platform])
+  @@index([vendorId, isActive, sortOrder])
+}
+
+// P10 (#1012) — the per-vendor approved-answer corpus. The prerequisite for every answering
+// surface, AI or not: before this existed the only shopper-facing document on the platform was
+// one hedged markdown page (`docs/shopper-help/shopping-guide.md`) serving every tenant at once.
+//
+// A TABLE RATHER THAN REPO MARKDOWN, for the reason #239 and ADR-004 already settled: an answer
+// is a claim, and a claim made on a vendor's behalf by the platform is the defect those fixed.
+// Aheed sells groceries and SriMart sells electronics; one authored set cannot serve both. The
+// rows are the vendor's own words, entered on /staff/faqs, and NOTHING here is seeded — see
+// `#1021` for the content itself.
+//
+// Shaped on VendorReviewLink above: same vendor-scoped-rows posture, same sortOrder/isActive
+// pair, so adding an answer is data rather than a migration or a deploy.
+//
+// A vendor with no active rows renders no FAQ section at all (#239's null-hides rule). There is
+// deliberately no platform-authored fallback answer.
+//
+// WHY THE UNIQUE KEY IS (vendorId, question) BUT WRITES ARE KEYED BY id. The unique stops one
+// vendor holding the same question twice, which is a data-quality rule worth having. It is NOT
+// the write key, because editing a question's wording would then orphan its answer into a new
+// row rather than correcting it — the one place this deliberately departs from
+// VendorReviewLink, whose `platform` label is short and stable in a way a question is not.
+// `lib/repositories/vendor-faqs.ts` therefore updates via `updateMany` on (id, vendorId).
+model VendorFaq {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  question  String
+  answer    String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([vendorId, question])
   @@index([vendorId, isActive, sortOrder])
 }
 

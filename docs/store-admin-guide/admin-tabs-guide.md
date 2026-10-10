@@ -171,6 +171,44 @@ until their basket recalculates. Social and contact links appear inside the floa
 on every storefront page as soon as they are saved; clearing a field removes that link from it just
 as quickly.
 
+## Help Centre Answers — `/staff/faqs`
+
+**Purpose:** Your own answers to the questions shoppers ask you, in your own words, shown on your
+Help Centre page. Nothing here is written for you, and nothing is filled in by default — the
+platform does not put words in your shop's mouth.
+
+**Who can access:** Store admins only
+
+**What you can do:** Add a question and its answer, edit either afterwards, set the order they
+appear in, hide one without deleting it, and delete one outright.
+
+**Typical workflow:** You will not need this for delivery charges, your minimum order, free
+delivery, collection or loyalty — your Help Centre already answers all of those from your own
+settings, exactly as they are, and repeating them here is how the two end up disagreeing. Use this
+for everything else shoppers ask: how you handle a missing item, what to do about a damaged product,
+whether you can put something aside, how long a refund takes. Add them as they come up, newest at
+the bottom, then reorder once you can see which are asked most.
+
+**Important fields and filters:** **Question** is one line, up to 200 characters. **Answer** is
+plain text up to 1,200 characters — line breaks are kept, but styling and links are not shown, so
+write a web address out in full if you need one. **Order** is a whole number from 0 upwards,
+lowest first; two answers sharing a number fall back to alphabetical order by question.
+**Show this on the Help Centre** is ticked by default; unticking it keeps the answer but hides it
+from shoppers. You cannot have the same question twice — saving a question you already use is
+refused, and the fix is to edit the existing one.
+
+**Common mistakes and limitations:** The biggest one is answering a question your settings already
+answer, because your settings change and your typed answer does not. The second is promising
+something the shop cannot deliver through this site: a shopper cannot swap an item for another after
+paying, and cannot cancel a paid order themselves, so an answer saying otherwise sends them to a
+button that does not exist. Hiding an answer is not the same as deleting it — a hidden answer is
+still stored and comes back when you show it again. Deleting is immediate and cannot be undone.
+Answers are per shop: what you write here is never shown on another store on this platform.
+
+**What happens after changes are saved:** The answer appears on, or disappears from, your Help
+Centre page immediately. Hiding the last active answer removes the whole questions section from
+that page rather than leaving an empty heading.
+
 ## Delivery areas — `/staff/delivery-areas`
 
 **Purpose:** The postcode areas and districts your shop delivers to, what delivery costs in each,
