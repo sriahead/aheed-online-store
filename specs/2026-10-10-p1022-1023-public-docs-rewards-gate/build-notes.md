@@ -113,3 +113,19 @@ Measured during Build (not a substitute for Validate):
 - **The `/help` comment block that used to explain the `#1022` defect in detail was shortened.**
   The history now lives in the helper's docstring, `#1022` and `app-conventions.md`; the page
   comment just points there.
+
+## Fix after validation (2026-10-10)
+
+- **Failure:** R16. A full `npx vitest run` exited 1 on two consecutive runs. Each time,
+  `tests/public-docs-boundary.test.ts`'s tree-scan case exceeded vitest's 5s default timeout (the
+  first run also timed out `motion-reduce-coverage` and `product-grid-usage` once; neither
+  repeated). Run alone, the case took ~2.3s (~3.5s cold) — about 7x the `repository-purity`
+  precedent, because it built a full TypeScript AST for every file under the four roots. The
+  "Known-shaky areas" note above predicted timeouts in the two corpus-importing tests but not here.
+- **Root cause, not the check:** `findDocsImports` now returns `[]` without parsing when the source
+  text does not contain `runbook/docs`. Every specifier `isDocsModuleSpecifier` accepts contains
+  that text, so no file the test could flag is skipped; the compiler still decides for every file
+  that mentions it, so the comment/string cases still go through the AST (R6's "compiler API
+  rather than a text search" holds — the text check only decides what is worth parsing). The case
+  now runs in ~0.4s alone. No timeout was raised, and no `validation.md` row was changed.
+- No observable behaviour change, so no `CHANGELOG.md` edit.

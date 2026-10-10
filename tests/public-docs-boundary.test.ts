@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
  * `tests/repository-purity.test.ts` takes — so a comment or a string naming the module cannot trip
  * it, and every import form is seen: static (type-only included, since a type import is still a
  * signal someone is building on the corpus), `export ... from`, dynamic `import()` and `require()`.
+ * Only files whose text mentions `runbook/docs` reach the parser; no other file can name the module.
  *
  * SCOPE. Everything under `app/`, `components/`, `lib/` and `features/`. Files under `app/(admin)/`
  * are staff surfaces and may import it (the runbook page does). The single other exemption is the
@@ -40,6 +41,11 @@ function isDocsModuleSpecifier(specifier: string): boolean {
 
 /** Every module specifier in `source` that names the generated docs module. */
 function findDocsImports(fileName: string, source: string): string[] {
+  // Every specifier `isDocsModuleSpecifier` accepts contains this text, so a file without it cannot
+  // import the module and is not worth a parse. Parsing every file under the four roots took ~2.3s
+  // alone and exceeded vitest's 5s default under a loaded full-suite run (#1022 /fix). The compiler
+  // still decides for every file that does mention it — a comment or a string still does not count.
+  if (!source.includes("runbook/docs")) return [];
   const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true);
   const found: string[] = [];
 
