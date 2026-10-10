@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.83.0"
+version: "1.84.0"
 updated: 2026-10-10
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -639,6 +639,13 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **Public docs boundary + loyalty-gated Rewards launcher (`#1022` + `#1023`): BUILT, NOT YET
+  VALIDATED OR MERGED** (2026-10-10). Branch `feature/p1022-1023-public-docs-rewards-gate` (also
+  carries the PR #1032/#1033 Document commits). Spec, build and build notes in
+  `specs/2026-10-10-p1022-1023-public-docs-rewards-gate/`. Next stage: `/validate` from a fresh
+  context, on Sonnet 5. No schema change. Both issues `In Progress`. Follow-ups filed at Build:
+  `#1034` (rewards data, including a referral code, is still built on every signed-in render for
+  loyalty-off vendors) and `#1035` (what the `shopper` audience tag means on internal articles).
 - **Chatbot prerequisites, slice 2 (`#1016` + `#1017`): DONE, in production** (PR #1032 to
   `staging`, then promotion PR #1033, merge `a0ea21e`, 2026-10-10), both issues closed. See
   **Last Verified** above for the production facts. Spec and build notes:
