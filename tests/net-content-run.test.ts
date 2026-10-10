@@ -12,6 +12,8 @@ import {
   type NetContentSuggester,
   type SuggesterResult,
 } from "@/lib/net-content-suggester";
+import type { AiMeter } from "@/lib/ai-meter";
+import { describeStaffNetContentRun } from "@/lib/net-content-review-form";
 
 /**
  * #900 (R15, R16) — the run loop's stop rules, with a stubbed suggester and store. What matters
@@ -44,6 +46,19 @@ function suggesterReturning(...results: SuggesterResult[]): NetContentSuggester 
   return { model: "@cf/google/gemma-4-26b-a4b-it", suggest };
 }
 
+/** A meter that always allows, unless given checks to return in order (#1017). */
+function meterAllowing(
+  ...checks: { allowed: boolean; usedNeurons: number; budgetNeurons: number }[]
+): AiMeter & { check: ReturnType<typeof vi.fn>; record: ReturnType<typeof vi.fn> } {
+  return {
+    check: vi.fn(
+      async () => checks.shift() ?? { allowed: true, usedNeurons: 0, budgetNeurons: 3000 },
+    ),
+    record: vi.fn(async () => {}),
+    recordImage: vi.fn(async () => {}),
+  };
+}
+
 function deps(overrides: Partial<RunDependencies>): RunDependencies & {
   saveSuggestion: ReturnType<typeof vi.fn>;
 } {
@@ -58,6 +73,7 @@ function deps(overrides: Partial<RunDependencies>): RunDependencies & {
     neuronBudget: 5000,
     rate: NET_CONTENT_MODEL_RATES["@cf/google/gemma-4-26b-a4b-it"],
     storeDescription: null,
+    aiMeter: meterAllowing(),
     ...overrides,
   } as RunDependencies & { saveSuggestion: ReturnType<typeof vi.fn> };
 }
@@ -317,5 +333,72 @@ describe("the description excerpt is shared by prompt and validator (#928 R9)", 
         }),
       }),
     );
+  });
+});
+
+describe("runNetContentSuggestions — the vendor's daily AI budget (#1017 R29)", () => {
+  it("starts no further call once the vendor meter refuses, and says why", async () => {
+    const refused = { allowed: false, usedNeurons: 3001, budgetNeurons: 3000 };
+    const aiMeter = meterAllowing({ allowed: true, usedNeurons: 0, budgetNeurons: 3000 }, refused);
+    const d = deps({ products: [product("a"), product("b"), product("c")], aiMeter });
+
+    const summary = await runNetContentSuggestions(d);
+
+    expect(summary.outcome).toBe("vendor-budget-reached");
+    expect(summary.vendorBudget).toEqual(refused);
+    expect(d.suggester.suggest).toHaveBeenCalledTimes(1);
+    expect(d.saveSuggestion).toHaveBeenCalledTimes(1);
+  });
+
+  it("charges the vendor meter once per call that reports usage, including a truncated one", async () => {
+    const truncated: SuggesterResult = {
+      kind: "transport-error",
+      message: "Reply truncated at 800 tokens",
+      latencyMs: 100,
+      usage: { inputTokens: 400, outputTokens: 800, neurons: 25 },
+    };
+    const unbilled: SuggesterResult = {
+      kind: "transport-error",
+      message: "HTTP 500",
+      latencyMs: 5,
+    };
+    const aiMeter = meterAllowing();
+    const d = deps({
+      products: [product("a"), product("b"), product("c")],
+      suggester: suggesterReturning(RICE_REPLY, truncated, unbilled),
+      aiMeter,
+    });
+
+    await runNetContentSuggestions(d);
+
+    expect(aiMeter.record).toHaveBeenCalledTimes(2);
+    expect(aiMeter.record).toHaveBeenCalledWith({
+      model: "@cf/google/gemma-4-26b-a4b-it",
+      usage: RICE_REPLY.kind === "reply" ? RICE_REPLY.usage : null,
+    });
+  });
+
+  it("turns the stop into the store's allowance message on the staff button", () => {
+    const state = describeStaffNetContentRun({
+      kind: "ran",
+      summary: {
+        outcome: "vendor-budget-reached",
+        attempted: 0,
+        pending: 0,
+        noAnswer: 0,
+        failed: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        neurons: 0,
+        neuronsIncomplete: false,
+        meanLatencyMs: null,
+        vendorBudget: { allowed: false, usedNeurons: 3012.4, budgetNeurons: 3000 },
+      },
+    });
+    expect(state).toEqual({
+      error:
+        "This store has used its AI allowance for today (3,013 of 3,000 neurons). It resets at 00:00 UTC.",
+      notice: null,
+    });
   });
 });

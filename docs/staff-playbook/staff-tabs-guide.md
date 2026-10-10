@@ -4,7 +4,7 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.9.0"
+version: "2.10.0"
 updated: "2026-09-28"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
@@ -249,6 +249,9 @@ nowhere for a subcategory campaign to appear.
 live exactly as typed — read it back before saving. Scheduling a campaign does not switch anything
 else off; if two departments both run campaigns, both display on their own pages. The real product
 price callout is always shown alongside your campaign copy and cannot be suppressed by it.
+**Auto-Generate** (the AI banner button) is reserved for store admins and counts against the store's
+daily AI allowance: once that is used up it is refused until 00:00 UTC, and uploading a banner still
+works.
 
 **What happens after changes are saved:** The banner appears on that department's page as soon as its
 schedule allows.
@@ -321,7 +324,10 @@ verification date; the flag cannot be set without them, and that is intentional.
 all-or-nothing — an amount with no unit, or a unit with no amount, is refused with the field marked,
 because neither half prices anything on its own. It also describes **one** pack: a 1kg bag and a 5kg
 bag are two separate products here, not two sizes of one. Switching a product off hides it from
-shoppers but does not delete it or affect orders already placed.
+shoppers but does not delete it or affect orders already placed. **Auto-fill Missing Images** and
+the product photo's AI generate button count against the store's daily AI allowance. Once it is used
+up, generation is refused until 00:00 UTC, and the products it skipped stay in line for the next
+run. Uploading a photo yourself is never affected.
 
 **What happens after changes are saved:** The change is live immediately — the storefront, the
 department listing and the product's own page all update. Existing orders are unaffected: they keep
@@ -354,6 +360,8 @@ they asked for.
 **Common mistakes and limitations:** A synonym pointing at a word that appears in no product name
 does nothing. Proposals come from real failed searches and are suggestions, not facts — read each one
 before approving, because an incorrect mapping will surface products a shopper did not ask for.
+Generating AI proposals counts against the store's daily AI allowance; once it is used up the button
+is refused until 00:00 UTC, while adding entries by hand keeps working.
 
 **What happens after changes are saved:** Approved entries affect shopper searches immediately;
 rejected proposals are removed from the queue.
@@ -397,7 +405,9 @@ a pack size for products where one does not apply (such as an electrical item so
 get no suggestion and stay without a value. Accept and Save refuse if the product already has a
 net content — change it on the product's own page instead. The AI only reads photos that staff
 uploaded or confirmed as a real photo of the pack (**Confirm real photo** on the product page);
-AI-generated and automatically matched images are never used.
+AI-generated and automatically matched images are never used. **Suggest net content** counts
+against the store's daily AI allowance; once it is used up the button is refused until 00:00 UTC, and
+reviewing the suggestions already waiting keeps working.
 
 **What happens after changes are saved:** Accepting or saving writes the net content to the
 product straight away, and shoppers see the derived unit price and the product appears under the

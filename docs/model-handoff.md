@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.80.0"
+version: "1.81.0"
 updated: 2026-10-10
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -628,6 +628,18 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **Chatbot prerequisites, slice 2 (`#1016` + `#1017`): BUILT, NOT YET VALIDATED OR MERGED**
+  (2026-10-10). Branch `feature/p1016-1017-ai-model-metering`, from `origin/staging` `09eb799`.
+  Spec `47e9f30`, build `c0c4c1e`, build notes in
+  `specs/2026-10-10-p1016-1017-ai-model-config-metering/`. Next stage: `/validate` from a fresh
+  context, on Sonnet 5. It adds per-vendor Workers AI metering (`AiUsageEvent`,
+  `VendorConfig.aiDailyNeuronBudget`) at all four AI call sites, model-id overrides, and an
+  `ErrorEvent` when the `/shop-your-list` model fails. **One additive migration, already applied to
+  dev by hand** (the `#895` drift blocks `migrate dev`). The R35–R37 live checks passed at Build.
+  New follow-ups: `#1027` (gemma switch and timeout), **`#1028` (owner: which Workers plan)**,
+  `#1029` (staff AI-allowance view), `#1030` (campaign prompt hardcodes "UK grocery"), `#1031`.
+  Build found that **Cloudflare silently serves the deprecated llama id from
+  `llama-3.1-8b-fast-v2`** (commented on `#1016`).
 - **Chatbot prerequisites, slice 1 (`#1013` + `#1012`): DONE, in production** (PR #1024 to
   `staging`, then promotion PR #1025, merge `b1dd2d4`, 2026-10-10), both issues closed and `Done`.
   See **Last Verified** above for the production facts; not repeated here. Spec/build notes:

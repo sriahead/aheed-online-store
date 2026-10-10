@@ -151,6 +151,11 @@ const aiSchema = z.object({
   // #900 — overrides the net-content suggester's default model (lib/net-content-suggester.ts).
   // Optional: unset means DEFAULT_NET_CONTENT_MODEL; a script's --model flag overrides both.
   NET_CONTENT_AI_MODEL: z.string().min(1).optional(),
+  // #1016 — override the /shop-your-list pre-pass and the synonym proposals' models
+  // (lib/list-normalisation.ts, lib/search-synonym-proposals.ts). Optional: unset means each
+  // module's named default, so a model withdrawal becomes a secret change rather than a deploy.
+  LIST_NORMALISATION_AI_MODEL: z.string().min(1).optional(),
+  SEARCH_SYNONYM_AI_MODEL: z.string().min(1).optional(),
 });
 
 export type AiEnv = z.infer<typeof aiSchema>;
@@ -160,6 +165,8 @@ export function getAiEnv(): AiEnv {
     CLOUDFLARE_ACCOUNT_ID: readEnv("CLOUDFLARE_ACCOUNT_ID"),
     CLOUDFLARE_API_TOKEN: readEnv("CLOUDFLARE_API_TOKEN"),
     NET_CONTENT_AI_MODEL: readEnv("NET_CONTENT_AI_MODEL") || undefined,
+    LIST_NORMALISATION_AI_MODEL: readEnv("LIST_NORMALISATION_AI_MODEL") || undefined,
+    SEARCH_SYNONYM_AI_MODEL: readEnv("SEARCH_SYNONYM_AI_MODEL") || undefined,
   });
 }
 

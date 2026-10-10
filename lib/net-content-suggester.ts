@@ -1,6 +1,7 @@
 import { getAiEnv } from "@/lib/config";
 import { isNetContentUnit, type NetContentUnit } from "@/components/product/unit-price";
 import { storeDescriptionPromptLine } from "@/lib/store-description";
+import { WORKERS_AI_MODEL_REQUEST_OPTIONS } from "@/lib/workers-ai";
 
 /**
  * AI-suggested net content (#900) — PROPOSED, NEVER APPLIED.
@@ -50,9 +51,9 @@ export const NET_CONTENT_MAX_TOKENS = 800;
  * 50 tokens at ~4 neurons. Reasoning off was also more willing to CONVERT (it answered 568 ml for
  * "2pt"), which is why the prompt below forbids conversion outside metric scale changes.
  */
-export const NET_CONTENT_MODEL_REQUEST_OPTIONS: Record<string, Record<string, unknown>> = {
-  "@cf/google/gemma-4-26b-a4b-it": { chat_template_kwargs: { enable_thinking: false } },
-};
+export const NET_CONTENT_MODEL_REQUEST_OPTIONS: Record<string, Record<string, unknown>> =
+  // #1016 — the same object as the shared table, so every text call site reads one source.
+  WORKERS_AI_MODEL_REQUEST_OPTIONS;
 
 /** The longest quoted evidence a suggestion may carry (R11). */
 export const MAX_EVIDENCE_CHARS = 200;

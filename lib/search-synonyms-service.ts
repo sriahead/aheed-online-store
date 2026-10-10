@@ -1,3 +1,4 @@
+import { createAiMeter, describeAiBudgetRefusal } from "@/lib/ai-meter";
 import { getPrisma, getPrismaWs } from "@/lib/db";
 import {
   createProposedSynonyms as createProposedSynonymsRepo,
@@ -105,9 +106,16 @@ export async function generateSynonymProposals(
     getVendorConfig(prisma, vendorId),
   ]);
 
+  // #1017 — the vendor's daily AI budget, before anything is sent.
+  const meter = createAiMeter(prisma, vendorId, "SEARCH_SYNONYMS");
+  const budget = await meter.check();
+  if (!budget.allowed) return { ok: false, error: describeAiBudgetRefusal(budget) };
+
   // #905 — the vendor's own description replaces the grocery framing the prompt used to assume.
   const result = await proposeSynonyms(queries, [...vocabulary], config?.storeDescription ?? null);
-  if (!result.ok) return result;
+  if (result.model && result.usage)
+    await meter.record({ model: result.model, usage: result.usage });
+  if (!result.ok) return { ok: false, error: result.error };
 
   const created = await createProposedSynonyms(vendorId, result.proposals);
   return { ok: true, created, considered: queries.length };

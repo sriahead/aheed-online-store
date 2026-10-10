@@ -1,3 +1,4 @@
+import { describeAiBudgetRefusal } from "@/lib/ai-budget-message";
 import type { StaffNetContentRunResult } from "@/lib/net-content-suggestions-service";
 
 /**
@@ -32,6 +33,10 @@ export function describeStaffNetContentRun(
     case "ran": {
       const { attempted, pending, noAnswer, failed, neurons, outcome } = result.summary;
       const counts = `Asked about ${attempted} product(s): ${pending} suggested, ${noAnswer} no answer, ${failed} failed`;
+      if (outcome === "vendor-budget-reached" && result.summary.vendorBudget) {
+        // #1017 — the store's whole-day AI budget, not this click's: clicking again won't help.
+        return { error: describeAiBudgetRefusal(result.summary.vendorBudget), notice: null };
+      }
       if (outcome === "transport-errors") {
         return {
           error: `The AI stopped responding. ${counts}. Try again later.`,

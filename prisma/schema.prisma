@@ -185,6 +185,7 @@ model Vendor {
   feedbackAttempts          CustomerFeedbackAttempt[]
   reviewLinks               VendorReviewLink[]
   faqs                      VendorFaq[]
+  aiUsageEvents             AiUsageEvent[]
 }
 
 // P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
@@ -504,6 +505,11 @@ model VendorConfig {
   // Tailwind cannot build grid-cols-* from runtime values, and a free number allows layouts that
   // break the card. Each preset maps to one static class string in lib/product-grid-density.ts.
   productGridDensity         ProductGridDensity @default(STANDARD)
+  // #1017 — this vendor's share of the platform's one Workers AI account, in neurons per UTC day
+  // (Cloudflare's allowance resets at 00:00 UTC). Every AI call is checked against it and recorded
+  // in AiUsageEvent; 0 turns AI off for this vendor. A row value, not a constant, so the owner can
+  // change one vendor's figure with scripts/ai-usage.ts and no deploy.
+  aiDailyNeuronBudget        Int                @default(3000)
   createdAt                  DateTime           @default(now())
   updatedAt                  DateTime           @updatedAt
 }
@@ -1821,6 +1827,41 @@ model SearchSynonym {
 ///
 /// Being over this limit is not an error: the caller skips the pre-pass and the existing
 /// deterministic matcher runs, so a throttled shopper still gets their list matched.
+// #1017 — the per-vendor Workers AI ledger: one row per call that reached the model. Every vendor
+// shares one Cloudflare account credential (lib/config.ts getAiEnv), so this is the only place a
+// vendor's AI spend is attributed. A vendor cost record, deliberately with NO user link — so it is
+// not personal data and stays outside lib/repositories/data-rights.ts (the SearchQueryLog
+// precedent, #570). Neurons are stored x1000 as an integer, rounded up: no floats, same discipline
+// as money. 90-day retention sweep in lib/repositories/ai-usage.ts.
+enum AiFeature {
+  LIST_NORMALISATION
+  SEARCH_SYNONYMS
+  NET_CONTENT
+  PRODUCT_IMAGE
+  CAMPAIGN_IMAGE
+}
+
+// REPORTED = Workers AI's own figure for the call; ESTIMATED = computed from lib/workers-ai.ts.
+enum AiNeuronSource {
+  REPORTED
+  ESTIMATED
+}
+
+model AiUsageEvent {
+  id           String         @id @default(uuid())
+  vendorId     String
+  vendor       Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  feature      AiFeature
+  model        String
+  inputTokens  Int?
+  outputTokens Int?
+  milliNeurons Int
+  neuronSource AiNeuronSource
+  createdAt    DateTime       @default(now())
+
+  @@index([vendorId, createdAt])
+}
+
 model ListNormalisationAttempt {
   id        String   @id @default(uuid())
   vendorId  String
