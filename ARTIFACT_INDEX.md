@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-10T15:38:16.982Z` · commit `a54dd84` · `219` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-10T16:52:24.565Z` · commit `09eb799` · `220` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -214,6 +214,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [#981, #982 — Mobile finish: Quick View review tap targets and the logo-less header wordmark (plan)](specs/2026-10-06-p981-982-mobile-finish/plan.md) | spec | 1.0.0 | 2026-10-06 | draft | internal | The review controls #964 and #979 left under 44px reach the tap size below lg, on both the Quick View drawer and the product page, and a logo-less vendor's header wordmark truncates instead of widening a phone page. No schema change. |
 | [#991, #987, #988 — Referral and discount-code integrity (plan)](specs/2026-10-06-p991-987-988-referral-code-integrity/plan.md) | spec | 1.0.0 | 2026-10-06 | draft | internal | A shopper's referral code row is created reliably, owned by a real foreign key and random rather than derived from the user id, and unrecognised discount codes are throttled per vendor and hashed IP. One additive migration with a backfill. |
 | [Help Centre exact facts + per-vendor approved-answer corpus (plan)](specs/2026-10-10-p1013-1012-help-facts-faq-corpus/plan.md) | spec | 1.0.0 | 2026-10-10 | draft | internal | Replaces the Help Centre's platform-written claims with facts computed from VendorConfig and VendorDeliveryArea, and adds the per-vendor approved-answer model plus staff CRUD that every later answering surface depends on. |
+| [Configurable Workers AI models, a dated degradation signal, and per-vendor AI metering (plan)](specs/2026-10-10-p1016-1017-ai-model-config-metering/plan.md) | spec | 1.0.0 | 2026-10-10 | draft | internal | Makes the two hardcoded Workers AI model ids configurable, makes the shop-your-list AI pre-pass write an ErrorEvent when the model stops answering, and meters every AI call per vendor against a per-vendor daily neuron budget. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.39.0 | 2026-10-06 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
