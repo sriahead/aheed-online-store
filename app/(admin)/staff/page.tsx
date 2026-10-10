@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Contact,
   FolderTree,
+  HelpCircle,
   Layers,
   Megaphone,
   MessageSquareQuote,
@@ -232,6 +233,16 @@ export default async function StaffHomePage() {
               <p className="font-semibold text-primary">Storefront</p>
               <p className="mt-1 text-sm text-primary-muted">
                 This store&apos;s branding, logo and shopfront configuration.
+              </p>
+            </Link>
+            <Link
+              href="/staff/faqs"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <HelpCircle className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">Help Centre Answers</p>
+              <p className="mt-1 text-sm text-primary-muted">
+                Your own answers to the questions shoppers ask, shown on the Help Centre.
               </p>
             </Link>
             <Link

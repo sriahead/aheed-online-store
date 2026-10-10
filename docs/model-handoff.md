@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.78.0"
+version: "1.79.0"
 updated: 2026-10-10
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -595,6 +595,43 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **Chatbot prerequisites, slice 1 (`#1013` + `#1012`): BUILT, not yet validated, merged or
+  promoted.** Branch `feature/p1013-1012-help-facts-faq-corpus`; spec, requirements, validation and
+  build notes in `specs/2026-10-10-p1013-1012-help-facts-faq-corpus/`. Owner-approved at `/propose`
+  on 2026-10-10 after naming "chatbot prerequisites" as the scope and asking for **all** related
+  issues to carry `High`.
+  - **The whole chatbot programme is now `High` / `P10` on the board:** `#1012`, `#1013`, `#1014`,
+    `#1015`, `#1016`, `#1017`, plus the two new ones below. All seven pre-existing items had been
+    filed by Discover with **no Priority and no Phase**, so they were invisible to the board's own
+    prioritisation until this pass set both.
+  - Approved sequencing: **slice 1 = `#1013`+`#1012`** (this branch), **slice 2 = `#1016`+`#1017`**
+    (chatbot safety in already-shipped AI code), **slice 3 = `#1015`+`#1014`**. One correction to
+    `#1015`'s own stated order: **`#1014` cannot precede `#1015`** — it logs chatbot conversations,
+    and until the bot exists there are none.
+  - **`#1021` (new) is the real blocker on `#1015`, and it is owner work, not code.** `#1012` ships
+    the table, the editor and the rendering; the answers are vendor content `ADR-004`/`#239` forbid
+    the platform writing, and none is seeded. An empty corpus makes a chatbot ship inert — the
+    `#697` shape, except user-visible, because a shopper opens the chat and gets nothing.
+  - **`#1022` (new) is a live production defect found while building, and fixed on this branch.**
+    `/help` filtered KMS documentation by **audience alone**, so the public Help Centre of every
+    vendor rendered an `internal` operations document (`PENDING_PAYMENT`, slot-capacity rules, a
+    "Known Trap" note) and never rendered the public shopper guide. Read live 2026-10-10 on
+    SriMart. The durable rule — `audience` says who it is relevant to, `visibility: public` is the
+    only field that says it may leave the building — is recorded in
+    `docs/developer-portal/app-conventions.md` 1.7.0, with the follow-ups this slice did **not**
+    do left on `#1022`: nothing mechanically stops the next internal article reaching a public
+    surface, and the render still selects by array position.
+  - **`#1013` was also a live defect, not a copy change:** `/help` promised loyalty points
+    unconditionally while `loyaltyEnabled` is `@default(false)`, and SriMart (seeded `false`) was
+    serving that promise in production. Every other loyalty surface already gated on the flag.
+  - Local state a validator needs: **the migration reached dev by hand because `#895` still blocks
+    `prisma migrate dev --create-only`** (it demands a full reset of dev over the unrelated
+    `p8_image_needs_review` checksum drift). Generated with `migrate diff`, read, applied with
+    `db execute`, recorded with `migrate resolve --applied`. Staging and production get it from CI
+    as normal.
+  - Green at the end of Build: `lint`, `typecheck`, `format:check`, `npm run build`, the full suite
+    (220 files / 2862 tests) and the docs-site build. The live `npm run preview` checks — the
+    `getPrismaWs()` wiring above all — are deliberately left to `/validate`.
 - **Mobile finish (`#981`/`#982`): DONE, in production** (PR #1009 to `staging`, then promotion
   PR #1019, merge `6a35f4a`, 2026-10-10), both issues closed and `Done`. See **Last Verified**
   above for the production facts; not repeated here. Spec/build notes:

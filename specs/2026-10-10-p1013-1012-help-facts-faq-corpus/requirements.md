@@ -28,9 +28,13 @@ R3. The help page states "no minimum" (or equivalent wording carrying that meani
     "minimum order value is required" no longer appears in the file.
 
 R4. The help page derives every delivery fee, minimum-order and free-delivery figure through
-    `resolveDeliveryRules` (`lib/delivery-pricing.ts`). The page contains no direct read of
+    `resolveDeliveryRules` (`lib/delivery-pricing.ts`). The page reaches it through
+    `helpDeliveryFacts` (`lib/help-facts.ts`), which is the only caller it needs and the module
+    that holds the per-area resolution — so the page's only permitted mention of
     `profile.deliveryFeePence`, `profile.minimumOrderPence` or `profile.freeDeliveryThresholdPence`
-    other than as arguments passed into that function.
+    is inside the argument list of that one `helpDeliveryFacts(...)` call. No figure reaches the
+    rendered output from those fields directly, and `lib/help-facts.ts` itself contains no money
+    arithmetic of its own beyond what `resolveDeliveryRules` returns.
 
 R5. When no `VendorDeliveryArea` row for the vendor overrides a given money field, the help page
     presents that field as one figure. When at least one row overrides it, the page additionally
@@ -73,16 +77,31 @@ R13. `lib/repositories/vendor-faqs.ts` exists, imports `@/lib/db` as a type-only
      context. `npx vitest run tests/repository-purity.test.ts
      tests/repository-client-injection.test.ts` exits 0.
 
-R14. No write in `lib/repositories/vendor-faqs.ts` opens an implicit transaction on the HTTP
-     adapter: no `createMany`, no `updateMany`, and no singular `create` carrying nested child
-     writes. Writes are singular `create`/`update` keyed by `id` and `deleteMany`.
+R14. No write in `lib/repositories/vendor-faqs.ts` reaches an implicit transaction through the
+     **HTTP** client: no `createMany`, and no singular `create` carrying nested child writes.
+     Creation is a singular `create` and deletion is a `deleteMany`, both on `getPrisma()`.
+     Editing, reordering and activation go through `updateMany` so the `vendorId` scope sits in the
+     `where`, and that module's update path therefore takes **`getPrismaWs()`** — the mixed-client
+     shape `lib/repositories/brands.ts:158` and `lib/repositories/attributes.ts:230` already use,
+     with the same "WHY TWO CLIENT TYPES" docstring.
+
+     *Amended at Build, 2026-10-10.* As first written this requirement forbade `updateMany`
+     outright, which contradicted R15: a singular `update` cannot carry a non-unique `vendorId`
+     filter, so a cross-vendor `id` throws `P2025` instead of affecting zero rows. Resolving it the
+     other way — catching that error — would have meant branching on `error.code`, which `CLAUDE.md`
+     specifically warns reports different values on the two adapters. `updateMany` over
+     `getPrismaWs()` is the repo's established answer to exactly this problem.
 
 R15. Every write and delete is vendor-scoped in its `where` clause, so an `id` belonging to another
      vendor updates and deletes zero rows rather than throwing or succeeding. Proved against a real
      database with two vendors.
 
 R16. `lib/vendor-faqs-service.ts` provides the request-scoped facade that resolves the current
-     vendor, and the staff and storefront call sites use it rather than the repository directly.
+     vendor, and every runtime call site — the staff page, the actions module, the storefront page —
+     goes through it rather than calling the repository directly. A **type-only** import of the row
+     shape in a component is permitted and expected: `components/staff/ReviewLinksManager.tsx`
+     imports `ReviewLink` from its repository the same way, and a type import reaches no client and
+     no request context.
 
 R17. `features/admin/faqs.ts` carries the `"use server"` directive and exports **only** async
      functions. The form-state type and every parser live in `lib/faq-form.ts`
