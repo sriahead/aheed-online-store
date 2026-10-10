@@ -42,9 +42,8 @@ function isDocsModuleSpecifier(specifier: string): boolean {
 /** Every module specifier in `source` that names the generated docs module. */
 function findDocsImports(fileName: string, source: string): string[] {
   // Every specifier `isDocsModuleSpecifier` accepts contains this text, so a file without it cannot
-  // import the module and is not worth a parse. Parsing every file under the four roots took ~2.3s
-  // alone and exceeded vitest's 5s default under a loaded full-suite run (#1022 /fix). The compiler
-  // still decides for every file that does mention it — a comment or a string still does not count.
+  // import the module and is not worth a parse (parsing all of them took ~2.3s; this takes ~0.4s).
+  // The compiler still decides for every file that does mention it — a comment still does not count.
   if (!source.includes("runbook/docs")) return [];
   const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true);
   const found: string[] = [];
@@ -152,7 +151,9 @@ describe("public docs boundary (#1022)", () => {
         `documents. Add a function to ${HELPER} that selects the public article by id instead:\n` +
         violations.join("\n"),
     ).toEqual([]);
-  });
+    // Reads every file under the four roots: ~0.4s alone, but over Vitest's 5s default under
+    // full-suite load on Windows — the #938 precedent in `tests/vendor-neutral-copy.test.ts`.
+  }, 30_000);
 
   it("the helper is the one exempt importer, and it does import the module", () => {
     // If the helper stopped importing it, the exemption would be dead weight hiding nothing.

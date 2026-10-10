@@ -122,10 +122,22 @@ Measured during Build (not a substitute for Validate):
   repeated). Run alone, the case took ~2.3s (~3.5s cold) — about 7x the `repository-purity`
   precedent, because it built a full TypeScript AST for every file under the four roots. The
   "Known-shaky areas" note above predicted timeouts in the two corpus-importing tests but not here.
-- **Root cause, not the check:** `findDocsImports` now returns `[]` without parsing when the source
-  text does not contain `runbook/docs`. Every specifier `isDocsModuleSpecifier` accepts contains
-  that text, so no file the test could flag is skipped; the compiler still decides for every file
-  that mentions it, so the comment/string cases still go through the AST (R6's "compiler API
-  rather than a text search" holds — the text check only decides what is worth parsing). The case
-  now runs in ~0.4s alone. No timeout was raised, and no `validation.md` row was changed.
+- **First attempt — cut the cost:** `findDocsImports` now returns `[]` without parsing when the
+  source text does not contain `runbook/docs`. Every specifier `isDocsModuleSpecifier` accepts
+  contains that text, so no file the test could flag is skipped; the compiler still decides for
+  every file that mentions it, so the comment/string cases still go through the AST (R6's "compiler
+  API rather than a text search" holds — the text check only decides what is worth parsing). Alone,
+  the case dropped from ~2.3s to ~0.4s. **It still timed out on two more full runs.** With the
+  filter, no non-staff file is parsed at all (only the exempt helper mentions the module), so what
+  remains is reading ~450 files — 365ms in a plain script. Over 5s for that is worker starvation
+  under a loaded Windows full-suite run, not test cost; the pre-existing whole-tree scans
+  (`motion-reduce-coverage`, `product-grid-usage`, `storefront-image-fallback`) also timed out
+  intermittently in the same runs.
+- **The fix that holds:** the repo already ratified the answer for exactly this — `#938` gave
+  `tests/vendor-neutral-copy.test.ts`'s whole-tree scan a test-local `30_000` timeout for the same
+  reason. This case now carries the same. The assertion is unchanged, so this is headroom, not a
+  loosened check; the pre-filter stays because it removed real cost. No `validation.md` row was
+  changed.
+- **Not fixed here:** the three pre-existing whole-tree tests above still use the 5s default and can
+  flake locally under load. They are outside this slice, and none failed twice in a row.
 - No observable behaviour change, so no `CHANGELOG.md` edit.
