@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.81.0"
+version: "1.82.0"
 updated: 2026-10-10
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -628,18 +628,18 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Chatbot prerequisites, slice 2 (`#1016` + `#1017`): BUILT, NOT YET VALIDATED OR MERGED**
-  (2026-10-10). Branch `feature/p1016-1017-ai-model-metering`, from `origin/staging` `09eb799`.
-  Spec `47e9f30`, build `c0c4c1e`, build notes in
-  `specs/2026-10-10-p1016-1017-ai-model-config-metering/`. Next stage: `/validate` from a fresh
-  context, on Sonnet 5. It adds per-vendor Workers AI metering (`AiUsageEvent`,
-  `VendorConfig.aiDailyNeuronBudget`) at all four AI call sites, model-id overrides, and an
-  `ErrorEvent` when the `/shop-your-list` model fails. **One additive migration, already applied to
-  dev by hand** (the `#895` drift blocks `migrate dev`). The R35–R37 live checks passed at Build.
-  New follow-ups: `#1027` (gemma switch and timeout), **`#1028` (owner: which Workers plan)**,
-  `#1029` (staff AI-allowance view), `#1030` (campaign prompt hardcodes "UK grocery"), `#1031`.
-  Build found that **Cloudflare silently serves the deprecated llama id from
-  `llama-3.1-8b-fast-v2`** (commented on `#1016`).
+- **Chatbot prerequisites, slice 2 (`#1016` + `#1017`): MERGED TO STAGING, awaiting promotion**
+  (PR #1032, merge `162b38e`, 2026-10-10). Both issues `In Review`, open by design until a
+  `staging -> main` promotion PR. `deploy-staging` succeeded, so the additive migration is applied
+  on staging, **not yet on production**. Spec and build notes:
+  `specs/2026-10-10-p1016-1017-ai-model-config-metering/`; shipped behaviour:
+  `specs/architecture.md` ("AI does not sit on a public request path"). **Validated from a fresh
+  context — no defect found**; R35–R37 were proved live against the dev database. Promoting it puts
+  per-vendor metering live in production with every vendor on the default 3,000-neuron budget.
+  Follow-ups, all `Backlog` / `P10`: `#1027` (gemma switch and timeout), **`#1028` (owner: which
+  Workers plan)**, `#1029` (staff AI-allowance view), `#1030` (campaign prompt hardcodes "UK
+  grocery"), `#1031` (backfill refusal shown in success tone). **Cloudflare silently serves the
+  deprecated llama id from `llama-3.1-8b-fast-v2`** (commented on `#1016`).
 - **Chatbot prerequisites, slice 1 (`#1013` + `#1012`): DONE, in production** (PR #1024 to
   `staging`, then promotion PR #1025, merge `b1dd2d4`, 2026-10-10), both issues closed and `Done`.
   See **Last Verified** above for the production facts; not repeated here. Spec/build notes:
@@ -1260,25 +1260,13 @@ Board Phase and GitHub milestone disagreed for #151, #422, #589, #602, #695, #69
 These are separate from, not a silent reordering of, the owner's High priorities:
 
 - Hard launch inputs: #113 production Stripe live keys and #104 verified Resend sending domain.
-- **AI features already in production carry two findings from the ninth Discover pass (2026-10-10,
-  PR #1018), promoted to `main` by PR #1019 as research only — neither is acted on.** They are
-  listed here, not left solely in `docs/research/discovery-log.md`, because they describe shipped
-  production code rather than prospective scope:
-  - **#1016** — `lib/list-normalisation.ts:37` and `lib/search-synonym-proposals.ts:31` hardcode
-    `@cf/meta/llama-3.1-8b-instruct`, deprecated by Cloudflare 2026-05-30 and absent from the
-    70-model catalogue, and neither site is env-overridable. **Investigated as a suspected
-    four-month silent outage and DISPROVED by live verification** — a real inference call still
-    returns `success: true`, so `/shop-your-list`'s AI pre-pass works today and `#591` stays
-    conditional. The exposure is the undated future withdrawal, which `lib/list-normalisation.ts`
-    is documented to degrade through **invisibly**. The pass measured five replacements: `-fp8`
-    (the entry's own first pick) is disqualified at 9.7s against a 6000ms timeout, and
-    `gemma-4-26b-a4b-it` is the validated successor pending a timeout decision at `/propose`.
-  - **#1017** — every Workers AI call uses one platform-level credential (`getAiEnv()`,
-    `lib/config.ts:158-164`), so the 10,000-neuron daily free allowance is a shared, unmetered,
-    unattributed commons. On the Workers **Free** plan one vendor exhausting it stops **every**
-    vendor's AI features until 00:00 UTC — the same starvation shape as #619. `neuronsForCall()`
-    is the metering seam, and the repo's dated rate table reconciles exactly with current
-    published prices.
+- **Workers AI metering is on staging only until the slice 2 promotion (`#1016`, `#1017`, PR
+  #1032).** Production still has the unmetered shared commons: one account credential, one daily
+  pool, a hardcoded deprecated `llama-3.1-8b-instruct` default, and no `ErrorEvent` when
+  `/shop-your-list`'s model stops answering. **`#1028` is owner work**: nobody has confirmed whether
+  the account is on the Workers Free or Paid plan, which decides whether an exhausted pool stops
+  every vendor's AI (Free) or bills the platform without attribution (Paid) — the per-vendor budget
+  is safe either way. `#591` stays conditional: the model still answers today.
 - **Two findings from the `#1013`/`#1012` slice's own `/validate` (2026-10-10), promoted to `main`
   by PR #1025 as research/defect reports, neither acted on beyond filing:**
   - **#1023** — `components/rewards/RewardsLauncher.tsx`, mounted unconditionally in
