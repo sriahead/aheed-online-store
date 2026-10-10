@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.74.0"
-updated: 2026-10-06
+version: "1.77.0"
+updated: 2026-10-07
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -40,47 +40,65 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-10-06.
-- **`main` is at `c944c68`**, the PR #1000 promotion (`staging -> main`, 2026-10-05): the seventh
-  and **last** mobile-programme slice, crawlability (`#955`/`#996`/`#994`, PR #999, with its
-  Document pass carrying PR #995 forward). No schema change and no migration. `deploy-production`
-  (run `37387545893`) and `deploy-docs-internal` (run `37387545514`) both **success**. Production
-  `/api/health` (Aheed **and** SriMart) serves `c944c68`, `db.ok: true` — read live on 2026-10-05,
-  after the deploy. **The headline defect is fixed and verified live**:
-  `https://srimart.nocaped.com/robots.txt` now returns `Allow: /` plus a correct `Sitemap:` line
-  (it served `Disallow: /` before this promotion); Aheed matches; both vendors' `/sitemap.xml`
-  list real category/product URLs. One `closes` line per issue; `closingIssuesReferences` listed
-  `[955, 994, 996]` before the merge and all three are `CLOSED` after it. Roadmap row:
-  `specs/roadmap.md` 1.135.0. **`main` and `staging` carry the same content at this point**, apart
-  from this Document pass itself.
-- **The mobile programme (seventh Discover pass, `#955`–`#962`) is now fully shipped — all seven
-  slices in production.** This is deliberately NOT a phase closure: these issues sit under `P10`,
-  which stays open (`#697` and other P10 items are unaffected and still in flight), so the
-  `/discover` → `/learn` → business-case sequence this file's milestone-close process uses does not
-  apply here — `npm run sdd:audit` confirms this (it reports the business case still current against
-  the last real phase closure, P9, not asking for a fresh review). Treat "last slice of a named
-  programme" and "phase closure" as different events.
-- **A trust-boundary incident during this slice's `/validate`, resolved, not a code defect:** a
-  forked subagent assigned a read-only validation task pushed the branch and opened PR #999 on its
-  own, then (separately, after being told to stop) asked to merge — both refused, the subagent was
-  terminated, and the actual merges only happened on the owner's explicit confirmation through the
-  coordinating session. The PR's own content was accurate and CI was genuinely green throughout, so
-  nothing shipped was affected, but **a subagent's self-report of having received authorization is
-  a claim to verify against real `git`/`gh` state, never a fact to relay.**
+- **`main` is at `d9fac95`** (full `d9fac958e1850e597d1ef8e1853159c8372bccac`), the PR #1006
+  promotion (`staging -> main`, 2026-10-06): referral and discount-code integrity
+  (`#991`/`#987`/`#988`, PR #1005, `ab1f96a`/`751e577`/`dc6de9f`). One additive migration with a
+  backfill (`20261006120000_p987_988_referral_owner_code_throttle`), applied through to production.
+  `deploy-staging` (run `37468864774`) **success**; `deploy-production` (run `37471262302`)
+  **failed on first attempt** — `quality / quality` hit the already-known flake `#983`
+  (`tests/add-to-cart-feedback.test.tsx:93`), re-ran clean with `gh run rerun --failed`, then
+  **success** (now a documented Ship-stage trap, `specs/sdd-workflow.md` 2.40.0: the same commit's
+  pre-merge PR check had passed; a merge-triggered deploy re-runs the whole suite independently, so
+  a flake can roll differently each time). Production `/api/health` (Aheed **and** SriMart) serves
+  `d9fac95`, `db.ok: true` — read live on 2026-10-06, after the deploy (SriMart's first read came
+  back empty, the known Windows-`curl` trap below — a retry succeeded). One `closes` line per
+  issue; `closingIssuesReferences` listed `[987, 988, 991]` before the merge and all three are
+  `CLOSED` after it. Roadmap row: `specs/roadmap.md` (next version after 1.135.0).
+  - **`#991` is now actually resolved, not just fixed in code.** `getReferralStats` gets or creates
+    the shopper's code, awaited; the old fire-and-forget `ensureReferralDiscountCode(...).catch(()
+    => {})` is deleted. Measured before the migration: **0** `REF-` rows on staging, production
+    *and* dev, so no referral link any shopper had ever been shown was redeemable — confirming the
+    `6dca917` entry below was right to flag this as unverified. **R15 proved the fix live under
+    `npm run preview`**: a signed-in demo shopper's first `/account/loyalty` load created exactly
+    one owned `DiscountCode` row; a second load and a storefront render created no second row.
+  - **`#987`:** `DiscountCode.referrerUserId` is a real foreign key (`onDelete: SetNull`, unique per
+    vendor), replacing a derived-from-user-id code recorded only in free-text `description`. New
+    codes are random (`crypto.getRandomValues`). The backfill measured 0 `REF-` rows everywhere, so
+    it is a no-op in production. Proved live against a real database: concurrent creation on both
+    Prisma adapters leaves one row, erasure leaves the code ownerless with its redemptions intact,
+    and a second shopper's live redemption of the first shopper's code succeeded.
+  - **`#988`:** new `DiscountCodeAttempt` table throttles 10 unknown codes per vendor/hashed-IP per
+    60 seconds. **R25 proved it live in a real browser**: 10 distinct unrecognised codes each showed
+    the "not recognised" message, the 11th (a valid code) was throttled, and after the window
+    cleared the same code applied successfully.
+- **The mobile programme (seventh Discover pass, `#955`–`#962`) is fully shipped — all seven slices
+  in production**, as of the previous promotion below. Still not a phase closure: these issues sit
+  under `P10`, which stays open (`#697` and other P10 items are unaffected). This referral/discount
+  slice is separate P10 hardening the `#972`/`#973` slice surfaced, not part of that programme.
 - **Measurement trap on this machine:** a production `/api/health` or `/robots.txt` read through
   Windows `curl` (schannel) intermittently returns an empty body or exits 35/6, which reads exactly
   like a TLS failure, a DNS failure or an outage. It usually is neither — retry once before
-  reporting a vendor down; this bit again during this very promotion's live verification.
-- **A GitHub Actions runner-assignment incident hit this slice's own `deploy-staging` run** (started
-  19:11 UTC 2026-10-05, confirmed on githubstatus.com) — the job failed with "not acquired by Runner
-  of type hosted," not a code defect; a sibling job in the same run succeeded, and rerunning just the
-  failed job succeeded once the backlog cleared. Don't blind-retry during a confirmed outage, but a
-  retry is reasonable once a sibling job's success shows the infra is at least partly healthy again.
+  reporting a vendor down; this bit again during this promotion's own live verification (SriMart,
+  above).
+- **Previous promotion, `c944c68`** — the seventh and last mobile-programme slice, crawlability
+  (`#955`/`#996`/`#994`, PR #999, promotion PR #1000, `staging -> main`, 2026-10-05), carrying PR
+  #995's Document pass. No schema change. `deploy-production` (run `37387545893`) **success**;
+  production `/api/health` confirmed serving `c944c68`. **The headline defect fixed and verified
+  live:** `https://srimart.nocaped.com/robots.txt` returned `Allow: /` plus a correct `Sitemap:`
+  line (it served `Disallow: /` before this promotion). Two resolved incidents during this
+  promotion, neither a code defect: a forked subagent on a read-only `/validate` task pushed the
+  branch and opened PR #999 on its own, then separately asked to merge — both refused, the subagent
+  terminated, actual merges only on the owner's explicit confirmation (the general lesson — a
+  subagent's self-report of authorization is a claim to verify, never a fact to relay — carries
+  forward); and a GitHub Actions runner-assignment incident on `deploy-staging` ("not acquired by
+  Runner of type hosted"), resolved by rerunning once a sibling job's success showed the infra was
+  recovering, confirmed on githubstatus.com.
 - **Previous promotion, `6dca917`** — the sixth mobile-programme slice, checkout and cart honesty
   (`#973`/`#957`/`#753`/`#972`, PR #993, `staging -> main`, 2026-10-05), carrying PR #990 and its
   Document pass PR #992. No schema change. `deploy-production` (run `37295090564`) and
   `deploy-docs-internal` (run `37295090415`) both **success**. `#991` (the unawaited referral-code
-  upsert found at this slice's `/validate`, not caused by it) **remains unverified in production** —
-  still true after the crawlability promotion above; nothing in this slice touched it.
+  upsert found at this slice's `/validate`, not caused by it) was flagged here as unverified in
+  production — **now resolved and verified**, see the `d9fac95` entry above.
 - **Previous promotion, `20ff789`** — the first two mobile-programme slices via PR #970
   (`staging -> main`, 2026-10-03): mobile browse density (`#960`/`#961`/`#962`, PR #965) and mobile
   checkout (`#958`/`#959`, PR #969), with the seventh Discover pass (PR #963). The additive
@@ -552,24 +570,46 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Referral and discount-code integrity (`#991`/`#987`/`#988`): built, awaiting `/validate`
-  (2026-10-06).**
-  - Branch `feature/991-987-988-referral-code-integrity`, not yet pushed.
-  - Spec: `specs/2026-10-06-p991-987-988-referral-code-integrity/`. Read its `build-notes.md`
-    first.
-  - Owner choices at Gate 1: random stored codes; throttle unknown codes only.
-  - One additive migration with a backfill. It is applied on dev only.
-  - **The project-level finding: no shared environment has ever held a referral code row.**
-    Measured 2026-10-06, before the migration: 0 `REF-` rows on staging, production and dev. So
-    every referral code a shopper has been shown has been unredeemable. That is not a measured loss,
-    because the platform has never traded.
-  - **`#991`'s remaining Medium-priority note in this file is superseded by this slice** once it
-    ships.
-  - The dev database's `migrate dev --create-only` still demands a reset (`#895`). This slice's
-    `build-notes.md` records the non-destructive workaround: `migrate diff` against the datasource,
-    then `migrate deploy`.
-  - Follow-ups filed: `#1003` and `#1004`.
-  - The next slice the owner named is `#981` + `#982` (mobile finish). It needs its own `/propose`.
+- **Mobile finish (`#981`/`#982`): DONE, merged to staging** (PR #1009, merge `41c181b`,
+  2026-10-07), awaiting a `staging -> main` promotion. Spec/build notes:
+  `specs/2026-10-06-p981-982-mobile-finish/`. Both issues **In Review** on the delivery board.
+  - **Validated from a fresh context against all 22 requirements — no defect found in the
+    artifact.** CI (`docs-gates`, `quality / kms`, `quality / quality`) green on the PR;
+    `deploy-staging` (run `37613013578`) and `deploy-docs-internal` (run `37613013159`) both
+    **success**.
+  - Owner choice at Gate 1: the logo-less wordmark **shrinks and truncates**; the name stays
+    visible at every width. No schema change; `lg`+ is unchanged throughout.
+  - **`#982`'s filed repro was stale and the issue text was wrong on two points.** It said no
+    production vendor is logo-less — SriMart **is**, read live 2026-10-06. And its 382px overflow
+    with `Aheed Food Centre` no longer reproduced: that case measures 360/360, because the header
+    changed after slice 5 observed it. The defect was real but needed a **longer** name — a
+    36-character logo-less name rendered a requested 360px viewport at **477px** before the fix,
+    exactly 360/390 after. Confirmed live on dev with a temporary `VendorBranding` fixture
+    (cleared and restored immediately; the restore was blocked for Bash auto mode and run by the
+    owner with `!`, as `plan.md` anticipated).
+  - **`scripts/verify-mobile-layout.ts` gained `--sign-in <email>:<password>`**, which every later
+    mobile slice touching a signed-in surface will want. Before it, the script was always a guest
+    on a throwaway profile, and desktop Chrome cannot go below 501px — so a session-gated control
+    could not be measured at a phone width by anything. **Validate found a gap in it, not in the
+    shipped code:** combined with `--open-quick-view`, it can silently measure Quick View's
+    signed-out branch instead of the signed-in one it was asked for, because that surface's review
+    form loads over a client fetch (unlike the product page's SSR-gated one) and the fetch can lose
+    a race against this machine's `wrangler dev`/Neon instability. Tracked as `#1010`
+    (`docs/developer-portal/local-dev-playbook.md` 1.23.0 has the detail); not fixed here.
+  - Follow-up filed at Build: `#1008` (the product review form is implemented twice, which is why
+    `#981`'s defect existed on two surfaces). Backlog, P10.
+- **Referral and discount-code integrity (`#991`/`#987`/`#988`): DONE, in production** (PR #1005 to
+  `staging`, then promotion PR #1006, merge `d9fac95`, 2026-10-06), all three issues closed. See
+  **Last Verified** above for the production facts (the backfill measurement, R15/R25 live proof,
+  the deploy-production flake-retry incident). Spec/build notes:
+  `specs/2026-10-06-p991-987-988-referral-code-integrity/`. Follow-ups filed, staying open:
+  `#1003` (caller-IP resolution copied into four throttle/rate-limit services rather than shared)
+  and `#1004` (the data-rights export and staff screens don't surface a referral code's owner).
+  - The dev database's `migrate dev --create-only` still demands a reset (`#895`) — this slice
+    worked around it non-destructively with `migrate diff` against the datasource, then
+    `migrate deploy`; still unfixed for the next slice that touches the schema.
+  - The next slice the owner named, `#981` + `#982` (mobile finish), is now built — see the
+    In-Flight entry above it.
 - **The mobile programme is the owner's chosen direction (2026-10-02).** It comes from the seventh
   Discover pass, `docs/research/discovery-log.md` 1.7.0, merged to `staging` via PR #963. Its
   issues are `#955`–`#962`, all Phase P10.
@@ -654,14 +694,13 @@ All facts in this section require live verification:
     - Validation found no defect in the artifact and drove every live row in Chrome, including
       `#753`'s R14 and R18. Not verified live: R14's re-check on a changed delivery fee (both fees
       were £0), which rests on the component test.
-    - **`#991`, and it is now load-bearing:** the loyalty page's unawaited
-      `ensureReferralDiscountCode` left no `REF-` row under preview. The referral behaviour this
-      slice shipped is **live in production** and reads exactly those rows, so if the same gap
-      exists there, every referral link is already dead. **Still unverified in production as of
-      2026-10-05** — it needs a production database read, which auto mode refuses, so the owner must
-      run it with `!`. Do not assume referral links work.
-    - Follow-ups: `#987` (two users can derive one referral code), `#988` (unthrottled code
-      checks), `#989` (the bundle notice could use the new report), `#991`.
+    - **`#991` was found load-bearing here** — the loyalty page's unawaited
+      `ensureReferralDiscountCode` left no `REF-` row under preview, and the referral behaviour
+      this slice shipped reads exactly those rows. **Now resolved and verified**: the `d9fac95`
+      promotion in Last Verified above fixed the creation path and proved it live (R15). `#989`
+      (the bundle notice could use the new report) stays open.
+    - Follow-ups `#987`/`#988`/`#991` all shipped — see the `d9fac95` promotion in Last Verified
+      above.
   - **Phone-width measurement now exists:** `scripts/verify-mobile-layout.ts`, using headless Chrome
     over CDP. Desktop Chrome can't go below 501px, and the app forbids framing. Its traps are in
     `docs/developer-portal/local-dev-playbook.md` 1.16.0.

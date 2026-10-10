@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.39.0"
+version: "2.40.0"
 updated: 2026-10-06
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
@@ -970,6 +970,22 @@ named gates, but the part of this repo's actual history most prone to drift.
   PR #275 (#250, #257, #259, #271). Squash-merging one is what created the divergence in the first
   place; there is no known reason PR #275 needed to deviate, so treat a squash option on a promotion
   PR as a mistake to avoid rather than a style choice.
+- **A required quality job can fail on the actual merge-triggered deploy run even though the exact
+  same suite passed clean on the PR's own pre-merge CI, minutes earlier, on the identical commit.**
+  `deploy-production`'s `quality / quality` job for the referral/discount-code-integrity promotion
+  (PR #1006, 2026-10-06) failed on `tests/add-to-cart-feedback.test.tsx:93` — the already-known
+  flake `#983`, independently confirmed during this slice's own `/validate` to pass reliably alone
+  and to be unrelated to the shipped code. The PR's pre-merge `quality / quality` check had passed
+  clean on the same commit. `deploy-staging`/`deploy-production` re-run the full suite from scratch
+  rather than reuse a prior CI result, so a flaky test gets an independent roll each time — passing
+  at PR review proves nothing about the merge-triggered run. **The correct response is
+  `gh run rerun <run-id> --failed`, not a new commit and not `--no-verify`/force-pushing past it**:
+  the `deploy` job itself had not run yet (`quality` gates it), so nothing was deployed on the
+  failing attempt, and re-running only the failed job is the same "fix nothing, just retry" move
+  already covered for a suspected GitHub Actions incident — the difference here is the cause is a
+  *known local flake*, confirmed in the same session's `/validate`, not an external outage. Always
+  read the actual failure before re-running blind: a different test, or a different line, would
+  mean a real regression, not this.
 
 Then go straight to **Document (final)** — no model switch here. It runs on the same Sonnet 5
 session that just shipped.

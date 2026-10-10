@@ -35,7 +35,9 @@ export function FeedbackForm({
   );
 
   return (
-    <form action={formAction} className="space-y-6">
+    // #981 — `feedback-form` is the measuring hook. This form shares `StarRatingInput` with the
+    // review surfaces, so it inherits the 44px star hit area and is measured rather than assumed.
+    <form data-tap-surface="feedback-form" action={formAction} className="space-y-6">
       <StarRatingInput
         key={existing?.rating ?? "new"}
         name="rating"
@@ -81,7 +83,7 @@ export function FeedbackForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+        className="flex min-h-tap items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 lg:min-h-0"
       >
         {pending ? "Sending…" : existing ? "Update my feedback" : "Send feedback"}
       </button>

@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.22.0"
-updated: 2026-10-05
+version: "1.23.0"
+updated: 2026-10-07
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -69,6 +69,17 @@ the evidence and the recipe.
   scripts) to suppress the conversion, and always read back a filed issue/PR's title after creating
   it from Git Bash if it starts with `/`. Fixed after the fact via `gh issue edit`, same env-var
   prefix.
+- **`gh issue create --body-file <path>` can mojibake-corrupt non-ASCII characters even from a
+  verified-UTF-8 source file, while `gh pr create --body-file` with the identical sourcing method
+  (a Bash heredoc) does not.** Confirmed in `#981`/`#982`'s `/document` (2026-10-07): a file with
+  `file`-confirmed UTF-8 bytes (em-dashes correctly `E2 80 94`) read back from the created issue
+  with every em-dash double-encoded (`â€”`), the same byte-swap pattern as the PowerShell
+  `Get-Content`/`Set-Content` trap above — but the PR opened moments earlier from the same shell,
+  same env, same heredoc pattern, read back clean. `gh issue edit --body-file` with the identical
+  content fixed it on retry (so it is not fully deterministic — don't assume one clean run proves
+  the next is safe). **Read back a filed issue's body (`gh issue view <N> --json body`) whenever it
+  contains non-ASCII punctuation, and prefer plain ASCII (`-`, `x`) over em-dashes/multiplication
+  signs in issue bodies created this way** until the cause is understood.
 - **`npx tsx -e "<multi-line script>"` fails silently on this Windows setup the moment the script
   imports an installed package (e.g. `@prisma/client`) — no stdout, no stderr, exit 0, even with an
   explicit `.catch()`/`.finally()` around every promise.** It isn't a working-directory problem
@@ -671,3 +682,28 @@ Added for `#964` (2026-10-04):
   with identical names. At 1024 and above the panel's copy is hidden, so a first-match lookup hits
   the baseline's `0x0` entry and reports every sidebar control as changed. Validate's first pass
   reported 8 false failures this way; none was real. Filter both sides on `displayed: true`.
+
+Added for `#981`/`#982` (2026-10-07):
+
+- **`--sign-in` combined with `--open-quick-view` can silently measure the signed-out branch, and
+  nothing in the output says so.** `QuickViewDrawer.tsx`'s review form depends on a client-side
+  `fetch('/api/products/quick-view?…')`, not an SSR read, and that fetch's session lookup can take
+  longer than the script's fixed 1s post-click sleep — this machine's `wrangler dev` reconnects to
+  Neon with a fresh Prisma client every request (`CLAUDE.md`, Database) and intermittently drops
+  the connection outright (the `Network connection lost` crash above). When the fetch is still
+  in flight past that 1s, `currentUser` defaults to `null` and the signed-out "Log in" link renders
+  instead — the run still exits 0 with plausible-looking geometry (`44×44`, correct
+  `documentScrollWidth`). Reproduced directly: the identical command against the same running
+  server passed cleanly several times and silently measured the wrong branch other times, including
+  on the *first* width of a multi-width run right after a confirmed-successful sign-in. The
+  product page's review form (SSR-gated via `session?.user` in the page render itself, not a client
+  fetch) never showed this. Tracked as `#1010`, not fixed here. Until it is, cross-check a
+  `quick-view-body` result that shows only the "Log in" link against a direct `curl` sign-in +
+  fetch to the same endpoint before concluding the signed-in branch is what you measured, and
+  prefer re-running over trusting a single pass for this one surface.
+- **A local wrangler-preview crash (`Network connection lost`, documented above for `#956`/`#967`)
+  can happen mid-session after dozens of successful requests, not just "soon after start."** Hit
+  twice in one `/validate` run, each after the server had already served many requests
+  successfully. Restarting (kill `node`/`workerd`, confirm nothing listens on 8787, `npm run
+  preview` again) resolved it both times; there is no known way to prevent it, only to detect it
+  (`curl -m 20 http://localhost:8787/api/health` before trusting a batch) and restart.

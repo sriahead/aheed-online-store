@@ -295,7 +295,7 @@ export function QuickViewDrawer() {
                 <button
                   type="button"
                   onClick={() => setRefreshIndex((i) => i + 1)}
-                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white transition hover:bg-primary/90"
+                  className="flex min-h-tap items-center justify-center rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white transition hover:bg-primary/90 lg:min-h-0"
                 >
                   Try again
                 </button>
@@ -439,8 +439,11 @@ export function QuickViewDrawer() {
                   />
                 </div>
 
-                {/* Reviews & Ratings Section */}
-                <div className="border-t border-black/10 pt-6">
+                {/* Reviews & Ratings Section. #981 — `quick-view-body` is the measuring hook:
+                `scripts/verify-mobile-layout.ts` reports a control only when it carries a
+                `data-tap-surface` or sits inside one, so this wraps the form, the review list and
+                the signed-out Log in block. */}
+                <div data-tap-surface="quick-view-body" className="border-t border-black/10 pt-6">
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-lg font-bold text-primary">Reviews & Ratings</h4>
                     <span className="text-xs font-medium text-primary-muted">
@@ -501,7 +504,7 @@ export function QuickViewDrawer() {
                       <button
                         type="submit"
                         disabled={reviewPending}
-                        className="self-start rounded-xl bg-action px-4 py-2 text-xs font-bold text-white transition hover:bg-action-hover active:scale-95 motion-reduce:active:scale-100 disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+                        className="self-start rounded-xl bg-action px-4 py-2 text-xs font-bold text-white transition hover:bg-action-hover active:scale-95 motion-reduce:active:scale-100 disabled:opacity-50 flex min-h-tap items-center justify-center gap-1.5 shadow-sm lg:min-h-0"
                       >
                         {reviewPending && (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
@@ -514,7 +517,7 @@ export function QuickViewDrawer() {
                       <p className="text-sm text-primary-muted">
                         <Link
                           href="/login"
-                          className="font-bold text-action hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action rounded-xs"
+                          className="inline-flex min-h-tap min-w-tap items-center justify-center font-bold text-action hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action rounded-xs lg:min-h-0 lg:min-w-0"
                         >
                           Log in
                         </Link>{" "}
@@ -544,7 +547,7 @@ export function QuickViewDrawer() {
                                 type="button"
                                 onClick={() => handleReviewDelete(review.id)}
                                 disabled={deletingId === review.id || reviewPending}
-                                className="text-xs font-semibold text-danger hover:underline disabled:opacity-50"
+                                className="flex min-h-tap min-w-tap items-center justify-center text-xs font-semibold text-danger hover:underline disabled:opacity-50 lg:min-h-0 lg:min-w-0"
                               >
                                 {deletingId === review.id ? "Deleting..." : "Delete"}
                               </button>
