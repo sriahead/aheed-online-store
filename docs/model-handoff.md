@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.84.0"
-updated: 2026-10-10
+version: "1.85.0"
+updated: 2026-10-11
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -49,7 +49,8 @@ reconciliation. If overall project state did not materially change, leave this f
   attempt**. Production `/api/health` (Aheed **and** SriMart) serves `a0ea21e`, `db.ok: true`.
   `closingIssuesReferences` listed exactly `[1016, 1017]`; both closed, and the post-promotion
   issue-state check found **no unintended closure** this time — `#1022`, `#1023` and the follow-ups
-  `#1027`–`#1031` are all still open. **`origin/main` and `origin/staging` are level.** Per-vendor
+  `#1027`–`#1031` are all still open. **`origin/staging` is now one PR ahead of `origin/main`**:
+  PR #1036 (`#1022`/`#1023`, merge `3c34d95`), awaiting its promotion PR — see In-Flight Work. Per-vendor
   metering is live in production with every vendor on the default 3,000-neuron daily budget. Not a
   phase closure (`P10` stays open).
 - **Previous promotion, `b1dd2d4`** (full `b1dd2d4f112b231cb551e4175c3224a15f32dfc1`), the PR #1025
@@ -639,13 +640,22 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Public docs boundary + loyalty-gated Rewards launcher (`#1022` + `#1023`): BUILT, NOT YET
-  VALIDATED OR MERGED** (2026-10-10). Branch `feature/p1022-1023-public-docs-rewards-gate` (also
-  carries the PR #1032/#1033 Document commits). Spec, build and build notes in
-  `specs/2026-10-10-p1022-1023-public-docs-rewards-gate/`. Next stage: `/validate` from a fresh
-  context, on Sonnet 5. No schema change. Both issues `In Progress`. Follow-ups filed at Build:
-  `#1034` (rewards data, including a referral code, is still built on every signed-in render for
-  loyalty-off vendors) and `#1035` (what the `shopper` audience tag means on internal articles).
+- **Public docs boundary + loyalty-gated Rewards launcher (`#1022` + `#1023`): MERGED TO STAGING,
+  NOT YET PROMOTED** (PR #1036, merge `3c34d95`, 2026-10-10; `deploy-staging` run `38093764375`
+  success). Both issues `In Review` and open. Spec and build notes:
+  `specs/2026-10-10-p1022-1023-public-docs-rewards-gate/`; the rule: `docs/developer-portal/app-conventions.md`
+  1.8.0. No schema change, no migration. **Next: the `staging -> main` promotion PR**, whose body
+  must carry `closes #1022` and `closes #1023` on separate lines.
+  - Validated from a fresh context. R16 failed once (the new boundary scan's 5s timeout under local
+    load) and was fixed in-branch; every row passed on the re-run from the top. Locally the full
+    suite was clean only with `--maxWorkers=6` (`#1037`); CI was green.
+  - **Staging cannot show `#1023`'s loyalty-off case: staging's SriMart has loyalty ON**, so its
+    launcher correctly renders there. The dev database and production have SriMart at loyalty off.
+    The check that matters after promotion: production `srimart.nocaped.com` `/` and `/help` must
+    no longer contain `Open rewards and loyalty panel`, and Aheed's still must.
+  - Follow-ups, all `Backlog` / `P10`: `#1034` (rewards data, including a referral code, is still
+    built on every signed-in render for loyalty-off vendors), `#1035` (what the `shopper` audience
+    tag means on internal articles), `#1037` (local full-suite timeouts).
 - **Chatbot prerequisites, slice 2 (`#1016` + `#1017`): DONE, in production** (PR #1032 to
   `staging`, then promotion PR #1033, merge `a0ea21e`, 2026-10-10), both issues closed. See
   **Last Verified** above for the production facts. Spec and build notes:
@@ -677,11 +687,9 @@ All facts in this section require live verification:
     table, the editor and the rendering; the answers are vendor content `ADR-004`/`#239` forbid the
     platform writing, and none is seeded. An empty corpus makes a chatbot ship inert — the `#697`
     shape, except user-visible, because a shopper opens the chat and gets nothing.
-  - **`#1022` is OPEN again** — see Last Verified above for why, and Risks And Blockers for what
-    actually remains on it. The immediate production defect (an internal operations document
-    rendering on the public `/help` route) shipped its correction with this slice; the durable rule
-    (`audience` says who it is relevant to, `visibility: public` is the only field that says it may
-    leave the building) is recorded in `docs/developer-portal/app-conventions.md` 1.7.0.
+  - **`#1022` was reopened** after this slice's promotion auto-closed it (see Last Verified). Its
+    remaining work, the mechanical guard and selection by id, is now on staging in PR #1036; see the
+    entry above.
   - The dev-DB migration workaround this slice used (`#895` still blocks `prisma migrate dev
     --create-only`) is the same recipe prior slices have used; staging and production got the
     migration from CI as normal.
@@ -1284,19 +1292,10 @@ These are separate from, not a silent reordering of, the owner's High priorities
   the account is on the Workers Free or Paid plan, which decides whether an exhausted pool stops
   every vendor's AI (Free) or bills the platform without attribution (Paid) — the per-vendor budget
   is safe either way. `#591` stays conditional: the model still answers today.
-- **Two findings from the `#1013`/`#1012` slice's own `/validate` (2026-10-10), promoted to `main`
-  by PR #1025 as research/defect reports, neither acted on beyond filing:**
-  - **#1023** — `components/rewards/RewardsLauncher.tsx`, mounted unconditionally in
-    `components/layout/StorefrontChrome.tsx:72`, renders a floating "Rewards" button with
-    `aria-label="Open rewards and loyalty panel"` on every vendor's every page regardless of
-    `loyaltyEnabled` — confirmed live on SriMart (loyalty off) in production. Pre-existing
-    (`#729`/`#836`), not part of that slice's diff; same defect class `#1013` fixed for the Help
-    Centre itself, just in sitewide chrome instead of one page.
-  - **#1022's real follow-up, still open**: nothing mechanically stops the next internal KMS
-    article from reaching a public surface (no guard equivalent to
-    `tests/operator-doc-coverage.test.ts` for the public direction), and `/help`'s
-    `shopperDocs[0]` is still an index into an array, correct today only because exactly one public
-    shopper article exists. The immediate defect this issue reported already shipped its fix.
+- **Production still has both `#1022` and `#1023` until PR #1036 is promoted**: SriMart (loyalty
+  off) shows the floating Rewards launcher, whose panel links to a 404 `/account/loyalty`, and
+  nothing mechanically stops an internal KMS article reaching a public page. Both fixes are on
+  staging (In-Flight Work).
 - Security/operations: #219 and #175 credential rotations; #436 demonstrated restore; #437 outbound
   alert delivery; #438 tested rollback; #246 persisted-log confirmation.
 - Reproduced or live defects: #236 rapid cart-mutation ceiling, #689 repeated query parameters

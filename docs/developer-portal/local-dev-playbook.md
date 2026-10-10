@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.23.0"
-updated: 2026-10-07
+version: "1.24.0"
+updated: 2026-10-11
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -148,6 +148,15 @@ the evidence and the recipe.
   isolation) and reports as a real *failure*; that test parses every file in `lib/repositories/`,
   so expect it to keep creeping as that directory grows. CI's Linux runners are the authority for
   both.
+  **`#538` is one instance of a class (`#1037`).** At PR #1036's `/validate` (2026-10-10), four
+  default-worker full runs on one tree each timed out a *different* set of whole-tree scan tests
+  (`motion-reduce-coverage`, `product-grid-usage`, `repository-purity`, `token-alpha-purity`,
+  `products-service`), every one under a second alone; `npx vitest run --maxWorkers=6` passed every
+  file with no `Errors` line. A timeout that **moves between runs** is load. A timeout that hits
+  the **same test every run** is worth a look at its cost, but cutting the cost may not be enough:
+  that slice's new scan still timed out after a pre-filter left it parsing nothing, and it took the
+  `#938` test-local `30_000` to hold. Record a `--maxWorkers` run in validation as a caveat, never
+  as a plain pass.
   **A full DATABASE is indistinguishable from broken code in a test summary.** Three live-DB test
   files once failed for an afternoon with `could not extend file because project size limit
   (512 MB) has been exceeded` — nothing to do with their own subject matter — because an oversized
