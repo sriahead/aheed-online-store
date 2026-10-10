@@ -111,6 +111,7 @@ async function main() {
     const { listEligibleProductsForNetContent, createNetContentSuggestion } =
       await import("@/lib/repositories/net-content-suggestions");
     const { runNetContentSuggestions } = await import("@/lib/net-content-run");
+    const { createAiMeter } = await import("@/lib/ai-meter");
     const { getStorage } = await import("@/lib/storage");
     const storage = getStorage();
 
@@ -155,6 +156,8 @@ async function main() {
         storeDescription: vendor.config?.storeDescription ?? null,
         neuronBudget: neuronBudget - totals.neurons,
         rate,
+        // #1017 — each vendor's own daily AI budget, charged per call like the Worker's paths.
+        aiMeter: createAiMeter(prisma, vendor.id, "NET_CONTENT"),
         log: (line) => console.log(line),
         async loadPhoto(image) {
           const [head, bytes] = await Promise.all([
@@ -185,6 +188,11 @@ async function main() {
         fail(
           "CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN is missing from the env file; nothing written.",
         );
+      }
+      // #1017 — one vendor's spent budget stops that vendor, not the run: the next vendor has its own.
+      if (summary.outcome === "vendor-budget-reached") {
+        console.log(`${vendor.slug}: vendor daily AI budget reached; moving on`);
+        continue;
       }
       if (summary.outcome !== "completed") stopReason = summary.outcome;
     }

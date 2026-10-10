@@ -136,8 +136,15 @@ R21. `recordAiUsage` stores `milliNeurons` as `Math.ceil(neurons × 1000)`. It a
 R22. `lib/ai-meter.ts` exports `createAiMeter(prisma, vendorId, feature)`, `startOfUtcDay`,
      `describeAiBudgetRefusal` and the `AiMeter` type. The meter has `check()`, `record(...)` and
      `recordImage(...)`. `lib/ai-meter-service.ts` exports `getCurrentAiMeter(feature)`, which
-     builds a meter from `getPrisma()` and `getCurrentVendorId()` on each call. No module holds a
-     meter or a Prisma client at module scope.
+     builds a meter from `getPrisma()` and `getCurrentVendorId()` on each call, and
+     `getVendorAiMeter(vendorId, feature)`, which builds one from `getPrisma()` for a vendor the
+     caller already holds (a route's `auth.vendorId`). No module holds a meter or a Prisma client at
+     module scope.
+     *Amended at Build (2026-10-10):* `getVendorAiMeter` was added because ESLint's
+     `no-restricted-imports` rule forbids `@/lib/db` in `app/` and `features/` (ADR-004 slice 2), so
+     the three image routes cannot call `createAiMeter(getPrisma(), …)` themselves. For the same
+     reason, R12's `ErrorEvent` is written through `recordHandledErrorEvent` in
+     `lib/error-events-service.ts`, a thin facade over the same `recordErrorEvent(getPrisma(), …)`.
 R23. `startOfUtcDay(new Date("2026-10-10T23:59:59.999+01:00"))` equals
      `2026-10-10T00:00:00.000Z`, and `startOfUtcDay(new Date("2026-10-11T00:30:00+01:00"))` equals
      `2026-10-10T00:00:00.000Z`. A unit test asserts both.

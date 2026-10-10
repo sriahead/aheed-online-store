@@ -1,4 +1,10 @@
 import { getAiEnv } from "@/lib/config";
+import {
+  extractWorkersAiReplyText,
+  extractWorkersAiUsage,
+  WORKERS_AI_MODEL_REQUEST_OPTIONS,
+  type WorkersAiUsage,
+} from "@/lib/workers-ai";
 import { MAX_LINE_QUANTITY, type ParsedLine } from "@/lib/shopping-list";
 import { storeDescriptionPromptLine } from "@/lib/store-description";
 
@@ -33,8 +39,22 @@ import { storeDescriptionPromptLine } from "@/lib/store-description";
  * `scripts/verify-list-normalisation.ts` can exercise it in plain Node with no request context.
  */
 
-/** The model this pre-pass runs on. Same one #566's synonym proposals use. */
+/**
+ * The model this pre-pass runs on by default. Same one #566's synonym proposals use.
+ *
+ * #1016 — deprecated by Cloudflare on 2026-05-30 and delisted from the account's catalogue, yet
+ * still answering (2026-10-10: served by `@cf/meta/llama-3.1-8b-fast-v2`), and still the best of
+ * five candidates measured on this prompt. Kept as the default; `LIST_NORMALISATION_AI_MODEL`
+ * overrides it, so its eventual withdrawal is a secret change, and `normaliseList`'s `http`
+ * degradation makes that day visible as an ErrorEvent. `@cf/google/gemma-4-26b-a4b-it` is the
+ * validated successor, but switching needs a NORMALISATION_TIMEOUT_MS decision first (#1016).
+ */
 export const NORMALISATION_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+
+/** The model a call will use: the config override when set, otherwise the default. */
+export function resolveNormalisationModel(): string {
+  return getAiEnv().LIST_NORMALISATION_AI_MODEL ?? NORMALISATION_MODEL;
+}
 
 /**
  * Ceiling on the characters one submission may send to the model.
@@ -189,30 +209,9 @@ export function parseNormalisationResponse(raw: string, lineCount: number): Norm
   return items;
 }
 
-/**
- * Cloudflare's response shape here is not `result.response: string` as originally assumed —
- * confirmed live against the real `@cf/meta/llama-3.1-8b-instruct` endpoint at `/validate` (#567):
- * `result.response` comes back as an ALREADY-PARSED array when the model's reply is JSON, with the
- * raw string form sitting instead at `result.choices[0].message.content`. Treating `response` as
- * "string or nothing" made every real call resolve to a text of `""`, so `parseNormalisationResponse`
- * ran on empty input every time and the pre-pass silently never enriched anything — degrading safely,
- * but doing so on every submission, not just a failure. This reconciles both shapes without touching
- * `parseNormalisationResponse` itself, which is unit-tested against the string contract it's actually
- * built for: a non-string `response` is re-serialised back to text so the same bracket-and-JSON.parse
- * path still runs, and `choices[0].message.content` is the fallback when `response` is absent
- * entirely.
- */
-function extractReplyText(payload: { result?: { response?: unknown; choices?: unknown } }): string {
-  const response = payload.result?.response;
-  if (typeof response === "string") return response;
-  if (response !== undefined && response !== null) return JSON.stringify(response);
-
-  const choices = payload.result?.choices;
-  const content = Array.isArray(choices)
-    ? (choices[0] as { message?: { content?: unknown } } | undefined)?.message?.content
-    : undefined;
-  return typeof content === "string" ? content : "";
-}
+// The reply-shape reconciliation that lived here (#567: `result.response` arrives ALREADY PARSED
+// when the model's reply is JSON, with the string form in `choices[0].message.content`) moved to
+// `extractWorkersAiReplyText` in lib/workers-ai.ts (#1016), so synonym proposals share it.
 
 /** Same clamp the deterministic parser applies, reused so both paths agree. */
 function clampQuantity(value: number): number {
@@ -268,9 +267,35 @@ export function mergeNormalisedItems(
 }
 
 /**
- * Ask the model to interpret the list. Returns null on EVERY failure — the caller falls through to
- * the deterministic matcher, so this function never throws and never surfaces an error to a
- * shopper.
+ * Why a pre-pass did not enrich the list (#1016). Every reason degrades identically for the shopper
+ * — the deterministic matcher runs — but they are kept apart because three of them (`http`,
+ * `unreadable`, `unparseable`) are what a withdrawn or mis-set model produces, and the caller
+ * records those as an ErrorEvent so the day it happens is dateable.
+ */
+export type NormalisationDegradeReason =
+  | "not-configured"
+  | "over-input-cap"
+  | "timeout"
+  | "network"
+  | "http"
+  | "unreadable"
+  | "unparseable";
+
+export type NormalisationResult =
+  | { kind: "ok"; model: string; items: NormalisedItem[]; usage: WorkersAiUsage }
+  | {
+      kind: "degraded";
+      model: string;
+      reason: NormalisationDegradeReason;
+      /** Present exactly when `reason` is `http`. */
+      status?: number;
+      /** Present when a body was received, i.e. the call may have been billed. */
+      usage?: WorkersAiUsage;
+    };
+
+/**
+ * Ask the model to interpret the list. Never throws and never surfaces an error to a shopper: every
+ * failure resolves to a `degraded` result and the caller falls through to the deterministic matcher.
  *
  * Exactly one fetch per invocation regardless of list length: the whole list goes in one prompt.
  * A 100-line list must not become 100 AI calls, for the same reason it must not become 100 queries.
@@ -278,46 +303,63 @@ export function mergeNormalisedItems(
 export async function normaliseList(
   lines: ParsedLine[],
   storeDescription: string | null,
-): Promise<NormalisedItem[] | null> {
-  if (lines.length === 0) return null;
+): Promise<NormalisationResult> {
+  const model = resolveNormalisationModel();
+  const degraded = (
+    reason: NormalisationDegradeReason,
+    extra: { status?: number; usage?: WorkersAiUsage } = {},
+  ): NormalisationResult => ({ kind: "degraded", model, reason, ...extra });
+
+  // Unreachable from matchList, which refuses an empty list before the pre-pass.
+  if (lines.length === 0) return degraded("unparseable");
 
   const prompt = buildNormalisationPrompt(lines, storeDescription);
-  if (prompt.length > MAX_AI_INPUT_CHARS) return null;
+  if (prompt.length > MAX_AI_INPUT_CHARS) return degraded("over-input-cap");
 
   const env = getAiEnv();
   const accountId = env.CLOUDFLARE_ACCOUNT_ID;
   const apiToken = env.CLOUDFLARE_API_TOKEN;
-  if (!accountId || !apiToken) return null;
+  if (!accountId || !apiToken) return degraded("not-configured");
 
   let response: Response;
   try {
     response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${NORMALISATION_MODEL}`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
+        body: JSON.stringify({
+          ...(WORKERS_AI_MODEL_REQUEST_OPTIONS[model] ?? {}),
+          messages: [{ role: "user", content: prompt }],
+        }),
         // A shopper is blocked on this call, so it gets a deadline rather than a retry. The 429
         // backoff lib/image-generation.ts uses is right for a staff-triggered batch and wrong
         // here: waiting 2s then 4s to enrich a form submit is worse than not enriching it.
         signal: AbortSignal.timeout(NORMALISATION_TIMEOUT_MS),
       },
     );
-  } catch {
-    // Includes the abort: a timeout is a degradation, not an error.
-    return null;
+  } catch (error) {
+    // A timeout is a degradation, not an error; so is any other transport fault.
+    const name = (error as { name?: unknown } | null)?.name;
+    return degraded(name === "TimeoutError" || name === "AbortError" ? "timeout" : "network");
   }
 
-  if (!response.ok) return null;
+  if (!response.ok) return degraded("http", { status: response.status });
 
-  // Unlike lib/search-synonym-proposals.ts, this parse is guarded: a 200 carrying a non-JSON body
-  // is exactly the kind of upstream hiccup that must degrade rather than throw on the request path.
-  let payload: { result?: { response?: unknown; choices?: unknown } };
+  // Unlike the synonym proposals before #1016, this parse is guarded: a 200 carrying a non-JSON
+  // body is exactly the kind of upstream hiccup that must degrade rather than throw on the request
+  // path.
+  let payload: unknown;
   try {
-    payload = (await response.json()) as { result?: { response?: unknown; choices?: unknown } };
+    payload = await response.json();
   } catch {
-    return null;
+    return degraded("unreadable");
   }
 
-  return parseNormalisationResponse(extractReplyText(payload), lines.length);
+  const usage = extractWorkersAiUsage(payload);
+  const items = parseNormalisationResponse(extractWorkersAiReplyText(payload), lines.length);
+  // Zero items for a non-empty list is not "nothing to enrich" — the model always returns an item
+  // per line when it is working — so it is treated as a broken reply (#1016).
+  if (items.length === 0) return degraded("unparseable", { usage });
+  return { kind: "ok", model, items, usage };
 }

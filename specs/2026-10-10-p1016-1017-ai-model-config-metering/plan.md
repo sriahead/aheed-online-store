@@ -137,7 +137,7 @@ never throws. The caller (`features/cart/match-list.ts`) still falls through to 
 matcher for every reason. The shopper sees nothing different.
 
 For **`http`, `unreadable` and `unparseable` only**, the caller also writes one `ErrorEvent` via
-`recordErrorEvent(getPrisma(), …)`. The message names the reason, the HTTP status when there is
+`recordHandledErrorEvent` (`lib/error-events-service.ts`, over `recordErrorEvent(getPrisma(), …)`). The message names the reason, the HTTP status when there is
 one, and the model id. The other fields are `path: "/shop-your-list"`, `method: "POST"`,
 `routerKind: "App Router"`, `routeType: "action"`, `stack: null` and `digest: null`. That write is
 wrapped so it can never throw into the submission. These three reasons are what a withdrawn or
@@ -203,7 +203,8 @@ it):
   protects.
 - A meter is created per request (or per script run) and **never held at module level**, per
   `CLAUDE.md`'s fresh-client rule. `lib/ai-meter-service.ts`'s `getCurrentAiMeter(feature)` is the
-  request-scoped facade (`getPrisma()` plus `getCurrentVendorId()`).
+  request-scoped facade (`getPrisma()` plus `getCurrentVendorId()`), and `getVendorAiMeter(vendorId,
+  feature)` serves routes that already hold `auth.vendorId` (`app/` may not import `@/lib/db`).
 
 **Wiring.** Each site checks before the call and records after any reply that carries a body:
 

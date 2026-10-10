@@ -2,6 +2,8 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { runProductImagePipeline } from "@/lib/product-image-pipeline";
 import { saveGeneratedProductImage } from "@/lib/products-service";
 import { NextResponse } from "next/server";
+import { describeAiBudgetRefusal } from "@/lib/ai-meter";
+import { getVendorAiMeter } from "@/lib/ai-meter-service";
 
 export async function POST(request: Request) {
   const auth = await requireVendorRole("ADMIN");
@@ -16,7 +18,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing productId or productName" }, { status: 400 });
     }
 
-    const result = await runProductImagePipeline(productId, productName, null);
+    const result = await runProductImagePipeline(productId, productName, null, {
+      aiMeter: getVendorAiMeter(auth.vendorId, "PRODUCT_IMAGE"),
+    });
+    if (result && "budgetRefused" in result) {
+      return NextResponse.json(
+        { error: describeAiBudgetRefusal(result.budgetRefused) },
+        { status: 429 },
+      );
+    }
     if (!result) {
       return NextResponse.json({ error: "Failed to fetch or generate image" }, { status: 500 });
     }

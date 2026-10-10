@@ -17,7 +17,7 @@ import { MAX_LINE_QUANTITY, parseList, type ParsedLine } from "@/lib/shopping-li
  *
  * The `normaliseList` block stubs `globalThis.fetch` rather than reaching Cloudflare. What is
  * being asserted there is this module's own contract — one call per submission, a deadline, and
- * null on every failure — not the model's behaviour, which no unit test can pin.
+ * a typed degradation on every failure (#1016) — not the model's behaviour, which no unit test can pin.
  */
 
 const line = (original: string, quantity = 1, terms: string[] = []): ParsedLine => ({
@@ -178,7 +178,7 @@ describe("mergeNormalisedItems", () => {
   });
 });
 
-describe("normaliseList — bounded, deadlined, and null on every failure", () => {
+describe("normaliseList — bounded, deadlined, and a typed degradation on every failure", () => {
   const originalFetch = globalThis.fetch;
   let calls: { url: string; init: RequestInit }[];
 
@@ -190,8 +190,11 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
     }) as unknown as typeof fetch;
   };
 
-  const okBody = (text: string) =>
-    ({ ok: true, status: 200, json: async () => ({ result: { response: text } }) }) as Response;
+  const ITEM = '[{"index":0,"name":"chapati flour","quantity":1,"measure":"2kg","brand":null}]';
+  const USAGE = { prompt_tokens: 120, completion_tokens: 40, neurons: 1.5 };
+  const okPayload = (result: Record<string, unknown>) =>
+    ({ ok: true, status: 200, json: async () => ({ result }) }) as unknown as Response;
+  const okBody = (text: string) => okPayload({ response: text, usage: USAGE });
 
   beforeEach(() => {
     calls = [];
@@ -206,7 +209,7 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
   });
 
   it("issues exactly one fetch for a 100-line list", async () => {
-    stubFetch(async () => okBody("[]"));
+    stubFetch(async () => okBody(ITEM));
     const lines = parseList(Array.from({ length: 100 }, (_, i) => `item${i}`).join("\n"));
     expect(lines).toHaveLength(100);
 
@@ -214,8 +217,8 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
     expect(calls).toHaveLength(1);
   });
 
-  it("targets the documented model endpoint with a bearer token", async () => {
-    stubFetch(async () => okBody("[]"));
+  it("targets the default model endpoint with a bearer token when no override is set", async () => {
+    stubFetch(async () => okBody(ITEM));
     await normaliseList(THREE_LINES, null);
 
     expect(calls[0].url).toContain(`/ai/run/${NORMALISATION_MODEL}`);
@@ -224,34 +227,65 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
     expect(headers.Authorization.startsWith("Bearer ")).toBe(true);
   });
 
+  it("targets LIST_NORMALISATION_AI_MODEL when it is set (#1016 R8)", async () => {
+    vi.stubEnv("LIST_NORMALISATION_AI_MODEL", "@cf/google/gemma-4-26b-a4b-it");
+    stubFetch(async () => okBody(ITEM));
+    const result = await normaliseList(THREE_LINES, null);
+
+    expect(calls[0].url).toMatch(/\/ai\/run\/@cf\/google\/gemma-4-26b-a4b-it$/);
+    expect(result.model).toBe("@cf/google/gemma-4-26b-a4b-it");
+  });
+
+  it("sends Gemma's enable_thinking:false, and nothing extra for Llama (#1016 R9)", async () => {
+    stubFetch(async () => okBody(ITEM));
+    await normaliseList(THREE_LINES, null);
+    expect(JSON.parse(String(calls[0].init.body))).not.toHaveProperty("chat_template_kwargs");
+
+    vi.stubEnv("LIST_NORMALISATION_AI_MODEL", "@cf/google/gemma-4-26b-a4b-it");
+    stubFetch(async () => okBody(ITEM));
+    await normaliseList(THREE_LINES, null);
+    expect(JSON.parse(String(calls[0].init.body)).chat_template_kwargs).toEqual({
+      enable_thinking: false,
+    });
+  });
+
   it("passes an abort signal derived from the timeout", async () => {
-    stubFetch(async () => okBody("[]"));
+    stubFetch(async () => okBody(ITEM));
     await normaliseList(THREE_LINES, null);
 
     expect(NORMALISATION_TIMEOUT_MS).toBe(6000);
     expect(calls[0].init.signal).toBeDefined();
   });
 
-  it("returns null without fetching when no account id is configured", async () => {
+  it("degrades as not-configured without fetching when no account id is configured", async () => {
     vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
-    stubFetch(async () => okBody("[]"));
-    expect(await normaliseList(THREE_LINES, null)).toBeNull();
+    stubFetch(async () => okBody(ITEM));
+    expect(await normaliseList(THREE_LINES, null)).toMatchObject({
+      kind: "degraded",
+      reason: "not-configured",
+    });
     expect(calls).toHaveLength(0);
   });
 
-  it("returns null without fetching when no api token is configured", async () => {
+  it("degrades as not-configured without fetching when no api token is configured", async () => {
     vi.stubEnv("CLOUDFLARE_API_TOKEN", "");
-    stubFetch(async () => okBody("[]"));
-    expect(await normaliseList(THREE_LINES, null)).toBeNull();
+    stubFetch(async () => okBody(ITEM));
+    expect(await normaliseList(THREE_LINES, null)).toMatchObject({ reason: "not-configured" });
     expect(calls).toHaveLength(0);
   });
 
-  it("returns null on a non-OK response", async () => {
-    stubFetch(async () => ({ ok: false, status: 429 }) as Response);
-    expect(await normaliseList(THREE_LINES, null)).toBeNull();
+  it("degrades as http, carrying the status, on a non-OK response", async () => {
+    stubFetch(async () => ({ ok: false, status: 400 }) as Response);
+    const result = await normaliseList(THREE_LINES, null);
+    expect(result).toEqual({
+      kind: "degraded",
+      model: NORMALISATION_MODEL,
+      reason: "http",
+      status: 400,
+    });
   });
 
-  it("returns null when the body will not parse", async () => {
+  it("degrades as unreadable when a 200's body will not parse", async () => {
     stubFetch(
       async () =>
         ({
@@ -262,41 +296,54 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
           },
         }) as unknown as Response,
     );
-    expect(await normaliseList(THREE_LINES, null)).toBeNull();
+    const result = await normaliseList(THREE_LINES, null);
+    expect(result).toMatchObject({ kind: "degraded", reason: "unreadable" });
+    expect(result).not.toHaveProperty("status");
   });
 
-  it("returns null when fetch itself rejects", async () => {
+  it("degrades as network when fetch itself rejects", async () => {
     stubFetch(async () => {
       throw new Error("network down");
     });
-    expect(await normaliseList(THREE_LINES, null)).toBeNull();
+    expect(await normaliseList(THREE_LINES, null)).toMatchObject({ reason: "network" });
+  });
+
+  it("degrades as unparseable, keeping the billed usage, when the reply yields no items", async () => {
+    stubFetch(async () => okBody("Sorry, I cannot help with that."));
+    const result = await normaliseList(THREE_LINES, null);
+    expect(result).toMatchObject({
+      kind: "degraded",
+      reason: "unparseable",
+      usage: { inputTokens: 120, outputTokens: 40, neurons: 1.5 },
+    });
   });
 
   it("does not throw on any failure mode", async () => {
     stubFetch(async () => {
       throw new Error("network down");
     });
-    await expect(normaliseList(THREE_LINES, null)).resolves.toBeNull();
+    await expect(normaliseList(THREE_LINES, null)).resolves.toMatchObject({ kind: "degraded" });
   });
 
-  it("enforces MAX_AI_INPUT_CHARS without issuing a fetch", async () => {
+  it("degrades as over-input-cap without issuing a fetch", async () => {
     expect(MAX_AI_INPUT_CHARS).toBe(4000);
-    stubFetch(async () => okBody("[]"));
+    stubFetch(async () => okBody(ITEM));
 
     const lines = parseList(Array.from({ length: 100 }, () => "x".repeat(60)).join("\n"));
     expect(buildNormalisationPrompt(lines, null).length).toBeGreaterThan(MAX_AI_INPUT_CHARS);
 
-    expect(await normaliseList(lines, null)).toBeNull();
+    expect(await normaliseList(lines, null)).toMatchObject({ reason: "over-input-cap" });
     expect(calls).toHaveLength(0);
   });
 
-  it("returns parsed items on a good reply", async () => {
-    stubFetch(async () =>
-      okBody('[{"index":0,"name":"chapati flour","quantity":1,"measure":"2kg","brand":null}]'),
-    );
-    const items = await normaliseList(THREE_LINES, null);
-    expect(items).toHaveLength(1);
-    expect(items?.[0].measure).toBe("2kg");
+  it("returns parsed items and the call's usage on a good reply", async () => {
+    stubFetch(async () => okBody(ITEM));
+    const result = await normaliseList(THREE_LINES, null);
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].measure).toBe("2kg");
+    expect(result.usage).toEqual({ inputTokens: 120, outputTokens: 40, neurons: 1.5 });
   });
 
   /**
@@ -305,63 +352,32 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
    * of the same content sits at `result.choices[0].message.content` instead. The original
    * `typeof response === "string"` check made every real call resolve to an empty text and every
    * real submission silently degrade, passing every test here because this describe block's own
-   * stub always returned `response` as a string. These three cases pin the real shape.
+   * stub always returned `response` as a string. These cases pin the real shape (re-measured
+   * 2026-10-10, #1016: still true).
    */
   it("parses items when the model's reply arrives as an already-parsed array, not a string", async () => {
-    stubFetch(
-      async () =>
-        ({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            result: {
-              response: [
-                { index: 0, name: "chapati flour", quantity: 1, measure: "2kg", brand: null },
-              ],
-            },
-          }),
-        }) as unknown as Response,
+    stubFetch(async () =>
+      okPayload({
+        response: [{ index: 0, name: "chapati flour", quantity: 1, measure: "2kg", brand: null }],
+      }),
     );
-    const items = await normaliseList(THREE_LINES, null);
-    expect(items).toHaveLength(1);
-    expect(items?.[0].measure).toBe("2kg");
+    const result = await normaliseList(THREE_LINES, null);
+    expect(result.kind === "ok" && result.items[0].measure).toBe("2kg");
   });
 
   it("falls back to choices[0].message.content when result.response is absent", async () => {
-    stubFetch(
-      async () =>
-        ({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            result: {
-              choices: [
-                {
-                  message: {
-                    content:
-                      '[{"index":0,"name":"chapati flour","quantity":1,"measure":"2kg","brand":null}]',
-                  },
-                },
-              ],
-            },
-          }),
-        }) as unknown as Response,
-    );
-    const items = await normaliseList(THREE_LINES, null);
-    expect(items).toHaveLength(1);
-    expect(items?.[0].measure).toBe("2kg");
+    stubFetch(async () => okPayload({ choices: [{ message: { content: ITEM } }] }));
+    const result = await normaliseList(THREE_LINES, null);
+    expect(result.kind === "ok" && result.items[0].measure).toBe("2kg");
   });
 
-  it("returns [] rather than throwing when neither response nor choices carries usable content", async () => {
-    stubFetch(
-      async () => ({ ok: true, status: 200, json: async () => ({ result: {} }) }) as Response,
-    );
-    const items = await normaliseList(THREE_LINES, null);
-    expect(items).toEqual([]);
+  it("degrades as unparseable rather than throwing when neither response nor choices carries content", async () => {
+    stubFetch(async () => okPayload({}));
+    expect(await normaliseList(THREE_LINES, null)).toMatchObject({ reason: "unparseable" });
   });
 
   it(
-    "resolves to null rather than hang when the upstream fetch never settles",
+    "degrades as timeout rather than hang when the upstream fetch never settles",
     { timeout: NORMALISATION_TIMEOUT_MS + 3000 },
     async () => {
       calls = [];
@@ -376,7 +392,7 @@ describe("normaliseList — bounded, deadlined, and null on every failure", () =
       }) as unknown as typeof fetch;
 
       const result = await normaliseList(THREE_LINES, null);
-      expect(result).toBeNull();
+      expect(result).toMatchObject({ kind: "degraded", reason: "timeout" });
       expect(calls[0].init.signal?.aborted).toBe(true);
     },
   );

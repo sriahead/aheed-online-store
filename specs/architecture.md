@@ -827,8 +827,30 @@ S3 API rather than an R2-specific SDK.
   4. **Its output is validated, not trusted.** Indices are range- and duplicate-checked so a reply
      cannot move an item onto a line the shopper did not write; anything unclaimed keeps its
      deterministic parse.
+  5. **Its spend is metered against the vendor's daily budget (`#1017`, 2026-10-10).** The call is
+     checked against `VendorConfig.aiDailyNeuronBudget` before it is made and recorded in
+     `AiUsageEvent` after, so one vendor's traffic cannot exhaust the platform's shared allowance.
+     Added after the four above, and it applies retroactively: `/shop-your-list` meets it.
 
-  A proposed AI call on a public path that cannot answer all four belongs offline, as `#571` said.
+  A proposed AI call on a public path that cannot answer all five belongs offline, as `#571` said.
+
+  **Every Workers AI call is metered per vendor (`#1017`, 2026-10-10).** All vendors share one
+  Cloudflare account credential (`getAiEnv()`), so the account's daily neuron allowance is one
+  pool. Every call site — the shop-your-list pre-pass, synonym proposals, net-content suggestions,
+  product images and campaign images — goes through `lib/ai-meter.ts`. It refuses a call once the
+  vendor's neurons since 00:00 UTC (Cloudflare's reset) reach `VendorConfig.aiDailyNeuronBudget`
+  (default 3,000; `0` turns AI off for that vendor), and records each call in `AiUsageEvent`. Each
+  feature degrades on a refusal exactly as it does when AI is unavailable. `AiUsageEvent` is the
+  **only per-vendor AI cost figure**; it carries no user link, so it is not personal data. Neurons
+  come from Workers AI's own reported figure where the reply carries one, otherwise from the dated
+  rate table in `lib/workers-ai.ts`. A model missing from that table is over-charged at the highest
+  listed rate, never refused and never free. The check is best-effort, not compare-and-set, and it
+  fails closed on a database error. **The account's Workers plan (Free or Paid) is unverified.** On
+  Free, an exhausted pool stops every vendor's AI until 00:00 UTC; on Paid, it bills the platform
+  without attribution. The per-vendor budget is what makes either plan safe, because a vendor
+  refused by its own budget never reaches the shared cliff. Record the plan here once confirmed.
+  Model ids are config as well as code: `LIST_NORMALISATION_AI_MODEL`, `SEARCH_SYNONYM_AI_MODEL` and
+  `NET_CONTENT_AI_MODEL` override each feature's named default (`#1016`).
 
   **Net-content suggestions (`#900`, 2026-09-25) follow the default, not the exception.** Three
   things are established:

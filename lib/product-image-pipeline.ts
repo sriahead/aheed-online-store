@@ -1,5 +1,7 @@
 import { getProductMetadataService } from "./product-metadata";
-import { getImageGenerationService } from "./image-generation";
+import { getImageGenerationService, IMAGE_GENERATION_MODEL } from "./image-generation";
+import type { AiMeter } from "./ai-meter";
+import type { AiBudgetCheck } from "./ai-budget-message";
 import { getStorage } from "./storage";
 import {
   buildProductImageKey,
@@ -28,15 +30,27 @@ export interface PipelineOptions {
    * why this is a per-run argument rather than validated config.
    */
   useOpenFoodFacts?: boolean;
+  /**
+   * #1017 — the product's vendor's Workers AI meter. Required, so the type checker finds every
+   * caller: an AI-generated image is the most expensive Workers AI call this platform makes, and
+   * one that bypassed the vendor's daily budget would undo the budget's whole point. Consulted only
+   * on the AI fallback — an Open Food Facts image costs no neurons.
+   */
+  aiMeter: AiMeter;
+}
+
+/** The AI fallback was needed but the vendor's daily budget refused it (#1017). */
+export interface PipelineBudgetRefused {
+  budgetRefused: AiBudgetCheck;
 }
 
 export async function runProductImagePipeline(
   productId: string,
   productName: string,
-  barcode?: string | null,
-  options: PipelineOptions = {},
-): Promise<PipelineResult | null> {
-  const { useOpenFoodFacts = true } = options;
+  barcode: string | null | undefined,
+  options: PipelineOptions,
+): Promise<PipelineResult | PipelineBudgetRefused | null> {
+  const { useOpenFoodFacts = true, aiMeter } = options;
   const aiSvc = getImageGenerationService();
   const storage = getStorage();
 
@@ -59,6 +73,11 @@ export async function runProductImagePipeline(
 
   // 2. Fallback to AI
   if (!imageBuffer) {
+    const budget = await aiMeter.check();
+    // Distinct from `null` on purpose: a caller that writes off a product the pipeline can never
+    // fill (#523's recordImageAttemptFailure) must not write one off because today's budget ran out.
+    if (!budget.allowed) return { budgetRefused: budget };
+
     const prompt = `Product photo of ${productName} on a plain white background, studio lighting, top quality, centered.`;
     imageBuffer = await aiSvc.generateImage(prompt);
 
@@ -66,6 +85,7 @@ export async function runProductImagePipeline(
       // Both failed or AI not configured
       return null;
     }
+    await aiMeter.recordImage({ model: IMAGE_GENERATION_MODEL });
 
     contentType = "image/png"; // Workers AI generally returns PNG or JPEG binary
   }

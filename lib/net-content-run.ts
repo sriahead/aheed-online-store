@@ -1,3 +1,6 @@
+import { WORKERS_AI_TEXT_RATES } from "@/lib/workers-ai";
+import type { AiMeter } from "@/lib/ai-meter";
+import type { AiBudgetCheck } from "@/lib/ai-budget-message";
 import { checkSuggestionAgainstUnitLabel } from "@/lib/net-content-label-check";
 import { choosePhotoEvidence, type CandidateImage } from "@/lib/net-content-eligibility";
 import {
@@ -22,11 +25,13 @@ import type { NewSuggestion } from "@/lib/repositories/net-content-suggestions";
  *   unless --unpriced-ok, and then --limit is the only bound.
  */
 
-/** Neurons per MILLION tokens, from Cloudflare's Workers AI pricing page, read 2026-09-25. */
-export const NET_CONTENT_MODEL_RATES: Record<string, { input: number; output: number }> = {
-  "@cf/google/gemma-4-26b-a4b-it": { input: 9091, output: 27273 },
-  "@cf/meta/llama-4-scout-17b-16e-instruct": { input: 24545, output: 77273 },
-};
+/**
+ * Neurons per MILLION tokens. #1017 — the same object as `WORKERS_AI_TEXT_RATES`
+ * (`lib/workers-ai.ts`), where the dated figures now live, so the per-run budget here and the
+ * per-vendor ledger can never disagree about what a call cost.
+ */
+export const NET_CONTENT_MODEL_RATES: Record<string, { input: number; output: number }> =
+  WORKERS_AI_TEXT_RATES;
 
 export const DEFAULT_NEURON_BUDGET = 5000;
 export const MAX_CONSECUTIVE_TRANSPORT_ERRORS = 3;
@@ -61,11 +66,22 @@ export interface RunDependencies {
   neuronBudget: number;
   /** Null for an unpriced model: the budget then applies only to reported neurons. */
   rate: { input: number; output: number } | null;
+  /**
+   * #1017 — the vendor's daily Workers AI budget. Checked before every call (a refusal ends the run
+   * as `vendor-budget-reached`) and charged after every call that reports usage. Separate from
+   * `neuronBudget`, which bounds one run; this bounds the vendor's whole day across every feature.
+   */
+  aiMeter: AiMeter;
   log?(line: string): void;
 }
 
 export interface RunSummary {
-  outcome: "completed" | "not-configured" | "budget-reached" | "transport-errors";
+  outcome:
+    | "completed"
+    | "not-configured"
+    | "budget-reached"
+    | "vendor-budget-reached"
+    | "transport-errors";
   attempted: number;
   pending: number;
   noAnswer: number;
@@ -76,6 +92,8 @@ export interface RunSummary {
   /** True when at least one call's cost could be neither read nor estimated. */
   neuronsIncomplete: boolean;
   meanLatencyMs: number | null;
+  /** Set when the run stopped on `vendor-budget-reached`: the check that refused it. */
+  vendorBudget?: AiBudgetCheck;
 }
 
 export async function runNetContentSuggestions(deps: RunDependencies): Promise<RunSummary> {
@@ -99,6 +117,17 @@ export async function runNetContentSuggestions(deps: RunDependencies): Promise<R
     if (summary.neurons >= deps.neuronBudget) {
       summary.outcome = "budget-reached";
       log(`neuron budget ${deps.neuronBudget} reached; not starting another call`);
+      break;
+    }
+
+    const vendorBudget = await deps.aiMeter.check();
+    if (!vendorBudget.allowed) {
+      summary.outcome = "vendor-budget-reached";
+      summary.vendorBudget = vendorBudget;
+      log(
+        `vendor daily AI budget reached (${vendorBudget.usedNeurons} of ` +
+          `${vendorBudget.budgetNeurons} neurons); not starting another call`,
+      );
       break;
     }
 
@@ -127,7 +156,10 @@ export async function runNetContentSuggestions(deps: RunDependencies): Promise<R
     if (result.kind === "transport-error") {
       // No row: a transient fault must not mark the product as attempted (R15). A truncated reply
       // was still billed — the most expensive kind of call — so its usage counts (R16).
-      if (result.usage) addUsage(summary, result.usage, deps.rate);
+      if (result.usage) {
+        addUsage(summary, result.usage, deps.rate);
+        await deps.aiMeter.record({ model: deps.suggester.model, usage: result.usage });
+      }
       summary.failed += 1;
       consecutiveTransportErrors += 1;
       log(`  failed ${product.name}: ${result.message}`);
@@ -140,6 +172,7 @@ export async function runNetContentSuggestions(deps: RunDependencies): Promise<R
     }
     consecutiveTransportErrors = 0;
     addUsage(summary, result.usage, deps.rate);
+    await deps.aiMeter.record({ model: deps.suggester.model, usage: result.usage });
 
     const photoSent = photo !== null;
     const validated = validateNetContentReply(result.text, {
