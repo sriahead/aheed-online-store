@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.77.0"
-updated: 2026-10-07
+version: "1.78.0"
+updated: 2026-10-10
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,8 +39,33 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-10-06.
-- **`main` is at `d9fac95`** (full `d9fac958e1850e597d1ef8e1853159c8372bccac`), the PR #1006
+- **Date:** 2026-10-10.
+- **`main` is at `6a35f4a`** (full `6a35f4a5ddbdc29915112ba6de928843856a54e8`), the PR #1019
+  promotion (`staging -> main`, 2026-10-10): mobile finish (`#981`/`#982`, PR #1009,
+  `5531f68`/`d2de5f9`/`d087cf1`). **No schema change, no migration, no server change.** CI green on
+  PR #1019 (run `38042906060`, `mergeStateStatus: CLEAN`); `deploy-production` (run `38043313025`)
+  and `deploy-docs-internal` (run `38043312839`) both **success on the first attempt** — the `#983`
+  flake that failed the previous promotion's first deploy did not fire. Production `/api/health`
+  (Aheed **and** SriMart) serves `6a35f4a`, `db.ok: true`, `reference.drift: false`, both read
+  first-try with no recurrence of the Windows-`curl` empty-body trap. `closingIssuesReferences`
+  listed exactly `[981, 982]` before the merge and both are `CLOSED`/`Done` after it.
+  **`origin/main` and `origin/staging` are level — zero divergence as of this snapshot.**
+  - **Not a phase closure.** Both issues sit under `P10`, which stays open; `#697` and other P10
+    items are unaffected, so `/discover` → `/learn` → business case does not apply.
+  - **`#982`'s fix is confirmed live, but only its lower half is reachable in production.** Read
+    post-deploy: SriMart (logo-less in production — do **not** re-assume otherwise, an earlier
+    revision of this file's own slice entry had to correct that) renders the text wordmark with no
+    `<img>`, and Aheed renders the logo image carrying the `shrink-0` this fix moved onto it, which
+    is the change itself visible in production HTML. What is **not** reachable in production is the
+    overflow the fix exists for: no vendor's name there is long enough to overflow a 360px header
+    (`SriMart` is 7 characters; `Aheed Food Centre` stopped overflowing before this slice), so the
+    truncation was proved on dev against a temporary 36-character `VendorBranding` fixture.
+  - This promotion also carried PR #1007 (the previous promotion's Document pass) and **PR #1018
+    (the eighth and ninth Discover passes)** into `main`. The latter is research, not scope — but
+    see Risks And Blockers for the two findings in it that describe **already-shipped production
+    code**.
+  - Roadmap row: `specs/roadmap.md` 1.138.0.
+- **Previous promotion, `d9fac95`** (full `d9fac958e1850e597d1ef8e1853159c8372bccac`), the PR #1006
   promotion (`staging -> main`, 2026-10-06): referral and discount-code integrity
   (`#991`/`#987`/`#988`, PR #1005, `ab1f96a`/`751e577`/`dc6de9f`). One additive migration with a
   backfill (`20261006120000_p987_988_referral_owner_code_throttle`), applied through to production.
@@ -570,13 +595,11 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Mobile finish (`#981`/`#982`): DONE, merged to staging** (PR #1009, merge `41c181b`,
-  2026-10-07), awaiting a `staging -> main` promotion. Spec/build notes:
-  `specs/2026-10-06-p981-982-mobile-finish/`. Both issues **In Review** on the delivery board.
-  - **Validated from a fresh context against all 22 requirements — no defect found in the
-    artifact.** CI (`docs-gates`, `quality / kms`, `quality / quality`) green on the PR;
-    `deploy-staging` (run `37613013578`) and `deploy-docs-internal` (run `37613013159`) both
-    **success**.
+- **Mobile finish (`#981`/`#982`): DONE, in production** (PR #1009 to `staging`, then promotion
+  PR #1019, merge `6a35f4a`, 2026-10-10), both issues closed and `Done`. See **Last Verified**
+  above for the production facts; not repeated here. Spec/build notes:
+  `specs/2026-10-06-p981-982-mobile-finish/`. **Validated from a fresh context against all 22
+  requirements — no defect found in the artifact.** The findings below are the durable ones.
   - Owner choice at Gate 1: the logo-less wordmark **shrinks and truncates**; the name stays
     visible at every width. No schema change; `lg`+ is unchanged throughout.
   - **`#982`'s filed repro was stale and the issue text was wrong on two points.** It said no
@@ -1164,6 +1187,25 @@ Board Phase and GitHub milestone disagreed for #151, #422, #589, #602, #695, #69
 These are separate from, not a silent reordering of, the owner's High priorities:
 
 - Hard launch inputs: #113 production Stripe live keys and #104 verified Resend sending domain.
+- **AI features already in production carry two findings from the ninth Discover pass (2026-10-10,
+  PR #1018), promoted to `main` by PR #1019 as research only — neither is acted on.** They are
+  listed here, not left solely in `docs/research/discovery-log.md`, because they describe shipped
+  production code rather than prospective scope:
+  - **#1016** — `lib/list-normalisation.ts:37` and `lib/search-synonym-proposals.ts:31` hardcode
+    `@cf/meta/llama-3.1-8b-instruct`, deprecated by Cloudflare 2026-05-30 and absent from the
+    70-model catalogue, and neither site is env-overridable. **Investigated as a suspected
+    four-month silent outage and DISPROVED by live verification** — a real inference call still
+    returns `success: true`, so `/shop-your-list`'s AI pre-pass works today and `#591` stays
+    conditional. The exposure is the undated future withdrawal, which `lib/list-normalisation.ts`
+    is documented to degrade through **invisibly**. The pass measured five replacements: `-fp8`
+    (the entry's own first pick) is disqualified at 9.7s against a 6000ms timeout, and
+    `gemma-4-26b-a4b-it` is the validated successor pending a timeout decision at `/propose`.
+  - **#1017** — every Workers AI call uses one platform-level credential (`getAiEnv()`,
+    `lib/config.ts:158-164`), so the 10,000-neuron daily free allowance is a shared, unmetered,
+    unattributed commons. On the Workers **Free** plan one vendor exhausting it stops **every**
+    vendor's AI features until 00:00 UTC — the same starvation shape as #619. `neuronsForCall()`
+    is the metering seam, and the repo's dated rate table reconciles exactly with current
+    published prices.
 - Security/operations: #219 and #175 credential rotations; #436 demonstrated restore; #437 outbound
   alert delivery; #438 tested rollback; #246 persisted-log confirmation.
 - Reproduced or live defects: #236 rapid cart-mutation ceiling, #689 repeated query parameters
