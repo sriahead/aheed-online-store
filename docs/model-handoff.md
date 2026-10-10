@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.77.0"
-updated: 2026-10-07
+version: "1.79.0"
+updated: 2026-10-10
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,8 +39,33 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-10-06.
-- **`main` is at `d9fac95`** (full `d9fac958e1850e597d1ef8e1853159c8372bccac`), the PR #1006
+- **Date:** 2026-10-10.
+- **`main` is at `6a35f4a`** (full `6a35f4a5ddbdc29915112ba6de928843856a54e8`), the PR #1019
+  promotion (`staging -> main`, 2026-10-10): mobile finish (`#981`/`#982`, PR #1009,
+  `5531f68`/`d2de5f9`/`d087cf1`). **No schema change, no migration, no server change.** CI green on
+  PR #1019 (run `38042906060`, `mergeStateStatus: CLEAN`); `deploy-production` (run `38043313025`)
+  and `deploy-docs-internal` (run `38043312839`) both **success on the first attempt** — the `#983`
+  flake that failed the previous promotion's first deploy did not fire. Production `/api/health`
+  (Aheed **and** SriMart) serves `6a35f4a`, `db.ok: true`, `reference.drift: false`, both read
+  first-try with no recurrence of the Windows-`curl` empty-body trap. `closingIssuesReferences`
+  listed exactly `[981, 982]` before the merge and both are `CLOSED`/`Done` after it.
+  **`origin/main` and `origin/staging` are level — zero divergence as of this snapshot.**
+  - **Not a phase closure.** Both issues sit under `P10`, which stays open; `#697` and other P10
+    items are unaffected, so `/discover` → `/learn` → business case does not apply.
+  - **`#982`'s fix is confirmed live, but only its lower half is reachable in production.** Read
+    post-deploy: SriMart (logo-less in production — do **not** re-assume otherwise, an earlier
+    revision of this file's own slice entry had to correct that) renders the text wordmark with no
+    `<img>`, and Aheed renders the logo image carrying the `shrink-0` this fix moved onto it, which
+    is the change itself visible in production HTML. What is **not** reachable in production is the
+    overflow the fix exists for: no vendor's name there is long enough to overflow a 360px header
+    (`SriMart` is 7 characters; `Aheed Food Centre` stopped overflowing before this slice), so the
+    truncation was proved on dev against a temporary 36-character `VendorBranding` fixture.
+  - This promotion also carried PR #1007 (the previous promotion's Document pass) and **PR #1018
+    (the eighth and ninth Discover passes)** into `main`. The latter is research, not scope — but
+    see Risks And Blockers for the two findings in it that describe **already-shipped production
+    code**.
+  - Roadmap row: `specs/roadmap.md` 1.138.0.
+- **Previous promotion, `d9fac95`** (full `d9fac958e1850e597d1ef8e1853159c8372bccac`), the PR #1006
   promotion (`staging -> main`, 2026-10-06): referral and discount-code integrity
   (`#991`/`#987`/`#988`, PR #1005, `ab1f96a`/`751e577`/`dc6de9f`). One additive migration with a
   backfill (`20261006120000_p987_988_referral_owner_code_throttle`), applied through to production.
@@ -570,13 +595,48 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Mobile finish (`#981`/`#982`): DONE, merged to staging** (PR #1009, merge `41c181b`,
-  2026-10-07), awaiting a `staging -> main` promotion. Spec/build notes:
-  `specs/2026-10-06-p981-982-mobile-finish/`. Both issues **In Review** on the delivery board.
-  - **Validated from a fresh context against all 22 requirements — no defect found in the
-    artifact.** CI (`docs-gates`, `quality / kms`, `quality / quality`) green on the PR;
-    `deploy-staging` (run `37613013578`) and `deploy-docs-internal` (run `37613013159`) both
-    **success**.
+- **Chatbot prerequisites, slice 1 (`#1013` + `#1012`): BUILT, not yet validated, merged or
+  promoted.** Branch `feature/p1013-1012-help-facts-faq-corpus`; spec, requirements, validation and
+  build notes in `specs/2026-10-10-p1013-1012-help-facts-faq-corpus/`. Owner-approved at `/propose`
+  on 2026-10-10 after naming "chatbot prerequisites" as the scope and asking for **all** related
+  issues to carry `High`.
+  - **The whole chatbot programme is now `High` / `P10` on the board:** `#1012`, `#1013`, `#1014`,
+    `#1015`, `#1016`, `#1017`, plus the two new ones below. All seven pre-existing items had been
+    filed by Discover with **no Priority and no Phase**, so they were invisible to the board's own
+    prioritisation until this pass set both.
+  - Approved sequencing: **slice 1 = `#1013`+`#1012`** (this branch), **slice 2 = `#1016`+`#1017`**
+    (chatbot safety in already-shipped AI code), **slice 3 = `#1015`+`#1014`**. One correction to
+    `#1015`'s own stated order: **`#1014` cannot precede `#1015`** — it logs chatbot conversations,
+    and until the bot exists there are none.
+  - **`#1021` (new) is the real blocker on `#1015`, and it is owner work, not code.** `#1012` ships
+    the table, the editor and the rendering; the answers are vendor content `ADR-004`/`#239` forbid
+    the platform writing, and none is seeded. An empty corpus makes a chatbot ship inert — the
+    `#697` shape, except user-visible, because a shopper opens the chat and gets nothing.
+  - **`#1022` (new) is a live production defect found while building, and fixed on this branch.**
+    `/help` filtered KMS documentation by **audience alone**, so the public Help Centre of every
+    vendor rendered an `internal` operations document (`PENDING_PAYMENT`, slot-capacity rules, a
+    "Known Trap" note) and never rendered the public shopper guide. Read live 2026-10-10 on
+    SriMart. The durable rule — `audience` says who it is relevant to, `visibility: public` is the
+    only field that says it may leave the building — is recorded in
+    `docs/developer-portal/app-conventions.md` 1.7.0, with the follow-ups this slice did **not**
+    do left on `#1022`: nothing mechanically stops the next internal article reaching a public
+    surface, and the render still selects by array position.
+  - **`#1013` was also a live defect, not a copy change:** `/help` promised loyalty points
+    unconditionally while `loyaltyEnabled` is `@default(false)`, and SriMart (seeded `false`) was
+    serving that promise in production. Every other loyalty surface already gated on the flag.
+  - Local state a validator needs: **the migration reached dev by hand because `#895` still blocks
+    `prisma migrate dev --create-only`** (it demands a full reset of dev over the unrelated
+    `p8_image_needs_review` checksum drift). Generated with `migrate diff`, read, applied with
+    `db execute`, recorded with `migrate resolve --applied`. Staging and production get it from CI
+    as normal.
+  - Green at the end of Build: `lint`, `typecheck`, `format:check`, `npm run build`, the full suite
+    (220 files / 2862 tests) and the docs-site build. The live `npm run preview` checks — the
+    `getPrismaWs()` wiring above all — are deliberately left to `/validate`.
+- **Mobile finish (`#981`/`#982`): DONE, in production** (PR #1009 to `staging`, then promotion
+  PR #1019, merge `6a35f4a`, 2026-10-10), both issues closed and `Done`. See **Last Verified**
+  above for the production facts; not repeated here. Spec/build notes:
+  `specs/2026-10-06-p981-982-mobile-finish/`. **Validated from a fresh context against all 22
+  requirements — no defect found in the artifact.** The findings below are the durable ones.
   - Owner choice at Gate 1: the logo-less wordmark **shrinks and truncates**; the name stays
     visible at every width. No schema change; `lg`+ is unchanged throughout.
   - **`#982`'s filed repro was stale and the issue text was wrong on two points.** It said no
@@ -1164,6 +1224,25 @@ Board Phase and GitHub milestone disagreed for #151, #422, #589, #602, #695, #69
 These are separate from, not a silent reordering of, the owner's High priorities:
 
 - Hard launch inputs: #113 production Stripe live keys and #104 verified Resend sending domain.
+- **AI features already in production carry two findings from the ninth Discover pass (2026-10-10,
+  PR #1018), promoted to `main` by PR #1019 as research only — neither is acted on.** They are
+  listed here, not left solely in `docs/research/discovery-log.md`, because they describe shipped
+  production code rather than prospective scope:
+  - **#1016** — `lib/list-normalisation.ts:37` and `lib/search-synonym-proposals.ts:31` hardcode
+    `@cf/meta/llama-3.1-8b-instruct`, deprecated by Cloudflare 2026-05-30 and absent from the
+    70-model catalogue, and neither site is env-overridable. **Investigated as a suspected
+    four-month silent outage and DISPROVED by live verification** — a real inference call still
+    returns `success: true`, so `/shop-your-list`'s AI pre-pass works today and `#591` stays
+    conditional. The exposure is the undated future withdrawal, which `lib/list-normalisation.ts`
+    is documented to degrade through **invisibly**. The pass measured five replacements: `-fp8`
+    (the entry's own first pick) is disqualified at 9.7s against a 6000ms timeout, and
+    `gemma-4-26b-a4b-it` is the validated successor pending a timeout decision at `/propose`.
+  - **#1017** — every Workers AI call uses one platform-level credential (`getAiEnv()`,
+    `lib/config.ts:158-164`), so the 10,000-neuron daily free allowance is a shared, unmetered,
+    unattributed commons. On the Workers **Free** plan one vendor exhausting it stops **every**
+    vendor's AI features until 00:00 UTC — the same starvation shape as #619. `neuronsForCall()`
+    is the metering seam, and the repo's dated rate table reconciles exactly with current
+    published prices.
 - Security/operations: #219 and #175 credential rotations; #436 demonstrated restore; #437 outbound
   alert delivery; #438 tested rollback; #246 persisted-log confirmation.
 - Reproduced or live defects: #236 rapid cart-mutation ceiling, #689 repeated query parameters

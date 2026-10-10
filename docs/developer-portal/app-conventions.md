@@ -4,8 +4,8 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.6.0"
-updated: 2026-10-05
+version: "1.7.0"
+updated: 2026-10-10
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), vendor-neutral user-facing copy, form-field autocomplete tokens, and React hooks — together with the tests that enforce each invariant mechanically.
 tags: [conventions, repositories, server-actions, staff-panel]
@@ -271,6 +271,30 @@ store's staff reads must be right for **any** vendor.
   admin's examples are built from the store postcode or its first delivery area
   (`lib/delivery-area-examples.ts`), and `/help` names the vendor's `localityName`. With no data,
   state the rule without an example rather than borrowing another town's.
+- **Never restate as prose a fact the database already holds (`#1013`).** `/help` described the
+  delivery fee, minimum order, free-delivery threshold and loyalty scheme in hedged platform
+  wording ("Some stores have a minimum order amount") while `VendorConfig` held each one exactly.
+  Hedging is the mild failure; the real one is asserting the hedge away — that page also stated
+  "A minimum order value **is required**" (`minimumOrderPence` is `@default(0)`) and "Every purchase
+  earns you points automatically" (`loyaltyEnabled` is `@default(false)`), the second of which was
+  live on a store with loyalty switched off. Compute it, or say nothing.
+  - **A flag that hides a feature must hide its documentation too.** Every loyalty *feature* surface
+    gated on `loyaltyEnabled`; the page *describing* the feature did not, so the one surface a
+    shopper reads before buying was the one that lied. When adding a vendor feature flag, grep for
+    prose about the feature, not just for its controls.
+  - **Money with per-area overrides is resolved, never read.** Go through
+    `resolveDeliveryRules` (`lib/delivery-pricing.ts`); a `VendorDeliveryArea` row may override the
+    fee, minimum and threshold independently and a district row beats an area row (`#890`), so a
+    surface with no postcode must show the variation rather than pick one figure. `0` and `null`
+    both mean free delivery **not offered** — `lib/help-facts.ts` is the worked example.
+- **A shopper-facing render of KMS documentation filters on `visibility`, not just `audience`
+  (`#1022`).** `/help` filtered `DOC_ARTICLES` for an audience containing `shopper` and rendered
+  `shopperDocs[0]`. Two internal documents list `shopper` among several audiences for KMS routing,
+  one of them sorts first, and the public Help Centre of every vendor served an internal operations
+  document — `PENDING_PAYMENT`, slot-capacity rules and a "Known Trap" note — while the guide
+  written for shoppers never rendered at all. `audience` says *who it is relevant to*;
+  **`visibility: public` is the only field that says it may leave the building.** Require both, and
+  select the document you mean by id rather than by array position.
 
 ## Form fields that collect the user's own data
 
