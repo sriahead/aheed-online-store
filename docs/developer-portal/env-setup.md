@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.16.0"
-updated: 2026-10-05
+version: "1.18.0"
+updated: 2026-10-10
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -269,6 +269,44 @@ npx tsx scripts/suggest-net-content.ts --env-file .dev.vars --product <id> --inc
   `CLOUDFLARE_API_TOKEN` Worker secrets, which both deploy workflows already
   `wrangler secret put`, plus the optional `NET_CONTENT_AI_MODEL`. No new secret is needed. A model
   missing from the rate table is refused (the button has no `--unpriced-ok`).
+
+### Workers AI model overrides and the per-vendor AI budget (`#1016`, `#1017`)
+
+Three optional runtime keys override a feature's named default model. Each sits beside the
+others in `lib/config.ts`'s `getAiEnv()`:
+
+- **`LIST_NORMALISATION_AI_MODEL`**: the `/shop-your-list` AI pre-pass. Default
+  `@cf/meta/llama-3.1-8b-instruct` (deprecated by Cloudflare but still serving, verified
+  2026-10-10).
+- **`SEARCH_SYNONYM_AI_MODEL`**: the synonym "Suggest from recent searches" button. Same default.
+- **`NET_CONTENT_AI_MODEL`**: net-content suggestions (above). Default
+  `@cf/google/gemma-4-26b-a4b-it`.
+
+On a Worker each of these is a **Cloudflare secret** (`wrangler secret put <KEY> --env <env>`), not a
+GitHub secret. The deploy workflows do not push them, so setting one in a GitHub environment changes
+nothing at runtime. Locally, put them in `.dev.vars` for `npm run preview`. Remember that precedence
+is per key, so remove a key from both `.env` and `.dev.vars` to fall back to the default. Per-model
+request options (such as Gemma's `enable_thinking: false`) and reply shapes are handled in
+`lib/workers-ai.ts`, so switching the first two keys to Gemma 4 needs no code change. It does need
+the `NORMALISATION_TIMEOUT_MS` decision recorded on `#1016`, because Gemma measured about 4.5 s
+against a 6 s deadline.
+
+When the pre-pass gets a non-OK response, an unreadable body or a reply with no usable items, it
+writes an `ErrorEvent` (visible on `/staff/errors`) naming the model. A withdrawn or mistyped model
+id therefore shows up there rather than as a silent loss of enrichment.
+
+**Every Workers AI call is charged to the vendor's daily budget**,
+`VendorConfig.aiDailyNeuronBudget` (default 3,000 neurons per UTC day; `0` turns AI off for that
+vendor). No env var is involved. Read and change it per vendor with:
+
+```bash
+npx tsx scripts/ai-usage.ts --env-file .dev.vars                                 # every vendor, today
+npx tsx scripts/ai-usage.ts --env-file .dev.vars --vendor aheed-food-centre      # by feature
+npx tsx scripts/ai-usage.ts --env-file .dev.vars --vendor aheed-food-centre --set-budget 5000
+```
+
+The script prints the database host first. **The env file you name is the database written to**,
+so naming `secrets/production.vars` changes production, and that is an owner action.
 
 ### Per-vendor branding/config/delivery (ADR-004 slice 4)
 
@@ -574,6 +612,17 @@ DIRECT_URL=<env-direct-url> npm run demo:accounts -- remove
   recorded demo password with a live sign-in before relying on it**, and do it again after every
   reset — a note that a password "was confirmed working" is only as trustworthy as the environment
   it was actually tested against.
+- **The trap above is not staging/production-only — local dev's own roster can carry the same
+  drift, and the two accounts can disagree with each other.** Hit at the `#1013`/`#1012` slice's
+  `/validate` (2026-10-10): against this checkout's `.dev.vars`, `demo-store-admin@example.com`
+  (Aheed) signed in successfully with the current `DEMO_ACCOUNT_PASSWORD`, but
+  `demo-srimart-admin@example.com` returned `INVALID_EMAIL_OR_PASSWORD` for the identical value —
+  the dev-DB roster was evidently last reset with a different password than `.dev.vars` currently
+  holds, and only one of the two accounts happened to agree with it. This blocked a cross-vendor
+  write-refusal proof (the `#141`-class check this account exists for) under `npm run preview`.
+  **Don't assume local dev's demo roster matches `.dev.vars` just because one account signs in** —
+  each account's password is set only once, at its own creation or last reset, so a partial drift
+  across the five-account roster is exactly as possible locally as it is on staging.
 
 ## Troubleshooting
 

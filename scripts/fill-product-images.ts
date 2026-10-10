@@ -108,6 +108,7 @@ async function main() {
     // Imported here rather than at module scope so process.env is already
     // populated when lib/config reads it.
     const { runProductImagePipeline } = await import("@/lib/product-image-pipeline");
+    const { createAiMeter, describeAiBudgetRefusal } = await import("@/lib/ai-meter");
 
     // Deliberately AFTER the client, the query and the pipeline import, not
     // before them. `--limit 0` is the smoke test this script is verified with
@@ -131,10 +132,20 @@ async function main() {
 
       console.log(`vendor ${vendor.slug}: ${products.length} product(s) to fill`);
 
+      // #1017 — each vendor's own daily AI budget, charged exactly as the Worker's routes are.
+      const aiMeter = createAiMeter(prisma, vendor.id, "PRODUCT_IMAGE");
+
       for (const product of products) {
         if (remaining === 0) break;
         try {
-          const result = await runProductImagePipeline(product.id, product.name, null);
+          const result = await runProductImagePipeline(product.id, product.name, null, {
+            aiMeter,
+          });
+          if (result && "budgetRefused" in result) {
+            // Not an unfillable product — no recordImageAttemptFailure, so it stays eligible.
+            console.log(`  ${describeAiBudgetRefusal(result.budgetRefused)}`);
+            break;
+          }
           if (!result) {
             // No source found and nothing generated. Counts as an attempt —
             // otherwise this product is re-selected forever (#523).

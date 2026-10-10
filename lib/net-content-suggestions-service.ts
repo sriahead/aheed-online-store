@@ -1,3 +1,4 @@
+import { createAiMeter } from "@/lib/ai-meter";
 import { getAiEnv } from "@/lib/config";
 import { getPrisma, getPrismaWs } from "@/lib/db";
 import {
@@ -97,6 +98,7 @@ export async function runNetContentSuggestionsForVendor(
     storeDescription: config?.storeDescription ?? null,
     neuronBudget: STAFF_RUN_NEURON_BUDGET,
     rate,
+    aiMeter: createAiMeter(prisma, vendorId, "NET_CONTENT"),
     async loadPhoto(image) {
       const [head, bytes] = await Promise.all([
         storage.headObject(image.storageKey),

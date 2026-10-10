@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.79.0"
+version: "1.81.0"
 updated: 2026-10-10
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,7 +40,41 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-10-10.
-- **`main` is at `6a35f4a`** (full `6a35f4a5ddbdc29915112ba6de928843856a54e8`), the PR #1019
+- **`main` is at `b1dd2d4`** (full `b1dd2d4f112b231cb551e4175c3224a15f32dfc1`), the PR #1025
+  promotion (`staging -> main`, 2026-10-10): chatbot prerequisites slice 1 — the Help Centre
+  computes its own delivery/collection/loyalty facts and a per-vendor approved-answer corpus
+  (`#1013`/`#1012`, PR #1024, `ad16a5c`/`20f708b`), carrying the already-merged PR #1020 docs
+  reconciliation. **One additive migration** (`20261010120000_p1012_vendor_faq`, new `VendorFaq`
+  table, no `DROP`). CI green on PR #1024 and PR #1025 (`docs-gates`, `quality/kms`,
+  `quality/quality` all pass on both); `deploy-staging`/`deploy-docs-internal` and
+  `deploy-production`/`deploy-docs-internal` all **success on the first attempt**. Production
+  `/api/health` (Aheed **and** SriMart) serves `b1dd2d4`, `db.ok: true`, `reference.drift: false`.
+  **`origin/main` and `origin/staging` are level — zero divergence as of this snapshot.**
+  - **Not a phase closure.** Both issues sit under `P10`, which stays open; `#697` and other P10
+    items are unaffected, so `/discover` → `/learn` → business case does not apply.
+  - **Verified live in production, beyond the health check:** SriMart's (`loyaltyEnabled: false`)
+    `/help` carries zero loyalty/points/rewards wording of its own and no "collect" content, and
+    the public shopping guide now renders in place of the internal operations document `#1022`
+    had been serving there — `PENDING_PAYMENT`, "Known Trap" and "Order & Fulfilment Operations"
+    are gone from that route, "Guest Checkout" (the public guide's own content) is present.
+  - **`closingIssuesReferences` on the promotion PR listed exactly `[1012, 1013]`, and both closed
+    on the merge — but `#1022` ALSO auto-closed**, a side effect of an adjacency in the already-
+    merged build commit `ad16a5c`'s own message (a closing-keyword word immediately next to its
+    number — GitHub's scanner reads every commit on the default branch, not just the PR's own
+    body, and doesn't parse context). Caught within minutes by the routine post-promotion
+    issue-state check, **reopened with an explanation**, board status corrected `Done` → `Backlog`.
+    `#1022` carries real undone follow-up work (see Risks And Blockers) and must stay open until
+    that lands — this is now the third recorded instance of this exact GitHub mechanism
+    (`specs/sdd-workflow.md`'s Ship section has the other two, `#174` and one of PR #953's five).
+  - **One new issue filed at this slice's own `/validate`, out of its scope: `#1023`.** See Risks
+    And Blockers.
+  - **R15's cross-vendor forgery check was not re-proven live against a second vendor's session**
+    this slice — the local `demo-srimart-admin` account's password didn't match this checkout's
+    `.dev.vars` (`docs/developer-portal/env-setup.md` 1.17.0 now documents this as a general local-
+    dev trap, not unique to this slice). Relied instead on the structural `{id, vendorId}`-scoped
+    `where` guarantee in `lib/repositories/vendor-faqs.ts` plus the build notes' direct-script
+    real-DB proof.
+- **Previous promotion, `6a35f4a`** (full `6a35f4a5ddbdc29915112ba6de928843856a54e8`), the PR #1019
   promotion (`staging -> main`, 2026-10-10): mobile finish (`#981`/`#982`, PR #1009,
   `5531f68`/`d2de5f9`/`d087cf1`). **No schema change, no migration, no server change.** CI green on
   PR #1019 (run `38042906060`, `mergeStateStatus: CLEAN`); `deploy-production` (run `38043313025`)
@@ -49,7 +83,6 @@ reconciliation. If overall project state did not materially change, leave this f
   (Aheed **and** SriMart) serves `6a35f4a`, `db.ok: true`, `reference.drift: false`, both read
   first-try with no recurrence of the Windows-`curl` empty-body trap. `closingIssuesReferences`
   listed exactly `[981, 982]` before the merge and both are `CLOSED`/`Done` after it.
-  **`origin/main` and `origin/staging` are level — zero divergence as of this snapshot.**
   - **Not a phase closure.** Both issues sit under `P10`, which stays open; `#697` and other P10
     items are unaffected, so `/discover` → `/learn` → business case does not apply.
   - **`#982`'s fix is confirmed live, but only its lower half is reachable in production.** Read
@@ -595,43 +628,46 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Chatbot prerequisites, slice 1 (`#1013` + `#1012`): BUILT, not yet validated, merged or
-  promoted.** Branch `feature/p1013-1012-help-facts-faq-corpus`; spec, requirements, validation and
-  build notes in `specs/2026-10-10-p1013-1012-help-facts-faq-corpus/`. Owner-approved at `/propose`
-  on 2026-10-10 after naming "chatbot prerequisites" as the scope and asking for **all** related
-  issues to carry `High`.
-  - **The whole chatbot programme is now `High` / `P10` on the board:** `#1012`, `#1013`, `#1014`,
-    `#1015`, `#1016`, `#1017`, plus the two new ones below. All seven pre-existing items had been
-    filed by Discover with **no Priority and no Phase**, so they were invisible to the board's own
-    prioritisation until this pass set both.
-  - Approved sequencing: **slice 1 = `#1013`+`#1012`** (this branch), **slice 2 = `#1016`+`#1017`**
-    (chatbot safety in already-shipped AI code), **slice 3 = `#1015`+`#1014`**. One correction to
-    `#1015`'s own stated order: **`#1014` cannot precede `#1015`** — it logs chatbot conversations,
-    and until the bot exists there are none.
-  - **`#1021` (new) is the real blocker on `#1015`, and it is owner work, not code.** `#1012` ships
-    the table, the editor and the rendering; the answers are vendor content `ADR-004`/`#239` forbid
-    the platform writing, and none is seeded. An empty corpus makes a chatbot ship inert — the
-    `#697` shape, except user-visible, because a shopper opens the chat and gets nothing.
-  - **`#1022` (new) is a live production defect found while building, and fixed on this branch.**
-    `/help` filtered KMS documentation by **audience alone**, so the public Help Centre of every
-    vendor rendered an `internal` operations document (`PENDING_PAYMENT`, slot-capacity rules, a
-    "Known Trap" note) and never rendered the public shopper guide. Read live 2026-10-10 on
-    SriMart. The durable rule — `audience` says who it is relevant to, `visibility: public` is the
-    only field that says it may leave the building — is recorded in
-    `docs/developer-portal/app-conventions.md` 1.7.0, with the follow-ups this slice did **not**
-    do left on `#1022`: nothing mechanically stops the next internal article reaching a public
-    surface, and the render still selects by array position.
-  - **`#1013` was also a live defect, not a copy change:** `/help` promised loyalty points
-    unconditionally while `loyaltyEnabled` is `@default(false)`, and SriMart (seeded `false`) was
-    serving that promise in production. Every other loyalty surface already gated on the flag.
-  - Local state a validator needs: **the migration reached dev by hand because `#895` still blocks
-    `prisma migrate dev --create-only`** (it demands a full reset of dev over the unrelated
-    `p8_image_needs_review` checksum drift). Generated with `migrate diff`, read, applied with
-    `db execute`, recorded with `migrate resolve --applied`. Staging and production get it from CI
-    as normal.
-  - Green at the end of Build: `lint`, `typecheck`, `format:check`, `npm run build`, the full suite
-    (220 files / 2862 tests) and the docs-site build. The live `npm run preview` checks — the
-    `getPrismaWs()` wiring above all — are deliberately left to `/validate`.
+- **Chatbot prerequisites, slice 2 (`#1016` + `#1017`): BUILT, NOT YET VALIDATED OR MERGED**
+  (2026-10-10). Branch `feature/p1016-1017-ai-model-metering`, from `origin/staging` `09eb799`.
+  Spec `47e9f30`, build `c0c4c1e`, build notes in
+  `specs/2026-10-10-p1016-1017-ai-model-config-metering/`. Next stage: `/validate` from a fresh
+  context, on Sonnet 5. It adds per-vendor Workers AI metering (`AiUsageEvent`,
+  `VendorConfig.aiDailyNeuronBudget`) at all four AI call sites, model-id overrides, and an
+  `ErrorEvent` when the `/shop-your-list` model fails. **One additive migration, already applied to
+  dev by hand** (the `#895` drift blocks `migrate dev`). The R35–R37 live checks passed at Build.
+  New follow-ups: `#1027` (gemma switch and timeout), **`#1028` (owner: which Workers plan)**,
+  `#1029` (staff AI-allowance view), `#1030` (campaign prompt hardcodes "UK grocery"), `#1031`.
+  Build found that **Cloudflare silently serves the deprecated llama id from
+  `llama-3.1-8b-fast-v2`** (commented on `#1016`).
+- **Chatbot prerequisites, slice 1 (`#1013` + `#1012`): DONE, in production** (PR #1024 to
+  `staging`, then promotion PR #1025, merge `b1dd2d4`, 2026-10-10), both issues closed and `Done`.
+  See **Last Verified** above for the production facts; not repeated here. Spec/build notes:
+  `specs/2026-10-10-p1013-1012-help-facts-faq-corpus/`. **Validated from a fresh context against
+  all 25 requirements — no defect found in the artifact**, two spec/check mismatches (an
+  explanatory comment tripping a literal `grep` for a banned string, same class
+  `specs/sdd-workflow.md` already documents extensively) and one pre-existing unrelated finding
+  (`#1023`, see Risks And Blockers). The `getPrismaWs()` wiring the build notes flagged as the
+  single biggest unproven risk **was proven live**: the full create/edit/hide/reorder/delete cycle
+  on `/staff/faqs` was driven over the real Next.js Server Actions wire protocol as a signed-in
+  vendor admin, not just a standalone script.
+  - **The whole chatbot programme is `High` / `P10` on the board:** `#1012`/`#1013` now closed;
+    `#1014`, `#1015`, `#1016`, `#1017` remain, plus `#1021`/`#1022`/`#1023` below.
+  - Approved sequencing, unchanged: **slice 2 = `#1016`+`#1017`** (chatbot safety in already-shipped
+    AI code) next, **slice 3 = `#1015`+`#1014`**. `#1014` cannot precede `#1015` — it logs chatbot
+    conversations, and until the bot exists there are none.
+  - **`#1021` is the real blocker on `#1015`, and it is owner work, not code.** `#1012` ships the
+    table, the editor and the rendering; the answers are vendor content `ADR-004`/`#239` forbid the
+    platform writing, and none is seeded. An empty corpus makes a chatbot ship inert — the `#697`
+    shape, except user-visible, because a shopper opens the chat and gets nothing.
+  - **`#1022` is OPEN again** — see Last Verified above for why, and Risks And Blockers for what
+    actually remains on it. The immediate production defect (an internal operations document
+    rendering on the public `/help` route) shipped its correction with this slice; the durable rule
+    (`audience` says who it is relevant to, `visibility: public` is the only field that says it may
+    leave the building) is recorded in `docs/developer-portal/app-conventions.md` 1.7.0.
+  - The dev-DB migration workaround this slice used (`#895` still blocks `prisma migrate dev
+    --create-only`) is the same recipe prior slices have used; staging and production got the
+    migration from CI as normal.
 - **Mobile finish (`#981`/`#982`): DONE, in production** (PR #1009 to `staging`, then promotion
   PR #1019, merge `6a35f4a`, 2026-10-10), both issues closed and `Done`. See **Last Verified**
   above for the production facts; not repeated here. Spec/build notes:
@@ -1243,6 +1279,19 @@ These are separate from, not a silent reordering of, the owner's High priorities
     vendor's AI features until 00:00 UTC — the same starvation shape as #619. `neuronsForCall()`
     is the metering seam, and the repo's dated rate table reconciles exactly with current
     published prices.
+- **Two findings from the `#1013`/`#1012` slice's own `/validate` (2026-10-10), promoted to `main`
+  by PR #1025 as research/defect reports, neither acted on beyond filing:**
+  - **#1023** — `components/rewards/RewardsLauncher.tsx`, mounted unconditionally in
+    `components/layout/StorefrontChrome.tsx:72`, renders a floating "Rewards" button with
+    `aria-label="Open rewards and loyalty panel"` on every vendor's every page regardless of
+    `loyaltyEnabled` — confirmed live on SriMart (loyalty off) in production. Pre-existing
+    (`#729`/`#836`), not part of that slice's diff; same defect class `#1013` fixed for the Help
+    Centre itself, just in sitewide chrome instead of one page.
+  - **#1022's real follow-up, still open**: nothing mechanically stops the next internal KMS
+    article from reaching a public surface (no guard equivalent to
+    `tests/operator-doc-coverage.test.ts` for the public direction), and `/help`'s
+    `shopperDocs[0]` is still an index into an array, correct today only because exactly one public
+    shopper article exists. The immediate defect this issue reported already shipped its fix.
 - Security/operations: #219 and #175 credential rotations; #436 demonstrated restore; #437 outbound
   alert delivery; #438 tested rollback; #246 persisted-log confirmation.
 - Reproduced or live defects: #236 rapid cart-mutation ceiling, #689 repeated query parameters

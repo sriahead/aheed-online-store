@@ -9,7 +9,10 @@ import {
   MAX_AI_INPUT_CHARS,
   mergeNormalisedItems,
   normaliseList,
+  type NormalisationResult,
 } from "@/lib/list-normalisation";
+import { getCurrentAiMeter } from "@/lib/ai-meter-service";
+import { recordHandledErrorEvent } from "@/lib/error-events-service";
 import { distinctTerms, parseList, resolveLines, type MatchListState } from "@/lib/shopping-list";
 
 /**
@@ -34,7 +37,7 @@ import { distinctTerms, parseList, resolveLines, type MatchListState } from "@/l
  */
 
 /** Why a submission skipped the AI pre-pass. Logged once, machine-readable (R23). */
-type SkipReason = "over-input-cap" | "rate-limited" | "unavailable";
+type SkipReason = "over-input-cap" | "rate-limited" | "unavailable" | "over-budget";
 
 function logSkip(reason: SkipReason, lineCount: number): void {
   console.warn(`list-normalisation skipped reason=${reason} lines=${lineCount}`);
@@ -92,18 +95,57 @@ async function normaliseParsed(parsed: ReturnType<typeof parseList>) {
     return parsed;
   }
 
+  // #1017 — the vendor's daily AI budget. A read, not a write, so it runs BEFORE the throttle: an
+  // over-budget vendor must not spend a shopper's rate-limit slot on a call that will never happen.
+  const meter = await getCurrentAiMeter("LIST_NORMALISATION");
+  const budget = await meter.check();
+  if (!budget.allowed) {
+    logSkip("over-budget", parsed.length);
+    return parsed;
+  }
+
   const { allowed } = await checkListNormalisationAllowed();
   if (!allowed) {
     logSkip("rate-limited", parsed.length);
     return parsed;
   }
 
-  const items = await normaliseList(parsed, storeDescription);
-  if (items === null) {
-    // No credential, non-OK response, timeout, unparseable body — all one thing to the shopper.
+  const result = await normaliseList(parsed, storeDescription);
+  if (result.usage) await meter.record({ model: result.model, usage: result.usage });
+
+  if (result.kind === "degraded") {
+    // All one thing to the shopper: the deterministic match.
     logSkip("unavailable", parsed.length);
+    await recordModelFailure(result);
     return parsed;
   }
 
-  return mergeNormalisedItems(parsed, items);
+  return mergeNormalisedItems(parsed, result.items);
+}
+
+/**
+ * #1016 — the three degradations a withdrawn or mis-set model produces become an ErrorEvent, so the
+ * day `/shop-your-list` stops being enriched is dateable on /staff/errors. Timeouts, transport
+ * hiccups, throttling and budget refusals are expected and stay on the console line; logging them
+ * would bury this signal. Never throws: the shopper's submission must not depend on this write.
+ */
+async function recordModelFailure(
+  result: Extract<NormalisationResult, { kind: "degraded" }>,
+): Promise<void> {
+  if (result.reason !== "http" && result.reason !== "unreadable" && result.reason !== "unparseable")
+    return;
+  const status = result.status === undefined ? "" : ` (HTTP ${result.status})`;
+  try {
+    await recordHandledErrorEvent({
+      message: `Workers AI list normalisation degraded: ${result.reason}${status}, model ${result.model}`,
+      stack: null,
+      digest: null,
+      path: "/shop-your-list",
+      method: "POST",
+      routerKind: "App Router",
+      routeType: "action",
+    });
+  } catch (error) {
+    console.error("Failed to persist list-normalisation ErrorEvent:", error);
+  }
 }

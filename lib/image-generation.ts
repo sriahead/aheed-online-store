@@ -7,6 +7,9 @@ import { getAiEnv } from "./config";
  * rather than proprietary Cloudflare AI bindings.
  */
 
+/** #1017 — the image model, named so its per-image cost can be metered (lib/workers-ai.ts). */
+export const IMAGE_GENERATION_MODEL = "@cf/black-forest-labs/flux-1-schnell";
+
 export interface ImageGenerationService {
   generateImage(prompt: string): Promise<ArrayBuffer | null>;
 }
@@ -29,7 +32,7 @@ export function getImageGenerationService(): ImageGenerationService {
 
       while (attempt < 3) {
         res = await fetch(
-          `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/black-forest-labs/flux-1-schnell`,
+          `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${IMAGE_GENERATION_MODEL}`,
           {
             method: "POST",
             headers: {

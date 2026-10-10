@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
+import { describeAiBudgetRefusal } from "@/lib/ai-meter";
+import { getVendorAiMeter } from "@/lib/ai-meter-service";
 import { getCategoryForAdmin } from "@/lib/categories-service";
 import { getCampaignForVendorCategory, saveCampaignImageForVendor } from "@/lib/campaigns-service";
-import { getImageGenerationService } from "@/lib/image-generation";
+import { getImageGenerationService, IMAGE_GENERATION_MODEL } from "@/lib/image-generation";
 import { getStorage } from "@/lib/storage";
 import { buildCampaignImageKey } from "@/lib/campaign-image";
 
@@ -75,6 +77,13 @@ export async function POST(request: Request) {
       );
     }
 
+    // #1017 — the vendor's daily AI budget, before the most expensive call this platform makes.
+    const aiMeter = getVendorAiMeter(auth.vendorId, "CAMPAIGN_IMAGE");
+    const budget = await aiMeter.check();
+    if (!budget.allowed) {
+      return NextResponse.json({ error: describeAiBudgetRefusal(budget) }, { status: 429 });
+    }
+
     const image = await getImageGenerationService().generateImage(
       buildPrompt(category.name, campaign.headline, campaign.subtitle),
     );
@@ -86,6 +95,7 @@ export async function POST(request: Request) {
         { status: 503 },
       );
     }
+    await aiMeter.recordImage({ model: IMAGE_GENERATION_MODEL });
 
     /*
      * #364 — Workers AI returns PNG bytes, and the key now says so.

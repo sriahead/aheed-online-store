@@ -1,5 +1,11 @@
 import { getAiEnv } from "@/lib/config";
 import { storeDescriptionPromptLine } from "@/lib/store-description";
+import {
+  extractWorkersAiReplyText,
+  extractWorkersAiUsage,
+  WORKERS_AI_MODEL_REQUEST_OPTIONS,
+  type WorkersAiUsage,
+} from "@/lib/workers-ai";
 
 /**
  * AI-proposed synonyms for staff approval (P2.6 slice 3, #566).
@@ -28,15 +34,26 @@ export const PROPOSAL_QUERY_LIMIT = 50;
 /** Ceiling on what one run will write, however many the model returns. */
 export const PROPOSAL_RESULT_LIMIT = 25;
 
-const MODEL = "@cf/meta/llama-3.1-8b-instruct";
+/**
+ * The model proposals run on by default (#1016). Same deprecated-but-serving id as
+ * lib/list-normalisation.ts's NORMALISATION_MODEL; `SEARCH_SYNONYM_AI_MODEL` overrides it. Reply
+ * text and request options are read through lib/workers-ai.ts, so an override to a chat-completion
+ * model such as Gemma 4 works without a code change.
+ */
+export const DEFAULT_SYNONYM_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
 export interface SynonymProposal {
   alias: string;
   canonical: string;
 }
 
+/**
+ * `model` and `usage` travel with every result that reached the model, so the caller can charge the
+ * vendor's AI budget (#1017) for a call that was billed even when its reply was useless.
+ */
 export type ProposalResult =
-  { ok: true; proposals: SynonymProposal[] } | { ok: false; error: string };
+  | { ok: true; proposals: SynonymProposal[]; model: string; usage: WorkersAiUsage }
+  | { ok: false; error: string; model?: string; usage?: WorkersAiUsage };
 
 /**
  * The prompt. Exported so the #905 prompt test can assert its framing. `storeDescription` is
@@ -126,14 +143,17 @@ export async function proposeSynonyms(
     };
   }
 
+  const model = env.SEARCH_SYNONYM_AI_MODEL ?? DEFAULT_SYNONYM_MODEL;
+
   let response: Response;
   try {
     response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${MODEL}`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(WORKERS_AI_MODEL_REQUEST_OPTIONS[model] ?? {}),
           messages: [
             { role: "user", content: buildSynonymPrompt(queries, vocabulary, storeDescription) },
           ],
@@ -154,13 +174,20 @@ export async function proposeSynonyms(
     };
   }
 
-  let payload: { result?: { response?: unknown } };
+  let payload: unknown;
   try {
-    payload = (await response.json()) as { result?: { response?: unknown } };
+    payload = await response.json();
   } catch {
     return { ok: false, error: "The AI service returned an unreadable response." };
   }
 
-  const text = typeof payload.result?.response === "string" ? payload.result.response : "";
-  return { ok: true, proposals: parseProposalResponse(text) };
+  // #1016 — the shared reader handles a string `response`, an already-parsed one (Llama 3.1 on a
+  // JSON answer) and a chat-completion `choices` reply (Gemma 4). Reading only a string `response`,
+  // as this did before, returned zero proposals for the latter two.
+  return {
+    ok: true,
+    proposals: parseProposalResponse(extractWorkersAiReplyText(payload)),
+    model,
+    usage: extractWorkersAiUsage(payload),
+  };
 }

@@ -6,6 +6,8 @@ import {
   saveGeneratedProductImage,
 } from "@/lib/products-service";
 import { NextResponse } from "next/server";
+import { describeAiBudgetRefusal } from "@/lib/ai-meter";
+import { getVendorAiMeter } from "@/lib/ai-meter-service";
 
 /**
  * How many products one click fills. Deliberately small and deliberately NOT
@@ -45,12 +47,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "No products need backfill", processed: 0 });
   }
 
+  // #1017 — one meter for the run, built for this request's vendor (never cached across requests).
+  const aiMeter = getVendorAiMeter(auth.vendorId, "PRODUCT_IMAGE");
+
   let processed = 0;
   for (const product of products) {
     try {
       const result = await runProductImagePipeline(product.id, product.name, null, {
         useOpenFoodFacts,
+        aiMeter,
       });
+      if (result && "budgetRefused" in result) {
+        // Not a product the pipeline can never fill, so NO recordImageAttemptFailure: it stays
+        // eligible for tomorrow. Every later product would be refused too, so stop here.
+        return NextResponse.json({
+          message: describeAiBudgetRefusal(result.budgetRefused),
+          processed,
+          totalFound: products.length,
+        });
+      }
       if (result) {
         await saveGeneratedProductImage(
           auth.vendorId,
