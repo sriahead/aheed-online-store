@@ -16,7 +16,7 @@ import {
   Store,
 } from "lucide-react";
 import { DocumentSectionRenderer } from "@/components/ui/DocumentSectionRenderer";
-import { DOC_ARTICLES } from "../../(admin)/staff/runbook/docs";
+import { getPublicShopperGuide } from "@/lib/public-docs";
 
 export const metadata: Metadata = {
   title: "Help Centre",
@@ -69,27 +69,13 @@ export default async function HelpPage() {
   const { defaults, varies } = facts;
 
   /*
-   * VISIBILITY IS PART OF THE FILTER, not just audience.
-   *
-   * This filter used to test audience alone, and three articles match that: the public shopping
-   * guide, `docs/operations-research/order-fulfilment-core.md`, and a KMS pilot spec plan — the
-   * latter two both `visibility: internal`, because they list `shopper` among several audiences for
-   * KMS routing rather than because they are written for shoppers. The internal operations document
-   * sorts first, so `shopperDocs[0]` served IT on the public Help Centre of every vendor, complete
-   * with `PENDING_PAYMENT`, "Known Trap" and slot-capacity internals, while the guide written for
-   * shoppers was never shown at all. Confirmed live in production on both vendors, 2026-10-10.
-   *
-   * Filed as its own defect; this slice fixes the filter because #1013's "no loyalty wording when
-   * loyalty is off" requirement cannot hold while an internal document discussing points renders
-   * here unconditionally. `visibility` is the field that already distinguishes the two, and
-   * `kms/schema` validates it on every article.
+   * The shopper guide comes from `lib/public-docs.ts`, selected by id and only when it is
+   * `visibility: public` (#1022). This page used to filter the whole KMS corpus by audience and
+   * render the first match; an internal operations document sorted first and served on every
+   * vendor's public Help Centre. `tests/public-docs-boundary.test.ts` now stops any non-staff file
+   * other than that helper from importing the corpus at all.
    */
-  const shopperDocs = (DOC_ARTICLES as any[]).filter(
-    (doc) =>
-      doc.visibility === "public" &&
-      doc.audience &&
-      (doc.audience.includes("shopper") || doc.audience.includes("customer")),
-  );
+  const shopperGuide = getPublicShopperGuide();
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8 space-y-12">
@@ -339,10 +325,10 @@ export default async function HelpPage() {
         </section>
       )}
 
-      {shopperDocs.length > 0 && (
+      {shopperGuide && (
         <section className="mt-12">
           <h2 className="text-2xl font-bold mb-6 px-4 sm:px-0">Detailed Shopping Guide</h2>
-          <DocumentSectionRenderer content={shopperDocs[0].content} />
+          <DocumentSectionRenderer content={shopperGuide.content} />
         </section>
       )}
     </div>
