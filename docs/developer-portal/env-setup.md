@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.16.0"
-updated: 2026-10-05
+version: "1.17.0"
+updated: 2026-10-10
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -574,6 +574,17 @@ DIRECT_URL=<env-direct-url> npm run demo:accounts -- remove
   recorded demo password with a live sign-in before relying on it**, and do it again after every
   reset — a note that a password "was confirmed working" is only as trustworthy as the environment
   it was actually tested against.
+- **The trap above is not staging/production-only — local dev's own roster can carry the same
+  drift, and the two accounts can disagree with each other.** Hit at the `#1013`/`#1012` slice's
+  `/validate` (2026-10-10): against this checkout's `.dev.vars`, `demo-store-admin@example.com`
+  (Aheed) signed in successfully with the current `DEMO_ACCOUNT_PASSWORD`, but
+  `demo-srimart-admin@example.com` returned `INVALID_EMAIL_OR_PASSWORD` for the identical value —
+  the dev-DB roster was evidently last reset with a different password than `.dev.vars` currently
+  holds, and only one of the two accounts happened to agree with it. This blocked a cross-vendor
+  write-refusal proof (the `#141`-class check this account exists for) under `npm run preview`.
+  **Don't assume local dev's demo roster matches `.dev.vars` just because one account signs in** —
+  each account's password is set only once, at its own creation or last reset, so a partial drift
+  across the five-account roster is exactly as possible locally as it is on staging.
 
 ## Troubleshooting
 
