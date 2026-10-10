@@ -142,15 +142,41 @@ than an incident — but it is the kind that converts into an undateable regress
 rule for `#1015`: a chatbot that hardcodes a model id inherits this failure mode, except a
 conversation has no deterministic answer to degrade into, so there the failure is user-visible and
 unrecoverable rather than a lost enrichment.
-**Options considered:** move both sites to the net-content pattern (named default plus env
-override), defaulting to `-fp8` so observable behaviour barely moves, or to
-`@cf/google/gemma-4-26b-a4b-it`, which is already used here and already priced in
-`NET_CONTENT_MODEL_RATES`. Narrower: swap the two literals to `-fp8` and stop, which leaves the
-next deprecation to land identically. **Separately and regardless:** have the degradation path
-write an `ErrorEvent` — now the most valuable half, since the feature works and the real exposure
-is the undated future failure. Doing nothing is tenable only while an unlisted id keeps answering,
-which nobody here controls or monitors.
+**Candidate models measured the same day**, three runs each, against the real prompt shape on a
+fixture chosen for the awkward cases (`2kg atta`, `6 free range eggs`, `dhania`,
+`500g chicken breast halal`, `amul butter 100g`). Full table on `#1016`:
+
+| Model | Latency max | `result.response` shape | Items | `2kg atta` | `dhania` kept |
+| --- | --- | --- | --- | --- | --- |
+| `llama-3.1-8b-instruct` (current) | 1806ms | `ARRAY` | 5,5,5 | **3/3** | **3/3** |
+| `llama-3.2-3b-instruct` | 1090ms | `ARRAY` | 5,5,5 | 2/3 | 3/3 |
+| `llama-3.2-1b-instruct` | 1699ms | `STRING` | **0,0,4** | 1/3 | 0/3 |
+| `gemma-4-26b-a4b-it` + `enable_thinking:false` | 4506ms | `NULL`→`choices` | 5,5,5 | **3/3** | **3/3** |
+| `llama-3.1-8b-instruct-fp8` | **9696ms** | `STRING` | — | 0/1 | 0/1 |
+
+**Two candidates are disqualified, and one of them was this entry's own first recommendation.**
+`-fp8` takes **9.7 seconds**, exceeding `NORMALISATION_TIMEOUT_MS` (6000) — it would abandon the
+pre-pass on every call, which is the very failure this entry is about — and it also broke both
+prompt rules. Same family and same weights was **not** a safe proxy for same behaviour.
+`llama-3.2-1b` returned unparseable output in two of three runs.
+**Options considered:** the current model is still the best performer of the lot, so the
+sequencing is (1) add the env override (the `lib/net-content-suggester.ts` pattern), which is what
+actually retires the risk, (2) write an `ErrorEvent` on the degradation path so the day the id
+stops is dateable, and (3) keep `llama-3.1-8b-instruct` as the default with
+`gemma-4-26b-a4b-it` recorded as the validated successor — raising `NORMALISATION_TIMEOUT_MS` as
+part of that switch, since 4.5s against 6000ms is not enough headroom, and whether a shopper should
+wait that long is a `/propose` decision rather than a constant to bump quietly. Gemma also needs
+two call-path changes, both already precedented here: the `enable_thinking: false` kwarg
+(`lib/net-content-suggester.ts:54`) and reading `choices[0].message.content`, because
+`result.response` comes back **null** for it. **Swapping the default today would mean accepting
+either a 1-in-3 quality regression (3.2-3b) or a 2.5× latency increase plus two call-path changes
+(gemma), to replace a model that currently works.** Doing nothing at all is tenable only while an
+unlisted id keeps answering, which nobody here controls or monitors.
 **Cost of delay:** none today. It becomes unrecoverable context on the day the id stops.
+**Limit of this evidence:** three runs on one five-line fixture. Enough to disqualify two
+candidates and to settle the shape and latency facts, which are stable properties; **not** enough
+to choose between gemma and 3.2-3b on accuracy. That needs a wider fixture set drawn from
+`SearchQueryLog` and real `/shop-your-list` submissions.
 
 **Next action:** PROPOSE
 
