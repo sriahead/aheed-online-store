@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.40.0"
-updated: 2026-10-06
+version: "2.41.0"
+updated: 2026-10-10
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -1105,7 +1105,24 @@ exactly one next action: `RESEARCH MORE`, `PROPOSE`, `ADD TO ROADMAP/BACKLOG`, `
 `DO NOT PURSUE`. Findings that warrant action become GitHub issues; a finding that stays a hypothesis
 stays in the log and nowhere else.
 
-**Discover writes no code and opens no PR of its own.** It is a read-and-write-docs pass.
+**Discover writes no code.** It is a read-and-write-docs pass. It does land as its own docs PR into
+`staging` (PR #963, PR #1018), which is what Gate 4 and the `docs-gates`/`quality` checks require of
+any branch — earlier revisions of this line said Discover "opens no PR of its own", which was never
+true of the docs branch and only ever true of application code.
+
+**Discover has no Document stage, and that is a real gap in the loop — not a quirk of one pass.**
+Nothing in `/discover` reconciles its findings into `docs/model-handoff.md`, so a Discover pass sits
+on `staging` until some *unrelated* slice's promotion carries it into `main`. PR #1019 (mobile
+finish, `#981`/`#982`) did exactly that on 2026-10-10: it promoted the eighth and ninth passes to
+production while the handoff a fresh model reads first described neither `#1016` (a Cloudflare-
+deprecated model id hardcoded at two live call sites) nor `#1017` (one shared, unattributed Workers
+AI pool). Orient's own step 9 reads `docs/research/discovery-log.md` directly and so does catch
+them, which is why this is a latency problem rather than a lost-knowledge one. **The rule:** at the
+next **Document (final)** after a Discover pass, promote any finding about *already-shipped* code
+into the handoff's own **Risks And Blockers** list. A finding about prospective scope stays in the
+discovery log, where `/propose` will find it. Both halves matter — copying every finding into the
+handoff would turn the recovery snapshot into a second discovery log, which
+**Project-state handoff responsibilities** above forbids.
 
 ## Learn
 
