@@ -72,10 +72,19 @@ order, and a vendor with loyalty off shows no loyalty launcher anywhere on its s
 
 `RewardsLauncher` is also where a `?ref=` referral code from a shared link is written to the
 `aheed_referral_code` cookie. Hiding it for a loyalty-off vendor means that vendor's storefront no
-longer captures `?ref=`. This is deliberate and correct today: a referral code is only ever created
-from `/account/loyalty` or the Rewards panel, both of which are loyalty-gated after this slice, so a
-loyalty-off vendor has no codes to capture. The account hub already treats referrals as part of
-loyalty. Making referrals work independently of loyalty would be a different, larger slice.
+longer captures `?ref=`. This is deliberate and correct today: after this slice a loyalty-off
+vendor has no surface that **shows** a shopper their referral code or link (`/account/loyalty` 404s
+and the panel is gone), so there are no links of its own to capture. The account hub already treats
+referrals as part of loyalty. Making referrals work independently of loyalty would be a different,
+larger slice.
+
+> **Corrected at Build (2026-10-10).** This paragraph originally said a code is only ever *created*
+> from `/account/loyalty` or the Rewards panel. That is wrong: `StorefrontChrome` calls
+> `getRewardsDataForUser`, which for any signed-in shopper calls `getReferralStats` and so gets or
+> creates a referral code on every storefront render, loyalty on or off. The accepted consequence
+> is unchanged — nothing shows the code — but the premise was overstated. The unconditional
+> creation is pre-existing and out of this slice's scope (R9 changes nothing else in the chrome);
+> it is recorded in `build-notes.md` and filed as its own follow-up.
 
 ## Deliberately excluded
 

@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-10T21:11:27.548Z` · commit `5f88678` · `221` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-10T21:31:19.081Z` · commit `a51c40a` · `221` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -25,7 +25,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 2.0.0 | 2026-09-17 | approved | internal | Always-loaded guardrails for the Aheed Online Store — runtime, database, schema, storage, config, CI and the SDD gates — reduced to what every session needs, with pointers to the documents that carry the detail. |
 | [Product Requirements & Feature Workflows](docs/business-analysis/product-requirements.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for Business Analysts and Project Managers detailing the core business logic, feature requirements, and workflows. |
 | [UI/UX & Design Guidelines](docs/design-ux/ux-guidelines.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for UI/UX designers detailing the design system, storefront customization, and the role of the ui-ref prototype. |
-| [Application Conventions — per-layer invariants and the tests that enforce them](docs/developer-portal/app-conventions.md) | doc | 1.7.0 | 2026-10-10 | approved | internal | What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), vendor-neutral user-facing copy, form-field autocomplete tokens, and React hooks — together with the tests that enforce each invariant mechanically. |
+| [Application Conventions — per-layer invariants and the tests that enforce them](docs/developer-portal/app-conventions.md) | doc | 1.8.0 | 2026-10-10 | approved | internal | What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), vendor-neutral user-facing copy, form-field autocomplete tokens, and React hooks — together with the tests that enforce each invariant mechanically. |
 | [Architecture & System Design Overview](docs/developer-portal/architecture-overview.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A high-level map of the platform's architecture, system design, and database design, acting as a directory to the deeper technical specifications. |
 | [Environment Setup — Secrets & Config (staging / production / dev)](docs/developer-portal/env-setup.md) | doc | 1.18.0 | 2026-10-10 | approved | internal | How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier. |
 | [Local Development Playbook — Windows shell, and proving things live without a browser](docs/developer-portal/local-dev-playbook.md) | runbook | 1.23.0 | 2026-10-07 | approved | internal | How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path. |
