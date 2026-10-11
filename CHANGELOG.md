@@ -6,6 +6,13 @@ every branch merges.
 
 ## [Unreleased]
 
+### Documentation
+
+- **Document pass and promotion record for PR #1050 / PR #1053 (`#1049`, `#1051`, `#1052` promoted to production, merge `c903f15`).** Docs only.
+  - `specs/roadmap.md` 1.147.0: the slice row, citing `specs/2026-10-11-p1049-assistant-link-close/`, with its stage deviations stated (one Opus session, no fresh-context Validate, no `build-notes.md`).
+  - `docs/model-handoff.md` 1.90.0: Last Verified moves to `c903f15`, `0311425` condensed to "previous promotion"; a new In-Flight entry for the slice; **corrects "off for every vendor"** for the help assistant: production Aheed has it on, read live 2026-10-11.
+  - `CLAUDE.md`: `kms:coverage` joins the command list; it runs only in CI's `quality / kms` job and failed this slice's first push.
+
 ### Added
 
 - **A guided help assistant on the storefront, with a WhatsApp handoff and a conversation log** (issues `#1015`, `#1014`; `specs/2026-10-11-p1015-1014-help-assistant/`). Built as one slice. One additive migration (`20261011120000_p1015_1014_help_assistant`, no `DROP`). **Off for every vendor** until a store admin switches it on, so it ships with no visible change.

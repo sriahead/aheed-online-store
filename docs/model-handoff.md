@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.89.0"
+version: "1.90.0"
 updated: 2026-10-11
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,24 +40,25 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-10-11.
-- **`main` is at `0311425`** (full `0311425acf3ccc20770c840d1c2c495b41c59038`), the PR #1047
-  promotion (`staging -> main`, 2026-10-11): chatbot slice 3, the guided help assistant, WhatsApp
-  handoff and conversation log (`#1015`/`#1014`, PR #1044, merge `077a9ef`), carrying PR #1040 (the
-  `#1022`/`#1023` promotion record) and PR #1046 (this slice's Document pass, `5812184`). **One
-  additive migration** (`20261011120000_p1015_1014_help_assistant`, no `DROP`), now applied in
-  production (the run's log names it). CI green on PR #1047; `deploy-production` (run
-  `38156203995`) and `deploy-docs-internal` (run `38156203806`) both **success on the first
-  attempt**. Production `/api/health` (Aheed **and** SriMart) serves `0311425`, `db.ok: true`,
-  `reference.drift: false`. **`origin/main` and `origin/staging` are level** apart from this
-  promotion record's own docs PR.
-  - **Verified live as a before/after** (production read just before the PR, then after the
-    deploy), on both vendors: commit `dadca17` → `0311425`; `/privacy` gained the help-assistant
-    paragraph; `/` still has **no** `Open help assistant`, because `assistantEnabled` defaults to
-    `false` everywhere. Switching it on is an owner action at `/staff/assistant`.
-  - `closingIssuesReferences` listed exactly `[1014, 1015]`; both closed and are `Done`, and they
-    are the **only** issues closed since the merge (`#1021`, `#1041`–`#1043`, `#1045` still open).
-    No promoted commit message carried a closing keyword (scanned before opening the PR).
+- **`main` is at `c903f15`** (full `c903f153b171af9825ac2fe886ab6c874e0c7d97`), the PR #1053
+  promotion (`staging -> main`, 2026-10-11): the help assistant follow-ups `#1049`/`#1051`/`#1052`
+  (PR #1050, merge `c960ae1`), carrying PR #1048 (the `#1015`/`#1014` promotion record). No schema
+  change, no migration. CI green on PR #1053; `deploy-production` (run `38170438220`) and
+  `deploy-docs-internal` (run `38170437719`) both **success on the first attempt**. Production
+  `/api/health` (Aheed **and** SriMart) serves `c903f15`, `db.ok: true`, `reference.drift: false`.
+  **`origin/main` and `origin/staging` are level** apart from this slice's own Document PR.
+  - **Verified live in production:** Aheed has the assistant **on**: `/help` shows the new
+    **Open the help assistant** card and the floating button shows the assistant with no WhatsApp
+    icon. SriMart has it off with a WhatsApp number set, so both surfaces show
+    **Message SriMart on WhatsApp**.
+  - `closingIssuesReferences` listed exactly `[1049, 1051, 1052]`; all three closed and `Done`, the
+    only issues closed since the merge. No promoted commit message carried a closing keyword.
   - Not a phase closure (`P10` stays open).
+- **Previous promotion, `0311425`** (full `0311425acf3ccc20770c840d1c2c495b41c59038`), the PR #1047
+  promotion (2026-10-11): chatbot slice 3, the guided help assistant and conversation log
+  (`#1015`/`#1014`, PR #1044). **One additive migration**
+  (`20261011120000_p1015_1014_help_assistant`), applied by `deploy-production` (run
+  `38156203995`) **on the first attempt**. `closingIssuesReferences` listed exactly `[1014, 1015]`.
 - **Previous promotion, `dadca17`** (full `dadca173535d46a039ddbf9d610535c6cece1450`), the PR #1039
   promotion (`staging -> main`, 2026-10-11): the public docs boundary and the loyalty-gated Rewards
   launcher (`#1022`/`#1023`, PR #1036, merge `3c34d95`), carrying PR #1038. No migration.
@@ -664,10 +665,20 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **Help assistant follow-ups (`#1049` + `#1051` + `#1052`, one slice): DONE, in production**
+  (PR #1050 to `staging`, then promotion PR #1053, merge `c903f15`, 2026-10-11), all three closed
+  and `Done`. Spec: `specs/2026-10-11-p1049-assistant-link-close/` (no `build-notes.md`; the loop
+  ran in one Opus 5.5 session with no fresh-context Validate, by owner's choice).
+  - The rule now in force: **with the assistant available (`assistantEnabled` and a WhatsApp
+    number), WhatsApp is reached through the assistant**, both on the floating contact button and
+    on `/help`'s "Still need help?" card (`components/assistant/HelpContactCard.tsx`); with it off,
+    both show a direct WhatsApp link; with no WhatsApp number, neither. Admin guide 2.9.0.
+  - In-panel links close the panel (`#1049`). Proved by a unit test shown to fail without the fix;
+    **not yet clicked in a real browser.**
 - **Guided help assistant + conversation log (`#1015` + `#1014`, one slice): DONE, in
   production** (PR #1044 to `staging`, then promotion PR #1047, merge `0311425`, 2026-10-11), both
-  issues closed and `Done`. See **Last Verified** above for the production facts. **Off for every
-  vendor until an owner switches it on.** Spec, build notes:
+  issues closed and `Done`. **Production state read live 2026-10-11 after PR #1053: Aheed has
+  it ON, SriMart OFF** (the switch is the owner's, at `/staff/assistant`). Spec, build notes:
   `specs/2026-10-11-p1015-1014-help-assistant/`.
   - **Validated from a fresh context (Opus 5.5, by owner's choice), no defect found.** Proved live
     under `npm run preview`: the three journeys log `ANSWERED`/`HANDED_OFF`/`ABANDONED`; a
@@ -685,8 +696,8 @@ All facts in this section require live verification:
     assistant still answers delivery, collection, rewards and discount codes from data and hands off
     the rest. `#1021` stays open and owner-gated, best written from the report once the assistant
     has run on one vendor.
-  - **Owner action to turn it on:** `/staff/assistant` per vendor (needs a WhatsApp number; both
-    production vendors have one, read live 2026-10-11). Until then production shows no change.
+  - **Switching it on** is `/staff/assistant` per vendor (needs a WhatsApp number; both
+    production vendors have one). Aheed's owner has done so; SriMart's has not.
   - Follow-ups, all `Backlog` / `P10`: `#1041` (privacy page omits the search-query log), `#1042`
     (grounded free-text answers), `#1043` (`/orders/lookup` placeholder shows Aheed's `AHE-` prefix
     on every vendor), and from Validate `#1045` (`/help` and the assistant both say points expire
