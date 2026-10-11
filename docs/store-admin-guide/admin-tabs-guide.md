@@ -125,7 +125,9 @@ cart button — tapping it reveals whichever of Facebook, Instagram and WhatsApp
 configured. There is no separate row of icons, and nothing social appears in the page footer.
 When the help assistant is switched on (Help Assistant page), the button shows the help assistant
 in place of the WhatsApp icon: shoppers reach your WhatsApp through the assistant, after it has had
-the chance to answer their question.
+the chance to answer their question. Your Help Centre page has a **Still need help?** card that follows the same
+rule: it opens the help assistant while it is on, links straight to your WhatsApp while it is off,
+and does not appear at all without a WhatsApp number.
 **Facebook page address** and **Instagram profile address** must both be full web addresses
 starting with `https://`. **WhatsApp number** is entered as digits only in international format —
 `447700900123`, not `+44 7700 900123`.
@@ -247,7 +249,8 @@ conversation is linked to a shopper's name or account, and each is deleted after
 **What happens after changes are saved:** The help assistant appears on, or disappears from, your
 storefront's contact button on the next page a shopper loads. While it is on, the button's direct
 WhatsApp icon is hidden, because the assistant hands shoppers to WhatsApp itself; switch the
-assistant off and the WhatsApp icon returns. The report updates as conversations
+assistant off and the WhatsApp icon returns. The Help Centre's **Still need help?** card switches the same way, between
+**Open the help assistant** and a direct WhatsApp link. The report updates as conversations
 happen.
 
 ## Delivery areas — `/staff/delivery-areas`

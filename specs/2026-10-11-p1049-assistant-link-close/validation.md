@@ -11,3 +11,6 @@
       returns.
 - [ ] After the guide edit: `kms:validate`, `kms:check-generated`, `kms:assemble:internal`, and a
       real Next build in `kms/site-internal`.
+- [ ] #1052: under `npm run preview`, `/help` on Aheed (assistant on) shows **Open the help
+      assistant** and it opens the panel; with the assistant off, the card shows the WhatsApp link;
+      SriMart (no assistant) shows whichever its WhatsApp setting allows.

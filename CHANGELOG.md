@@ -25,6 +25,7 @@ every branch merges.
 ### Changed
 
 - **With the help assistant on, shoppers reach WhatsApp through it rather than a direct shortcut** (issue `#1051`; `specs/2026-10-11-p1049-assistant-link-close/`). `FloatingContact` no longer renders its direct WhatsApp link when the assistant is available (`assistantEnabled` plus a WhatsApp number); the assistant's handoff is the WhatsApp route, after it has had the chance to answer. With the assistant off the direct link stays, as the only route to the store's WhatsApp. Facebook and Instagram are unchanged. `docs/store-admin-guide/admin-tabs-guide.md` 2.9.0 says so. Tests in `tests/help-assistant-panel.test.tsx`. No schema change.
+- **The Help Centre gains a "Still need help?" card** (issue `#1052`; same spec). New `components/assistant/HelpContactCard.tsx` on `/help`, with the same availability rule as `FloatingContact`: **Open the help assistant** while the assistant is on (it hands off to WhatsApp itself), a direct **Message <store> on WhatsApp** link while it is off, and no card without a WhatsApp number. Read from the profile `/help` already loads, so no query is added. Admin guide 2.9.0 covers it. Tests in `tests/help-vendor-facts.test.tsx`, proved to fail without the card.
 
 ### Fixed
 
