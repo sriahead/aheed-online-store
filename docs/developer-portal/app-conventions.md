@@ -4,7 +4,7 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.7.0"
+version: "1.8.0"
 updated: 2026-10-10
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), vendor-neutral user-facing copy, form-field autocomplete tokens, and React hooks — together with the tests that enforce each invariant mechanically.
@@ -294,7 +294,11 @@ store's staff reads must be right for **any** vendor.
   document — `PENDING_PAYMENT`, slot-capacity rules and a "Known Trap" note — while the guide
   written for shoppers never rendered at all. `audience` says *who it is relevant to*;
   **`visibility: public` is the only field that says it may leave the building.** Require both, and
-  select the document you mean by id rather than by array position.
+  select the document you mean by id rather than by array position. **`lib/public-docs.ts` is the
+  only route from a non-staff surface to the generated docs module** (`getPublicShopperGuide()` is
+  the worked example; a new public surface adds a sibling function there), and
+  `tests/public-docs-boundary.test.ts` fails if any file outside `app/(admin)/` other than that
+  helper imports it.
 
 ## Form fields that collect the user's own data
 

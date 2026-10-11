@@ -259,3 +259,14 @@ describe("/help vendor answers (#1012 R21)", () => {
     expect(text).toMatch(/First answer\./);
   });
 });
+
+describe("/help shopper guide (#1022)", () => {
+  it("renders the public shopping guide and nothing from the internal operations document", async () => {
+    await renderHelp();
+    const text = document.body.textContent ?? "";
+    expect(text).toMatch(/Detailed Shopping Guide/);
+    expect(text).toMatch(/Guest Checkout/);
+    expect(text).not.toMatch(/PENDING_PAYMENT/);
+    expect(text).not.toMatch(/Known Trap/);
+  });
+});

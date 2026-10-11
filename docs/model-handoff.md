@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.81.0"
-updated: 2026-10-10
+version: "1.85.0"
+updated: 2026-10-11
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -40,7 +40,20 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-10-10.
-- **`main` is at `b1dd2d4`** (full `b1dd2d4f112b231cb551e4175c3224a15f32dfc1`), the PR #1025
+- **`main` is at `a0ea21e`** (full `a0ea21e348218a97110ccc459d7c02beef9adcaa`), the PR #1033
+  promotion (`staging -> main`, 2026-10-10): chatbot prerequisites slice 2 — configurable Workers
+  AI model ids, a dated degradation signal and per-vendor AI metering (`#1016`/`#1017`, PR #1032,
+  `162b38e`). **One additive migration** (`20261010150000_p1016_1017_ai_usage_metering`, no
+  `DROP`), now applied in production. CI green on PR #1033; `deploy-production` (run
+  `38084709126`) and `deploy-docs-internal` (run `38084708843`) both **success on the first
+  attempt**. Production `/api/health` (Aheed **and** SriMart) serves `a0ea21e`, `db.ok: true`.
+  `closingIssuesReferences` listed exactly `[1016, 1017]`; both closed, and the post-promotion
+  issue-state check found **no unintended closure** this time — `#1022`, `#1023` and the follow-ups
+  `#1027`–`#1031` are all still open. **`origin/staging` is now one PR ahead of `origin/main`**:
+  PR #1036 (`#1022`/`#1023`, merge `3c34d95`), awaiting its promotion PR — see In-Flight Work. Per-vendor
+  metering is live in production with every vendor on the default 3,000-neuron daily budget. Not a
+  phase closure (`P10` stays open).
+- **Previous promotion, `b1dd2d4`** (full `b1dd2d4f112b231cb551e4175c3224a15f32dfc1`), the PR #1025
   promotion (`staging -> main`, 2026-10-10): chatbot prerequisites slice 1 — the Help Centre
   computes its own delivery/collection/loyalty facts and a per-vendor approved-answer corpus
   (`#1013`/`#1012`, PR #1024, `ad16a5c`/`20f708b`), carrying the already-merged PR #1020 docs
@@ -49,7 +62,6 @@ reconciliation. If overall project state did not materially change, leave this f
   `quality/quality` all pass on both); `deploy-staging`/`deploy-docs-internal` and
   `deploy-production`/`deploy-docs-internal` all **success on the first attempt**. Production
   `/api/health` (Aheed **and** SriMart) serves `b1dd2d4`, `db.ok: true`, `reference.drift: false`.
-  **`origin/main` and `origin/staging` are level — zero divergence as of this snapshot.**
   - **Not a phase closure.** Both issues sit under `P10`, which stays open; `#697` and other P10
     items are unaffected, so `/discover` → `/learn` → business case does not apply.
   - **Verified live in production, beyond the health check:** SriMart's (`loyaltyEnabled: false`)
@@ -628,18 +640,33 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Chatbot prerequisites, slice 2 (`#1016` + `#1017`): BUILT, NOT YET VALIDATED OR MERGED**
-  (2026-10-10). Branch `feature/p1016-1017-ai-model-metering`, from `origin/staging` `09eb799`.
-  Spec `47e9f30`, build `c0c4c1e`, build notes in
-  `specs/2026-10-10-p1016-1017-ai-model-config-metering/`. Next stage: `/validate` from a fresh
-  context, on Sonnet 5. It adds per-vendor Workers AI metering (`AiUsageEvent`,
-  `VendorConfig.aiDailyNeuronBudget`) at all four AI call sites, model-id overrides, and an
-  `ErrorEvent` when the `/shop-your-list` model fails. **One additive migration, already applied to
-  dev by hand** (the `#895` drift blocks `migrate dev`). The R35–R37 live checks passed at Build.
-  New follow-ups: `#1027` (gemma switch and timeout), **`#1028` (owner: which Workers plan)**,
-  `#1029` (staff AI-allowance view), `#1030` (campaign prompt hardcodes "UK grocery"), `#1031`.
-  Build found that **Cloudflare silently serves the deprecated llama id from
-  `llama-3.1-8b-fast-v2`** (commented on `#1016`).
+- **Public docs boundary + loyalty-gated Rewards launcher (`#1022` + `#1023`): MERGED TO STAGING,
+  NOT YET PROMOTED** (PR #1036, merge `3c34d95`, 2026-10-10; `deploy-staging` run `38093764375`
+  success). Both issues `In Review` and open. Spec and build notes:
+  `specs/2026-10-10-p1022-1023-public-docs-rewards-gate/`; the rule: `docs/developer-portal/app-conventions.md`
+  1.8.0. No schema change, no migration. **Next: the `staging -> main` promotion PR**, whose body
+  must carry `closes #1022` and `closes #1023` on separate lines.
+  - Validated from a fresh context. R16 failed once (the new boundary scan's 5s timeout under local
+    load) and was fixed in-branch; every row passed on the re-run from the top. Locally the full
+    suite was clean only with `--maxWorkers=6` (`#1037`); CI was green.
+  - **Staging cannot show `#1023`'s loyalty-off case: staging's SriMart has loyalty ON**, so its
+    launcher correctly renders there. The dev database and production have SriMart at loyalty off.
+    The check that matters after promotion: production `srimart.nocaped.com` `/` and `/help` must
+    no longer contain `Open rewards and loyalty panel`, and Aheed's still must.
+  - Follow-ups, all `Backlog` / `P10`: `#1034` (rewards data, including a referral code, is still
+    built on every signed-in render for loyalty-off vendors), `#1035` (what the `shopper` audience
+    tag means on internal articles), `#1037` (local full-suite timeouts).
+- **Chatbot prerequisites, slice 2 (`#1016` + `#1017`): DONE, in production** (PR #1032 to
+  `staging`, then promotion PR #1033, merge `a0ea21e`, 2026-10-10), both issues closed. See
+  **Last Verified** above for the production facts. Spec and build notes:
+  `specs/2026-10-10-p1016-1017-ai-model-config-metering/`; shipped behaviour:
+  `specs/architecture.md` ("AI does not sit on a public request path"). **Validated from a fresh
+  context — no defect found**; R35–R37 were proved live against the dev database. Per-vendor
+  metering is live in production with every vendor on the default 3,000-neuron budget.
+  Follow-ups, all `Backlog` / `P10`: `#1027` (gemma switch and timeout), **`#1028` (owner: which
+  Workers plan)**, `#1029` (staff AI-allowance view), `#1030` (campaign prompt hardcodes "UK
+  grocery"), `#1031` (backfill refusal shown in success tone). **Cloudflare silently serves the
+  deprecated llama id from `llama-3.1-8b-fast-v2`** (commented on `#1016`).
 - **Chatbot prerequisites, slice 1 (`#1013` + `#1012`): DONE, in production** (PR #1024 to
   `staging`, then promotion PR #1025, merge `b1dd2d4`, 2026-10-10), both issues closed and `Done`.
   See **Last Verified** above for the production facts; not repeated here. Spec/build notes:
@@ -651,20 +678,18 @@ All facts in this section require live verification:
   single biggest unproven risk **was proven live**: the full create/edit/hide/reorder/delete cycle
   on `/staff/faqs` was driven over the real Next.js Server Actions wire protocol as a signed-in
   vendor admin, not just a standalone script.
-  - **The whole chatbot programme is `High` / `P10` on the board:** `#1012`/`#1013` now closed;
-    `#1014`, `#1015`, `#1016`, `#1017` remain, plus `#1021`/`#1022`/`#1023` below.
-  - Approved sequencing, unchanged: **slice 2 = `#1016`+`#1017`** (chatbot safety in already-shipped
-    AI code) next, **slice 3 = `#1015`+`#1014`**. `#1014` cannot precede `#1015` — it logs chatbot
+  - **The whole chatbot programme is `High` / `P10` on the board:** `#1012`/`#1013` and
+    `#1016`/`#1017` now closed; `#1014`, `#1015`, `#1021` and `#1022` remain High (`#1023` is not).
+  - Approved sequencing: slice 2 (`#1016`+`#1017`) is done; **slice 3 = `#1015`+`#1014`** is next
+    for the chatbot itself, gated on `#1021`'s owner content. `#1014` cannot precede `#1015` — it logs chatbot
     conversations, and until the bot exists there are none.
   - **`#1021` is the real blocker on `#1015`, and it is owner work, not code.** `#1012` ships the
     table, the editor and the rendering; the answers are vendor content `ADR-004`/`#239` forbid the
     platform writing, and none is seeded. An empty corpus makes a chatbot ship inert — the `#697`
     shape, except user-visible, because a shopper opens the chat and gets nothing.
-  - **`#1022` is OPEN again** — see Last Verified above for why, and Risks And Blockers for what
-    actually remains on it. The immediate production defect (an internal operations document
-    rendering on the public `/help` route) shipped its correction with this slice; the durable rule
-    (`audience` says who it is relevant to, `visibility: public` is the only field that says it may
-    leave the building) is recorded in `docs/developer-portal/app-conventions.md` 1.7.0.
+  - **`#1022` was reopened** after this slice's promotion auto-closed it (see Last Verified). Its
+    remaining work, the mechanical guard and selection by id, is now on staging in PR #1036; see the
+    entry above.
   - The dev-DB migration workaround this slice used (`#895` still blocks `prisma migrate dev
     --create-only`) is the same recipe prior slices have used; staging and production got the
     migration from CI as normal.
@@ -1260,38 +1285,17 @@ Board Phase and GitHub milestone disagreed for #151, #422, #589, #602, #695, #69
 These are separate from, not a silent reordering of, the owner's High priorities:
 
 - Hard launch inputs: #113 production Stripe live keys and #104 verified Resend sending domain.
-- **AI features already in production carry two findings from the ninth Discover pass (2026-10-10,
-  PR #1018), promoted to `main` by PR #1019 as research only — neither is acted on.** They are
-  listed here, not left solely in `docs/research/discovery-log.md`, because they describe shipped
-  production code rather than prospective scope:
-  - **#1016** — `lib/list-normalisation.ts:37` and `lib/search-synonym-proposals.ts:31` hardcode
-    `@cf/meta/llama-3.1-8b-instruct`, deprecated by Cloudflare 2026-05-30 and absent from the
-    70-model catalogue, and neither site is env-overridable. **Investigated as a suspected
-    four-month silent outage and DISPROVED by live verification** — a real inference call still
-    returns `success: true`, so `/shop-your-list`'s AI pre-pass works today and `#591` stays
-    conditional. The exposure is the undated future withdrawal, which `lib/list-normalisation.ts`
-    is documented to degrade through **invisibly**. The pass measured five replacements: `-fp8`
-    (the entry's own first pick) is disqualified at 9.7s against a 6000ms timeout, and
-    `gemma-4-26b-a4b-it` is the validated successor pending a timeout decision at `/propose`.
-  - **#1017** — every Workers AI call uses one platform-level credential (`getAiEnv()`,
-    `lib/config.ts:158-164`), so the 10,000-neuron daily free allowance is a shared, unmetered,
-    unattributed commons. On the Workers **Free** plan one vendor exhausting it stops **every**
-    vendor's AI features until 00:00 UTC — the same starvation shape as #619. `neuronsForCall()`
-    is the metering seam, and the repo's dated rate table reconciles exactly with current
-    published prices.
-- **Two findings from the `#1013`/`#1012` slice's own `/validate` (2026-10-10), promoted to `main`
-  by PR #1025 as research/defect reports, neither acted on beyond filing:**
-  - **#1023** — `components/rewards/RewardsLauncher.tsx`, mounted unconditionally in
-    `components/layout/StorefrontChrome.tsx:72`, renders a floating "Rewards" button with
-    `aria-label="Open rewards and loyalty panel"` on every vendor's every page regardless of
-    `loyaltyEnabled` — confirmed live on SriMart (loyalty off) in production. Pre-existing
-    (`#729`/`#836`), not part of that slice's diff; same defect class `#1013` fixed for the Help
-    Centre itself, just in sitewide chrome instead of one page.
-  - **#1022's real follow-up, still open**: nothing mechanically stops the next internal KMS
-    article from reaching a public surface (no guard equivalent to
-    `tests/operator-doc-coverage.test.ts` for the public direction), and `/help`'s
-    `shopperDocs[0]` is still an index into an array, correct today only because exactly one public
-    shopper article exists. The immediate defect this issue reported already shipped its fix.
+- **Workers AI is metered per vendor in production since PR #1033 (`#1016`, `#1017`), but still
+  runs on one account credential and one daily pool**, and the default model is still the
+  deprecated `llama-3.1-8b-instruct` (now overridable by env; the switch is `#1027`). A failing
+  `/shop-your-list` model now writes an `ErrorEvent`. **`#1028` is owner work**: nobody has confirmed whether
+  the account is on the Workers Free or Paid plan, which decides whether an exhausted pool stops
+  every vendor's AI (Free) or bills the platform without attribution (Paid) — the per-vendor budget
+  is safe either way. `#591` stays conditional: the model still answers today.
+- **Production still has both `#1022` and `#1023` until PR #1036 is promoted**: SriMart (loyalty
+  off) shows the floating Rewards launcher, whose panel links to a 404 `/account/loyalty`, and
+  nothing mechanically stops an internal KMS article reaching a public page. Both fixes are on
+  staging (In-Flight Work).
 - Security/operations: #219 and #175 credential rotations; #436 demonstrated restore; #437 outbound
   alert delivery; #438 tested rollback; #246 persisted-log confirmation.
 - Reproduced or live defects: #236 rapid cart-mutation ceiling, #689 repeated query parameters

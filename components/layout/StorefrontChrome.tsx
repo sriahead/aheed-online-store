@@ -69,7 +69,15 @@ export async function StorefrontChrome({
           />
           <CookieBanner />
           <QuickViewDrawer />
-          <RewardsLauncher initialData={initialRewardsData} vendorName={profile.name} />
+          {/*
+            #1023 — only for a vendor that runs a loyalty scheme. With loyalty off the panel still
+            promised points and linked to `/account/loyalty`, which 404s. This also stops `?ref=`
+            capture for that vendor, deliberately: referral codes are only issued from loyalty
+            surfaces, so such a vendor has none to capture.
+          */}
+          {initialRewardsData.loyaltyEnabled && (
+            <RewardsLauncher initialData={initialRewardsData} vendorName={profile.name} />
+          )}
         </CartFeedbackProvider>
       </div>
     </QuickViewProvider>
