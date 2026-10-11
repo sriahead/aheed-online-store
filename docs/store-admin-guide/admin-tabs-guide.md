@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.7.0"
-updated: "2026-10-02"
+version: "2.8.0"
+updated: "2026-10-11"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -207,7 +207,43 @@ Answers are per shop: what you write here is never shown on another store on thi
 
 **What happens after changes are saved:** The answer appears on, or disappears from, your Help
 Centre page immediately. Hiding the last active answer removes the whole questions section from
-that page rather than leaving an empty heading.
+that page rather than leaving an empty heading. Active answers also appear in the help assistant
+when it is switched on (see **Help Assistant** below), from the next time a shopper opens it.
+
+## Help Assistant — `/staff/assistant`
+
+**Purpose:** A guided help assistant on your storefront, and a report of what shoppers ask it. A
+shopper picks a topic and sees the answer, or taps through to message you on WhatsApp with a short
+summary of what they picked. It answers from your own settings and your Help Centre answers only;
+it does not make anything up, and shoppers cannot type into it.
+
+**Who can access:** Store admins only
+
+**What you can do:** Switch the help assistant on or off for your storefront with **Show the help
+assistant** and **Save**. Read how many conversations it had in the last 90 days, how many were
+answered, handed off to WhatsApp or left without an answer, the same split for each topic, and the
+ten questions most often handed off.
+
+**Typical workflow:** Make sure your WhatsApp number is set on the Storefront page, then switch the
+assistant on. After a few weeks, read the report: a question that keeps being handed off is one
+shoppers want answered, so add an answer for it on **Help Centre Answers**. The assistant picks it up
+the next time a shopper opens it.
+
+**Important fields and filters:** The assistant offers delivery charges and minimums, discount
+codes, where an order is, swapping an item, cancelling a paid order and "something else" in every
+store. It adds Click & Collect only if you offer collection, rewards only if your loyalty scheme is
+on, and one entry for each of your active Help Centre answers. Swapping an item and cancelling a paid
+order always go to WhatsApp, because neither can be done through this site. A signed-in shopper can
+pick one of their own recent orders to mention; its order number is the only order detail sent.
+
+**Common mistakes and limitations:** With no WhatsApp number, the assistant stays hidden even when
+switched on, and this page says so. The WhatsApp message is a starting point the shopper can edit,
+not a copy of the conversation. The report shows topics and outcomes, never who asked: no
+conversation is linked to a shopper's name or account, and each is deleted after 90 days.
+
+**What happens after changes are saved:** The help assistant appears on, or disappears from, your
+storefront's contact button on the next page a shopper loads. The report updates as conversations
+happen.
 
 ## Delivery areas — `/staff/delivery-areas`
 

@@ -66,6 +66,8 @@ export async function StorefrontChrome({
             facebookUrl={profile.facebookUrl}
             instagramUrl={profile.instagramUrl}
             whatsappNumber={profile.whatsappNumber}
+            // #1015 — from the profile already loaded above: no query added to the page render.
+            assistantAvailable={profile.assistantEnabled && profile.whatsappNumber !== null}
           />
           <CookieBanner />
           <QuickViewDrawer />
