@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.88.0"
+version: "1.89.0"
 updated: 2026-10-11
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,25 +40,31 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-10-11.
-- **`main` is at `dadca17`** (full `dadca173535d46a039ddbf9d610535c6cece1450`), the PR #1039
-  promotion (`staging -> main`, 2026-10-11): the public docs boundary and the loyalty-gated Rewards
-  launcher (`#1022`/`#1023`, PR #1036, merge `3c34d95`), carrying PR #1038 (its Document pass,
-  `2516321`). No schema change, no migration. CI green on PR #1039; `deploy-production` (run
-  `38129431081`) and `deploy-docs-internal` (run `38129430939`) both **success on the first
-  attempt**. Production `/api/health` (Aheed **and** SriMart) serves `dadca17`, `db.ok: true`,
-  `reference.drift: false`. **`origin/staging` is ahead of `origin/main`** by this promotion
-  record (PR #1040) and the help assistant (PR #1044, `077a9ef`, with a migration already applied
-  on staging); see In-Flight Work. Not yet promoted.
-  - **Verified live as a before/after** (production read just before the merge, then after the
-    deploy): SriMart's `Open rewards and loyalty panel` launcher went from present to **absent** on
-    `/` and `/help`; Aheed's is still **present** on both. Neither vendor's `/help` contains any of
-    the 220 `visibility: internal` titles in `ARTIFACT_INDEX.md`; both render the public Shopping
-    Guide.
-  - `closingIssuesReferences` listed exactly `[1022, 1023]`; both closed and moved to `Done`, and
-    they are the **only** issues closed since the merge.
-  - The `#983` flake failed PR #1038's merge-triggered `deploy-staging` (docs-only, and the same
-    tree had just passed the PR check); `gh run rerun --failed` cleared it.
+- **`main` is at `0311425`** (full `0311425acf3ccc20770c840d1c2c495b41c59038`), the PR #1047
+  promotion (`staging -> main`, 2026-10-11): chatbot slice 3, the guided help assistant, WhatsApp
+  handoff and conversation log (`#1015`/`#1014`, PR #1044, merge `077a9ef`), carrying PR #1040 (the
+  `#1022`/`#1023` promotion record) and PR #1046 (this slice's Document pass, `5812184`). **One
+  additive migration** (`20261011120000_p1015_1014_help_assistant`, no `DROP`), now applied in
+  production (the run's log names it). CI green on PR #1047; `deploy-production` (run
+  `38156203995`) and `deploy-docs-internal` (run `38156203806`) both **success on the first
+  attempt**. Production `/api/health` (Aheed **and** SriMart) serves `0311425`, `db.ok: true`,
+  `reference.drift: false`. **`origin/main` and `origin/staging` are level** apart from this
+  promotion record's own docs PR.
+  - **Verified live as a before/after** (production read just before the PR, then after the
+    deploy), on both vendors: commit `dadca17` → `0311425`; `/privacy` gained the help-assistant
+    paragraph; `/` still has **no** `Open help assistant`, because `assistantEnabled` defaults to
+    `false` everywhere. Switching it on is an owner action at `/staff/assistant`.
+  - `closingIssuesReferences` listed exactly `[1014, 1015]`; both closed and are `Done`, and they
+    are the **only** issues closed since the merge (`#1021`, `#1041`–`#1043`, `#1045` still open).
+    No promoted commit message carried a closing keyword (scanned before opening the PR).
   - Not a phase closure (`P10` stays open).
+- **Previous promotion, `dadca17`** (full `dadca173535d46a039ddbf9d610535c6cece1450`), the PR #1039
+  promotion (`staging -> main`, 2026-10-11): the public docs boundary and the loyalty-gated Rewards
+  launcher (`#1022`/`#1023`, PR #1036, merge `3c34d95`), carrying PR #1038. No migration.
+  `deploy-production` (run `38129431081`) **success on the first attempt**. Verified live as a
+  before/after: SriMart's Rewards launcher went from present to absent, Aheed's stayed, and neither
+  `/help` contains internal article titles. `closingIssuesReferences` listed exactly
+  `[1022, 1023]`.
 - **Previous promotion, `a0ea21e`** (full `a0ea21e348218a97110ccc459d7c02beef9adcaa`), the PR #1033
   promotion (`staging -> main`, 2026-10-10): chatbot prerequisites slice 2 — configurable Workers
   AI model ids, a dated degradation signal and per-vendor AI metering (`#1016`/`#1017`, PR #1032,
@@ -658,12 +664,10 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Guided help assistant + conversation log (`#1015` + `#1014`, one slice): MERGED TO STAGING,
-  NOT YET PROMOTED** (PR #1044, merge `077a9ef`, 2026-10-11). Both issues `In Review`. **Next:
-  a `staging -> main` promotion PR**; it carries a real migration
-  (`20261011120000_p1015_1014_help_assistant`, additive, no `DROP`), already applied on staging by
-  `deploy-staging` run `38140377033` (success on the first attempt). PR #1044 also carried PR
-  #1040's commit, so GitHub marked #1040 merged at the same moment. Spec, build notes:
+- **Guided help assistant + conversation log (`#1015` + `#1014`, one slice): DONE, in
+  production** (PR #1044 to `staging`, then promotion PR #1047, merge `0311425`, 2026-10-11), both
+  issues closed and `Done`. See **Last Verified** above for the production facts. **Off for every
+  vendor until an owner switches it on.** Spec, build notes:
   `specs/2026-10-11-p1015-1014-help-assistant/`.
   - **Validated from a fresh context (Opus 5.5, by owner's choice), no defect found.** Proved live
     under `npm run preview`: the three journeys log `ANSWERED`/`HANDED_OFF`/`ABANDONED`; a
@@ -672,8 +676,6 @@ All facts in this section require live verification:
     `question` field is ignored on the wire; the STAFF form replay changes nothing. **One row is
     code-read only:** `/staff/assistant`'s empty state, because the only vendor with no rows is
     SriMart, whose admin gets the known local 403 at sign-in.
-  - On staging the assistant is off for every vendor (no `Open help assistant` on `/`); `/privacy`
-    carries the new paragraph.
   - Owner's Gate 1 rulings (2026-10-11, recorded on both issues): guided topics only, **no AI and
     no free text**; answers from computed facts plus the vendor's active `VendorFaq` rows; WhatsApp
     handoff with a 300-character, PII-free summary; item swaps and paid-order cancellations always
@@ -683,9 +685,8 @@ All facts in this section require live verification:
     assistant still answers delivery, collection, rewards and discount codes from data and hands off
     the rest. `#1021` stays open and owner-gated, best written from the report once the assistant
     has run on one vendor.
-  - **After promotion nothing visible changes in production** — every vendor is off. Switching it on
-    per vendor is an owner action at `/staff/assistant` (needs a WhatsApp number; both production
-    vendors have one, read live 2026-10-11).
+  - **Owner action to turn it on:** `/staff/assistant` per vendor (needs a WhatsApp number; both
+    production vendors have one, read live 2026-10-11). Until then production shows no change.
   - Follow-ups, all `Backlog` / `P10`: `#1041` (privacy page omits the search-query log), `#1042`
     (grounded free-text answers), `#1043` (`/orders/lookup` placeholder shows Aheed's `AHE-` prefix
     on every vendor), and from Validate `#1045` (`/help` and the assistant both say points expire
@@ -724,9 +725,11 @@ All facts in this section require live verification:
   on `/staff/faqs` was driven over the real Next.js Server Actions wire protocol as a signed-in
   vendor admin, not just a standalone script.
   - **The whole chatbot programme is `High` / `P10` on the board:** `#1012`/`#1013` and
-    `#1016`/`#1017` and `#1022` now closed; `#1014`, `#1015` and `#1021` remain High.
-  - Sequencing: slice 2 (`#1016`+`#1017`) is done; **slice 3 = `#1015`+`#1014` is merged to
-    staging, awaiting promotion** (see the first entry in this section). The owner ruled on 2026-10-11 that `#1021` does **not** gate it.
+    `#1016`/`#1017`, `#1022` and `#1014`/`#1015` now closed; **only `#1021` remains High**, and it
+    is owner work.
+  - Sequencing: slices 1–3 are all in production; **slice 3 = `#1015`+`#1014` shipped 2026-10-11**
+    (see the first entry in this section). The owner ruled on 2026-10-11 that `#1021` does **not**
+    gate it.
   - **`#1021` is owner work, not code**, and none is seeded: the answers are vendor content
     `ADR-004`/`#239` forbid the platform writing. It no longer makes the chatbot inert, because the
     guided assistant also answers from computed facts; it limits coverage, not function.
