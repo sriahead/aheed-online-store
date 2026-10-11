@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.87.0"
+version: "1.88.0"
 updated: 2026-10-11
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -46,8 +46,9 @@ reconciliation. If overall project state did not materially change, leave this f
   `2516321`). No schema change, no migration. CI green on PR #1039; `deploy-production` (run
   `38129431081`) and `deploy-docs-internal` (run `38129430939`) both **success on the first
   attempt**. Production `/api/health` (Aheed **and** SriMart) serves `dadca17`, `db.ok: true`,
-  `reference.drift: false`. **`origin/main` and `origin/staging` are level** apart from this
-  promotion record's own docs PR.
+  `reference.drift: false`. **`origin/staging` is ahead of `origin/main`** by this promotion
+  record (PR #1040) and the help assistant (PR #1044, `077a9ef`, with a migration already applied
+  on staging); see In-Flight Work. Not yet promoted.
   - **Verified live as a before/after** (production read just before the merge, then after the
     deploy): SriMart's `Open rewards and loyalty panel` launcher went from present to **absent** on
     `/` and `/help`; Aheed's is still **present** on both. Neither vendor's `/help` contains any of
@@ -657,12 +658,22 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Guided help assistant + conversation log (`#1015` + `#1014`, one slice): BUILT, NOT YET
-  VALIDATED OR MERGED** (2026-10-11). Branch `feature/p1015-1014-help-assistant` (it also carries
-  PR #1040's docs commit, merged in to avoid a handoff conflict). Spec, build and build notes:
-  `specs/2026-10-11-p1015-1014-help-assistant/`. **Next stage: `/validate` from a fresh context, on
-  Sonnet 5.** Both issues `In Progress`. One additive migration, applied to dev by hand (`#895`
-  route); nothing for a validator to apply.
+- **Guided help assistant + conversation log (`#1015` + `#1014`, one slice): MERGED TO STAGING,
+  NOT YET PROMOTED** (PR #1044, merge `077a9ef`, 2026-10-11). Both issues `In Review`. **Next:
+  a `staging -> main` promotion PR**; it carries a real migration
+  (`20261011120000_p1015_1014_help_assistant`, additive, no `DROP`), already applied on staging by
+  `deploy-staging` run `38140377033` (success on the first attempt). PR #1044 also carried PR
+  #1040's commit, so GitHub marked #1040 merged at the same moment. Spec, build notes:
+  `specs/2026-10-11-p1015-1014-help-assistant/`.
+  - **Validated from a fresh context (Opus 5.5, by owner's choice), no defect found.** Proved live
+    under `npm run preview`: the three journeys log `ANSWERED`/`HANDED_OFF`/`ABANDONED`; a
+    signed-in shopper's order picker matched their five newest orders; with the switch off,
+    SriMart's three actions return `null` and write nothing when called directly; a forged
+    `question` field is ignored on the wire; the STAFF form replay changes nothing. **One row is
+    code-read only:** `/staff/assistant`'s empty state, because the only vendor with no rows is
+    SriMart, whose admin gets the known local 403 at sign-in.
+  - On staging the assistant is off for every vendor (no `Open help assistant` on `/`); `/privacy`
+    carries the new paragraph.
   - Owner's Gate 1 rulings (2026-10-11, recorded on both issues): guided topics only, **no AI and
     no free text**; answers from computed facts plus the vendor's active `VendorFaq` rows; WhatsApp
     handoff with a 300-character, PII-free summary; item swaps and paid-order cancellations always
@@ -675,9 +686,11 @@ All facts in this section require live verification:
   - **After promotion nothing visible changes in production** — every vendor is off. Switching it on
     per vendor is an owner action at `/staff/assistant` (needs a WhatsApp number; both production
     vendors have one, read live 2026-10-11).
-  - Follow-ups filed at Build, all `Backlog` / `P10`: `#1041` (privacy page omits the search-query
-    log), `#1042` (grounded free-text answers), `#1043` (`/orders/lookup` placeholder shows Aheed's
-    `AHE-` prefix on every vendor).
+  - Follow-ups, all `Backlog` / `P10`: `#1041` (privacy page omits the search-query log), `#1042`
+    (grounded free-text answers), `#1043` (`/orders/lookup` placeholder shows Aheed's `AHE-` prefix
+    on every vendor), and from Validate `#1045` (`/help` and the assistant both say points expire
+    "N months after you earn them"; `lib/loyalty.ts` `isLapsed()` lapses the whole balance after N
+    months of inactivity).
 - **Public docs boundary + loyalty-gated Rewards launcher (`#1022` + `#1023`): DONE, in
   production** (PR #1036 to `staging`, then promotion PR #1039, merge `dadca17`, 2026-10-11), both
   issues closed and `Done`. See **Last Verified** above for the production facts. Spec and build
@@ -712,8 +725,8 @@ All facts in this section require live verification:
   vendor admin, not just a standalone script.
   - **The whole chatbot programme is `High` / `P10` on the board:** `#1012`/`#1013` and
     `#1016`/`#1017` and `#1022` now closed; `#1014`, `#1015` and `#1021` remain High.
-  - Sequencing: slice 2 (`#1016`+`#1017`) is done; **slice 3 = `#1015`+`#1014` is built** (see the
-    first entry in this section). The owner ruled on 2026-10-11 that `#1021` does **not** gate it.
+  - Sequencing: slice 2 (`#1016`+`#1017`) is done; **slice 3 = `#1015`+`#1014` is merged to
+    staging, awaiting promotion** (see the first entry in this section). The owner ruled on 2026-10-11 that `#1021` does **not** gate it.
   - **`#1021` is owner work, not code**, and none is seeded: the answers are vendor content
     `ADR-004`/`#239` forbid the platform writing. It no longer makes the chatbot inert, because the
     guided assistant also answers from computed facts; it limits coverage, not function.
