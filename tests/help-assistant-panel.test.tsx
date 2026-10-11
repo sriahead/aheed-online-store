@@ -114,6 +114,33 @@ describe("dialog accessibility (R28)", () => {
   });
 });
 
+describe("WhatsApp is reached through the assistant (#1051)", () => {
+  function renderContact(assistantAvailable: boolean) {
+    render(
+      <FloatingContact
+        vendorName={VENDOR}
+        facebookUrl={null}
+        instagramUrl={null}
+        whatsappNumber={NUMBER}
+        assistantAvailable={assistantAvailable}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: `Contact and follow ${VENDOR}` }));
+  }
+
+  it("hides the direct WhatsApp link when the assistant is available", () => {
+    renderContact(true);
+    expect(screen.getByRole("button", { name: "Open help assistant" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: `Message ${VENDOR} on WhatsApp` })).toBeNull();
+  });
+
+  it("keeps the direct WhatsApp link when the assistant is off", () => {
+    renderContact(false);
+    expect(screen.queryByRole("button", { name: "Open help assistant" })).toBeNull();
+    expect(screen.getByRole("link", { name: `Message ${VENDOR} on WhatsApp` })).toBeTruthy();
+  });
+});
+
 describe("answer links close the panel (#1049 R1-R4)", () => {
   it("closes on following an answer link, returns focus, and records no extra outcome", async () => {
     await openPanel();
