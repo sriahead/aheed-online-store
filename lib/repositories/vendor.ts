@@ -105,6 +105,11 @@ export interface VendorProfile {
   freeDeliveryThresholdPence: number | null;
   minimumOrderPence: number;
   offerCollection: boolean;
+  /**
+   * #1015 — the guided help assistant's switch, read in this same query so the storefront render
+   * gains no database read for it. It renders only when `whatsappNumber` is also set.
+   */
+  assistantEnabled: boolean;
   id: string;
   bookingWindowDays: number;
   slotHoldDurationMinutes: number;
@@ -185,6 +190,7 @@ export async function fetchVendorProfile(
           freeDeliveryThresholdPence: true,
           minimumOrderPence: true,
           offerCollection: true,
+          assistantEnabled: true,
           bookingWindowDays: true,
           slotHoldDurationMinutes: true,
           offerDeliverySlots: true,
@@ -256,6 +262,7 @@ export async function fetchVendorProfile(
     freeDeliveryThresholdPence: vendor?.config?.freeDeliveryThresholdPence ?? null,
     minimumOrderPence: vendor?.config?.minimumOrderPence ?? 0,
     offerCollection: vendor?.config?.offerCollection ?? false,
+    assistantEnabled: vendor?.config?.assistantEnabled ?? false,
     id: vendorId,
     bookingWindowDays: vendor?.config?.bookingWindowDays ?? 14,
     slotHoldDurationMinutes: vendor?.config?.slotHoldDurationMinutes ?? 15,
@@ -272,6 +279,26 @@ export async function fetchVendorProfile(
 
 export async function getVendorConfig(prisma: ReturnType<typeof getPrisma>, vendorId: string) {
   return prisma.vendorConfig.findUnique({ where: { vendorId } });
+}
+
+/**
+ * #1015 — the help assistant's switch, owned by `/staff/assistant` alone. A singular, childless
+ * `update` keyed on the vendor's own config row, so it runs over `getPrisma()` with no transaction
+ * and can only ever touch this vendor. Returns the number of rows changed (0 for an unseeded
+ * vendor with no config row).
+ */
+export async function setVendorAssistantEnabled(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  enabled: boolean,
+): Promise<number> {
+  const existing = await prisma.vendorConfig.findUnique({
+    where: { vendorId },
+    select: { id: true },
+  });
+  if (!existing) return 0;
+  await prisma.vendorConfig.update({ where: { vendorId }, data: { assistantEnabled: enabled } });
+  return 1;
 }
 
 export async function getVendorBranding(prisma: ReturnType<typeof getPrisma>, vendorId: string) {

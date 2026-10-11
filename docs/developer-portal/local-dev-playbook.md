@@ -4,7 +4,7 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.24.0"
+version: "1.25.0"
 updated: 2026-10-11
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
@@ -344,6 +344,15 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   **Default to a Node `fetch()` script for any request against a real (non-`:8787`) host on this
   platform**, not just uploads; fall back to curl only for the local preview server, where it
   still works.
+- **The reverse holds against `npm run preview`: Node's `fetch()` cannot target a vendor there.**
+  Every local vendor shares `127.0.0.1:8787` and is told apart only by the `Host` header, and
+  Node's `fetch` (undici) does not send a caller-supplied `Host` — it is dropped without an error. So
+  `fetch("http://127.0.0.1:8787/api/auth/sign-in/email", { headers: { host: "localhost:8787" } })`
+  never reaches the intended vendor, and a sign-in that works in the browser fails with no useful
+  message. Hit at `#1015`'s Build (2026-10-11): every Node sign-in failed while
+  `curl -H "Host: localhost:8787" … http://127.0.0.1:8787/api/auth/sign-in/email` returned 200 for
+  the same account. **Locally, use `curl -H "Host: <vendor-host>"` with a cookie jar** (the
+  pattern in the section above); keep Node `fetch` for real hosts.
 - **A `tsx` script placed outside the repo (e.g. this session's scratchpad directory on a
   different drive) cannot resolve `node_modules` — `Cannot find module '@prisma/client'` even
   though it's installed.** Node's `require`/import resolution walks up from the *script's own*

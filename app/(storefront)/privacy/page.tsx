@@ -85,6 +85,15 @@ export default async function PrivacyPage() {
             You can change or replace your feedback at any time, and erasing your data removes it
             entirely.
           </p>
+          {/* #1014 — the help assistant's log. Not personal data by design (no user link), but a
+              shopper is still entitled to know it exists and how long it lasts. */}
+          <p className="text-sm text-primary-muted leading-relaxed">
+            <strong>The help assistant.</strong> If a store offers a help assistant and you use it,
+            we record the topic you chose and whether it was answered or passed to the store on
+            WhatsApp, together with a scrambled (hashed) form of your network address so the
+            assistant cannot be flooded. This record is not linked to your name or your account, and
+            it is deleted after 90 days.
+          </p>
         </section>
 
         <section className="space-y-2">

@@ -39,7 +39,7 @@ export default async function FaqsAdminPage() {
       <p className="mb-8 max-w-2xl text-sm text-black/60">
         Delivery charges, minimums, collection and loyalty are already answered on your Help Centre
         from your own settings, so you do not need to repeat them here. Add anything else shoppers
-        ask you.
+        ask you. Active answers also appear in the help assistant when it is switched on.
       </p>
       <FaqManager faqs={faqs} />
     </main>
