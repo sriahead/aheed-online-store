@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-11T18:04:07.676Z` · commit `f47356a` · `222` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-11T18:11:13.062Z` · commit `a3fed7a` · `223` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -217,6 +217,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Configurable Workers AI models, a dated degradation signal, and per-vendor AI metering (plan)](specs/2026-10-10-p1016-1017-ai-model-config-metering/plan.md) | spec | 1.0.0 | 2026-10-10 | draft | internal | Makes the two hardcoded Workers AI model ids configurable, makes the shop-your-list AI pre-pass write an ErrorEvent when the model stops answering, and meters every AI call per vendor against a per-vendor daily neuron budget. |
 | [Public docs boundary and loyalty-gated Rewards launcher (plan)](specs/2026-10-10-p1022-1023-public-docs-rewards-gate/plan.md) | spec | 1.0.0 | 2026-10-10 | draft | internal | Makes the public Help Centre select its shopper guide by id through one visibility-checked helper, guards that no other storefront path can import the internal docs corpus, and hides the floating Rewards launcher for vendors with loyalty off. |
 | [Guided help assistant with WhatsApp handoff and conversation logging (plan)](specs/2026-10-11-p1015-1014-help-assistant/plan.md) | spec | 1.0.0 | 2026-10-11 | draft | internal | #1015 + #1014 as one slice: a per-vendor guided help assistant (off by default) answering from computed facts and active FAQs, handing off to WhatsApp with a bounded summary, logging topic and outcome without a user link. |
+| [Help assistant links, WhatsApp via the assistant, Help Centre contact card (plan)](specs/2026-10-11-p1049-assistant-link-close/plan.md) | spec | 1.0.0 | 2026-10-11 | draft | internal | Closes the help assistant when an in-panel link is followed, routes WhatsApp through the assistant while it is on, and adds a Help Centre card that opens the assistant or falls back to WhatsApp. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.39.0 | 2026-10-06 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
