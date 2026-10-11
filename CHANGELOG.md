@@ -41,6 +41,10 @@ every branch merges.
 
 ### Changed
 
+- **Document-stage reconciliation for PR #1044 (`#1015`, `#1014` merged to staging, merge `077a9ef`).** Docs only.
+  - `specs/roadmap.md` 1.145.0: the change-log row for the staging merge. It records the migration applied on staging by `deploy-staging` (run `38140377033`), the live validation, the one code-read-only row (`/staff/assistant`'s empty state; SriMart's admin hits the local 403) and that PR #1044 also carried PR #1040's commit, so GitHub marked #1040 merged.
+  - `docs/model-handoff.md` 1.88.0: the In-Flight entry moves to "merged to staging, not yet promoted", with the promotion carrying a migration; `origin/staging` is recorded ahead of `origin/main`; follow-up `#1045` added.
+  - New issue `#1045` (Backlog / P10), found at Validate: `/help` and the help assistant both say points expire "N months after you earn them", but `lib/loyalty.ts` `isLapsed()` lapses the whole balance after N months with no account activity.
 - **Promotion record for PR #1039 (`#1022`, `#1023` promoted to production, merge `dadca17`).** Docs only.
   - `specs/roadmap.md` 1.144.0: the promotion row. CI green on PR #1039; `deploy-production` and `deploy-docs-internal` both **success on the first attempt**; production `/api/health` serves `dadca17` on Aheed **and** SriMart with `db.ok: true`. Verified live as a before/after: SriMart's Rewards launcher absent on `/` and `/help` (present before the merge), Aheed's still present, and neither vendor's `/help` carries any `visibility: internal` article title. `closingIssuesReferences` was exactly `[1022, 1023]`; both closed, and no other issue closed.
   - `docs/model-handoff.md` 1.86.0: `main` is `dadca17`; the `#1022`/`#1023` entry moved to done and its Risks line removed.
