@@ -172,6 +172,7 @@ model Vendor {
   bindingRefusals           PaymentBindingRefusal[]
   paymentReconciliations    PaymentReconciliation[]
   searchQueryLogs           SearchQueryLog[]
+  assistantConversations    AssistantConversation[]
   searchSynonyms            SearchSynonym[]
   netContentSuggestions     NetContentSuggestion[]
   listNormalisationAttempts ListNormalisationAttempt[]
@@ -476,6 +477,10 @@ model VendorConfig {
   // no backfill, and loyaltyEnabled defaults OFF so the feature ships dark for any
   // vendor that hasn't opted in.
   loyaltyEnabled             Boolean            @default(false)
+  // #1015 — the guided help assistant. OFF by default for the same reason loyalty is: it ships
+  // dark everywhere, and a store admin turns it on at /staff/assistant. It renders only when
+  // whatsappNumber is also set, because the WhatsApp handoff is half of what it does.
+  assistantEnabled           Boolean            @default(false)
   bookingWindowDays          Int                @default(14)
   slotHoldDurationMinutes    Int                @default(15)
   offerDeliverySlots         Boolean            @default(false)
@@ -1760,6 +1765,52 @@ model SearchQueryLog {
 
   @@index([vendorId, directResultCount, createdAt])
   @@index([vendorId, directNameMatch, createdAt])
+}
+
+// Help assistant conversation log (#1014, built with #1015) — one row per conversation: the
+// shopper's first choice and how the conversation ended, so a store can see which questions
+// arrive and which end in a WhatsApp handoff, and write its #1021 answers from that.
+//
+// NO USER LINK AND NO ORDER NUMBER, deliberately, on SearchQueryLog's #570 precedent: vendorId plus
+// a hashed IP serves the purpose (what is asked, how often it escalates) without making the table
+// personal data in lib/repositories/data-rights.ts's export/erasure scope.
+//
+// openingQuestion is NEVER shopper-written. features/assistant/assistant.ts derives it on the
+// server — the platform's fixed label for a topic, or the vendor's own active VendorFaq question —
+// so no client can put free text in this column. It is a snapshot rather than a VendorFaq relation
+// so a store can edit or delete a question without rewriting what was logged.
+enum AssistantTopic {
+  DELIVERY
+  COLLECTION
+  REWARDS
+  DISCOUNT_CODES
+  STORE_QUESTION
+  ORDER_STATUS
+  ITEM_SWAP
+  CANCEL_PAID_ORDER
+  OTHER
+}
+
+/// ABANDONED until an answer is shown (ANSWERED) or the handoff is tapped (HANDED_OFF, terminal).
+enum AssistantOutcome {
+  ANSWERED
+  HANDED_OFF
+  ABANDONED
+}
+
+model AssistantConversation {
+  id              String           @id @default(uuid())
+  vendorId        String
+  vendor          Vendor           @relation(fields: [vendorId], references: [id])
+  topic           AssistantTopic
+  openingQuestion String
+  outcome         AssistantOutcome @default(ABANDONED)
+  ipHash          String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([vendorId, createdAt])
+  @@index([vendorId, ipHash, createdAt])
 }
 
 enum SearchSynonymStatus {

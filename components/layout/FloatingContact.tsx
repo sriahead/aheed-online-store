@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { MessageCircle, Share2, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { HelpCircle, MessageCircle, Share2, X } from "lucide-react";
+import { HelpAssistant } from "@/components/assistant/HelpAssistant";
 
 /**
  * Floating per-vendor contact cluster (P9.2, #407 / #405).
@@ -85,13 +86,27 @@ export function FloatingContact({
   facebookUrl,
   instagramUrl,
   whatsappNumber,
+  assistantAvailable,
 }: {
   vendorName: string;
   facebookUrl: string | null;
   instagramUrl: string | null;
   whatsappNumber: string | null;
+  /**
+   * #1015 — `assistantEnabled` and a WhatsApp number, computed by `StorefrontChrome` from the
+   * profile it already loaded. When true, the disclosure gains a help-assistant control.
+   */
+  assistantAvailable: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const assistantTrigger = useRef<HTMLButtonElement>(null);
+
+  function closeAssistant() {
+    setAssistantOpen(false);
+    // Back to the control that opened it; the disclosure stays open so that control is visible.
+    assistantTrigger.current?.focus();
+  }
 
   if (!facebookUrl && !instagramUrl && !whatsappNumber) return null;
 
@@ -111,6 +126,19 @@ export function FloatingContact({
               : "pointer-events-none translate-y-2 opacity-0"
           }`}
         >
+          {assistantAvailable && (
+            <button
+              ref={assistantTrigger}
+              type="button"
+              onClick={() => setAssistantOpen(true)}
+              aria-label="Open help assistant"
+              aria-haspopup="dialog"
+              tabIndex={open ? undefined : -1}
+              className={LINK_CLASS}
+            >
+              <HelpCircle className="h-5 w-5" aria-hidden="true" />
+            </button>
+          )}
           {whatsappNumber && (
             <a
               href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`}
@@ -165,6 +193,10 @@ export function FloatingContact({
           )}
         </button>
       </div>
+      {/* Mounted only while open: each open is a fresh conversation (#1014). */}
+      {assistantAvailable && assistantOpen && (
+        <HelpAssistant vendorName={vendorName} onClose={closeAssistant} />
+      )}
     </div>
   );
 }

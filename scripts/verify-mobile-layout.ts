@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 /**
  * Measure the storefront at real phone and tablet widths:
- * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location] [--open-filters] [--open-cart] [--open-quick-view] [--block-urls <pattern>] [--sign-in <email>:<password>]`.
+ * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>]`.
  *
  * ## Why this exists (#960, #961, #962)
  *
@@ -67,6 +67,9 @@ import { join } from "node:path";
  *   `--add-first`.
  * - `--open-quick-view`: clicks the first card's `Quick view …` button and waits up to 10 s for
  *   `[data-tap-surface="quick-view-close"]` to show, then 1 s more for its content.
+ * - `--open-help-assistant` (#1015): opens the floating contact disclosure, clicks `Open help
+ *   assistant`, and waits up to 10 s for the panel (`[data-help-assistant]`) to show, then 1 s more
+ *   for its content to load. The assistant must be switched on for the vendor, with a WhatsApp number.
  * - `--block-urls <pattern>`: blocks matching requests with `Network.setBlockedURLs` before the first
  *   navigation (pass `<cdnBase>/*` to make every stored image fail). Before measuring each width it
  *   sets `loading="eager"` on every `img` and waits 2 s, so lazy images are requested too.
@@ -106,6 +109,7 @@ interface Args {
   openFilters: boolean;
   openCart: boolean;
   openQuickView: boolean;
+  openHelpAssistant: boolean;
   blockUrls: string | null;
   signIn: { email: string; password: string } | null;
 }
@@ -123,6 +127,7 @@ function parseArgs(argv: string[]): Args {
   const openFilters = argv.includes("--open-filters");
   const openCart = argv.includes("--open-cart");
   const openQuickView = argv.includes("--open-quick-view");
+  const openHelpAssistant = argv.includes("--open-help-assistant");
   const blockUrls = value("--block-urls") ?? null;
   // #981 — `--sign-in <email>:<password>`. The password may itself contain `:`, so split on the
   // FIRST colon only.
@@ -148,7 +153,7 @@ function parseArgs(argv: string[]): Args {
     (argv.includes("--sign-in") && signIn === null)
   ) {
     console.error(
-      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location] [--open-filters] [--open-cart] [--open-quick-view] [--block-urls <pattern>] [--sign-in <email>:<password>]",
+      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>]",
     );
     process.exit(2);
   }
@@ -177,6 +182,7 @@ function parseArgs(argv: string[]): Args {
     openFilters,
     openCart,
     openQuickView,
+    openHelpAssistant,
     blockUrls,
     signIn,
   };
@@ -490,6 +496,21 @@ const OPEN_CART = `(() => {
   return true;
 })()`;
 
+/**
+ * #1015 — opens the floating contact disclosure, then the help assistant from inside it; false when
+ * the page has no help-assistant control (the assistant is off, or the vendor has no WhatsApp).
+ */
+const OPEN_HELP_ASSISTANT = `(() => {
+  const trigger = [...document.querySelectorAll("button[aria-controls]")].find((b) =>
+    (b.getAttribute("aria-label") || "").startsWith("Contact and follow"),
+  );
+  if (trigger && trigger.getAttribute("aria-expanded") !== "true") trigger.click();
+  const button = document.querySelector('button[aria-label="Open help assistant"]');
+  if (!button) return false;
+  button.click();
+  return true;
+})()`;
+
 /** #979 — clicks the first card's Quick View button; false when there is none. */
 const OPEN_QUICK_VIEW = `(() => {
   const card = document.querySelector("[data-product-grid]")?.children[0];
@@ -673,6 +694,14 @@ async function main() {
           throw new Error("--open-quick-view: no Quick view button in the first card");
         }
         await waitDisplayed('[data-tap-surface="quick-view-close"]', 10_000, "--open-quick-view");
+        await sleep(1000);
+      }
+
+      if (args.openHelpAssistant) {
+        if (!(await cdp.evaluate<boolean>(OPEN_HELP_ASSISTANT))) {
+          throw new Error("--open-help-assistant: no help-assistant control on the page");
+        }
+        await waitDisplayed("[data-help-assistant]", 10_000, "--open-help-assistant");
         await sleep(1000);
       }
 
