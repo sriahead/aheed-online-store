@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 /**
  * #1013 — `/help` states this vendor's own delivery and loyalty facts, and states nothing about
@@ -65,6 +65,14 @@ const state = {
   tiers: [] as unknown[],
   faqs: [] as unknown[],
 };
+
+// #1052 — the contact card mounts the help assistant, whose server actions must not run here.
+vi.mock("@/lib/db", () => ({ getPrisma: vi.fn(), getPrismaWs: vi.fn() }));
+vi.mock("@/features/assistant/assistant", () => ({
+  loadAssistantContent: vi.fn(async () => null),
+  startAssistantConversation: vi.fn(async () => null),
+  recordAssistantOutcome: vi.fn(async () => null),
+}));
 
 vi.mock("@/lib/auth-rbac", () => ({
   requireVendorRole: async () => ({ ok: false, status: 403 }),
@@ -268,5 +276,38 @@ describe("/help shopper guide (#1022)", () => {
     expect(text).toMatch(/Guest Checkout/);
     expect(text).not.toMatch(/PENDING_PAYMENT/);
     expect(text).not.toMatch(/Known Trap/);
+  });
+});
+
+describe("/help contact card (#1052)", () => {
+  const CONTACT = { name: "Test Store", whatsappNumber: "447700900000" };
+
+  it("opens the help assistant when it is available, with no direct WhatsApp link", async () => {
+    state.profile = { ...SRIMART_PROFILE, ...CONTACT, assistantEnabled: true };
+    await renderHelp();
+    expect(screen.getByRole("heading", { name: "Still need help?" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /on WhatsApp/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Open the help assistant" }));
+    expect(await screen.findByRole("dialog", { name: "Help from Test Store" })).toBeTruthy();
+  });
+
+  it("links straight to WhatsApp when the assistant is off", async () => {
+    state.profile = { ...SRIMART_PROFILE, ...CONTACT, assistantEnabled: false };
+    await renderHelp();
+    expect(screen.queryByRole("button", { name: "Open the help assistant" })).toBeNull();
+    const link = screen.getByRole("link", { name: "Message Test Store on WhatsApp" });
+    expect(link.getAttribute("href")).toMatch(/^https:\/\/wa\.me\/447700900000\?text=/);
+    expect(link.getAttribute("target")).toBe("_blank");
+  });
+
+  it("renders no contact card for a store with no WhatsApp number", async () => {
+    state.profile = {
+      ...SRIMART_PROFILE,
+      name: "Test Store",
+      whatsappNumber: null,
+      assistantEnabled: true,
+    };
+    await renderHelp();
+    expect(screen.queryByRole("heading", { name: "Still need help?" })).toBeNull();
   });
 });

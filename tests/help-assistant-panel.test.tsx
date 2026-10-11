@@ -114,6 +114,61 @@ describe("dialog accessibility (R28)", () => {
   });
 });
 
+describe("WhatsApp is reached through the assistant (#1051)", () => {
+  function renderContact(assistantAvailable: boolean) {
+    render(
+      <FloatingContact
+        vendorName={VENDOR}
+        facebookUrl={null}
+        instagramUrl={null}
+        whatsappNumber={NUMBER}
+        assistantAvailable={assistantAvailable}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: `Contact and follow ${VENDOR}` }));
+  }
+
+  it("hides the direct WhatsApp link when the assistant is available", () => {
+    renderContact(true);
+    expect(screen.getByRole("button", { name: "Open help assistant" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: `Message ${VENDOR} on WhatsApp` })).toBeNull();
+  });
+
+  it("keeps the direct WhatsApp link when the assistant is off", () => {
+    renderContact(false);
+    expect(screen.queryByRole("button", { name: "Open help assistant" })).toBeNull();
+    expect(screen.getByRole("link", { name: `Message ${VENDOR} on WhatsApp` })).toBeTruthy();
+  });
+});
+
+describe("answer links close the panel (#1049 R1-R4)", () => {
+  it("closes on following an answer link, returns focus, and records no extra outcome", async () => {
+    await openPanel();
+    fireEvent.click(screen.getByRole("button", { name: "Where is my order?" }));
+    await settle();
+    expect(recordAssistantOutcome).toHaveBeenCalledTimes(1);
+
+    const link = screen.getByRole("link", { name: "Look up an order" });
+    expect(link.getAttribute("href")).toBe("/orders/lookup");
+    fireEvent.click(link);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Open help assistant" }),
+    );
+    await settle();
+    expect(recordAssistantOutcome).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the panel open when the WhatsApp handoff is followed", async () => {
+    await openPanel();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel an order I've paid for" }));
+    fireEvent.click(screen.getByRole("link", { name: /Message the store on WhatsApp/ }));
+    await settle();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+});
+
 describe("one conversation per open panel (R29)", () => {
   it("starts once, marks ANSWERED once, HANDED_OFF once, and starts again after reopening", async () => {
     await openPanel();

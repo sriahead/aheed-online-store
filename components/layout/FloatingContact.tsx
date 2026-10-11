@@ -12,6 +12,10 @@ import { HelpAssistant } from "@/components/assistant/HelpAssistant";
  * rather than falling back to a platform account (#239). A vendor with nothing configured renders
  * no trigger at all — an empty disclosure would advertise links that do not exist.
  *
+ * When the help assistant is available (#1015), the direct WhatsApp link is NOT rendered (#1051):
+ * shoppers reach WhatsApp through the assistant's handoff, after it has had the chance to answer.
+ * With the assistant off, the direct link stays — it is then the only route to the store's WhatsApp.
+ *
  * ## Why a disclosure rather than three floating buttons
  *
  * Three permanently-visible controls stacked above the cart button occupied a real share of a phone
@@ -139,7 +143,8 @@ export function FloatingContact({
               <HelpCircle className="h-5 w-5" aria-hidden="true" />
             </button>
           )}
-          {whatsappNumber && (
+          {/* #1051 — with the assistant on, WhatsApp is reached through its handoff, not directly. */}
+          {whatsappNumber && !assistantAvailable && (
             <a
               href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`}
               target="_blank"

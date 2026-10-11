@@ -150,7 +150,7 @@ export function HelpAssistant({
           {status === "unavailable" && (
             <p className="text-primary-muted">
               The help assistant is not available right now. The{" "}
-              <Link href="/help" className="font-semibold underline">
+              <Link href="/help" onClick={onClose} className="font-semibold underline">
                 Help Centre
               </Link>{" "}
               has the same information.
@@ -202,7 +202,11 @@ export function HelpAssistant({
               ))}
               {entry.links.map((link) => (
                 <p key={link.href}>
-                  <Link href={link.href} className="font-semibold text-action underline">
+                  <Link
+                    href={link.href}
+                    onClick={onClose}
+                    className="font-semibold text-action underline"
+                  >
                     {link.label}
                   </Link>
                 </p>
