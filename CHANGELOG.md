@@ -36,6 +36,9 @@ every branch merges.
 
 ### Changed
 
+- **Promotion record for PR #1039 (`#1022`, `#1023` promoted to production, merge `dadca17`).** Docs only.
+  - `specs/roadmap.md` 1.144.0: the promotion row. CI green on PR #1039; `deploy-production` and `deploy-docs-internal` both **success on the first attempt**; production `/api/health` serves `dadca17` on Aheed **and** SriMart with `db.ok: true`. Verified live as a before/after: SriMart's Rewards launcher absent on `/` and `/help` (present before the merge), Aheed's still present, and neither vendor's `/help` carries any `visibility: internal` article title. `closingIssuesReferences` was exactly `[1022, 1023]`; both closed, and no other issue closed.
+  - `docs/model-handoff.md` 1.86.0: `main` is `dadca17`; the `#1022`/`#1023` entry moved to done and its Risks line removed.
 - **Document-stage reconciliation for PR #1036 (`#1022`, `#1023` merged to staging, merge `3c34d95`).** Docs only.
   - `specs/roadmap.md` 1.143.0: the change-log row for the staging merge, including the R16 fix-and-revalidate and that staging's SriMart has loyalty **on**, so `#1023`'s loyalty-off case is observable only in dev and, after promotion, production.
   - `docs/model-handoff.md` 1.85.0: In-Flight entry moved to "merged to staging, not yet promoted"; `origin/staging` recorded one PR ahead of `origin/main`; the two Risks entries `#1022`/`#1023` cover collapsed into one line.

@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.85.0"
+version: "1.86.0"
 updated: 2026-10-11
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,8 +39,26 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-10-10.
-- **`main` is at `a0ea21e`** (full `a0ea21e348218a97110ccc459d7c02beef9adcaa`), the PR #1033
+- **Date:** 2026-10-11.
+- **`main` is at `dadca17`** (full `dadca173535d46a039ddbf9d610535c6cece1450`), the PR #1039
+  promotion (`staging -> main`, 2026-10-11): the public docs boundary and the loyalty-gated Rewards
+  launcher (`#1022`/`#1023`, PR #1036, merge `3c34d95`), carrying PR #1038 (its Document pass,
+  `2516321`). No schema change, no migration. CI green on PR #1039; `deploy-production` (run
+  `38129431081`) and `deploy-docs-internal` (run `38129430939`) both **success on the first
+  attempt**. Production `/api/health` (Aheed **and** SriMart) serves `dadca17`, `db.ok: true`,
+  `reference.drift: false`. **`origin/main` and `origin/staging` are level** apart from this
+  promotion record's own docs PR.
+  - **Verified live as a before/after** (production read just before the merge, then after the
+    deploy): SriMart's `Open rewards and loyalty panel` launcher went from present to **absent** on
+    `/` and `/help`; Aheed's is still **present** on both. Neither vendor's `/help` contains any of
+    the 220 `visibility: internal` titles in `ARTIFACT_INDEX.md`; both render the public Shopping
+    Guide.
+  - `closingIssuesReferences` listed exactly `[1022, 1023]`; both closed and moved to `Done`, and
+    they are the **only** issues closed since the merge.
+  - The `#983` flake failed PR #1038's merge-triggered `deploy-staging` (docs-only, and the same
+    tree had just passed the PR check); `gh run rerun --failed` cleared it.
+  - Not a phase closure (`P10` stays open).
+- **Previous promotion, `a0ea21e`** (full `a0ea21e348218a97110ccc459d7c02beef9adcaa`), the PR #1033
   promotion (`staging -> main`, 2026-10-10): chatbot prerequisites slice 2 — configurable Workers
   AI model ids, a dated degradation signal and per-vendor AI metering (`#1016`/`#1017`, PR #1032,
   `162b38e`). **One additive migration** (`20261010150000_p1016_1017_ai_usage_metering`, no
@@ -49,8 +67,7 @@ reconciliation. If overall project state did not materially change, leave this f
   attempt**. Production `/api/health` (Aheed **and** SriMart) serves `a0ea21e`, `db.ok: true`.
   `closingIssuesReferences` listed exactly `[1016, 1017]`; both closed, and the post-promotion
   issue-state check found **no unintended closure** this time — `#1022`, `#1023` and the follow-ups
-  `#1027`–`#1031` are all still open. **`origin/staging` is now one PR ahead of `origin/main`**:
-  PR #1036 (`#1022`/`#1023`, merge `3c34d95`), awaiting its promotion PR — see In-Flight Work. Per-vendor
+  `#1027`–`#1031` are all still open. Per-vendor
   metering is live in production with every vendor on the default 3,000-neuron daily budget. Not a
   phase closure (`P10` stays open).
 - **Previous promotion, `b1dd2d4`** (full `b1dd2d4f112b231cb551e4175c3224a15f32dfc1`), the PR #1025
@@ -640,19 +657,13 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Public docs boundary + loyalty-gated Rewards launcher (`#1022` + `#1023`): MERGED TO STAGING,
-  NOT YET PROMOTED** (PR #1036, merge `3c34d95`, 2026-10-10; `deploy-staging` run `38093764375`
-  success). Both issues `In Review` and open. Spec and build notes:
-  `specs/2026-10-10-p1022-1023-public-docs-rewards-gate/`; the rule: `docs/developer-portal/app-conventions.md`
-  1.8.0. No schema change, no migration. **Next: the `staging -> main` promotion PR**, whose body
-  must carry `closes #1022` and `closes #1023` on separate lines.
-  - Validated from a fresh context. R16 failed once (the new boundary scan's 5s timeout under local
-    load) and was fixed in-branch; every row passed on the re-run from the top. Locally the full
-    suite was clean only with `--maxWorkers=6` (`#1037`); CI was green.
+- **Public docs boundary + loyalty-gated Rewards launcher (`#1022` + `#1023`): DONE, in
+  production** (PR #1036 to `staging`, then promotion PR #1039, merge `dadca17`, 2026-10-11), both
+  issues closed and `Done`. See **Last Verified** above for the production facts. Spec and build
+  notes: `specs/2026-10-10-p1022-1023-public-docs-rewards-gate/`; the rule:
+  `docs/developer-portal/app-conventions.md` 1.8.0.
   - **Staging cannot show `#1023`'s loyalty-off case: staging's SriMart has loyalty ON**, so its
-    launcher correctly renders there. The dev database and production have SriMart at loyalty off.
-    The check that matters after promotion: production `srimart.nocaped.com` `/` and `/help` must
-    no longer contain `Open rewards and loyalty panel`, and Aheed's still must.
+    launcher correctly renders there. Dev and production have SriMart at loyalty off.
   - Follow-ups, all `Backlog` / `P10`: `#1034` (rewards data, including a referral code, is still
     built on every signed-in render for loyalty-off vendors), `#1035` (what the `shopper` audience
     tag means on internal articles), `#1037` (local full-suite timeouts).
@@ -679,7 +690,7 @@ All facts in this section require live verification:
   on `/staff/faqs` was driven over the real Next.js Server Actions wire protocol as a signed-in
   vendor admin, not just a standalone script.
   - **The whole chatbot programme is `High` / `P10` on the board:** `#1012`/`#1013` and
-    `#1016`/`#1017` now closed; `#1014`, `#1015`, `#1021` and `#1022` remain High (`#1023` is not).
+    `#1016`/`#1017` and `#1022` now closed; `#1014`, `#1015` and `#1021` remain High.
   - Approved sequencing: slice 2 (`#1016`+`#1017`) is done; **slice 3 = `#1015`+`#1014`** is next
     for the chatbot itself, gated on `#1021`'s owner content. `#1014` cannot precede `#1015` — it logs chatbot
     conversations, and until the bot exists there are none.
@@ -687,9 +698,8 @@ All facts in this section require live verification:
     table, the editor and the rendering; the answers are vendor content `ADR-004`/`#239` forbid the
     platform writing, and none is seeded. An empty corpus makes a chatbot ship inert — the `#697`
     shape, except user-visible, because a shopper opens the chat and gets nothing.
-  - **`#1022` was reopened** after this slice's promotion auto-closed it (see Last Verified). Its
-    remaining work, the mechanical guard and selection by id, is now on staging in PR #1036; see the
-    entry above.
+  - **`#1022` was reopened** after this slice's promotion auto-closed it (see the `b1dd2d4` entry in
+    Last Verified). Its remaining work shipped in PR #1036/#1039; see the entry above.
   - The dev-DB migration workaround this slice used (`#895` still blocks `prisma migrate dev
     --create-only`) is the same recipe prior slices have used; staging and production got the
     migration from CI as normal.
@@ -1292,10 +1302,6 @@ These are separate from, not a silent reordering of, the owner's High priorities
   the account is on the Workers Free or Paid plan, which decides whether an exhausted pool stops
   every vendor's AI (Free) or bills the platform without attribution (Paid) — the per-vendor budget
   is safe either way. `#591` stays conditional: the model still answers today.
-- **Production still has both `#1022` and `#1023` until PR #1036 is promoted**: SriMart (loyalty
-  off) shows the floating Rewards launcher, whose panel links to a 404 `/account/loyalty`, and
-  nothing mechanically stops an internal KMS article reaching a public page. Both fixes are on
-  staging (In-Flight Work).
 - Security/operations: #219 and #175 credential rotations; #436 demonstrated restore; #437 outbound
   alert delivery; #438 tested rollback; #246 persisted-log confirmation.
 - Reproduced or live defects: #236 rapid cart-mutation ceiling, #689 repeated query parameters
