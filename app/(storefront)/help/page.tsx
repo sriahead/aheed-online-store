@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { DocumentSectionRenderer } from "@/components/ui/DocumentSectionRenderer";
 import { getPublicShopperGuide } from "@/lib/public-docs";
+import { HelpContactCard } from "@/components/assistant/HelpContactCard";
 
 export const metadata: Metadata = {
   title: "Help Centre",
@@ -120,6 +121,16 @@ export default async function HelpPage() {
             </div>
           </div>
         </section>
+      )}
+
+      {/* #1052 — the help assistant when it is on, else the store's WhatsApp, else nothing. Same
+          availability rule as `FloatingContact` in `StorefrontChrome`. */}
+      {profile && (
+        <HelpContactCard
+          vendorName={profile.name}
+          whatsappNumber={profile.whatsappNumber}
+          assistantAvailable={profile.assistantEnabled && profile.whatsappNumber !== null}
+        />
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
