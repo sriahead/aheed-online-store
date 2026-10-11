@@ -41,6 +41,9 @@ every branch merges.
 
 ### Changed
 
+- **Promotion record for PR #1047 (`#1015`, `#1014` promoted to production, merge `0311425`).** Docs only.
+  - `specs/roadmap.md` 1.146.0: the promotion row. `deploy-production` (run `38156203995`) applied the `20261011120000_p1015_1014_help_assistant` migration and succeeded on the first attempt. Production serves `0311425` on both vendors. Before and after the deploy, `/privacy` gained the assistant paragraph and `/` still shows no assistant control (off by default). Exactly `#1014` and `#1015` closed.
+  - `docs/model-handoff.md` 1.89.0: Last Verified moves to `0311425`, with `dadca17` condensed to "previous promotion"; the In-Flight entry becomes "DONE, in production"; `#1021` is the chatbot programme's only remaining High item, and it is owner work.
 - **Document-stage reconciliation for PR #1044 (`#1015`, `#1014` merged to staging, merge `077a9ef`).** Docs only.
   - `specs/roadmap.md` 1.145.0: the change-log row for the staging merge. It records the migration applied on staging by `deploy-staging` (run `38140377033`), the live validation, the one code-read-only row (`/staff/assistant`'s empty state; SriMart's admin hits the local 403) and that PR #1044 also carried PR #1040's commit, so GitHub marked #1040 merged.
   - `docs/model-handoff.md` 1.88.0: the In-Flight entry moves to "merged to staging, not yet promoted", with the promotion carrying a migration; `origin/staging` is recorded ahead of `origin/main`; follow-up `#1045` added.
