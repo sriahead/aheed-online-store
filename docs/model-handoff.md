@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.86.0"
+version: "1.87.0"
 updated: 2026-10-11
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -657,6 +657,27 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **Guided help assistant + conversation log (`#1015` + `#1014`, one slice): BUILT, NOT YET
+  VALIDATED OR MERGED** (2026-10-11). Branch `feature/p1015-1014-help-assistant` (it also carries
+  PR #1040's docs commit, merged in to avoid a handoff conflict). Spec, build and build notes:
+  `specs/2026-10-11-p1015-1014-help-assistant/`. **Next stage: `/validate` from a fresh context, on
+  Sonnet 5.** Both issues `In Progress`. One additive migration, applied to dev by hand (`#895`
+  route); nothing for a validator to apply.
+  - Owner's Gate 1 rulings (2026-10-11, recorded on both issues): guided topics only, **no AI and
+    no free text**; answers from computed facts plus the vendor's active `VendorFaq` rows; WhatsApp
+    handoff with a 300-character, PII-free summary; item swaps and paid-order cancellations always
+    hand off; `VendorConfig.assistantEnabled` **off by default for every vendor**; a log with no
+    user link; an admin-only `/staff/assistant` report.
+  - **`#1021` no longer blocks the chatbot** (comment on `#1021`): with zero FAQ answers the
+    assistant still answers delivery, collection, rewards and discount codes from data and hands off
+    the rest. `#1021` stays open and owner-gated, best written from the report once the assistant
+    has run on one vendor.
+  - **After promotion nothing visible changes in production** — every vendor is off. Switching it on
+    per vendor is an owner action at `/staff/assistant` (needs a WhatsApp number; both production
+    vendors have one, read live 2026-10-11).
+  - Follow-ups filed at Build, all `Backlog` / `P10`: `#1041` (privacy page omits the search-query
+    log), `#1042` (grounded free-text answers), `#1043` (`/orders/lookup` placeholder shows Aheed's
+    `AHE-` prefix on every vendor).
 - **Public docs boundary + loyalty-gated Rewards launcher (`#1022` + `#1023`): DONE, in
   production** (PR #1036 to `staging`, then promotion PR #1039, merge `dadca17`, 2026-10-11), both
   issues closed and `Done`. See **Last Verified** above for the production facts. Spec and build
@@ -691,13 +712,11 @@ All facts in this section require live verification:
   vendor admin, not just a standalone script.
   - **The whole chatbot programme is `High` / `P10` on the board:** `#1012`/`#1013` and
     `#1016`/`#1017` and `#1022` now closed; `#1014`, `#1015` and `#1021` remain High.
-  - Approved sequencing: slice 2 (`#1016`+`#1017`) is done; **slice 3 = `#1015`+`#1014`** is next
-    for the chatbot itself, gated on `#1021`'s owner content. `#1014` cannot precede `#1015` — it logs chatbot
-    conversations, and until the bot exists there are none.
-  - **`#1021` is the real blocker on `#1015`, and it is owner work, not code.** `#1012` ships the
-    table, the editor and the rendering; the answers are vendor content `ADR-004`/`#239` forbid the
-    platform writing, and none is seeded. An empty corpus makes a chatbot ship inert — the `#697`
-    shape, except user-visible, because a shopper opens the chat and gets nothing.
+  - Sequencing: slice 2 (`#1016`+`#1017`) is done; **slice 3 = `#1015`+`#1014` is built** (see the
+    first entry in this section). The owner ruled on 2026-10-11 that `#1021` does **not** gate it.
+  - **`#1021` is owner work, not code**, and none is seeded: the answers are vendor content
+    `ADR-004`/`#239` forbid the platform writing. It no longer makes the chatbot inert, because the
+    guided assistant also answers from computed facts; it limits coverage, not function.
   - **`#1022` was reopened** after this slice's promotion auto-closed it (see the `b1dd2d4` entry in
     Last Verified). Its remaining work shipped in PR #1036/#1039; see the entry above.
   - The dev-DB migration workaround this slice used (`#895` still blocks `prisma migrate dev
