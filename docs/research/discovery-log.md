@@ -4,8 +4,8 @@ title: "Discovery log"
 audience: [dev, product]
 type: doc
 status: approved
-version: "1.9.0"
-updated: 2026-10-10
+version: "1.10.0"
+updated: 2026-10-12
 visibility: internal
 summary: "Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action."
 tags: [research, discovery, opportunities, risk, sdd]
@@ -35,6 +35,206 @@ milestone close). Nothing here is approved scope — see `docs/research/README.m
 
 **Next action:** RESEARCH MORE | PROPOSE | ADD TO ROADMAP/BACKLOG | READY FOR SPEC | DO NOT PURSUE
 ```
+
+---
+
+## 2026-10-12 — tenth Discover pass (external brand-identity brief: "Aheed Super Store")
+
+**Trigger:** explicit `/discover` on a pasted brief asking for a complete vector brand identity,
+design system and web asset kit for "Aheed Super Store", with a reference logo: a blue italic
+"Aheed" over a lime-green "Super Store", supplied as a 520×225 raster.
+
+**What the brief is, in this repo's terms.** It mixes three different kinds of work, and only one of
+them is code:
+
+1. **An owner decision** — the brief names a business and a palette the platform does not have
+   (first entry below).
+2. **Creative design work** — a monogram "A", horizontal and stacked lockups, CMYK values and a
+   brand-guidelines document. The reference contains **no monogram**; it has to be designed, not
+   extracted. That is design-agency output. It can be drafted here as SVG for the owner to judge,
+   but a spec and a CI run cannot make it production-grade.
+3. **Platform capability** — per-vendor icons, a compact mark and a social image (second and third
+   entries). This is the part that is genuinely unowned, and it is useful whether or not the
+   rebrand happens.
+
+**What the brief gets wrong about this codebase.** It asks for a hand-written CSS variable layer
+(`--color-primary`, `--color-cta-blue`, `--color-bg`) and a static header snippet. Under ADR-004 a
+vendor's look is a `VendorBranding` row, applied at request time by `brandStyle()`; a new variable
+set would duplicate the semantic tokens and, per CLAUDE.md, a `tokens.css` edit may never reach a
+browser at all. The brief's intent maps onto the existing model with **no code** (fourth entry).
+
+**Measured from the reference (Known — pixel average of the supplied PNG, contrast by the WCAG
+formula):** blue `#093DAA`, **9.29:1** on white; lime `#8DAD0E`, **2.59:1** on white and **3.59:1**
+on the blue.
+
+### 2026-10-12 — the brief names a business the platform does not trade as, in colours its current logo does not use
+
+**Trigger:** explicit `/discover`.
+**Status of the area:** genuinely unowned — no issue, ADR or roadmap row mentions a rename or a
+rebrand.
+
+**Observed (verifiable today):** the Aheed vendor is seeded as `name: "Aheed Food Centre"`, slug
+`aheed-food-centre` (`prisma/seed.ts:73`, `:455`), with `senderName: "Aheed Food Centre"` for email
+(`:469`). The internal docs host is `docs.internal.aheedfoodcentre.nocaped.com`. The logo in the
+repo, `public/images/brand/logo.png` (298×160), is dark green throughout (dominant pixels near
+`#103810`), matching `specs/design-system.md`'s green/orange brand kit. "Super Store" appears
+nowhere in the repository.
+
+**Interpretation:** "Aheed Super Store" in blue and lime is a **rebrand**, not a refinement — new
+trading name, new palette, new logo. The name half is mostly data (`Vendor.name`,
+`VendorBranding`, the email sender), but it reaches places that are not this repo's to change: the
+Stripe account's statement descriptor, the verified email domain (`#104`, still open), the domain
+name, the Companies House and VAT details shown in the footer (`#1058`), and printed material in the
+shop. Doing it **before** first trade (`#113`) is far cheaper than after, because no customer has
+yet learned the old name.
+**Confidence:** Known that it differs; **Needs validation** whether the owner intends a rename, a
+sub-brand, or only a new logo under the existing name.
+
+**Why it matters commercially:** a shopper who sees "Super Store" on the site and "Food Centre" on
+the bank statement, receipt email or shop sign is the textbook trigger for a "did I pay the right
+business?" dispute — on a platform whose chargeback handling has never been exercised.
+**Options considered:** (a) logo and palette only, name unchanged — cheapest, no external records;
+(b) full rename before launch; (c) do nothing until after launch — the worst timing.
+**Cost of delay:** rises sharply at first trade (`#113`), when the old name reaches statements,
+emails and repeat customers.
+
+**Next action:** RESEARCH MORE — one owner question: is "Aheed Super Store" the new trading name, or
+a logo for "Aheed Food Centre"?
+
+### 2026-10-12 — no vendor has a favicon, a home-screen icon or a social share image, and nothing can hold one
+
+**Trigger:** explicit `/discover` — the brief's favicon, touch-icon, manifest and SERP items.
+**Status of the area:** genuinely unowned. No open issue's title mentions favicon, icon, manifest or
+Open Graph (searched 2026-10-12). The seventh pass's crawler finding (2026-10-02) is about product
+pages being uncrawlable, not about icons.
+
+**Observed (verifiable today):** `app/manifest.ts` returns `icons: []`, with the comment "Icons stay
+empty until real per-vendor brand assets exist". There is no `app/icon.*`, `app/apple-icon.*`,
+`app/favicon.ico` or `opengraph-image.*` anywhere under `app/`, and `public/` holds only
+`images/brand/logo.png` and `payment-methods/`. `generateMetadata()` in `app/layout.tsx:15`
+returns a title and description only — no `icons`, no `openGraph`. `VendorBranding` has exactly
+one image column, `logoStorageKey` (`prisma/schema.prisma:420`).
+
+**Interpretation:** every vendor's browser tab shows the browser's blank globe; "Add to Home
+Screen" on a phone produces a letter tile or a screenshot; and a product link pasted into WhatsApp
+— the channel the ninth pass made the support handoff — previews with no image. None of this can be
+fixed by dropping files into `public/`, because `public/` is shared by every vendor (ADR-004): one
+favicon there would show Aheed's mark on SriMart's site.
+**Confidence:** Known for the absence; Inferred for the WhatsApp preview effect (not yet observed
+on a real share).
+
+**Why it matters commercially:** grocery is a **weekly repeat** shop. A home-screen icon is the
+cheapest re-entry point a returning customer has, and a link shared between household members
+("can you add this?") is a real grocery behaviour that currently previews as a bare URL.
+**Options considered:** (a) do nothing; (b) one platform-neutral favicon in `public/` — fixes the
+blank tab, for nobody's brand; (c) a per-vendor **square mark** upload — the existing uploader
+already re-encodes in a canvas, so it can produce the 32, 180, 192 and 512 px sizes client-side and
+store each under a relative key, and `generateMetadata()` and `app/manifest.ts` then point at them;
+`/favicon.ico`, which browsers request regardless, becomes a redirect to the vendor's 32 px PNG
+rather than a true multi-resolution `.ico`; (d) generate the icons at request time — rejected,
+image work on the Worker for a file that changes yearly.
+**Cost of delay:** low per day, but it is a launch-quality defect paid at first impression.
+
+**Next action:** PROPOSE — filed as `#1069`.
+
+### 2026-10-12 — a single logo slot cannot serve both a wide lockup and a narrow header, and the footer has none
+
+**Trigger:** explicit `/discover` — the brief's "full lockup on desktop, monogram below 768px" rule.
+**Status of the area:** genuinely unowned; filed together with the entry above, because it is the
+same schema decision (which images a vendor's brand consists of).
+
+**Observed (verifiable today):** `components/layout/Header.tsx:279` renders the logo as
+`h-10 w-auto aspect-9/5 object-contain` — a fixed **72×40 px** box at every width, reserved that
+way by `#329` and `#655` so the header never moves. The reference lockup is **2.31:1**, so
+`object-contain` fits it at about 72×31 px, putting the "Super Store" line near **9 px tall**.
+`components/layout/StorefrontFooter.tsx` renders no logo. The footer paints the vendor's **dark**
+primary (`#1055`), on which the reference's blue would be near-invisible and its lime measures
+3.59:1. `components/staff/VendorLogoUploader.tsx` re-encodes every upload to `image/webp`
+(`lib/product-image.ts:17`), so there is no vector path.
+
+**Interpretation:** the brief's responsive swap is the right call, but in this layout it is a swap
+between a **compact mark** and the lockup, not a CSS trick on one image. The header box exists to
+prevent layout shift, so the mark should occupy the same box below `md` and the lockup take a wider
+reserved box above it. A footer logo needs a **light-on-dark variant**, or it should not be
+attempted. Re-encoding to WebP is fine for a raster; a vector upload is a separate decision with a
+security cost (an SVG can carry script), not a free upgrade.
+**Confidence:** Known for the dimensions; Inferred for legibility at 9 px (not yet measured in a
+browser with this artwork).
+
+**Why it matters commercially:** a logo nobody can read is a header slot spent on nothing, on the
+viewport — phones — most grocery orders arrive from.
+**Options considered:** (a) a wider header box with the existing single slot — breaks the 360 px
+header measured in `#655`; (b) a mark slot beside the existing lockup, both raster — recommended,
+and the same square mark feeds the icons above; (c) also a dark-surface variant for the footer —
+defer until the footer is asked to carry a logo; (d) SVG uploads — do not pursue without a
+sanitiser.
+**Cost of delay:** none until a vendor supplies a mark; the issue filed for the entry above carries
+it.
+
+**Next action:** PROPOSE — filed as `#1069`.
+
+### 2026-10-12 — the brief's blue-only CTA rule fights a blue logo, and its CSS layer would duplicate the token model
+
+**Trigger:** explicit `/discover` — the brief's colour system and CSS sample.
+**Status of the area:** already implemented as a mechanism — the eight `VendorBranding` primitives,
+`brandStyle()`, `clampForContrast` and the `Theme` catalogue (`#75`) — so this entry records why
+the brief's CSS should not be built.
+
+**Observed (verifiable today):** the semantic roles the brief asks for already exist and are
+per-vendor: `--color-primary` (from `brandGreenDark`: header bar, headings, footer),
+`--color-action` (from `brandGreen`: primary buttons and Add), `--color-accent` (from
+`brandOrange`), `--color-surface-muted` (from `brandCream`) — `specs/design-system.md`, Colors. A
+vendor changes them on `/staff/storefront` with no deploy. The reference blue `#093DAA` measures
+9.29:1 and would pass the clamp unchanged; the lime `#8DAD0E` measures 2.59:1 and the clamp would
+darken it to an olive before it could be used as text.
+
+**Interpretation:** the brief wants logo colours on headers, borders and cards, and a "vibrant
+blue" **reserved exclusively** for conversion. With a logo whose dominant colour is already blue,
+those two rules collide: a blue header bar, blue headings and a blue footer leave a blue Add button
+with nothing to stand out against. The workable reading is **logo blue as the action colour** (the
+brief's own CTA rule), with structure carried by neutrals and lime tints rather than more blue —
+map `brandGreen` to the blue and `brandOrange` to the lime, and set `brandGreenDark` to a darker
+navy only if the owner accepts the header and the CTA sharing a hue family. Typography is the same
+story: the brief asks for a headline and body pairing, but Poppins is self-hosted at build time
+(`app/layout.tsx:6`) and shared by every vendor; changing it for one vendor's logo restyles SriMart
+too. The logo itself carries the display face.
+**Confidence:** Known for the mechanism and the measurements; Inferred for the visual collision
+(needs a rendered preview to confirm).
+
+**Why it matters commercially:** a CTA that does not stand out costs conversions on the one
+interaction — Add — that a grocery shopper repeats dozens of times per order.
+**Options considered:** (a) build the brief's variable layer and header snippet — rejected, it
+duplicates the token model and could not reach a browser; (b) enter the palette as a `Theme` row
+and apply it from `/staff/storefront` — no code, reversible, recommended once the owner answers the
+first entry; (c) add a ninth "CTA" primitive — not needed, `--color-action` is that role.
+**Cost of delay:** none.
+
+**Next action:** DO NOT PURSUE
+
+### 2026-10-12 — a blue Aheed would be indistinguishable from SriMart, the vendor every branding check compares against
+
+**Trigger:** explicit `/discover` — testing the palette against the second vendor, as CLAUDE.md
+requires.
+**Status of the area:** genuinely unowned, and contingent on the first entry.
+
+**Observed (verifiable today):** SriMart's seeded branding is `brandGreenDark: "#0d47a1"` and
+`brandGreen: "#1e88e5"` (`prisma/seed.ts:1513` and `:1514`). The reference blue is `#093DAA`.
+CLAUDE.md's design-token rule says to verify every branding change against a second vendor because
+"SriMart's colours differ" — the check works only because the two palettes are visibly different.
+
+**Interpretation:** if Aheed adopts the reference palette, its primary sits within a few units of
+SriMart's on every channel. Every "does vendor B render vendor B's colour?" check — manual and
+scripted — would pass whether or not per-vendor theming worked. The fix is cheap and seed-only:
+move SriMart to a palette no other vendor uses (purple or teal).
+**Confidence:** Known for the values; Inferred that existing checks would false-pass.
+
+**Why it matters commercially:** none directly; it protects the multi-tenant guarantee that a vendor
+never ships in another's colours.
+**Options considered:** change SriMart's seed palette in the same slice that applies the rebrand; or
+do nothing if the owner keeps green.
+**Cost of delay:** zero until the rebrand is applied; then immediate.
+
+**Next action:** RESEARCH MORE — resolves with the first entry's owner answer.
 
 ---
 
