@@ -4,7 +4,7 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.18.0"
+version: "1.19.0"
 updated: 2026-10-12
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
@@ -312,6 +312,28 @@ Aheed's `--color-accent` on its own dark green measures about 3.1:1.
 
 A future dark surface reuses `footerPalette`; it does not reach for `--color-accent` on a dark
 background.
+
+### Footer layout rules (#1060, 2026-10-12)
+
+- **Today's opening-hours row** is bold in `--footer-heading` and carries `aria-current="date"`.
+  "Today" is the store's calendar day (`STORE_TIMEZONE`), computed per request.
+- **Contact channels** render as a row of **44px circles** (`size-tap`, bordered in
+  `--footer-text`) under the "Shop with us" links. The list, its order, links and labels come
+  **only** from `contactChannels()` in `lib/contact-channels.ts`, the same source
+  `FloatingContact` renders, and the icons only from `components/layout/contact-channel-icons.tsx`.
+  Never add a channel to one surface alone.
+- **The bottom bar is one grid, `lg:grid-cols-[2fr_1fr_1fr]`**: company details and "Powered by",
+  then the legal links, then the Stripe line and badges. That is an exact 50 / 25 / 25, because the
+  gaps sit between tracks. It switches at `lg`, not `md`: a quarter column at 768px cannot hold the
+  Stripe line or five badges on one line. Below `lg` it stacks **payment, legal, company**, via
+  `order-*`, so the DOM order stays the desktop reading order.
+- **The legal links** sit on one line (`whitespace-nowrap`), separated by `aria-hidden` dots. All
+  three share one style: no underline until hover.
+- **The footer clears the floating buttons.** Its bottom padding (`pb-40`, `sm:pb-44`) is taller
+  than the stack on the right: the cart button at `bottom-6`/`sm:bottom-8`, and the contact trigger
+  at `bottom-24`/`sm:bottom-28` with `h-12`. So scrolled to the end, no footer content sits under
+  Rewards, the cart or the contact trigger. **Moving any floating button higher means raising this
+  padding too.**
 
 ## Product grids (#962, 2026-10-02)
 

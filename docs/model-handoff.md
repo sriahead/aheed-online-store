@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.91.0"
+version: "1.92.0"
 updated: 2026-10-12
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -665,17 +665,29 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Storefront footer (`#1055`): BUILT, not yet validated or shipped.** Branch
-  `feature/p1055-storefront-footer` (spec `6cebdb5`, build `d42c9eb`); spec and build notes are in
-  `specs/2026-10-12-p1055-storefront-footer/`. The owner raised it as High on 2026-10-12.
-  - **Migration `20261012120000_p1055_storefront_footer` is applied nowhere yet, not even on the
-    local dev DB.** Auto mode blocked `prisma migrate deploy`, so the user must run it. Until then
-    three DB tests fail on the missing `showSecureCheckoutNote` column, and nothing can be
-    previewed.
-  - **Placeholders (`[YOUR EMAIL]`, `[OPEN]`, `[NUMBER]`, `[PLATFORM NAME]`, placeholder logo SVGs)
-    are approved and intentional** until the owner supplies the real values (`#1058`). Production
-    gets no seeded values; an admin enters them on `/staff/storefront`.
-  - Follow-ups `#1056` and `#1057` are Low.
+- **Storefront footer: `#1055` is on `staging`, HELD; `#1060` is BUILT, not yet validated or
+  shipped. Both are promoted together, in one PR (owner decision, 2026-10-12).**
+  - `#1055` merged to `staging` via PR #1059 (`9e9ca66`) after a fresh-context Validate.
+    `deploy-staging` applied `20261012120000_p1055_storefront_footer`. It is **In Review**, with
+    its `/document` stage deferred until `#1060` ships.
+  - `#1060` is on branch `feature/p1060-footer-hours-contact`; spec and build notes are in
+    `specs/2026-10-12-p1060-footer-hours-contact/`. It replaces `#1055`'s free-text
+    `VendorOpeningHours` with `VendorWeeklyHours` (real times, or closed all day) and
+    `VendorHoursOverride` (dated holiday hours). Its migration
+    `20261012180000_p1060_footer_weekly_hours` **drops** that table. That is safe only because
+    `#1055` never reached production, so **do not promote `#1055` alone**.
+  - **`#1060`'s migration is not applied to dev yet.** The user must run
+    `! npx prisma migrate deploy`, then the seed, before `/validate`.
+  - **Staging, after `#1060` deploys:** run
+    `DIRECT_URL=<staging direct> npx tsx scripts/seed-footer-defaults.ts` (owner request). It is
+    footer-only and fill-only. **Never run the full `npm run db:seed` against staging**: its
+    `upsertVendorSatellites` reverts admin-edited branding and config. Staging currently shows
+    admin-entered real company and VAT values and a custom theme.
+  - Placeholders (`[YOUR EMAIL]`, `[NUMBER]`, `[PLATFORM NAME]`, the placeholder badge SVGs) are
+    approved until the owner supplies real values (`#1058`). Hours are no longer placeholders: Aheed
+    is seeded with Mon–Sat 09:00–20:00 and Sun 09:00–19:00.
+  - Follow-ups: `#1056`, `#1057` (open-now and JSON-LD, now buildable), `#1061` and `#1062`.
+    All are Low or Backlog.
 - **Help assistant follow-ups (`#1049` + `#1051` + `#1052`, one slice): DONE, in production**
   (PR #1050 to `staging`, then promotion PR #1053, merge `c903f15`, 2026-10-11), all three closed
   and `Done`. Spec: `specs/2026-10-11-p1049-assistant-link-close/` (no `build-notes.md`; the loop

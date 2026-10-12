@@ -4,7 +4,7 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.10.0"
+version: "2.11.0"
 updated: "2026-10-12"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
@@ -94,12 +94,14 @@ Facebook page address, your Instagram profile address and your WhatsApp number. 
 labels & store description** form at the bottom of the page, choose which of the six product labels
 (Halal, Fresh, Organic, Vegetarian, Gluten free, HMC certification) your staff see on the product
 form, and write what your store sells. In the **Product grid layout** form below that, choose how
-many product cards sit side by side on your category, search and bundle pages. Two footer forms
+many product cards sit side by side on your category, search and bundle pages. Three footer forms
 follow: in **Footer contact & legal**, enter your phone number, email address, company number, VAT
 number, registered office, a one-line note under your opening hours, and whether to show "Secure
-checkout powered by Stripe". In **Opening hours & payment badges**, enter up to eight rows of
-opening hours and tick which payment-method badges (Visa, Mastercard, American Express, Apple Pay,
-Google Pay) appear in the footer.
+checkout powered by Stripe". In **Opening hours & payment badges**, set your usual opening and
+closing time for each day of the week (or tick **Closed all day**) and tick which payment-method
+badges (Visa, Mastercard, American Express, Apple Pay, Google Pay) appear in the footer. In
+**Holiday & closure dates**, add a date, a name for it and either different hours or **Closed all
+day** — for a bank holiday, a stocktake or a staff day off.
 
 **Typical workflow:** You do the branding at setup and when it changes. The quickest start is to
 choose a theme from the **Select a theme** list and press **Apply Theme** — that fills all eight
@@ -160,18 +162,25 @@ alone.
 **The storefront footer** appears at the bottom of every storefront page. Its first column shows
 your shop name and address — taken from the **Collection Location** in the delivery rules form, not
 entered again here — with a **Get directions** link that opens Google Maps, then your phone number
-and email address. Its second column shows your opening hours; its third column links shoppers to
-your Help Centre, the delivery and refunds sections of your help and terms pages, your loyalty page
-(only when loyalty is on), and your feedback page. The bottom bar shows your company number, VAT
+and email address. Its second column shows your opening hours, Monday to Sunday, with today's day in
+bold; its third column links shoppers to your Help Centre, the delivery and refunds sections of your
+help and terms pages, your loyalty page (only when loyalty is on), and your feedback page, followed
+by round buttons for the same ways to contact you as the floating contact button (Facebook,
+Instagram, WhatsApp, or the help assistant — only the ones that button shows). The bottom bar shows your company number, VAT
 number and registered office, the Terms, Privacy and Cookies links, the Stripe line and the payment
 badges. Like the social links, **leaving a footer field blank hides it** rather than showing a
 default, and a column with nothing in it disappears. A phone number becomes a tap-to-call link and
 an email becomes a link that opens the shopper's email app — but only when it is a real number or
 address. Placeholder text in square brackets, such as `[YOUR EMAIL]`, is shown exactly as typed and
-never as a link, so you can save the form before you have every detail. **Opening hours** are
-written the way shoppers should read them: each row is a label ("Monday – Friday") and its hours
-("9am – 8pm"), up to 40 characters each, shown in the order you enter them. Clear both boxes in a
-row to remove it. Each footer form has its own Save button and leaves every other form alone.
+never as a link, so you can save the form before you have every detail. **Opening hours** are real
+times: each day has an opening and a closing time (closing must be later than opening), or **Closed
+all day**. Leave both times empty to leave a day out of the footer. **Holiday & closure dates**
+change one date only. A date in the next 14 days appears under **Holiday hours**, below the weekly
+hours, for example "Fri 25 Dec · Christmas Day · Closed"; on the day itself it replaces that day's
+usual hours instead. There is one entry per date: saving a date that already has one replaces it,
+which is how you change it. Each upcoming date has a **Delete** button, past dates are tidied away
+automatically, and you can hold up to 50 upcoming dates. Each footer form has its own Save button and
+leaves every other form alone.
 
 **Common mistakes and limitations:** Colour choices affect the readability of text sitting on them.
 After changing a brand colour, look at a real page rather than only the colour swatch. Because your

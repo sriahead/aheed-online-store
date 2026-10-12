@@ -2,6 +2,8 @@ import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { STORE_TIMEZONE } from "@/lib/local-datetime";
 import { DEFAULT_PRODUCT_GRID_DENSITY, type ProductGridDensity } from "@/lib/product-grid-density";
 import { orderPaymentBadges, type PaymentBadgeMethodName } from "@/lib/payment-badges";
+import type { HoursOverrideRow, WeeklyHoursRow } from "@/lib/footer-hours";
+import { calendarDayToUtcMidnight } from "@/lib/local-datetime";
 
 /**
  * Re-exported so the app/UI/feature layers can type a prop against the real
@@ -137,8 +139,13 @@ export interface VendorProfile {
     city: string;
     postcode: string;
   } | null;
-  /** Ordered by `sortOrder`. */
-  openingHours: { label: string; hours: string }[];
+  /** #1060 — the weekly schedule, one row per configured weekday (any order; the view sorts). */
+  weeklyHours: WeeklyHoursRow[];
+  /**
+   * #1060 — every stored override, `date` as the `YYYY-MM-DD` calendar day. Bounded by the save
+   * path (past rows pruned, at most 50 upcoming), so reading them all costs no extra query.
+   */
+  hoursOverrides: (HoursOverrideRow & { id: string })[];
   /** In display order (`lib/payment-badges.ts`), not row order. */
   paymentBadges: PaymentBadgeMethodName[];
   /** #1023's gate, reused by the footer's Rewards link. */
@@ -234,9 +241,19 @@ export async function fetchVendorProfile(
       location: {
         select: { addressLine1: true, addressLine2: true, city: true, postcode: true },
       },
-      openingHours: {
-        select: { label: true, hours: true },
-        orderBy: { sortOrder: "asc" },
+      weeklyHours: {
+        select: { dayOfWeek: true, openTime: true, closeTime: true, closed: true },
+      },
+      hoursOverrides: {
+        select: {
+          id: true,
+          date: true,
+          label: true,
+          openTime: true,
+          closeTime: true,
+          closed: true,
+        },
+        orderBy: { date: "asc" },
       },
       paymentBadges: { select: { method: true } },
       deliveryAreas: {
@@ -320,7 +337,12 @@ export async function fetchVendorProfile(
     openingHoursNote: vendor?.config?.openingHoursNote ?? null,
     showSecureCheckoutNote: vendor?.config?.showSecureCheckoutNote ?? false,
     location: vendor?.location ?? null,
-    openingHours: vendor?.openingHours ?? [],
+    weeklyHours: vendor?.weeklyHours ?? [],
+    // `@db.Date` reads back as UTC midnight of the stored calendar day.
+    hoursOverrides: (vendor?.hoursOverrides ?? []).map((o) => ({
+      ...o,
+      date: o.date.toISOString().slice(0, 10),
+    })),
     paymentBadges: orderPaymentBadges((vendor?.paymentBadges ?? []).map((b) => b.method)),
     loyaltyEnabled: vendor?.config?.loyaltyEnabled ?? false,
   };
@@ -566,14 +588,14 @@ export async function updateVendorStorefrontConfig(
   });
 }
 
-/** #1055 — what the footer hours form writes: the complete replacement set for both tables. */
+/** #1060 — what the footer hours form writes: the complete replacement set for both tables. */
 export interface VendorFooterHoursInput {
-  openingHours: { label: string; hours: string; sortOrder: number }[];
+  weeklyHours: WeeklyHoursRow[];
   paymentBadges: PaymentBadgeMethodName[];
 }
 
 /**
- * #1055 — replace this vendor's opening-hours rows and payment-badge rows as one unit.
+ * #1055/#1060 — replace this vendor's weekly-hours rows and payment-badge rows as one unit.
  *
  * A WebSocket client and an interactive transaction: the delete and the re-insert must commit
  * together (a failure between them would empty the footer), and `createMany` crashes
@@ -586,10 +608,10 @@ export async function replaceVendorFooterHours(
   data: VendorFooterHoursInput,
 ) {
   return prismaWs.$transaction(async (tx) => {
-    await tx.vendorOpeningHours.deleteMany({ where: { vendorId } });
-    if (data.openingHours.length > 0) {
-      await tx.vendorOpeningHours.createMany({
-        data: data.openingHours.map((row) => ({ vendorId, ...row })),
+    await tx.vendorWeeklyHours.deleteMany({ where: { vendorId } });
+    if (data.weeklyHours.length > 0) {
+      await tx.vendorWeeklyHours.createMany({
+        data: data.weeklyHours.map((row) => ({ vendorId, ...row })),
       });
     }
     await tx.vendorPaymentBadge.deleteMany({ where: { vendorId } });
@@ -599,6 +621,67 @@ export async function replaceVendorFooterHours(
       });
     }
   });
+}
+
+/** #1060 — the most upcoming overrides (today onwards) one vendor may hold. */
+export const MAX_UPCOMING_HOURS_OVERRIDES = 50;
+
+/**
+ * #1060 — save one dated override, replacing any existing one for that date (`upsert` on
+ * `vendorId_date`: one override per day is the edit path).
+ *
+ * Also prunes this vendor's overrides dated before `today`, which keeps the table — and the
+ * footer's read of every override — bounded. A NEW date is refused once the vendor already holds
+ * `MAX_UPCOMING_HOURS_OVERRIDES` from today on; replacing an existing date always works.
+ *
+ * The HTTP client is enough: `deleteMany`, `count`, `findUnique` and `upsert` open no
+ * interactive transaction (CLAUDE.md). `today` and `row.date` are `YYYY-MM-DD` calendar days.
+ */
+export async function saveVendorHoursOverride(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  today: string,
+  row: HoursOverrideRow,
+): Promise<{ ok: true } | { ok: false; reason: "limit" }> {
+  const todayDate = calendarDayToUtcMidnight(today);
+  const date = calendarDayToUtcMidnight(row.date);
+  if (!todayDate || !date) throw new Error("saveVendorHoursOverride: not a calendar day");
+
+  await prisma.vendorHoursOverride.deleteMany({ where: { vendorId, date: { lt: todayDate } } });
+
+  const existing = await prisma.vendorHoursOverride.findUnique({
+    where: { vendorId_date: { vendorId, date } },
+    select: { id: true },
+  });
+  if (!existing) {
+    const upcoming = await prisma.vendorHoursOverride.count({ where: { vendorId } });
+    if (upcoming >= MAX_UPCOMING_HOURS_OVERRIDES) return { ok: false, reason: "limit" };
+  }
+
+  const fields = {
+    label: row.label,
+    openTime: row.openTime,
+    closeTime: row.closeTime,
+    closed: row.closed,
+  };
+  await prisma.vendorHoursOverride.upsert({
+    where: { vendorId_date: { vendorId, date } },
+    create: { vendorId, date, ...fields },
+    update: fields,
+  });
+  return { ok: true };
+}
+
+/**
+ * #1060 — delete one override. Scoped by `vendorId` as well as `id`, so an id belonging to
+ * another vendor deletes nothing.
+ */
+export async function deleteVendorHoursOverride(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  id: string,
+) {
+  await prisma.vendorHoursOverride.deleteMany({ where: { id, vendorId } });
 }
 
 /**

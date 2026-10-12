@@ -1,70 +1,149 @@
 import { describe, expect, it } from "vitest";
 import {
-  OPENING_HOURS_FIELD,
-  openingHoursLabelField,
-  openingHoursValueField,
-  parseFooterHours,
+  OVERRIDE_CLOSE_FIELD,
+  OVERRIDE_DATE_FIELD,
+  OVERRIDE_LABEL_FIELD,
+  OVERRIDE_OPEN_FIELD,
+  WEEKLY_HOURS_FIELD,
+  parseHoursOverride,
+  parseWeeklyHours,
+  weekdayCloseField,
+  weekdayOpenField,
 } from "@/lib/footer-hours-form";
 
-const row = (label: string, hours: string) => ({ label, hours });
+const day = (dayOfWeek: number, open = "", close = "", closed = false) => ({
+  dayOfWeek,
+  open,
+  close,
+  closed,
+});
 
-describe("parseFooterHours (#1055)", () => {
-  it("keeps rows in submitted order with sortOrder from their position", () => {
-    const result = parseFooterHours({
-      rows: [row("Monday – Friday", "[OPEN] – 8pm"), row("Sunday", "10am – 4pm")],
+const errorField = (result: { ok: boolean; error?: { field: string } }) =>
+  result.ok ? null : result.error!.field;
+
+describe("parseWeeklyHours (#1060 R17)", () => {
+  it("keeps a valid day and drops a day that is not set", () => {
+    const result = parseWeeklyHours({
+      days: [day(1, "09:00", "20:00"), day(2)],
       badges: [],
     });
-    expect(result.ok && result.value.openingHours).toEqual([
-      { label: "Monday – Friday", hours: "[OPEN] – 8pm", sortOrder: 0 },
-      { label: "Sunday", hours: "10am – 4pm", sortOrder: 1 },
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        weeklyHours: [{ dayOfWeek: 1, openTime: "09:00", closeTime: "20:00", closed: false }],
+        paymentBadges: [],
+      },
+    });
+  });
+
+  it("stores a closed day's times as null whatever was typed", () => {
+    const result = parseWeeklyHours({ days: [day(0, "09:00", "17:00", true)], badges: [] });
+    expect(result.ok && result.value.weeklyHours).toEqual([
+      { dayOfWeek: 0, openTime: null, closeTime: null, closed: true },
     ]);
   });
 
-  it("drops a fully blank row without leaving a gap in sortOrder", () => {
-    const result = parseFooterHours({
-      rows: [row("Mon", "9–5"), row(" ", ""), row("Tue", "9–5")],
-      badges: [],
-    });
-    expect(result.ok && result.value.openingHours.map((r) => r.sortOrder)).toEqual([0, 1]);
-  });
-
-  it("refuses a ninth row", () => {
-    const result = parseFooterHours({
-      rows: Array.from({ length: 9 }, (_, i) => row(`Day ${i}`, "9–5")),
-      badges: [],
-    });
-    expect(!result.ok && result.error.field).toBe(OPENING_HOURS_FIELD);
-  });
-
-  it("refuses a half-filled row against its blank input", () => {
-    const noHours = parseFooterHours({ rows: [row("Ok", "1"), row("Saturday", "")], badges: [] });
-    expect(!noHours.ok && noHours.error.field).toBe(openingHoursValueField(1));
-    const noLabel = parseFooterHours({ rows: [row("", "9–5")], badges: [] });
-    expect(!noLabel.ok && noLabel.error.field).toBe(openingHoursLabelField(0));
-  });
-
-  it("limits label and hours to 40 characters", () => {
-    expect(parseFooterHours({ rows: [row("x".repeat(40), "y".repeat(40))], badges: [] }).ok).toBe(
-      true,
+  it("refuses a half-filled day against the blank input", () => {
+    expect(errorField(parseWeeklyHours({ days: [day(3, "09:00", "")], badges: [] }))).toBe(
+      weekdayCloseField(3),
     );
-    const label = parseFooterHours({ rows: [row("x".repeat(41), "9–5")], badges: [] });
-    expect(!label.ok && label.error.field).toBe(openingHoursLabelField(0));
-    const hours = parseFooterHours({ rows: [row("Mon", "y".repeat(41))], badges: [] });
-    expect(!hours.ok && hours.error.field).toBe(openingHoursValueField(0));
+    expect(errorField(parseWeeklyHours({ days: [day(3, "", "17:00")], badges: [] }))).toBe(
+      weekdayOpenField(3),
+    );
+  });
+
+  it.each(["24:00", "9:00", "09:60", "nine"])("refuses the time %s", (time) => {
+    expect(errorField(parseWeeklyHours({ days: [day(4, time, "20:00")], badges: [] }))).toBe(
+      weekdayOpenField(4),
+    );
+  });
+
+  it("refuses a close time before (or equal to) the open time", () => {
+    expect(errorField(parseWeeklyHours({ days: [day(5, "20:00", "09:00")], badges: [] }))).toBe(
+      weekdayCloseField(5),
+    );
+    expect(errorField(parseWeeklyHours({ days: [day(5, "09:00", "09:00")], badges: [] }))).toBe(
+      weekdayCloseField(5),
+    );
+  });
+
+  it("refuses a duplicate or out-of-range dayOfWeek", () => {
+    expect(
+      errorField(parseWeeklyHours({ days: [day(1, "09:00", "17:00"), day(1)], badges: [] })),
+    ).toBe(WEEKLY_HOURS_FIELD);
+    expect(errorField(parseWeeklyHours({ days: [day(7, "09:00", "17:00")], badges: [] }))).toBe(
+      WEEKLY_HOURS_FIELD,
+    );
   });
 
   it("dedupes badges, puts them in display order and ignores unknown values", () => {
-    const result = parseFooterHours({
-      rows: [],
-      badges: ["GOOGLE_PAY", "VISA", "VISA", "BITCOIN", "AMEX"],
+    const result = parseWeeklyHours({
+      days: [],
+      badges: ["GOOGLE_PAY", "VISA", "VISA", "BITCOIN"],
     });
-    expect(result.ok && result.value.paymentBadges).toEqual(["VISA", "AMEX", "GOOGLE_PAY"]);
+    expect(result.ok && result.value.paymentBadges).toEqual(["VISA", "GOOGLE_PAY"]);
+  });
+});
+
+describe("parseHoursOverride (#1060 R17)", () => {
+  const TODAY = "2026-10-14";
+  const valid = { date: "2026-12-25", label: "Christmas Day", open: "", close: "", closed: true };
+
+  it("accepts a closed override and trims the label", () => {
+    expect(parseHoursOverride({ ...valid, label: "  Christmas Day  " }, TODAY)).toEqual({
+      ok: true,
+      value: {
+        date: "2026-12-25",
+        label: "Christmas Day",
+        openTime: null,
+        closeTime: null,
+        closed: true,
+      },
+    });
   });
 
-  it("allows an empty set, which hides hours and badges", () => {
-    expect(parseFooterHours({ rows: [], badges: [] })).toEqual({
-      ok: true,
-      value: { openingHours: [], paymentBadges: [] },
-    });
+  it("accepts an override with hours", () => {
+    const result = parseHoursOverride(
+      { ...valid, open: "10:00", close: "16:00", closed: false },
+      TODAY,
+    );
+    expect(result.ok && result.value).toMatchObject({ openTime: "10:00", closeTime: "16:00" });
+  });
+
+  it("accepts today and today + 365", () => {
+    expect(parseHoursOverride({ ...valid, date: TODAY }, TODAY).ok).toBe(true);
+    expect(parseHoursOverride({ ...valid, date: "2027-10-14" }, TODAY).ok).toBe(true);
+  });
+
+  it.each([
+    ["2026-02-30", "an impossible date"],
+    ["2026-10-13", "yesterday"],
+    ["2027-10-15", "today + 366"],
+    ["14/10/2026", "a non-ISO date"],
+  ])("refuses %s (%s)", (date) => {
+    expect(errorField(parseHoursOverride({ ...valid, date }, TODAY))).toBe(OVERRIDE_DATE_FIELD);
+  });
+
+  it("refuses a blank or 41-character label", () => {
+    expect(errorField(parseHoursOverride({ ...valid, label: "   " }, TODAY))).toBe(
+      OVERRIDE_LABEL_FIELD,
+    );
+    expect(errorField(parseHoursOverride({ ...valid, label: "x".repeat(41) }, TODAY))).toBe(
+      OVERRIDE_LABEL_FIELD,
+    );
+    expect(parseHoursOverride({ ...valid, label: "x".repeat(40) }, TODAY).ok).toBe(true);
+  });
+
+  it("applies the weekly times rules when not closed", () => {
+    const open = { ...valid, closed: false };
+    expect(errorField(parseHoursOverride({ ...open, open: "", close: "" }, TODAY))).toBe(
+      OVERRIDE_OPEN_FIELD,
+    );
+    expect(errorField(parseHoursOverride({ ...open, open: "20:00", close: "09:00" }, TODAY))).toBe(
+      OVERRIDE_CLOSE_FIELD,
+    );
+    expect(errorField(parseHoursOverride({ ...open, open: "09:00", close: "24:00" }, TODAY))).toBe(
+      OVERRIDE_CLOSE_FIELD,
+    );
   });
 });

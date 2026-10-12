@@ -1,7 +1,12 @@
 "use client";
 
 import { useActionState } from "react";
-import { updateFooterContact, updateFooterHours } from "@/features/admin/storefront";
+import {
+  deleteHoursOverride,
+  saveHoursOverride,
+  updateFooterContact,
+  updateFooterHours,
+} from "@/features/admin/storefront";
 import {
   COMPANY_NUMBER_FIELD,
   CONTACT_EMAIL_FIELD,
@@ -13,13 +18,27 @@ import {
   initialFooterContactState,
 } from "@/lib/footer-contact-form";
 import {
-  MAX_OPENING_HOURS_ROWS,
-  OPENING_HOURS_TEXT_MAX,
+  OVERRIDE_CLOSE_FIELD,
+  OVERRIDE_CLOSED_FIELD,
+  OVERRIDE_DATE_FIELD,
+  OVERRIDE_ID_FIELD,
+  OVERRIDE_LABEL_FIELD,
+  OVERRIDE_LABEL_MAX,
+  OVERRIDE_OPEN_FIELD,
   PAYMENT_BADGE_FIELD,
+  WEEKDAYS,
   initialFooterHoursState,
-  openingHoursLabelField,
-  openingHoursValueField,
+  initialHoursOverrideState,
+  weekdayCloseField,
+  weekdayClosedField,
+  weekdayOpenField,
 } from "@/lib/footer-hours-form";
+import {
+  formatHours,
+  formatOverrideDate,
+  type HoursOverrideRow,
+  type WeeklyHoursRow,
+} from "@/lib/footer-hours";
 import {
   PAYMENT_BADGE_DETAILS,
   PAYMENT_BADGE_METHODS,
@@ -27,8 +46,8 @@ import {
 } from "@/lib/payment-badges";
 
 /**
- * The storefront footer's two settings forms on `/staff/storefront` (#1055): "Footer contact &
- * legal" and "Opening hours & payment badges". Each is its own sibling `<form>` with its own action,
+ * The storefront footer's settings forms on `/staff/storefront` (#1055, #1060): "Footer contact &
+ * legal", "Opening hours & payment badges" and "Holiday & closure dates". Each is its own sibling `<form>` with its own action,
  * like every form on that page, so saving one never touches the fields of another.
  *
  * Its own component rather than two more sections inside `StorefrontConfigForm`, following the
@@ -47,8 +66,12 @@ export interface FooterSettingsValues {
   registeredOffice: string | null;
   openingHoursNote: string | null;
   showSecureCheckoutNote: boolean;
-  openingHours: { label: string; hours: string }[];
+  weeklyHours: WeeklyHoursRow[];
   paymentBadges: PaymentBadgeMethodName[];
+  /** #1060 — the vendor's overrides dated today onwards, ascending. */
+  upcomingOverrides: (HoursOverrideRow & { id: string })[];
+  /** #1060 — the store's calendar day (`YYYY-MM-DD`), the earliest date the date input offers. */
+  today: string;
 }
 
 const CONTACT_FIELDS = [
@@ -100,9 +123,9 @@ export function FooterSettingsForms({ initial }: { initial: FooterSettingsValues
     initialFooterHoursState,
   );
 
-  const rows = Array.from(
-    { length: MAX_OPENING_HOURS_ROWS },
-    (_, index) => initial.openingHours[index] ?? { label: "", hours: "" },
+  const [overrideState, saveOverride, overridePending] = useActionState(
+    saveHoursOverride,
+    initialHoursOverrideState,
   );
 
   return (
@@ -167,42 +190,59 @@ export function FooterSettingsForms({ initial }: { initial: FooterSettingsValues
         <div>
           <h2 className="font-bold text-black">Opening hours &amp; payment badges</h2>
           <p className="mt-1 text-sm text-black/60">
-            Up to {MAX_OPENING_HOURS_ROWS} rows, shown in this order. Write each row the way you
-            want shoppers to read it (for example &quot;Monday – Friday&quot; and &quot;9am –
-            8pm&quot;). Clear both boxes in a row to remove it. With no rows, the footer hides
-            opening hours.
+            Your usual hours for each day. Tick &quot;Closed all day&quot; for a day you never open.
+            Leave a day&apos;s times empty to leave it out of the footer. With no days set, the
+            footer hides opening hours.
           </p>
         </div>
 
         <div className="flex flex-col gap-3">
-          {rows.map((row, index) => (
-            <div key={index} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <label className="sr-only" htmlFor={openingHoursLabelField(index)}>
-                Row {index + 1} label
-              </label>
-              <input
-                id={openingHoursLabelField(index)}
-                name={openingHoursLabelField(index)}
-                type="text"
-                maxLength={OPENING_HOURS_TEXT_MAX}
-                defaultValue={row.label}
-                className={fieldClass(hoursState.field === openingHoursLabelField(index))}
-                placeholder="Day or days"
-              />
-              <label className="sr-only" htmlFor={openingHoursValueField(index)}>
-                Row {index + 1} hours
-              </label>
-              <input
-                id={openingHoursValueField(index)}
-                name={openingHoursValueField(index)}
-                type="text"
-                maxLength={OPENING_HOURS_TEXT_MAX}
-                defaultValue={row.hours}
-                className={fieldClass(hoursState.field === openingHoursValueField(index))}
-                placeholder="Hours"
-              />
-            </div>
-          ))}
+          {WEEKDAYS.map(({ dayOfWeek, name }) => {
+            const row = initial.weeklyHours.find((r) => r.dayOfWeek === dayOfWeek);
+            return (
+              <fieldset
+                key={dayOfWeek}
+                className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[8rem_1fr_1fr_auto]"
+              >
+                <legend className="sr-only">{name}</legend>
+                <span aria-hidden="true" className="col-span-2 font-bold text-black sm:col-span-1">
+                  {name}
+                </span>
+                <label className="flex flex-col gap-1 text-xs text-black/60">
+                  Opens
+                  <input
+                    id={weekdayOpenField(dayOfWeek)}
+                    name={weekdayOpenField(dayOfWeek)}
+                    type="time"
+                    aria-label={`${name} opening time`}
+                    defaultValue={row?.openTime ?? ""}
+                    className={fieldClass(hoursState.field === weekdayOpenField(dayOfWeek))}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs text-black/60">
+                  Closes
+                  <input
+                    id={weekdayCloseField(dayOfWeek)}
+                    name={weekdayCloseField(dayOfWeek)}
+                    type="time"
+                    aria-label={`${name} closing time`}
+                    defaultValue={row?.closeTime ?? ""}
+                    className={fieldClass(hoursState.field === weekdayCloseField(dayOfWeek))}
+                  />
+                </label>
+                <label className="col-span-2 flex min-h-tap items-center gap-2 text-black sm:col-span-1">
+                  <input
+                    type="checkbox"
+                    name={weekdayClosedField(dayOfWeek)}
+                    aria-label={`${name} closed all day`}
+                    defaultChecked={row?.closed ?? false}
+                    className="h-5 w-5"
+                  />
+                  Closed all day
+                </label>
+              </fieldset>
+            );
+          })}
         </div>
 
         <fieldset className="flex flex-col gap-3">
@@ -240,6 +280,116 @@ export function FooterSettingsForms({ initial }: { initial: FooterSettingsValues
           {hoursPending ? "Saving…" : "Save Opening Hours & Badges"}
         </button>
       </form>
+
+      <section className="flex flex-col gap-6">
+        <form action={saveOverride} className="flex flex-col gap-6">
+          <div>
+            <h2 className="font-bold text-black">Holiday &amp; closure dates</h2>
+            <p className="mt-1 text-sm text-black/60">
+              Different hours, or a closure, on one date. The footer lists dates in the next 14 days
+              under &quot;Holiday hours&quot;, and on the day itself shows them in place of your
+              usual hours. Saving a date that already has an entry replaces it.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-2 font-bold text-black">
+              Date
+              <input
+                name={OVERRIDE_DATE_FIELD}
+                type="date"
+                min={initial.today}
+                required
+                className={fieldClass(overrideState.field === OVERRIDE_DATE_FIELD)}
+              />
+            </label>
+            <label className="flex flex-col gap-2 font-bold text-black">
+              Name
+              <input
+                name={OVERRIDE_LABEL_FIELD}
+                type="text"
+                maxLength={OVERRIDE_LABEL_MAX}
+                placeholder="e.g. a public holiday"
+                className={fieldClass(overrideState.field === OVERRIDE_LABEL_FIELD)}
+              />
+            </label>
+            <label className="flex flex-col gap-2 font-bold text-black">
+              Opens
+              <input
+                name={OVERRIDE_OPEN_FIELD}
+                type="time"
+                className={fieldClass(overrideState.field === OVERRIDE_OPEN_FIELD)}
+              />
+            </label>
+            <label className="flex flex-col gap-2 font-bold text-black">
+              Closes
+              <input
+                name={OVERRIDE_CLOSE_FIELD}
+                type="time"
+                className={fieldClass(overrideState.field === OVERRIDE_CLOSE_FIELD)}
+              />
+            </label>
+          </div>
+          <label className="flex items-center gap-3 font-bold text-black">
+            <input type="checkbox" name={OVERRIDE_CLOSED_FIELD} className="h-5 w-5" />
+            Closed all day
+          </label>
+
+          {overrideState.error && (
+            <p className="rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger">
+              {overrideState.error}
+            </p>
+          )}
+          {overrideState.saved && !overrideState.error && (
+            <p className="rounded-xl bg-action-tint px-4 py-3 text-sm font-medium text-primary">
+              Date saved.
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={overridePending}
+            className="rounded-full bg-primary py-3 font-bold text-white hover:bg-primary/90 disabled:opacity-50"
+          >
+            {overridePending ? "Saving…" : "Save Date"}
+          </button>
+        </form>
+
+        {initial.upcomingOverrides.length === 0 ? (
+          <p className="text-sm text-black/60">No upcoming dates.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-black/10 rounded-xl border border-black/10">
+            {initial.upcomingOverrides.map((override) => (
+              <OverrideRow key={override.id} override={override} />
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
+  );
+}
+
+/** One upcoming override with its own Delete form, so each delete reports against its own row. */
+function OverrideRow({ override }: { override: HoursOverrideRow & { id: string } }) {
+  const [state, remove, pending] = useActionState(deleteHoursOverride, initialHoursOverrideState);
+  const date = formatOverrideDate(override.date);
+  return (
+    <li className="flex items-center justify-between gap-4 px-4 py-3 text-black">
+      <span>
+        <span className="font-bold">{date}</span> · {override.label} · {formatHours(override)}
+        {state.error && <span className="ml-2 text-sm text-danger">{state.error}</span>}
+      </span>
+      <form action={remove}>
+        <input type="hidden" name={OVERRIDE_ID_FIELD} value={override.id} />
+        <button
+          type="submit"
+          disabled={pending}
+          aria-label={`Delete ${date} ${override.label}`}
+          className="min-h-tap rounded-full border border-black/20 px-4 text-sm font-bold disabled:opacity-50"
+        >
+          {pending ? "Deleting…" : "Delete"}
+        </button>
+      </form>
+    </li>
   );
 }
