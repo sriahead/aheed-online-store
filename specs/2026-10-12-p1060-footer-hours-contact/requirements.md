@@ -151,8 +151,11 @@ R12. When the help assistant is available, these hold:
     - closing it returns focus to the footer button.
 
     Opening from the floating panel still returns focus to the floating panel's assistant control
-    on close, with the panel still expanded. `HelpAssistant` is mounted in exactly one place in the
-    source: the new shared provider.
+    on close, with the panel still expanded. Within the storefront chrome (footer and
+    floating contact), `HelpAssistant` is mounted in exactly one place: the new shared provider.
+    *(Amended at Validate, 2026-10-12: `components/assistant/HelpContactCard.tsx`, the `/help`
+    page's own contact card, predates this slice, owns a separate trigger, and keeps its own
+    mount. It is out of scope.)*
 
 R13. The bottom bar is one grid. At 1280px and 1024px widths:
     - its three column elements have widths in the ratio 2 : 1 : 1, each within ±4px of the ideal
