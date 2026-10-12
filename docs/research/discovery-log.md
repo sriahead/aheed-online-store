@@ -241,7 +241,9 @@ do nothing if the owner keeps green.
 **Next action:** RESEARCH MORE — resolves with the first entry's owner answer.
 
 **Update 2026-10-12:** the owner kept the name but adopts the new logo and palette, so this
-collision is live once the palette is applied. Carried into `#1069`'s spec as a seed-only change.
+collision is live once the palette is applied. **Owner ruling, same day: leave SriMart as it is.**
+Not carried into `#1069`. Until that changes, a second-vendor check must compare the accent colour
+(SriMart's purple `#8e24aa` against Aheed's lime), not the primary.
 
 ---
 
