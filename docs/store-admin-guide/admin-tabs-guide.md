@@ -4,7 +4,7 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.11.0"
+version: "2.12.0"
 updated: "2026-10-12"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
@@ -88,7 +88,7 @@ footer shows.
 **Who can access:** Store admins only
 
 **What you can do:** Pick a ready-made colour theme, set all eight of your brand colours
-individually, upload your logo, edit the homepage hero subtitle, the notice in the header banner and
+individually, upload your logo and your square mark, edit the homepage hero subtitle, the notice in the header banner and
 the search box text shown in the header's search box, set your delivery fee, your free delivery threshold and your minimum order value, and enter your
 Facebook page address, your Instagram profile address and your WhatsApp number. In the **Product
 labels & store description** form at the bottom of the page, choose which of the six product labels
@@ -107,6 +107,18 @@ day** — for a bank holiday, a stocktake or a staff day off.
 choose a theme from the **Select a theme** list and press **Apply Theme** — that fills all eight
 colour fields for you, and you can then adjust any of them before saving. Otherwise set the colours
 yourself, upload the logo, write the banner note, and check the shop's homepage afterwards.
+Your logo looks best at about 9:5 (for example 900 × 500 pixels). The header shows it in a small
+box, so a very wide logo comes out with tiny text.
+
+**Square mark.** Below the logo, **Square mark** takes a square version of your symbol: an
+initial, an emblem or a monogram. The image must be at least 512 pixels wide or tall. A
+rectangular image is fitted inside the square with space around it, not cropped. Press **Upload
+image** once. From that one upload your shop gets its browser-tab icon, the icon used when a
+shopper adds your shop to their phone's home screen, the picture shown when someone shares a link
+to your shop (for example in WhatsApp), and the logo in the header on phones. On a computer screen
+the header keeps showing your full logo. The link-preview picture uses your saved **Surface Brand Color (Cream)** as it is when you
+upload, so **after changing your colours, upload the mark again** to update it.
+There is no button to remove a mark; upload a new one to replace it.
 Delivery rules are their own form lower down the page with its own Save button — changing your
 delivery fee does not require touching your branding, and saving one does not save the other. Social
 and contact links are a third form below that, again with its own Save button, so you can add a

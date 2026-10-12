@@ -28,6 +28,7 @@ export function ImageWithFallback({
   fetchPriority,
   draggable,
   className,
+  sources,
 }: {
   src: string;
   alt: string;
@@ -38,6 +39,14 @@ export function ImageWithFallback({
   fetchPriority?: "high" | "low" | "auto";
   draggable?: boolean;
   className?: string;
+  /**
+   * #1069 — art-direction alternatives, rendered as `<source>`s in a `<picture>` ahead of the
+   * `<img>`. The browser fetches ONLY the candidate whose `media` matches, so a header that shows a
+   * mark on phones and a logo from `md` never downloads the hidden one. `src` is the fallback when
+   * no `media` matches. A failure of whichever candidate was chosen fires the `<img>`'s error event,
+   * so the fallback behaviour is unchanged.
+   */
+  sources?: readonly { media: string; srcSet: string }[];
 }) {
   const [failed, setFailed] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -55,7 +64,7 @@ export function ImageWithFallback({
 
   if (failed) return <>{fallback}</>;
 
-  return (
+  const img = (
     <img
       ref={imgRef}
       src={src}
@@ -68,5 +77,18 @@ export function ImageWithFallback({
       className={className}
       onError={() => setFailed(true)}
     />
+  );
+
+  if (!sources || sources.length === 0) return img;
+
+  // `contents`: the <picture> box disappears from layout, so the <img> stays the flex item its
+  // caller's classes were written for.
+  return (
+    <picture className="contents">
+      {sources.map((source) => (
+        <source key={source.media} media={source.media} srcSet={source.srcSet} />
+      ))}
+      {img}
+    </picture>
   );
 }

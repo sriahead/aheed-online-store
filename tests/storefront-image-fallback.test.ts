@@ -31,13 +31,17 @@ function tsxFiles(dir: string): string[] {
 
 const posix = (path: string) => relative(root, join(root, path)).split(sep).join("/");
 
-/** The surfaces `#655` named, plus the header logo (specs/2026-10-04-p979-655-storefront-finish). */
+/**
+ * The surfaces `#655` named, plus the header logo (specs/2026-10-04-p979-655-storefront-finish).
+ * #1069 moved the header's images (logo and square mark) into `HeaderBrand.tsx`; `Header.tsx` no
+ * longer renders an image itself, so the guard follows the images.
+ */
 const SURFACES = [
   "components/product/ProductImageGallery.tsx",
   "components/cart/CartContents.tsx",
   "components/bundle/BundleCard.tsx",
   "components/layout/DepartmentHero.tsx",
-  "components/layout/Header.tsx",
+  "components/layout/HeaderBrand.tsx",
 ];
 
 describe("storefront images degrade instead of breaking", () => {
