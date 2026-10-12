@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { getStorage } from "@/lib/storage";
+import { AHEED_FOOTER_DEFAULTS, seedFooterDefaults } from "./seed-footer";
 import { deriveUnitPricePenceForSort } from "@/components/product/unit-price";
 import {
   GENERATED_SLUG_PREFIX,
@@ -79,6 +80,7 @@ async function main() {
   await seedFeaturedProducts(AHEED_VENDOR_ID, AHEED_FEATURED_SLUGS);
   await refreshProductImages(CATALOGUE);
   await upsertVendorSatellites(AHEED_VENDOR_ID, AHEED_SATELLITES);
+  await seedFooterDefaults(prisma, AHEED_VENDOR_ID, AHEED_FOOTER_DEFAULTS);
   // After the catalogue: bundles resolve their constituents by product slug.
   await seedBundles(AHEED_VENDOR_ID, AHEED_BUNDLES);
   await seedPriceTiers(AHEED_VENDOR_ID, AHEED_PRICE_TIERS);

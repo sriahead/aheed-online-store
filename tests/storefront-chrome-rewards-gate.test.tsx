@@ -39,6 +39,8 @@ vi.mock("@/lib/rewards-service", () => ({
 // Chrome siblings the gate does not touch; each has its own tests.
 vi.mock("@/components/layout/Header", () => ({ Header: () => null }));
 vi.mock("@/components/layout/FloatingContact", () => ({ FloatingContact: () => null }));
+// #1055 — the footer has its own test (tests/storefront-footer.test.tsx); this one is about the launcher.
+vi.mock("@/components/layout/StorefrontFooter", () => ({ StorefrontFooter: () => null }));
 vi.mock("@/components/consent/CookieBanner", () => ({ CookieBanner: () => null }));
 vi.mock("@/components/product/QuickViewDrawer", () => ({ QuickViewDrawer: () => null }));
 vi.mock("@/lib/vendor-theme", () => ({ brandStyle: () => ({}) }));

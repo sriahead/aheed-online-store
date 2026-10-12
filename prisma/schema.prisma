@@ -187,6 +187,9 @@ model Vendor {
   reviewLinks               VendorReviewLink[]
   faqs                      VendorFaq[]
   aiUsageEvents             AiUsageEvent[]
+  weeklyHours               VendorWeeklyHours[]
+  hoursOverrides            VendorHoursOverride[]
+  paymentBadges             VendorPaymentBadge[]
 }
 
 // P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
@@ -464,6 +467,17 @@ model VendorConfig {
   facebookUrl                String? // full https profile URL
   instagramUrl               String? // full https profile URL
   whatsappNumber             String? // digits only, E.164 without the leading +, for wa.me
+  // #1055 — storefront footer identity, same null rule as the social links above: a null HIDES
+  // that footer element rather than falling back to a platform default (#239). Bracketed
+  // placeholders such as "[YOUR EMAIL]" are legal values (approved defaults) and render as text;
+  // the footer only builds a tel:/mailto: href from a value that passes the real format check.
+  contactPhone               String?
+  contactEmail               String?
+  companyNumber              String?
+  vatNumber                  String?
+  registeredOffice           String?
+  openingHoursNote           String? // line under the opening hours
+  showSecureCheckoutNote     Boolean            @default(false) // "Secure checkout powered by Stripe"
   // P3a — delivery rules are vendor data, never constants (the AI Studio mockup hardcoded a
   // £30 threshold). Prisma-level defaults mean a newly-inserted vendor is valid without the
   // seed supplying values. P3a reads only the threshold (cart banner); applying the fee and
@@ -2047,4 +2061,56 @@ model ShoppingListItem {
   position Int
 
   @@index([listId])
+}
+
+// #1060 — the storefront footer's weekly opening hours: one row per weekday, real HH:mm times
+// (the VendorExpressSchedule convention), or closed all day. A weekday with no row is "not set" and
+// the footer omits it. Replaces #1055's free-text VendorOpeningHours. The invariant (closed => both
+// times null; open => both set and openTime < closeTime) is enforced by lib/footer-hours-form.ts.
+model VendorWeeklyHours {
+  id        String  @id @default(uuid())
+  vendorId  String
+  vendor    Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  dayOfWeek Int // 0 = Sunday, 1 = Monday...
+  openTime  String? // HH:mm
+  closeTime String? // HH:mm
+  closed    Boolean @default(false)
+
+  @@unique([vendorId, dayOfWeek])
+}
+
+// #1060 — a dated holiday / closure override of the weekly hours. One per calendar day (saving a
+// date again replaces it). `date` is the store-local calendar day at UTC midnight, the same
+// convention as `Order.fulfilmentDate` (lib/local-datetime.ts).
+model VendorHoursOverride {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  label     String
+  openTime  String? // HH:mm
+  closeTime String? // HH:mm
+  closed    Boolean  @default(false)
+
+  @@unique([vendorId, date])
+}
+
+// #1055 — which payment-method badges the footer shows. Display order is this declaration
+// order, fixed in code. The images are platform static assets (public/payment-methods/), not
+// vendor uploads: a card scheme's logo is the same for every vendor.
+enum PaymentBadgeMethod {
+  VISA
+  MASTERCARD
+  AMEX
+  APPLE_PAY
+  GOOGLE_PAY
+}
+
+model VendorPaymentBadge {
+  id       String             @id @default(uuid())
+  vendorId String
+  vendor   Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  method   PaymentBadgeMethod
+
+  @@unique([vendorId, method])
 }

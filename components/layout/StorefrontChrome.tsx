@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
 import { getRewardsDataForUser } from "@/lib/rewards-service";
 import { Header } from "@/components/layout/Header";
 import { FloatingContact } from "@/components/layout/FloatingContact";
+import { AssistantLauncherProvider } from "@/components/assistant/AssistantLauncher";
+import { StorefrontFooter } from "@/components/layout/StorefrontFooter";
+import { getPlatformBrandingEnv } from "@/lib/config";
 import { CookieBanner } from "@/components/consent/CookieBanner";
 import { QuickViewProvider } from "@/components/product/quick-view-context";
 import { QuickViewDrawer } from "@/components/product/QuickViewDrawer";
@@ -34,6 +36,9 @@ export async function StorefrontChrome({
   const proto = requestHeaders.get("x-forwarded-proto") ?? "https";
   const baseUrl = `${proto}://${host}`;
   const initialRewardsData = await getRewardsDataForUser(session?.user?.id ?? null, baseUrl);
+  // #1015 — from the profile already loaded above: no query added to the page render. One value for
+  // both FloatingContact and the footer's channel row (#1060), so they always list the same set.
+  const assistantAvailable = profile.assistantEnabled && profile.whatsappNumber !== null;
 
   return (
     <QuickViewProvider>
@@ -44,31 +49,24 @@ export async function StorefrontChrome({
           here, so outside this div SriMart would get the :root (Aheed) colour.
         */}
         <CartFeedbackProvider>
-          <Header isLanding={isLanding} />
-          <div className="flex-1">{children}</div>
-          <footer className="border-t border-black/10 bg-white py-6 text-xs text-primary">
-            <div className="mx-auto flex max-w-5xl flex-col sm:flex-row items-center justify-between gap-4 px-4">
-              <p>
-                © {new Date().getFullYear()} {profile.name}. All rights reserved.
-              </p>
-              <div className="flex items-center gap-4 font-medium">
-                <Link href="/terms" className="hover:underline">
-                  Terms of Service
-                </Link>
-                <Link href="/privacy" className="hover:underline">
-                  Privacy Policy
-                </Link>
-              </div>
-            </div>
-          </footer>
-          <FloatingContact
-            vendorName={profile.name}
-            facebookUrl={profile.facebookUrl}
-            instagramUrl={profile.instagramUrl}
-            whatsappNumber={profile.whatsappNumber}
-            // #1015 — from the profile already loaded above: no query added to the page render.
-            assistantAvailable={profile.assistantEnabled && profile.whatsappNumber !== null}
-          />
+          {/* #1060 — one help-assistant panel, opened from FloatingContact or the footer. */}
+          <AssistantLauncherProvider vendorName={profile.name}>
+            <Header isLanding={isLanding} />
+            <div className="flex-1">{children}</div>
+            {/* #1055 — vendor-configured footer; every value comes from `profile` (no extra query). */}
+            <StorefrontFooter
+              profile={profile}
+              platformName={getPlatformBrandingEnv().PLATFORM_NAME}
+              assistantAvailable={assistantAvailable}
+            />
+            <FloatingContact
+              vendorName={profile.name}
+              facebookUrl={profile.facebookUrl}
+              instagramUrl={profile.instagramUrl}
+              whatsappNumber={profile.whatsappNumber}
+              assistantAvailable={assistantAvailable}
+            />
+          </AssistantLauncherProvider>
           <CookieBanner />
           <QuickViewDrawer />
           {/*

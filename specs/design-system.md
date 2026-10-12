@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.17.0"
-updated: 2026-10-07
+version: "1.19.0"
+updated: 2026-10-12
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -288,6 +288,52 @@ fix rather than a name-length assumption.
 
 This matters for multi-tenancy (ADR-004): a new vendor onboarding without a logo is ordinary, not
 exceptional, and nothing validates a vendor's name length.
+
+## Dark surfaces: the storefront footer (#1055, 2026-10-12)
+
+The footer is the one storefront surface painted in the vendor's **dark** brand colour
+(`--color-primary`), so its text has to be light. **No semantic token covers that.** Every themed
+foreground `brandStyle()` emits is clamped against the LIGHT surfaces (white, cream, the tints), and
+Aheed's `--color-accent` on its own dark green measures about 3.1:1.
+
+- The footer's colours come from `footerPalette(primitives)` in `lib/footer-palette.ts`:
+  - `background` is the clamped `--color-primary`;
+  - `text` comes from `cream`;
+  - `heading` comes from `orange`;
+  - `muted` comes from `cream`, darkened, then clamped.
+  Each foreground is clamped to **4.5:1 against the footer background**, and `clampForContrast`
+  lightens when the background is dark.
+- They are applied as footer-local custom properties (`--footer-bg`, `--footer-text`,
+  `--footer-heading`, `--footer-muted`) inline on `<footer>`, and read as
+  `text-[var(--footer-…)]`. **No hex literal, no `tokens.css` entry, and no alpha modifier on text.**
+- A malformed stored primitive falls back to the platform default, as in `brandStyle()`. A throw
+  there would take down every storefront page.
+- Measured for Aheed and SriMart in `lib/footer-palette.test.ts`.
+
+A future dark surface reuses `footerPalette`; it does not reach for `--color-accent` on a dark
+background.
+
+### Footer layout rules (#1060, 2026-10-12)
+
+- **Today's opening-hours row** is bold in `--footer-heading` and carries `aria-current="date"`.
+  "Today" is the store's calendar day (`STORE_TIMEZONE`), computed per request.
+- **Contact channels** render as a row of **44px circles** (`size-tap`, bordered in
+  `--footer-text`) under the "Shop with us" links. The list, its order, links and labels come
+  **only** from `contactChannels()` in `lib/contact-channels.ts`, the same source
+  `FloatingContact` renders, and the icons only from `components/layout/contact-channel-icons.tsx`.
+  Never add a channel to one surface alone.
+- **The bottom bar is one grid, `lg:grid-cols-[2fr_1fr_1fr]`**: company details and "Powered by",
+  then the legal links, then the Stripe line and badges. That is an exact 50 / 25 / 25, because the
+  gaps sit between tracks. It switches at `lg`, not `md`: a quarter column at 768px cannot hold the
+  Stripe line or five badges on one line. Below `lg` it stacks **payment, legal, company**, via
+  `order-*`, so the DOM order stays the desktop reading order.
+- **The legal links** sit on one line (`whitespace-nowrap`), separated by `aria-hidden` dots. All
+  three share one style: no underline until hover.
+- **The footer clears the floating buttons.** Its bottom padding (`pb-40`, `sm:pb-44`) is taller
+  than the stack on the right: the cart button at `bottom-6`/`sm:bottom-8`, and the contact trigger
+  at `bottom-24`/`sm:bottom-28` with `h-12`. So scrolled to the end, no footer content sits under
+  Rewards, the cart or the contact trigger. **Moving any floating button higher means raising this
+  padding too.**
 
 ## Product grids (#962, 2026-10-02)
 

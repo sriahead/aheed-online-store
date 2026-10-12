@@ -59,7 +59,8 @@ export default async function TermsPage() {
           </p>
         </section>
 
-        <section className="space-y-2">
+        {/* #1055 — the footer's "Returns & refunds" link lands here. */}
+        <section id="refunds" className="scroll-mt-24 space-y-2">
           <h2 className="text-lg font-semibold text-primary">4. Order Cancellations & Refunds</h2>
           <p className="text-sm text-primary-muted leading-relaxed">
             Orders can be cancelled before picking commences by contacting customer support. For

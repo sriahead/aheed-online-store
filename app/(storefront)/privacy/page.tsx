@@ -58,11 +58,52 @@ export default async function PrivacyPage() {
           </p>
         </section>
 
-        <section className="space-y-2">
+        {/* #1055 — the footer's "Cookies" link lands here. */}
+        <section id="cookies" className="scroll-mt-24 space-y-2">
           <h2 className="text-lg font-semibold text-primary">4. Cookies and Local Storage</h2>
           <p className="text-sm text-primary-muted leading-relaxed">
-            We use essential host-scoped cookies for authentication (`aheed_session`), shopping cart
-            state (`aheed_cart`), and cookie preference management (`aheed_cookie_consent`).
+            We use cookies and local storage technologies to support essential website
+            functionality, including user authentication, shopping cart management, delivery and
+            collection preferences, checkout convenience, referral links, and the storage of cookie
+            consent preferences.
+          </p>
+          <p className="text-sm text-primary-muted leading-relaxed">
+            The following cookies and local storage items are used for these purposes:
+          </p>
+          {/* #1064 — every name here is one the storefront really sets; tests/privacy-cookies-
+              section.test.tsx pins the three that exist as exported constants. The session name is
+              Better Auth's own, with the `__Secure-` prefix it adds over HTTPS. */}
+          <ul className="list-disc space-y-1 pl-5 text-sm text-primary-muted leading-relaxed">
+            <li>
+              <code>__Secure-better-auth.session_token</code> — Maintains your authenticated
+              session.
+            </li>
+            <li>
+              <code>aheed_cart</code> — Stores your shopping cart state.
+            </li>
+            <li>
+              <code>aheed_cookie_consent</code> — Records your cookie consent preferences.
+            </li>
+            <li>
+              <code>delivery-postcode</code> — Remembers the postcode you entered so we can show
+              delivery availability and fees.
+            </li>
+            <li>
+              <code>fulfilment-method</code> — Remembers whether you chose delivery or collection.
+            </li>
+            <li>
+              <code>aheed_referral_code</code> — Remembers a referral code from a link you followed
+              so it can be applied at checkout. Only set when you arrive through a referral link.
+            </li>
+            <li>
+              <code>aheed_checkout_details</code> — Local storage. Keeps the contact and delivery
+              details you type into the checkout form on your device so they are filled in next
+              time. It stays on your device.
+            </li>
+          </ul>
+          <p className="text-sm text-primary-muted leading-relaxed">
+            These cookies and local storage items are scoped to the relevant host and are used to
+            provide core website functionality.
           </p>
         </section>
 

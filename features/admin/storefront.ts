@@ -12,6 +12,9 @@ import {
 import {
   applyVendorTheme,
   updateVendorLogoKey,
+  replaceVendorFooterHours,
+  saveVendorHoursOverride,
+  deleteVendorHoursOverride,
   updateVendorStorefrontConfig,
 } from "@/lib/vendor-service";
 import type { VendorStorefrontConfigInput, BrandPrimitives } from "@/lib/repositories/vendor";
@@ -30,6 +33,25 @@ import {
   parseProductGridDensity,
   type ProductGridDensityFormState,
 } from "@/lib/product-grid-density";
+import { parseFooterContact, type FooterContactFormState } from "@/lib/footer-contact-form";
+import {
+  OVERRIDE_CLOSE_FIELD,
+  OVERRIDE_CLOSED_FIELD,
+  OVERRIDE_DATE_FIELD,
+  OVERRIDE_ID_FIELD,
+  OVERRIDE_LABEL_FIELD,
+  OVERRIDE_OPEN_FIELD,
+  PAYMENT_BADGE_FIELD,
+  WEEKDAYS,
+  parseHoursOverride,
+  parseWeeklyHours,
+  weekdayCloseField,
+  weekdayClosedField,
+  weekdayOpenField,
+  type FooterHoursFormState,
+  type HoursOverrideFormState,
+} from "@/lib/footer-hours-form";
+import { calendarDayInZone } from "@/lib/local-datetime";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import crypto from "crypto";
 
@@ -332,4 +354,148 @@ export async function updateProductGridDensity(
   revalidatePath("/staff/storefront");
   revalidatePath("/", "layout");
   return { error: null, saved: true };
+}
+
+/**
+ * Save the storefront footer's contact & legal details (#1055).
+ *
+ * Its own action and its own form, for the reason every form on this page is separate: the others
+ * submit without these seven fields and must keep leaving them alone, and a bad email needs a
+ * FIELD-LEVEL error against the input that caused it. Validation lives in
+ * `lib/footer-contact-form.ts`, DB-free and unit-tested.
+ *
+ * The vendor comes from the session — `requireVendorRole("ADMIN")` — never from the submission.
+ */
+export async function updateFooterContact(
+  _prev: FooterContactFormState,
+  formData: FormData,
+): Promise<FooterContactFormState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { error: refusal(auth.status), field: null, saved: false };
+
+  const checkbox = formData.get("showSecureCheckoutNote");
+  const parsed = parseFooterContact({
+    contactPhone: String(formData.get("contactPhone") ?? ""),
+    contactEmail: String(formData.get("contactEmail") ?? ""),
+    companyNumber: String(formData.get("companyNumber") ?? ""),
+    vatNumber: String(formData.get("vatNumber") ?? ""),
+    registeredOffice: String(formData.get("registeredOffice") ?? ""),
+    openingHoursNote: String(formData.get("openingHoursNote") ?? ""),
+    showSecureCheckoutNote: typeof checkbox === "string" ? checkbox : null,
+  });
+
+  if (!parsed.ok) {
+    return { error: parsed.error.message, field: parsed.error.field, saved: false };
+  }
+
+  // Only the seven footer columns are passed; every other config field is omitted (undefined), so
+  // Prisma leaves branding, delivery rules and social links untouched.
+  await updateVendorStorefrontConfig(auth.vendorId, parsed.value);
+
+  revalidatePath("/staff/storefront");
+  revalidatePath("/", "layout");
+  return { error: null, field: null, saved: true };
+}
+
+/**
+ * Save the storefront footer's weekly opening hours and payment badges (#1055, #1060).
+ *
+ * The submission is the COMPLETE set for both: the repository deletes and re-inserts this vendor's
+ * rows in one WebSocket transaction (`createMany` cannot run over the HTTP adapter, #382), so a
+ * failure leaves the previous set intact rather than an empty footer. A weekday left blank (and not
+ * ticked closed) is "not set", and the footer omits it.
+ *
+ * The vendor comes from the session — `requireVendorRole("ADMIN")` — never from the submission.
+ */
+export async function updateFooterHours(
+  _prev: FooterHoursFormState,
+  formData: FormData,
+): Promise<FooterHoursFormState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { error: refusal(auth.status), field: null, saved: false };
+
+  const parsed = parseWeeklyHours({
+    days: WEEKDAYS.map(({ dayOfWeek }) => ({
+      dayOfWeek,
+      open: String(formData.get(weekdayOpenField(dayOfWeek)) ?? ""),
+      close: String(formData.get(weekdayCloseField(dayOfWeek)) ?? ""),
+      closed: formData.get(weekdayClosedField(dayOfWeek)) === "on",
+    })),
+    badges: formData.getAll(PAYMENT_BADGE_FIELD).map(String),
+  });
+
+  if (!parsed.ok) {
+    return { error: parsed.error.message, field: parsed.error.field, saved: false };
+  }
+
+  await replaceVendorFooterHours(auth.vendorId, parsed.value);
+
+  revalidatePath("/staff/storefront");
+  revalidatePath("/", "layout");
+  return { error: null, field: null, saved: true };
+}
+
+/**
+ * Save one holiday / closure date (#1060). Saving a date that already has an override replaces it;
+ * that is how an admin edits one. "Today" is the store's calendar day (`STORE_TIMEZONE`), never the
+ * server's UTC date.
+ *
+ * The vendor comes from the session — `requireVendorRole("ADMIN")` — never from the submission.
+ */
+export async function saveHoursOverride(
+  _prev: HoursOverrideFormState,
+  formData: FormData,
+): Promise<HoursOverrideFormState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { error: refusal(auth.status), field: null, saved: false };
+
+  const today = calendarDayInZone(new Date());
+  const parsed = parseHoursOverride(
+    {
+      date: String(formData.get(OVERRIDE_DATE_FIELD) ?? ""),
+      label: String(formData.get(OVERRIDE_LABEL_FIELD) ?? ""),
+      open: String(formData.get(OVERRIDE_OPEN_FIELD) ?? ""),
+      close: String(formData.get(OVERRIDE_CLOSE_FIELD) ?? ""),
+      closed: formData.get(OVERRIDE_CLOSED_FIELD) === "on",
+    },
+    today,
+  );
+
+  if (!parsed.ok) {
+    return { error: parsed.error.message, field: parsed.error.field, saved: false };
+  }
+
+  const result = await saveVendorHoursOverride(auth.vendorId, today, parsed.value);
+  if (!result.ok) {
+    return {
+      error: "You already have 50 upcoming dates. Delete one before adding another.",
+      field: OVERRIDE_DATE_FIELD,
+      saved: false,
+    };
+  }
+
+  revalidatePath("/staff/storefront");
+  revalidatePath("/", "layout");
+  return { error: null, field: null, saved: true };
+}
+
+/**
+ * Delete one holiday / closure date (#1060). The repository scopes the delete by the session's
+ * vendor as well as the id, so an id belonging to another vendor deletes nothing.
+ */
+export async function deleteHoursOverride(
+  _prev: HoursOverrideFormState,
+  formData: FormData,
+): Promise<HoursOverrideFormState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { error: refusal(auth.status), field: null, saved: false };
+
+  const id = String(formData.get(OVERRIDE_ID_FIELD) ?? "");
+  if (id === "") return { error: "Nothing to delete.", field: null, saved: false };
+
+  await deleteVendorHoursOverride(auth.vendorId, id);
+
+  revalidatePath("/staff/storefront");
+  revalidatePath("/", "layout");
+  return { error: null, field: null, saved: true };
 }

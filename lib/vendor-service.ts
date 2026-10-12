@@ -9,13 +9,18 @@ import {
   getVendorConfig as getVendorConfigRepo,
   listThemes as listThemesRepo,
   listVendorThemes as listVendorThemesRepo,
+  replaceVendorFooterHours as replaceVendorFooterHoursRepo,
+  saveVendorHoursOverride as saveVendorHoursOverrideRepo,
+  deleteVendorHoursOverride as deleteVendorHoursOverrideRepo,
   saveVendorTheme as saveVendorThemeRepo,
   updateVendorLogoKey as updateVendorLogoKeyRepo,
   updateVendorStorefrontConfig as updateVendorStorefrontConfigRepo,
   type BrandPrimitives,
   type VendorProfile,
+  type VendorFooterHoursInput,
   type VendorStorefrontConfigInput,
 } from "@/lib/repositories/vendor";
+import type { HoursOverrideRow } from "@/lib/footer-hours";
 
 /**
  * Request-scoped vendor-profile accessors (#252) — the two functions that
@@ -96,6 +101,28 @@ export async function updateVendorStorefrontConfig(
   data: VendorStorefrontConfigInput,
 ) {
   return updateVendorStorefrontConfigRepo(getPrismaWs(), vendorId, data);
+}
+
+/**
+ * #1055 — `getPrismaWs()` for the same reason as above: the replace is an interactive transaction
+ * carrying `createMany`, neither of which the HTTP adapter can run.
+ */
+export async function replaceVendorFooterHours(vendorId: string, data: VendorFooterHoursInput) {
+  return replaceVendorFooterHoursRepo(getPrismaWs(), vendorId, data);
+}
+
+/** #1060 — HTTP client: prune, count and `upsert` open no interactive transaction. */
+export async function saveVendorHoursOverride(
+  vendorId: string,
+  today: string,
+  row: HoursOverrideRow,
+) {
+  return saveVendorHoursOverrideRepo(getPrisma(), vendorId, today, row);
+}
+
+/** #1060 — `deleteMany` scoped by vendor, which the HTTP client runs fine. */
+export async function deleteVendorHoursOverride(vendorId: string, id: string) {
+  return deleteVendorHoursOverrideRepo(getPrisma(), vendorId, id);
 }
 
 /** The seeded theme catalogue (#75), for the `/staff/storefront` picker. */
