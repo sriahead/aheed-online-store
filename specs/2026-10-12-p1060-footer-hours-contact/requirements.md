@@ -273,6 +273,16 @@ R22. In `prisma/seed.ts`, `seedFooterDefaults`:
     Running the seed twice in a row leaves an admin-edited weekly row unchanged. SriMart receives no
     weekly rows.
 
+R22a. *(Spec amendment, user request 2026-10-12.)* `scripts/seed-footer-defaults.ts` runs **only**
+    `seedFooterDefaults` for Aheed, against the database in `DIRECT_URL`. It writes nothing to
+    `VendorBranding`, makes no `vendorConfig.upsert`, uploads nothing to storage and touches no
+    other vendor. That lets staging receive the weekly hours without the full seed reverting
+    admin-edited branding and config, which the full seed's `upsertVendorSatellites` does.
+    `seedFooterDefaults` lives in a module that both `prisma/seed.ts` and the script import, so
+    there is one implementation. The script finds Aheed by its seeded vendor id, and exits non-zero
+    with a message when that vendor is absent. The user runs it against staging **after** this
+    slice's migration has deployed there; auto mode blocks the assistant from staging writes.
+
 ## Docs, gates
 
 R23. `specs/design-system.md`'s storefront footer section records:
