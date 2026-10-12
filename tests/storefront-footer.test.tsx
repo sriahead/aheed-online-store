@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { StorefrontFooter } from "@/components/layout/StorefrontFooter";
 import { DEFAULT_BRAND_PRIMITIVES, type VendorProfile } from "@/lib/repositories/vendor";
 
 /*
  * #1055 — the footer's hide-when-null rule, the placeholder-never-a-link rule, and the gated links.
+ * #1060 — structured weekly hours with today highlighted, and the shared contact-channel row.
  * Only the fields the footer reads are set; the cast keeps the fixture from restating all of
  * `VendorProfile`.
  */
@@ -14,6 +15,8 @@ const BARE = {
   name: "Second Shop",
   primitives: DEFAULT_BRAND_PRIMITIVES,
   facebookUrl: null,
+  instagramUrl: null,
+  whatsappNumber: null,
   contactPhone: null,
   contactEmail: null,
   companyNumber: null,
@@ -22,10 +25,18 @@ const BARE = {
   openingHoursNote: null,
   showSecureCheckoutNote: false,
   location: null,
-  openingHours: [],
+  weeklyHours: [],
+  hoursOverrides: [],
   paymentBadges: [],
   loyaltyEnabled: false,
 };
+
+const WEEK = [1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
+  dayOfWeek,
+  openTime: "09:00",
+  closeTime: "20:00",
+  closed: false,
+}));
 
 const SEEDED = {
   ...BARE,
@@ -43,20 +54,26 @@ const SEEDED = {
     city: "Milton Keynes",
     postcode: "MK9 3BU",
   },
-  openingHours: [
-    { label: "Monday – Friday", hours: "[OPEN] – 8pm" },
-    { label: "Bank holidays", hours: "[HOURS]" },
-  ],
+  weeklyHours: [...WEEK, { dayOfWeek: 0, openTime: "09:00", closeTime: "19:00", closed: false }],
   paymentBadges: ["VISA", "MASTERCARD", "AMEX", "APPLE_PAY", "GOOGLE_PAY"],
   loyaltyEnabled: true,
 };
 
-function renderFooter(profile: object, platformName?: string) {
-  render(<StorefrontFooter profile={profile as VendorProfile} platformName={platformName} />);
+function renderFooter(profile: object, platformName?: string, assistantAvailable = false) {
+  render(
+    <StorefrontFooter
+      profile={profile as VendorProfile}
+      platformName={platformName}
+      assistantAvailable={assistantAvailable}
+    />,
+  );
   return screen.getByRole("contentinfo");
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe("StorefrontFooter (#1055)", () => {
   it("renders the three columns and the seeded values", () => {
@@ -93,11 +110,45 @@ describe("StorefrontFooter (#1055)", () => {
     expect(footer.querySelector('a[href="mailto:shop@example.com"]')).not.toBeNull();
   });
 
-  it("shows hours rows in order", () => {
+  it("shows the weekly hours Monday → Sunday and highlights today (#1060)", () => {
+    // Wednesday 2026-10-14, midday in London.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-14T11:00:00Z"));
     const footer = renderFooter(SEEDED);
-    const text = footer.textContent ?? "";
-    expect(text.indexOf("Monday – Friday")).toBeLessThan(text.indexOf("Bank holidays"));
-    expect(text).toContain("[OPEN] – 8pm");
+    const terms = [...footer.querySelectorAll("dt")].map((dt) => dt.textContent);
+    expect(terms).toEqual([
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ]);
+    const today = footer.querySelectorAll('[aria-current="date"]');
+    expect(today).toHaveLength(1);
+    expect(today[0].textContent).toBe("Wednesday9am – 8pm");
+    expect(footer.textContent).not.toContain("Holiday hours");
+  });
+
+  it("lists an upcoming override under Holiday hours (#1060)", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-12-20T12:00:00Z"));
+    const footer = renderFooter({
+      ...SEEDED,
+      hoursOverrides: [
+        {
+          id: "o1",
+          date: "2026-12-25",
+          label: "Christmas Day",
+          openTime: null,
+          closeTime: null,
+          closed: true,
+        },
+      ],
+    });
+    expect(footer.textContent).toContain("Holiday hours");
+    expect(footer.textContent).toContain("Fri 25 Dec · Christmas Day · Closed");
   });
 
   it("renders the badges in display order with alt text", () => {
@@ -113,7 +164,7 @@ describe("StorefrontFooter (#1055)", () => {
     for (const img of imgs) expect(img.getAttribute("alt")).toBeTruthy();
   });
 
-  it("links the shop pages, Rewards and Facebook when configured", () => {
+  it("links the shop pages, Rewards and the contact channels when configured", () => {
     const footer = renderFooter(SEEDED);
     const hrefs = [...footer.querySelectorAll("a")].map((a) => a.getAttribute("href"));
     for (const href of [
@@ -128,9 +179,17 @@ describe("StorefrontFooter (#1055)", () => {
     ]) {
       expect(hrefs).toContain(href);
     }
-    expect(within(footer).getByRole("link", { name: "Facebook" }).getAttribute("href")).toBe(
-      SEEDED.facebookUrl,
-    );
+    expect(
+      within(footer).getByRole("link", { name: "First Shop on Facebook" }).getAttribute("href"),
+    ).toBe(SEEDED.facebookUrl);
+  });
+
+  it("renders the help-assistant channel as a button when it is available (#1060)", () => {
+    const footer = renderFooter({ ...SEEDED, whatsappNumber: "447700900123" }, undefined, true);
+    const row = within(footer).getByRole("list", { name: "Contact us" });
+    expect(within(row).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(row).getByRole("button", { name: "Open help assistant" })).toBeTruthy();
+    expect(within(row).queryByRole("link", { name: /WhatsApp/ })).toBeNull();
   });
 
   it("hides everything a bare vendor has not set, with no platform fallback", () => {
@@ -138,7 +197,7 @@ describe("StorefrontFooter (#1055)", () => {
     expect(within(footer).queryByRole("heading", { name: "Visit & contact us" })).toBeNull();
     expect(within(footer).queryByRole("heading", { name: "Shop opening hours" })).toBeNull();
     expect(within(footer).getByRole("heading", { name: "Shop with us" })).toBeTruthy();
-    expect(within(footer).queryByRole("link", { name: "Facebook" })).toBeNull();
+    expect(within(footer).queryByRole("list", { name: "Contact us" })).toBeNull();
     expect(footer.querySelector('a[href="/account/loyalty"]')).toBeNull();
     expect(footer.querySelector("img")).toBeNull();
     const text = footer.textContent ?? "";

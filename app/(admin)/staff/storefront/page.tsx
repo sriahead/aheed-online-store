@@ -13,6 +13,7 @@ import { ReviewLinksManager } from "@/components/staff/ReviewLinksManager";
 import { FooterSettingsForms } from "@/components/staff/FooterSettingsForms";
 import { getVendorReviewLinkRepository } from "@/lib/vendor-review-links-service";
 import { getStorage } from "@/lib/storage";
+import { calendarDayInZone } from "@/lib/local-datetime";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,7 @@ export default async function StorefrontAdminPage() {
   const reviewLinks = await getVendorReviewLinkRepository().listAll();
   // #1055 — the footer's hours and badges come back on the profile, already ordered.
   const profile = await fetchVendorProfile(auth.vendorId);
+  const today = calendarDayInZone(new Date());
 
   if (!config || !branding) {
     return <div className="p-8">Vendor config or branding not found.</div>;
@@ -71,8 +73,11 @@ export default async function StorefrontAdminPage() {
             registeredOffice: config.registeredOffice,
             openingHoursNote: config.openingHoursNote,
             showSecureCheckoutNote: config.showSecureCheckoutNote,
-            openingHours: profile.openingHours,
+            weeklyHours: profile.weeklyHours,
             paymentBadges: profile.paymentBadges,
+            // #1060 — the store's calendar day; earlier overrides are pruned on the next save.
+            upcomingOverrides: profile.hoursOverrides.filter((o) => o.date >= today),
+            today,
           }}
         />
       </div>

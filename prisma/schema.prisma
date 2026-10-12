@@ -187,7 +187,8 @@ model Vendor {
   reviewLinks               VendorReviewLink[]
   faqs                      VendorFaq[]
   aiUsageEvents             AiUsageEvent[]
-  openingHours              VendorOpeningHours[]
+  weeklyHours               VendorWeeklyHours[]
+  hoursOverrides            VendorHoursOverride[]
   paymentBadges             VendorPaymentBadge[]
 }
 
@@ -2062,19 +2063,36 @@ model ShoppingListItem {
   @@index([listId])
 }
 
-// #1055 — the storefront footer's opening hours, as free-text label/value rows rather than
-// per-day times. The approved defaults are placeholders ("[OPEN] – 8pm") no time column can hold,
-// and the grouping (Mon–Fri / Sat / Sun / Bank holidays) is the vendor's own choice of label.
-// Machine-readable hours are deliberately deferred (specs/2026-10-12-p1055-storefront-footer).
-model VendorOpeningHours {
-  id        String @id @default(uuid())
+// #1060 — the storefront footer's weekly opening hours: one row per weekday, real HH:mm times
+// (the VendorExpressSchedule convention), or closed all day. A weekday with no row is "not set" and
+// the footer omits it. Replaces #1055's free-text VendorOpeningHours. The invariant (closed => both
+// times null; open => both set and openTime < closeTime) is enforced by lib/footer-hours-form.ts.
+model VendorWeeklyHours {
+  id        String  @id @default(uuid())
   vendorId  String
-  vendor    Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  label     String
-  hours     String
-  sortOrder Int
+  vendor    Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  dayOfWeek Int // 0 = Sunday, 1 = Monday...
+  openTime  String? // HH:mm
+  closeTime String? // HH:mm
+  closed    Boolean @default(false)
 
-  @@index([vendorId, sortOrder])
+  @@unique([vendorId, dayOfWeek])
+}
+
+// #1060 — a dated holiday / closure override of the weekly hours. One per calendar day (saving a
+// date again replaces it). `date` is the store-local calendar day at UTC midnight, the same
+// convention as `Order.fulfilmentDate` (lib/local-datetime.ts).
+model VendorHoursOverride {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  label     String
+  openTime  String? // HH:mm
+  closeTime String? // HH:mm
+  closed    Boolean  @default(false)
+
+  @@unique([vendorId, date])
 }
 
 // #1055 — which payment-method badges the footer shows. Display order is this declaration

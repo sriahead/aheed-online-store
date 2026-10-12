@@ -1,8 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { HelpCircle, MessageCircle, Share2, X } from "lucide-react";
-import { HelpAssistant } from "@/components/assistant/HelpAssistant";
+import { useState } from "react";
+import { Share2, X } from "lucide-react";
+import { contactChannels } from "@/lib/contact-channels";
+import { ContactChannelIcon } from "@/components/layout/contact-channel-icons";
+import {
+  AssistantLauncherProvider,
+  useAssistantLauncher,
+} from "@/components/assistant/AssistantLauncher";
 
 /**
  * Floating per-vendor contact cluster (P9.2, #407 / #405).
@@ -42,6 +47,13 @@ import { HelpAssistant } from "@/components/assistant/HelpAssistant";
  * `pointer-events-none` plus `opacity-0` keeps it inert without the layout thrash of unmounting,
  * and `aria-hidden` keeps it out of the accessibility tree so a screen reader does not announce
  * links the sighted reader cannot see.
+ *
+ * ## One source for the channels (#1060)
+ *
+ * Which channels exist, their order, links and labels come from `contactChannels()` in
+ * `lib/contact-channels.ts` — the same list the storefront footer's channel row renders — and the
+ * icons from `components/layout/contact-channel-icons.tsx`. The panel reads that list top to bottom.
+ * The help assistant itself is mounted once by `AssistantLauncherProvider`, shared with the footer.
  */
 
 const LINK_CLASS =
@@ -49,49 +61,7 @@ const LINK_CLASS =
 
 const PANEL_ID = "vendor-social-links";
 
-function FacebookGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-      aria-hidden="true"
-    >
-      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-    </svg>
-  );
-}
-
-function InstagramGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-      aria-hidden="true"
-    >
-      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-    </svg>
-  );
-}
-
-export function FloatingContact({
-  vendorName,
-  facebookUrl,
-  instagramUrl,
-  whatsappNumber,
-  assistantAvailable,
-}: {
+interface FloatingContactProps {
   vendorName: string;
   facebookUrl: string | null;
   instagramUrl: string | null;
@@ -101,20 +71,26 @@ export function FloatingContact({
    * profile it already loaded. When true, the disclosure gains a help-assistant control.
    */
   assistantAvailable: boolean;
-}) {
+}
+
+export function FloatingContact(props: FloatingContactProps) {
+  // Inside the storefront the chrome's provider is shared with the footer; rendered alone (tests,
+  // any future surface) it brings its own, so the assistant still opens.
+  if (useAssistantLauncher()) return <FloatingContactPanel {...props} />;
+  return (
+    <AssistantLauncherProvider vendorName={props.vendorName}>
+      <FloatingContactPanel {...props} />
+    </AssistantLauncherProvider>
+  );
+}
+
+function FloatingContactPanel(props: FloatingContactProps) {
   const [open, setOpen] = useState(false);
-  const [assistantOpen, setAssistantOpen] = useState(false);
-  const assistantTrigger = useRef<HTMLButtonElement>(null);
+  const launcher = useAssistantLauncher();
+  const { vendorName } = props;
 
-  function closeAssistant() {
-    setAssistantOpen(false);
-    // Back to the control that opened it; the disclosure stays open so that control is visible.
-    assistantTrigger.current?.focus();
-  }
-
-  if (!facebookUrl && !instagramUrl && !whatsappNumber) return null;
-
-  const whatsappMessage = `Hi ${vendorName}, I have a question about my order.`;
+  const channels = contactChannels(props);
+  if (channels.length === 0) return null;
 
   return (
     <div className="fixed bottom-24 right-6 z-50 sm:bottom-28 sm:right-8">
@@ -124,61 +100,40 @@ export function FloatingContact({
         <div
           id={PANEL_ID}
           aria-hidden={!open}
-          className={`absolute bottom-full right-0 mb-3 flex flex-col-reverse items-end gap-3 transition-all duration-200 ease-out motion-reduce:transition-none ${
+          className={`absolute bottom-full right-0 mb-3 flex flex-col items-end gap-3 transition-all duration-200 ease-out motion-reduce:transition-none ${
             open
               ? "pointer-events-auto translate-y-0 opacity-100"
               : "pointer-events-none translate-y-2 opacity-0"
           }`}
         >
-          {assistantAvailable && (
-            <button
-              ref={assistantTrigger}
-              type="button"
-              onClick={() => setAssistantOpen(true)}
-              aria-label="Open help assistant"
-              aria-haspopup="dialog"
-              tabIndex={open ? undefined : -1}
-              className={LINK_CLASS}
-            >
-              <HelpCircle className="h-5 w-5" aria-hidden="true" />
-            </button>
-          )}
-          {/* #1051 — with the assistant on, WhatsApp is reached through its handoff, not directly. */}
-          {whatsappNumber && !assistantAvailable && (
-            <a
-              href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`Message ${vendorName} on WhatsApp`}
-              tabIndex={open ? undefined : -1}
-              className={LINK_CLASS}
-            >
-              <MessageCircle className="h-5 w-5" aria-hidden="true" />
-            </a>
-          )}
-          {instagramUrl && (
-            <a
-              href={instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`${vendorName} on Instagram`}
-              tabIndex={open ? undefined : -1}
-              className={LINK_CLASS}
-            >
-              <InstagramGlyph />
-            </a>
-          )}
-          {facebookUrl && (
-            <a
-              href={facebookUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`${vendorName} on Facebook`}
-              tabIndex={open ? undefined : -1}
-              className={LINK_CLASS}
-            >
-              <FacebookGlyph />
-            </a>
+          {channels.map((channel) =>
+            channel.href === null ? (
+              <button
+                key={channel.kind}
+                type="button"
+                // The disclosure stays open while the assistant is up, so this control is still
+                // there for focus to return to on close.
+                onClick={(event) => launcher?.open(event.currentTarget)}
+                aria-label={channel.label}
+                aria-haspopup="dialog"
+                tabIndex={open ? undefined : -1}
+                className={LINK_CLASS}
+              >
+                <ContactChannelIcon kind={channel.kind} />
+              </button>
+            ) : (
+              <a
+                key={channel.kind}
+                href={channel.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={channel.label}
+                tabIndex={open ? undefined : -1}
+                className={LINK_CLASS}
+              >
+                <ContactChannelIcon kind={channel.kind} />
+              </a>
+            ),
           )}
         </div>
 
@@ -198,10 +153,6 @@ export function FloatingContact({
           )}
         </button>
       </div>
-      {/* Mounted only while open: each open is a fresh conversation (#1014). */}
-      {assistantAvailable && assistantOpen && (
-        <HelpAssistant vendorName={vendorName} onClose={closeAssistant} />
-      )}
     </div>
   );
 }
