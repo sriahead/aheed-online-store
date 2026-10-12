@@ -8,6 +8,12 @@ every branch merges.
 
 ### Documentation
 
+- **Tenth Discover pass: the "Aheed Super Store" brand-identity brief (filed `#1069`).** Docs only. `docs/research/discovery-log.md` 1.10.0, five entries:
+  - The brief is a rebrand (blue `#093DAA` / lime `#8DAD0E`, measured from the reference). **Owner ruling:** a new logo and palette under the existing name "Aheed Food Centre"; the owner's designer supplies the artwork.
+  - No vendor has a favicon, home-screen icon or social share image, and one 72×40 logo slot cannot serve a wide lockup on a phone. Filed as `#1069` (Gate 1 approved, full slice).
+  - The brief's CSS variable layer is not pursued: the semantic tokens and `VendorBranding` already cover it, and the palette is applied as a theme on `/staff/storefront`.
+  - A blue Aheed is close to SriMart's `#0d47a1`. **Owner ruling:** leave SriMart as it is; second-vendor checks compare the accent colour instead.
+
 - **Document pass and promotion record for PR #1050 / PR #1053 (`#1049`, `#1051`, `#1052` promoted to production, merge `c903f15`).** Docs only.
   - `specs/roadmap.md` 1.147.0: the slice row, citing `specs/2026-10-11-p1049-assistant-link-close/`, with its stage deviations stated (one Opus session, no fresh-context Validate, no `build-notes.md`).
   - `docs/model-handoff.md` 1.90.0: Last Verified moves to `c903f15`, `0311425` condensed to "previous promotion"; a new In-Flight entry for the slice; **corrects "off for every vendor"** for the help assistant: production Aheed has it on, read live 2026-10-11.
