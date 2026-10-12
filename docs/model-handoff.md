@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.90.0"
-updated: 2026-10-11
+version: "1.91.0"
+updated: 2026-10-12
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -665,6 +665,17 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **Storefront footer (`#1055`): BUILT, not yet validated or shipped.** Branch
+  `feature/p1055-storefront-footer` (spec `6cebdb5`, build `d42c9eb`); spec and build notes are in
+  `specs/2026-10-12-p1055-storefront-footer/`. The owner raised it as High on 2026-10-12.
+  - **Migration `20261012120000_p1055_storefront_footer` is applied nowhere yet, not even on the
+    local dev DB.** Auto mode blocked `prisma migrate deploy`, so the user must run it. Until then
+    three DB tests fail on the missing `showSecureCheckoutNote` column, and nothing can be
+    previewed.
+  - **Placeholders (`[YOUR EMAIL]`, `[OPEN]`, `[NUMBER]`, `[PLATFORM NAME]`, placeholder logo SVGs)
+    are approved and intentional** until the owner supplies the real values (`#1058`). Production
+    gets no seeded values; an admin enters them on `/staff/storefront`.
+  - Follow-ups `#1056` and `#1057` are Low.
 - **Help assistant follow-ups (`#1049` + `#1051` + `#1052`, one slice): DONE, in production**
   (PR #1050 to `staging`, then promotion PR #1053, merge `c903f15`, 2026-10-11), all three closed
   and `Done`. Spec: `specs/2026-10-11-p1049-assistant-link-close/` (no `build-notes.md`; the loop

@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.17.0"
-updated: 2026-10-07
+version: "1.18.0"
+updated: 2026-10-12
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -288,6 +288,30 @@ fix rather than a name-length assumption.
 
 This matters for multi-tenancy (ADR-004): a new vendor onboarding without a logo is ordinary, not
 exceptional, and nothing validates a vendor's name length.
+
+## Dark surfaces: the storefront footer (#1055, 2026-10-12)
+
+The footer is the one storefront surface painted in the vendor's **dark** brand colour
+(`--color-primary`), so its text has to be light. **No semantic token covers that.** Every themed
+foreground `brandStyle()` emits is clamped against the LIGHT surfaces (white, cream, the tints), and
+Aheed's `--color-accent` on its own dark green measures about 3.1:1.
+
+- The footer's colours come from `footerPalette(primitives)` in `lib/footer-palette.ts`:
+  - `background` is the clamped `--color-primary`;
+  - `text` comes from `cream`;
+  - `heading` comes from `orange`;
+  - `muted` comes from `cream`, darkened, then clamped.
+  Each foreground is clamped to **4.5:1 against the footer background**, and `clampForContrast`
+  lightens when the background is dark.
+- They are applied as footer-local custom properties (`--footer-bg`, `--footer-text`,
+  `--footer-heading`, `--footer-muted`) inline on `<footer>`, and read as
+  `text-[var(--footer-…)]`. **No hex literal, no `tokens.css` entry, and no alpha modifier on text.**
+- A malformed stored primitive falls back to the platform default, as in `brandStyle()`. A throw
+  there would take down every storefront page.
+- Measured for Aheed and SriMart in `lib/footer-palette.test.ts`.
+
+A future dark surface reuses `footerPalette`; it does not reach for `--color-accent` on a dark
+background.
 
 ## Product grids (#962, 2026-10-02)
 
