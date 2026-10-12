@@ -101,6 +101,10 @@ emails and repeat customers.
 **Next action:** RESEARCH MORE — one owner question: is "Aheed Super Store" the new trading name, or
 a logo for "Aheed Food Centre"?
 
+**Resolved 2026-10-12 (owner, at `/propose`):** a **new logo under the existing name**. The vendor
+keeps trading as "Aheed Food Centre"; no vendor name, Stripe descriptor, email sender or domain
+changes. The logo and palette change. The owner's designer supplies the vector artwork.
+
 ### 2026-10-12 — no vendor has a favicon, a home-screen icon or a social share image, and nothing can hold one
 
 **Trigger:** explicit `/discover` — the brief's favicon, touch-icon, manifest and SERP items.
@@ -235,6 +239,9 @@ do nothing if the owner keeps green.
 **Cost of delay:** zero until the rebrand is applied; then immediate.
 
 **Next action:** RESEARCH MORE — resolves with the first entry's owner answer.
+
+**Update 2026-10-12:** the owner kept the name but adopts the new logo and palette, so this
+collision is live once the palette is applied. Carried into `#1069`'s spec as a seed-only change.
 
 ---
 
