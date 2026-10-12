@@ -12,6 +12,7 @@ import {
 import {
   applyVendorTheme,
   updateVendorLogoKey,
+  replaceVendorFooterHours,
   updateVendorStorefrontConfig,
 } from "@/lib/vendor-service";
 import type { VendorStorefrontConfigInput, BrandPrimitives } from "@/lib/repositories/vendor";
@@ -30,6 +31,15 @@ import {
   parseProductGridDensity,
   type ProductGridDensityFormState,
 } from "@/lib/product-grid-density";
+import { parseFooterContact, type FooterContactFormState } from "@/lib/footer-contact-form";
+import {
+  MAX_OPENING_HOURS_ROWS,
+  PAYMENT_BADGE_FIELD,
+  openingHoursLabelField,
+  openingHoursValueField,
+  parseFooterHours,
+  type FooterHoursFormState,
+} from "@/lib/footer-hours-form";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import crypto from "crypto";
 
@@ -332,4 +342,85 @@ export async function updateProductGridDensity(
   revalidatePath("/staff/storefront");
   revalidatePath("/", "layout");
   return { error: null, saved: true };
+}
+
+/**
+ * Save the storefront footer's contact & legal details (#1055).
+ *
+ * Its own action and its own form, for the reason every form on this page is separate: the others
+ * submit without these seven fields and must keep leaving them alone, and a bad email needs a
+ * FIELD-LEVEL error against the input that caused it. Validation lives in
+ * `lib/footer-contact-form.ts`, DB-free and unit-tested.
+ *
+ * The vendor comes from the session — `requireVendorRole("ADMIN")` — never from the submission.
+ */
+export async function updateFooterContact(
+  _prev: FooterContactFormState,
+  formData: FormData,
+): Promise<FooterContactFormState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { error: refusal(auth.status), field: null, saved: false };
+
+  const checkbox = formData.get("showSecureCheckoutNote");
+  const parsed = parseFooterContact({
+    contactPhone: String(formData.get("contactPhone") ?? ""),
+    contactEmail: String(formData.get("contactEmail") ?? ""),
+    companyNumber: String(formData.get("companyNumber") ?? ""),
+    vatNumber: String(formData.get("vatNumber") ?? ""),
+    registeredOffice: String(formData.get("registeredOffice") ?? ""),
+    openingHoursNote: String(formData.get("openingHoursNote") ?? ""),
+    showSecureCheckoutNote: typeof checkbox === "string" ? checkbox : null,
+  });
+
+  if (!parsed.ok) {
+    return { error: parsed.error.message, field: parsed.error.field, saved: false };
+  }
+
+  // Only the seven footer columns are passed; every other config field is omitted (undefined), so
+  // Prisma leaves branding, delivery rules and social links untouched.
+  await updateVendorStorefrontConfig(auth.vendorId, parsed.value);
+
+  revalidatePath("/staff/storefront");
+  revalidatePath("/", "layout");
+  return { error: null, field: null, saved: true };
+}
+
+/**
+ * Save the storefront footer's opening hours and payment badges (#1055).
+ *
+ * The submission is the COMPLETE set for both: the repository deletes and re-inserts this vendor's
+ * rows in one WebSocket transaction (`createMany` cannot run over the HTTP adapter, #382), so a
+ * failure leaves the previous set intact rather than an empty footer.
+ *
+ * The vendor comes from the session — `requireVendorRole("ADMIN")` — never from the submission.
+ */
+export async function updateFooterHours(
+  _prev: FooterHoursFormState,
+  formData: FormData,
+): Promise<FooterHoursFormState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { error: refusal(auth.status), field: null, saved: false };
+
+  const rows: { label: string; hours: string }[] = [];
+  for (let index = 0; index < MAX_OPENING_HOURS_ROWS + 1; index++) {
+    const label = formData.get(openingHoursLabelField(index));
+    const hours = formData.get(openingHoursValueField(index));
+    if (label === null && hours === null) continue;
+    rows.push({ label: String(label ?? ""), hours: String(hours ?? "") });
+  }
+
+  const parsed = parseFooterHours({
+    rows,
+    badges: formData.getAll(PAYMENT_BADGE_FIELD).map(String),
+  });
+
+  if (!parsed.ok) {
+    return { error: parsed.error.message, field: parsed.error.field, saved: false };
+  }
+
+  await replaceVendorFooterHours(auth.vendorId, parsed.value);
+
+  revalidatePath("/staff/storefront");
+  revalidatePath("/", "layout");
+  return { error: null, field: null, saved: true };
 }

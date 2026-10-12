@@ -1,6 +1,7 @@
 import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { STORE_TIMEZONE } from "@/lib/local-datetime";
 import { DEFAULT_PRODUCT_GRID_DENSITY, type ProductGridDensity } from "@/lib/product-grid-density";
+import { orderPaymentBadges, type PaymentBadgeMethodName } from "@/lib/payment-badges";
 
 /**
  * Re-exported so the app/UI/feature layers can type a prop against the real
@@ -117,6 +118,31 @@ export interface VendorProfile {
   /** P402 (#402) — Express Collection (ASAP pickup), gated on a schedule window. */
   expressCollectionEnabled: boolean;
   expressSchedules: { dayOfWeek: number; openTime: string; closeTime: string }[];
+  /**
+   * #1055 — the storefront footer, read in this same query so the page render gains no database
+   * call. Every string is `null` when unset, and a `null` HIDES its footer element — no platform
+   * fallback (#239). Bracketed placeholders ("[YOUR EMAIL]") are real values that render as text.
+   */
+  contactPhone: string | null;
+  contactEmail: string | null;
+  companyNumber: string | null;
+  vatNumber: string | null;
+  registeredOffice: string | null;
+  openingHoursNote: string | null;
+  showSecureCheckoutNote: boolean;
+  /** The store's own address (the collection address), or `null` when none is recorded. */
+  location: {
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    postcode: string;
+  } | null;
+  /** Ordered by `sortOrder`. */
+  openingHours: { label: string; hours: string }[];
+  /** In display order (`lib/payment-badges.ts`), not row order. */
+  paymentBadges: PaymentBadgeMethodName[];
+  /** #1023's gate, reused by the footer's Rewards link. */
+  loyaltyEnabled: boolean;
 }
 
 // Fallbacks = the Aheed defaults already in design-system/tokens/tokens.css, so a
@@ -195,8 +221,24 @@ export async function fetchVendorProfile(
           slotHoldDurationMinutes: true,
           offerDeliverySlots: true,
           expressCollectionEnabled: true,
+          loyaltyEnabled: true,
+          contactPhone: true,
+          contactEmail: true,
+          companyNumber: true,
+          vatNumber: true,
+          registeredOffice: true,
+          openingHoursNote: true,
+          showSecureCheckoutNote: true,
         },
       },
+      location: {
+        select: { addressLine1: true, addressLine2: true, city: true, postcode: true },
+      },
+      openingHours: {
+        select: { label: true, hours: true },
+        orderBy: { sortOrder: "asc" },
+      },
+      paymentBadges: { select: { method: true } },
       deliveryAreas: {
         select: {
           prefix: true,
@@ -269,6 +311,18 @@ export async function fetchVendorProfile(
     offerDeliverySlots: vendor?.config?.offerDeliverySlots ?? false,
     expressCollectionEnabled: vendor?.config?.expressCollectionEnabled ?? false,
     expressSchedules: vendor?.vendorExpressSchedules ?? [],
+    // #1055 — no platform default for any of these: an unseeded vendor's footer hides them.
+    contactPhone: vendor?.config?.contactPhone ?? null,
+    contactEmail: vendor?.config?.contactEmail ?? null,
+    companyNumber: vendor?.config?.companyNumber ?? null,
+    vatNumber: vendor?.config?.vatNumber ?? null,
+    registeredOffice: vendor?.config?.registeredOffice ?? null,
+    openingHoursNote: vendor?.config?.openingHoursNote ?? null,
+    showSecureCheckoutNote: vendor?.config?.showSecureCheckoutNote ?? false,
+    location: vendor?.location ?? null,
+    openingHours: vendor?.openingHours ?? [],
+    paymentBadges: orderPaymentBadges((vendor?.paymentBadges ?? []).map((b) => b.method)),
+    loyaltyEnabled: vendor?.config?.loyaltyEnabled ?? false,
   };
 }
 
@@ -377,6 +431,18 @@ export interface VendorStorefrontConfigInput {
    */
   productGridDensity?: ProductGridDensity;
   /**
+   * #1055 — the footer contact & legal fields, owned by that form alone. Same optionality rule:
+   * every other form omits them, so saving any of them leaves the footer alone. `null` clears
+   * (and therefore hides) the element.
+   */
+  contactPhone?: string | null;
+  contactEmail?: string | null;
+  companyNumber?: string | null;
+  vatNumber?: string | null;
+  registeredOffice?: string | null;
+  openingHoursNote?: string | null;
+  showSecureCheckoutNote?: boolean;
+  /**
    * #634 — the three delivery rules. Optional as a group: the branding half of
    * this form submits without them, and omitting them must leave the stored
    * values alone rather than reset them to a default.
@@ -445,6 +511,14 @@ export async function updateVendorStorefrontConfig(
         storeDescription: data.storeDescription,
         // #962 — same direct assignment: only the product-grid form supplies it.
         productGridDensity: data.productGridDensity,
+        // #1055 — same direct assignment: only the footer contact form supplies these.
+        contactPhone: data.contactPhone,
+        contactEmail: data.contactEmail,
+        companyNumber: data.companyNumber,
+        vatNumber: data.vatNumber,
+        registeredOffice: data.registeredOffice,
+        openingHoursNote: data.openingHoursNote,
+        showSecureCheckoutNote: data.showSecureCheckoutNote,
         // #634 — written only when supplied. `freeDeliveryThresholdPence` is
         // explicitly nullable, so `undefined` (absent) and `null` (free
         // delivery never offered) must stay distinguishable here; spreading a
@@ -487,6 +561,41 @@ export async function updateVendorStorefrontConfig(
       await tx.vendorBranding.update({
         where: { vendorId },
         data: brandingUpdates,
+      });
+    }
+  });
+}
+
+/** #1055 — what the footer hours form writes: the complete replacement set for both tables. */
+export interface VendorFooterHoursInput {
+  openingHours: { label: string; hours: string; sortOrder: number }[];
+  paymentBadges: PaymentBadgeMethodName[];
+}
+
+/**
+ * #1055 — replace this vendor's opening-hours rows and payment-badge rows as one unit.
+ *
+ * A WebSocket client and an interactive transaction: the delete and the re-insert must commit
+ * together (a failure between them would empty the footer), and `createMany` crashes
+ * unconditionally over the HTTP adapter even on zero rows (#382, CLAUDE.md). Both tables are
+ * scoped by `vendorId` in every statement, so this can only ever touch the caller's vendor.
+ */
+export async function replaceVendorFooterHours(
+  prismaWs: ReturnType<typeof getPrismaWs>,
+  vendorId: string,
+  data: VendorFooterHoursInput,
+) {
+  return prismaWs.$transaction(async (tx) => {
+    await tx.vendorOpeningHours.deleteMany({ where: { vendorId } });
+    if (data.openingHours.length > 0) {
+      await tx.vendorOpeningHours.createMany({
+        data: data.openingHours.map((row) => ({ vendorId, ...row })),
+      });
+    }
+    await tx.vendorPaymentBadge.deleteMany({ where: { vendorId } });
+    if (data.paymentBadges.length > 0) {
+      await tx.vendorPaymentBadge.createMany({
+        data: data.paymentBadges.map((method) => ({ vendorId, method })),
       });
     }
   });

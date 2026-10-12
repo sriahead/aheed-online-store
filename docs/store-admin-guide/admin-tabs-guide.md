@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.9.0"
-updated: "2026-10-11"
+version: "2.10.0"
+updated: "2026-10-12"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -81,8 +81,9 @@ the redemption value applies to every existing balance.
 ## Storefront — `/staff/storefront`
 
 **Purpose:** Your shop's own identity — its branding colours, logo and homepage copy — the delivery
-rules every order is charged by, the social and contact links shoppers use to reach you, and which
-product labels your staff can set, plus a short description of what you sell.
+rules every order is charged by, the social and contact links shoppers use to reach you, which
+product labels your staff can set, a short description of what you sell, and what your storefront
+footer shows.
 
 **Who can access:** Store admins only
 
@@ -93,7 +94,12 @@ Facebook page address, your Instagram profile address and your WhatsApp number. 
 labels & store description** form at the bottom of the page, choose which of the six product labels
 (Halal, Fresh, Organic, Vegetarian, Gluten free, HMC certification) your staff see on the product
 form, and write what your store sells. In the **Product grid layout** form below that, choose how
-many product cards sit side by side on your category, search and bundle pages.
+many product cards sit side by side on your category, search and bundle pages. Two footer forms
+follow: in **Footer contact & legal**, enter your phone number, email address, company number, VAT
+number, registered office, a one-line note under your opening hours, and whether to show "Secure
+checkout powered by Stripe". In **Opening hours & payment badges**, enter up to eight rows of
+opening hours and tick which payment-method badges (Visa, Mastercard, American Express, Apple Pay,
+Google Pay) appear in the footer.
 
 **Typical workflow:** You do the branding at setup and when it changes. The quickest start is to
 choose a theme from the **Select a theme** list and press **Apply Theme** — that fills all eight
@@ -122,7 +128,8 @@ one blank hides that link entirely** rather than showing a default, so a shop wi
 account simply has no Instagram icon anywhere on the storefront. All three links live together in
 one expandable button fixed to the bottom-right corner of every storefront page, above the floating
 cart button — tapping it reveals whichever of Facebook, Instagram and WhatsApp the shop has
-configured. There is no separate row of icons, and nothing social appears in the page footer.
+configured. The page footer also shows a Facebook icon when a Facebook page address is set;
+Instagram and WhatsApp appear only in the floating button.
 When the help assistant is switched on (Help Assistant page), the button shows the help assistant
 in place of the WhatsApp icon: shoppers reach your WhatsApp through the assistant, after it has had
 the chance to answer their question. Your Help Centre page has a **Still need help?** card that follows the same
@@ -150,6 +157,21 @@ on laptops and 6 on the widest screens. **Spacious** shows fewer, larger cards: 
 search results and your Value Bundles page, and it changes the layout only: every product still
 shows, and nothing about a product changes. Saving any other form on this page leaves your choice
 alone.
+**The storefront footer** appears at the bottom of every storefront page. Its first column shows
+your shop name and address — taken from the **Collection Location** in the delivery rules form, not
+entered again here — with a **Get directions** link that opens Google Maps, then your phone number
+and email address. Its second column shows your opening hours; its third column links shoppers to
+your Help Centre, the delivery and refunds sections of your help and terms pages, your loyalty page
+(only when loyalty is on), and your feedback page. The bottom bar shows your company number, VAT
+number and registered office, the Terms, Privacy and Cookies links, the Stripe line and the payment
+badges. Like the social links, **leaving a footer field blank hides it** rather than showing a
+default, and a column with nothing in it disappears. A phone number becomes a tap-to-call link and
+an email becomes a link that opens the shopper's email app — but only when it is a real number or
+address. Placeholder text in square brackets, such as `[YOUR EMAIL]`, is shown exactly as typed and
+never as a link, so you can save the form before you have every detail. **Opening hours** are
+written the way shoppers should read them: each row is a label ("Monday – Friday") and its hours
+("9am – 8pm"), up to 40 characters each, shown in the order you enter them. Clear both boxes in a
+row to remove it. Each footer form has its own Save button and leaves every other form alone.
 
 **Common mistakes and limitations:** Colour choices affect the readability of text sitting on them.
 After changing a brand colour, look at a real page rather than only the colour swatch. Because your

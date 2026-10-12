@@ -79,6 +79,7 @@ async function main() {
   await seedFeaturedProducts(AHEED_VENDOR_ID, AHEED_FEATURED_SLUGS);
   await refreshProductImages(CATALOGUE);
   await upsertVendorSatellites(AHEED_VENDOR_ID, AHEED_SATELLITES);
+  await seedFooterDefaults(AHEED_VENDOR_ID, AHEED_FOOTER_DEFAULTS);
   // After the catalogue: bundles resolve their constituents by product slug.
   await seedBundles(AHEED_VENDOR_ID, AHEED_BUNDLES);
   await seedPriceTiers(AHEED_VENDOR_ID, AHEED_PRICE_TIERS);
@@ -443,6 +444,89 @@ async function upsertVendorSatellites(vendorId: string, s: VendorSatellites) {
     });
   }
   console.log(`seeded branding/config/delivery/loyalty/discounts for ${vendorId}`);
+}
+
+/**
+ * #1055 — the storefront footer's starting values. FILL-ONLY, unlike `upsertVendorSatellites`'s
+ * config `update` above: every value here is one a store admin is expected to replace on
+ * `/staff/storefront`, so a re-seed must never put a placeholder back over a real value. Each
+ * string column is written only while it is null, the location only when there is none, and the
+ * hours and badges only when the vendor has no rows at all.
+ *
+ * The bracketed values are the owner-approved placeholders (2026-10-12) for details not yet
+ * supplied. They render as text, never as links (`lib/footer-contact-form.ts`).
+ */
+type FooterDefaults = {
+  location: { addressLine1: string; city: string; postcode: string };
+  config: {
+    contactPhone: string;
+    contactEmail: string;
+    companyNumber: string;
+    vatNumber: string;
+    openingHoursNote: string;
+  };
+  showSecureCheckoutNote: boolean;
+  openingHours: { label: string; hours: string }[];
+  paymentBadges: ("VISA" | "MASTERCARD" | "AMEX" | "APPLE_PAY" | "GOOGLE_PAY")[];
+};
+
+const AHEED_FOOTER_DEFAULTS: FooterDefaults = {
+  location: { addressLine1: "13 N 11th St", city: "Milton Keynes", postcode: "MK9 3BU" },
+  config: {
+    contactPhone: "01908 239130",
+    contactEmail: "[YOUR EMAIL]",
+    companyNumber: "[NUMBER]",
+    vatNumber: "[NUMBER]",
+    openingHoursNote: "Click & Collect orders are ready to pick up during opening hours.",
+  },
+  showSecureCheckoutNote: true,
+  openingHours: [
+    { label: "Monday – Friday", hours: "[OPEN] – 8pm" },
+    { label: "Saturday", hours: "[OPEN] – 8pm" },
+    { label: "Sunday", hours: "[OPEN] – [CLOSE]" },
+    { label: "Bank holidays", hours: "[HOURS]" },
+  ],
+  paymentBadges: ["VISA", "MASTERCARD", "AMEX", "APPLE_PAY", "GOOGLE_PAY"],
+};
+
+async function seedFooterDefaults(vendorId: string, d: FooterDefaults) {
+  const location = await prisma.vendorLocation.findUnique({ where: { vendorId } });
+  if (!location) {
+    await prisma.vendorLocation.create({ data: { vendorId, ...d.location } });
+  }
+
+  const config = await prisma.vendorConfig.findUnique({ where: { vendorId } });
+  if (config) {
+    const fill: Partial<FooterDefaults["config"]> = {};
+    for (const key of Object.keys(d.config) as (keyof FooterDefaults["config"])[]) {
+      if (config[key] === null) fill[key] = d.config[key];
+    }
+    // The boolean has no "unset" state; it is turned on only from its column default (false), and
+    // only together with a first fill of the footer — so a later deliberate switch-off survives.
+    const firstFill = config.contactPhone === null && config.contactEmail === null;
+    await prisma.vendorConfig.update({
+      where: { vendorId },
+      data: {
+        ...fill,
+        ...(firstFill && !config.showSecureCheckoutNote
+          ? { showSecureCheckoutNote: d.showSecureCheckoutNote }
+          : {}),
+      },
+    });
+  }
+
+  if ((await prisma.vendorOpeningHours.count({ where: { vendorId } })) === 0) {
+    for (const [sortOrder, row] of d.openingHours.entries()) {
+      await prisma.vendorOpeningHours.create({ data: { vendorId, ...row, sortOrder } });
+    }
+  }
+
+  if ((await prisma.vendorPaymentBadge.count({ where: { vendorId } })) === 0) {
+    for (const method of d.paymentBadges) {
+      await prisma.vendorPaymentBadge.create({ data: { vendorId, method } });
+    }
+  }
+  console.log(`seeded footer defaults (fill-only) for ${vendorId}`);
 }
 
 // Aheed's primitives are the exact current tokens.css hex; tagline preserves the

@@ -134,7 +134,11 @@ export default async function HelpPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <section className="bg-white rounded-2xl p-6 border border-black/10">
+        {/* #1055 — the footer's "Delivery areas & slots" link lands here. */}
+        <section
+          id="delivery"
+          className="scroll-mt-24 bg-white rounded-2xl p-6 border border-black/10"
+        >
           <div className="flex items-center gap-3 mb-4">
             <MapPin className="w-5 h-5 text-action-tint" />
             <h2 className="font-bold text-lg">Delivery &amp; Minimums</h2>

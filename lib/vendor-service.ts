@@ -9,11 +9,13 @@ import {
   getVendorConfig as getVendorConfigRepo,
   listThemes as listThemesRepo,
   listVendorThemes as listVendorThemesRepo,
+  replaceVendorFooterHours as replaceVendorFooterHoursRepo,
   saveVendorTheme as saveVendorThemeRepo,
   updateVendorLogoKey as updateVendorLogoKeyRepo,
   updateVendorStorefrontConfig as updateVendorStorefrontConfigRepo,
   type BrandPrimitives,
   type VendorProfile,
+  type VendorFooterHoursInput,
   type VendorStorefrontConfigInput,
 } from "@/lib/repositories/vendor";
 
@@ -96,6 +98,14 @@ export async function updateVendorStorefrontConfig(
   data: VendorStorefrontConfigInput,
 ) {
   return updateVendorStorefrontConfigRepo(getPrismaWs(), vendorId, data);
+}
+
+/**
+ * #1055 — `getPrismaWs()` for the same reason as above: the replace is an interactive transaction
+ * carrying `createMany`, neither of which the HTTP adapter can run.
+ */
+export async function replaceVendorFooterHours(vendorId: string, data: VendorFooterHoursInput) {
+  return replaceVendorFooterHoursRepo(getPrismaWs(), vendorId, data);
 }
 
 /** The seeded theme catalogue (#75), for the `/staff/storefront` picker. */

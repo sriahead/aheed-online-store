@@ -112,6 +112,23 @@ export function getEmailEnv(): EmailEnv {
   });
 }
 
+// #1055 — the storefront footer's "Powered by {name}" line. Its own schema, like email and
+// payments above, so reading it never depends on DATABASE_URL or BETTER_AUTH_SECRET. Optional
+// everywhere: unset (or blank) HIDES the line rather than falling back to a written-in name. The
+// value lives in wrangler.toml's per-environment `[vars]`, not in code.
+const platformBrandingSchema = z.object({
+  PLATFORM_NAME: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim() !== "" ? v.trim() : undefined)),
+});
+
+export type PlatformBrandingEnv = z.infer<typeof platformBrandingSchema>;
+
+export function getPlatformBrandingEnv(): PlatformBrandingEnv {
+  return platformBrandingSchema.parse({ PLATFORM_NAME: readEnv("PLATFORM_NAME") });
+}
+
 const paymentSchema = z
   .object({
     STRIPE_SECRET_KEY: z.string().optional(),

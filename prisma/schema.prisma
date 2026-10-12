@@ -187,6 +187,8 @@ model Vendor {
   reviewLinks               VendorReviewLink[]
   faqs                      VendorFaq[]
   aiUsageEvents             AiUsageEvent[]
+  openingHours              VendorOpeningHours[]
+  paymentBadges             VendorPaymentBadge[]
 }
 
 // P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
@@ -464,6 +466,17 @@ model VendorConfig {
   facebookUrl                String? // full https profile URL
   instagramUrl               String? // full https profile URL
   whatsappNumber             String? // digits only, E.164 without the leading +, for wa.me
+  // #1055 — storefront footer identity, same null rule as the social links above: a null HIDES
+  // that footer element rather than falling back to a platform default (#239). Bracketed
+  // placeholders such as "[YOUR EMAIL]" are legal values (approved defaults) and render as text;
+  // the footer only builds a tel:/mailto: href from a value that passes the real format check.
+  contactPhone               String?
+  contactEmail               String?
+  companyNumber              String?
+  vatNumber                  String?
+  registeredOffice           String?
+  openingHoursNote           String? // line under the opening hours
+  showSecureCheckoutNote     Boolean            @default(false) // "Secure checkout powered by Stripe"
   // P3a — delivery rules are vendor data, never constants (the AI Studio mockup hardcoded a
   // £30 threshold). Prisma-level defaults mean a newly-inserted vendor is valid without the
   // seed supplying values. P3a reads only the threshold (cart banner); applying the fee and
@@ -2047,4 +2060,39 @@ model ShoppingListItem {
   position Int
 
   @@index([listId])
+}
+
+// #1055 — the storefront footer's opening hours, as free-text label/value rows rather than
+// per-day times. The approved defaults are placeholders ("[OPEN] – 8pm") no time column can hold,
+// and the grouping (Mon–Fri / Sat / Sun / Bank holidays) is the vendor's own choice of label.
+// Machine-readable hours are deliberately deferred (specs/2026-10-12-p1055-storefront-footer).
+model VendorOpeningHours {
+  id        String @id @default(uuid())
+  vendorId  String
+  vendor    Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  label     String
+  hours     String
+  sortOrder Int
+
+  @@index([vendorId, sortOrder])
+}
+
+// #1055 — which payment-method badges the footer shows. Display order is this declaration
+// order, fixed in code. The images are platform static assets (public/payment-methods/), not
+// vendor uploads: a card scheme's logo is the same for every vendor.
+enum PaymentBadgeMethod {
+  VISA
+  MASTERCARD
+  AMEX
+  APPLE_PAY
+  GOOGLE_PAY
+}
+
+model VendorPaymentBadge {
+  id       String             @id @default(uuid())
+  vendorId String
+  vendor   Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  method   PaymentBadgeMethod
+
+  @@unique([vendorId, method])
 }

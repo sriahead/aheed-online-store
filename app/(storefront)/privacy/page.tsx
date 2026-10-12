@@ -58,7 +58,8 @@ export default async function PrivacyPage() {
           </p>
         </section>
 
-        <section className="space-y-2">
+        {/* #1055 — the footer's "Cookies" link lands here. */}
+        <section id="cookies" className="scroll-mt-24 space-y-2">
           <h2 className="text-lg font-semibold text-primary">4. Cookies and Local Storage</h2>
           <p className="text-sm text-primary-muted leading-relaxed">
             We use essential host-scoped cookies for authentication (`aheed_session`), shopping cart
