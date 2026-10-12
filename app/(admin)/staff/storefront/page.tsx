@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import {
+  fetchVendorProfile,
   getVendorConfig,
   getVendorBranding,
   listThemes,
@@ -9,6 +10,7 @@ import {
 import { StorefrontConfigForm } from "@/components/staff/StorefrontConfigForm";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { ReviewLinksManager } from "@/components/staff/ReviewLinksManager";
+import { FooterSettingsForms } from "@/components/staff/FooterSettingsForms";
 import { getVendorReviewLinkRepository } from "@/lib/vendor-review-links-service";
 import { getStorage } from "@/lib/storage";
 
@@ -37,6 +39,8 @@ export default async function StorefrontAdminPage() {
   const themes = await listThemes();
   const vendorThemes = await listVendorThemes(auth.vendorId);
   const reviewLinks = await getVendorReviewLinkRepository().listAll();
+  // #1055 — the footer's hours and badges come back on the profile, already ordered.
+  const profile = await fetchVendorProfile(auth.vendorId);
 
   if (!config || !branding) {
     return <div className="p-8">Vendor config or branding not found.</div>;
@@ -55,6 +59,23 @@ export default async function StorefrontAdminPage() {
         vendorThemes={vendorThemes}
         logoUrl={logoUrl}
       />
+
+      {/* #1055 — the storefront footer's contact, legal, hours and payment-badge settings. */}
+      <div className="mt-10 border-t border-black/10 pt-8">
+        <FooterSettingsForms
+          initial={{
+            contactPhone: config.contactPhone,
+            contactEmail: config.contactEmail,
+            companyNumber: config.companyNumber,
+            vatNumber: config.vatNumber,
+            registeredOffice: config.registeredOffice,
+            openingHoursNote: config.openingHoursNote,
+            showSecureCheckoutNote: config.showSecureCheckoutNote,
+            openingHours: profile.openingHours,
+            paymentBadges: profile.paymentBadges,
+          }}
+        />
+      </div>
 
       {/* P9.2 (#818) — outbound review-site links. Here rather than on /staff/feedback
           because these are storefront settings, which keeps that page purely moderation. */}

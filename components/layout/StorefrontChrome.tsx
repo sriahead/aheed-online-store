@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
 import { getRewardsDataForUser } from "@/lib/rewards-service";
 import { Header } from "@/components/layout/Header";
 import { FloatingContact } from "@/components/layout/FloatingContact";
+import { StorefrontFooter } from "@/components/layout/StorefrontFooter";
+import { getPlatformBrandingEnv } from "@/lib/config";
 import { CookieBanner } from "@/components/consent/CookieBanner";
 import { QuickViewProvider } from "@/components/product/quick-view-context";
 import { QuickViewDrawer } from "@/components/product/QuickViewDrawer";
@@ -46,21 +47,11 @@ export async function StorefrontChrome({
         <CartFeedbackProvider>
           <Header isLanding={isLanding} />
           <div className="flex-1">{children}</div>
-          <footer className="border-t border-black/10 bg-white py-6 text-xs text-primary">
-            <div className="mx-auto flex max-w-5xl flex-col sm:flex-row items-center justify-between gap-4 px-4">
-              <p>
-                © {new Date().getFullYear()} {profile.name}. All rights reserved.
-              </p>
-              <div className="flex items-center gap-4 font-medium">
-                <Link href="/terms" className="hover:underline">
-                  Terms of Service
-                </Link>
-                <Link href="/privacy" className="hover:underline">
-                  Privacy Policy
-                </Link>
-              </div>
-            </div>
-          </footer>
+          {/* #1055 — vendor-configured footer; every value comes from `profile` (no extra query). */}
+          <StorefrontFooter
+            profile={profile}
+            platformName={getPlatformBrandingEnv().PLATFORM_NAME}
+          />
           <FloatingContact
             vendorName={profile.name}
             facebookUrl={profile.facebookUrl}
