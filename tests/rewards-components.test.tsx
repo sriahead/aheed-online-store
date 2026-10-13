@@ -28,6 +28,27 @@ describe("WaysToEarnAccordion", () => {
     fireEvent.click(screen.getByRole("button", { name: /ways to earn/i }));
     expect(screen.queryByText("Place an order")).toBeNull();
   });
+
+  // #1077 R18 — "point" was hardcoded, so a vendor earning 2 points per pound read "2 point".
+  it("pluralises the unit on the vendor's own earn rate (R18)", () => {
+    render(<WaysToEarnAccordion pointsPerPoundEarned={2} rewardPoints={100} />);
+    fireEvent.click(screen.getByRole("button", { name: /ways to earn/i }));
+
+    expect(screen.getByText(/Earn 2 points for every £1 spent/)).toBeTruthy();
+  });
+
+  // #1077 R16 — the tier-boost line renders only above 1x, which is why a missing `maxMultiplier`
+  // made it invisible on the rewards panel without failing anything.
+  it("shows the tier-boost line above 1x and hides it at 1x (R16)", () => {
+    render(<WaysToEarnAccordion pointsPerPoundEarned={1} rewardPoints={100} maxMultiplier={1.5} />);
+    fireEvent.click(screen.getByRole("button", { name: /ways to earn/i }));
+    expect(screen.getByText("Loyalty tier boosts")).toBeTruthy();
+
+    cleanup();
+    render(<WaysToEarnAccordion pointsPerPoundEarned={1} rewardPoints={100} maxMultiplier={1} />);
+    fireEvent.click(screen.getByRole("button", { name: /ways to earn/i }));
+    expect(screen.queryByText("Loyalty tier boosts")).toBeNull();
+  });
 });
 
 describe("WaysToRedeemAccordion", () => {
@@ -47,7 +68,7 @@ describe("WaysToRedeemAccordion", () => {
 });
 
 describe("AvailableRewardsSection", () => {
-  it("renders available vouchers with status based on points balance", () => {
+  it("renders milestones with status based on points balance", () => {
     render(
       <AvailableRewardsSection
         balancePoints={60}
@@ -56,11 +77,56 @@ describe("AvailableRewardsSection", () => {
       />,
     );
 
-    expect(screen.getByText("Available rewards")).toBeTruthy();
+    expect(screen.getByText("Points milestones")).toBeTruthy();
     expect(screen.getByText("100 pts")).toBeTruthy();
+    expect(screen.getByText("200 pts")).toBeTruthy();
     expect(screen.getByText("500 pts")).toBeTruthy();
-    expect(screen.getByText("1000 pts")).toBeTruthy();
     expect(screen.getByText("40 more points needed")).toBeTruthy();
+  });
+
+  /**
+   * #1077 R21/R22 — every threshold is a multiple of the VENDOR's `minRedeemPoints`.
+   *
+   * 500 and 1000 used to be hardcoded, so this vendor — whose minimum is 250 — was shown a 500
+   * step it does not define and a 1000 step presented as the ceiling, both invented by the
+   * platform. The figures below are 1x, 2x and 5x of 250 at 2p per point.
+   */
+  it("derives every threshold from the vendor's own minimum (R21, R22)", () => {
+    render(
+      <AvailableRewardsSection balancePoints={0} pencePerPointRedeemed={2} minRedeemPoints={250} />,
+    );
+
+    expect(screen.getByText("250 pts")).toBeTruthy();
+    expect(screen.getByText("500 pts")).toBeTruthy();
+    expect(screen.getByText("1250 pts")).toBeTruthy();
+    expect(screen.getByText("£5.00 off your basket")).toBeTruthy();
+    expect(screen.getByText("£10.00 off your basket")).toBeTruthy();
+    expect(screen.getByText("£25.00 off your basket")).toBeTruthy();
+    expect(screen.queryByText("1000 pts")).toBeNull();
+  });
+
+  // #1077 R23 — no minimum means no threshold to show, so the section hides rather than rendering
+  // three cards all reading "0 pts" (#239's null-hides rule).
+  it("renders nothing when the vendor sets no redemption minimum (R23)", () => {
+    const { container } = render(
+      <AvailableRewardsSection balancePoints={500} pencePerPointRedeemed={1} minRedeemPoints={0} />,
+    );
+
+    expect(container.innerHTML).toBe("");
+  });
+
+  // #1077 R23 — no rendered text calls these vouchers; redemption is a points field at checkout,
+  // not an issued code.
+  it("promises no voucher anywhere in its rendered copy (R23)", () => {
+    const { container } = render(
+      <AvailableRewardsSection
+        balancePoints={60}
+        pencePerPointRedeemed={1}
+        minRedeemPoints={100}
+      />,
+    );
+
+    expect(container.textContent?.toLowerCase()).not.toContain("voucher");
   });
 
   it("shows ready state when points balance meets threshold", () => {
@@ -94,6 +160,32 @@ describe("ReferralCard", () => {
     expect(screen.getByText("2 referrals completed")).toBeTruthy();
     expect(screen.getByText("https://aheed.co.uk/?ref=REF-12345678")).toBeTruthy();
     expect(screen.getByRole("button", { name: /copy referral link/i })).toBeTruthy();
+  });
+
+  /**
+   * #1077 R19/R20 — the offer sentence states the rules the code actually enforces.
+   *
+   * The £20 is `MIN_REFERRAL_ORDER_PENCE`, written as the referral code's `minSubtotalPence`, and
+   * `evaluateCode` refuses below it — so it gates the friend's £5 AND the referrer's points, which
+   * are only awarded where a referral redemption exists. "First order" was never enforced at all:
+   * the code carries `maxPerCustomer: 1`, one use per customer.
+   */
+  it("states the enforced minimum and makes no first-order claim (R19, R20)", () => {
+    const { container } = render(
+      <ReferralCard
+        referralUrl="https://aheed.co.uk/?ref=REF-12345678"
+        referralCode="REF-12345678"
+        completedCount={0}
+        discountOffPence={500}
+        rewardPoints={100}
+        storeName="Aheed Food Centre"
+      />,
+    );
+
+    const copy = container.textContent ?? "";
+    expect(copy).toContain("£5.00 off an order of £20.00 or more");
+    expect(copy).toContain("Each friend can use it once");
+    expect(copy).not.toMatch(/first order/i);
   });
 
   // #991 R18 — a signed-in shopper whose code could not be read or created is told so, and is never
@@ -150,6 +242,8 @@ describe("RewardsPanel", () => {
           pencePerPointRedeemed: 1,
           minRedeemPoints: 100,
           tier: null,
+          // #1077 R16 — above 1x, so this fixture proves the panel forwards it to the accordion.
+          maxMultiplier: 1.25,
           referralCode: "REF-ABC12345",
           referralsCompleted: 0,
           referralUrl: "https://aheed.co.uk/?ref=REF-ABC12345",
@@ -195,6 +289,7 @@ describe("RewardsLauncher", () => {
           pencePerPointRedeemed: 1,
           minRedeemPoints: 100,
           tier: null,
+          maxMultiplier: 1,
           referralCode: "REF-DEMO1234",
           referralsCompleted: 3,
           referralUrl: "https://staging.aheedfoodcentre.nocaped.com/?ref=REF-DEMO1234",

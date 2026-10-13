@@ -62,9 +62,11 @@ export function WaysToEarnAccordion({
               <p className={`font-semibold ${isDark ? "text-white" : "text-primary"}`}>
                 Place an order
               </p>
+              {/* #1077 — "point" was hardcoded singular, so any vendor earning more than one point
+                  per pound read "Earn 2 point for every £1" (triage item 12b). */}
               <p>
-                Earn {pointsPerPoundEarned} point for every £1 spent on eligible items across the
-                store.
+                Earn {pointsPerPoundEarned} {pointsPerPoundEarned === 1 ? "point" : "points"} for
+                every £1 spent on eligible items across the store.
               </p>
             </div>
           </div>
