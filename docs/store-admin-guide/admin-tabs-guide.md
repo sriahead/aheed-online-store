@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.12.0"
-updated: "2026-10-12"
+version: "2.13.0"
+updated: "2026-10-13"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -88,8 +88,8 @@ footer shows.
 **Who can access:** Store admins only
 
 **What you can do:** Pick a ready-made colour theme, set all eight of your brand colours
-individually, upload your logo and your square mark, edit the homepage hero subtitle, the notice in the header banner and
-the search box text shown in the header's search box, set your delivery fee, your free delivery threshold and your minimum order value, and enter your
+individually, upload your logo and your square mark, edit the homepage hero subtitle, the header banner's headline and notice, and
+the search box text shown in the header's search box, set your delivery fee, your free delivery threshold, your minimum delivery order and, if you offer Click & Collect, your collection minimum order, and enter your
 Facebook page address, your Instagram profile address and your WhatsApp number. In the **Product
 labels & store description** form at the bottom of the page, choose which of the six product labels
 (Halal, Fresh, Organic, Vegetarian, Gluten free, HMC certification) your staff see on the product
@@ -128,15 +128,22 @@ Facebook page months after setting your colours without touching anything else.
 a product page as well as the homepage. There are eight of them and they do different jobs: the two
 **primary** colours carry headings and text, **accent** and **danger** carry buttons and alerts,
 **cream** is the page background, and the three **tint** colours are the pale backgrounds behind
-badges and notices. Applying a theme overwrites all eight at once. The banner note is a short line
-in the site header — a good place for opening hours over a bank holiday. The search box text is the
+badges and notices. Applying a theme overwrites all eight at once. The **banner headline** is the
+first line of the banner at the top of every page, up to 120 characters; leave it blank and the
+banner shows your store name and delivery area (and "click and collect" if you offer it). The
+banner note is a second short line in the site header — a good place for opening hours over a bank
+holiday. The search box text is the
 hint inside the header's search box, up to 80 characters — name a few things you sell, such as
-"Search chargers, earbuds, lamps…"; leaving it empty shows "Search products…". The three delivery amounts
+"Search chargers, earbuds, lamps…"; leaving it empty shows "Search products…". The delivery amounts
 are entered in pounds:
 **Delivery fee** is what a shopper pays for delivery; **Free delivery over** is the basket value at
 which that fee is waived, and leaving it **blank** means free delivery is never offered — which is
-not the same as entering `0`, because `0` would make every order qualify; **Minimum order** is the
-basket value below which a shopper cannot check out, so enter `0.00` if you do not want one.
+not the same as entering `0`, because `0` would make every order qualify; **Minimum delivery
+order** is the basket value below which a delivery order cannot check out, so enter `0.00` if you do
+not want one. It does not apply to Click & Collect: with **Offer Click & Collect** ticked, a separate
+**Collection minimum order** field appears, and `0.00` there (the starting value) means a
+collection order has no minimum at all. Unticking collection keeps whatever collection minimum you
+had set, for when you turn it back on.
 The three social and contact fields work differently from everything else on this page: **leaving
 one blank hides that link entirely** rather than showing a default, so a shop with no Instagram
 account simply has no Instagram icon anywhere on the storefront. All three links live together in
@@ -332,7 +339,8 @@ reach, open **Edit charges** on those rows and set a higher delivery charge. Che
   field blank to use the store's defaults from **Storefront** — each field falls back on its own, so
   you can raise just the delivery charge. `£0` means: free delivery (charge), no minimum (minimum),
   or free delivery **not offered** in that area (free-delivery threshold). Charges apply to
-  delivery orders only; Click & Collect always uses the store defaults. When you add several areas
+  delivery orders only. Click & Collect is never priced per area: it has no delivery charge, and its
+minimum is the **Collection minimum order** set on **Storefront**, not the delivery minimum. When you add several areas
   at once, the charges you enter apply to every new one; any that were already listed keep their
   existing charges, and the confirmation says so.
 

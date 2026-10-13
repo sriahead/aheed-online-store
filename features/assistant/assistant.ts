@@ -64,6 +64,7 @@ export async function loadAssistantContent(): Promise<AssistantPanelData | null>
         deliveryFeePence: profile.deliveryFeePence,
         minimumOrderPence: profile.minimumOrderPence,
         freeDeliveryThresholdPence: profile.freeDeliveryThresholdPence,
+        collectionMinimumOrderPence: profile.collectionMinimumOrderPence,
       },
       profile.deliveryAreas,
     );

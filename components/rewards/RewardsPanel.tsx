@@ -17,6 +17,16 @@ export interface RewardsData {
   pencePerPointRedeemed: number;
   minRedeemPoints: number;
   tier: { name: string; multiplierBps: number } | null;
+  /**
+   * #1077 — the HIGHEST multiplier any of this vendor's tiers offers, as a plain factor (1 = no
+   * tiers, or none above 1x). `tier` above is the shopper's CURRENT tier and cannot answer "what
+   * could I earn", which is what `WaysToEarnAccordion`'s tier-boost line states.
+   *
+   * Required, not optional: the accordion's prop already defaults to 1, and that default is exactly
+   * how this line came to be dead on this surface — the panel never passed a value and nothing
+   * failed. A required field makes a future `RewardsData` producer declare one.
+   */
+  maxMultiplier: number;
   referralCode: string;
   referralsCompleted: number;
   referralUrl: string;
@@ -57,6 +67,7 @@ export function RewardsPanel({
   const pencePerPointRedeemed = data?.pencePerPointRedeemed ?? 1;
   const minRedeemPoints = data?.minRedeemPoints ?? 100;
   const tier = data?.tier ?? null;
+  const maxMultiplier = data?.maxMultiplier ?? 1;
   const referralCode = data?.referralCode ?? "";
   const referralsCompleted = data?.referralsCompleted ?? 0;
   const referralUrl = data?.referralUrl ?? "";
@@ -146,9 +157,13 @@ export function RewardsPanel({
       <div className="p-4 space-y-3 bg-surface-muted/50">
         {/* Accordions */}
         <div className="space-y-2">
+          {/* #1077 — `maxMultiplier` was never passed here, so the accordion's tier-boost line
+              defaulted to 1 and never rendered on this surface, while /account/loyalty (which does
+              pass it) showed it. */}
           <WaysToEarnAccordion
             pointsPerPoundEarned={pointsPerPoundEarned}
             rewardPoints={rewardPoints}
+            maxMultiplier={maxMultiplier}
             variant="light"
           />
 

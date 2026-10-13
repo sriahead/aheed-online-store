@@ -1,8 +1,5 @@
 import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 
-/** Tailwind's `md` breakpoint (768px): the mark below it, the logo from it (#1069). */
-const LOGO_MEDIA = "(min-width: 768px)";
-
 /**
  * The header's brand block — the contents of the home link (#1069, extracted from `Header.tsx`).
  *
@@ -10,10 +7,23 @@ const LOGO_MEDIA = "(min-width: 768px)";
  *
  * | Vendor has      | Below 768px                         | From 768px                      |
  * |-----------------|-------------------------------------|---------------------------------|
- * | logo and mark   | the mark, 40×40                     | the logo, 128×64 (2:1)          |
- * | logo only       | the logo, 72×40 (unchanged)         | the logo, 128×64 (2:1)          |
+ * | logo and mark   | the logo, 72×40                     | the logo, 128×64 (2:1)          |
+ * | logo only       | the logo, 72×40                     | the logo, 128×64 (2:1)          |
  * | mark only       | wordmark, mark replacing the tile   | same                            |
- * | neither         | wordmark (unchanged)                | same                            |
+ * | neither         | wordmark                            | same                            |
+ *
+ * #1077 — THE FIRST TWO ROWS ARE DELIBERATELY IDENTICAL, which reverses #1069's own decision one
+ * day later. #1069 rendered the square mark below `md` and swapped the logo in from `md`, as one
+ * `<picture>` with a media `<source>`. Owner testing (2026-10-13, triage item 1a) found the mark
+ * too small to identify the store on a phone, and judged there to be room for the logo. So a
+ * vendor WITH a logo now renders that logo at every width, which is what the logo-only case below
+ * already did — the two branches are one branch, and `ImageWithFallback`'s `sources` prop no
+ * longer has a caller here (kept as a primitive; #1072's light-on-dark footer logo is its next
+ * likely user).
+ *
+ * The mark keeps every other job it has: `app/favicon.ico/route.ts`, `app/layout.tsx` and
+ * `app/manifest.ts` each read `markStorageKey` independently of this component, and `markUrl`
+ * below still replaces the initial tile for a LOGO-LESS vendor.
  *
  * Every box is sized in CSS before its image decodes, so nothing shifts (#329), and every image
  * renders through `ImageWithFallback` with a fallback of the same footprint (#655).
@@ -95,31 +105,7 @@ export function HeaderBrand({
 
   if (!logoUrl) return wordmark;
 
-  if (markUrl) {
-    // #1069 — logo AND mark: one <picture>, so the browser downloads only the candidate it shows.
-    // The <img> (the mark) is the below-`md` default; the `md` source swaps in the logo, and the
-    // classes swap the box from 40×40 to the 128×64 (2:1) logo box at the same breakpoint. The fallback carries
-    // the same responsive box.
-    return (
-      <ImageWithFallback
-        src={markUrl}
-        sources={[{ media: LOGO_MEDIA, srcSet: logoUrl }]}
-        alt={alt}
-        className="size-10 shrink-0 object-contain rounded-xl shadow-sm md:h-16 md:w-auto md:aspect-2/1 group-hover:opacity-90 transition-opacity"
-        fallback={
-          <span
-            role="img"
-            aria-label={alt}
-            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-xl font-extrabold text-white shadow-sm md:h-16 md:w-auto md:aspect-2/1 group-hover:opacity-90 transition-opacity"
-          >
-            {name.charAt(0)}
-          </span>
-        }
-      />
-    );
-  }
-
-  // Logo only — unchanged.
+  // A vendor WITH a logo — whether or not they also have a mark (#1077).
   // Plain <img> by decision — see #46 / eslint.config.mjs. NOTE: this logo is
   // the storefront's dominant byte cost (1.9 MB, 83% of page weight, rendered
   // into a 40px box) and the whole of the ~12s LCP breach — tracked as #243.

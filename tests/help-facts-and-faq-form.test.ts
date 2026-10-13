@@ -22,6 +22,7 @@ const DEFAULTS = {
   deliveryFeePence: 349,
   minimumOrderPence: 1500,
   freeDeliveryThresholdPence: 3000,
+  collectionMinimumOrderPence: 0,
 };
 
 describe("freeDeliveryOffered", () => {
@@ -114,8 +115,8 @@ describe("helpDeliveryFacts", () => {
     expect(facts.varies.fee).toBe(true);
   });
 
-  it("prices collection from the vendor defaults, never per area", () => {
-    const facts = helpDeliveryFacts(DEFAULTS, [
+  it("prices collection from the vendor's own collection minimum, never per area (#1083 R8)", () => {
+    const facts = helpDeliveryFacts({ ...DEFAULTS, collectionMinimumOrderPence: 400 }, [
       {
         prefix: "MK9",
         deliveryFeePence: 199,
@@ -124,7 +125,16 @@ describe("helpDeliveryFacts", () => {
       },
     ]);
 
-    expect(facts.collectionMinimumOrderPence).toBe(1500);
+    expect(facts.collectionMinimumOrderPence).toBe(400);
+  });
+
+  it("a £15 delivery minimum is not reported as the collection minimum (#1083 R8)", () => {
+    // Before #1083 this reported 1500: collection inherited the delivery minimum, and /help told
+    // shoppers "Collection orders must reach £15.00" while place-order refused them.
+    const facts = helpDeliveryFacts(DEFAULTS, []);
+
+    expect(facts.collectionMinimumOrderPence).toBe(0);
+    expect(facts.defaults.minimumOrderPence).toBe(1500);
   });
 
   it("handles a vendor with no areas at all", () => {

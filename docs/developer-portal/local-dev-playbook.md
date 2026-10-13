@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.25.0"
-updated: 2026-10-11
+version: "1.26.0"
+updated: 2026-10-13
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -725,3 +725,31 @@ Added for `#981`/`#982` (2026-10-07):
   successfully. Restarting (kill `node`/`workerd`, confirm nothing listens on 8787, `npm run
   preview` again) resolved it both times; there is no known way to prevent it, only to detect it
   (`curl -m 20 http://localhost:8787/api/health` before trusting a batch) and restart.
+
+## Browser uploads and CDN images cannot be proven under `npm run preview` (#1069)
+
+Two environment gaps make a "real" image upload impossible from `localhost`, and neither is a code
+defect:
+
+- **The dev bucket (`aheed-images-dev`) has no CORS rule for `http://localhost:8787` or
+  `http://srimart.localhost:8787`.** A presigned `PUT` from the page fails its preflight with a 403
+  and the uploader shows "Failed to fetch". The staging and production buckets do allow `PUT` from
+  their own origins (checked with an `OPTIONS` preflight against the bucket endpoint).
+- **The dev CDN rejects a `localhost` referer** (hotlink protection), so `<img>` elements pointing at
+  `CDN_BASE_URL` fail and render their fallback. `curl` from Git Bash could not reach the CDN at all
+  in the #1069 session; PowerShell's `Invoke-WebRequest` could.
+
+What still works, and is enough for most upload rows:
+
+- Stub `window.fetch` in the page so the `PUT`s are captured instead of sent, then decode the
+  captured blobs with `createImageBitmap` to check dimensions, type and pixels. The attach step then
+  reports an incomplete upload, which is harmless: nothing is written.
+- Seed objects with `getStorage().putObject` from a `tsx` script and set the key with a read-write
+  script, **including the exact stored suffix**. A key missing `/512.png` is rejected as malformed
+  and every icon silently disappears (this cost a rebuild in #1069).
+- Measure fallback box sizes with `scripts/verify-mobile-layout.ts`; its `brand.file` and
+  `brand.requested` fields stay empty when the CDN images do not load.
+
+`scripts/lib/env-file.ts`'s `parseEnvFile` takes a **path**, not file contents. Passing contents makes
+it try to read the contents as a path, and the resulting error dumped the whole `.dev.vars` into the
+output. Pass `".dev.vars"`.

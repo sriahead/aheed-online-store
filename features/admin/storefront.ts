@@ -335,6 +335,7 @@ export async function updateDeliveryRules(
     freeDeliveryThreshold: String(formData.get("freeDeliveryThreshold") ?? ""),
     minimumOrder: String(formData.get("minimumOrder") ?? ""),
     offerCollection: formData.get("offerCollection") === "on",
+    collectionMinimumOrder: String(formData.get("collectionMinimumOrder") ?? ""),
     addressLine1: String(formData.get("collectionAddressLine1") ?? ""),
     addressLine2: String(formData.get("collectionAddressLine2") ?? ""),
     city: String(formData.get("collectionCity") ?? ""),
@@ -345,7 +346,7 @@ export async function updateDeliveryRules(
     return { error: parsed.error.message, field: parsed.error.field, saved: false };
   }
 
-  // Only the three delivery columns are passed. `bannerNote`/`heroSubtitle` and the three social
+  // Only the delivery-rule columns are passed. `bannerNote`/`heroSubtitle` and the three social
   // columns are omitted entirely rather than sent as null, so Prisma leaves the vendor's copy and
   // contact links untouched — this action has no business rewriting either.
   await updateVendorStorefrontConfig(auth.vendorId, parsed.value);

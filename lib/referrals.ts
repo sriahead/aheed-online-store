@@ -112,9 +112,13 @@ export function buildShareLinks(
   discountOffPence: number,
 ): ShareLinks {
   const discount = formatPrice(discountOffPence);
-  const shareMessage = `Join me on ${storeName}! Use my invite link to get ${discount} off your first order:`;
+  // #1079 — "off an order of £X or more", not "off your first order": the code is one use per
+  // friend on ANY order at or over MIN_REFERRAL_ORDER_PENCE (evaluateCode), and nothing restricts
+  // it to a first order. These messages leave the site, so they must not promise a rule that isn't.
+  const minimum = formatPrice(MIN_REFERRAL_ORDER_PENCE);
+  const shareMessage = `Join me on ${storeName}! Use my invite link to get ${discount} off an order of ${minimum} or more:`;
   const emailSubject = `Special invitation to shop at ${storeName}`;
-  const emailBody = `Hi,\n\nI thought you would like ${storeName}. Use my personal referral link to get ${discount} off your first order:\n\n${referralUrl}\n\nHappy shopping!`;
+  const emailBody = `Hi,\n\nI thought you would like ${storeName}. Use my personal referral link to get ${discount} off an order of ${minimum} or more:\n\n${referralUrl}\n\nHappy shopping!`;
 
   return {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralUrl)}`,

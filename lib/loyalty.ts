@@ -193,3 +193,24 @@ export function resolveTier(tiers: LoyaltyTier[], spendPence: number): LoyaltyTi
   }
   return best;
 }
+
+/**
+ * The best multiplier any of this vendor's tiers offers, as a plain factor — `1` when they have no
+ * tiers, or none above the default. This answers "what COULD I earn", which `resolveTier` above
+ * cannot: that returns the tier a shopper is in now.
+ *
+ * #1077 — extracted rather than copied. `/account/loyalty` already computed this inline, and
+ * `lib/rewards-service.ts` needed the same number for the rewards panel's tier-boost line (which
+ * had been dead there because nothing supplied it). Two inline copies of a rate calculation is how
+ * two surfaces come to disagree about the same vendor's offer.
+ *
+ * The floor at `DEFAULT_MULTIPLIER_BPS` is the one difference from the inline version this
+ * replaces, and it changes nothing a shopper can see: the only consumer hides its line unless the
+ * value exceeds 1, so a vendor whose every tier sits BELOW the default rendered nothing before
+ * (`0.5`) and renders nothing now (`1`). It exists so the number means "best available", never a
+ * penalty, if a second consumer ever displays it unguarded.
+ */
+export function maxTierMultiplier(tiers: readonly LoyaltyTier[]): number {
+  if (tiers.length === 0) return 1;
+  return Math.max(DEFAULT_MULTIPLIER_BPS, ...tiers.map((tier) => tier.multiplierBps)) / 10000;
+}

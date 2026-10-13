@@ -4,7 +4,7 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.20.1"
+version: "1.21.0"
 updated: 2026-10-13
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
@@ -315,18 +315,33 @@ it; re-uploading the mark does.
 
 A source is contained in the square, never cropped, and must be at least 512px on its longer edge.
 
-**Header rule** (`components/layout/HeaderBrand.tsx`):
+**Header rule** (`components/layout/HeaderBrand.tsx`) — **amended by #1077, 2026-10-13**:
 
 | Vendor has | Below 768px (`md`) | From 768px |
 |---|---|---|
-| logo and mark | the mark, 40×40 | the logo, 128×64 |
+| logo and mark | the logo, 72×40 | the logo, 128×64 |
 | logo only | the logo, 72×40 | the logo, 128×64 |
 | mark only | the wordmark, with the mark in the initial tile's 40×40 box | same |
 | neither | the wordmark | same |
 
-The logo-and-mark case is **one `<picture>`**: a `(min-width: 768px)` source for the logo, and the
-mark as the `<img>`. The browser downloads only the candidate it shows. Hiding one of two `<img>`s
-with CSS would download both, and the logo is already the storefront's largest asset (#243).
+**The first two rows are deliberately identical, and that is a reversal.** #1069 shipped the mark
+below 768px and the logo from 768px, as one `<picture>` with a `(min-width: 768px)` source — so the
+browser downloaded only the candidate it showed, which mattered because the logo is the storefront's
+largest asset (#243). Owner testing the next day (2026-10-13) found the 40×40 mark too small to
+identify the store on a phone and judged there to be room for the lockup, so **a vendor with a logo
+now renders that logo at every width** and the two cases are one code path. The `<picture>` is gone;
+`ImageWithFallback`'s `sources` prop has no caller until a second one arrives.
+
+**The mark is unaffected everywhere else.** It is still the favicon, the apple-touch icon, the
+manifest icons and `og:image` — each read from `markStorageKey` independently of the header — and it
+still replaces the initial tile in a **logo-less** vendor's wordmark. Uploading a mark remains
+worthwhile for every vendor; it simply no longer appears in the header of a vendor who also has a
+logo.
+
+**72×40 over anything larger, by decision.** It is the box logo-only vendors already render at that
+width in production, so it needed no re-measurement — and the width budget there is known to be
+tight: #655 measured the logo-less wordmark overflowing a 360px header by 22px. A bigger phone box
+is a change that has to be measured with `scripts/verify-mobile-layout.ts` first, not assumed.
 
 Everything above is per vendor and read from the database. **Nothing brand-specific lives in
 `public/` or `app/`**: those are shared by every vendor, so one static favicon would show one
@@ -413,6 +428,7 @@ Rules for any future preset:
 To ensure compliance with WCAG AA standards (minimum 4.5:1 contrast ratio for text) and robust screen reader support across all multi-tenant brands, the following design constraints are strictly enforced:
 
 - **NO ALPHA MODIFIER ON A THEMED FOREGROUND TOKEN — EVER, AT ANY PERCENTAGE.** Not `text-primary/80`, not `/70`, not `/60`. Use `text-primary-muted` (secondary text, clamped 4.5:1) or `text-primary-subtle` (decorative `aria-hidden` graphics only, clamped 3:1). **This rule replaced an "opacity minimums / never below 80%" rule on 2026-09-07 (#649), and the reason the old wording failed is the important part.** It named a threshold, which invited the reading that `/80` was safe — and `/80` was the row that actually mattered: for Aheed it measures **4.80:1 on white and 4.41:1 on the tints**, passing and failing depending on which surface it lands on, while SriMart passes both. A per-vendor, per-surface failure cannot be expressed as a percentage floor. More fundamentally: `brandStyle()` passes every semantic foreground through `clampForContrast`, and **an alpha modifier composites that clamped value straight back below the floor** — so the better the clamp works, the worse the modifier renders. The rule was also unenforced prose for the entire life of the project and reached **299 sites across 83 files**. It is now `tests/token-alpha-purity.test.ts`, which walks the filesystem and fails the build. Alpha modifiers in **background, border and ring** positions are out of scope and remain legal — they are surfaces and boundaries, not text (`#641` tracks one open question there). `text-black/60` and above also remain legal: `black` is not a themed token, no vendor varies it, and 5.74:1 is verified once rather than per vendor.
+- **A PLACEHOLDER CANNOT BE MADE FAINTER THAN THE SECONDARY-TEXT TOKEN (measured #1077, 2026-10-13).** Owner testing asked for the "Shop your list" placeholder to look fainter, because its worked example list read as content the shopper had already typed. There is no colour that does it: `placeholder:text-primary-muted` (Aheed's `#49784e`) measures **5.21:1**, and the lowest value the rule above permits, `text-black/60`, measures **5.74:1** — so every legal colour is *more* prominent than the token already in place, and `/50` and `/40` (3.98:1 and about 3.0:1) are barred by `tests/token-alpha-purity.test.ts`. **Fix placeholder prominence with CONTENT, not colour**: make the placeholder a one-line prompt that cannot be mistaken for data and move worked examples into a hint beside the field. The ask is not unreasonable — it is unachievable within AA, and reaching for the colour is the wrong instinct to repeat.
 - **Focus is `focus-visible:`, with a ring — never `focus:outline-none` alone.** The standard treatment is `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2`, carried by `inputClass`/`buttonClass` in `lib/form-classes.ts`. Two things it fixes (#650): `focus:` fires on mouse click as well as keyboard, and a 1px border-colour change — the previous replacement at 27 sites — fails WCAG 2.2 SC 2.4.11's indicator-area requirement **and disappears entirely in forced-colors mode**, where the user's own setting overrides author border colours and the suppressed system outline is not there to fall back on.
 - **An invalid field needs `aria-invalid` and `aria-describedby`, not just a red border.** `errorInputClass` is colour and border only; alone it satisfies neither SC 1.4.1 (Use of Colour) nor SC 3.3.1 (Error Identification). The four staff forms return both from one `fieldProps(name)` helper so a field cannot be styled invalid without being announced invalid.
 - **Button Contrast:** Primary and action buttons must use highly contrasting text colors (e.g., solid `bg-primary` or darker action variants) rather than standard brand greens, which often fail contrast requirements against white text. **Resolved at the token layer in P7 closeout (#251)** — `--color-action`, `--color-accent` and `--color-danger` now hold AA-passing values, so `bg-action` is safe with white text and this rule no longer has to be remembered per call site. `tests/design-tokens-contrast.test.ts` enforces it.

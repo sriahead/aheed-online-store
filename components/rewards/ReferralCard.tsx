@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { Check, Copy, Share2, Users } from "lucide-react";
-import { buildShareLinks, REFERRAL_DISCOUNT_PENCE } from "@/lib/referrals";
+import {
+  buildShareLinks,
+  MIN_REFERRAL_ORDER_PENCE,
+  REFERRAL_DISCOUNT_PENCE,
+} from "@/lib/referrals";
 import { formatPrice } from "@/components/product/format-price";
 
 function FacebookIcon({ className = "h-4 w-4" }: { className?: string }) {
@@ -84,7 +88,8 @@ export function ReferralCard({
       try {
         await navigator.share({
           title: `${storeName} referral`,
-          text: `Use my invite link to get ${formatPrice(discountOffPence)} off your first order at ${storeName}!`,
+          // #1079 — the same facts as the paragraph below, not a "first order" rule nothing enforces.
+          text: `Use my invite link to get ${formatPrice(discountOffPence)} off an order of ${formatPrice(MIN_REFERRAL_ORDER_PENCE)} or more at ${storeName}!`,
           url: displayUrl,
         });
       } catch {
@@ -130,11 +135,28 @@ export function ReferralCard({
         )}
       </div>
 
+      {/*
+        #1077 — this sentence made two claims the code does not back (triage item 13).
+
+        1. It said "their qualifying first order" without ever saying what qualifies. The threshold
+           is real: `MIN_REFERRAL_ORDER_PENCE` is written as the referral code's `minSubtotalPence`
+           (lib/repositories/referral-codes.ts), and `evaluateCode` refuses below it — so the £5 is
+           refused below the minimum order. The referrer's points ride on the same threshold, because
+           they are awarded only where a referral `DiscountRedemption` exists on the order
+           (lib/repositories/orders.ts). One threshold, both halves of the offer.
+        2. It said "first order". The code carries `maxPerCustomer: 1`, which is one USE per
+           customer, not a restriction to a chronologically first order — a friend could spend it on
+           their third. Stated as the rule that actually exists.
+
+        Both figures are formatted from the constants, never written as literals, so changing a
+        constant cannot leave this sentence lying.
+      */}
       <p
         className={`mt-2 text-xs leading-relaxed ${isDark ? "text-stone-300" : "text-primary-muted"}`}
       >
-        Share this URL to give your friends {formatPrice(discountOffPence)} off their first order
-        and earn <strong>{rewardPoints} bonus points</strong> when they complete it.
+        Share this URL to give a friend {formatPrice(discountOffPence)} off an order of{" "}
+        {formatPrice(MIN_REFERRAL_ORDER_PENCE)} or more. Each friend can use it once, and you earn{" "}
+        <strong>{rewardPoints} bonus points</strong> when their order is confirmed.
       </p>
 
       {unavailable ? (

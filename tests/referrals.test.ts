@@ -7,7 +7,9 @@ import {
   REFERRAL_CODE_ALPHABET,
   buildReferralUrl,
   buildShareLinks,
+  MIN_REFERRAL_ORDER_PENCE,
 } from "@/lib/referrals";
+import { formatPrice } from "@/components/product/format-price";
 
 describe("referral rules and helpers", () => {
   // #987 R7 — random, not derived from the user id, and from an alphabet with no 0/1/O/I.
@@ -92,6 +94,16 @@ describe("referral rules and helpers", () => {
       const decoded = decodeURIComponent(link);
       expect(decoded).toContain("£7.50");
       expect(decoded).not.toContain("£5");
+    }
+  });
+
+  // #1079 R23 — the code is one use per friend on any order over the minimum; no "first order" rule.
+  it("states the minimum order and never promises a first-order rule", () => {
+    const share = buildShareLinks("https://srimart.example/?ref=REF-1234", "SriMart", 500);
+    for (const link of [share.twitter, share.email, share.whatsapp]) {
+      const decoded = decodeURIComponent(link);
+      expect(decoded).toContain(`off an order of ${formatPrice(MIN_REFERRAL_ORDER_PENCE)} or more`);
+      expect(decoded).not.toMatch(/first order/i);
     }
   });
 });

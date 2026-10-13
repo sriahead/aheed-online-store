@@ -2,15 +2,20 @@
 
 import { useState } from "react";
 import { ChevronDown, Coins, Sparkles, UserPlus } from "lucide-react";
+import { formatPrice } from "@/components/product/format-price";
+import { MIN_REFERRAL_ORDER_PENCE, REFERRAL_DISCOUNT_PENCE } from "@/lib/referrals";
 
 export function WaysToEarnAccordion({
   pointsPerPoundEarned = 1,
   rewardPoints = 100,
+  discountOffPence = REFERRAL_DISCOUNT_PENCE,
   maxMultiplier = 1,
   variant = "light",
 }: {
   pointsPerPoundEarned?: number;
   rewardPoints?: number;
+  /** #1079 — the friend's discount, from the same constant `ReferralCard` and the code use. */
+  discountOffPence?: number;
   maxMultiplier?: number;
   variant?: "light" | "dark";
 }) {
@@ -62,9 +67,11 @@ export function WaysToEarnAccordion({
               <p className={`font-semibold ${isDark ? "text-white" : "text-primary"}`}>
                 Place an order
               </p>
+              {/* #1077 — "point" was hardcoded singular, so any vendor earning more than one point
+                  per pound read "Earn 2 point for every £1" (triage item 12b). */}
               <p>
-                Earn {pointsPerPoundEarned} point for every £1 spent on eligible items across the
-                store.
+                Earn {pointsPerPoundEarned} {pointsPerPoundEarned === 1 ? "point" : "points"} for
+                every £1 spent on eligible items across the store.
               </p>
             </div>
           </div>
@@ -93,9 +100,14 @@ export function WaysToEarnAccordion({
               <p className={`font-semibold ${isDark ? "text-white" : "text-primary"}`}>
                 Refer your friends
               </p>
+              {/* #1079 — the same facts ReferralCard states since #1077. This used to promise a
+                  friend's "qualifying first order": "qualifying" was never defined (the rule is a
+                  minimum spend, MIN_REFERRAL_ORDER_PENCE), and nothing restricts the code to a
+                  FIRST order (it is one use per friend, on any order). */}
               <p>
-                Earn {rewardPoints} bonus points when a referred friend places their qualifying
-                first order.
+                Give a friend {formatPrice(discountOffPence)} off an order of{" "}
+                {formatPrice(MIN_REFERRAL_ORDER_PENCE)} or more. Each friend can use it once, and
+                you earn {rewardPoints} bonus points when their order is confirmed.
               </p>
             </div>
           </div>

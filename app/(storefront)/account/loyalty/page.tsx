@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { ChevronLeft, Sparkles } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
-import { resolveTier } from "@/lib/loyalty";
+import { maxTierMultiplier, resolveTier } from "@/lib/loyalty";
 import { formatPrice } from "@/components/product/format-price";
 import { formatOrderDate } from "@/lib/order-status";
 import { WaysToEarnAccordion } from "@/components/rewards/WaysToEarnAccordion";
@@ -51,8 +51,9 @@ export default async function LoyaltyPage() {
     .filter((t) => t.thresholdPence > windowSpend)
     .sort((a, b) => a.thresholdPence - b.thresholdPence)[0];
 
-  const maxMultiplier =
-    tiers.length > 0 ? Math.max(...tiers.map((t) => t.multiplierBps)) / 10000 : 1;
+  // #1077 — was computed inline here; now the one shared helper, because the rewards panel needs
+  // the identical number and two copies of a rate calculation drift.
+  const maxMultiplier = maxTierMultiplier(tiers);
 
   let expiryDate: string | null = null;
   if (

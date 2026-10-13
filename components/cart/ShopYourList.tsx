@@ -28,6 +28,14 @@ import { EMPTY_SAVE_STATE, MAX_LIST_NAME_LENGTH, MAX_SAVED_LISTS } from "@/lib/s
  * `exampleNames` are the current vendor's own in-stock product names, fetched by the page (#729) —
  * a client component cannot resolve the vendor. `buildListExamples` falls back to neutral wording
  * when there are none.
+ *
+ * #1077 — the textarea's placeholder is a fixed PROMPT, not a worked example list. It used to be
+ * the latter, and shoppers read it as a list that was already there (triage item 18). Dimming it
+ * was tried first and is not available: `tests/token-alpha-purity.test.ts` (#649) bars text below
+ * 60% black, and the floor it permits (5.74:1) is more prominent than the placeholder's existing
+ * `text-primary-muted` (5.21:1) — so no permitted colour is fainter than the status quo. The
+ * worked examples live in the hint ABOVE the box instead, which is also where a shopper needs them
+ * (triage item 19). See `lib/shopping-list-examples.ts`.
  */
 export function ShopYourList({
   canSave = false,
@@ -48,13 +56,8 @@ export function ShopYourList({
         <label htmlFor="list" className="block text-sm font-semibold text-primary">
           One item per line
         </label>
-        <textarea
-          id="list"
-          name="list"
-          rows={8}
-          placeholder={placeholder}
-          className="w-full rounded-2xl border border-black/10 bg-white p-3 text-sm text-primary placeholder:text-primary-muted focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
-        />
+        {/* #1077 — ABOVE the textarea (triage item 19). It used to sit below, where a shopper read
+            how quantities work only after typing the list without them. */}
         {exampleName !== null ? (
           <p className="text-xs text-primary-muted">
             Quantities are understood — <span className="font-semibold">2x {exampleName}</span>,{" "}
@@ -67,6 +70,13 @@ export function ShopYourList({
             {MAX_LIST_LINES} lines.
           </p>
         )}
+        <textarea
+          id="list"
+          name="list"
+          rows={8}
+          placeholder={placeholder}
+          className="w-full rounded-2xl border border-black/10 bg-white p-3 text-sm text-primary placeholder:text-primary-muted focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+        />
         <button
           type="submit"
           disabled={pending}

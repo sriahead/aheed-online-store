@@ -12,12 +12,14 @@ import {
   ShoppingBag,
   Store,
   Clock,
+  Phone,
 } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
 import { markUrls } from "@/lib/vendor-icons";
+import { isDiallablePhone, telHref } from "@/lib/footer-contact-form";
 import { HeaderBrand } from "./HeaderBrand";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getRequestCartSummary } from "@/lib/cart-summary";
@@ -28,6 +30,7 @@ import { CartContents } from "@/components/cart/CartContents";
 import { LocationControl } from "./LocationControl";
 import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
+import { bannerHeadlineText } from "@/components/layout/banner-headline";
 import { SearchSuggest } from "./SearchSuggest";
 import { ViewSwitcher } from "./ViewSwitcher";
 
@@ -102,6 +105,19 @@ export async function Header({
   const localityName = profile?.localityName ?? "";
   const bannerNote = profile?.bannerNote ?? null;
 
+  // #1077 — the store's phone number in the banner (owner testing, triage item 2). The value is
+  // `VendorConfig.contactPhone` (#1055), already editable at /staff/storefront, so nothing here is
+  // a literal.
+  //
+  // The SAME guard the footer applies, and for the same reason: a bracketed placeholder such as
+  // "[YOUR PHONE]" is a legal stored value (`lib/footer-contact-form.ts`), and only a value that
+  // passes `isDiallablePhone` may become an href. The footer renders a non-diallable value as text;
+  // this banner renders NOTHING for it — one terse promo line is not the place to show a shopper an
+  // unfilled placeholder, and #239's rule is that a missing value hides its element.
+  const bannerPhone = profile?.contactPhone ?? null;
+  const bannerPhoneHref =
+    bannerPhone && isDiallablePhone(bannerPhone) ? telHref(bannerPhone) : null;
+
   // P8.5f: the checker moved here from the homepage hero. Only the postcode is
   // stored; the verdict is recomputed every render against the vendor's CURRENT
   // prefixes, so extending a delivery area doesn't leave a shopper holding a
@@ -165,9 +181,13 @@ export async function Header({
           <div className="flex items-center gap-4 text-white/90">
             <span className="flex items-center gap-1 font-medium text-white">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              {profile?.offerCollection
-                ? `${name} — local delivery across ${localityName} & click and collect`
-                : `${name} — local delivery across ${localityName}`}
+              {/* #1078 — the vendor's own headline, or the line derived from its name and area. */}
+              {bannerHeadlineText({
+                bannerHeadline: profile?.bannerHeadline ?? null,
+                name,
+                localityName,
+                offerCollection: profile?.offerCollection ?? false,
+              })}
             </span>
             {bannerNote && (
               <>
@@ -181,6 +201,19 @@ export async function Header({
           </div>
 
           <div className="flex items-center gap-3 text-xs">
+            {/* #1077 — deliberately NOT hidden below `md` like bannerNote above. A phone number is
+                least useful on the one device that can dial it, and this banner scrolls away rather
+                than staying pinned (#960), so the extra wrapped line costs no sticky height. */}
+            {bannerPhoneHref && (
+              <a
+                href={bannerPhoneHref}
+                aria-label={`Call ${name}`}
+                className="flex items-center gap-1 text-white/80 hover:text-white px-2 py-0.5 rounded font-medium text-[11px]"
+              >
+                <Phone className="w-3 h-3 text-action-tint" aria-hidden />
+                <span>{bannerPhone}</span>
+              </a>
+            )}
             <Link
               href="/help"
               className="flex items-center gap-1 text-white/80 hover:text-white px-2 py-0.5 rounded font-medium text-[11px]"

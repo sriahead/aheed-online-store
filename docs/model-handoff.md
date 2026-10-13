@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.94.0"
+version: "1.98.0"
 updated: 2026-10-13
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -665,52 +665,77 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Per-vendor square mark (`#1069`): BUILT on `feature/p1069-brand-assets`, not yet validated or
-  shipped.** Spec and build notes: `specs/2026-10-12-p1069-brand-assets/`. It carries one additive
-  migration (`20261012210000_p1069_vendor_mark`), **not yet applied to dev**. Next: `/clear`, then
-  `/validate` on Sonnet.
-  - Origin: the tenth Discover pass (2026-10-12) on an "Aheed Super Store" brand brief. **Owner
-    rulings:** Aheed keeps the name "Aheed Food Centre" and adopts a new blue/lime logo and palette;
-    the owner's designer supplies the artwork; **leave SriMart's palette as it is**. Because of that,
-    a second-vendor check against SriMart must compare the **accent** colour, since the primaries
-    will be near-identical blues once Aheed's palette is applied.
-  - Applying the new palette is data, not code: a theme on `/staff/storefront`. Staging Aheed has a
-    saved theme, "Aheed brand kit — original green", to switch back to. **Production's backup of
-    its live palette is a user-run command that has not been confirmed as done.**
-  - Follow-ups filed at Build: `#1071` (product Open Graph image), `#1072` (footer logo variant),
+- **Owner user-testing pass, 2026-10-13 — 21 observations, triaged with live evidence.** The
+  single most useful artifact from it is
+  `docs/business-analysis/user-testing-feedback-2026-10-13.md` (committed `7bee5ad`): every item
+  traced to a file and line or to a production measurement, sorted into already-handled,
+  owner-configurable, code-change-needed and blocked. **Read it before re-triaging anything a user
+  reports about the storefront** — two of the 21 turned out to be already shipped, and it records
+  which.
+  - **`#1077` (eleven quick UI/copy fixes) is merged to `staging` (PR #1081) and In Review, not yet
+    in production.** Spec and build notes in `specs/2026-10-13-p1077-quick-ui-copy-fixes/`. It was
+    validated from a fresh context. Not proven locally: the logo and favicon checks, because the
+    local database has no logo or mark for either vendor, so check them on staging.
+  - **It reverses `#1069`'s header rule of the previous day**: a vendor with a logo renders the
+    logo at every width, not the square mark below 768px. `specs/design-system.md` 1.21.0 is the
+    authority; the `#1069` entry below is left as shipped history.
+  - **Durable measurement worth not rediscovering:** a placeholder cannot be made fainter than
+    `text-primary-muted` (5.21:1), because the lowest value `tests/token-alpha-purity.test.ts`
+    (`#649`) permits is `text-black/60` at 5.74:1. Placeholder prominence is a content problem.
+    Recorded in `specs/design-system.md`.
+  - **Filed from this pass:** `#1078` (vendor-editable banner headline, needs a migration — the
+    owner chose this over rewording in code), `#1079` (`WaysToEarnAccordion` repeats the unenforced
+    referral claim `#1077` removed from `ReferralCard`), `#1083` (Click & Collect held to the
+    delivery minimum; `#1078`, `#1079` and `#1083` are one slice, built and awaiting Validate, see
+    Risks And Blockers), `#1080` (four `aheed_`-prefixed storage
+    keys are platform-wide, so SriMart's privacy page names another vendor).
+  - **Found, evidenced, and NOT yet filed** — the owner has not asked for issues on these, and the
+    triage document is their only home: a deliverable postcode does not select Delivery
+    (`#748`'s rule, confirmed in code); no warning when an ambiguous shop-list line is skipped;
+    24 flat staff-nav links needing grouping; `listCategorySpotlights`' global take window starving
+    departments of spotlights; and the privacy page's `code`-styled cookie names reading as
+    "code base words" to a shopper. Each has a file and line in the document.
+- **Per-vendor square mark (`#1069`): DONE, in production** (PR #1074 to `staging`, then promotion
+  PR #1075, merge `8bb2a6b`, 2026-10-13); closed and `Done`. Spec, build notes:
+  `specs/2026-10-12-p1069-brand-assets/`. One additive migration
+  (`20261012210000_p1069_vendor_mark`), applied by `deploy-production`.
+  - **No vendor has a mark yet**, so nothing visibly changes in production except the desktop logo
+    box (128×64, 2:1, from 768px; amended after Validate for the Aheed Super Store lockup). Applying
+    real artwork is an owner action: upload on `/staff/storefront`, then a theme for the new palette.
+  - Origin: the tenth Discover pass (2026-10-12). **Owner rulings:** Aheed keeps the name "Aheed Food
+    Centre" and adopts the new blue/lime logo and palette; the designer supplies artwork; **leave
+    SriMart's palette as it is**, so a second-vendor check must compare the accent colour.
+    Staging Aheed has a saved theme, "Aheed brand kit — original green", to switch back to.
+    **Production's backup of its live palette is a user-run command not confirmed as done.**
+  - **Never validated against a real bucket.** The dev bucket has no CORS rule for `localhost`, so
+    the browser upload cannot run under `npm run preview`, and the dev CDN rejects a localhost
+    referer, so images never load there. The staging and production buckets do allow `PUT` from
+    their own origins (preflight checked 2026-10-13). **The first real upload on staging or
+    production is the first end-to-end test**; R16 (SriMart upload) and the live image-request rows
+    (R18/R20) were not run.
+  - Trap met while validating: a DB key written without the `/512.png` suffix is rejected by
+    `markFileKeys`, so every icon silently disappears. Seed a mark through the uploader, not by hand.
+  - Follow-ups, all Backlog: `#1071` (product Open Graph image), `#1072` (footer logo variant),
     `#1073` (remove a mark; clean up superseded uploads).
-- **Storefront footer: `#1055` and `#1060` are BOTH on `staging`, deployed and seeded; the
-  `staging` to `main` PROMOTION is outstanding and must carry them together (owner decision,
-  2026-10-12).**
-  - `#1055` merged to `staging` via PR #1059 (`9e9ca66`); `#1060` via PR #1063 (merge `e514b74`,
-    2026-10-12), both after a fresh-context Validate. `deploy-staging` applied
-    `20261012120000_p1055_storefront_footer` and `20261012180000_p1060_footer_weekly_hours`; the
-    second **drops** `VendorOpeningHours`, safe only because `#1055` never reached production, so
-    **do not promote `#1055` alone**. `#1055` is still **In Review** with its `/document` stage
-    deferred until the promotion.
-  - Staging's footer was seeded with `scripts/seed-footer-defaults.ts` (footer-only, fill-only) on
-    2026-10-12 and reads Mon–Sat 9am–8pm, Sun 9am–7pm. **Never run the full `npm run db:seed`
-    against staging**: its `upsertVendorSatellites` reverts admin-edited branding and config.
-    Staging shows admin-entered real company and VAT values and a custom theme. Production has not
-    been seeded; do that after the promotion deploys.
-  - Placeholders (`[YOUR EMAIL]`, `[NUMBER]`, `[PLATFORM NAME]`, the placeholder badge SVGs) are
-    approved until the owner supplies real values (`#1058`). Hours are no longer placeholders: Aheed
-    is seeded with Mon–Sat 09:00–20:00 and Sun 09:00–19:00.
-  - Follow-ups: `#1056`, `#1057` (open-now and JSON-LD, now buildable), `#1061` and `#1062`.
-    All are Low or Backlog.
-- **Privacy page cookie list (`#1064`): BUILT on `feature/p1064-privacy-cookies`, not yet validated
-  or shipped.** Spec and build notes: `specs/2026-10-12-p1064-privacy-cookies/`. Section 4 of
-  `/privacy` now lists seven items under their real names (the old copy named `aheed_session`, which
-  does not exist). Copy only; nothing that sets a cookie changed.
-  - Durable fact: the session cookie is Better Auth's default, `better-auth.session_token`, with a
-    `__Secure-` prefix over HTTPS. The storefront sets `aheed_cart`, `aheed_cookie_consent`,
-    `delivery-postcode`, `fulfilment-method` and (only on `?ref=`) `aheed_referral_code`, plus
-    the `aheed_checkout_details` localStorage key. `admin-tier` is staff-only and deliberately
-    unlisted. A new test ties three of those names to their exported constants.
-  - Open: `#1065` (the referral cookie is written regardless of the consent choice, a PECR
-    question for the owner) and `#1066` (inspect live `Set-Cookie` headers for infrastructure
-    cookies **before the promotion that carries this slice**). The HTTPS session-cookie name is
-    unobserved until a staging sign-in.
+- **Storefront footer (`#1055` + `#1060`) and privacy cookie list (`#1064`): DONE, in production**
+  (PR #1059, #1063, #1067 to `staging`; promotion PR #1068, merge `b38b0f1`, 2026-10-12;
+  `deploy-production` run `38273458012` success). All three closed and `Done`. Specs:
+  `specs/2026-10-12-p1055-storefront-footer/`, `specs/2026-10-12-p1060-footer-hours-contact/`,
+  `specs/2026-10-12-p1064-privacy-cookies/`. Their own `/document` passes were deferred until the
+  promotion; this entry and the roadmap row are that record.
+  - **Production's footer seed is unconfirmed.** Run `scripts/seed-footer-defaults.ts` (footer-only,
+    fill-only) against production if its footer is empty. **Never run the full `npm run db:seed`
+    against staging or production**: its `upsertVendorSatellites` reverts admin-edited branding.
+  - Placeholders (`[YOUR EMAIL]`, `[NUMBER]`, `[PLATFORM NAME]`, placeholder badge SVGs) are
+    approved until the owner supplies real values (`#1058`).
+  - Durable cookie fact (`#1064`): the session cookie is Better Auth's default,
+    `better-auth.session_token` (`__Secure-` prefix over HTTPS). The storefront sets `aheed_cart`,
+    `aheed_cookie_consent`, `delivery-postcode`, `fulfilment-method` and, only on `?ref=`,
+    `aheed_referral_code`, plus the `aheed_checkout_details` localStorage key. `admin-tier` is
+    staff-only and unlisted.
+  - Open: `#1056`, `#1057`, `#1061`, `#1062`, `#1065` (referral cookie set regardless of consent,
+    a PECR question for the owner) and `#1066` (inspect live `Set-Cookie` headers; was meant to run
+    before the promotion and has not been confirmed).
 - **Help assistant follow-ups (`#1049` + `#1051` + `#1052`, one slice): DONE, in production**
   (PR #1050 to `staging`, then promotion PR #1053, merge `c903f15`, 2026-10-11), all three closed
   and `Done`. Spec: `specs/2026-10-11-p1049-assistant-link-close/` (no `build-notes.md`; the loop
@@ -1387,6 +1412,27 @@ Board Phase and GitHub milestone disagreed for #151, #422, #589, #602, #695, #69
 These are separate from, not a silent reordering of, the owner's High priorities:
 
 - Hard launch inputs: #113 production Stripe live keys and #104 verified Resend sending domain.
+  **`#104`'s blast radius is larger than "emails are not delivered", measured 2026-10-13:**
+  `lib/auth.ts` sets `requireEmailVerification: true`, so a new customer cannot sign in until they
+  click a link that cannot currently be delivered. **Customer registration is effectively broken in
+  production, not merely degraded** — this is the first blocker to clear, ahead of `#113`.
+- **A live trading defect confirmed on production 2026-10-13: the £15 minimum order is applied to
+  Click & Collect.** `resolveDeliveryRules(…, "COLLECTION")` returns the vendor-wide defaults
+  (`lib/delivery-pricing.ts`), so `fulfilmentProgress` reports `below-minimum` and `place-order`
+  throws `BELOW_MINIMUM` for a collection basket under £15; `/help` states "Collection orders must
+  reach £15.00". The owner's position is that collection should have **no** minimum. Fixing it needs
+  a new `VendorConfig` column, so it is not in `#1077`. **Now `#1083`, built on
+  `feature/p1083-collection-minimum-headline` (with `#1078` and `#1079`), not yet validated or
+  merged:** `VendorConfig.collectionMinimumOrderPence`, default `0` = no collection minimum (owner
+  ruling), so the defect clears on deploy with no admin action. Spec and build notes:
+  `specs/2026-10-13-p1083-collection-minimum-banner-headline/`. Evidence is in
+  `docs/business-analysis/user-testing-feedback-2026-10-13.md` (item 9).
+- **Google sign-in does not complete in production** (owner-reported 2026-10-13). The code is
+  correct and both credentials are set — the button renders only when they are. `baseURL` is derived
+  **per request from the host** (`lib/auth.ts`), so each vendor host needs its own authorised
+  redirect URI (`https://<host>/api/auth/callback/google`), and the OAuth consent screen may still
+  be in "Testing", which admits only listed test users. **Both are Google-console actions, not
+  code.**
 - **Workers AI is metered per vendor in production since PR #1033 (`#1016`, `#1017`), but still
   runs on one account credential and one daily pool**, and the default model is still the
   deprecated `llama-3.1-8b-instruct` (now overridable by env; the switch is `#1027`). A failing

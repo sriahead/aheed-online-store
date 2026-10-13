@@ -62,6 +62,45 @@ describe("brand colour validation", () => {
     });
   });
 
+  // #1078 R19 — the header banner's first line, edited on the same branding form.
+  describe("bannerHeadline", () => {
+    function parseWith(value: string | null) {
+      const formData = new FormData();
+      if (value !== null) formData.append("bannerHeadline", value);
+      return parseBrandColourForm(formData);
+    }
+
+    test("trims a value and keeps it", () => {
+      const result = parseWith("  Fresh every morning  ");
+      expect(result.ok && result.value.bannerHeadline).toBe("Fresh every morning");
+    });
+
+    test("accepts exactly 120 characters", () => {
+      const value = "a".repeat(120);
+      const result = parseWith(value);
+      expect(result.ok && result.value.bannerHeadline).toBe(value);
+    });
+
+    test("refuses 121 characters with a field error", () => {
+      const result = parseWith("a".repeat(121));
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          field: "bannerHeadline",
+          message: "Banner headline must be 120 characters or fewer.",
+        },
+      });
+    });
+
+    test("empty, whitespace-only or absent stores null, so the derived line shows", () => {
+      for (const value of ["", "   ", null]) {
+        const result = parseWith(value);
+        expect(result.ok).toBe(true);
+        expect(result.ok && result.value.bannerHeadline).toBe(null);
+      }
+    });
+  });
+
   test("rejects malformed hex codes and never throws", () => {
     const formData = new FormData();
     formData.append("brandGreen", "green");

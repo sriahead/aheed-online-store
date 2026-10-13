@@ -41,6 +41,8 @@ export const DELIVERY_FEE_FIELD = "deliveryFeePence";
 export const FREE_DELIVERY_THRESHOLD_FIELD = "freeDeliveryThresholdPence";
 export const MINIMUM_ORDER_FIELD = "minimumOrderPence";
 export const COLLECTION_OFFER_FIELD = "offerCollection";
+/** #1083 — Click & Collect's own minimum. Rendered only inside the collection block. */
+export const COLLECTION_MINIMUM_FIELD = "collectionMinimumOrderPence";
 export const COLLECTION_ADDRESS_LINE1_FIELD = "collectionAddressLine1";
 export const COLLECTION_CITY_FIELD = "collectionCity";
 export const COLLECTION_POSTCODE_FIELD = "collectionPostcode";
@@ -51,6 +53,11 @@ export interface DeliveryRulesInput {
   /** `null` = free delivery is never offered. Deliberately distinct from `0`. */
   freeDeliveryThresholdPence: number | null;
   minimumOrderPence: number;
+  /**
+   * #1083 — `undefined` when collection is unticked: the field is not rendered then, so there is
+   * nothing to write, and `updateVendorConfig` leaves the stored value alone.
+   */
+  collectionMinimumOrderPence: number | undefined;
   offerCollection: boolean;
   location: {
     addressLine1: string;
@@ -142,6 +149,7 @@ export function parseDeliveryRules(raw: {
   freeDeliveryThreshold: string;
   minimumOrder: string;
   offerCollection: boolean;
+  collectionMinimumOrder: string;
   addressLine1: string;
   addressLine2: string;
   city: string;
@@ -161,8 +169,19 @@ export function parseDeliveryRules(raw: {
   if (!minimum.ok) return minimum;
 
   let location: DeliveryRulesInput["location"] = null;
+  let collectionMinimumOrderPence: number | undefined;
 
   if (raw.offerCollection) {
+    // #1083 — required while collection is offered, exactly as the delivery minimum is: blank is
+    // an error, 0.00 is the way to say "no minimum".
+    const collectionMinimum = parsePoundsToPence(
+      raw.collectionMinimumOrder,
+      COLLECTION_MINIMUM_FIELD,
+      "Collection minimum order",
+    );
+    if (!collectionMinimum.ok) return collectionMinimum;
+    collectionMinimumOrderPence = collectionMinimum.value;
+
     if (!raw.addressLine1.trim()) {
       return {
         ok: false,
@@ -201,6 +220,7 @@ export function parseDeliveryRules(raw: {
       deliveryFeePence: fee.value,
       freeDeliveryThresholdPence: threshold.value,
       minimumOrderPence: minimum.value,
+      collectionMinimumOrderPence,
       offerCollection: raw.offerCollection,
       location,
     },

@@ -27,6 +27,7 @@ export const getShopperDeliveryRules = cache(
         deliveryFeePence: profile?.deliveryFeePence ?? 0,
         minimumOrderPence: profile?.minimumOrderPence ?? 0,
         freeDeliveryThresholdPence: profile?.freeDeliveryThresholdPence ?? null,
+        collectionMinimumOrderPence: profile?.collectionMinimumOrderPence ?? 0,
       },
       profile?.deliveryAreas ?? [],
       postcode,
