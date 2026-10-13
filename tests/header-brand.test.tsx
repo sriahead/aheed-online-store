@@ -30,19 +30,21 @@ describe("HeaderBrand", () => {
     expect(html).toContain(`<source media="(min-width: 768px)" srcSet="${LOGO}"/>`);
     expect(html).toContain(`src="${MARK}"`);
     expect(html).toContain(`alt="${ALT}"`);
-    // 40x40 below md; today's 72x40 logo box (h-10 + aspect 9/5) from md.
-    expect(html).toMatch(/class="size-10 shrink-0 object-contain[^"]*md:w-auto md:aspect-9\/5/);
+    // 40x40 below md; the 128x64 (2:1) logo box from md.
+    expect(html).toMatch(
+      /class="size-10 shrink-0 object-contain[^"]*md:h-16 md:w-auto md:aspect-2\/1/,
+    );
     expect(html).not.toContain("Somewhere");
   });
 
-  it("logo only: today's single <img> in the 72x40 box, no picture, no mark", () => {
+  it("logo only: today's single <img> in the 72x40 box (128x64 from md), no picture, no mark", () => {
     const html = render(LOGO, null);
     expect(html).not.toContain("<picture");
     expect(html.match(/<img /g)).toHaveLength(1);
     expect(html).toContain(`src="${LOGO}"`);
     expect(html).toContain(`alt="${ALT}"`);
     expect(html).toContain(
-      'class="h-10 w-auto shrink-0 aspect-9/5 object-contain rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"',
+      'class="h-10 w-auto shrink-0 aspect-9/5 md:h-16 md:aspect-2/1 object-contain rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"',
     );
   });
 

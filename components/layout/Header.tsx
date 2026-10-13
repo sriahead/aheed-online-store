@@ -206,7 +206,7 @@ export async function Header({
             Coupert case above (that is `h-10 overflow-clip`), but it did forbid this block from
             giving way, so a long logo-less wordmark widened the whole page instead of clipping.
             The logo itself now carries `shrink-0`, so the logo path keeps its exact footprint. */}
-          <div className="flex items-center gap-3 min-w-0 h-10 overflow-clip">
+          <div className="flex items-center gap-3 min-w-0 h-10 md:h-16 overflow-clip">
             <Link
               href={isPortal ? "/staff" : "/"}
               className="flex min-w-0 items-center gap-2.5 group text-left"

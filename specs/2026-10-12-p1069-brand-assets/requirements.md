@@ -189,3 +189,8 @@ R26. `CHANGELOG.md` has an entry for #1069 under `[Unreleased]` (Gate 4).
 R27. `npm run lint`, `npm run typecheck`, `npx vitest run`, `npm run format:check`,
      `npm run kms:validate` and `npm run kms:check-generated` all exit 0 after this slice. The
      tests also include the existing repository-purity, client-injection and `use server` guards.
+
+## Amendment (2026-10-13)
+
+R18/R22: from 768px the logo box is **128×64** (`md:h-16 md:aspect-2/1`), not 72×40, to fit the 2:1
+"Aheed Super Store" lockup. Below 768px every size is unchanged.

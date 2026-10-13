@@ -4,7 +4,7 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.20.0"
+version: "1.20.1"
 updated: 2026-10-13
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
@@ -295,8 +295,9 @@ A vendor's brand has **two image slots**, both on `VendorBranding` and both rela
 (ADR-003). Both are uploaded on `/staff/storefront`.
 
 - **The logo (lockup)**, `logoStorageKey`: a single WebP. It renders in a fixed **72×40** box
-  (`h-10 aspect-9/5 object-contain`), reserved before the image decodes (#329, #655). A lockup
-  supplied at **about 9:5** fills that box. A wider one is letterboxed, and its small text shrinks
+  below 768px (`h-10 aspect-9/5 object-contain`) and a **128×64** (2:1) box from 768px
+  (`md:h-16 md:aspect-2/1`), reserved before the image decodes (#329, #655). A lockup
+  supplied at **about 2:1** fills the desktop box (about 9:5 fills the phone one). A wider one is letterboxed, and its small text shrinks
   with it: a 2.3:1 lockup's second line is about 9px tall.
 - **The square mark**, `markStorageKey`: one upload, which the browser turns into five PNGs in one
   folder. The column stores the `512.png` key, and `lib/vendor-mark.ts` derives the other four.
@@ -318,8 +319,8 @@ A source is contained in the square, never cropped, and must be at least 512px o
 
 | Vendor has | Below 768px (`md`) | From 768px |
 |---|---|---|
-| logo and mark | the mark, 40×40 | the logo, 72×40 |
-| logo only | the logo, 72×40 | same |
+| logo and mark | the mark, 40×40 | the logo, 128×64 |
+| logo only | the logo, 72×40 | the logo, 128×64 |
 | mark only | the wordmark, with the mark in the initial tile's 40×40 box | same |
 | neither | the wordmark | same |
 

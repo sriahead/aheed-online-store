@@ -10,8 +10,8 @@ const LOGO_MEDIA = "(min-width: 768px)";
  *
  * | Vendor has      | Below 768px                         | From 768px                      |
  * |-----------------|-------------------------------------|---------------------------------|
- * | logo and mark   | the mark, 40×40                     | the logo, 72×40                 |
- * | logo only       | the logo, 72×40 (unchanged)         | same                            |
+ * | logo and mark   | the mark, 40×40                     | the logo, 128×64 (2:1)          |
+ * | logo only       | the logo, 72×40 (unchanged)         | the logo, 128×64 (2:1)          |
  * | mark only       | wordmark, mark replacing the tile   | same                            |
  * | neither         | wordmark (unchanged)                | same                            |
  *
@@ -40,7 +40,7 @@ export function HeaderBrand({
     <span
       role="img"
       aria-label={alt}
-      className="flex h-10 aspect-9/5 items-center justify-center rounded-xl bg-primary text-xl font-extrabold text-white shadow-sm group-hover:opacity-90 transition-opacity"
+      className="flex h-10 aspect-9/5 md:h-16 md:aspect-2/1 items-center justify-center rounded-xl bg-primary text-xl font-extrabold text-white shadow-sm group-hover:opacity-90 transition-opacity"
     >
       {name.charAt(0)}
     </span>
@@ -98,19 +98,19 @@ export function HeaderBrand({
   if (markUrl) {
     // #1069 — logo AND mark: one <picture>, so the browser downloads only the candidate it shows.
     // The <img> (the mark) is the below-`md` default; the `md` source swaps in the logo, and the
-    // classes swap the box from 40×40 to today's 72×40 at the same breakpoint. The fallback carries
+    // classes swap the box from 40×40 to the 128×64 (2:1) logo box at the same breakpoint. The fallback carries
     // the same responsive box.
     return (
       <ImageWithFallback
         src={markUrl}
         sources={[{ media: LOGO_MEDIA, srcSet: logoUrl }]}
         alt={alt}
-        className="size-10 shrink-0 object-contain rounded-xl shadow-sm md:w-auto md:aspect-9/5 group-hover:opacity-90 transition-opacity"
+        className="size-10 shrink-0 object-contain rounded-xl shadow-sm md:h-16 md:w-auto md:aspect-2/1 group-hover:opacity-90 transition-opacity"
         fallback={
           <span
             role="img"
             aria-label={alt}
-            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-xl font-extrabold text-white shadow-sm md:w-auto md:aspect-9/5 group-hover:opacity-90 transition-opacity"
+            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-xl font-extrabold text-white shadow-sm md:h-16 md:w-auto md:aspect-2/1 group-hover:opacity-90 transition-opacity"
           >
             {name.charAt(0)}
           </span>
@@ -142,7 +142,7 @@ export function HeaderBrand({
       alt={alt}
       // #982 — `shrink-0` moved here from the container, so the logo keeps its exact
       // reserved footprint now that the container is allowed to shrink.
-      className="h-10 w-auto shrink-0 aspect-9/5 object-contain rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"
+      className="h-10 w-auto shrink-0 aspect-9/5 md:h-16 md:aspect-2/1 object-contain rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"
       fallback={missingLogo}
     />
   );
