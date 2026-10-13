@@ -1,5 +1,5 @@
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
-import { resolveTier } from "@/lib/loyalty";
+import { maxTierMultiplier, resolveTier } from "@/lib/loyalty";
 import { getReferralStats } from "@/lib/referrals-service";
 import { buildReferralUrl, REFERRAL_DISCOUNT_PENCE, REFERRAL_REWARD_POINTS } from "@/lib/referrals";
 import type { RewardsData } from "@/components/rewards/RewardsPanel";
@@ -25,6 +25,10 @@ export async function getRewardsDataForUser(
       pencePerPointRedeemed: config.pencePerPointRedeemed,
       minRedeemPoints: config.minRedeemPoints,
       tier: null,
+      // #1077 — 1, not a tier read. A signed-out visitor has no tier, and `WaysToEarnAccordion`
+      // hides the boost line at 1, so fetching this vendor's tiers here would buy a query to
+      // render nothing. The signed-in branch below derives the real value from tiers it already has.
+      maxMultiplier: 1,
       referralCode: "",
       referralsCompleted: 0,
       referralUrl: "",
@@ -72,6 +76,9 @@ export async function getRewardsDataForUser(
     pencePerPointRedeemed: config.pencePerPointRedeemed,
     minRedeemPoints: config.minRedeemPoints,
     tier: currentTier ? { name: currentTier.name, multiplierBps: currentTier.multiplierBps } : null,
+    // #1077 — derived from the `tiers` ALREADY fetched in the Promise.all above, so this adds no
+    // query. `/account/loyalty` computes the identical value the identical way.
+    maxMultiplier: maxTierMultiplier(tiers),
     referralCode: referralStats.referralCode,
     referralsCompleted: referralStats.completedCount,
     referralUrl,

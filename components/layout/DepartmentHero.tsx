@@ -64,7 +64,8 @@ export interface HeroDepartment {
   } | null;
 }
 
-const ROTATE_MS = 6000;
+/** #1077 — 6000 until owner testing asked for a shorter dwell (triage item 11b). */
+const ROTATE_MS = 4000;
 
 /**
  * Cycled per panel so consecutive departments differ. All three are semantic
@@ -84,6 +85,10 @@ export function DepartmentHero({
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
   const [interactionPaused, setInteractionPaused] = useState(false);
+  // #1077 — false until the shopper presses the pause/resume control. See `rotating` below: this is
+  // what lets their choice outrank a hover that is still in effect. `paused` already carries WHICH
+  // way they chose, so this only records THAT they chose.
+  const [choiceMade, setChoiceMade] = useState(false);
   const reducedMotion = useRef(false);
 
   const count = departments.length;
@@ -95,11 +100,33 @@ export function DepartmentHero({
     if (reducedMotion.current) setPaused(true);
   }, []);
 
+  /*
+   * #1077 — ONE resolved decision, in precedence order, replacing `paused || interactionPaused`.
+   *
+   * THE BUG THAT DECISION HAD. `interactionPaused` latches on `onMouseEnter`/`onFocus` on the
+   * carousel region, and the pause/resume control sits INSIDE that region — so on any pointer
+   * device, reaching for the control is itself what stops rotation, and pressing Play could not
+   * undo a hover that was still happening. Owner testing reported the control as doing nothing
+   * (triage item 11a); it was doing exactly what it said and being overruled by the pointer.
+   *
+   * Precedence now:
+   *   1. `paused` — the control's own state, and ALSO where `prefers-reduced-motion` lands at
+   *      mount (the effect above), so a visitor who asked for no motion still gets none without
+   *      this expression having to re-read a ref that never triggers a render. WCAG SC 2.2.2, and
+   *      #356's original contract.
+   *   2. An explicit press of the control — once `choiceMade`, hover no longer overrules the
+   *      shopper in either direction. A reduced-motion visitor who deliberately presses Play is
+   *      therefore obeyed, which is the point of giving them a control at all.
+   *   3. Hover or keyboard focus — still pauses, but only while the shopper has never pressed the
+   *      control. That is the case #356 added it for.
+   */
+  const rotating = count >= 2 && !paused && (choiceMade || !interactionPaused);
+
   useEffect(() => {
-    if (count < 2 || paused || interactionPaused) return;
+    if (!rotating) return;
     const timer = setInterval(() => setCurrent((prev) => (prev + 1) % count), ROTATE_MS);
     return () => clearInterval(timer);
-  }, [count, paused, interactionPaused]);
+  }, [count, rotating]);
 
   const go = useCallback(
     (delta: number) => setCurrent((prev) => (prev + delta + count) % count),
@@ -320,7 +347,12 @@ export function DepartmentHero({
                 criterion. This is the half the prototype omits entirely. */}
             <button
               type="button"
-              onClick={() => setPaused((p) => !p)}
+              onClick={() => {
+                // #1077 — record THAT a choice was made as well as which way, so `rotating` stops
+                // deferring to a hover the shopper's own pointer is causing.
+                setChoiceMade(true);
+                setPaused((p) => !p);
+              }}
               className="flex h-6 w-6 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50"
               aria-label={paused ? "Resume department rotation" : "Pause department rotation"}
             >

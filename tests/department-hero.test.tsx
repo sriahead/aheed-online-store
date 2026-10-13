@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { DepartmentHero, type HeroDepartment } from "@/components/layout/DepartmentHero";
 
 /**
@@ -17,11 +17,18 @@ import { DepartmentHero, type HeroDepartment } from "@/components/layout/Departm
  * quietly stops working, so both branches are tested here rather than only the
  * one currently reachable in production.
  *
- * The rotation/pause behaviour (R10-R13) is deliberately NOT asserted here.
+ * The rotation/pause behaviour (R10-R13) was deliberately NOT asserted here.
  * Those are WCAG SC 2.2.2 obligations about a real user agent — focus, hover
  * and prefers-reduced-motion — and validation.md routes them to a browser on
  * purpose. A jsdom test asserting a button exists would look like coverage
  * without being it.
+ *
+ * #1077 R9/R10 REOPEN EXACTLY ONE PART OF THAT, and it is worth saying why. The defect was not a
+ * WCAG obligation failing in a real browser; it was two pause signals combining wrongly in plain
+ * state — `interactionPaused` latched by hover on the region, and the control sitting INSIDE that
+ * region, so pressing Play could never outlive the pointer that was hovering it. That is
+ * resolvable logic, not user-agent behaviour, and the two cases below drive it with fake timers.
+ * Hover/focus and reduced motion in a REAL agent stay in validation.md where #356 put them.
  */
 
 const DEPARTMENTS: HeroDepartment[] = [
@@ -131,9 +138,62 @@ describe("DepartmentHero", () => {
   it("gives the pause control an accessible name (R10)", () => {
     render(<DepartmentHero departments={DEPARTMENTS} cdnBaseUrl={null} />);
 
-    // Presence only — that it actually STOPS rotation, and that hover and
-    // keyboard focus pause it, are browser checks in validation.md.
+    // Presence only — that hover and keyboard focus pause it in a real agent, and
+    // prefers-reduced-motion, are browser checks in validation.md.
     expect(screen.getByRole("button", { name: "Pause department rotation" })).toBeDefined();
+  });
+
+  /**
+   * #1077 R9/R10 — the two halves of the hover/control precedence rule.
+   *
+   * `currentDotName` reads the state through the dots' `aria-current`, which is the only
+   * programmatic marker of the showing panel (the existing R13 case above reads it the same way).
+   */
+  describe("pause control versus hover (#1077)", () => {
+    const ROTATE_MS = 4000;
+
+    function currentDotName(): string | null {
+      const dots = screen.getAllByRole("button", { name: /^Show / });
+      return dots.find((dot) => dot.getAttribute("aria-current") === "true")?.ariaLabel ?? null;
+    }
+
+    it("an explicit resume overrides a hover that is still in effect (R9)", () => {
+      vi.useFakeTimers();
+      try {
+        render(<DepartmentHero departments={DEPARTMENTS} cdnBaseUrl={null} />);
+        const region = screen.getByRole("region", { name: "Department spotlight" });
+        const before = currentDotName();
+
+        // The pointer enters the panel — which is what reaching for the control does.
+        fireEvent.mouseEnter(region);
+        // Press once to pause, once to resume: an explicit choice, made while still hovering.
+        act(() => screen.getByRole("button", { name: /department rotation$/ }).click());
+        act(() => screen.getByRole("button", { name: /department rotation$/ }).click());
+
+        act(() => void vi.advanceTimersByTime(ROTATE_MS));
+
+        // Before #1077 this stayed put: `interactionPaused` was still true and outranked the press.
+        expect(currentDotName()).not.toBe(before);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("hover still pauses for a shopper who never presses the control (R10)", () => {
+      vi.useFakeTimers();
+      try {
+        render(<DepartmentHero departments={DEPARTMENTS} cdnBaseUrl={null} />);
+        const region = screen.getByRole("region", { name: "Department spotlight" });
+        const before = currentDotName();
+
+        fireEvent.mouseEnter(region);
+        act(() => void vi.advanceTimersByTime(ROTATE_MS * 2));
+
+        expect(currentDotName()).toBe(before);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   /**

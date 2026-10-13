@@ -104,7 +104,11 @@ export function ListReview({ lines }: { lines: ResolvedLine[] }) {
                   }
                   className="w-full rounded-xl border border-black/10 bg-surface-muted p-2 text-xs font-semibold text-primary"
                 >
-                  <option value="">Skip this line</option>
+                  {/* #1077 — "Skip this line" alone never said a choice was wanted (triage item
+                      20). The empty value is UNCHANGED and load-bearing: it IS the skip, read
+                      positionally by features/cart/add-list-to-cart.ts, so the wording has to name
+                      both the choice and what happens if none is made. */}
+                  <option value="">Please choose an item — or skip this line</option>
                   {line.resolution.candidates.map((candidate) => (
                     <option
                       key={candidate.id}

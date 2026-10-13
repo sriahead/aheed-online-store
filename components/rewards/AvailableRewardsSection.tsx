@@ -3,12 +3,21 @@
 import { Gift, Lock, CheckCircle2 } from "lucide-react";
 import { formatPrice } from "@/components/product/format-price";
 
-interface RewardVoucher {
+interface RewardThreshold {
   id: string;
   pointsNeeded: number;
   discountPence: number;
   label: string;
 }
+
+/**
+ * #1077 — multiples of the vendor's OWN `minRedeemPoints`, replacing two hardcoded point figures
+ * (triage item 15). Those two were not vendor data at all: a vendor whose minimum is 250 was shown
+ * a fixed step they can reach and another fixed step framed as the top, both invented by the
+ * platform — the same defect class as #239. The step multiples are presentation over the vendor's
+ * own unit, so every figure below now moves when that unit does.
+ */
+const THRESHOLD_MULTIPLES = [1, 2, 5] as const;
 
 export function AvailableRewardsSection({
   balancePoints = 0,
@@ -23,27 +32,19 @@ export function AvailableRewardsSection({
 }) {
   const isDark = variant === "dark";
 
-  // Supported discount tiers
-  const vouchers: RewardVoucher[] = [
-    {
-      id: "v-1",
-      pointsNeeded: minRedeemPoints,
-      discountPence: minRedeemPoints * pencePerPointRedeemed,
-      label: `${formatPrice(minRedeemPoints * pencePerPointRedeemed)} Off Basket`,
-    },
-    {
-      id: "v-5",
-      pointsNeeded: 500,
-      discountPence: 500 * pencePerPointRedeemed,
-      label: `${formatPrice(500 * pencePerPointRedeemed)} Off Basket`,
-    },
-    {
-      id: "v-10",
-      pointsNeeded: 1000,
-      discountPence: 1000 * pencePerPointRedeemed,
-      label: `${formatPrice(1000 * pencePerPointRedeemed)} Off Basket`,
-    },
-  ];
+  const thresholds: RewardThreshold[] = THRESHOLD_MULTIPLES.map((multiple) => {
+    const pointsNeeded = minRedeemPoints * multiple;
+    return {
+      id: `t-${multiple}`,
+      pointsNeeded,
+      discountPence: pointsNeeded * pencePerPointRedeemed,
+      label: `${formatPrice(pointsNeeded * pencePerPointRedeemed)} off your basket`,
+    };
+  });
+
+  // A vendor with no redemption minimum has no threshold to show, so this renders nothing rather
+  // than three cards all reading "0 pts" — #239's rule that a missing value hides its element.
+  if (minRedeemPoints <= 0) return null;
 
   return (
     <div
@@ -60,25 +61,27 @@ export function AvailableRewardsSection({
           <Gift className="h-4 w-4" aria-hidden="true" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold">Available rewards</h3>
+          <h3 className="text-sm font-semibold">Points milestones</h3>
+          {/* #1077 — the heading and this line named a code the shopper never receives, and none exists: redemption
+              is a points field on the checkout form, not an issued code. */}
           <p className={`text-xs ${isDark ? "text-stone-400" : "text-primary-muted"}`}>
-            Redeem points at checkout for money off your order
+            Enter your points at checkout for money off your order
           </p>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        {vouchers.map((voucher) => {
-          const isUnlocked = balancePoints >= voucher.pointsNeeded;
-          const pointsRemaining = voucher.pointsNeeded - balancePoints;
+        {thresholds.map((threshold) => {
+          const isUnlocked = balancePoints >= threshold.pointsNeeded;
+          const pointsRemaining = threshold.pointsNeeded - balancePoints;
           const progressPercent = Math.min(
             100,
-            Math.round((balancePoints / voucher.pointsNeeded) * 100),
+            Math.round((balancePoints / threshold.pointsNeeded) * 100),
           );
 
           return (
             <div
-              key={voucher.id}
+              key={threshold.id}
               className={`relative flex flex-col justify-between rounded-xl border p-3.5 transition ${
                 isUnlocked
                   ? isDark
@@ -102,7 +105,7 @@ export function AvailableRewardsSection({
                           : "text-primary-muted"
                     }`}
                   >
-                    {voucher.pointsNeeded} pts
+                    {threshold.pointsNeeded} pts
                   </span>
                   {isUnlocked ? (
                     <span className="flex items-center gap-1 text-[11px] font-semibold text-action">
@@ -117,7 +120,7 @@ export function AvailableRewardsSection({
                 </div>
 
                 <p className={`text-sm font-bold ${isDark ? "text-white" : "text-primary"}`}>
-                  {voucher.label}
+                  {threshold.label}
                 </p>
               </div>
 

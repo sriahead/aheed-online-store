@@ -3,12 +3,16 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { HeaderBrand } from "@/components/layout/HeaderBrand";
 
 /**
- * #1069 R17-R19 — the four brand cases, as static markup.
+ * #1069 R17-R19, amended by #1077 R1-R3 — the four brand cases, as static markup.
  *
- * Markup proves which element, box classes and `alt` each case renders, and that the logo-and-mark
- * case is ONE <picture> (so the browser fetches one candidate). It cannot prove layout or which
- * request the browser makes: `validation.md` R18/R20 measure those with
+ * Markup proves which element, box classes and `alt` each case renders. It cannot prove layout or
+ * which request the browser makes: `validation.md` measures those with
  * `scripts/verify-mobile-layout.ts`.
+ *
+ * #1077 — the logo-and-mark case no longer asserts a `<picture>` with a `(min-width: 768px)`
+ * source. Owner testing found the square mark too small to identify the store on a phone, so a
+ * vendor WITH a logo renders that logo at every width — which makes this case byte-for-byte
+ * identical to the logo-only case, and that equality is what the first test now asserts.
  */
 
 const NAME = "Example Store";
@@ -23,16 +27,23 @@ function render(logoUrl: string | null, markUrl: string | null): string {
 }
 
 describe("HeaderBrand", () => {
-  it("logo and mark: one <picture>, the mark below md and the logo from md", () => {
+  it("logo and mark: the logo at every width, identical to the logo-only case (#1077 R1)", () => {
     const html = render(LOGO, MARK);
+
+    // R1 — the two cases are now ONE branch, so their markup must be indistinguishable. This is
+    // the whole requirement in one assertion: anything that made the mark reappear below `md`
+    // (a <source>, a second <img>, a md:hidden class) would make these differ.
+    expect(html).toBe(render(LOGO, null));
+
+    expect(html).not.toContain("<picture");
+    expect(html).not.toContain("<source");
+    expect(html).not.toContain(MARK);
     expect(html.match(/<img /g)).toHaveLength(1);
-    expect(html).toContain('<picture class="contents">');
-    expect(html).toContain(`<source media="(min-width: 768px)" srcSet="${LOGO}"/>`);
-    expect(html).toContain(`src="${MARK}"`);
+    expect(html).toContain(`src="${LOGO}"`);
     expect(html).toContain(`alt="${ALT}"`);
-    // 40x40 below md; the 128x64 (2:1) logo box from md.
-    expect(html).toMatch(
-      /class="size-10 shrink-0 object-contain[^"]*md:h-16 md:w-auto md:aspect-2\/1/,
+    // 72x40 below md (h-10 aspect-9/5); the 128x64 (2:1) box from md.
+    expect(html).toContain(
+      'class="h-10 w-auto shrink-0 aspect-9/5 md:h-16 md:aspect-2/1 object-contain rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"',
     );
     expect(html).not.toContain("Somewhere");
   });
