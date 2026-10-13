@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.93.0"
-updated: 2026-10-12
+version: "1.94.0"
+updated: 2026-10-13
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -665,6 +665,20 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **Per-vendor square mark (`#1069`): BUILT on `feature/p1069-brand-assets`, not yet validated or
+  shipped.** Spec and build notes: `specs/2026-10-12-p1069-brand-assets/`. It carries one additive
+  migration (`20261012210000_p1069_vendor_mark`), **not yet applied to dev**. Next: `/clear`, then
+  `/validate` on Sonnet.
+  - Origin: the tenth Discover pass (2026-10-12) on an "Aheed Super Store" brand brief. **Owner
+    rulings:** Aheed keeps the name "Aheed Food Centre" and adopts a new blue/lime logo and palette;
+    the owner's designer supplies the artwork; **leave SriMart's palette as it is**. Because of that,
+    a second-vendor check against SriMart must compare the **accent** colour, since the primaries
+    will be near-identical blues once Aheed's palette is applied.
+  - Applying the new palette is data, not code: a theme on `/staff/storefront`. Staging Aheed has a
+    saved theme, "Aheed brand kit — original green", to switch back to. **Production's backup of
+    its live palette is a user-run command that has not been confirmed as done.**
+  - Follow-ups filed at Build: `#1071` (product Open Graph image), `#1072` (footer logo variant),
+    `#1073` (remove a mark; clean up superseded uploads).
 - **Storefront footer: `#1055` and `#1060` are BOTH on `staging`, deployed and seeded; the
   `staging` to `main` PROMOTION is outstanding and must carry them together (owner decision,
   2026-10-12).**

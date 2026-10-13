@@ -13,6 +13,7 @@ import {
   saveVendorHoursOverride as saveVendorHoursOverrideRepo,
   deleteVendorHoursOverride as deleteVendorHoursOverrideRepo,
   saveVendorTheme as saveVendorThemeRepo,
+  updateVendorMarkKey as updateVendorMarkKeyRepo,
   updateVendorLogoKey as updateVendorLogoKeyRepo,
   updateVendorStorefrontConfig as updateVendorStorefrontConfigRepo,
   type BrandPrimitives,
@@ -89,6 +90,10 @@ export async function getVendorLocation(vendorId: string) {
 
 export async function updateVendorLogoKey(vendorId: string, logoStorageKey: string) {
   return updateVendorLogoKeyRepo(getPrisma(), vendorId, logoStorageKey);
+}
+
+export async function updateVendorMarkKey(vendorId: string, markStorageKey: string) {
+  return updateVendorMarkKeyRepo(getPrisma(), vendorId, markStorageKey);
 }
 
 /**

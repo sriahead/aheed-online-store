@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.19.0"
-updated: 2026-10-12
+version: "1.20.1"
+updated: 2026-10-13
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -288,6 +288,53 @@ fix rather than a name-length assumption.
 
 This matters for multi-tenancy (ADR-004): a new vendor onboarding without a logo is ordinary, not
 exceptional, and nothing validates a vendor's name length.
+
+## Brand assets: lockup and mark (#1069)
+
+A vendor's brand has **two image slots**, both on `VendorBranding` and both relative storage keys
+(ADR-003). Both are uploaded on `/staff/storefront`.
+
+- **The logo (lockup)**, `logoStorageKey`: a single WebP. It renders in a fixed **72×40** box
+  below 768px (`h-10 aspect-9/5 object-contain`) and a **128×64** (2:1) box from 768px
+  (`md:h-16 md:aspect-2/1`), reserved before the image decodes (#329, #655). A lockup
+  supplied at **about 2:1** fills the desktop box (about 9:5 fills the phone one). A wider one is letterboxed, and its small text shrinks
+  with it: a 2.3:1 lockup's second line is about 9px tall.
+- **The square mark**, `markStorageKey`: one upload, which the browser turns into five PNGs in one
+  folder. The column stores the `512.png` key, and `lib/vendor-mark.ts` derives the other four.
+
+| File | Size | Background | Used for |
+|---|---|---|---|
+| `32.png` | 32×32 | transparent | `<link rel="icon">`, and the target of `/favicon.ico`'s redirect |
+| `180.png` | 180×180 | the vendor's cream | `<link rel="apple-touch-icon">` (iOS paints transparency black) |
+| `192.png` | 192×192 | transparent | `<link rel="icon">`, the manifest, and the header mark |
+| `512.png` | 512×512 | transparent | the manifest |
+| `og.png` | 1200×630 | the vendor's cream, mark 480px centred | `og:image`: the link preview in WhatsApp, Facebook and iMessage |
+
+**`og.png`'s background is the cream at upload time.** Changing the colours later does not regenerate
+it; re-uploading the mark does.
+
+A source is contained in the square, never cropped, and must be at least 512px on its longer edge.
+
+**Header rule** (`components/layout/HeaderBrand.tsx`):
+
+| Vendor has | Below 768px (`md`) | From 768px |
+|---|---|---|
+| logo and mark | the mark, 40×40 | the logo, 128×64 |
+| logo only | the logo, 72×40 | the logo, 128×64 |
+| mark only | the wordmark, with the mark in the initial tile's 40×40 box | same |
+| neither | the wordmark | same |
+
+The logo-and-mark case is **one `<picture>`**: a `(min-width: 768px)` source for the logo, and the
+mark as the `<img>`. The browser downloads only the candidate it shows. Hiding one of two `<img>`s
+with CSS would download both, and the logo is already the storefront's largest asset (#243).
+
+Everything above is per vendor and read from the database. **Nothing brand-specific lives in
+`public/` or `app/`**: those are shared by every vendor, so one static favicon would show one
+vendor's mark on another's site (ADR-004). A vendor with no mark gets no icon links, no
+`og:image`, `icons: []` in the manifest and a 404 for `/favicon.ico`, exactly as before.
+
+Not supported, by decision: SVG uploads (an SVG can carry script), a footer logo or a
+light-on-dark variant, maskable icons, and a true multi-resolution `.ico`.
 
 ## Dark surfaces: the storefront footer (#1055, 2026-10-12)
 

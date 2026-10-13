@@ -40,6 +40,7 @@ import {
   initialProductGridDensityState,
 } from "@/lib/product-grid-density";
 import { VendorLogoUploader } from "@/components/staff/VendorLogoUploader";
+import { VendorMarkUploader } from "@/components/staff/VendorMarkUploader";
 
 /** The eight `VendorBranding` brand primitives — every column that is a hex string. */
 type BrandColorFieldName =
@@ -71,6 +72,7 @@ export function StorefrontConfigForm({
   themes,
   vendorThemes,
   logoUrl,
+  markUrl,
 }: {
   initialConfig: VendorConfig;
   initialBranding: VendorBranding;
@@ -83,6 +85,8 @@ export function StorefrontConfigForm({
   themes: Theme[];
   vendorThemes: { id: string; name: string }[];
   logoUrl: string | null;
+  /** #1069 — the current mark's `192.png`, or null. */
+  markUrl: string | null;
 }) {
   const router = useRouter();
   const [themePending, startThemeTransition] = useTransition();
@@ -310,6 +314,7 @@ export function StorefrontConfigForm({
   return (
     <div className="flex max-w-2xl flex-col gap-8">
       <VendorLogoUploader currentLogoUrl={logoUrl} />
+      <VendorMarkUploader currentMarkUrl={markUrl} cream={initialBranding.brandCream} />
 
       {/* #75, #714 — Themes dropdown mixing Global and Vendor themes. */}
       {(themes.length > 0 || vendorThemes.length > 0) && (

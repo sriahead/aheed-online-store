@@ -414,6 +414,35 @@ const MEASURE = `(async () => {
     };
   }
 
+  // #1069 — the header brand: which image is showing, at what size, and which brand images the
+  // page's <img> elements requested. \`requested\` counts only initiatorType "img", so the favicon
+  // and manifest icon fetches are excluded. A memory-cache hit may not produce an entry, so measure
+  // each width in its own run when comparing \`requested\` across widths.
+  const brandLink = document.querySelector("[data-header-brand]");
+  let brand = null;
+  if (brandLink) {
+    const lastSegment = (url) => (url ? new URL(url, location.href).pathname.split("/").pop() : null);
+    const visible = [...brandLink.querySelectorAll("img")].find((img) => shown(img));
+    const fallback = visible ? null : brandLink.querySelector('[role="img"]');
+    const box = visible || fallback;
+    const rect = box ? box.getBoundingClientRect() : null;
+    const brandUrls = new Set(
+      [...brandLink.querySelectorAll("img, source")].flatMap((el) =>
+        [el.getAttribute("src"), el.getAttribute("srcset")].filter(Boolean).map((u) => new URL(u, location.href).href),
+      ),
+    );
+    brand = {
+      file: visible ? lastSegment(visible.currentSrc || visible.src) : null,
+      fallback: Boolean(fallback),
+      width: rect ? Math.round(rect.width) : null,
+      height: rect ? Math.round(rect.height) : null,
+      requested: performance
+        .getEntriesByType("resource")
+        .filter((e) => e.initiatorType === "img" && brandUrls.has(e.name))
+        .map((e) => lastSegment(e.name)),
+    };
+  }
+
   window.scrollTo(0, ${SCROLL_Y});
   await sleep(400);
   const headerAfter = header ? header.getBoundingClientRect() : null;
@@ -438,6 +467,7 @@ const MEASURE = `(async () => {
     firstCardStepperLabel: readout ? readout.getAttribute("aria-label") : null,
     formInputs,
     checkout,
+    brand,
   };
 })()`;
 

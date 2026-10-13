@@ -43,6 +43,8 @@ export interface VendorProfile {
   name: string;
   tagline: string | null;
   logoStorageKey: string | null;
+  /** #1069 — the square mark's `512.png` key; see `lib/vendor-mark.ts`. */
+  markStorageKey: string | null;
   primitives: BrandPrimitives;
   localityName: string;
   /**
@@ -189,6 +191,7 @@ export async function fetchVendorProfile(
           name: true,
           tagline: true,
           logoStorageKey: true,
+          markStorageKey: true,
           brandGreenDark: true,
           brandGreen: true,
           brandOrange: true,
@@ -276,6 +279,7 @@ export async function fetchVendorProfile(
     name: b?.name ?? vendor?.name ?? DEFAULT_SENDER_NAME,
     tagline: b?.tagline ?? null,
     logoStorageKey: b?.logoStorageKey ?? null,
+    markStorageKey: b?.markStorageKey ?? null,
     primitives: b
       ? {
           "green-dark": b.brandGreenDark,
@@ -393,6 +397,21 @@ export async function updateVendorLogoKey(
   return prisma.vendorBranding.update({
     where: { vendorId },
     data: { logoStorageKey },
+  });
+}
+
+/**
+ * #1069 — attach a vendor's square mark. A singular `update` with no nested writes, so it runs over
+ * the HTTP client (CLAUDE.md Database rules). The caller has already verified all five files.
+ */
+export async function updateVendorMarkKey(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  markStorageKey: string,
+) {
+  return prisma.vendorBranding.update({
+    where: { vendorId },
+    data: { markStorageKey },
   });
 }
 

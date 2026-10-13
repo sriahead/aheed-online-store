@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { Poppins } from "next/font/google";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { getEnv } from "@/lib/config";
+import { buildVendorIconMetadata } from "@/lib/vendor-icons";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -20,6 +22,9 @@ export async function generateMetadata() {
       return {
         title: profile.tagline ? `${profile.name} — ${profile.tagline}` : profile.name,
         description,
+        // #1069 — favicon, apple-touch icon and Open Graph image from the vendor's square mark.
+        // Spreads nothing at all for a vendor without one, so its head is unchanged.
+        ...buildVendorIconMetadata(profile.name, profile.markStorageKey, getEnv().CDN_BASE_URL),
       };
     }
   } catch {
