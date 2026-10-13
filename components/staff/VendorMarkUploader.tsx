@@ -63,6 +63,15 @@ async function renderMarkFiles(file: File, cream: string): Promise<Record<MarkFi
   }
 }
 
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("That image couldn't be read."));
+    reader.readAsDataURL(blob);
+  });
+}
+
 export function VendorMarkUploader({
   currentMarkUrl,
   cream,
@@ -133,7 +142,9 @@ export function VendorMarkUploader({
         return;
       }
 
-      setUploaded(URL.createObjectURL(blobs.icon192));
+      // A data: URL, not URL.createObjectURL: the site CSP's img-src allows data: but not blob:, so
+      // a blob: preview rendered as a broken image (#1069 validation).
+      setUploaded(await blobToDataUrl(blobs.icon192).catch(() => null));
     });
   }
 

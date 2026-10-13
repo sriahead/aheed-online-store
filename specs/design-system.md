@@ -5,7 +5,7 @@ audience: [dev]
 type: doc
 status: approved
 version: "1.20.0"
-updated: 2026-10-12
+updated: 2026-10-13
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]

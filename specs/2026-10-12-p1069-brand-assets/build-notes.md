@@ -107,3 +107,36 @@ how to run a check and do not change any requirement.
 - **Unrelated data change on staging this session** (no code): Aheed got a vendor theme, "Aheed
   brand kit — original green", so the pre-rebrand palette can be re-applied. Production's
   equivalent is a user-run command, not done here.
+
+## Fix after the first Validate (2026-10-13)
+
+The first `/validate` failed two rows. Both were corrected at the root cause; no `validation.md`
+row was loosened.
+
+- **R8, the success preview.** `VendorMarkUploader` previewed the new `192.png` with
+  `URL.createObjectURL`. The site CSP (`next.config`) has `img-src 'self' data: https://*.nocaped.com`,
+  with no `blob:`, so the preview was a broken image in every environment. It now reads the blob into
+  a `data:` URL (`blobToDataUrl`, `FileReader`), which the CSP already allows. A failed read leaves
+  no preview rather than throwing, because the mark is already attached at that point. The CSP was
+  not widened. `VendorLogoUploader` has the same latent bug; it predates this slice and is left for
+  its own issue.
+- **R23.** `specs/design-system.md` front-matter `updated` is now `2026-10-13`, the build date.
+  Staging already carried `2026-10-12`, so the row's "changed versus `origin/staging`" check failed.
+
+### Found by Validate, not fixed here (environment or Spec-level)
+
+- **The dev R2 bucket has no CORS rule for any localhost origin.** A browser PUT from
+  `npm run preview` is refused at preflight (403), for the logo uploader too. ADR-003 treats bucket
+  CORS as a per-environment prerequisite outside the repo. The browser→R2 PUT was therefore not
+  exercised locally. The canvas output was checked in the page, and generated files went through
+  the real `requestMarkUpload`/`attachVendorMark` actions.
+- **The `nocaped.com` zone's hotlink rule refuses `.png` (not `.webp`) for any off-zone `Referer`.**
+  Measured: `192.png` returns 403 with `Referer: http://localhost:8787/` or `https://srimart.example.com/`,
+  and 200 with `https://staging.aheedfoodcentre.nocaped.com/` or no Referer. Staging and production
+  are on-zone, so nothing breaks today. A vendor on a custom domain outside `nocaped.com` would lose
+  its header mark, favicon and touch icon. That is a **Spec-level** decision (PNG vs WebP, or a zone
+  rule change), not a Fix. `docs/developer-portal/env-setup.md`'s "dev has no hotlink rule" is wrong
+  for PNGs.
+- **R16 was only partly verified locally.** Dev's `demo-srimart-admin` rejects the shared
+  `DEMO_ACCOUNT_PASSWORD` (`demo-accounts add` sets a password only on creation). The cross-vendor
+  leak check passed live; SriMart's own upload is to be checked on staging.

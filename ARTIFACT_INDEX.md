@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-12T23:12:47.768Z` · commit `61022ce` · `227` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-13T05:21:47.690Z` · commit `3c5b9d0` · `227` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -229,7 +229,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)](specs/decisions/ADR-004-multi-tenancy.md) | adr | 1.13.0 | 2026-09-19 | approved | internal | Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated). |
 | [ADR-005 — Payments & multi-vendor money flow](specs/decisions/ADR-005-payments-money-flow.md) | adr | 1.9.0 | 2026-09-29 | approved | internal | Stripe behind a PaymentService port, taking card payments via hosted Stripe Checkout. All vendors settle into a single platform Stripe account for now, with a Connect-ready seam so per-vendor payouts are an additive change rather than a rewrite. |
 | [ADR-006 — Store locations (multi-branch shape)](specs/decisions/ADR-006-store-locations.md) | adr | 1.1.0 | 2026-09-24 | approved | internal | If a vendor ever trades from more than one physical site, a location is a child of Vendor and never a second tenancy axis — vendorId stays the sole mandatory repository filter. Rules the shape so |
-| [Design System](specs/design-system.md) | doc | 1.20.0 | 2026-10-12 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases. |
+| [Design System](specs/design-system.md) | doc | 1.20.0 | 2026-10-13 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases. |
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
 | [Roadmap](specs/roadmap.md) | doc | 1.147.0 | 2026-10-11 | approved | internal | Master backlog and phase sequencing (M0, P0-P10, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is now a historical record; launch work lives in P9 and post-launch work in P10. |
 | [SDD Workflow](specs/sdd-workflow.md) | doc | 2.41.0 | 2026-10-10 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands. |
