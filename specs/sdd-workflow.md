@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.41.0"
-updated: 2026-10-10
+version: "2.42.0"
+updated: 2026-10-13
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -989,6 +989,8 @@ named gates, but the part of this repo's actual history most prone to drift.
 
 Then go straight to **Document (final)** — no model switch here. It runs on the same Sonnet 5
 session that just shipped.
+
+**A feature branch cut from `origin/staging` inherits `origin/staging` as its upstream** (#1077, 2026-10-13: `git branch -vv` showed `[origin/staging: ahead 6]`). A bare `git push` would have gone to `staging` itself, not the feature branch. Push with an explicit target and reset the upstream in one step: `git push -u origin HEAD:refs/heads/<branch>`. The `staging` ruleset would have refused it, but do not rely on that.
 
 ## Document (final)
 

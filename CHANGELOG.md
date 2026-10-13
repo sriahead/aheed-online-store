@@ -19,6 +19,8 @@ every branch merges.
 
 ### Documentation
 
+- **Document pass for `#1077` (merged to `staging` as PR #1081).** Docs only. `specs/roadmap.md` 1.149.0 gains the change-log row for the slice, which is what `sdd:audit` checks. `docs/model-handoff.md` 1.97.0 replaces the "built, not yet PR'd" entry with the merged state and what is still unproven (the logo and favicon checks need a vendor with a logo and a mark). `specs/sdd-workflow.md` 2.42.0 records a trap: a branch cut from `origin/staging` has `origin/staging` as its upstream, so push with an explicit target.
+
 - **Document pass for `#1069`, and the deferred records for `#1055`, `#1060`, `#1064`** (promotions PR #1075 and PR #1068). `specs/roadmap.md` 1.148.0 gains a change-log row for each promotion, which is what `sdd:audit` was reporting as missing; `docs/model-handoff.md` 1.95.0 replaces three "built, not shipped" entries with their production state; `docs/developer-portal/local-dev-playbook.md` 1.26.0 records why a browser upload and CDN images cannot be proven under `npm run preview` (dev bucket has no `localhost` CORS rule, dev CDN rejects a localhost referer) and the `/512.png` key-suffix trap. Production footer seeding and the `#1066` cookie inspection are recorded as unconfirmed.
 
 - **Tenth Discover pass: the "Aheed Super Store" brand-identity brief (filed `#1069`).** Docs only. `docs/research/discovery-log.md` 1.10.0, five entries:
