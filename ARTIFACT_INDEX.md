@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-13T10:37:57.930Z` · commit `97d4dd1` · `228` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-13T11:14:15.921Z` · commit `7bee5ad` · `229` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -223,6 +223,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Storefront footer — holiday-aware opening hours, contact channel buttons, three-column bottom bar (plan)](specs/2026-10-12-p1060-footer-hours-contact/plan.md) | spec | 1.0.0 | 2026-10-12 | draft | internal | Follow-up to #1055: structured weekly opening hours plus dated holiday overrides with today highlighted, FloatingContact's channel buttons in the footer from one shared source, and a 50/25/25 bottom bar the floating buttons no longer cover. |
 | [Privacy page — accurate Cookies and Local Storage section (plan)](specs/2026-10-12-p1064-privacy-cookies/plan.md) | spec | 1.0.0 | 2026-10-12 | draft | internal | Rewrites section 4 of the privacy page in the owner's wording, listing every cookie and local-storage item the storefront actually sets under its real name, instead of one sentence naming one cookie that does not exist. |
 | [Per-vendor brand assets: square mark, icons, social image, responsive header mark (plan)](specs/2026-10-12-p1069-brand-assets/plan.md) | spec | 1.0.0 | 2026-10-12 | draft | internal | Adds a per-vendor square mark to VendorBranding. From one upload it produces favicon, apple-touch, manifest and social-share images, and the header shows the mark on phones. |
+| [P10 — Eleven quick UI and copy fixes from the 2026-10-13 user-testing pass (plan)](specs/2026-10-13-p1077-quick-ui-copy-fixes/plan.md) | spec | 1.0.0 | 2026-10-13 | draft | internal | Eleven single-file UI and copy defects from the owner's 2026-10-13 testing pass — header logo on phones, a banner phone number, a carousel pause control that cannot resume, shop-list affordances and four rewards claims the code does not back. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.39.0 | 2026-10-06 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
