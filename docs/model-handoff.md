@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.98.0"
+version: "1.99.0"
 updated: 2026-10-13
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -672,10 +672,10 @@ All facts in this section require live verification:
   owner-configurable, code-change-needed and blocked. **Read it before re-triaging anything a user
   reports about the storefront** — two of the 21 turned out to be already shipped, and it records
   which.
-  - **`#1077` (eleven quick UI/copy fixes) is merged to `staging` (PR #1081) and In Review, not yet
-    in production.** Spec and build notes in `specs/2026-10-13-p1077-quick-ui-copy-fixes/`. It was
-    validated from a fresh context. Not proven locally: the logo and favicon checks, because the
-    local database has no logo or mark for either vendor, so check them on staging.
+  - **`#1077` (eleven quick UI/copy fixes) is in production** (PR #1081, promoted by PR #1085;
+    closed and `Done`). Spec and build notes in `specs/2026-10-13-p1077-quick-ui-copy-fixes/`. It was
+    validated from a fresh context. Not proven anywhere yet: the logo and favicon checks, because the
+    local database has no logo or mark for either vendor, so check them on a vendor that has both.
   - **It reverses `#1069`'s header rule of the previous day**: a vendor with a logo renders the
     logo at every width, not the square mark below 768px. `specs/design-system.md` 1.21.0 is the
     authority; the `#1069` entry below is left as shipped history.
@@ -683,18 +683,28 @@ All facts in this section require live verification:
     `text-primary-muted` (5.21:1), because the lowest value `tests/token-alpha-purity.test.ts`
     (`#649`) permits is `text-black/60` at 5.74:1. Placeholder prominence is a content problem.
     Recorded in `specs/design-system.md`.
-  - **Filed from this pass:** `#1078` (vendor-editable banner headline, needs a migration — the
-    owner chose this over rewording in code), `#1079` (`WaysToEarnAccordion` repeats the unenforced
-    referral claim `#1077` removed from `ReferralCard`), `#1083` (Click & Collect held to the
-    delivery minimum; `#1078`, `#1079` and `#1083` are one slice, built and awaiting Validate, see
-    Risks And Blockers), `#1080` (four `aheed_`-prefixed storage
-    keys are platform-wide, so SriMart's privacy page names another vendor).
+  - **Filed from this pass:** `#1078` (vendor-editable banner headline), `#1079`
+    (`WaysToEarnAccordion` repeated the unenforced referral claim `#1077` removed from
+    `ReferralCard`) and `#1083` (Click & Collect held to the delivery minimum) are **one slice, in
+    production and closed** — see the `#1083` entry below. `#1080` (four `aheed_`-prefixed storage
+    keys are platform-wide, so SriMart's privacy page names another vendor) is still open.
   - **Found, evidenced, and NOT yet filed** — the owner has not asked for issues on these, and the
     triage document is their only home: a deliverable postcode does not select Delivery
     (`#748`'s rule, confirmed in code); no warning when an ambiguous shop-list line is skipped;
     24 flat staff-nav links needing grouping; `listCategorySpotlights`' global take window starving
     departments of spotlights; and the privacy page's `code`-styled cookie names reading as
     "code base words" to a shopper. Each has a file and line in the document.
+- **Collection minimum, banner headline, referral copy (`#1083`, `#1078`, `#1079`): DONE, in
+  production** (PR #1084 to `staging`, promotion PR #1085, merge `624ffbc`, 2026-10-13); all closed
+  and `Done`. Spec, build notes: `specs/2026-10-13-p1083-collection-minimum-banner-headline/`. One
+  additive migration (`VendorConfig.collectionMinimumOrderPence Int @default(0)`, `bannerHeadline
+  String?`), applied by `deploy-production` run `38475624590`. Click & Collect now has its own
+  minimum, default none; the banner's first line is editable at `/staff/storefront`, with blank
+  keeping the derived line. **Unproven in production:** a real collection order under £15 (the
+  checkout submit step was not exercised live, only the `R7` unit test, which mocks `createOrder`).
+  **Verification trap worth keeping:** a demo account's cart is not empty by default (the Aheed demo
+  admin held £92.00), so a below-minimum live check needs either a cleared cart or minimums set
+  above its subtotal.
 - **Per-vendor square mark (`#1069`): DONE, in production** (PR #1074 to `staging`, then promotion
   PR #1075, merge `8bb2a6b`, 2026-10-13); closed and `Done`. Spec, build notes:
   `specs/2026-10-12-p1069-brand-assets/`. One additive migration
@@ -1416,17 +1426,6 @@ These are separate from, not a silent reordering of, the owner's High priorities
   `lib/auth.ts` sets `requireEmailVerification: true`, so a new customer cannot sign in until they
   click a link that cannot currently be delivered. **Customer registration is effectively broken in
   production, not merely degraded** — this is the first blocker to clear, ahead of `#113`.
-- **A live trading defect confirmed on production 2026-10-13: the £15 minimum order is applied to
-  Click & Collect.** `resolveDeliveryRules(…, "COLLECTION")` returns the vendor-wide defaults
-  (`lib/delivery-pricing.ts`), so `fulfilmentProgress` reports `below-minimum` and `place-order`
-  throws `BELOW_MINIMUM` for a collection basket under £15; `/help` states "Collection orders must
-  reach £15.00". The owner's position is that collection should have **no** minimum. Fixing it needs
-  a new `VendorConfig` column, so it is not in `#1077`. **Now `#1083`, built on
-  `feature/p1083-collection-minimum-headline` (with `#1078` and `#1079`), not yet validated or
-  merged:** `VendorConfig.collectionMinimumOrderPence`, default `0` = no collection minimum (owner
-  ruling), so the defect clears on deploy with no admin action. Spec and build notes:
-  `specs/2026-10-13-p1083-collection-minimum-banner-headline/`. Evidence is in
-  `docs/business-analysis/user-testing-feedback-2026-10-13.md` (item 9).
 - **Google sign-in does not complete in production** (owner-reported 2026-10-13). The code is
   correct and both credentials are set — the button renders only when they are. `baseURL` is derived
   **per request from the host** (`lib/auth.ts`), so each vendor host needs its own authorised
