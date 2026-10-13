@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-13T08:26:06.815Z` · commit `8bb2a6b` · `227` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-13T10:37:57.930Z` · commit `97d4dd1` · `228` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -24,6 +24,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 |---|---|---|---|---|---|---|
 | [CLAUDE.md — AI Assistant Guardrails](CLAUDE.md) | doc | 2.0.0 | 2026-09-17 | approved | internal | Always-loaded guardrails for the Aheed Online Store — runtime, database, schema, storage, config, CI and the SDD gates — reduced to what every session needs, with pointers to the documents that carry the detail. |
 | [Product Requirements & Feature Workflows](docs/business-analysis/product-requirements.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for Business Analysts and Project Managers detailing the core business logic, feature requirements, and workflows. |
+| [User testing feedback — triage, 2026-10-13](docs/business-analysis/user-testing-feedback-2026-10-13.md) | doc | 1.0.0 | 2026-10-13 | draft | internal | Owner user-testing feedback of 2026-10-13, 21 items, each traced to code or to live production evidence and sorted into already-handled, owner-configurable, code-change-needed and blocked-on-existing-work, with priority. |
 | [UI/UX & Design Guidelines](docs/design-ux/ux-guidelines.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for UI/UX designers detailing the design system, storefront customization, and the role of the ui-ref prototype. |
 | [Application Conventions — per-layer invariants and the tests that enforce them](docs/developer-portal/app-conventions.md) | doc | 1.8.0 | 2026-10-10 | approved | internal | What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), vendor-neutral user-facing copy, form-field autocomplete tokens, and React hooks — together with the tests that enforce each invariant mechanically. |
 | [Architecture & System Design Overview](docs/developer-portal/architecture-overview.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A high-level map of the platform's architecture, system design, and database design, acting as a directory to the deeper technical specifications. |
