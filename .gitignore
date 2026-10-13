@@ -51,3 +51,12 @@ kms/site-*/public/_pagefind/
 # enablement. It must stay local for every contributor, so ignore it here rather
 # than relying on an individual's global gitignore.
 .claude/settings.local.json
+
+# Local scratch area for brand artwork and generated asset pages (added #1077,
+# 2026-10-13). Held per-developer on purpose: the real logo/mark artwork is an
+# OWNER deliverable that enters the product by upload on /staff/storefront, which
+# writes a relative storage key to VendorBranding (ADR-003) — never a file in the
+# repo. Nothing brand-specific may live in public/ or app/ either, since those are
+# shared by every vendor (ADR-004). A committed copy here would be a second,
+# unversioned source of truth for an asset the database already owns.
+/misc/
