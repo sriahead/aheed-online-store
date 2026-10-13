@@ -8,6 +8,8 @@ every branch merges.
 
 ### Documentation
 
+- **Document pass for `#1069`, and the deferred records for `#1055`, `#1060`, `#1064`** (promotions PR #1075 and PR #1068). `specs/roadmap.md` 1.148.0 gains a change-log row for each promotion, which is what `sdd:audit` was reporting as missing; `docs/model-handoff.md` 1.95.0 replaces three "built, not shipped" entries with their production state; `docs/developer-portal/local-dev-playbook.md` 1.26.0 records why a browser upload and CDN images cannot be proven under `npm run preview` (dev bucket has no `localhost` CORS rule, dev CDN rejects a localhost referer) and the `/512.png` key-suffix trap. Production footer seeding and the `#1066` cookie inspection are recorded as unconfirmed.
+
 - **Tenth Discover pass: the "Aheed Super Store" brand-identity brief (filed `#1069`).** Docs only. `docs/research/discovery-log.md` 1.10.0, five entries:
   - The brief is a rebrand (blue `#093DAA` / lime `#8DAD0E`, measured from the reference). **Owner ruling:** a new logo and palette under the existing name "Aheed Food Centre"; the owner's designer supplies the artwork.
   - No vendor has a favicon, home-screen icon or social share image, and one 72×40 logo slot cannot serve a wide lockup on a phone. Filed as `#1069` (Gate 1 approved, full slice).
