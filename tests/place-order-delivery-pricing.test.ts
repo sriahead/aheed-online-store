@@ -9,6 +9,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *   refused — the comparison is on values, not on which row matched.
  * - A checkout refusal for an out-of-area postcode is counted as `CHECKOUT`, and a failing count
  *   leaves the shopper's response unchanged.
+ * - #1083 R7: a Click & Collect order is held to the vendor's COLLECTION minimum, not the delivery
+ *   one.
  */
 
 const m = vi.hoisted(() => ({
@@ -24,6 +26,7 @@ const m = vi.hoisted(() => ({
     deliveryFeePence: 349,
     minimumOrderPence: 0,
     freeDeliveryThresholdPence: 4000,
+    collectionMinimumOrderPence: 0,
     deliveryAreas: [
       {
         prefix: "MK",
@@ -75,6 +78,7 @@ vi.mock("@/lib/repositories/delivery-refusals", () => ({
 }));
 
 import { placeOrderAction } from "@/features/checkout/place-order";
+import { CheckoutError } from "@/lib/repositories/orders";
 
 function checkoutForm(postcode: string, quote: string | null): FormData {
   const form = new FormData();
@@ -100,6 +104,8 @@ function verdict(status: "DELIVERABLE" | "OUTSIDE_DELIVERY_AREA", postcode: stri
 
 beforeEach(() => {
   vi.clearAllMocks();
+  m.profile.minimumOrderPence = 0;
+  m.profile.collectionMinimumOrderPence = 0;
   vi.spyOn(console, "error").mockImplementation(() => {});
   m.createOrder.mockResolvedValue({
     orderNumber: "AHD-1",
@@ -184,5 +190,53 @@ describe("place-order counts out-of-area refusals (#889 R31/R32)", () => {
 
     expect(state).toEqual({ error: "Sorry — we don't deliver to MK17 8NL yet." });
     expect(m.createOrder).not.toHaveBeenCalled();
+  });
+});
+
+describe("place-order holds collection to the collection minimum (#1083 R7)", () => {
+  /** A £10.00 basket: under the £15.00 delivery minimum these tests set. */
+  const SUBTOTAL_PENCE = 1000;
+
+  function collectionForm(): FormData {
+    const form = new FormData();
+    form.set("fulfilmentMethod", "COLLECTION");
+    form.set("recipientName", "Test Shopper");
+    form.set("phone", "07000000000");
+    form.set("email", "shopper@example.test");
+    return form;
+  }
+
+  beforeEach(() => {
+    m.profile.minimumOrderPence = 1500;
+    // createOrder is mocked, so this stands in for placeOrder's own comparison
+    // (lib/repositories/orders.ts), which tests/orders.test.ts already proves refuses below
+    // `rules.minimumOrderPence`. What THIS file proves is which minimum the action hands it.
+    m.createOrder.mockImplementation(async (input: { rules: { minimumOrderPence: number } }) => {
+      if (SUBTOTAL_PENCE < input.rules.minimumOrderPence) {
+        throw new CheckoutError("BELOW_MINIMUM", "Your order is below this store's minimum.");
+      }
+      return { orderNumber: "AHD-2", redirectUrl: "/pay", confirmationToken: "t" };
+    });
+  });
+
+  it("with a collection minimum of 0, a basket under the delivery minimum is not refused", async () => {
+    m.profile.collectionMinimumOrderPence = 0;
+
+    const state = await placeOrderAction({ error: null }, collectionForm());
+
+    expect(m.createOrder).toHaveBeenCalledTimes(1);
+    expect(m.createOrder.mock.calls[0][0].rules.minimumOrderPence).toBe(0);
+    expect(state).toBeUndefined();
+    expect(m.redirect).toHaveBeenCalledWith("/pay");
+  });
+
+  it("with a collection minimum above the basket, the order is refused as below the minimum", async () => {
+    m.profile.collectionMinimumOrderPence = 2000;
+
+    const state = await placeOrderAction({ error: null }, collectionForm());
+
+    expect(m.createOrder.mock.calls[0][0].rules.minimumOrderPence).toBe(2000);
+    expect(state).toEqual({ error: "Your order is below this store's minimum." });
+    expect(m.redirect).not.toHaveBeenCalled();
   });
 });

@@ -38,7 +38,12 @@ function panelData(orderNumbers: string[] = []): AssistantPanelData {
     sections: buildAssistantContent({
       vendorName: VENDOR,
       delivery: helpDeliveryFacts(
-        { deliveryFeePence: 349, minimumOrderPence: 0, freeDeliveryThresholdPence: null },
+        {
+          deliveryFeePence: 349,
+          minimumOrderPence: 0,
+          freeDeliveryThresholdPence: null,
+          collectionMinimumOrderPence: 0,
+        },
         [],
       ),
       offerCollection: false,

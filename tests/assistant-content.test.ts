@@ -26,7 +26,12 @@ function input(overrides: Partial<AssistantContentInput> = {}): AssistantContent
   return {
     vendorName: "Test Store",
     delivery: helpDeliveryFacts(
-      { deliveryFeePence: 349, minimumOrderPence: 1500, freeDeliveryThresholdPence: 4000 },
+      {
+        deliveryFeePence: 349,
+        minimumOrderPence: 1500,
+        freeDeliveryThresholdPence: 4000,
+        collectionMinimumOrderPence: 0,
+      },
       [],
     ),
     offerCollection: false,
@@ -136,7 +141,12 @@ describe("labels and verbatim store answers (R14)", () => {
 describe("delivery answer (R15)", () => {
   const facts = (fee: number, min: number, threshold: number | null) =>
     helpDeliveryFacts(
-      { deliveryFeePence: fee, minimumOrderPence: min, freeDeliveryThresholdPence: threshold },
+      {
+        deliveryFeePence: fee,
+        minimumOrderPence: min,
+        freeDeliveryThresholdPence: threshold,
+        collectionMinimumOrderPence: 0,
+      },
       [],
     );
 
@@ -156,7 +166,12 @@ describe("delivery answer (R15)", () => {
 
   it("points to the Help Centre when an area overrides a figure, and not otherwise", () => {
     const varied = helpDeliveryFacts(
-      { deliveryFeePence: 349, minimumOrderPence: 0, freeDeliveryThresholdPence: null },
+      {
+        deliveryFeePence: 349,
+        minimumOrderPence: 0,
+        freeDeliveryThresholdPence: null,
+        collectionMinimumOrderPence: 0,
+      },
       [
         {
           prefix: "AB1",
@@ -199,7 +214,12 @@ describe("rewards, collection and order status (R16)", () => {
   it("states the collection minimum only when above zero", () => {
     const delivery = (collectionMin: number) => ({
       ...helpDeliveryFacts(
-        { deliveryFeePence: 349, minimumOrderPence: 0, freeDeliveryThresholdPence: null },
+        {
+          deliveryFeePence: 349,
+          minimumOrderPence: 0,
+          freeDeliveryThresholdPence: null,
+          collectionMinimumOrderPence: 0,
+        },
         [],
       ),
       collectionMinimumOrderPence: collectionMin,

@@ -463,6 +463,10 @@ model VendorConfig {
   // replaced ("100% Certified HMC Halal Fresh Meat Cut Daily", "Same-Day Local
   // Dispatch") was rendering for every vendor, SriMart included.
   bannerNote                 String? // header's second banner line
+  // #1078 — the header banner's FIRST line. Unlike bannerNote, null does not hide it: null keeps the
+  // line derived from this vendor's own name and locality (components/layout/Header.tsx), which is
+  // vendor data rather than platform-written copy. A set value replaces it as plain text.
+  bannerHeadline             String?
   heroSubtitle               String? // hero's supporting paragraph, under the tagline
   // P9.2 (#407, #405) — per-vendor social and contact identity, same null rule as the two
   // lines above: a null HIDES that link rather than falling back to a platform default. A
@@ -490,6 +494,10 @@ model VendorConfig {
   deliveryFeePence           Int                @default(349)
   freeDeliveryThresholdPence Int? // null = free delivery never offered
   minimumOrderPence          Int                @default(0) // 0 = no minimum
+  // #1083 — Click & Collect's own minimum, separate from the delivery minimum above, which exists to
+  // cover a van run collection does not need. 0 = no minimum, the same convention. The default is
+  // the owner's ruling; before this column, collection silently inherited the delivery minimum.
+  collectionMinimumOrderPence Int @default(0)
   offerCollection            Boolean            @default(false)
   // P5a — loyalty settings are vendor data for the same reason the delivery rules
   // above are (#135). Defaults mean an existing VendorConfig row stays valid with

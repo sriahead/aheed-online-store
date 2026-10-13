@@ -160,7 +160,8 @@ export default async function HomePage() {
               {minimumOrderPence > 0 && (
                 <span className="flex items-center gap-1 bg-black/20 px-2.5 py-1 rounded-lg">
                   <ShieldCheck className="w-3.5 h-3.5 text-action-tint" />{" "}
-                  {formatPrice(minimumOrderPence)} minimum order
+                  {/* #1083 — "delivery": collection has its own minimum, often none. */}
+                  {formatPrice(minimumOrderPence)} minimum delivery order
                 </span>
               )}
             </div>

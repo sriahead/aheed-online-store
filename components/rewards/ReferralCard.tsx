@@ -88,7 +88,8 @@ export function ReferralCard({
       try {
         await navigator.share({
           title: `${storeName} referral`,
-          text: `Use my invite link to get ${formatPrice(discountOffPence)} off your first order at ${storeName}!`,
+          // #1079 — the same facts as the paragraph below, not a "first order" rule nothing enforces.
+          text: `Use my invite link to get ${formatPrice(discountOffPence)} off an order of ${formatPrice(MIN_REFERRAL_ORDER_PENCE)} or more at ${storeName}!`,
           url: displayUrl,
         });
       } catch {
