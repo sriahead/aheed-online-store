@@ -140,8 +140,8 @@ export function ReferralCard({
         1. It said "their qualifying first order" without ever saying what qualifies. The threshold
            is real: `MIN_REFERRAL_ORDER_PENCE` is written as the referral code's `minSubtotalPence`
            (lib/repositories/referral-codes.ts), and `evaluateCode` refuses below it — so the £5 is
-           refused under £20. The referrer's points ride on the same threshold, because they are
-           awarded only where a referral `DiscountRedemption` exists on the order
+           refused below the minimum order. The referrer's points ride on the same threshold, because
+           they are awarded only where a referral `DiscountRedemption` exists on the order
            (lib/repositories/orders.ts). One threshold, both halves of the offer.
         2. It said "first order". The code carries `maxPerCustomer: 1`, which is one USE per
            customer, not a restriction to a chronologically first order — a friend could spend it on

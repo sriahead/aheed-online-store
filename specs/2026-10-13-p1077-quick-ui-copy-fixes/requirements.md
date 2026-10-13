@@ -61,9 +61,12 @@ R12. `ROTATE_MS` in `components/layout/DepartmentHero.tsx` is `4000`.
 
 ## Shop your list (items 18, 19, 20)
 
-R13. The `textarea` in `components/cart/ShopYourList.tsx` carries a placeholder colour utility that
-     is not `placeholder:text-primary-muted`, and `git diff --name-only origin/staging...HEAD` does
-     not list `design-system/tokens/tokens.css`.
+R13. The list box in `components/cart/ShopYourList.tsx` shows a short instruction as its
+     placeholder (`LIST_PLACEHOLDER`: "Type or paste your list, one item per line"), not a sample
+     list that looks like real entries. `design-system/tokens/tokens.css` is not changed.
+     *(Changed at `/fix`: this originally asked for a different placeholder colour. The contrast
+     test (#649) allows no fainter colour, so the owner approved this wording fix instead. See
+     `build-notes.md`.)*
 
 R14. In the static markup of `components/cart/ShopYourList.tsx`, the quantities hint text appears
      before the `textarea` element.

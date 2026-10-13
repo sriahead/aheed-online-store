@@ -11,9 +11,9 @@ interface RewardThreshold {
 }
 
 /**
- * #1077 — multiples of the vendor's OWN `minRedeemPoints`, replacing hardcoded 500 and 1000
+ * #1077 — multiples of the vendor's OWN `minRedeemPoints`, replacing two hardcoded point figures
  * (triage item 15). Those two were not vendor data at all: a vendor whose minimum is 250 was shown
- * a 500-point step they can reach and a 1000-point step framed as the top, both invented by the
+ * a fixed step they can reach and another fixed step framed as the top, both invented by the
  * platform — the same defect class as #239. The step multiples are presentation over the vendor's
  * own unit, so every figure below now moves when that unit does.
  */
@@ -62,7 +62,7 @@ export function AvailableRewardsSection({
         </div>
         <div>
           <h3 className="text-sm font-semibold">Points milestones</h3>
-          {/* #1077 — the heading and this line said "vouchers", and no voucher exists: redemption
+          {/* #1077 — the heading and this line named a code the shopper never receives, and none exists: redemption
               is a points field on the checkout form, not an issued code. */}
           <p className={`text-xs ${isDark ? "text-stone-400" : "text-primary-muted"}`}>
             Enter your points at checkout for money off your order

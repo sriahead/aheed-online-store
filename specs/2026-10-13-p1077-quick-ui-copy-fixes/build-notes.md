@@ -158,3 +158,12 @@ how the workflow says to handle one.
 - **`misc/`** is an untracked directory of brand assets from the #1069 work. It fails
   `npm run format:check` locally and is **not** part of this slice; untracked files are not checked
   out in CI, so it does not affect the build. Do not read it as a regression.
+
+## Fix pass after the first validation
+
+- **R13 was the wrong requirement, not a code fault.** It asked for a fainter placeholder colour,
+  which the contrast test (#649) does not allow. The owner approved the wording fix described under
+  "Deviations", so R13 and its check now describe that. No code change.
+- **R19, R21 and R23 checks matched comments, not shipped text.** The page already showed no
+  hard-coded figures or the word "voucher". The code comments quoted them, so they were reworded.
+  No behaviour change, so no `CHANGELOG.md` edit.
