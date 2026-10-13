@@ -17,7 +17,8 @@ import { getAuth } from "@/lib/auth";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
-import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
+import { markUrls } from "@/lib/vendor-icons";
+import { HeaderBrand } from "./HeaderBrand";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getRequestCartSummary } from "@/lib/cart-summary";
 import { isPostcodeDeliverable } from "@/lib/delivery-eligibility-service";
@@ -136,52 +137,8 @@ export async function Header({
       ? composePublicUrl(CDN_BASE_URL, profile.logoStorageKey)
       : null;
 
-  // #655 — a vendor HAS a logo, but its stored object failed to load. Not the logo-less wordmark
-  // below: that is far wider than the 72×40 logo box, and swapping it in overflowed a 360px header
-  // by 22px and squeezed the search field at 1024 (measured, build-notes.md). This keeps the logo's
-  // exact footprint (`h-10 aspect-9/5`) and its text alternative, so nothing around it moves.
-  const missingLogo = (
-    <span
-      role="img"
-      aria-label={`${name} — Your Local Store`}
-      className="flex h-10 aspect-9/5 items-center justify-center rounded-xl bg-primary text-xl font-extrabold text-white shadow-sm group-hover:opacity-90 transition-opacity"
-    >
-      {name.charAt(0)}
-    </span>
-  );
-
-  // The logo-less vendor's wordmark: the initial tile and the name.
-  const wordmark = (
-    <>
-      {/* #982 — `shrink-0` on the tile, because the initial must never be squashed; the NAME
-      block beside it is what gives way. */}
-      <div className="w-10 h-10 shrink-0 rounded-xl bg-primary flex items-center justify-center text-white font-extrabold text-xl shadow-md group-hover:bg-primary/90 transition-colors">
-        {name.charAt(0)}
-      </div>
-      {/* #982 — `min-w-0` lets this block shrink below its content width, which is what a flex
-      item refuses to do by default. Without it a long name widened the whole page (measured: a
-      36-character logo-less name rendered a requested 360px viewport at 477px) rather than
-      clipping. Every text node below truncates rather than wrapping, so the header keeps its
-      height. */}
-      <div className="min-w-0">
-        <div className="flex items-baseline gap-1">
-          <span className="truncate font-bold text-xl text-primary tracking-tight group-hover:text-primary-muted transition-colors">
-            {name.split(" ")[0]}
-          </span>
-          <span className="truncate font-semibold text-xs text-accent uppercase tracking-wider">
-            {name.split(" ").slice(1).join(" ")}
-          </span>
-        </div>
-        {/* #239: was "{localityName} Groceries", which rendered
-        "Reading Groceries" under SriMart's wordmark. Only shown
-        in the logo fallback (a vendor with no logoStorageKey), so
-        it was easy to miss — the locality alone names no trade. */}
-        <p className="truncate text-[10px] text-black/60 font-medium tracking-wide uppercase">
-          {localityName}
-        </p>
-      </div>
-    </>
-  );
+  // #1069 — the mark's 192px PNG for the header below `md`, or null.
+  const markUrl = markUrls(profile?.markStorageKey, CDN_BASE_URL)?.icon192 ?? null;
 
   // #960 — three SIBLINGS, not one sticky <header> wrapping everything. The whole header used to
   // be sticky, and at phone widths that pinned 234px (a third of the screen) over the product
@@ -249,39 +206,18 @@ export async function Header({
             Coupert case above (that is `h-10 overflow-clip`), but it did forbid this block from
             giving way, so a long logo-less wordmark widened the whole page instead of clipping.
             The logo itself now carries `shrink-0`, so the logo path keeps its exact footprint. */}
-          <div className="flex items-center gap-3 min-w-0 h-10 overflow-clip">
+          <div className="flex items-center gap-3 min-w-0 h-10 md:h-16 overflow-clip">
             <Link
               href={isPortal ? "/staff" : "/"}
               className="flex min-w-0 items-center gap-2.5 group text-left"
+              data-header-brand=""
             >
-              {logoUrl ? (
-                // Plain <img> by decision — see #46 / eslint.config.mjs. NOTE: this logo is
-                // the storefront's dominant byte cost (1.9 MB, 83% of page weight, rendered
-                // into a 40px box) and the whole of the ~12s LCP breach — tracked as #243.
-                //
-                // `aspect-9/5` (= 1.8) reserves the box BEFORE the bytes land. Without it, `w-auto`
-                // gave the element zero width until the image decoded, and it then snapped to
-                // ~72px and shoved the whole header row sideways — the visible "jerk on
-                // refresh". That shift was invisible to the transition sweeps in #323/#324
-                // because it is a layout shift, not an animation, and it is made far worse by
-                // the 1.9 MB payload above: the bigger the file, the later the jolt.
-                // Dimensions cannot come from the DB — VendorBranding stores only
-                // logoStorageKey, no width/height — so the ratio is pinned in CSS instead.
-                // 1.8 matches both seeded logos (298x160 and 1664x928); `object-contain` means
-                // a vendor whose logo is a different shape is letterboxed inside the reserved
-                // box rather than distorted, and still never shifts. If #243 later stores real
-                // dimensions, replace this with width/height attributes.
-                <ImageWithFallback
-                  src={logoUrl}
-                  alt={`${name} — Your Local Store`}
-                  // #982 — `shrink-0` moved here from the container, so the logo keeps its exact
-                  // reserved footprint now that the container is allowed to shrink.
-                  className="h-10 w-auto shrink-0 aspect-9/5 object-contain rounded-xl shadow-sm group-hover:opacity-90 transition-opacity"
-                  fallback={missingLogo}
-                />
-              ) : (
-                wordmark
-              )}
+              <HeaderBrand
+                name={name}
+                localityName={localityName}
+                logoUrl={logoUrl}
+                markUrl={markUrl}
+              />
             </Link>
           </div>
 

@@ -8,12 +8,25 @@ every branch merges.
 
 ### Documentation
 
+- **Tenth Discover pass: the "Aheed Super Store" brand-identity brief (filed `#1069`).** Docs only. `docs/research/discovery-log.md` 1.10.0, five entries:
+  - The brief is a rebrand (blue `#093DAA` / lime `#8DAD0E`, measured from the reference). **Owner ruling:** a new logo and palette under the existing name "Aheed Food Centre"; the owner's designer supplies the artwork.
+  - No vendor has a favicon, home-screen icon or social share image, and one 72×40 logo slot cannot serve a wide lockup on a phone. Filed as `#1069` (Gate 1 approved, full slice).
+  - The brief's CSS variable layer is not pursued: the semantic tokens and `VendorBranding` already cover it, and the palette is applied as a theme on `/staff/storefront`.
+  - A blue Aheed is close to SriMart's `#0d47a1`. **Owner ruling:** leave SriMart as it is; second-vendor checks compare the accent colour instead.
+
 - **Document pass and promotion record for PR #1050 / PR #1053 (`#1049`, `#1051`, `#1052` promoted to production, merge `c903f15`).** Docs only.
   - `specs/roadmap.md` 1.147.0: the slice row, citing `specs/2026-10-11-p1049-assistant-link-close/`, with its stage deviations stated (one Opus session, no fresh-context Validate, no `build-notes.md`).
   - `docs/model-handoff.md` 1.90.0: Last Verified moves to `c903f15`, `0311425` condensed to "previous promotion"; a new In-Flight entry for the slice; **corrects "off for every vendor"** for the help assistant: production Aheed has it on, read live 2026-10-11.
   - `CLAUDE.md`: `kms:coverage` joins the command list; it runs only in CI's `quality / kms` job and failed this slice's first push.
 
 ### Added
+
+- **Per-vendor square mark: favicon, home-screen icon, link-preview image and a phone header mark** (issue `#1069`; `specs/2026-10-12-p1069-brand-assets/`). One additive migration (`20261012210000_p1069_vendor_mark`, a nullable `VendorBranding.markStorageKey`, no `DROP`).
+  - `/staff/storefront` has a new **Square mark** upload. The browser turns one image into five PNGs in one folder: `32`, `180` (on the vendor's cream), `192`, `512`, and a 1200×630 `og.png` with the mark centred on cream. Uploads under 512px are refused before upload. A non-square image is contained, not cropped. `attachVendorMark` checks all five files and attaches all or none: a partial set is deleted.
+  - For a vendor with a mark, the head gains `rel="icon"` (32, 192), `apple-touch-icon` (180) and `og:image`/`og:site_name`; `/manifest.webmanifest` lists the 192 and 512 icons; `/favicon.ico` (new route) `302`s to the 32px PNG. A vendor without a mark is unchanged: no icon links, `icons: []`, and a `404` for `/favicon.ico`.
+  - Header (`components/layout/HeaderBrand.tsx`, extracted from `Header.tsx`): with logo and mark, the mark shows at 40×40 below 768px and the logo in today's 72×40 box from 768px. It is one `<picture>`, so only the shown image is downloaded. With a mark but no logo, the mark replaces the wordmark's initial tile. `ImageWithFallback` gains an optional `sources` prop. `scripts/verify-mobile-layout.ts` reports a `brand` field.
+  - Desktop logo box enlarged for the 2:1 "Aheed Super Store" lockup: from 768px it is 128×64 (`md:h-16 md:aspect-2/1`, header brand container `md:h-16`), up from 72×40. Phone sizes are unchanged. This supersedes the 72×40 desktop figure in R18 of the #1069 spec.
+  - `specs/design-system.md` 1.20.0 (new "Brand assets: lockup and mark" section); admin guide 2.12.0. Real Aheed artwork is an owner action.
 
 - **Storefront footer: real opening hours with holiday dates, contact-channel buttons, and a three-column bottom bar** (issue `#1060`; `specs/2026-10-12-p1060-footer-hours-contact/`). Follow-up to `#1055`, promoted together with it. One migration (`20261012180000_p1060_footer_weekly_hours`) that **drops** `#1055`'s free-text `VendorOpeningHours` (staging and dev only; never in production) and adds `VendorWeeklyHours` and `VendorHoursOverride`.
   - Hours are real times per weekday, or "Closed all day", shown Monday → Sunday with today (Europe/London) in bold. Dated holiday/closure overrides in the next 14 days appear under "Holiday hours", e.g. `Fri 25 Dec · Christmas Day · Closed`; on the day itself an override replaces that day's hours. Edited on `/staff/storefront`: 7 weekday rows with time pickers, plus a new "Holiday & closure dates" form (one entry per date, save replaces; past dates pruned; at most 50 upcoming).

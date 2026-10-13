@@ -418,6 +418,11 @@ model VendorBranding {
   name            String
   tagline         String?
   logoStorageKey  String? // RELATIVE key only (ADR-003) — never a URL
+  // #1069 — the vendor's square MARK: the RELATIVE key of its 512px PNG,
+  // `vendors/{vendorId}/mark-{uuid}/512.png`. Its four siblings (32/180/192.png, og.png) sit in the
+  // same folder under fixed names and are derived by lib/vendor-mark.ts's markFileKeys(), so this
+  // one column stores one real object key rather than five columns that only change together.
+  markStorageKey  String?
   // Brand color PRIMITIVES (mirror design-system/tokens/tokens.css --color-brand-*),
   // injected per vendor as CSS custom properties in slice 4. Hex strings.
   brandGreenDark  String

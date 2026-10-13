@@ -13,6 +13,7 @@ import { ReviewLinksManager } from "@/components/staff/ReviewLinksManager";
 import { FooterSettingsForms } from "@/components/staff/FooterSettingsForms";
 import { getVendorReviewLinkRepository } from "@/lib/vendor-review-links-service";
 import { getStorage } from "@/lib/storage";
+import { markFileKeys } from "@/lib/vendor-mark";
 import { calendarDayInZone } from "@/lib/local-datetime";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,9 @@ export default async function StorefrontAdminPage() {
   }
 
   const logoUrl = branding.logoStorageKey ? getStorage().publicUrl(branding.logoStorageKey) : null;
+  // #1069 — the mark's 192px PNG, for the uploader's preview.
+  const markKeys = branding.markStorageKey ? markFileKeys(branding.markStorageKey) : null;
+  const markUrl = markKeys ? getStorage().publicUrl(markKeys.icon192) : null;
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
@@ -60,6 +64,7 @@ export default async function StorefrontAdminPage() {
         themes={themes}
         vendorThemes={vendorThemes}
         logoUrl={logoUrl}
+        markUrl={markUrl}
       />
 
       {/* #1055 — the storefront footer's contact, legal, hours and payment-badge settings. */}

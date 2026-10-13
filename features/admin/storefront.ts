@@ -12,6 +12,7 @@ import {
 import {
   applyVendorTheme,
   updateVendorLogoKey,
+  updateVendorMarkKey,
   replaceVendorFooterHours,
   saveVendorHoursOverride,
   deleteVendorHoursOverride,
@@ -53,6 +54,14 @@ import {
 } from "@/lib/footer-hours-form";
 import { calendarDayInZone } from "@/lib/local-datetime";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
+import {
+  MARK_CONTENT_TYPE,
+  MARK_FILES,
+  buildVendorMarkFolder,
+  isVendorMarkKey,
+  markFileKeys,
+  type MarkFileId,
+} from "@/lib/vendor-mark";
 import crypto from "crypto";
 
 const PRESIGN_TTL_SECONDS = 300;
@@ -108,6 +117,110 @@ export async function attachVendorLogo(key: string): Promise<ImageActionResult<v
   }
 
   await updateVendorLogoKey(auth.vendorId, key);
+
+  revalidatePath("/staff/storefront");
+  revalidatePath("/", "layout");
+  return { ok: true, value: undefined };
+}
+
+/**
+ * #1069 — presign the five PNGs of one square-mark upload, all under one fresh folder.
+ *
+ * Each length is checked before anything is presigned, so a refused set signs nothing. The
+ * returned `markStorageKey` is the `512.png` key — the one `attachVendorMark` takes back.
+ */
+export async function requestMarkUpload(byteLengths: Record<MarkFileId, number>): Promise<
+  ImageActionResult<{
+    markStorageKey: string;
+    uploads: Record<MarkFileId, string>;
+  }>
+> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  for (const file of MARK_FILES) {
+    const length = byteLengths?.[file.id];
+    if (!Number.isInteger(length) || length <= 0 || length > MAX_IMAGE_BYTES) {
+      return {
+        ok: false,
+        error: `Images must be under ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))} MB.`,
+      };
+    }
+  }
+
+  const folder = buildVendorMarkFolder(auth.vendorId);
+  const storage = getStorage();
+  const entries = await Promise.all(
+    MARK_FILES.map(
+      async (file) =>
+        [
+          file.id,
+          await storage.presignPut(
+            `${folder}/${file.name}`,
+            MARK_CONTENT_TYPE,
+            PRESIGN_TTL_SECONDS,
+          ),
+        ] as const,
+    ),
+  );
+
+  return {
+    ok: true,
+    value: {
+      markStorageKey: `${folder}/512.png`,
+      uploads: Object.fromEntries(entries) as Record<MarkFileId, string>,
+    },
+  };
+}
+
+/**
+ * #1069 — attach an uploaded square mark, or attach nothing.
+ *
+ * All five files are checked before the column is written. If any is missing, is not a PNG or is
+ * over the size limit, every one of the five that DOES exist is deleted and nothing is written —
+ * a half set would give a vendor a favicon with no home-screen icon, or a header mark that 404s.
+ * The ownership check runs first and touches no storage at all, so a key under another vendor's
+ * prefix can neither be attached nor probed.
+ */
+export async function attachVendorMark(markStorageKey: string): Promise<ImageActionResult<void>> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  const keys =
+    typeof markStorageKey === "string" && isVendorMarkKey(markStorageKey, auth.vendorId)
+      ? markFileKeys(markStorageKey)
+      : null;
+  if (!keys) {
+    return { ok: false, error: "Invalid upload key." };
+  }
+
+  const storage = getStorage();
+  const heads = await Promise.all(
+    MARK_FILES.map(async (file) => ({
+      key: keys[file.id],
+      head: await storage.headObject(keys[file.id]),
+    })),
+  );
+
+  const problem = heads.find(
+    ({ head }) =>
+      !head ||
+      head.contentType !== MARK_CONTENT_TYPE ||
+      (head.contentLength !== null && head.contentLength > MAX_IMAGE_BYTES),
+  );
+  if (problem) {
+    await Promise.all(heads.filter(({ head }) => head).map(({ key }) => storage.deleteObject(key)));
+    return {
+      ok: false,
+      error: !problem.head
+        ? "The upload was incomplete — please try again."
+        : problem.head.contentType !== MARK_CONTENT_TYPE
+          ? "Images must be uploaded as PNG."
+          : "The uploaded file exceeded the size limit.",
+    };
+  }
+
+  await updateVendorMarkKey(auth.vendorId, markStorageKey);
 
   revalidatePath("/staff/storefront");
   revalidatePath("/", "layout");
