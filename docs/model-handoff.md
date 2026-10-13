@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.94.0"
+version: "1.95.0"
 updated: 2026-10-13
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -665,52 +665,47 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Per-vendor square mark (`#1069`): BUILT on `feature/p1069-brand-assets`, not yet validated or
-  shipped.** Spec and build notes: `specs/2026-10-12-p1069-brand-assets/`. It carries one additive
-  migration (`20261012210000_p1069_vendor_mark`), **not yet applied to dev**. Next: `/clear`, then
-  `/validate` on Sonnet.
-  - Origin: the tenth Discover pass (2026-10-12) on an "Aheed Super Store" brand brief. **Owner
-    rulings:** Aheed keeps the name "Aheed Food Centre" and adopts a new blue/lime logo and palette;
-    the owner's designer supplies the artwork; **leave SriMart's palette as it is**. Because of that,
-    a second-vendor check against SriMart must compare the **accent** colour, since the primaries
-    will be near-identical blues once Aheed's palette is applied.
-  - Applying the new palette is data, not code: a theme on `/staff/storefront`. Staging Aheed has a
-    saved theme, "Aheed brand kit — original green", to switch back to. **Production's backup of
-    its live palette is a user-run command that has not been confirmed as done.**
-  - Follow-ups filed at Build: `#1071` (product Open Graph image), `#1072` (footer logo variant),
+- **Per-vendor square mark (`#1069`): DONE, in production** (PR #1074 to `staging`, then promotion
+  PR #1075, merge `8bb2a6b`, 2026-10-13); closed and `Done`. Spec, build notes:
+  `specs/2026-10-12-p1069-brand-assets/`. One additive migration
+  (`20261012210000_p1069_vendor_mark`), applied by `deploy-production`.
+  - **No vendor has a mark yet**, so nothing visibly changes in production except the desktop logo
+    box (128×64, 2:1, from 768px; amended after Validate for the Aheed Super Store lockup). Applying
+    real artwork is an owner action: upload on `/staff/storefront`, then a theme for the new palette.
+  - Origin: the tenth Discover pass (2026-10-12). **Owner rulings:** Aheed keeps the name "Aheed Food
+    Centre" and adopts the new blue/lime logo and palette; the designer supplies artwork; **leave
+    SriMart's palette as it is**, so a second-vendor check must compare the accent colour.
+    Staging Aheed has a saved theme, "Aheed brand kit — original green", to switch back to.
+    **Production's backup of its live palette is a user-run command not confirmed as done.**
+  - **Never validated against a real bucket.** The dev bucket has no CORS rule for `localhost`, so
+    the browser upload cannot run under `npm run preview`, and the dev CDN rejects a localhost
+    referer, so images never load there. The staging and production buckets do allow `PUT` from
+    their own origins (preflight checked 2026-10-13). **The first real upload on staging or
+    production is the first end-to-end test**; R16 (SriMart upload) and the live image-request rows
+    (R18/R20) were not run.
+  - Trap met while validating: a DB key written without the `/512.png` suffix is rejected by
+    `markFileKeys`, so every icon silently disappears. Seed a mark through the uploader, not by hand.
+  - Follow-ups, all Backlog: `#1071` (product Open Graph image), `#1072` (footer logo variant),
     `#1073` (remove a mark; clean up superseded uploads).
-- **Storefront footer: `#1055` and `#1060` are BOTH on `staging`, deployed and seeded; the
-  `staging` to `main` PROMOTION is outstanding and must carry them together (owner decision,
-  2026-10-12).**
-  - `#1055` merged to `staging` via PR #1059 (`9e9ca66`); `#1060` via PR #1063 (merge `e514b74`,
-    2026-10-12), both after a fresh-context Validate. `deploy-staging` applied
-    `20261012120000_p1055_storefront_footer` and `20261012180000_p1060_footer_weekly_hours`; the
-    second **drops** `VendorOpeningHours`, safe only because `#1055` never reached production, so
-    **do not promote `#1055` alone**. `#1055` is still **In Review** with its `/document` stage
-    deferred until the promotion.
-  - Staging's footer was seeded with `scripts/seed-footer-defaults.ts` (footer-only, fill-only) on
-    2026-10-12 and reads Mon–Sat 9am–8pm, Sun 9am–7pm. **Never run the full `npm run db:seed`
-    against staging**: its `upsertVendorSatellites` reverts admin-edited branding and config.
-    Staging shows admin-entered real company and VAT values and a custom theme. Production has not
-    been seeded; do that after the promotion deploys.
-  - Placeholders (`[YOUR EMAIL]`, `[NUMBER]`, `[PLATFORM NAME]`, the placeholder badge SVGs) are
-    approved until the owner supplies real values (`#1058`). Hours are no longer placeholders: Aheed
-    is seeded with Mon–Sat 09:00–20:00 and Sun 09:00–19:00.
-  - Follow-ups: `#1056`, `#1057` (open-now and JSON-LD, now buildable), `#1061` and `#1062`.
-    All are Low or Backlog.
-- **Privacy page cookie list (`#1064`): BUILT on `feature/p1064-privacy-cookies`, not yet validated
-  or shipped.** Spec and build notes: `specs/2026-10-12-p1064-privacy-cookies/`. Section 4 of
-  `/privacy` now lists seven items under their real names (the old copy named `aheed_session`, which
-  does not exist). Copy only; nothing that sets a cookie changed.
-  - Durable fact: the session cookie is Better Auth's default, `better-auth.session_token`, with a
-    `__Secure-` prefix over HTTPS. The storefront sets `aheed_cart`, `aheed_cookie_consent`,
-    `delivery-postcode`, `fulfilment-method` and (only on `?ref=`) `aheed_referral_code`, plus
-    the `aheed_checkout_details` localStorage key. `admin-tier` is staff-only and deliberately
-    unlisted. A new test ties three of those names to their exported constants.
-  - Open: `#1065` (the referral cookie is written regardless of the consent choice, a PECR
-    question for the owner) and `#1066` (inspect live `Set-Cookie` headers for infrastructure
-    cookies **before the promotion that carries this slice**). The HTTPS session-cookie name is
-    unobserved until a staging sign-in.
+- **Storefront footer (`#1055` + `#1060`) and privacy cookie list (`#1064`): DONE, in production**
+  (PR #1059, #1063, #1067 to `staging`; promotion PR #1068, merge `b38b0f1`, 2026-10-12;
+  `deploy-production` run `38273458012` success). All three closed and `Done`. Specs:
+  `specs/2026-10-12-p1055-storefront-footer/`, `specs/2026-10-12-p1060-footer-hours-contact/`,
+  `specs/2026-10-12-p1064-privacy-cookies/`. Their own `/document` passes were deferred until the
+  promotion; this entry and the roadmap row are that record.
+  - **Production's footer seed is unconfirmed.** Run `scripts/seed-footer-defaults.ts` (footer-only,
+    fill-only) against production if its footer is empty. **Never run the full `npm run db:seed`
+    against staging or production**: its `upsertVendorSatellites` reverts admin-edited branding.
+  - Placeholders (`[YOUR EMAIL]`, `[NUMBER]`, `[PLATFORM NAME]`, placeholder badge SVGs) are
+    approved until the owner supplies real values (`#1058`).
+  - Durable cookie fact (`#1064`): the session cookie is Better Auth's default,
+    `better-auth.session_token` (`__Secure-` prefix over HTTPS). The storefront sets `aheed_cart`,
+    `aheed_cookie_consent`, `delivery-postcode`, `fulfilment-method` and, only on `?ref=`,
+    `aheed_referral_code`, plus the `aheed_checkout_details` localStorage key. `admin-tier` is
+    staff-only and unlisted.
+  - Open: `#1056`, `#1057`, `#1061`, `#1062`, `#1065` (referral cookie set regardless of consent,
+    a PECR question for the owner) and `#1066` (inspect live `Set-Cookie` headers; was meant to run
+    before the promotion and has not been confirmed).
 - **Help assistant follow-ups (`#1049` + `#1051` + `#1052`, one slice): DONE, in production**
   (PR #1050 to `staging`, then promotion PR #1053, merge `c903f15`, 2026-10-11), all three closed
   and `Done`. Spec: `specs/2026-10-11-p1049-assistant-link-close/` (no `build-notes.md`; the loop
