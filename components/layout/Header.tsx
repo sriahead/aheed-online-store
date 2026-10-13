@@ -30,6 +30,7 @@ import { CartContents } from "@/components/cart/CartContents";
 import { LocationControl } from "./LocationControl";
 import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
+import { bannerHeadlineText } from "@/components/layout/banner-headline";
 import { SearchSuggest } from "./SearchSuggest";
 import { ViewSwitcher } from "./ViewSwitcher";
 
@@ -180,9 +181,13 @@ export async function Header({
           <div className="flex items-center gap-4 text-white/90">
             <span className="flex items-center gap-1 font-medium text-white">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              {profile?.offerCollection
-                ? `${name} — local delivery across ${localityName} & click and collect`
-                : `${name} — local delivery across ${localityName}`}
+              {/* #1078 — the vendor's own headline, or the line derived from its name and area. */}
+              {bannerHeadlineText({
+                bannerHeadline: profile?.bannerHeadline ?? null,
+                name,
+                localityName,
+                offerCollection: profile?.offerCollection ?? false,
+              })}
             </span>
             {bannerNote && (
               <>

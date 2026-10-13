@@ -20,7 +20,10 @@ import { matchDeliveryArea } from "@/lib/delivery";
  * charge. `place-order` passes the delivery ADDRESS postcode; the rest pass the `delivery-postcode`
  * cookie.
  *
- * Click & Collect is outside per-area pricing: `COLLECTION` always resolves to the vendor defaults.
+ * Click & Collect is outside per-area pricing: `COLLECTION` always resolves to the vendor defaults,
+ * except its minimum, which is the vendor's own `collectionMinimumOrderPence` (#1083). Until #1083 it
+ * inherited the DELIVERY minimum, so production refused collection baskets below a minimum that only
+ * exists to pay for a van run. `0` means no minimum, as it does for delivery.
  */
 
 export interface DeliveryMoneyRules {
@@ -37,13 +40,22 @@ export interface DeliveryAreaCharges {
   freeDeliveryThresholdPence: number | null;
 }
 
+/**
+ * What a vendor supplies to `resolveDeliveryRules`: the delivery defaults plus collection's own
+ * minimum. Required rather than optional, so a caller that forgets it fails `typecheck` instead of
+ * quietly charging collection the delivery minimum again.
+ */
+export interface VendorDeliveryDefaults extends DeliveryMoneyRules {
+  collectionMinimumOrderPence: number;
+}
+
 export interface ResolvedDeliveryRules extends DeliveryMoneyRules {
   /** The matched row's prefix, or `null` when the vendor defaults apply. */
   areaPrefix: string | null;
 }
 
 export function resolveDeliveryRules(
-  vendorDefaults: DeliveryMoneyRules,
+  vendorDefaults: VendorDeliveryDefaults,
   areas: readonly DeliveryAreaCharges[],
   postcode: string | null | undefined,
   method: "DELIVERY" | "COLLECTION",
@@ -54,7 +66,10 @@ export function resolveDeliveryRules(
     freeDeliveryThresholdPence: vendorDefaults.freeDeliveryThresholdPence,
     areaPrefix: null,
   };
-  if (method !== "DELIVERY" || !postcode) return defaults;
+  if (method === "COLLECTION") {
+    return { ...defaults, minimumOrderPence: vendorDefaults.collectionMinimumOrderPence };
+  }
+  if (!postcode) return defaults;
 
   const row = matchDeliveryArea(postcode, areas);
   if (!row) return defaults;

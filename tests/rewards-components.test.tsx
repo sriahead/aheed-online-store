@@ -7,6 +7,8 @@ import { ReferralCard } from "@/components/rewards/ReferralCard";
 import { AvailableRewardsSection } from "@/components/rewards/AvailableRewardsSection";
 import { RewardsPanel } from "@/components/rewards/RewardsPanel";
 import { RewardsLauncher } from "@/components/rewards/RewardsLauncher";
+import { formatPrice } from "@/components/product/format-price";
+import { MIN_REFERRAL_ORDER_PENCE, REFERRAL_DISCOUNT_PENCE } from "@/lib/referrals";
 
 afterEach(cleanup);
 
@@ -22,7 +24,7 @@ describe("WaysToEarnAccordion", () => {
     expect(screen.getByText("Place an order")).toBeTruthy();
     expect(screen.getByText(/Earn 1 point for every £1 spent/)).toBeTruthy();
     expect(screen.getByText("Refer your friends")).toBeTruthy();
-    expect(screen.getByText(/Earn 100 bonus points/)).toBeTruthy();
+    expect(screen.getByText(/earn 100 bonus points/)).toBeTruthy();
 
     // Click to collapse
     fireEvent.click(screen.getByRole("button", { name: /ways to earn/i }));
@@ -35,6 +37,20 @@ describe("WaysToEarnAccordion", () => {
     fireEvent.click(screen.getByRole("button", { name: /ways to earn/i }));
 
     expect(screen.getByText(/Earn 2 points for every £1 spent/)).toBeTruthy();
+  });
+
+  // #1079 R22 — the referral line states the real rule (a minimum spend, one use per friend), from
+  // the constants, and no longer promises a "qualifying first order".
+  it("states the referral minimum from the constants and no first-order rule (#1079 R22)", () => {
+    render(<WaysToEarnAccordion pointsPerPoundEarned={1} rewardPoints={100} />);
+    fireEvent.click(screen.getByRole("button", { name: /ways to earn/i }));
+
+    const line = screen.getByText(/bonus points when their order is confirmed/).textContent ?? "";
+    expect(line).toContain(`${formatPrice(REFERRAL_DISCOUNT_PENCE)} off an order of`);
+    expect(line).toContain(`${formatPrice(MIN_REFERRAL_ORDER_PENCE)} or more`);
+    expect(line).toContain("Each friend can use it once");
+    expect(line).not.toMatch(/qualifying/i);
+    expect(line).not.toMatch(/first order/i);
   });
 
   // #1077 R16 — the tier-boost line renders only above 1x, which is why a missing `maxMultiplier`

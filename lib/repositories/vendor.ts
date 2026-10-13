@@ -63,6 +63,12 @@ export interface VendorProfile {
    * claim made on a vendor's behalf.
    */
   bannerNote: string | null;
+  /**
+   * #1078 — the header banner's first line, as the vendor wrote it. `null` does NOT hide the line
+   * (unlike `bannerNote`): the header falls back to a line derived from the vendor's own name and
+   * locality, which is vendor data rather than a claim written on its behalf.
+   */
+  bannerHeadline: string | null;
   heroSubtitle: string | null;
   /**
    * P9.2 (#407, #405) — social and contact identity, under the same rule as the two lines above.
@@ -109,6 +115,8 @@ export interface VendorProfile {
   deliveryFeePence: number;
   freeDeliveryThresholdPence: number | null;
   minimumOrderPence: number;
+  /** #1083 — Click & Collect's own minimum; `0` = none. Not per-area: collection has no area. */
+  collectionMinimumOrderPence: number;
   offerCollection: boolean;
   /**
    * #1015 — the guided help assistant's switch, read in this same query so the storefront render
@@ -210,6 +218,7 @@ export async function fetchVendorProfile(
           senderEmail: true,
           searchPlaceholder: true,
           bannerNote: true,
+          bannerHeadline: true,
           heroSubtitle: true,
           facebookUrl: true,
           instagramUrl: true,
@@ -225,6 +234,7 @@ export async function fetchVendorProfile(
           deliveryFeePence: true,
           freeDeliveryThresholdPence: true,
           minimumOrderPence: true,
+          collectionMinimumOrderPence: true,
           offerCollection: true,
           assistantEnabled: true,
           bookingWindowDays: true,
@@ -303,6 +313,7 @@ export async function fetchVendorProfile(
     // No platform default for either — an unseeded vendor renders neither
     // element rather than borrowing Aheed's voice.
     bannerNote: vendor?.config?.bannerNote ?? null,
+    bannerHeadline: vendor?.config?.bannerHeadline ?? null,
     heroSubtitle: vendor?.config?.heroSubtitle ?? null,
     // Same reasoning — an unseeded vendor shows no social links at all rather
     // than borrowing another vendor's accounts (#407, #405).
@@ -324,6 +335,7 @@ export async function fetchVendorProfile(
     deliveryFeePence: vendor?.config?.deliveryFeePence ?? 349,
     freeDeliveryThresholdPence: vendor?.config?.freeDeliveryThresholdPence ?? null,
     minimumOrderPence: vendor?.config?.minimumOrderPence ?? 0,
+    collectionMinimumOrderPence: vendor?.config?.collectionMinimumOrderPence ?? 0,
     offerCollection: vendor?.config?.offerCollection ?? false,
     assistantEnabled: vendor?.config?.assistantEnabled ?? false,
     id: vendorId,
@@ -438,6 +450,8 @@ export interface VendorStorefrontConfigInput {
    * conditional spread.
    */
   bannerNote?: string | null;
+  /** #1078 — same direct-assignment rule as `bannerNote`: `null` clears, `undefined` leaves alone. */
+  bannerHeadline?: string | null;
   heroSubtitle?: string | null;
   /**
    * #729 — header search-box hint, edited on the branding form. Same optionality rule: `null`
@@ -491,6 +505,11 @@ export interface VendorStorefrontConfigInput {
   deliveryFeePence?: number;
   freeDeliveryThresholdPence?: number | null;
   minimumOrderPence?: number;
+  /**
+   * #1083 — sent only while the delivery-rules form shows the collection block. `undefined` (the
+   * box unticked, so the field was never rendered) leaves the stored value alone.
+   */
+  collectionMinimumOrderPence?: number;
   offerCollection?: boolean;
   location?: {
     addressLine1: string;
@@ -534,6 +553,7 @@ export async function updateVendorStorefrontConfig(
       where: { vendorId },
       data: {
         bannerNote: data.bannerNote,
+        bannerHeadline: data.bannerHeadline,
         heroSubtitle: data.heroSubtitle,
         searchPlaceholder: data.searchPlaceholder,
         // Direct assignment, like the two above and unlike the delivery numbers below: Prisma
@@ -570,6 +590,9 @@ export async function updateVendorStorefrontConfig(
           : {}),
         ...(data.minimumOrderPence !== undefined
           ? { minimumOrderPence: data.minimumOrderPence }
+          : {}),
+        ...(data.collectionMinimumOrderPence !== undefined
+          ? { collectionMinimumOrderPence: data.collectionMinimumOrderPence }
           : {}),
         ...(data.offerCollection !== undefined ? { offerCollection: data.offerCollection } : {}),
       },

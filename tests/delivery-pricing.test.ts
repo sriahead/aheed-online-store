@@ -8,11 +8,13 @@ import {
 
 /**
  * #890 R18/R19 — per-area delivery money resolution. A district row beats an area row; each field
- * falls back to the vendor default independently; Click & Collect and an unknown postcode always
- * get the defaults.
+ * falls back to the vendor default independently; an unknown postcode always gets the defaults.
+ * Click & Collect gets the defaults too, except its minimum (#1083 R4/R5).
  */
 
-const DEFAULTS = { deliveryFeePence: 349, minimumOrderPence: 0, freeDeliveryThresholdPence: 4000 };
+/** The three delivery-money fields, as a quote carries them. */
+const MONEY = { deliveryFeePence: 349, minimumOrderPence: 0, freeDeliveryThresholdPence: 4000 };
+const DEFAULTS = { ...MONEY, collectionMinimumOrderPence: 0 };
 
 function row(prefix: string, overrides: Partial<Omit<DeliveryAreaCharges, "prefix">> = {}) {
   return {
@@ -48,16 +50,16 @@ describe("resolveDeliveryRules (#890 R19)", () => {
     });
   });
 
-  it("Click & Collect always resolves to the vendor defaults", () => {
+  it("Click & Collect resolves to the vendor defaults, never an area's overrides", () => {
     expect(resolveDeliveryRules(DEFAULTS, AREAS, "MK17 8NL", "COLLECTION")).toEqual({
-      ...DEFAULTS,
+      ...MONEY,
       areaPrefix: null,
     });
   });
 
   it("no postcode resolves to the vendor defaults", () => {
     expect(resolveDeliveryRules(DEFAULTS, AREAS, null, "DELIVERY")).toEqual({
-      ...DEFAULTS,
+      ...MONEY,
       areaPrefix: null,
     });
     expect(resolveDeliveryRules(DEFAULTS, AREAS, "", "DELIVERY").areaPrefix).toBeNull();
@@ -80,11 +82,29 @@ describe("resolveDeliveryRules (#890 R19)", () => {
   });
 });
 
+describe("Click & Collect's own minimum (#1083 R5)", () => {
+  it("a £15 delivery minimum does not apply to collection when the collection minimum is 0", () => {
+    const vendor = { ...MONEY, minimumOrderPence: 1500, collectionMinimumOrderPence: 0 };
+    expect(resolveDeliveryRules(vendor, AREAS, null, "COLLECTION").minimumOrderPence).toBe(0);
+    expect(resolveDeliveryRules(vendor, AREAS, null, "DELIVERY").minimumOrderPence).toBe(1500);
+  });
+
+  it("collection keeps its own minimum even where an area overrides the delivery minimum", () => {
+    const vendor = { ...MONEY, minimumOrderPence: 1500, collectionMinimumOrderPence: 500 };
+    const collection = resolveDeliveryRules(vendor, AREAS, "MK17 8NL", "COLLECTION");
+    expect(collection.minimumOrderPence).toBe(500);
+    expect(collection.areaPrefix).toBeNull();
+    expect(resolveDeliveryRules(vendor, AREAS, "MK17 8NL", "DELIVERY").minimumOrderPence).toBe(
+      2500,
+    );
+  });
+});
+
 describe("delivery quote (#890 R23)", () => {
   it("round-trips, with an empty threshold for null", () => {
-    expect(encodeDeliveryQuote(DEFAULTS)).toBe("349:0:4000");
-    expect(encodeDeliveryQuote({ ...DEFAULTS, freeDeliveryThresholdPence: null })).toBe("349:0:");
-    expect(quoteMatches("349:0:4000", DEFAULTS)).toBe(true);
+    expect(encodeDeliveryQuote(MONEY)).toBe("349:0:4000");
+    expect(encodeDeliveryQuote({ ...MONEY, freeDeliveryThresholdPence: null })).toBe("349:0:");
+    expect(quoteMatches("349:0:4000", MONEY)).toBe(true);
   });
 
   it("rejects a different, missing or malformed quote", () => {

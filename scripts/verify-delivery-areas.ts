@@ -68,6 +68,7 @@ async function main(): Promise<void> {
           deliveryFeePence: true,
           minimumOrderPence: true,
           freeDeliveryThresholdPence: true,
+          collectionMinimumOrderPence: true,
         },
       },
     },
@@ -114,6 +115,7 @@ async function main(): Promise<void> {
       deliveryFeePence: aheed.config?.deliveryFeePence ?? 349,
       minimumOrderPence: aheed.config?.minimumOrderPence ?? 0,
       freeDeliveryThresholdPence: aheed.config?.freeDeliveryThresholdPence ?? null,
+      collectionMinimumOrderPence: aheed.config?.collectionMinimumOrderPence ?? 0,
     };
     const mk10Rules = resolveDeliveryRules(defaults, stored, "MK10 1AA", "DELIVERY");
     check(

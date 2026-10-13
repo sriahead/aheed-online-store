@@ -2,6 +2,7 @@ import {
   resolveDeliveryRules,
   type DeliveryAreaCharges,
   type DeliveryMoneyRules,
+  type VendorDeliveryDefaults,
 } from "@/lib/delivery-pricing";
 
 /**
@@ -41,7 +42,10 @@ export interface HelpDeliveryFacts {
   areas: HelpAreaFacts[];
   /** Which of the three figures differ between areas, so the page knows what to break out. */
   varies: { fee: boolean; minimum: boolean; threshold: boolean };
-  /** Collection is never per-area: `resolveDeliveryRules` returns the defaults for COLLECTION. */
+  /**
+   * Collection is never per-area. Since #1083 this is the vendor's own collection minimum, which
+   * `resolveDeliveryRules` returns for COLLECTION, not the delivery minimum.
+   */
   collectionMinimumOrderPence: number;
 }
 
@@ -65,7 +69,7 @@ function representativePostcodeFor(prefix: string): string {
 }
 
 export function helpDeliveryFacts(
-  vendorDefaults: DeliveryMoneyRules,
+  vendorDefaults: VendorDeliveryDefaults,
   areas: readonly DeliveryAreaCharges[],
 ): HelpDeliveryFacts {
   const resolvedAreas: HelpAreaFacts[] = areas.map((area) => {

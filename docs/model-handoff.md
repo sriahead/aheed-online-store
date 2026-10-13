@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.97.0"
+version: "1.98.0"
 updated: 2026-10-13
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -685,7 +685,9 @@ All facts in this section require live verification:
     Recorded in `specs/design-system.md`.
   - **Filed from this pass:** `#1078` (vendor-editable banner headline, needs a migration — the
     owner chose this over rewording in code), `#1079` (`WaysToEarnAccordion` repeats the unenforced
-    referral claim `#1077` removed from `ReferralCard`), `#1080` (four `aheed_`-prefixed storage
+    referral claim `#1077` removed from `ReferralCard`), `#1083` (Click & Collect held to the
+    delivery minimum; `#1078`, `#1079` and `#1083` are one slice, built and awaiting Validate, see
+    Risks And Blockers), `#1080` (four `aheed_`-prefixed storage
     keys are platform-wide, so SriMart's privacy page names another vendor).
   - **Found, evidenced, and NOT yet filed** — the owner has not asked for issues on these, and the
     triage document is their only home: a deliverable postcode does not select Delivery
@@ -1419,7 +1421,11 @@ These are separate from, not a silent reordering of, the owner's High priorities
   (`lib/delivery-pricing.ts`), so `fulfilmentProgress` reports `below-minimum` and `place-order`
   throws `BELOW_MINIMUM` for a collection basket under £15; `/help` states "Collection orders must
   reach £15.00". The owner's position is that collection should have **no** minimum. Fixing it needs
-  a new `VendorConfig` column, so it is not in `#1077`. **No issue is filed yet** — evidence is in
+  a new `VendorConfig` column, so it is not in `#1077`. **Now `#1083`, built on
+  `feature/p1083-collection-minimum-headline` (with `#1078` and `#1079`), not yet validated or
+  merged:** `VendorConfig.collectionMinimumOrderPence`, default `0` = no collection minimum (owner
+  ruling), so the defect clears on deploy with no admin action. Spec and build notes:
+  `specs/2026-10-13-p1083-collection-minimum-banner-headline/`. Evidence is in
   `docs/business-analysis/user-testing-feedback-2026-10-13.md` (item 9).
 - **Google sign-in does not complete in production** (owner-reported 2026-10-13). The code is
   correct and both credentials are set — the button renders only when they are. `baseURL` is derived

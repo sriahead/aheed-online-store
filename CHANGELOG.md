@@ -8,6 +8,13 @@ every branch merges.
 
 ### Fixed
 
+- **Click & Collect was held to the delivery minimum order; it now has its own, defaulting to none** (issue `#1083`, with `#1078` and `#1079`; `specs/2026-10-13-p1083-collection-minimum-banner-headline/`). One additive migration (`VendorConfig.collectionMinimumOrderPence Int @default(0)`, `VendorConfig.bannerHeadline String?`), no `DROP`, no backfill.
+  - `resolveDeliveryRules(…, "COLLECTION")` returned the vendor-wide defaults, so production refused every collection basket under the £15 delivery minimum, and `/help` said "Collection orders must reach £15.00". It now returns the collection minimum, which its input type requires, so `typecheck` found every caller. `0` means no minimum (owner ruling): the defect clears on deploy with no admin action.
+  - `/staff/storefront`: **Collection minimum order (£)** appears inside the Click & Collect block; unticking collection leaves it stored. The delivery minimum is relabelled **Minimum delivery order (£)**, and the landing-page badge reads "£X minimum delivery order".
+  - `#1078`: **Banner Headline** on `/staff/storefront`, up to 120 characters, plain text. Blank keeps the line derived from the store name and delivery area, unchanged (`components/layout/banner-headline.ts`).
+  - `#1079`: `WaysToEarnAccordion` and the three referral share messages (`buildShareLinks`' text and email, `ReferralCard`'s native share) no longer promise a "qualifying first order". They state the £20 minimum and the friend's discount from `lib/referrals.ts`' constants.
+  - `docs/store-admin-guide/admin-tabs-guide.md` 2.13.0.
+
 - **Eleven UI and copy defects from the 2026-10-13 owner testing pass** (issue `#1077`; `specs/2026-10-13-p1077-quick-ui-copy-fixes/`). No schema change, no new route, no new dependency.
   - Header (`components/layout/HeaderBrand.tsx`): a vendor with a logo now renders that **logo at every width**, in the 72×40 box below 768px and 128×64 from 768px. This **reverses `#1069`'s own rule** of the previous day (the square mark below 768px, via one `<picture>`) — owner testing found a 40×40 mark too small to identify the store on a phone. The mark is unaffected as the favicon, apple-touch icon, manifest icons and `og:image`, and still replaces the initial tile for a logo-less vendor. `ImageWithFallback`'s `sources` prop is now caller-less, kept for `#1072`. `specs/design-system.md` 1.21.0.
   - The trust banner carries the store's **phone number as a tap-to-call link at every width** (not hidden below 768px like `bannerNote`), from `VendorConfig.contactPhone`, reusing the footer's `isDiallablePhone`/`telHref` — so a bracketed placeholder renders nothing rather than a broken `href`.

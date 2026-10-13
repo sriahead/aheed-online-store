@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  COLLECTION_MINIMUM_FIELD,
   DELIVERY_FEE_FIELD,
   FREE_DELIVERY_THRESHOLD_FIELD,
   MINIMUM_ORDER_FIELD,
@@ -21,10 +22,21 @@ const VALID = {
   freeDeliveryThreshold: "30",
   minimumOrder: "0",
   offerCollection: false,
+  collectionMinimumOrder: "",
   addressLine1: "",
   addressLine2: "",
   city: "",
   postcode: "",
+};
+
+/** VALID with collection offered and a complete collection address. */
+const WITH_COLLECTION = {
+  ...VALID,
+  offerCollection: true,
+  collectionMinimumOrder: "0.00",
+  addressLine1: "1 High Street",
+  city: "Testtown",
+  postcode: "AB1 2CD",
 };
 
 describe("parsePoundsToPence", () => {
@@ -110,6 +122,7 @@ describe("parseDeliveryRules", () => {
       deliveryFeePence: 349,
       freeDeliveryThresholdPence: 3000,
       minimumOrderPence: 0,
+      collectionMinimumOrderPence: undefined,
       offerCollection: false,
       location: null,
     });
@@ -134,6 +147,32 @@ describe("parseDeliveryRules", () => {
     const result = parseDeliveryRules({ ...VALID, minimumOrder: "-1" });
     expect(result.ok).toBe(false);
     expect(result).not.toHaveProperty("value");
+  });
+});
+
+describe("parseDeliveryRules — collection minimum (#1083 R13)", () => {
+  it("parses the collection minimum while collection is offered", () => {
+    const zero = parseDeliveryRules(WITH_COLLECTION);
+    expect(zero.ok && zero.value.collectionMinimumOrderPence).toBe(0);
+
+    const set = parseDeliveryRules({ ...WITH_COLLECTION, collectionMinimumOrder: "7.50" });
+    expect(set.ok && set.value.collectionMinimumOrderPence).toBe(750);
+  });
+
+  it.each(["", "nope", "-1", "1.234"])(
+    "refuses %j as the collection minimum while collection is offered",
+    (value) => {
+      const result = parseDeliveryRules({ ...WITH_COLLECTION, collectionMinimumOrder: value });
+      expect(result.ok).toBe(false);
+      expect(!result.ok && result.error.field).toBe(COLLECTION_MINIMUM_FIELD);
+    },
+  );
+
+  it("returns undefined while collection is not offered, whatever was submitted", () => {
+    // The field is not rendered then; undefined is what makes updateVendorConfig leave it alone.
+    const result = parseDeliveryRules({ ...VALID, collectionMinimumOrder: "nope" });
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.value.collectionMinimumOrderPence).toBeUndefined();
   });
 });
 

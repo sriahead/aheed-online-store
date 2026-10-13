@@ -16,6 +16,7 @@ import {
   updateStorefrontConfig,
 } from "@/features/admin/storefront";
 import {
+  COLLECTION_MINIMUM_FIELD,
   DELIVERY_FEE_FIELD,
   FREE_DELIVERY_THRESHOLD_FIELD,
   MINIMUM_ORDER_FIELD,
@@ -28,7 +29,7 @@ import {
   WHATSAPP_NUMBER_FIELD,
   initialSocialContactState,
 } from "@/lib/social-contact-form";
-import { initialBrandColourState } from "@/lib/brand-colour-form";
+import { MAX_BANNER_HEADLINE_LENGTH, initialBrandColourState } from "@/lib/brand-colour-form";
 import {
   STORE_DESCRIPTION_FIELD,
   initialCatalogueSettingsState,
@@ -381,6 +382,28 @@ export function StorefrontConfigForm({
           />
         </div>
 
+        {/* #1078 — the banner's first line. Blank is NOT "hide": it keeps the line derived from the
+            store name and delivery area, which is this vendor's own data. Plain text, no tokens. The
+            placeholder names no store and no trade (CLAUDE.md, "User-facing copy"). */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="bannerHeadline" className="font-bold text-black">
+            Banner Headline
+          </label>
+          <input
+            id="bannerHeadline"
+            name="bannerHeadline"
+            type="text"
+            maxLength={MAX_BANNER_HEADLINE_LENGTH}
+            defaultValue={initialConfig.bannerHeadline || ""}
+            className="rounded-lg border border-black/20 p-3"
+            placeholder="Your banner headline"
+          />
+          <p className="text-xs text-black/60">
+            The first line of the banner at the top of every page. Leave blank to show your store
+            name and delivery area.
+          </p>
+        </div>
+
         <div className="flex flex-col gap-2">
           <label htmlFor="bannerNote" className="font-bold text-black">
             Banner Note
@@ -592,7 +615,7 @@ export function StorefrontConfigForm({
 
         <div className="flex flex-col gap-2">
           <label htmlFor="minimumOrder" className="font-bold text-black">
-            Minimum order (£)
+            Minimum delivery order (£)
           </label>
           <input
             id="minimumOrder"
@@ -604,7 +627,8 @@ export function StorefrontConfigForm({
             placeholder="e.g. 0.00"
           />
           <p className="text-xs text-black/60">
-            Enter 0.00 for no minimum. A shopper below this cannot check out.
+            Enter 0.00 for no minimum. A delivery order below this cannot check out. It does not
+            apply to Click &amp; Collect orders, which have their own minimum below.
           </p>
         </div>
 
@@ -626,6 +650,28 @@ export function StorefrontConfigForm({
           <div className="flex flex-col gap-4 rounded-xl border border-black/10 bg-surface-muted p-4">
             <h3 className="font-bold text-black">Collection Location</h3>
             <p className="text-sm text-black/60">Where shoppers will collect their orders.</p>
+
+            {/* #1083 — collection's own minimum. Before it, collection inherited the delivery
+                minimum above, so a collection basket below it could not be placed. Only rendered
+                while collection is offered; unticked, nothing is submitted and the stored value is
+                left alone. */}
+            <div className="flex flex-col gap-2">
+              <label htmlFor="collectionMinimumOrder" className="text-sm font-bold text-black">
+                Collection minimum order (£)
+              </label>
+              <input
+                id="collectionMinimumOrder"
+                name="collectionMinimumOrder"
+                type="text"
+                inputMode="decimal"
+                defaultValue={penceToPoundsValue(initialConfig.collectionMinimumOrderPence)}
+                className={fieldClass(deliveryState.field === COLLECTION_MINIMUM_FIELD)}
+                placeholder="e.g. 0.00"
+              />
+              <p className="text-xs text-black/60">
+                Enter 0.00 for no minimum on collection orders.
+              </p>
+            </div>
 
             <div className="flex flex-col gap-2">
               <label htmlFor="collectionAddressLine1" className="text-sm font-bold text-black">

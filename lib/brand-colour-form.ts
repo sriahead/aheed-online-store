@@ -3,6 +3,8 @@ import type { BrandPrimitives } from "@/lib/repositories/vendor";
 
 export interface BrandColourInput {
   bannerNote: string | null;
+  /** #1078 — the banner's first line; `null` shows the line derived from the store name and area. */
+  bannerHeadline: string | null;
   heroSubtitle: string | null;
   /** #729 — header search-box hint; `null` shows the platform default "Search products…". */
   searchPlaceholder: string | null;
@@ -32,6 +34,12 @@ const HEX = /^#[0-9a-fA-F]{6}$/;
 
 /** #729 — the search box is one line of header chrome; longer text is cut off on a phone. */
 export const MAX_SEARCH_PLACEHOLDER_LENGTH = 80;
+
+/**
+ * #1078 — the header banner's first line. Long enough for a store name, an area and a promise,
+ * short enough to stay one line on a desktop banner; a phone wraps it, as it wraps the derived line.
+ */
+export const MAX_BANNER_HEADLINE_LENGTH = 120;
 
 function parseHex(
   raw: string | undefined | null,
@@ -131,8 +139,20 @@ export function parseBrandColourForm(formData: FormData): ParseResult<BrandColou
     };
   }
 
+  const bannerHeadline = ((formData.get("bannerHeadline") as string | null) ?? "").trim();
+  if (bannerHeadline.length > MAX_BANNER_HEADLINE_LENGTH) {
+    return {
+      ok: false,
+      error: {
+        field: "bannerHeadline",
+        message: `Banner headline must be ${MAX_BANNER_HEADLINE_LENGTH} characters or fewer.`,
+      },
+    };
+  }
+
   const parsed: Partial<BrandColourInput> = {
     bannerNote: bannerNote || null,
+    bannerHeadline: bannerHeadline || null,
     heroSubtitle: heroSubtitle || null,
     searchPlaceholder: searchPlaceholder || null,
   };
