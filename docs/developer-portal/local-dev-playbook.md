@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.26.0"
-updated: 2026-10-13
+version: "1.27.0"
+updated: 2026-10-14
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -166,6 +166,46 @@ the evidence and the recipe.
   **Three test files are guarded with `it.skipIf(!process.env.DATABASE_URL)`** and report as
   **skipped**, not run, in CI — so CI's own summary legitimately runs fewer tests than a local run
   with a real `DATABASE_URL`. That is expected, not a shortfall.
+
+## jsdom does not implement `<dialog>.showModal()` (#1087)
+
+Rendering a component that calls `dialogRef.current?.showModal()` in a jsdom test throws
+`TypeError: dialogRef.current?.showModal is not a function`. Measured on **jsdom 29.1.1**
+(2026-10-14, `#1087`'s `LocationControl` test) — this is not a regression to wait out, and an
+earlier guess that jsdom 29 supported it was wrong and had to be corrected in that slice's
+`validation.md`.
+
+Stub both methods on the prototype in a `beforeAll`, tracking the `open` attribute, which is what
+the `.open` getter reads:
+
+```ts
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute("open");
+  };
+});
+```
+
+A `<dialog>`'s children are in the DOM whether or not it is open, so a no-op stub is enough to
+assert anything rendered inside it. Do not reach for `fireEvent` workarounds or skip the test.
+
+## An invalid KMS `summary` is dropped from the index rather than failing the build (#1087)
+
+`npm run kms:build-index` **succeeds** when a document's front-matter is invalid. It simply omits
+that document, so the only visible symptom is the artifact count in its own output falling by one
+(observed 231 → 230). `ARTIFACT_INDEX.md` then silently lacks an entry, and CI fails later at a
+check that does not name the cause.
+
+`npm run kms:validate` is what names the file and the rule. Run it after **any** front-matter edit,
+not just after adding a document.
+
+The limit that actually bites is `summary`: **at most 300 characters**, and it is easy to exceed by
+appending one clause to an existing summary when adding a section. It bit twice in one slice
+(`#1087`): once on `docs/business-analysis/user-testing-feedback-2026-10-13.md` and once on
+`docs/developer-portal/app-conventions.md`.
 
 ## A `TZ` override is silently ignored on Windows when the value contains a slash
 

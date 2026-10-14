@@ -33,6 +33,14 @@ export function ListReview({ lines }: { lines: ResolvedLine[] }) {
     (line, index) => lineIsAddable(line) || (choices[index] ?? "") !== "",
   ).length;
 
+  // #1088 — how many ambiguous lines are still unresolved. `readyCount` above already keeps the
+  // button honest about what WILL go in; this names what will not, before the submit rather than
+  // after it. Out-of-stock and unmatched lines are excluded on purpose: each is already labelled
+  // in place on its own row below, so counting them here would double-report them.
+  const skippedCount = lines.filter(
+    (line, index) => line.resolution.kind === "ambiguous" && (choices[index] ?? "") === "",
+  ).length;
+
   return (
     <form action={addListToCart} className="space-y-3">
       <div className="flex items-center gap-2 border-t border-black/10 pt-5">
@@ -66,6 +74,7 @@ export function ListReview({ lines }: { lines: ResolvedLine[] }) {
                     </p>
                     <input type="hidden" name="productId" value={line.resolution.product.id} />
                     <input type="hidden" name="quantity" value={line.quantity} />
+                    <input type="hidden" name="lineLabel" value={line.original} />
                   </>
                 ) : (
                   <p className="flex items-center gap-1.5 text-xs font-semibold text-danger">
@@ -121,6 +130,7 @@ export function ListReview({ lines }: { lines: ResolvedLine[] }) {
                   ))}
                 </select>
                 <input type="hidden" name="quantity" value={line.quantity} />
+                <input type="hidden" name="lineLabel" value={line.original} />
               </div>
             )}
 
@@ -133,6 +143,14 @@ export function ListReview({ lines }: { lines: ResolvedLine[] }) {
           </li>
         ))}
       </ul>
+
+      {skippedCount > 0 && (
+        <p className="text-xs font-semibold text-accent">
+          {skippedCount === 1
+            ? "1 line will be skipped unless you choose an item"
+            : `${skippedCount} lines will be skipped unless you choose an item`}
+        </p>
+      )}
 
       <button
         type="submit"

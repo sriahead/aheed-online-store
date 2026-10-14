@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState, useTransition } from "react";
 import { Truck, MapPin, Store, Check, Pencil } from "lucide-react";
 import { setDeliveryPostcode, setFulfilmentMethod } from "@/features/storefront/delivery";
+import { POSTCODE_INTENT_FIELD, type PostcodeIntent } from "@/lib/delivery-cookie";
 import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
 
 /**
@@ -35,12 +36,18 @@ export function LocationControl({
 
   const [isPending, startTransition] = useTransition();
   const [isDirty, setIsDirty] = useState(false);
+  // Which control opened the modal, submitted to the action as a form field
+  // (#1087). The component does not act on it — `setDeliveryPostcode` decides,
+  // so a crafted post cannot claim an intent the server treats differently
+  // from a real one.
+  const [intent, setIntent] = useState<PostcodeIntent>("delivery");
   const hasDeliverablePostcode = Boolean(postcode && deliverable);
 
-  // Close the modal once a submitted postcode comes back deliverable. This
-  // deliberately no longer touches the fulfilment method: it used to force
-  // DELIVERY here, so a shopper who had chosen Click & Collect and then edited
-  // their postcode was silently switched back to Delivery (#748).
+  // Close the modal once a submitted postcode comes back deliverable. Whether
+  // the method changed with it is the ACTION's decision, from the submitted
+  // intent: the Delivery affordance selects Delivery, the pencil leaves the
+  // method alone. This component forces nothing either way — forcing DELIVERY
+  // here unconditionally is exactly what #748 removed.
   useEffect(() => {
     if (isPending) return;
     if (hasDeliverablePostcode && dialogRef.current?.open) {
@@ -48,8 +55,9 @@ export function LocationControl({
     }
   }, [hasDeliverablePostcode, isPending]);
 
-  const openModal = () => {
+  const openModal = (openedWith: PostcodeIntent) => {
     setIsDirty(false);
+    setIntent(openedWith);
     dialogRef.current?.showModal();
   };
   const closeModal = () => dialogRef.current?.close();
@@ -61,8 +69,10 @@ export function LocationControl({
         : "text-black/60 hover:text-black"
     }`;
 
-  const deliveryLabel =
-    method === "DELIVERY" && hasDeliverablePostcode ? `Delivery · ${postcode}` : "Delivery";
+  // #1087 — the postcode shows whenever one is stored and deliverable, not only
+  // under DELIVERY. A shopper on Click & Collect could otherwise read the
+  // postcode they had just typed only by reopening the modal and cancelling it.
+  const deliveryLabel = hasDeliverablePostcode ? `Delivery · ${postcode}` : "Delivery";
 
   return (
     <div data-tap-surface="location" className="flex h-full items-center">
@@ -100,7 +110,7 @@ export function LocationControl({
                   <Truck className="w-3.5 h-3.5" />
                 )}
                 <span className="hidden sm:inline">{deliveryLabel}</span>
-                <span className="sm:hidden">{method === "DELIVERY" ? postcode : "Delivery"}</span>
+                <span className="sm:hidden">{hasDeliverablePostcode ? postcode : "Delivery"}</span>
               </button>
             </form>
           ) : (
@@ -108,7 +118,11 @@ export function LocationControl({
             // method the shopper cannot complete. A plain button because the
             // modal it opens is `<dialog>.showModal()`, which needs JS anyway —
             // there is no no-JS behaviour being given up here.
-            <button type="button" onClick={openModal} className={toggleClass(false)}>
+            <button
+              type="button"
+              onClick={() => openModal("delivery")}
+              className={toggleClass(false)}
+            >
               <Truck className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Delivery</span>
               <span className="sm:hidden">Delivery</span>
@@ -121,12 +135,13 @@ export function LocationControl({
             one was set nothing on the page could reopen it. This is that missing
             affordance, and it is separate from the method toggle on purpose —
             changing where you live is not the same action as changing how you
-            receive the order.
+            receive the order. #1087 turns that distinction into the submitted
+            `edit` intent, which is what keeps this path from selecting Delivery.
           */}
           {postcode && (
             <button
               type="button"
-              onClick={openModal}
+              onClick={() => openModal("edit")}
               aria-label={`Change delivery postcode (currently ${postcode})`}
               title="Change postcode"
               className="flex min-h-tap min-w-tap items-center justify-center px-2 text-black/60 transition-colors hover:text-primary lg:min-h-0 lg:min-w-0"
@@ -136,9 +151,13 @@ export function LocationControl({
           )}
         </div>
       ) : (
+        // A vendor with no collection is always DELIVERY
+        // (`lib/fulfilment-service.ts` checks that before the cookie), so this
+        // single button carries delivery intent whether it is asking for a
+        // postcode or changing one — there is no other method to protect.
         <button
           type="button"
-          onClick={openModal}
+          onClick={() => openModal("delivery")}
           className="flex min-h-tap items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10 w-full sm:w-auto h-full lg:min-h-0"
           title={hasDeliverablePostcode ? "Change postcode" : "Check availability"}
         >
@@ -186,6 +205,14 @@ export function LocationControl({
             }}
             className="flex flex-col gap-4"
           >
+            {/*
+              #1087 — which control opened this modal, read by
+              `setDeliveryPostcode` to decide whether a deliverable postcode also
+              selects Delivery. A hidden field rather than a closure argument so
+              the value travels with the submission the action actually receives.
+            */}
+            <input type="hidden" name={POSTCODE_INTENT_FIELD} value={intent} />
+
             <div className="flex items-center gap-2">
               <div className="relative flex-1 flex items-center">
                 <MapPin

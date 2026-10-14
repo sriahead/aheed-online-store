@@ -19,6 +19,32 @@ const MAX_POSTCODE_LENGTH = 8;
 export const DELIVERY_POSTCODE_COOKIE = "delivery-postcode";
 
 /**
+ * Which affordance opened the postcode modal (#1087).
+ *
+ * `setDeliveryPostcode` writes the fulfilment method only for `"delivery"`. The
+ * distinction is `#748`'s own: asking to have an order delivered is not the same
+ * action as correcting where you live, and only the first one is a statement
+ * about the method. Carried as a form field rather than read from client state,
+ * so the action decides and nothing in the browser is trusted.
+ */
+export const POSTCODE_INTENT_FIELD = "intent";
+
+export type PostcodeIntent = "delivery" | "edit";
+
+/**
+ * `"delivery"` for exactly that string, `"edit"` for everything else.
+ *
+ * Defaulting to `"edit"` is the safe direction: `"edit"` is the behaviour that
+ * existed before this slice, so an absent, unrecognised or crafted value leaves
+ * the shopper's stored method alone instead of switching it. Case-sensitive for
+ * the same reason `parseFulfilmentMethod` is — the only producer is our own
+ * hidden input.
+ */
+export function parsePostcodeIntent(raw: string | null | undefined): PostcodeIntent {
+  return raw === "delivery" ? "delivery" : "edit";
+}
+
+/**
  * Trim, upper-case, collapse internal whitespace, and drop anything that can't
  * appear in a UK postcode. Returns `""` for input worth nothing — which the
  * action treats as "forget it" rather than storing junk in a cookie.

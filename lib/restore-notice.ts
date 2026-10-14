@@ -11,16 +11,18 @@
  * Anyone can therefore link to `/cart?restored=…` with names of their own. React escapes the text,
  * so it is content, never markup, and the parser below caps how much of it a link can show.
  *
- *   /cart?restored={reorder|cancelled}&of={n}&lines={k}~{added}~{requested}~{name}|…
+ *   /cart?restored={reorder|cancelled|list}&of={n}&lines={k}~{added}~{requested}~{name}|…
  *
  * `n` is how many distinct lines the action tried to put back. `lines` lists only those that did
- * not go in in full: `u` unavailable, `p` partial, `h` the cart already holds all the stock.
+ * not go in in full: `u` unavailable, `p` partial, `h` the cart already holds all the stock, and
+ * (`#1088`, the `list` source only) `s` the shopper left an ambiguous line unresolved, so no
+ * product was ever chosen for it.
  */
 
 import type { BulkAddKind } from "@/lib/cart-rules";
 
-export type RestoreSource = "reorder" | "cancelled";
-export type RestoreEntryKind = "u" | "p" | "h";
+export type RestoreSource = "reorder" | "cancelled" | "list";
+export type RestoreEntryKind = "u" | "p" | "h" | "s";
 
 export interface RestoreEntry {
   kind: RestoreEntryKind;
@@ -36,12 +38,21 @@ export interface RestoreNotice {
   entries: RestoreEntry[];
 }
 
+/**
+ * What an action can report about one line.
+ *
+ * `#1088` adds `"skipped"` HERE rather than to `lib/cart-rules.ts`'s `BulkAddKind`: a shop-list
+ * line the shopper declined to resolve never reached the cart layer at all, so it is not one of
+ * that layer's outcomes. Everything else is the bulk add's own kind, unchanged.
+ */
+export type RestoredLineKind = BulkAddKind | "skipped";
+
 /** One restored line, as an action knows it: the bulk add's kind, or `unavailable` for a deleted product. */
 export interface RestoredLine {
   name: string;
   requested: number;
   added: number;
-  kind: BulkAddKind;
+  kind: RestoredLineKind;
 }
 
 export const MAX_RESTORE_ENTRIES = 50;
@@ -50,10 +61,11 @@ export const MAX_RESTORE_NAME_LENGTH = 120;
 const ENTRY_SEPARATOR = "|";
 const FIELD_SEPARATOR = "~";
 
-const KIND_CODE: Record<Exclude<BulkAddKind, "added">, RestoreEntryKind> = {
+const KIND_CODE: Record<Exclude<RestoredLineKind, "added">, RestoreEntryKind> = {
   unavailable: "u",
   partial: "p",
   at_limit: "h",
+  skipped: "s",
 };
 
 /** The cart URL to land on after a restore. Exactly `/cart` when every line went in in full. */
@@ -64,7 +76,7 @@ export function buildRestoreNoticeUrl(source: RestoreSource, lines: RestoredLine
   const entries = short
     .map((line) =>
       [
-        KIND_CODE[line.kind as Exclude<BulkAddKind, "added">],
+        KIND_CODE[line.kind as Exclude<RestoredLineKind, "added">],
         line.added,
         line.requested,
         line.name.split(ENTRY_SEPARATOR).join("/"),
@@ -89,13 +101,16 @@ function parseEntry(raw: string): RestoreEntry | null {
   const [kind, addedRaw, requestedRaw] = parts;
   const name = parts.slice(3).join(FIELD_SEPARATOR).trim();
 
-  if (kind !== "u" && kind !== "p" && kind !== "h") return null;
+  if (kind !== "u" && kind !== "p" && kind !== "h" && kind !== "s") return null;
   if (!isCount(addedRaw) || !isCount(requestedRaw)) return null;
   if (name === "") return null;
 
   const added = Number(addedRaw);
   const requested = Number(requestedRaw);
   if (kind === "p" && !(added > 0 && added < requested)) return null;
+  // A skipped line was never sent to the cart, so a non-zero `added` is a
+  // contradiction — the same shape of invariant the `p` check above enforces.
+  if (kind === "s" && !(added === 0 && requested >= 1)) return null;
 
   return { kind, added, requested, name: name.slice(0, MAX_RESTORE_NAME_LENGTH) };
 }
@@ -107,7 +122,7 @@ export function parseRestoreNotice(params: {
   lines?: string;
 }): RestoreNotice | null {
   const source = params.restored;
-  if (source !== "reorder" && source !== "cancelled") return null;
+  if (source !== "reorder" && source !== "cancelled" && source !== "list") return null;
 
   const entries = (params.lines ?? "")
     .split(ENTRY_SEPARATOR)
