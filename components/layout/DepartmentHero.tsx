@@ -262,8 +262,8 @@ export function DepartmentHero({
                     </div>
                   ) : (
                     /*
-                      A department whose products fall outside the spotlight
-                      query's bounded window shows no callout rather than a
+                      A department with no active product, in itself or an
+                      active subcategory, shows no callout rather than a
                       placeholder price.
                     */
                     <p className="mb-4 text-sm text-white/80">Browse the full range.</p>

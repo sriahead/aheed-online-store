@@ -4,6 +4,7 @@ import { buildNormalisationPrompt } from "@/lib/list-normalisation";
 import { buildSynonymPrompt } from "@/lib/search-synonym-proposals";
 import { buildNetContentPrompt } from "@/lib/net-content-suggester";
 import { parseList } from "@/lib/shopping-list";
+import { buildCampaignImagePrompt } from "@/lib/campaign-image";
 
 /**
  * #905 R15/R20 — the three AI prompts no longer tell the model every vendor is a grocer; the
@@ -24,6 +25,8 @@ const BUILDERS: [string, (description: string | null) => string][] = [
         storeDescription: d,
       }),
   ],
+  // #1030 R14 — the campaign banner image prompt, missed by #905.
+  ["campaign banner", (d) => buildCampaignImagePrompt("Audio", "Sound sale", null, d)],
 ];
 
 describe.each(BUILDERS)("%s prompt (#905 R20)", (_name, build) => {
@@ -58,5 +61,22 @@ describe("storeDescriptionPromptLine (#905 R15)", () => {
     const line = storeDescriptionPromptLine("x".repeat(300));
     const quoted = /"(.*)"$/.exec(line ?? "")?.[1];
     expect(quoted).toHaveLength(200);
+  });
+});
+
+describe("campaign banner prompt with no description (#1030 R15)", () => {
+  const prompt = buildCampaignImagePrompt("Fresh Produce", "Summer picks", "From the farm", null);
+
+  it("says nothing about groceries, the UK or appetising food", () => {
+    expect(prompt).not.toMatch(/grocer/i);
+    expect(prompt).not.toMatch(/UK/);
+    expect(prompt).not.toMatch(/appetis/i);
+  });
+
+  it("keeps the department, the campaign copy and the no-text instruction", () => {
+    expect(prompt).toContain("Fresh Produce");
+    expect(prompt).toContain("Summer picks");
+    expect(prompt).toContain("From the farm");
+    expect(prompt).toContain("No text");
   });
 });

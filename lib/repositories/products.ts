@@ -804,42 +804,112 @@ export async function listProductsByCategory(
   );
 }
 
-/**
- * How many rows to pull per requested category. The hero needs ONE product per
- * department, but "one per group" is not expressible in a single Prisma query
- * without raw SQL — which `CLAUDE.md` bans in application code. So this
- * over-fetches a bounded window and picks the first per category in memory.
- *
- * 4 is chosen against the real ordering: featured products sort first, and a
- * department with four or more featured products is choosing between good
- * candidates, not missing one. The cost is bounded at `4 x departments` rows
- * (roughly 36 for the seeded vendors), which is smaller than the product rows
- * the same page already fetches.
- */
-const SPOTLIGHT_ROWS_PER_CATEGORY = 4;
+/** One `product.groupBy` row: the newest product of a category, split by `isFeatured` (#1096). */
+export interface SpotlightGroup {
+  categoryId: string;
+  isFeatured: boolean;
+  createdAt: Date;
+}
 
 /**
- * P8.5b (#346) — the headline product for each of several departments, in ONE
- * query rather than one per department (requirement R5).
+ * #1096 — which `(categoryId, isFeatured, createdAt)` group wins each department.
  *
- * Ordering is `isFeatured desc, createdAt desc`: a vendor's own curation wins,
- * and newest-first breaks the tie. A department whose products all fall outside
- * the fetched window simply has no spotlight, and the hero renders that panel
- * without a price callout rather than inventing one — the same principle #239
- * established when hardcoded hero copy turned out to be one vendor's claim
- * rendered for everyone.
+ * Pure, so the ordering rule is provable without a database. `departmentOf` maps every eligible
+ * category id (a department and its active direct children) to its department; a group whose
+ * category is not in the map is ignored. The rule is P8.5b's own — featured beats non-featured,
+ * then the latest `createdAt` — applied per department rather than across the whole store, which
+ * is what stops one busy department starving the rest.
+ */
+export function pickDepartmentSpotlights(
+  groups: readonly SpotlightGroup[],
+  departmentOf: ReadonlyMap<string, string>,
+): Map<string, SpotlightGroup> {
+  const winners = new Map<string, SpotlightGroup>();
+  for (const group of groups) {
+    const department = departmentOf.get(group.categoryId);
+    if (department === undefined) continue;
+    const current = winners.get(department);
+    if (!current || beats(group, current)) winners.set(department, group);
+  }
+  return winners;
+}
+
+function beats(a: SpotlightGroup, b: SpotlightGroup): boolean {
+  if (a.isFeatured !== b.isFeatured) return a.isFeatured;
+  if (a.createdAt.getTime() !== b.createdAt.getTime()) {
+    return a.createdAt.getTime() > b.createdAt.getTime();
+  }
+  // Same flag and instant in two sibling categories: any stable choice will do.
+  return a.categoryId < b.categoryId;
+}
+
+/**
+ * P8.5b (#346), reworked by #1096 — the headline product for each department, where a department
+ * is a top-level category plus its ACTIVE DIRECT children (what `getCategoryBySlug` shows on the
+ * department page itself).
+ *
+ * At most three queries, however many departments: the children, the newest product per
+ * `(categoryId, isFeatured)`, then the winning rows. #346 used one query with a global
+ * `take: departments x 4` window, which let a department with many featured products consume the
+ * whole window and left the others with no spotlight; "one per group" is not expressible in a
+ * single Prisma query without raw SQL, which `CLAUDE.md` bans, and Prisma's `distinct` reads every
+ * matching row before de-duplicating in memory.
+ *
+ * Rows sharing the winning triple exactly (a seeded or bulk-imported batch shares one
+ * `createdAt`) all come back from the third query; the lowest `id` wins. The returned map is keyed
+ * by department id; `CategorySpotlight.categoryId` is the product's own category, which may be a
+ * child. A department with no eligible product is absent, and the hero renders that panel without
+ * a price callout rather than inventing one (#239).
  */
 export async function listCategorySpotlights(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
   categoryIds: readonly string[],
 ): Promise<Map<string, CategorySpotlight>> {
-  if (categoryIds.length === 0) return new Map();
+  const spotlights = new Map<string, CategorySpotlight>();
+  if (categoryIds.length === 0) return spotlights;
+
+  const children = await prisma.category.findMany({
+    where: { vendorId, isActive: true, parentId: { in: [...categoryIds] } },
+    select: { id: true, parentId: true },
+  });
+  const departmentOf = new Map<string, string>(categoryIds.map((id) => [id, id]));
+  for (const child of children) {
+    if (child.parentId !== null) departmentOf.set(child.id, child.parentId);
+  }
+
+  const groups = await prisma.product.groupBy({
+    by: ["categoryId", "isFeatured"],
+    where: { vendorId, isActive: true, categoryId: { in: [...departmentOf.keys()] } },
+    _max: { createdAt: true },
+  });
+  const winners = pickDepartmentSpotlights(
+    groups.flatMap((group) =>
+      group._max.createdAt
+        ? [
+            {
+              categoryId: group.categoryId,
+              isFeatured: group.isFeatured,
+              createdAt: group._max.createdAt,
+            },
+          ]
+        : [],
+    ),
+    departmentOf,
+  );
+  if (winners.size === 0) return spotlights;
 
   const rows = await prisma.product.findMany({
-    where: { vendorId, isActive: true, categoryId: { in: [...categoryIds] } },
-    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-    take: categoryIds.length * SPOTLIGHT_ROWS_PER_CATEGORY,
+    where: {
+      vendorId,
+      isActive: true,
+      OR: [...winners.values()].map(({ categoryId, isFeatured, createdAt }) => ({
+        categoryId,
+        isFeatured,
+        createdAt,
+      })),
+    },
+    orderBy: { id: "asc" },
     select: {
       categoryId: true,
       name: true,
@@ -850,10 +920,10 @@ export async function listCategorySpotlights(
     },
   });
 
-  const spotlights = new Map<string, CategorySpotlight>();
   for (const row of rows) {
-    // First row wins per category — the list is already in priority order.
-    if (!spotlights.has(row.categoryId)) spotlights.set(row.categoryId, row);
+    const department = departmentOf.get(row.categoryId);
+    // First row wins per department — the list is in `id` order, which settles exact ties.
+    if (department !== undefined && !spotlights.has(department)) spotlights.set(department, row);
   }
   return spotlights;
 }

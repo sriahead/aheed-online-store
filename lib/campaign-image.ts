@@ -9,6 +9,7 @@
  */
 
 import { IMAGE_CONTENT_TYPE, imageExtensionForContentType } from "./product-image";
+import { storeDescriptionPromptLine } from "./store-description";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -52,4 +53,32 @@ export function isCampaignImageKey(key: string, categoryId: string): boolean {
   if (!file.endsWith(SUFFIX)) return false;
 
   return UUID_PATTERN.test(file.slice(0, -SUFFIX.length));
+}
+
+/**
+ * #1030 — the Workers AI prompt for a department campaign banner.
+ *
+ * It used to describe every vendor as "a UK grocery store" with "appetising" light, so SriMart's
+ * electronics banners were prompted as food photography. Now it has the same shape as #905's text
+ * prompts: a neutral first line, then the vendor's own description as the second line when it has
+ * one (`storeDescriptionPromptLine`, inserted as quoted data), then neutral photographic direction.
+ * Pure, so `tests/store-description-prompts.test.ts` reaches it directly — a route file may export
+ * only its handlers.
+ */
+export function buildCampaignImagePrompt(
+  categoryName: string,
+  headline: string | null,
+  subtitle: string | null,
+  storeDescription: string | null,
+): string {
+  const copy = [headline, subtitle].filter((part) => part && part.trim() !== "").join(". ");
+  const subject = copy === "" ? categoryName : `${categoryName}: ${copy}`;
+  const describe = storeDescriptionPromptLine(storeDescription);
+
+  return [
+    `Photographic marketing banner for a shop's ${subject}.`,
+    ...(describe ? [describe] : []),
+    "Natural daylight, shallow depth of field, clean uncluttered composition with space for text " +
+      "overlay. No text, no words, no logos.",
+  ].join("\n");
 }
