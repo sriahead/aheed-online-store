@@ -4,10 +4,10 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.8.0"
-updated: 2026-10-10
+version: "1.9.0"
+updated: 2026-10-14
 visibility: internal
-summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff panel pages under app/(admin), vendor-neutral user-facing copy, form-field autocomplete tokens, and React hooks — together with the tests that enforce each invariant mechanically.
+summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, the fulfilment-method preference, form-field autocomplete tokens and React hooks — with the tests that enforce each invariant mechanically.
 tags: [conventions, repositories, server-actions, staff-panel]
 ---
 
@@ -340,6 +340,33 @@ store's staff reads must be right for **any** vendor.
   past basket back must tell the shopper about the short lines: reorder and cancel redirect through
   `lib/restore-notice.ts`, and `/cart` renders `RestoreNotice`. Enforced by
   `tests/cart-bulk-add-report.test.ts` and `tests/restore-notice.test.tsx`.
+
+## Fulfilment method and the postcode control (`#748`, `#1087`)
+
+- **The fulfilment method is a stored preference, not a derived value.** It lives in the
+  `fulfilment-method` cookie and is resolved once by `getFulfilmentMethod`
+  (`lib/fulfilment-service.ts`): a vendor that does not offer collection is `DELIVERY` whatever the
+  cookie says, checked **before** the cookie so a crafted value cannot select a method the vendor
+  does not operate; otherwise the stored choice wins; and only with no stored choice does
+  `defaultFulfilmentMethod` apply, which returns `DELIVERY` as soon as the postcode is deliverable.
+- **A postcode submission sets the method only when the submission carried delivery intent.**
+  `setDeliveryPostcode` reads the `intent` field (`POSTCODE_INTENT_FIELD`,
+  `parsePostcodeIntent` in `lib/delivery-cookie.ts`) and writes `DELIVERY` only for `"delivery"`
+  **and** a deliverable postcode. Anything else — `"edit"`, an absent field, an unrecognised value,
+  an undeliverable postcode — leaves the stored method exactly as it was.
+- **The pencil/edit path must never change the method.** This is `#748`: changing where you live is
+  not changing how you receive the order, and silently switching a Click & Collect shopper back to
+  Delivery because they corrected a typo is the defect that rule exists to prevent.
+- **Do not restate that rule as "a postcode submission never sets the method".** It was written
+  that way in code comments only, and the wider form caused `#1087`: with a `COLLECTION` cookie
+  stored, a shopper who clicked **Delivery**, was asked for a postcode and gave a deliverable one
+  stayed on Click & Collect. Intent is what distinguishes the two cases; the absolute does not.
+- **The control shows a stored deliverable postcode under either method.** Gating the label on
+  `method === "DELIVERY"` left the shopper's own postcode readable only by reopening the modal and
+  cancelling out of it.
+- Enforced by `tests/delivery-postcode-intent.test.ts` (the parser, and which submissions write the
+  method cookie) and `tests/location-control.test.tsx` (which affordance submits which intent, and
+  the label).
 
 ## Checkout pricing (`#973`)
 

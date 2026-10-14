@@ -1,5 +1,5 @@
 import type { BulkAddLine, MergeLine } from "@/lib/cart-rules";
-import type { RestoredLine } from "@/lib/restore-notice";
+import type { RestoredLine, RestoredLineKind } from "@/lib/restore-notice";
 
 /**
  * #957 — put an order's lines back through the bulk add and name what happened to each, for
@@ -10,11 +10,18 @@ import type { RestoredLine } from "@/lib/restore-notice";
  * unavailable under the order's snapshot name. Every other line is named from the order too, matched
  * back by product id: the order's name is the one the shopper bought it under.
  *
+ * `#1088` reuses this for "shop your list", which differs only in WHY a line has no product id: the
+ * shopper left an ambiguous line unresolved rather than the product having been deleted. That is the
+ * `missingKind` parameter and the only difference — the id-to-name mapping, the empty-`live`
+ * short-circuit (which is what keeps a guest from being issued a token when nothing is addable) and
+ * the report shape are all identical, so they stay in one place.
+ *
  * A plain module, so it is testable without a request and importable by `"use server"` files.
  */
 export async function restoredLines(
   items: { productId: string | null; productName: string; quantity: number }[],
   addItems: (lines: MergeLine[]) => Promise<BulkAddLine[]>,
+  missingKind: RestoredLineKind = "unavailable",
 ): Promise<RestoredLine[]> {
   const deleted: RestoredLine[] = items
     .filter((item) => !item.productId)
@@ -22,7 +29,7 @@ export async function restoredLines(
       name: item.productName,
       requested: item.quantity,
       added: 0,
-      kind: "unavailable",
+      kind: missingKind,
     }));
 
   const live = items.filter((item): item is typeof item & { productId: string } =>

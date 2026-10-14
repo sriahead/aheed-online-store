@@ -33,7 +33,13 @@ import { revalidatePath } from "next/cache";
  * submission — never on browse.
  */
 
-import { DELIVERY_POSTCODE_COOKIE, normalisePostcodeInput } from "@/lib/delivery-cookie";
+import {
+  DELIVERY_POSTCODE_COOKIE,
+  POSTCODE_INTENT_FIELD,
+  normalisePostcodeInput,
+  parsePostcodeIntent,
+} from "@/lib/delivery-cookie";
+import { isPostcodeDeliverable } from "@/lib/delivery-eligibility-service";
 import { recordRefusalForPostcode } from "@/lib/delivery-refusals-service";
 import { FULFILMENT_METHOD_COOKIE, parseFulfilmentMethod } from "@/lib/fulfilment-cookie";
 
@@ -45,9 +51,32 @@ const THIRTY_DAYS_SECONDS = 60 * 60 * 24 * 30;
  *
  * An empty submission clears it — that is the "forget my postcode" affordance,
  * and it costs no extra control on a header that is deliberately sparse.
+ *
+ * ## It sets the fulfilment method, but only on delivery intent (#1087)
+ *
+ * This used to set the method NEVER, which read as `#748`'s rule but was wider
+ * than that rule needed to be. The consequence: once the method cookie held
+ * `COLLECTION`, entering a postcode could not select Delivery, so a shopper who
+ * clicked **Delivery**, was asked for a postcode, and gave a deliverable one
+ * stayed on Click & Collect — with their own postcode invisible, because the
+ * control only showed it under `DELIVERY`.
+ *
+ * `#748`'s actual rule is narrower, and `LocationControl` already encodes it in
+ * which control opens this modal: the Delivery affordance means "deliver this",
+ * the pencil means "I live somewhere else now". So the method follows the
+ * submitted intent, and the pencil path behaves exactly as it did before.
+ *
+ * Deliverability costs no extra query: `getDeliveryEligibility` is wrapped in
+ * React `cache()` and `recordRefusalForPostcode` below resolves the same
+ * postcode in the same request, so this is a cache hit either way. The cookie
+ * still stores the postcode ONLY — the verdict stays derived per request, for
+ * the reason in this file's header.
  */
 export async function setDeliveryPostcode(formData: FormData): Promise<void> {
   const submitted = normalisePostcodeInput(String(formData.get("postcode") ?? ""));
+  const intent = parsePostcodeIntent(
+    formData.get(POSTCODE_INTENT_FIELD) as string | null | undefined,
+  );
   const jar = await cookies();
 
   if (submitted === "") {
@@ -62,6 +91,20 @@ export async function setDeliveryPostcode(formData: FormData): Promise<void> {
       path: "/",
       maxAge: THIRTY_DAYS_SECONDS,
     });
+
+    // Only a deliverable postcode selects Delivery. An undeliverable one leaves
+    // the stored preference alone rather than selecting a method the shopper
+    // cannot complete — the same reasoning as the control that renders an
+    // "ask for a postcode" button instead of a Delivery toggle.
+    if (intent === "delivery" && (await isPostcodeDeliverable(submitted))) {
+      jar.set(FULFILMENT_METHOD_COOKIE, "DELIVERY", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: THIRTY_DAYS_SECONDS,
+      });
+    }
   }
 
   // #889 — a real postcode this store does not serve is counted, by district and day only. The

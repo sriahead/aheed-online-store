@@ -208,3 +208,89 @@ describe("RestoreNotice", () => {
     ]);
   });
 });
+
+/**
+ * #1088 (R11, R11a, R12) — the "shop your list" source and the skipped-line kind.
+ *
+ * The three cases above are #957's and must keep passing byte-for-byte: this slice adds a source
+ * and a kind to a shipped notice rather than changing one, and the reorder/cancel copy is what a
+ * regression here would quietly rewrite.
+ */
+describe("the list source and the skipped kind (#1088)", () => {
+  it("R11: encodes a skipped line as s~0~q~name, with of counting every submitted line", () => {
+    const url = buildRestoreNoticeUrl("list", [
+      line("Milk", "added", 2, 2),
+      line("Apple juice", "skipped", 0, 3),
+    ]);
+    expect(params(url)).toEqual({
+      restored: "list",
+      of: "2",
+      lines: "s~0~3~Apple juice",
+    });
+  });
+
+  it("R11: round-trips a list notice", () => {
+    expect(parseRestoreNotice({ restored: "list", of: "3", lines: "s~0~2~Apple juice" })).toEqual({
+      source: "list",
+      of: 3,
+      entries: [{ kind: "s", added: 0, requested: 2, name: "Apple juice" }],
+    });
+  });
+
+  it("R11: rejects a skipped entry that claims something was added", () => {
+    // A skipped line never reached the cart, so a non-zero `added` is a contradiction — the same
+    // shape of invariant the `p` kind already enforces.
+    expect(parseRestoreNotice({ restored: "list", lines: "s~1~2~Apple juice" })).toBeNull();
+    expect(parseRestoreNotice({ restored: "list", lines: "s~0~0~Apple juice" })).toBeNull();
+  });
+
+  it("R11: a skipped line and a short add can share one notice", () => {
+    const url = buildRestoreNoticeUrl("list", [
+      line("Milk", "partial", 1, 2),
+      line("Apple juice", "skipped", 0, 3),
+    ]);
+    expect(params(url).lines).toBe("p~1~2~Milk|s~0~3~Apple juice");
+  });
+
+  it("R11a: the skipped kind is the notice's own, not the cart layer's", async () => {
+    // `restoredLines` reports a line with no product id under the kind its caller names, so the
+    // shop-list path can say "skipped" where reorder says "unavailable" — without BulkAddKind
+    // growing a member for something that never reached the cart.
+    const addItems = vi.fn();
+    expect(
+      await restoredLines(
+        [{ productId: null, productName: "Apple juice", quantity: 3 }],
+        addItems,
+        "skipped",
+      ),
+    ).toEqual([{ name: "Apple juice", requested: 3, added: 0, kind: "skipped" }]);
+    expect(addItems).not.toHaveBeenCalled();
+  });
+
+  it("R11a: the default stays 'unavailable', so #957's two callers are unaffected", async () => {
+    expect(
+      await restoredLines([{ productId: null, productName: "Gone", quantity: 1 }], vi.fn()),
+    ).toEqual([{ name: "Gone", requested: 1, added: 0, kind: "unavailable" }]);
+  });
+
+  it("R12: renders the list copy and the skipped-line text", () => {
+    render(
+      <RestoreNotice
+        notice={{
+          source: "list",
+          of: 3,
+          entries: [{ kind: "s", added: 0, requested: 2, name: "Apple juice" }],
+        }}
+      />,
+    );
+    expect(
+      [...document.querySelectorAll("[data-restore-notice] p, [data-restore-notice] li")].map(
+        (el) => el.textContent,
+      ),
+    ).toEqual([
+      "1 of 3 items from your list couldn't be added in full:",
+      "Apple juice: not added, no product chosen",
+      "Everything else is in your cart.",
+    ]);
+  });
+});

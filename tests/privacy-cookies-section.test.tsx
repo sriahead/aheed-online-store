@@ -34,24 +34,36 @@ import { FULFILMENT_METHOD_COOKIE } from "@/lib/fulfilment-cookie";
 
 const squash = (text: string | null | undefined) => (text ?? "").replace(/\s+/g, " ").trim();
 
+/**
+ * `[technical name, the purpose the entry LEADS with]` (#1089).
+ *
+ * The order is unchanged from `#1064`; what changed is which half comes first. The owner's
+ * user-testing pass read the previous name-led, `<code>`-styled version as "code base words". Every
+ * name stays on the page — naming the cookie is the PECR/UK GDPR transparency a shopper is owed —
+ * so this test now pins both halves AND the fact that no entry is code-styled.
+ */
 const EXPECTED_ITEMS: ReadonlyArray<readonly [string, string]> = [
-  ["__Secure-better-auth.session_token", "Maintains your authenticated session."],
-  ["aheed_cart", "Stores your shopping cart state."],
-  ["aheed_cookie_consent", "Records your cookie consent preferences."],
+  ["__Secure-better-auth.session_token", "Keeps you signed in."],
+  ["aheed_cart", "Keeps the items in your basket."],
+  ["aheed_cookie_consent", "Remembers your cookie choices."],
   [
     "delivery-postcode",
-    "Remembers the postcode you entered so we can show delivery availability and fees.",
+    "Remembers the postcode you entered, so we can show delivery availability and fees.",
   ],
   ["fulfilment-method", "Remembers whether you chose delivery or collection."],
   [
     "aheed_referral_code",
-    "Remembers a referral code from a link you followed so it can be applied at checkout. Only set when you arrive through a referral link.",
+    "Remembers a referral code from a link you followed, so it can be applied at checkout. Only set if you arrive through a referral link.",
   ],
   [
     "aheed_checkout_details",
-    "Local storage. Keeps the contact and delivery details you type into the checkout form on your device so they are filled in next time. It stays on your device.",
+    "Keeps the contact and delivery details you type at checkout, so they are filled in next time. Stored on your device, not on our servers.",
   ],
 ];
+
+/** The technical names, as the page now presents them: emphasised, not code-styled. */
+const renderedNames = (section: HTMLElement) =>
+  [...section.querySelectorAll("ul > li .font-semibold")].map((el) => el.textContent);
 
 async function renderSection(): Promise<{ container: HTMLElement; section: HTMLElement }> {
   const { container } = render(await PrivacyPage());
@@ -87,16 +99,24 @@ describe("privacy page — Cookies and Local Storage (#1064)", () => {
     expect(closing.compareDocumentPosition(list!) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
-  it("R5: the list is exactly the seven approved items, in order, as `name — description`", async () => {
+  it("R5/#1089 R15: the seven items are in order and each LEADS with its purpose", async () => {
     const { section } = await renderSection();
     const items = [...section.querySelectorAll("ul > li")];
     expect(items).toHaveLength(EXPECTED_ITEMS.length);
     items.forEach((li, i) => {
-      const [name, description] = EXPECTED_ITEMS[i];
-      expect(li.querySelector("code")?.textContent).toBe(name);
-      // A space, an em dash (U+2014), a space — not a hyphen or an en dash.
-      expect(squash(li.textContent)).toBe(`${name} — ${description}`);
+      const [name, purpose] = EXPECTED_ITEMS[i];
+      const text = squash(li.textContent);
+      // Leads with the purpose: a shopper reads what it is for before any identifier.
+      expect(text.startsWith(purpose)).toBe(true);
+      // And still names the cookie, after the purpose, not before it.
+      expect(text).toBe(`${purpose} Shown in your browser as ${name}.`);
+      expect(text.indexOf(purpose)).toBeLessThan(text.indexOf(name));
     });
+  });
+
+  it("#1089 R15: no entry is code-styled", async () => {
+    const { section } = await renderSection();
+    expect(section.querySelectorAll("code")).toHaveLength(0);
   });
 
   it("R7: never names the cookies that do not exist, or the staff-only one", async () => {
@@ -104,7 +124,7 @@ describe("privacy page — Cookies and Local Storage (#1064)", () => {
     const text = squash(section.textContent);
     expect(text).not.toContain("aheed_session");
     expect(text).not.toContain("admin-tier");
-    const names = [...section.querySelectorAll("li > code")].map((c) => c.textContent);
+    const names = renderedNames(section);
     for (const bare of ["session", "cart", "cookie_consent"]) {
       expect(names).not.toContain(bare);
     }
@@ -112,7 +132,7 @@ describe("privacy page — Cookies and Local Storage (#1064)", () => {
 
   it("R12: the three names that exist as constants are listed under those constants' values", async () => {
     const { section } = await renderSection();
-    const names = [...section.querySelectorAll("li > code")].map((c) => c.textContent);
+    const names = renderedNames(section);
     expect(names).toContain(CART_COOKIE);
     expect(names).toContain(DELIVERY_POSTCODE_COOKIE);
     expect(names).toContain(FULFILMENT_METHOD_COOKIE);

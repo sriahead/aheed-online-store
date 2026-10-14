@@ -72,33 +72,61 @@ export default async function PrivacyPage() {
           </p>
           {/* #1064 — every name here is one the storefront really sets; tests/privacy-cookies-
               section.test.tsx pins the three that exist as exported constants. The session name is
-              Better Auth's own, with the `__Secure-` prefix it adds over HTTPS. */}
-          <ul className="list-disc space-y-1 pl-5 text-sm text-primary-muted leading-relaxed">
+              Better Auth's own, with the `__Secure-` prefix it adds over HTTPS.
+
+              #1089 — PURPOSE FIRST, name second, and no `<code>`. The owner's user-testing pass
+              read the previous name-led, code-styled version as "code base words". The names stay,
+              every one of them: naming the cookie is the transparency a shopper is owed under PECR
+              and the UK GDPR, so dropping them would trade one defect for another. They are
+              presented as what they are — an identifier you would see in your browser — rather
+              than as the heading of each entry. */}
+          <ul className="list-disc space-y-1.5 pl-5 text-sm text-primary-muted leading-relaxed">
             <li>
-              <code>__Secure-better-auth.session_token</code> — Maintains your authenticated
-              session.
+              Keeps you signed in.{" "}
+              <span>
+                Shown in your browser as{" "}
+                <span className="font-semibold">__Secure-better-auth.session_token</span>.
+              </span>
             </li>
             <li>
-              <code>aheed_cart</code> — Stores your shopping cart state.
+              Keeps the items in your basket.{" "}
+              <span>
+                Shown in your browser as <span className="font-semibold">aheed_cart</span>.
+              </span>
             </li>
             <li>
-              <code>aheed_cookie_consent</code> — Records your cookie consent preferences.
+              Remembers your cookie choices.{" "}
+              <span>
+                Shown in your browser as <span className="font-semibold">aheed_cookie_consent</span>
+                .
+              </span>
             </li>
             <li>
-              <code>delivery-postcode</code> — Remembers the postcode you entered so we can show
-              delivery availability and fees.
+              Remembers the postcode you entered, so we can show delivery availability and fees.{" "}
+              <span>
+                Shown in your browser as <span className="font-semibold">delivery-postcode</span>.
+              </span>
             </li>
             <li>
-              <code>fulfilment-method</code> — Remembers whether you chose delivery or collection.
+              Remembers whether you chose delivery or collection.{" "}
+              <span>
+                Shown in your browser as <span className="font-semibold">fulfilment-method</span>.
+              </span>
             </li>
             <li>
-              <code>aheed_referral_code</code> — Remembers a referral code from a link you followed
-              so it can be applied at checkout. Only set when you arrive through a referral link.
+              Remembers a referral code from a link you followed, so it can be applied at checkout.
+              Only set if you arrive through a referral link.{" "}
+              <span>
+                Shown in your browser as <span className="font-semibold">aheed_referral_code</span>.
+              </span>
             </li>
             <li>
-              <code>aheed_checkout_details</code> — Local storage. Keeps the contact and delivery
-              details you type into the checkout form on your device so they are filled in next
-              time. It stays on your device.
+              Keeps the contact and delivery details you type at checkout, so they are filled in
+              next time. Stored on your device, not on our servers.{" "}
+              <span>
+                Shown in your browser as{" "}
+                <span className="font-semibold">aheed_checkout_details</span>.
+              </span>
             </li>
           </ul>
           <p className="text-sm text-primary-muted leading-relaxed">
