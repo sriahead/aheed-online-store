@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-14T17:44:24.849Z` · commit `4b8a4d3` · `231` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-14T22:46:57.937Z` · commit `40a95b7` · `232` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -226,6 +226,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P10 — Eleven quick UI and copy fixes from the 2026-10-13 user-testing pass (plan)](specs/2026-10-13-p1077-quick-ui-copy-fixes/plan.md) | spec | 1.0.0 | 2026-10-13 | draft | internal | Eleven single-file UI and copy defects from the owner's 2026-10-13 testing pass — header logo on phones, a banner phone number, a carousel pause control that cannot resume, shop-list affordances and four rewards claims the code does not back. |
 | [P10 #1083/#1078/#1079 — Collection minimum, editable banner headline, honest referral copy (plan)](specs/2026-10-13-p1083-collection-minimum-banner-headline/plan.md) | spec | 1.0.0 | 2026-10-13 | draft | internal | Click & Collect gets its own vendor minimum (default none), the header banner headline becomes vendor-editable, and the referral copy stops promising a first-order rule. One additive migration. |
 | [Shopper clarity: delivery intent, skipped shop-list lines, privacy copy (plan)](specs/2026-10-14-p1087-1088-1089-shopper-clarity/plan.md) | spec | 1.0.0 | 2026-10-14 | draft | internal | Three storefront honesty defects from the owner's 2026-10-13 user-testing pass: entering a postcode from the Delivery affordance now selects Delivery without reverting #748, a skipped shop-list line is accounted for on /cart, and the privacy page leads with purpose instead of cookie names. |
+| [Departments show what they actually sell: hero spotlights and the banner prompt (plan)](specs/2026-10-14-p1096-1030-department-spotlights/plan.md) | spec | 1.0.0 | 2026-10-14 | draft | internal | Club B from the owner's 2026-10-13 user-testing pass: every homepage department panel gets a spotlight product drawn from the department and its subcategories, chosen fairly per department, and the AI campaign-banner prompt uses the vendor's own description instead of assuming a UK grocer. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.39.0 | 2026-10-06 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
