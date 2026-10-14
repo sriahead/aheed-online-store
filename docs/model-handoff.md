@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.99.0"
-updated: 2026-10-13
+version: "1.100.0"
+updated: 2026-10-14
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -688,12 +688,24 @@ All facts in this section require live verification:
     `ReferralCard`) and `#1083` (Click & Collect held to the delivery minimum) are **one slice, in
     production and closed** — see the `#1083` entry below. `#1080` (four `aheed_`-prefixed storage
     keys are platform-wide, so SriMart's privacy page names another vendor) is still open.
-  - **Found, evidenced, and NOT yet filed** — the owner has not asked for issues on these, and the
-    triage document is their only home: a deliverable postcode does not select Delivery
-    (`#748`'s rule, confirmed in code); no warning when an ambiguous shop-list line is skipped;
-    24 flat staff-nav links needing grouping; `listCategorySpotlights`' global take window starving
-    departments of spotlights; and the privacy page's `code`-styled cookie names reading as
-    "code base words" to a shopper. Each has a file and line in the document.
+  - **The triage document now carries a dated status register (2026-10-14) re-verifying all 21
+    items against the code.** Read that section before the buckets above it — where they disagree,
+    it is newer and wins, and it records which items `#1077` and `#1083`/`#1078`/`#1079` already
+    closed.
+  - **Three of the previously-unfiled findings are now filed and built, not shipped: `#1087`
+    (a deliverable postcode did not select Delivery), `#1088` (no warning when an ambiguous
+    shop-list line is skipped) and `#1089` (the privacy page's `code`-styled cookie names).** Owner-
+    approved as one slice ("Club A") on 2026-10-14; spec, build notes and local gate state in
+    `specs/2026-10-14-p1087-1088-1089-shopper-clarity/`. **Do not re-file these.** They are on
+    `feature/p1087-shopper-clarity` and have had **no live proof of any kind** — that is Validate's
+    first job, and the build notes name the two rows that need a real browser and the seeded
+    `offerCollection` trap that would make them silently test nothing.
+  - **Still found, evidenced and NOT filed**, with the triage document as their only home: 24 flat
+    staff-nav links needing grouping (now **37**, re-counted 2026-10-14), `listCategorySpotlights`'
+    global take window starving departments of spotlights, and referral economics being platform
+    constants rather than vendor data (`lib/referrals.ts`). Each has a file and line there. Filed
+    during `#1088`'s build and deferred: `#1090` (shop-list lines the review step never submits) and
+    `#1091` (responsive two-span labels computing a doubled accessible name).
 - **Collection minimum, banner headline, referral copy (`#1083`, `#1078`, `#1079`): DONE, in
   production** (PR #1084 to `staging`, promotion PR #1085, merge `624ffbc`, 2026-10-13); all closed
   and `Done`. Spec, build notes: `specs/2026-10-13-p1083-collection-minimum-banner-headline/`. One
