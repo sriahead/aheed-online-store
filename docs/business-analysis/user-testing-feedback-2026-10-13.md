@@ -4,10 +4,10 @@ title: "User testing feedback — triage, 2026-10-13"
 audience: [dev, product]
 type: doc
 status: draft
-version: "1.0.0"
-updated: 2026-10-13
+version: "1.1.0"
+updated: 2026-10-14
 visibility: internal
-summary: "Owner user-testing feedback of 2026-10-13, 21 items, each traced to code or to live production evidence and sorted into already-handled, owner-configurable, code-change-needed and blocked-on-existing-work, with priority."
+summary: "Owner user-testing feedback of 2026-10-13, 21 items, each traced to code or to live production evidence and sorted into already-handled, owner-configurable, code-change-needed and blocked. Carries a dated status register re-verifying every item after #1077 and #1083/#1078/#1079 shipped."
 tags: [user-testing, feedback, triage, gap-register, uat, p10]
 related: [gap-register-audit, roadmap, product-requirements]
 ---
@@ -283,3 +283,63 @@ review. A screenshot and the page URL would settle it.
 3. **A second slice:** items 3, 6, 12, 13, 15, 19, 20.
 4. **Own slices:** item 1b (staff nav), item 10 (spotlight query), the `aheed_`-prefixed storage
    keys.
+
+## Status register — re-verified 2026-10-14
+
+**Read this before the buckets above.** Everything from `## A.` to `## Suggested sequence` is the
+original triage of 2026-10-13. This section is the later reconciliation: every item re-checked
+against the code on 2026-10-14, after `#1077` and `#1083`/`#1078`/`#1079` reached production. **Where
+this section and a bucket above disagree, this section is newer and wins.** The sequence above is
+kept for provenance, not as the plan — its slices 2 and 3 are now mostly shipped, so the live
+grouping is "Clubbing" at the end of this section.
+
+### Closed — in production, nothing left
+
+Items **1a, 2, 3, 5, 9, 11, 12a, 12b, 13, 14, 15, 17 (points half), 18, 19, 20**.
+
+- `#1077` — 1a, 2, 11a, 11b, 18, 19, 20, 12a, 12b, 13, 15.
+- `#1078` — 3 (banner headline is now vendor-editable). `#1079` — the referral **copy** half of
+  12/13. `#1083` — 9's collection clause (`VendorConfig.collectionMinimumOrderPence`).
+- `#1013`/`#1012`/`#1022` — item 5's code half, shipped 2026-10-10, before the owner's pass.
+
+### Remaining — no issue filed
+
+| Item | Defect | Evidence re-verified 2026-10-14 | Priority |
+| --- | --- | --- | --- |
+| **4** | A deliverable postcode still does not select Delivery | `features/storefront/delivery.ts` — `setDeliveryPostcode` writes no method cookie; `components/layout/LocationControl.tsx:65-66` builds `deliveryLabel` only when `method === "DELIVERY"` | **P1** |
+| **21** | An ambiguous shop-list line is silently dropped | `features/cart/add-list-to-cart.ts:50` is still a bare `redirect("/cart")`; `ListReview` counts only ready lines into the button label | **P1** |
+| **6** | Privacy page reads as "code base words" | `app/(storefront)/privacy/page.tsx:78-100` — seven `<code>`-styled storage names | P2 |
+| **12.1** | Referral economics are platform constants, not vendor data | `lib/referrals.ts:11-13` (£5 / 100 points / £20). **Confirmed there are no `VendorConfig` referral fields** — `prisma/schema.prisma` carries only the `DiscountCode` referral relations. Needs one additive migration plus every call site | P2 |
+| **1b** | Flat staff navigation | `components/staff/PanelNav.tsx` now renders **37** `<NavLink>`s, not the 24 recorded above — it grew between 2026-10-13 and 2026-10-14. Touches `PanelNav`, `app/(admin)/staff/page.tsx`, an operator guide and `tests/staff-nav-parity.test.ts` | P2 |
+| **10 (code half)** | Departments starved of spotlights | `lib/repositories/products.ts:819` (`SPOTLIGHT_ROWS_PER_CATEGORY = 4`) and `:838-842` — `take: categoryIds.length * 4` under a **global** `isFeatured desc, createdAt desc` order, and the `where` matches only the **direct** `categoryId` | P2 |
+
+### Remaining — issue already filed, all open as of 2026-10-14
+
+- **`#1080`** — the four `aheed_`-prefixed storage keys (the separate finding under item 6).
+- **`#1030`** — the campaign banner AI prompt hardcodes "UK grocery store"; the sibling of item 10.
+- **`#1034`** — a referral code is created on every signed-in render; the best candidate cause for
+  item 16.
+- **`#1021`** (FAQ answers) and **`#1058`** (footer email, still `[YOUR EMAIL]` live) — owner
+  actions, no code.
+- **`#104`** (Resend domain, item 7) and **`#113`** (Stripe live keys) — launch blockers,
+  owner-gated, external.
+- **`#606`** (no refund path, item 17) and **`#795`** (cancelled-but-unrefunded revenue).
+
+### Needs the owner before it can be filed at all
+
+- **Item 16** — no disabled refer-a-friend button of that description exists anywhere in the code.
+  A screenshot and the page URL would settle whether it is `#1034` or `ReferralCard`'s `unavailable`
+  branch.
+- **Item 14** — the loyalty detail page was never exercised **signed in**. If a 404 was genuinely
+  observed it becomes a real defect; until then it stays in bucket A.
+
+### Clubbing
+
+- **Club A — "stop making the shopper guess": items 4, 21 and 6. Owner-approved 2026-10-14**, taken
+  to Gate 1 as the next slice. Two P1 pre-trading defects plus one single-file copy change; three
+  independent files, **no schema change**.
+- **Club B — "departments show what they actually sell": item 10's code half plus `#1030`.** Same
+  surface, same defect in two halves — the spotlight query and the vendor-neutral banner prompt.
+- **Deliberately alone:** **12.1** (the only remaining item needing a migration), **1b** (three
+  test-enforced surfaces), **`#1080`** (renaming the keys drops every live cart and consent record,
+  so it needs a migration plan rather than a rename).
