@@ -57,6 +57,8 @@ vi.mock("@/lib/image-generation", () => ({
   IMAGE_GENERATION_MODEL: "@cf/black-forest-labs/flux-1-schnell",
 }));
 vi.mock("@/lib/storage", () => ({ getStorage: () => ({ putObject }) }));
+// #1030 — the campaign route reads the vendor's store description for its prompt.
+vi.mock("@/lib/vendor-service", () => ({ getVendorConfig: vi.fn(async () => null) }));
 
 const backfill = await import("@/app/api/admin/jobs/backfill-images/route");
 const productImage = await import("@/app/api/admin/product-images/generate/route");

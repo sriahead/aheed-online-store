@@ -7,7 +7,8 @@ import { getCategoryForAdmin } from "@/lib/categories-service";
 import { getCampaignForVendorCategory, saveCampaignImageForVendor } from "@/lib/campaigns-service";
 import { getImageGenerationService, IMAGE_GENERATION_MODEL } from "@/lib/image-generation";
 import { getStorage } from "@/lib/storage";
-import { buildCampaignImageKey } from "@/lib/campaign-image";
+import { buildCampaignImageKey, buildCampaignImagePrompt } from "@/lib/campaign-image";
+import { getVendorConfig } from "@/lib/vendor-service";
 
 /**
  * Generate a department campaign banner with AI (P8.5f).
@@ -33,21 +34,6 @@ function deriveAltText(categoryName: string, headline: string | null): string {
     : `${categoryName} campaign banner`;
 }
 
-function buildPrompt(
-  categoryName: string,
-  headline: string | null,
-  subtitle: string | null,
-): string {
-  const copy = [headline, subtitle].filter((part) => part && part.trim() !== "").join(". ");
-  const subject = copy === "" ? categoryName : `${categoryName}: ${copy}`;
-
-  return (
-    `Photographic marketing banner for a UK grocery store's ${subject}. ` +
-    `Appetising natural daylight, shallow depth of field, clean uncluttered ` +
-    `composition with space for text overlay. No text, no words, no logos.`
-  );
-}
-
 export async function POST(request: Request) {
   const auth = await requireVendorRole("ADMIN");
   if (!auth.ok) {
@@ -61,9 +47,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing categoryId" }, { status: 400 });
     }
 
-    const [category, campaign] = await Promise.all([
+    const [category, campaign, config] = await Promise.all([
       getCategoryForAdmin(auth.vendorId, categoryId),
       getCampaignForVendorCategory(auth.vendorId, categoryId),
+      getVendorConfig(auth.vendorId),
     ]);
     if (!category) {
       return NextResponse.json({ error: "That department no longer exists." }, { status: 404 });
@@ -85,7 +72,13 @@ export async function POST(request: Request) {
     }
 
     const image = await getImageGenerationService().generateImage(
-      buildPrompt(category.name, campaign.headline, campaign.subtitle),
+      // #1030 — the vendor's own description, not a "UK grocery store" every vendor shared.
+      buildCampaignImagePrompt(
+        category.name,
+        campaign.headline,
+        campaign.subtitle,
+        config?.storeDescription ?? null,
+      ),
     );
     // null = the service is not configured (missing account id or API token); it
     // degrades rather than throwing, so this is the "AI unavailable" branch.
