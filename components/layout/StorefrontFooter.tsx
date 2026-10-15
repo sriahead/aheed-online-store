@@ -282,7 +282,10 @@ export function StorefrontFooter({
             {platformName && <p>Powered by {platformName}</p>}
           </div>
 
-          <nav aria-label="Legal" className="order-2 flex flex-nowrap whitespace-nowrap lg:order-2">
+          <nav
+            aria-label="Legal"
+            className="order-2 flex flex-wrap items-center gap-y-1 lg:order-2 lg:flex-nowrap lg:whitespace-nowrap"
+          >
             <Link href="/terms" className={LINK}>
               Terms
             </Link>

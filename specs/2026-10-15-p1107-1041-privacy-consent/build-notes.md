@@ -7,6 +7,11 @@ At the end of Build: `npm run lint`, `npm run typecheck` and `npm run format:che
 `npx vitest run` (run alone) passed **259 files, 3,294 tests**. The browser rows R13 and R24 were
 **not** run here; they are Validate's.
 
+**Validate/Fix update (Sonnet 5, same day):** `/validate` confirmed R1–R12, R14–R23, R25, R26 and ran
+R24 live in Chrome (pass). R13 could not be measured — see "Known-shaky areas" below — so `/fix`
+applied the row-wrap precaution on `components/layout/StorefrontFooter.tsx` rather than leave the
+overflow risk unverified. `/validate` is being re-run from the top after this change.
+
 ## What changed and why
 
 - **`lib/data-retention.ts` (new):** the three retention figures, with no imports, so both the
@@ -74,10 +79,18 @@ At the end of Build: `npm run lint`, `npm run typecheck` and `npm run format:che
 
 ## Known-shaky areas
 
-- **R13, the footer Legal row at 360px, is unmeasured.** The row is `flex-nowrap whitespace-nowrap`
-  and now holds four items ("Terms · Privacy · Cookies · Cookie settings"). Below `md`, each item
-  also carries `min-h-tap`. If it overflows, the fix is to let that row wrap, not to drop the
-  button. Check both vendors, because the footer palette differs.
+- **R13, the footer Legal row at 360px, was unmeasurable under `/validate`:** the browser-automation
+  session's window could not be resized below its default (~1536px wide); a same-origin iframe
+  workaround to get a real 360px viewport also failed, blocked as cross-origin by the automation
+  extension's own sandboxing. Rather than ship the overflow risk unmeasured, `/fix` applied the
+  precaution already named here: `components/layout/StorefrontFooter.tsx`'s `nav[aria-label="Legal"]`
+  changed from `flex flex-nowrap whitespace-nowrap` to `flex flex-wrap items-center gap-y-1` below
+  `lg`, keeping `flex-nowrap whitespace-nowrap` from `lg` up — so desktop layout is byte-for-byte
+  unchanged and only the narrow breakpoint, where R13's risk lives, can wrap instead of overflow.
+  `tests/storefront-footer.test.tsx` (order and content of the four items) still passes. **R13 itself
+  is still unmeasured in a real 360px browser** — this change removes the overflow failure mode
+  rather than proving `scrollWidth <= 360`; a human check on both vendor hosts remains the real proof
+  and is recommended before/soon after this ships.
 - **R24 (the real browser) is the only proof that expiry works.** jsdom records what was written but
   not whether a real browser deleted it. The referral cookie is written with `Secure`; the expiring
   write (`expireBrowserCookie`) has no `Secure` and uses the same name and path. Browsers delete on

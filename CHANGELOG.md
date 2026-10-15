@@ -13,6 +13,7 @@ every branch merges.
   - Owner ruling: saved checkout details (`store_checkout_details`) stay essential; no consent gate.
   - `#1041`, widened by owner ruling: `/privacy` section 5 discloses the search log (90 days), the five rate-limit attempt records (one hour) and the hashed IP kept with feedback, beside the help-assistant log already listed. Retention is worded as "due for deletion … removed by routine clean-up", because each sweep runs on 1% of writes.
   - `lib/data-retention.ts` is the one source for those figures: the seven sweeping repositories and `/privacy` both read it. Values unchanged. Rule recorded in `docs/developer-portal/app-conventions.md` 1.12.0.
+  - The footer's Legal row (Terms · Privacy · Cookies · Cookie settings) now wraps below `lg` instead of running `flex-nowrap`, so the new fourth item cannot overflow a narrow viewport; `lg`-and-up layout is unchanged.
   - Deferred: `#1112` (a scheduled sweep so retention is exact) and `#1113` (14 storefront files fall back to one vendor's name when no vendor resolves).
 
 - **Browser storage names no longer carry one vendor's name, and the referral cookie waits for consent** (issues `#1080`, `#1065`, `#1066`; `specs/2026-10-15-p1080-1065-neutral-storage-keys/`). No schema change, no migration, no new dependency.
