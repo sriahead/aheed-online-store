@@ -1,4 +1,5 @@
 import type { AssistantOutcome, AssistantTopic } from "@prisma/client/wasm";
+import { ASSISTANT_CONVERSATION_RETENTION_DAYS } from "@/lib/data-retention";
 import type { getPrisma } from "@/lib/db";
 
 /**
@@ -30,7 +31,7 @@ type Db = ReturnType<typeof getPrisma>;
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_CONVERSATIONS_PER_WINDOW = 20;
 
-const RETENTION_DAYS = 90;
+const RETENTION_DAYS = ASSISTANT_CONVERSATION_RETENTION_DAYS;
 const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000;
 const SWEEP_PROBABILITY = 0.01;
 

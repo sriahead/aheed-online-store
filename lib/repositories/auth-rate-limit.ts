@@ -1,6 +1,8 @@
 import type { getPrisma } from "@/lib/db";
+import { ATTEMPT_RECORD_RETENTION_HOURS } from "@/lib/data-retention";
 
-const WINDOW_MS = 60_000;
+export const AUTH_RATE_LIMIT_WINDOW_MS = 60_000;
+const WINDOW_MS = AUTH_RATE_LIMIT_WINDOW_MS;
 const MAX_ATTEMPTS = 5;
 
 // #468 — this table had no retention sweep at all and grew without bound. Retention only
@@ -8,7 +10,7 @@ const MAX_ATTEMPTS = 5;
 // deleteMany doesn't add latency to every request. deleteMany is confirmed safe on the
 // HTTP adapter (getPrisma()) per CLAUDE.md — unlike updateMany/createMany — so no
 // getPrismaWs() is needed here.
-const RETENTION_MS = 60 * 60 * 1000;
+const RETENTION_MS = ATTEMPT_RECORD_RETENTION_HOURS * 60 * 60 * 1000;
 const SWEEP_PROBABILITY = 0.01;
 
 /** SHA-256 of the caller's IP — see AuthenticationAttempt's schema comment for why hashed, not raw. */
