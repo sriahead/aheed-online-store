@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-15T09:27:21.031Z` · commit `e72a94f` · `233` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-15T09:40:15.951Z` · commit `e080708` · `233` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -254,7 +254,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Order & Fulfilment Operations](docs/operations-research/order-fulfilment-core.md) | runbook | 1.0.0 | 2026-09-22 | approved | internal | Canonical rules for order status transitions, fulfilment slots, cancellations, and payment exceptions. |
 | [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.1.0 | 2026-09-06 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
 | [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.10.0 | 2026-09-28 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item. |
-| [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.13.0 | 2026-10-13 | approved | internal | How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access. |
+| [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.14.0 | 2026-10-15 | approved | internal | How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access. |
 | [Phase 6.5 — Autonomous Application Self-Review, Gap Detection & Hardening Plan](specs/2026-08-13-p6.5-self-review-hardening/plan.md) | spec | 1.0.0 | 2026-08-13 | approved | internal | Plan for Phase 6.5 autonomous self-review and hardening audit loop prior to Phase 7. |
 | [Phase 7a Implementation & Execution Plan](specs/2026-08-13-p7a-compliance-hardening/plan.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Step-by-step implementation plan for Phase 7a operational closure, UK compliance, security headers, and user-experience gaps. |
 | [KMS Strategy — Target Design and Governance Standard](specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md) | spec | 2.1.1 | 2026-09-22 | review | internal | The target architecture, documentation standard and governance model for the platform Knowledge Management System — audiences, taxonomy, metadata, source-of-truth, deployment documentation, runbooks, CI governance and SDD integration, with current-state facts separated from design intent. |
