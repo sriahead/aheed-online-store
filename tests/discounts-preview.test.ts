@@ -45,12 +45,26 @@ const aCode = (overrides: Partial<CodeRow> = {}): CodeRow => ({
   ...overrides,
 });
 
-/** Reads answer from fixtures; every write method throws. */
-function readOnlyDb(code: CodeRow | null, priorUses = 0) {
+/**
+ * Reads answer from fixtures; every write method throws. `loyaltyEnabled` is the vendor's flag,
+ * read by `previewCode` only for a referral code (#1101); it defaults to on, the state every test
+ * written before #1101 assumed.
+ */
+function readOnlyDb(code: CodeRow | null, priorUses = 0, loyaltyEnabled = true) {
   const refuse = () => {
     throw new Error("previewCode must not write");
   };
   return {
+    vendorConfig: {
+      findUnique: vi.fn(async () => ({
+        loyaltyEnabled,
+        pointsPerPoundEarned: 1,
+        pencePerPointRedeemed: 1,
+        minRedeemPoints: 100,
+        tierWindowDays: 30,
+        pointsExpiryMonths: null,
+      })),
+    },
     discountCode: {
       findUnique: async () => code,
       update: refuse,
@@ -74,8 +88,8 @@ function readOnlyDb(code: CodeRow | null, priorUses = 0) {
 }
 
 /** The same reads, plus the one write `claimCode` makes, which succeeds. */
-function claimingDb(code: CodeRow | null, priorUses = 0) {
-  const db = readOnlyDb(code, priorUses);
+function claimingDb(code: CodeRow | null, priorUses = 0, loyaltyEnabled = true) {
+  const db = readOnlyDb(code, priorUses, loyaltyEnabled);
   return {
     ...db,
     discountCode: { ...db.discountCode, updateMany: async () => ({ count: 1 }) },
@@ -224,4 +238,56 @@ describe("previewCode — own referral code (#972)", () => {
     const result = await previewCode(readOnlyDb(owned) as never, VENDOR, input("u-1"));
     expect(result).toEqual({ ok: false, reason: "OWN_REFERRAL_CODE" });
   });
+});
+
+/**
+ * #1101 (R7–R9) — on a vendor whose loyalty scheme is off, a referral code (one with a
+ * `referrerUserId`) is refused at preview and claim. A staff code is untouched and costs no config read.
+ */
+describe("referral codes on a loyalty-off vendor (#1101)", () => {
+  const OWNER = "u-owner";
+  const referral = (overrides: Partial<CodeRow> = {}) =>
+    aCode({ value: 500, referrerUserId: OWNER, maxPerCustomer: 1, ...overrides });
+  const staff = () => aCode({ value: 500, referrerUserId: null });
+  const input = (userId: string | null, code = "REF-ABCD2345") => ({ ...base, code, userId });
+
+  it("refuses another shopper's otherwise-valid referral code in previewCode (R7)", async () => {
+    const db = readOnlyDb(referral(), 0, false);
+    const result = await previewCode(db as never, VENDOR, input("u-friend"));
+    expect(result).toEqual({ ok: false, reason: "REFERRALS_UNAVAILABLE" });
+  });
+
+  it("outranks OWN_REFERRAL_CODE for the code's own owner (R7)", async () => {
+    const db = readOnlyDb(referral(), 0, false);
+    const result = await previewCode(db as never, VENDOR, input(OWNER));
+    expect(result).toEqual({ ok: false, reason: "REFERRALS_UNAVAILABLE" });
+  });
+
+  it("refuses it in claimCode with no reservation written (R8)", async () => {
+    const db = claimingDb(referral(), 0, false);
+    const updateMany = vi.fn(db.discountCode.updateMany);
+    db.discountCode.updateMany = updateMany;
+    const result = await claimCode(db as never, VENDOR, input("u-friend"));
+    expect(result).toEqual({ ok: false, reason: "REFERRALS_UNAVAILABLE" });
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it("still accepts the referral code when loyalty is on (R9)", async () => {
+    const db = readOnlyDb(referral(), 0, true);
+    const result = await previewCode(db as never, VENDOR, input("u-friend"));
+    expect(result).toEqual(expect.objectContaining({ ok: true, discountPence: 500 }));
+  });
+
+  it.each([false, true])(
+    "accepts a staff code without reading loyalty config (loyaltyEnabled %s) (R9)",
+    async (on) => {
+      const db = readOnlyDb(staff(), 0, on);
+      const result = await previewCode(db as never, VENDOR, {
+        ...input("u-friend"),
+        code: "WELCOME5",
+      });
+      expect(result).toEqual(expect.objectContaining({ ok: true, discountPence: 500 }));
+      expect(db.vendorConfig.findUnique).not.toHaveBeenCalled();
+    },
+  );
 });

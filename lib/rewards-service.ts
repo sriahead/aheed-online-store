@@ -15,9 +15,13 @@ export async function getRewardsDataForUser(
   const loyalty = getLoyaltyRepository();
   const config = await loyalty.config();
 
-  if (!userId) {
+  // #1101 / #1034 — a vendor with loyalty off runs no referral scheme, so nothing below may run for
+  // it: `getReferralStats` would CREATE a live, redeemable referral code for every signed-in shopper,
+  // and the three loyalty reads would be discarded (the chrome renders no launcher for this vendor).
+  // Same shape as the signed-out branch; only `authenticated` still says whether a shopper is signed in.
+  if (!userId || !config.loyaltyEnabled) {
     return {
-      authenticated: false,
+      authenticated: userId !== null,
       loyaltyEnabled: config.loyaltyEnabled,
       balancePoints: 0,
       expiryDate: null,

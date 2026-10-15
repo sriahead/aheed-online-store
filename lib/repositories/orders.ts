@@ -1790,9 +1790,11 @@ export async function confirmPayment(
       where: { orderId: order.id },
       select: { code: { select: { referrerUserId: true } } },
     });
+    // #1101 — gated on the same flag as the earn path above: no referral bonus on a loyalty-off vendor.
     const referrerUserId = referralBonusRecipient(
       discountRedemption?.code?.referrerUserId,
       order.userId,
+      loyaltyConfig.loyaltyEnabled,
     );
     if (referrerUserId) {
       await awardReferralBonusPoints(tx, order.vendorId, referrerUserId, REFERRAL_REWARD_POINTS);
