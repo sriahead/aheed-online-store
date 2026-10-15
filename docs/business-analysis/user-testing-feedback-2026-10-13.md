@@ -4,7 +4,7 @@ title: "User testing feedback — triage, 2026-10-13"
 audience: [dev, product]
 type: doc
 status: draft
-version: "1.2.0"
+version: "1.2.1"
 updated: 2026-10-15
 visibility: internal
 summary: "Owner user-testing feedback of 2026-10-13, 21 items, each traced to code or to live production evidence and sorted into already-handled, owner-configurable, code-change-needed and blocked. Carries a dated status register re-verifying every item after #1077 and #1083/#1078/#1079 shipped."
@@ -311,12 +311,12 @@ Items **1a, 2, 3, 5, 9, 11, 12a, 12b, 13, 14, 15, 17 (points half), 18, 19, 20**
 | **6** | Privacy page reads as "code base words" | `app/(storefront)/privacy/page.tsx:78-100` — seven `<code>`-styled storage names | P2 |
 | **12.1** | Referral economics are platform constants, not vendor data | `lib/referrals.ts:11-13` (£5 / 100 points / £20). **Confirmed there are no `VendorConfig` referral fields** — `prisma/schema.prisma` carries only the `DiscountCode` referral relations. Needs one additive migration plus every call site | P2 |
 | **1b** | Flat staff navigation | `components/staff/PanelNav.tsx` now renders **37** `<NavLink>`s, not the 24 recorded above — it grew between 2026-10-13 and 2026-10-14. Touches `PanelNav`, `app/(admin)/staff/page.tsx`, an operator guide and `tests/staff-nav-parity.test.ts` | P2 |
-| **10 (code half)** | Departments starved of spotlights | **Now filed as `#1096` and fixed on `staging` by PR #1097 (2026-10-15), awaiting promotion.** Evidence below is the pre-fix state: `lib/repositories/products.ts` had `SPOTLIGHT_ROWS_PER_CATEGORY = 4` and `take: categoryIds.length * 4` under a **global** `isFeatured desc, createdAt desc` order, and the `where` matched only the **direct** `categoryId` | P2 |
+| **10 (code half)** | Departments starved of spotlights | **Filed as `#1096`, fixed by PR #1097 and in production since PR #1099 (2026-10-15); closed.** Evidence below is the pre-fix state: `lib/repositories/products.ts` had `SPOTLIGHT_ROWS_PER_CATEGORY = 4` and `take: categoryIds.length * 4` under a **global** `isFeatured desc, createdAt desc` order, and the `where` matched only the **direct** `categoryId` | P2 |
 
 ### Remaining — issue already filed, all open as of 2026-10-14
 
 - **`#1080`** — the four `aheed_`-prefixed storage keys (the separate finding under item 6).
-- **`#1030`** — the campaign banner AI prompt hardcodes "UK grocery store"; the sibling of item 10. **Fixed on `staging` by PR #1097 (2026-10-15), awaiting promotion.**
+- **`#1030`** — the campaign banner AI prompt hardcodes "UK grocery store"; the sibling of item 10. **Fixed by PR #1097, in production since PR #1099 (2026-10-15); closed.**
 - **`#1034`** — a referral code is created on every signed-in render; the best candidate cause for
   item 16.
 - **`#1021`** (FAQ answers) and **`#1058`** (footer email, still `[YOUR EMAIL]` live) — owner

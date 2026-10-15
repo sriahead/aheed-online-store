@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.102.0"
+version: "1.103.0"
 updated: 2026-10-15
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -40,23 +40,27 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **Date:** 2026-10-15.
-- **`main` is at `c3327e4`** (full `c3327e46c5cbd3b6f15672fca8abd0c287d4878c`), the PR #1093
+- **`main` is at `3b94f8f`** (full `3b94f8fb7e25abf59f8dccb0c1f1015261b94b84`), the PR #1099
+  promotion (`staging -> main`, 2026-10-15): department spotlights and the vendor-neutral banner
+  prompt (`#1096`/`#1030`, PR #1097, merge `07128a8`;
+  `specs/2026-10-14-p1096-1030-department-spotlights/`), carrying the docs-only PRs #1094, #1095 and
+  #1098. No schema change, no migration. CI green on PR #1099; `deploy-production` (run
+  `38686460635`) and `deploy-docs-internal` both **success**. Production `/api/health` (Aheed
+  **and** SriMart) serves `3b94f8f`, `db.ok: true`, `reference.drift: false`.
+  `closingIssuesReferences` listed exactly `[1030, 1096]`; both closed and `Done`, the only issues
+  closed since the merge. **Verified live in production beyond the health check:** Aheed's homepage
+  carousel names all 13 departments and SriMart's both of its 2, with zero `Browse the full range.`
+  fallbacks. **`origin/main` and `origin/staging` are level** apart from this promotion record's
+  own docs PR. Not a phase closure (`P10` stays open).
+  - **`#901` still shows `In Progress` on the board** although its stated pause (pending `#928`)
+    lifted when `#928` closed on 2026-09-28. It is an owner-run production pilot, so its status is
+    the owner's to set — do not read it as live engineering work.
+- **Previous promotion, `c3327e4`** (full `c3327e46c5cbd3b6f15672fca8abd0c287d4878c`), the PR #1093
   promotion (`staging -> main`, 2026-10-14): delivery intent, skipped shop-list lines and privacy
-  copy (`#1087`/`#1088`/`#1089`, PR #1092, merge `2efd98b`), carrying PR #1086 (the `#1083` slice's
-  deferred Document pass). No schema change, no migration. CI green on PR #1093;
-  `deploy-staging` (run `38600165704`) and `deploy-production` (run `38602854895`) both **success**.
-  Production `/api/health` (Aheed **and** SriMart) serves `c3327e4`, `db.ok: true`,
-  `reference.drift: false`. `closingIssuesReferences` listed exactly `[1087, 1088, 1089]`; all three
-  closed and `Done`. **Verified live in production beyond the health check:** `/privacy` carries the
-  purpose-first cookie copy with zero `<code>` elements.
-  - **`staging` is ahead of `main` (`staging` at `07128a8`).** It carries two docs-only PRs (#1094,
-    #1095) and **PR #1097, the `#1096`/`#1030` slice** (`specs/2026-10-14-p1096-1030-department-spotlights/`):
-    `listCategorySpotlights` now judges each department on its own and its active direct
-    subcategories' products in a fixed three queries, and the campaign-banner prompt quotes the
-    vendor's own `storeDescription` (`buildCampaignImagePrompt`). No schema change, no migration.
-    `deploy-staging` (run `38683401657`) **success**; **not in production**. Both issues are `In
-    Review` and open until a `staging -> main` promotion PR that carries `closes #1096` and
-    `closes #1030` on separate lines. Detail: `specs/roadmap.md`'s 2026-10-15 row.
+  copy (`#1087`/`#1088`/`#1089`, PR #1092, merge `2efd98b`), carrying PR #1086. No migration.
+  `deploy-production` (run `38602854895`) **success**. `closingIssuesReferences` listed exactly
+  `[1087, 1088, 1089]`. **Verified live:** `/privacy` carries the purpose-first cookie copy with zero
+  `<code>` elements.
   - **This entry's predecessor (`c903f15`, below) had gone three promotions stale** — `#1069`
     (`8bb2a6b`), the footer/privacy cookie list (`b38b0f1`), and collection minimum/banner/referral
     copy plus the quick UI fixes (`624ffbc`) had all already reached production without a Last
@@ -735,7 +739,7 @@ All facts in this section require live verification:
     staff-nav links needing grouping (now **37**, re-counted 2026-10-14) and referral economics
     being platform constants rather than vendor data (`lib/referrals.ts`). Each has a file and line
     there. (A third, `listCategorySpotlights`' global take window starving departments, has since
-    been filed as `#1096` and fixed on `staging` by PR #1097.) Filed
+    been filed as `#1096`, fixed by PR #1097 and promoted by PR #1099.) Filed
     during `#1088`'s build and still open, unaffected by this slice: `#1090` (shop-list lines the
     review step never submits) and `#1091` (responsive two-span labels computing a doubled
     accessible name).
@@ -848,7 +852,7 @@ All facts in this section require live verification:
   metering is live in production with every vendor on the default 3,000-neuron budget.
   Follow-ups, all `Backlog` / `P10`: `#1027` (gemma switch and timeout), **`#1028` (owner: which
   Workers plan)**, `#1029` (staff AI-allowance view), `#1030` (campaign prompt hardcodes "UK
-  grocery"; **fixed on `staging` by PR #1097**, not yet in production), `#1031` (backfill refusal shown in success tone). **Cloudflare silently serves the
+  grocery"; **fixed by PR #1097, in production since PR #1099**, closed), `#1031` (backfill refusal shown in success tone). **Cloudflare silently serves the
   deprecated llama id from `llama-3.1-8b-fast-v2`** (commented on `#1016`).
 - **Chatbot prerequisites, slice 1 (`#1013` + `#1012`): DONE, in production** (PR #1024 to
   `staging`, then promotion PR #1025, merge `b1dd2d4`, 2026-10-10), both issues closed and `Done`.
