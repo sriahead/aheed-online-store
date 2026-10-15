@@ -714,8 +714,8 @@ All facts in this section require live verification:
     (`WaysToEarnAccordion` repeated the unenforced referral claim `#1077` removed from
     `ReferralCard`) and `#1083` (Click & Collect held to the delivery minimum) are **one slice, in
     production and closed** — see the `#1083` entry below. `#1080` (four `aheed_`-prefixed storage
-    keys are platform-wide, so SriMart's privacy page names another vendor) is **merged to `staging`
-    (PR #1108), not yet in production** — see the `#1080`/`#1065` entry in `specs/roadmap.md`.
+    keys are platform-wide, so SriMart's privacy page names another vendor) is **in production**
+    (PR #1108, promoted by #1109, 2026-10-15) — see the `#1080`/`#1065` entry in `specs/roadmap.md`.
   - **The triage document now carries a dated status register (2026-10-14) re-verifying all 21
     items against the code.** Read that section before the buckets above it — where they disagree,
     it is newer and wins, and it records which items `#1077` and `#1083`/`#1078`/`#1079` already
@@ -794,9 +794,9 @@ All facts in this section require live verification:
     Accept All, `store_referral_code`, plus the `store_checkout_details` localStorage key (renamed
     from `aheed_*` by `#1080`; names live in `lib/storage-keys.ts`, with a 30-day legacy fallback
     removed by `#1106`). `admin-tier` is staff-only and unlisted.
-  - Open: `#1056`, `#1057`, `#1061`, `#1062`, `#1065` and `#1066` (both addressed by PR
-    #1108 — the referral cookie now waits for Accept All, and the live `Set-Cookie` check is
-    recorded on `#1066`; they close when promoted to `main`).
+  - Open: `#1056`, `#1057`, `#1061`, `#1062`, `#1065` and `#1066` (both closed by PR
+    #1108 / #1109 — the referral cookie now waits for Accept All, and the live `Set-Cookie` check is
+    recorded on `#1066`).
 - **Help assistant follow-ups (`#1049` + `#1051` + `#1052`, one slice): DONE, in production**
   (PR #1050 to `staging`, then promotion PR #1053, merge `c903f15`, 2026-10-11), all three closed
   and `Done`. Spec: `specs/2026-10-11-p1049-assistant-link-close/` (no `build-notes.md`; the loop
