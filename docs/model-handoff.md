@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.100.0"
-updated: 2026-10-14
+version: "1.102.0"
+updated: 2026-10-15
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,8 +39,31 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-10-11.
-- **`main` is at `c903f15`** (full `c903f153b171af9825ac2fe886ab6c874e0c7d97`), the PR #1053
+- **Date:** 2026-10-15.
+- **`main` is at `c3327e4`** (full `c3327e46c5cbd3b6f15672fca8abd0c287d4878c`), the PR #1093
+  promotion (`staging -> main`, 2026-10-14): delivery intent, skipped shop-list lines and privacy
+  copy (`#1087`/`#1088`/`#1089`, PR #1092, merge `2efd98b`), carrying PR #1086 (the `#1083` slice's
+  deferred Document pass). No schema change, no migration. CI green on PR #1093;
+  `deploy-staging` (run `38600165704`) and `deploy-production` (run `38602854895`) both **success**.
+  Production `/api/health` (Aheed **and** SriMart) serves `c3327e4`, `db.ok: true`,
+  `reference.drift: false`. `closingIssuesReferences` listed exactly `[1087, 1088, 1089]`; all three
+  closed and `Done`. **Verified live in production beyond the health check:** `/privacy` carries the
+  purpose-first cookie copy with zero `<code>` elements.
+  - **`staging` is ahead of `main` (`staging` at `07128a8`).** It carries two docs-only PRs (#1094,
+    #1095) and **PR #1097, the `#1096`/`#1030` slice** (`specs/2026-10-14-p1096-1030-department-spotlights/`):
+    `listCategorySpotlights` now judges each department on its own and its active direct
+    subcategories' products in a fixed three queries, and the campaign-banner prompt quotes the
+    vendor's own `storeDescription` (`buildCampaignImagePrompt`). No schema change, no migration.
+    `deploy-staging` (run `38683401657`) **success**; **not in production**. Both issues are `In
+    Review` and open until a `staging -> main` promotion PR that carries `closes #1096` and
+    `closes #1030` on separate lines. Detail: `specs/roadmap.md`'s 2026-10-15 row.
+  - **This entry's predecessor (`c903f15`, below) had gone three promotions stale** — `#1069`
+    (`8bb2a6b`), the footer/privacy cookie list (`b38b0f1`), and collection minimum/banner/referral
+    copy plus the quick UI fixes (`624ffbc`) had all already reached production without a Last
+    Verified update. Each is correctly recorded as its own "DONE, in production" bullet further down
+    this section and in `specs/roadmap.md`'s change log — this note exists so a fresh session does
+    not read the gap as those slices being unshipped. Not a phase closure (`P10` stays open).
+- **Previous promotion, `c903f15`** (full `c903f153b171af9825ac2fe886ab6c874e0c7d97`), the PR #1053
   promotion (`staging -> main`, 2026-10-11): the help assistant follow-ups `#1049`/`#1051`/`#1052`
   (PR #1050, merge `c960ae1`), carrying PR #1048 (the `#1015`/`#1014` promotion record). No schema
   change, no migration. CI green on PR #1053; `deploy-production` (run `38170438220`) and
@@ -692,20 +715,30 @@ All facts in this section require live verification:
     items against the code.** Read that section before the buckets above it — where they disagree,
     it is newer and wins, and it records which items `#1077` and `#1083`/`#1078`/`#1079` already
     closed.
-  - **Three of the previously-unfiled findings are now filed and built, not shipped: `#1087`
-    (a deliverable postcode did not select Delivery), `#1088` (no warning when an ambiguous
-    shop-list line is skipped) and `#1089` (the privacy page's `code`-styled cookie names).** Owner-
-    approved as one slice ("Club A") on 2026-10-14; spec, build notes and local gate state in
-    `specs/2026-10-14-p1087-1088-1089-shopper-clarity/`. **Do not re-file these.** They are on
-    `feature/p1087-shopper-clarity` and have had **no live proof of any kind** — that is Validate's
-    first job, and the build notes name the two rows that need a real browser and the seeded
-    `offerCollection` trap that would make them silently test nothing.
+  - **Three previously-unfiled findings from this pass — `#1087` (a deliverable postcode did not
+    select Delivery), `#1088` (no warning when an ambiguous shop-list line is skipped) and `#1089`
+    (the privacy page's `code`-styled cookie names) — are DONE, in production** (PR #1092 to
+    `staging`, merge `2efd98b`; promotion PR #1093, merge `c3327e4`, 2026-10-14); all three closed
+    and `Done`. Owner-approved as one slice ("Club A"). Spec, build notes:
+    `specs/2026-10-14-p1087-1088-1089-shopper-clarity/`. No schema change, no migration.
+    `setDeliveryPostcode` now scopes the method switch to the submitted intent — the Delivery
+    affordance's postcode selects `DELIVERY`, the pencil's never does, which is `#748`'s actual
+    distinction. `ListReview`/`addListToCart` report a skipped shop-list line through `#957`'s
+    existing notice. `/privacy` leads each storage entry with its purpose, name second, no `<code>`.
+    **Validated from a fresh context (Sonnet 5), no fix pass — every row passed, including both rows
+    build notes had flagged as needing a real browser** (R3-E2E, the postcode-from-Delivery fix, and
+    R5-E2E, the `#748` regression guard: the pencil never flips the method, even when the re-entered
+    postcode is fully deliverable — confirmed live, not just by the unit tests). The seeded
+    `offerCollection` trap the build notes warned about did not bite: local Aheed renders the toggle
+    by default.
   - **Still found, evidenced and NOT filed**, with the triage document as their only home: 24 flat
-    staff-nav links needing grouping (now **37**, re-counted 2026-10-14), `listCategorySpotlights`'
-    global take window starving departments of spotlights, and referral economics being platform
-    constants rather than vendor data (`lib/referrals.ts`). Each has a file and line there. Filed
-    during `#1088`'s build and deferred: `#1090` (shop-list lines the review step never submits) and
-    `#1091` (responsive two-span labels computing a doubled accessible name).
+    staff-nav links needing grouping (now **37**, re-counted 2026-10-14) and referral economics
+    being platform constants rather than vendor data (`lib/referrals.ts`). Each has a file and line
+    there. (A third, `listCategorySpotlights`' global take window starving departments, has since
+    been filed as `#1096` and fixed on `staging` by PR #1097.) Filed
+    during `#1088`'s build and still open, unaffected by this slice: `#1090` (shop-list lines the
+    review step never submits) and `#1091` (responsive two-span labels computing a doubled
+    accessible name).
 - **Collection minimum, banner headline, referral copy (`#1083`, `#1078`, `#1079`): DONE, in
   production** (PR #1084 to `staging`, promotion PR #1085, merge `624ffbc`, 2026-10-13); all closed
   and `Done`. Spec, build notes: `specs/2026-10-13-p1083-collection-minimum-banner-headline/`. One
@@ -815,7 +848,7 @@ All facts in this section require live verification:
   metering is live in production with every vendor on the default 3,000-neuron budget.
   Follow-ups, all `Backlog` / `P10`: `#1027` (gemma switch and timeout), **`#1028` (owner: which
   Workers plan)**, `#1029` (staff AI-allowance view), `#1030` (campaign prompt hardcodes "UK
-  grocery"), `#1031` (backfill refusal shown in success tone). **Cloudflare silently serves the
+  grocery"; **fixed on `staging` by PR #1097**, not yet in production), `#1031` (backfill refusal shown in success tone). **Cloudflare silently serves the
   deprecated llama id from `llama-3.1-8b-fast-v2`** (commented on `#1016`).
 - **Chatbot prerequisites, slice 1 (`#1013` + `#1012`): DONE, in production** (PR #1024 to
   `staging`, then promotion PR #1025, merge `b1dd2d4`, 2026-10-10), both issues closed and `Done`.

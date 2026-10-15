@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.42.0"
-updated: 2026-10-13
+version: "2.43.0"
+updated: 2026-10-14
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -1013,6 +1013,16 @@ see "Why the switch sits after Document, not before" above.
   state. Remove or replace stale information rather than appending history, and reference authority
   rather than copying it. If nothing material changed, leave the handoff untouched. This does not
   turn Build Notes into final documentation or make the handoff a second changelog.
+  - **Check `docs/model-handoff.md`'s own `Last Verified` top entry, not just the slice's own
+    bullet.** `sdd:audit` checks that every promotion is *cited somewhere* in the roadmap's change
+    log, but nothing checks whether the handoff's `Last Verified` pointer — the fact a fresh session
+    reads first — has kept pace with it. Measured at `#1087`'s Document pass (2026-10-14): three
+    promotions (`#1069`, the footer/privacy cookie list, `#1083`/`#1078`/`#1079`/`#1077`) had each
+    landed its own correct "DONE, in production" bullet further down the file, while the top
+    `Last Verified` entry still named a `main` commit from three promotions earlier — silently
+    correct in one place and stale in the other, inside the same document. `sdd:audit` passed
+    throughout. Diff the handoff's stated `main` commit against `origin/main`'s actual tip before
+    calling this stage done, not just against this slice's own promotion.
 - Update `specs/roadmap.md`: progress, and a closure note in its change log if this closed out a
   phase/milestone, matching existing entries' style. **This is the step `sdd:audit` checks at the
   next Orient** — if it doesn't land, the next loop opens with a reported gap. Verify with
