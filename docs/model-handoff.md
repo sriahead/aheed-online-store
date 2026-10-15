@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.103.0"
+version: "1.104.0"
 updated: 2026-10-15
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,8 +39,21 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-10-15.
-- **`main` is at `3b94f8f`** (full `3b94f8fb7e25abf59f8dccb0c1f1015261b94b84`), the PR #1099
+- **Date:** 2026-10-15 (re-verified at the Club C Orient).
+- **`main` is at `dac5a3d`**, the PR #1111 promotion (`staging -> main`, 2026-10-15), carrying the
+  PR #1110 promotion-record docs. Its predecessor **`7a99caf`** (PR #1109, 2026-10-15) promoted
+  vendor-neutral storage keys and the consent-gated referral cookie (`#1080`/`#1065`/`#1066`, PR
+  #1108) and loyalty-off referrals (`#1101`/`#1034`, PR #1104). Production `/api/health` (Aheed
+  **and** SriMart) serves `dac5a3d`, `db.ok: true`, `reference.drift: false`, read 2026-10-15.
+  `origin/staging` has the same content (main is ahead only by merge commits). `sdd:audit` reports
+  PR #1111 as "row pending carry-forward": docs-only, record it on the next slice's Document pass.
+  - **PR #1105 (`docs/p1101-1034-document`) is open and stale.** PR #1110 overtook its roadmap,
+    handoff and changelog edits, and its handoff text ("staging one PR ahead") is no longer true.
+    Its only unique content is a `docs/developer-portal/local-dev-playbook.md` note on signing in
+    to `srimart.localhost:8787` (send `x-forwarded-proto: http`; wait about 30 seconds after a
+    `429`; set `MSYS_NO_POSIX_PATHCONV=1`). Closing it and carrying the note forward is the owner's
+    call, asked 2026-10-15 and not yet answered.
+- **Previous promotion, `3b94f8f`** (full `3b94f8fb7e25abf59f8dccb0c1f1015261b94b84`), the PR #1099
   promotion (`staging -> main`, 2026-10-15): department spotlights and the vendor-neutral banner
   prompt (`#1096`/`#1030`, PR #1097, merge `07128a8`;
   `specs/2026-10-14-p1096-1030-department-spotlights/`), carrying the docs-only PRs #1094, #1095 and
@@ -692,6 +705,13 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **Club C, privacy and consent honesty (`#1107` + `#1041`): BUILT, not yet validated or pushed**
+  (branch `feature/p1107-1041-privacy-consent`; spec `1b4b518`, build `22599b6`;
+  `specs/2026-10-15-p1107-1041-privacy-consent/`). Both issues are In Progress. Owner rulings at
+  Gate 1: saved checkout details stay essential; disclose every hashed-IP record; a Cookie settings
+  control is in scope. The next step is `/validate` from a fresh context (Sonnet 5). The
+  2026-10-15 clubbing of the wider backlog (Clubs C–F and the owner-gated groups) is recorded in
+  the triage document's "Backlog clubbing — 2026-10-15" section.
 - **Owner user-testing pass, 2026-10-13 — 21 observations, triaged with live evidence.** The
   single most useful artifact from it is
   `docs/business-analysis/user-testing-feedback-2026-10-13.md` (committed `7bee5ad`): every item
