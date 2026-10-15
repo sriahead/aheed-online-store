@@ -8,6 +8,13 @@ every branch merges.
 
 ### Fixed
 
+- **Browser storage names no longer carry one vendor's name, and the referral cookie waits for consent** (issues `#1080`, `#1065`, `#1066`; `specs/2026-10-15-p1080-1065-neutral-storage-keys/`). No schema change, no migration, no new dependency.
+  - `#1080`: `aheed_cart`, `aheed_cookie_consent`, `aheed_referral_code` and `aheed_checkout_details` become `store_cart`, `store_cookie_consent`, `store_referral_code` and `store_checkout_details`, defined once in `lib/storage-keys.ts`. Every vendor sets them, and the privacy page lists them, so SriMart's privacy page had been naming Aheed. The page now renders the names from the constants.
+  - Compatibility window, 30 days (the guest cart cookie's own unrefreshed life): reads fall back to the legacy name, and the next cart mutation re-issues the **same** guest token under the new name, so no basket is lost. The banner carries a legacy consent choice across without asking again. Checkout details migrate on read. Removing the fallbacks is `#1106`, due 30 days after production.
+  - `#1065`: a `?ref=` code is held in memory and written as `store_referral_code` (now `Secure`) only after **Accept All**, signalled by the banner's new `store-consent-change` event. Essential Only writes nothing and clears any referral cookie under either name. Until now the two banner buttons did exactly the same thing: nothing read the choice.
+  - `#1066`: live `Set-Cookie` headers on production and staging set no Cloudflare cookie, and the session cookie is `__Secure-better-auth.session_token`. Recorded on the issue.
+  - Deferred: `#1107` (saved checkout details are written without consent; the banner promises optional cookies that do not exist).
+
 - **A vendor with loyalty switched off no longer runs a referral scheme underneath it** (issues `#1101`, `#1034`; `specs/2026-10-15-p1101-referral-loyalty-off/`). `#1023` had hidden the referral UI only. No schema change, no migration, no new dependency.
   - Creation (`#1034`): `getRewardsDataForUser` returns straight after reading the config when `loyaltyEnabled` is false. Every signed-in render on such a vendor had created a live, redeemable £5 referral code and made three loyalty reads whose results were thrown away.
   - Redemption: `previewCode`/`claimCode` refuse a referral code (`referrerUserId` set) on a loyalty-off vendor with the new reason `REFERRALS_UNAVAILABLE` ("Referral codes can't be used at this store right now."). It outranks `OWN_REFERRAL_CODE`. Staff codes are untouched and cost no extra query. The unknown-code throttle doesn't count this refusal.
