@@ -1,7 +1,7 @@
 # Vendor-neutral browser storage keys, and a referral cookie that waits for consent (build notes)
 
 Build commit `1af4c6b` on `feature/p1080-1065-neutral-storage-keys`, cut from `origin/staging` at
-`17b9051`. Spec commit `95a5f5c`, KMS index `22df82f`. The branch is **not pushed** and has no PR yet.
+`17b9051`. Spec commit `95a5f5c`, KMS index `22df82f`. The branch is pushed to `origin` as a backup and has **no PR yet**.
 
 **Owner-queued work after this slice (2026-10-15).** It is recorded here and not in
 `docs/model-handoff.md`, because PR #1105 is rewriting the handoff, and editing it on this branch
