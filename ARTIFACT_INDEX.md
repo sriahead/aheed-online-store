@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-15T05:33:15.477Z` · commit `a81f30b` · `232` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-15T09:27:21.031Z` · commit `e72a94f` · `233` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -227,6 +227,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [P10 #1083/#1078/#1079 — Collection minimum, editable banner headline, honest referral copy (plan)](specs/2026-10-13-p1083-collection-minimum-banner-headline/plan.md) | spec | 1.0.0 | 2026-10-13 | draft | internal | Click & Collect gets its own vendor minimum (default none), the header banner headline becomes vendor-editable, and the referral copy stops promising a first-order rule. One additive migration. |
 | [Shopper clarity: delivery intent, skipped shop-list lines, privacy copy (plan)](specs/2026-10-14-p1087-1088-1089-shopper-clarity/plan.md) | spec | 1.0.0 | 2026-10-14 | draft | internal | Three storefront honesty defects from the owner's 2026-10-13 user-testing pass: entering a postcode from the Delivery affordance now selects Delivery without reverting #748, a skipped shop-list line is accounted for on /cart, and the privacy page leads with purpose instead of cookie names. |
 | [Departments show what they actually sell: hero spotlights and the banner prompt (plan)](specs/2026-10-14-p1096-1030-department-spotlights/plan.md) | spec | 1.0.0 | 2026-10-14 | draft | internal | Club B from the owner's 2026-10-13 user-testing pass: every homepage department panel gets a spotlight product drawn from the department and its subcategories, chosen fairly per department, and the AI campaign-banner prompt uses the vendor's own description instead of assuming a UK grocer. |
+| [A loyalty-off vendor stops running a referral scheme (plan)](specs/2026-10-15-p1101-referral-loyalty-off/plan.md) | spec | 1.0.0 | 2026-10-15 | draft | internal | With loyalty switched off, a vendor creates no referral codes, refuses existing ones at checkout and pays no referral bonus. Also fixes the signed-out referral box that rendered greyed out (triage item 16) and drops a leftover voucher promise. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.39.0 | 2026-10-06 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
