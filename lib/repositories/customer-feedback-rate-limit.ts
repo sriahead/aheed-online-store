@@ -1,4 +1,5 @@
 import type { getPrisma } from "@/lib/db";
+import { ATTEMPT_RECORD_RETENTION_HOURS } from "@/lib/data-retention";
 
 /**
  * Write throttle for customer feedback (P9.2, #818).
@@ -36,7 +37,7 @@ const MIN_EDIT_INTERVAL_MS = 60_000;
 // Retention only has to exceed WINDOW_MS. The probability is low so the extra deleteMany
 // does not add latency to every submission. `deleteMany` is safe on the HTTP adapter —
 // unlike updateMany/createMany — so no websocket client is needed here.
-const RETENTION_MS = 60 * 60 * 1000;
+const RETENTION_MS = ATTEMPT_RECORD_RETENTION_HOURS * 60 * 60 * 1000;
 const SWEEP_PROBABILITY = 0.01;
 
 export const FEEDBACK_RATE_LIMIT = {

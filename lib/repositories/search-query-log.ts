@@ -1,11 +1,12 @@
 import type { getPrisma } from "@/lib/db";
+import { SEARCH_QUERY_LOG_RETENTION_DAYS } from "@/lib/data-retention";
 
 // #565 (P2.6 slice 2) — every storefront search submission's outcome, vendor-scoped, no user
 // link (#570 — see prisma/schema.prisma's SearchQueryLog docstring for why). Retention only has
 // to outlast a staff monthly review; SWEEP_PROBABILITY is deliberately low so the sweep's extra
 // deleteMany doesn't add latency to every request — same shape as
 // lib/repositories/error-events.ts and lib/repositories/order-lookup-rate-limit.ts.
-const RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+const RETENTION_MS = SEARCH_QUERY_LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 const SWEEP_PROBABILITY = 0.01;
 const QUERY_MAX = 200;
 

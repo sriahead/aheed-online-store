@@ -1,4 +1,5 @@
 import type { getPrisma } from "@/lib/db";
+import { ATTEMPT_RECORD_RETENTION_HOURS } from "@/lib/data-retention";
 
 /**
  * Discount-code throttle (#988). The checkout's code checks answer "isn't recognised" for a code
@@ -23,7 +24,7 @@ type Db = ReturnType<typeof getPrisma>;
 
 export const DISCOUNT_CODE_WINDOW_MS = 60_000;
 export const MAX_UNKNOWN_DISCOUNT_CODES = 10;
-const RETENTION_MS = 60 * 60 * 1000;
+const RETENTION_MS = ATTEMPT_RECORD_RETENTION_HOURS * 60 * 60 * 1000;
 const SWEEP_PROBABILITY = 0.01;
 
 /** Lowercase hex SHA-256 of the caller's IP. */

@@ -6,6 +6,7 @@ import { footerPalette, footerStyle } from "@/lib/footer-palette";
 import { isDiallablePhone, isEmailAddress, telHref } from "@/lib/footer-contact-form";
 import { PAYMENT_BADGE_DETAILS } from "@/lib/payment-badges";
 import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
+import { CookieSettingsButton } from "@/components/consent/CookieSettingsButton";
 import { buildOpeningHoursView } from "@/lib/footer-hours";
 import { contactChannels } from "@/lib/contact-channels";
 import { FooterContactChannels } from "@/components/layout/FooterContactChannels";
@@ -297,6 +298,11 @@ export function StorefrontFooter({
             <Link href="/privacy#cookies" className={LINK}>
               Cookies
             </Link>
+            <span aria-hidden="true" className={SEPARATOR}>
+              ·
+            </span>
+            {/* #1107 — reopens the consent banner, so an answer can be changed. */}
+            <CookieSettingsButton className={LINK} />
           </nav>
 
           <div className="order-1 space-y-2 lg:order-3">

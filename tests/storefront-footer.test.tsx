@@ -206,3 +206,21 @@ describe("StorefrontFooter (#1055)", () => {
     expect(text).not.toMatch(/Company no\.|VAT|Powered by|Secure checkout|Get directions/);
   });
 });
+
+describe("StorefrontFooter Legal row (#1107 R12)", () => {
+  it("ends with a Cookie settings button after the three links", () => {
+    const footer = renderFooter(SEEDED);
+    const legal = within(footer).getByRole("navigation", { name: "Legal" });
+    const controls = [...legal.querySelectorAll("a, button")].map((el) => [
+      el.tagName,
+      el.textContent?.trim(),
+    ]);
+    expect(controls).toEqual([
+      ["A", "Terms"],
+      ["A", "Privacy"],
+      ["A", "Cookies"],
+      ["BUTTON", "Cookie settings"],
+    ]);
+    expect(legal.querySelectorAll('[aria-hidden="true"]')).toHaveLength(3);
+  });
+});
