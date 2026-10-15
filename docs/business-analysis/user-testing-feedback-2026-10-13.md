@@ -4,7 +4,7 @@ title: "User testing feedback — triage, 2026-10-13"
 audience: [dev, product]
 type: doc
 status: draft
-version: "1.2.0"
+version: "1.3.0"
 updated: 2026-10-15
 visibility: internal
 summary: "Owner user-testing feedback of 2026-10-13, 21 items, each traced to code or to live production evidence and sorted into already-handled, owner-configurable, code-change-needed and blocked. Carries a dated status register re-verifying every item after #1077 and #1083/#1078/#1079 shipped."
@@ -268,6 +268,9 @@ observed. The failure is on the Google side, and is one of two things:
 
 ### 16. "refer a friend CTA button is greyed"
 
+**Superseded 2026-10-15; see the status register's update.** The likely cause is the signed-out
+`ReferralCard` box's colours, fixed under `#1101`. The original note follows.
+
 **No disabled refer-a-friend button exists anywhere in the code.** The closest candidates are the
 `unavailable` branch of `components/rewards/ReferralCard.tsx:64` ("Your referral link isn't
 available right now" — it fires when the referral code can neither be read nor created, which is
@@ -293,6 +296,27 @@ this section and a bucket above disagree, this section is newer and wins.** The 
 kept for provenance, not as the plan — its slices 2 and 3 are now mostly shipped, so the live
 grouping is "Clubbing" at the end of this section.
 
+### Update — 2026-10-15 (supersedes the tables below where they disagree)
+
+- **Items 4, 21 and 6 are closed and in production** as `#1087`, `#1088` and `#1089` (PR #1092,
+  promoted by PR #1093, merge `c3327e4`). The "Remaining — no issue filed" table below still lists
+  them; that table was written before they were filed. Club A is done.
+- **Item 10 is closed and in production** as `#1096` (with `#1030`, promoted by PR #1099).
+- **Item 1b's "37 links" was a mis-count.** `components/staff/PanelNav.tsx` holds **two
+  role-dependent lists**: vendor staff see 13 links and store admins see 24. 13 + 24 = 37. The file
+  last changed on 2026-10-11, so nothing grew between 2026-10-13 and 2026-10-14. An admin sees 24, as
+  originally recorded.
+- **Item 16 now has a concrete cause, fixed under `#1101`** (still unconfirmed by the owner). The
+  signed-out branch of `components/rewards/ReferralCard.tsx` hardcoded its dark-card pair
+  (`bg-black/20` + `text-stone-300`). Both callers render it on a white card, so it showed at about
+  1.05:1 and looked like a disabled control. It is visible to any signed-out visitor who opens the
+  Rewards panel on a loyalty-on vendor. If the owner was **signed in** when they saw it, the cause is
+  elsewhere and the item reopens.
+- **`#1034` is folded into `#1101`.** It was not item 16's cause after all: it creates referral codes
+  on loyalty-off vendors, which a shopper never sees.
+- **Item 12.1 is filed as `#1103`** and parked, because nothing triggers it while only Aheed runs
+  referrals.
+
 ### Closed — in production, nothing left
 
 Items **1a, 2, 3, 5, 9, 11, 12a, 12b, 13, 14, 15, 17 (points half), 18, 19, 20**.
@@ -311,12 +335,12 @@ Items **1a, 2, 3, 5, 9, 11, 12a, 12b, 13, 14, 15, 17 (points half), 18, 19, 20**
 | **6** | Privacy page reads as "code base words" | `app/(storefront)/privacy/page.tsx:78-100` — seven `<code>`-styled storage names | P2 |
 | **12.1** | Referral economics are platform constants, not vendor data | `lib/referrals.ts:11-13` (£5 / 100 points / £20). **Confirmed there are no `VendorConfig` referral fields** — `prisma/schema.prisma` carries only the `DiscountCode` referral relations. Needs one additive migration plus every call site | P2 |
 | **1b** | Flat staff navigation | `components/staff/PanelNav.tsx` now renders **37** `<NavLink>`s, not the 24 recorded above — it grew between 2026-10-13 and 2026-10-14. Touches `PanelNav`, `app/(admin)/staff/page.tsx`, an operator guide and `tests/staff-nav-parity.test.ts` | P2 |
-| **10 (code half)** | Departments starved of spotlights | **Now filed as `#1096` and fixed on `staging` by PR #1097 (2026-10-15), awaiting promotion.** Evidence below is the pre-fix state: `lib/repositories/products.ts` had `SPOTLIGHT_ROWS_PER_CATEGORY = 4` and `take: categoryIds.length * 4` under a **global** `isFeatured desc, createdAt desc` order, and the `where` matched only the **direct** `categoryId` | P2 |
+| **10 (code half)** | Departments starved of spotlights | **Filed as `#1096`, fixed by PR #1097 and in production since PR #1099 (2026-10-15); closed.** Evidence below is the pre-fix state: `lib/repositories/products.ts` had `SPOTLIGHT_ROWS_PER_CATEGORY = 4` and `take: categoryIds.length * 4` under a **global** `isFeatured desc, createdAt desc` order, and the `where` matched only the **direct** `categoryId` | P2 |
 
 ### Remaining — issue already filed, all open as of 2026-10-14
 
 - **`#1080`** — the four `aheed_`-prefixed storage keys (the separate finding under item 6).
-- **`#1030`** — the campaign banner AI prompt hardcodes "UK grocery store"; the sibling of item 10. **Fixed on `staging` by PR #1097 (2026-10-15), awaiting promotion.**
+- **`#1030`** — the campaign banner AI prompt hardcodes "UK grocery store"; the sibling of item 10. **Fixed by PR #1097, in production since PR #1099 (2026-10-15); closed.**
 - **`#1034`** — a referral code is created on every signed-in render; the best candidate cause for
   item 16.
 - **`#1021`** (FAQ answers) and **`#1058`** (footer email, still `[YOUR EMAIL]` live) — owner

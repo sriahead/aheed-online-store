@@ -22,6 +22,11 @@ import { CheckoutPricingProvider } from "@/components/checkout/CheckoutPricing";
 // static prerendering — same reason as the other DB-backed storefront routes.
 import { cookies } from "next/headers";
 import { DELIVERY_POSTCODE_COOKIE } from "@/lib/delivery-cookie";
+import {
+  LEGACY_REFERRAL_COOKIE,
+  readCookieWithFallback,
+  REFERRAL_COOKIE,
+} from "@/lib/storage-keys";
 import { STORE_TIMEZONE } from "@/lib/local-datetime";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +50,11 @@ export default async function CheckoutPage() {
   const signedInUserId = (session?.user as { id?: string } | undefined)?.id ?? null;
 
   const initialPostcode = cookieStore.get(DELIVERY_POSTCODE_COOKIE)?.value ?? null;
-  const initialDiscountCode = cookieStore.get("aheed_referral_code")?.value ?? null;
+  const initialDiscountCode = readCookieWithFallback(
+    cookieStore,
+    REFERRAL_COOKIE,
+    LEGACY_REFERRAL_COOKIE,
+  );
 
   // #764 — a returning signed-in shopper is offered the addresses they have already confirmed,
   // rather than being made to retype one we hold. The service returns an empty list for a guest,

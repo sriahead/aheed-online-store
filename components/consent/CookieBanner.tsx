@@ -2,25 +2,47 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import {
+  browserCookieJar,
+  CONSENT_CHANGE_EVENT,
+  CONSENT_COOKIE,
+  expireBrowserCookie,
+  isConsentValue,
+  LEGACY_CONSENT_COOKIE,
+  type ConsentValue,
+} from "@/lib/storage-keys";
 
-const COOKIE_NAME = "aheed_cookie_consent";
 const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60;
+
+function writeConsent(value: ConsentValue) {
+  document.cookie = `${CONSENT_COOKIE}=${value}; max-age=${ONE_YEAR_SECONDS}; path=/; SameSite=Lax; Secure`;
+}
 
 export function CookieBanner() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Check if consent cookie exists
-    const hasConsent = document.cookie.split("; ").some((row) => row.startsWith(`${COOKIE_NAME}=`));
-    if (!hasConsent) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsVisible(true);
+    const jar = browserCookieJar();
+    if (jar.get(CONSENT_COOKIE)) return;
+
+    // #1080 — a choice made under the legacy name is carried across, so the rename does not ask
+    // anyone again. The new cookie gets a full year: a page script cannot read how long the old
+    // one had left. An unrecognised legacy value is no answer, so the banner shows.
+    const legacy = jar.get(LEGACY_CONSENT_COOKIE)?.value;
+    if (legacy !== undefined) expireBrowserCookie(LEGACY_CONSENT_COOKIE);
+    if (isConsentValue(legacy)) {
+      writeConsent(legacy);
+      return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsVisible(true);
   }, []);
 
-  const saveConsent = (value: "accepted" | "essential") => {
-    document.cookie = `${COOKIE_NAME}=${value}; max-age=${ONE_YEAR_SECONDS}; path=/; SameSite=Lax; Secure`;
+  const saveConsent = (value: ConsentValue) => {
+    writeConsent(value);
     setIsVisible(false);
+    // #1065 — RewardsLauncher holds a `?ref=` code in memory until this reports `accepted`.
+    window.dispatchEvent(new CustomEvent(CONSENT_CHANGE_EVENT, { detail: { value } }));
   };
 
   if (!isVisible) return null;

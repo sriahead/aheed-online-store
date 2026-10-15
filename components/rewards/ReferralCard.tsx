@@ -246,8 +246,14 @@ export function ReferralCard({
           </div>
         </div>
       ) : (
-        <div className="mt-4 rounded-xl bg-black/20 p-3 text-center text-xs">
-          <p className="text-stone-300">
+        // #1101 (triage item 16) — follows `variant` like every other branch here. It hardcoded the
+        // dark pair, so on the light card both callers render it read as a greyed-out control.
+        <div
+          className={`mt-4 rounded-xl p-3 text-center text-xs ${
+            isDark ? "bg-black/20" : "bg-surface-muted"
+          }`}
+        >
+          <p className={isDark ? "text-stone-300" : "text-primary"}>
             Sign in to your account to get your unique referral link.
           </p>
         </div>

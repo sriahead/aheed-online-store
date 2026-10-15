@@ -3,6 +3,15 @@
 import { useEffect, useState } from "react";
 import { Gift, X } from "lucide-react";
 import { RewardsPanel, type RewardsData } from "@/components/rewards/RewardsPanel";
+import {
+  CONSENT_CHANGE_EVENT,
+  expireBrowserCookie,
+  isConsentValue,
+  LEGACY_REFERRAL_COOKIE,
+  readBrowserConsent,
+  REFERRAL_COOKIE,
+  type ConsentValue,
+} from "@/lib/storage-keys";
 
 /**
  * `vendorName` comes from the storefront layout (`StorefrontChrome`) as a prop — CLAUDE.md rules
@@ -21,17 +30,35 @@ export function RewardsLauncher({
 
   const rewardsData = overrideData ?? initialData ?? null;
 
-  // Capture ?ref=... parameter from URL if present and persist in a cookie
+  // #1065 — a `?ref=` code is optional storage, not strictly necessary, so it is written only once
+  // the shopper has chosen Accept All. Until then it is held in memory (this effect's closure, not
+  // any browser storage). This component sits in the storefront layout, so a held code survives
+  // client-side navigation but not a full reload; a shopper who never accepts can still type it at
+  // checkout. Choosing Essential Only also clears a code written before this gate existed.
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const refCode = params.get("ref");
-      if (refCode && refCode.trim() !== "") {
-        document.cookie = `aheed_referral_code=${encodeURIComponent(
-          refCode.trim(),
-        )}; path=/; max-age=2592000; SameSite=Lax`;
+    const refCode = new URLSearchParams(window.location.search).get("ref")?.trim() || null;
+
+    const apply = (consent: ConsentValue | null) => {
+      if (consent === "essential") {
+        expireBrowserCookie(REFERRAL_COOKIE);
+        expireBrowserCookie(LEGACY_REFERRAL_COOKIE);
+      } else if (consent === "accepted" && refCode) {
+        document.cookie = `${REFERRAL_COOKIE}=${encodeURIComponent(
+          refCode,
+        )}; path=/; max-age=2592000; SameSite=Lax; Secure`;
       }
-    }
+    };
+
+    const current = readBrowserConsent();
+    apply(current);
+    if (current !== null) return;
+
+    const onConsent = (event: Event) => {
+      const value = (event as CustomEvent<{ value?: string }>).detail?.value;
+      if (isConsentValue(value)) apply(value);
+    };
+    window.addEventListener(CONSENT_CHANGE_EVENT, onConsent);
+    return () => window.removeEventListener(CONSENT_CHANGE_EVENT, onConsent);
   }, []);
 
   // Fetch rewards data when opened if not already present

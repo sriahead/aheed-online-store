@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.39.0"
-updated: 2026-10-06
+version: "1.40.0"
+updated: 2026-10-15
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -352,7 +352,7 @@ there.
 > family-cookie (SSO) path is config-gated behind an optional `AUTH_COOKIE_FAMILY_DOMAIN`, unset today
 > (no subdomain family exists). **The cart is vendor-scoped (P3a):** `Cart`/`CartItem` carry
 > `vendorId`, so one shopper has an independent cart per vendor. Cart identity is **exactly one of**
-> `userId` or an opaque `guestToken` in a host-only `aheed_cart` cookie, and carts are created lazily
+> `userId` or an opaque `guestToken` in a host-only `store_cart` cookie (#1080), and carts are created lazily
 > (first add only — crawling this public storefront writes nothing). A guest cart meeting a saved cart
 > is **never silently merged**: the shopper picks combine / keep-saved / keep-new, and the cookie is
 > cleared only once a resolution is applied. The cart stores **no prices** — unit price is read from

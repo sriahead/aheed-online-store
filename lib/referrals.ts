@@ -67,11 +67,17 @@ export function isSelfReferral(
  * redeemed code's `referrerUserId` foreign key (null for staff codes, and for a referral code whose
  * owner was erased); a shopper never earns a bonus from their own order. `confirmPayment` calls this
  * for exactly that decision, so it can be tested without a transaction.
+ *
+ * #1101 — and nobody at all on a vendor whose loyalty scheme is off: the referral bonus is loyalty
+ * points, so a loyalty-off vendor must not credit them. Required, not optional, so a future call
+ * site cannot get the old ungated answer by leaving it out.
  */
 export function referralBonusRecipient(
   referrerUserId: string | null | undefined,
   orderUserId: string | null,
+  loyaltyEnabled: boolean,
 ): string | null {
+  if (!loyaltyEnabled) return null;
   if (!referrerUserId) return null;
   return isSelfReferral(referrerUserId, orderUserId) ? null : referrerUserId;
 }

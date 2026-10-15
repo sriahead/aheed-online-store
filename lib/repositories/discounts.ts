@@ -7,6 +7,7 @@ import {
   type DiscountKind,
 } from "@/lib/discounts";
 import { isSelfReferral } from "@/lib/referrals";
+import { getLoyaltyConfig } from "@/lib/repositories/loyalty";
 
 /**
  * Discount-code read/write path (P5b, #145) — the ONLY DB access for codes.
@@ -102,6 +103,14 @@ export async function previewCode(
   // A code belonging to another vendor is indistinguishable from one that does
   // not exist — the vendor is in the lookup key, not checked afterwards.
   if (!row) return { ok: false, reason: "UNKNOWN" };
+
+  // #1101 — a referral code on a vendor whose loyalty scheme is off. The referral scheme is part of
+  // loyalty, so with it off nothing the shopper can do makes the code usable — including it being
+  // their own — and this outranks `OWN_REFERRAL_CODE` below. Read only for a referral code, so a
+  // staff code costs no extra query; a vendor with no config row falls back to loyalty off.
+  if (row.referrerUserId && !(await getLoyaltyConfig(db, vendorId)).loyaltyEnabled) {
+    return { ok: false, reason: "REFERRALS_UNAVAILABLE" };
+  }
 
   // #972 — a shopper's own referral code. Checked before `evaluateCode` because nothing the
   // shopper can do fixes it, so it outranks every other reason. #987 — the owner is the row's
