@@ -92,7 +92,7 @@ export default async function LoyaltyPage() {
 
       <h1 className="mb-1 text-2xl font-semibold text-primary">Loyalty & Rewards</h1>
       <p className="mb-6 text-sm text-primary-muted">
-        Earn points on every order you pay for, unlock vouchers, and refer friends.
+        Earn points on every order you pay for, spend them at checkout, and refer friends.
       </p>
 
       {/* Hero Points Card */}
@@ -162,7 +162,7 @@ export default async function LoyaltyPage() {
         )}
       </section>
 
-      {/* Available Rewards Vouchers */}
+      {/* Available Rewards */}
       <section className="mb-6">
         <AvailableRewardsSection
           balancePoints={balance.balancePoints}

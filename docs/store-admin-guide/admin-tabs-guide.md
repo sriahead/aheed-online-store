@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.13.0"
-updated: "2026-10-13"
+version: "2.14.0"
+updated: "2026-10-15"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -59,8 +59,8 @@ customers.
 
 **Who can access:** Store admins only
 
-**What you can do:** Set the earn rate, set the redemption value, and define tiers with spend
-thresholds and point multipliers.
+**What you can do:** Switch your loyalty scheme on or off, set the earn rate, set the redemption
+value, and define tiers with spend thresholds and point multipliers.
 
 **Typical workflow:** You set this up once and revisit it rarely. Decide how many points a pound
 earns, what a point is worth when spent, then add tiers such as Silver and Gold with the spend needed
@@ -70,7 +70,10 @@ to reach each and the multiplier it grants.
 what the scheme costs you. Tier thresholds are measured on customer spend; the multiplier applies to
 points earned once a customer is in that tier.
 
-**Common mistakes and limitations:** Changing the redemption value changes what **already-earned**
+**Common mistakes and limitations:** Referrals are part of your loyalty scheme. Switching loyalty
+off also switches off referrals: shoppers' referral links stop working at checkout and no referral
+bonus is paid. Existing balances and referral codes are kept, not deleted, so switching loyalty back
+on makes those links work again. Changing the redemption value changes what **already-earned**
 points are worth, not just future ones — customers holding a balance are affected immediately, so
 treat a reduction carefully. The Reports page shows your outstanding points liability, which is worth
 reading before you raise the earn rate.

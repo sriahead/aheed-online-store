@@ -55,10 +55,16 @@ describe("referral rules and helpers", () => {
 
   // #987 R14 — who earns the referral bonus, decided from the code's referrerUserId FK.
   it("credits the code's owner, never the ordering shopper, and nobody for an ownerless code", () => {
-    expect(referralBonusRecipient("owner-1", "buyer-2")).toBe("owner-1");
-    expect(referralBonusRecipient(null, "buyer-2")).toBeNull();
-    expect(referralBonusRecipient(undefined, "buyer-2")).toBeNull();
-    expect(referralBonusRecipient("owner-1", "owner-1")).toBeNull();
+    expect(referralBonusRecipient("owner-1", "buyer-2", true)).toBe("owner-1");
+    expect(referralBonusRecipient(null, "buyer-2", true)).toBeNull();
+    expect(referralBonusRecipient(undefined, "buyer-2", true)).toBeNull();
+    expect(referralBonusRecipient("owner-1", "owner-1", true)).toBeNull();
+  });
+
+  // #1101 R12 — a loyalty-off vendor credits nobody, even for a valid, non-self referral.
+  it("credits nobody when the vendor's loyalty scheme is off", () => {
+    expect(referralBonusRecipient("owner-1", "buyer-2", false)).toBeNull();
+    expect(referralBonusRecipient("owner-1", null, false)).toBeNull();
   });
 
   it("builds clean referral URLs", () => {

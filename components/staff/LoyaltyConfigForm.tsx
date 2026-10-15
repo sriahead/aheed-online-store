@@ -77,8 +77,9 @@ export function LoyaltyConfigForm({
             </span>
           </label>
           <p className="text-xs text-primary-muted">
-            Turning this off hides points from checkout and the account area. Existing balances are
-            kept, not deleted.
+            Turning this off hides points from checkout and the account area, and switches off
+            referrals: shoppers&apos; referral links stop working and no referral bonus is paid.
+            Existing balances and referral codes are kept, not deleted.
           </p>
         </section>
 

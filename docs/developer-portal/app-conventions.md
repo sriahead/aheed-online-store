@@ -4,8 +4,8 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.9.0"
-updated: 2026-10-14
+version: "1.10.0"
+updated: 2026-10-15
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, the fulfilment-method preference, form-field autocomplete tokens and React hooks — with the tests that enforce each invariant mechanically.
 tags: [conventions, repositories, server-actions, staff-panel]
@@ -282,6 +282,13 @@ store's staff reads must be right for **any** vendor.
     gated on `loyaltyEnabled`; the page *describing* the feature did not, so the one surface a
     shopper reads before buying was the one that lied. When adding a vendor feature flag, grep for
     prose about the feature, not just for its controls.
+  - **A flag that hides a feature must also stop its side effects (`#1101`).** `#1023` hid the
+    Rewards launcher and `/account/loyalty` when `loyaltyEnabled` was false, and the referral scheme
+    kept running underneath: every signed-in render created a redeemable referral code, checkout
+    accepted those codes, and `confirmPayment` paid the referral bonus. A UI gate proves nothing
+    about the server. Find every place the feature **writes** (rows created on read, codes accepted,
+    rewards paid) and gate each on the same flag. Put the gate in the service or repository that
+    acts, not in the component that renders.
   - **Money with per-area overrides is resolved, never read.** Go through
     `resolveDeliveryRules` (`lib/delivery-pricing.ts`); a `VendorDeliveryArea` row may override the
     fee, minimum and threshold independently and a district row beats an area row (`#890`), so a

@@ -37,6 +37,11 @@ export type CodeRefusalReason =
    */
   | "OWN_REFERRAL_CODE"
   /**
+   * #1101 — a referral code (`referrerUserId` set) on a vendor whose loyalty scheme is off, which
+   * means its referral scheme is off too. Decided by the repository, never by `evaluateCode`.
+   */
+  | "REFERRALS_UNAVAILABLE"
+  /**
    * #988 — this caller has tried too many codes that do not exist, so the code was not looked up
    * at all. Decided by the discount-code throttle at the checkout's two entry points, never by
    * `evaluateCode` or the repository.
@@ -183,6 +188,8 @@ export function refusalMessage(reason: CodeRefusalReason): string {
       return "That discount code can't be applied to this order.";
     case "OWN_REFERRAL_CODE":
       return "You can't use your own referral code.";
+    case "REFERRALS_UNAVAILABLE":
+      return "Referral codes can't be used at this store right now.";
     case "TOO_MANY_ATTEMPTS":
       return "Too many code attempts. Please try again in a minute.";
   }

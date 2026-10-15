@@ -240,6 +240,37 @@ describe("ReferralCard", () => {
       expect(screen.getAllByRole("link", { name: /share referral link/i })).toHaveLength(3);
     });
   });
+
+  /**
+   * #1101 R14 (triage item 16) — the signed-out box follows `variant`. It hardcoded the dark pair
+   * (`bg-black/20` + `text-stone-300`), so on the light card both callers use it rendered at roughly
+   * 1.05:1 and read as a greyed-out control.
+   */
+  it.each([
+    ["light", "bg-surface-muted", "text-primary"],
+    ["dark", "bg-black/20", "text-stone-300"],
+  ] as const)("signed-out box uses the %s pair (R14)", (variant, bg, text) => {
+    render(
+      <ReferralCard
+        referralUrl=""
+        referralCode=""
+        completedCount={0}
+        discountOffPence={500}
+        rewardPoints={100}
+        variant={variant}
+        authenticated={false}
+        storeName="Test Store"
+      />,
+    );
+    const sentence = screen.getByText("Sign in to your account to get your unique referral link.");
+    const box = sentence.parentElement as HTMLElement;
+    expect(sentence.className.split(/\s+/)).toContain(text);
+    expect(box.className.split(/\s+/)).toContain(bg);
+    if (variant === "light") {
+      expect(sentence.className).not.toContain("text-stone-300");
+      expect(box.className).not.toContain("bg-black/20");
+    }
+  });
 });
 
 describe("RewardsPanel", () => {
