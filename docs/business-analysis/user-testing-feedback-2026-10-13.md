@@ -4,7 +4,7 @@ title: "User testing feedback — triage, 2026-10-13"
 audience: [dev, product]
 type: doc
 status: draft
-version: "1.3.0"
+version: "1.4.0"
 updated: 2026-10-15
 visibility: internal
 summary: "Owner user-testing feedback of 2026-10-13, 21 items, each traced to code or to live production evidence and sorted into already-handled, owner-configurable, code-change-needed and blocked. Carries a dated status register re-verifying every item after #1077 and #1083/#1078/#1079 shipped."
@@ -368,3 +368,19 @@ Items **1a, 2, 3, 5, 9, 11, 12a, 12b, 13, 14, 15, 17 (points half), 18, 19, 20**
 - **Deliberately alone:** **12.1** (the only remaining item needing a migration), **1b** (three
   test-enforced surfaces), **`#1080`** (renaming the keys drops every live cart and consent record,
   so it needs a migration plan rather than a rename).
+
+### Backlog clubbing — 2026-10-15 (wider than this triage)
+
+Grouped from the files each open issue's own body names, at the 2026-10-15 Orient; not re-read
+against the code, so each club's overlap is confirmed at its own Gate 1. **Club B above is in
+production** (PR #1099), and `#1080`/`#1065` shipped by PR #1109. This list now covers the open
+backlog that grew out of this pass and its neighbours, not only the 21 items.
+
+| Club | Issues | Shared surface | Gate before build |
+| --- | --- | --- | --- |
+| **C — privacy and consent honesty** | `#1107` + `#1041` | `app/(storefront)/privacy/page.tsx`, `CookieBanner.tsx`, `CheckoutForm.tsx` / `lib/checkout-details-storage.ts` | **Gate 1, 2026-10-15 — owner rulings:** saved checkout details stay essential (no consent gate); all seven hashed-IP records get disclosed, not only the search log; a "Cookie settings" control is in scope. |
+| D — AI allowance visible to staff | `#1029` + `#1031` | staff AI-usage surface, `BackfillImagesButton.tsx` | `#1028` (Workers Free or Paid) decides the copy; a new `/staff/*` page lands on three surfaces |
+| E — shopper copy that contradicts the system | `#1045` + `#1043` | `/help`, `lib/assistant-content.ts`, `/orders/lookup` | None; copy only |
+| F — `#1088` follow-ups | `#1090` + `#1091` | `ListReview.tsx` / `add-list-to-cart.ts`; `LocationControl.tsx` | None; no shared files, batched for efficiency only |
+| Owner-gated or later | `#1057`+`#1061`+`#1062` (opening-hours model, likely one migration); `#1071`+`#1072`+`#1073` (brand assets, `#1072` needs artwork); `#1103`+`#1102` (referral economics, parked); `#1056`+`#1058` (footer pages, owner content) | — | Owner input or a date |
+| Alone | 1b (staff nav, unfiled), `#1027` (model switch), `#1106` (due ~2026-11-14) | — | — |
