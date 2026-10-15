@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { computeAccessibleName } from "dom-accessibility-api";
 import { CookieBanner } from "@/components/consent/CookieBanner";
+import { CONSENT_COOKIE, LEGACY_CONSENT_COOKIE } from "@/lib/storage-keys";
 
 /**
  * Proves R5 (#251, P7 closeout) for the consent banner, and pins the one
@@ -18,7 +19,8 @@ import { CookieBanner } from "@/components/consent/CookieBanner";
 
 beforeEach(() => {
   // The banner renders only when no consent cookie is present.
-  document.cookie = "aheed_cookie_consent=; max-age=0; path=/";
+  document.cookie = `${CONSENT_COOKIE}=; max-age=0; path=/`;
+  document.cookie = `${LEGACY_CONSENT_COOKIE}=; max-age=0; path=/`;
 });
 afterEach(cleanup);
 

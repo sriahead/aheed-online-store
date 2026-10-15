@@ -16,6 +16,7 @@ import {
   type CheckoutSectionKey,
 } from "@/lib/checkout-sections";
 import { SlotPicker } from "./SlotPicker";
+import { readCheckoutDetails, writeCheckoutDetails } from "@/lib/checkout-details-storage";
 
 /**
  * Checkout form (P3b, #96), following docs/ui-ref/CheckoutModal.tsx's structure —
@@ -279,7 +280,7 @@ export function CheckoutForm({
   }, [initialPostcode]);
 
   useEffect(() => {
-    const saved = localStorage.getItem("aheed_checkout_details");
+    const saved = readCheckoutDetails(localStorage);
     if (saved) {
       try {
         const details = JSON.parse(saved);
@@ -329,7 +330,7 @@ export function CheckoutForm({
     // from here either: the cookie is the single source of truth, and a stale
     // localStorage copy would fight it on the next visit.
     delete details.fulfilmentMethod;
-    localStorage.setItem("aheed_checkout_details", JSON.stringify(details));
+    writeCheckoutDetails(localStorage, JSON.stringify(details));
   };
 
   return (

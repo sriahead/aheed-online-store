@@ -4,7 +4,7 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.10.0"
+version: "1.11.0"
 updated: 2026-10-15
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, the fulfilment-method preference, form-field autocomplete tokens and React hooks — with the tests that enforce each invariant mechanically.
@@ -267,6 +267,13 @@ store's staff reads must be right for **any** vendor.
   learns what the shop sells: every prompt builder takes it as a **required** `string | null` and
   inserts it through `storeDescriptionPromptLine` (quoted, one line, capped); `null` means neutral
   wording, never a grocery default.
+- **Browser storage names are vendor-neutral too (`#1080`).** Every cookie and `localStorage` key
+  the storefront owns is defined once in `lib/storage-keys.ts`, and the privacy page renders the
+  names from those constants. A vendor-prefixed name (`aheed_cart`) put one vendor's name on every
+  vendor's privacy page. A storage item that is **not strictly necessary** is written only after the
+  shopper chooses **Accept All** (`#1065`, the referral cookie), and the privacy page names it as
+  optional. Renaming an existing key needs a compatibility window, because the name is the lookup
+  key: see that module's comment.
 - **Example values come from the vendor's own data**, not one vendor's geography: the delivery-area
   admin's examples are built from the store postcode or its first delivery area
   (`lib/delivery-area-examples.ts`), and `/help` names the vendor's `localityName`. With no data,

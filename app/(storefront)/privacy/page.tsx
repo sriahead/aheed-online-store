@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import {
+  CART_COOKIE,
+  CHECKOUT_DETAILS_KEY,
+  CONSENT_COOKIE,
+  REFERRAL_COOKIE,
+} from "@/lib/storage-keys";
 
 export const dynamic = "force-dynamic";
 
@@ -64,8 +70,9 @@ export default async function PrivacyPage() {
           <p className="text-sm text-primary-muted leading-relaxed">
             We use cookies and local storage technologies to support essential website
             functionality, including user authentication, shopping cart management, delivery and
-            collection preferences, checkout convenience, referral links, and the storage of cookie
-            consent preferences.
+            collection preferences, checkout convenience, and the storage of cookie consent
+            preferences. One optional cookie remembers a referral code, and it is set only if you
+            choose Accept All.
           </p>
           <p className="text-sm text-primary-muted leading-relaxed">
             The following cookies and local storage items are used for these purposes:
@@ -79,7 +86,12 @@ export default async function PrivacyPage() {
               every one of them: naming the cookie is the transparency a shopper is owed under PECR
               and the UK GDPR, so dropping them would trade one defect for another. They are
               presented as what they are — an identifier you would see in your browser — rather
-              than as the heading of each entry. */}
+              than as the heading of each entry.
+
+              #1080 — the four names the storefront owns render from `lib/storage-keys.ts`, so a
+              rename cannot leave this list wrong, and only the current names are listed: naming
+              the pre-#1080 ones would put another vendor's name back on this page. #1065 — the
+              referral cookie is optional, written only after Accept All. */}
           <ul className="list-disc space-y-1.5 pl-5 text-sm text-primary-muted leading-relaxed">
             <li>
               Keeps you signed in.{" "}
@@ -91,14 +103,13 @@ export default async function PrivacyPage() {
             <li>
               Keeps the items in your basket.{" "}
               <span>
-                Shown in your browser as <span className="font-semibold">aheed_cart</span>.
+                Shown in your browser as <span className="font-semibold">{CART_COOKIE}</span>.
               </span>
             </li>
             <li>
               Remembers your cookie choices.{" "}
               <span>
-                Shown in your browser as <span className="font-semibold">aheed_cookie_consent</span>
-                .
+                Shown in your browser as <span className="font-semibold">{CONSENT_COOKIE}</span>.
               </span>
             </li>
             <li>
@@ -115,9 +126,9 @@ export default async function PrivacyPage() {
             </li>
             <li>
               Remembers a referral code from a link you followed, so it can be applied at checkout.
-              Only set if you arrive through a referral link.{" "}
+              Optional: set only if you arrive through a referral link and choose Accept All.{" "}
               <span>
-                Shown in your browser as <span className="font-semibold">aheed_referral_code</span>.
+                Shown in your browser as <span className="font-semibold">{REFERRAL_COOKIE}</span>.
               </span>
             </li>
             <li>
@@ -125,13 +136,13 @@ export default async function PrivacyPage() {
               next time. Stored on your device, not on our servers.{" "}
               <span>
                 Shown in your browser as{" "}
-                <span className="font-semibold">aheed_checkout_details</span>.
+                <span className="font-semibold">{CHECKOUT_DETAILS_KEY}</span>.
               </span>
             </li>
           </ul>
           <p className="text-sm text-primary-muted leading-relaxed">
-            These cookies and local storage items are scoped to the relevant host and are used to
-            provide core website functionality.
+            These cookies and local storage items are scoped to the relevant host. All of them
+            except the referral cookie are used to provide core website functionality.
           </p>
         </section>
 
