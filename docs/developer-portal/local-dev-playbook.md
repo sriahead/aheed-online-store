@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.27.0"
-updated: 2026-10-14
+version: "1.28.0"
+updated: 2026-10-15
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -429,6 +429,21 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   vendor's row in the dev database, and the write side by submitting the same action as the vendor
   you *can* sign in as. Report the second vendor's own-UI save as unverified rather than counting
   it. Reset the dev row to its default first: the previous run's value is still there.
+- **Signing in locally on `srimart.localhost:8787` does work, but only with the right protocol
+  header — the bullet above is about a made-up alias, not this seeded host.** Hit at `#1101`'s
+  `/validate` (2026-10-15): `curl -H "Host: srimart.localhost:8787" -H "Origin: http://srimart.localhost:8787"`
+  against `127.0.0.1:8787/api/auth/sign-in/email` returned `403 INVALID_ORIGIN` until the request
+  also carried `-H "x-forwarded-proto: http"`. `resolveAuthOrigin` infers `https` for any
+  non-loopback host without it, so the trusted origin never matched the `http` one sent. With the
+  header the sign-in returns 200 and a `better-auth.session_token` in `Set-Cookie`; send that value
+  back as `-H "Cookie: ..."` plus the same `x-forwarded-proto: http` on every page request. Two
+  more traps in the same drive: the Better Auth rate limiter answers `429` after a few attempts
+  (about 30 seconds clears it, so a retry loop with a `sleep 30` beats trying origin variants), and
+  Git Bash rewrites a bare `"/"` argument into `C:/Program Files/Git/` unless
+  `MSYS_NO_POSIX_PATHCONV=1` is set.
+  This relaxes the "cannot sign in as a second vendor locally" limit in the bullet above for the
+  seeded SriMart host; it was measured here for a customer account only, so a second vendor's
+  admin sign-in is likely but not yet proven.
 - **A `grep` pattern written against a literal string (e.g. a doc title containing `&`) can silently
   false-negative against a page's real, rendered HTML, because HTML-escapes it as `&amp;` — and a
   `validation.md` row's own example command is not exempt from this.** Hit at `#633`'s `/validate`

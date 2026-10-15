@@ -4,7 +4,7 @@ title: "User testing feedback — triage, 2026-10-13"
 audience: [dev, product]
 type: doc
 status: draft
-version: "1.3.0"
+version: "1.3.1"
 updated: 2026-10-15
 visibility: internal
 summary: "Owner user-testing feedback of 2026-10-13, 21 items, each traced to code or to live production evidence and sorted into already-handled, owner-configurable, code-change-needed and blocked. Carries a dated status register re-verifying every item after #1077 and #1083/#1078/#1079 shipped."
@@ -306,7 +306,7 @@ grouping is "Clubbing" at the end of this section.
   role-dependent lists**: vendor staff see 13 links and store admins see 24. 13 + 24 = 37. The file
   last changed on 2026-10-11, so nothing grew between 2026-10-13 and 2026-10-14. An admin sees 24, as
   originally recorded.
-- **Item 16 now has a concrete cause, fixed under `#1101`** (still unconfirmed by the owner). The
+- **Item 16 now has a concrete cause, fixed under `#1101`** (merged to `staging` as PR #1104, 2026-10-15; In Review until promoted; still unconfirmed by the owner). The
   signed-out branch of `components/rewards/ReferralCard.tsx` hardcoded its dark-card pair
   (`bg-black/20` + `text-stone-300`). Both callers render it on a white card, so it showed at about
   1.05:1 and looked like a disabled control. It is visible to any signed-out visitor who opens the

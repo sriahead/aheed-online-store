@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.103.0"
+version: "1.104.0"
 updated: 2026-10-15
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -50,8 +50,10 @@ reconciliation. If overall project state did not materially change, leave this f
   `closingIssuesReferences` listed exactly `[1030, 1096]`; both closed and `Done`, the only issues
   closed since the merge. **Verified live in production beyond the health check:** Aheed's homepage
   carousel names all 13 departments and SriMart's both of its 2, with zero `Browse the full range.`
-  fallbacks. **`origin/main` and `origin/staging` are level** apart from this promotion record's
-  own docs PR. Not a phase closure (`P10` stays open).
+  fallbacks. **`origin/staging` is one PR ahead of `main`:** PR #1104 (`#1101`/`#1034`, merge
+  `17b9051`, `specs/2026-10-15-p1101-referral-loyalty-off/`) is on `staging` only, with
+  `deploy-staging` success and both issues In Review; its promotion PR is outstanding. Not a phase
+  closure (`P10` stays open).
   - **`#901` still shows `In Progress` on the board** although its stated pause (pending `#928`)
     lifted when `#928` closed on 2026-09-28. It is an owner-run production pilot, so its status is
     the owner's to set — do not read it as live engineering work.
