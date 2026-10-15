@@ -8,6 +8,8 @@ every branch merges.
 
 ### Fixed
 
+- **Promotion record for `#1096`, `#1030` (promoted to production by PR #1099, merge `3b94f8f`, 2026-10-15).** Docs only. `specs/roadmap.md` 1.153.0 amends the slice's change-log row to cite the promotion, which `sdd:audit` checks, with the production deploy, health and closing-issue evidence and the live homepage check (13 Aheed and 2 SriMart departments, no fallback). `docs/model-handoff.md` 1.103.0 moves Last Verified to `3b94f8f` and notes that `#901`'s `In Progress` board status outlived its pause. The 2026-10-13 triage doc marks item 10's code half and `#1030` as in production.
+
 - **Document pass for `#1096`, `#1030` (merged to `staging` by PR #1097, merge `07128a8`; not yet promoted).** Docs only. `specs/roadmap.md` 1.152.0 gains the change-log row for the staging merge, which `sdd:audit` checks, and records the two limits Validate found (the local `#1037` vitest timeout flake, and R11's fallback count being 0 against 0 on dev data). `docs/model-handoff.md` 1.102.0 replaces the stale "`origin/main` and `origin/staging` are level" claim with the real state (`staging` at `07128a8`, three PRs ahead of `main` at `c3327e4`) and removes the spotlight starvation from its "found, NOT filed" list. `docs/business-analysis/user-testing-feedback-2026-10-13.md` 1.2.0 marks item 10's code half and `#1030` as fixed on `staging`. KMS index regenerated.
 
 - **Every homepage department now spotlights one of its own products, and AI campaign banners are prompted as the vendor's own shop** (issues `#1096`, `#1030`; `specs/2026-10-14-p1096-1030-department-spotlights/`). "Club B" from the 2026-10-13 owner testing pass (item 10's code half, plus its sibling). No schema change, no migration, no new dependency.
