@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.105.0"
+version: "1.106.0"
 updated: 2026-10-16
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,8 +39,17 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-10-16 (re-verified at the PR #1118 / PR #1120 roadmap-and-handoff reconciliation).
-- **`main` is at `6ec8142`**, the PR #1118 promotion (`staging -> main`, 2026-10-16): the honest
+- **Date:** 2026-10-16 (re-verified at the `#1119` credential reset; previously at the PR #1118 /
+  PR #1120 roadmap-and-handoff reconciliation).
+- **`main` is at `763bf37`**, the PR #1122 promotion ("Promote docs to main", `staging -> main`,
+  2026-10-16) — **documentation and CI-comment only**, no code, schema, migration or dependency
+  change. It carried PR #1120 (`76accba`) and PR #1121 (`cc7ec43` + `5c3c553`). It closed **no**
+  issues, deliberately: `closingIssuesReferences` was empty because every issue involved had
+  already closed and `#1119`/`#1116` had to stay open, confirmed by a sweep of every issue closed
+  that day. Production `/api/health` (Aheed **and** SriMart) serves `763bf37`, `db.ok: true`.
+  `origin/main` and `origin/staging` are **level** (`git log origin/main..origin/staging` empty),
+  so there is no unpromoted work on `staging`.
+- **Previous promotion: `6ec8142`**, PR #1118 (`staging -> main`, 2026-10-16): the honest
   consent banner, cookie settings and hashed-IP disclosure (`#1107`/`#1041`, PR #1114, merge
   `cc46827`), carrying PR #1117 (merge `29ab582`, that slice's own Document pass);
   `specs/2026-10-15-p1107-1041-privacy-consent/`. No schema change, no migration.
@@ -56,20 +65,48 @@ reconciliation. If overall project state did not materially change, leave this f
   `P10`/Backlog: a `validation.md` wording defect (R22 says "axe", which this repo has no test
   dependency for). PR #1118's "row pending carry-forward" flag from `sdd:audit` is **resolved** —
   recorded in `specs/roadmap.md`'s change log here.
-  - **`reference.drift: false` is NOT evidence of health. Stop citing it.** This Orient measured
-    `configured: true, reachable: false, sources: []` on staging **and** production, and
-    `/api/address/lookup?postcode=MK10 0AA` returning `UNVERIFIED` with no coordinates — where the
-    PR #775 record below has that same postcode returning `DELIVERABLE` with real coordinates.
-    `emptyStatus()` (`lib/reference/reference-status-service.ts:66`) hardcodes `drift: false`
-    beside an empty `sources`, so "compared, no drift" and "never asked" are indistinguishable, and
-    every promotion record since PR #775 has cited a vacuous figure. Root cause **proven** for the
-    staging/dev project (`ep-wild-violet-zaa9udu5`): `password authentication failed for user
-    'neondb_owner'`. Production points at a **different** Neon project (`ep-summer-boat-zapzp2t9`)
-    and is unreachable for a cause that is **not** proven. Address autofill degrades safely
-    (`deliverable: true`, `manualEntryAvailable: true`), so no shopper is misinformed. Filed as
-    **`#1119`** (Backlog, `P10`), which also carries the owner's Neon/secret-store steps. **Assert
-    `reference.reachable === true` in future records, not `drift === false`.**
-  - **`origin/staging` is one docs PR ahead of `main`:** PR #1120 (merge `76c1ecb`, commit
+  - **`reference.drift: false` is NOT evidence of health. Stop citing it.** The rule stands even
+    though the outage behind it is fixed, because the vacuous reading returns the moment the
+    database is unreachable again. `emptyStatus()`
+    (`lib/reference/reference-status-service.ts:66`) hardcodes `drift: false` beside an empty
+    `sources`, so "compared, no drift" and "never asked" are indistinguishable, and every promotion
+    record from PR #775 until this one cited that figure while the database was unreachable.
+    **Assert `reference.reachable === true` AND a non-empty `sources`, never `drift === false`.**
+    **`#1119` stays open** for its two repository items (honest `drift`; the promotion-checklist
+    assertion) — the credential half is done.
+  - **The reference database is RESOLVED and address lookup is live again (2026-10-16).** Earlier
+    the same day this Orient measured `configured: true, reachable: false, sources: []` on staging
+    **and** production with `password authentication failed for user 'neondb_owner'` proven
+    locally. The owner reset the credential and repointed all four env files at **one** endpoint —
+    staging/dev and production previously used *separate* Neon projects
+    (`ep-wild-violet-zaa9udu5`, `ep-summer-boat-zapzp2t9`) and now share one. Verified
+    byte-identical across all eight slots (two keys x four files);
+    `scripts/verify-reference-coverage.ts` exits `0` (MK 16,215 postcodes / 9,989 places, RG
+    23,816 / 13,483, both datasets `SUCCEEDED`, `missing=[]`). **Measured live on all four vendor
+    hosts, not inferred from the secret change:** `reference.reachable: true` with two populated
+    `sources` on staging and production, and `/api/address/lookup?postcode=MK10 0AA` returning
+    `DELIVERABLE` with coordinates `52.031738, -0.687` and two street suggestions on both Aheed
+    hosts — the PR #775 known-good state, with `UNVERIFIED` gone everywhere. SriMart returns
+    `valid: true` with the same coordinates but `OUTSIDE_DELIVERY_AREA`: the per-vendor delivery
+    rule working (ADR-004), **not** a reference failure.
+  - **The replacement endpoint is a read REPLICA, so the write path is broken on a timer —
+    `#1123`.** `pg_is_in_recovery()` is `true` there, and `UK_LOCATION_REF_DIRECT_URL` is what
+    `ref:migrate` and the bulk import write through, so the `0 4 3 * *` sync fails from
+    **2026-11-03** until that key points at the **primary** (un-pooled, no `-pooler`). **No code
+    change is needed:** `prisma/reference/schema.prisma` and `lib/config.ts:222` already split
+    pooled-runtime from direct-write, and `lib/reference-db.ts` reads only the pooled key over
+    `PrismaNeonHttp` with zero writes anywhere in `lib/reference/` — a replica suits the runtime
+    path exactly. The owner must read the primary's URL from the Neon dashboard; the GitHub
+    environment secret was deliberately **left unchanged**, because it is write-only and
+    overwriting it would destroy the last stored record of the previous primary.
+  - **These Workers use versioned deploys, which changes how a secret rotation works.**
+    `wrangler secret put` **refuses** while an undeployed version exists — "the latest version of
+    your Worker isn't currently deployed" — so it reads as a secrets problem when it is a
+    deployment one. A dashboard secret edit creates a version without deploying it; finish with
+    `wrangler versions deploy <id> --env <env>`, which ships the waiting version's credential with
+    no code change. Production hit the first path and staging the second on 2026-10-16.
+  - **PR #1120 has since reached `main` inside the PR #1122 promotion, so `staging` is no longer
+    ahead:** PR #1120 (merge `76c1ecb`, commit
     `76accba`, 2026-10-16) carried the SriMart local sign-in note out of the stale PR #1105, which
     is now **closed** as superseded by PR #1110. `docs/developer-portal/local-dev-playbook.md`
     1.28.0 holds the note (`x-forwarded-proto: http` against `403 INVALID_ORIGIN`, because
@@ -78,7 +115,10 @@ reconciliation. If overall project state did not materially change, leave this f
     customer account only — a second vendor's **admin** sign-in stays unproven. Read live on the
     internal docs site at `/dev/runbook/local-dev-playbook`. The owner question this file carried
     from 2026-10-15 ("closing it and carrying the note forward") is therefore **answered and closed
-    out**. The unmerged branch `docs/p1101-1034-document` is deliberately left in place.
+    out**. `docs/p1101-1034-document` is **gone**: the 2026-10-16 `/prune-branches` run found it
+    merged after all and deleted it, so the earlier note here calling it unmerged was wrong. That
+    run took branches from 56/55 to **local 18, origin 17**, below the reminder threshold, and left
+    all five REVIEW entries untouched.
 - **Previous promotion, `dac5a3d`**, the PR #1111 promotion (`staging -> main`, 2026-10-15),
   carrying the PR #1110 promotion-record docs. Its predecessor **`7a99caf`** (PR #1109,
   2026-10-15) promoted vendor-neutral storage keys and the consent-gated referral cookie
@@ -459,7 +499,7 @@ this exposed. `docs/developer-portal/env-setup.md` now carries both halves (move
 `#783` — staging and production still share one Cloudflare API token, which was `#219` step 3 and
 became untracked when that issue closed.
 
-## A second database now exists: `uk-location-reference` (#764, shipped to staging 2026-09-16)
+## A second database now exists: `uk-location-reference` (#764, in production; one shared endpoint since 2026-10-16)
 
 **This is the fact a fresh session is most likely to be missing.** The application now reads from
 **two** Neon projects.
@@ -496,20 +536,35 @@ the schedule, and deletes each area's coverage row before its data rows so the a
 only, left from proving the expansion path, and that was not harmless: its coverage row made the
 service an authority on Luton while nothing would ever refresh it.
 
-**The monthly sync cannot run yet.** `.github/workflows/sync-reference-data.yml` has never existed
-on `main`, and GitHub resolves `schedule` and `workflow_dispatch` from the default branch, so every
-import so far has been manual and will stay manual until `#764` is promoted (**#772**).
+**The monthly sync runs, and it has run exactly once.** This paragraph previously said the sync
+"cannot run yet" because `.github/workflows/sync-reference-data.yml` "has never existed on `main`";
+both halves are **stale** and were corrected 2026-10-16. The workflow is present on `main` **and**
+`staging` (`git ls-tree origin/main .github/workflows/` — note `git cat-file -e` gave a false
+negative here, so prefer `ls-tree`), `#772` is **closed**, and `#764` was promoted long since. One
+`schedule` run has ever fired — 2026-10-03, `completed/success`, on `main`. The rule it was built
+on still holds and is still worth knowing: GitHub resolves `schedule` and `workflow_dispatch` from
+the default branch only.
 
-**Production's reference DATABASE is bootstrapped (`#767`, 2026-09-16) — the APPLICATION serving
-it is not, and those are two separate facts.** The database itself is migrated and synced, matching
-dev/staging row for row (see the paragraph above); confirmed live via `scripts/verify-reference-
-coverage.ts --env-file secrets/production.vars` and `prisma migrate status`. But `#764` — the slice
-that adds `GET /api/address/lookup` — has not been promoted to `main`, so production's deployed
-Worker does not route that endpoint at all, on a database or not. **Do not read a production 404 on
-that path as a reference-data failure**: it is the application, not the data, that is not there yet.
-This line previously said the database itself was unmigrated, which was true until `#767` and is
-stale now — the two facts (database readiness, application promotion) were conflated here and need
-checking independently.
+**But it will fail on 2026-11-03 (`#1123`).** The reference endpoint is now a read replica
+(`pg_is_in_recovery()` is `true`) while `UK_LOCATION_REF_DIRECT_URL` is the key `ref:migrate` and
+the bulk import write through. That key must point at the **primary** — un-pooled, no `-pooler`.
+See Last Verified above.
+
+**Both halves are now live in production: the reference DATABASE and the APPLICATION serving it.**
+Corrected 2026-10-16. This paragraph previously said `#764` "has not been promoted to `main`, so
+production's deployed Worker does not route that endpoint at all" — **stale**: `#764` is closed,
+and on 2026-10-16 production returned `DELIVERABLE` for `MK10 0AA` with real coordinates on
+`aheedfoodcentre.nocaped.com`. The database is migrated and synced, matching dev/staging row for
+row; confirmed via `scripts/verify-reference-coverage.ts` and `prisma migrate status`.
+
+The durable lesson is why this line was wrong twice in different directions: **database readiness
+and application promotion are two independent facts, and a reference-data symptom can come from
+either, or from the credential.** Before 2026-09-16 the database was unmigrated; after it, the
+endpoint was unrouted; on 2026-10-16 both were fine and the *credential* was rejected. Check all
+three separately — `scripts/verify-reference-coverage.ts` for the data,
+`/api/health`'s `reference` block for what the Worker can actually reach, and
+`/api/address/lookup?postcode=MK10 0AA` for the served behaviour — and never infer one from
+another.
 
 **The feature this database backs is now live in PRODUCTION, not just staging**: `GET
 /api/address/lookup`, postcode validation and delivery-eligibility consolidation
@@ -1535,6 +1590,11 @@ Board Phase and GitHub milestone disagreed for #151, #422, #589, #602, #695, #69
 
 These are separate from, not a silent reordering of, the owner's High priorities:
 
+- **`#1123` carries a hard date: 2026-11-03.** The `uk-location-reference` endpoint is a read
+  replica while `UK_LOCATION_REF_DIRECT_URL` is the write path, so the monthly sync
+  (`0 4 3 * *`) fails on that date. Nothing is broken before it, and the fix is one value the owner
+  reads from the Neon dashboard — no code change. The only dated item in this list; everything else
+  here waits on a decision rather than a clock.
 - Hard launch inputs: #113 production Stripe live keys and #104 verified Resend sending domain.
   **`#104`'s blast radius is larger than "emails are not delivered", measured 2026-10-13:**
   `lib/auth.ts` sets `requireEmailVerification: true`, so a new customer cannot sign in until they
@@ -1576,8 +1636,24 @@ Not verified by the latest orientation:
 
 - Whether production Stripe credentials are test or live.
 - Resend domain verification and real external delivery.
-- Cloudflare Worker secret presence. (Scheduler/application `JOB_INVOCATION_TOKEN` parity **is**
-  answered for staging and production: both return `ok` ticks as of 2026-09-30, `#947`.)
+- ~~Cloudflare Worker secret presence.~~ **ANSWERED 2026-10-16** — `wrangler secret list` for both
+  Workers (the repo's own `CLOUDFLARE_API_TOKEN` works; the `wrangler login` OAuth token returns
+  `Authentication error 10000` on this account). Staging and production each carry the identical 18
+  names: `BETTER_AUTH_SECRET`, `CDN_BASE_URL`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`,
+  `DATABASE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `JOB_INVOCATION_TOKEN`,
+  `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `S3_ACCESS_KEY`, `S3_BUCKET`, `S3_ENDPOINT`,
+  `S3_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+  `UK_LOCATION_REF_DATABASE_URL`. (`JOB_INVOCATION_TOKEN` parity was already answered by live `ok`
+  ticks, 2026-09-30, `#947`.)
+  - **Lead, NOT a diagnosis: `S3_REGION` and `BETTER_AUTH_URL` are absent from both Workers** — not
+    secrets, and not `[vars]` in `wrangler.toml` either. `scripts/configure-env.mjs` lists both
+    under `WORKER_SECRETS` (required), commenting that `BETTER_AUTH_URL` "is per-environment and
+    OAuth/session break without it". That *may* bear on **"Google sign-in does not complete in
+    production"** under Risks And Blockers, which currently attributes the failure to authorised
+    redirect URIs. **This is a correlation found while listing secrets for `#1119`, not a tested
+    cause** — `lib/auth.ts` derives `baseURL` per request from the host, which may make the
+    variable redundant. Read `lib/auth.ts` and `lib/config.ts` before believing either story, and
+    give it its own `/propose` rather than folding it into a sign-in fix.
 - Whether the **#175** rotation happened outside GitHub issue state. (**#219** is answered: rotated,
   confirmed by the owner, GitHub secret timestamps post-date the exposure. Still unverified is
   whether the OLD token was deleted rather than merely superseded — a dashboard-only fact.)
