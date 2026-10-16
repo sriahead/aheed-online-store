@@ -49,12 +49,11 @@ const intentValue = (container: HTMLElement) =>
 
 /** The pencil, which exists only once a postcode is stored. */
 const pencil = (postcode: string) =>
-  screen.getByLabelText(`Change delivery postcode (currently ${postcode})`);
+  screen.getByRole("button", { name: `Change delivery postcode (currently ${postcode})` });
 
 /**
- * #1091 — every control is addressed by its accessible name. This used to need a structural helper,
- * because the responsive two-span label computed as the doubled "DeliveryDelivery" without a
- * stylesheet; the component now gives each button one name that does not depend on CSS.
+ * #1091 — every control is addressed by its accessible name, which the component keeps single and
+ * independent of the stylesheet (jsdom applies none), so no structural lookup is needed.
  */
 const button = (name: string) => screen.getByRole("button", { name });
 

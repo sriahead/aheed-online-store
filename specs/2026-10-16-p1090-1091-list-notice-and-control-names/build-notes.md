@@ -95,16 +95,30 @@ fix rather than passing vacuously.
      and R16 prove it. Text and `className` of every span are unchanged.
   Neither changes behaviour; both are what `npm run format:check` requires.
 
+## Fixes after Validate
+
+- **R15 — a comment in `tests/location-control.test.tsx` still named `DeliveryDelivery`.** The
+  helper was gone, but the comment above `button()` explained the old doubling, so R15's grep
+  (`deliveryAffordance\|DeliveryDelivery` must print nothing) still hit. The row was right: that
+  history belongs here and in git, not in the test. The comment now states only the present
+  contract. No behaviour change, so no `CHANGELOG.md` edit.
+- **R15 — the pencil was still located by `getByLabelText`.** R15 requires every clicked button to
+  be found by `getByRole("button", { name })`; the `pencil()` helper was the one exception. Now
+  by role (its `aria-label` is already the accessible name), so no test depends on the label
+  lookup. **The row itself was also wrong, and was corrected, not just satisfied:** its
+  `grep -c 'getByRole("button"'` "at least 5" counted call sites, but the file correctly funnels
+  clicks through two helpers and two table-driven loops (3 call sites, then 4). The row now checks
+  that every `fireEvent.click` target comes from a role-based helper and `getByLabelText` is gone.
+
 ## Known-shaky areas
 
-- **R10 (live end-to-end) has not been run.** Everything above is jsdom plus a stubbed cart
-  repository. The real path — a review page rendered by `/shop-your-list` under `npm run preview`,
-  submitted through the bound server action, landing on `/cart` with `u` and `m` entries — is
-  unproven. Precondition P4 needs an out-of-stock product set by hand; do not skip restoring its
-  stock.
-- **R16 (real browser accessible name) has not been run.** The `aria-label` makes the name
-  authoritative by construction, but Chrome's computed name at 375px vs 1280px is only asserted,
-  not measured. If Aheed's local collection is off (P5), the toggle does not render at all.
+- **R10 (live end-to-end) — run at Validate, passed.** Under `npm run preview` with one product
+  at stock 0, a three-line list landed on `/cart` with the `2 of 3` heading and both the `u` and
+  `m` entries, and the in-stock line in the cart. P4's product stock had to be restored by hand.
+- **R16 (real browser accessible name) — half run.** At a 1536px viewport Chrome's tree gave
+  `Click & Collect` and `Delivery · <postcode>`. The 375px half was not measured: the browser
+  tool would not narrow the viewport and a same-origin iframe was blocked. Still unproven at
+  narrow width; if Aheed's local collection is off (P5), the toggle does not render at all.
 - **The out-of-stock line is named by product name, the other kinds by typed text** — a deliberate
   `plan.md` choice. If R10 shows the typed text for the out-of-stock line, the wrong input was read;
   check `lineLabel` in that branch of `ListReview.tsx`.
