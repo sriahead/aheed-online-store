@@ -35,7 +35,7 @@ because this codebase has no cron surface.
 
 Three surfaces describe per-point aging instead:
 
-- `app/(storefront)/help/page.tsx:281` — "Points expire {N} months after you earn them."
+- `app/(storefront)/help/page.tsx:281` — `"Points expire {N} months after you earn them."`
 - `lib/assistant-content.ts:178` — the identical sentence, copied from `/help` by `#1015`.
 - `components/staff/LoyaltyConfigForm.tsx:105` — "Points expire after (months, blank = never)",
   the label on the control that **sets** the value.
@@ -45,9 +45,9 @@ scope and is included here by explicit approval, because it is the same sentence
 configures the rule: a vendor who reads it as per-point aging picks the wrong number, and the cost
 of fixing it alongside is one line.
 
-`app/(storefront)/account/loyalty/page.tsx:151` already words it correctly — "Your points expired
-after {N} months without an order." — so this slice has a precedent in the repo to match rather
-than a wording question to invent.
+`app/(storefront)/account/loyalty/page.tsx:151` already words it correctly —
+`"Your points expired after {N} months without an order."` — so this slice has a precedent in the
+repo to match rather than a wording question to invent.
 
 ## Why the lookup placeholder is wrong
 
@@ -91,7 +91,7 @@ weaker option buys nothing.
 - **`app/(admin)/staff/reports/page.tsx:178`** — "this store's expiry setting", which is vague but
   not wrong. Changing it would be preference, not correction.
 - **`components/rewards/RewardsPanel.tsx:120` and `app/(storefront)/account/loyalty/page.tsx:116`**
-  — "Expiration date: {date}". Behaviourally **correct**: the date is computed from
+  — `"Expiration date: {date}"`. Behaviourally **correct**: the date is computed from
   `lastActivityAt`, so it already moves when the shopper orders. It does not tell the shopper that
   ordering moves it, which is a real gap in helpfulness but not a false statement. Left alone; it
   needs its own issue and a copy decision, not a drive-by edit inside a correction slice.

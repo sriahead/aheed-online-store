@@ -121,3 +121,29 @@ No requirement's intent changed, no scope was widened, and the user was told abo
 - **Not shaky, but it will look wrong:** `docs/model-handoff.md:945` still describes `#1045` as an
   open defect, quoting the old wording. It is accurate until this merges. The final `/document` must
   retire it — `plan.md` records this under "Reconciliation this slice creates".
+
+## Fix pass — two R10a failures, both root-caused to unescaped MDX syntax
+
+`/validate` from a fresh context ran the `kms/site-internal` build R10a requires and it genuinely
+failed; both issues were in prose, not in the shipped code, and neither needed a design decision.
+
+- **Root cause: `plan.md` quoted the old, wrong copy using literal `{N}`/`{date}` outside any
+  backtick span** (lines 38, 49, 94 — three instances, the validator found the build error but not
+  all three occurrences). KMS assembles `specs/**/plan.md` into this slice's MDX page, and MDX
+  compiles an unescaped `{...}` in prose as a JSX expression, not literal text. Each one threw
+  `ReferenceError: N is not defined` / `date is not defined` at prerender, which `gates` never runs
+  and `kms:validate`/`kms:check-generated` don't render MDX either — exactly the gap R10a's own
+  validation row calls out. Fixed by wrapping each quoted sentence in a backtick code span, matching
+  how `requirements.md`'s `SHOPPER_SENTENCE` already did it correctly. Re-ran `kms:assemble:internal`
+  then `next build` in `kms/site-internal`: 240/240 pages, previously failing at ~180/240.
+- **Doc wording, not a bad check: `local-dev-playbook.md:210`'s heading read `` `kms:coverage`
+  counts gitignored files ``, so the backtick sitting between "coverage" and " counts" broke the
+  literal substring `validation.md` R10a greps for.** The content was already correct; only the
+  markdown styling defeated an intentionally-literal check (this spec's own stated preference for
+  string equality over pattern matching, applied to its own validation). Widened the code span to
+  `` `kms:coverage counts gitignored files` `` so the full phrase renders as contiguous text. Did
+  not touch `validation.md` — the row itself was right to insist on the literal string.
+- **Ran `kms:build-index` after the `local-dev-playbook.md` edit**, since that doc's prose is
+  embedded in the generated `app/(admin)/staff/runbook/docs.ts`; skipping it would have reintroduced
+  the exact `kms:check-generated` staleness this slice's R10a already guards.
+- No behaviour, schema, or shipped-code change — `CHANGELOG.md` is untouched.

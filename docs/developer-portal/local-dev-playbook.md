@@ -207,7 +207,7 @@ appending one clause to an existing summary when adding a section. It bit twice 
 (`#1087`): once on `docs/business-analysis/user-testing-feedback-2026-10-13.md` and once on
 `docs/developer-portal/app-conventions.md`.
 
-## `kms:coverage` counts gitignored files, so it can fail locally and pass in CI (#1045)
+## `kms:coverage counts gitignored files`, so it can fail locally and pass in CI (#1045)
 
 `npm run kms:coverage` walks the **filesystem**, not git. A markdown file that is gitignored still
 counts against the ratchet, so the check can fail on a dev machine for a file CI will never see —
