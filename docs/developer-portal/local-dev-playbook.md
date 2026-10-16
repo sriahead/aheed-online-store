@@ -4,7 +4,7 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.29.0"
+version: "1.30.0"
 updated: 2026-10-16
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, KMS coverage vs gitignore, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, vendor hosts, and what a session can and cannot drive when proving a payment path.
@@ -238,6 +238,21 @@ Related, and often confused with it: **`npm run kms:check-generated` compares ag
 `git show HEAD:<path>`**, not the working tree — its own docstring explains why. So between
 `kms:build-index` and the commit it *always* reports the two generated artefacts as stale. That is
 the instruction to commit, not a drift to investigate; it goes green on the next commit.
+
+## A spec file quoting old copy with a literal `{word}` breaks the `kms/site-internal` MDX build
+
+Measured 2026-10-16 at `#1045`/`#1043`'s `/validate` pass, from a fresh context. KMS assembles
+`specs/**/plan.md` (and any other tracked markdown) into this site's MDX pages, and MDX compiles an
+unescaped `{...}` in prose as a JSX expression, not literal text — so quoting a sentence like
+`"Points expire {N} months after you earn them."` outside a backtick span throws
+`ReferenceError: N is not defined` at prerender, failing `next build` in `kms/site-internal`.
+**Neither `npm run kms:validate` nor `npm run kms:check-generated` catches this — neither renders
+MDX** — and `gates` never builds the docs site at all, so this reaches `main` silently unless
+someone runs the real build. **Wrap any quoted sentence containing `{...}` in a backtick code
+span** (`` `"...{N}..."` ``), matching how `requirements.md`'s own literal strings are already
+written. Run `npm run kms:assemble:internal && cd kms/site-internal && npx next build` after
+editing any `specs/*/plan.md` that quotes old or wrong copy verbatim — the failure only shows up at
+that build, not at `kms:validate`/`kms:check-generated`, and not in the normal app build either.
 
 ## A `TZ` override is silently ignored on Windows when the value contains a slash
 

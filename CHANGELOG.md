@@ -75,6 +75,22 @@ every branch merges.
 
 ### Documentation
 
+- **Document pass for `#1045`/`#1043` (merged to `staging` by PR #1127, `85cfead`).** Documentation
+  only, no code change. `specs/roadmap.md` 1.156.0 gains the change-log row `sdd:audit` was
+  reporting as missing. `docs/model-handoff.md` 1.107.0: the `Last Verified` block no longer
+  claims `origin/main` and `origin/staging` are level — they now diverge by PR #1124 and this
+  slice's PR #1127, neither promoted — and Club E (`#1045`/`#1043`) moves from "next unblocked
+  club" to "closed out, merged to staging"; the chatbot slice's follow-up list is corrected to
+  reflect `#1041`/`#1043`/`#1045` all shipped, leaving only `#1042` open.
+  - **Trap recorded for future spec authors:** `docs/developer-portal/local-dev-playbook.md` 1.30.0.
+    `/validate` found that a spec `plan.md` quoting old/wrong copy with a literal `{word}` outside a
+    backtick span breaks `next build` in `kms/site-internal` — KMS assembles `plan.md` into MDX,
+    and an unescaped `{...}` compiles as a JSX expression (`ReferenceError: N is not defined`).
+    Neither `kms:validate` nor `kms:check-generated` renders MDX, and `gates` never builds the docs
+    site, so this reaches `main` silently unless someone runs the real build. Fixed on this slice's
+    branch by backtick-wrapping the quoted sentences (commit `f34a67a`); the playbook now names the
+    pattern and the two-command check (`kms:assemble:internal` then `next build` in
+    `kms/site-internal`) to run after editing any spec that quotes copy verbatim.
 - **The reference database is recorded as restored, the PR #1122 promotion row lands, and four stale handoff claims are corrected** (`specs/roadmap.md` 1.155.0, `docs/model-handoff.md` 1.106.0). Documentation only, no code change. Two roadmap change-log rows: PR #1122 (`763bf37`, `staging -> main`, documentation-only, closing no issues deliberately) clearing the `sdd:audit` carry-forward flag, and the `#1119` credential reset with its live evidence.
   - **`#1119`'s live symptom is resolved and proven, not inferred from the secret change.** `reference.reachable: true` with two populated `sources` on staging and production, and `/api/address/lookup?postcode=MK10 0AA` returning `DELIVERABLE` with coordinates `52.031738, -0.687` on both Aheed hosts — the known-good PR #775 state, with `UNVERIFIED` gone from all four vendor hosts. SriMart returns `valid: true` with the same coordinates but `OUTSIDE_DELIVERY_AREA`, the per-vendor delivery rule working (ADR-004), not a reference failure. `#1119` stays open for its two repository items.
   - **The standing correction survives the fix:** `reference.drift: false` is still not evidence of health, because `emptyStatus()` re-manufactures it the moment the database is unreachable. Records must assert `reference.reachable === true` **and** a non-empty `sources`.
