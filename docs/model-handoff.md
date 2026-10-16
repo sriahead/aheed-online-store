@@ -1515,8 +1515,17 @@ Board Phase and GitHub milestone disagreed for #151, #422, #589, #602, #695, #69
   straight after a heavy build — see the forks-pool trap) and read its own summary line; three
   `it.skipIf(!DATABASE_URL)`-guarded files still report fewer tests in CI than locally, which is
   expected, not a discrepancy.
-- The roadmap says the internal KMS site went live behind Access; its deploy workflow says no public
-  route is configured. Verify Cloudflare before correcting either statement.
+- ~~The roadmap says the internal KMS site went live behind Access; its deploy workflow says no
+  public route is configured.~~ **RESOLVED 2026-10-16.** The roadmap was right and the workflow
+  comment was the stale half: `kms/site-internal/wrangler.toml` carries an uncommented
+  `[[routes]]` block with `custom_domain = true`, annotated `LIVE (2026-08-08)`, and the route
+  answers. `.github/workflows/deploy-docs-internal.yml`'s header is corrected to say so and to
+  point at `wrangler.toml` as the authority. **Verified unauthenticated:** both `/` and a deep
+  link (`/dev/runbook/local-dev-playbook`) `302` to `nocaped.cloudflareaccess.com` with
+  `auth_status: NONE`, and no document content comes through. **Re-check a deep link, not only
+  `/`, after any Access policy change** — a policy scoped to the root alone would leave every
+  document directly reachable, and Access does not gate a `*.workers.dev` URL at all, which is
+  why `workers_dev` must stay `false`.
 - **`#613` citation error, tracked as `#761`:** `specs/2026-09-13-p613-address-lookup/`, and rows in
   `specs/roadmap.md`, cite the real (unrelated, still-open) issue `#613` for the address-lookup
   feature that actually shipped. See Project Position above and `#761` for the full history and
@@ -1576,7 +1585,9 @@ Not verified by the latest orientation:
 - Persisted Workers Logs, alert-channel delivery and scheduler executions.
 - Production/staging net-content row counts for #697. Production suggestion rows are known only
   from the `#901` pilot output (2026-09-28); populated `Product.netContentAmount` was not measured.
-- Whether the internal KMS Worker has an Access-protected route despite the workflow comment.
+- ~~Whether the internal KMS Worker has an Access-protected route despite the workflow comment.~~
+  **ANSWERED 2026-10-16: it does** — see Documentation Reconciliation above. The workflow comment
+  was stale, not the roadmap.
 
 Public health checks verified Aheed and SriMart staging/production Workers at the expected commits,
 with `db.ok: true` and storage configured. That does not verify any item above.
