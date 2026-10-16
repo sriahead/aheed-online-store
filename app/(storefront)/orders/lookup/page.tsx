@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { getCurrentVendorId } from "@/lib/tenant";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { vendorOrderPrefix } from "@/lib/order-totals";
 import { getGuestOrderLookupService } from "@/lib/orders-service";
 import type { GuestLookupOrder } from "@/lib/repositories/orders";
 import { checkOrderLookupRateLimitForVendor } from "@/lib/order-lookup-rate-limit-service";
@@ -62,6 +64,20 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
     }
   }
 
+  /*
+   * #1043 — the example order number belongs to whichever vendor is being viewed.
+   *
+   * Aheed's own three-letter prefix was hardcoded here, but no prefix is a platform constant:
+   * `vendorOrderPrefix` derives each one from
+   * the vendor's slug, so every store except Aheed showed guests an example that could never be
+   * theirs (same class as #729/#239). `getCurrentVendorProfile()` is `cache()`d and the
+   * `(storefront)` layout has already called it on this request, so this adds no query. The `?? ""`
+   * yields the helper's own `ORD` fallback for an unresolved host, which the layout redirects to
+   * `/coming-soon` before this page renders anyway.
+   */
+  const profile = await getCurrentVendorProfile();
+  const examplePrefix = vendorOrderPrefix(profile?.slug ?? "");
+
   const steps = [
     { status: "CONFIRMED", label: "Order Confirmed", desc: "Store staff preparing items" },
     {
@@ -111,7 +127,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                 id="orderNumber"
                 name="orderNumber"
                 defaultValue={orderNumber}
-                placeholder="e.g. AHE-20260813-K4M2XQ"
+                placeholder={`e.g. ${examplePrefix}-20260813-K4M2XQ`}
                 required
                 className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
               />

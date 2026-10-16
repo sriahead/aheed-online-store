@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-16T10:00:52.446Z` · commit `9f757dc` · `235` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-16T16:41:55.895Z` · commit `56a7d86` · `236` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -230,6 +230,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Vendor-neutral browser storage keys, and a referral cookie that waits for consent (plan)](specs/2026-10-15-p1080-1065-neutral-storage-keys/plan.md) | spec | 1.0.0 | 2026-10-15 | draft | internal | Renames the four aheed_-prefixed cookies and local-storage keys to vendor-neutral store_ names, with a 30-day compatibility window so no shopper loses a basket or a consent choice, and stops writing the referral cookie until the shopper chooses Accept All. |
 | [A loyalty-off vendor stops running a referral scheme (plan)](specs/2026-10-15-p1101-referral-loyalty-off/plan.md) | spec | 1.0.0 | 2026-10-15 | draft | internal | With loyalty switched off, a vendor creates no referral codes, refuses existing ones at checkout and pays no referral bonus. Also fixes the signed-out referral box that rendered greyed out (triage item 16) and drops a leftover voucher promise. |
 | [Privacy and consent honesty — banner copy, cookie settings, hashed-IP disclosure (plan)](specs/2026-10-15-p1107-1041-privacy-consent/plan.md) | spec | 1.0.0 | 2026-10-15 | draft | internal | Club C (#1107, #1041): the cookie banner stops promising optional cookies that do not exist, gains a way to change a choice later, and /privacy discloses every hashed-IP record with retention rendered from one shared constant module. |
+| [Shopper copy that contradicts the system — points expiry and the guest-lookup prefix (plan)](specs/2026-10-16-p1045-1043-shopper-copy-truth/plan.md) | spec | 1.0.0 | 2026-10-16 | draft | internal | Club E (#1045, #1043): /help, the help assistant and the staff label stop describing a per-point points expiry the platform never implemented, all three from one shared helper; and the guest-lookup placeholder derives the viewing vendor's own order-number prefix instead of hardcoding AHE-. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.40.0 | 2026-10-15 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { helpDeliveryFacts } from "@/lib/help-facts";
+import { helpDeliveryFacts, pointsExpirySentence } from "@/lib/help-facts";
 import {
   assistantEntries,
   buildAssistantContent,
@@ -208,7 +208,25 @@ describe("rewards, collection and order status (R16)", () => {
     expect(never.links.map((l) => l.href)).toEqual(["/account/loyalty"]);
 
     const expiring = entry("REWARDS", { loyalty: { ...loyalty, pointsExpiryMonths: 12 } });
-    expect(text(expiring)).toContain("12 months");
+    expect(text(expiring)).toContain(
+      "Points expire if your account goes 12 months without an order. Placing an order resets the clock.",
+    );
+  });
+
+  /**
+   * #1045 — the sentence itself, asserted with `toBe` rather than a pattern.
+   *
+   * The previous assertions here matched `/expire/i` and `"12 months"`, both of which the WRONG
+   * sentence ("Points expire 12 months after you earn them") also satisfied, so the defect lived
+   * under a green test for three slices. A regex would still admit a longer sentence that
+   * re-introduced per-point aging; string equality is what actually pins the rule. `/help` renders
+   * this same helper, so the two surfaces cannot drift (`lib/help-facts.ts`).
+   */
+  it("words points expiry as inactivity-based, matching isLapsed()", () => {
+    expect(pointsExpirySentence(12)).toBe(
+      "Points expire if your account goes 12 months without an order. Placing an order resets the clock.",
+    );
+    expect(pointsExpirySentence(12)).not.toMatch(/after you earn/i);
   });
 
   it("states the collection minimum only when above zero", () => {

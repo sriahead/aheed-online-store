@@ -3,7 +3,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
 import { getVendorFaqRepository } from "@/lib/vendor-faqs-service";
-import { helpDeliveryFacts, freeDeliveryOffered } from "@/lib/help-facts";
+import { helpDeliveryFacts, freeDeliveryOffered, pointsExpirySentence } from "@/lib/help-facts";
 import { formatPrice } from "@/components/product/format-price";
 import Link from "next/link";
 import {
@@ -278,8 +278,7 @@ export default async function HelpPage() {
               )}
               {loyalty.pointsExpiryMonths !== null && (
                 <p>
-                  <strong>Expiry:</strong> Points expire {loyalty.pointsExpiryMonths} months after
-                  you earn them.
+                  <strong>Expiry:</strong> {pointsExpirySentence(loyalty.pointsExpiryMonths)}
                 </p>
               )}
             </div>

@@ -32,6 +32,12 @@ import { describe, expect, it } from "vitest";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 const FORBIDDEN = [
+  // #1043 — one vendor's DERIVED order-number prefix, hardcoded as the guest-lookup placeholder.
+  // `vendorOrderPrefix` builds it from the slug, so `AHE-` in a shipped .tsx is always a literal
+  // that belongs to Aheed alone. Safe to deny here: the only other occurrence in the repo is
+  // `lib/order-totals.ts`'s format docstring, which this test cannot reach — it walks `.tsx` files
+  // and strips comments before matching.
+  "AHE-",
   "Aheed Club",
   "Aheed Food Centre Referral",
   "Aheed Store Delivery Pipeline",

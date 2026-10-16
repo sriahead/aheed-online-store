@@ -101,8 +101,14 @@ export function LoyaltyConfigForm({
               />
             </div>
             <div>
+              {/*
+                #1045 — names the inactivity rule the code implements. "Points expire after
+                (months)" reads as per-point aging, and this is the control that SETS the value
+                `lib/loyalty.ts`'s `isLapsed()` applies to the whole balance from the shopper's
+                last order.
+              */}
               <label className={labelClass} htmlFor="pointsExpiryMonths">
-                Points expire after (months, blank = never)
+                Points expire after this many months without an order (blank = never)
               </label>
               <input
                 id="pointsExpiryMonths"
