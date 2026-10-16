@@ -6,10 +6,22 @@ on:
 # Unlike the storefront app, the internal KMS site has no staging/production split — it's one
 # "internal" audience regardless of branch, so either branch triggers the same deploy.
 #
-# NOT YET LIVE: kms/site-internal/wrangler.toml has workers_dev = false and its custom-domain
-# route commented out, so this deploy publishes the Worker without any public route — safe to
-# run even before Cloudflare-side provisioning (DNS + Access application) exists. See
-# kms/site-internal/README.md.
+# LIVE, AND GATED BY CLOUDFLARE ACCESS — not "no public route". This comment said the opposite
+# until 2026-10-16, long after the route went live: kms/site-internal/wrangler.toml carries an
+# uncommented [[routes]] block for docs.internal.aheedfoodcentre.nocaped.com with
+# custom_domain = true, annotated LIVE (2026-08-08). Read that file, not this comment, and keep
+# the two in step.
+#
+# Access IS this site's only auth — it has no application-level auth of its own, and it serves
+# internal content (ADRs, CLAUDE.md, operator runbooks). Verified unauthenticated on 2026-10-16:
+# both the root and a deep link (/dev/runbook/local-dev-playbook) 302 to
+# nocaped.cloudflareaccess.com with auth_status NONE, and no document content leaks through.
+# Re-check the deep link, not only "/", after any Access policy change — a policy scoped to the
+# root alone would leave every document directly reachable.
+#
+# workers_dev stays false: a deployed Worker gets a public *.workers.dev URL by default,
+# which Access does NOT gate. If the Access application is ever removed, re-comment the route in
+# the same change. See kms/site-internal/README.md.
 jobs:
   deploy:
     runs-on: ubuntu-latest
