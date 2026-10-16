@@ -17,6 +17,12 @@ import type { ResolvedLine } from "@/lib/shopping-list";
  * `features/cart/add-list-to-cart.ts` has always read, which is why that action is untouched by
  * this slice.
  *
+ * #1090 — every line now emits all four positional fields (`productId`, `quantity`, `lineLabel`,
+ * `lineStatus`), including the out-of-stock and unmatched rows that used to emit none. Those two
+ * send an empty productId, so they can never be added; `lineStatus` tells the action which notice
+ * wording fits. Keep the four inputs together in every branch below — a branch that drops one
+ * misaligns every line after it.
+ *
  * The only client state is which product an ambiguous line resolved to — needed to keep the count
  * honest as the shopper chooses. Matching itself writes nothing, so leaving mid-review leaves no
  * cart.
@@ -75,12 +81,20 @@ export function ListReview({ lines }: { lines: ResolvedLine[] }) {
                     <input type="hidden" name="productId" value={line.resolution.product.id} />
                     <input type="hidden" name="quantity" value={line.quantity} />
                     <input type="hidden" name="lineLabel" value={line.original} />
+                    <input type="hidden" name="lineStatus" value="ready" />
                   </>
                 ) : (
-                  <p className="flex items-center gap-1.5 text-xs font-semibold text-danger">
-                    <PackageX className="h-4 w-4" aria-hidden />
-                    {line.resolution.product.name} — unavailable, not added
-                  </p>
+                  <>
+                    <p className="flex items-center gap-1.5 text-xs font-semibold text-danger">
+                      <PackageX className="h-4 w-4" aria-hidden />
+                      {line.resolution.product.name} — unavailable, not added
+                    </p>
+                    {/* Named by the matched product, the name this row shows, not the typed text. */}
+                    <input type="hidden" name="productId" value="" />
+                    <input type="hidden" name="quantity" value={line.quantity} />
+                    <input type="hidden" name="lineLabel" value={line.resolution.product.name} />
+                    <input type="hidden" name="lineStatus" value="unavailable" />
+                  </>
                 )}
               </div>
             )}
@@ -131,6 +145,7 @@ export function ListReview({ lines }: { lines: ResolvedLine[] }) {
                 </select>
                 <input type="hidden" name="quantity" value={line.quantity} />
                 <input type="hidden" name="lineLabel" value={line.original} />
+                <input type="hidden" name="lineStatus" value="choose" />
               </div>
             )}
 
@@ -139,6 +154,15 @@ export function ListReview({ lines }: { lines: ResolvedLine[] }) {
                 <CircleAlert className="h-4 w-4" aria-hidden />
                 No match in this shop — check the spelling or search for it
               </p>
+            )}
+
+            {line.resolution.kind === "unmatched" && (
+              <>
+                <input type="hidden" name="productId" value="" />
+                <input type="hidden" name="quantity" value={line.quantity} />
+                <input type="hidden" name="lineLabel" value={line.original} />
+                <input type="hidden" name="lineStatus" value="unmatched" />
+              </>
             )}
           </li>
         ))}

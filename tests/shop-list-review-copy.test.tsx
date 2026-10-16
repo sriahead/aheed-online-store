@@ -137,19 +137,43 @@ const UNMATCHED: ResolvedLine = {
 
 const named = (name: string) => [...document.querySelectorAll(`input[name="${name}"]`)];
 
-describe("ListReview submitted fields (#1088 R9)", () => {
-  it("emits lineLabel for exactly the lines that emit productId and quantity", () => {
-    render(
-      <ListReview lines={[MATCHED_IN_STOCK, AMBIGUOUS_LINE, MATCHED_OUT_OF_STOCK, UNMATCHED]} />,
+describe("ListReview submitted fields (#1088 R9, superseded by #1090)", () => {
+  const ALL_FOUR = [MATCHED_IN_STOCK, AMBIGUOUS_LINE, MATCHED_OUT_OF_STOCK, UNMATCHED];
+  const values = (name: string) =>
+    [...document.querySelectorAll(`[name="${name}"]`)].map(
+      (el) => (el as HTMLInputElement | HTMLSelectElement).value,
     );
 
-    // Only the matched-in-stock line and the ambiguous line submit anything. The out-of-stock and
-    // unmatched rows are labelled in place and emit no fields at all, which is what keeps the
-    // three arrays aligned.
-    expect(named("lineLabel")).toHaveLength(2);
-    expect(named("quantity")).toHaveLength(2);
-    // productId: one hidden input, one select.
-    expect(document.querySelectorAll('[name="productId"]')).toHaveLength(2);
+  it("#1090 R1: every line emits all four positional fields, whatever its resolution", () => {
+    // #1088 asserted 2 here: the out-of-stock and unmatched rows emitted nothing, which kept the
+    // arrays aligned but left /cart silent about them. Every row now emits all four.
+    render(<ListReview lines={ALL_FOUR} />);
+
+    // productId: three hidden inputs and one select.
+    expect(document.querySelectorAll('[name="productId"]')).toHaveLength(4);
+    expect(named("quantity")).toHaveLength(4);
+    expect(named("lineLabel")).toHaveLength(4);
+    expect(named("lineStatus")).toHaveLength(4);
+  });
+
+  it("#1090 R1: the submitted form data is aligned, four values per field", () => {
+    const { container } = render(<ListReview lines={ALL_FOUR} />);
+    const data = new FormData(container.querySelector("form")!);
+
+    for (const field of ["productId", "quantity", "lineLabel", "lineStatus"]) {
+      expect(data.getAll(field)).toHaveLength(4);
+    }
+  });
+
+  it("#1090 R2: each line kind emits its own status, label and product", () => {
+    render(<ListReview lines={ALL_FOUR} />);
+
+    expect(values("lineStatus")).toEqual(["ready", "choose", "unavailable", "unmatched"]);
+    // The out-of-stock line is named by the matched product, the name its row shows.
+    expect(values("lineLabel")).toEqual(["milk 2", "apple juice", "Salted Butter 250g", "quinoa"]);
+    // In-stock id, the unresolved select's empty value, then the two lines that can never be added.
+    expect(values("productId")).toEqual(["p-10", "", "", ""]);
+    expect(values("quantity")).toEqual(["2", "1", "2", "1"]);
   });
 
   it("carries each line's own text, in render order", () => {
@@ -169,6 +193,21 @@ describe("ListReview submitted fields (#1088 R9)", () => {
 
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "p-1" } });
     expect(named("lineLabel")).toHaveLength(1);
+  });
+
+  it("#1090 R3: the status and label do not change with the shopper's selection", () => {
+    render(<ListReview lines={[AMBIGUOUS_LINE]} />);
+    const before = [named("lineStatus"), named("lineLabel")].map((els) =>
+      els.map((el) => (el as HTMLInputElement).value),
+    );
+
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "p-1" } });
+
+    const after = [named("lineStatus"), named("lineLabel")].map((els) =>
+      els.map((el) => (el as HTMLInputElement).value),
+    );
+    expect(after).toEqual(before);
+    expect(after).toEqual([["choose"], ["apple juice"]]);
   });
 });
 

@@ -16,13 +16,14 @@
  * `n` is how many distinct lines the action tried to put back. `lines` lists only those that did
  * not go in in full: `u` unavailable, `p` partial, `h` the cart already holds all the stock, and
  * (`#1088`, the `list` source only) `s` the shopper left an ambiguous line unresolved, so no
- * product was ever chosen for it.
+ * product was ever chosen for it. `#1090` adds `m` (also `list` only): the line matched nothing in
+ * the shop. A list line that matched an out-of-stock product reuses `u`.
  */
 
 import type { BulkAddKind } from "@/lib/cart-rules";
 
 export type RestoreSource = "reorder" | "cancelled" | "list";
-export type RestoreEntryKind = "u" | "p" | "h" | "s";
+export type RestoreEntryKind = "u" | "p" | "h" | "s" | "m";
 
 export interface RestoreEntry {
   kind: RestoreEntryKind;
@@ -44,8 +45,11 @@ export interface RestoreNotice {
  * `#1088` adds `"skipped"` HERE rather than to `lib/cart-rules.ts`'s `BulkAddKind`: a shop-list
  * line the shopper declined to resolve never reached the cart layer at all, so it is not one of
  * that layer's outcomes. Everything else is the bulk add's own kind, unchanged.
+ *
+ * `#1090` adds `"unmatched"` for the same reason: a shop-list line that matched no product never
+ * reached the cart layer either.
  */
-export type RestoredLineKind = BulkAddKind | "skipped";
+export type RestoredLineKind = BulkAddKind | "skipped" | "unmatched";
 
 /** One restored line, as an action knows it: the bulk add's kind, or `unavailable` for a deleted product. */
 export interface RestoredLine {
@@ -66,6 +70,7 @@ const KIND_CODE: Record<Exclude<RestoredLineKind, "added">, RestoreEntryKind> = 
   partial: "p",
   at_limit: "h",
   skipped: "s",
+  unmatched: "m",
 };
 
 /** The cart URL to land on after a restore. Exactly `/cart` when every line went in in full. */
@@ -101,7 +106,7 @@ function parseEntry(raw: string): RestoreEntry | null {
   const [kind, addedRaw, requestedRaw] = parts;
   const name = parts.slice(3).join(FIELD_SEPARATOR).trim();
 
-  if (kind !== "u" && kind !== "p" && kind !== "h" && kind !== "s") return null;
+  if (kind !== "u" && kind !== "p" && kind !== "h" && kind !== "s" && kind !== "m") return null;
   if (!isCount(addedRaw) || !isCount(requestedRaw)) return null;
   if (name === "") return null;
 
@@ -109,8 +114,9 @@ function parseEntry(raw: string): RestoreEntry | null {
   const requested = Number(requestedRaw);
   if (kind === "p" && !(added > 0 && added < requested)) return null;
   // A skipped line was never sent to the cart, so a non-zero `added` is a
-  // contradiction — the same shape of invariant the `p` check above enforces.
-  if (kind === "s" && !(added === 0 && requested >= 1)) return null;
+  // contradiction — the same shape of invariant the `p` check above enforces. An unmatched line
+  // (`m`, #1090) was never sent either, so it carries the same invariant.
+  if ((kind === "s" || kind === "m") && !(added === 0 && requested >= 1)) return null;
 
   return { kind, added, requested, name: name.slice(0, MAX_RESTORE_NAME_LENGTH) };
 }

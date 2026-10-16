@@ -16,10 +16,20 @@ import type { RestoredLine, RestoredLineKind } from "@/lib/restore-notice";
  * short-circuit (which is what keeps a guest from being issued a token when nothing is addable) and
  * the report shape are all identical, so they stay in one place.
  *
+ * `#1090` lets an item name its own `kind`, because a shop list now submits two more id-less lines —
+ * an out-of-stock match (`unavailable`) and an unmatched line (`unmatched`) — beside the skipped
+ * one, so one `missingKind` for the whole call no longer fits. An item without a `kind` falls back
+ * to `missingKind`, which is all reorder and cancel ever pass.
+ *
  * A plain module, so it is testable without a request and importable by `"use server"` files.
  */
 export async function restoredLines(
-  items: { productId: string | null; productName: string; quantity: number }[],
+  items: {
+    productId: string | null;
+    productName: string;
+    quantity: number;
+    kind?: RestoredLineKind;
+  }[],
   addItems: (lines: MergeLine[]) => Promise<BulkAddLine[]>,
   missingKind: RestoredLineKind = "unavailable",
 ): Promise<RestoredLine[]> {
@@ -29,7 +39,7 @@ export async function restoredLines(
       name: item.productName,
       requested: item.quantity,
       added: 0,
-      kind: missingKind,
+      kind: item.kind ?? missingKind,
     }));
 
   const live = items.filter((item): item is typeof item & { productId: string } =>

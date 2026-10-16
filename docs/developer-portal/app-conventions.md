@@ -4,7 +4,7 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.13.0"
+version: "1.14.0"
 updated: 2026-10-16
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, fulfilment-method preference, autocomplete tokens, shared-source copy rules and React hooks — with the tests that enforce each invariant mechanically.
@@ -401,6 +401,36 @@ store's staff reads must be right for **any** vendor.
 - Enforced by `tests/delivery-postcode-intent.test.ts` (the parser, and which submissions write the
   method cookie) and `tests/location-control.test.tsx` (which affordance submits which intent, and
   the label).
+
+## Responsive labels that switch text by viewport (`#1091`)
+
+- **A control whose label text changes by breakpoint must have one accessible name that does not
+  depend on the stylesheet.** Two sibling spans (`hidden sm:inline` and `sm:hidden`) are correct in
+  a browser, where one is `display: none` at any width, but anywhere CSS is not applied — jsdom,
+  reader modes — both count and the name doubles (`DeliveryDelivery`,
+  `Click & CollectCollect`). Put an `aria-label` on the control and `aria-hidden` on both spans.
+- **The `aria-label` must contain the narrow span's visible text** (WCAG 2.5.3, Label in Name), so a
+  speech user saying what they see still hits it: `Click & Collect` contains `Collect`,
+  `Delivery · <postcode>` contains the postcode.
+- **If both spans render the same text, collapse them to one span** rather than labelling the pair.
+- A **single** `hidden sm:inline` span beside an icon (the header's Shop, Shop List, account and Sign
+  In links) does not double; at narrow widths its name falls back to the link's `title`. That is
+  out of this rule's scope.
+- Enforced for `components/layout/LocationControl.tsx` by `tests/location-control.test.tsx`, which
+  addresses every button by `getByRole("button", { name })` with the exact name.
+
+## Shop-list review fields (`#1088`, `#1090`)
+
+- **Every line `components/cart/ListReview.tsx` renders emits all four positional fields** —
+  `productId`, `quantity`, `lineLabel`, `lineStatus` — whatever its resolution.
+  `features/cart/add-list-to-cart.ts` reads them by index, so a branch that drops one misaligns every
+  line after it. Before `#1090` the out-of-stock and unmatched rows emitted none, which kept the
+  arrays aligned but left `/cart` silent about them.
+- **`lineStatus` is read only for an empty `productId`**, and only picks the notice wording
+  (`unavailable` → `u`, `unmatched` → `m`, anything else or absent → `s`). A line carrying a product
+  goes to the bulk add whatever its status says, which is what makes a client-supplied status safe.
+- Enforced by `tests/shop-list-review-copy.test.tsx` (four of each field for all four line kinds)
+  and `tests/add-list-to-cart.test.ts`.
 
 ## Checkout pricing (`#973`)
 
