@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.106.0"
+version: "1.107.0"
 updated: 2026-10-16
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,16 +39,19 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-10-16 (re-verified at the `#1119` credential reset; previously at the PR #1118 /
-  PR #1120 roadmap-and-handoff reconciliation).
+- **Date:** 2026-10-16 (re-verified at the `#1045`/`#1043` Document pass; previously at the
+  `#1119` credential reset, and before that the PR #1118 / PR #1120 roadmap-and-handoff
+  reconciliation).
 - **`main` is at `763bf37`**, the PR #1122 promotion ("Promote docs to main", `staging -> main`,
   2026-10-16) — **documentation and CI-comment only**, no code, schema, migration or dependency
   change. It carried PR #1120 (`76accba`) and PR #1121 (`cc7ec43` + `5c3c553`). It closed **no**
   issues, deliberately: `closingIssuesReferences` was empty because every issue involved had
   already closed and `#1119`/`#1116` had to stay open, confirmed by a sweep of every issue closed
   that day. Production `/api/health` (Aheed **and** SriMart) serves `763bf37`, `db.ok: true`.
-  `origin/main` and `origin/staging` are **level** (`git log origin/main..origin/staging` empty),
-  so there is no unpromoted work on `staging`.
+  **`origin/main` and `origin/staging` are NOT level — `main` is stale by two merges.**
+  `git log origin/main..origin/staging` now shows PR #1124 (`735dc46`, docs-only: the reference-
+  database-restored roadmap rows) and PR #1127 (`85cfead`, `#1045`/`#1043`, this slice) ahead of
+  it. Neither has a promotion PR yet; see `specs/roadmap.md`'s change log for both.
 - **Previous promotion: `6ec8142`**, PR #1118 (`staging -> main`, 2026-10-16): the honest
   consent banner, cookie settings and hashed-IP disclosure (`#1107`/`#1041`, PR #1114, merge
   `cc46827`), carrying PR #1117 (merge `29ab582`, that slice's own Document pass);
@@ -798,9 +801,10 @@ All facts in this section require live verification:
   any future change here: saved checkout details stay essential (no consent gate); every
   hashed-IP record gets disclosed, not only the search log; a Cookie settings control is in scope.
   The 2026-10-15 clubbing of the wider backlog (Clubs C–F and the owner-gated groups) is recorded
-  in the triage document's "Backlog clubbing — 2026-10-15" section; **Club C is now closed out, so
-  the next unblocked clubs are E (`#1045` + `#1043`, copy only) and F (`#1090` + `#1091`)** —
-  Club D stays blocked on `#1028` (Workers Free or Paid, owner).
+  in the triage document's "Backlog clubbing — 2026-10-15" section; **Club C and now Club E
+  (`#1045` + `#1043`, copy only — PR #1127, merged to `staging` 2026-10-16, see Last Verified
+  above) are closed out, so the next unblocked club is F (`#1090` + `#1091`)** — Club D stays
+  blocked on `#1028` (Workers Free or Paid, owner).
 - **Owner user-testing pass, 2026-10-13 — 21 observations, triaged with live evidence.** The
   single most useful artifact from it is
   `docs/business-analysis/user-testing-feedback-2026-10-13.md` (committed `7bee5ad`): every item
@@ -939,11 +943,13 @@ All facts in this section require live verification:
     has run on one vendor.
   - **Switching it on** is `/staff/assistant` per vendor (needs a WhatsApp number; both
     production vendors have one). Aheed's owner has done so; SriMart's has not.
-  - Follow-ups, all `Backlog` / `P10`: `#1041` (privacy page omits the search-query log), `#1042`
-    (grounded free-text answers), `#1043` (`/orders/lookup` placeholder shows Aheed's `AHE-` prefix
-    on every vendor), and from Validate `#1045` (`/help` and the assistant both say points expire
-    "N months after you earn them"; `lib/loyalty.ts` `isLapsed()` lapses the whole balance after N
-    months of inactivity).
+  - Follow-ups filed at this slice: `#1041` (privacy page omits the search-query log) **shipped
+    and is now DONE in production** — see Club C above. `#1043` (`/orders/lookup` placeholder
+    shows Aheed's `AHE-` prefix on every vendor) and `#1045` (from Validate: `/help` and the
+    assistant both said points expire "N months after you earn them", contradicting
+    `isLapsed()`'s inactivity-based lapse) **both shipped to `staging`** — see Last Verified
+    above (PR #1127, `85cfead`). Only `#1042` (grounded free-text answers) is still open,
+    `Backlog`/`P10`.
 - **Public docs boundary + loyalty-gated Rewards launcher (`#1022` + `#1023`): DONE, in
   production** (PR #1036 to `staging`, then promotion PR #1039, merge `dadca17`, 2026-10-11), both
   issues closed and `Done`. See **Last Verified** above for the production facts. Spec and build
