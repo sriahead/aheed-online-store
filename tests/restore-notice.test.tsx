@@ -294,3 +294,56 @@ describe("the list source and the skipped kind (#1088)", () => {
     ]);
   });
 });
+
+describe("the unmatched kind (#1090)", () => {
+  it("R7: encodes an unmatched line as m~0~q~name", () => {
+    const url = buildRestoreNoticeUrl("list", [line("Ghost item", "unmatched", 0, 3)]);
+    expect(params(url)).toEqual({ restored: "list", of: "1", lines: "m~0~3~Ghost item" });
+  });
+
+  it("R7: round-trips an unmatched entry", () => {
+    expect(parseRestoreNotice({ restored: "list", of: "3", lines: "m~0~3~Ghost item" })).toEqual({
+      source: "list",
+      of: 3,
+      entries: [{ kind: "m", added: 0, requested: 3, name: "Ghost item" }],
+    });
+  });
+
+  it("R7: rejects an unmatched entry that claims something was added, or asked for nothing", () => {
+    expect(parseRestoreNotice({ restored: "list", lines: "m~1~3~Ghost item" })).toBeNull();
+    expect(parseRestoreNotice({ restored: "list", lines: "m~0~0~Ghost item" })).toBeNull();
+  });
+
+  it("R8: an id-less item's own kind wins over missingKind, and one without falls back to it", async () => {
+    const addItems = vi.fn();
+    expect(
+      await restoredLines(
+        [
+          { productId: null, productName: "A", quantity: 1, kind: "unmatched" },
+          { productId: null, productName: "B", quantity: 1 },
+        ],
+        addItems,
+        "skipped",
+      ),
+    ).toEqual([
+      { name: "A", requested: 1, added: 0, kind: "unmatched" },
+      { name: "B", requested: 1, added: 0, kind: "skipped" },
+    ]);
+    expect(addItems).not.toHaveBeenCalled();
+  });
+
+  it("R9: renders the unmatched-line text", () => {
+    render(
+      <RestoreNotice
+        notice={{
+          source: "list",
+          of: 3,
+          entries: [{ kind: "m", added: 0, requested: 3, name: "Ghost item" }],
+        }}
+      />,
+    );
+    expect(document.querySelector("[data-restore-notice] li")?.textContent).toBe(
+      "Ghost item: not added, no match in this shop",
+    );
+  });
+});

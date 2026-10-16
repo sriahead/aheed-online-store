@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getCartRepository } from "@/lib/cart-service";
 import { getUserId, issueGuestToken, type CartIdentity } from "@/lib/cart-identity";
 import { restoredLines } from "@/lib/restore-lines";
-import { buildRestoreNoticeUrl } from "@/lib/restore-notice";
+import { buildRestoreNoticeUrl, type RestoredLineKind } from "@/lib/restore-notice";
 import { MAX_LINE_QUANTITY } from "@/lib/shopping-list";
 import { revalidateCartSurfaces } from "./shared";
 
@@ -17,9 +17,11 @@ import { revalidateCartSurfaces } from "./shared";
  * nothing) has no row, resolves to stock 0, and is skipped. Nothing here
  * re-derives that check.
  *
- * The fields are read positionally: every rendered line emits ALL THREE inputs
- * or none, so the arrays stay aligned. An unresolved ambiguous line emits an
- * empty productId.
+ * The fields are read positionally: every rendered line emits ALL FOUR inputs
+ * (`productId`, `quantity`, `lineLabel`, `lineStatus`), so the arrays stay
+ * aligned. An unresolved ambiguous line, an out-of-stock match and an unmatched
+ * line each emit an empty productId. Until #1090 the last two emitted nothing at
+ * all, which kept the arrays aligned but left `/cart` silent about them.
  *
  * ## It now says what did not go in (#1088)
  *
@@ -54,15 +56,32 @@ const SKIPPED_LINE_FALLBACK_NAME = "An item from your list";
 const readText = (value: FormDataEntryValue | undefined) =>
   typeof value === "string" ? value.trim() : "";
 
+/**
+ * #1090 — why a submitted line has no product, from the review step's positional `lineStatus`.
+ *
+ * Read ONLY for an empty productId: a line carrying a product goes to the bulk add whatever its
+ * status says, so the field can choose a notice's wording but never cause or prevent an add. That
+ * is what makes it safe to take from the client. Anything other than the two recognised values —
+ * including no field at all, which is what a review page rendered before #1090 submits — is a
+ * skipped line, exactly as `#1088` reported it.
+ */
+function missingLineKind(status: string): RestoredLineKind {
+  if (status === "unavailable") return "unavailable";
+  if (status === "unmatched") return "unmatched";
+  return "skipped";
+}
+
 export async function addListToCart(formData: FormData) {
   const productIds = formData.getAll("productId");
   const quantities = formData.getAll("quantity");
   const labels = formData.getAll("lineLabel");
+  const statuses = formData.getAll("lineStatus");
 
   const submitted = productIds
     .map((rawId, index) => ({
       productId: readText(rawId),
       label: readText(labels[index]),
+      status: readText(statuses[index]),
       quantity: Number(readText(quantities[index])),
     }))
     // A line carrying a product but an unusable quantity is dropped exactly as it was before this
@@ -74,6 +93,7 @@ export async function addListToCart(formData: FormData) {
     .map((line) => ({
       productId: line.productId === "" ? null : line.productId,
       productName: line.label === "" ? SKIPPED_LINE_FALLBACK_NAME : line.label,
+      kind: line.productId === "" ? missingLineKind(line.status) : undefined,
       quantity:
         Number.isFinite(line.quantity) && line.quantity >= 1
           ? Math.min(Math.trunc(line.quantity), MAX_LINE_QUANTITY)

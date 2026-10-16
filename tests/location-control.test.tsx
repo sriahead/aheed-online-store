@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { POSTCODE_INTENT_FIELD } from "@/lib/delivery-cookie";
 
 /**
@@ -51,26 +52,11 @@ const pencil = (postcode: string) =>
   screen.getByLabelText(`Change delivery postcode (currently ${postcode})`);
 
 /**
- * The Delivery control that opens the modal to ask for a postcode.
- *
- * Not `getByRole("button", { name: "Delivery" })`: the responsive pattern renders the word in two
- * spans (`hidden sm:inline` and `sm:hidden`), so its accessible name is the doubled
- * "DeliveryDelivery" and an anchored name match finds nothing. Identified instead by what only it
- * has: Delivery text, no `value` (that is the method toggle's submit button) and no `aria-label`
- * (that is the pencil).
+ * #1091 — every control is addressed by its accessible name. This used to need a structural helper,
+ * because the responsive two-span label computed as the doubled "DeliveryDelivery" without a
+ * stylesheet; the component now gives each button one name that does not depend on CSS.
  */
-const deliveryAffordance = () => {
-  const button = screen
-    .getAllByRole("button")
-    .find(
-      (candidate) =>
-        (candidate.textContent ?? "").includes("Delivery") &&
-        !candidate.hasAttribute("value") &&
-        !candidate.hasAttribute("aria-label"),
-    );
-  if (!button) throw new Error("no Delivery affordance rendered");
-  return button;
-};
+const button = (name: string) => screen.getByRole("button", { name });
 
 describe("LocationControl — the submitted intent (R7)", () => {
   it("submits 'delivery' when the modal is opened from the Delivery affordance", () => {
@@ -78,7 +64,7 @@ describe("LocationControl — the submitted intent (R7)", () => {
       <LocationControl postcode={null} deliverable={null} offerCollection method="COLLECTION" />,
     );
 
-    fireEvent.click(deliveryAffordance());
+    fireEvent.click(button("Delivery"));
 
     expect(intentValue(container)).toBe("delivery");
   });
@@ -115,7 +101,7 @@ describe("LocationControl — the submitted intent (R7)", () => {
     fireEvent.click(pencil("RG1 1AA"));
     expect(intentValue(container)).toBe("edit");
 
-    fireEvent.click(deliveryAffordance());
+    fireEvent.click(button("Delivery"));
     expect(intentValue(container)).toBe("delivery");
   });
 
@@ -124,7 +110,7 @@ describe("LocationControl — the submitted intent (R7)", () => {
       <LocationControl postcode="MK9 1AA" deliverable offerCollection={false} method="DELIVERY" />,
     );
 
-    fireEvent.click(deliveryAffordance());
+    fireEvent.click(button("Delivery · MK9 1AA"));
 
     expect(intentValue(container)).toBe("delivery");
   });
@@ -156,5 +142,64 @@ describe("LocationControl — the stored postcode is readable (R8)", () => {
     );
 
     expect(container.textContent).not.toContain("·");
+  });
+});
+
+describe("LocationControl — one accessible name per button (#1091)", () => {
+  // Each case: the props, the exact name, and the text of the span visible at narrow widths, which
+  // the name must contain (WCAG 2.5.3, Label in Name).
+  const cases: {
+    label: string;
+    props: ComponentProps<typeof LocationControl>;
+    name: string;
+    narrow: string;
+  }[] = [
+    {
+      label: "the Click & Collect toggle",
+      props: { postcode: null, deliverable: null, offerCollection: true, method: "COLLECTION" },
+      name: "Click & Collect",
+      narrow: "Collect",
+    },
+    {
+      label: "the Delivery toggle with a deliverable postcode",
+      props: {
+        postcode: "MK9 1AA",
+        deliverable: true,
+        offerCollection: true,
+        method: "COLLECTION",
+      },
+      name: "Delivery · MK9 1AA",
+      narrow: "MK9 1AA",
+    },
+    {
+      label: "the Delivery affordance with no postcode",
+      props: { postcode: null, deliverable: null, offerCollection: true, method: "COLLECTION" },
+      name: "Delivery",
+      narrow: "Delivery",
+    },
+    {
+      label: "the no-collection button with a deliverable postcode",
+      props: { postcode: "MK9 1AA", deliverable: true, offerCollection: false, method: "DELIVERY" },
+      name: "Delivery · MK9 1AA",
+      narrow: "Delivery · MK9 1AA",
+    },
+    {
+      label: "the no-collection button with no postcode",
+      props: { postcode: null, deliverable: null, offerCollection: false, method: "DELIVERY" },
+      name: "Check delivery availability",
+      narrow: "Check delivery",
+    },
+  ];
+
+  it.each(cases)("$label is named exactly $name", ({ props, name }) => {
+    render(<LocationControl {...props} />);
+    expect(screen.getByRole("button", { name })).toBeTruthy();
+  });
+
+  it.each(cases)("$label's name contains its narrow-width text", ({ props, name, narrow }) => {
+    render(<LocationControl {...props} />);
+    const control = screen.getByRole("button", { name });
+    expect(control.textContent).toContain(narrow);
+    expect(name).toContain(narrow);
   });
 });

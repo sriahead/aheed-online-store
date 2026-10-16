@@ -89,10 +89,21 @@ export function LocationControl({
               name="fulfilmentMethod"
               value="COLLECTION"
               className={toggleClass(method === "COLLECTION")}
+              aria-label="Click & Collect"
             >
+              {/*
+                #1091 — two spans switch the text by viewport. Without a stylesheet (jsdom, a
+                reader mode) BOTH count toward the name, which doubled to "Click & CollectCollect".
+                The aria-label makes the name authoritative and contains the narrow text, so it
+                still satisfies Label in Name at every width.
+              */}
               <Store className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Click &amp; Collect</span>
-              <span className="sm:hidden">Collect</span>
+              <span aria-hidden className="hidden sm:inline">
+                Click &amp; Collect
+              </span>
+              <span aria-hidden className="sm:hidden">
+                Collect
+              </span>
             </button>
           </form>
 
@@ -103,14 +114,19 @@ export function LocationControl({
                 name="fulfilmentMethod"
                 value="DELIVERY"
                 className={toggleClass(method === "DELIVERY")}
+                aria-label={deliveryLabel}
               >
                 {method === "DELIVERY" ? (
                   <Check className="w-3.5 h-3.5 text-action" />
                 ) : (
                   <Truck className="w-3.5 h-3.5" />
                 )}
-                <span className="hidden sm:inline">{deliveryLabel}</span>
-                <span className="sm:hidden">{hasDeliverablePostcode ? postcode : "Delivery"}</span>
+                <span aria-hidden className="hidden sm:inline">
+                  {deliveryLabel}
+                </span>
+                <span aria-hidden className="sm:hidden">
+                  {hasDeliverablePostcode ? postcode : "Delivery"}
+                </span>
               </button>
             </form>
           ) : (
@@ -124,8 +140,8 @@ export function LocationControl({
               className={toggleClass(false)}
             >
               <Truck className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Delivery</span>
-              <span className="sm:hidden">Delivery</span>
+              {/* #1091 — one span: the responsive pair rendered the same word twice. */}
+              <span>Delivery</span>
             </button>
           )}
 
@@ -160,16 +176,17 @@ export function LocationControl({
           onClick={() => openModal("delivery")}
           className="flex min-h-tap items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10 w-full sm:w-auto h-full lg:min-h-0"
           title={hasDeliverablePostcode ? "Change postcode" : "Check availability"}
+          aria-label={hasDeliverablePostcode ? deliveryLabel : "Check delivery availability"}
         >
           {hasDeliverablePostcode ? (
             <Check className="w-4 h-4 text-action" />
           ) : (
             <Truck className="w-4 h-4 text-primary" />
           )}
-          <span className="hidden sm:inline">
+          <span aria-hidden className="hidden sm:inline">
             {hasDeliverablePostcode ? `Delivery · ${postcode}` : "Check delivery availability"}
           </span>
-          <span className="sm:hidden truncate">
+          <span aria-hidden className="sm:hidden truncate">
             {hasDeliverablePostcode ? `Delivery · ${postcode}` : "Check delivery"}
           </span>
         </button>
