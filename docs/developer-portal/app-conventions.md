@@ -4,10 +4,10 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.12.0"
-updated: 2026-10-15
+version: "1.13.0"
+updated: 2026-10-16
 visibility: internal
-summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, the fulfilment-method preference, form-field autocomplete tokens and React hooks — with the tests that enforce each invariant mechanically.
+summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, fulfilment-method preference, autocomplete tokens, shared-source copy rules and React hooks — with the tests that enforce each invariant mechanically.
 tags: [conventions, repositories, server-actions, staff-panel]
 ---
 
@@ -258,6 +258,26 @@ store's staff reads must be right for **any** vendor.
   scanned across `app/**/*.tsx`, `components/**/*.tsx` and `lib/referrals.ts` with comments
   stripped. It catches those strings returning, **not** new vendor-specific copy — that is still a
   review question. Check a new string against a second vendor (SriMart) before shipping it.
+- **A value the code *derives* must never be hardcoded as an example (`#1043`).** `/orders/lookup`
+  showed every store `e.g. AHE-20260813-K4M2XQ`, but `vendorOrderPrefix()`
+  (`lib/order-totals.ts:158`) builds that prefix from the vendor's slug, so the example could only
+  ever be right for one vendor. Derive the example from the same function the real value comes
+  from. Cost is rarely the objection it looks like: `getCurrentVendorProfile()` is `cache()`-wrapped
+  and the `(storefront)` layout has already called it, so a storefront page can read `profile.slug`
+  for free.
+- **Copy that states a system rule comes from one helper, shared by every surface that states it
+  (`#1045`).** `/help` and the help assistant both said points expire a fixed number of months after
+  each point is earned, while `lib/loyalty.ts`'s `isLapsed()` lapses the whole balance on
+  **inactivity**. The assistant was wrong because it had copied `/help`'s wording (`#1015`) — two
+  literals, one of them already false. Both now render `pointsExpirySentence()` from
+  `lib/help-facts.ts`, the module they already shared, so they cannot diverge. Same shape as
+  `lib/data-retention.ts` for retention figures and `lib/storage-keys.ts` for storage names: **one
+  source per fact, not one per surface.**
+- **Assert copy with string equality, not a pattern.** `tests/help-vendor-facts.test.tsx` asserted
+  `/expire 12 months/i`, which the **incorrect** sentence satisfied too, so that defect shipped and
+  survived three slices under a green test. A regex also admits a longer sentence that re-introduces
+  the error. Pin the sentence with `toBe`/`toContain` on the full string. A copy test that cannot
+  fail on wrong copy is worse than none, because it reads as coverage.
 - **What a vendor sells is vendor data (`#905`).** Six `VendorConfig` label settings
   (`showHalalLabel` … `showHmcCertification`, edited on `/staff/storefront`) decide which label
   controls the staff product form renders; HMC needs Halal. They gate the staff form only — the

@@ -57,6 +57,19 @@ R10. `tests/help-vendor-facts.test.tsx` and `tests/assistant-content.test.ts` ea
      file retains an assertion that passes against the old `expire {N} months after you earn them`
      phrasing.
 
+R10a. The two durable conventions this slice established are recorded in persistent docs, and the
+     KMS artefacts are regenerated for them: `docs/developer-portal/app-conventions.md` states that
+     a derived value is never hardcoded as an example (`#1043`), that copy stating a system rule
+     comes from one shared helper (`#1045`), and that copy is asserted by string equality rather
+     than a pattern; `docs/developer-portal/local-dev-playbook.md` records that `kms:coverage`
+     counts gitignored files. `kms:validate` reports `invalid front-matter (failing): 0`,
+     `kms:check-generated` reports both artefacts current, and a real `next build` in
+     `kms/site-internal` succeeds — `gates` never builds the docs site.
+
+     *(Added after approval: the Build-notes stage requires a standing decision to be recorded in
+     its persistent doc on the same branch, which put `docs/` in scope. The requirement describes
+     work the stage mandates, not new scope chosen here.)*
+
 R11. `CHANGELOG.md` updated (Gate 4).
 
 R12. `lint`, `typecheck`, `test`, `format:check` all remain green after this slice. Because `#1125`

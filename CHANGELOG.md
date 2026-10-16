@@ -8,6 +8,14 @@ every branch merges.
 
 ### Fixed
 
+- **Points expiry is described as the inactivity rule it is, and the guest-lookup example order number belongs to the store you are in** (issues `#1045`, `#1043`; `specs/2026-10-16-p1045-1043-shopper-copy-truth/`). "Club E" from the 2026-10-16 backlog clubbing. Copy only: no schema change, no migration, no behaviour change, no new dependency.
+  - `#1045`: `/help` and the help assistant said points expire a fixed number of months from when each point was earned. `lib/loyalty.ts`'s `isLapsed()` lapses the **whole balance** once that many months pass since the shopper's **last order**, so a shopper who keeps ordering never loses a point and one who stops loses everything at once. The rule was right; the copy was wrong.
+  - Both surfaces now render `pointsExpirySentence()` from `lib/help-facts.ts` — the module both already imported — so the two cannot drift. The sentence also states what no surface stated before: placing an order resets the clock.
+  - `components/staff/LoyaltyConfigForm.tsx`'s months label carried the same ambiguity on the control that **sets** the value, where a misreading picks the wrong number. Outside `#1045`'s stated scope, included by approval.
+  - `#1043`: `/orders/lookup`'s order-number placeholder hardcoded one vendor's three-letter prefix, which `vendorOrderPrefix()` derives from the vendor slug — so every other store showed guests an example order number that could not exist there (same class as `#729`, `#239`). It is now derived per vendor at no extra query, because the storefront layout has already resolved the profile on that request.
+  - `tests/help-vendor-facts.test.tsx` had asserted `/expire 12 months/i`, which the **wrong** sentence also satisfied, so the defect sat under a green test from `#1015` on. Copy assertions now pin the exact sentence with `toBe`; `tests/vendor-neutral-copy.test.ts` denies the prefix literal.
+  - Deferred: `#1126` (the `Expiration date:` badges on `/account/loyalty` and the rewards panel are correct but do not say that ordering moves the date).
+
 - **The cookie banner and privacy page now say only what is true, and a consent answer can be changed** (issues `#1107`, `#1041`; `specs/2026-10-15-p1107-1041-privacy-consent/`). "Club C" from the 2026-10-15 backlog clubbing. No schema change, no migration, no new dependency.
   - `#1107`: the banner stops promising optional cookies "to improve site experience" (none exist) and names what is stored, with the referral cookie as the one optional item. A new **Cookie settings** button (footer Legal row, end of `/privacy#cookies`) reopens the banner, shows the current choice and focuses it; Essential Only now clears the referral cookie from the banner itself, for every vendor.
   - Owner ruling: saved checkout details (`store_checkout_details`) stay essential; no consent gate.
