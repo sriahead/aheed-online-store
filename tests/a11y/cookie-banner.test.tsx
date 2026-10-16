@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { computeAccessibleName } from "dom-accessibility-api";
 import { CookieBanner } from "@/components/consent/CookieBanner";
 import { CONSENT_COOKIE, LEGACY_CONSENT_COOKIE } from "@/lib/storage-keys";
@@ -71,5 +71,24 @@ describe("cookie banner — does not behave like a modal", () => {
     render(<CookieBanner />);
     fireEvent.click(screen.getByRole("button", { name: "Essential Only" }));
     expect(screen.queryByRole("complementary", { name: /cookie/i })).toBeNull();
+  });
+});
+
+describe("cookie banner — reopened from Cookie settings (#1107 R22)", () => {
+  it("keeps a named landmark and named controls, and adds no dialog semantics", () => {
+    document.cookie = `${CONSENT_COOKIE}=accepted; path=/`;
+    const { container } = render(<CookieBanner />);
+    act(() => void window.dispatchEvent(new Event("store-consent-open")));
+
+    expect(screen.getByRole("complementary", { name: /cookie/i })).toBeTruthy();
+    const controls = Array.from(
+      container.querySelectorAll<HTMLElement>("button, a[href], input, select, textarea"),
+    );
+    expect(controls.length).toBeGreaterThan(0);
+    expect(controls.filter((el) => computeAccessibleName(el).trim() === "")).toEqual([]);
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(container.querySelector("[aria-modal]")).toBeNull();
+    // Focus moves only because the shopper asked for the banner; it is not trapped there.
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Essential Only" }));
   });
 });

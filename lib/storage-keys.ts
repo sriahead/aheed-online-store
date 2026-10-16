@@ -35,6 +35,12 @@ export const LEGACY_CHECKOUT_DETAILS_KEY = "aheed_checkout_details";
  */
 export const CONSENT_CHANGE_EVENT = "store-consent-change";
 
+/**
+ * Dispatched on `window` by `CookieSettingsButton` (#1107). The consent banner always listens and
+ * reopens on it, so a shopper can change an answer they already gave.
+ */
+export const CONSENT_SETTINGS_OPEN_EVENT = "store-consent-open";
+
 export type ConsentValue = "accepted" | "essential";
 
 export function isConsentValue(value: string | null | undefined): value is ConsentValue {

@@ -4,7 +4,7 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.11.0"
+version: "1.12.0"
 updated: 2026-10-15
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, the fulfilment-method preference, form-field autocomplete tokens and React hooks — with the tests that enforce each invariant mechanically.
@@ -433,6 +433,18 @@ store's staff reads must be right for **any** vendor.
   layout's metadata stand, rather than throwing or naming a vendor. It runs on the request path, so
   an uncaught rejection turns a product page from 200 into 500 because its `<head>` could not be
   built.
+
+## Records that store a hashed network address (`#1041`, `#1107`)
+
+- **A table that stores a hashed IP takes its retention from `lib/data-retention.ts` and is
+  disclosed on `/privacy`, which renders the figure from the same constant.** Seven tables do so
+  today (the search log, the help-assistant log and five rate-limit attempt tables), and before
+  `#1041` the privacy page disclosed one. A new one adds its constant there, imports it in its
+  repository's `RETENTION_MS`, and gets a sentence in `/privacy` section 5.
+  `tests/data-retention.test.ts` and `tests/privacy-retention-section.test.tsx` enforce the
+  existing seven; a new table is on its author to add.
+- **Say "due for deletion", never "deleted after".** Every sweep runs on a small random fraction
+  of writes, so a row on a quiet shop can outlive its figure.
 
 ## React and Next.js hooks
 

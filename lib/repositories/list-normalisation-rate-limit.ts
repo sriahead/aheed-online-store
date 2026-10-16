@@ -1,4 +1,5 @@
 import type { getPrisma } from "@/lib/db";
+import { ATTEMPT_RECORD_RETENTION_HOURS } from "@/lib/data-retention";
 
 /**
  * Per-caller throttle for the AI normalisation pre-pass on /shop-your-list (P2.6 slice 4, #567).
@@ -35,7 +36,7 @@ const MAX_ATTEMPTS = 5;
 // Retention only has to exceed WINDOW_MS; the sweep probability is deliberately low so the extra
 // deleteMany doesn't add latency to every submission. deleteMany is confirmed safe on the HTTP
 // adapter (getPrisma()) per CLAUDE.md — unlike updateMany/createMany — so no getPrismaWs() here.
-const RETENTION_MS = 60 * 60 * 1000;
+const RETENTION_MS = ATTEMPT_RECORD_RETENTION_HOURS * 60 * 60 * 1000;
 const SWEEP_PROBABILITY = 0.01;
 
 /** SHA-256 of the caller's IP — this table is only ever a counter, so no raw address is stored. */

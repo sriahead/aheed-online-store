@@ -76,6 +76,17 @@ async function renderSection(): Promise<{ container: HTMLElement; section: HTMLE
 afterEach(cleanup);
 
 describe("privacy page — Cookies and Local Storage (#1064)", () => {
+  it("#1107 R14: ends with the change-your-choice paragraph, then the Cookie settings button", async () => {
+    const { section } = await renderSection();
+    const last = section.lastElementChild;
+    expect(last?.tagName).toBe("BUTTON");
+    expect(last?.getAttribute("type")).toBe("button");
+    expect(squash(last?.textContent)).toBe("Cookie settings");
+    expect(squash(last?.previousElementSibling?.textContent)).toBe(
+      "You can change your choice at any time.",
+    );
+  });
+
   it("R1: keeps the anchor and heading, and the anchor occurs once", async () => {
     const { container, section } = await renderSection();
     expect(container.querySelectorAll("#cookies")).toHaveLength(1);
@@ -91,6 +102,8 @@ describe("privacy page — Cookies and Local Storage (#1064)", () => {
       "We use cookies and local storage technologies to support essential website functionality, including user authentication, shopping cart management, delivery and collection preferences, checkout convenience, and the storage of cookie consent preferences. One optional cookie remembers a referral code, and it is set only if you choose Accept All.",
       "The following cookies and local storage items are used for these purposes:",
       "These cookies and local storage items are scoped to the relevant host. All of them except the referral cookie are used to provide core website functionality.",
+      // #1107 R14 — the section now closes on the way to change a consent answer.
+      "You can change your choice at any time.",
     ]);
     // The closing paragraph comes after the list; the lead-in comes before it.
     const list = section.querySelector("ul");

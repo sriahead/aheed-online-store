@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CookieBanner } from "@/components/consent/CookieBanner";
+import { CookieSettingsButton } from "@/components/consent/CookieSettingsButton";
 
 /**
  * #1080 R10–R13 and #1065 — the consent cookie's vendor-neutral rename, the migration of a choice
@@ -95,5 +96,115 @@ describe("a choice already under the new name (#1080 R13)", () => {
     cookieDescriptor.set!.call(document, "store_cookie_consent=accepted; path=/");
     render(<CookieBanner />);
     expect(banner()).toBeNull();
+  });
+});
+
+const BODY_TEXT =
+  "We use essential cookies and browser storage to keep you signed in, hold your basket, and remember your delivery choice and checkout details. One optional cookie remembers a referral code from a link you followed, and it is set only if you choose Accept All. Read our Privacy Policy and Terms of Service.";
+
+const bodyText = () => {
+  const heading = screen.getByText("We value your privacy");
+  return (heading.parentElement?.textContent ?? "")
+    .replace("We value your privacy", "")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+const reopen = () => act(() => void window.dispatchEvent(new Event("store-consent-open")));
+
+describe("banner copy (#1107 R4)", () => {
+  it("names what is stored and the one optional cookie", () => {
+    render(<CookieBanner />);
+    expect(bodyText()).toBe(BODY_TEXT);
+    expect(screen.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toBe(
+      "/privacy",
+    );
+    expect(screen.getByRole("link", { name: "Terms of Service" }).getAttribute("href")).toBe(
+      "/terms",
+    );
+  });
+});
+
+describe("Cookie settings (#1107 R6)", () => {
+  it("is a named button that dispatches store-consent-open", () => {
+    let opened = 0;
+    const listener = () => opened++;
+    window.addEventListener("store-consent-open", listener);
+    render(<CookieSettingsButton />);
+    const button = screen.getByRole("button", { name: "Cookie settings" });
+    expect(button.getAttribute("type")).toBe("button");
+    fireEvent.click(button);
+    expect(opened).toBe(1);
+    window.removeEventListener("store-consent-open", listener);
+  });
+});
+
+describe("reopening the banner (#1107 R7–R10)", () => {
+  it.each([
+    ["essential", "Essential Only"],
+    ["accepted", "Accept All"],
+  ])("with %s stored: hidden until opened, then states the choice and focuses", (value, label) => {
+    cookieDescriptor.set!.call(document, `store_cookie_consent=${value}; path=/`);
+    render(<CookieBanner />);
+    expect(banner()).toBeNull();
+
+    reopen();
+    expect(banner()).not.toBeNull();
+    expect(screen.getByText(`Your current choice: ${label}.`)).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Essential Only" }));
+  });
+
+  it("a first visit shows no current-choice line and takes no focus (R8, R9)", () => {
+    render(<CookieBanner />);
+    expect(banner()).not.toBeNull();
+    expect(screen.queryByText(/Your current choice/)).toBeNull();
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it.each([
+    ["accepted", "Essential Only", "essential"],
+    ["essential", "Accept All", "accepted"],
+  ])(
+    "with %s stored, choosing %s overwrites it like a first visit (R10)",
+    (stored, label, value) => {
+      cookieDescriptor.set!.call(document, `store_cookie_consent=${stored}; path=/`);
+      const received: unknown[] = [];
+      const listener = (e: Event) => received.push((e as CustomEvent).detail);
+      window.addEventListener("store-consent-change", listener);
+      render(<CookieBanner />);
+      reopen();
+      writes = [];
+
+      fireEvent.click(screen.getByRole("button", { name: label }));
+      expect(writes.some((w) => w.startsWith(`store_cookie_consent=${value};`))).toBe(true);
+      expect(banner()).toBeNull();
+      expect(received).toEqual([{ value }]);
+      window.removeEventListener("store-consent-change", listener);
+    },
+  );
+});
+
+describe("Essential Only clears the referral cookie from the banner itself (#1107 R11)", () => {
+  const referralWrites = () =>
+    writes.filter((w) => /^(store_referral_code|aheed_referral_code)=/.test(w));
+
+  it.each([
+    ["a first visit", false],
+    ["a reopen", true],
+  ])("on %s, both referral names are expired", (_case, viaReopen) => {
+    if (viaReopen) cookieDescriptor.set!.call(document, "store_cookie_consent=accepted; path=/");
+    render(<CookieBanner />);
+    if (viaReopen) reopen();
+    fireEvent.click(screen.getByRole("button", { name: "Essential Only" }));
+    expect(referralWrites().sort()).toEqual([
+      "aheed_referral_code=; max-age=0; path=/",
+      "store_referral_code=; max-age=0; path=/",
+    ]);
+  });
+
+  it("Accept All writes no referral cookie", () => {
+    render(<CookieBanner />);
+    fireEvent.click(screen.getByRole("button", { name: "Accept All" }));
+    expect(referralWrites()).toEqual([]);
   });
 });

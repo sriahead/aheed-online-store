@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { CookieSettingsButton } from "@/components/consent/CookieSettingsButton";
+import {
+  ASSISTANT_CONVERSATION_RETENTION_DAYS,
+  ATTEMPT_RECORD_RETENTION_HOURS,
+  SEARCH_QUERY_LOG_RETENTION_DAYS,
+} from "@/lib/data-retention";
 import {
   CART_COOKIE,
   CHECKOUT_DETAILS_KEY,
@@ -9,6 +15,11 @@ import {
 } from "@/lib/storage-keys";
 
 export const dynamic = "force-dynamic";
+
+/** #1041 — "one hour" reads better than "1 hours" in a policy; any other count is numeric. */
+function hoursPhrase(hours: number): string {
+  return hours === 1 ? "one hour" : `${hours} hours`;
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const profile = await getCurrentVendorProfile();
@@ -144,6 +155,11 @@ export default async function PrivacyPage() {
             These cookies and local storage items are scoped to the relevant host. All of them
             except the referral cookie are used to provide core website functionality.
           </p>
+          {/* #1107 — reopens the consent banner; the same control sits in the footer. */}
+          <p className="text-sm text-primary-muted leading-relaxed">
+            You can change your choice at any time.
+          </p>
+          <CookieSettingsButton className="text-sm font-medium text-primary underline underline-offset-2 hover:text-primary-muted" />
         </section>
 
         <section className="space-y-2">
@@ -163,7 +179,8 @@ export default async function PrivacyPage() {
             <strong>first name, the initial of your surname</strong> and your star rating alongside
             what you wrote — never your full name, your email address or anything about your orders.
             You can change or replace your feedback at any time, and erasing your data removes it
-            entirely.
+            entirely. We also keep a scrambled (hashed) form of your network address with your
+            feedback, used only to investigate abuse, and it is removed with your feedback.
           </p>
           {/* #1014 — the help assistant's log. Not personal data by design (no user link), but a
               shopper is still entitled to know it exists and how long it lasts. */}
@@ -171,8 +188,30 @@ export default async function PrivacyPage() {
             <strong>The help assistant.</strong> If a store offers a help assistant and you use it,
             we record the topic you chose and whether it was answered or passed to the store on
             WhatsApp, together with a scrambled (hashed) form of your network address so the
-            assistant cannot be flooded. This record is not linked to your name or your account, and
-            it is deleted after 90 days.
+            assistant cannot be flooded. This record is not linked to your name or your account. It
+            becomes due for deletion after {ASSISTANT_CONVERSATION_RETENTION_DAYS} days and is
+            removed by routine clean-up after that.
+          </p>
+          {/* #1041 — every record holding a hashed network address is disclosed here, with its
+              retention rendered from lib/data-retention.ts so the policy and the sweeps cannot
+              disagree. "Due for deletion", not "deleted after": each sweep runs on a small random
+              fraction of writes, so a row on a quiet shop can outlive its figure. */}
+          <p className="text-sm text-primary-muted leading-relaxed">
+            <strong>Searches.</strong> When you search the shop, we record what you searched for and
+            how many results it found, together with a scrambled (hashed) form of your network
+            address, so the shop can see what shoppers look for and cannot find. This record is not
+            linked to your name or your account. It becomes due for deletion after{" "}
+            {SEARCH_QUERY_LOG_RETENTION_DAYS} days and is removed by routine clean-up after that.
+          </p>
+          <p className="text-sm text-primary-muted leading-relaxed">
+            <strong>Records that protect the shop from abuse.</strong> When you sign in, create an
+            account or reset a password, look up an order, enter a discount code we do not
+            recognise, send feedback, or paste a shopping list for the shop to match, we briefly
+            record that it happened, together with a scrambled (hashed) form of your network
+            address, so that repeated attempts can be slowed down. These records are not linked to
+            your name or your account. Each becomes due for deletion after{" "}
+            {hoursPhrase(ATTEMPT_RECORD_RETENTION_HOURS)} and is removed by routine clean-up after
+            that.
           </p>
         </section>
 
