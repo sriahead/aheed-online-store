@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.104.0"
-updated: 2026-10-15
+version: "1.105.0"
+updated: 2026-10-16
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,30 +39,51 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-10-15 (re-verified at the `#1107`/`#1041` Document pass).
-- **`main` is still at `dac5a3d`**, the PR #1111 promotion (`staging -> main`, 2026-10-15), carrying
-  the PR #1110 promotion-record docs. Its predecessor **`7a99caf`** (PR #1109, 2026-10-15) promoted
-  vendor-neutral storage keys and the consent-gated referral cookie (`#1080`/`#1065`/`#1066`, PR
-  #1108) and loyalty-off referrals (`#1101`/`#1034`, PR #1104). Production `/api/health` (Aheed
-  **and** SriMart) serves `dac5a3d`, `db.ok: true`, `reference.drift: false`, read 2026-10-15.
-  PR #1111's "row pending carry-forward" flag from `sdd:audit` is now **resolved** — recorded in
-  `specs/roadmap.md`'s change log at this Document pass.
-  - **`origin/staging` is no longer level with `main`.** PR #1114 (merge `cc46827`, 2026-10-15)
-    merged the honest consent banner, cookie settings and hashed-IP disclosure (`#1107`/`#1041`,
-    `specs/2026-10-15-p1107-1041-privacy-consent/`) to `staging`; `deploy-staging` succeeded.
-    `#1107`/`#1041` are **In Review, not Done**, awaiting their own `staging -> main` promotion PR.
-    `#1115` (confirm the footer Legal row doesn't overflow at 360px) was filed at `/validate` when
-    Claude-in-Chrome's `resize_window` couldn't go below ~1536px, then closed at `/document` once
-    `scripts/verify-mobile-layout.ts` — the tool `docs/developer-portal/local-dev-playbook.md`
-    already names for this — proved `documentScrollWidth == viewportWidth` at 360/390/768px on both
-    vendor hosts. `#1116` stays open on `P10`/Backlog: a `validation.md` wording defect (R22 says
-    "axe", which this repo has no test dependency for).
-  - **PR #1105 (`docs/p1101-1034-document`) is open and stale.** PR #1110 overtook its roadmap,
-    handoff and changelog edits, and its handoff text ("staging one PR ahead") is no longer true.
-    Its only unique content is a `docs/developer-portal/local-dev-playbook.md` note on signing in
-    to `srimart.localhost:8787` (send `x-forwarded-proto: http`; wait about 30 seconds after a
-    `429`; set `MSYS_NO_POSIX_PATHCONV=1`). Closing it and carrying the note forward is the owner's
-    call, asked 2026-10-15 and not yet answered.
+- **Date:** 2026-10-16 (re-verified at the PR #1118 / PR #1120 roadmap-and-handoff reconciliation).
+- **`main` is at `6ec8142`**, the PR #1118 promotion (`staging -> main`, 2026-10-16): the honest
+  consent banner, cookie settings and hashed-IP disclosure (`#1107`/`#1041`, PR #1114, merge
+  `cc46827`), carrying PR #1117 (merge `29ab582`, that slice's own Document pass);
+  `specs/2026-10-15-p1107-1041-privacy-consent/`. No schema change, no migration.
+  `deploy-production` (run `38848633448`) and `deploy-docs-internal` (run `38848633429`) both
+  **success**. Production `/api/health` (Aheed **and** SriMart) serves `6ec8142`, `db.ok: true`,
+  read 2026-10-16. `closingIssuesReferences` listed exactly `[1041, 1107]`; both closed, the board
+  moved itself to `Done`, and a sweep of every issue closed that day found no unintended closure
+  (`#1115` had closed earlier, at the Document pass, with `scripts/verify-mobile-layout.ts`
+  evidence). **Verified live in production beyond the health check, on both vendors:** Cookie
+  settings twice per host (footer Legal row, end of `/privacy#cookies`); the three retention
+  figures (90 days, 90 days, one hour) each followed by "removed by routine clean-up after that",
+  six occurrences; and zero `aheed_`-prefixed storage keys on SriMart's page. `#1116` stays open on
+  `P10`/Backlog: a `validation.md` wording defect (R22 says "axe", which this repo has no test
+  dependency for). PR #1118's "row pending carry-forward" flag from `sdd:audit` is **resolved** —
+  recorded in `specs/roadmap.md`'s change log here.
+  - **`reference.drift: false` is NOT evidence of health. Stop citing it.** This Orient measured
+    `configured: true, reachable: false, sources: []` on staging **and** production, and
+    `/api/address/lookup?postcode=MK10 0AA` returning `UNVERIFIED` with no coordinates — where the
+    PR #775 record below has that same postcode returning `DELIVERABLE` with real coordinates.
+    `emptyStatus()` (`lib/reference/reference-status-service.ts:66`) hardcodes `drift: false`
+    beside an empty `sources`, so "compared, no drift" and "never asked" are indistinguishable, and
+    every promotion record since PR #775 has cited a vacuous figure. Root cause **proven** for the
+    staging/dev project (`ep-wild-violet-zaa9udu5`): `password authentication failed for user
+    'neondb_owner'`. Production points at a **different** Neon project (`ep-summer-boat-zapzp2t9`)
+    and is unreachable for a cause that is **not** proven. Address autofill degrades safely
+    (`deliverable: true`, `manualEntryAvailable: true`), so no shopper is misinformed. Filed as
+    **`#1119`** (Backlog, `P10`), which also carries the owner's Neon/secret-store steps. **Assert
+    `reference.reachable === true` in future records, not `drift === false`.**
+  - **`origin/staging` is one docs PR ahead of `main`:** PR #1120 (merge `76c1ecb`, commit
+    `76accba`, 2026-10-16) carried the SriMart local sign-in note out of the stale PR #1105, which
+    is now **closed** as superseded by PR #1110. `docs/developer-portal/local-dev-playbook.md`
+    1.28.0 holds the note (`x-forwarded-proto: http` against `403 INVALID_ORIGIN`, because
+    `resolveAuthOrigin` infers `https` for any non-loopback host; the Better Auth `429` window,
+    about 30 seconds; `MSYS_NO_POSIX_PATHCONV=1` for a bare `"/"` in Git Bash), measured for a
+    customer account only — a second vendor's **admin** sign-in stays unproven. Read live on the
+    internal docs site at `/dev/runbook/local-dev-playbook`. The owner question this file carried
+    from 2026-10-15 ("closing it and carrying the note forward") is therefore **answered and closed
+    out**. The unmerged branch `docs/p1101-1034-document` is deliberately left in place.
+- **Previous promotion, `dac5a3d`**, the PR #1111 promotion (`staging -> main`, 2026-10-15),
+  carrying the PR #1110 promotion-record docs. Its predecessor **`7a99caf`** (PR #1109,
+  2026-10-15) promoted vendor-neutral storage keys and the consent-gated referral cookie
+  (`#1080`/`#1065`/`#1066`, PR #1108) and loyalty-off referrals (`#1101`/`#1034`, PR #1104).
+  PR #1111's own `sdd:audit` carry-forward flag was resolved at the `#1107`/`#1041` Document pass.
 - **Previous promotion, `3b94f8f`** (full `3b94f8fb7e25abf59f8dccb0c1f1015261b94b84`), the PR #1099
   promotion (`staging -> main`, 2026-10-15): department spotlights and the vendor-neutral banner
   prompt (`#1096`/`#1030`, PR #1097, merge `07128a8`;
@@ -715,13 +736,16 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **Club C, privacy and consent honesty (`#1107` + `#1041`): BUILT, not yet validated or pushed**
-  (branch `feature/p1107-1041-privacy-consent`; spec `1b4b518`, build `22599b6`;
-  `specs/2026-10-15-p1107-1041-privacy-consent/`). Both issues are In Progress. Owner rulings at
-  Gate 1: saved checkout details stay essential; disclose every hashed-IP record; a Cookie settings
-  control is in scope. The next step is `/validate` from a fresh context (Sonnet 5). The
-  2026-10-15 clubbing of the wider backlog (Clubs C–F and the owner-gated groups) is recorded in
-  the triage document's "Backlog clubbing — 2026-10-15" section.
+- **Club C, privacy and consent honesty (`#1107` + `#1041`): DONE, in production** (PR #1114 to
+  `staging`, promotion PR #1118, merge `6ec8142`, 2026-10-16; spec `1b4b518`, build `22599b6`, fix
+  `e2f3470`; `specs/2026-10-15-p1107-1041-privacy-consent/`). Both issues closed and `Done`; see
+  Last Verified above for the live evidence. Owner rulings at Gate 1, preserved because they bound
+  any future change here: saved checkout details stay essential (no consent gate); every
+  hashed-IP record gets disclosed, not only the search log; a Cookie settings control is in scope.
+  The 2026-10-15 clubbing of the wider backlog (Clubs C–F and the owner-gated groups) is recorded
+  in the triage document's "Backlog clubbing — 2026-10-15" section; **Club C is now closed out, so
+  the next unblocked clubs are E (`#1045` + `#1043`, copy only) and F (`#1090` + `#1091`)** —
+  Club D stays blocked on `#1028` (Workers Free or Paid, owner).
 - **Owner user-testing pass, 2026-10-13 — 21 observations, triaged with live evidence.** The
   single most useful artifact from it is
   `docs/business-analysis/user-testing-feedback-2026-10-13.md` (committed `7bee5ad`): every item
