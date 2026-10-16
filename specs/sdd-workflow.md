@@ -718,6 +718,17 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   to grep.**
 - UI changes: verify against rendered output (compiled CSS, rendered HTML, browser screenshot), not
   code review alone. DB-touching code: `npm run preview`, never `npm run dev` (see `CLAUDE.md`).
+- **A row that needs a real narrow viewport (phone-width overflow, tap targets) is not a
+  Claude-in-Chrome job — check `docs/developer-portal/local-dev-playbook.md`'s "Measuring the
+  storefront at real phone widths" section first.** Desktop Chrome, including a Claude in Chrome
+  session, cannot be resized below ~501-1536px depending on the environment, and a same-origin
+  `<iframe>` workaround doesn't work either (`next.config.mjs` sends `X-Frame-Options` /
+  `frame-ancestors 'none'`, and in at least one session the automation extension's own sandboxing
+  blocked it too). `scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768`
+  drives headless Chrome over the real DevTools protocol instead and reports `documentScrollWidth`
+  at the exact width asked for — proven at the `#1107`/`#1041` Document pass (2026-10-15) after a
+  `/validate` session spent real effort on the browser-automation dead end first. Reach for this
+  tool before reaching for `resize_window`, not after.
 - **Server actions can be driven headlessly against `npm run preview`** — no browser needed. Next
   renders every `<form action={serverAction}>` with progressive-enhancement fields, so submitting
   those fields as `multipart/form-data` invokes the real action, and `Set-Cookie` on the response

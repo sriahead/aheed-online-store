@@ -39,14 +39,24 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **Date:** 2026-10-15 (re-verified at the Club C Orient).
-- **`main` is at `dac5a3d`**, the PR #1111 promotion (`staging -> main`, 2026-10-15), carrying the
-  PR #1110 promotion-record docs. Its predecessor **`7a99caf`** (PR #1109, 2026-10-15) promoted
+- **Date:** 2026-10-15 (re-verified at the `#1107`/`#1041` Document pass).
+- **`main` is still at `dac5a3d`**, the PR #1111 promotion (`staging -> main`, 2026-10-15), carrying
+  the PR #1110 promotion-record docs. Its predecessor **`7a99caf`** (PR #1109, 2026-10-15) promoted
   vendor-neutral storage keys and the consent-gated referral cookie (`#1080`/`#1065`/`#1066`, PR
   #1108) and loyalty-off referrals (`#1101`/`#1034`, PR #1104). Production `/api/health` (Aheed
   **and** SriMart) serves `dac5a3d`, `db.ok: true`, `reference.drift: false`, read 2026-10-15.
-  `origin/staging` has the same content (main is ahead only by merge commits). `sdd:audit` reports
-  PR #1111 as "row pending carry-forward": docs-only, record it on the next slice's Document pass.
+  PR #1111's "row pending carry-forward" flag from `sdd:audit` is now **resolved** — recorded in
+  `specs/roadmap.md`'s change log at this Document pass.
+  - **`origin/staging` is no longer level with `main`.** PR #1114 (merge `cc46827`, 2026-10-15)
+    merged the honest consent banner, cookie settings and hashed-IP disclosure (`#1107`/`#1041`,
+    `specs/2026-10-15-p1107-1041-privacy-consent/`) to `staging`; `deploy-staging` succeeded.
+    `#1107`/`#1041` are **In Review, not Done**, awaiting their own `staging -> main` promotion PR.
+    `#1115` (confirm the footer Legal row doesn't overflow at 360px) was filed at `/validate` when
+    Claude-in-Chrome's `resize_window` couldn't go below ~1536px, then closed at `/document` once
+    `scripts/verify-mobile-layout.ts` — the tool `docs/developer-portal/local-dev-playbook.md`
+    already names for this — proved `documentScrollWidth == viewportWidth` at 360/390/768px on both
+    vendor hosts. `#1116` stays open on `P10`/Backlog: a `validation.md` wording defect (R22 says
+    "axe", which this repo has no test dependency for).
   - **PR #1105 (`docs/p1101-1034-document`) is open and stale.** PR #1110 overtook its roadmap,
     handoff and changelog edits, and its handoff text ("staging one PR ahead") is no longer true.
     Its only unique content is a `docs/developer-portal/local-dev-playbook.md` note on signing in
