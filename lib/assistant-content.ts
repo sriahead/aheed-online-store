@@ -1,5 +1,9 @@
 import { formatPrice } from "@/components/product/format-price";
-import { freeDeliveryOffered, type HelpDeliveryFacts } from "@/lib/help-facts";
+import {
+  freeDeliveryOffered,
+  pointsExpirySentence,
+  type HelpDeliveryFacts,
+} from "@/lib/help-facts";
 
 /**
  * What the guided help assistant shows (#1015) — pure, no I/O, unit-tested.
@@ -175,7 +179,7 @@ function rewardsEntry(loyalty: AssistantLoyaltyFacts): AssistantEntry {
     )} off.`,
   ];
   if (loyalty.pointsExpiryMonths !== null) {
-    answer.push(`Points expire ${loyalty.pointsExpiryMonths} months after you earn them.`);
+    answer.push(pointsExpirySentence(loyalty.pointsExpiryMonths));
   }
   return fixedEntry("REWARDS", answer, [{ href: "/account/loyalty", label: "See your points" }]);
 }

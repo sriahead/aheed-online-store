@@ -55,6 +55,30 @@ export function freeDeliveryOffered(thresholdPence: number | null): boolean {
 }
 
 /**
+ * How points expiry actually works, in one sentence (#1045).
+ *
+ * `/help` and the help assistant both dated expiry from the moment a point was earned, which
+ * describes per-point aging the platform has never implemented. `lib/loyalty.ts`'s `isLapsed()`
+ * lapses the WHOLE balance once `lastActivityAt + pointsExpiryMonths` passes: expiry is
+ * inactivity-based, so a shopper who keeps ordering never loses a point, and one who stops loses
+ * everything at once — including points earned the day before their last order. That is deliberate
+ * (it makes expiry derivable from one column at read time, with no scheduled sweep, which P5a chose
+ * because this codebase has no cron surface), so the copy is what was wrong, not the rule.
+ *
+ * WHY IT LIVES HERE. This module is already imported by both surfaces that state the rule —
+ * `app/(storefront)/help/page.tsx` and `lib/assistant-content.ts`, the second of which copied its
+ * wording from the first in #1015. #1045 asked for a test pinning the two sentences together; one
+ * source makes them incapable of drifting instead, which is the same request's stronger form.
+ *
+ * The second sentence is not padding: without it a shopper has no way to know the deadline moves.
+ * `app/(storefront)/account/loyalty/page.tsx` shows each shopper their own computed date, so this
+ * states the rule rather than a date — neither caller has a shopper in context.
+ */
+export function pointsExpirySentence(months: number): string {
+  return `Points expire if your account goes ${months} months without an order. Placing an order resets the clock.`;
+}
+
+/**
  * A postcode that `matchDeliveryArea` will match to this row, so the row's own overrides resolve.
  *
  * A district prefix (`MK9`) already matches as written — the matcher compares it to a postcode's
