@@ -15,7 +15,7 @@ every branch merges.
   - **Shopping List:** the header's link (now "Shopping List", `aria-label="Shopping list"`) shows on the landing page too. A guest who matches a list on `/shop-your-list` is told to sign in to save it, where nothing was shown before.
   - **Aheed data:** `scripts/apply-department-changes.ts --vendor <slug> [--apply] [--restore]` is dry-run by default and idempotent. It hides International, Household, Health & Beauty, Baby & Kids and Pet Supplies, creates Fish with Fresh Fish and Frozen Fish, and sets the search placeholder "Type your product, we will find it for you". `--restore` shows the five again. **It must be run by hand on staging and production after deploy**; the dev seed adds Fish only.
   - Docs: `specs/architecture.md` 1.41.0 (category visibility rule); `docs/staff-playbook/staff-tabs-guide.md` 2.11.0 (Categories: hiding and showing).
-  - Deferred: `#1137` (search suggestions ignore the chosen department), `#1138` (sign-in from the list prompt does not return to the list), `#1139` (hidden-department products already in carts or bundles), `#1140` (a hidden department's promotion is not listed on `/staff/promotions`).
+  - Deferred: `#1137` (search suggestions ignore the chosen department), `#1138` (sign-in from the list prompt does not return to the list) and `#1139` (hidden-department products already in carts or bundles). A hidden department is still listed on `/staff/promotions` and its promotion stays editable; shoppers just do not see it until the department is shown again.
 
 ### Fixed
 
