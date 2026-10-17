@@ -117,6 +117,19 @@ No symptom that R7 and R12 do not explain, so there is no `R13a`.
 - Saving it without `isActive` returned "Category saved", and `/categories/zz-repro-sub` then
   returned 404.
 
+## Fix after first Validate (2026-10-17)
+
+- **F1: the playbook said a hidden department is not listed on the Promotions page. It is.**
+  `listCategoriesForAdmin` and `getCategoryForAdmin` carry no `isActive` filter, and the page was
+  never changed, so `/staff/promotions` lists hidden departments and their promotion stays
+  editable. Observed live: all five hidden departments were listed. The sentence in
+  `docs/staff-playbook/staff-tabs-guide.md` now says so, and that shoppers do not see the promotion
+  until the department is shown. The doc was wrong, not the code: R6a requires the promotion row to
+  survive hiding. No `validation.md` row was loosened.
+- Validate also recorded, for the owner rather than as defects: R14's "removes it from every one of
+  those places" does not hold for the staff product picker, which has always listed inactive
+  categories marked "(inactive)" so staff can still assign products to them. Left as is.
+
 ## Decisions taken during the build
 
 - **One scan rule for R2, a superset of the requirement's wording.**

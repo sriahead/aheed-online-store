@@ -162,7 +162,8 @@ products and subcategories will be hidden with it.
 **Common mistakes and limitations:** Subcategories are grouped hierarchically under their parent
 departments, so use the toggle arrows to show or hide nested children. A product that a shopper
 already had in their basket before you hid its department stays in that basket. While a department
-is hidden, it is not listed on the Promotions page; show the department to edit its promotion.
+is hidden, it is still listed on the Promotions page and you can still edit its promotion, but
+shoppers do not see that promotion until the department is shown again.
 
 **What happens after changes are saved:** The shop's navigation updates immediately, including the
 department list in the header search bar. Products already assigned to a category stay assigned to
