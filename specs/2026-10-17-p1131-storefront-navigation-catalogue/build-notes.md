@@ -143,6 +143,12 @@ No symptom that R7 and R12 do not explain, so there is no `R13a`.
   depends on it.
 - **Corrections to "Dev database state left by Build" above:** the five departments are **hidden**
   (not visible), and `Zz Probe` (hidden, with `Zz Probe Sub` under it) exists alongside `Zz Repro`.
+- **Dev database state after Validate** (`ep-dry-morning`): the five departments hidden; the Aheed
+  search placeholder is the owner's text; `Zz Probe` and `Zz Repro` hidden with their children; a
+  `Zz Promo` campaign on `baby-kids` (created by R6a, so Aheed has 2 campaign rows) is left in place.
+- **Not verified at Validate:** R24's visual comparison of SriMart's `/search?q=rice` against
+  `origin/staging`'s build. `tests/storefront-chrome-rewards-gate.test.tsx` fails on a full
+  `npx vitest run` on `origin/staging` too (#1125), so it is not a regression of this slice.
 - **Spec wording, not a defect:** R20 writes the query as `q=…&category=…`; the form serialises
   `category` first (`?category=bakery&q=bread`) because R15 puts the select before the input.
 
