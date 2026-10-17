@@ -263,9 +263,12 @@ export async function Header({
             </div>
           )}
 
-          {/* Search */}
+          {/* Search — inline from `xl` only (#1131). With the department select added, the shared
+            row (logo, location, search, nav) left the field 9px wide at 768 and 81px at 1024,
+            measured with scripts/verify-mobile-layout.ts; below `xl` the bar takes the full-width
+            row under this one instead. */}
           {!isPortal && (
-            <div className="flex-1 min-w-0 max-w-3xl hidden sm:block">
+            <div className="flex-1 min-w-0 max-w-3xl hidden xl:block">
               <DepartmentSearchBar
                 departments={searchDepartments}
                 placeholder={searchPlaceholder}
@@ -363,9 +366,10 @@ export async function Header({
 
         {/* Mobile search row — stays pinned with the logo/nav row (#960). #979: pb-1.5, not pb-3.
             The search input grew 6px to the 44px `tap` size below `lg`, and this row gives those
-            6px back so the product grid does not move. */}
+            6px back so the product grid does not move. #1131: shown up to `xl` (was `sm`), because
+            the department search bar no longer fits inline below `xl`. */}
         {!isPortal && (
-          <div className="px-4 pb-1.5 sm:hidden">
+          <div className="mx-auto max-w-7xl px-4 pb-1.5 xl:hidden">
             <DepartmentSearchBar departments={searchDepartments} placeholder={searchPlaceholder} />
           </div>
         )}
