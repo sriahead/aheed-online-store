@@ -138,8 +138,9 @@ No symptom that R7 and R12 do not explain, so there is no `R13a`.
   departments hidden and it listed all 16 categories, hidden ones included. F1 had corrected the
   playbook but not the CHANGELOG. The CHANGELOG now states the real behaviour and no longer defers
   `#1140`. No code and no `validation.md` row changed; the CHANGELOG was wrong, not the code.
-- **Open, for the owner:** issue `#1140`'s own body repeats the false claim. Closing or
-  correcting it is a GitHub write, so it is left for the user (see the hand-over in the reply).
+- **`#1140` is out of scope for this slice, by the owner's decision.** Its issue body repeats the
+  false claim and is deliberately left untouched: not closed, not edited. Nothing in this slice
+  depends on it.
 - **Corrections to "Dev database state left by Build" above:** the five departments are **hidden**
   (not visible), and `Zz Probe` (hidden, with `Zz Probe Sub` under it) exists alongside `Zz Repro`.
 - **Spec wording, not a defect:** R20 writes the query as `q=…&category=…`; the form serialises
