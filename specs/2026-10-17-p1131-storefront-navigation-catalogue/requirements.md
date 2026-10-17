@@ -132,7 +132,9 @@ R14. **Live, propagation.** Creating at `/staff/categories` a top-level category
      `/categories/zz-probe`; `/` shows `Zz Probe` in the department hero; the staff product form's
      category picker at `/staff/products/new` has an optgroup labelled `Zz Probe` containing
      `Zz Probe Sub`; and `/search?category=zz-probe` returns 200 with a filter chip naming
-     `Zz Probe`. Toggling the department invisible removes it from every one of those places.
+     `Zz Probe`. Toggling the department invisible removes it from every one of those places except the
+     staff product form's category picker, which keeps listing inactive categories, marked
+     "(inactive)", so staff can still file products under a hidden department.
      Both probe categories are left hidden afterwards, and the validator records that they remain.
 
 ## E. Header search

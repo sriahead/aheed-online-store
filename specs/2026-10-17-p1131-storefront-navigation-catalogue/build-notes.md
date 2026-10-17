@@ -126,9 +126,10 @@ No symptom that R7 and R12 do not explain, so there is no `R13a`.
   `docs/staff-playbook/staff-tabs-guide.md` now says so, and that shoppers do not see the promotion
   until the department is shown. The doc was wrong, not the code: R6a requires the promotion row to
   survive hiding. No `validation.md` row was loosened.
-- Validate also recorded, for the owner rather than as defects: R14's "removes it from every one of
+- R14 wording amended on the owner's instruction: R14 "removes it from every one of
   those places" does not hold for the staff product picker, which has always listed inactive
-  categories marked "(inactive)" so staff can still assign products to them. Left as is.
+  categories marked "(inactive)" so staff can still assign products to them. R14 and its validation
+  row now name the picker as the one exception; no code changed.
 
 ## Decisions taken during the build
 
