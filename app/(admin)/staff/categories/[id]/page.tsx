@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getCategoryForAdmin, listCategoriesForAdmin } from "@/lib/categories-service";
+import {
+  countHiddenWithCategory,
+  getCategoryForAdmin,
+  listCategoriesForAdmin,
+} from "@/lib/categories-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { CategoryForm } from "@/components/staff/CategoryForm";
 
@@ -32,9 +36,11 @@ export default async function EditCategoryPage({ params }: { params: Promise<{ i
     );
   }
 
-  const [category, categories] = await Promise.all([
+  const [category, categories, hiddenCounts] = await Promise.all([
     getCategoryForAdmin(auth.vendorId, id),
     listCategoriesForAdmin(auth.vendorId),
+    // Vendor-scoped counts, so an unknown or foreign id simply counts zero before notFound() below.
+    countHiddenWithCategory(auth.vendorId, id),
   ]);
   if (!category) notFound();
 
@@ -42,9 +48,10 @@ export default async function EditCategoryPage({ params }: { params: Promise<{ i
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">{category.name}</h1>
       <p className="mb-6 text-sm text-primary-muted">
-        Hiding a category needs its products and sub-categories hidden or moved first.
+        Hiding a category hides its products and sub-categories from shoppers too, without changing
+        them. Show it again to bring them all back.
       </p>
-      <CategoryForm category={category} categories={categories} />
+      <CategoryForm category={category} categories={categories} hiddenCounts={hiddenCounts} />
     </main>
   );
 }

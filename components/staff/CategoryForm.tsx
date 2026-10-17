@@ -5,7 +5,11 @@ import Link from "next/link";
 import { Save } from "lucide-react";
 import { saveCategory } from "@/features/admin/catalogue";
 import { initialCatalogueState } from "@/lib/catalogue-form";
-import type { AdminCategoryDetail, AdminCategoryRow } from "@/lib/repositories/categories";
+import type {
+  AdminCategoryDetail,
+  AdminCategoryRow,
+  CategoryHiddenCounts,
+} from "@/lib/repositories/categories";
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/Button";
 
@@ -28,11 +32,47 @@ export interface CategoryFormProps {
   category: AdminCategoryDetail | null;
   /** Every category for this vendor — filtered to legal parents below. */
   categories: AdminCategoryRow[];
+  /**
+   * #1131 — edit mode only: what switching this category off hides from shoppers, stated beside
+   * the checkbox. Omitted (or null) when creating.
+   */
+  hiddenCounts?: CategoryHiddenCounts | null;
 }
 
-export function CategoryForm({ category, categories }: CategoryFormProps) {
+function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/**
+ * The advisory beside "Visible in the shop" (#1131), or null when switching off would hide nothing.
+ * Exported for its test. Names no vendor and no kind of product (CLAUDE.md, user-facing copy).
+ */
+export function hiddenWithCategoryNote(counts: CategoryHiddenCounts): string | null {
+  const parts = [
+    counts.products > 0 && plural(counts.products, "product", "products"),
+    counts.subCategories > 0 && plural(counts.subCategories, "sub-category", "sub-categories"),
+  ].filter((part): part is string => part !== false);
+  if (parts.length === 0) return null;
+  return `Turning this off also hides its ${parts.join(" and ")} from shoppers. They come back when you turn it on.`;
+}
+
+export function CategoryForm({ category, categories, hiddenCounts = null }: CategoryFormProps) {
   const [state, action, saving] = useActionState(saveCategory, initialCatalogueState);
   const isNew = category === null;
+
+  // #1131 — after a refused save, render what was submitted rather than the stored row. React 19
+  // resets uncontrolled fields when the action settles; these defaults are what it resets TO.
+  const submitted = state.error ? state.submittedCategory : undefined;
+  const values = submitted ?? {
+    name: category?.name ?? "",
+    slug: category?.slug ?? "",
+    parentId: category?.parentId ?? "",
+    sortOrder: String(category?.sortOrder ?? 0),
+    isActive: category?.isActive ?? true,
+  };
+  // A changed key remounts the fields, so a select or checkbox cannot keep a stale DOM default.
+  const formKey = submitted ? `refused:${state.error}:${JSON.stringify(submitted)}` : "stored";
+  const hiddenNote = !isNew && hiddenCounts ? hiddenWithCategoryNote(hiddenCounts) : null;
 
   const parentOptions = categories.filter(
     (row) => row.parentId === null && row.id !== category?.id,
@@ -46,7 +86,7 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
   const isInvalid = (name: string) => state.field === name;
 
   return (
-    <form action={action} className="space-y-6">
+    <form key={formKey} action={action} className="space-y-6">
       {category && <input type="hidden" name="categoryId" value={category.id} />}
 
       {state.error && (
@@ -72,7 +112,7 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
           name="name"
           label="Name"
           required
-          defaultValue={category?.name ?? ""}
+          defaultValue={values.name}
           error={isInvalid("name")}
           errorId="category-form-error"
         />
@@ -83,7 +123,7 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
           autoComplete="off"
           spellCheck={false}
           placeholder="category-name"
-          defaultValue={category?.slug ?? ""}
+          defaultValue={values.slug}
           error={isInvalid("slug")}
           errorId="category-form-error"
         />
@@ -92,7 +132,7 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
           name="parentId"
           as="select"
           label="Parent category — blank makes this a top-level department"
-          defaultValue={category?.parentId ?? ""}
+          defaultValue={values.parentId}
           error={isInvalid("parentId")}
           errorId="category-form-error"
           hint="Categories go two levels deep, so a sub-category can't have children of its own."
@@ -114,7 +154,7 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
           min={0}
           step={1}
           required
-          defaultValue={category?.sortOrder ?? 0}
+          defaultValue={values.sortOrder}
           error={isInvalid("sortOrder")}
           errorId="category-form-error"
         />
@@ -123,11 +163,17 @@ export function CategoryForm({ category, categories }: CategoryFormProps) {
           <input
             type="checkbox"
             name="isActive"
-            defaultChecked={category?.isActive ?? true}
+            defaultChecked={values.isActive}
+            aria-describedby={hiddenNote ? "category-hidden-note" : undefined}
             className="h-4 w-4 rounded border-black/20"
           />
           Visible in the shop
         </label>
+        {hiddenNote && (
+          <p id="category-hidden-note" className="text-xs text-primary-muted">
+            {hiddenNote}
+          </p>
+        )}
       </section>
 
       <div className="flex items-center gap-3">

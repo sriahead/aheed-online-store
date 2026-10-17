@@ -12,6 +12,7 @@ import {
   type GeneratedProduct,
   generateProducts,
 } from "./generate-catalogue";
+import { FISH_DEPARTMENT } from "./department-changes";
 
 // Seed runs in Node (locally or CI) — prefers DIRECT_URL.
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
@@ -909,6 +910,12 @@ const CATALOGUE: CatalogueCategory[] = [
       },
     ],
   },
+  // #1131 — the owner's Fish department, with no products yet: it ships empty and staff stock it.
+  // Created here so a clean dev database has it; staging and production get it from
+  // scripts/apply-department-changes.ts, which reads this same entry (FISH_DEPARTMENT) so the two
+  // cannot disagree about names or slugs. `seedCatalogue` creates it on an already-seeded database
+  // too, because its idempotency check is per category.
+  FISH_DEPARTMENT,
 ];
 
 // Re-upload the (brand-neutral) product placeholder to every catalogue product's key.

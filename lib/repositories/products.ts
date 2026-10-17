@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
+import { visibleCategoryWhere } from "@/lib/category-visibility";
 import { keysetCursorArgs, runKeysetPage } from "@/lib/repositories/pagination";
 import {
   comparePackSizes,
@@ -734,7 +735,12 @@ export async function listProductsByUnitPrice(
   take: number,
 ): Promise<ProductSummary[]> {
   const rows = await prisma.product.findMany({
-    where: { vendorId, isActive: true, unitPricePencePerBaseUnit: { not: null } },
+    where: {
+      vendorId,
+      isActive: true,
+      category: visibleCategoryWhere,
+      unitPricePencePerBaseUnit: { not: null },
+    },
     orderBy: { unitPricePencePerBaseUnit: "asc" },
     take,
     select: productSummarySelect,
@@ -768,7 +774,7 @@ export async function listActiveProductSlugs(
   vendorId: string,
 ): Promise<string[]> {
   const rows = await prisma.product.findMany({
-    where: { vendorId, isActive: true },
+    where: { vendorId, isActive: true, category: visibleCategoryWhere },
     orderBy: { slug: "asc" },
     select: { slug: true },
   });
@@ -799,7 +805,13 @@ export async function listProductsByCategory(
      * displaying — i.e. a URL parameter silently replacing the route's own subject. The page's
      * category always wins; `tests/search-repository.test.ts` pins this order.
      */
-    { vendorId, isActive: true, ...buildFilterWhere(filters), categoryId: { in: categoryIds } },
+    {
+      vendorId,
+      isActive: true,
+      category: visibleCategoryWhere,
+      ...buildFilterWhere(filters),
+      categoryId: { in: categoryIds },
+    },
     { take, cursor },
   );
 }
@@ -880,7 +892,12 @@ export async function listCategorySpotlights(
 
   const groups = await prisma.product.groupBy({
     by: ["categoryId", "isFeatured"],
-    where: { vendorId, isActive: true, categoryId: { in: [...departmentOf.keys()] } },
+    where: {
+      vendorId,
+      isActive: true,
+      category: visibleCategoryWhere,
+      categoryId: { in: [...departmentOf.keys()] },
+    },
     _max: { createdAt: true },
   });
   const winners = pickDepartmentSpotlights(
@@ -903,6 +920,7 @@ export async function listCategorySpotlights(
     where: {
       vendorId,
       isActive: true,
+      category: visibleCategoryWhere,
       OR: [...winners.values()].map(({ categoryId, isFeatured, createdAt }) => ({
         categoryId,
         isFeatured,
@@ -936,7 +954,7 @@ export async function listProducts(
   return findPage(
     prisma,
     vendorId,
-    { vendorId, isActive: true, ...buildFilterWhere(filters) },
+    { vendorId, isActive: true, category: visibleCategoryWhere, ...buildFilterWhere(filters) },
     { take, cursor },
   );
 }
@@ -1030,7 +1048,11 @@ async function fetchSearchCandidates(
   const rows = await prisma.product.findMany({
     // #569 — combineWhere, NOT a spread: the filters and the rung predicate can both carry `AND`
     // or both carry `OR`, and a spread would silently drop one of them.
-    where: combineWhere({ vendorId, isActive: true }, buildFilterWhere(filters), predicate),
+    where: combineWhere(
+      { vendorId, isActive: true, category: visibleCategoryWhere },
+      buildFilterWhere(filters),
+      predicate,
+    ),
     // A TOTAL order, so which rows land inside the cap is deterministic even
     // when createdAt ties right at the boundary. Without `id`, two products
     // sharing a timestamp could swap across the cap between identical requests.
@@ -1162,7 +1184,7 @@ export async function listProductNameTokens(
   vendorId: string,
 ): Promise<Set<string>> {
   const rows = await prisma.product.findMany({
-    where: { vendorId, isActive: true },
+    where: { vendorId, isActive: true, category: visibleCategoryWhere },
     select: { name: true },
   });
 
@@ -1365,7 +1387,7 @@ export async function getProductBySlug(
   slug: string,
 ): Promise<ProductDetail | null> {
   const product = await prisma.product.findFirst({
-    where: { vendorId, slug, isActive: true },
+    where: { vendorId, slug, isActive: true, category: visibleCategoryWhere },
     select: {
       id: true,
       slug: true,
@@ -1463,7 +1485,7 @@ export async function getAvailableFacets(
 ): Promise<AvailableFacets> {
   const { groups, ...filters } = context;
   const base = combineWhere(
-    { vendorId, isActive: true },
+    { vendorId, isActive: true, category: visibleCategoryWhere },
     buildFilterWhere(filters),
     groups && groups.length > 0 ? buildDirectSearchWhere(groups) : undefined,
   );
@@ -1672,6 +1694,7 @@ export async function suggestProducts(
     where: {
       vendorId,
       isActive: true,
+      category: visibleCategoryWhere,
       AND: groups.map((group) => ({
         OR: group.variants.map((variant) => ({
           name: { contains: variant, mode: "insensitive" as const },
@@ -1719,6 +1742,7 @@ export async function matchProductListTerms(
     where: {
       vendorId,
       isActive: true,
+      category: visibleCategoryWhere,
       OR: variants.map((variant) => ({
         name: { contains: variant, mode: "insensitive" as const },
       })),

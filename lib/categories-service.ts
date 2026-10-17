@@ -2,6 +2,7 @@ import { cache } from "react";
 import { getPrisma } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import {
+  countHiddenWithCategory as countHiddenWithCategoryRepo,
   createCategoryForVendor as createCategoryForVendorRepo,
   getCategoryBySlug,
   getCategoryForAdmin as getCategoryForAdminRepo,
@@ -12,6 +13,7 @@ import {
   updateCategoryForVendor as updateCategoryForVendorRepo,
   type AdminCategoryDetail,
   type AdminCategoryRow,
+  type CategoryHiddenCounts,
   type CategoryRepository,
   type CategoryWriteInput,
 } from "@/lib/repositories/categories";
@@ -122,6 +124,14 @@ export async function getCategoryForAdmin(
   id: string,
 ): Promise<AdminCategoryDetail | null> {
   return getCategoryForAdminRepo(getPrisma(), vendorId, id);
+}
+
+/** `/staff/categories/[id]`'s "what switching this off hides" note (#1131). */
+export async function countHiddenWithCategory(
+  vendorId: string,
+  id: string,
+): Promise<CategoryHiddenCounts> {
+  return countHiddenWithCategoryRepo(getPrisma(), vendorId, id);
 }
 
 export async function createCategoryForVendor(
