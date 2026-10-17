@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.107.0"
-updated: 2026-10-16
+version: "1.108.0"
+updated: 2026-10-17
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -793,6 +793,25 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **Owner's 2026-10-17 "Website Updates" brief, split into three slices.** The owner approved
+  the clubbing at `/propose`.
+  - **Slice A `#1131`** absorbs `#1132` and `#1133`. It covers departments, category management, the
+    department search bar and the Shopping List entry.
+    - **Status:** BUILT on `feature/p1131-storefront-navigation-catalogue`. Spec `fac3ca1`. Not
+      validated, not pushed. Next stage is `/validate` from a fresh context.
+    - **Standing rule it introduces:** a category is visible only if it and its parent are active.
+      Hiding rewrites no row. `#159`'s refusal to hide a stocked department is gone. Recorded in
+      `specs/architecture.md` 1.41.0.
+    - **Rollout is not automatic.** After deploy, the five departments, Fish and the search
+      placeholder only change when someone runs
+      `scripts/apply-department-changes.ts --vendor aheed-food-centre --apply` with `DIRECT_URL`
+      from `secrets/<env>.vars`, on staging then production. That is a production command, so the
+      user runs it.
+  - **Slice B `#1134`** absorbs `#1136`: Rewards off, feature-switch gating, and the marketing
+    sentence with a separate opt-in. Proposed only.
+  - **Slice C `#1135`**: a free-text custom line per category or item. Proposed only. The owner
+    deferred "fix existing free-text" until they give a route or symptom.
 
 - **Club C, privacy and consent honesty (`#1107` + `#1041`): DONE, in production** (PR #1114 to
   `staging`, promotion PR #1118, merge `6ec8142`, 2026-10-16; spec `1b4b518`, build `22599b6`, fix

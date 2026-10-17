@@ -38,6 +38,11 @@ import { join } from "node:path";
  * each visible form input's `autocomplete` attribute (`formInputs`). The sticky header is the page's `header` element. It is not a
  * replacement for `#440`'s Playwright harness.
  *
+ * #1131 adds `headerSearch`: the displayed `[data-header-search]` form's box and the boxes of its
+ * `select`, `input[name=q]` and `button[type=submit]`, each as `{ top, left, width, height }` read
+ * at scroll 0, or `null` on a page with no search bar (the landing page). Compare it with
+ * `viewportWidth` and `documentScrollWidth` for horizontal overflow.
+ *
  * #956 adds `documentScrollWidth` (`document.documentElement.scrollWidth`) to every object, and,
  * with `--add-first`, `cartFeedback` to the first width's: the `[data-cart-feedback]` region's text
  * and its message's `left`/`right`, read as soon as the region fills after the click (it empties
@@ -443,6 +448,30 @@ const MEASURE = `(async () => {
     };
   }
 
+  // #1131 — the header search bar: the displayed \`[data-header-search]\` form (the header mounts one
+  // per breakpoint) and its select, input and submit button, each with its top so a reader can tell
+  // whether the three share one row. Read at scroll 0, like everything above.
+  const searchForm = [...document.querySelectorAll("[data-header-search]")].find((el) => shown(el));
+  let headerSearch = null;
+  if (searchForm) {
+    const box = (el) => {
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return {
+        top: Math.round(r.top),
+        left: Math.round(r.left),
+        width: Math.round(r.width),
+        height: Math.round(r.height),
+      };
+    };
+    headerSearch = {
+      form: box(searchForm),
+      select: box(searchForm.querySelector("select")),
+      input: box(searchForm.querySelector("input[name=q]")),
+      button: box(searchForm.querySelector("button[type=submit]")),
+    };
+  }
+
   window.scrollTo(0, ${SCROLL_Y});
   await sleep(400);
   const headerAfter = header ? header.getBoundingClientRect() : null;
@@ -468,6 +497,7 @@ const MEASURE = `(async () => {
     formInputs,
     checkout,
     brand,
+    headerSearch,
   };
 })()`;
 

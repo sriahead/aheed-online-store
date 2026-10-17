@@ -10,6 +10,7 @@ import {
   type ProductFilters,
 } from "@/lib/repositories/products";
 import { toUnexpandedGroups } from "@/lib/search-expansion";
+import { visibleCategoryWhere } from "@/lib/category-visibility";
 
 /**
  * P2.6 slice 1 (#564), R6/R7/R8/R15/R16/R17/R18.
@@ -424,7 +425,11 @@ function onlySearchCalls(spies: ReturnType<typeof makeLadderStub>["spies"]) {
 describe("listProductNameTokens (R6)", () => {
   it("tokenises active product NAMES only, vendor-scoped, deduplicated", async () => {
     const productFindMany = vi.fn(async (args: unknown) => {
-      expect(args).toEqual({ where: { vendorId: VENDOR, isActive: true }, select: { name: true } });
+      // #1131 — and only from visible categories, like every storefront product read (R2).
+      expect(args).toEqual({
+        where: { vendorId: VENDOR, isActive: true, category: visibleCategoryWhere },
+        select: { name: true },
+      });
       return [{ name: "Basmati Rice" }, { name: "Basmati Lentils" }];
     });
     const client = { product: { findMany: productFindMany } };

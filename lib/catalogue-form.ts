@@ -103,6 +103,34 @@ export interface CatalogueFormState {
   /** The control to point at, matching the input's `name`. Null for whole-form errors. */
   field: string | null;
   saved: boolean;
+  /**
+   * #1131 — what the user submitted, echoed back on a REFUSED category save so the form can render
+   * it again. React 19 resets a form's uncontrolled fields after its action settles, so without this
+   * a refused save (a taken web address, an unusable parent) blanked everything the user had typed.
+   * Absent on success and on every product-form state.
+   */
+  submittedCategory?: SubmittedCategory;
+}
+
+/** The category form's fields as submitted — raw strings, because a refusal may be a parse error. */
+export interface SubmittedCategory {
+  name: string;
+  slug: string;
+  parentId: string;
+  sortOrder: string;
+  isActive: boolean;
+}
+
+/** FormData -> `SubmittedCategory`, read through the same field list the parser uses. */
+export function readSubmittedCategory(form: FormData): SubmittedCategory {
+  const raw = readForm(form, CATEGORY_FIELDS);
+  return {
+    name: raw.name ?? "",
+    slug: raw.slug ?? "",
+    parentId: raw.parentId ?? "",
+    sortOrder: raw.sortOrder ?? "",
+    isActive: checkbox(raw, "isActive"),
+  };
 }
 
 /**

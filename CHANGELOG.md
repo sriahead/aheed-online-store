@@ -6,6 +6,17 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Hiding a department hides its products too, Aheed gets a Fish department, and the header search becomes a department-scoped bar** (issue `#1131`, absorbing `#1132` and `#1133`; `specs/2026-10-17-p1131-storefront-navigation-catalogue/`). Slice A of the owner's 2026-10-17 website brief. No schema change, no migration, no new dependency.
+  - **Departments:** a category is shown only if it and its parent are active (`lib/category-visibility.ts`). Every storefront product read and the storefront category reads now apply that rule, so a hidden department's page, subcategories, products, sitemap entries and carousel promotion all disappear, and come back when it is shown again. No product, subcategory or promotion row is changed. A source-scanning test (`tests/storefront-product-visibility.test.ts`) fails any product read that omits the rule. Before this, hiding a department changed the navigation only, and its products stayed in search and on their own pages.
+  - **Staff:** `/staff/categories` no longer refuses to hide a category that has active products or subcategories (`#159`'s "Deactivate or move those first"). The edit page states what the switch will hide instead. A refused category save now keeps what was typed; it used to come back with the name and web address blank and the sort order reset to 0 (reproduced live, see `build-notes.md`).
+  - **Header search:** `DepartmentSearchBar` has a native department select ("All Departments" and then the vendor's active departments, read from the database), the search field, and a real submit button with the search icon. It is still a plain `GET /search` form, so it works without JavaScript; `/search` already scoped by `category`. The select shows the department already in the URL. Inline from `xl`; below that it takes the full-width row under the header, because inline left the field 9px wide at 768px. `scripts/verify-mobile-layout.ts` now reports `headerSearch`.
+  - **Shopping List:** the header's link (now "Shopping List", `aria-label="Shopping list"`) shows on the landing page too. A guest who matches a list on `/shop-your-list` is told to sign in to save it, where nothing was shown before.
+  - **Aheed data:** `scripts/apply-department-changes.ts --vendor <slug> [--apply] [--restore]` is dry-run by default and idempotent. It hides International, Household, Health & Beauty, Baby & Kids and Pet Supplies, creates Fish with Fresh Fish and Frozen Fish, and sets the search placeholder "Type your product, we will find it for you". `--restore` shows the five again. **It must be run by hand on staging and production after deploy**; the dev seed adds Fish only.
+  - Docs: `specs/architecture.md` 1.41.0 (category visibility rule); `docs/staff-playbook/staff-tabs-guide.md` 2.11.0 (Categories: hiding and showing).
+  - Deferred: `#1137` (search suggestions ignore the chosen department), `#1138` (sign-in from the list prompt does not return to the list) and `#1139` (hidden-department products already in carts or bundles). A hidden department is still listed on `/staff/promotions` and its promotion stays editable; shoppers just do not see it until the department is shown again.
+
 ### Fixed
 
 - **Every shop-list line that did not go in is named on `/cart`, and the header's Collect/Delivery controls have one accessible name** (issues `#1090`, `#1091`; `specs/2026-10-16-p1090-1091-list-notice-and-control-names/`). "Club F" from the 2026-10-15 backlog clubbing. No schema change, no migration, no new dependency.

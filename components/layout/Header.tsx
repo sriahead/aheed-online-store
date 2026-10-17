@@ -31,7 +31,8 @@ import { LocationControl } from "./LocationControl";
 import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
 import { bannerHeadlineText } from "@/components/layout/banner-headline";
-import { SearchSuggest } from "./SearchSuggest";
+import { DepartmentSearchBar } from "./DepartmentSearchBar";
+import { getCategoryRepository } from "@/lib/categories-service";
 import { ViewSwitcher } from "./ViewSwitcher";
 
 /**
@@ -40,27 +41,17 @@ import { ViewSwitcher } from "./ViewSwitcher";
  * progressive-enhancement pattern used everywhere since P2a.
  */
 
-/**
- * #568 — the form itself is unchanged: still `method="GET" action="/search"`, so with JavaScript
- * off it submits and navigates exactly as before. `SearchSuggest` is a client island that owns only
- * the input and its suggestion listbox; the enhancement is additive, never load-bearing.
- */
-function SearchForm({ className = "", placeholder }: { className?: string; placeholder: string }) {
-  return (
-    <form method="GET" action="/search" className={className}>
-      <SearchSuggest placeholder={placeholder} />
-    </form>
-  );
-}
-
 export async function Header({
   isPortal = false,
-  isLanding: isLandingProp = false,
 }: {
   isPortal?: boolean;
   /**
-   * P8.5f: whether this is the storefront's landing route (`/`), where the
-   * postcode checker replaces search. Passed explicitly by whichever layout
+   * P8.5f: whether this is the storefront's landing route (`/`). #1131: the
+   * header no longer renders differently there — the "Shop List" link it used
+   * to hide is the landing page's Shopping List entry now — so `Header` reads
+   * nothing from it. It stays on the props because it is the route groups'
+   * seam into the header (`StorefrontChrome`), and re-deriving it later would
+   * mean re-plumbing three layouts. Passed explicitly by whichever layout
    * renders `Header` — `app/(landing)/layout.tsx` passes `true`,
    * `app/(storefront)/layout.tsx` and `app/(admin)/layout.tsx` don't, same
    * pattern `isPortal` already uses. Not derived from a request header: a
@@ -78,7 +69,6 @@ export async function Header({
   const session = await (await getAuth()).api.getSession({ headers: requestHeaders });
   const user = session?.user as { name: string } | undefined;
   const firstName = user?.name?.split(" ")[0];
-  const isLanding = !isPortal && isLandingProp;
 
   let isStaffOrAdmin = false;
   let canSeeAdmin = false;
@@ -147,6 +137,13 @@ export async function Header({
   // vendor with none — but a platform default naming one vendor's trade is the
   // same defect this slice exists to remove.
   const searchPlaceholder = profile?.searchPlaceholder ?? "Search products…";
+  // #1131 — the search bar's department selector. The vendor's ACTIVE departments straight from the
+  // database (request-memoised, so a page that also lists departments shares the one query), which is
+  // what makes a new department appear and a hidden one disappear with no code change. The portal
+  // renders no search bar, so it skips the read.
+  const searchDepartments = isPortal
+    ? []
+    : (await getCategoryRepository().listTopLevel()).map(({ slug, name }) => ({ slug, name }));
   const { CDN_BASE_URL } = getEnv();
   const logoUrl =
     profile?.logoStorageKey && CDN_BASE_URL
@@ -266,10 +263,16 @@ export async function Header({
             </div>
           )}
 
-          {/* Search */}
+          {/* Search — inline from `xl` only (#1131). With the department select added, the shared
+            row (logo, location, search, nav) left the field 9px wide at 768 and 81px at 1024,
+            measured with scripts/verify-mobile-layout.ts; below `xl` the bar takes the full-width
+            row under this one instead. */}
           {!isPortal && (
-            <div className="flex-1 max-w-md hidden sm:block">
-              <SearchForm placeholder={searchPlaceholder} />
+            <div className="flex-1 min-w-0 max-w-3xl hidden xl:block">
+              <DepartmentSearchBar
+                departments={searchDepartments}
+                placeholder={searchPlaceholder}
+              />
             </div>
           )}
 
@@ -278,8 +281,9 @@ export async function Header({
             {/* #496 — the landing page's header had no path at all to the
               catalogue: "Shop List" (below) is deliberately hidden there
               (P8.5f), and the only other route in was the hero's rotating
-              per-department "Shop {Department}" button. Unlike "Shop List",
-              this stays visible on every non-portal route, landing included. */}
+              per-department "Shop {Department}" button. This stays visible on
+              every non-portal route, landing included — and since #1131 so
+              does the Shopping List link below. */}
             {!isPortal && (
               <Link
                 href="/categories"
@@ -291,16 +295,20 @@ export async function Header({
               </Link>
             )}
 
-            {/* P8.5f: hidden on the landing page (see the search slot above); the
-              standing postcode answer takes this space instead. */}
-            {!isPortal && !isLanding && (
+            {/* #1131 — shown on the landing page too: it is the landing page's Shopping List entry
+              (P8.5f had hidden it there). `aria-label` because the visible text is hidden below
+              `sm`, so without it a phone's screen reader would fall back to the `title`. */}
+            {!isPortal && (
               <Link
                 href="/shop-your-list"
+                aria-label="Shopping list"
                 className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
                 title="Shop by pasting your list"
               >
                 <ShoppingBag className="w-4 h-4 text-primary" />
-                <span className="hidden sm:inline">Shop List</span>
+                {/* #1131 — "Shopping List", the owner's name for it, so the visible text and the
+                  aria-label above agree (WCAG 2.5.3, label in name). */}
+                <span className="hidden sm:inline">Shopping List</span>
               </Link>
             )}
 
@@ -358,10 +366,11 @@ export async function Header({
 
         {/* Mobile search row — stays pinned with the logo/nav row (#960). #979: pb-1.5, not pb-3.
             The search input grew 6px to the 44px `tap` size below `lg`, and this row gives those
-            6px back so the product grid does not move. */}
+            6px back so the product grid does not move. #1131: shown up to `xl` (was `sm`), because
+            the department search bar no longer fits inline below `xl`. */}
         {!isPortal && (
-          <div className="px-4 pb-1.5 sm:hidden">
-            <SearchForm placeholder={searchPlaceholder} />
+          <div className="mx-auto max-w-7xl px-4 pb-1.5 xl:hidden">
+            <DepartmentSearchBar departments={searchDepartments} placeholder={searchPlaceholder} />
           </div>
         )}
       </header>

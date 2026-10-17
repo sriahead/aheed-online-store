@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { BookmarkPlus, CircleCheck } from "lucide-react";
+import Link from "next/link";
+import { BookmarkPlus, CircleCheck, LogIn } from "lucide-react";
 import { ListReview } from "@/components/cart/ListReview";
 import { matchList } from "@/features/cart/match-list";
 import { saveListFromMatch } from "@/features/lists/save-list-from-match";
@@ -151,6 +152,21 @@ export function ShopYourList({
             </p>
           )}
         </form>
+      )}
+
+      {/* #1131 — a guest used to get nothing here: no save form and no reason. Saving needs an
+          account (see the docstring above), so say so where the save form would be. */}
+      {lines && !canSave && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/10 pt-5">
+          <p className="text-sm text-primary">Sign in to save this list for next time.</p>
+          <Link
+            href="/login"
+            className="inline-flex min-h-tap items-center gap-1.5 rounded-2xl border border-black/10 bg-surface-muted px-4 text-sm font-bold text-primary hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+          >
+            <LogIn className="h-4 w-4" aria-hidden />
+            Sign in
+          </Link>
+        </div>
       )}
     </div>
   );
