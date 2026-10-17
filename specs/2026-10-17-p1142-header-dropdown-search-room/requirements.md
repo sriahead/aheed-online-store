@@ -89,9 +89,15 @@ R12. **Live.** `curl -s http://localhost:8787/` and `curl -s http://localhost:87
 
 R13. **Measured.** With `npx tsx scripts/verify-mobile-layout.ts --base http://localhost:8787 --path
      /search --widths 360,390,768,1024,1280`: at 1280 the `[data-header-search]` form is at least
-     640px wide and its input is at least 400px wide (slice A measured 521 and 337); at 360 and 390
+     600px wide and its input is at least 400px wide (slice A measured 521 and 337); at 360 and 390
      the input is at least 120px wide; select, input and button tops differ by at most 2px; the
      page does not scroll horizontally at any width (`scrollWidth <= viewport width`).
+     **Amended at Build (2026-10-17, owner-approved):** the form threshold was 640. Measured at
+     1280 the slice's design gives 603: the 1248px row holds the logo (128), the menu summary
+     (156), the nav (176) and three 16px gaps, and the Shopping List link (129 plus an 8px gap)
+     now shares the search slot, so only the toggle pair's replacement frees width. The owner
+     chose to keep the design and lower the threshold to 600 rather than shrink other controls.
+     The breakdown is in `build-notes.md`.
 
 R14. The inline breakpoint is recorded in `build-notes.md` with the measured input width at 1024.
      If the search bar is inline at 1024 (the `lg` choice), that measurement is at least 240px; if

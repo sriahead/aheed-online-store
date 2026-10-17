@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 /**
  * Measure the storefront at real phone and tablet widths:
- * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>]`.
+ * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>]`.
  *
  * ## Why this exists (#960, #961, #962)
  *
@@ -99,6 +99,18 @@ import { join } from "node:path";
  *   never a deployed host, and never a real customer's credentials. The dev demo shopper is
  *   `demo-customer@example.com` with `DEMO_ACCOUNT_PASSWORD` from `.dev.vars`. The split is on the
  *   FIRST colon, so a password containing `:` still works.
+ *
+ * #1142 adds:
+ * - `--open-location-menu`: before measuring each width, sets `open` on the first displayed
+ *   `[data-location-menu]` (the header mounts `LocationControl` twice, one per breakpoint), then
+ *   waits 300 ms.
+ * - `locationMenu`, always printed: for the first displayed `[data-location-menu]`, whether it is
+ *   `open`, its `summary` box and its panel box (`{ top, left, right, bottom, width, height }`), and
+ *   per item `{ name, width, height, atCentre }`, where `atCentre` is whether the element at the
+ *   item's centre (`elementFromPoint`) is that item or inside it — false means something covers or
+ *   clips it. Read at scroll 0. `null` on a page with no menu (a vendor without collection).
+ * - `shoppingList`: the displayed `a[href="/shop-your-list"]` inside `header`, as `{ top, left,
+ *   width, height }` at scroll 0, or `null`. Compare its `top` with `headerSearch.button.top`.
  */
 
 const HEIGHT = 844;
@@ -111,6 +123,7 @@ interface Args {
   addFirst: boolean;
   then: string | null;
   openLocation: boolean;
+  openLocationMenu: boolean;
   openFilters: boolean;
   openCart: boolean;
   openQuickView: boolean;
@@ -129,6 +142,7 @@ function parseArgs(argv: string[]): Args {
   const then = value("--then") ?? null;
   const addFirst = argv.includes("--add-first");
   const openLocation = argv.includes("--open-location");
+  const openLocationMenu = argv.includes("--open-location-menu");
   const openFilters = argv.includes("--open-filters");
   const openCart = argv.includes("--open-cart");
   const openQuickView = argv.includes("--open-quick-view");
@@ -158,7 +172,7 @@ function parseArgs(argv: string[]): Args {
     (argv.includes("--sign-in") && signIn === null)
   ) {
     console.error(
-      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>]",
+      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>]",
     );
     process.exit(2);
   }
@@ -184,6 +198,7 @@ function parseArgs(argv: string[]): Args {
     addFirst,
     then: then === null ? null : absolute(then),
     openLocation,
+    openLocationMenu,
     openFilters,
     openCart,
     openQuickView,
@@ -472,6 +487,50 @@ const MEASURE = `(async () => {
     };
   }
 
+  // #1142 — the displayed location menu and its items, and whether each item is actually hit at its
+  // centre (an ancestor's overflow or a later element covering it makes this false). Scroll 0.
+  const edges = (el) => {
+    const r = el.getBoundingClientRect();
+    return {
+      top: Math.round(r.top),
+      left: Math.round(r.left),
+      right: Math.round(r.right),
+      bottom: Math.round(r.bottom),
+      width: Math.round(r.width),
+      height: Math.round(r.height),
+    };
+  };
+  const menu = [...document.querySelectorAll("[data-location-menu]")].find((el) => shown(el));
+  let locationMenu = null;
+  if (menu) {
+    const summary = menu.querySelector("summary");
+    const panel = summary ? summary.nextElementSibling : null;
+    const items = panel ? [...panel.querySelectorAll("button")] : [];
+    locationMenu = {
+      open: menu.open,
+      summary: summary ? edges(summary) : null,
+      panel: panel && menu.open ? edges(panel) : null,
+      items: menu.open
+        ? items.map((el) => {
+            const r = el.getBoundingClientRect();
+            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return {
+              name: el.textContent.trim(),
+              width: Math.round(r.width),
+              height: Math.round(r.height),
+              atCentre: Boolean(hit && (hit === el || el.contains(hit))),
+            };
+          })
+        : [],
+    };
+  }
+  const listLink = [...document.querySelectorAll('header a[href="/shop-your-list"]')].find((el) =>
+    shown(el),
+  );
+  const shoppingList = listLink
+    ? (({ top, left, width, height }) => ({ top, left, width, height }))(edges(listLink))
+    : null;
+
   window.scrollTo(0, ${SCROLL_Y});
   await sleep(400);
   const headerAfter = header ? header.getBoundingClientRect() : null;
@@ -498,7 +557,20 @@ const MEASURE = `(async () => {
     checkout,
     brand,
     headerSearch,
+    locationMenu,
+    shoppingList,
   };
+})()`;
+
+/** #1142 — opens the displayed LocationControl method menu; false when there is none. */
+const OPEN_LOCATION_MENU = `(() => {
+  const menu = [...document.querySelectorAll("[data-location-menu]")].find((d) => {
+    const r = d.getBoundingClientRect();
+    return getComputedStyle(d).display !== "none" && r.width > 0 && r.height > 0;
+  });
+  if (!menu) return false;
+  menu.open = true;
+  return true;
 })()`;
 
 /**
@@ -731,6 +803,13 @@ async function main() {
       if (args.openLocation) {
         if (!(await cdp.evaluate<boolean>(OPEN_LOCATION))) {
           throw new Error("--open-location: no displayed LocationControl dialog");
+        }
+        await sleep(300);
+      }
+
+      if (args.openLocationMenu) {
+        if (!(await cdp.evaluate<boolean>(OPEN_LOCATION_MENU))) {
+          throw new Error("--open-location-menu: no displayed LocationControl menu");
         }
         await sleep(300);
       }

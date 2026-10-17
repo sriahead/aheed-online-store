@@ -115,7 +115,7 @@ describe("planDepartmentChanges", () => {
   });
 
   it("the owner's placeholder is within the staff form's 80-character limit", () => {
-    expect(OWNER_SEARCH_PLACEHOLDER).toBe("Type your product, we will find it for you");
+    expect(OWNER_SEARCH_PLACEHOLDER).toBe("Find your favourites...");
     expect(OWNER_SEARCH_PLACEHOLDER.length).toBeLessThanOrEqual(80);
   });
 });

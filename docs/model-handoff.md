@@ -813,6 +813,15 @@ All facts in this section require live verification:
       `scripts/apply-department-changes.ts --vendor aheed-food-centre --apply` with `DIRECT_URL`
       from `secrets/<env>.vars`, on staging then production. That is a production command, so the
       user runs it.
+  - **Follow-on `#1142`**: the header method dropdown, Shopping List beside the search bar, and the
+    placeholder "Find your favourites...".
+    - **Status:** BUILT on `feature/p1142-header-dropdown-search-room`, awaiting Validate from a
+      fresh context. `specs/2026-10-17-p1142-header-dropdown-search-room/build-notes.md` has the
+      measurements. The owner lowered R13's form threshold from 640 to 600 at Build.
+    - **It changes what slice A's script writes.** The script sets whatever `OWNER_SEARCH_PLACEHOLDER`
+      is in the deployed code. Run it on an environment before `#1142` reaches it and you get the
+      old text; run it again after the deploy and you get the new one. The script is idempotent, so
+      a second run is safe.
   - **Slice B `#1134`** absorbs `#1136`: Rewards off, feature-switch gating, and the marketing
     sentence with a separate opt-in. Proposed only.
   - **Slice C `#1135`**: a free-text custom line per category or item. Proposed only. The owner

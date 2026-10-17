@@ -75,13 +75,34 @@ afterEach(() => {
 
 describe("Header Shopping List link (#1131 R25)", () => {
   for (const isLanding of [true, false]) {
+    // #1142 — the link moved from the right-hand nav to beside the search bar, so it renders once
+    // per search bar (the inline slot from `xl` and the full-width row below it; CSS shows one).
     it(`renders on ${isLanding ? "the landing page" : "other storefront pages"} with one accessible name`, async () => {
       render(await Header({ isLanding }));
-      const link = screen.getByRole("link", { name: "Shopping list" });
-      expect(link.getAttribute("href")).toBe("/shop-your-list");
-      expect(link.getAttribute("aria-label")).toBe("Shopping list");
-      // The visible text is contained in the accessible name.
-      expect(link.textContent?.trim().toLowerCase()).toBe("shopping list");
+      const links = screen.getAllByRole("link", { name: "Shopping list" });
+      expect(links).toHaveLength(2);
+      for (const link of links) {
+        expect(link.getAttribute("href")).toBe("/shop-your-list");
+        expect(link.getAttribute("aria-label")).toBe("Shopping list");
+        // The visible text is contained in the accessible name.
+        expect(link.textContent?.trim().toLowerCase()).toBe("shopping list");
+      }
+    });
+
+    it(`sits directly after each search bar, outside it and outside the main nav, on ${isLanding ? "the landing page" : "other storefront pages"} (#1142 R11)`, async () => {
+      render(await Header({ isLanding }));
+      const forms = screen.getAllByRole("search");
+      expect(forms).toHaveLength(2);
+      for (const form of forms) {
+        const next = form.nextElementSibling;
+        expect(next?.tagName).toBe("A");
+        expect(next?.getAttribute("aria-label")).toBe("Shopping list");
+      }
+      const nav = screen.getByRole("navigation", { name: "Main Navigation" });
+      for (const link of screen.getAllByRole("link", { name: "Shopping list" })) {
+        expect(nav.contains(link)).toBe(false);
+        expect(link.closest("form")).toBeNull();
+      }
     });
   }
 
