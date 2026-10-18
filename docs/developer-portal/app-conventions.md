@@ -4,7 +4,7 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.14.1"
+version: "1.15.1"
 updated: 2026-10-18
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, fulfilment-method preference, autocomplete tokens, shared-source copy rules and React hooks — with the tests that enforce each invariant mechanically.
@@ -43,6 +43,14 @@ Runtime failures that survive a green build are in `runtime-pitfalls.md`. Folder
   keeps its own untouched single-order `<form action={advanceStatus}>`, and a row's bulk-select
   checkbox sits in the same `<li>` but carries `form="bulk-advance"` to bind to a separate
   `<form id="bulk-advance" action={advanceStatusBulk}>` rendered once above the list.
+- **A `<form action={serverAction}>` reloads the page only when JavaScript is off.** With
+  JavaScript on, React submits the action and re-renders without navigating, so DOM state the
+  browser owns (a `<details>` left `open`, focus, scroll) survives the post. UI that is meant to close
+  "because the post reloads" stays open for every hydrated shopper. Close it in the form's
+  `onSubmit`, without `preventDefault` so the action still runs; the no-JS reload covers the
+  other case. First hit in `#1142`: the header's method menu stayed open after every choice. The
+  plan had assumed a reload, and jsdom tests could not show it. Pinned by
+  `tests/location-control.test.tsx` ("closes when the … method item is submitted").
 
 
 ## Repository layer (`lib/repositories/*`)
@@ -415,9 +423,10 @@ store's staff reads must be right for **any** vendor.
   speech user saying what they see still hits it: `Click & Collect` contains `Collect`,
   `Delivery · <postcode>` contains the postcode.
 - **If both spans render the same text, collapse them to one span** rather than labelling the pair.
-- A **single** `hidden sm:inline` span beside an icon (the header's Shop, Shop List, account and Sign
-  In links) does not double; at narrow widths its name falls back to the link's `title`. That is
-  out of this rule's scope.
+- A **single** `hidden sm:inline` span beside an icon (the header's Shop, account and Sign In links)
+  does not double; at narrow widths its name falls back to the link's `title`. That is out of this
+  rule's scope. The Quick Shop link beside the search bar carries an `aria-label="Quick Shop"`
+  identical to its visible text, so its name does not fall back.
 - Enforced for `components/layout/LocationControl.tsx` by `tests/location-control.test.tsx`, which
   addresses every button by `getByRole("button", { name })` with the exact name.
 

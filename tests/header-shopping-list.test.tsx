@@ -6,9 +6,9 @@ import { cleanup, render, screen } from "@testing-library/react";
  * #1131 R25 (and R17's wiring) — the header's Shopping List link and department selector.
  *
  * P8.5f hid the "Shop List" link on the landing page, so the owner found no Shopping List entry
- * there. It now renders on every non-portal route, with `aria-label="Shopping list"` because its
- * visible text is hidden below `sm`, and with the visible text "Shopping List" so the two agree
- * (WCAG 2.5.3, label in name). Everything else `Header` renders is stubbed: each piece has its own
+ * there. It now renders on every non-portal route, with an `aria-label` because its visible text
+ * is hidden below `sm`, and the label and visible text agree (WCAG 2.5.3, label in name). #1145
+ * renamed it from "Shopping List" to "Quick Shop". Everything else `Header` renders is stubbed: each piece has its own
  * test, and this one is about which links and departments the header puts in front of a shopper.
  */
 
@@ -79,13 +79,13 @@ describe("Header Shopping List link (#1131 R25)", () => {
     // per search bar (the inline slot from `xl` and the full-width row below it; CSS shows one).
     it(`renders on ${isLanding ? "the landing page" : "other storefront pages"} with one accessible name`, async () => {
       render(await Header({ isLanding }));
-      const links = screen.getAllByRole("link", { name: "Shopping list" });
+      const links = screen.getAllByRole("link", { name: "Quick Shop" });
       expect(links).toHaveLength(2);
       for (const link of links) {
         expect(link.getAttribute("href")).toBe("/shop-your-list");
-        expect(link.getAttribute("aria-label")).toBe("Shopping list");
+        expect(link.getAttribute("aria-label")).toBe("Quick Shop");
         // The visible text is contained in the accessible name.
-        expect(link.textContent?.trim().toLowerCase()).toBe("shopping list");
+        expect(link.textContent?.trim().toLowerCase()).toBe("quick shop");
       }
     });
 
@@ -96,10 +96,10 @@ describe("Header Shopping List link (#1131 R25)", () => {
       for (const form of forms) {
         const next = form.nextElementSibling;
         expect(next?.tagName).toBe("A");
-        expect(next?.getAttribute("aria-label")).toBe("Shopping list");
+        expect(next?.getAttribute("aria-label")).toBe("Quick Shop");
       }
       const nav = screen.getByRole("navigation", { name: "Main Navigation" });
-      for (const link of screen.getAllByRole("link", { name: "Shopping list" })) {
+      for (const link of screen.getAllByRole("link", { name: "Quick Shop" })) {
         expect(nav.contains(link)).toBe(false);
         expect(link.closest("form")).toBeNull();
       }
@@ -108,7 +108,7 @@ describe("Header Shopping List link (#1131 R25)", () => {
 
   it("renders no Shopping List link in the staff portal", async () => {
     render(await Header({ isPortal: true }));
-    expect(screen.queryByRole("link", { name: "Shopping list" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Quick Shop" })).toBeNull();
   });
 });
 

@@ -49,7 +49,7 @@ export default async function AccountListsPage() {
           <p className="mt-1 text-sm text-primary-muted">
             Paste a list on{" "}
             <Link href="/shop-your-list" className="font-semibold text-primary underline">
-              Shop your list
+              Quick Shop
             </Link>
             , or save your cart or a past order as a list.
           </p>

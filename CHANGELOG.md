@@ -24,6 +24,13 @@ every branch merges.
   - Docs: `specs/architecture.md` 1.41.0 (category visibility rule); `docs/staff-playbook/staff-tabs-guide.md` 2.11.0 (Categories: hiding and showing).
   - Deferred: `#1137` (search suggestions ignore the chosen department), `#1138` (sign-in from the list prompt does not return to the list) and `#1139` (hidden-department products already in carts or bundles). A hidden department is still listed on `/staff/promotions` and its promotion stays editable; shoppers just do not see it until the department is shown again.
 
+### Changed
+
+- **The paste-a-list feature is called "Quick Shop" everywhere a shopper sees it, and its page copy is shorter** (issue `#1145`; `specs/2026-10-18-p1145-quick-shop/`). Copy only: the URL stays `/shop-your-list`, and parsing, matching, the review step, saving and adding to the cart are unchanged. No schema change, no migration, no new dependency.
+  - **Name:** the header link (visible text and `aria-label`), the page `h1` and `<title>`, the `/cart` link and the `/account/lists` empty-state link all read `Quick Shop`. They read "Shopping List" or "Shop your list" before. Code identifiers (`ShopYourList`, `ShoppingListLink`, the route folder) keep their names.
+  - **Copy:** the page's intro paragraph is gone. The textarea's label is now `Paste your list, one item per line.` The quantity hint is one sentence (`Add a number for more than one: 2 <example> (up to 100 items)`, or a neutral version), with the limit rendered from `MAX_LIST_LINES`. The parser still accepts `2x`, `3` and `x3`. The button reads `Find my items` (`Finding…` while pending). The textarea placeholder is unchanged (`#1077`).
+  - Tests: `tests/header-shopping-list.test.tsx` and `tests/shop-list-review-copy.test.tsx` now expect the new wording; new `tests/quick-shop-copy.test.tsx` covers the label, both hint branches and the button. `docs/developer-portal/app-conventions.md` 1.15.1.
+
 ### Fixed
 
 - **Every shop-list line that did not go in is named on `/cart`, and the header's Collect/Delivery controls have one accessible name** (issues `#1090`, `#1091`; `specs/2026-10-16-p1090-1091-list-notice-and-control-names/`). "Club F" from the 2026-10-15 backlog clubbing. No schema change, no migration, no new dependency.

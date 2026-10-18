@@ -11,7 +11,7 @@ import { buildListExamples } from "@/lib/shopping-list-examples";
 import { EMPTY_SAVE_STATE, MAX_LIST_NAME_LENGTH, MAX_SAVED_LISTS } from "@/lib/saved-list";
 
 /**
- * "Shop your list" (P3d, #114). Sibling forms, not nested ones: the first matches the pasted
+ * "Shop your list" (P3d, #114), shown to shoppers as "Quick Shop" since #1145. Sibling forms, not nested ones: the first matches the pasted
  * list, `ListReview` renders the second which adds the reviewed lines, and P10 (#116) adds a
  * third that saves them for next week. Every one is a server action, so all three still submit
  * without client JS.
@@ -54,21 +54,23 @@ export function ShopYourList({
   return (
     <div className="space-y-6">
       <form action={formAction} className="space-y-3">
+        {/* #1145 — the page has no intro paragraph any more, so this label carries the whole
+            instruction and is the textarea's accessible name. */}
         <label htmlFor="list" className="block text-sm font-semibold text-primary">
-          One item per line
+          Paste your list, one item per line.
         </label>
         {/* #1077 — ABOVE the textarea (triage item 19). It used to sit below, where a shopper read
-            how quantities work only after typing the list without them. */}
+            how quantities work only after typing the list without them. #1145 — one example form
+            only; the parser still accepts the others. The limit stays because lines past it are
+            dropped silently (`parseList`). */}
         {exampleName !== null ? (
           <p className="text-xs text-primary-muted">
-            Quantities are understood — <span className="font-semibold">2x {exampleName}</span>,{" "}
-            <span className="font-semibold">3 {exampleName}</span> or{" "}
-            <span className="font-semibold">{exampleName} x3</span>. Up to {MAX_LIST_LINES} lines.
+            Add a number for more than one: <span className="font-semibold">2 {exampleName}</span>{" "}
+            (up to {MAX_LIST_LINES} items)
           </p>
         ) : (
           <p className="text-xs text-primary-muted">
-            Quantities are understood — write 2x or 3 before an item, or x3 after it. Up to{" "}
-            {MAX_LIST_LINES} lines.
+            Add a number for more than one, like 2 before the item (up to {MAX_LIST_LINES} items)
           </p>
         )}
         <textarea
@@ -83,7 +85,7 @@ export function ShopYourList({
           disabled={pending}
           className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
         >
-          {pending ? "Matching…" : "Match my list"}
+          {pending ? "Finding…" : "Find my items"}
         </button>
         {state.error && <p className="text-xs font-semibold text-danger">{state.error}</p>}
       </form>

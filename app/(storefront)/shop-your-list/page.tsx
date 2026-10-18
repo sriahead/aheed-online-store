@@ -17,7 +17,9 @@ import { MAX_EXAMPLE_NAMES } from "@/lib/shopping-list-examples";
  */
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Shop your list" };
+// #1145 — the feature's one shopper-facing name. The URL stays /shop-your-list so bookmarks, the
+// sitemap and existing links keep working.
+export const metadata: Metadata = { title: "Quick Shop" };
 
 /** Rows shown before the shopper has to click through to /account/lists (#806). */
 const QUICK_PICK_LIMIT = 5;
@@ -36,11 +38,8 @@ export default async function ShopYourListPage() {
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
-      <h1 className="text-xl font-bold text-primary">Shop your list</h1>
-      <p className="mt-1 mb-5 text-sm text-primary-muted">
-        Paste your shopping list and we&apos;ll find each item. Nothing goes in your cart until you
-        say so.
-      </p>
+      {/* #1145 — no intro paragraph: the textarea's own label says what to do. */}
+      <h1 className="mb-5 text-xl font-bold text-primary">Quick Shop</h1>
 
       {savedLists.length > 0 && (
         <div className="mb-6">

@@ -64,7 +64,7 @@ export default async function CartPage({
           className="flex items-center gap-1.5 rounded-xl border border-primary/20 px-3 py-1.5 text-xs font-bold text-primary"
         >
           <ListChecks className="h-4 w-4" aria-hidden />
-          Shop your list
+          Quick Shop
         </Link>
       </div>
 
