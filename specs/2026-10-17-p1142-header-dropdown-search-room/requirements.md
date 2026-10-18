@@ -52,6 +52,10 @@ R6. A small client enhancement closes the menu on Escape, on a click outside it,
     item (`Delivery` with no postcode, or `Change postcode`) is chosen. In
     `tests/location-control.test.tsx`, each of these three closes an open menu (jsdom), and none of
     them changes the stored method.
+    **Amended at Fix (2026-10-18):** submitting a method item (`Click & Collect` or `Delivery`)
+    also closes the menu, and a test proves it for each. The plan assumed the post reloads the
+    page; with JavaScript on, React submits the action without a reload, and Validate found the
+    menu left open after every choice in a real browser.
 
 R7. The menu is not clipped. At 360, 390, 768 and 1280px, with the menu open, the menu's box lies
     inside the viewport horizontally (`left >= 0`, `right <= viewport width`), and its bottom

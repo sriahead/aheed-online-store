@@ -67,8 +67,10 @@ could not submit a server action on change without JavaScript.
   that opens the dialog with intent `delivery`), and `Change postcode` (only when a postcode is
   stored; opens the dialog with intent `edit`, so it never selects Delivery). The chosen method
   shows a check.
-- **Closing:** a method form post reloads the page, which closes it. A small client effect closes it
-  on Escape, on an outside click, and when a dialog item is chosen. That is an enhancement; the
+- **Closing:** without JavaScript, a method form post reloads the page, which closes it. With
+  JavaScript, React submits the action without a reload, so the form's submit closes it (found at
+  Validate). A small client effect closes it on Escape, on an outside click, and when a dialog item
+  is chosen. That is an enhancement; the
   menu is usable without it, only less tidy.
 - **The vendor-without-collection path is unchanged** (finding 2).
 - **Mobile:** the same component in the existing below-`sm` row, full width.

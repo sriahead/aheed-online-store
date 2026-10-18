@@ -61,6 +61,9 @@ export function LocationControl({
   // #1142 — closing the method menu is an enhancement on a native `<details>`: without this the
   // menu still opens and every item still works, it just stays open until the page reloads or
   // the summary is pressed again. Escape and a click outside close it; neither touches the method.
+  const closeMenu = () => {
+    if (menuRef.current) menuRef.current.open = false;
+  };
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const menu = menuRef.current;
@@ -85,7 +88,7 @@ export function LocationControl({
     setIsDirty(false);
     setIntent(openedWith);
     // #1142 — a dialog item hands over to the modal, so the menu behind it closes.
-    if (menuRef.current) menuRef.current.open = false;
+    closeMenu();
     dialogRef.current?.showModal();
   };
   const closeModal = () => dialogRef.current?.close();
@@ -135,10 +138,13 @@ export function LocationControl({
             {/*
               Bound straight to the server action — NOT to a client function — so
               the item submits with client JavaScript disabled. The chosen value
-              rides on the submitting button's own name/value pair. The post
-              reloads the page, which is what closes the menu.
+              rides on the submitting button's own name/value pair. Without
+              JavaScript the post reloads the page, which closes the menu. With it,
+              React submits the action WITHOUT a reload (found at Validate: the menu
+              stayed open after a choice), so `onSubmit` closes it. `onSubmit` does
+              not prevent the default, so the action still runs.
             */}
-            <form action={setFulfilmentMethod}>
+            <form action={setFulfilmentMethod} onSubmit={closeMenu}>
               <button
                 type="submit"
                 name="fulfilmentMethod"
@@ -156,7 +162,7 @@ export function LocationControl({
             </form>
 
             {hasDeliverablePostcode ? (
-              <form action={setFulfilmentMethod}>
+              <form action={setFulfilmentMethod} onSubmit={closeMenu}>
                 <button
                   type="submit"
                   name="fulfilmentMethod"

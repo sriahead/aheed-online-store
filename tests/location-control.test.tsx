@@ -388,6 +388,18 @@ describe("LocationControl — closing the menu (#1142 R6)", () => {
     expectMethodUnchanged(menu);
   });
 
+  // Found at Validate: with JavaScript on, React submits the action without a reload, so nothing
+  // closed the menu after a method choice. The submit itself closes it now.
+  it.each(["COLLECTION", "DELIVERY"] as const)(
+    "closes when the %s method item is submitted",
+    (value) => {
+      const { menu } = renderOpen();
+      const submit = itemsOf(menu).find((b) => b.value === value)!;
+      fireEvent.submit(submit.closest("form")!, { submitter: submit });
+      expect(menu.open).toBe(false);
+    },
+  );
+
   it("closes when Delivery with no postcode is chosen", () => {
     vi.mocked(setFulfilmentMethod).mockClear();
     const { container } = render(

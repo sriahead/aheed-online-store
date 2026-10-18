@@ -92,6 +92,33 @@ on 2026-10-17/18 under `npm run preview` against the **dev** database (host
 - Aheed's placeholder is still the old value: the dev database has not been updated (R17 is the
   validator's write).
 
+### Fix pass (2026-10-18)
+
+- **Validation was run in the build context and on Opus, at the owner's explicit request.** It
+  passed every row, but found one defect in a real browser.
+- **The defect:** with JavaScript on, choosing `Click & Collect` or `Delivery` changed the method
+  and updated the summary, but the menu stayed open. React submits a server-action form without a
+  page reload, so the plan's "the post reloads the page, which closes it" holds only without
+  JavaScript. No row caught it, because R6 listed three closing triggers and not this one.
+- **Root-cause fix:** both method forms have `onSubmit={closeMenu}`. It doesn't call
+  `preventDefault`, so the action still runs. `openModal` now uses the same `closeMenu`.
+- **Spec:** R6 is amended (a method submit closes the menu), and `validation.md`'s R6 row gains a
+  browser check.
+- **Test:** two cases ("closes when the COLLECTION/DELIVERY method item is submitted"). Both
+  **fail against the unfixed component** (checked by stashing the fix) and pass with it.
+- **Validation evidence from the first pass, still valid for unchanged code:**
+  - Server HTML for four cookie states (R5).
+  - Layout at `/` and `/search` with the menu open (R7, R12, R13, R15), unchanged from the table
+    above.
+  - The three-item menu in Chrome: items 36px tall at `xl`, all at their centre, panel 280 to 536.
+  - R17 on dev: the placeholder applied, a second apply was a no-op, and restore left the
+    placeholder alone. The departments were re-hidden afterwards.
+  - R19 in Chrome at a 1536px CSS viewport. That is the same `xl` tier, but the window could not go
+    narrower at a device-pixel ratio of 2.5.
+- **Dev state left behind:** Aheed's placeholder is now "Find your favourites...", and the five
+  departments are hidden (as at the start). The owner's Chrome holds `delivery-postcode=MK9 1AA`
+  with Click & Collect chosen.
+
 ## Decisions taken during the build
 
 - **No ARIA menu role.** The panel is a plain group of buttons and forms inside `<details>`.
