@@ -239,7 +239,8 @@ export function StorefrontFooter({
               </li>
               <li>
                 <Link href="/help#delivery" className={LINK}>
-                  Delivery areas &amp; slots
+                  {/* #1134 — slots are named only where the store offers them. */}
+                  {profile.offerDeliverySlots ? "Delivery areas & slots" : "Delivery areas"}
                 </Link>
               </li>
               <li>

@@ -47,14 +47,14 @@ enum VendorRole {
 }
 
 model User {
-  id                  String                 @id
+  id                  String                  @id
   name                String
-  email               String                 @unique
-  emailVerified       Boolean                @default(false)
+  email               String                  @unique
+  emailVerified       Boolean                 @default(false)
   image               String?
-  role                Role                   @default(CUSTOMER)
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
+  role                Role                    @default(CUSTOMER)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
   sessions            Session[]
   accounts            Account[]
   reviews             Review[]
@@ -62,19 +62,20 @@ model User {
   carts               Cart[]
   addresses           Address[]
   orders              Order[]
-  statusChanges       OrderStatusEvent[]     @relation("OrderStatusEventActor")
+  statusChanges       OrderStatusEvent[]      @relation("OrderStatusEventActor")
   loyaltyAccounts     LoyaltyAccount[]
   loyaltyEntries      LoyaltyLedgerEntry[]
+  marketingConsents   MarketingConsentEvent[]
   discountUses        DiscountRedemption[]
   /// #987 — the referral codes this user owns, at most one per vendor.
-  referralCodes       DiscountCode[]         @relation("ReferralCodeOwner")
-  roleChangesTargeted VendorRoleAuditLog[]   @relation("TargetUser")
-  roleChangesActedOn  VendorRoleAuditLog[]   @relation("ActorUser")
+  referralCodes       DiscountCode[]          @relation("ReferralCodeOwner")
+  roleChangesTargeted VendorRoleAuditLog[]    @relation("TargetUser")
+  roleChangesActedOn  VendorRoleAuditLog[]    @relation("ActorUser")
   customerAddresses   CustomerAddress[]
   shoppingLists       ShoppingList[]
   feedback            CustomerFeedback[]
-  feedbackModerated   CustomerFeedback[]     @relation("FeedbackModerator")
-  netContentReviews   NetContentSuggestion[] @relation("NetContentReviewer")
+  feedbackModerated   CustomerFeedback[]      @relation("FeedbackModerator")
+  netContentReviews   NetContentSuggestion[]  @relation("NetContentReviewer")
 }
 
 model Session {
@@ -160,6 +161,7 @@ model Vendor {
   loyaltyTiers              VendorLoyaltyTier[]
   loyaltyAccounts           LoyaltyAccount[]
   loyaltyEntries            LoyaltyLedgerEntry[]
+  marketingConsents         MarketingConsentEvent[]
   discountCodes             DiscountCode[]
   discountUses              DiscountRedemption[]
   roleAuditLogs             VendorRoleAuditLog[]
@@ -444,106 +446,109 @@ model VendorBranding {
 }
 
 model VendorConfig {
-  id                         String             @id @default(uuid())
-  vendorId                   String             @unique
-  vendor                     Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  localityName               String // e.g. "Milton Keynes"
+  id                          String             @id @default(uuid())
+  vendorId                    String             @unique
+  vendor                      Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  localityName                String // e.g. "Milton Keynes"
   // #363 — the store's IANA timezone, region-shaped vendor data for the same reason
   // localityName above is. Interprets every datetime-local field (campaign windows,
   // discount-code windows) and decides which calendar day "today" is when the checkout
   // slot picker offers dates. Default keeps every existing row, and any vendor created
   // before a zone is chosen, on the platform default — see lib/local-datetime.ts.
-  timezone                   String             @default("Europe/London")
-  senderName                 String // transactional email sender identity
-  senderEmail                String
-  searchPlaceholder          String? // header search-box copy, e.g. "Search halal lamb, basmati, lentils…"
+  timezone                    String             @default("Europe/London")
+  senderName                  String // transactional email sender identity
+  senderEmail                 String
+  searchPlaceholder           String? // header search-box copy, e.g. "Search halal lamb, basmati, lentils…"
   // P7.5c+f (#239) — per-vendor storefront copy. Both nullable, and a null HIDES
   // its element rather than falling back to neutral filler: platform-written
   // marketing is still a claim made on a vendor's behalf, and the copy these
   // replaced ("100% Certified HMC Halal Fresh Meat Cut Daily", "Same-Day Local
   // Dispatch") was rendering for every vendor, SriMart included.
-  bannerNote                 String? // header's second banner line
+  bannerNote                  String? // header's second banner line
   // #1078 — the header banner's FIRST line. Unlike bannerNote, null does not hide it: null keeps the
   // line derived from this vendor's own name and locality (components/layout/Header.tsx), which is
   // vendor data rather than platform-written copy. A set value replaces it as plain text.
-  bannerHeadline             String?
-  heroSubtitle               String? // hero's supporting paragraph, under the tagline
+  bannerHeadline              String?
+  heroSubtitle                String? // hero's supporting paragraph, under the tagline
   // P9.2 (#407, #405) — per-vendor social and contact identity, same null rule as the two
   // lines above: a null HIDES that link rather than falling back to a platform default. A
   // platform-written social link is a claim made on a vendor's behalf, which is exactly what
   // #239 fixed. Both URLs are validated https-only on write (lib/social-contact-form.ts) —
   // they are the first vendor-editable values in this repo that land inside an href.
-  facebookUrl                String? // full https profile URL
-  instagramUrl               String? // full https profile URL
-  whatsappNumber             String? // digits only, E.164 without the leading +, for wa.me
+  facebookUrl                 String? // full https profile URL
+  instagramUrl                String? // full https profile URL
+  whatsappNumber              String? // digits only, E.164 without the leading +, for wa.me
   // #1055 — storefront footer identity, same null rule as the social links above: a null HIDES
   // that footer element rather than falling back to a platform default (#239). Bracketed
   // placeholders such as "[YOUR EMAIL]" are legal values (approved defaults) and render as text;
   // the footer only builds a tel:/mailto: href from a value that passes the real format check.
-  contactPhone               String?
-  contactEmail               String?
-  companyNumber              String?
-  vatNumber                  String?
-  registeredOffice           String?
-  openingHoursNote           String? // line under the opening hours
-  showSecureCheckoutNote     Boolean            @default(false) // "Secure checkout powered by Stripe"
+  contactPhone                String?
+  contactEmail                String?
+  companyNumber               String?
+  vatNumber                   String?
+  registeredOffice            String?
+  openingHoursNote            String? // line under the opening hours
+  showSecureCheckoutNote      Boolean            @default(false) // "Secure checkout powered by Stripe"
   // P3a — delivery rules are vendor data, never constants (the AI Studio mockup hardcoded a
   // £30 threshold). Prisma-level defaults mean a newly-inserted vendor is valid without the
   // seed supplying values. P3a reads only the threshold (cart banner); applying the fee and
   // the minimum to a payable total is P3b.
-  deliveryFeePence           Int                @default(349)
-  freeDeliveryThresholdPence Int? // null = free delivery never offered
-  minimumOrderPence          Int                @default(0) // 0 = no minimum
+  deliveryFeePence            Int                @default(349)
+  freeDeliveryThresholdPence  Int? // null = free delivery never offered
+  minimumOrderPence           Int                @default(0) // 0 = no minimum
   // #1083 — Click & Collect's own minimum, separate from the delivery minimum above, which exists to
   // cover a van run collection does not need. 0 = no minimum, the same convention. The default is
   // the owner's ruling; before this column, collection silently inherited the delivery minimum.
-  collectionMinimumOrderPence Int @default(0)
-  offerCollection            Boolean            @default(false)
+  collectionMinimumOrderPence Int                @default(0)
+  offerCollection             Boolean            @default(false)
   // P5a — loyalty settings are vendor data for the same reason the delivery rules
   // above are (#135). Defaults mean an existing VendorConfig row stays valid with
   // no backfill, and loyaltyEnabled defaults OFF so the feature ships dark for any
   // vendor that hasn't opted in.
-  loyaltyEnabled             Boolean            @default(false)
+  loyaltyEnabled              Boolean            @default(false)
   // #1015 — the guided help assistant. OFF by default for the same reason loyalty is: it ships
   // dark everywhere, and a store admin turns it on at /staff/assistant. It renders only when
   // whatsappNumber is also set, because the WhatsApp handoff is half of what it does.
-  assistantEnabled           Boolean            @default(false)
-  bookingWindowDays          Int                @default(14)
-  slotHoldDurationMinutes    Int                @default(15)
-  offerDeliverySlots         Boolean            @default(false)
-  expressCollectionEnabled   Boolean            @default(false)
-  pointsPerPoundEarned       Int                @default(1) // points per whole £1 of eligible spend
-  pencePerPointRedeemed      Int                @default(1) // 100 points = £1
-  minRedeemPoints            Int                @default(100) // below this, redemption isn't offered
-  tierWindowDays             Int                @default(30) // rolling window tier qualification looks back over
-  pointsExpiryMonths         Int? // null = points never expire
+  assistantEnabled            Boolean            @default(false)
+  // #1134 — whether this store asks shoppers for marketing consent (/register, /account/data,
+  // /privacy). OFF by default so it ships dark; a store admin turns it on at /staff/storefront.
+  marketingConsentEnabled     Boolean            @default(false)
+  bookingWindowDays           Int                @default(14)
+  slotHoldDurationMinutes     Int                @default(15)
+  offerDeliverySlots          Boolean            @default(false)
+  expressCollectionEnabled    Boolean            @default(false)
+  pointsPerPoundEarned        Int                @default(1) // points per whole £1 of eligible spend
+  pencePerPointRedeemed       Int                @default(1) // 100 points = £1
+  minRedeemPoints             Int                @default(100) // below this, redemption isn't offered
+  tierWindowDays              Int                @default(30) // rolling window tier qualification looks back over
+  pointsExpiryMonths          Int? // null = points never expire
   // #905 — which of Product's six label booleans this vendor's staff product form offers. They
   // gate the STAFF FORM only: the storefront stays data-driven (a badge/facet shows only where a
   // product carries the flag), and switching one off keeps every product's stored value —
   // features/admin/catalogue.ts strips a disabled label from the write rather than saving false.
   // Default false, so a new vendor sees none until an admin opts in; the migration backfilled
   // existing vendors from their own products. HMC is only offered while Halal is too.
-  showHalalLabel             Boolean            @default(false)
-  showFreshLabel             Boolean            @default(false)
-  showOrganicLabel           Boolean            @default(false)
-  showVegetarianLabel        Boolean            @default(false)
-  showGlutenFreeLabel        Boolean            @default(false)
-  showHmcCertification       Boolean            @default(false)
+  showHalalLabel              Boolean            @default(false)
+  showFreshLabel              Boolean            @default(false)
+  showOrganicLabel            Boolean            @default(false)
+  showVegetarianLabel         Boolean            @default(false)
+  showGlutenFreeLabel         Boolean            @default(false)
+  showHmcCertification        Boolean            @default(false)
   // #905 — what this store sells, in the admin's own words (max 200 chars, one line). Given to
   // the AI prompts (list normalisation, synonym proposals, net-content suggestions) in place of
   // a hardcoded "grocery" framing; null = neutral wording.
-  storeDescription           String?
+  storeDescription            String?
   // #962 — how dense this vendor's product listings are. A preset, never a free column count:
   // Tailwind cannot build grid-cols-* from runtime values, and a free number allows layouts that
   // break the card. Each preset maps to one static class string in lib/product-grid-density.ts.
-  productGridDensity         ProductGridDensity @default(STANDARD)
+  productGridDensity          ProductGridDensity @default(STANDARD)
   // #1017 — this vendor's share of the platform's one Workers AI account, in neurons per UTC day
   // (Cloudflare's allowance resets at 00:00 UTC). Every AI call is checked against it and recorded
   // in AiUsageEvent; 0 turns AI off for this vendor. A row value, not a constant, so the owner can
   // change one vendor's figure with scripts/ai-usage.ts and no deploy.
-  aiDailyNeuronBudget        Int                @default(3000)
-  createdAt                  DateTime           @default(now())
-  updatedAt                  DateTime           @updatedAt
+  aiDailyNeuronBudget         Int                @default(3000)
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
 }
 
 // #962 — product listing density presets; see VendorConfig.productGridDensity.
@@ -1450,6 +1455,31 @@ model LoyaltyLedgerEntry {
 /// needing a sweep job: points lapse when it falls further behind than
 /// VendorConfig.pointsExpiryMonths. A lapsed row's balancePoints is stale until
 /// its next EARN, which RESETS rather than increments (see lib/loyalty.ts).
+/// #1134 — how a marketing-consent choice was made.
+enum MarketingConsentSource {
+  REGISTRATION
+  ACCOUNT
+}
+
+/// #1134 — an append-only record of a shopper's marketing-consent choices for one vendor. The
+/// newest row for (vendorId, userId) is the current state; no row means not opted in. A log, not a
+/// mutable row, because the ICO expects a record of who consented, when, how and to what wording.
+/// `statement` is the exact text the shopper saw — an audit snapshot, like OrderItem's name.
+/// Consent is effective only once the user's email is verified (hasEffectiveMarketingConsent).
+model MarketingConsentEvent {
+  id        String                 @id @default(uuid())
+  vendorId  String
+  vendor    Vendor                 @relation(fields: [vendorId], references: [id])
+  userId    String
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  granted   Boolean
+  statement String
+  source    MarketingConsentSource
+  createdAt DateTime               @default(now())
+
+  @@index([vendorId, userId, createdAt])
+}
+
 model LoyaltyAccount {
   id             String   @id @default(uuid())
   vendorId       String

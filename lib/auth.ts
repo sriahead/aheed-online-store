@@ -3,8 +3,11 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { getPrisma } from "./db";
 import { getEnv, type AppEnv } from "./config";
 import { getEmailService } from "./email";
-import { getCurrentVendorSenderName } from "./vendor-service";
+import { getCurrentVendorProfile, getCurrentVendorSenderName } from "./vendor-service";
 import { resolveAuthOrigin } from "./auth-origin";
+import { recordSignUpMarketingConsent } from "./marketing-consent-signup";
+import { recordMarketingConsent } from "./repositories/marketing-consent";
+import { recordHandledErrorEvent } from "./error-events-service";
 
 /**
  * Hide `$transaction` from the client handed to Better Auth's Prisma adapter
@@ -191,6 +194,27 @@ export async function getAuth() {
     user: {
       additionalFields: {
         role: { type: "string", defaultValue: "CUSTOMER", input: false },
+      },
+    },
+    // #1134 — the register form's marketing checkbox. Records a REGISTRATION consent event only
+    // for an email sign-up that ticked it, on a store whose switch is on; never fails the sign-up.
+    // A singular, childless create over getPrisma(), so no implicit transaction (CLAUDE.md).
+    databaseHooks: {
+      user: {
+        create: {
+          after: async (user, context) => {
+            await recordSignUpMarketingConsent(user.id, context, {
+              resolveVendor: getCurrentVendorProfile,
+              record: (vendorId, userId, statement) =>
+                recordMarketingConsent(getPrisma(), vendorId, userId, {
+                  granted: true,
+                  statement,
+                  source: "REGISTRATION",
+                }),
+              reportError: recordHandledErrorEvent,
+            });
+          },
+        },
       },
     },
     emailAndPassword: {

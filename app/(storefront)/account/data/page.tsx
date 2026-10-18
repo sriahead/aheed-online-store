@@ -8,6 +8,9 @@ import { getDataRightsRepository } from "@/lib/data-rights-service";
 import { eraseConfirmationMode } from "@/lib/data-rights-form";
 import { NameForm } from "@/components/account/NameForm";
 import { EraseDataForm } from "@/components/account/EraseDataForm";
+import { MarketingConsentForm } from "@/components/account/MarketingConsentForm";
+import { getMarketingConsentRepository } from "@/lib/marketing-consent-service";
+import { getCurrentVendorProfile } from "@/lib/vendor-service";
 
 // Reads the session and the viewer's own account state — must render per request.
 export const dynamic = "force-dynamic";
@@ -31,10 +34,18 @@ export default async function AccountDataPage() {
 
   const user = session.user as { id: string; name: string; email: string };
   const repo = getDataRightsRepository();
-  const [providers, isStaff] = await Promise.all([
+  const [providers, isStaff, profile, marketing] = await Promise.all([
     repo.getAccountProviders(user.id),
     repo.hasVendorMembership(user.id),
+    getCurrentVendorProfile(),
+    getMarketingConsentRepository().forUser(user.id),
   ]);
+  // #1134 — loyalty is named only where the store runs it (export and erasure still cover any
+  // points that exist). The marketing section shows where the store asks for consent, and also
+  // wherever this shopper is currently opted in, so withdrawing never depends on the switch.
+  const loyaltyEnabled = profile?.loyaltyEnabled ?? false;
+  const marketingGranted = marketing.state?.granted === true;
+  const showMarketing = marketing.statement !== null && (marketing.enabled || marketingGranted);
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
@@ -44,7 +55,8 @@ export default async function AccountDataPage() {
         <h2 className="mb-2 text-lg font-semibold text-primary">Download your data</h2>
         <p className="mb-4 text-sm text-primary-muted">
           A JSON file containing everything this store holds about you — your account details,
-          orders, addresses, reviews, basket, loyalty points and any discount codes you have used.
+          orders, addresses, reviews, basket, {loyaltyEnabled ? "loyalty points, " : ""}
+          {showMarketing ? "marketing email choices, " : ""}and any discount codes you have used.
         </p>
         <Link
           href="/account/data/export"
@@ -64,11 +76,19 @@ export default async function AccountDataPage() {
         <NameForm currentName={user.name} />
       </section>
 
+      {showMarketing && marketing.statement !== null && (
+        <section className="mb-6 rounded-2xl border border-black/10 bg-surface-muted p-5">
+          <h2 className="mb-2 text-lg font-semibold text-primary">Marketing emails</h2>
+          <MarketingConsentForm granted={marketingGranted} statement={marketing.statement} />
+        </section>
+      )}
+
       <section className="mb-6 rounded-2xl border border-danger/30 bg-surface-muted p-5">
         <h2 className="mb-2 text-lg font-semibold text-primary">Erase your data</h2>
         <p className="mb-2 text-sm text-primary-muted">
-          This removes your name, contact details, addresses, reviews, basket and loyalty points
-          from this store. It cannot be undone.
+          This removes your name, contact details, addresses, reviews, basket
+          {loyaltyEnabled ? ", loyalty points" : ""}
+          {showMarketing ? ", marketing email choices" : ""} from this store. It cannot be undone.
         </p>
         <p className="mb-4 text-sm text-primary-muted">
           Your past orders are kept as anonymised records, with your name and address removed — we

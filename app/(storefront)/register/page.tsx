@@ -2,6 +2,7 @@ import { RegisterForm } from "@/features/auth/components/RegisterForm";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { getEnv } from "@/lib/config";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { marketingConsentStatement } from "@/lib/marketing-consent";
 
 // getEnv() reads GOOGLE_CLIENT_ID from the Cloudflare request-scoped binding,
 // which only exists at runtime (wrangler secrets aren't available at build
@@ -15,14 +16,20 @@ export async function generateMetadata() {
   return { title: `Create account — ${profile?.name ?? "Aheed Food Centre"}` };
 }
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
   const env = getEnv();
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+  // #1134 — the marketing checkbox renders only where this store asks for consent. The sign-up
+  // hook re-checks the switch and rebuilds this statement server-side before recording anything.
+  const profile = await getCurrentVendorProfile();
+  const marketingStatement = profile?.marketingConsentEnabled
+    ? marketingConsentStatement(profile.name)
+    : null;
 
   return (
     <main className="mx-auto max-w-sm px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold text-primary">Create account</h1>
-      <RegisterForm />
+      <RegisterForm marketingStatement={marketingStatement} />
       {googleEnabled && (
         <>
           <p className="my-4 text-center text-sm text-black/60">or</p>

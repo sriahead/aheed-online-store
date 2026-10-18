@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getAuth } from "@/lib/auth";
 import { getDataRightsRepository } from "@/lib/data-rights-service";
+import { getMarketingConsentRepository } from "@/lib/marketing-consent-service";
 import {
   checkEmailConfirmation,
   eraseConfirmationMode,
@@ -134,5 +135,38 @@ export async function eraseMyData(
     error: null,
     field: null,
     done: erasureSummary(result.identityDeleted, result.ordersAnonymised),
+  };
+}
+
+/**
+ * #1134 — opt in to, or withdraw, marketing email at the current store. Appends one ACCOUNT
+ * consent event; the statement is rebuilt server-side from the store's name, never read from the
+ * form. The service enforces the rule that matters: opting in needs the store's switch on, but
+ * withdrawing works whenever the newest choice is a grant, even after the store switched it off.
+ */
+export async function setMyMarketingConsent(
+  _prev: DataRightsFormState,
+  formData: FormData,
+): Promise<DataRightsFormState> {
+  const user = await currentUser();
+  if (!user) return SIGNED_OUT;
+
+  const granted = formData.get("granted") === "true";
+  const wrote = await getMarketingConsentRepository().recordAccountChoice(user.id, granted);
+  if (!wrote) {
+    return {
+      error: "That choice could not be saved. Refresh the page and try again.",
+      field: null,
+      done: null,
+    };
+  }
+
+  revalidatePath("/account/data");
+  return {
+    error: null,
+    field: null,
+    done: granted
+      ? "You are opted in to marketing emails."
+      : "You have withdrawn from marketing emails.",
   };
 }
