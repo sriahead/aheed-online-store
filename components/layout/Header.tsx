@@ -48,7 +48,7 @@ export async function Header({
   /**
    * P8.5f: whether this is the storefront's landing route (`/`). #1131: the
    * header no longer renders differently there — the "Shop List" link it used
-   * to hide is the landing page's Shopping List entry now — so `Header` reads
+   * to hide is the landing page's Quick Shop entry now — so `Header` reads
    * nothing from it. It stays on the props because it is the route groups'
    * seam into the header (`StorefrontChrome`), and re-deriving it later would
    * mean re-plumbing three layouts. Passed explicitly by whichever layout
@@ -266,7 +266,7 @@ export async function Header({
           {/* Search — inline from `xl` only (#1131). With the department select added, the shared
             row (logo, location, search, nav) left the field 9px wide at 768 and 81px at 1024,
             measured with scripts/verify-mobile-layout.ts; below `xl` the bar takes the full-width
-            row under this one instead. #1142 — the Shopping List link sits directly after the bar,
+            row under this one instead. #1142 — the Quick Shop link sits directly after the bar,
             outside its form, in one flex container with it. `lg` was measured again once the
             method menu replaced the toggle pair: the input was 163px at 1024, still too narrow. */}
           {!isPortal && (
@@ -286,7 +286,7 @@ export async function Header({
               catalogue: "Shop List" was deliberately hidden there (P8.5f), and
               the only other route in was the hero's rotating per-department
               "Shop {Department}" button. This stays visible on every non-portal
-              route, landing included — and since #1131 so does the Shopping List
+              route, landing included — and since #1131 so does the Quick Shop
               link, which #1142 moved beside the search bar. */}
             {!isPortal && (
               <Link
@@ -354,7 +354,7 @@ export async function Header({
         {/* Mobile search row — stays pinned with the logo/nav row (#960). #979: pb-1.5, not pb-3.
             The search input grew 6px to the 44px `tap` size below `lg`, and this row gives those
             6px back so the product grid does not move. #1131: shown up to `xl` (was `sm`), because
-            the department search bar no longer fits inline below `xl`. #1142: the Shopping List
+            the department search bar no longer fits inline below `xl`. #1142: the Quick Shop
             link sits beside the bar here too, in the same row, so it adds no height. */}
         {!isPortal && (
           <div className="mx-auto flex max-w-7xl items-stretch gap-2 px-4 pb-1.5 xl:hidden">

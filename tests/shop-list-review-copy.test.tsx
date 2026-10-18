@@ -71,13 +71,14 @@ describe("ShopYourList hint placement (#1077 R14)", () => {
    * `ShopYourList` is the wrong trade here. The property under test is static: whichever branch of
    * the example/neutral conditional renders, the hint is authored above the textarea, so no runtime
    * state can reorder them. A reader checking this by eye should look for the `<p>` carrying
-   * "Quantities are understood" sitting before `<textarea id="list"`.
+   * "Add a number for more than one" sitting before `<textarea id="list"` (#1145 reworded the hint;
+   * it was "Quantities are understood").
    */
   it("authors the quantities hint before the textarea", async () => {
     const { readFileSync } = await import("node:fs");
     const source = readFileSync("components/cart/ShopYourList.tsx", "utf8");
 
-    const hintAt = source.indexOf("Quantities are understood");
+    const hintAt = source.indexOf("Add a number for more than one");
     const textareaAt = source.indexOf("<textarea");
 
     expect(hintAt).toBeGreaterThan(-1);
