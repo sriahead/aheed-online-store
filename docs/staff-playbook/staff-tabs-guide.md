@@ -4,8 +4,8 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.11.0"
-updated: "2026-10-17"
+version: "2.12.0"
+updated: "2026-10-18"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
 tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback"]
@@ -339,6 +339,12 @@ shoppers but does not delete it or affect orders already placed. **Auto-fill Mis
 the product photo's AI generate button count against the store's daily AI allowance. Once it is used
 up, generation is refused until 00:00 UTC, and the products it skipped stay in line for the next
 run. Uploading a photo yourself is never affected.
+
+**A product that arrives switched off:** Some products are added in bulk with no stock and switched
+off, for example the Fish range. They appear in this list, but shoppers cannot see them. To put one
+on sale: check its price is what you will charge, add a photograph, set its quantity on **Live
+Inventory & Availability** (`/staff/inventory`), then tick **Visible in the shop** on its page here.
+Until you do, it stays hidden, so nothing is offered at a price you have not confirmed.
 
 **What happens after changes are saved:** The change is live immediately — the storefront, the
 department listing and the product's own page all update. Existing orders are unaffected: they keep
