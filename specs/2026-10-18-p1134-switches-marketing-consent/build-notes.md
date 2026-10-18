@@ -268,3 +268,33 @@ checked live in both states and read correctly, so they were not changed.
 **Method note:** R2, R3 and R5's "loyalty off" was checked on SriMart, whose loyalty is off in dev,
 rather than by switching Aheed off through the full `/staff/loyalty` form. Aheed (on) and SriMart
 (off) together cover both states on two vendors.
+
+## Validation pass 2, from the top, after the fix (2026-10-18, same context, Opus — not independent)
+
+Every row was re-run from the top on commit `2d00af7`. **All rows R1–R36 pass**, and so does the
+pass-1 defect.
+
+- **Pre-flight:**
+  - `lint`, `format:check` and `tsc` are clean.
+  - `npx vitest run`, run alone: 276 of 276 tracked test files ran, 3454 tests passed, no load
+    flakes.
+  - `npm run preview` built and served.
+- **Static rows** (R4, R8–R12, R14, R27, R31–R33, R35): unchanged and passing.
+- **Live rows:**
+  - Fixed sentences: on Aheed, both sentences are byte-identical to the pre-`#1134` wording. On
+    SriMart they read "…basket and any discount codes you have used." and "…addresses, reviews and
+    basket from this store.".
+  - R14 and R15: switch saved and refused as before.
+  - R16 and R25: switch-on rendering as before.
+  - Five sign-ups (R18, R19, R28): only the ticked Aheed one wrote an event. The string-flag case
+    first hit the 429 auth limiter and was retried after 35 s: no event.
+  - R21: opt in and withdraw; the anonymous post was a 307 that wrote nothing.
+  - R23: the export lists 6 events, newest first, with the four fields.
+  - R29: no overflow at any of the four widths.
+  - R22: withdrawal works with the switch off; the staff user sees no section; the register
+    checkbox is gone.
+- **R34:** `kms:validate`, `kms:check-generated` and a 246/246 `kms/site-internal` build pass.
+- Both switches are off again in dev. The dev database keeps the validation's throwaway users
+  (`v1134-*@example.com`, unverified) and demo-customer's `ACCOUNT` events, as earlier slices'
+  validation fixtures do.
+- **Still to come:** CI `gates` on the PR is the authority (Ship).
