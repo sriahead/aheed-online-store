@@ -173,19 +173,20 @@ No requirement was dropped or widened.
     as an orphan.
   - **Earlier in this session, `npx prisma migrate status` also read production** (the "1 pending"
     result was production's). That was read-only.
-  - **Dev is still unmigrated.** Before validating, clear the export and confirm the host first:
-    `env -u DIRECT_URL -u DATABASE_URL npx prisma migrate status`. Its datasource line must name
-    `ep-dry-morning-zab7dx08`. Then run the same prefix with `migrate deploy`. Restarting Claude
-    Code from a clean terminal also clears the export.
+  - **Dev is now migrated (2026-10-18).** The owner ran
+    `env -u DIRECT_URL -u DATABASE_URL npx prisma migrate deploy`; Prisma named
+    `ep-dry-morning-zab7dx08` (dev) and applied `20261018200000_p1134_marketing_consent`. Staging is
+    not migrated, and `deploy-staging` will apply it on merge. **Every Prisma CLI command in this
+    session still needs the `env -u DIRECT_URL -u DATABASE_URL` prefix** until Claude Code is
+    restarted from a clean terminal.
 - **Nothing has run against a database or under `npm run preview`.**
   - Applying the migration to the dev database (`npx prisma migrate deploy`, `.env` →
     `ep-dry-morning-zab7dx08`) was **blocked by the Claude Code auto-mode classifier** as a
     "Production Deploy", even though `.env` and `.dev.vars` were checked first and match neither
     `secrets/staging.vars` (`ep-empty-scene-zafjzeye`) nor `secrets/production.vars`
     (`ep-young-glitter-zadlkttm`).
-  - **The owner must run `! npx prisma migrate deploy` before any live row.** Until then every page
-    that reads the vendor profile fails locally on the missing column, and so do three DB-backed
-    tests: `tests/slot-capacity.test.ts`, `tests/express-sla.test.ts` and
+  - The dev migration has since been applied (see the first bullet). Before it was, every page that
+    reads the vendor profile failed locally on the missing column, and so did three DB-backed tests: `tests/slot-capacity.test.ts`, `tests/express-sla.test.ts` and
     `tests/concurrency-slot-booking.test.ts`. Each failed with "The column
     `marketingConsentEnabled` does not exist in the current database". CI sets no `DATABASE_URL`
     and skips them.
