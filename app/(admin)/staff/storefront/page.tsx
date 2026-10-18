@@ -11,6 +11,7 @@ import { StorefrontConfigForm } from "@/components/staff/StorefrontConfigForm";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { ReviewLinksManager } from "@/components/staff/ReviewLinksManager";
 import { FooterSettingsForms } from "@/components/staff/FooterSettingsForms";
+import { MarketingConsentSettingsForm } from "@/components/staff/MarketingConsentSettingsForm";
 import { getVendorReviewLinkRepository } from "@/lib/vendor-review-links-service";
 import { getStorage } from "@/lib/storage";
 import { markFileKeys } from "@/lib/vendor-mark";
@@ -86,6 +87,12 @@ export default async function StorefrontAdminPage() {
           }}
         />
       </div>
+
+      {/* #1134 — whether this store asks shoppers for marketing consent. Off by default. */}
+      <section className="mt-10 border-t border-black/10 pt-8">
+        <h2 className="mb-4 text-xl font-bold text-black">Marketing consent</h2>
+        <MarketingConsentSettingsForm enabled={config.marketingConsentEnabled} />
+      </section>
 
       {/* P9.2 (#818) — outbound review-site links. Here rather than on /staff/feedback
           because these are storefront settings, which keeps that page purely moderation. */}

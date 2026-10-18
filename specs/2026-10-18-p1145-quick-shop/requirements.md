@@ -32,7 +32,9 @@ R4. No shopper-visible `Shop your list`, `Shopping List` or `Shopping list` rema
 
 R5. The route is unchanged: `app/(storefront)/shop-your-list/page.tsx` exists at the same path,
     `curl -s -i http://localhost:8787/shop-your-list | head -1` shows status `200`, and
-    `app/sitemap.ts` still lists `/shop-your-list`.
+    `/shop-your-list` is still deliberately absent from `app/sitemap.ts` (a comment there says so;
+    this slice did not touch the file). Corrected on 2026-10-18 under `#1149`: this line first
+    claimed the sitemap listed the route, which it never did.
 
 ## B. The page copy
 

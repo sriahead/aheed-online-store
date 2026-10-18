@@ -2,11 +2,18 @@
 
 import { useState } from "react";
 import { signUp } from "../api-client";
+import { MARKETING_OPT_IN_FIELD } from "@/lib/marketing-consent";
 
-export function RegisterForm() {
+/**
+ * `marketingStatement` is the store's marketing-consent sentence when its switch is on, else
+ * `null` (#1134). Required so no caller can silently drop the choice. The checkbox is unticked and
+ * optional: consent must be a separate, positive act, never a condition of creating an account.
+ */
+export function RegisterForm({ marketingStatement }: { marketingStatement: string | null }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -16,7 +23,14 @@ export function RegisterForm() {
     setError(null);
     setSubmitting(true);
 
-    const { error: signUpError } = await signUp.email({ name, email, password });
+    // Better Auth passes extra body keys through to the user-create hook without storing them on
+    // the user; the flag is sent only when the box is ticked and the store asks.
+    const { error: signUpError } = await signUp.email({
+      name,
+      email,
+      password,
+      ...(marketingStatement !== null && marketingOptIn ? { [MARKETING_OPT_IN_FIELD]: true } : {}),
+    });
     setSubmitting(false);
 
     if (signUpError) {
@@ -69,6 +83,18 @@ export function RegisterForm() {
           className="rounded-lg border border-black/20 px-3 py-2"
         />
       </label>
+      {marketingStatement !== null && (
+        <label className="flex items-start gap-2 text-sm text-primary">
+          <input
+            type="checkbox"
+            name={MARKETING_OPT_IN_FIELD}
+            checked={marketingOptIn}
+            onChange={(e) => setMarketingOptIn(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0"
+          />
+          <span>{marketingStatement}</span>
+        </label>
+      )}
       {error && (
         <p role="alert" className="text-sm text-danger">
           {error}

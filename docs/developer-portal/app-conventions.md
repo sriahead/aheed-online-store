@@ -4,7 +4,7 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.15.1"
+version: "1.16.0"
 updated: 2026-10-18
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, fulfilment-method preference, autocomplete tokens, shared-source copy rules and React hooks — with the tests that enforce each invariant mechanically.
@@ -324,11 +324,33 @@ store's staff reads must be right for **any** vendor.
     about the server. Find every place the feature **writes** (rows created on read, codes accepted,
     rewards paid) and gate each on the same flag. Put the gate in the service or repository that
     acts, not in the component that renders.
+  - **"Hidden" means absent, and navigation is a surface (`#1134`).** `/account` showed a greyed
+    "not enabled for this store" card and `AccountNav` linked to `/account/loyalty`'s 404 with
+    loyalty off. Remove the element instead of disabling it, and pass the flag into a client
+    component as a **required** prop so no caller can drop it. Policy and data-rights pages that
+    list what is kept or erased name the feature only when its flag is on, while the export and
+    erasure themselves keep handling any rows that exist.
+  - **A consent flag never removes withdrawal (`#1134`).** Switching `marketingConsentEnabled` off
+    hides the opt-in, but a shopper whose newest choice is a grant still sees "Withdraw" on
+    `/account/data`. Gate the *offer* on the flag; gate *withdrawal* on the shopper's own state.
   - **Money with per-area overrides is resolved, never read.** Go through
     `resolveDeliveryRules` (`lib/delivery-pricing.ts`); a `VendorDeliveryArea` row may override the
     fee, minimum and threshold independently and a district row beats an area row (`#890`), so a
     surface with no postcode must show the variation rather than pick one figure. `0` and `null`
     both mean free delivery **not offered** — `lib/help-facts.ts` is the worked example.
+- **A new user-owned table reaches data rights in three places (`#116`, `#818`, `#1134`):**
+  `exportPersonalData`, `eraseVendorData` (inside its transaction) and `countOtherVendorData` in
+  `lib/repositories/data-rights.ts`. Omitting it from the count is the dangerous one: a `User`
+  relation with `onDelete: Cascade` means erasing at one vendor would delete the identity and,
+  with it, the rows another vendor holds. Nothing in `lint`, `typecheck` or `build` notices.
+- **Data a sign-up form collects beside the account rides Better Auth's body to a hook, never a
+  `User` column (`#1134`).** Better Auth 1.6's `/sign-up/email` schema accepts extra keys and
+  `parseUserInput` ignores unknown ones, and `databaseHooks.user.create.after` receives the endpoint
+  context with the body. The hook must re-check every server-side condition (the vendor's switch,
+  `context.path`), rebuild any wording from the database rather than trust client text, and never
+  throw — a failed side write must not fail the sign-up (`lib/marketing-consent-signup.ts`). A
+  sign-up for an existing email creates no user, so the hook does not run for someone else's
+  account.
 - **A shopper-facing render of KMS documentation filters on `visibility`, not just `audience`
   (`#1022`).** `/help` filtered `DOC_ARTICLES` for an audience containing `shopper` and rendered
   `shopperDocs[0]`. Two internal documents list `shopper` among several audiences for KMS routing,

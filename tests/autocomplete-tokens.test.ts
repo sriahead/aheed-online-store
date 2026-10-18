@@ -22,9 +22,11 @@ function tokenOf(element: string): string | null {
 }
 
 describe("auth forms", () => {
-  const forms: Record<string, string[]> = {
+  const forms: Record<string, (string | null)[]> = {
     "features/auth/components/LoginForm.tsx": ["email", "current-password"],
-    "features/auth/components/RegisterForm.tsx": ["name", "email", "new-password"],
+    // #1134 — the trailing `null` is the marketing-consent checkbox: it records a choice, not the
+    // shopper's own data, so WCAG 1.3.5 has no input-purpose token for it.
+    "features/auth/components/RegisterForm.tsx": ["name", "email", "new-password", null],
     "features/auth/components/ResetPasswordForm.tsx": ["new-password"],
     "features/auth/components/ForgotPasswordForm.tsx": ["email"],
   };

@@ -47,7 +47,10 @@ export default async function AccountPage() {
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Your account</h1>
       <p className="mb-6 text-sm text-primary-muted">
-        Manage your orders, shopping lists, loyalty rewards, customer feedback, and personal data.
+        {/* #1134 — loyalty is named only where the store runs it. */}
+        {config.loyaltyEnabled
+          ? "Manage your orders, shopping lists, loyalty rewards, customer feedback, and personal data."
+          : "Manage your orders, shopping lists, customer feedback, and personal data."}
       </p>
 
       {/* Account Info near the top */}
@@ -96,8 +99,8 @@ export default async function AccountPage() {
           </p>
         </Link>
 
-        {/* 3. Loyalty & Rewards */}
-        {config.loyaltyEnabled ? (
+        {/* 3. Loyalty & Rewards — #1134: hidden, not greyed out, when the store's switch is off. */}
+        {config.loyaltyEnabled && (
           <Link
             href="/account/loyalty"
             className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action transition block"
@@ -117,14 +120,6 @@ export default async function AccountPage() {
                 : "View your points balance, earning options, exclusive rewards, and referral invite link."}
             </p>
           </Link>
-        ) : (
-          <div className="rounded-2xl border border-black/10 bg-white/60 p-5 opacity-60">
-            <Sparkles className="mb-3 h-6 w-6 text-primary-muted" aria-hidden="true" />
-            <p className="font-semibold text-primary">Loyalty & Rewards</p>
-            <p className="mt-1 text-sm text-primary-muted">
-              Loyalty rewards are currently not enabled for this store.
-            </p>
-          </div>
         )}
 
         {/* 4. Your feedback */}

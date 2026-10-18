@@ -111,6 +111,11 @@ Detail and the deployed-binding traps: `docs/developer-portal/env-setup.md`.
   `DIRECT_URL` at runtime.
 - Before live-database work, diff `.env` and `.dev.vars` against `secrets/staging.vars` and
   `secrets/production.vars` — two files agreeing is not evidence they are right.
+- **Check the process environment too: an exported variable beats `.env`.** Before any Prisma CLI
+  command, run `printenv DIRECT_URL DATABASE_URL`; if either is set, prefix the command with
+  `env -u DIRECT_URL -u DATABASE_URL`, and read `prisma migrate status`'s datasource host before any
+  `deploy`. A session-inherited production `DIRECT_URL` migrated production at `#1134` while both
+  files correctly named dev.
 
 ## Commands
 

@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Marketing consent a store can ask for: opt-in, recorded, and off until switched on** (issue `#1134`, absorbing `#1136`; `specs/2026-10-18-p1134-switches-marketing-consent/`). One migration (`20261018200000_p1134_marketing_consent`, creates only: an enum, a table, an index, two foreign keys and one `VendorConfig` column). No new dependency, no raw SQL.
+  - **Switch:** `VendorConfig.marketingConsentEnabled`, `false` by default, set by a store admin in a new **Marketing consent** section on `/staff/storefront`. Shipping this changes nothing on any store until it is switched on.
+  - **Record:** an append-only `MarketingConsentEvent` log per user and vendor (granted or withdrawn, the exact statement shown, `REGISTRATION` or `ACCOUNT`, when). The newest event is the current state. `hasEffectiveMarketingConsent` is true only for a grant **and** a verified email; nothing sends marketing yet (`#1152`).
+  - **Where shoppers see it:** an unticked, optional checkbox at `/register` ("Email me marketing and promotional offers from" the store's name), recorded by a Better Auth user-create hook that re-checks the switch and rebuilds the statement server-side and never fails the sign-up; a **Marketing emails** section on `/account/data` to opt in or withdraw, with withdrawal kept while a shopper is opted in even after the switch goes off; and `/privacy` section 3 says "If you opt in, we may use your details for marketing and promotional purposes." in place of "solely".
+  - **Data rights:** the export lists every consent event at that store, erasure deletes them, and a consent record at another store keeps the shared sign-in alive.
+
 - **The Fish department gets 18 realistic products, added by a script that writes nothing until told to** (issue `#1147`; `specs/2026-10-18-p1147-fish-products/`). Follow-on to `#1131`, which created Fish, Fresh Fish and Frozen Fish empty. No schema change, no migration, no new dependency, no raw SQL.
   - **Script:** `scripts/add-fish-products.ts --vendor <slug>` is a **dry run** unless `--apply` is given, prints the target database host before it connects, and runs against `DIRECT_URL` like `scripts/apply-department-changes.ts`. It only **creates**: a product whose slug already exists is skipped and never changed, so an edit made in the staff panel survives a re-run. It refuses to run until the Fish department and both sub-categories exist on that vendor. Writes go through `createProductForVendor`, the staff panel's own path, so the unit-price sort key and the inventory row are written as for a hand-made product.
   - **Safe by default:** products are created **hidden** ("Visible in the shop" off) with **zero stock**. `--active` makes them visible and `--stock <n>` (0 to 1000) sets the opening stock. Nothing carries an origin, brand, halal, organic, fresh, vegetarian, gluten-free or HMC value, and none has a photograph; each description names only what the item is and its allergen.
@@ -33,6 +39,8 @@ every branch merges.
   - Deferred: `#1137` (search suggestions ignore the chosen department), `#1138` (sign-in from the list prompt does not return to the list) and `#1139` (hidden-department products already in carts or bundles). A hidden department is still listed on `/staff/promotions` and its promotion stays editable; shoppers just do not see it until the department is shown again.
 
 ### Changed
+
+- **Switching Rewards off now hides all of it** (issue `#1134`). The account menu's "Loyalty & Rewards" tab (a link to a 404 with loyalty off), the greyed "not enabled for this store" card and the intro's mention on `/account`, and the "loyalty points" wording on `/privacy` and `/account/data` now follow `loyaltyEnabled`. Export and erasure still cover any points that exist. The footer's "Delivery areas & slots" link reads "Delivery areas" when the store offers no delivery slots.
 
 - **The paste-a-list feature is called "Quick Shop" everywhere a shopper sees it, and its page copy is shorter** (issue `#1145`; `specs/2026-10-18-p1145-quick-shop/`). Copy only: the URL stays `/shop-your-list`, and parsing, matching, the review step, saving and adding to the cart are unchanged. No schema change, no migration, no new dependency.
   - **Name:** the header link (visible text and `aria-label`), the page `h1` and `<title>`, the `/cart` link and the `/account/lists` empty-state link all read `Quick Shop`. They read "Shopping List" or "Shop your list" before. Code identifiers (`ShopYourList`, `ShoppingListLink`, the route folder) keep their names.
@@ -112,6 +120,17 @@ every branch merges.
   - Follow-ups filed, both out of scope here: `#1078` (make the banner headline vendor-editable — the owner's choice over rewording it in code, which needs a migration) and `#1079` (`WaysToEarnAccordion` repeats the unenforced "qualifying first order" claim this slice removed from `ReferralCard`).
 
 ### Documentation
+
+- **Document pass for `#1134` (slice B, merged to `staging` by PR #1153, `1d9a2a1`).** Documentation
+  only, no code change.
+  - `specs/roadmap.md` 1.159.0 adds the slice's change-log row, which `sdd:audit` reported as
+    missing.
+  - `docs/model-handoff.md` 1.111.0 records that `staging` is one slice ahead of `main`, that
+    production's database already holds this slice's additive migration (an exported `DIRECT_URL`
+    beat `.env`), and the owner's post-promotion actions.
+  - `specs/sdd-workflow.md` 2.45.0 adds a trap: a keyword grep over generated SQL matches
+    `ON UPDATE CASCADE`, so anchor it on statement starts.
+  - The slice's `validation.md` R9 and R14 rows are corrected to match.
 
 - **Document pass for `#1045`/`#1043` (merged to `staging` by PR #1127, `85cfead`).** Documentation
   only, no code change. `specs/roadmap.md` 1.156.0 gains the change-log row `sdd:audit` was
