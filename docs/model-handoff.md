@@ -808,20 +808,32 @@ All facts in this section require live verification:
     - **Standing rule it introduces:** a category is visible only if it and its parent are active.
       Hiding rewrites no row. `#159`'s refusal to hide a stocked department is gone. Recorded in
       `specs/architecture.md` 1.41.0.
-    - **Rollout is not automatic, and has not been done on staging or production.** The five
-      departments, Fish and the search placeholder only change when someone runs
+    - **Rollout is not automatic.** The five departments, Fish and the search placeholder change
+      only when someone runs
       `scripts/apply-department-changes.ts --vendor aheed-food-centre --apply` with `DIRECT_URL`
-      from `secrets/<env>.vars`, on staging then production. That is a production command, so the
-      user runs it.
+      from `secrets/<env>.vars`.
+      - **Staging is done (2026-10-18):** 9 changes covering both slices, and a second run was a
+        no-op. Verified live: hidden department pages 404, Fish 200, new placeholder.
+      - **Production is not done.** Run it only after **both** `#1131` and `#1142` are promoted to
+        `main`. The script writes whatever `OWNER_SEARCH_PLACEHOLDER` the deployed code holds, so an
+        earlier run sets the old text (a re-run afterwards fixes it). It is a production command,
+        so the user runs it.
   - **Follow-on `#1142`**: the header method dropdown, Shopping List beside the search bar, and the
     placeholder "Find your favourites...".
-    - **Status:** BUILT on `feature/p1142-header-dropdown-search-room`, awaiting Validate from a
-      fresh context. `specs/2026-10-17-p1142-header-dropdown-search-room/build-notes.md` has the
-      measurements. The owner lowered R13's form threshold from 640 to 600 at Build.
-    - **It changes what slice A's script writes.** The script sets whatever `OWNER_SEARCH_PLACEHOLDER`
-      is in the deployed code. Run it on an environment before `#1142` reaches it and you get the
-      old text; run it again after the deploy and you get the new one. The script is idempotent, so
-      a second run is safe.
+    - **Status:** MERGED to `staging` (PR #1143, `3dc515c`, 2026-10-18) after one fix pass;
+      `deploy-staging` success; board **In Review**, issue open until promoted. Not in production.
+    - **Validate ran in the build context, on Opus, at the owner's request** — not an independent
+      check. `specs/2026-10-17-p1142-header-dropdown-search-room/build-notes.md` records every
+      measurement, the owner's R13 change (640 to 600), and what was partly verified.
+    - Open follow-up: `#1144`, one unreproduced observation of the menu staying open after a choice.
+  - **Staging is ahead of `main` by five merges** (checked with
+    `git log --merges origin/main..origin/staging` on 2026-10-18):
+    - PR #1127 and its docs PR #1128: `#1045`, `#1043`
+    - PR #1130: `#1090`, `#1091`
+    - PR #1141: `#1131`
+    - PR #1143: `#1142`
+
+    A promotion PR must close each issue with its own keyword on its own line.
   - **Slice B `#1134`** absorbs `#1136`: Rewards off, feature-switch gating, and the marketing
     sentence with a separate opt-in. Proposed only.
   - **Slice C `#1135`**: a free-text custom line per category or item. Proposed only. The owner
