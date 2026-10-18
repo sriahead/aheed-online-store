@@ -223,4 +223,17 @@ describe("StorefrontFooter Legal row (#1107 R12)", () => {
     ]);
     expect(legal.querySelectorAll('[aria-hidden="true"]')).toHaveLength(3);
   });
+
+  // #1134 — the delivery link names slots only where the store offers them.
+  it("names slots in the delivery link only when the store offers delivery slots", () => {
+    const withSlots = renderFooter({ ...SEEDED, offerDeliverySlots: true });
+    const slotsLink = within(withSlots).getByRole("link", { name: "Delivery areas & slots" });
+    expect(slotsLink.getAttribute("href")).toBe("/help#delivery");
+    cleanup();
+
+    const withoutSlots = renderFooter({ ...SEEDED, offerDeliverySlots: false });
+    const areasLink = within(withoutSlots).getByRole("link", { name: "Delivery areas" });
+    expect(areasLink.getAttribute("href")).toBe("/help#delivery");
+    expect(withoutSlots.textContent).not.toContain("slots");
+  });
 });

@@ -123,6 +123,11 @@ export interface VendorProfile {
    * gains no database read for it. It renders only when `whatsappNumber` is also set.
    */
   assistantEnabled: boolean;
+  /**
+   * #1134 — whether this store asks shoppers for marketing consent, read in this same query.
+   * `false` for a vendor with no config row, which is also the column default.
+   */
+  marketingConsentEnabled: boolean;
   id: string;
   bookingWindowDays: number;
   slotHoldDurationMinutes: number;
@@ -237,6 +242,7 @@ export async function fetchVendorProfile(
           collectionMinimumOrderPence: true,
           offerCollection: true,
           assistantEnabled: true,
+          marketingConsentEnabled: true,
           bookingWindowDays: true,
           slotHoldDurationMinutes: true,
           offerDeliverySlots: true,
@@ -338,6 +344,7 @@ export async function fetchVendorProfile(
     collectionMinimumOrderPence: vendor?.config?.collectionMinimumOrderPence ?? 0,
     offerCollection: vendor?.config?.offerCollection ?? false,
     assistantEnabled: vendor?.config?.assistantEnabled ?? false,
+    marketingConsentEnabled: vendor?.config?.marketingConsentEnabled ?? false,
     id: vendorId,
     bookingWindowDays: vendor?.config?.bookingWindowDays ?? 14,
     slotHoldDurationMinutes: vendor?.config?.slotHoldDurationMinutes ?? 15,
@@ -843,4 +850,26 @@ export async function listActiveVendorIds(prisma: ReturnType<typeof getPrisma>):
     select: { id: true },
   });
   return rows.map((row) => row.id);
+}
+
+/**
+ * #1134 — the marketing-consent switch, owned by `/staff/storefront`. Same shape as
+ * `setVendorAssistantEnabled`: a singular, childless `update` on this vendor's own config row.
+ * Returns the number of rows changed (0 for an unseeded vendor with no config row).
+ */
+export async function setVendorMarketingConsentEnabled(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  enabled: boolean,
+): Promise<number> {
+  const existing = await prisma.vendorConfig.findUnique({
+    where: { vendorId },
+    select: { id: true },
+  });
+  if (!existing) return 0;
+  await prisma.vendorConfig.update({
+    where: { vendorId },
+    data: { marketingConsentEnabled: enabled },
+  });
+  return 1;
 }

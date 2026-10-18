@@ -51,7 +51,12 @@ function NavLink({
  * (max-w-5xl, horizontal scroll with smooth nudge buttons, identical typography,
  * border indicators, and spacing).
  */
-export function AccountNav() {
+/**
+ * `loyaltyEnabled` is the current store's loyalty switch (#1134): with it off, the Rewards tab is
+ * hidden rather than left as a link to `/account/loyalty`'s 404. Required, so every caller has to
+ * pass the store's real value.
+ */
+export function AccountNav({ loyaltyEnabled }: { loyaltyEnabled: boolean }) {
   const trackRef = useRef<HTMLDivElement>(null);
 
   const nudge = (direction: 1 | -1) =>
@@ -79,7 +84,9 @@ export function AccountNav() {
           <NavLink href="/account" icon={User} label="Overview" />
           <NavLink href="/account/orders" icon={ClipboardList} label="Orders" />
           <NavLink href="/account/lists" icon={Bookmark} label="Lists" />
-          <NavLink href="/account/loyalty" icon={Sparkles} label="Loyalty & Rewards" />
+          {loyaltyEnabled && (
+            <NavLink href="/account/loyalty" icon={Sparkles} label="Loyalty & Rewards" />
+          )}
           <NavLink href="/feedback" icon={MessageSquareQuote} label="Feedback" />
           <NavLink href="/account/data" icon={ShieldCheck} label="Data rights" />
         </div>

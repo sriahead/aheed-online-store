@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.14.0"
-updated: "2026-10-15"
+version: "2.15.0"
+updated: "2026-10-18"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -69,6 +69,12 @@ to reach each and the multiplier it grants.
 **Important fields and filters:** The earn rate and redemption value are the two figures that decide
 what the scheme costs you. Tier thresholds are measured on customer spend; the multiplier applies to
 points earned once a customer is in that tier.
+
+**Switching loyalty off hides it from shoppers.** With loyalty off, every Rewards link, setting
+and help entry disappears from your storefront: the Rewards button, the footer's Rewards link, the
+Loyalty & Rewards tab and card in a shopper's account, the loyalty section of the Help Centre, the
+loyalty wording in your privacy policy and on a shopper's "Your data" page, and points at checkout.
+Switching it back on restores all of them.
 
 **Common mistakes and limitations:** Referrals are part of your loyalty scheme. Switching loyalty
 off also switches off referrals: shoppers' referral links stop working at checkout and no referral
@@ -228,6 +234,27 @@ next basket calculated — a shopper already partway through checkout may still 
 until their basket recalculates. Social and contact links appear inside the floating contact button
 on every storefront page as soon as they are saved; clearing a field removes that link from it just
 as quickly.
+
+### Marketing consent
+
+**Marketing consent** is a separate section near the bottom of the page, with one checkbox, **Ask
+shoppers for marketing consent**, and a **Save** button. It is off until you switch it on.
+
+When it is on, three things change on your storefront. Account sign-up shows an unticked, optional
+checkbox reading "Email me marketing and promotional offers from" followed by your store's name,
+and "You can change this at any time in your account." Each shopper's **Your data** page gains a
+**Marketing emails** section where they can opt in or withdraw. And your privacy policy says that,
+if a shopper opts in, you may use their details for marketing and promotional purposes, and that
+they can withdraw at any time. Every choice is recorded with when it was made, where (sign-up or
+their account) and the exact wording they saw, and it is included when a shopper downloads or erases
+their data. A choice made before the shopper has verified their email address is recorded but does
+not count as consent until they verify it.
+
+**Nothing sends marketing emails yet.** This section only collects consent; sending will be a later
+change, and it will email only shoppers whose consent counts. **Have the wording reviewed by someone
+with legal knowledge before you switch it on.** Switching it off later hides the sign-up checkbox,
+the privacy wording and the opt-in, but a shopper who is currently opted in can still withdraw from
+their **Your data** page.
 
 ## Help Centre Answers — `/staff/faqs`
 

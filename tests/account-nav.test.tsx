@@ -14,7 +14,7 @@ afterEach(cleanup);
 describe("AccountNav", () => {
   it("renders all shopper account navigation tabs", () => {
     mockPathname = "/account";
-    render(<AccountNav />);
+    render(<AccountNav loyaltyEnabled />);
 
     expect(screen.getByRole("navigation", { name: /shopper account navigation/i })).toBeTruthy();
     expect(screen.getByRole("link", { name: /overview/i })).toBeTruthy();
@@ -27,7 +27,7 @@ describe("AccountNav", () => {
 
   it("sets active class on the current path", () => {
     mockPathname = "/account/loyalty";
-    render(<AccountNav />);
+    render(<AccountNav loyaltyEnabled />);
 
     const loyaltyLink = screen.getByRole("link", { name: /loyalty & rewards/i });
     expect(loyaltyLink.className).toContain("border-primary text-primary");
@@ -38,7 +38,7 @@ describe("AccountNav", () => {
 
   it("sets active class on nested order paths", () => {
     mockPathname = "/account/orders/ORD-12345";
-    render(<AccountNav />);
+    render(<AccountNav loyaltyEnabled />);
 
     const ordersLink = screen.getByRole("link", { name: /orders/i });
     expect(ordersLink.className).toContain("border-primary text-primary");
@@ -46,7 +46,7 @@ describe("AccountNav", () => {
 
   it("links to correct destinations", () => {
     mockPathname = "/account";
-    render(<AccountNav />);
+    render(<AccountNav loyaltyEnabled />);
 
     expect(screen.getByRole("link", { name: /overview/i }).getAttribute("href")).toBe("/account");
     expect(screen.getByRole("link", { name: /orders/i }).getAttribute("href")).toBe(
@@ -62,5 +62,17 @@ describe("AccountNav", () => {
     expect(screen.getByRole("link", { name: /data rights/i }).getAttribute("href")).toBe(
       "/account/data",
     );
+  });
+
+  // #1134 — with the store's loyalty switch off, the Rewards tab is hidden, not a link to a 404.
+  it("hides the Rewards tab when the store's loyalty switch is off", () => {
+    mockPathname = "/account";
+    render(<AccountNav loyaltyEnabled={false} />);
+
+    expect(screen.queryByRole("link", { name: /loyalty & rewards/i })).toBeNull();
+    expect(
+      screen.getAllByRole("link").some((link) => link.getAttribute("href") === "/account/loyalty"),
+    ).toBe(false);
+    expect(screen.getByRole("link", { name: /data rights/i })).toBeTruthy();
   });
 });

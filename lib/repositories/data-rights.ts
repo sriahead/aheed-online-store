@@ -145,6 +145,17 @@ export interface PersonalDataExport {
     verifiedPurchase: boolean;
     submittedAt: Date;
   }[];
+  /**
+   * #1134 — every marketing-consent choice made at this vendor, newest first: whether it was a
+   * grant or a withdrawal, the exact wording shown, where it was made, and when. This record exists
+   * to evidence consent, so the subject is entitled to see all of it.
+   */
+  marketingConsent: {
+    granted: boolean;
+    statement: string;
+    source: string;
+    createdAt: Date;
+  }[];
 }
 
 /**
@@ -178,6 +189,7 @@ export async function exportPersonalData(
     redemptions,
     savedLists,
     feedback,
+    marketingConsent,
   ] = await Promise.all([
     prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { id: true, name: true } }),
     prisma.user.findUniqueOrThrow({
@@ -318,6 +330,12 @@ export async function exportPersonalData(
       },
       orderBy: { submittedAt: "desc" },
     }),
+    // #1134 — the marketing-consent log for this vendor only.
+    prisma.marketingConsentEvent.findMany({
+      where: { vendorId, userId },
+      select: { granted: true, statement: true, source: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   return {
@@ -373,6 +391,7 @@ export async function exportPersonalData(
       createdAt: redemption.createdAt,
     })),
     savedLists,
+    marketingConsent,
   };
 }
 
@@ -416,6 +435,10 @@ export async function countOtherVendorData(
     // that vendor's published reviews as a side effect of an erasure request this vendor
     // received. Omitting a model from this list is silent and irreversible.
     prisma.customerFeedback.count({ where: notThisVendor }),
+    // #1134 — a consent record at another vendor keeps the identity alive too: User owns
+    // MarketingConsentEvent with onDelete: Cascade, so deleting the identity here would destroy
+    // that vendor's evidence of consent.
+    prisma.marketingConsentEvent.count({ where: notThisVendor }),
   ]);
   return counts.reduce((total, count) => total + count, 0);
 }
@@ -436,6 +459,9 @@ export interface EraseResult {
   savedListsDeleted: number;
   /** #818 — business feedback is deleted outright, for the same reason saved lists are. */
   feedbackDeleted: number;
+  /** #1134 — this vendor's marketing-consent log, deleted outright: it evidences nothing once the
+   *  person it is about has asked to be forgotten here. */
+  marketingConsentEventsDeleted: number;
 }
 
 /**
@@ -542,6 +568,9 @@ export async function eraseVendorData(
     const feedbackDeleted = await tx.customerFeedback.deleteMany({ where: { vendorId, userId } });
     await tx.cart.deleteMany({ where: { vendorId, userId } });
     await tx.loyaltyAccount.deleteMany({ where: { vendorId, userId } });
+    const marketingConsentEvents = await tx.marketingConsentEvent.deleteMany({
+      where: { vendorId, userId },
+    });
 
     // Audit trails keep their rows and lose their owner.
     await tx.loyaltyLedgerEntry.updateMany({
@@ -579,6 +608,7 @@ export async function eraseVendorData(
       reviewsDeleted: reviews.count,
       savedListsDeleted: savedListsDeleted.count,
       feedbackDeleted: feedbackDeleted.count,
+      marketingConsentEventsDeleted: marketingConsentEvents.count,
     };
   });
 }

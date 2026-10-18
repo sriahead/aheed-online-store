@@ -172,3 +172,38 @@ describe("fetchVendorProfile productGridDensity", () => {
     expect(profile.productGridDensity).toBe("STANDARD");
   });
 });
+
+/**
+ * #1134 — the marketing-consent switch rides the same profile query as `assistantEnabled`, so the
+ * register page, /account/data and /privacy gain no database read for it. Off when unset.
+ */
+describe("fetchVendorProfile marketingConsentEnabled", () => {
+  it("returns the configured switch and selects it beside assistantEnabled", async () => {
+    findUnique.mockResolvedValue({
+      name: "SriMart",
+      branding: null,
+      config: { marketingConsentEnabled: true },
+      deliveryAreas: [],
+      vendorExpressSchedules: [],
+    });
+
+    const profile = await fetchVendorProfile(prisma, "v1");
+    expect(profile.marketingConsentEnabled).toBe(true);
+    const select = findUnique.mock.calls[0][0].select.config.select;
+    expect(select.marketingConsentEnabled).toBe(true);
+    expect(select.assistantEnabled).toBe(true);
+  });
+
+  it("is false when there is no config row", async () => {
+    findUnique.mockResolvedValue({
+      name: "SriMart",
+      branding: null,
+      config: null,
+      deliveryAreas: [],
+      vendorExpressSchedules: [],
+    });
+
+    const profile = await fetchVendorProfile(prisma, "v1");
+    expect(profile.marketingConsentEnabled).toBe(false);
+  });
+});

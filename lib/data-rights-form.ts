@@ -182,3 +182,38 @@ export function guestErasureSummary(orderNumber: string): string {
     `if you placed others as a guest, look each one up and erase it the same way.`
   );
 }
+
+/**
+ * #1134 — the "what we hold" and "what erasure removes" lists on /account/data, built from the
+ * store's switches so loyalty and marketing are named only where the store runs them. Joined with
+ * a final "and" (en-GB: "a, b and c"), never stitched from conditional comma fragments in JSX:
+ * that is how the erasure sentence first shipped as "…reviews, basket from this store."
+ */
+export function listPhrase(items: string[]): string {
+  return new Intl.ListFormat("en-GB", { style: "long", type: "conjunction" }).format(items);
+}
+
+export function dataExportItems(flags: { loyalty: boolean; marketing: boolean }): string[] {
+  return [
+    "your account details",
+    "orders",
+    "addresses",
+    "reviews",
+    "basket",
+    ...(flags.loyalty ? ["loyalty points"] : []),
+    ...(flags.marketing ? ["marketing email choices"] : []),
+    "any discount codes you have used",
+  ];
+}
+
+export function dataErasureItems(flags: { loyalty: boolean; marketing: boolean }): string[] {
+  return [
+    "your name",
+    "contact details",
+    "addresses",
+    "reviews",
+    "basket",
+    ...(flags.loyalty ? ["loyalty points"] : []),
+    ...(flags.marketing ? ["marketing email choices"] : []),
+  ];
+}

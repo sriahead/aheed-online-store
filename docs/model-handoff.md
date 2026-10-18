@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.109.0"
-updated: 2026-10-17
+version: "1.110.0"
+updated: 2026-10-18
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,6 +39,25 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
+- **2026-10-18 (Orient for `#1134`; supersedes the "`main` is stale" bullet below).** `main` is at
+  `d30165e`, the PR #1151 promotion. It carried every staging slice listed below plus `#1142`, `#1145`
+  and `#1147`, so **`origin/main` and `origin/staging` were level** at the Orient (`02b25cc` on
+  staging, identical tree). Production `/api/health` serves `d30165e`, `db.ok: true`,
+  `reference.reachable: true` with two sources. Board High items `#697` and `#1021` are both
+  owner-gated. **In flight:** `#1134` (slice B: Rewards gating plus per-vendor marketing consent,
+  one additive migration) on `feature/p1134-switches-marketing-consent`, built and not yet
+  validated. Its dev-database migration is **waiting on the owner**: the auto-mode classifier blocks
+  `npx prisma migrate deploy` even against the dev endpoint (`ep-dry-morning-zab7dx08`), so hand it
+  over as a `!` command. **Correction, same day: that hand-over migrated PRODUCTION**, because the
+  session's process environment exported a production `DIRECT_URL` that beats `.env`. The change is
+  additive and unread by `d30165e`, and production pages and health checked fine, but production's
+  `_prisma_migrations` now records `20261018200000_p1134_marketing_consent`: never edit it, and
+  reverse it if `#1134` is abandoned. Dev is still unmigrated. **Before any Prisma CLI command,
+  check the process environment as well as the env files** (`printenv DIRECT_URL`), or run it
+  under `env -u DIRECT_URL -u DATABASE_URL`. Owner actions after promotion: Rewards off for Aheed at
+  `/staff/loyalty`; marketing consent on at `/staff/storefront` only after a legal read of the
+  wording; approve deleting the unmerged, now-superseded `docs/p1142-merged-handoff` branch
+  (`#1149`). `#1123` (reference write path) still fails from 2026-11-03.
 - **Date:** 2026-10-16 (re-verified at the `#1045`/`#1043` Document pass; previously at the
   `#1119` credential reset, and before that the PR #1118 / PR #1120 roadmap-and-handoff
   reconciliation).

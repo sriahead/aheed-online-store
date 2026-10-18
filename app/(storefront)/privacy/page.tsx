@@ -33,6 +33,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function PrivacyPage() {
   const profile = await getCurrentVendorProfile();
   const vendorName = profile?.name ?? "Aheed Food Centre";
+  // #1134 — loyalty is named only where the store runs it, and marketing only where the store asks
+  // for consent. With marketing off, section 3 is exactly the pre-#1134 wording.
+  const loyaltyEnabled = profile?.loyaltyEnabled ?? false;
+  const marketingEnabled = profile?.marketingConsentEnabled ?? false;
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 text-primary">
@@ -68,11 +72,30 @@ export default async function PrivacyPage() {
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-primary">3. How We Use Your Data</h2>
-          <p className="text-sm text-primary-muted leading-relaxed">
-            Your data is used solely to process payments (via Stripe), fulfil and deliver your
-            orders, and send order confirmations and updates. We do not sell your personal data to
-            third parties.
-          </p>
+          {marketingEnabled ? (
+            <>
+              <p className="text-sm text-primary-muted leading-relaxed">
+                Your data is used to process payments (via Stripe), fulfil and deliver your orders,
+                and send order confirmations and updates. We do not sell your personal data to third
+                parties.
+              </p>
+              <p className="text-sm text-primary-muted leading-relaxed">
+                If you opt in, we may use your details for marketing and promotional purposes.
+                Opting in is a separate choice from creating an account or placing an order, it is
+                never required, and you can withdraw at any time from{" "}
+                <Link href="/account/data" className="font-medium underline">
+                  your data
+                </Link>{" "}
+                in your account.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-primary-muted leading-relaxed">
+              Your data is used solely to process payments (via Stripe), fulfil and deliver your
+              orders, and send order confirmations and updates. We do not sell your personal data to
+              third parties.
+            </p>
+          )}
         </section>
 
         {/* #1055 — the footer's "Cookies" link lands here. */}
@@ -167,9 +190,18 @@ export default async function PrivacyPage() {
           <p className="text-sm text-primary-muted leading-relaxed">
             We keep records of completed orders for <strong>six years</strong>, which is the
             retention period UK tax law requires for proof of sale. Your account details, saved
-            addresses, reviews, feedback, basket and loyalty points are kept for as long as you have
-            an account with us, and are removed when you ask us to erase your data.
+            addresses, reviews, feedback
+            {loyaltyEnabled ? ", basket and loyalty points" : " and basket"} are kept for as long as
+            you have an account with us, and are removed when you ask us to erase your data.
           </p>
+          {marketingEnabled && (
+            <p className="text-sm text-primary-muted leading-relaxed">
+              <strong>Marketing choices.</strong> If you opt in to marketing emails, or later
+              withdraw, we keep a record of each choice — when you made it, where, and the exact
+              wording you agreed to — so we can show we had your consent. The record is kept for as
+              long as you have an account with us and is removed when you ask us to erase your data.
+            </p>
+          )}
           {/* P9.2 (#818) — feedback is the only thing a customer writes here that we publish
               to strangers, so what appears alongside it is stated plainly rather than left to
               be discovered after the fact. */}
@@ -228,11 +260,12 @@ export default async function PrivacyPage() {
           </p>
           <p className="text-sm text-primary-muted leading-relaxed">
             <strong>What erasure does.</strong> We remove your name, contact details, addresses,
-            reviews, any feedback you left about the shop, basket and loyalty points. We{" "}
-            <em>keep</em> your past orders, because we are required to retain proof of sale — but we
-            strip your name and address from them first, so the records that remain no longer
-            identify you. If you do not shop with any of our other stores, your sign-in is deleted
-            too.
+            reviews, any feedback you left about the shop
+            {marketingEnabled ? ", your marketing preferences" : ""}
+            {loyaltyEnabled ? ", basket and loyalty points" : " and basket"}. We <em>keep</em> your
+            past orders, because we are required to retain proof of sale — but we strip your name
+            and address from them first, so the records that remain no longer identify you. If you
+            do not shop with any of our other stores, your sign-in is deleted too.
           </p>
           <p className="text-sm text-primary-muted leading-relaxed">
             <strong>If you checked out as a guest.</strong> You do not need an account to exercise
