@@ -154,6 +154,29 @@ No requirement was dropped or widened.
 
 ## Known-shaky areas
 
+- **THIS SLICE'S MIGRATION IS ALREADY APPLIED TO PRODUCTION, not to dev (2026-10-18, after the
+  build-notes commit).** The owner ran `! npx prisma migrate deploy` at the assistant's request, and
+  Prisma reported `ep-young-glitter-zadlkttm`, the **production** endpoint. Cause: this Claude Code
+  session's process environment exports `DIRECT_URL` with the production URL, and an exported
+  variable beats `.env` (which correctly names dev, `ep-dry-morning-zab7dx08`). It is not set at
+  Windows User or Machine scope or in any settings file, so it was most likely inherited from the
+  terminal that launched the session. The assistant's pre-check compared only the env **files**.
+  - **Effect:** additive only: the `MarketingConsentSource` enum, the empty `MarketingConsentEvent`
+    table and `VendorConfig.marketingConsentEnabled` (default `false`). Production code at
+    `d30165e` reads none of them. Checked right after: `/api/health` 200 with `db.ok: true` and
+    `d30165e`; `/`, `/help`, `/privacy` and `/register` 200; `/account/data` 307 (the normal
+    redirect to sign-in).
+  - **Consequence for Ship:** production's `_prisma_migrations` now records
+    `20261018200000_p1134_marketing_consent`, so `deploy-production`'s `migrate deploy` will skip it
+    on promotion. **Do not edit that `migration.sql` again**, or the recorded checksum no longer
+    matches. If the slice is abandoned, production needs a reversing migration; it must not be left
+    as an orphan.
+  - **Earlier in this session, `npx prisma migrate status` also read production** (the "1 pending"
+    result was production's). That was read-only.
+  - **Dev is still unmigrated.** Before validating, clear the export and confirm the host first:
+    `env -u DIRECT_URL -u DATABASE_URL npx prisma migrate status`. Its datasource line must name
+    `ep-dry-morning-zab7dx08`. Then run the same prefix with `migrate deploy`. Restarting Claude
+    Code from a clean terminal also clears the export.
 - **Nothing has run against a database or under `npm run preview`.**
   - Applying the migration to the dev database (`npx prisma migrate deploy`, `.env` →
     `ep-dry-morning-zab7dx08`) was **blocked by the Claude Code auto-mode classifier** as a

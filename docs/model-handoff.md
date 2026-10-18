@@ -48,7 +48,13 @@ reconciliation. If overall project state did not materially change, leave this f
   one additive migration) on `feature/p1134-switches-marketing-consent`, built and not yet
   validated. Its dev-database migration is **waiting on the owner**: the auto-mode classifier blocks
   `npx prisma migrate deploy` even against the dev endpoint (`ep-dry-morning-zab7dx08`), so hand it
-  over as `! npx prisma migrate deploy`. Owner actions after promotion: Rewards off for Aheed at
+  over as a `!` command. **Correction, same day: that hand-over migrated PRODUCTION**, because the
+  session's process environment exported a production `DIRECT_URL` that beats `.env`. The change is
+  additive and unread by `d30165e`, and production pages and health checked fine, but production's
+  `_prisma_migrations` now records `20261018200000_p1134_marketing_consent`: never edit it, and
+  reverse it if `#1134` is abandoned. Dev is still unmigrated. **Before any Prisma CLI command,
+  check the process environment as well as the env files** (`printenv DIRECT_URL`), or run it
+  under `env -u DIRECT_URL -u DATABASE_URL`. Owner actions after promotion: Rewards off for Aheed at
   `/staff/loyalty`; marketing consent on at `/staff/storefront` only after a legal read of the
   wording; approve deleting the unmerged, now-superseded `docs/p1142-merged-handoff` branch
   (`#1149`). `#1123` (reference write path) still fails from 2026-11-03.
