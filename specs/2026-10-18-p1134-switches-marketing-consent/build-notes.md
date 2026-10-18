@@ -221,3 +221,50 @@ No requirement was dropped or widened.
   this branch. Its `docs/model-handoff.md` edit is **not** carried; the handoff is reconciled at the
   final `/document`. Deleting the branch needs the owner's approval: it is unmerged, and the
   standing rule is never to delete an unmerged branch unasked.
+
+## Validation pass 1 and fix (2026-10-18, same context, Opus — not independent)
+
+The owner chose to validate in the building context rather than Clear and switch to Sonnet. This
+record is **not an independent validation**.
+
+**Pass 1 confirmed every numbered row R1–R36**, live rows under `npm run preview` against the dev
+database:
+- R14 and R15: the switch saved, and a STAFF post of the captured action was refused with nothing
+  written.
+- R16: the checkbox is unticked, not required, carries the exact statement and sits between the
+  password field and submit.
+- R18, R19 and R28: five real sign-ups. Only the ticked Aheed one wrote an event; SriMart, unticked,
+  the duplicate email and the string `"true"` wrote none.
+- R21, R22 and R23: opt in, withdraw, an anonymous post (307, nothing written), withdrawal with the
+  switch off, and the export JSON.
+- R25: privacy wording with the switch on.
+- R29: no overflow on `/register` or `/account/data` at 360, 390, 768 and 1280.
+- R34: the docs site built all 246 pages.
+- Full `npx vitest run`: all 275 tracked files ran. `product-grid-usage` and `slot-capacity` failed
+  under load and pass alone (`#1125`).
+- Both switches were restored to off afterwards.
+
+**Defect found outside the numbered rows:** the `/account/data` export and erasure sentences lost
+their final "and". Aheed read "…basket, loyalty points, marketing email choices from this store."
+and SriMart "…reviews, basket from this store.". The cause was conditional comma fragments stitched
+in JSX.
+
+**Fix:** `lib/data-rights-form.ts` gains three pure functions, and both sentences now render from
+them:
+- `dataExportItems` and `dataErasureItems` (the item lists, gated on the two switches);
+- `listPhrase` (`Intl.ListFormat("en-GB")`, which gives "a, b and c").
+
+`tests/data-rights-lists.test.ts` pins every switch combination. With loyalty on and marketing off,
+both sentences are byte-identical to the pre-`#1134` wording. `/privacy` sections 5 and 6 were
+checked live in both states and read correctly, so they were not changed.
+
+**Spec-wording notes (rows, not code):**
+- R9's `grep -inE '\b(DROP|UPDATE|INSERT)\b'` matches `ON UPDATE CASCADE` inside the two
+  foreign-key `ADD CONSTRAINT` statements. The requirement (only the allowed statement kinds) is
+  met; the row should anchor on statement starts, e.g. `^\s*(DROP|UPDATE|INSERT)`.
+- R14's export regex `^export (const|let|var|function [^a])` is an odd proxy. Reading the file shows
+  its only export is `export async function`.
+
+**Method note:** R2, R3 and R5's "loyalty off" was checked on SriMart, whose loyalty is off in dev,
+rather than by switching Aheed off through the full `/staff/loyalty` form. Aheed (on) and SriMart
+(off) together cover both states on two vendors.

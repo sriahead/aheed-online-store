@@ -5,7 +5,12 @@ import { redirect } from "next/navigation";
 import { Download } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { getDataRightsRepository } from "@/lib/data-rights-service";
-import { eraseConfirmationMode } from "@/lib/data-rights-form";
+import {
+  dataErasureItems,
+  dataExportItems,
+  eraseConfirmationMode,
+  listPhrase,
+} from "@/lib/data-rights-form";
 import { NameForm } from "@/components/account/NameForm";
 import { EraseDataForm } from "@/components/account/EraseDataForm";
 import { MarketingConsentForm } from "@/components/account/MarketingConsentForm";
@@ -46,6 +51,7 @@ export default async function AccountDataPage() {
   const loyaltyEnabled = profile?.loyaltyEnabled ?? false;
   const marketingGranted = marketing.state?.granted === true;
   const showMarketing = marketing.statement !== null && (marketing.enabled || marketingGranted);
+  const listFlags = { loyalty: loyaltyEnabled, marketing: showMarketing };
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
@@ -54,9 +60,8 @@ export default async function AccountDataPage() {
       <section className="mb-6 rounded-2xl border border-black/10 bg-surface-muted p-5">
         <h2 className="mb-2 text-lg font-semibold text-primary">Download your data</h2>
         <p className="mb-4 text-sm text-primary-muted">
-          A JSON file containing everything this store holds about you — your account details,
-          orders, addresses, reviews, basket, {loyaltyEnabled ? "loyalty points, " : ""}
-          {showMarketing ? "marketing email choices, " : ""}and any discount codes you have used.
+          A JSON file containing everything this store holds about you —{" "}
+          {listPhrase(dataExportItems(listFlags))}.
         </p>
         <Link
           href="/account/data/export"
@@ -86,9 +91,8 @@ export default async function AccountDataPage() {
       <section className="mb-6 rounded-2xl border border-danger/30 bg-surface-muted p-5">
         <h2 className="mb-2 text-lg font-semibold text-primary">Erase your data</h2>
         <p className="mb-2 text-sm text-primary-muted">
-          This removes your name, contact details, addresses, reviews, basket
-          {loyaltyEnabled ? ", loyalty points" : ""}
-          {showMarketing ? ", marketing email choices" : ""} from this store. It cannot be undone.
+          This removes {listPhrase(dataErasureItems(listFlags))} from this store. It cannot be
+          undone.
         </p>
         <p className="mb-4 text-sm text-primary-muted">
           Your past orders are kept as anonymised records, with your name and address removed — we
