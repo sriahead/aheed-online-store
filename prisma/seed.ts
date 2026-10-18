@@ -13,6 +13,7 @@ import {
   generateProducts,
 } from "./generate-catalogue";
 import { FISH_DEPARTMENT } from "./department-changes";
+import { toSeedProducts } from "./fish-products";
 
 // Seed runs in Node (locally or CI) — prefers DIRECT_URL.
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
@@ -2577,6 +2578,9 @@ const AHEED_SUBCATEGORY_PRODUCTS: Record<string, CatalogueProduct[]> = {
       quantity: 35,
     },
   ],
+  // #1147 — the Fish department's products, built from the same module `scripts/add-fish-products.ts`
+  // reads, so the dev catalogue and the script cannot disagree about a name, slug or price.
+  ...toSeedProducts(),
 };
 
 /** SriMart sells electronics and homeware — see the note above about why the generated pool
