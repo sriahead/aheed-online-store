@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.110.0"
+version: "1.111.0"
 updated: 2026-10-18
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,25 +39,30 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-18 (Orient for `#1134`; supersedes the "`main` is stale" bullet below).** `main` is at
-  `d30165e`, the PR #1151 promotion. It carried every staging slice listed below plus `#1142`, `#1145`
-  and `#1147`, so **`origin/main` and `origin/staging` were level** at the Orient (`02b25cc` on
-  staging, identical tree). Production `/api/health` serves `d30165e`, `db.ok: true`,
-  `reference.reachable: true` with two sources. Board High items `#697` and `#1021` are both
-  owner-gated. **In flight:** `#1134` (slice B: Rewards gating plus per-vendor marketing consent,
-  one additive migration) on `feature/p1134-switches-marketing-consent`, built and not yet
-  validated. Its dev-database migration is **waiting on the owner**: the auto-mode classifier blocks
-  `npx prisma migrate deploy` even against the dev endpoint (`ep-dry-morning-zab7dx08`), so hand it
-  over as a `!` command. **Correction, same day: that hand-over migrated PRODUCTION**, because the
-  session's process environment exported a production `DIRECT_URL` that beats `.env`. The change is
-  additive and unread by `d30165e`, and production pages and health checked fine, but production's
-  `_prisma_migrations` now records `20261018200000_p1134_marketing_consent`: never edit it, and
-  reverse it if `#1134` is abandoned. Dev is still unmigrated. **Before any Prisma CLI command,
-  check the process environment as well as the env files** (`printenv DIRECT_URL`), or run it
-  under `env -u DIRECT_URL -u DATABASE_URL`. Owner actions after promotion: Rewards off for Aheed at
-  `/staff/loyalty`; marketing consent on at `/staff/storefront` only after a legal read of the
-  wording; approve deleting the unmerged, now-superseded `docs/p1142-merged-handoff` branch
-  (`#1149`). `#1123` (reference write path) still fails from 2026-11-03.
+- **2026-10-18, `#1134` Document pass (supersedes the "`main` is stale" bullet below).** `main` is
+  at `d30165e` (the PR #1151 promotion; production `/api/health` `db.ok: true`, reference reachable
+  with two sources). **`staging` is ahead by exactly one slice**: PR #1153 (`#1134`, slice B: Rewards
+  follows `loyaltyEnabled`, plus a per-vendor recorded marketing consent behind
+  `marketingConsentEnabled`, default off). It merged as `1d9a2a1`, and `deploy-staging` (run
+  `39165328069`) succeeded with its migration applied. No promotion PR yet; record:
+  `specs/roadmap.md` 1.159.0.
+  - **Production's database is already one migration ahead of its code.**
+    `20261018200000_p1134_marketing_consent` was applied to production during Build: the session's
+    process environment exported a production `DIRECT_URL`, which beats `.env`. It is additive and
+    unread by `d30165e`, and the promotion's `migrate deploy` will skip it. **Never edit that
+    `migration.sql`; reverse it if `#1134` is abandoned.** The rule is now in `CLAUDE.md`: check
+    `printenv DIRECT_URL DATABASE_URL`, not only the env files, before any Prisma CLI command.
+  - **The auto-mode classifier blocks `prisma migrate deploy` even against dev.** Hand it over as a
+    `!` command with the `env -u DIRECT_URL -u DATABASE_URL` prefix, after a `migrate status` whose
+    datasource line names dev (`ep-dry-morning-zab7dx08`).
+  - **Owner actions after promotion:**
+    - Rewards off for Aheed at `/staff/loyalty`.
+    - Marketing consent on at `/staff/storefront`, only after a legal read of the wording.
+    - Approve deleting the unmerged, now-superseded `docs/p1142-merged-handoff` branch (`#1149`).
+  - **Still open:**
+    - `#1152`: consent-checked marketing sending.
+    - Board High items `#697` and `#1021`: both owner-gated.
+    - `#1123`: the reference write path fails from 2026-11-03.
 - **Date:** 2026-10-16 (re-verified at the `#1045`/`#1043` Document pass; previously at the
   `#1119` credential reset, and before that the PR #1118 / PR #1120 roadmap-and-handoff
   reconciliation).
