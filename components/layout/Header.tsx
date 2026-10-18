@@ -9,7 +9,6 @@ import {
   HelpCircle,
   UserCheck,
   LogOut,
-  ShoppingBag,
   Store,
   Clock,
   Phone,
@@ -32,6 +31,7 @@ import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
 import { bannerHeadlineText } from "@/components/layout/banner-headline";
 import { DepartmentSearchBar } from "./DepartmentSearchBar";
+import { ShoppingListLink } from "./ShoppingListLink";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { ViewSwitcher } from "./ViewSwitcher";
 
@@ -266,24 +266,28 @@ export async function Header({
           {/* Search — inline from `xl` only (#1131). With the department select added, the shared
             row (logo, location, search, nav) left the field 9px wide at 768 and 81px at 1024,
             measured with scripts/verify-mobile-layout.ts; below `xl` the bar takes the full-width
-            row under this one instead. */}
+            row under this one instead. #1142 — the Shopping List link sits directly after the bar,
+            outside its form, in one flex container with it. `lg` was measured again once the
+            method menu replaced the toggle pair: the input was 163px at 1024, still too narrow. */}
           {!isPortal && (
-            <div className="flex-1 min-w-0 max-w-3xl hidden xl:block">
+            <div className="flex-1 min-w-0 max-w-3xl hidden xl:flex items-stretch gap-2">
               <DepartmentSearchBar
                 departments={searchDepartments}
                 placeholder={searchPlaceholder}
+                className="min-w-0 flex-1"
               />
+              <ShoppingListLink />
             </div>
           )}
 
           {/* Action Controls & Navigation */}
           <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             {/* #496 — the landing page's header had no path at all to the
-              catalogue: "Shop List" (below) is deliberately hidden there
-              (P8.5f), and the only other route in was the hero's rotating
-              per-department "Shop {Department}" button. This stays visible on
-              every non-portal route, landing included — and since #1131 so
-              does the Shopping List link below. */}
+              catalogue: "Shop List" was deliberately hidden there (P8.5f), and
+              the only other route in was the hero's rotating per-department
+              "Shop {Department}" button. This stays visible on every non-portal
+              route, landing included — and since #1131 so does the Shopping List
+              link, which #1142 moved beside the search bar. */}
             {!isPortal && (
               <Link
                 href="/categories"
@@ -292,23 +296,6 @@ export async function Header({
               >
                 <Store className="w-4 h-4 text-primary" />
                 <span className="hidden sm:inline">Shop</span>
-              </Link>
-            )}
-
-            {/* #1131 — shown on the landing page too: it is the landing page's Shopping List entry
-              (P8.5f had hidden it there). `aria-label` because the visible text is hidden below
-              `sm`, so without it a phone's screen reader would fall back to the `title`. */}
-            {!isPortal && (
-              <Link
-                href="/shop-your-list"
-                aria-label="Shopping list"
-                className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
-                title="Shop by pasting your list"
-              >
-                <ShoppingBag className="w-4 h-4 text-primary" />
-                {/* #1131 — "Shopping List", the owner's name for it, so the visible text and the
-                  aria-label above agree (WCAG 2.5.3, label in name). */}
-                <span className="hidden sm:inline">Shopping List</span>
               </Link>
             )}
 
@@ -367,10 +354,16 @@ export async function Header({
         {/* Mobile search row — stays pinned with the logo/nav row (#960). #979: pb-1.5, not pb-3.
             The search input grew 6px to the 44px `tap` size below `lg`, and this row gives those
             6px back so the product grid does not move. #1131: shown up to `xl` (was `sm`), because
-            the department search bar no longer fits inline below `xl`. */}
+            the department search bar no longer fits inline below `xl`. #1142: the Shopping List
+            link sits beside the bar here too, in the same row, so it adds no height. */}
         {!isPortal && (
-          <div className="mx-auto max-w-7xl px-4 pb-1.5 xl:hidden">
-            <DepartmentSearchBar departments={searchDepartments} placeholder={searchPlaceholder} />
+          <div className="mx-auto flex max-w-7xl items-stretch gap-2 px-4 pb-1.5 xl:hidden">
+            <DepartmentSearchBar
+              departments={searchDepartments}
+              placeholder={searchPlaceholder}
+              className="min-w-0 flex-1"
+            />
+            <ShoppingListLink />
           </div>
         )}
       </header>

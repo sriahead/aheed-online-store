@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.108.0"
+version: "1.109.0"
 updated: 2026-10-17
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -48,10 +48,11 @@ reconciliation. If overall project state did not materially change, leave this f
   issues, deliberately: `closingIssuesReferences` was empty because every issue involved had
   already closed and `#1119`/`#1116` had to stay open, confirmed by a sweep of every issue closed
   that day. Production `/api/health` (Aheed **and** SriMart) serves `763bf37`, `db.ok: true`.
-  **`origin/main` and `origin/staging` are NOT level — `main` is stale by two merges.**
-  `git log origin/main..origin/staging` now shows PR #1124 (`735dc46`, docs-only: the reference-
-  database-restored roadmap rows) and PR #1127 (`85cfead`, `#1045`/`#1043`, this slice) ahead of
-  it. Neither has a promotion PR yet; see `specs/roadmap.md`'s change log for both.
+  **`origin/main` and `origin/staging` are NOT level — `main` is stale.** `git log
+  origin/main..origin/staging --first-parent` shows PR #1124 (docs only), #1127 (`#1045`/`#1043`),
+  #1128 (its Document pass), #1130 (`#1090`/`#1091`) and #1141 (`#1131`, slice A, merge `4f1cc9a`,
+  2026-10-17, `deploy-staging` success) ahead of it. None has a promotion PR yet; see
+  `specs/roadmap.md`'s change log for each.
 - **Previous promotion: `6ec8142`**, PR #1118 (`staging -> main`, 2026-10-16): the honest
   consent banner, cookie settings and hashed-IP disclosure (`#1107`/`#1041`, PR #1114, merge
   `cc46827`), carrying PR #1117 (merge `29ab582`, that slice's own Document pass);
@@ -798,16 +799,29 @@ All facts in this section require live verification:
   the clubbing at `/propose`.
   - **Slice A `#1131`** absorbs `#1132` and `#1133`. It covers departments, category management, the
     department search bar and the Shopping List entry.
-    - **Status:** BUILT on `feature/p1131-storefront-navigation-catalogue`. Spec `fac3ca1`. Not
-      validated, not pushed. Next stage is `/validate` from a fresh context.
+    - **Status:** MERGED to `staging` (PR #1141, `4f1cc9a`, 2026-10-17, validated from a fresh
+      context with one fix pass); board **In Review**, issue open until promoted. Not in production.
+      `specs/2026-10-17-p1131-storefront-navigation-catalogue/` records what was and was not
+      verified (R24's SriMart visual comparison was not). `#1140` is out of scope by the owner's
+      decision; its issue body still repeats a claim that is false (a hidden department **is**
+      listed on `/staff/promotions`), so do not act on it.
     - **Standing rule it introduces:** a category is visible only if it and its parent are active.
       Hiding rewrites no row. `#159`'s refusal to hide a stocked department is gone. Recorded in
       `specs/architecture.md` 1.41.0.
-    - **Rollout is not automatic.** After deploy, the five departments, Fish and the search
-      placeholder only change when someone runs
+    - **Rollout is not automatic, and has not been done on staging or production.** The five
+      departments, Fish and the search placeholder only change when someone runs
       `scripts/apply-department-changes.ts --vendor aheed-food-centre --apply` with `DIRECT_URL`
       from `secrets/<env>.vars`, on staging then production. That is a production command, so the
       user runs it.
+  - **Follow-on `#1142`**: the header method dropdown, Shopping List beside the search bar, and the
+    placeholder "Find your favourites...".
+    - **Status:** BUILT on `feature/p1142-header-dropdown-search-room`, awaiting Validate from a
+      fresh context. `specs/2026-10-17-p1142-header-dropdown-search-room/build-notes.md` has the
+      measurements. The owner lowered R13's form threshold from 640 to 600 at Build.
+    - **It changes what slice A's script writes.** The script sets whatever `OWNER_SEARCH_PLACEHOLDER`
+      is in the deployed code. Run it on an environment before `#1142` reaches it and you get the
+      old text; run it again after the deploy and you get the new one. The script is idempotent, so
+      a second run is safe.
   - **Slice B `#1134`** absorbs `#1136`: Rewards off, feature-switch gating, and the marketing
     sentence with a separate opt-in. Proposed only.
   - **Slice C `#1135`**: a free-text custom line per category or item. Proposed only. The owner
@@ -822,7 +836,8 @@ All facts in this section require live verification:
   The 2026-10-15 clubbing of the wider backlog (Clubs C–F and the owner-gated groups) is recorded
   in the triage document's "Backlog clubbing — 2026-10-15" section; **Club C and now Club E
   (`#1045` + `#1043`, copy only — PR #1127, merged to `staging` 2026-10-16, see Last Verified
-  above) are closed out, so the next unblocked club is F (`#1090` + `#1091`)** — Club D stays
+  above) are closed out, Club F (`#1090` + `#1091`, PR #1130) is merged to `staging`, and slice A (`#1131`,
+  above) is separate work from the owner's brief** — Club D stays
   blocked on `#1028` (Workers Free or Paid, owner).
 - **Owner user-testing pass, 2026-10-13 — 21 observations, triaged with live evidence.** The
   single most useful artifact from it is

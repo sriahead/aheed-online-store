@@ -4,8 +4,8 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.14.0"
-updated: 2026-10-16
+version: "1.14.1"
+updated: 2026-10-18
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, fulfilment-method preference, autocomplete tokens, shared-source copy rules and React hooks — with the tests that enforce each invariant mechanically.
 tags: [conventions, repositories, server-actions, staff-panel]
@@ -388,9 +388,11 @@ store's staff reads must be right for **any** vendor.
   `parsePostcodeIntent` in `lib/delivery-cookie.ts`) and writes `DELIVERY` only for `"delivery"`
   **and** a deliverable postcode. Anything else — `"edit"`, an absent field, an unrecognised value,
   an undeliverable postcode — leaves the stored method exactly as it was.
-- **The pencil/edit path must never change the method.** This is `#748`: changing where you live is
+- **The edit path must never change the method.** This is `#748`: changing where you live is
   not changing how you receive the order, and silently switching a Click & Collect shopper back to
-  Delivery because they corrected a typo is the defect that rule exists to prevent.
+  Delivery because they corrected a typo is the defect that rule exists to prevent. Since `#1142`
+  the edit path is the **Change postcode** item in the header's method menu (it was a pencil
+  button); it still submits `"edit"`.
 - **Do not restate that rule as "a postcode submission never sets the method".** It was written
   that way in code comments only, and the wider form caused `#1087`: with a `COLLECTION` cookie
   stored, a shopper who clicked **Delivery**, was asked for a postcode and gave a deliverable one

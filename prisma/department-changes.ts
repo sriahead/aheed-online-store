@@ -31,8 +31,11 @@ export const FISH_DEPARTMENT = {
   products: [],
 };
 
-/** The owner's header search placeholder, verbatim. Within the 80-character limit `/staff/storefront` applies. */
-export const OWNER_SEARCH_PLACEHOLDER = "Type your product, we will find it for you";
+/**
+ * The owner's header search placeholder, verbatim. Within the 80-character limit `/staff/storefront`
+ * applies. #1142 — three ASCII full stops, as the owner wrote it, not an ellipsis character.
+ */
+export const OWNER_SEARCH_PLACEHOLDER = "Find your favourites...";
 
 export interface CategoryState {
   id: string;
