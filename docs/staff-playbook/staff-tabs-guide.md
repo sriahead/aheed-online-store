@@ -4,8 +4,8 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.10.0"
-updated: "2026-09-28"
+version: "2.12.0"
+updated: "2026-10-18"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
 tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback"]
@@ -151,12 +151,23 @@ deliberate rather than an oversight. Each category's web address must be unique 
 category list features individual expand/collapse toggle arrows for each department with subcategories,
 as well as global **Expand All** and **Collapse All** controls at the top of the list.
 
-**Common mistakes and limitations:** Subcategories are grouped hierarchically under their parent
-departments, so use the toggle arrows to show or hide nested children. Hiding a department
-hides it from browsing but does not hide the products inside it from search.
+**Hiding and showing a department:** Untick **Visible in the shop** on a category's edit page and
+save. Shoppers then stop seeing that category everywhere: its page, its subcategories, its
+products in search and on their own pages, its slide in the homepage carousel, and its entry in the
+header's department list. Nothing is deleted or changed — the products, subcategories and the
+promotion stay exactly as they were. Tick the box again and save, and all of it comes back. You do
+not have to hide or move the products first: the edit page tells you, beside the checkbox, how many
+products and subcategories will be hidden with it.
 
-**What happens after changes are saved:** The shop's navigation updates immediately. Products already
-assigned to a category stay assigned to it through a rename.
+**Common mistakes and limitations:** Subcategories are grouped hierarchically under their parent
+departments, so use the toggle arrows to show or hide nested children. A product that a shopper
+already had in their basket before you hid its department stays in that basket. While a department
+is hidden, it is still listed on the Promotions page and you can still edit its promotion, but
+shoppers do not see that promotion until the department is shown again.
+
+**What happens after changes are saved:** The shop's navigation updates immediately, including the
+department list in the header search bar. Products already assigned to a category stay assigned to
+it through a rename.
 
 
 ## Brands — `/staff/brands`
@@ -328,6 +339,12 @@ shoppers but does not delete it or affect orders already placed. **Auto-fill Mis
 the product photo's AI generate button count against the store's daily AI allowance. Once it is used
 up, generation is refused until 00:00 UTC, and the products it skipped stay in line for the next
 run. Uploading a photo yourself is never affected.
+
+**A product that arrives switched off:** Some products are added in bulk with no stock and switched
+off, for example the Fish range. They appear in this list, but shoppers cannot see them. To put one
+on sale: check its price is what you will charge, add a photograph, set its quantity on **Live
+Inventory & Availability** (`/staff/inventory`), then tick **Visible in the shop** on its page here.
+Until you do, it stays hidden, so nothing is offered at a price you have not confirmed.
 
 **What happens after changes are saved:** The change is live immediately — the storefront, the
 department listing and the product's own page all update. Existing orders are unaffected: they keep

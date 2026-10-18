@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.40.0"
-updated: 2026-10-15
+version: "1.41.0"
+updated: 2026-10-17
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -409,6 +409,17 @@ model Category {
 // depth makes a cycle — a category reachable from itself — unrepresentable,
 // with no recursive walk to get wrong. Anything that writes a Category must
 // preserve this.
+//
+// A CATEGORY IS VISIBLE TO SHOPPERS ONLY IF IT AND ITS PARENT ARE ACTIVE (#1131).
+// `lib/category-visibility.ts` holds the one predicate, and every storefront
+// product read in lib/repositories/products.ts carries it (a source-scanning
+// test fails a read that does not), so switching a department off hides its
+// products, its subcategories' products, its page and its sitemap entries
+// without altering a single Product row. Switching it back on restores all of
+// it. That is why deactivating a category no longer requires emptying it first:
+// #159's "deactivate or move the products first" refusal existed to avoid
+// rewriting rows the owner never saw, and nothing is rewritten any more. Carts,
+// orders and bundles that already hold such a product are not reconciled.
 
 model Product {
   id          String         @id @default(uuid())

@@ -18,6 +18,9 @@ function entryText(entry: RestoreEntry): string {
       return `${entry.name}: none added, your cart already holds all we have in stock`;
     case "s":
       return `${entry.name}: not added, no product chosen`;
+    case "m":
+      // #1090 — a list line that matched nothing. The name is the shopper's own typed text.
+      return `${entry.name}: not added, no match in this shop`;
   }
 }
 

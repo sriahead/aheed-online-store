@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
 
 /** Matches the shape `app/api/search/suggest/route.ts` returns. */
 type Suggestions = {
@@ -170,10 +169,9 @@ export function SearchSuggest({
 
   return (
     <div className={`relative ${className}`}>
-      <Search
-        className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/60"
-        aria-hidden
-      />
+      {/* #1131 — no magnifier glyph in here any more. It was decorative and looked clickable but did
+          nothing; the search icon now sits on a real submit button beside this input
+          (components/layout/DepartmentSearchBar.tsx). */}
       <input
         type="text"
         name="q"
@@ -197,7 +195,10 @@ export function SearchSuggest({
         placeholder={placeholder}
         aria-label="Search products"
         data-tap-surface="search"
-        className="w-full min-h-tap lg:min-h-0 bg-surface-muted hover:bg-black/5 focus-visible:bg-white pl-10 pr-4 py-2 rounded-xl text-sm border border-black/10 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 transition"
+        // #1131 — the middle segment of a joined bar: no rounding and no side borders of its own, so
+        // the department select on its left and the button on its right close it off. The focus
+        // ring is inset so it is not clipped by its neighbours.
+        className="w-full h-full min-h-tap lg:min-h-0 bg-white px-3 py-2 text-sm border-y border-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-action transition"
       />
 
       <ul

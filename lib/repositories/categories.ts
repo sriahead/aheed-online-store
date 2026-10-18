@@ -1,6 +1,7 @@
 import type { getPrisma } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import type { CatalogueWriteResult } from "@/lib/repositories/products";
+import { visibleCategoryWhere } from "@/lib/category-visibility";
 
 export interface CategorySummary {
   id: string;
@@ -81,7 +82,10 @@ export async function listCategoryTreeForStorefront(
   vendorId: string,
 ): Promise<StorefrontCategoryNode[]> {
   return prisma.category.findMany({
-    where: { vendorId, isActive: true },
+    // #1131 — visible, not merely active: a subcategory under a hidden department keeps its own
+    // `isActive: true` (see lib/category-visibility.ts), so `isActive` alone would leak it into
+    // /search's tree, /bundles and the sitemap.
+    where: { vendorId, ...visibleCategoryWhere },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: { id: true, slug: true, name: true, parentId: true, isActive: true },
   });
@@ -109,7 +113,9 @@ export async function suggestCategories(
   return prisma.category.findMany({
     where: {
       vendorId,
-      isActive: true,
+      // #1131 — under `AND`, not spread: the visibility predicate and the term match each carry an
+      // `OR`, and spreading one would silently overwrite the other.
+      AND: [visibleCategoryWhere],
       OR: terms.map((term) => ({ name: { contains: term, mode: "insensitive" as const } })),
     },
     orderBy: { sortOrder: "asc" },
@@ -124,7 +130,8 @@ export async function getCategoryBySlug(
   slug: string,
 ): Promise<CategoryWithChildren | null> {
   return prisma.category.findFirst({
-    where: { vendorId, slug, isActive: true },
+    // #1131 — a hidden department's page 404s, and so does a subcategory under one.
+    where: { vendorId, slug, ...visibleCategoryWhere },
     select: {
       id: true,
       slug: true,
@@ -299,6 +306,41 @@ export async function getCategoryForAdmin(
   });
 }
 
+/** What switching a category off hides from shoppers (#1131) — see `countHiddenWithCategory`. */
+export interface CategoryHiddenCounts {
+  /** Active products in this category and in its active sub-categories. */
+  products: number;
+  /** Active direct sub-categories. Always 0 for a sub-category (the tree is two levels deep). */
+  subCategories: number;
+}
+
+/**
+ * How many active products and sub-categories stop being shown when this category is switched off
+ * (#1131). Read-only and advisory: the staff form states it beside "Visible in the shop" so the
+ * consequence is visible BEFORE the save, which is what #159's refusal used to provide.
+ *
+ * Products in an active sub-category count too, because a hidden department hides its whole
+ * subtree (lib/category-visibility.ts). Products in a sub-category that is already off are not
+ * counted — switching the parent changes nothing for them.
+ */
+export async function countHiddenWithCategory(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  id: string,
+): Promise<CategoryHiddenCounts> {
+  const [products, subCategories] = await Promise.all([
+    prisma.product.count({
+      where: {
+        vendorId,
+        isActive: true,
+        OR: [{ categoryId: id }, { category: { parentId: id, isActive: true } }],
+      },
+    }),
+    prisma.category.count({ where: { vendorId, parentId: id, isActive: true } }),
+  ]);
+  return { products, subCategories };
+}
+
 const DUPLICATE_SLUG = {
   ok: false as const,
   error: "Another category in this store already uses that web address.",
@@ -376,39 +418,19 @@ export async function updateCategoryForVendor(
 ): Promise<CatalogueWriteResult> {
   const existing = await prisma.category.findFirst({
     where: { id, vendorId },
-    select: { isActive: true },
+    select: { id: true },
   });
   if (!existing) return { ok: false, error: "That category no longer exists." };
 
   const parent = await checkParent(prisma, vendorId, input.parentId, id);
   if (!parent.ok) return parent;
 
-  // Only on the ACTIVE -> INACTIVE transition. Testing the resulting state
-  // instead would make an already-inactive category that has active products
-  // impossible to edit at all — including impossible to rename or re-activate.
-  if (existing.isActive && !input.isActive) {
-    const [activeProducts, activeChildren] = await Promise.all([
-      prisma.product.count({ where: { vendorId, categoryId: id, isActive: true } }),
-      prisma.category.count({ where: { vendorId, parentId: id, isActive: true } }),
-    ]);
-    if (activeProducts > 0 || activeChildren > 0) {
-      // Named, not cascaded: one click quietly rewriting an unbounded number of
-      // rows the owner never saw is the wrong default, and there is no undo.
-      const blockers = [
-        activeProducts > 0 &&
-          `${activeProducts} active ${activeProducts === 1 ? "product" : "products"}`,
-        activeChildren > 0 &&
-          `${activeChildren} active ${activeChildren === 1 ? "sub-category" : "sub-categories"}`,
-      ].filter((part): part is string => part !== false);
-      return {
-        ok: false,
-        error: `This category still has ${blockers.join(" and ")}. Deactivate or move ${
-          blockers.length > 1 ? "them" : "those"
-        } first.`,
-        field: "isActive",
-      };
-    }
-  }
+  // #1131 — no refusal on the ACTIVE -> INACTIVE transition any more. #159 refused to switch off a
+  // category that still had active products or sub-categories, because the only way to hide them
+  // was to rewrite rows the owner never saw. Visibility is now derived (lib/category-visibility.ts):
+  // switching a department off hides its products and sub-categories WITHOUT touching a row, and
+  // switching it back on restores them. The form says what the switch will hide instead
+  // (`countHiddenWithCategory`, components/staff/CategoryForm.tsx).
 
   try {
     await prisma.category.update({

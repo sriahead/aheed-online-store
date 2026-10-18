@@ -12,6 +12,8 @@ import {
   type GeneratedProduct,
   generateProducts,
 } from "./generate-catalogue";
+import { FISH_DEPARTMENT } from "./department-changes";
+import { toSeedProducts } from "./fish-products";
 
 // Seed runs in Node (locally or CI) — prefers DIRECT_URL.
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
@@ -909,6 +911,12 @@ const CATALOGUE: CatalogueCategory[] = [
       },
     ],
   },
+  // #1131 — the owner's Fish department, with no products yet: it ships empty and staff stock it.
+  // Created here so a clean dev database has it; staging and production get it from
+  // scripts/apply-department-changes.ts, which reads this same entry (FISH_DEPARTMENT) so the two
+  // cannot disagree about names or slugs. `seedCatalogue` creates it on an already-seeded database
+  // too, because its idempotency check is per category.
+  FISH_DEPARTMENT,
 ];
 
 // Re-upload the (brand-neutral) product placeholder to every catalogue product's key.
@@ -2570,6 +2578,9 @@ const AHEED_SUBCATEGORY_PRODUCTS: Record<string, CatalogueProduct[]> = {
       quantity: 35,
     },
   ],
+  // #1147 — the Fish department's products, built from the same module `scripts/add-fish-products.ts`
+  // reads, so the dev catalogue and the script cannot disagree about a name, slug or price.
+  ...toSeedProducts(),
 };
 
 /** SriMart sells electronics and homeware — see the note above about why the generated pool

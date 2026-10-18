@@ -139,7 +139,12 @@ describe("/help loyalty gate (#1013 R1, R9)", () => {
     // still read "1 point per £1" and pass a test written against the defaults.
     expect(text).toMatch(/2 points for every £1/i);
     expect(text).toMatch(/250 points are worth £2\.50/i);
-    expect(text).toMatch(/expire 12 months/i);
+    // #1045 — this line asserted /expire 12 months/i, which the wrong wording ("expire 12 months
+    // after you earn them") satisfied. The exact sentence is the only form that pins the
+    // inactivity rule `lib/loyalty.ts`'s isLapsed() implements.
+    expect(text).toContain(
+      "Points expire if your account goes 12 months without an order. Placing an order resets the clock.",
+    );
   });
 
   it("names the tiers the vendor actually has, and omits the sentence when it has none", async () => {

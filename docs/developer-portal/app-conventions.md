@@ -4,10 +4,10 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.12.0"
-updated: 2026-10-15
+version: "1.15.1"
+updated: 2026-10-18
 visibility: internal
-summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, the fulfilment-method preference, form-field autocomplete tokens and React hooks — with the tests that enforce each invariant mechanically.
+summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, fulfilment-method preference, autocomplete tokens, shared-source copy rules and React hooks — with the tests that enforce each invariant mechanically.
 tags: [conventions, repositories, server-actions, staff-panel]
 ---
 
@@ -43,6 +43,14 @@ Runtime failures that survive a green build are in `runtime-pitfalls.md`. Folder
   keeps its own untouched single-order `<form action={advanceStatus}>`, and a row's bulk-select
   checkbox sits in the same `<li>` but carries `form="bulk-advance"` to bind to a separate
   `<form id="bulk-advance" action={advanceStatusBulk}>` rendered once above the list.
+- **A `<form action={serverAction}>` reloads the page only when JavaScript is off.** With
+  JavaScript on, React submits the action and re-renders without navigating, so DOM state the
+  browser owns (a `<details>` left `open`, focus, scroll) survives the post. UI that is meant to close
+  "because the post reloads" stays open for every hydrated shopper. Close it in the form's
+  `onSubmit`, without `preventDefault` so the action still runs; the no-JS reload covers the
+  other case. First hit in `#1142`: the header's method menu stayed open after every choice. The
+  plan had assumed a reload, and jsdom tests could not show it. Pinned by
+  `tests/location-control.test.tsx` ("closes when the … method item is submitted").
 
 
 ## Repository layer (`lib/repositories/*`)
@@ -258,6 +266,26 @@ store's staff reads must be right for **any** vendor.
   scanned across `app/**/*.tsx`, `components/**/*.tsx` and `lib/referrals.ts` with comments
   stripped. It catches those strings returning, **not** new vendor-specific copy — that is still a
   review question. Check a new string against a second vendor (SriMart) before shipping it.
+- **A value the code *derives* must never be hardcoded as an example (`#1043`).** `/orders/lookup`
+  showed every store `e.g. AHE-20260813-K4M2XQ`, but `vendorOrderPrefix()`
+  (`lib/order-totals.ts:158`) builds that prefix from the vendor's slug, so the example could only
+  ever be right for one vendor. Derive the example from the same function the real value comes
+  from. Cost is rarely the objection it looks like: `getCurrentVendorProfile()` is `cache()`-wrapped
+  and the `(storefront)` layout has already called it, so a storefront page can read `profile.slug`
+  for free.
+- **Copy that states a system rule comes from one helper, shared by every surface that states it
+  (`#1045`).** `/help` and the help assistant both said points expire a fixed number of months after
+  each point is earned, while `lib/loyalty.ts`'s `isLapsed()` lapses the whole balance on
+  **inactivity**. The assistant was wrong because it had copied `/help`'s wording (`#1015`) — two
+  literals, one of them already false. Both now render `pointsExpirySentence()` from
+  `lib/help-facts.ts`, the module they already shared, so they cannot diverge. Same shape as
+  `lib/data-retention.ts` for retention figures and `lib/storage-keys.ts` for storage names: **one
+  source per fact, not one per surface.**
+- **Assert copy with string equality, not a pattern.** `tests/help-vendor-facts.test.tsx` asserted
+  `/expire 12 months/i`, which the **incorrect** sentence satisfied too, so that defect shipped and
+  survived three slices under a green test. A regex also admits a longer sentence that re-introduces
+  the error. Pin the sentence with `toBe`/`toContain` on the full string. A copy test that cannot
+  fail on wrong copy is worse than none, because it reads as coverage.
 - **What a vendor sells is vendor data (`#905`).** Six `VendorConfig` label settings
   (`showHalalLabel` … `showHmcCertification`, edited on `/staff/storefront`) decide which label
   controls the staff product form renders; HMC needs Halal. They gate the staff form only — the
@@ -368,9 +396,11 @@ store's staff reads must be right for **any** vendor.
   `parsePostcodeIntent` in `lib/delivery-cookie.ts`) and writes `DELIVERY` only for `"delivery"`
   **and** a deliverable postcode. Anything else — `"edit"`, an absent field, an unrecognised value,
   an undeliverable postcode — leaves the stored method exactly as it was.
-- **The pencil/edit path must never change the method.** This is `#748`: changing where you live is
+- **The edit path must never change the method.** This is `#748`: changing where you live is
   not changing how you receive the order, and silently switching a Click & Collect shopper back to
-  Delivery because they corrected a typo is the defect that rule exists to prevent.
+  Delivery because they corrected a typo is the defect that rule exists to prevent. Since `#1142`
+  the edit path is the **Change postcode** item in the header's method menu (it was a pencil
+  button); it still submits `"edit"`.
 - **Do not restate that rule as "a postcode submission never sets the method".** It was written
   that way in code comments only, and the wider form caused `#1087`: with a `COLLECTION` cookie
   stored, a shopper who clicked **Delivery**, was asked for a postcode and gave a deliverable one
@@ -381,6 +411,37 @@ store's staff reads must be right for **any** vendor.
 - Enforced by `tests/delivery-postcode-intent.test.ts` (the parser, and which submissions write the
   method cookie) and `tests/location-control.test.tsx` (which affordance submits which intent, and
   the label).
+
+## Responsive labels that switch text by viewport (`#1091`)
+
+- **A control whose label text changes by breakpoint must have one accessible name that does not
+  depend on the stylesheet.** Two sibling spans (`hidden sm:inline` and `sm:hidden`) are correct in
+  a browser, where one is `display: none` at any width, but anywhere CSS is not applied — jsdom,
+  reader modes — both count and the name doubles (`DeliveryDelivery`,
+  `Click & CollectCollect`). Put an `aria-label` on the control and `aria-hidden` on both spans.
+- **The `aria-label` must contain the narrow span's visible text** (WCAG 2.5.3, Label in Name), so a
+  speech user saying what they see still hits it: `Click & Collect` contains `Collect`,
+  `Delivery · <postcode>` contains the postcode.
+- **If both spans render the same text, collapse them to one span** rather than labelling the pair.
+- A **single** `hidden sm:inline` span beside an icon (the header's Shop, account and Sign In links)
+  does not double; at narrow widths its name falls back to the link's `title`. That is out of this
+  rule's scope. The Quick Shop link beside the search bar carries an `aria-label="Quick Shop"`
+  identical to its visible text, so its name does not fall back.
+- Enforced for `components/layout/LocationControl.tsx` by `tests/location-control.test.tsx`, which
+  addresses every button by `getByRole("button", { name })` with the exact name.
+
+## Shop-list review fields (`#1088`, `#1090`)
+
+- **Every line `components/cart/ListReview.tsx` renders emits all four positional fields** —
+  `productId`, `quantity`, `lineLabel`, `lineStatus` — whatever its resolution.
+  `features/cart/add-list-to-cart.ts` reads them by index, so a branch that drops one misaligns every
+  line after it. Before `#1090` the out-of-stock and unmatched rows emitted none, which kept the
+  arrays aligned but left `/cart` silent about them.
+- **`lineStatus` is read only for an empty `productId`**, and only picks the notice wording
+  (`unavailable` → `u`, `unmatched` → `m`, anything else or absent → `s`). A line carrying a product
+  goes to the bulk add whatever its status says, which is what makes a client-supplied status safe.
+- Enforced by `tests/shop-list-review-copy.test.tsx` (four of each field for all four line kinds)
+  and `tests/add-list-to-cart.test.ts`.
 
 ## Checkout pricing (`#973`)
 

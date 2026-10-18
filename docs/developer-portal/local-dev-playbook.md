@@ -4,10 +4,10 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.28.0"
+version: "1.30.0"
 updated: 2026-10-16
 visibility: internal
-summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, local vendor hosts, and what a session can and cannot drive when proving a payment path.
+summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, KMS coverage vs gitignore, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
 ---
 
@@ -206,6 +206,53 @@ The limit that actually bites is `summary`: **at most 300 characters**, and it i
 appending one clause to an existing summary when adding a section. It bit twice in one slice
 (`#1087`): once on `docs/business-analysis/user-testing-feedback-2026-10-13.md` and once on
 `docs/developer-portal/app-conventions.md`.
+
+## `kms:coverage counts gitignored files`, so it can fail locally and pass in CI (#1045)
+
+`npm run kms:coverage` walks the **filesystem**, not git. A markdown file that is gitignored still
+counts against the ratchet, so the check can fail on a dev machine for a file CI will never see —
+`actions/checkout` does not materialise ignored files.
+
+Observed 2026-10-16 while specifying `#1045`: a local scratch note at `misc/issue-club-a.md`
+(`/misc/` is ignored at `.gitignore:62`) produced
+
+```
+kms:coverage — 16 uncovered file(s) across 9 director(ies)
+  ✘ misc: baseline 0, measured 1 (increased)
+```
+
+**Do not follow the failure's own advice here.** It suggests `npm run kms:coverage -- --update`,
+which would commit a baseline describing one machine's scratch directory; CI, which cannot see that
+file, would then report a *decrease* and fail the other way.
+
+Check whether the named path is tracked before acting:
+
+```bash
+git ls-files misc/issue-club-a.md   # prints nothing  -> ignored, not your problem
+git check-ignore -v <path>          # names the .gitignore rule
+```
+
+A complaint about a **tracked** file is real: add front-matter, or re-baseline deliberately.
+
+Related, and often confused with it: **`npm run kms:check-generated` compares against
+`git show HEAD:<path>`**, not the working tree — its own docstring explains why. So between
+`kms:build-index` and the commit it *always* reports the two generated artefacts as stale. That is
+the instruction to commit, not a drift to investigate; it goes green on the next commit.
+
+## A spec file quoting old copy with a literal `{word}` breaks the `kms/site-internal` MDX build
+
+Measured 2026-10-16 at `#1045`/`#1043`'s `/validate` pass, from a fresh context. KMS assembles
+`specs/**/plan.md` (and any other tracked markdown) into this site's MDX pages, and MDX compiles an
+unescaped `{...}` in prose as a JSX expression, not literal text — so quoting a sentence like
+`"Points expire {N} months after you earn them."` outside a backtick span throws
+`ReferenceError: N is not defined` at prerender, failing `next build` in `kms/site-internal`.
+**Neither `npm run kms:validate` nor `npm run kms:check-generated` catches this — neither renders
+MDX** — and `gates` never builds the docs site at all, so this reaches `main` silently unless
+someone runs the real build. **Wrap any quoted sentence containing `{...}` in a backtick code
+span** (`` `"...{N}..."` ``), matching how `requirements.md`'s own literal strings are already
+written. Run `npm run kms:assemble:internal && cd kms/site-internal && npx next build` after
+editing any `specs/*/plan.md` that quotes old or wrong copy verbatim — the failure only shows up at
+that build, not at `kms:validate`/`kms:check-generated`, and not in the normal app build either.
 
 ## A `TZ` override is silently ignored on Windows when the value contains a slash
 

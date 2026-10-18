@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.43.0"
+version: "2.44.0"
 updated: 2026-10-14
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
@@ -718,6 +718,16 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   to grep.**
 - UI changes: verify against rendered output (compiled CSS, rendered HTML, browser screenshot), not
   code review alone. DB-touching code: `npm run preview`, never `npm run dev` (see `CLAUDE.md`).
+- **A twelfth instance, `#1131`'s `/validate` (2026-10-17): a source-wide grep matched generated
+  text, and a setup step leaked a secret.** R29's `git diff origin/staging -- app components lib
+  features ... | grep -E "queryRaw|executeRaw|Prisma\.sql"` printed a hit that was prose inside
+  `app/(admin)/staff/runbook/docs.ts`, the generated embed of `specs/architecture.md`, which mentions
+  `$queryRaw` nine times already. Loop over `git diff --name-only` and count per file, then exclude
+  generated artefacts (`docs.ts`, `ARTIFACT_INDEX.md`) before treating a hit as code. Separately,
+  `set -a; . ./.env` in Git Bash tried to execute comment and URL lines and echoed a fragment of an
+  API key into the session output: read single keys with `grep '^KEY=' .env`, never source an env
+  file. And a `validation.md` row can assume a state the dev database is no longer in (R4/R5 expect
+  *restored*, the database was *hidden*); check the starting state before the first row, and say so.
 - **A row that needs a real narrow viewport (phone-width overflow, tap targets) is not a
   Claude-in-Chrome job — check `docs/developer-portal/local-dev-playbook.md`'s "Measuring the
   storefront at real phone widths" section first.** Desktop Chrome, including a Claude in Chrome

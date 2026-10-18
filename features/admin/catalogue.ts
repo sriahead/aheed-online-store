@@ -9,6 +9,7 @@ import {
   parseCategoryForm,
   parseProductForm,
   readForm,
+  readSubmittedCategory,
   type CatalogueFormState,
 } from "@/lib/catalogue-form";
 import { createProductForVendor, updateProductForVendor } from "@/lib/products-service";
@@ -119,9 +120,17 @@ export async function saveCategory(
   const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) return refusal(auth.status, "categories");
 
+  // #1131 — echoed on every refusal below, so the form re-renders what was typed (see
+  // CatalogueFormState.submittedCategory).
+  const submittedCategory = readSubmittedCategory(form);
   const parsed = parseCategoryForm(readForm(form, CATEGORY_FIELDS));
   if (!parsed.ok) {
-    return { error: parsed.error.message, field: parsed.error.field, saved: false };
+    return {
+      error: parsed.error.message,
+      field: parsed.error.field,
+      saved: false,
+      submittedCategory,
+    };
   }
 
   const categoryId = String(form.get("categoryId") ?? "").trim();
@@ -130,7 +139,7 @@ export async function saveCategory(
       ? await createCategoryForVendor(auth.vendorId, parsed.value)
       : await updateCategoryForVendor(auth.vendorId, categoryId, parsed.value);
 
-  if (!result.ok) return failure(result);
+  if (!result.ok) return { ...failure(result), submittedCategory };
 
   revalidatePath("/staff/categories");
   revalidatePath(`/staff/categories/${result.id}`);

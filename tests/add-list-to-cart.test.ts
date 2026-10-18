@@ -41,12 +41,16 @@ afterEach(() => {
 });
 
 /** Build the positionally-aligned form the review step submits. */
-const form = (rows: { productId: string; quantity: string; lineLabel?: string }[]): FormData => {
+const form = (
+  rows: { productId: string; quantity: string; lineLabel?: string; lineStatus?: string }[],
+): FormData => {
   const data = new FormData();
   for (const row of rows) {
     data.append("productId", row.productId);
     data.append("quantity", row.quantity);
     if (row.lineLabel !== undefined) data.append("lineLabel", row.lineLabel);
+    // #1090 — absent unless a case sets it, which is exactly what a pre-#1090 review page submits.
+    if (row.lineStatus !== undefined) data.append("lineStatus", row.lineStatus);
   }
   return data;
 };
@@ -168,6 +172,53 @@ describe("addListToCart (#1088)", () => {
 
     expect(addItems).toHaveBeenCalledWith({ userId: "user-1", guestToken: null }, [
       { productId: "p-1", quantity: 1 },
+    ]);
+    expect(url).toBe("/cart");
+  });
+});
+
+describe("addListToCart — out-of-stock and unmatched lines (#1090)", () => {
+  it("R5: names each id-less line by its submitted status, and any other status is skipped", async () => {
+    addItems.mockResolvedValue([{ productId: "p-1", requested: 1, added: 1, kind: "added" }]);
+
+    const url = await redirectedTo(
+      form([
+        { productId: "p-1", quantity: "1", lineLabel: "Milk", lineStatus: "ready" },
+        { productId: "", quantity: "2", lineLabel: "Oat drink", lineStatus: "unavailable" },
+        { productId: "", quantity: "3", lineLabel: "Ghost item", lineStatus: "unmatched" },
+        { productId: "", quantity: "4", lineLabel: "Thing", lineStatus: "pigeon" },
+      ]),
+    );
+
+    expect(query(url)).toEqual({
+      restored: "list",
+      of: "4",
+      lines: "u~0~2~Oat drink|m~0~3~Ghost item|s~0~4~Thing",
+    });
+    expect(addItems).toHaveBeenCalledWith({ userId: "user-1", guestToken: null }, [
+      { productId: "p-1", quantity: 1 },
+    ]);
+  });
+
+  it("R5: with no lineStatus field at all, an id-less line is skipped (a pre-#1090 page)", async () => {
+    addItems.mockResolvedValue([]);
+
+    const url = await redirectedTo(
+      form([{ productId: "", quantity: "1", lineLabel: "Apple juice" }]),
+    );
+
+    expect(query(url).lines).toBe("s~0~1~Apple juice");
+  });
+
+  it("R6: a line carrying a product is added whatever its status says", async () => {
+    addItems.mockResolvedValue([{ productId: "p-1", requested: 2, added: 2, kind: "added" }]);
+
+    const url = await redirectedTo(
+      form([{ productId: "p-1", quantity: "2", lineLabel: "Milk", lineStatus: "unavailable" }]),
+    );
+
+    expect(addItems).toHaveBeenCalledWith({ userId: "user-1", guestToken: null }, [
+      { productId: "p-1", quantity: 2 },
     ]);
     expect(url).toBe("/cart");
   });
