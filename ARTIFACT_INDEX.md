@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-18T09:21:23.237Z` · commit `3dc515ce` · `240` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-18T12:05:39.811Z` · commit `66b25d56` · `241` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -235,6 +235,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Storefront navigation and catalogue: hidden departments, Fish, department search, list entry (plan)](specs/2026-10-17-p1131-storefront-navigation-catalogue/plan.md) | spec | 1.0.0 | 2026-10-17 | draft | internal | Slice A of the 2026-10-17 website brief (#1131, absorbing #1132, #1133): hidden departments hide their products, Aheed gets a Fish department, category forms keep typed values, header search becomes a department-scoped bar, and the landing page gets a Shopping List entry with a guest sign-in prompt. |
 | [Header: Collect/Delivery dropdown, Shopping List beside search, new search placeholder (plan)](specs/2026-10-17-p1142-header-dropdown-search-room/plan.md) | spec | 1.0.0 | 2026-10-17 | draft | internal | Follow-on to slice A (#1131), issue #1142: replace the Click & Collect / Delivery toggle pair with one compact dropdown, move the Shopping List link next to the search bar, and change Aheed's search placeholder, so the search field gets more room. |
 | [Quick Shop: one name for the paste-a-list feature, and simpler page copy (plan)](specs/2026-10-18-p1145-quick-shop/plan.md) | spec | 1.0.0 | 2026-10-18 | draft | internal | Issue #1145: rename the paste-a-list feature to Quick Shop everywhere a shopper sees it (header, page, cart and saved-lists links) and cut the /shop-your-list copy to one label, one quantity example and the line limit. Copy only; no behaviour change. |
+| [Fish products: 18 reviewable products under Fresh Fish and Frozen Fish (plan)](specs/2026-10-18-p1147-fish-products/plan.md) | spec | 1.0.0 | 2026-10-18 | draft | internal | Issue #1147: stock the empty Fish department with 18 realistic products through a tested data module and a dry-run-by-default script that creates them hidden with zero stock, plus the same products in the dev seed. Data only; no schema change and no live prices. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.41.0 | 2026-10-17 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
