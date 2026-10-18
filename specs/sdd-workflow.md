@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.44.0"
-updated: 2026-10-14
+version: "2.45.0"
+updated: 2026-10-18
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -314,6 +314,11 @@ not present.
 - `requirements.md`: numbered `R1..Rn`, each one objectively checkable sentence (a tool exits 0, a
   file exists with property X, a route returns Y) — no "should" language. `validation.md`: a
   `| Req | How to verify |` table, one concrete step per row.
+- **A keyword grep over generated SQL matches clauses, not just statements — anchor it.** `#1134`'s
+  R9 asked `grep -inE '\b(DROP|UPDATE|INSERT)\b'` to print nothing over a purely additive migration,
+  and it matched `ON UPDATE CASCADE` inside both foreign-key `ADD CONSTRAINT` statements Prisma
+  always emits. Anchor on a statement start (`^\s*(DROP|UPDATE|INSERT)\b`) or name the allowed
+  statement kinds and read the file.
 - **Don't verify the *absence* of a word with `grep` when the artifact is prose or carries an
   explanatory comment.** Good code and good docs *name the thing they deliberately exclude* — so the
   grep matches the explanation and the only way to "pass" is to delete the most useful sentence in

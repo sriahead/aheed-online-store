@@ -121,6 +121,17 @@ every branch merges.
 
 ### Documentation
 
+- **Document pass for `#1134` (slice B, merged to `staging` by PR #1153, `1d9a2a1`).** Documentation
+  only, no code change.
+  - `specs/roadmap.md` 1.159.0 adds the slice's change-log row, which `sdd:audit` reported as
+    missing.
+  - `docs/model-handoff.md` 1.111.0 records that `staging` is one slice ahead of `main`, that
+    production's database already holds this slice's additive migration (an exported `DIRECT_URL`
+    beat `.env`), and the owner's post-promotion actions.
+  - `specs/sdd-workflow.md` 2.45.0 adds a trap: a keyword grep over generated SQL matches
+    `ON UPDATE CASCADE`, so anchor it on statement starts.
+  - The slice's `validation.md` R9 and R14 rows are corrected to match.
+
 - **Document pass for `#1045`/`#1043` (merged to `staging` by PR #1127, `85cfead`).** Documentation
   only, no code change. `specs/roadmap.md` 1.156.0 gains the change-log row `sdd:audit` was
   reporting as missing. `docs/model-handoff.md` 1.107.0: the `Last Verified` block no longer
