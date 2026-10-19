@@ -141,6 +141,11 @@ every branch merges.
 
 ### Documentation
 
+- **Document pass for `#1169` (merged to `staging` by PR #1171, `d5a7e36`).** Documentation only, no code change.
+  - `specs/roadmap.md` 1.165.0 adds the slice's change-log row.
+  - `docs/model-handoff.md` 1.117.0: `staging` is one slice ahead of `main`; `#1170` filed.
+  - `docs/developer-portal/local-dev-playbook.md` 1.33.0: a PowerShell line that stops only preview, and reading a client-side select's live value over CDP.
+
 - **Document pass for `#1161`/`#1162`/`#1119` (merged to `staging` by PR #1166, `535e53f`).**
   Documentation only, no code change.
   - `specs/roadmap.md` 1.163.0 adds the slice's change-log row.
