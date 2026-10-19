@@ -852,9 +852,9 @@ All facts in this section require live verification:
     categories or products a store ticks, plus the Workers AI plan mode and the staff AI Allowance
     page. **BUILT** on `feature/p1135-custom-notes-ai-allowance` (spec `09b2fec`, build `68ce77e`)
     and awaiting Validate from a fresh context. Read
-    `specs/2026-10-19-p1135-custom-notes-ai-allowance/build-notes.md` first: **its dev migration
-    was not applied at Build** (the owner runs `migrate deploy`), and the session environment
-    exported the production `DIRECT_URL` again. **`#1028` is resolved in code:** `WORKERS_AI_PLAN`
+    `specs/2026-10-19-p1135-custom-notes-ai-allowance/build-notes.md` first: its dev migration was
+    applied by the owner after Build, and the session environment exported the production
+    `DIRECT_URL` again. **`#1028` is resolved in code:** `WORKERS_AI_PLAN`
     defaults to Free (a shared 10,000-neuron cap per UTC day), and the owner sets `paid` once the
     Cloudflare plan is confirmed. The owner deferred "fix existing free-text" until they give a
     route or symptom. Deferred: `#1156`–`#1159`.

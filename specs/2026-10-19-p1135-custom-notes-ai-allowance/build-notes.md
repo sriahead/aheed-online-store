@@ -115,21 +115,17 @@ wording) are recorded as decisions. Neither changes a requirement's outcome.
 
 ## Known-shaky areas
 
-- **The dev migration is NOT yet applied.** `env -u DIRECT_URL -u DATABASE_URL npx prisma migrate
-  status` (host `ep-dry-morning-zab7dx08`, dev) lists `20261019120000_p1135_custom_item_notes` as
-  pending. Auto mode blocks `migrate deploy`, so the owner must run
-  `! env -u DIRECT_URL -u DATABASE_URL npx prisma migrate deploy`. Until then:
-  - `tests/express-sla.test.ts` and `tests/concurrency-slot-booking.test.ts` fail against dev,
-    because the Prisma client selects `customNote`;
-  - R21–R24 and R38 can't be run.
-
-  Rerun both test files first at Validate.
+- **The dev migration was applied after Build, by the owner** (2026-10-19,
+  `env -u DIRECT_URL -u DATABASE_URL npx prisma migrate deploy`, datasource
+  `ep-dry-morning-zab7dx08`). Since then `tests/express-sla.test.ts` and
+  `tests/concurrency-slot-booking.test.ts`, which had failed while the column was missing, pass
+  against dev (2 of 2). R21–R24 and R38 can now run under `npm run preview`.
 - **The session environment exports the PRODUCTION `DIRECT_URL`** (`ep-young-glitter-zadlkttm`),
   the same trap that migrated production at `#1134`. `DATABASE_URL` is not exported, so live tests
   used dev through `.env`. Every Prisma CLI or DB script command must carry
   `env -u DIRECT_URL -u DATABASE_URL`. Run `printenv DIRECT_URL DATABASE_URL` before anything that
   touches a database.
-- **Not yet exercised live (pending the migration):**
+- **Not yet exercised live:**
   - R21–R24: the note input on Aheed with a ticked category; nothing on SriMart; the dropped
     sentence after unticking; the mobile measurement;
   - R38: the store-admin versus platform-admin view of `/staff/ai-usage`.
