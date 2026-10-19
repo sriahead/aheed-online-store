@@ -71,19 +71,22 @@ describe("ShopYourList hint placement (#1077 R14)", () => {
    * `ShopYourList` is the wrong trade here. The property under test is static: whichever branch of
    * the example/neutral conditional renders, the hint is authored above the textarea, so no runtime
    * state can reorder them. A reader checking this by eye should look for the `<p>` carrying
-   * "Add a number for more than one" sitting before `<textarea id="list"` (#1145 reworded the hint;
-   * it was "Quantities are understood").
+   * "For example:" (and the neutral "For more than one") sitting before `<textarea id="list"`
+   * (#1169 reworded the hint; #1145 had it as "Add a number for more than one", and before that it
+   * was "Quantities are understood").
    */
   it("authors the quantities hint before the textarea", async () => {
     const { readFileSync } = await import("node:fs");
     const source = readFileSync("components/cart/ShopYourList.tsx", "utf8");
 
-    const hintAt = source.indexOf("Add a number for more than one");
     const textareaAt = source.indexOf("<textarea");
-
-    expect(hintAt).toBeGreaterThan(-1);
     expect(textareaAt).toBeGreaterThan(-1);
-    expect(hintAt).toBeLessThan(textareaAt);
+    // Both branches of the example/neutral conditional.
+    for (const hint of ["For example:", "For more than one"]) {
+      const hintAt = source.indexOf(hint);
+      expect(hintAt).toBeGreaterThan(-1);
+      expect(hintAt).toBeLessThan(textareaAt);
+    }
   });
 });
 

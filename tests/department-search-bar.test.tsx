@@ -29,6 +29,13 @@ const THREE = [
   { slug: "dept-two", name: "Dept Two" },
   { slug: "dept-three", name: "Dept Three" },
 ];
+// #1169 — a department with two subcategories, flattened the way `toSearchDepartments` does it.
+const TREE = [
+  { slug: "dept-one", name: "Dept One" },
+  { slug: "dept-two", name: "Dept Two" },
+  { slug: "two-a", name: "Two A", isSubcategory: true },
+  { slug: "two-b", name: "Two B", isSubcategory: true },
+];
 const THIRTY = Array.from({ length: 30 }, (_, i) => ({ slug: `d-${i}`, name: `Department ${i}` }));
 
 function renderBar(departments = THREE, placeholder = "Find something") {
@@ -73,16 +80,31 @@ describe("department options (R16)", () => {
     ["three", THREE],
     ["thirty", THIRTY],
   ] as const) {
-    it(`lists All Departments then exactly the ${label} given departments, in order`, () => {
+    it(`lists All then exactly the ${label} given departments, in order`, () => {
       renderBar(departments);
       const select = departmentSelect();
       const options = [...select.options].map((o) => [o.value, o.textContent]);
-      expect(options).toEqual([
-        ["", "All Departments"],
-        ...departments.map((d) => [d.slug, d.name]),
-      ]);
+      expect(options).toEqual([["", "All"], ...departments.map((d) => [d.slug, d.name])]);
     });
   }
+
+  it("keeps the accessible name Search department now the first option is only All (#1169 R1)", () => {
+    renderBar();
+    expect(departmentSelect().getAttribute("aria-label")).toBe("Search department");
+  });
+
+  it("lists each department's subcategories straight after it, indented (#1169 R2)", () => {
+    const NB = "\u00A0\u00A0";
+    renderBar(TREE);
+    const options = [...departmentSelect().options].map((o) => [o.value, o.textContent]);
+    expect(options).toEqual([
+      ["", "All"],
+      ["dept-one", "Dept One"],
+      ["dept-two", "Dept Two"],
+      ["two-a", `${NB}Two A`],
+      ["two-b", `${NB}Two B`],
+    ]);
+  });
 
   it("is a native select with no size attribute, so a long list scrolls natively", () => {
     renderBar(THIRTY);
@@ -134,19 +156,31 @@ describe("the department already in the URL (R22)", () => {
     expect(departmentSelect().value).toBe("dept-two");
   });
 
+  it("selects a listed subcategory (#1169 R4)", () => {
+    params.value = new URLSearchParams("q=a&category=two-b");
+    renderBar(TREE);
+    expect(departmentSelect().value).toBe("two-b");
+  });
+
+  it("selects a department that has subcategories (#1169 R4)", () => {
+    params.value = new URLSearchParams("category=dept-two");
+    renderBar(TREE);
+    expect(departmentSelect().value).toBe("dept-two");
+  });
+
   for (const [label, query] of [
     ["an unknown slug", "category=nope"],
-    ["a sub-category slug the selector does not list", "category=dept-two-child"],
+    ["a sub-category slug the selector was not given", "category=dept-two-child"],
     ["no parameter", "q=a"],
   ] as const) {
-    it(`selects All Departments for ${label}`, () => {
+    it(`selects All for ${label}`, () => {
       params.value = new URLSearchParams(query);
       renderBar();
       expect(departmentSelect().value).toBe("");
     });
   }
 
-  it("renders the select with All Departments while the URL is not yet available", () => {
+  it("renders the select with All while the URL is not yet available", () => {
     params.suspend = true;
     const { container } = renderBar();
     const select = departmentSelect();

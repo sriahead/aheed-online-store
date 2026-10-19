@@ -17,8 +17,8 @@ import { FooterContactChannels } from "@/components/layout/FooterContactChannels
  * Every value is vendor data from the profile `StorefrontChrome` already loaded (no extra query),
  * plus the platform name from config. **A null HIDES its element; nothing falls back to platform
  * copy (#239).** A column with nothing to show is not rendered — column 1 counts as empty when the
- * location, phone and email are all unset, because the vendor's name alone is not contact
- * information.
+ * location, phone and email are all unset and there are no contact-channel buttons (#1169 moved
+ * those here), because the vendor's name alone is not contact information.
  *
  * Placeholders such as "[YOUR EMAIL]" are legal stored values and render as TEXT: a `tel:` or
  * `mailto:` href is built only from a value that passes the real format check, so a placeholder can
@@ -70,8 +70,8 @@ export function StorefrontFooter({
   const phoneHref = contactPhone && isDiallablePhone(contactPhone) ? telHref(contactPhone) : null;
   const emailHref = contactEmail && isEmailAddress(contactEmail) ? `mailto:${contactEmail}` : null;
   const directions = location ? directionsHref(profile.name, location) : null;
+  const hasAddressDetails = Boolean(location || contactPhone || contactEmail);
 
-  const showContact = Boolean(location || contactPhone || contactEmail);
   // #1060 — "today" is read here, per request (storefront HTML is not cached), in the store's zone.
   const hours = buildOpeningHoursView(profile.weeklyHours, profile.hoursOverrides, new Date());
   const showHours =
@@ -83,6 +83,9 @@ export function StorefrontFooter({
     whatsappNumber: profile.whatsappNumber,
     assistantAvailable,
   });
+  // #1169 — the contact-channel buttons live in this column now, so it shows for them too: a store
+  // with only a Facebook page still has a way to be reached, and it must not vanish.
+  const showContact = hasAddressDetails || channels.length > 0;
   const legal = [
     profile.companyNumber ? `Company no. ${profile.companyNumber}` : null,
     profile.vatNumber ? `VAT ${profile.vatNumber}` : null,
@@ -128,60 +131,65 @@ export function StorefrontFooter({
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
           {showContact && (
             <Column title="Visit & contact us">
-              <address className="space-y-2 not-italic">
-                {location && (
-                  <div className="flex gap-2">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                    <div>
-                      <p className="font-semibold">{profile.name}</p>
-                      <p>
-                        {[
-                          location.addressLine1,
-                          location.addressLine2,
-                          location.city,
-                          location.postcode,
-                        ]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </p>
-                      {directions && (
-                        <a
-                          href={directions}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`${LINK} font-semibold`}
-                        >
-                          Get directions →
+              {hasAddressDetails && (
+                <address className="space-y-2 not-italic">
+                  {location && (
+                    <div className="flex gap-2">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                      <div>
+                        <p className="font-semibold">{profile.name}</p>
+                        <p>
+                          {[
+                            location.addressLine1,
+                            location.addressLine2,
+                            location.city,
+                            location.postcode,
+                          ]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </p>
+                        {directions && (
+                          <a
+                            href={directions}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`${LINK} font-semibold`}
+                          >
+                            Get directions →
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {contactPhone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      {phoneHref ? (
+                        <a href={phoneHref} className={`${LINK} text-base font-bold`}>
+                          {contactPhone}
                         </a>
+                      ) : (
+                        <span className="text-base font-bold">{contactPhone}</span>
                       )}
                     </div>
-                  </div>
-                )}
-                {contactPhone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    {phoneHref ? (
-                      <a href={phoneHref} className={`${LINK} text-base font-bold`}>
-                        {contactPhone}
-                      </a>
-                    ) : (
-                      <span className="text-base font-bold">{contactPhone}</span>
-                    )}
-                  </div>
-                )}
-                {contactEmail && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    {emailHref ? (
-                      <a href={emailHref} className={`${LINK} break-all`}>
-                        {contactEmail}
-                      </a>
-                    ) : (
-                      <span className="break-all">{contactEmail}</span>
-                    )}
-                  </div>
-                )}
-              </address>
+                  )}
+                  {contactEmail && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      {emailHref ? (
+                        <a href={emailHref} className={`${LINK} break-all`}>
+                          {contactEmail}
+                        </a>
+                      ) : (
+                        <span className="break-all">{contactEmail}</span>
+                      )}
+                    </div>
+                  )}
+                </address>
+              )}
+              {/* #1060 — the same channels as the floating contact button, from one source.
+                  #1169 — under "Visit & contact us", where the owner looks for them. */}
+              <FooterContactChannels channels={channels} />
             </Column>
           )}
 
@@ -261,8 +269,6 @@ export function StorefrontFooter({
                 </Link>
               </li>
             </ul>
-            {/* #1060 — the same channels as the floating contact button, from one source. */}
-            <FooterContactChannels channels={channels} />
           </Column>
         </div>
 

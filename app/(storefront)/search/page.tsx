@@ -14,7 +14,8 @@ import { CollectionNav } from "@/components/product/CollectionNav";
 import { parsePackSizeParam } from "@/components/product/unit-price";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
-import { searchPageHref } from "@/components/product/search-href";
+import { categoryFilterHref, searchPageHref } from "@/components/product/search-href";
+import { SubcategoryLinks } from "@/components/product/SubcategoryLinks";
 import { SearchTruncationNotice } from "@/components/product/SearchTruncationNotice";
 import { SearchRecoveryNotice } from "@/components/product/SearchRecoveryNotice";
 import { SearchSuggestionsNotice } from "@/components/product/SearchSuggestionsNotice";
@@ -239,6 +240,23 @@ export default async function SearchPage({
           */}
           {!query && <p className="mb-6 text-sm text-primary-muted">Newest first</p>}
           {query && <div className="mb-6" />}
+
+          {/*
+            #1169 — the category page's subcategory pills, for a resolved `category` (none for an
+            unknown slug, and `SubcategoryLinks` renders nothing for a department with no
+            subcategories). Same rules as /categories/[slug]: a department shows "All" (itself, active)
+            then its children; a subcategory shows its department's row with itself active. Unlike
+            there, every pill stays a search: `categoryFilterHref` keeps the query and filters and
+            drops the cursor, which is an offset into a differently sized result set.
+          */}
+          {selectedCategory && (
+            <SubcategoryLinks
+              tabs={selectedCategory.parent?.children ?? selectedCategory.children}
+              parentSlug={selectedCategory.parent?.slug ?? selectedCategory.slug}
+              activeSlug={selectedCategory.slug}
+              hrefFor={(slug) => categoryFilterHref(params, slug)}
+            />
+          )}
 
           {/*
             #568 fix (R15) — `category` must not reach the chip row unless it actually resolved.

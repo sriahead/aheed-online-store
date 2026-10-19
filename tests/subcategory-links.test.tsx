@@ -72,4 +72,20 @@ describe("SubcategoryLinks", () => {
     render(<SubcategoryLinks tabs={TABS} parentSlug="groceries" activeSlug="groceries" />);
     expect(screen.getAllByRole("link")).toHaveLength(TABS.length + 1);
   });
+
+  it("builds every href with hrefFor when one is given, e.g. a search link (#1169 R5)", () => {
+    render(
+      <SubcategoryLinks
+        tabs={TABS}
+        parentSlug="groceries"
+        activeSlug="groceries"
+        hrefFor={(slug) => `/search?q=rice&category=${slug}`}
+      />,
+    );
+    const hrefs = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
+    expect(hrefs).toEqual([
+      "/search?q=rice&category=groceries",
+      ...TABS.map((tab) => `/search?q=rice&category=${tab.slug}`),
+    ]);
+  });
 });

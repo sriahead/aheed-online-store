@@ -60,17 +60,21 @@ export function ShopYourList({
           Paste your list, one item per line.
         </label>
         {/* #1077 — ABOVE the textarea (triage item 19). It used to sit below, where a shopper read
-            how quantities work only after typing the list without them. #1145 — one example form
-            only; the parser still accepts the others. The limit stays because lines past it are
+            how quantities work only after typing the list without them. #1169 — both forms, at the
+            owner's request: a count before the item, or `x2` after it. NOT a bare trailing number:
+            `parseListLine` reads "Eggs 12" as one pack of 12, deliberately, and a test pins both
+            forms shown here to what the parser accepts. The limit stays because lines past it are
             dropped silently (`parseList`). */}
         {exampleName !== null ? (
           <p className="text-xs text-primary-muted">
-            Add a number for more than one: <span className="font-semibold">2 {exampleName}</span>{" "}
-            (up to {MAX_LIST_LINES} items)
+            For example: <span className="font-semibold">2 {exampleName}</span> or{" "}
+            <span className="font-semibold">{exampleName} x2</span> (up to {MAX_LIST_LINES} items,
+            one per line)
           </p>
         ) : (
           <p className="text-xs text-primary-muted">
-            Add a number for more than one, like 2 before the item (up to {MAX_LIST_LINES} items)
+            For more than one, put 2 before the item or x2 after it (up to {MAX_LIST_LINES} items,
+            one per line)
           </p>
         )}
         <textarea
