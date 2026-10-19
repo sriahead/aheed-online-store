@@ -128,6 +128,23 @@ every branch merges.
 
 ### Documentation
 
+- **Document pass for `#1135` (item notes, plus `#1028`/`#1029`/`#1031`, merged to `staging` by PR
+  #1160, `3bbfa47`).** Documentation only, no code change.
+  - `specs/roadmap.md` 1.161.0 adds the slice's change-log row.
+  - `docs/model-handoff.md` 1.113.0:
+    - `main` is at `dc15145` (`#1134` promoted in PR #1155), and `staging` is one slice ahead;
+    - the stale "`#1028` is owner work" lines now say the plan mode is handled in code;
+    - the owner actions for `#1134` and `#1135` are listed together.
+  - `docs/developer-portal/local-dev-playbook.md` 1.31.0:
+    - driving a server action that is called from JavaScript with curl, using the build manifest
+      for its id;
+    - a form replay must carry `<textarea>` and `<select>` values, or the save blanks them;
+    - `/staff/orders` hides `PENDING_PAYMENT` orders by default;
+    - Git Bash's working opt-out is `MSYS_NO_PATHCONV=1` (not `MSYS_NO_POSIX_PATHCONV`);
+    - `demo-srimart-admin`'s dev password differs from `DEMO_ACCOUNT_PASSWORD`.
+  - Validation findings filed as `#1161` (AI budget save without a `VendorConfig` row) and `#1162`
+    (possible duplicate cart-note ids).
+
 - **Document pass for `#1134` (slice B, merged to `staging` by PR #1153, `1d9a2a1`).** Documentation
   only, no code change.
   - `specs/roadmap.md` 1.159.0 adds the slice's change-log row, which `sdd:audit` reported as

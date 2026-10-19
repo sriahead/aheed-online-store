@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.30.0"
-updated: 2026-10-16
+version: "1.31.0"
+updated: 2026-10-19
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, KMS coverage vs gitignore, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -487,10 +487,34 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   more traps in the same drive: the Better Auth rate limiter answers `429` after a few attempts
   (about 30 seconds clears it, so a retry loop with a `sleep 30` beats trying origin variants), and
   Git Bash rewrites a bare `"/"` argument into `C:/Program Files/Git/` unless
-  `MSYS_NO_POSIX_PATHCONV=1` is set.
+  `MSYS_NO_PATHCONV=1` is set (`MSYS_NO_POSIX_PATHCONV=1`, written here until `#1135`, did not stop
+  the rewrite of a `/staff/...` argument passed to `python`; `MSYS_NO_PATHCONV=1` did).
   This relaxes the "cannot sign in as a second vendor locally" limit in the bullet above for the
-  seeded SriMart host; it was measured here for a customer account only, so a second vendor's
-  admin sign-in is likely but not yet proven.
+  seeded SriMart host; it was measured here for a customer account only. At `#1135`'s Validate
+  (2026-10-19) `demo-admin` (a platform admin) signed in the same way and read SriMart's
+  `/staff/ai-usage`. `demo-srimart-admin` answered 401: its dev password is not
+  `DEMO_ACCOUNT_PASSWORD`, so a SriMart **store-admin** sign-in is still unproven on dev.
+- **A server action that a client component calls from JavaScript (no `<form>`) is still drivable
+  with curl. Take its id from the build, not from the page.** After `npm run preview`'s build,
+  `.next/server/server-reference-manifest.json` maps every action id to its `exportedName` and
+  `filename`. POST to any page with `-H "Next-Action: <id>"`,
+  `-H "Content-Type: text/plain;charset=UTF-8"`, the vendor's `Host`, a matching `Origin` and the
+  session cookie. The body is the JSON array of arguments, for example
+  `["<productId>",1,"note text"]`. The `1:` line of the `text/x-component` response is the
+  action's return value. Measured at `#1135`'s Validate (2026-10-19) for `addToCart` and
+  `setCartItemNote`. The id changes on every build, so re-read the manifest after each one.
+- **Replaying a staff form by scraping its fields must carry `<textarea>` contents and every
+  `<select>`'s selected option, or the save silently blanks them.** The edit actions persist every
+  submitted field, so an omitted `description` is written as empty. Hit at `#1135`'s Validate
+  (2026-10-19): a helper that read only `<input>` tags blanked a dev product's description on a
+  one-checkbox change. It was restored through the same form. Diff the form's fields before and
+  after any scripted save. To untick a checkbox, omit its field; that is what a browser does.
+  A button with its own `formAction` (a second submit, such as Clear) submits that button's
+  `$ACTION_REF_<n>` and `$ACTION_<n>:*` fields **instead of** the form's own action fields.
+- **`/staff/orders` hides `PENDING_PAYMENT` orders by default**, because it is an action queue. An
+  order placed locally with Stripe test mode stops at that status unless the hosted page is paid,
+  so add `?status=PENDING_PAYMENT&q=<order number>` to see its row. Cancel it afterwards at
+  `/checkout/<orderNumber>/cancel`, which also restores its lines to the basket.
 - **A `grep` pattern written against a literal string (e.g. a doc title containing `&`) can silently
   false-negative against a page's real, rendered HTML, because HTML-escapes it as `&amp;` — and a
   `validation.md` row's own example command is not exempt from this.** Hit at `#633`'s `/validate`
