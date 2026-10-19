@@ -139,3 +139,13 @@ describe("Header department selector wiring (#1131 R17)", () => {
     expect(screen.queryByRole("combobox", { name: "Search department" })).toBeNull();
   });
 });
+
+describe("Header Sign In icon (#1173 R8)", () => {
+  it("shows the round user icon in the signed-out Sign In link", async () => {
+    const { container } = render(await Header({}));
+    const signIn = container.querySelector('a[href="/login"]');
+    expect(signIn?.textContent).toContain("Sign In");
+    expect(signIn?.querySelector("svg.lucide-circle-user-round")).not.toBeNull();
+    expect(signIn?.querySelector("svg.lucide-log-in")).toBeNull();
+  });
+});

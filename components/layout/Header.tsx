@@ -4,7 +4,7 @@ import {
   MapPin,
   Search,
   User,
-  LogIn,
+  CircleUserRound,
   Sparkles,
   HelpCircle,
   UserCheck,
@@ -317,7 +317,8 @@ export async function Header({
                 href="/login"
                 className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
               >
-                <LogIn className="w-4 h-4 text-primary" />
+                {/* #1173 — the account symbol, matching the round signed-in avatar. */}
+                <CircleUserRound className="w-4 h-4 text-primary" />
                 <span className="hidden sm:inline">Sign In</span>
               </Link>
             )}

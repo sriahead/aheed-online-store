@@ -9,12 +9,15 @@ import { ProductCard } from "@/components/product/ProductCard";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { DEFAULT_PRODUCT_GRID_DENSITY } from "@/lib/product-grid-density";
 import { FilterPanel } from "@/components/product/FilterPanel";
+import { CollapsibleSidebar } from "@/components/product/CollapsibleSidebar";
+import { FILTERS_COLLAPSED_SCRIPT } from "@/components/product/filters-collapsed";
 import { FilterChips } from "@/components/product/FilterChips";
 import { CollectionNav } from "@/components/product/CollectionNav";
 import { parsePackSizeParam } from "@/components/product/unit-price";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
 import { categoryFilterHref, searchPageHref } from "@/components/product/search-href";
+import { searchHeading } from "@/components/product/search-heading";
 import { SubcategoryLinks } from "@/components/product/SubcategoryLinks";
 import { SearchTruncationNotice } from "@/components/product/SearchTruncationNotice";
 import { SearchRecoveryNotice } from "@/components/product/SearchRecoveryNotice";
@@ -209,14 +212,23 @@ export default async function SearchPage({
   const gridDensity =
     (await getCurrentVendorProfile())?.productGridDensity ?? DEFAULT_PRODUCT_GRID_DENSITY;
 
-  const heading = query ? `Results for “${query}”` : "All products";
+  // #1173 — headed by the category when one is selected and nothing was typed, like its own page.
+  const heading = searchHeading(query, selectedCategory?.name);
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-6">
       {/* Departments: horizontal strip on top (arrow-scrolled). */}
-      <DepartmentScroller categories={allCategories} activeSlug={null} />
+      {/* #1173 — highlights the selected department (a subcategory's parent), like /categories. */}
+      <DepartmentScroller
+        categories={allCategories}
+        activeSlug={
+          selectedCategory ? (selectedCategory.parent?.slug ?? selectedCategory.slug) : null
+        }
+      />
 
-      <div className="mt-6 flex flex-col gap-6 md:flex-row">
+      {/* #1173 — applies a collapse chosen earlier in this tab before the sidebar paints. */}
+      <script dangerouslySetInnerHTML={{ __html: FILTERS_COLLAPSED_SCRIPT }} />
+      <div data-filters-layout="" className="mt-6 flex flex-col gap-6 md:flex-row">
         {/*
           #681 — the collection links sit ABOVE the panel and render exactly once. `FilterPanel`
           renders its form twice (a `details` disclosure below `md`, a static `aside` at `md` and
@@ -224,11 +236,22 @@ export default async function SearchPage({
           `nav` landmarks in the accessibility tree. Keeping them outside also means they stay
           visible on a narrow viewport instead of collapsing behind the disclosure.
         */}
-        <div className="md:w-60 md:shrink-0">
-          <CollectionNav activeHref={params.featured === "1" ? "/search?featured=1" : "/search"} />
+        {/* #1173 — collapsible at md and up (a JavaScript enhancement; open without it). */}
+        <CollapsibleSidebar id="browse-sidebar">
+          {/* #1173 — with a category selected the page is that category, not "All products", so no
+              collection is highlighted (as on /categories). */}
+          <CollectionNav
+            activeHref={
+              selectedCategory
+                ? undefined
+                : params.featured === "1"
+                  ? "/search?featured=1"
+                  : "/search"
+            }
+          />
           {/* #568 — sidebar at md+, a `details` disclosure below it. Both render the same form. */}
           <FilterPanel heading="Search & filters" showQuery searchParams={params} facets={facets} />
-        </div>
+        </CollapsibleSidebar>
 
         <div className="flex-1">
           <h1 className="mb-1 text-2xl font-semibold text-primary">{heading}</h1>

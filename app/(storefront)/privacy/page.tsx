@@ -12,6 +12,7 @@ import {
   CHECKOUT_DETAILS_KEY,
   CONSENT_COOKIE,
   REFERRAL_COOKIE,
+  FILTERS_COLLAPSED_KEY,
 } from "@/lib/storage-keys";
 
 export const dynamic = "force-dynamic";
@@ -156,6 +157,14 @@ export default async function PrivacyPage() {
               Remembers whether you chose delivery or collection.{" "}
               <span>
                 Shown in your browser as <span className="font-semibold">fulfilment-method</span>.
+              </span>
+            </li>
+            {/* #1173 — session storage, cleared when the tab closes; listed though exempt (#1107). */}
+            <li>
+              Remembers whether you hid the filters, until you close the tab.{" "}
+              <span>
+                Shown in your browser as{" "}
+                <span className="font-semibold">{FILTERS_COLLAPSED_KEY}</span>.
               </span>
             </li>
             <li>
