@@ -93,3 +93,59 @@ in `plan.md`. It is not a build deviation.
   `env -u DIRECT_URL -u DATABASE_URL` if `printenv` shows either variable.
 - **Docs-site build (R14):** `kms:assemble:internal` plus the `kms/site-internal` Next build was
   run at build notes; the result is recorded below this list.
+
+## Validation pass 1 (2026-10-19)
+
+**Not independent.** Validated in the same Opus session that wrote the spec and the build, at the
+owner's explicit choice ("validate here anyway"). There was no Clear and no Sonnet switch.
+
+**Pre-flight:**
+- `npm run lint`, `npm run format:check` and `npx tsc --noEmit`: all exit 0.
+- `npx vitest run`, run alone: 281/281 files, 3,538/3,538 tests.
+- The build inside `npm run preview` reported "Compiled successfully".
+
+**Rows, all PASS except where noted:**
+- **R1:** the two `#1161` cases in `tests/ai-meter.test.ts`. The fake client has no
+  `create`/`upsert`, so any such call would throw and fail the test.
+- **R2:** read the function body (lines 140-156). No `upsert`, `create`, `updateMany` or
+  `createMany` call, and the client is the first parameter. The purity and client-injection tests
+  pass.
+- **R3:** `Promise<boolean>`, returns the repository result, passes `getPrisma()`.
+- **R4:** both cases pass. The error copy names no store, brand or product, and every export is
+  `export async function`.
+  - Beyond the row: `components/staff/AiBudgetForm.tsx` renders `state.error`, so the refusal is
+    visible on the page.
+- **R5:** under preview, signed in as `demo-admin` by a Node script replaying the four
+  `useActionState` fields. The budget went 3000 to 4321, and the page showed "0 of 4,321 neurons
+  used" with no error. It was then restored to 3000.
+- **R6:** the `grep` prints nothing. The id is `` `cart-note-${useId()}` ``.
+- **R7:** the `#1162` case passes.
+- **R8:** `verify-mobile-layout.ts --path /categories/bakery --widths 390 --add-first --then /cart
+  --open-cart` exited 0. `formInputs` had exactly two `name: "note"` entries, with ids
+  `cart-note-_S_2_` and `cart-note-_S_1_`.
+  - React 19.2's `useId()` format is `_S_n_`, not the `«r0»` the build-notes decision above
+    guessed. It is a valid id either way.
+  - **Procedure deviation:** `validation.md` says to tick the category on `/staff/categories`. It
+    was ticked by a throwaway Prisma script against dev instead, which refused any host other
+    than `ep-dry-morning-zab7dx08`. The reason is that `#1135`'s form replay had blanked a field.
+  - The first pick, `african-caribbean`, 404s on the storefront, so it was restored and
+    `bakery` used.
+  - Both categories were restored to `allowsCustomNote = false` and the script was deleted.
+- **R9:** 11/11 in `tests/reference-status-service.test.ts`. The empty states assert
+  `toBeNull()`, the new reachable-but-empty case passes, and the field's comment explains `null`.
+- **R10:** the route is unchanged against `origin/staging`. Under preview, `/api/health` returned
+  200 with `status: "ok"`, `reachable: true`, two `sources` and `drift: false`, a real boolean on
+  the compared path.
+- **R11:** both files carry the assertion and the "`drift` false is not evidence" sentence in the
+  same bullet or step.
+- **R12:** one roadmap row naming `943efa0`. `sdd:audit` reports PR #1164 as cited.
+- **R13:** the CHANGELOG diff names all three issues.
+- **R14:** every local gate passes. `kms:assemble:internal` plus the `kms/site-internal` build
+  exited 0 on `f9b3902`, and the tree is unchanged since apart from this section.
+  - **CI `gates` is unverified until the branch is pushed at Ship.**
+
+**Dev state restored:**
+- Aheed's AI budget is 3000.
+- No category was left ticked.
+- Preview's `node`/`workerd` processes were stopped.
+- One throwaway guest cart remains, for the guest-cart reaper.
