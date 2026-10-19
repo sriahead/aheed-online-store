@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { searchPageHref } from "@/components/product/search-href";
+import {
+  categoryFilterHref,
+  searchPageHref,
+  type SearchHrefParams,
+} from "@/components/product/search-href";
 
 /**
  * #501 — `/search` gained a browse mode and a `featured` param, so this builder
@@ -63,5 +67,19 @@ describe("searchPageHref", () => {
   it("percent-encodes a query containing spaces and symbols", () => {
     const href = searchPageHref({ q: "basmati rice & dal" }, "c");
     expect(new URL(href, "https://example.test").searchParams.get("q")).toBe("basmati rice & dal");
+  });
+});
+
+describe("categoryFilterHref for the /search subcategory pills (#1169 R8)", () => {
+  it("keeps the query and filters, replaces category and drops the cursor", () => {
+    // The page's own params carry `cursor` too; it must not survive into the pill's link.
+    const params = { q: "juice", category: "beverages", inStock: "1", cursor: "24" };
+    const href = categoryFilterHref(params as SearchHrefParams, "juices");
+    const qs = new URLSearchParams(href.split("?")[1]);
+    expect(href.startsWith("/search?")).toBe(true);
+    expect(qs.get("q")).toBe("juice");
+    expect(qs.get("inStock")).toBe("1");
+    expect(qs.getAll("category")).toEqual(["juices"]);
+    expect(qs.has("cursor")).toBe(false);
   });
 });

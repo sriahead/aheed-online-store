@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.115.0"
+version: "1.119.0"
 updated: 2026-10-19
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -47,13 +47,24 @@ reconciliation. If overall project state did not materially change, leave this f
   `origin/staging` were level at this slice's Orient: `staging` was at `6871d14`, and every commit
   missing from it was a promotion merge. PR #1164 closed exactly `[1028, 1029, 1031, 1135]`, and
   all four are `Done`. The row is `specs/roadmap.md` 1.162.0.
-  - **`staging` is ahead of `main` by exactly one slice:** PR #1166 (`#1161`, `#1162`, `#1119`),
-    merge `535e53f`, `specs/2026-10-19-p1161-1162-1119-fixups/`. No migration. `deploy-staging`
-    run `39247069739` succeeded. Staging `/api/health` on both vendor hosts serves `535e53f` with
-    `reachable: true`, two `sources` and `drift: false`. The three issues are `In Review`, and there
-    is no promotion PR yet. The promotion PR must carry one `closes` line per issue, since the
-    staging PR linked none. Its validation was **not independent** (same Opus session, owner's
-    choice).
+  - **Promoted the same day:** PR #1168 (`a182d6d`) took `#1161`/`#1162`/`#1119` to production.
+    `deploy-production` run `39250801069` succeeded, and the PR closed exactly
+    `[1119, 1161, 1162]`. `main` and `staging` were level at `a182d6d`/`f2281b7` at the next
+    Orient. The row is `specs/roadmap.md` 1.164.0.
+  - **`staging` is ahead of `main` by two slices.** First, `#1169` (PR #1171, merge `d5a7e36`,
+    `specs/2026-10-19-p1169-search-footer-polish/`): search selector "All" with subcategories,
+    `/search` subcategory pills, footer contact icons, Simple Icons payment logos and the Quick Shop
+    `x2` example. `deploy-staging` succeeded and both staging hosts serve `d5a7e36` healthy.
+    `#1169` is `In Review`, with no promotion PR yet, and its validation was not independent.
+    Filed `#1170`: the staff category pickers can drop a subcategory that sorts before its
+    department.
+  - Second, `#1173` (PR #1174, merge `265fa01`,
+    `specs/2026-10-19-p1173-search-heading-selector/`): the category search heading and
+    highlights, the compact styled selector, the round Sign In icon, and a collapsible sidebar with
+    one more product column (an owner-approved odd-column exception in `specs/design-system.md`).
+    `deploy-staging` succeeded, and both staging hosts serve `265fa01` healthy. `#1173` is
+    `In Review`, and its validation was not independent. Neither slice has a promotion PR yet. One
+    promotion PR can carry both, with one `closes #N` line per issue.
   - `#1152` was excluded by the owner at Gate 1 until `#104` is closer. `#1165` was filed:
     alerting when the reference database stops answering.
   - **`/api/health`'s `reference.drift` is `null` whenever nothing was compared** (on staging now,

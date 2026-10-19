@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.16.0"
-updated: "2026-10-19"
+version: "2.17.0"
+updated: 2026-10-19
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -103,7 +103,8 @@ Facebook page address, your Instagram profile address and your WhatsApp number. 
 labels & store description** form at the bottom of the page, choose which of the six product labels
 (Halal, Fresh, Organic, Vegetarian, Gluten free, HMC certification) your staff see on the product
 form, and write what your store sells. In the **Product grid layout** form below that, choose how
-many product cards sit side by side on your category, search and bundle pages. Three footer forms
+many product cards sit side by side on your category, search and bundle pages. A shopper who hides the
+filter sidebar on a category or search page sees one more card per row on wide screens. Three footer forms
 follow: in **Footer contact & legal**, enter your phone number, email address, company number, VAT
 number, registered office, a one-line note under your opening hours, and whether to show "Secure
 checkout powered by Stripe". In **Opening hours & payment badges**, set your usual opening and

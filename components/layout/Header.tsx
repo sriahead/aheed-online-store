@@ -4,7 +4,7 @@ import {
   MapPin,
   Search,
   User,
-  LogIn,
+  CircleUserRound,
   Sparkles,
   HelpCircle,
   UserCheck,
@@ -31,6 +31,7 @@ import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
 import { bannerHeadlineText } from "@/components/layout/banner-headline";
 import { DepartmentSearchBar } from "./DepartmentSearchBar";
+import { toSearchDepartments } from "./search-departments";
 import { ShoppingListLink } from "./ShoppingListLink";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { ViewSwitcher } from "./ViewSwitcher";
@@ -137,13 +138,14 @@ export async function Header({
   // vendor with none — but a platform default naming one vendor's trade is the
   // same defect this slice exists to remove.
   const searchPlaceholder = profile?.searchPlaceholder ?? "Search products…";
-  // #1131 — the search bar's department selector. The vendor's ACTIVE departments straight from the
-  // database (request-memoised, so a page that also lists departments shares the one query), which is
-  // what makes a new department appear and a hidden one disappear with no code change. The portal
-  // renders no search bar, so it skips the read.
+  // #1131 — the search bar's department selector. The vendor's visible categories straight from the
+  // database (request-memoised, so a page that also reads the tree shares the one query), which is
+  // what makes a new department appear and a hidden one disappear with no code change. #1169 — the
+  // whole tree, so subcategories are offered under their department. The portal renders no search
+  // bar, so it skips the read.
   const searchDepartments = isPortal
     ? []
-    : (await getCategoryRepository().listTopLevel()).map(({ slug, name }) => ({ slug, name }));
+    : toSearchDepartments(await getCategoryRepository().listTree());
   const { CDN_BASE_URL } = getEnv();
   const logoUrl =
     profile?.logoStorageKey && CDN_BASE_URL
@@ -315,7 +317,8 @@ export async function Header({
                 href="/login"
                 className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
               >
-                <LogIn className="w-4 h-4 text-primary" />
+                {/* #1173 — the account symbol, matching the round signed-in avatar. */}
+                <CircleUserRound className="w-4 h-4 text-primary" />
                 <span className="hidden sm:inline">Sign In</span>
               </Link>
             )}

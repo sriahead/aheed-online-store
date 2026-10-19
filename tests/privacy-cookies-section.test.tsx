@@ -29,7 +29,12 @@ vi.mock("@/lib/auth-rbac", () => ({ getUserId: vi.fn() }));
 
 import PrivacyPage from "@/app/(storefront)/privacy/page";
 import { CART_COOKIE } from "@/lib/cart-identity";
-import { CHECKOUT_DETAILS_KEY, CONSENT_COOKIE, REFERRAL_COOKIE } from "@/lib/storage-keys";
+import {
+  CHECKOUT_DETAILS_KEY,
+  CONSENT_COOKIE,
+  FILTERS_COLLAPSED_KEY,
+  REFERRAL_COOKIE,
+} from "@/lib/storage-keys";
 import { DELIVERY_POSTCODE_COOKIE } from "@/lib/delivery-cookie";
 import { FULFILMENT_METHOD_COOKIE } from "@/lib/fulfilment-cookie";
 
@@ -52,6 +57,8 @@ const EXPECTED_ITEMS: ReadonlyArray<readonly [string, string]> = [
     "Remembers the postcode you entered, so we can show delivery availability and fees.",
   ],
   ["fulfilment-method", "Remembers whether you chose delivery or collection."],
+  // #1173 — session storage, cleared when the tab closes.
+  ["store_filters_collapsed", "Remembers whether you hid the filters, until you close the tab."],
   [
     "store_referral_code",
     "Remembers a referral code from a link you followed, so it can be applied at checkout. Optional: set only if you arrive through a referral link and choose Accept All.",
@@ -113,7 +120,7 @@ describe("privacy page — Cookies and Local Storage (#1064)", () => {
     expect(closing.compareDocumentPosition(list!) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
-  it("R5/#1089 R15: the seven items are in order and each LEADS with its purpose", async () => {
+  it("R5/#1089 R15, #1173 R14: the eight items are in order and each LEADS with its purpose", async () => {
     const { section } = await renderSection();
     const items = [...section.querySelectorAll("ul > li")];
     expect(items).toHaveLength(EXPECTED_ITEMS.length);
@@ -153,6 +160,7 @@ describe("privacy page — Cookies and Local Storage (#1064)", () => {
     expect(names).toContain(CONSENT_COOKIE);
     expect(names).toContain(REFERRAL_COOKIE);
     expect(names).toContain(CHECKOUT_DETAILS_KEY);
+    expect(names).toContain(FILTERS_COLLAPSED_KEY);
   });
 
   it("R6/#1080 R24: carries no vendor name or grocery wording, not even inside a storage name", async () => {

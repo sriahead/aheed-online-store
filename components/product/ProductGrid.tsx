@@ -21,7 +21,8 @@ export function ProductGrid({
 }) {
   const Element = as;
   return (
-    <Element data-product-grid="" className={productGridClassName(density)}>
+    // #1173 — `data-density` lets app/globals.css add a column while the filter sidebar is hidden.
+    <Element data-product-grid="" data-density={density} className={productGridClassName(density)}>
       {children}
     </Element>
   );

@@ -47,6 +47,20 @@ every branch merges.
 
 ### Changed
 
+- **A category search is headed by the category, the department selector is compact with a modern list, Sign In has a round user icon, and the browse sidebar can be hidden to show more products** (issue `#1173`, follow-up to `#1169`; `specs/2026-10-19-p1173-search-heading-selector/`). No schema change, no migration, no new dependency.
+  - **Heading:** `/search?category=<slug>` with no term is headed by the category's name (was "All products"). The sidebar highlights no collection and the department strip highlights the department, as on `/categories/<slug>`.
+  - **Selector:** still a native select, now compact (sized to its text where supported, `5.5rem` otherwise). Chrome and Edge show a styled list (rounded panel, shadow, hover, tick on the selected option) via customisable-select CSS. Safari and Firefox keep their own list.
+  - **Sign In:** lucide `CircleUserRound` replaces the arrow icon.
+  - **Collapsible sidebar:** on `/search` and `/categories/<slug>` at tablet width and up, "Hide filters" collapses Browse and filters into a slim rail, and the grid gains one product per row on wide screens (Standard 4→5, Compact 4→5 and 6→7, Spacious 2→3 and 4→5). The choice is remembered until the tab closes (`sessionStorage` `store_filters_collapsed`, listed on `/privacy`). Without JavaScript the sidebar stays open. On phones the filters stay a closed native disclosure, with a restyled summary.
+
+- **Search narrows by subcategory too, and the footer shows real payment logos** (issue `#1169`; `specs/2026-10-19-p1169-search-footer-polish/`). The owner's 2026-10-19 polish request. No schema change, no migration, no new dependency.
+  - **Header search selector:** the first option reads **All** (was "All Departments"). Subcategories are listed indented under their department, read from `listTree()`, and a subcategory in the URL shows as selected.
+  - **Search results:** `/search?category=<slug>` shows the same subcategory pills as the category page ("All" active for a department, the subcategory active for a subcategory). Each pill keeps the search and filters (`categoryFilterHref`).
+  - **Footer:** the contact buttons (Facebook, WhatsApp, help assistant) move under **Visit & contact us**, which now also shows for a store with buttons but no address details.
+  - **Payment badges:** the five text placeholders in `public/payment-methods/` are replaced by Visa, Mastercard, American Express, Apple Pay and Google Pay marks from Simple Icons 16.35.0 (CC0), in brand colours on the same white tiles and under the same file names, so official artwork can replace them later.
+  - **Quick Shop hint:** "For example: **2 Apple Juice 1L** or **Apple Juice 1L x2** (up to 100 items, one per line)", naming the store's own product. The `x2` form is shown, not a bare trailing number, because the parser deliberately reads "Eggs 12" as a pack size.
+  - Filed `#1170`: `toCategoryOptionGroups` drops a subcategory listed before its department (staff category pickers).
+
 - **Switching Rewards off now hides all of it** (issue `#1134`). The account menu's "Loyalty & Rewards" tab (a link to a 404 with loyalty off), the greyed "not enabled for this store" card and the intro's mention on `/account`, and the "loyalty points" wording on `/privacy` and `/account/data` now follow `loyaltyEnabled`. Export and erasure still cover any points that exist. The footer's "Delivery areas & slots" link reads "Delivery areas" when the store offers no delivery slots.
 
 - **The paste-a-list feature is called "Quick Shop" everywhere a shopper sees it, and its page copy is shorter** (issue `#1145`; `specs/2026-10-18-p1145-quick-shop/`). Copy only: the URL stays `/shop-your-list`, and parsing, matching, the review step, saving and adding to the cart are unchanged. No schema change, no migration, no new dependency.
@@ -132,6 +146,16 @@ every branch merges.
   - Follow-ups filed, both out of scope here: `#1078` (make the banner headline vendor-editable — the owner's choice over rewording it in code, which needs a migration) and `#1079` (`WaysToEarnAccordion` repeats the unenforced "qualifying first order" claim this slice removed from `ReferralCard`).
 
 ### Documentation
+
+- **Document pass for `#1173` (merged to `staging` by PR #1174, `265fa01`).** Documentation only, no code change.
+  - `specs/roadmap.md` 1.166.0 adds the slice's change-log row.
+  - `docs/model-handoff.md` 1.119.0: `staging` is two slices ahead of `main`.
+  - `specs/design-system.md` 1.22.0 records the hidden-sidebar column exception (odd steps, owner-approved) and the base-select trigger's `inline-flex` need.
+
+- **Document pass for `#1169` (merged to `staging` by PR #1171, `d5a7e36`).** Documentation only, no code change.
+  - `specs/roadmap.md` 1.165.0 adds the slice's change-log row.
+  - `docs/model-handoff.md` 1.117.0: `staging` is one slice ahead of `main`; `#1170` filed.
+  - `docs/developer-portal/local-dev-playbook.md` 1.33.0: a PowerShell line that stops only preview, and reading a client-side select's live value over CDP.
 
 - **Document pass for `#1161`/`#1162`/`#1119` (merged to `staging` by PR #1166, `535e53f`).**
   Documentation only, no code change.

@@ -192,6 +192,21 @@ describe("StorefrontFooter (#1055)", () => {
     expect(within(row).queryByRole("link", { name: /WhatsApp/ })).toBeNull();
   });
 
+  it("puts the contact-channel buttons under Visit & contact us, not Shop with us (#1169 R10)", () => {
+    const footer = renderFooter(SEEDED);
+    const row = within(footer).getByRole("list", { name: "Contact us" });
+    expect(row.closest('section[aria-label="Visit & contact us"]')).not.toBeNull();
+    expect(row.closest('section[aria-label="Shop with us"]')).toBeNull();
+  });
+
+  it("shows Visit & contact us for a store with only contact channels (#1169 R11)", () => {
+    const footer = renderFooter({ ...BARE, facebookUrl: "https://www.facebook.com/secondshop" });
+    const column = within(footer).getByRole("region", { name: "Visit & contact us" });
+    expect(within(column).getByRole("list", { name: "Contact us" })).toBeTruthy();
+    // No address details were set, so no empty <address> is rendered.
+    expect(column.querySelector("address")).toBeNull();
+  });
+
   it("hides everything a bare vendor has not set, with no platform fallback", () => {
     const footer = renderFooter(BARE);
     expect(within(footer).queryByRole("heading", { name: "Visit & contact us" })).toBeNull();

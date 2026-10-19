@@ -12,10 +12,12 @@ import { cleanup, render, screen } from "@testing-library/react";
  * test, and this one is about which links and departments the header puts in front of a shopper.
  */
 
-const listTopLevel = vi.hoisted(() =>
+// #1169 — the header reads the whole tree, so subcategories are offered under their department.
+const listTree = vi.hoisted(() =>
   vi.fn(async () => [
-    { id: "1", slug: "dept-one", name: "Dept One" },
-    { id: "2", slug: "dept-two", name: "Dept Two" },
+    { id: "1", slug: "dept-one", name: "Dept One", parentId: null, isActive: true },
+    { id: "2", slug: "dept-two", name: "Dept Two", parentId: null, isActive: true },
+    { id: "3", slug: "two-child", name: "Two Child", parentId: "2", isActive: true },
   ]),
 );
 
@@ -59,7 +61,7 @@ vi.mock("@/lib/fulfilment-service", () => ({ getFulfilmentMethod: async () => "D
 vi.mock("@/lib/delivery-pricing-service", () => ({
   getShopperDeliveryRules: async () => ({ minimumOrderPence: 0, freeDeliveryThresholdPence: null }),
 }));
-vi.mock("@/lib/categories-service", () => ({ getCategoryRepository: () => ({ listTopLevel }) }));
+vi.mock("@/lib/categories-service", () => ({ getCategoryRepository: () => ({ listTree }) }));
 vi.mock("@/components/layout/HeaderBrand", () => ({ HeaderBrand: () => null }));
 vi.mock("@/components/layout/LocationControl", () => ({ LocationControl: () => null }));
 vi.mock("@/components/layout/ViewSwitcher", () => ({ ViewSwitcher: () => null }));
@@ -70,7 +72,7 @@ const { Header } = await import("@/components/layout/Header");
 
 afterEach(() => {
   cleanup();
-  listTopLevel.mockClear();
+  listTree.mockClear();
 });
 
 describe("Header Shopping List link (#1131 R25)", () => {
@@ -113,22 +115,37 @@ describe("Header Shopping List link (#1131 R25)", () => {
 });
 
 describe("Header department selector wiring (#1131 R17)", () => {
-  it("offers exactly the departments listTopLevel() returns, in both search bars", async () => {
+  it("offers exactly the categories listTree() returns, in both search bars (#1169)", async () => {
     render(await Header({}));
-    expect(listTopLevel).toHaveBeenCalledTimes(1);
+    expect(listTree).toHaveBeenCalledTimes(1);
     const selects = screen.getAllByRole("combobox", {
       name: "Search department",
     }) as unknown as HTMLSelectElement[];
     // One bar per breakpoint (desktop slot and the below-`sm` row).
     expect(selects).toHaveLength(2);
     for (const select of selects) {
-      expect([...select.options].map((o) => o.value)).toEqual(["", "dept-one", "dept-two"]);
+      expect([...select.options].map((o) => o.value)).toEqual([
+        "",
+        "dept-one",
+        "dept-two",
+        "two-child",
+      ]);
     }
   });
 
   it("does not read departments for the staff portal, which has no search bar", async () => {
     render(await Header({ isPortal: true }));
-    expect(listTopLevel).not.toHaveBeenCalled();
+    expect(listTree).not.toHaveBeenCalled();
     expect(screen.queryByRole("combobox", { name: "Search department" })).toBeNull();
+  });
+});
+
+describe("Header Sign In icon (#1173 R8)", () => {
+  it("shows the round user icon in the signed-out Sign In link", async () => {
+    const { container } = render(await Header({}));
+    const signIn = container.querySelector('a[href="/login"]');
+    expect(signIn?.textContent).toContain("Sign In");
+    expect(signIn?.querySelector("svg.lucide-circle-user-round")).not.toBeNull();
+    expect(signIn?.querySelector("svg.lucide-log-in")).toBeNull();
   });
 });

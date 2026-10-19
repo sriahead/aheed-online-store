@@ -4,7 +4,7 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.32.0"
+version: "1.33.0"
 updated: 2026-10-19
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, KMS coverage vs gitignore, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, vendor hosts, and what a session can and cannot drive when proving a payment path.
@@ -536,7 +536,17 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   phone width, so use `--widths 390`. React 19.2's `useId()` renders as `_S_<n>_` in these ids.
 - **Stopping preview with `Get-Process node | Stop-Process` also kills every other Node process**,
   including MCP servers such as graft. Their tools then disconnect for the rest of the session.
-  Narrow the stop to the preview's process tree if other Node tools are in use.
+  Narrow the stop to the preview's process tree if other Node tools are in use. This PowerShell
+  stops only preview and leaves MCP servers running (used at `#1169`'s Validate):
+  `Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'workerd.exe' -or ($_.Name -eq 'node.exe' -and $_.CommandLine -match 'wrangler|opennext') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`.
+- **A control that reads the URL on the client cannot be checked from server HTML.** The header's
+  department select reads `useSearchParams` under `Suspense`, so preview's HTML always shows the
+  fallback ("All") and carries a second, streamed copy of the select (four `Search department`
+  selects per `/search` page). Read the live value after hydration instead. At `#1169`'s Validate
+  this was a short Node script: start headless Chrome with `--remote-debugging-port`, open the URL
+  through `/json/new`, and `Runtime.evaluate` `select.value` after `readyState` is `complete` plus
+  a pause. It uses Node 22's built-in `WebSocket` and no dependency, like
+  `scripts/verify-mobile-layout.ts`.
 - **A `grep` pattern written against a literal string (e.g. a doc title containing `&`) can silently
   false-negative against a page's real, rendered HTML, because HTML-escapes it as `&amp;` — and a
   `validation.md` row's own example command is not exempt from this.** Hit at `#633`'s `/validate`
