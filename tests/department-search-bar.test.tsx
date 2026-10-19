@@ -106,6 +106,18 @@ describe("department options (R16)", () => {
     ]);
   });
 
+  it("is sized by the department-select rule, not fixed widths (#1173 R4)", () => {
+    renderBar();
+    const classes = departmentSelect().className.split(/\s+/);
+    expect(classes).toContain("department-select");
+    expect(classes).not.toContain("w-24");
+    expect(classes).not.toContain("sm:w-36");
+    // R7 — tap height and focus ring stay.
+    expect(classes).toEqual(
+      expect.arrayContaining(["min-h-tap", "lg:min-h-0", "focus-visible:ring-2"]),
+    );
+  });
+
   it("is a native select with no size attribute, so a long list scrolls natively", () => {
     renderBar(THIRTY);
     const select = departmentSelect();

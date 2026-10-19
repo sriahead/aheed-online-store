@@ -41,7 +41,8 @@ function DepartmentSelect({
       aria-label="Search department"
       defaultValue={selected}
       data-tap-surface="search"
-      className="min-h-tap lg:min-h-0 w-24 sm:w-36 shrink-0 truncate rounded-l-xl border border-r-0 border-black/10 bg-surface-muted px-2 text-xs font-semibold text-primary hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-action"
+      // #1173 — `department-select` (app/globals.css) sizes it compactly and styles its list.
+      className="department-select min-h-tap lg:min-h-0 shrink-0 truncate rounded-l-xl border border-r-0 border-black/10 bg-surface-muted px-2 text-xs font-semibold text-primary hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-action"
     >
       <option value="">{ALL_DEPARTMENTS_LABEL}</option>
       {departments.map((department) => (

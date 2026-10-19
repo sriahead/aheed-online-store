@@ -918,6 +918,11 @@ export function StorefrontConfigForm({
             How many product cards sit side by side on your category, search and bundle pages. It
             changes the layout only; every product still shows.
           </p>
+          {/* #1173 — the collapsible filter sidebar adds a column on wide screens. */}
+          <p className="mt-1 text-sm text-black/60">
+            On category and search pages, a shopper who hides the filter sidebar sees one more
+            product per row on wide screens.
+          </p>
         </div>
 
         <fieldset className="flex flex-col gap-3">

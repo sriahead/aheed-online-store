@@ -13,6 +13,8 @@ import { ProductGrid } from "@/components/product/ProductGrid";
 import { CollectionNav } from "@/components/product/CollectionNav";
 import { parsePackSizeParam } from "@/components/product/unit-price";
 import { FilterPanel } from "@/components/product/FilterPanel";
+import { CollapsibleSidebar } from "@/components/product/CollapsibleSidebar";
+import { FILTERS_COLLAPSED_SCRIPT } from "@/components/product/filters-collapsed";
 import { getBrandRepository } from "@/lib/brands-service";
 import { FilterChips } from "@/components/product/FilterChips";
 import { SubcategoryLinks } from "@/components/product/SubcategoryLinks";
@@ -171,7 +173,9 @@ export default async function CategoryPage({
           the DEPARTMENT even when viewing one of its subcategories. */}
       <DepartmentScroller categories={allCategories} activeSlug={scrollerActiveSlug} />
 
-      <div className="mt-6 flex flex-col gap-6 md:flex-row">
+      {/* #1173 — applies a collapse chosen earlier in this tab before the sidebar paints. */}
+      <script dangerouslySetInnerHTML={{ __html: FILTERS_COLLAPSED_SCRIPT }} />
+      <div data-filters-layout="" className="mt-6 flex flex-col gap-6 md:flex-row">
         {/*
           #694 — the collections were reachable from /search and /bundles and INVISIBLE here, on
           the page a shopper actually reaches from the department menu. Rendered outside
@@ -182,11 +186,12 @@ export default async function CategoryPage({
           No `activeHref`: a category is a different axis from a collection, so nothing here is the
           current collection and marking one `aria-current` would be a lie.
         */}
-        <div className="md:w-60 md:shrink-0">
+        {/* #1173 — collapsible at md and up (a JavaScript enhancement; open without it). */}
+        <CollapsibleSidebar id="browse-sidebar">
           <CollectionNav />
           {/* #568 — sidebar at md+, a `details` disclosure below it. Both render the same form. */}
           <FilterPanel heading="Filters" searchParams={query} facets={facets} />
-        </div>
+        </CollapsibleSidebar>
 
         <section className="flex-1">
           <h1 className="mb-6 text-2xl font-semibold text-primary">{category.name}</h1>

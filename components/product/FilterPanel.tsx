@@ -1,4 +1,4 @@
-import { SlidersHorizontal } from "lucide-react";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { ProductFilterForm } from "./ProductFilterForm";
 
 type FilterPanelProps = React.ComponentProps<typeof ProductFilterForm> & {
@@ -35,13 +35,21 @@ export function FilterPanel({ heading, ...formProps }: FilterPanelProps) {
   return (
     <>
       {/* Below md: a disclosure. `open` is deliberately never set — see the docstring. */}
-      <details className="md:hidden rounded-xl border border-black/10 bg-white">
+      {/* #1173 — a modern summary: the icon in a tinted circle, the heading, and a chevron that
+          turns when open (no turn under reduced motion). Still a native `details`, still no JS. */}
+      <details className="group md:hidden rounded-xl border border-black/10 bg-white shadow-sm">
         <summary
           data-tap-surface="filter-panel"
-          className="flex cursor-pointer items-center gap-2 px-4 py-3 font-semibold text-primary"
+          className="flex min-h-tap cursor-pointer list-none items-center gap-3 rounded-xl px-4 py-3 font-semibold text-primary hover:bg-action-tint/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action [&::-webkit-details-marker]:hidden"
         >
-          <SlidersHorizontal className="h-4 w-4" aria-hidden />
-          {heading}
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-action-tint">
+            <SlidersHorizontal className="h-4 w-4" aria-hidden />
+          </span>
+          <span className="flex-1">{heading}</span>
+          <ChevronDown
+            className="h-4 w-4 text-primary-muted transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+            aria-hidden
+          />
         </summary>
         <div className="border-t border-black/10 px-4 py-4">
           <ProductFilterForm {...formProps} />

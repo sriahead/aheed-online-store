@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.117.0"
+version: "1.118.0"
 updated: 2026-10-19
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -58,6 +58,10 @@ reconciliation. If overall project state did not materially change, leave this f
     `#1169` is `In Review`, with no promotion PR yet, and its validation was not independent.
     Filed `#1170`: the staff category pickers can drop a subcategory that sorts before its
     department.
+  - **In flight:** `#1173` (`feature/p1173-search-heading-selector`,
+    `specs/2026-10-19-p1173-search-heading-selector/`), the owner's follow-ups to `#1169`: the
+    category search heading and highlights, the compact styled selector, the Sign In icon, and a
+    collapsible sidebar with one more product column. Built and awaiting Validate.
   - `#1152` was excluded by the owner at Gate 1 until `#104` is closer. `#1165` was filed:
     alerting when the reference database stops answering.
   - **`/api/health`'s `reference.drift` is `null` whenever nothing was compared** (on staging now,

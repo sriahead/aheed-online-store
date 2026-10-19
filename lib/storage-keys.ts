@@ -22,6 +22,12 @@ export const CART_COOKIE = "store_cart";
 export const CONSENT_COOKIE = "store_cookie_consent";
 export const REFERRAL_COOKIE = "store_referral_code";
 export const CHECKOUT_DETAILS_KEY = "store_checkout_details";
+/**
+ * #1173 — `sessionStorage`, not a cookie or `localStorage`: whether the shopper hid the browse
+ * sidebar on desktop, remembered until the tab closes. Session-only interface customisation the
+ * shopper asked for, so it needs no consent; `/privacy` still lists it.
+ */
+export const FILTERS_COLLAPSED_KEY = "store_filters_collapsed";
 
 export const LEGACY_CART_COOKIE = "aheed_cart";
 export const LEGACY_CONSENT_COOKIE = "aheed_cookie_consent";
