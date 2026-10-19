@@ -31,6 +31,7 @@ import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
 import { bannerHeadlineText } from "@/components/layout/banner-headline";
 import { DepartmentSearchBar } from "./DepartmentSearchBar";
+import { toSearchDepartments } from "./search-departments";
 import { ShoppingListLink } from "./ShoppingListLink";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { ViewSwitcher } from "./ViewSwitcher";
@@ -137,13 +138,14 @@ export async function Header({
   // vendor with none — but a platform default naming one vendor's trade is the
   // same defect this slice exists to remove.
   const searchPlaceholder = profile?.searchPlaceholder ?? "Search products…";
-  // #1131 — the search bar's department selector. The vendor's ACTIVE departments straight from the
-  // database (request-memoised, so a page that also lists departments shares the one query), which is
-  // what makes a new department appear and a hidden one disappear with no code change. The portal
-  // renders no search bar, so it skips the read.
+  // #1131 — the search bar's department selector. The vendor's visible categories straight from the
+  // database (request-memoised, so a page that also reads the tree shares the one query), which is
+  // what makes a new department appear and a hidden one disappear with no code change. #1169 — the
+  // whole tree, so subcategories are offered under their department. The portal renders no search
+  // bar, so it skips the read.
   const searchDepartments = isPortal
     ? []
-    : (await getCategoryRepository().listTopLevel()).map(({ slug, name }) => ({ slug, name }));
+    : toSearchDepartments(await getCategoryRepository().listTree());
   const { CDN_BASE_URL } = getEnv();
   const logoUrl =
     profile?.logoStorageKey && CDN_BASE_URL

@@ -21,15 +21,21 @@ import type { CategorySummary } from "@/lib/repositories/categories";
  * by the caller from `CategoryWithChildren.parent`. `activeSlug` is
  * whichever of `parentSlug`/a tab's slug is currently being viewed, so
  * exactly one pill is ever highlighted regardless of which page this is.
+ *
+ * #1169 — `/search` renders the same row for its `category`, and there every pill has to stay a
+ * search (the shopper's query and filters kept), so the caller may pass `hrefFor`. Without it a pill
+ * links to the category page, as it always has.
  */
 export function SubcategoryLinks({
   tabs,
   parentSlug,
   activeSlug,
+  hrefFor = (slug) => `/categories/${slug}`,
 }: {
   tabs: CategorySummary[];
   parentSlug: string;
   activeSlug: string;
+  hrefFor?: (slug: string) => string;
 }) {
   if (tabs.length === 0) return null;
 
@@ -45,7 +51,7 @@ export function SubcategoryLinks({
       className="mb-6 flex flex-wrap gap-2"
     >
       <Link
-        href={`/categories/${parentSlug}`}
+        href={hrefFor(parentSlug)}
         aria-current={activeSlug === parentSlug ? "page" : undefined}
         className={pill(activeSlug === parentSlug)}
       >
@@ -54,7 +60,7 @@ export function SubcategoryLinks({
       {tabs.map((tab) => (
         <Link
           key={tab.id}
-          href={`/categories/${tab.slug}`}
+          href={hrefFor(tab.slug)}
           aria-current={activeSlug === tab.slug ? "page" : undefined}
           className={pill(activeSlug === tab.slug)}
         >

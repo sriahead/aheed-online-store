@@ -5,14 +5,25 @@ import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { SearchSuggest } from "./SearchSuggest";
 
-/** One department as the selector needs it: its slug is what `/search?category=` takes. */
+/**
+ * One option as the selector needs it: its slug is what `/search?category=` takes. #1169 — a
+ * subcategory is listed too, straight after its department, and `isSubcategory` indents it.
+ */
 export interface SearchDepartment {
   slug: string;
   name: string;
+  isSubcategory?: boolean;
 }
 
-/** The selector's "no department" option. Its empty value is what `/search` reads as "everything". */
-export const ALL_DEPARTMENTS_LABEL = "All Departments";
+/**
+ * The selector's "no department" option. Its empty value is what `/search` reads as "everything".
+ * #1169 — "All", not "All Departments", at the owner's request: the select's accessible name
+ * ("Search department") still says what it is all of.
+ */
+export const ALL_DEPARTMENTS_LABEL = "All";
+
+/** #1169 — two no-break spaces: a native select keeps them, so a subcategory reads indented. */
+const SUBCATEGORY_INDENT = "\u00A0\u00A0";
 
 function DepartmentSelect({
   departments,
@@ -35,7 +46,7 @@ function DepartmentSelect({
       <option value="">{ALL_DEPARTMENTS_LABEL}</option>
       {departments.map((department) => (
         <option key={department.slug} value={department.slug}>
-          {department.name}
+          {department.isSubcategory ? `${SUBCATEGORY_INDENT}${department.name}` : department.name}
         </option>
       ))}
     </select>
@@ -43,9 +54,9 @@ function DepartmentSelect({
 }
 
 /**
- * The department already in the URL, when it is one of the listed departments. A subcategory slug or
- * an unknown one selects "All Departments": the selector only offers departments, and claiming a
- * department the shopper did not choose would be worse than showing none.
+ * The department or subcategory already in the URL, when it is one of the listed options (#1169: the
+ * list carries subcategories too). An unknown slug selects "All": claiming a department the shopper
+ * did not choose would be worse than showing none.
  */
 function DepartmentSelectFromUrl({ departments }: { departments: readonly SearchDepartment[] }) {
   const category = useSearchParams()?.get("category") ?? "";
@@ -69,7 +80,7 @@ function DepartmentSelectFromUrl({ departments }: { departments: readonly Search
  * and keyboard and screen-reader behaviour come with it.
  *
  * `useSearchParams` sits under `Suspense` so the header can still render on the server; the
- * fallback is the same select with "All Departments" chosen.
+ * fallback is the same select with "All" chosen.
  */
 export function DepartmentSearchBar({
   departments,
