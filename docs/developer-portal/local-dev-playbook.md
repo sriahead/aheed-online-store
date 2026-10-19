@@ -4,7 +4,7 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.31.0"
+version: "1.32.0"
 updated: 2026-10-19
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, KMS coverage vs gitignore, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, vendor hosts, and what a session can and cannot drive when proving a payment path.
@@ -515,6 +515,28 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   order placed locally with Stripe test mode stops at that status unless the hosted page is paid,
   so add `?status=PENDING_PAYMENT&q=<order number>` to see its row. Cancel it afterwards at
   `/checkout/<orderNumber>/cancel`, which also restores its lines to the basket.
+- **A one-flag dev data change for a live check is safer as a throwaway Prisma script than as a
+  staff-form replay** (the replay trap above). Hit at `#1161`/`#1162`/`#1119`'s Validate
+  (2026-10-19), ticking `Category.allowsCustomNote` for one check. Four things the script needed:
+  - an `.mts` extension, because `tsx` compiles a `.ts` file under `scripts/` as CommonJS, which
+    rejects top-level `await`;
+  - `new PrismaClient({ adapter: new PrismaNeon({ connectionString }) })`, because
+    `engineType = "client"` refuses to start without a driver adapter (P2038);
+  - a guard that prints the host and exits unless it is dev (`ep-dry-morning-zab7dx08`), with the
+    command run as `env -u DIRECT_URL -u DATABASE_URL npx tsx ...` (CLAUDE.md, Config);
+  - a `restore` mode that writes the recorded original value back. Delete the script afterwards.
+
+  Pick the category from the storefront's own `/categories` links, not from the database. A
+  category can exist with active products and still 404 at `/categories/<slug>`, so the first
+  database pick (`african-caribbean`) was unusable.
+- **`scripts/verify-mobile-layout.ts` proves duplicate-id defects with no extra code.** Each printed
+  object's `formInputs` lists every non-hidden form input's `id` and `name`, so
+  `--add-first --then /cart --open-cart` shows `/cart` and the opened basket drawer together. The
+  `--path` page's first card must have an Add button, and the floating cart button is clicked at
+  phone width, so use `--widths 390`. React 19.2's `useId()` renders as `_S_<n>_` in these ids.
+- **Stopping preview with `Get-Process node | Stop-Process` also kills every other Node process**,
+  including MCP servers such as graft. Their tools then disconnect for the rest of the session.
+  Narrow the stop to the preview's process tree if other Node tools are in use.
 - **A `grep` pattern written against a literal string (e.g. a doc title containing `&`) can silently
   false-negative against a page's real, rendered HTML, because HTML-escapes it as `&amp;` — and a
   `validation.md` row's own example command is not exempt from this.** Hit at `#633`'s `/validate`
