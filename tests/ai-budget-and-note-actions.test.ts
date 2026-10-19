@@ -9,12 +9,13 @@ import { join } from "node:path";
  */
 
 const requireVendorRole = vi.fn();
-const setAiDailyBudgetForVendor = vi.fn(async () => {});
+const setAiDailyBudgetForVendor = vi.fn(async () => true);
 const setNote = vi.fn(async () => ({ ok: true, customNote: "x" }));
 
 vi.mock("@/lib/auth-rbac", () => ({ requireVendorRole }));
 vi.mock("@/lib/ai-usage-service", () => ({ setAiDailyBudgetForVendor }));
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+const revalidatePath = vi.fn();
+vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("@/lib/cart-service", () => ({ getCartRepository: () => ({ setNote }) }));
 vi.mock("@/lib/cart-identity", () => ({
   getCartIdentity: async () => ({ userId: "u1", guestToken: null }),
@@ -38,6 +39,7 @@ const initial = { error: null, saved: false };
 beforeEach(() => {
   requireVendorRole.mockReset();
   setAiDailyBudgetForVendor.mockClear();
+  revalidatePath.mockClear();
   setNote.mockClear();
 });
 
@@ -72,6 +74,16 @@ describe("saveAiBudget (R35)", () => {
     requireVendorRole.mockResolvedValue({ ok: true, via: "platform-admin", vendorId: "v1" });
     expect(await saveAiBudget(initial, form("5000"))).toEqual({ error: null, saved: true });
     expect(setAiDailyBudgetForVendor).toHaveBeenCalledExactlyOnceWith("v1", 5000);
+    expect(revalidatePath).toHaveBeenCalledWith("/staff/ai-usage");
+  });
+
+  it("#1161 — refuses with a message, and does not revalidate, when the store has no settings record", async () => {
+    requireVendorRole.mockResolvedValue({ ok: true, via: "platform-admin", vendorId: "v1" });
+    setAiDailyBudgetForVendor.mockResolvedValueOnce(false);
+    const state = await saveAiBudget(initial, form("5000"));
+    expect(state.saved).toBe(false);
+    expect(state.error).toBeTruthy();
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 });
 

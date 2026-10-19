@@ -62,4 +62,25 @@ describe("CartLineNote", () => {
     const { container } = render(<CartLineNote line={line({})} />);
     expect(container.innerHTML).toBe("");
   });
+
+  it("#1162 — gives each rendered copy of a line its own input id, paired with its own label", () => {
+    // /cart and the header drawer both mount the same line when the drawer opens on /cart.
+    const editable = line({ acceptsNote: true });
+    const { container } = render(
+      <>
+        <CartLineNote line={editable} />
+        <CartLineNote line={editable} />
+      </>,
+    );
+    const forms = [...container.querySelectorAll("form")];
+    expect(forms).toHaveLength(2);
+    const ids = forms.map((form) => {
+      const input = form.querySelector('input[name="note"]') as HTMLInputElement;
+      const label = form.querySelector("label") as HTMLLabelElement;
+      expect(input.id).toBeTruthy();
+      expect(label.htmlFor).toBe(input.id);
+      return input.id;
+    });
+    expect(ids[0]).not.toBe(ids[1]);
+  });
 });

@@ -130,14 +130,27 @@ export async function sumVendorMilliNeuronsByFeatureSince(
  * #1029 — set this vendor's daily budget. A singular `update` with no nested writes (safe on the
  * HTTP client). Validation and the platform-admin check live in the caller
  * (features/admin/ai-budget.ts); this only writes.
+ *
+ * #1161 — returns `false`, writing nothing, when the vendor has no `VendorConfig` row, instead of
+ * letting `update` throw. Not an `upsert`: the row's create branch would need `localityName`,
+ * `senderName` and `senderEmail`, and inventing a store's town and email sender to save an AI
+ * budget is fabricated vendor data. The read and the write are not atomic; the row only vanishes
+ * when its vendor is deleted (cascade), and then `update` throws exactly as it did before.
  */
 export async function setVendorAiDailyBudget(
   prisma: Prisma,
   vendorId: string,
   budgetNeurons: number,
-): Promise<void> {
+): Promise<boolean> {
+  const existing = await prisma.vendorConfig.findUnique({
+    where: { vendorId },
+    select: { vendorId: true },
+  });
+  if (!existing) return false;
+
   await prisma.vendorConfig.update({
     where: { vendorId },
     data: { aiDailyNeuronBudget: budgetNeurons },
   });
+  return true;
 }

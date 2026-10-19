@@ -56,6 +56,11 @@ every branch merges.
 
 ### Fixed
 
+- **The AI budget save refuses cleanly, basket note fields keep their own labels, and `/api/health` stops reporting reference drift it never measured** (issues `#1161`, `#1162`, `#1119`; `specs/2026-10-19-p1161-1162-1119-fixups/`). No schema change, no migration, no new dependency.
+  - `#1161`: `setVendorAiDailyBudget` returns `false` without writing when the vendor has no `VendorConfig` row, and `/staff/ai-usage` shows a plain error instead of an error page. Deliberately not an `upsert`, because that would invent a store's town and email sender.
+  - `#1162`: the basket note input's id comes from `useId()`, so opening the basket drawer on `/cart` no longer gives two inputs the same id and points the second label at the first.
+  - `#1119`: `reference.drift` in `/api/health` is `null` whenever no source was compared (unconfigured, unreachable, unmigrated or empty), where it used to say `false`. The Ship stage (`specs/sdd-workflow.md` 2.46.0, `.claude/commands/ship.md`) now asserts `reference.reachable` and a non-empty `reference.sources` after every deploy.
+
 - **Every shop-list line that did not go in is named on `/cart`, and the header's Collect/Delivery controls have one accessible name** (issues `#1090`, `#1091`; `specs/2026-10-16-p1090-1091-list-notice-and-control-names/`). "Club F" from the 2026-10-15 backlog clubbing. No schema change, no migration, no new dependency.
   - `#1090`: an out-of-stock match and an unmatched line were labelled on the review screen but submitted no fields, so `/cart`'s notice (`#957`, `#1088`) never mentioned them. Every review line now emits four positional fields, the new one being `lineStatus`; `addListToCart` reads it only for a line with no product, reporting `u` ("not available right now", named by the matched product) or a new `m` ("not added, no match in this shop"). Any other or absent status stays a skipped line, so a review page rendered before this deploy still submits correctly. A status can choose wording but never cause an add.
   - `#1091`: `LocationControl` switched label text by viewport with two sibling spans, so anywhere the stylesheet was not applied the name doubled (`DeliveryDelivery`, `Click & CollectCollect`). The four buttons now carry one name (`aria-label` plus `aria-hidden` spans, or one span where both said the same word), each containing the narrow-width text (WCAG 2.5.3). Visuals unchanged. `tests/location-control.test.tsx` now finds every button by role and name.
@@ -127,6 +132,19 @@ every branch merges.
   - Follow-ups filed, both out of scope here: `#1078` (make the banner headline vendor-editable — the owner's choice over rewording it in code, which needs a migration) and `#1079` (`WaysToEarnAccordion` repeats the unenforced "qualifying first order" claim this slice removed from `ReferralCard`).
 
 ### Documentation
+
+- **Document pass for `#1161`/`#1162`/`#1119` (merged to `staging` by PR #1166, `535e53f`).**
+  Documentation only, no code change.
+  - `specs/roadmap.md` 1.163.0 adds the slice's change-log row.
+  - `docs/model-handoff.md` 1.115.0: `staging` is one slice ahead of `main`. It also records the
+    `closes`-per-issue need for the promotion PR, and that the slice's validation was not
+    independent.
+  - `docs/developer-portal/local-dev-playbook.md` 1.32.0:
+    - a throwaway Prisma script for a one-flag dev change, and what it needs (`.mts`, the Neon
+      adapter, a dev-host guard and a restore mode);
+    - pick categories from the storefront's links, because a database category can 404;
+    - `verify-mobile-layout.ts`'s `formInputs` proves duplicate-id defects;
+    - stopping every `node` process also kills MCP servers.
 
 - **Document pass for `#1135` (item notes, plus `#1028`/`#1029`/`#1031`, merged to `staging` by PR
   #1160, `3bbfa47`).** Documentation only, no code change.

@@ -4,6 +4,7 @@ import {
   DEFAULT_AI_DAILY_NEURON_BUDGET,
   getVendorAiDailyBudget,
   recordAiUsage,
+  setVendorAiDailyBudget,
   sumVendorMilliNeuronsSince,
 } from "@/lib/repositories/ai-usage";
 
@@ -47,6 +48,7 @@ function fakePrisma(
     findUnique: vi.fn(async () =>
       opts.budget === null ? null : { aiDailyNeuronBudget: opts.budget ?? 3000 },
     ),
+    update: vi.fn(async () => ({})),
   };
   return { aiUsageEvent, vendorConfig } as unknown as Parameters<typeof createAiMeter>[0] & {
     aiUsageEvent: typeof aiUsageEvent;
@@ -271,6 +273,21 @@ describe("the ledger repository (R20, R21)", () => {
       DEFAULT_AI_DAILY_NEURON_BUDGET,
     );
     expect(DEFAULT_AI_DAILY_NEURON_BUDGET).toBe(3000);
+  });
+
+  it("#1161 — writes nothing and returns false when the vendor has no VendorConfig row", async () => {
+    const prisma = fakePrisma({ budget: null });
+    expect(await setVendorAiDailyBudget(prisma, "v1", 5000)).toBe(false);
+    expect(prisma.vendorConfig.update).not.toHaveBeenCalled();
+  });
+
+  it("#1161 — updates the existing row once and returns true", async () => {
+    const prisma = fakePrisma();
+    expect(await setVendorAiDailyBudget(prisma, "v1", 5000)).toBe(true);
+    expect(prisma.vendorConfig.update).toHaveBeenCalledExactlyOnceWith({
+      where: { vendorId: "v1" },
+      data: { aiDailyNeuronBudget: 5000 },
+    });
   });
 
   it("sums to 0 when the vendor has no rows", async () => {

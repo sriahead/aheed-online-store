@@ -4,7 +4,7 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.19.0"
+version: "1.20.0"
 updated: 2026-10-19
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
@@ -142,7 +142,10 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/production.vars
 
 Read-only, safe against production, and exits non-zero on drift in either direction. The deployed
 equivalent is `/api/health`'s `reference` block, which reports the same comparison plus whether the
-running Worker has a reference binding at all.
+running Worker has a reference binding at all. Read it as `reachable` plus a non-empty `sources`:
+`drift` is `null` whenever nothing was compared (unconfigured, unreachable, unmigrated or empty),
+and only a boolean once at least one source was read (`#1119`). Before that it said `false` in
+every one of those states, which is how an unreachable database passed for healthy.
 
 **An environment that has not yet run this bootstrap is not broken — it serves `UNVERIFIED` for
 every postcode.** `lib/reference/postcode-reference-service.ts` treats an unconfigured, unreachable,

@@ -59,12 +59,18 @@ export interface ReferenceStatus {
   reachable: boolean;
   requiredAreas: string[];
   sources: ReferenceSourceStatus[];
-  /** True when any source has a missing or unsupported area. */
-  drift: boolean;
+  /**
+   * True when any source has a missing or unsupported area; false when every source matches.
+   * `null` means nothing was compared — `sources` is empty because the database is unconfigured,
+   * unreachable, unmigrated, or holds no datasets (#1119). A bare `false` there read as "compared,
+   * no drift" and was cited as evidence of health while the database was unreachable. Read
+   * `reachable` and a non-empty `sources` for health, never `drift === false`.
+   */
+  drift: boolean | null;
 }
 
 function emptyStatus(configured: boolean, requiredAreas: string[]): ReferenceStatus {
-  return { configured, reachable: false, requiredAreas, sources: [], drift: false };
+  return { configured, reachable: false, requiredAreas, sources: [], drift: null };
 }
 
 /**
@@ -111,9 +117,12 @@ export async function getReferenceStatus(): Promise<ReferenceStatus> {
       reachable: true,
       requiredAreas,
       sources,
-      drift: sources.some(
-        (source) => source.missingAreas.length > 0 || source.unsupportedAreas.length > 0,
-      ),
+      drift:
+        sources.length === 0
+          ? null
+          : sources.some(
+              (source) => source.missingAreas.length > 0 || source.unsupportedAreas.length > 0,
+            ),
     };
   } catch (error) {
     // Reachability is information, not a failure: an environment mid-provisioning is expected to
