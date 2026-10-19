@@ -252,6 +252,15 @@ body {
     appearance: base-select;
   }
 
+  /* The base-select button lays its label and arrow out as blocks, so without this the label sits
+     at the top of the control and, at its narrowest, the arrow wraps under it (#1173 Validate). */
+  .department-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+  }
+
   .department-select::picker-icon {
     color: var(--color-primary-muted);
     transition: rotate 150ms ease;
