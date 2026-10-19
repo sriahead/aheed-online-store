@@ -114,3 +114,79 @@ Spec commit `20fea41`; build commit `cc89788`, on `feature/p1169-search-footer-p
   and treat CI as authority.**
 - **The production `DIRECT_URL` is still exported** in this shell. This slice ran no database
   command.
+
+## Validation pass 1 (2026-10-19)
+
+**Not independent.** Validated in the same Opus session that wrote the spec and the build, at the
+owner's explicit choice ("validate here anyway"). There was no Clear and no Sonnet switch.
+
+**Pre-flight:**
+- `npm run lint`, `npm run format:check` and `npx tsc --noEmit`: all exit 0.
+- Full `npx vitest run`: 281/283 files and 3,553/3,555 tests. The two failures
+  (`add-to-cart-feedback`, `product-grid-usage`) both passed run alone (17/17), the same
+  load-flake pattern as the Build notes.
+- The preview build compiled.
+
+**Static rows, all PASS:**
+- **R1:** the constant is `"All"`, and the accessible-name test passes.
+- **R2:** the indented-option test, plus `tests/search-departments.test.ts`.
+- **R3:** `Header.tsx` has no `listTopLevel`, and both `departments=` props come from
+  `searchDepartments` (from `listTree()`).
+- **R4:** unit cases for a department, a subcategory and an unknown slug.
+- **R5:** the `hrefFor` test passes, and the category page's call has no href prop.
+- **R8 (unit):** the test passes.
+- **R10, R11 (unit):** pass.
+- **R12:** `tests/payment-badge-files.test.ts`, 5/5.
+- **R13:** no diff in `lib/payment-badges.ts`, `package.json` or `package-lock.json`.
+- **R15, R16:** `tests/quick-shop-copy.test.tsx` passes, and `shop-list-review-copy` passes.
+- **R18:** one row, and `sdd:audit` reports PR #1168 as cited.
+- **R19:** the CHANGELOG cites `#1169`.
+
+**Live rows, under `npm run preview`** (both vendors through `Host:`; script in the scratchpad):
+
+- **Aheed, `localhost:8787`:**
+  - **R1/R2:** the first option is "All". 33 options, 23 of them indented subcategories across 8
+    departments.
+  - **R6** (`beverages`): one pill row. "All" is first, current and links to
+    `/search?category=beverages`. 4 links (1 + 3 subcategories), all `/search?`, slugs in
+    selector order, one current.
+  - **R7** (`water-mixers`): the same 4 hrefs. Only `water-mixers` is current, and "All" points
+    at `beverages`.
+  - **R8:** with `q=juice&inStock=1&cursor=24`, every pill keeps `q` and `inStock` and drops
+    `cursor`.
+  - **R9:**
+    - no pill row for `/search?q=juice`, `no-such-slug`, or `frozen-foods` (a department with no
+      subcategories);
+    - the department chip is still rendered.
+  - **R17 footer:** "Contact us" is inside "Visit & contact us" and not in "Shop with us". All
+    five badge images are served 200 with the Simple Icons content.
+  - **R17 Quick Shop:** "For example: 2 Sultanas 500g or Sultanas 500g x2 (up to 100 items, one
+    per line)".
+- **SriMart, `srimart.localhost:8787`:**
+  - **R1/R2:** 7 options, 4 indented, across 2 departments.
+  - **R6** (`sri-electronics`): 3 links, "All" current, all into search.
+  - **R7** (`sri-chargers-cables`): the same hrefs, and only it is current.
+  - **R8:** pass.
+  - **R9:** the negatives pass. A department with no subcategories is **N/A**, because SriMart has
+    none.
+  - **R17 footer: N/A.** SriMart's dev data has no address, phone, email, contact channel or
+    badge. The only footer section is "Shop with us", which is R11's "none of the four" case
+    behaving correctly.
+  - **R17 Quick Shop:** "For example: 2 microSD Card 128GB or microSD Card 128GB x2 …", SriMart's
+    own product.
+- **R4 after hydration** (headless Chrome over CDP, reading `select.value`):
+  - `water-mixers` gives "  Water & Mixers";
+  - `beverages` gives "Beverages";
+  - `no-such-slug` gives "All";
+  - SriMart's `sri-chargers-cables` gives "  Chargers & Cables".
+
+  The **server** HTML shows the `Suspense` fallback ("All") for every URL, and four
+  `Search department` selects on every `/search` URL: the fallback is streamed beside the
+  resolved select. This slice did not change it. Recorded as information, not a finding.
+- **R14:** a fresh 4x headless-Chrome screenshot of the five files. Visa, Mastercard (red,
+  single-colour), American Express, Apple Pay and Google Pay each show their mark on a white tile.
+- **R20:** every local gate passes. The docs-site build exited 0 on `f2408ac`.
+  - **CI `gates` is unverified until the branch is pushed.**
+
+Preview's `workerd` and wrangler `node` processes were stopped by command line, so other Node
+tools were left running. No database writes were made.
