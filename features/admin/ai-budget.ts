@@ -28,7 +28,15 @@ export async function saveAiBudget(
   const parsed = parseAiBudget(form.get("aiDailyNeuronBudget"));
   if (!parsed.ok) return { error: parsed.error, saved: false };
 
-  await setAiDailyBudgetForVendor(auth.vendorId, parsed.value);
+  // #1161 — a store with no settings record has nothing to write the budget to; say so rather than
+  // throwing to an error page. Creating the record is provisioning, not this form's job.
+  const written = await setAiDailyBudgetForVendor(auth.vendorId, parsed.value);
+  if (!written) {
+    return {
+      error: "This store has no settings record yet, so its AI budget cannot be saved.",
+      saved: false,
+    };
+  }
   revalidatePath("/staff/ai-usage");
   return { error: null, saved: true };
 }

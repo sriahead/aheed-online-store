@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { CUSTOM_NOTE_MAX_LENGTH } from "@/lib/custom-note";
 import type { CartLine } from "@/lib/repositories/cart";
 import { setCartItemNote } from "@/features/cart/set-note";
@@ -18,9 +19,11 @@ import { setCartItemNote } from "@/features/cart/set-note";
  * Copy is neutral (CLAUDE.md): no vendor name, no product example.
  */
 export function CartLineNote({ line }: { line: CartLine }) {
+  // #1162 — unique per rendered instance, not per product: `CartContents` mounts in both /cart and
+  // the header drawer, so opening the drawer on /cart renders this line twice, and a product-derived
+  // id would point the second label at the first input. Called before the early return (hook rule).
+  const inputId = `cart-note-${useId()}`;
   if (!line.acceptsNote && !line.customNote) return null;
-
-  const inputId = `cart-note-${line.productId}`;
   const clear = async () => {
     "use server";
     await setCartItemNote(line.productId, "");
