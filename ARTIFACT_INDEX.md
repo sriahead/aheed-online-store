@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-18T21:00:59.887Z` · commit `1d9a2a1` · `242` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-19T02:27:13.759Z` · commit `d271834` · `243` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -237,6 +237,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Slice B — feature switches and marketing consent (plan)](specs/2026-10-18-p1134-switches-marketing-consent/plan.md) | spec | 1.0.0 | 2026-10-18 | draft | internal | Slice B of the owner's website brief (#1134, absorbing #1136): every Rewards surface follows the loyalty switch, cheap mismatches on the other switches are fixed, and a per-vendor, opt-in, recorded marketing consent ships dark behind a new switch. |
 | [Quick Shop: one name for the paste-a-list feature, and simpler page copy (plan)](specs/2026-10-18-p1145-quick-shop/plan.md) | spec | 1.0.0 | 2026-10-18 | draft | internal | Issue #1145: rename the paste-a-list feature to Quick Shop everywhere a shopper sees it (header, page, cart and saved-lists links) and cut the /shop-your-list copy to one label, one quantity example and the line limit. Copy only; no behaviour change. |
 | [Fish products: 18 reviewable products under Fresh Fish and Frozen Fish (plan)](specs/2026-10-18-p1147-fish-products/plan.md) | spec | 1.0.0 | 2026-10-18 | draft | internal | Issue #1147: stock the empty Fish department with 18 realistic products through a tested data module and a dry-run-by-default script that creates them hidden with zero stock, plus the same products in the dev seed. Data only; no schema change and no live prices. |
+| [Custom item notes and the AI allowance (plan)](specs/2026-10-19-p1135-custom-notes-ai-allowance/plan.md) | spec | 1.0.0 | 2026-10-19 | draft | internal | Shoppers attach a short note to a priced basket line where a category or product allows it (#1135); the Workers AI allowance gains a Free/Paid plan mode, a staff view, a platform-admin budget control and an honest backfill refusal (#1028, #1029, #1031). |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.41.0 | 2026-10-17 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
