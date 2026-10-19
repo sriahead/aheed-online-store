@@ -40,7 +40,12 @@ export function BackfillImagesButton() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ useOpenFoodFacts }),
       });
-      const data = (await res.json()) as { message?: string; error?: string; processed?: number };
+      const data = (await res.json()) as {
+        message?: string;
+        error?: string;
+        processed?: number;
+        budgetRefused?: boolean;
+      };
 
       if (!res.ok) {
         // The route answers 401/403 with `error`, not `message` — reporting
@@ -54,6 +59,16 @@ export function BackfillImagesButton() {
       }
 
       const processed = data.processed ?? 0;
+      // #1031 — the route answers 200 when the AI allowance stops a run, so its progress is still
+      // reported; that is a refusal, not a completed run, and must not wear the success tone.
+      if (data.budgetRefused) {
+        setResult({
+          tone: "error",
+          message: `${data.message ?? "The AI allowance stopped this run."}${processed ? ` (${processed} generated before it stopped)` : ""}`,
+        });
+        router.refresh();
+        return;
+      }
       setResult({
         tone: "ok",
         message: `${data.message ?? "Backfill complete"}${processed ? ` (${processed} generated)` : ""}`,

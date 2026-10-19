@@ -4,8 +4,8 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.1.0"
-updated: "2026-09-06"
+version: "1.2.0"
+updated: "2026-10-19"
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
 tags: ["admin", "platform", "technical", "multi-tenancy"]
@@ -29,6 +29,7 @@ The platform is designed to host multiple independent store fronts (vendors) fro
 ## Global Infrastructure & Fallbacks
 - **Secret Management:** Platform Admins are responsible for managing environment secrets via Cloudflare Workers and GitHub environments. (See `docs/developer-portal/env-setup.md` for the technical runbook).
 - **Global Feature Flags:** Managing platform-wide feature rollouts (like activating a new payment gateway provider) is done at the platform level.
+- **Workers AI budgets and plan (#1028, #1029):** Every store's AI features draw on one Cloudflare account. Each store has a daily neuron budget (default 3,000; `0` switches its AI off). To change it, open the store's **AI Allowance** page at `/staff/ai-usage` on that store's host while signed in as a platform admin, enter the new figure (a whole number up to 1,000,000) and **Save budget**. Store admins can read the page but cannot change the budget, because it caps spend the platform pays for. The `WORKERS_AI_PLAN` setting (`free` or `paid`, Free when unset or misspelled) must match the Cloudflare dashboard's **Workers & Pages → Plans**. On `free`, AI pauses for every store once all stores together use the shared 10,000-neuron daily allowance; on `paid` that shared cap is lifted, usage above it is billed at $0.011 per 1,000 neurons, and the AI Allowance page shows platform admins an estimate of today's charge. The shared count covers only this platform's own usage records, so other usage on the same Cloudflare account is not included. Setting the value is a Worker environment change; see `docs/developer-portal/env-setup.md`.
 
 ## Store Impersonation (Dev/Support)
 For support and debugging, Platform Admins can use the View Switcher to impersonate specific vendors and view the platform exactly as a Store Admin or Staff member of that vendor would see it.

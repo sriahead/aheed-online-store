@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.111.0"
-updated: 2026-10-18
+version: "1.113.0"
+updated: 2026-10-19
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,30 +39,36 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-18, `#1134` Document pass (supersedes the "`main` is stale" bullet below).** `main` is
-  at `d30165e` (the PR #1151 promotion; production `/api/health` `db.ok: true`, reference reachable
-  with two sources). **`staging` is ahead by exactly one slice**: PR #1153 (`#1134`, slice B: Rewards
-  follows `loyaltyEnabled`, plus a per-vendor recorded marketing consent behind
-  `marketingConsentEnabled`, default off). It merged as `1d9a2a1`, and `deploy-staging` (run
-  `39165328069`) succeeded with its migration applied. No promotion PR yet; record:
-  `specs/roadmap.md` 1.159.0.
-  - **Production's database is already one migration ahead of its code.**
-    `20261018200000_p1134_marketing_consent` was applied to production during Build: the session's
-    process environment exported a production `DIRECT_URL`, which beats `.env`. It is additive and
-    unread by `d30165e`, and the promotion's `migrate deploy` will skip it. **Never edit that
-    `migration.sql`; reverse it if `#1134` is abandoned.** The rule is now in `CLAUDE.md`: check
-    `printenv DIRECT_URL DATABASE_URL`, not only the env files, before any Prisma CLI command.
-  - **The auto-mode classifier blocks `prisma migrate deploy` even against dev.** Hand it over as a
-    `!` command with the `env -u DIRECT_URL -u DATABASE_URL` prefix, after a `migrate status` whose
-    datasource line names dev (`ep-dry-morning-zab7dx08`).
-  - **Owner actions after promotion:**
-    - Rewards off for Aheed at `/staff/loyalty`.
-    - Marketing consent on at `/staff/storefront`, only after a legal read of the wording.
-    - Approve deleting the unmerged, now-superseded `docs/p1142-merged-handoff` branch (`#1149`).
+- **2026-10-19, `#1135` Document pass (supersedes the "`main` is stale" bullet below).** `main` is
+  at `dc15145`: the PR #1155 promotion of `#1134`, with `deploy-production` run `39168968302`
+  successful and production `/api/health` showing `db.ok: true`. **`staging` is ahead by exactly one
+  slice**: PR #1160 (`#1135` item notes, plus `#1028`/`#1029`/`#1031`, the AI plan mode, the AI
+  Allowance page and the backfill refusal tone). It merged as `3bbfa47`. `deploy-staging` (run
+  `39227084041`) succeeded and applied `20261019120000_p1135_custom_item_notes` to staging, and
+  staging `/api/health` shows `3bbfa47`. There is no promotion PR yet. Record: `specs/roadmap.md`
+  1.161.0.
+  - **The session environment exports the production `DIRECT_URL`.** This was seen at `#1134`
+    (where it migrated production) and again at `#1135`, where it was caught before any Prisma
+    command ran. `CLAUDE.md`'s `printenv` rule covers it; the variable's source (shell profile or
+    Windows environment) has not been found or removed.
+  - **The auto-mode classifier blocks `prisma migrate deploy` even against dev, and blocks
+    `gh pr merge`.** Hand both over as `!` commands. For the migration, use the
+    `env -u DIRECT_URL -u DATABASE_URL` prefix, after a `migrate status` whose datasource line names
+    dev (`ep-dry-morning-zab7dx08`).
+  - **Owner actions:**
+    - `#1134`, now in production: switch Rewards off for Aheed at `/staff/loyalty`. Switch
+      marketing consent on at `/staff/storefront` only after a legal read of the wording.
+    - `#1135`, after promotion: tick the Aheed categories that should take item notes. Nothing
+      accepts notes until then.
+    - `#1028`: if the Cloudflare account is on Paid, set `WORKERS_AI_PLAN=paid` on staging and
+      production. Until then both run Free mode (a shared 10,000-neuron cap per UTC day).
+    - Approve deleting the unmerged, superseded `docs/p1142-merged-handoff` branch (`#1149`).
   - **Still open:**
     - `#1152`: consent-checked marketing sending.
-    - Board High items `#697` and `#1021`: both owner-gated.
+    - Board High items `#697` and `#1021`, both owner-gated.
     - `#1123`: the reference write path fails from 2026-11-03.
+    - `#1156` (owner: privacy wording for item notes), and `#1157`–`#1159`, `#1161` and `#1162`
+      (`#1135` follow-ups).
 - **Date:** 2026-10-16 (re-verified at the `#1045`/`#1043` Document pass; previously at the
   `#1119` credential reset, and before that the PR #1118 / PR #1120 roadmap-and-handoff
   reconciliation).
@@ -139,7 +145,7 @@ reconciliation. If overall project state did not materially change, leave this f
     is now **closed** as superseded by PR #1110. `docs/developer-portal/local-dev-playbook.md`
     1.28.0 holds the note (`x-forwarded-proto: http` against `403 INVALID_ORIGIN`, because
     `resolveAuthOrigin` infers `https` for any non-loopback host; the Better Auth `429` window,
-    about 30 seconds; `MSYS_NO_POSIX_PATHCONV=1` for a bare `"/"` in Git Bash), measured for a
+    about 30 seconds; `MSYS_NO_PATHCONV=1` for a bare `"/"` in Git Bash), measured for a
     customer account only — a second vendor's **admin** sign-in stays unproven. Read live on the
     internal docs site at `/dev/runbook/local-dev-playbook`. The owner question this file carried
     from 2026-10-15 ("closing it and carrying the note forward") is therefore **answered and closed
@@ -848,8 +854,12 @@ All facts in this section require live verification:
       a second run is safe.
   - **Slice B `#1134`** absorbs `#1136`: Rewards off, feature-switch gating, and the marketing
     sentence with a separate opt-in. Proposed only.
-  - **Slice C `#1135`**: a free-text custom line per category or item. Proposed only. The owner
-    deferred "fix existing free-text" until they give a route or symptom.
+  - **Slice C `#1135`**, combined with Club D (`#1029`, `#1031`) and `#1028`: **merged to
+    `staging`** (PR #1160, `3bbfa47`), not yet promoted. See Last Verified above and
+    `specs/2026-10-19-p1135-custom-notes-ai-allowance/build-notes.md`. It was validated in the
+    building session on Opus at the owner's choice, not independently. **`#1028` is resolved in
+    code**: `WORKERS_AI_PLAN` defaults to Free, and the owner sets `paid` once the Cloudflare plan
+    is confirmed. The owner deferred "fix existing free-text" until they give a route or symptom.
 
 - **Club C, privacy and consent honesty (`#1107` + `#1041`): DONE, in production** (PR #1114 to
   `staging`, promotion PR #1118, merge `6ec8142`, 2026-10-16; spec `1b4b518`, build `22599b6`, fix
@@ -861,8 +871,8 @@ All facts in this section require live verification:
   in the triage document's "Backlog clubbing — 2026-10-15" section; **Club C and now Club E
   (`#1045` + `#1043`, copy only — PR #1127, merged to `staging` 2026-10-16, see Last Verified
   above) are closed out, Club F (`#1090` + `#1091`, PR #1130) is merged to `staging`, and slice A (`#1131`,
-  above) is separate work from the owner's brief** — Club D stays
-  blocked on `#1028` (Workers Free or Paid, owner).
+  above) is separate work from the owner's brief** — Club D (`#1029`, `#1031`) is now built with
+  `#1135`, which resolved `#1028` in code (above).
 - **Owner user-testing pass, 2026-10-13 — 21 observations, triaged with live evidence.** The
   single most useful artifact from it is
   `docs/business-analysis/user-testing-feedback-2026-10-13.md` (committed `7bee5ad`): every item
@@ -1025,9 +1035,9 @@ All facts in this section require live verification:
   `specs/architecture.md` ("AI does not sit on a public request path"). **Validated from a fresh
   context — no defect found**; R35–R37 were proved live against the dev database. Per-vendor
   metering is live in production with every vendor on the default 3,000-neuron budget.
-  Follow-ups, all `Backlog` / `P10`: `#1027` (gemma switch and timeout), **`#1028` (owner: which
-  Workers plan)**, `#1029` (staff AI-allowance view), `#1030` (campaign prompt hardcodes "UK
-  grocery"; **fixed by PR #1097, in production since PR #1099**, closed), `#1031` (backfill refusal shown in success tone). **Cloudflare silently serves the
+  Follow-ups, all `Backlog` / `P10`: `#1027` (gemma switch and timeout), `#1028`, `#1029` and `#1031`
+  (**merged to `staging` in PR #1160**, see Slice C), `#1030` (campaign prompt hardcodes "UK
+  grocery"; **fixed by PR #1097, in production since PR #1099**, closed). **Cloudflare silently serves the
   deprecated llama id from `llama-3.1-8b-fast-v2`** (commented on `#1016`).
 - **Chatbot prerequisites, slice 1 (`#1013` + `#1012`): DONE, in production** (PR #1024 to
   `staging`, then promotion PR #1025, merge `b1dd2d4`, 2026-10-10), both issues closed and `Done`.
@@ -1673,10 +1683,10 @@ These are separate from, not a silent reordering of, the owner's High priorities
 - **Workers AI is metered per vendor in production since PR #1033 (`#1016`, `#1017`), but still
   runs on one account credential and one daily pool**, and the default model is still the
   deprecated `llama-3.1-8b-instruct` (now overridable by env; the switch is `#1027`). A failing
-  `/shop-your-list` model now writes an `ErrorEvent`. **`#1028` is owner work**: nobody has confirmed whether
-  the account is on the Workers Free or Paid plan, which decides whether an exhausted pool stops
-  every vendor's AI (Free) or bills the platform without attribution (Paid) — the per-vendor budget
-  is safe either way. `#591` stays conditional: the model still answers today.
+  `/shop-your-list` model now writes an `ErrorEvent`. **`#1028` is handled in code** (PR #1160,
+  on `staging`): `WORKERS_AI_PLAN` defaults to Free, which adds a shared 10,000-neuron daily cap
+  across every vendor. Nobody has yet confirmed which plan the account is actually on; if it is
+  Paid, the owner sets `paid`. `#591` stays conditional: the model still answers today.
 - Security/operations: #219 and #175 credential rotations; #436 demonstrated restore; #437 outbound
   alert delivery; #438 tested rollback; #246 persisted-log confirmation.
 - Reproduced or live defects: #236 rapid cart-mutation ceiling, #689 repeated query parameters

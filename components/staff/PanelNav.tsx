@@ -29,6 +29,7 @@ import {
   SlidersHorizontal,
   HelpCircle,
   MessagesSquare,
+  Gauge,
 } from "lucide-react";
 
 export interface PanelNavProps {
@@ -143,6 +144,7 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
               <NavLink href="/staff/storefront" icon={Store} label="Storefront" />
               <NavLink href="/staff/faqs" icon={HelpCircle} label="Help Centre Answers" />
               <NavLink href="/staff/assistant" icon={MessagesSquare} label="Help Assistant" />
+              <NavLink href="/staff/ai-usage" icon={Gauge} label="AI Allowance" />
               <NavLink href="/staff/delivery-areas" icon={Truck} label="Delivery areas" />
               <NavLink href="/staff/loyalty" icon={Sparkles} label="Loyalty" />
               <NavLink href="/staff/discounts" icon={TicketPercent} label="Discounts" />

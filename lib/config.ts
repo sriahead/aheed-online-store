@@ -173,6 +173,13 @@ const aiSchema = z.object({
   // module's named default, so a model withdrawal becomes a secret change rather than a deploy.
   LIST_NORMALISATION_AI_MODEL: z.string().min(1).optional(),
   SEARCH_SYNONYM_AI_MODEL: z.string().min(1).optional(),
+  // #1028 — which Workers plan the shared Cloudflare account is on (lib/ai-meter.ts). Free enforces
+  // the shared daily allowance across every vendor; Paid lifts that cap. Anything other than an
+  // exact "paid" — unset, empty, a typo — resolves to "free", so a mistake never removes the cap.
+  WORKERS_AI_PLAN: z.preprocess(
+    (value) => (value === "paid" ? "paid" : "free"),
+    z.enum(["free", "paid"]),
+  ),
 });
 
 export type AiEnv = z.infer<typeof aiSchema>;
@@ -184,6 +191,7 @@ export function getAiEnv(): AiEnv {
     NET_CONTENT_AI_MODEL: readEnv("NET_CONTENT_AI_MODEL") || undefined,
     LIST_NORMALISATION_AI_MODEL: readEnv("LIST_NORMALISATION_AI_MODEL") || undefined,
     SEARCH_SYNONYM_AI_MODEL: readEnv("SEARCH_SYNONYM_AI_MODEL") || undefined,
+    WORKERS_AI_PLAN: readEnv("WORKERS_AI_PLAN"),
   });
 }
 

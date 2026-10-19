@@ -195,6 +195,9 @@ export default async function StaffOrdersPage({
                     {order.itemCount >
                       order.previewItems.reduce((sum, item) => sum + item.quantity, 0) && " …"}
                   </p>
+                  {order.hasItemNotes && (
+                    <p className="mb-2 text-xs font-bold text-action">Has item notes</p>
+                  )}
 
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="text-primary-muted">

@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.41.0"
-updated: 2026-10-17
+version: "1.42.0"
+updated: 2026-10-19
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -856,10 +856,21 @@ S3 API rather than an R2-specific SDK.
   come from Workers AI's own reported figure where the reply carries one, otherwise from the dated
   rate table in `lib/workers-ai.ts`. A model missing from that table is over-charged at the highest
   listed rate, never refused and never free. The check is best-effort, not compare-and-set, and it
-  fails closed on a database error. **The account's Workers plan (Free or Paid) is unverified.** On
-  Free, an exhausted pool stops every vendor's AI until 00:00 UTC; on Paid, it bills the platform
-  without attribution. The per-vendor budget is what makes either plan safe, because a vendor
-  refused by its own budget never reaches the shared cliff. Record the plan here once confirmed.
+  fails closed on a database error. **The Workers plan is a platform setting, `WORKERS_AI_PLAN`,
+  Free by default (`#1028`, owner ruling 2026-10-19).** Unset, empty or any value other than exactly
+  `paid` resolves to `free`, so a typo never lifts the shared cap. **Free:** besides each vendor's
+  own budget, the meter refuses every vendor once the platform's total since 00:00 UTC reaches the
+  shared 10,000-neuron allowance, with a refusal that names the platform rather than the store
+  (`AiBudgetCheck.scope`). The platform stops itself before Cloudflare does. **Paid:** no shared
+  cap; usage above the allowance is billed at $0.011 per 1,000 neurons, and `/staff/ai-usage` shows
+  platform admins the day's estimated charge. In both modes the per-vendor budget still applies.
+  **The shared count is this platform's own ledger, not Cloudflare's meter.** Part of it is
+  estimated, and other usage on the same Cloudflare account is invisible to it, so it protects
+  against our own spend, not against Cloudflare's own cut-off. Which plan the account is actually
+  on is an owner reading of the dashboard; setting `WORKERS_AI_PLAN=paid` follows it. The platform
+  total is the one ledger read with no `vendorId` (`sumPlatformMilliNeuronsSince`, allowlisted in
+  `tests/repository-vendor-scoping.test.ts`). Store admins read their usage on `/staff/ai-usage`;
+  only a platform admin can change a budget, enforced in the server action (`#1029`).
   Model ids are config as well as code: `LIST_NORMALISATION_AI_MODEL`, `SEARCH_SYNONYM_AI_MODEL` and
   `NET_CONTENT_AI_MODEL` override each feature's named default (`#1016`).
 

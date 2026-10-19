@@ -48,6 +48,7 @@ const mockProductSummary: ProductSummary = {
 const mockProductDetail: ProductDetail = {
   ...mockProductSummary,
   description: "Fresh and delicious paneer cheese block.",
+  acceptsNote: false,
   images: [
     { storageKey: "products/paneer-1.webp", alt: "Paneer Front", isPrimary: true },
     { storageKey: "products/paneer-2.webp", alt: "Paneer Back", isPrimary: false },

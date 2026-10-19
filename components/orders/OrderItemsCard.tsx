@@ -14,6 +14,8 @@ export interface OrderItemLine {
   unitPricePence: number;
   quantity: number;
   lineTotalPence: number;
+  /** #1135 — the shopper's note, snapshotted at checkout. Optional so other callers are unchanged. */
+  customNote?: string | null;
 }
 
 export function OrderItemsCard({
@@ -54,6 +56,14 @@ export function OrderItemsCard({
               <span className="ml-1 text-xs text-primary-muted">
                 ({formatPrice(item.unitPricePence)} each)
               </span>
+              {item.customNote && (
+                <span
+                  data-order-item-note
+                  className="mt-0.5 block break-words text-xs text-primary"
+                >
+                  Note: {item.customNote}
+                </span>
+              )}
             </span>
             <span className="shrink-0 font-medium text-primary">
               {formatPrice(item.lineTotalPence)}

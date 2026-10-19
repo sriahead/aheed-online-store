@@ -1,6 +1,7 @@
 import { getPrisma } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import { createAiMeter, type AiFeature, type AiMeter } from "@/lib/ai-meter";
+import { getAiEnv } from "@/lib/config";
 
 /**
  * Request-scoped entry point for the Workers AI meter (#1017): the current request's vendor, a
@@ -8,7 +9,12 @@ import { createAiMeter, type AiFeature, type AiMeter } from "@/lib/ai-meter";
  * `features/` may not import `@/lib/db` (ESLint, ADR-004 slice 2), so this is how they get a meter.
  */
 export async function getCurrentAiMeter(feature: AiFeature): Promise<AiMeter> {
-  return createAiMeter(getPrisma(), await getCurrentVendorId(), feature);
+  return createAiMeter(
+    getPrisma(),
+    await getCurrentVendorId(),
+    feature,
+    getAiEnv().WORKERS_AI_PLAN,
+  );
 }
 
 /**
@@ -16,5 +22,5 @@ export async function getCurrentAiMeter(feature: AiFeature): Promise<AiMeter> {
  * is always the one the session acts for, never one read from the request body.
  */
 export function getVendorAiMeter(vendorId: string, feature: AiFeature): AiMeter {
-  return createAiMeter(getPrisma(), vendorId, feature);
+  return createAiMeter(getPrisma(), vendorId, feature, getAiEnv().WORKERS_AI_PLAN);
 }

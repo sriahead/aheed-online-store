@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Plus, Check, Loader2, Minus } from "lucide-react";
 import { addToCart } from "@/features/cart/add-to-cart";
 import type { AddOutcome } from "@/lib/cart-rules";
 import { useCartFeedback } from "./CartFeedback";
 import { addFeedbackButtonText, addFeedbackMessage } from "./add-feedback-copy";
+import { CUSTOM_NOTE_MAX_LENGTH } from "@/lib/custom-note";
 
 /** How long the button shows "Added" (unchanged) and any other outcome (#956). */
 const ADDED_MS = 1500;
@@ -25,6 +26,7 @@ export function AddToCartButton({
   disabled = false,
   label = "Add to cart",
   variant = "icon",
+  acceptsNote = false,
 }: {
   productId: string;
   /** #956 — names the controls and the outcome message. Required: never a placeholder. */
@@ -32,10 +34,18 @@ export function AddToCartButton({
   disabled?: boolean;
   label?: string;
   variant?: "icon" | "full" | "card" | "drawer";
+  /**
+   * #1135 — the product takes a shopper note (`productAcceptsNote`). Only the `full` variant (the
+   * product page) renders the note box; cards and Quick View never do.
+   */
+  acceptsNote?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [flash, setFlash] = useState<Flash>(null);
   const [qty, setQty] = useState(1);
+  const [note, setNote] = useState("");
+  const noteId = useId();
+  const showNote = variant === "full" && acceptsNote && !disabled;
   const announce = useCartFeedback();
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -65,13 +75,16 @@ export function AddToCartButton({
       // here (null) rather than thrown into the route error boundary.
       let outcome: AddOutcome | null;
       try {
-        outcome = await addToCart(productId, qty);
+        outcome = await addToCart(productId, qty, showNote && note.trim() ? note : null);
       } catch {
         outcome = null;
       }
       announce(addFeedbackMessage(outcome, productName));
-      if (outcome?.kind === "added") showFlash({ kind: "added" }, ADDED_MS);
-      else showFlash({ kind: "other", text: addFeedbackButtonText(outcome) }, OTHER_OUTCOME_MS);
+      if (outcome?.kind === "added") {
+        showFlash({ kind: "added" }, ADDED_MS);
+        // #1135 — the note now lives on the basket line, where it can be edited.
+        setNote("");
+      } else showFlash({ kind: "other", text: addFeedbackButtonText(outcome) }, OTHER_OUTCOME_MS);
       setQty(1);
     });
   }
@@ -195,7 +208,7 @@ export function AddToCartButton({
   }
 
   if (variant === "full") {
-    return (
+    const button = (
       <button
         type="button"
         onClick={onClickAdd}
@@ -206,6 +219,25 @@ export function AddToCartButton({
         <Icon className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} aria-hidden />
         <span>{disabled ? "Out of stock" : added ? "Added" : (outcomeText ?? label)}</span>
       </button>
+    );
+    if (!showNote) return button;
+    return (
+      <div className="flex flex-col gap-2">
+        <label htmlFor={noteId} className="text-sm font-semibold text-primary">
+          Note for this item <span className="font-normal text-primary-muted">(optional)</span>
+        </label>
+        <input
+          id={noteId}
+          type="text"
+          name="customNote"
+          value={note}
+          maxLength={CUSTOM_NOTE_MAX_LENGTH}
+          onChange={(event) => setNote(event.target.value)}
+          placeholder="Anything the store should know about this item"
+          className="min-h-tap w-full rounded-xl border border-black/15 bg-white px-3 text-sm text-primary placeholder:text-primary-muted focus:border-action focus:outline-none"
+        />
+        {button}
+      </div>
     );
   }
 

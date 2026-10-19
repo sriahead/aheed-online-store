@@ -69,6 +69,7 @@ export function CategoryForm({ category, categories, hiddenCounts = null }: Cate
     parentId: category?.parentId ?? "",
     sortOrder: String(category?.sortOrder ?? 0),
     isActive: category?.isActive ?? true,
+    allowsCustomNote: category?.allowsCustomNote ?? false,
   };
   // A changed key remounts the fields, so a select or checkbox cannot keep a stale DOM default.
   const formKey = submitted ? `refused:${state.error}:${JSON.stringify(submitted)}` : "stored";
@@ -174,6 +175,17 @@ export function CategoryForm({ category, categories, hiddenCounts = null }: Cate
             {hiddenNote}
           </p>
         )}
+
+        {/* #1135 — covers this category's sub-categories too (lib/custom-note.ts). */}
+        <label className="flex items-center gap-2 text-sm text-primary">
+          <input
+            type="checkbox"
+            name="allowsCustomNote"
+            defaultChecked={values.allowsCustomNote}
+            className="h-4 w-4 rounded border-black/20"
+          />
+          Customers can add a note to items in this category
+        </label>
       </section>
 
       <div className="flex items-center gap-3">

@@ -539,6 +539,12 @@ export function ProductForm({
               label="Visible in the shop"
               defaultChecked={product?.isActive ?? true}
             />
+            {/* #1135 — also on when this product's category (or its parent) is ticked. */}
+            <Checkbox
+              name="allowsCustomNote"
+              label="Customers can add a note to this item"
+              defaultChecked={product?.allowsCustomNote ?? false}
+            />
           </div>
         </section>
 

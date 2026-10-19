@@ -17,6 +17,7 @@ import {
 import type { CartIdentity } from "@/lib/cart-identity";
 import { tierSavingPence, tieredLineTotalPence, type ProductTier } from "@/lib/tier-pricing";
 import { listActiveTiersForProducts } from "@/lib/repositories/product-tiers";
+import { NOTE_ACCEPTANCE_SELECT, normaliseCustomNote, productAcceptsNote } from "@/lib/custom-note";
 
 /**
  * Cart read/write path (P3a, #93) — the ONLY DB access for carts; pages,
@@ -80,6 +81,14 @@ export interface CartLine {
   stock: number;
   /** false when the product went inactive or out of stock while sitting in the cart */
   available: boolean;
+  /** #1135 — the shopper's note on this line, or null. */
+  customNote: string | null;
+  /**
+   * #1135 — whether the product takes a note right now (`productAcceptsNote`). A line can carry a
+   * note while this is false — the owner unticked the category after it was written — and
+   * checkout will then drop it, so the basket must say so.
+   */
+  acceptsNote: boolean;
 }
 
 export interface CartSummary {
@@ -106,7 +115,16 @@ export const EMPTY_CART: CartSummary = {
 export interface CartRepository {
   getSummary(identity: CartIdentity): Promise<CartSummary>;
   /** #956 — resolves to what the add actually did, never just "done". */
-  addItem(identity: CartIdentity, productId: string, delta?: number): Promise<AddOutcome>;
+  /**
+   * #1135 — `customNote`, when non-empty after normalisation and the product takes notes, replaces
+   * the line's note; empty or absent leaves an existing note alone.
+   */
+  addItem(
+    identity: CartIdentity,
+    productId: string,
+    delta?: number,
+    customNote?: string | null,
+  ): Promise<AddOutcome>;
   /**
    * Bulk add for "Shop your list" (P3d, #114) — one cart resolution and one
    * transaction for the whole list, not N sequential addItem() calls.
@@ -115,6 +133,8 @@ export interface CartRepository {
    */
   addItems(identity: CartIdentity, lines: MergeLine[]): Promise<BulkAddLine[]>;
   setQuantity(identity: CartIdentity, productId: string, quantity: number): Promise<void>;
+  /** #1135 — set or clear (empty note) a basket line's note. */
+  setNote(identity: CartIdentity, productId: string, note: string): Promise<SetNoteOutcome>;
   removeItem(identity: CartIdentity, productId: string): Promise<void>;
   applyMerge(identity: CartIdentity, resolution: MergeResolution): Promise<void>;
   /** True once no guest cart remains for this token — the cookie is then safe to clear. */
@@ -135,13 +155,19 @@ async function findCart(
   if (userId) {
     return prisma.cart.findUnique({
       where: { vendorId_userId: { vendorId, userId } },
-      select: { id: true, items: { select: { productId: true, quantity: true } } },
+      select: {
+        id: true,
+        items: { select: { productId: true, quantity: true, customNote: true } },
+      },
     });
   }
   if (guestToken) {
     return prisma.cart.findUnique({
       where: { vendorId_guestToken: { vendorId, guestToken } },
-      select: { id: true, items: { select: { productId: true, quantity: true } } },
+      select: {
+        id: true,
+        items: { select: { productId: true, quantity: true, customNote: true } },
+      },
     });
   }
   return null;
@@ -207,7 +233,7 @@ async function autoReconcile(prisma: Db, vendorId: string, identity: CartIdentit
 async function decorate(
   prisma: Db,
   vendorId: string,
-  items: { productId: string; quantity: number }[],
+  items: { productId: string; quantity: number; customNote?: string | null }[],
 ): Promise<CartLine[]> {
   if (items.length === 0) return [];
   const products = await prisma.product.findMany({
@@ -219,6 +245,7 @@ async function decorate(
       unitLabel: true,
       basePrice: true,
       isActive: true,
+      ...NOTE_ACCEPTANCE_SELECT,
       inventory: { select: { quantity: true } },
       images: {
         where: { isPrimary: true },
@@ -259,6 +286,8 @@ async function decorate(
         imageKey: p.images[0]?.storageKey ?? null,
         stock,
         available,
+        customNote: item.customNote ?? null,
+        acceptsNote: productAcceptsNote(p),
       },
     ];
   });
@@ -274,6 +303,29 @@ async function stockMap(
     select: { id: true, isActive: true, inventory: { select: { quantity: true } } },
   });
   return new Map(rows.map((r) => [r.id, r.isActive ? effectiveStock(r.inventory?.quantity) : 0]));
+}
+
+/** #1135 — the products among `productIds` (this vendor's only) that take a note right now. */
+async function noteAcceptingIds(
+  prisma: Db,
+  vendorId: string,
+  productIds: string[],
+): Promise<Set<string>> {
+  if (productIds.length === 0) return new Set();
+  const rows = await prisma.product.findMany({
+    where: { vendorId, id: { in: productIds } },
+    select: { id: true, ...NOTE_ACCEPTANCE_SELECT },
+  });
+  return new Set(rows.filter(productAcceptsNote).map((r) => r.id));
+}
+
+/**
+ * #1135 — the note an add writes, or `undefined` for "leave the line's note alone". A note for a
+ * product that does not take notes is never written; the add itself still goes ahead.
+ */
+function noteToWrite(raw: string | null | undefined, accepted: boolean): string | undefined {
+  if (!accepted) return undefined;
+  return normaliseCustomNote(raw) ?? undefined;
 }
 
 export async function getCartSummary(
@@ -317,12 +369,20 @@ export async function addCartItem(
   identity: CartIdentity,
   productId: string,
   delta = 1,
+  customNote?: string | null,
 ): Promise<AddOutcome> {
   // #956 — both refusals are decided before a cart exists, so a refused add
   // never creates a Cart row. `classifyAdd` applies the same two checks first.
   if (!isValidAddDelta(delta)) return { kind: "none", reason: "INVALID_QUANTITY" };
   const stock = (await stockMap(prisma, vendorId, [productId])).get(productId) ?? 0;
   if (stock <= 0) return { kind: "none", reason: "SOLD_OUT" }; // or no Inventory row
+
+  const note = normaliseCustomNote(customNote)
+    ? noteToWrite(
+        customNote,
+        (await noteAcceptingIds(prisma, vendorId, [productId])).has(productId),
+      )
+    : undefined;
 
   const cartId = await ensureCart(prisma, prismaWs, vendorId, identity);
   return prismaWs.$transaction(async (tx: Tx) => {
@@ -336,8 +396,8 @@ export async function addCartItem(
     if (write !== null) {
       await tx.cartItem.upsert({
         where: { cartId_productId: { cartId, productId } },
-        create: { cartId, vendorId, productId, quantity: write },
-        update: { quantity: write },
+        create: { cartId, vendorId, productId, quantity: write, customNote: note ?? null },
+        update: note === undefined ? { quantity: write } : { quantity: write, customNote: note },
       });
     }
     return outcome;
@@ -374,6 +434,10 @@ export async function addCartItems(
   // Nothing addable — don't create a cart, but still say what happened to every line (#957).
   if (writable.length === 0) return merged.map(unavailable);
 
+  // #1135 — only lines that carry a note need the acceptance read (order-again restores them).
+  const noted = writable.filter((line) => line.customNote).map((line) => line.productId);
+  const accepting = await noteAcceptingIds(prisma, vendorId, noted);
+
   const cartId = await ensureCart(prisma, prismaWs, vendorId, identity);
   // #957 — each line is classified from the quantity read INSIDE the transaction, so the report
   // describes the writes that actually happen rather than a guess made before them.
@@ -391,10 +455,17 @@ export async function addCartItems(
       );
       results.set(line.productId, { productId: line.productId, ...outcome });
       if (write === null) continue;
+      const note = noteToWrite(line.customNote, accepting.has(line.productId));
       await tx.cartItem.upsert({
         where: { cartId_productId: { cartId, productId: line.productId } },
-        create: { cartId, vendorId, productId: line.productId, quantity: write },
-        update: { quantity: write },
+        create: {
+          cartId,
+          vendorId,
+          productId: line.productId,
+          quantity: write,
+          customNote: note ?? null,
+        },
+        update: note === undefined ? { quantity: write } : { quantity: write, customNote: note },
       });
     }
     return results;
@@ -423,6 +494,42 @@ export async function setCartQuantity(
       data: { quantity: next },
     });
   });
+}
+
+/** #1135 — what a set-note request did. Refusals write nothing. */
+export type SetNoteOutcome =
+  | { ok: true; customNote: string | null }
+  | { ok: false; reason: "NOT_IN_CART" | "NOTES_NOT_TAKEN" };
+
+/**
+ * #1135 — set (or, with an empty note, clear) the note on a line already in this identity's cart.
+ * Refuses a product that is not in the cart, or a non-empty note for a product that does not take
+ * notes. Clearing is always allowed, so a shopper can remove a note the store no longer takes.
+ * A singular `update` with no nested writes, which is safe on the HTTP client (CLAUDE.md).
+ */
+export async function setCartNote(
+  prisma: Db,
+  vendorId: string,
+  identity: CartIdentity,
+  productId: string,
+  note: string,
+): Promise<SetNoteOutcome> {
+  const cart = await findCart(prisma, vendorId, identity.userId, identity.guestToken);
+  if (!cart || !cart.items.some((item) => item.productId === productId)) {
+    return { ok: false, reason: "NOT_IN_CART" };
+  }
+  const normalised = normaliseCustomNote(note);
+  if (
+    normalised !== null &&
+    !(await noteAcceptingIds(prisma, vendorId, [productId])).has(productId)
+  ) {
+    return { ok: false, reason: "NOTES_NOT_TAKEN" };
+  }
+  await prisma.cartItem.update({
+    where: { cartId_productId: { cartId: cart.id, productId } },
+    data: { customNote: normalised },
+  });
+  return { ok: true, customNote: normalised };
 }
 
 export async function removeCartItem(
@@ -480,6 +587,7 @@ export async function applyCartMerge(
           vendorId,
           productId: l.productId,
           quantity: l.quantity,
+          customNote: l.customNote ?? null,
         })),
       });
     }

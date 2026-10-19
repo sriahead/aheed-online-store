@@ -14,7 +14,12 @@ vi.mock("@/lib/auth-rbac", () => ({
 }));
 vi.mock("@/lib/ai-meter-service", () => ({
   getVendorAiMeter: () => ({
-    check: vi.fn(async () => ({ allowed: true, usedNeurons: 0, budgetNeurons: 3000 })),
+    check: vi.fn(async () => ({
+      allowed: true,
+      scope: "vendor" as const,
+      usedNeurons: 0,
+      budgetNeurons: 3000,
+    })),
     record: vi.fn(),
     recordImage: vi.fn(async () => {}),
   }),

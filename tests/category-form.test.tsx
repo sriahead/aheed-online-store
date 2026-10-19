@@ -44,6 +44,7 @@ const EDITING: AdminCategoryDetail = {
   parentId: null,
   sortOrder: 0,
   isActive: true,
+  allowsCustomNote: false,
 };
 
 afterEach(() => {

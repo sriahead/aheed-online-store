@@ -29,13 +29,19 @@ const { placeOrder, CheckoutError, toProvenance, findOrderForViewer, cancelConfi
 const VENDOR = "v-aheed";
 
 type FakeState = {
-  cart: { id: string; items: { productId: string; quantity: number }[] } | null;
+  cart: {
+    id: string;
+    items: { productId: string; quantity: number; customNote?: string | null }[];
+  } | null;
   products: {
     id: string;
     name: string;
     basePrice: number;
     isActive: boolean;
     inventory: { quantity: number } | null;
+    /** #1135 — absent means "does not take notes", as for every pre-#1135 case. */
+    allowsCustomNote?: boolean;
+    category?: { allowsCustomNote: boolean; parent: { allowsCustomNote: boolean } | null };
   }[];
   /** How many rows the guarded decrement claims to have updated. */
   decrementCount: number;
@@ -71,10 +77,14 @@ const created: Record<string, unknown[]> = {};
  * so a change to the order lines cannot leave the compensation asserting against
  * stale fixtures.
  */
-function orderItemRows(): { productId: string; quantity: number }[] {
-  return (created.orderItem as { productId: string; quantity: number }[]).map((row) => ({
+function orderItemRows(): { productId: string; quantity: number; customNote?: string }[] {
+  return (
+    created.orderItem as { productId: string; quantity: number; customNote: string | null }[]
+  ).map((row) => ({
     productId: row.productId,
     quantity: row.quantity,
+    // #1135 — only a real note is carried, so every pre-#1135 expectation keeps its shape.
+    ...(row.customNote ? { customNote: row.customNote } : {}),
   }));
 }
 
@@ -797,6 +807,59 @@ describe("placeOrder — loyalty redemption (R28-R35)", () => {
  * empty while the error told the shopper "please try again", which they could
  * not do. Observed on staging with a 17-item basket.
  */
+/**
+ * #1135 (R12, R13) — a basket line's note becomes the order line's snapshot only if the product
+ * takes notes at checkout; a note it no longer takes is dropped, never a CheckoutError; and a basket
+ * restored after a failed payment carries the note back.
+ */
+describe("placeOrder — custom item notes", () => {
+  const noted = (allowsCustomNote: boolean) => {
+    state.cart = {
+      id: "cart-1",
+      items: [{ productId: "p1", quantity: 2, customNote: "curry cut" }],
+    };
+    state.products[0].allowsCustomNote = allowsCustomNote;
+    state.products[0].category = { allowsCustomNote: false, parent: null };
+  };
+  const writtenNotes = () =>
+    (created.orderItem as { customNote: string | null }[]).map((row) => row.customNote);
+
+  it("copies a note the product accepts onto the order line", async () => {
+    noted(true);
+    await placeOrder(fakePrisma(), VENDOR, input());
+    expect(writtenNotes()).toEqual(["curry cut"]);
+  });
+
+  it("accepts through the category's parent too", async () => {
+    noted(false);
+    state.products[0].category = { allowsCustomNote: false, parent: { allowsCustomNote: true } };
+    await placeOrder(fakePrisma(), VENDOR, input());
+    expect(writtenNotes()).toEqual(["curry cut"]);
+  });
+
+  it("writes null for a note the product no longer accepts, and still places the order", async () => {
+    noted(false);
+    await expect(placeOrder(fakePrisma(), VENDOR, input())).resolves.toBeTruthy();
+    expect(writtenNotes()).toEqual([null]);
+  });
+
+  it("writes null for a line with no note", async () => {
+    await placeOrder(fakePrisma(), VENDOR, input());
+    expect(writtenNotes()).toEqual([null]);
+  });
+
+  it("carries the note back when a failed payment restores the basket", async () => {
+    noted(true);
+    paymentStub.createPayment = async () => {
+      throw new Error("stripe unreachable");
+    };
+    await expect(placeOrder(fakePrisma(), VENDOR, input())).rejects.toThrow();
+    expect(created.cartRestored).toEqual([
+      { cartId: "cart-1", vendorId: VENDOR, productId: "p1", quantity: 2, customNote: "curry cut" },
+    ]);
+  });
+});
+
 describe("placeOrder — payment provider unavailable", () => {
   const failProvider = () => {
     paymentStub.createPayment = async () => {

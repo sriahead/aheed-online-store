@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Shoppers can add a note to an item a store allows it on, and the AI allowance follows the Workers plan** (issues `#1135`, `#1028`, `#1029`, `#1031`; `specs/2026-10-19-p1135-custom-notes-ai-allowance/`). One migration (`20261019120000_p1135_custom_item_notes`, four `ADD COLUMN`s only). No new dependency, no raw SQL.
+  - **Item notes:** `Category.allowsCustomNote` and `Product.allowsCustomNote` (off by default, ticked on `/staff/categories` and `/staff/products`). A product takes notes if it, its category or that category's parent is ticked (`lib/custom-note.ts`). The product page shows a note field (200 characters, neutral copy); the basket line lets the shopper edit or clear it. If notes are switched off after one was added, the basket says the note will not be sent, and `placeOrder` drops it. The note reaches `OrderItem.customNote`, the customer and staff order pages, and the confirmation email (escaped, with the product name). The staff order list shows only a "Has item notes" marker. Merge, order-again, export and erasure carry or clear it. Nothing accepts notes on any store until a category or product is ticked.
+  - **Plan mode (`#1028`):** `WORKERS_AI_PLAN` is `free` unless set to exactly `paid`. In Free mode every AI call also checks the platform's shared spend since 00:00 UTC and refuses for every vendor at 10,000 neurons, with its own message. Paid mode skips that check. `specs/architecture.md` 1.42.0 documents both.
+  - **AI Allowance page (`#1029`):** `/staff/ai-usage` for store admins: today's use against the store budget, use by feature, and the plan line. Only a platform admin can change a store's daily budget (up to 1,000,000 neurons) or see the Paid-plan charge estimate ($0.011 per 1,000 neurons over the allowance).
+  - **Backfill (`#1031`):** a budget refusal from "Generate missing images" now shows in the error tone with how many images were made first (`budgetRefused` on the route's response).
+  - Owner: set `WORKERS_AI_PLAN=paid` on staging and production if the account is Paid; until then both run Free mode. Deferred: `#1156` (privacy wording), `#1157` (more surfaces for notes), `#1158` (several notes per product), `#1159` (store-set note label).
+
 - **Marketing consent a store can ask for: opt-in, recorded, and off until switched on** (issue `#1134`, absorbing `#1136`; `specs/2026-10-18-p1134-switches-marketing-consent/`). One migration (`20261018200000_p1134_marketing_consent`, creates only: an enum, a table, an index, two foreign keys and one `VendorConfig` column). No new dependency, no raw SQL.
   - **Switch:** `VendorConfig.marketingConsentEnabled`, `false` by default, set by a store admin in a new **Marketing consent** section on `/staff/storefront`. Shipping this changes nothing on any store until it is switched on.
   - **Record:** an append-only `MarketingConsentEvent` log per user and vendor (granted or withdrawn, the exact statement shown, `REGISTRATION` or `ACCOUNT`, when). The newest event is the current state. `hasEffectiveMarketingConsent` is true only for a grant **and** a verified email; nothing sends marketing yet (`#1152`).
@@ -120,6 +127,23 @@ every branch merges.
   - Follow-ups filed, both out of scope here: `#1078` (make the banner headline vendor-editable — the owner's choice over rewording it in code, which needs a migration) and `#1079` (`WaysToEarnAccordion` repeats the unenforced "qualifying first order" claim this slice removed from `ReferralCard`).
 
 ### Documentation
+
+- **Document pass for `#1135` (item notes, plus `#1028`/`#1029`/`#1031`, merged to `staging` by PR
+  #1160, `3bbfa47`).** Documentation only, no code change.
+  - `specs/roadmap.md` 1.161.0 adds the slice's change-log row.
+  - `docs/model-handoff.md` 1.113.0:
+    - `main` is at `dc15145` (`#1134` promoted in PR #1155), and `staging` is one slice ahead;
+    - the stale "`#1028` is owner work" lines now say the plan mode is handled in code;
+    - the owner actions for `#1134` and `#1135` are listed together.
+  - `docs/developer-portal/local-dev-playbook.md` 1.31.0:
+    - driving a server action that is called from JavaScript with curl, using the build manifest
+      for its id;
+    - a form replay must carry `<textarea>` and `<select>` values, or the save blanks them;
+    - `/staff/orders` hides `PENDING_PAYMENT` orders by default;
+    - Git Bash's working opt-out is `MSYS_NO_PATHCONV=1` (not `MSYS_NO_POSIX_PATHCONV`);
+    - `demo-srimart-admin`'s dev password differs from `DEMO_ACCOUNT_PASSWORD`.
+  - Validation findings filed as `#1161` (AI budget save without a `VendorConfig` row) and `#1162`
+    (possible duplicate cart-note ids).
 
 - **Document pass for `#1134` (slice B, merged to `staging` by PR #1153, `1d9a2a1`).** Documentation
   only, no code change.
