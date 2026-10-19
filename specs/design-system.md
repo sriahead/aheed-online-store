@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.21.0"
-updated: 2026-10-13
+version: "1.22.0"
+updated: 2026-10-19
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -423,6 +423,24 @@ Rules for any future preset:
 - **Six only from `xl`.**
 - **No free per-vendor column count.** It allows layouts that break the card.
 
+**Exception: the hidden filter sidebar (#1173, 2026-10-19).** On the category and search pages a
+shopper can hide the browse sidebar (`components/product/CollapsibleSidebar.tsx`). While it is
+hidden, `<html>` carries `data-filters-collapsed` and `app/globals.css` adds one column from `lg`.
+The grid is scoped to `[data-filters-layout] [data-product-grid][data-density=…]`, so `/bundles`
+never changes. The owner chose these odd steps on purpose, since the freed sidebar width is what
+pays for the extra card. A short page may end ragged in this state; only the shopper sees it, and
+only after hiding the sidebar.
+
+| Preset, sidebar hidden | `lg` | `xl` |
+|---|---|---|
+| `COMPACT` | 5 | 7 |
+| `STANDARD` | 5 | 5 |
+| `SPACIOUS` | 3 | 5 |
+
+The state lives in `sessionStorage` (`FILTERS_COLLAPSED_KEY`, listed on `/privacy`) and is restored
+before paint by `FILTERS_COLLAPSED_SCRIPT`. Below `md` the attribute changes nothing. With
+JavaScript off there is no toggle and the sidebar always shows (#568).
+
 ## Accessibility & Compliance
 
 To ensure compliance with WCAG AA standards (minimum 4.5:1 contrast ratio for text) and robust screen reader support across all multi-tenant brands, the following design constraints are strictly enforced:
@@ -565,6 +583,12 @@ copied literally:
   `components/product/ProductFilterForm.tsx`, a stacked panel (search, price range, speciality
   checkboxes, Apply), still a plain `<form method="GET">` (zero-JS, real navigation resets
   pagination).
+- **The header department selector** (`components/layout/DepartmentSearchBar.tsx`, #1173) sizes to
+  its selected label with `field-sizing: content` (3.5–10rem, with a 5.5rem fallback). Where
+  `appearance: base-select` is supported, it opens a styled picker with token colours. The
+  base-select trigger lays its contents out as blocks, so it needs
+  `display: inline-flex; align-items: center; white-space: nowrap`. Without that, the label sits at
+  the top and the arrow wraps under a short label such as "All" (found at Validate, `57efaff`).
 - **Logo**: `public/images/brand/logo.png` is `docs/logo.png` with whitespace trimmed and flattened
   to white; shown `h-11` on mobile, `h-16` on desktop. The mobile header adds a dedicated
   full-width search row (the inline search is hidden below `sm`).
