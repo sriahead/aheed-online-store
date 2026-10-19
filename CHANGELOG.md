@@ -147,6 +147,11 @@ every branch merges.
 
 ### Documentation
 
+- **Document pass for `#1173` (merged to `staging` by PR #1174, `265fa01`).** Documentation only, no code change.
+  - `specs/roadmap.md` 1.166.0 adds the slice's change-log row.
+  - `docs/model-handoff.md` 1.119.0: `staging` is two slices ahead of `main`.
+  - `specs/design-system.md` 1.22.0 records the hidden-sidebar column exception (odd steps, owner-approved) and the base-select trigger's `inline-flex` need.
+
 - **Document pass for `#1169` (merged to `staging` by PR #1171, `d5a7e36`).** Documentation only, no code change.
   - `specs/roadmap.md` 1.165.0 adds the slice's change-log row.
   - `docs/model-handoff.md` 1.117.0: `staging` is one slice ahead of `main`; `#1170` filed.
