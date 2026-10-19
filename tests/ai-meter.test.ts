@@ -17,6 +17,8 @@ import {
 function fakePrisma(
   opts: {
     milliNeurons?: number | null;
+    /** #1028 — the every-vendor total the Free plan checks; null means no rows. */
+    platformMilliNeurons?: number | null;
     budget?: number | null;
     sumRejects?: boolean;
     createRejects?: boolean;
@@ -28,9 +30,17 @@ function fakePrisma(
       return {};
     }),
     deleteMany: vi.fn(async () => ({ count: 0 })),
-    aggregate: vi.fn(async () => {
+    aggregate: vi.fn(async (args: { where: { vendorId?: string } }) => {
       if (opts.sumRejects) throw new Error("read failed");
-      return { _sum: { milliNeurons: opts.milliNeurons ?? null } };
+      // A where with no vendorId is the platform-wide read (sumPlatformMilliNeuronsSince).
+      return {
+        _sum: {
+          milliNeurons:
+            args.where.vendorId === undefined
+              ? (opts.platformMilliNeurons ?? null)
+              : (opts.milliNeurons ?? null),
+        },
+      };
     }),
   };
   const vendorConfig = {
@@ -62,9 +72,14 @@ describe("startOfUtcDay (R23)", () => {
 describe("check() (R24)", () => {
   it("allows a vendor under its budget, reading today's spend in neurons", async () => {
     const prisma = fakePrisma({ milliNeurons: 2_999_500, budget: 3000 });
-    const check = await createAiMeter(prisma, "v1", "LIST_NORMALISATION").check();
+    const check = await createAiMeter(prisma, "v1", "LIST_NORMALISATION", "paid").check();
 
-    expect(check).toEqual({ allowed: true, usedNeurons: 2999.5, budgetNeurons: 3000 });
+    expect(check).toEqual({
+      allowed: true,
+      scope: "vendor",
+      usedNeurons: 2999.5,
+      budgetNeurons: 3000,
+    });
     const where = (
       prisma.aiUsageEvent.aggregate.mock.calls[0] as unknown as [
         { where: { vendorId: string; createdAt: { gte: Date } } },
@@ -76,13 +91,16 @@ describe("check() (R24)", () => {
 
   it("refuses a vendor exactly at its budget", async () => {
     const prisma = fakePrisma({ milliNeurons: 3_000_000, budget: 3000 });
-    expect((await createAiMeter(prisma, "v1", "LIST_NORMALISATION").check()).allowed).toBe(false);
+    expect((await createAiMeter(prisma, "v1", "LIST_NORMALISATION", "paid").check()).allowed).toBe(
+      false,
+    );
   });
 
   it("always refuses a budget of 0", async () => {
     const prisma = fakePrisma({ milliNeurons: null, budget: 0 });
-    expect(await createAiMeter(prisma, "v1", "LIST_NORMALISATION").check()).toEqual({
+    expect(await createAiMeter(prisma, "v1", "LIST_NORMALISATION", "paid").check()).toEqual({
       allowed: false,
+      scope: "vendor",
       usedNeurons: 0,
       budgetNeurons: 0,
     });
@@ -91,9 +109,99 @@ describe("check() (R24)", () => {
   it("fails closed, without throwing, when the database read rejects", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const prisma = fakePrisma({ sumRejects: true });
-    await expect(createAiMeter(prisma, "v1", "SEARCH_SYNONYMS").check()).resolves.toMatchObject({
+    await expect(
+      createAiMeter(prisma, "v1", "SEARCH_SYNONYMS", "free").check(),
+    ).resolves.toMatchObject({
       allowed: false,
     });
+  });
+});
+
+describe("#1028 — plan mode (R27)", () => {
+  it("Free: refuses with scope vendor when the vendor's own budget is reached", async () => {
+    const prisma = fakePrisma({ milliNeurons: 3_000_000, platformMilliNeurons: 3_000_000 });
+    expect(await createAiMeter(prisma, "v1", "NET_CONTENT", "free").check()).toEqual({
+      allowed: false,
+      scope: "vendor",
+      usedNeurons: 3000,
+      budgetNeurons: 3000,
+    });
+  });
+
+  it("Free: refuses with scope platform once every vendor together reaches 10,000", async () => {
+    const prisma = fakePrisma({ milliNeurons: 1_000_000, platformMilliNeurons: 10_000_000 });
+    expect(await createAiMeter(prisma, "v1", "NET_CONTENT", "free").check()).toEqual({
+      allowed: false,
+      scope: "platform",
+      usedNeurons: 10000,
+      budgetNeurons: 10000,
+    });
+  });
+
+  it("Free: allows when both the vendor and the platform are under their limits", async () => {
+    const prisma = fakePrisma({ milliNeurons: 1_000_000, platformMilliNeurons: 9_999_000 });
+    const check = await createAiMeter(prisma, "v1", "NET_CONTENT", "free").check();
+    expect(check).toEqual({
+      allowed: true,
+      scope: "vendor",
+      usedNeurons: 1000,
+      budgetNeurons: 3000,
+    });
+    // The platform read is the aggregate whose where has no vendorId.
+    const wheres = prisma.aiUsageEvent.aggregate.mock.calls.map(
+      (call) => (call as unknown as [{ where: { vendorId?: string } }])[0].where,
+    );
+    expect(wheres.some((where) => where.vendorId === undefined)).toBe(true);
+  });
+
+  it("Paid: refuses only on the vendor's own budget", async () => {
+    const prisma = fakePrisma({ milliNeurons: 3_000_000, platformMilliNeurons: 50_000_000 });
+    expect(await createAiMeter(prisma, "v1", "NET_CONTENT", "paid").check()).toMatchObject({
+      allowed: false,
+      scope: "vendor",
+    });
+  });
+
+  it("Paid: allows a vendor under budget however high the platform total, and never reads it", async () => {
+    const prisma = fakePrisma({ milliNeurons: 1_000_000, platformMilliNeurons: 50_000_000 });
+    expect((await createAiMeter(prisma, "v1", "NET_CONTENT", "paid").check()).allowed).toBe(true);
+    const wheres = prisma.aiUsageEvent.aggregate.mock.calls.map(
+      (call) => (call as unknown as [{ where: { vendorId?: string } }])[0].where,
+    );
+    expect(wheres.every((where) => where.vendorId === "v1")).toBe(true);
+  });
+
+  it("Free: still fails closed on a database error", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const prisma = fakePrisma({ sumRejects: true });
+    expect(await createAiMeter(prisma, "v1", "NET_CONTENT", "free").check()).toEqual({
+      allowed: false,
+      scope: "vendor",
+      usedNeurons: 0,
+      budgetNeurons: 0,
+    });
+  });
+});
+
+describe("#1028 — describeAiBudgetRefusal (R29)", () => {
+  it("keeps the store sentence for a vendor refusal", () => {
+    expect(
+      describeAiBudgetRefusal({ scope: "vendor", usedNeurons: 3012.4, budgetNeurons: 3000 }),
+    ).toBe(
+      "This store has used its AI allowance for today (3,013 of 3,000 neurons). It resets at 00:00 UTC.",
+    );
+  });
+
+  it("names the platform's shared allowance for a platform refusal", () => {
+    const text = describeAiBudgetRefusal({
+      scope: "platform",
+      usedNeurons: 10000,
+      budgetNeurons: 10000,
+    });
+    expect(text).toContain("platform's shared AI allowance");
+    expect(text).toContain("10,000 of 10,000");
+    expect(text).toContain("00:00 UTC");
+    expect(text).not.toMatch(/aheed|srimart/i);
   });
 });
 
@@ -101,7 +209,7 @@ describe("record() and recordImage() (R25)", () => {
   it("writes one row for the meter's vendor and feature, neurons x1000 rounded up", async () => {
     vi.spyOn(Math, "random").mockReturnValue(0.5);
     const prisma = fakePrisma();
-    await createAiMeter(prisma, "v1", "SEARCH_SYNONYMS").record({
+    await createAiMeter(prisma, "v1", "SEARCH_SYNONYMS", "free").record({
       model: "@cf/meta/llama-3.1-8b-instruct",
       usage: { inputTokens: 45, outputTokens: 7, neurons: 0.4294 },
     });
@@ -122,7 +230,7 @@ describe("record() and recordImage() (R25)", () => {
   it("charges an image its table figure, and an unlisted image model the highest figure", async () => {
     vi.spyOn(Math, "random").mockReturnValue(0.5);
     const prisma = fakePrisma();
-    const meter = createAiMeter(prisma, "v1", "CAMPAIGN_IMAGE");
+    const meter = createAiMeter(prisma, "v1", "CAMPAIGN_IMAGE", "free");
     await meter.recordImage({ model: "@cf/black-forest-labs/flux-1-schnell" });
     await meter.recordImage({ model: "@cf/unknown/image-model" });
 
@@ -136,7 +244,7 @@ describe("record() and recordImage() (R25)", () => {
   it("never throws when the ledger write rejects", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const prisma = fakePrisma({ createRejects: true });
-    const meter = createAiMeter(prisma, "v1", "PRODUCT_IMAGE");
+    const meter = createAiMeter(prisma, "v1", "PRODUCT_IMAGE", "free");
     await expect(
       meter.record({
         model: "@cf/meta/llama-3.1-8b-instruct",

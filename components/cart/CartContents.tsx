@@ -9,6 +9,7 @@ import type { CartSummary } from "@/lib/repositories/cart";
 import { removeFromCart } from "@/features/cart/remove-item";
 import { updateQuantity } from "@/features/cart/update-quantity";
 import { CheckoutLink } from "./CheckoutLink";
+import { CartLineNote } from "./CartLineNote";
 
 /**
  * Server-rendered cart body (P3a, #93) — shared by the drawer and /cart so both
@@ -203,6 +204,8 @@ export function CartContents({
                     </button>
                   </form>
                 </div>
+
+                <CartLineNote line={line} />
               </div>
 
               <div className="flex flex-col items-end">

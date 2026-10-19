@@ -630,18 +630,21 @@ model VendorLocation {
 // P2a — catalogue browsing (specs/2026-08-07-p2a-catalogue-browsing/). Matches the
 // representative schema already designed in specs/architecture.md §3.2.
 model Category {
-  id        String              @id @default(uuid())
-  vendorId  String
-  vendor    Vendor              @relation(fields: [vendorId], references: [id])
-  slug      String
-  name      String
-  parentId  String?
-  parent    Category?           @relation("Sub", fields: [parentId], references: [id])
-  children  Category[]          @relation("Sub")
-  sortOrder Int                 @default(0)
-  isActive  Boolean             @default(true)
-  products  Product[]
-  campaign  DepartmentCampaign?
+  id               String              @id @default(uuid())
+  vendorId         String
+  vendor           Vendor              @relation(fields: [vendorId], references: [id])
+  slug             String
+  name             String
+  parentId         String?
+  parent           Category?           @relation("Sub", fields: [parentId], references: [id])
+  children         Category[]          @relation("Sub")
+  sortOrder        Int                 @default(0)
+  isActive         Boolean             @default(true)
+  // #1135 — shoppers may attach a note to a basket line for products in this category (and its
+  // sub-categories). Decided by lib/custom-note.ts's productAcceptsNote, nowhere else.
+  allowsCustomNote Boolean             @default(false)
+  products         Product[]
+  campaign         DepartmentCampaign?
 
   @@unique([vendorId, slug])
   @@unique([id, vendorId])
@@ -773,6 +776,8 @@ model Product {
   // this column can never reach a price a shopper actually reads. Null whenever net content is.
   unitPricePencePerBaseUnit Int?
   isActive                  Boolean                 @default(true)
+  // #1135 — this product takes a shopper note even when its category does not.
+  allowsCustomNote          Boolean                 @default(false)
   createdAt                 DateTime                @default(now())
   images                    ProductImage[]
   netContentSuggestions     NetContentSuggestion[]
@@ -1202,16 +1207,18 @@ model Cart {
 // snapshotted into OrderItem at order creation (P3b) — a cart that cached prices
 // would silently serve stale money after a price change.
 model CartItem {
-  id        String   @id @default(uuid())
-  cartId    String
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  vendorId  String
-  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  quantity  Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(uuid())
+  cartId     String
+  cart       Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  vendorId   String
+  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  quantity   Int
+  // #1135 — normalised shopper note (lib/custom-note.ts); null when there is none.
+  customNote String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@unique([cartId, productId])
   @@index([cartId])
@@ -1346,6 +1353,9 @@ model OrderItem {
   unitPricePence Int
   quantity       Int
   lineTotalPence Int
+  // #1135 — snapshot of the basket line's note, written by placeOrder only when the product still
+  // accepted notes at that instant. Personal data: exported and nulled by erasure (data-rights.ts).
+  customNote     String?
 
   @@index([orderId])
 }

@@ -44,7 +44,15 @@ const order = (overrides: Partial<WebhookOrder> = {}): WebhookOrder => ({
   totalPence: 2349,
   buyerEmail: "shopper@example.com",
   userId: "u-1",
-  items: [{ productName: "Basmati rice", unitPricePence: 1000, quantity: 2, lineTotalPence: 2000 }],
+  items: [
+    {
+      productName: "Basmati rice",
+      unitPricePence: 1000,
+      quantity: 2,
+      lineTotalPence: 2000,
+      customNote: null,
+    },
+  ],
   ...overrides,
 });
 
@@ -167,5 +175,37 @@ describe("order confirmation email — money provenance (P7.5b, #150/#138)", () 
     // clear the earn threshold. "You earned 0 points" is worse than silence.
     await sendOrderConfirmationEmail(order({ pointsEarned: 0 }));
     expect(sentHtml()).not.toContain("loyalty points");
+  });
+});
+
+/**
+ * #1135 (R17) — a shopper-typed item note is the first attacker-controlled string to reach this
+ * template, so it (and the product name) must arrive in the HTML escaped.
+ */
+describe("order confirmation email — custom item notes", () => {
+  it("renders the note under its line, HTML-escaped", async () => {
+    await sendOrderConfirmationEmail(
+      order({
+        items: [
+          {
+            productName: "Goat <b>leg</b>",
+            unitPricePence: 1000,
+            quantity: 2,
+            lineTotalPence: 2000,
+            customNote: `<script>alert(1)</script> & "x"`,
+          },
+        ],
+      }),
+    );
+    const html = sentHtml();
+    expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt; &amp; &quot;x&quot;");
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("Goat &lt;b&gt;leg&lt;/b&gt;");
+    expect(html).not.toContain("<b>leg</b>");
+  });
+
+  it("renders no note element for a line without one", async () => {
+    await sendOrderConfirmationEmail(order());
+    expect(sentHtml()).not.toContain("Note:");
   });
 });

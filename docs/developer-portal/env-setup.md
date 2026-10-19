@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.18.0"
-updated: 2026-10-10
+version: "1.19.0"
+updated: 2026-10-19
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -307,6 +307,19 @@ npx tsx scripts/ai-usage.ts --env-file .dev.vars --vendor aheed-food-centre --se
 
 The script prints the database host first. **The env file you name is the database written to**,
 so naming `secrets/production.vars` changes production, and that is an owner action.
+
+A platform admin can also set the budget on the store's `/staff/ai-usage` page (`#1029`); store
+admins can only read it there.
+
+**`WORKERS_AI_PLAN`** (`#1028`, optional): `free` or `paid`, matching the Cloudflare dashboard's
+**Workers & Pages → Plans** for the shared account. **Unset, empty or anything other than exactly
+`paid` means `free`**, so a typo can never lift the shared cap. On `free`, `lib/ai-meter.ts` also
+refuses every vendor's AI once all vendors together reach the 10,000-neuron daily allowance
+(resets 00:00 UTC). On `paid` there is no shared cap, and `/staff/ai-usage` shows platform admins
+an estimated charge above the allowance. Set it like the model keys above, as a Cloudflare secret
+(`wrangler secret put WORKERS_AI_PLAN --env <env>`), and in `.dev.vars` locally. It is not a
+`wrangler.toml` var and not a GitHub secret. The scripts that build a meter
+(`fill-product-images.ts`, `suggest-net-content.ts`) read it from the env file they are given.
 
 ### Per-vendor branding/config/delivery (ADR-004 slice 4)
 

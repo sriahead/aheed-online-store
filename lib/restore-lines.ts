@@ -29,6 +29,8 @@ export async function restoredLines(
     productName: string;
     quantity: number;
     kind?: RestoredLineKind;
+    /** #1135 — the order line's note, carried back onto the basket line. */
+    customNote?: string | null;
   }[],
   addItems: (lines: MergeLine[]) => Promise<BulkAddLine[]>,
   missingKind: RestoredLineKind = "unavailable",
@@ -47,7 +49,13 @@ export async function restoredLines(
   );
   const report =
     live.length > 0
-      ? await addItems(live.map((item) => ({ productId: item.productId, quantity: item.quantity })))
+      ? await addItems(
+          live.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            ...(item.customNote ? { customNote: item.customNote } : {}),
+          })),
+        )
       : [];
 
   const nameOf = new Map(live.map((item) => [item.productId, item.productName]));

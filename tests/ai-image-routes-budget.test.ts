@@ -6,11 +6,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * without `recordImageAttemptFailure`, or a spent budget would write off products for good (#523).
  */
 
-const REFUSED = { allowed: false, usedNeurons: 3012.4, budgetNeurons: 3000 };
+const REFUSED = {
+  allowed: false,
+  scope: "vendor" as const,
+  usedNeurons: 3012.4,
+  budgetNeurons: 3000,
+};
 const REFUSAL_TEXT =
   "This store has used its AI allowance for today (3,013 of 3,000 neurons). It resets at 00:00 UTC.";
 
-const check = vi.fn(async () => ({ allowed: true, usedNeurons: 0, budgetNeurons: 3000 }));
+const check = vi.fn(async () => ({
+  allowed: true,
+  scope: "vendor" as const,
+  usedNeurons: 0,
+  budgetNeurons: 3000,
+}));
 const recordImage = vi.fn(async () => {});
 const createAiMeter = vi.fn((_prisma: unknown, _vendorId: string, _feature: string) => ({
   check,
@@ -81,10 +91,32 @@ describe("image backfill (R30)", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ message: REFUSAL_TEXT, processed: 1, totalFound: 3 });
+    // #1031 (R39) — still 200, now flagged so the button can show it as a refusal.
+    expect(body).toEqual({
+      message: REFUSAL_TEXT,
+      processed: 1,
+      totalFound: 3,
+      budgetRefused: true,
+    });
     expect(runProductImagePipeline).toHaveBeenCalledTimes(2);
     expect(recordImageAttemptFailure).not.toHaveBeenCalled();
     expect(createAiMeter).toHaveBeenCalledWith({}, "v1", "PRODUCT_IMAGE");
+  });
+
+  it("does not flag a completed run or an empty one (#1031, R39)", async () => {
+    runProductImagePipeline.mockResolvedValue({
+      imageKey: "k",
+      needsReview: true,
+      source: "AI_GENERATED",
+    });
+    const complete = (await (await backfill.POST(post({}))).json()) as Record<string, unknown>;
+    expect(complete.message).toBe("Backfill complete");
+    expect(complete).not.toHaveProperty("budgetRefused");
+
+    getProductsWithoutImages.mockResolvedValueOnce([]);
+    const empty = (await (await backfill.POST(post({}))).json()) as Record<string, unknown>;
+    expect(empty.message).toBe("No products need backfill");
+    expect(empty).not.toHaveProperty("budgetRefused");
   });
 
   it("passes the vendor's meter to every pipeline run", async () => {

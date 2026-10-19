@@ -98,7 +98,7 @@ export async function runNetContentSuggestionsForVendor(
     storeDescription: config?.storeDescription ?? null,
     neuronBudget: STAFF_RUN_NEURON_BUDGET,
     rate,
-    aiMeter: createAiMeter(prisma, vendorId, "NET_CONTENT"),
+    aiMeter: createAiMeter(prisma, vendorId, "NET_CONTENT", getAiEnv().WORKERS_AI_PLAN),
     async loadPhoto(image) {
       const [head, bytes] = await Promise.all([
         storage.headObject(image.storageKey),

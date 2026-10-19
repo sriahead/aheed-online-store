@@ -12,7 +12,7 @@ import {
   type NetContentSuggester,
   type SuggesterResult,
 } from "@/lib/net-content-suggester";
-import type { AiMeter } from "@/lib/ai-meter";
+import type { AiBudgetCheck, AiMeter } from "@/lib/ai-meter";
 import { describeStaffNetContentRun } from "@/lib/net-content-review-form";
 
 /**
@@ -48,11 +48,17 @@ function suggesterReturning(...results: SuggesterResult[]): NetContentSuggester 
 
 /** A meter that always allows, unless given checks to return in order (#1017). */
 function meterAllowing(
-  ...checks: { allowed: boolean; usedNeurons: number; budgetNeurons: number }[]
+  ...checks: AiBudgetCheck[]
 ): AiMeter & { check: ReturnType<typeof vi.fn>; record: ReturnType<typeof vi.fn> } {
   return {
     check: vi.fn(
-      async () => checks.shift() ?? { allowed: true, usedNeurons: 0, budgetNeurons: 3000 },
+      async () =>
+        checks.shift() ?? {
+          allowed: true,
+          scope: "vendor" as const,
+          usedNeurons: 0,
+          budgetNeurons: 3000,
+        },
     ),
     record: vi.fn(async () => {}),
     recordImage: vi.fn(async () => {}),
@@ -338,8 +344,16 @@ describe("the description excerpt is shared by prompt and validator (#928 R9)", 
 
 describe("runNetContentSuggestions — the vendor's daily AI budget (#1017 R29)", () => {
   it("starts no further call once the vendor meter refuses, and says why", async () => {
-    const refused = { allowed: false, usedNeurons: 3001, budgetNeurons: 3000 };
-    const aiMeter = meterAllowing({ allowed: true, usedNeurons: 0, budgetNeurons: 3000 }, refused);
+    const refused = {
+      allowed: false,
+      scope: "vendor" as const,
+      usedNeurons: 3001,
+      budgetNeurons: 3000,
+    };
+    const aiMeter = meterAllowing(
+      { allowed: true, scope: "vendor" as const, usedNeurons: 0, budgetNeurons: 3000 },
+      refused,
+    );
     const d = deps({ products: [product("a"), product("b"), product("c")], aiMeter });
 
     const summary = await runNetContentSuggestions(d);
@@ -392,7 +406,12 @@ describe("runNetContentSuggestions — the vendor's daily AI budget (#1017 R29)"
         neurons: 0,
         neuronsIncomplete: false,
         meanLatencyMs: null,
-        vendorBudget: { allowed: false, usedNeurons: 3012.4, budgetNeurons: 3000 },
+        vendorBudget: {
+          allowed: false,
+          scope: "vendor" as const,
+          usedNeurons: 3012.4,
+          budgetNeurons: 3000,
+        },
       },
     });
     expect(state).toEqual({

@@ -31,6 +31,7 @@ import {
   type ProductImageSource,
 } from "@/lib/product-image";
 import type { ProductTier } from "@/lib/tier-pricing";
+import { NOTE_ACCEPTANCE_SELECT, productAcceptsNote } from "@/lib/custom-note";
 import type { AttributeValueWrite } from "@/lib/product-attribute-form";
 import { formatAttributeNumber } from "@/lib/attribute-number";
 import {
@@ -147,6 +148,11 @@ export interface ProductDetail extends ProductSummary {
    * #569's facets shipped with). Detail page only; empty when the product carries none.
    */
   specifications: { name: string; value: string }[];
+  /**
+   * #1135 — whether a shopper may attach a note to this product's basket line
+   * (`productAcceptsNote`). Detail page only; cards and Quick View get no note box.
+   */
+  acceptsNote: boolean;
 }
 
 export interface ProductPage {
@@ -1418,11 +1424,13 @@ export async function getProductBySlug(
       // #912 — same query as the rest of the product; ordered below, since Prisma cannot order a
       // relation list by a field of a further relation.
       attributeValues: { select: attributeValueDisplaySelect },
+      // #1135 — one source for "takes a note": the same rule the cart and checkout use.
+      ...NOTE_ACCEPTANCE_SELECT,
     },
   });
   if (!product) return null;
 
-  const { inventory, images, attributeValues, ...rest } = product;
+  const { inventory, images, attributeValues, allowsCustomNote, category, ...rest } = product;
   const tiers = await listActiveTiersForProducts(prisma, vendorId, [product.id]);
   return {
     ...rest,
@@ -1439,6 +1447,7 @@ export async function getProductBySlug(
     lowStockThreshold: inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
     expectedRestockDay: restockDayFromStored(inventory?.expectedRestockDate),
     tier: tiers.get(product.id) ?? null,
+    acceptsNote: productAcceptsNote({ allowsCustomNote, category }),
   };
 }
 
@@ -1843,6 +1852,8 @@ export interface AdminProductDetail {
   brandId: string | null;
   isFeatured: boolean;
   isActive: boolean;
+  /** #1135 — this product takes a shopper note. */
+  allowsCustomNote: boolean;
   quantity: number;
   lowStockThreshold: number;
   /** #876 — the stored expected restock day (`YYYY-MM-DD`), past or not, for the edit form. */
@@ -1893,6 +1904,8 @@ export interface ProductWriteInput {
   brandId: string | null;
   isFeatured: boolean;
   isActive: boolean;
+  /** #1135 — this product takes a shopper note. Absent leaves the stored value alone on update. */
+  allowsCustomNote?: boolean;
   quantity: number;
   lowStockThreshold: number;
   /** #876 — a `YYYY-MM-DD` day already validated by the form parser, or null to clear it. */
@@ -2091,6 +2104,7 @@ export async function getProductForAdmin(
       brandId: true,
       isFeatured: true,
       isActive: true,
+      allowsCustomNote: true,
       imageNeedsReview: true,
       inventory: {
         select: { quantity: true, lowStockThreshold: true, expectedRestockDate: true },
@@ -2272,6 +2286,7 @@ export async function createProductForVendor(
         isOrganic: input.isOrganic,
         isFeatured: input.isFeatured,
         isActive: input.isActive,
+        allowsCustomNote: input.allowsCustomNote,
         inventory: {
           create: {
             vendorId,
@@ -2374,6 +2389,7 @@ export async function updateProductForVendor(
           isOrganic: input.isOrganic,
           isFeatured: input.isFeatured,
           isActive: input.isActive,
+          allowsCustomNote: input.allowsCustomNote,
         },
       });
 

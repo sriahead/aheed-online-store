@@ -157,7 +157,7 @@ async function main() {
         neuronBudget: neuronBudget - totals.neurons,
         rate,
         // #1017 — each vendor's own daily AI budget, charged per call like the Worker's paths.
-        aiMeter: createAiMeter(prisma, vendor.id, "NET_CONTENT"),
+        aiMeter: createAiMeter(prisma, vendor.id, "NET_CONTENT", getAiEnv().WORKERS_AI_PLAN),
         log: (line) => console.log(line),
         async loadPhoto(image) {
           const [head, bytes] = await Promise.all([

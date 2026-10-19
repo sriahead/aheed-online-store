@@ -44,6 +44,7 @@ import {
 import { refusalMessage, type CodeRefusalReason } from "@/lib/discounts";
 import { tieredLineTotalPence } from "@/lib/tier-pricing";
 import { listActiveTiersForProducts } from "@/lib/repositories/product-tiers";
+import { NOTE_ACCEPTANCE_SELECT, productAcceptsNote } from "@/lib/custom-note";
 
 /**
  * Order read/write path (P3b, #96) — the ONLY DB access for orders. Pages,
@@ -211,7 +212,10 @@ export async function placeOrder(
       // Re-read the cart inside the transaction — never trust what the page rendered.
       const cart = await tx.cart.findFirst({
         where: { id: input.cartId, vendorId },
-        select: { id: true, items: { select: { productId: true, quantity: true } } },
+        select: {
+          id: true,
+          items: { select: { productId: true, quantity: true, customNote: true } },
+        },
       });
       if (!cart || cart.items.length === 0) {
         throw new CheckoutError("CART_EMPTY", "Your cart is empty.");
@@ -226,6 +230,8 @@ export async function placeOrder(
           basePrice: true,
           isActive: true,
           inventory: { select: { quantity: true } },
+          // #1135 — whether a line's note still travels is decided here, at this instant.
+          ...NOTE_ACCEPTANCE_SELECT,
         },
       });
       const byId = new Map(products.map((p) => [p.id, p]));
@@ -269,6 +275,9 @@ export async function placeOrder(
             item.quantity,
             tiers.get(product.id) ?? null,
           ),
+          // #1135 — a note the product no longer takes is dropped, never a CheckoutError: the
+          // basket has already told the shopper it will not be sent (CartLineNote).
+          customNote: productAcceptsNote(product) ? (item.customNote ?? null) : null,
         };
       });
 
@@ -468,6 +477,7 @@ export async function placeOrder(
           // line actually charged — which is what makes the multi-buy auditable
           // without a DiscountRedemption row.
           lineTotalPence: line.lineTotalPence,
+          customNote: line.customNote,
         })),
       });
 
@@ -668,7 +678,7 @@ async function restoreCartFromOrder(
 ): Promise<void> {
   const items = await prisma.orderItem.findMany({
     where: { orderId },
-    select: { productId: true, quantity: true },
+    select: { productId: true, quantity: true, customNote: true },
   });
   if (items.length === 0) return;
 
@@ -678,6 +688,9 @@ async function restoreCartFromOrder(
       vendorId,
       productId: item.productId,
       quantity: item.quantity,
+      // #1135 — the basket comes back as it was, note included. If the product has stopped taking
+      // notes since, the basket says so and checkout drops it.
+      customNote: item.customNote,
     })),
     skipDuplicates: true,
   });
@@ -764,6 +777,8 @@ export interface OrderSummary {
     unitPricePence: number;
     quantity: number;
     lineTotalPence: number;
+    /** #1135 — the shopper's note on this line, or null. */
+    customNote: string | null;
   }[];
   address: {
     recipientName: string;
@@ -792,6 +807,11 @@ export interface OrderListItem {
   isExpress: boolean;
   /** P402 (#402) — set on PENDING_PAYMENT → CONFIRMED for an Express order; null otherwise. */
   targetFulfilmentTime: Date | null;
+  /**
+   * #1135 — true when any line carries a shopper note. The staff queue marks such rows so a note
+   * cannot be missed by someone packing from the list; the note text stays on the detail page.
+   */
+  hasItemNotes: boolean;
 }
 
 export interface OrderListPage {
@@ -844,7 +864,7 @@ const ORDER_LIST_SELECT = {
   isExpress: true,
   targetFulfilmentTime: true,
   items: {
-    select: { productName: true, quantity: true },
+    select: { productName: true, quantity: true, customNote: true },
     orderBy: { productName: "asc" },
   },
 } as const;
@@ -858,7 +878,7 @@ type OrderListRow = {
   totalPence: number;
   isExpress: boolean;
   targetFulfilmentTime: Date | null;
-  items: { productName: string; quantity: number }[];
+  items: { productName: string; quantity: number; customNote: string | null }[];
 };
 
 /**
@@ -877,9 +897,12 @@ function toOrderListPage(rows: OrderListRow[], take: number): OrderListPage {
       createdAt: order.createdAt,
       totalPence: order.totalPence,
       itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
-      previewItems: order.items.slice(0, ORDER_PREVIEW_ITEMS),
+      previewItems: order.items
+        .slice(0, ORDER_PREVIEW_ITEMS)
+        .map(({ productName, quantity }) => ({ productName, quantity })),
       isExpress: order.isExpress,
       targetFulfilmentTime: order.targetFulfilmentTime,
+      hasItemNotes: order.items.some((item) => item.customNote !== null),
     })),
     nextCursor: hasMore ? page[page.length - 1].id : null,
   };
@@ -1015,6 +1038,7 @@ export async function findOrderForViewer(
           unitPricePence: true,
           quantity: true,
           lineTotalPence: true,
+          customNote: true,
         },
       },
       address: {
@@ -1130,6 +1154,7 @@ export async function findOrderForUser(
           unitPricePence: true,
           quantity: true,
           lineTotalPence: true,
+          customNote: true,
         },
       },
       address: {
@@ -1216,6 +1241,7 @@ export async function findOrderForStaff(
           unitPricePence: true,
           quantity: true,
           lineTotalPence: true,
+          customNote: true,
         },
       },
       address: {
@@ -1554,6 +1580,8 @@ export interface WebhookOrder {
     unitPricePence: number;
     quantity: number;
     lineTotalPence: number;
+    /** #1135 — the shopper's note on this line, or null. */
+    customNote: string | null;
   }[];
 }
 
@@ -1590,6 +1618,7 @@ export async function findOrderForWebhook(
           unitPricePence: true,
           quantity: true,
           lineTotalPence: true,
+          customNote: true,
         },
       },
       ...ORDER_PROVENANCE_SELECT,

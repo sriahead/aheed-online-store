@@ -195,6 +195,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           productName={product.name}
           disabled={!product.inStock}
           variant="full"
+          acceptsNote={product.acceptsNote}
         />
       </div>
 

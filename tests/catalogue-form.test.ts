@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  CATEGORY_FIELDS,
+  PRODUCT_FIELDS,
+  readForm,
   parseCategoryForm,
   parseProductForm,
   slugify,
@@ -470,5 +473,26 @@ describe("toCategoryOptionGroups (#630, generic since #681)", () => {
 
   it("returns an empty array for an empty list, so a caller can render no control at all", () => {
     expect(toCategoryOptionGroups([])).toEqual([]);
+  });
+});
+
+describe("allowsCustomNote checkbox (#1135, R20)", () => {
+  it("parses a ticked box as true and an absent one as false, on both forms", () => {
+    expect(
+      accepted(parseCategoryForm(categoryForm({ allowsCustomNote: "on" }))).allowsCustomNote,
+    ).toBe(true);
+    expect(accepted(parseCategoryForm(categoryForm())).allowsCustomNote).toBe(false);
+    expect(
+      accepted(parseProductForm(productForm({ allowsCustomNote: "on" }))).allowsCustomNote,
+    ).toBe(true);
+    expect(accepted(parseProductForm(productForm())).allowsCustomNote).toBe(false);
+  });
+
+  it("reads the field out of FormData on both forms", () => {
+    expect(CATEGORY_FIELDS).toContain("allowsCustomNote");
+    expect(PRODUCT_FIELDS).toContain("allowsCustomNote");
+    const form = new FormData();
+    form.set("allowsCustomNote", "on");
+    expect(readForm(form, CATEGORY_FIELDS).allowsCustomNote).toBe("on");
   });
 });

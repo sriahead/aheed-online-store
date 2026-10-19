@@ -191,6 +191,8 @@ export interface AdminCategoryDetail {
   parentId: string | null;
   sortOrder: number;
   isActive: boolean;
+  /** #1135 — products here (and in sub-categories) take a shopper note. */
+  allowsCustomNote: boolean;
 }
 
 /** Everything a category write needs, already validated by lib/catalogue-form.ts. */
@@ -200,6 +202,9 @@ export interface CategoryWriteInput {
   parentId: string | null;
   sortOrder: number;
   isActive: boolean;
+  /** #1135 — products in this category (and its sub-categories) take a shopper note. Absent (a
+   * script, a seed) leaves the stored value alone on update and takes the column default on create. */
+  allowsCustomNote?: boolean;
 }
 
 /**
@@ -302,7 +307,15 @@ export async function getCategoryForAdmin(
 ): Promise<AdminCategoryDetail | null> {
   return prisma.category.findFirst({
     where: { id, vendorId },
-    select: { id: true, slug: true, name: true, parentId: true, sortOrder: true, isActive: true },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      parentId: true,
+      sortOrder: true,
+      isActive: true,
+      allowsCustomNote: true,
+    },
   });
 }
 
@@ -400,6 +413,7 @@ export async function createCategoryForVendor(
         parentId: input.parentId,
         sortOrder: input.sortOrder,
         isActive: input.isActive,
+        allowsCustomNote: input.allowsCustomNote,
       },
       select: { id: true },
     });
@@ -441,6 +455,7 @@ export async function updateCategoryForVendor(
         parentId: input.parentId,
         sortOrder: input.sortOrder,
         isActive: input.isActive,
+        allowsCustomNote: input.allowsCustomNote,
       },
     });
     return { ok: true, id };

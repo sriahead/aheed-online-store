@@ -60,10 +60,13 @@ export async function POST(request: Request) {
       if (result && "budgetRefused" in result) {
         // Not a product the pipeline can never fill, so NO recordImageAttemptFailure: it stays
         // eligible for tomorrow. Every later product would be refused too, so stop here.
+        // #1031 — still 200 (partial progress is real and nothing was written off), but flagged so
+        // BackfillImagesButton shows it as a refusal rather than in its success tone.
         return NextResponse.json({
           message: describeAiBudgetRefusal(result.budgetRefused),
           processed,
           totalFound: products.length,
+          budgetRefused: true,
         });
       }
       if (result) {

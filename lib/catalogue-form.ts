@@ -66,6 +66,8 @@ export interface ProductFormValues {
   brandId: string | null;
   isFeatured: boolean;
   isActive: boolean;
+  /** #1135 — shoppers may attach a note to this product's basket line. */
+  allowsCustomNote: boolean;
   quantity: number;
   lowStockThreshold: number;
   /**
@@ -96,6 +98,8 @@ export interface CategoryFormValues {
   parentId: string | null;
   sortOrder: number;
   isActive: boolean;
+  /** #1135 — shoppers may attach a note to products in this category and its sub-categories. */
+  allowsCustomNote: boolean;
 }
 
 export interface CatalogueFormState {
@@ -119,6 +123,7 @@ export interface SubmittedCategory {
   parentId: string;
   sortOrder: string;
   isActive: boolean;
+  allowsCustomNote: boolean;
 }
 
 /** FormData -> `SubmittedCategory`, read through the same field list the parser uses. */
@@ -130,6 +135,7 @@ export function readSubmittedCategory(form: FormData): SubmittedCategory {
     parentId: raw.parentId ?? "",
     sortOrder: raw.sortOrder ?? "",
     isActive: checkbox(raw, "isActive"),
+    allowsCustomNote: checkbox(raw, "allowsCustomNote"),
   };
 }
 
@@ -343,6 +349,7 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
       isOrganic: checkbox(raw, "isOrganic"),
       isFeatured: checkbox(raw, "isFeatured"),
       isActive: checkbox(raw, "isActive"),
+      allowsCustomNote: checkbox(raw, "allowsCustomNote"),
       quantity: quantity.value,
       lowStockThreshold: lowStockThreshold.value,
       expectedRestockDay: restockRaw === "" ? null : restockRaw,
@@ -575,6 +582,7 @@ export function parseCategoryForm(raw: RawForm): ParseResult<CategoryFormValues>
       parentId: optionalText(raw, "parentId"),
       sortOrder: sortOrder.value,
       isActive: checkbox(raw, "isActive"),
+      allowsCustomNote: checkbox(raw, "allowsCustomNote"),
     },
   };
 }
@@ -615,6 +623,7 @@ export const PRODUCT_FIELDS = [
   "brandId",
   "isFeatured",
   "isActive",
+  "allowsCustomNote",
   "quantity",
   "lowStockThreshold",
   "expectedRestockDay",
@@ -623,7 +632,14 @@ export const PRODUCT_FIELDS = [
   "tierIsActive",
 ] as const;
 
-export const CATEGORY_FIELDS = ["name", "slug", "parentId", "sortOrder", "isActive"] as const;
+export const CATEGORY_FIELDS = [
+  "name",
+  "slug",
+  "parentId",
+  "sortOrder",
+  "isActive",
+  "allowsCustomNote",
+] as const;
 
 /* ------------------------------------------------------------------------- *
  * Category picker grouping (#630)

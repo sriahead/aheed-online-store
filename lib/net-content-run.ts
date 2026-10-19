@@ -125,7 +125,8 @@ export async function runNetContentSuggestions(deps: RunDependencies): Promise<R
       summary.outcome = "vendor-budget-reached";
       summary.vendorBudget = vendorBudget;
       log(
-        `vendor daily AI budget reached (${vendorBudget.usedNeurons} of ` +
+        // #1028 — a Free-plan refusal can be the platform's shared allowance, not this vendor's.
+        `${vendorBudget.scope === "platform" ? "platform shared" : "vendor daily"} AI budget reached (${vendorBudget.usedNeurons} of ` +
           `${vendorBudget.budgetNeurons} neurons); not starting another call`,
       );
       break;

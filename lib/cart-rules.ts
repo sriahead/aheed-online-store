@@ -126,6 +126,16 @@ export function classifyBulkAdd(
 export interface MergeLine {
   productId: string;
   quantity: number;
+  /**
+   * #1135 — the line's shopper note. Optional so every existing caller (shop-your-list, bundles)
+   * is unchanged; absent and `null` both mean "no note to write".
+   */
+  customNote?: string | null;
+}
+
+/** Copy `customNote` onto `line` only when one exists, so note-free results keep their old shape. */
+function withNote(line: MergeLine, customNote: string | null | undefined): MergeLine {
+  return customNote ? { ...line, customNote } : line;
 }
 
 /**
@@ -150,11 +160,19 @@ export function resolveMerge(
   for (const line of [...savedLines, ...guestLines]) {
     totals.set(line.productId, (totals.get(line.productId) ?? 0) + line.quantity);
   }
+  // #1135 — the guest line's note wins when it has one (the shopper's most recent intent),
+  // otherwise the saved line's note survives.
+  const notes = new Map<string, string>();
+  for (const line of [...savedLines, ...guestLines]) {
+    if (line.customNote) notes.set(line.productId, line.customNote);
+  }
   return [...totals.entries()]
-    .map(([productId, quantity]) => ({
-      productId,
-      quantity: Math.min(quantity, stockFor(productId)),
-    }))
+    .map(([productId, quantity]) =>
+      withNote(
+        { productId, quantity: Math.min(quantity, stockFor(productId)) },
+        notes.get(productId),
+      ),
+    )
     .filter((l) => l.quantity > 0);
 }
 
@@ -167,10 +185,15 @@ export function resolveMerge(
  */
 export function sumLinesByProduct(lines: MergeLine[]): MergeLine[] {
   const totals = new Map<string, number>();
+  const notes = new Map<string, string>();
   for (const line of lines) {
     totals.set(line.productId, (totals.get(line.productId) ?? 0) + line.quantity);
+    // #1135 — the last non-empty note for a product is the one kept.
+    if (line.customNote) notes.set(line.productId, line.customNote);
   }
-  return [...totals.entries()].map(([productId, quantity]) => ({ productId, quantity }));
+  return [...totals.entries()].map(([productId, quantity]) =>
+    withNote({ productId, quantity }, notes.get(productId)),
+  );
 }
 
 /**

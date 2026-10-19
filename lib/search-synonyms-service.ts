@@ -1,5 +1,6 @@
 import { createAiMeter, describeAiBudgetRefusal } from "@/lib/ai-meter";
 import { getPrisma, getPrismaWs } from "@/lib/db";
+import { getAiEnv } from "@/lib/config";
 import {
   createProposedSynonyms as createProposedSynonymsRepo,
   createSynonym as createSynonymRepo,
@@ -107,7 +108,7 @@ export async function generateSynonymProposals(
   ]);
 
   // #1017 — the vendor's daily AI budget, before anything is sent.
-  const meter = createAiMeter(prisma, vendorId, "SEARCH_SYNONYMS");
+  const meter = createAiMeter(prisma, vendorId, "SEARCH_SYNONYMS", getAiEnv().WORKERS_AI_PLAN);
   const budget = await meter.check();
   if (!budget.allowed) return { ok: false, error: describeAiBudgetRefusal(budget) };
 
