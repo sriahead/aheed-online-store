@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.111.0"
-updated: 2026-10-18
+version: "1.112.0"
+updated: 2026-10-19
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -848,8 +848,16 @@ All facts in this section require live verification:
       a second run is safe.
   - **Slice B `#1134`** absorbs `#1136`: Rewards off, feature-switch gating, and the marketing
     sentence with a separate opt-in. Proposed only.
-  - **Slice C `#1135`**: a free-text custom line per category or item. Proposed only. The owner
-    deferred "fix existing free-text" until they give a route or symptom.
+  - **Slice C `#1135`**, combined with Club D (`#1029`, `#1031`) and `#1028`: item notes on
+    categories or products a store ticks, plus the Workers AI plan mode and the staff AI Allowance
+    page. **BUILT** on `feature/p1135-custom-notes-ai-allowance` (spec `09b2fec`, build `68ce77e`)
+    and awaiting Validate from a fresh context. Read
+    `specs/2026-10-19-p1135-custom-notes-ai-allowance/build-notes.md` first: **its dev migration
+    was not applied at Build** (the owner runs `migrate deploy`), and the session environment
+    exported the production `DIRECT_URL` again. **`#1028` is resolved in code:** `WORKERS_AI_PLAN`
+    defaults to Free (a shared 10,000-neuron cap per UTC day), and the owner sets `paid` once the
+    Cloudflare plan is confirmed. The owner deferred "fix existing free-text" until they give a
+    route or symptom. Deferred: `#1156`–`#1159`.
 
 - **Club C, privacy and consent honesty (`#1107` + `#1041`): DONE, in production** (PR #1114 to
   `staging`, promotion PR #1118, merge `6ec8142`, 2026-10-16; spec `1b4b518`, build `22599b6`, fix
@@ -861,8 +869,8 @@ All facts in this section require live verification:
   in the triage document's "Backlog clubbing — 2026-10-15" section; **Club C and now Club E
   (`#1045` + `#1043`, copy only — PR #1127, merged to `staging` 2026-10-16, see Last Verified
   above) are closed out, Club F (`#1090` + `#1091`, PR #1130) is merged to `staging`, and slice A (`#1131`,
-  above) is separate work from the owner's brief** — Club D stays
-  blocked on `#1028` (Workers Free or Paid, owner).
+  above) is separate work from the owner's brief** — Club D (`#1029`, `#1031`) is now built with
+  `#1135`, which resolved `#1028` in code (above).
 - **Owner user-testing pass, 2026-10-13 — 21 observations, triaged with live evidence.** The
   single most useful artifact from it is
   `docs/business-analysis/user-testing-feedback-2026-10-13.md` (committed `7bee5ad`): every item
