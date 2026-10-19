@@ -133,6 +133,19 @@ every branch merges.
 
 ### Documentation
 
+- **Document pass for `#1161`/`#1162`/`#1119` (merged to `staging` by PR #1166, `535e53f`).**
+  Documentation only, no code change.
+  - `specs/roadmap.md` 1.163.0 adds the slice's change-log row.
+  - `docs/model-handoff.md` 1.115.0: `staging` is one slice ahead of `main`. It also records the
+    `closes`-per-issue need for the promotion PR, and that the slice's validation was not
+    independent.
+  - `docs/developer-portal/local-dev-playbook.md` 1.32.0:
+    - a throwaway Prisma script for a one-flag dev change, and what it needs (`.mts`, the Neon
+      adapter, a dev-host guard and a restore mode);
+    - pick categories from the storefront's links, because a database category can 404;
+    - `verify-mobile-layout.ts`'s `formInputs` proves duplicate-id defects;
+    - stopping every `node` process also kills MCP servers.
+
 - **Document pass for `#1135` (item notes, plus `#1028`/`#1029`/`#1031`, merged to `staging` by PR
   #1160, `3bbfa47`).** Documentation only, no code change.
   - `specs/roadmap.md` 1.161.0 adds the slice's change-log row.

@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.114.0"
+version: "1.115.0"
 updated: 2026-10-19
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,7 +39,7 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-19, `#1161`/`#1162`/`#1119` build notes (supersedes the "staging is ahead by exactly
+- **2026-10-19, `#1161`/`#1162`/`#1119` Document pass (supersedes the "staging is ahead by exactly
   one slice" claim in the next bullet).** `#1135` **is in production**. Promotion PR #1164 merged
   as `943efa0`. `deploy-production` run `39236441711` succeeded and its log shows
   `20261019120000_p1135_custom_item_notes` applied. Production `/api/health` serves `943efa0` with
@@ -47,11 +47,18 @@ reconciliation. If overall project state did not materially change, leave this f
   `origin/staging` were level at this slice's Orient: `staging` was at `6871d14`, and every commit
   missing from it was a promotion merge. PR #1164 closed exactly `[1028, 1029, 1031, 1135]`, and
   all four are `Done`. The row is `specs/roadmap.md` 1.162.0.
-  - **In flight:** `feature/p1161-1162-1119-fixups` (`specs/2026-10-19-p1161-1162-1119-fixups/`),
-    built, awaiting Validate. `#1152` was excluded by the owner at its Gate 1 until `#104` is
-    closer. `#1165` was filed: alerting when the reference database stops answering.
-  - **`/api/health`'s `reference.drift` is `null`, not `false`, once this slice deploys,** whenever
-    nothing was compared. The Ship stage now asserts `reachable` plus a non-empty `sources`.
+  - **`staging` is ahead of `main` by exactly one slice:** PR #1166 (`#1161`, `#1162`, `#1119`),
+    merge `535e53f`, `specs/2026-10-19-p1161-1162-1119-fixups/`. No migration. `deploy-staging`
+    run `39247069739` succeeded. Staging `/api/health` on both vendor hosts serves `535e53f` with
+    `reachable: true`, two `sources` and `drift: false`. The three issues are `In Review`, and there
+    is no promotion PR yet. The promotion PR must carry one `closes` line per issue, since the
+    staging PR linked none. Its validation was **not independent** (same Opus session, owner's
+    choice).
+  - `#1152` was excluded by the owner at Gate 1 until `#104` is closer. `#1165` was filed:
+    alerting when the reference database stops answering.
+  - **`/api/health`'s `reference.drift` is `null` whenever nothing was compared** (on staging now,
+    and in production after promotion). The Ship stage asserts `reachable` plus a non-empty
+    `sources`.
   - **The production `DIRECT_URL` was exported in the session environment again** at this
     Orient. That makes three sessions running; its source has still not been found.
   - **Owner actions now live in production:** tick Aheed's note-taking categories (`#1135`); set
