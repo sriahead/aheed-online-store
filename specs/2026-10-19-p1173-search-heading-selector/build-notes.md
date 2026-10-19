@@ -97,3 +97,88 @@ None.
   `storefront-chrome-rewards-gate`, and both files passed alone (14/14). Run alone, re-run
   failures alone, and treat CI as authority.
 - **The production `DIRECT_URL` is still exported** in this shell. No database command ran.
+
+## Validation pass 1, with one fix (2026-10-19)
+
+**Not independent.** Validated in the same Opus session that wrote the spec and the build, at the
+owner's explicit choice. They keep the session while context is under about 60%.
+
+**Fix found at Validate (`57efaff`):**
+- In headless-Chrome screenshots on both vendors, the styled (`base-select`) selector's label sat
+  at the **top** of the control. At its narrowest ("All"), the picker arrow **wrapped under** the
+  label.
+- **Cause:** the base-select button lays its contents out as blocks.
+- **Fix:** inside the `@supports (appearance: base-select)` block, `.department-select` gets
+  `display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap`.
+- **Re-checked from the top** after the fix: clipped screenshots of "All ▾", "Fruit & Veg ▾" and
+  "  Fresh Fruit ▾" show a centred label with the arrow inline, and the full live script was
+  re-run.
+- It is a CSS-only change inside an existing requirement (R5/R6). No spec change.
+
+**Pre-flight** (after the fix):
+- lint, format and `tsc` exit 0.
+- Full `npx vitest run`: 284/285 files. `products-service.test.ts` (2 tests) failed under load
+  and passed alone, 2/2. It is unrelated: no diff touches it.
+  - The run before the fix was a clean 285/285.
+- The preview build compiled. `npm run build` was green at Build, with all new rules present in
+  the minified CSS.
+
+**Static rows:**
+- **R1:** `searchHeading` and its test; the `h1` renders it, and "All products" survives only in a
+  comment.
+- **R2, R3:** read.
+- **R4, R7:** the class test.
+- **R5:** read. The colour grep matched only issue numbers in comments and the allowed
+  `rgb(0 0 0 / 0.14)` shadow.
+- **R8:** no `LogIn`; `CircleUserRound` used; test passes.
+- **R12:** the key literal appears only in `lib/storage-keys.ts`.
+- **R14:** no diff in `components/consent/`.
+- **R15 (unit):** the CSS test passes, and the grid-density/usage tests pass.
+- **R16:** the source line is present.
+- **R17 (unit):** passes.
+- **R18:** the CHANGELOG cites `#1173`.
+
+**Live, under `npm run preview`, both vendors, headless Chrome over CDP** (scripts in the
+scratchpad):
+- **R6:**
+  - the select is 56px wide with "All", and computes `appearance: base-select`;
+  - the picker opened on a real click;
+  - screenshots show a rounded, shadowed panel, indented subcategories, a tick on "All", and the
+    vendor's colours (Aheed green, SriMart blue).
+- **R10:**
+  - "Hide filters" has `aria-expanded="true"` and `aria-controls="browse-sidebar"`;
+  - after clicking, focus is on "Show filters"; after showing again, focus is on "Hide filters";
+  - with JavaScript disabled there is no button, and the desktop `aside` is `display: block` with
+    its form, with no hidden ancestor.
+- **R11:** collapsed, Collections is hidden, the "Show filters" rail is visible and the attribute
+  is set; showing reverses all three. At 390px the attribute changes nothing: Browse is visible,
+  and the filter `details` is visible and closed.
+- **R12:** `sessionStorage` is `"1"` after collapsing and `null` after showing, and no cookie
+  carries the key.
+- **R13:** after collapsing, the next page (`/categories/<dept>`) had the attribute at
+  `DOMContentLoaded`, and the screenshot shows the rail.
+- **R15:** both vendors are Standard, and the density was left unchanged.
+  - 4 to 5 columns at 1280px, and 5 at 1536px;
+  - 2 at 1000px, unchanged;
+  - `/bundles` unchanged (4 and 4) with the attribute set.
+  - Compact and Spacious live: **N/A**, since neither vendor uses them; covered by the R15 CSS
+    unit test.
+- **R9:**
+  - `h1`: department name, subcategory name, "Results for “cable”", "All products";
+  - on category searches the Collections nav has 0 `aria-current`, and the strip's current item
+    is the department (also for a subcategory);
+  - the `/login` link carries `svg.lucide-circle-user-round`.
+- **R14:** the `/privacy` entry text is exact on both hosts.
+- **R16:** as `demo-admin`, `/staff/storefront` shows the sentence.
+- **R17:** at 390px there is one Collections nav, visible above the closed disclosure. The
+  open-disclosure screenshot shows the tinted-circle icon and the turned chevron.
+
+**Environment, not the slice:**
+- `npm run preview` crashed three times with an uncaught "Network connection lost" from an
+  outbound connection, which took down wrangler's proxy. It is the same flaky local network seen
+  all day (DNS timeouts, dropped HTTPS).
+- Each affected reading was re-taken on a fresh preview. R13's step uses a category URL (as
+  `validation.md` says) rather than a term search, which makes more outbound calls.
+- **Observed, pre-existing:** plain `/search` highlights both "All products" and "New Arrivals",
+  because both link to `/search` (#681). `CollectionNav` is unchanged by this slice.
+- **R19:** CI `gates` stays unverified until the push.
