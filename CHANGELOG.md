@@ -47,6 +47,14 @@ every branch merges.
 
 ### Changed
 
+- **Search narrows by subcategory too, and the footer shows real payment logos** (issue `#1169`; `specs/2026-10-19-p1169-search-footer-polish/`). The owner's 2026-10-19 polish request. No schema change, no migration, no new dependency.
+  - **Header search selector:** the first option reads **All** (was "All Departments"). Subcategories are listed indented under their department, read from `listTree()`, and a subcategory in the URL shows as selected.
+  - **Search results:** `/search?category=<slug>` shows the same subcategory pills as the category page ("All" active for a department, the subcategory active for a subcategory). Each pill keeps the search and filters (`categoryFilterHref`).
+  - **Footer:** the contact buttons (Facebook, WhatsApp, help assistant) move under **Visit & contact us**, which now also shows for a store with buttons but no address details.
+  - **Payment badges:** the five text placeholders in `public/payment-methods/` are replaced by Visa, Mastercard, American Express, Apple Pay and Google Pay marks from Simple Icons 16.35.0 (CC0), in brand colours on the same white tiles and under the same file names, so official artwork can replace them later.
+  - **Quick Shop hint:** "For example: **2 Apple Juice 1L** or **Apple Juice 1L x2** (up to 100 items, one per line)", naming the store's own product. The `x2` form is shown, not a bare trailing number, because the parser deliberately reads "Eggs 12" as a pack size.
+  - Filed `#1170`: `toCategoryOptionGroups` drops a subcategory listed before its department (staff category pickers).
+
 - **Switching Rewards off now hides all of it** (issue `#1134`). The account menu's "Loyalty & Rewards" tab (a link to a 404 with loyalty off), the greyed "not enabled for this store" card and the intro's mention on `/account`, and the "loyalty points" wording on `/privacy` and `/account/data` now follow `loyaltyEnabled`. Export and erasure still cover any points that exist. The footer's "Delivery areas & slots" link reads "Delivery areas" when the store offers no delivery slots.
 
 - **The paste-a-list feature is called "Quick Shop" everywhere a shopper sees it, and its page copy is shorter** (issue `#1145`; `specs/2026-10-18-p1145-quick-shop/`). Copy only: the URL stays `/shop-your-list`, and parsing, matching, the review step, saving and adding to the cart are unchanged. No schema change, no migration, no new dependency.
