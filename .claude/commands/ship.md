@@ -29,7 +29,10 @@ Follow the **Ship** stage of `specs/sdd-workflow.md` (read it if not already in 
    `gh pr view <N> --json closingIssuesReferences` lists every issue; after the deploy, confirm
    each one is actually closed.
 7. After merging, confirm the relevant deploy workflow (`deploy-staging`/`deploy-production`)
-   actually completed — don't assume success from the merge alone.
+   actually completed — don't assume success from the merge alone. Then read that host's
+   `/api/health`: `commit` is the merge, `db.ok` is `true`, `reference.reachable` is `true` and
+   `reference.sources` is non-empty. A `drift` of `false` is not evidence of health — it was
+   reported as `false` while the reference database was unreachable until `#1119`.
 8. If a PR merges before a fix/follow-up commit lands, don't force-push or rewrite history to
    patch it in — open a tracking issue and land the fix as its own proper follow-up PR (`/propose`
    → `/spec` if non-trivial, otherwise straight to a small `/build` + `/ship`).

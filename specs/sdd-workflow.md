@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.45.0"
-updated: 2026-10-18
+version: "2.46.0"
+updated: 2026-10-19
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -900,7 +900,12 @@ named gates, but the part of this repo's actual history most prone to drift.
   always get explicit confirmation before either, even immediately after a related approval — one
   merge is not blanket permission for the next one.
 - Confirm the deploy workflow (`deploy-staging`/`deploy-production`) actually completed. Don't infer
-  success from the merge alone.
+  success from the merge alone. Then read the deployed host's `/api/health`: `commit` is the merge,
+  `db.ok` is `true`, `reference.reachable` is `true` and `reference.sources` is non-empty. **A
+  `drift` of `false` is not evidence of health** — until `#1119` it was reported as `false` even
+  when the reference database never answered, and every promotion record from PR #775 to
+  2026-10-16 cited it while address lookup was down. `drift` is now `null` when nothing was
+  compared, but the assertion stays on `reachable` and `sources`.
 - **If this Build ran in a sub-agent's isolated worktree, remove it once its branch has merged.**
   Nothing does this automatically — a worktree survives merge indefinitely, and its content becomes
   a strict subset of the target branch the moment the merge lands. Confirm the branch actually

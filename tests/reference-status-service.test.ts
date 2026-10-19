@@ -141,7 +141,7 @@ describe("getReferenceStatus", () => {
       reachable: false,
       requiredAreas: ["MK", "RG"],
       sources: [],
-      drift: false,
+      drift: null,
     });
     expect(listDatasetStatuses).not.toHaveBeenCalled();
   });
@@ -162,7 +162,9 @@ describe("getReferenceStatus", () => {
 
     const status = await (await subject())();
 
-    expect(status).toMatchObject({ configured: true, reachable: false, sources: [], drift: false });
+    expect(status).toMatchObject({ configured: true, reachable: false, sources: [] });
+    // #1119 — null, not false: nothing was compared.
+    expect(status.drift).toBeNull();
     expect(error).toHaveBeenCalled();
     error.mockRestore();
   });
@@ -177,8 +179,18 @@ describe("getReferenceStatus", () => {
     const status = await (await subject())();
 
     expect(status.reachable).toBe(false);
-    expect(status.drift).toBe(false);
+    expect(status.drift).toBeNull();
     error.mockRestore();
+  });
+
+  it("#1119 — reports drift as null when reachable but holding no datasets", async () => {
+    // Reachable and migrated but never synced: nothing to compare, so no claim either way.
+    listDatasetStatuses.mockResolvedValue([]);
+
+    const status = await (await subject())();
+
+    expect(status).toMatchObject({ configured: true, reachable: true, sources: [] });
+    expect(status.drift).toBeNull();
   });
 
   it("reports an empty required list without claiming drift", async () => {

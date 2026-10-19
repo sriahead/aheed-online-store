@@ -56,10 +56,13 @@ export async function getAiUsageOverview(vendorId: string): Promise<AiUsageOverv
   };
 }
 
-/** Write a vendor's daily budget. Authorisation and validation are the caller's (the server action). */
+/**
+ * Write a vendor's daily budget. Authorisation and validation are the caller's (the server action).
+ * `false` when the vendor has no `VendorConfig` row to write to (#1161).
+ */
 export async function setAiDailyBudgetForVendor(
   vendorId: string,
   budgetNeurons: number,
-): Promise<void> {
-  await setVendorAiDailyBudget(getPrisma(), vendorId, budgetNeurons);
+): Promise<boolean> {
+  return setVendorAiDailyBudget(getPrisma(), vendorId, budgetNeurons);
 }
