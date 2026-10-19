@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.116.0"
+version: "1.117.0"
 updated: 2026-10-19
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -51,10 +51,13 @@ reconciliation. If overall project state did not materially change, leave this f
     `deploy-production` run `39250801069` succeeded, and the PR closed exactly
     `[1119, 1161, 1162]`. `main` and `staging` were level at `a182d6d`/`f2281b7` at the next
     Orient. The row is `specs/roadmap.md` 1.164.0.
-  - **In flight:** `#1169` (`feature/p1169-search-footer-polish`,
-    `specs/2026-10-19-p1169-search-footer-polish/`). The owner's search selector, search pills,
-    footer icons, payment logos and Quick Shop copy, built and awaiting Validate. Filed `#1170`
-    (the staff category pickers can drop a subcategory).
+  - **`staging` is ahead of `main` by one slice:** `#1169` (PR #1171, merge `d5a7e36`,
+    `specs/2026-10-19-p1169-search-footer-polish/`): search selector "All" with subcategories,
+    `/search` subcategory pills, footer contact icons, Simple Icons payment logos and the Quick Shop
+    `x2` example. `deploy-staging` succeeded and both staging hosts serve `d5a7e36` healthy.
+    `#1169` is `In Review`, with no promotion PR yet, and its validation was not independent.
+    Filed `#1170`: the staff category pickers can drop a subcategory that sorts before its
+    department.
   - `#1152` was excluded by the owner at Gate 1 until `#104` is closer. `#1165` was filed:
     alerting when the reference database stops answering.
   - **`/api/health`'s `reference.drift` is `null` whenever nothing was compared** (on staging now,
