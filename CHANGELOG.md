@@ -47,6 +47,12 @@ every branch merges.
 
 ### Changed
 
+- **A category search is headed by the category, the department selector is compact with a modern list, Sign In has a round user icon, and the browse sidebar can be hidden to show more products** (issue `#1173`, follow-up to `#1169`; `specs/2026-10-19-p1173-search-heading-selector/`). No schema change, no migration, no new dependency.
+  - **Heading:** `/search?category=<slug>` with no term is headed by the category's name (was "All products"). The sidebar highlights no collection and the department strip highlights the department, as on `/categories/<slug>`.
+  - **Selector:** still a native select, now compact (sized to its text where supported, `5.5rem` otherwise). Chrome and Edge show a styled list (rounded panel, shadow, hover, tick on the selected option) via customisable-select CSS. Safari and Firefox keep their own list.
+  - **Sign In:** lucide `CircleUserRound` replaces the arrow icon.
+  - **Collapsible sidebar:** on `/search` and `/categories/<slug>` at tablet width and up, "Hide filters" collapses Browse and filters into a slim rail, and the grid gains one product per row on wide screens (Standard 4→5, Compact 4→5 and 6→7, Spacious 2→3 and 4→5). The choice is remembered until the tab closes (`sessionStorage` `store_filters_collapsed`, listed on `/privacy`). Without JavaScript the sidebar stays open. On phones the filters stay a closed native disclosure, with a restyled summary.
+
 - **Search narrows by subcategory too, and the footer shows real payment logos** (issue `#1169`; `specs/2026-10-19-p1169-search-footer-polish/`). The owner's 2026-10-19 polish request. No schema change, no migration, no new dependency.
   - **Header search selector:** the first option reads **All** (was "All Departments"). Subcategories are listed indented under their department, read from `listTree()`, and a subcategory in the URL shows as selected.
   - **Search results:** `/search?category=<slug>` shows the same subcategory pills as the category page ("All" active for a department, the subcategory active for a subcategory). Each pill keeps the search and filters (`categoryFilterHref`).
