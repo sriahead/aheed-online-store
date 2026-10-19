@@ -38,7 +38,12 @@ type Generated = Exclude<Outcome, null | { budgetRefused: unknown }>;
 /** #1017 — a vendor meter for the pipeline's required option; allows unless told otherwise. */
 function meter(allowed = true) {
   return {
-    check: vi.fn(async () => ({ allowed, usedNeurons: allowed ? 0 : 3000, budgetNeurons: 3000 })),
+    check: vi.fn(async () => ({
+      allowed,
+      scope: "vendor" as const,
+      usedNeurons: allowed ? 0 : 3000,
+      budgetNeurons: 3000,
+    })),
     record: vi.fn(async () => {}),
     recordImage: vi.fn(async () => {}),
   };
@@ -140,7 +145,12 @@ describe("runProductImagePipeline", () => {
     const result = await runProductImagePipeline("p1", "Golden Paneer 500g", null, { aiMeter });
 
     expect(result).toEqual({
-      budgetRefused: { allowed: false, usedNeurons: 3000, budgetNeurons: 3000 },
+      budgetRefused: {
+        allowed: false,
+        scope: "vendor" as const,
+        usedNeurons: 3000,
+        budgetNeurons: 3000,
+      },
     });
     expect(generateImage).not.toHaveBeenCalled();
     expect(putObject).not.toHaveBeenCalled();

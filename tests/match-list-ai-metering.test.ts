@@ -17,7 +17,7 @@ const normaliseList = vi.fn<() => Promise<NormalisationResult>>();
 const isNormalisationConfigured = vi.fn(() => true);
 const check = vi.fn(async () => {
   order.push("meter.check");
-  return { allowed: true, usedNeurons: 0, budgetNeurons: 3000 };
+  return { allowed: true, scope: "vendor" as const, usedNeurons: 0, budgetNeurons: 3000 };
 });
 const record = vi.fn(async () => {});
 const checkListNormalisationAllowed = vi.fn(async () => {
@@ -91,7 +91,12 @@ describe("the vendor's AI budget on /shop-your-list (#1017 R27)", () => {
   });
 
   it("over budget: no model call, no throttle slot spent, skip logged as over-budget", async () => {
-    check.mockResolvedValueOnce({ allowed: false, usedNeurons: 3000, budgetNeurons: 3000 });
+    check.mockResolvedValueOnce({
+      allowed: false,
+      scope: "vendor" as const,
+      usedNeurons: 3000,
+      budgetNeurons: 3000,
+    });
     const result = await submit();
 
     expect(normaliseList).not.toHaveBeenCalled();

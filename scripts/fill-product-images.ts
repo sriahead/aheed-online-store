@@ -109,6 +109,9 @@ async function main() {
     // populated when lib/config reads it.
     const { runProductImagePipeline } = await import("@/lib/product-image-pipeline");
     const { createAiMeter, describeAiBudgetRefusal } = await import("@/lib/ai-meter");
+    // #1028 — the env file's WORKERS_AI_PLAN, so a script charges exactly as that Worker would.
+    const { getAiEnv } = await import("@/lib/config");
+    const plan = getAiEnv().WORKERS_AI_PLAN;
 
     // Deliberately AFTER the client, the query and the pipeline import, not
     // before them. `--limit 0` is the smoke test this script is verified with
@@ -133,7 +136,7 @@ async function main() {
       console.log(`vendor ${vendor.slug}: ${products.length} product(s) to fill`);
 
       // #1017 — each vendor's own daily AI budget, charged exactly as the Worker's routes are.
-      const aiMeter = createAiMeter(prisma, vendor.id, "PRODUCT_IMAGE");
+      const aiMeter = createAiMeter(prisma, vendor.id, "PRODUCT_IMAGE", plan);
 
       for (const product of products) {
         if (remaining === 0) break;

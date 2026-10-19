@@ -84,6 +84,7 @@ describe("#876 — QuickViewDrawer restock notice (R13)", () => {
     const detail: ProductDetail = {
       ...summary,
       description: "Fresh paneer.",
+      acceptsNote: false,
       images: [],
       hmcReference: null,
       specifications: [],

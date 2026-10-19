@@ -31,6 +31,15 @@ const SWEEP_PROBABILITY = 0.01;
 export type AiFeature =
   "LIST_NORMALISATION" | "SEARCH_SYNONYMS" | "NET_CONTENT" | "PRODUCT_IMAGE" | "CAMPAIGN_IMAGE";
 
+/** #1029 — every metered feature, in the order the staff AI page lists them. */
+export const AI_FEATURES: readonly AiFeature[] = [
+  "LIST_NORMALISATION",
+  "SEARCH_SYNONYMS",
+  "NET_CONTENT",
+  "PRODUCT_IMAGE",
+  "CAMPAIGN_IMAGE",
+];
+
 export interface AiUsageEntry {
   feature: AiFeature;
   model: string;
@@ -85,4 +94,50 @@ export async function getVendorAiDailyBudget(prisma: Prisma, vendorId: string): 
     select: { aiDailyNeuronBudget: true },
   });
   return config?.aiDailyNeuronBudget ?? DEFAULT_AI_DAILY_NEURON_BUDGET;
+}
+
+/**
+ * #1028 — every vendor's summed milli-neurons since `since`; 0 when there are no rows.
+ *
+ * The one read here with no `vendorId`, deliberately: the Free plan's shared allowance is one pool
+ * across every vendor on the account, so the question it answers has no vendor in it. Its allowlist
+ * entry in tests/repository-vendor-scoping.test.ts carries the same justification. It returns a
+ * single number, never another vendor's rows.
+ */
+export async function sumPlatformMilliNeuronsSince(prisma: Prisma, since: Date): Promise<number> {
+  const result = await prisma.aiUsageEvent.aggregate({
+    where: { createdAt: { gte: since } },
+    _sum: { milliNeurons: true },
+  });
+  return result._sum.milliNeurons ?? 0;
+}
+
+/** #1029 — this vendor's summed milli-neurons since `since`, per feature (features with none omitted). */
+export async function sumVendorMilliNeuronsByFeatureSince(
+  prisma: Prisma,
+  vendorId: string,
+  since: Date,
+): Promise<Map<AiFeature, number>> {
+  const rows = await prisma.aiUsageEvent.groupBy({
+    by: ["feature"],
+    where: { vendorId, createdAt: { gte: since } },
+    _sum: { milliNeurons: true },
+  });
+  return new Map(rows.map((row) => [row.feature as AiFeature, row._sum.milliNeurons ?? 0]));
+}
+
+/**
+ * #1029 — set this vendor's daily budget. A singular `update` with no nested writes (safe on the
+ * HTTP client). Validation and the platform-admin check live in the caller
+ * (features/admin/ai-budget.ts); this only writes.
+ */
+export async function setVendorAiDailyBudget(
+  prisma: Prisma,
+  vendorId: string,
+  budgetNeurons: number,
+): Promise<void> {
+  await prisma.vendorConfig.update({
+    where: { vendorId },
+    data: { aiDailyNeuronBudget: budgetNeurons },
+  });
 }

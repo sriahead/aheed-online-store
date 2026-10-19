@@ -13,6 +13,7 @@ import {
   HelpCircle,
   Layers,
   MessagesSquare,
+  Gauge,
   Megaphone,
   MessageSquareQuote,
   Package,
@@ -254,6 +255,16 @@ export default async function StaffHomePage() {
               <p className="font-semibold text-primary">Help Assistant</p>
               <p className="mt-1 text-sm text-primary-muted">
                 Switch the storefront help assistant on or off, and see what shoppers ask it.
+              </p>
+            </Link>
+            <Link
+              href="/staff/ai-usage"
+              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+            >
+              <Gauge className="mb-3 h-6 w-6 text-accent" aria-hidden />
+              <p className="font-semibold text-primary">AI Allowance</p>
+              <p className="mt-1 text-sm text-primary-muted">
+                How much of today&apos;s AI budget this store has used, by feature.
               </p>
             </Link>
             <Link

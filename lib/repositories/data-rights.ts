@@ -107,12 +107,20 @@ export interface PersonalDataExport {
     deliveryFeePence: number;
     totalPence: number;
     createdAt: Date;
-    items: { productName: string; quantity: number; unitPricePence: number }[];
+    items: {
+      productName: string;
+      quantity: number;
+      unitPricePence: number;
+      customNote: string | null;
+    }[];
     payment: { provider: string; status: string; amountPence: number; createdAt: Date } | null;
     statusHistory: { status: string; note: string | null; createdAt: Date }[];
   }[];
   reviews: { rating: number; comment: string | null; createdAt: Date; product: string }[];
-  carts: { createdAt: Date; items: { product: string; quantity: number }[] }[];
+  carts: {
+    createdAt: Date;
+    items: { product: string; quantity: number; customNote: string | null }[];
+  }[];
   loyalty: {
     account: { balancePoints: number; lifetimePoints: number; lastActivityAt: Date } | null;
     ledger: { kind: string; points: number; createdAt: Date; orderNumber: string }[];
@@ -258,7 +266,10 @@ export async function exportPersonalData(
         deliveryFeePence: true,
         totalPence: true,
         createdAt: true,
-        items: { select: { productName: true, quantity: true, unitPricePence: true } },
+        // #1135 — a shopper-typed note is personal data, so it is exported with the line.
+        items: {
+          select: { productName: true, quantity: true, unitPricePence: true, customNote: true },
+        },
         payment: {
           select: { provider: true, status: true, amountPence: true, createdAt: true },
         },
@@ -283,7 +294,9 @@ export async function exportPersonalData(
       where: { vendorId, userId },
       select: {
         createdAt: true,
-        items: { select: { quantity: true, product: { select: { name: true } } } },
+        items: {
+          select: { quantity: true, customNote: true, product: { select: { name: true } } },
+        },
       },
     }),
     prisma.loyaltyAccount.findUnique({
@@ -374,7 +387,11 @@ export async function exportPersonalData(
     })),
     carts: carts.map((cart) => ({
       createdAt: cart.createdAt,
-      items: cart.items.map((item) => ({ product: item.product.name, quantity: item.quantity })),
+      items: cart.items.map((item) => ({
+        product: item.product.name,
+        quantity: item.quantity,
+        customNote: item.customNote,
+      })),
     })),
     loyalty: {
       account: loyaltyAccount,
@@ -503,6 +520,12 @@ export async function eraseVendorData(
     const anonymised = await tx.order.updateMany({
       where: { vendorId, userId },
       data: { userId: null, guestEmail: null },
+    });
+    // #1135 — an item note is free text the shopper typed; the line's money survives, the note
+    // does not.
+    await tx.orderItem.updateMany({
+      where: { vendorId, orderId: { in: orderIds } },
+      data: { customNote: null },
     });
 
     // #764 — saved addresses are DELETED outright, not redacted.
@@ -648,7 +671,12 @@ export interface GuestOrderExport {
     totalPence: number;
     createdAt: Date;
     guestEmail: string | null;
-    items: { productName: string; quantity: number; unitPricePence: number }[];
+    items: {
+      productName: string;
+      quantity: number;
+      unitPricePence: number;
+      customNote: string | null;
+    }[];
     payment: { provider: string; status: string; amountPence: number; createdAt: Date } | null;
     statusHistory: { status: string; note: string | null; createdAt: Date }[];
   };
@@ -706,7 +734,10 @@ export async function exportGuestOrderData(
         totalPence: true,
         createdAt: true,
         guestEmail: true,
-        items: { select: { productName: true, quantity: true, unitPricePence: true } },
+        // #1135 — a shopper-typed note is personal data, so it is exported with the line.
+        items: {
+          select: { productName: true, quantity: true, unitPricePence: true, customNote: true },
+        },
         payment: {
           select: { provider: true, status: true, amountPence: true, createdAt: true },
         },
@@ -806,6 +837,11 @@ export async function eraseGuestOrderData(
     await tx.order.updateMany({
       where: { id: order.id, vendorId },
       data: { guestEmail: null },
+    });
+    // #1135 — same as eraseVendorData: the note goes, the line stays.
+    await tx.orderItem.updateMany({
+      where: { orderId: order.id, vendorId },
+      data: { customNote: null },
     });
 
     const redacted = await tx.address.updateMany({

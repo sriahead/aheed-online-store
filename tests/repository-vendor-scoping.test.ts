@@ -100,6 +100,10 @@ const ALLOWED = new Map<string, string>([
     "payment-binding-refusals.ts:recordPaymentBindingRefusal",
     "Same webhook path as findOrderForWebhook and confirmPayment (#454): this records a REFUSED binding, so it runs on the one code path that by definition has no vendor — the event arrives from the payment provider with an order number and no host, and the refusal reasons it exists to record include `not-found`, where no order and therefore no vendor exists at all. It resolves the vendor from the order when there is one and stores it on the row, which is what makes the staff-facing reads (listBindingRefusalsForVendor, findBindingRefusalForVendor, recordRefusalResolution — all vendor-scoped, none exempt) safe. The webhook route is its only caller; nothing reachable from unauthenticated user input may call it.",
   ],
+  [
+    "ai-usage.ts:sumPlatformMilliNeuronsSince",
+    "Platform-wide by definition (#1028): on the Workers Free plan every vendor draws on ONE shared daily neuron allowance, so 'has the platform used it up?' has no vendor in it. Returns a single summed integer — never rows, never another vendor's figures. Callers: lib/ai-meter.ts's Free-plan check and the staff AI page's shared-allowance line.",
+  ],
 ]);
 
 /** A parameter that carries a tenant id, whatever it is called. */

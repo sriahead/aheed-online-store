@@ -8,6 +8,7 @@ import {
   getCartSummary,
   isGuestCartGone,
   removeCartItem,
+  setCartNote,
   setCartQuantity,
   type CartRepository,
 } from "@/lib/repositories/cart";
@@ -40,8 +41,16 @@ export function getCartRepository(): CartRepository {
       return getCartSummary(prisma, await vendorId(), identity);
     },
 
-    async addItem(identity, productId, delta = 1) {
-      return addCartItem(prisma, getPrismaWs(), await vendorId(), identity, productId, delta);
+    async addItem(identity, productId, delta = 1, customNote) {
+      return addCartItem(
+        prisma,
+        getPrismaWs(),
+        await vendorId(),
+        identity,
+        productId,
+        delta,
+        customNote,
+      );
     },
 
     async addItems(identity, lines) {
@@ -57,6 +66,10 @@ export function getCartRepository(): CartRepository {
         productId,
         quantity,
       );
+    },
+
+    async setNote(identity, productId, note) {
+      return setCartNote(prisma, await vendorId(), identity, productId, note);
     },
 
     async removeItem(identity, productId) {

@@ -2,6 +2,7 @@ import { getEmailService } from "@/lib/email";
 import { fetchVendorProfile } from "@/lib/vendor-service";
 import { formatPrice } from "@/components/product/format-price";
 import { splitDiscount } from "@/lib/order-totals";
+import { escapeHtml } from "@/lib/html-escape";
 import type { WebhookOrder } from "@/lib/repositories/orders";
 
 /**
@@ -28,9 +29,10 @@ export async function sendOrderConfirmationEmail(order: WebhookOrder): Promise<v
     const lines = order.items
       .map(
         (item) =>
-          `<tr><td>${item.quantity} × ${item.productName}</td><td align="right">${formatPrice(
-            item.lineTotalPence,
-          )}</td></tr>`,
+          // #1135 — the note is shopper-typed, so it and the name go through escapeHtml.
+          `<tr><td>${item.quantity} × ${escapeHtml(item.productName)}${
+            item.customNote ? `<br><small>Note: ${escapeHtml(item.customNote)}</small>` : ""
+          }</td><td align="right">${formatPrice(item.lineTotalPence)}</td></tr>`,
       )
       .join("");
 

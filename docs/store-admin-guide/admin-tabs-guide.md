@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.15.0"
-updated: "2026-10-18"
+version: "2.16.0"
+updated: "2026-10-19"
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -332,6 +332,39 @@ WhatsApp icon is hidden, because the assistant hands shoppers to WhatsApp itself
 assistant off and the WhatsApp icon returns. The Help Centre's **Still need help?** card switches the same way, between
 **Open the help assistant** and a direct WhatsApp link. The report updates as conversations
 happen.
+
+## AI Allowance — `/staff/ai-usage`
+
+**Purpose:** How much of today's AI allowance your store has used. Several features use AI: Shop
+your list, search dictionary suggestions, net content suggestions, and product and department
+campaign images. Each draws on a daily budget measured in neurons (Cloudflare's unit). This page
+shows where the budget has gone, so you can tell before pressing an AI button whether it will run.
+
+**Who can access:** Store admins only
+
+**What you can do:** Read today's neurons used against your store's daily budget and how many are
+left; a table of each AI feature's use today and over the last seven days; and which Workers plan
+the platform runs on. You cannot change the budget here: a platform admin sets it, because it limits
+spend the platform pays for.
+
+**Typical workflow:** Before a large image backfill or a net content run, open this page and check
+how much budget is left. If a feature keeps running out, ask your platform admin to raise the
+budget.
+
+**Important fields and filters:** **Today** is your store's use since 00:00 UTC against its daily
+budget. **Plan** is Free or Paid. On Free, the page also shows the shared allowance every store
+draws on (10,000 neurons a day); when it runs out, AI pauses for every store until 00:00 UTC, even
+one with budget left. **By feature** lists every AI feature, including ones that used nothing.
+"Last 7 days" means today and the six days before it, in UTC.
+
+**Common mistakes and limitations:** All figures reset at 00:00 UTC, which is 1 am in UK summer
+time. A budget of 0 switches AI off for your store; the features keep working without it (for
+example, Shop your list falls back to its plain matcher). Some figures are estimates where
+Cloudflare does not report an exact cost, so treat them as close, not exact. The page has no filters
+and no history beyond seven days.
+
+**What happens after changes are saved:** You cannot change anything here. The figures update as
+AI features run; reload to see the latest.
 
 ## Delivery areas — `/staff/delivery-areas`
 

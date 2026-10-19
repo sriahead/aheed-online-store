@@ -52,6 +52,27 @@ describe("BackfillImagesButton", () => {
     expect(alertSpy).not.toHaveBeenCalled();
   });
 
+  it("shows a 200 budget refusal in the error tone, not the success tone (#1031, R40)", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        message: "This store has used its AI allowance for today (3,000 of 3,000 neurons).",
+        processed: 2,
+        totalFound: 10,
+        budgetRefused: true,
+      }),
+    });
+    render(<BackfillImagesButton />);
+    click();
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("used its AI allowance");
+    expect(alert.textContent).toContain("2 generated before it stopped");
+    expect(alert.className).toContain("text-danger");
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
   it("reports a refusal inline using the route's `error` field, not `message`", async () => {
     // 401/403 answer with `error`; reading `message` would show the operator
     // nothing at all.
