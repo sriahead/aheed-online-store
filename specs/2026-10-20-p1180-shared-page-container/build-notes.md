@@ -136,6 +136,16 @@ deliberately owner-tuned, and this slice touched both files. Measure, do not rea
 re-indenting the body after the grid moved one level in, not a rewrite. Reviewing it as a 243-line
 change will waste time; `git diff -w` shows the real shape.
 
-**6. The storefront's vertical rhythm shifted on two pages only** — `/feedback` (`py-10` to `py-8`)
+**6. `npm run sdd:audit` exits 1 on this branch, with exactly one gap, and that is correct.** It
+reports `NO roadmap change-log row cites specs/2026-10-20-p1180-shared-page-container/`. That row
+records merge commit, deploy run and production health, none of which exist before Ship, so it is
+written at this slice's own `/document` stage. **Do not try to close it during validation.** The
+audit went from 2 gaps to 1 here: `#1177`'s row was genuinely missing (its `/document` never ran)
+and both of its rows — staging merge PR #1178 and promotion PR #1179 — were added on this branch
+under the carry-forward rule, along with the slice-path citation the audit actually matches on.
+**The audit matches the slice FOLDER PATH, not the issue number**; a row naming only `#1177` does
+not satisfy it, which is why the first attempt still failed.
+
+**7. The storefront's vertical rhythm shifted on two pages only** — `/feedback` (`py-10` to `py-8`)
 and `/dev` (`py-16` to `py-8`). If a visual check flags vertical spacing anywhere else, that is a
 real defect, because nothing else was meant to move vertically.
