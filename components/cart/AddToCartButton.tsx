@@ -117,40 +117,34 @@ export function AddToCartButton({
       );
     }
 
-    // #961 — every control here is 44px (`tap`) below `lg`, today's 32px from `lg`. Below `sm` a
-    // 2-column card has about 128px of content width, which cannot hold a 44px minus, a quantity,
-    // a 44px plus AND the Add button, so the pre-add picker is hidden there: one tap adds one, and
-    // ProductCard then swaps in CartQuantityStepper (#345), which carries its own 44px controls.
+    // #1185 — ONE CONTROL: a bare `+` that adds one. No "Add" text and no pre-add quantity picker.
+    //
+    // This REVERSES #956's Gate 1 decision ("pre-add quantity picker: unchanged, by owner
+    // decision"), re-approved by the owner on 2026-10-20. Do not restore it as a regression. Two
+    // facts made it cheap: #961 already hid the picker below `sm`, because a 2-column card at 360px
+    // has roughly 128px of content width and cannot hold a 44px minus, a readout, a 44px plus AND
+    // the Add button — so most phone shoppers never saw it. And a successful add on a card never
+    // showed "Added" anyway: `addToCart` revalidates, the listing re-renders with the product's new
+    // `cartQuantity`, and ProductCard swaps this button for `CartQuantityStepper` (#345) before any
+    // flash can be read. That is why the shared `CartFeedback` region exists, and it remains the
+    // card's only channel for `partial`, `AT_STOCK_LIMIT` and `SOLD_OUT`.
+    //
+    // `label` IS THE ACCESSIBLE NAME, not decoration. #956 fixed "the card variant ignores its
+    // `label` prop, so every card's button is named Add"; with no text left, dropping it would
+    // re-create that exact regression in a worse form — an unnamed icon button.
+    //
+    // 44px (`tap`) below `lg`, 32px from `lg`, matching the stepper it is swapped for so the card
+    // does not change height on the first add.
     return (
-      <div className="flex items-center justify-between gap-2 mt-1">
-        <div className="hidden sm:flex items-center rounded-xl border border-black/10 bg-surface-muted overflow-hidden lg:h-8">
-          <button
-            type="button"
-            onClick={onClickMinus}
-            aria-label={`Decrease quantity of ${productName}`}
-            className="size-tap lg:w-auto lg:px-2 lg:h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
-          >
-            <Minus className="w-3 h-3" aria-hidden="true" />
-          </button>
-          <span className="text-xs font-semibold text-primary w-4 text-center">{qty}</span>
-          <button
-            type="button"
-            onClick={onClickPlus}
-            aria-label={`Increase quantity of ${productName}`}
-            className="size-tap lg:w-auto lg:px-2 lg:h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
-          >
-            <Plus className="w-3 h-3" aria-hidden="true" />
-          </button>
-        </div>
+      <div className="flex items-center justify-end mt-1">
         <button
           type="button"
           onClick={onClickAdd}
           disabled={pending}
           aria-label={label}
-          className="flex-1 flex items-center justify-center gap-1.5 h-tap lg:h-8 rounded-xl bg-primary text-white text-xs font-bold transition hover:bg-primary/90 active:scale-95 motion-reduce:active:scale-100 shadow-sm"
+          className="flex size-tap lg:size-8 items-center justify-center rounded-xl bg-primary text-white transition hover:bg-primary/90 active:scale-95 motion-reduce:active:scale-100 shadow-sm"
         >
-          <Icon className={`w-3.5 h-3.5 ${pending ? "animate-spin" : ""}`} />
-          {added ? "Added" : "Add"}
+          <Icon className={`w-4 h-4 ${pending ? "animate-spin" : ""}`} aria-hidden="true" />
         </button>
       </div>
     );

@@ -59,7 +59,14 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
 }
 
 function renderCard(p: ProductSummary) {
-  return render(<ProductCard product={p} cdnBaseUrl="https://cdn.example" cartQuantity={0} />);
+  return render(
+    <ProductCard
+      product={p}
+      cdnBaseUrl="https://cdn.example"
+      cartQuantity={0}
+      favouriteState="off"
+    />,
+  );
 }
 
 describe("#876 — ProductCard restock notice (R12)", () => {

@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.121.0"
+version: "1.122.0"
 updated: 2026-10-20
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,17 +39,70 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-20, `#1180` Build (supersedes the "`staging` is ahead of `main` by two slices" bullet
-  below — it is stale).** `#1177` is **in production**, as are `#1169` and `#1173` before it.
-  Promotion PR #1179 merged as `e47466f` at 2026-10-20T09:05:06Z, closing exactly `[1177]`; it is
-  `Done`. `deploy-production` run `39398092276` succeeded. Production `/api/health` on **both**
-  vendor hosts serves `e47466f` with `db.ok: true`, `reference.reachable: true`, `drift: false` and
-  two `sources`, read three times per host. `origin/main` and `origin/staging` are **level** —
-  `git log origin/main..origin/staging` is empty. Both rows are `specs/roadmap.md` 1.168.0, added
-  on `feature/p1180-shared-page-container` carrying `sdd:audit`'s flag.
-  - **In flight:** `#1180` (one shared page container and a three-step width scale), branch
-    `feature/p1180-shared-page-container`, spec `effa5d8` + build `82f1cb7` + `33a8f81`, **not yet
-    validated**. Board `In Progress`, Phase `P10`, Complexity `L`.
+- **2026-10-20, `#232`/`#1185` Build notes (supersedes the "Nothing is in flight" line in the
+  `#1180` entry below).** Slice 1 of the **Quick Shop programme** is built but **not validated and
+  not merged**, on `feature/p232-1185-favourites-card-controls`
+  (`specs/2026-10-20-p232-1185-favourites-card-controls/`). Gate 1 approved 2026-10-20.
+  - **`#1180`'s carry-forward is resolved.** `be4ece1` ("docs: final documentation pass for #1180")
+    is the first commit on this branch, so `#1180`'s roadmap rows reach `origin` with this slice's
+    PR. `npm run sdd:audit` exits 0 only *with* that commit — `origin/main`'s roadmap still has no
+    row citing PR #1182 or #1183, so **do not drop or rebase it away.**
+  - **The programme is three slices plus one deferral**, all filed and on the board as `Backlog`,
+    Phase `P10`: `#232` + `#1185` (this slice), `#1186` (Regulars placeholder), `#1187` (Quick Shop
+    four-tile hub and the Smart Lists rename, which must land **last**, once all four tiles have
+    destinations), `#1184` (reading a list from a photo, deferred out of the programme), and
+    `#1188` (favourites paging, deferred from `#232`).
+  - **ONE REQUIREMENT IS COMPLETELY UNVERIFIED AND IT IS THE LOAD-BEARING ONE.** The migration
+    `20261020150000_p232_favourite` **has not been applied to any database** — `prisma migrate
+    status` still lists it as pending on dev. So `scripts/verify-favourites.ts` has never run (it
+    fails with `relation "public.Favourite" does not exist`), and that script is the only real
+    evidence behind the duplicate-key guard. `prisma migrate deploy` is blocked in this environment
+    even against dev, so it must be handed to the owner as a `! <command>`. Nothing in this slice
+    has touched a database: every green check is a type check, a unit test over rendered DOM, a
+    build or a grep.
+  - **Favourites is authenticated-only**, resolving `#232`'s long-open guest question by owner
+    decision. A guest sees the heart as a `/login` link. `#232`'s body cites its own obligation as
+    P6.6 "R1"; **it is R6**, and that file's R6 is amended on the record to accept the
+    `/account` and hub entry points instead of a header control.
+  - **`#1185` reverses `#956`'s Gate 1 decision** on the card's pre-add quantity picker, by owner
+    instruction. Recorded in the code and in `specs/design-system.md` 1.24.0 so it is not
+    "restored" as a regression.
+  - **A new standing hazard is now in `CLAUDE.md`:** `prisma migrate dev --create-only` refuses on
+    dev (`#895`, reproduced verbatim) and offers only `migrate reset`, which drops every dev row.
+    Hand-author migrations instead. `prisma migrate status` gives no warning beforehand.
+  - **The exported production `DIRECT_URL` recurred for a FIFTH session**, and the production
+    password was **disclosed in this session's transcript again** by a `printenv` that echoed the
+    value — the same mistake as 2026-10-20's earlier session and `#175`. Check the host only
+    (`echo "$DIRECT_URL" | grep -oE '@[a-z0-9.-]+\.neon\.tech'`). **Rotation is still
+    OUTSTANDING and is now verified, not assumed:** the `production` GitHub environment's
+    `DIRECT_URL` was last updated **2026-08-05T23:56:44Z**, months before the first disclosure. All
+    three steps remain to be done — GitHub `DIRECT_URL`, the Cloudflare Worker `DATABASE_URL`, and
+    a Worker redeploy.
+  - **`gh project item-list` lags its own writes.** After `item-add` returned an item id and two
+    `item-edit` calls succeeded, `item-list` at `--limit 600` *and* `--limit 700` still reported 588
+    items and omitted the new one entirely. Verify a board write with a GraphQL
+    `node(id: "PVTI_…")` query instead; `--limit` alone is not sufficient.
+  - **Open board `High` items are unchanged: `#697` and `#1021`**, both owner/data actions rather
+    than code. `#901` remains the one `In Progress` item and still gates `#697`.
+
+- **2026-10-20, `#1180` Document (supersedes the "`staging` is ahead of `main` by two slices"
+  bullet below — it is stale).** `#1180` **and** `#1177` are **in production**, as are `#1169` and
+  `#1173` before them. Promotion PR #1183 merged as `39b238d` at 2026-10-20T12:45:58Z, closing
+  exactly `[1180]`; it is `Done`. `deploy-production` run `39424830450` succeeded. Production
+  `/api/health` on **both** vendor hosts serves `39b238d` with `db.ok: true`,
+  `reference.reachable: true`, `drift: false` and two `sources`, read three times per host.
+  `origin/main` and `origin/staging` are **level** — `git log origin/main..origin/staging` is
+  empty. `npm run sdd:audit` exits **0**.
+  - **Nothing is in flight.** The next loop starts at `/orient`. `#1180`'s own Document rows are
+    `specs/roadmap.md` 1.169.0 on branch `docs/p1180-document`, which under the carry-forward rule
+    rides the **next** slice's branch rather than a PR of its own — merge or rebase it there before
+    opening that slice's PR, or its roadmap rows never reach `origin`.
+  - **Two unverified things shipped deliberately and are not defects to re-discover.** `#1180`'s
+    validation was **not independent** (same session built and validated it, owner's choice), and
+    SriMart's `/staff` overflow row is **unverified** because `demo-srimart-admin@example.com` is
+    absent from the **dev** database (401). One command in a clean shell closes it:
+    `npx tsx scripts/demo-accounts.ts add`. It is the second slice where a two-vendor check was
+    blocked by local fixtures, so do this before the next UI slice rather than during it.
   - **A promotion to `main` is a MERGE commit, never a squash.** `e47466f` has two parents, as do
     the twelve promotions before it. Two `--squash` attempts on PR #1179 left it open; had one
     landed, `main` would have lost its parent link to `staging` and `4e265b2` would have read as
@@ -73,6 +126,17 @@ reconciliation. If overall project state did not materially change, leave this f
     Windows `Machine` scope, `env` blocks in any `.claude/settings*.json`, and the PowerShell and
     bash profiles. It is injected into the process by whatever launches the session; that is where
     to look next. The `printenv` + `env -u` rule in `CLAUDE.md` still covers it.
+    **2026-10-20 additions.** `[Environment]::GetEnvironmentVariable` confirms `Process` scope only
+    (`User` and `Machine` both empty), so a freshly launched session does **not** inherit it —
+    which is why it keeps looking new each time. `Remove-Item Env:DIRECT_URL` in the user's own
+    shell does **not** clear it for tool calls: each call spawns a child of the launching process
+    and re-inherits. Until the launcher is found, the only reliable mitigation is prefixing
+    `env -u DIRECT_URL -u DATABASE_URL`.
+    **The production Neon password was disclosed in the 2026-10-20 session transcript** by a
+    diagnostic that echoed the variable's value instead of masking it (the `#175` mistake, repeated).
+    **Rotation is OUTSTANDING** and needs all three: the GitHub environment `DIRECT_URL`, the
+    Cloudflare Worker `DATABASE_URL`, and a Worker redeploy — local `.env` alone is not enough.
+    Treat the current production credential as compromised until that is done.
   - **Open board `High` items are still only `#697` and `#1021`**, both owner/data actions rather
     than code. `#901` is the one `In Progress` board item and gates `#697`: its production pilot
     left 25 PENDING net-content suggestions that nobody has accepted.
