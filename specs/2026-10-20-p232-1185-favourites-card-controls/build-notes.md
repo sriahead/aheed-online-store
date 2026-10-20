@@ -1,0 +1,175 @@
+# Favourites, and a bare + on the product card (build notes)
+
+Slice 1 of the Quick Shop programme. `#232` (Favourites, authenticated-only) and `#1185` (the
+product card's add control). Built 2026-10-20 on `feature/p232-1185-favourites-card-controls`.
+
+**Read "Known-shaky areas" first.** One requirement (R7) could not be exercised at all, because the
+migration this slice adds has not been applied to any database yet.
+
+## What changed and why
+
+**The data layer is four files, split by what each one is allowed to know.**
+
+- `prisma/schema.prisma` — the `Favourite` model, shaped on `Review` (`:1024`), which was already
+  the precedent for a vendor-scoped row keyed by user *and* product and already carried the
+  composite unique this needs. Cascade on all three relations, unlike `Review`, whose product and
+  vendor relations restrict: deleting a product that carries published reviews should not silently
+  discard them, whereas a favourite without its product is meaningless. Products are not
+  hard-deleted by the app today, so that is a correctness guarantee rather than a hot path.
+- `lib/repositories/favourites.ts` — pure functions taking client, `vendorId` and `userId`
+  explicitly. **The unique constraint is the concurrency control, not just an integrity rule:** two
+  taps racing both reach the `create`, and the loser's duplicate-key error is swallowed as success
+  because the product ends up favourited either way. That is what makes the toggle idempotent, and
+  `removeFavourite` uses `deleteMany` for the same idempotence from the other side.
+- `lib/favourites-service.ts` — the per-call facade, constructed fresh, never cached.
+- `lib/favourites-summary.ts` — the per-request `cache()` memo, kept separate from the facade for
+  the reason `cart-summary` is separate from `cart-service`: the facade must stay constructible
+  fresh per call, and `cache()` in it would defeat that.
+
+**Nothing uses `getPrismaWs()`, and that is a decision rather than an omission.** CLAUDE.md's rule
+is "does this open an implicit transaction", not "which method is named". A singular `create` with
+no nested writes, a `deleteMany` and the reads are all safe on the HTTP client; nothing here is
+interactive. All three modules say so in prose, so a later reader does not "fix" it and spend an
+isolate's socket budget for nothing.
+
+**`listProductsByIds` was added to `lib/repositories/products.ts` rather than a `select` written
+inside the favourites repository.** That file owns what a product summary *is* — the
+`productSummarySelect` shape, the `toProductSummary` mapping, and the one-query-per-page
+`listActiveTiersForProducts` follow-up that puts the multi-buy tier on a card. A hand-rolled join in
+favourites would have dropped that tier lookup, so a favourited product would have rendered
+differently from the same product on `/categories`, with the "3 for GBP 10" badge the first thing to
+go missing. Order is the caller's, because Postgres promises nothing about an `IN` result's order
+and "favourited newest first" is not something `products.ts` knows about.
+
+**The card's favourite state is one prop, not two.** `favouriteState: "on" | "off" | "signed-out"`.
+An `isFavourite`/`canFavourite` pair would admit a fourth, meaningless combination — favourited but
+signed out — that every reader of the component would then have to interpret. The memo hands out a
+*resolver function* rather than a `Set` for the same reason: a caller given a set has to re-derive
+"no user means signed-out, not simply empty", and getting that wrong would look fine while offering
+guests a toggle that cannot work.
+
+**`FavouriteButton` owns its own absolute placement**, which is why its class list looks odd. The
+card's top-right 44px box is already the below-`sm` quick-view button
+(`ProductCard.tsx:191`), and the top-left holds the Halal/Fresh/Offer badges (`:103`). So the heart
+is `right-tap sm:right-0` — one 44px box inboard below `sm`, the corner itself from `sm` up where
+that button is `sm:hidden`. **Changing one half without the other overlaps two 44px hit areas on a
+phone and is invisible in a desktop browser**, which is why `tests/favourite-heart.test.tsx` asserts
+both halves and the absence of an unprefixed `right-0`.
+
+**A guest gets a link, not a disabled button.** "Sign in to do this" is a navigation, so it is an
+`<a href="/login">` a shopper can middle-click and a screen reader announces as a link. Same split
+`/shop-your-list` already makes with its `canSave` prop.
+
+**`AddToCartButton`'s `card` variant is now a single `+`** — the `sm:`-and-up pre-add picker and the
+"Add" text both gone. The three other variants are untouched. `label` remains the accessible name
+and is now the *only* name the control has, so dropping it would recreate `#956`'s "every card's
+button is named Add" defect in a worse form: an unnamed icon button.
+
+## Decisions taken during the build
+
+- **The migration is hand-authored.** `prisma migrate dev --create-only` **cannot run** here: it
+  refuses with "`20260820200500_p8_image_needs_review` was modified after it was applied" and offers
+  only `migrate reset`, which drops every row in the dev database. That is the open `#895`,
+  reproduced rather than worked around. The SQL matches what Prisma emits for this model — same
+  statement order, comment markers, quoting and constraint names as
+  `20260918053538_p116_saved_shopping_lists`, whose `ShoppingList` has the same vendor/user shape.
+  The header comment records all of this.
+- **Reused `isUniqueViolation` instead of writing a predicate.** The spec's drafted R6 called for a
+  new pure predicate in `lib/favourites.ts`. `lib/repositories/prisma-errors.ts` already had one,
+  already accepting both `"23505"` and `P2002`, already covered by `tests/prisma-errors.test.ts`.
+  Its own docstring records that a second copy of those literals is how two call sites drift, so
+  adding one would have been the defect the spec was trying to prevent. R6 was rewritten to require
+  reuse and forbid a second copy.
+- **`revalidatePath("/account/favourites")`, not `revalidatePath("/", "layout")`.** The cart
+  revalidates the layout because the header's badge must follow a write. No chrome shows a favourite
+  count, so the only server-rendered surface that can go stale is the listing page, and the card
+  updates itself optimistically. Revalidating the layout on every heart tap would re-render every
+  storefront page for no visible gain.
+- **A signed-out toggle returns an outcome; it does not throw.** A throw would reach the route error
+  boundary and replace the page the shopper was reading. Since the UI renders a `/login` link for a
+  guest, this branch is defence in depth — what a hand-made POST meets — which is exactly why it has
+  a test, as nothing in the UI exercises it.
+- **`/account/favourites` is `wide`, not `standard` like its sibling account pages.** It renders a
+  product grid through `ProductGrid`, so it belongs with `/categories`, `/search` and `/bundles`. A
+  `standard` 1024px column would drop the grid a column against every other place the same cards
+  appear. Recorded with that reasoning in `tests/page-container.test.ts`'s registry.
+- **Two stale tests in `tests/add-to-cart-feedback.test.tsx` were rewritten, not deleted.** Both
+  asserted the removed pre-add picker. Each was rewritten to assert what it was actually protecting:
+  that a non-added outcome still reaches the shared `CartFeedback` region (the card's only channel,
+  because the revalidation unmounts the button), and that the single control is still named for the
+  product. Their comments say what changed and why, so a later reader does not "restore" the picker.
+- **The optimistic heart reverts to the server's last state on failure**, and treats a `signed-out`
+  result as a failure — a session can expire between render and tap, and leaving a filled heart
+  would assert a row that does not exist.
+
+## Deviations from the spec
+
+Four requirements were corrected *during* Build and committed with the implementation. Each is
+recorded inline in `requirements.md` with its reason, so validation checks the corrected text.
+
+- **R2, R5, R6, R16b all originally used an absence-grep over an artifact that names the excluded
+  thing in prose.** This is the trap `specs/sdd-workflow.md` records from P4a and `#539`: good code
+  and good docs name what they deliberately exclude, so the only way to "pass" is to delete the
+  rationale. The migration header names all three `pg_trgm` indexes to say what must not happen to
+  them; all three favourites modules name `getPrismaWs` to record why it is absent; the repository
+  docstring names both error codes to explain why the shared predicate is used; and the corrected
+  `design-system.md` bullet names the pre-add picker in the past tense because the history is the
+  useful part. **Fixed by scoping each check to code lines** (`grep -vE '^[[:space:]]*[*/]'`, a
+  character class rather than alternation so no pipe is needed in a markdown table cell) **or by
+  making it an explicit read-and-judge step** (R16b). All four now pass.
+- **R2 also originally asserted the wrong thing entirely** — that the three `pg_trgm` indexes still
+  exist in the database. `#765` records them already absent from dev, staging *and* production, so
+  it would have failed for a cause this slice did not create. It is now a property of the generated
+  SQL.
+- **R6 reversed direction**, from "write a predicate" to "reuse the existing one and write no
+  second copy", for the reason under Decisions.
+- **R16a named the wrong file** for the `data-tap-surface` hook (`ProductCard.tsx`). The control is
+  its own component and owns its placement, so the hook belongs in `FavouriteButton.tsx`, which is
+  also the file `tests/tap-targets.test.ts` reads.
+
+Four validation *commands* were also fixed, which is not a scope change but would have produced
+false passes: three greps used `\|` alternation under `grep -E` (which matches a literal pipe, so
+they would have found nothing and read as green), and R8 used a `(?!...)` lookahead that POSIX ERE
+does not support. R8 is now two comparable counts.
+
+One citation was corrected: **`#232`'s body attributes its obligation to P6.6's R1. It is R6**
+(`specs/2026-08-13-p6.6-p0-ui-overhaul/requirements.md`); R1 is the header logo. The wrong number
+had not reached any other artifact, and this slice does not propagate it.
+
+## Known-shaky areas
+
+- **R7 IS COMPLETELY UNVERIFIED, and it is the only real evidence behind the duplicate-key guard.**
+  `scripts/verify-favourites.ts` cannot run until the migration applies — it currently fails with
+  `relation "public.Favourite" does not exist` (Prisma `P2021`). `prisma migrate deploy` is blocked
+  in this environment even against dev, so it was handed to the owner and **had not been run when
+  these notes were written** (`prisma migrate status` still lists `20261020150000_p232_favourite` as
+  pending). Validation must apply the migration and then run that script, and **a run reporting the
+  duplicate case as skipped is a FAIL, not a pass**. CLAUDE.md is explicit that a hand-built double
+  only reproduces its author's guess about which `.code` the adapter reports, so no unit test
+  substitutes for this. Start here.
+- **The whole feature has never touched a database.** Every passing check is a type check, a unit
+  test over rendered DOM, a build, or a grep. Nothing has written a `Favourite` row. The toggle, the
+  listing query, the ordering, the `cache()` memo and the `listProductsByIds` drop-inactive
+  behaviour are all unexercised against real data.
+- **The second-vendor check (R24) has not been done**, and this is the third consecutive slice where
+  local fixtures were the obstacle. `npx tsx scripts/demo-accounts.ts add` in a clean shell, then
+  drive SriMart with `--map-host`; a CDP `Host` header is ignored by Chrome and yields a false pass.
+  The heart uses `text-action` when filled, which is a per-vendor brand colour — Aheed's and
+  SriMart's differ, and `brandStyle()` injects competing inline custom properties, so this is
+  exactly the class of thing that false-positives against Aheed alone.
+- **The `right-tap` placement is asserted by class name, not by geometry.** The built CSS does
+  contain `.right-tap{right:var(--spacing-tap)}`, so the utility exists, but no measurement has
+  confirmed the heart and the quick-view eye actually clear each other at 360px. R11's browser half
+  and R16's `--measure` half both remain to be run.
+- **`listProductsByIds` silently drops ids that match nothing** (inactive, or in a hidden
+  department). That is deliberate — a delisted favourite stops appearing rather than rendering as a
+  gap — but it means **the empty state is reachable with rows still in the table**, which will read
+  as data loss to anyone who does not know. Worth a look during validation, and the related
+  reconciliation gap is the open `#1139`.
+- **The optimistic revert path has no test.** `tests/favourite-toggle-guard.test.ts` covers the
+  action's guard, and the heart's three render states are covered, but the branch where
+  `toggleFavourite` rejects or returns `signed-out` and the control reverts is only reasoned about.
+- **`#983` is a known pre-existing flake** in the add-to-cart feedback area, which this slice edits.
+  If it appears, it is not new. Separately, if 2 to 10 tests fail across unrelated files at 5 to 9
+  seconds each and the failing set moves between runs, that is the loaded-machine artefact in
+  CLAUDE.md — use `--maxWorkers=4` and do not bisect against it.

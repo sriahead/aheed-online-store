@@ -4,7 +4,7 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.23.0"
+version: "1.24.0"
 updated: 2026-10-20
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
@@ -190,7 +190,12 @@ overrides it and it needs no second-vendor check.
 **The storefront's primary shopping controls are at least 44×44 CSS px below `lg`** and keep their
 compact desktop size from `lg`. Those controls are:
 
-- the product card's Add button and its pre-add minus and plus;
+- the product card's add control — a single `+` since `#1185`. It replaced an "Add" text button and
+  a `sm:`-and-up pre-add minus/plus picker, which `#956` had deliberately kept and the owner removed
+  on 2026-10-20. The card still swaps to `CartQuantityStepper` on the first add, so the pre-add
+  picker was the only quantity choice lost, and `#961` had already hidden it below `sm`;
+- the product card's favourite control (`#232`), one 44px box inboard of the corner below `sm` and
+  at the corner from `sm` up, because the corner is the Quick View button's below `sm`;
 - the in-cart `CartQuantityStepper`'s minus and plus;
 - the card's mobile Quick View button;
 - the header's Shop, Shop List, Sign In and Account links.

@@ -12,12 +12,15 @@ R1. `prisma/schema.prisma` contains a `Favourite` model with fields `id`, `vendo
     `@@index([vendorId, userId, createdAt])`. It declares no `Json` field.
 
 R2. A new directory exists under `prisma/migrations/` whose `migration.sql` creates the
-    `Favourite` table and its two constraints, and whose statements are additive only: no line in
-    that file begins with `DROP`, and the file names none of `Order_orderNumber_trgm_idx`,
-    `Order_guestEmail_trgm_idx` or `User_email_trgm_idx`.
-    (Deliberately a property of the generated SQL, not of the live database: `#765` records that
-    those three indexes are already absent from dev, staging and production, so asserting their
-    presence would fail for a reason this slice did not cause.)
+    `Favourite` table and its two constraints, and whose **statements** are additive only: with
+    SQL comment lines excluded, no line begins with `DROP` and no line names
+    `Order_orderNumber_trgm_idx`, `Order_guestEmail_trgm_idx` or `User_email_trgm_idx`.
+    (Two deliberate choices. It is a property of the migration SQL, not of the live database:
+    `#765` records those three indexes already absent from dev, staging and production, so
+    asserting their presence would fail for a cause this slice did not create. And comment lines
+    are excluded because the file's header comment *names* all three indexes in order to explain
+    what must not happen to them — a check that counted those would be satisfiable only by deleting
+    the rationale, which `specs/sdd-workflow.md` records as a recurring self-inflicted failure.)
 
 R3. `lib/repositories/favourites.ts` exists, and every function it exports takes a Prisma client as
     its first parameter and `vendorId` plus `userId` as explicit parameters. It imports nothing from
@@ -26,12 +29,22 @@ R3. `lib/repositories/favourites.ts` exists, and every function it exports takes
 R4. `lib/favourites-service.ts` exports a `getFavouritesRepository()` factory that resolves the
     client and vendor per call and holds no module-level client or vendor cache.
 
-R5. Neither `lib/repositories/favourites.ts`, `lib/favourites-service.ts` nor
-    `features/favourites/toggle-favourite.ts` references `getPrismaWs`.
+R5. No **code** line in `lib/repositories/favourites.ts`, `lib/favourites-service.ts` or
+    `features/favourites/toggle-favourite.ts` imports or calls `getPrismaWs`.
+    (Comment lines are excluded, and this is not a loophole: all three files deliberately *name*
+    `getPrismaWs` in prose to record why it is absent and warn a later reader off "fixing" the
+    client. A check counting those could only be passed by deleting the warning — the failure mode
+    `specs/sdd-workflow.md` records from P4a, and the same reason R2 and R6 exclude comments.)
 
-R6. A pure exported predicate (in `lib/favourites.ts`) returns `true` for an error object whose
-    `code` is the string `"23505"` and for one whose `code` is the string `P2002`, and `false` for
-    an error with any other code and for a non-object value.
+R6. The duplicate-key guard reuses the existing shared predicate
+    `isUniqueViolation` from `lib/repositories/prisma-errors.ts` — which already accepts both
+    `"23505"` and `P2002` — and this slice defines no second duplicate-key predicate of its own.
+    (Corrected at Build from the drafted "a pure exported predicate in `lib/favourites.ts`": the
+    shared helper already existed, already handled both codes, and already had
+    `tests/prisma-errors.test.ts` covering them. That module's own docstring records that a second
+    copy of the magic string is how two call sites drift, so adding one would have been the defect
+    the spec was trying to prevent.) No **code** line in those three files contains the literal
+    `23505` or `P2002`; comment lines are excluded, for the reason R5 gives.
 
 R7. `scripts/verify-favourites.ts` exists and, run against the dev database, exits 0 having
     observed: a toggle-on followed by a second toggle-on for the same
@@ -82,11 +95,20 @@ R16. The card's add control and the favourite control each have a hit area of at
 
 R16a. The favourite control carries `data-tap-surface="product-card-favourite"`, and
      `tests/tap-targets.test.ts`'s `surfaces` map contains an entry for
-     `components/product/ProductCard.tsx` listing that value.
+     `components/product/FavouriteButton.tsx` listing that value.
+     (Corrected at Build from `components/product/ProductCard.tsx`: the control is its own
+     component, which owns its placement because that placement is a function of the quick-view
+     button above it. The hook belongs in the file that renders the element, which is also the file
+     that test reads.)
 
-R16b. `specs/design-system.md`'s "Touch targets" section lists the product card's **single** add
-     control and its favourite control among the storefront's primary shopping controls, and no
-     longer names a pre-add minus and plus on the card.
+R16b. `specs/design-system.md`'s "Touch targets" section lists, among the storefront's primary
+     shopping controls, (a) the product card's add control described as a single `+`, and (b) the
+     product card's favourite control. No bullet in that list presents a card-level pre-add minus
+     and plus as a control that currently exists.
+     (Stated as a property to read rather than a word to grep for. The corrected bullet explains
+     what `#1185` replaced, so it mentions the pre-add picker in the past tense on purpose — the
+     history is the useful part, and an absence-grep could only be passed by deleting it. Fourth
+     instance of that trap in this slice; see R2, R5 and R6.)
 
 R17. `app/(storefront)/account/favourites/page.tsx` exists, exports
      `dynamic = "force-dynamic"`, redirects an unauthenticated request to `/login`, and renders

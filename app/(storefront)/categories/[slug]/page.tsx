@@ -5,6 +5,7 @@ import { buildCategoryMetadata } from "@/lib/page-metadata";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { getProductRepository } from "@/lib/products-service";
 import { getRequestCartQuantities } from "@/lib/cart-summary";
+import { getRequestFavouriteState } from "@/lib/favourites-summary";
 import { getEnv } from "@/lib/config";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { DEFAULT_PRODUCT_GRID_DENSITY } from "@/lib/product-grid-density";
@@ -152,6 +153,8 @@ export default async function CategoryPage({
   // P8.5a (#345): request-memoised, so this shares the header's cart read
   // rather than issuing a second identical query.
   const cartQuantities = await getRequestCartQuantities();
+  // #232 — request-memoised too, so a page rendering several grids issues ONE favourite query.
+  const favouriteState = await getRequestFavouriteState();
   const { CDN_BASE_URL } = getEnv();
   // #962 — request-memoised; the header already resolved this profile in the same render.
   const gridDensity =
@@ -217,6 +220,7 @@ export default async function CategoryPage({
                 product={product}
                 cdnBaseUrl={CDN_BASE_URL ?? ""}
                 cartQuantity={cartQuantities.get(product.id) ?? 0}
+                favouriteState={favouriteState(product.id)}
               />
             ))}
           </ProductGrid>

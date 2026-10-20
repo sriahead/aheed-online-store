@@ -86,6 +86,15 @@ Modelling rules, the raw-SQL exception, the migration procedure: `specs/architec
 - Images: store a **relative key**, never a URL; keys are immutable.
 - **Generate every migration with `--create-only` and read the SQL before it applies** — Prisma has
   proposed dropping the hand-authored `pg_trgm` indexes on every migration since `#508`.
+- **But `migrate dev --create-only` currently REFUSES on dev, and its only offer destroys data.**
+  `20260820200500_p8_image_needs_review` was edited after it was applied, so `migrate dev` demands a
+  schema reset and names `migrate reset` — which drops every row in the dev database. **Never accept
+  that offer.** Hand-author the migration instead, copying Prisma's own emitted DDL (statement order,
+  `-- CreateTable`/`-- CreateIndex`/`-- AddForeignKey` markers, quoting, `<Model>_pkey` /
+  `<Model>_<cols>_key` / `<Model>_<col>_fkey` names) from the nearest existing migration, and say in
+  its header why it was not generated. Open `#895`; reproduced verbatim at `#232` (2026-10-20).
+  **`prisma migrate status` does not warn** — it reported "Database schema is up to date!" moments
+  before the refusal, so a slice reads clear until the moment it needs a table.
 
 ## Storage (ADR-003)
 

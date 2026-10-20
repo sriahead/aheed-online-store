@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { Bookmark, ClipboardList, MessageSquareQuote, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  Bookmark,
+  ClipboardList,
+  Heart,
+  MessageSquareQuote,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { LogoutButton } from "@/features/auth/components/LogoutButton";
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
@@ -97,6 +104,19 @@ export default async function AccountPage() {
           <p className="font-semibold text-primary">Your lists</p>
           <p className="mt-1 text-sm text-primary-muted">
             Manage saved items, recurring shopping lists, and quick shopping.
+          </p>
+        </Link>
+
+        {/* 2a. Your favourites (#232). Numbered 2a rather than renumbering the four tiles below
+            it, which carry their own issue references. */}
+        <Link
+          href="/account/favourites"
+          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action transition block"
+        >
+          <Heart className="mb-3 h-6 w-6 text-action" aria-hidden="true" />
+          <p className="font-semibold text-primary">Your favourites</p>
+          <p className="mt-1 text-sm text-primary-muted">
+            Everything you have tapped the heart on, ready to add to your basket again.
           </p>
         </Link>
 

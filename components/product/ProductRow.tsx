@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { ProductCard } from "./ProductCard";
 import { HorizontalScroller } from "@/components/layout/HorizontalScroller";
 import type { ProductSummary } from "@/lib/repositories/products";
+import type { FavouriteState } from "@/lib/favourites";
 
 interface ProductRowProps {
   title: string;
@@ -16,6 +17,14 @@ interface ProductRowProps {
    * control.
    */
   cartQuantities?: ReadonlyMap<string, number>;
+  /**
+   * #232 — resolves one product's favourite state. A FUNCTION rather than a set, so the "signed
+   * out" case cannot be confused with "signed in with nothing saved"; see
+   * `lib/favourites-summary.ts`. Optional for the same reason `cartQuantities` is — a caller with
+   * no request context still renders — and a card with no resolver shows the sign-in link, which is
+   * the safe default: it offers navigation rather than a toggle that could not work.
+   */
+  favouriteState?: (productId: string) => FavouriteState;
 }
 
 export function ProductRow({
@@ -24,6 +33,7 @@ export function ProductRow({
   cdnBaseUrl,
   viewAllLink,
   cartQuantities,
+  favouriteState,
 }: ProductRowProps) {
   if (products.length === 0) return null;
 
@@ -63,6 +73,7 @@ export function ProductRow({
             product={product}
             cdnBaseUrl={cdnBaseUrl}
             cartQuantity={cartQuantities?.get(product.id) ?? 0}
+            favouriteState={favouriteState?.(product.id) ?? "signed-out"}
           />
         ))}
       </HorizontalScroller>
