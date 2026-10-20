@@ -49,8 +49,9 @@ export default async function AccountListsPage() {
           <p className="text-sm font-semibold text-primary">You have no saved lists yet.</p>
           <p className="mt-1 text-sm text-primary-muted">
             Paste a list on{" "}
+            {/* #1187 — "Smart Lists" is the page this opens; "Quick Shop" is now the hub. */}
             <Link href="/shop-your-list" className="font-semibold text-primary underline">
-              Quick Shop
+              Smart Lists
             </Link>
             , or save your cart or a past order as a list.
           </p>

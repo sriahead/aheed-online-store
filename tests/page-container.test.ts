@@ -77,6 +77,14 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   // --- storefront: standard
   "app/(storefront)/account/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/data/page.tsx": { width: "standard", padY: "default" },
+  // #1187 — the Quick Shop hub. `standard` because it is the same tile grid as `/account`, which it
+  // borrows its tile markup from, not a listing like `/categories` or `/bundles`.
+  "app/(storefront)/quick-shop/page.tsx": { width: "standard", padY: "default" },
+  // #1186 — Regulars. `standard` with its account siblings, NOT `wide` like `/account/favourites`:
+  // that page is wide because it renders a `ProductGrid`, and this one renders one placeholder
+  // sentence. When the derivation lands and a grid appears, this row moves to `wide` with it — and
+  // this registry is what makes that an explicit decision rather than a drift.
+  "app/(storefront)/account/regulars/page.tsx": { width: "standard", padY: "default" },
   // #232 — `wide`, not `standard` like its sibling account pages: this one renders a product GRID
   // through `ProductGrid`, so it belongs with the other listings (`/categories`, `/search`,
   // `/bundles`) rather than with the record-detail pages around it. A `standard` 1024px column

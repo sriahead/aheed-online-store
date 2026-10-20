@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Heart,
   MessageSquareQuote,
+  Repeat,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -102,8 +103,11 @@ export default async function AccountPage() {
         >
           <Bookmark className="mb-3 h-6 w-6 text-accent" aria-hidden="true" />
           <p className="font-semibold text-primary">Your lists</p>
+          {/* #1187 — was "Manage saved items, recurring shopping lists, and quick shopping", which
+              collided by name with Favourites, Regulars and Quick Shop once all three existed.
+              This tile is about saved lists and nothing else. */}
           <p className="mt-1 text-sm text-primary-muted">
-            Manage saved items, recurring shopping lists, and quick shopping.
+            Lists you have saved, ready to match against what is in stock.
           </p>
         </Link>
 
@@ -117,6 +121,22 @@ export default async function AccountPage() {
           <p className="font-semibold text-primary">Your favourites</p>
           <p className="mt-1 text-sm text-primary-muted">
             Everything you have tapped the heart on, ready to add to your basket again.
+          </p>
+        </Link>
+
+        {/* 2b. Your regulars (#1186) — the placeholder half; `lib/regulars.ts` records the five
+            decisions the derivation still needs. Numbered 2b for the same reason 2a is: the four
+            tiles below carry their own issue references. Like Favourites, this is reachable here
+            and from the Quick Shop hub, and deliberately NOT in `components/account/AccountNav.tsx`
+            — Favourites is already absent from that nav, and extending it is its own slice. */}
+        <Link
+          href="/account/regulars"
+          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action transition block"
+        >
+          <Repeat className="mb-3 h-6 w-6 text-accent" aria-hidden="true" />
+          <p className="font-semibold text-primary">Your regulars</p>
+          <p className="mt-1 text-sm text-primary-muted">
+            The items you order most often, in one place.
           </p>
         </Link>
 
