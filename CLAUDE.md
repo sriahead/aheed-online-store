@@ -233,6 +233,13 @@ Policy: `specs/tech-stack.md`. Failures: `docs/developer-portal/runtime-pitfalls
   `git diff --numstat` after any scripted rewrite.
 - **Run `npx vitest run` alone** — beside or straight after a heavy build its forks pool silently
   fails to start workers and whole files never execute, sometimes still exiting 0.
+- **Running it alone is not always enough: cap the pool with `npx vitest run --maxWorkers=4`**
+  (`#1180`). On a loaded machine the default worker count produces **scattered, moving, plausible
+  failures** — 2 to 10 tests across unrelated files, each taking 5-9 s for a trivial assertion —
+  and they look exactly like a real regression. Two signals tell them apart: the durations, and the
+  fact that the failing set changes between runs. **Do not bisect against them**; reverting code
+  made the failure set grow in `#1180`, which is the opposite of what a real culprit does. Capping
+  the pool returned the same tree to 286 files / 3583 tests green. `--minWorkers` is not a flag.
 - **Stopping `npm run preview` does not stop it** — kill the whole `node`/`workerd` chain first, or
   the next build fails with `EBUSY`.
 - **Server actions and staff pages are drivable with `curl`, no browser needed.**
