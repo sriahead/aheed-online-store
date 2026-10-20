@@ -312,3 +312,77 @@ these fixes touch are unproven as fixed — the 360px measurement showing
 `"23505"` on the shipped adapter. Neither has been executed since the change; the preview server
 was stopped before the fix was written. No CHANGELOG change: neither fix alters observable
 behaviour that the entry describes (the heart's offset moves 4px and the entry does not state it).
+
+## Validation pass 2 — PASSED, all 29 rows (2026-10-20)
+
+**Same caveat as pass 1: not independent, and on Opus 5 rather than Sonnet 5.** The owner re-ran
+`/validate` in the context that built and fixed the slice. Flagged before the walk. The
+measurements below are instrument output; the judgment is self-reviewed.
+
+Pre-flight: `lint`, `format:check`, `tsc --noEmit`, **289 files / 3611 tests**, `build`. The fix's
+new utility compiles — `.right-12{right:calc(var(--spacing) * 12)}` is in the built CSS, which is
+48px at the default `--spacing: 0.25rem`.
+
+### Both pass-1 findings are closed, by the evidence that failed before
+
+- **R7.** `scripts/verify-favourites.ts` now prints
+  `Functional suite adapter: PrismaNeonHttp (what getPrisma() builds)` and observes
+  **`"23505"` on the shipped path** plus `P2002` on the WebSocket adapter, with a third check
+  asserting the two genuinely differ (`codes=["23505","P2002"]`). The whole functional suite —
+  including `addFavourite` swallowing a real duplicate — now runs on the adapter the application
+  uses. Exit 0, duplicate case executed rather than skipped.
+- **R11.** Measured at a real 360px viewport (`gridColumns: 2`): heart `left=83 width=46` so its
+  right edge is **129**, quick-view eye `left=131`. `129 <= 131` holds with a **2px gap**. Pass 1
+  failed here at 133 against 131.
+
+### Every other row
+
+- **R1-R6, R8, R12, R16a, R17, R19, R26** — schema valid; migration SQL still 6 additive statements
+  with no `DROP` and no trgm index named; no request-context import, module-scope client, or
+  `getPrismaWs` in the favourites modules; `isUniqueViolation` imported and called with no second
+  copy of either code literal; `"use server"` with 1 export, 1 async; the prop threaded through all
+  four call sites; the tap hook in both the component and the test map; `force-dynamic`, the
+  `/login` redirect and `PageContainer width` all present; one `/account` tile; CHANGELOG citing
+  both issues.
+- **R10, R13-R16, R21** — 80 tests across 8 files, plus the live DOM: the signed-in heart is a
+  `BUTTON` with `aria-pressed` and class
+  `absolute top-0 right-12 sm:right-0 z-20 flex size-tap …`. R16 measured at 360px: heart 46x44,
+  add control 44x44.
+- **R9 (both halves)** — guard test, plus a cookieless replay of the real captured action POST:
+  HTTP 200, `{"kind":"signed-out"}`, no 500, and the favourite table held **0** rows afterwards.
+- **R18, R20** — signed out, `/account/favourites` is 307 to `/login`; signed in with nothing saved
+  it renders the exact sentence inside `<main class="mx-auto w-full px-4 max-w-7xl py-8">`. Full
+  round trip: heart off, clicked, `aria-pressed` true and filled, `/account/favourites` showed 1
+  card and no empty state; clicked again, back to 0 cards and the empty state.
+- **R22, R23, R16b** — P6.6 R6 reads correctly; the only vendor-name hits in this slice's own files
+  are the two in `lib/favourites.ts`'s comment explaining the vendor-neutral rule, which that row
+  says to read rather than fail; `design-system.md`'s control list names the single `+`, the
+  favourite control with the 48px figure and why, and the pre-add picker only in the past tense.
+- **R24** — SriMart via `srimart.localhost:8787`: 6 hearts all carrying `right-12 sm:right-0`, 6 add
+  controls, 0 pre-add pickers, a label naming "65W GaN Wall Charger", and
+  `--color-action: #006fc4` against Aheed's `#108020`.
+- **R25** — `kms:validate` 0 invalid; `kms:check-generated` **initially failed** (see below) and is
+  now current.
+- **R27** — the Gate 3 catch-all, as in pre-flight.
+
+### One finding of pass 2, mechanical, fixed in place
+
+`app/(admin)/staff/runbook/docs.ts` was **stale** while `ARTIFACT_INDEX.md` was current — the fix
+pass edited `specs/design-system.md`'s touch-target bullet, and that file's body is embedded in the
+generated runbook module. This is exactly the `#537` defect class: one generator, two outputs, and
+only one of them obviously drifts. Regenerated with `npm run kms:build-index` and committed
+separately (`chore(kms): regenerate docs.ts for the #232 design-system edit`); the only diff is the
+embedded doc content. Fixed in place rather than cycled through `/fix` because a generated file is
+derived output — regenerating it cannot change any validation outcome, and the instruction the check
+itself prints is "run build-index and commit the result".
+
+**Carry this forward:** any slice that edits a file under `docs/` or `specs/` must run
+`kms:build-index` *after* its last doc edit, not before. This slice ran it at Build, then edited
+`design-system.md` again at Fix, and the staleness survived until validation caught it.
+
+### Fixture note
+
+Both passes created a throwaway verified shopper (`p232-validate@`, `p232-val2@`), used it and
+deleted it. The dev `Favourite` table is back to **0 rows** and both users are gone, so nothing is
+left for `#797` to complain about. The dev demo accounts' passwords are still not
+`DEMO_ACCOUNT_PASSWORD` and `scripts/demo-accounts.ts add` does not reset them.
