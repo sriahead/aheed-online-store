@@ -194,9 +194,12 @@ Policy: `specs/tech-stack.md`. Failures: `docs/developer-portal/runtime-pitfalls
 
 ## Staff panel pages (`app/(admin)/staff/*`)
 
-- **A new `/staff/*` page must land on three surfaces** — `components/staff/PanelNav.tsx`, the hub
-  at `app/(admin)/staff/page.tsx`, and one of the three operator guides — and its
-  `requireVendorRole` refusal branch must render the `PanelRefusal` component, never `return null`.
+- **Register a new `/staff/*` page ONCE, in `components/staff/nav-items.ts`** (`#1177`) — it feeds
+  **both** app surfaces (`components/staff/PanelNav.tsx` and the hub at
+  `app/(admin)/staff/page.tsx`), and adding a link to either by hand fails
+  `tests/staff-nav-parity.test.ts`. Its `tier` must match the page's own `requireVendorRole`
+  arguments. Then document it in **one of the three operator guides**, and make its
+  `requireVendorRole` refusal branch render the `PanelRefusal` component, never `return null`.
   Three tests enforce this. **No test checks whether a documented capability exists**, so trace
   every capability sentence to a real control.
 
