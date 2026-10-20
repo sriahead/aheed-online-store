@@ -173,3 +173,114 @@ had not reached any other artifact, and this slice does not propagate it.
   If it appears, it is not new. Separately, if 2 to 10 tests fail across unrelated files at 5 to 9
   seconds each and the failing set moves between runs, that is the loaded-machine artefact in
   CLAUDE.md — use `--maxWorkers=4` and do not bisect against it.
+
+## Validation pass 1 — FAILED (2026-10-20)
+
+**Not independent, and on the wrong model.** The same Opus 5 context that built the slice also
+validated it; the owner invoked `/validate` without the pre-validation Clear or the switch to
+Sonnet 5, and this was flagged before the walk began. Treat the judgment calls below as
+self-reviewed. The measurements are instrument output and stand on their own.
+
+The migration was applied to dev by the owner during this pass
+(`20261020150000_p232_favourite`), which unblocked every row the build notes listed as unverified.
+
+**27 of 29 rows pass.** Pre-flight green: `lint`, `format:check`, `tsc --noEmit`,
+289 files / 3611 tests, `build`.
+
+### Finding 1 — R7 verifies the wrong database adapter (CONFIRMED)
+
+`scripts/verify-favourites.ts` exits 0 with all checks passing, and reports the duplicate-key code
+as `P2002`. **But it constructs `PrismaNeon` — the WebSocket adapter — while
+`lib/repositories/favourites.ts` runs on `getPrisma()`, which is `PrismaNeonHttp` (`lib/db.ts:12`).**
+Measured on dev, same duplicate insert, both adapters:
+
+- `PrismaNeon` (WebSocket, what the script uses): `.code = "P2002"`
+- `PrismaNeonHttp` (HTTP, what the shipped path uses): `.code = "23505"`
+
+So the code the shipped path actually raises was never observed by the script. R7 exists precisely
+to satisfy CLAUDE.md's rule that an `error.code` guard must be "verified against a real failing
+request — a hand-built double only reproduces its author's guess"; substituting a different adapter
+is a subtler form of the same error, and it reported `ALL CHECKS PASSED` while doing it.
+
+**The feature is not broken:** `isUniqueViolation` accepts both codes, so a racing double-tap is
+handled correctly on the real path. What failed is the evidence. Fix: have the script exercise
+`PrismaNeonHttp`, and preferably both adapters, since the predicate must accept both and only the
+HTTP one ships.
+
+### Finding 2 — R11's non-overlap property is false by 2px (CONFIRMED)
+
+Measured by `scripts/verify-mobile-layout.ts` at a real 360px viewport (`gridColumns: 2`):
+
+| control | left | width | right edge |
+|---|---|---|---|
+| `[data-tap-surface="product-card-favourite"]` | 87 | 46 | 133 |
+| `[aria-label^="Quick view"]` | 131 | 46 | 177 |
+
+They overlap on x 131-133. **Cause:** both controls are direct children of the image block and are
+NOT inside `.skew-card-inner`, so the card's skew widens each bounding box to **46px**, while the
+inboard offset is `right-tap` = **44px**. The quick-view button was already 46px before this slice;
+what is new is placing a second 46px box exactly 44px inboard of it.
+
+**Impact is small but the requirement's stated property is false.** The heart is later in DOM order
+at equal `z-index`, so it wins the 2px strip; the eye keeps 44 of its 46px, so no tap-target rule is
+broken and neither control becomes unreachable. A tap on the eye's leftmost 2px favourites instead.
+Fix: offset below `sm` by at least the rendered width (`right-12` = 48px leaves 2px of gap), or
+counter-skew the control.
+
+### Rows confirmed, with how
+
+- **R1-R6, R8** — `prisma validate`; comment-stripped migration SQL (6 statements, no `DROP`, no
+  trgm index named); purity and client-injection tests; no `getPrismaWs` or duplicated error-code
+  literal in code; `"use server"` with 1 export, 1 async.
+- **R9 (both halves)** — the guard test, plus a **live cookieless replay** of the real captured
+  server-action POST: HTTP 200 with `{"kind":"signed-out"}`, no 500, and the favourite count stayed
+  at 1 (the signed-in click's row) rather than 2, so nothing was written.
+- **R10, R13-R15, R21** — unit tests, and then confirmed in **rendered HTML**: a signed-out listing
+  page carried 12 `<a href="/login">` hearts; the same page signed in carried 12
+  `<button aria-pressed="false">` hearts and zero login links; 11 add controls (one product out of
+  stock); and **zero** `Decrease/Increase quantity` controls anywhere.
+- **R11 (class half), R16** — `right-tap sm:right-0` present with no unprefixed `right-0`; computed
+  `right: 0px` at 1280. At 360px the add control measures 44x44 and every one of the 12 hearts
+  46x44, both at or above 44 in each dimension.
+- **R12** — the resolver is awaited once per page in all three callers and called per card.
+- **R17, R18** — signed out, `/account/favourites` returns **307 to `/login`**. Signed in with no
+  favourites it renders the exact empty sentence inside
+  `<main class="mx-auto w-full px-4 max-w-7xl py-8">`, confirming `PageContainer width="wide"`.
+- **R19** — exactly one `/account` tile linking to `/account/favourites`.
+- **R20** — full round trip in a browser: heart off, clicked, `aria-pressed` false to true and the
+  icon filled; `/account/favourites` then showed that product and no empty state; clicked again and
+  the page returned to 0 cards and the empty state.
+- **R22, R23, R25, R26, R27** — P6.6 R6 read and correct; the only vendor-name hit in a new file is
+  the comment explaining the vendor-neutral rule, which that row says to read rather than fail;
+  `kms:validate` 0 invalid and `kms:check-generated` current; CHANGELOG cites both issues.
+- **R24** — SriMart via `srimart.localhost:8787`: 6 hearts, 6 add controls, 0 pre-add pickers, and
+  the label named an electronics product ("65W GaN Wall Charger"), so no grocery example leaked.
+  The brand colours genuinely differ — `--color-action` is `#108020` on Aheed and `#006fc4` on
+  SriMart, both injected by `brandStyle()` — so the filled heart's `text-action` was exercised
+  against two real values rather than false-positiving against Aheed alone.
+
+### Two risks checked that were NOT defects
+
+- **The hover overlay does not steal the heart's clicks.** At `sm` and up the overlay is
+  `absolute inset-0 z-20` and becomes `pointer-events-auto` on hover, and the heart is also `z-20`.
+  Forcing the overlay to `opacity: 1; pointer-events: auto` and hit-testing the heart's centre
+  returned an element inside the heart, not the overlay — the heart is later in DOM order, so it
+  wins. (CSS `:hover` cannot be driven by synthetic events, so the state was reproduced directly.)
+- **Deploy ordering is safe.** `deploy-staging.yml` runs `prisma migrate deploy` (line 63) before
+  `wrangler deploy` (line 73), so no deployed Worker serves against a table its migration has not
+  created. All three listing pages are `force-dynamic`, so revalidating only
+  `/account/favourites` cannot leave a card's favourite state stale.
+
+### Environment notes for the next pass
+
+- Browser screenshots timed out repeatedly and `resize_window` did not change the renderer's
+  viewport (`innerWidth` stuck at 1280 while `outerWidth` became 262). Geometry was therefore taken
+  with `scripts/verify-mobile-layout.ts`, which drives its own Chrome with real device metrics —
+  the better instrument for this anyway. Pass `MSYS_NO_PATHCONV=1` or Git Bash rewrites `--path`
+  into a Windows path (the script detects this and says so).
+- **The dev demo accounts' passwords are not `DEMO_ACCOUNT_PASSWORD`**, and
+  `scripts/demo-accounts.ts add` reconciles roles without resetting them, so it does not fix a
+  sign-in. The playbook records this for `demo-srimart-admin`; it is true of `demo-customer` too.
+  This pass created a throwaway verified shopper, used it, and deleted it; the cascade delete
+  removed its favourite row, leaving the dev table at 0 and incidentally proving
+  `onDelete: Cascade` on the user relation.
