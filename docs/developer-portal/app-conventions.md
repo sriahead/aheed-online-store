@@ -4,8 +4,8 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.18.0"
-updated: 2026-10-20
+version: "1.19.0"
+updated: 2026-10-21
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, fulfilment-method preference, autocomplete tokens, shared-source copy rules and React hooks — with the tests that enforce each invariant mechanically.
 tags: [conventions, repositories, server-actions, staff-panel]
@@ -309,6 +309,24 @@ store's staff reads must be right for **any** vendor.
   `lib/help-facts.ts`, the module they already shared, so they cannot diverge. Same shape as
   `lib/data-retention.ts` for retention figures and `lib/storage-keys.ts` for storage names: **one
   source per fact, not one per surface.**
+- **One concept, one label — and a link's label is its destination's own heading (`#1145`,
+  `#1187`).** `#1145` existed because the paste-a-list feature had three names at once ("Shopping
+  List" in the header, "Shop your list" on the page, "Match my list" on the button) and collapsed
+  them to one. `#1187` then split that name deliberately, now a hub exists: "Quick Shop" is the hub,
+  "Smart Lists" is the page. Two rules came out of doing it twice in a fortnight:
+  - **Before renaming a surface, check whether the "other" thing is actually the same data.**
+    `#1187` was filed describing `/shop-your-list`'s "Your saved lists" block and `/account/lists`
+    as two different list concepts. They are **the same rows from the same
+    `getShoppingListService().list()` call** — the block is a truncated preview linking into that
+    page. Renaming only the page would have left one concept wearing three labels, re-creating
+    `#1145` next door. The fix was renaming that `<h2>` to match, and it was one string. A rename
+    that looks like it needs a decision often needs a `grep` for the service call first.
+  - **A tile or link must carry the name of the page it opens**, not a shorter synonym. `#1187`'s
+    body named its four tiles as single words; two would not have matched their destination's
+    `<h1>`, so `/quick-shop` uses "Your favourites", "Your regulars", "Smart Lists" and "Value
+    Bundles". A shopper tapping one name and landing on another is the `#1145` failure in miniature,
+    and no test catches it — `tests/quick-shop-hub.test.tsx` pins the four labels, but nothing
+    compares them to the destination headings automatically.
 - **Assert copy with string equality, not a pattern.** `tests/help-vendor-facts.test.tsx` asserted
   `/expire 12 months/i`, which the **incorrect** sentence satisfied too, so that defect shipped and
   survived three slices under a green test. A regex also admits a longer sentence that re-introduces

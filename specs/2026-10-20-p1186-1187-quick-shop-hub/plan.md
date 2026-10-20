@@ -120,7 +120,9 @@ surface in a fortnight. Every site, measured on 2026-10-20:
   now accurate for a hub) and `:24` (visible text, stays); `shop-your-list/page.tsx:23`
   (`metadata.title` → "Smart Lists") and `:43` (`<h1>` → "Smart Lists"); `cart/page.tsx:68` (→
   "Smart Lists", since that link opens the paste page); `account/lists/page.tsx:53` (→ "Smart
-  Lists", in the sentence "Paste a list on <link>").
+  Lists", in the sentence "Paste a list on `<link>`" — backticked because this file is rendered as
+  MDX on the internal docs site, where a bare `<link>` is parsed as an unclosed JSX element and
+  fails the Nextra build).
 - **`ShoppingListLink.tsx:21`'s `title="Shop by pasting your list"` becomes false** once the link
   opens a hub, and is rewritten. Its `aria-label` and visible text must stay identical to each
   other — WCAG 2.5.3, recorded in that file's own comment.
@@ -182,18 +184,21 @@ the same reasoning `#1145` used.
   `/account`, absent from the persistent nav. Adding a tab for Regulars alone would leave
   favourites the single omission, which is worse than the consistent state. Adding both would be a
   visual change to eight pages through a shared nav with scroll affordances — the kind of
-  shared-surface edit `#1177` showed deserves its own propose, not a ride on a hub slice. **An
-  issue is filed for the real gap (both pages, plus the missing parity test that would have caught
-  it) at `/build-notes`.** `AccountNav.tsx` and its test are untouched by this slice, and R30
-  asserts that so a later pass cannot quietly add one and call it tidy-up.
+  shared-surface edit `#1177` showed deserves its own propose, not a ride on a hub slice. **The
+  real gap — both pages, plus the missing parity test that would have caught either — is filed as
+  `#1191`.** `AccountNav.tsx` and its test are untouched by this slice, and R28 asserts that so a
+  later pass cannot quietly add one and call it tidy-up.
 - **No schema change, no migration, no new dependency.** Nothing here reads or writes a new column.
 - **`/bundles` is untouched**, including its `<h1>`.
 
 ## Open items carried forward
 
-- **The Regulars derivation** stays on `#1186`'s successor work; `#1186` itself closes with this
-  slice, since the placeholder is its whole stated scope. The five decisions above need their own
+- **The Regulars derivation is `#1192`**, filed at this slice's `/build-notes`. `#1186` itself
+  closes here, since the placeholder is its whole stated scope — which is exactly why the derivation
+  needed an issue of its own rather than inheriting one. The five decisions above need their own
   `/propose` before anything queries `OrderItem`.
+- **The account-nav gap is `#1191`**, also filed at `/build-notes`: Favourites *and* Regulars are
+  both missing from `components/account/AccountNav.tsx`, and no parity test would catch either.
 - **`#1184`** and **`#1188`** remain open and unscheduled.
 - **Carry-forward from the previous slice.** `docs/p232-1185-document` holds one unpushed commit,
   `cecba89`, with `#232`/`#1185`'s roadmap rows for PR #1189/#1190, the `ARTIFACT_INDEX.md` and
