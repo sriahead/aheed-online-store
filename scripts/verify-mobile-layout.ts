@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 /**
  * Measure the storefront at real phone and tablet widths:
- * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>] [--desktop] [--measure <selector>]`.
+ * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>] [--desktop] [--measure <selector>] [--map-host <ip>] [--collapse-filters] [--header <name:value>]`.
  *
  * ## Why this exists (#960, #961, #962)
  *
@@ -22,6 +22,16 @@ import { join } from "node:path";
  * emulated a touch device, which is right for the phone widths it was written for and wrong above
  * them — a 1280px measurement taken with `mobile: true` is a tablet-emulated layout, not the one a
  * desktop visitor sees.
+ *
+ * `--map-host <ip>` resolves `--base`'s hostname to `<ip>` inside this Chrome only, via Chrome's
+ * own `--host-resolver-rules`. That is how a vendor selected BY HOSTNAME is measured against a
+ * local server: `--base http://srimart-staging.nocaped.com:8787 --map-host 127.0.0.1`. A `Host`
+ * header injected through CDP does NOT reliably override the real one, and the server would go on
+ * resolving the wrong vendor while every measurement still looked plausible.
+ *
+ * `--collapse-filters` clicks "Hide filters" (#1173) so the collapsed browse sidebar, and the extra
+ * product column it pays for, can be measured. That state lives in `sessionStorage` and this script
+ * uses a throwaway profile, so it is otherwise unreachable.
  *
  * `--measure <selector>` (repeatable, or comma-separated) adds `measured` to each printed object:
  * one `{ top, left, width, height }` per selector, or `null` where nothing matched. It is how
@@ -145,6 +155,9 @@ interface Args {
   signIn: { email: string; password: string } | null;
   desktop: boolean;
   measure: string[];
+  mapHost: string | null;
+  collapseFilters: boolean;
+  headers: Array<[string, string]>;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -164,6 +177,16 @@ function parseArgs(argv: string[]): Args {
   const openHelpAssistant = argv.includes("--open-help-assistant");
   const blockUrls = value("--block-urls") ?? null;
   const desktop = argv.includes("--desktop");
+  const mapHost = value("--map-host") ?? null;
+  const collapseFilters = argv.includes("--collapse-filters");
+  // Repeatable `--header name:value`. The value may itself contain ":" (a URL), so split on the
+  // FIRST one only — the same reason `--sign-in` uses `indexOf` rather than `split` (#981).
+  const headers = argv
+    .flatMap((a, i) => (a === "--header" ? [argv[i + 1] ?? ""] : []))
+    .flatMap((raw): Array<[string, string]> => {
+      const at = raw.indexOf(":");
+      return at > 0 ? [[raw.slice(0, at).trim(), raw.slice(at + 1).trim()]] : [];
+    });
   // Repeatable and/or comma-separated: --measure main --measure 'nav > div,header'
   const measure = argv
     .flatMap((a, i) => (a === "--measure" ? [argv[i + 1] ?? ""] : []))
@@ -194,7 +217,7 @@ function parseArgs(argv: string[]): Args {
     (argv.includes("--sign-in") && signIn === null)
   ) {
     console.error(
-      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>] [--desktop] [--measure <selector>]",
+      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>] [--desktop] [--measure <selector>] [--map-host <ip>] [--collapse-filters] [--header <name:value>]",
     );
     process.exit(2);
   }
@@ -229,6 +252,9 @@ function parseArgs(argv: string[]): Args {
     signIn,
     desktop,
     measure,
+    mapHost,
+    collapseFilters,
+    headers,
   };
 }
 
@@ -659,6 +685,20 @@ const OPEN_FILTERS = `(() => {
   return panels.length > 0;
 })()`;
 
+/**
+ * #1180 — clicks `CollapsibleSidebar`'s "Hide filters" button (#1173), putting the browse sidebar
+ * into its collapsed state so the extra product column can be measured. The state normally lives in
+ * `sessionStorage`, and this script uses a throwaway profile per run, so without this the page is
+ * always measured expanded. Returns false when the button is absent — it renders only after
+ * hydration and only from `md` up, so a narrow width or an un-hydrated page has none.
+ */
+const COLLAPSE_FILTERS = `(() => {
+  const button = document.querySelector(".filters-sidebar-hide");
+  if (!button) return false;
+  button.click();
+  return true;
+})()`;
+
 /** #979 — clicks the floating cart button; false when there is none. */
 const OPEN_CART = `(() => {
   const button = [...document.querySelectorAll('button[aria-haspopup="dialog"]')].find((b) =>
@@ -721,6 +761,15 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const profile = mkdtempSync(join(tmpdir(), "verify-mobile-layout-"));
   const port = 9300 + Math.floor(Math.random() * 500);
+  // #1180 — `--map-host <ip>` resolves --base's hostname to <ip> inside this Chrome only, so a
+  // vendor whose profile is selected BY HOSTNAME can be measured against a local server. Chrome's
+  // own resolver rule is used rather than an injected `Host` header: a header set through
+  // `Network.setExtraHTTPHeaders` does not reliably override the real `Host`, and the server would
+  // keep resolving the wrong vendor while every measurement looked plausible.
+  const mapHost = args.mapHost
+    ? [`--host-resolver-rules=MAP ${new URL(args.base).hostname} ${args.mapHost}`]
+    : [];
+
   const chrome = spawn(
     findChrome(),
     [
@@ -728,6 +777,7 @@ async function main() {
       `--remote-debugging-port=${port}`,
       `--user-data-dir=${profile}`,
       "--no-first-run",
+      ...mapHost,
       "about:blank",
     ],
     { stdio: "ignore" },
@@ -767,6 +817,17 @@ async function main() {
     if (args.blockUrls) {
       await cdp.send("Network.enable");
       await cdp.send("Network.setBlockedURLs", { urls: [args.blockUrls] });
+    }
+
+    // #1180 — `--header name:value`. Needed above all for `x-forwarded-proto: http` against a local
+    // `npm run preview`: Better Auth derives its origin from the forwarded proto, so over plain http
+    // it computes an `https://` origin, the origin check fails and every sign-in returns 403 (the
+    // same trap as #1177). NOTE `Host` cannot be set this way — Chrome ignores it; use `--map-host`.
+    if (args.headers.length > 0) {
+      await cdp.send("Network.enable");
+      await cdp.send("Network.setExtraHTTPHeaders", {
+        headers: Object.fromEntries(args.headers.map(([name, v]) => [name, v])),
+      });
     }
 
     /** Polls until the selector is displayed; throws naming the flag if it never is. */
@@ -866,6 +927,16 @@ async function main() {
           throw new Error("--open-filters: no filter disclosure on the page");
         }
         await sleep(300);
+      }
+
+      if (args.collapseFilters) {
+        if (!(await cdp.evaluate<boolean>(COLLAPSE_FILTERS))) {
+          throw new Error(
+            "--collapse-filters: no displayed 'Hide filters' button (it renders after hydration, from md up)",
+          );
+        }
+        // The attribute is set on <html> and the grid restyles from it; let that settle.
+        await sleep(500);
       }
 
       if (args.openCart) {

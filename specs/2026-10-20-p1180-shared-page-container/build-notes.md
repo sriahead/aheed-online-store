@@ -85,6 +85,58 @@ the file. A card is not a page container.
 top-level container, a `className` smuggling `max-w-3xl`, and a new page absent from the map — then
 restored green. Recorded here because the evidence does not survive in the diff.
 
+## Fixes after validation pass 1
+
+Validation pass 1 **failed**: R2 and R4 could not be verified at all, and R14/R15 could only be
+half-checked. All four were fixed at the root rather than by loosening a row — **no row was
+weakened; every one of them was correct as written.**
+
+**R2 / R4 — the artifact was missing the required evidence.** `validation.md` specified "a rendering
+case per variant" and a `className` case; `tests/page-container.test.ts` had **zero** rendering
+cases (`render(` count 0) — all five tests parsed source text. The component's behaviour happened to
+be right, but `wide` and `padY="tight"` had never been asserted against real output, only inferred
+from a template literal. Added six rendering cases using `renderToStaticMarkup` + `createElement`,
+which keeps the file a plain `.ts` (the name R11 references) and needs no jsdom. They also assert
+*exactly one* `max-w-*` and *exactly one* `py-*` class, so a future edit that appends rather than
+replaces fails. 5 cases became 11.
+
+**R14 — the instrument could not reach the second vendor.** SriMart is selected **by hostname**, and
+`verify-mobile-layout.ts` could only point at a URL. Added **`--map-host <ip>`**, which passes
+Chrome's own `--host-resolver-rules=MAP <base-hostname> <ip>`. A `Host` header injected over CDP was
+rejected as an approach on purpose: **Chrome ignores it**, so the server would have gone on resolving
+the wrong vendor while every measurement still looked plausible — a false pass, which is the exact
+failure mode `#1177` produced.
+
+**R14 — a second blocker behind the first.** With the host mapped, SriMart sign-in returned **403**.
+Not rate limiting and not vendor resolution (`splitHostPort` strips the port, and the refusal path
+returns **429**, not 403): Better Auth derives its origin from the forwarded proto, so over plain
+local `http` it computed an `https://` origin and refused. Added **`--header <name:value>`**;
+`--header x-forwarded-proto:http` turns the 403 into a 401. This is `#1177`'s trap again, now
+solved in shared tooling instead of a throwaway driver.
+
+**R15 — the collapsed state was unreachable.** `#1173`'s collapse lives in `sessionStorage` and this
+script uses a throwaway profile per run, so the page was always measured expanded. Added
+**`--collapse-filters`**, which clicks the real "Hide filters" button (`.filters-sidebar-hide`)
+rather than forging the attribute, so it exercises the same path a shopper does.
+
+**Two traps worth knowing, both of which cost time here:**
+- **An unresolved vendor returns 429, identical to throttling** (`lib/auth.ts`, the `#469`
+  fail-closed path). Pointing `--base` at an invented hostname like `aheed-local` therefore looks
+  exactly like a rate limit and is not one. Aheed resolves through the single-vendor fallback at
+  `127.0.0.1`; only SriMart needs `--map-host`.
+- **The auth rate limit is real too**: 5 attempts per 60s per vendor+IP
+  (`lib/repositories/auth-rate-limit.ts`). A loop of `curl` probes exhausts it and the next genuine
+  measurement fails for a reason that has nothing to do with the artifact.
+
+**Still not verified, and not fixable from here:** SriMart's `/staff` and `/staff/orders`.
+`demo-srimart-admin@example.com` returns **401** — it is not in the local dev database. Creating it
+means running `scripts/demo-accounts.ts`, which reads `DIRECT_URL`, and this session's process
+environment has a **production** `DIRECT_URL` exported. Not worth the risk for one measurement. The
+remedy is one command in a clean shell: `npx tsx scripts/demo-accounts.ts add`. The residual risk is
+low — the staff panel's chrome is vendor-agnostic (only `brandStyle()` colours differ, which cannot
+cause horizontal overflow) and SriMart's **storefront** pages, where vendor content length actually
+varies, were measured with no overflow.
+
 ## Deviations from the spec
 
 **One, and it is an addition the spec anticipated as a possibility rather than specified.**

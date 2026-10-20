@@ -1,6 +1,9 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { PageContainer, type PageWidth } from "../components/layout/PageContainer";
 
 /**
  * #1180 — the pages must not hand-roll their own width containers again.
@@ -123,6 +126,61 @@ const read = (rel: string) => readFileSync(join(REPO_ROOT, rel), "utf8");
 function returnedElements(source: string): string[] {
   return [...source.matchAll(/\n {2}return \(\s*\n\s*(<[^\n]*)/g)].map((m) => m[1]);
 }
+
+/**
+ * Rendered, not read. The source-parsing cases below prove which width each PAGE asks for; these
+ * prove what the component actually EMITS for that ask. Added at validation (#1180): the first
+ * version of this file had no rendering case at all, so `max-w-7xl` and `py-6` were never asserted
+ * against real output — only inferred from a template literal.
+ *
+ * `renderToStaticMarkup` rather than `@testing-library/react`: this needs the emitted class string,
+ * not a DOM, so it keeps the file a plain `.ts` and needs no jsdom environment.
+ */
+const markup = (props: Parameters<typeof PageContainer>[0]) =>
+  renderToStaticMarkup(createElement(PageContainer, props));
+
+const classOf = (html: string) => html.match(/^<main class="([^"]*)"/)?.[1] ?? null;
+
+describe("#1180 PageContainer renders", () => {
+  const widths: Array<[PageWidth, string]> = [
+    ["wide", "max-w-7xl"],
+    ["standard", "max-w-5xl"],
+    ["narrow", "max-w-2xl"],
+  ];
+
+  it.each(widths)("%s emits exactly one width class, on a <main>", (width, expected) => {
+    const html = markup({ width, children: "x" });
+    expect(html.startsWith("<main ")).toBe(true);
+    expect(html.endsWith("</main>")).toBe(true);
+    expect(classOf(html)).toBe(`mx-auto w-full px-4 ${expected} py-8`);
+    // Exactly one width class — not the right one plus a stray.
+    expect(classOf(html)!.match(/\bmax-w-\S+/g)).toEqual([expected]);
+  });
+
+  it("padY defaults to py-8 and tight gives py-6, never both", () => {
+    expect(classOf(markup({ width: "wide", children: "x" }))).toBe(
+      "mx-auto w-full px-4 max-w-7xl py-8",
+    );
+    expect(classOf(markup({ width: "wide", padY: "tight", children: "x" }))).toBe(
+      "mx-auto w-full px-4 max-w-7xl py-6",
+    );
+    const tight = classOf(markup({ width: "narrow", padY: "tight", children: "x" }))!;
+    expect(tight.match(/\bpy-\d+\b/g)).toEqual(["py-6"]);
+  });
+
+  it("className is appended after the layout classes, which all survive", () => {
+    const cls = classOf(markup({ width: "standard", className: "text-primary", children: "x" }))!;
+    expect(cls.endsWith("text-primary")).toBe(true);
+    expect(cls).toContain("px-4");
+    expect(cls).toBe("mx-auto w-full px-4 max-w-5xl py-8 text-primary");
+  });
+
+  it("renders its children inside the main element", () => {
+    expect(markup({ width: "narrow", children: "hello" })).toBe(
+      '<main class="mx-auto w-full px-4 max-w-2xl py-8">hello</main>',
+    );
+  });
+});
 
 describe("#1180 page containers", () => {
   it("every page on disk has an expected width recorded", () => {
