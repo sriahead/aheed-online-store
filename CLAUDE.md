@@ -66,6 +66,12 @@ Every rule here fails **silently**. Evidence: `docs/developer-portal/runtime-pit
 - **The two adapters report the same Postgres error under different `.code` values** (raw SQLSTATE
   `"23505"` vs Prisma `P2002`). Any `error.code` check guarding a write must accept **both**, and be
   verified against a real failing request — a hand-built double only reproduces its author's guess.
+  **"A real failing request" means THE ADAPTER THE CODE ACTUALLY USES.** A verification script that
+  builds the *other* real client is the same mistake in a subtler form, and it looks green:
+  `#232`'s script constructed `PrismaNeon` while the repository ran on `getPrisma()`
+  (`PrismaNeonHttp`), so it observed `P2002`, never raised the `"23505"` the shipped path produces,
+  and printed `ALL CHECKS PASSED`. Check which adapter the script constructs against which one the
+  code under test resolves, and prefer probing **both** so the predicate's other branch is real too.
 - **`engineType = "client"`**; runtime code imports from **`@prisma/client/wasm`**, Node scripts
   from the bare specifier. Same for `@aheed/reference-client/wasm`.
 - **Validate DB-touching code with `npm run preview`, never `npm run dev`** — `next dev` cannot load

@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.46.0"
+version: "2.47.0"
 updated: 2026-10-19
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
@@ -377,6 +377,20 @@ not present.
   write or update the relevant **persistent doc** (`specs/architecture.md`, `tech-stack.md`,
   `design-system.md`, ...) — the dated folder is the one-time slice, the persistent doc is what
   future sessions read as current truth.
+- **A class-list assertion cannot prove a geometric property, and writing one is how a real defect
+  hides behind a green test.** `#232`'s R11 required a control not to overlap its neighbour and
+  checked the Tailwind class that was *supposed* to produce that — which passed while the two
+  controls overlapped by 2px on a phone, because the card's skew renders them 46px wide rather than
+  the 44px the offset assumed. When a requirement states a property of the rendered result
+  (non-overlap, a minimum hit area, an alignment), **its validation row must measure the rendered
+  result** — `scripts/verify-mobile-layout.ts --widths 360 --measure '<sel>,<sel>'` prints the
+  boxes. Keep the class assertion as a cheap guard if you like, but say in the row that the class
+  passing is not the requirement.
+- **Run `npm run kms:build-index` after a slice's LAST doc edit, not the first.** `#232` ran it at
+  Build, then edited `specs/design-system.md` again at Fix, which left
+  `app/(admin)/staff/runbook/docs.ts` stale while `ARTIFACT_INDEX.md` stayed current — one
+  generator, two outputs, only one of which obviously drifts (the `#537` shape). `/validate` caught
+  it; CI would have. A doc edit at Fix or Document means regenerating again.
 - **Adversarial pass before presenting**: read your own draft asking what's missing, ambiguous, or
   quietly out of scope. Explicitly list deferred items (don't let them vanish silently) and check
   the spec doesn't contradict an existing ADR or persistent doc.
