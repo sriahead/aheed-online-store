@@ -5,6 +5,7 @@ import { Package, Plus } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { listBundlesForVendor } from "@/lib/bundles-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's bundles — must render per-request.
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ export default async function StaffBundlesPage() {
   const bundles = await listBundlesForVendor(auth.vendorId);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <PageContainer width="wide">
       <div className="mb-1 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-primary">Bundles</h1>
         <Link
@@ -88,6 +89,6 @@ export default async function StaffBundlesPage() {
           ))}
         </ul>
       )}
-    </main>
+    </PageContainer>
   );
 }

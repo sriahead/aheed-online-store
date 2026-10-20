@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.120.0"
+version: "1.121.0"
 updated: 2026-10-20
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,21 +39,34 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-20, `#1177` Orient and Build (supersedes the "`staging` is ahead of `main` by two
-  slices" bullet below — it is stale).** `#1169` **and** `#1173` are **in production**. Promotion
-  PR #1176 merged as `b5c27e8` at 2026-10-19T23:01Z, closing exactly `[1169, 1173]`; both are
-  `Done`. `deploy-production` run `39338898037` and `deploy-docs-internal` run `39338897892`
-  succeeded. Production `/api/health` on **both** vendor hosts serves `b5c27e8` with `db.ok: true`,
-  `reference.reachable: true`, `drift: false` and two `sources`. `origin/main` and `origin/staging`
-  are **level** — `git log origin/main..origin/staging` is empty. The row is `specs/roadmap.md`
-  1.167.0, added on `feature/p1177-staff-nav-grouping` carrying `sdd:audit`'s flag.
-  - **In flight:** `#1177` (grouped staff panel navigation), branch
-    `feature/p1177-staff-nav-grouping`, spec `376d169` + build `12b3a0f`, **not yet validated**.
-    Board `In Progress`, Phase `P10`, Complexity `M`.
-  - **A standing rule changed.** A new `/staff/*` page is now registered **once**, in
-    `components/staff/nav-items.ts`, which feeds both app surfaces — not in `PanelNav.tsx` and the
-    hub separately. `CLAUDE.md` and `docs/developer-portal/app-conventions.md` 1.17.0 carry it.
-    Any older instruction to edit both surfaces is superseded.
+- **2026-10-20, `#1180` Build (supersedes the "`staging` is ahead of `main` by two slices" bullet
+  below — it is stale).** `#1177` is **in production**, as are `#1169` and `#1173` before it.
+  Promotion PR #1179 merged as `e47466f` at 2026-10-20T09:05:06Z, closing exactly `[1177]`; it is
+  `Done`. `deploy-production` run `39398092276` succeeded. Production `/api/health` on **both**
+  vendor hosts serves `e47466f` with `db.ok: true`, `reference.reachable: true`, `drift: false` and
+  two `sources`, read three times per host. `origin/main` and `origin/staging` are **level** —
+  `git log origin/main..origin/staging` is empty. Both rows are `specs/roadmap.md` 1.168.0, added
+  on `feature/p1180-shared-page-container` carrying `sdd:audit`'s flag.
+  - **In flight:** `#1180` (one shared page container and a three-step width scale), branch
+    `feature/p1180-shared-page-container`, spec `effa5d8` + build `82f1cb7` + `33a8f81`, **not yet
+    validated**. Board `In Progress`, Phase `P10`, Complexity `L`.
+  - **A promotion to `main` is a MERGE commit, never a squash.** `e47466f` has two parents, as do
+    the twelve promotions before it. Two `--squash` attempts on PR #1179 left it open; had one
+    landed, `main` would have lost its parent link to `staging` and `4e265b2` would have read as
+    unpromoted forever. Feature-to-`staging` PRs are still squashed. Use `gh pr merge <N> --merge`.
+  - **Two standing rules changed.** A new `/staff/*` page is registered **once**, in
+    `components/staff/nav-items.ts`, which feeds both app surfaces (`#1177`). And every page's
+    top-level container is now `components/layout/PageContainer.tsx` with a required `width` of
+    `wide`/`standard`/`narrow` (`#1180`) — a page must not hand-roll `mx-auto … max-w-… px-4`, and
+    `tests/page-container.test.ts` fails if it does. `CLAUDE.md`,
+    `docs/developer-portal/app-conventions.md` 1.18.0 and `specs/design-system.md` 1.23.0 carry
+    both. Any older instruction to edit both nav surfaces, or to set a page width inline, is
+    superseded.
+  - **The local vitest signal on this machine lies under load.** At the default worker count a
+    loaded machine produced 2-10 failures scattered across unrelated files, each 5-9 s for a
+    trivial assertion, with the failing set moving between runs — and **reverting code made the set
+    grow**. Use `npx vitest run --maxWorkers=4`; it returned the same tree to 286 files / 3583
+    tests green. `--minWorkers` is not a valid flag. Recorded in `CLAUDE.md`.
   - **The exported production `DIRECT_URL` is now narrowed, not just observed.** It was set again
     this session (`ep-young-glitter-zadlkttm`, production) while `.env` and `.dev.vars` both
     correctly named dev. This is the **fourth** session. Newly ruled out: Windows `User` scope,

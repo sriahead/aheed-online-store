@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function TermsPage() {
   const vendorName = profile?.name ?? "Aheed Food Centre";
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8 text-primary">
+    <PageContainer width="narrow" className="text-primary">
       <nav className="mb-6 text-xs text-primary-muted">
         <Link href="/" className="hover:underline">
           Home
@@ -77,6 +78,6 @@ export default async function TermsPage() {
           </p>
         </section>
       </article>
-    </main>
+    </PageContainer>
   );
 }

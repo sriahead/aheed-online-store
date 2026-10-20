@@ -4,6 +4,7 @@ import { Check, X, ExternalLink } from "lucide-react";
 import { requireRole } from "@/lib/auth-rbac";
 import { getDevDiagnostics } from "@/lib/dev-diagnostics";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session (requireRole) — must render per-request, never prerender.
 export const dynamic = "force-dynamic";
@@ -34,13 +35,13 @@ export default async function DevPage() {
     if (auth.status === 401) redirect("/login");
     // 403 — signed in but not an admin. Show a message, not the diagnostics.
     return (
-      <main className="mx-auto max-w-md px-4 py-16 text-center">
+      <PageContainer width="narrow" className="text-center">
         <h1 className="text-2xl font-semibold text-primary">Administrators only</h1>
         <p className="mt-3 text-primary-muted">
           This area is restricted to admin accounts. You&apos;re signed in, but your role
           doesn&apos;t have access.
         </p>
-      </main>
+      </PageContainer>
     );
   }
 
@@ -49,7 +50,7 @@ export default async function DevPage() {
   const { user } = auth;
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <PageContainer width="narrow">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Developer diagnostics</h1>
       <p className="mb-8 text-sm text-primary-muted">
         Admin-only. Non-secret environment info — never shows secret values.
@@ -147,6 +148,6 @@ export default async function DevPage() {
           )}
         </section>
       </div>
-    </main>
+    </PageContainer>
   );
 }

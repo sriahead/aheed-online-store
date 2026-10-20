@@ -28,6 +28,7 @@ import {
   REFERRAL_COOKIE,
 } from "@/lib/storage-keys";
 import { STORE_TIMEZONE } from "@/lib/local-datetime";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -113,7 +114,7 @@ export default async function CheckoutPage() {
   });
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6">
+    <PageContainer width="narrow" padY="tight">
       <h1 className="mb-4 text-xl font-bold text-primary">Checkout</h1>
 
       {progress.kind === "below-minimum" && (
@@ -166,6 +167,6 @@ export default async function CheckoutPage() {
           <CheckoutSummary lines={summary.lines} method={fulfilmentMethod} />
         </div>
       </CheckoutPricingProvider>
-    </main>
+    </PageContainer>
   );
 }

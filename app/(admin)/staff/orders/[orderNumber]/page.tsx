@@ -13,6 +13,7 @@ import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { StaffOrderTimeline } from "@/components/staff/StaffOrderTimeline";
 import { advanceStatus } from "@/features/orders/advance-status";
 import { cancelOrderStaff } from "@/features/orders/cancel-order-staff";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and one of this vendor's orders — must render per-request.
 export const dynamic = "force-dynamic";
@@ -53,7 +54,7 @@ export default async function StaffOrderDetailPage({
   const next = nextStatus(order.status, order.fulfilmentMethod);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <PageContainer width="narrow">
       <Link
         href="/staff/orders"
         className="mb-4 inline-flex items-center gap-1 text-sm text-primary-muted hover:text-primary"
@@ -156,6 +157,6 @@ export default async function StaffOrderDetailPage({
           </button>
         </form>
       )}
-    </main>
+    </PageContainer>
   );
 }

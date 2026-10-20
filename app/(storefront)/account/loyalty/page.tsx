@@ -15,6 +15,7 @@ import { AvailableRewardsSection } from "@/components/rewards/AvailableRewardsSe
 import { getReferralStats } from "@/lib/referrals-service";
 import { buildReferralUrl } from "@/lib/referrals";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's live loyalty rows — must render per-request.
 export const dynamic = "force-dynamic";
@@ -80,7 +81,7 @@ export default async function LoyaltyPage() {
     : "";
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="standard">
       {/* Back button */}
       <Link
         href="/account"
@@ -234,7 +235,7 @@ export default async function LoyaltyPage() {
           </ul>
         )}
       </section>
-    </main>
+    </PageContainer>
   );
 }
 

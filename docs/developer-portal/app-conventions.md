@@ -4,7 +4,7 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.17.0"
+version: "1.18.0"
 updated: 2026-10-20
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, fulfilment-method preference, autocomplete tokens, shared-source copy rules and React hooks — with the tests that enforce each invariant mechanically.
@@ -159,6 +159,25 @@ Runtime failures that survive a green build are in `runtime-pitfalls.md`. Folder
   **data**. That is what made the hierarchy rules (who may grant ADMIN, who may touch a platform
   admin, the last-admin self-demotion guard) testable at all — which authorization logic needs most.
 
+
+## Page containers (every page, `#1180`)
+
+- **A page's top-level container is `components/layout/PageContainer.tsx`**, not a hand-written
+  `mx-auto … max-w-… px-4`. `width` is required (`wide` / `standard` / `narrow`) and has no
+  default, because a default is how a page silently inherits a width nobody chose — which is the
+  drift this replaced. Pick `wide` for tables, lists, dashboards and browse (it matches the chrome
+  exactly), `standard` for settings and record detail, `narrow` for forms, auth and reading copy.
+- **All three share `mx-auto w-full px-4`; that gutter is what makes pages line up**, not the
+  `max-width`. A `narrow` page still shares its left edge with the header.
+- **`className` appends and cannot override.** There is no `clsx` and no `tailwind-merge` here, so
+  a competing `max-w-*` would resolve by stylesheet source order rather than intent.
+  `tests/page-container.test.ts` rejects `max-w-`, `mx-auto` and `px-` in that prop, and fails on
+  any page that hand-rolls a top-level container. One nested width is deliberate: the four auth
+  pages keep a `max-w-sm` card inside a `narrow` container.
+- **`PageContainer` renders the page's `<main>` landmark.** Neither route-group layout renders one
+  (`app/(admin)/layout.tsx` and `components/layout/StorefrontChrome.tsx` both render a plain
+  `div`), so exactly one `<main>` per rendered page comes from here. Scale and rationale:
+  `specs/design-system.md`.
 
 ## Staff panel pages (`app/(admin)/staff/*`)
 

@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 /**
  * Measure the storefront at real phone and tablet widths:
- * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>]`.
+ * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>] [--desktop] [--measure <selector>] [--map-host <ip>] [--collapse-filters] [--header <name:value>]`.
  *
  * ## Why this exists (#960, #961, #962)
  *
@@ -15,6 +15,29 @@ import { join } from "node:path";
  * the locally installed Chrome headless over the DevTools protocol and sets the viewport with
  * `Emulation.setDeviceMetricsOverride`, which is a real layout at that width with `mobile: true`.
  * It uses Node's built-in `WebSocket` (Node 22+) and adds no dependency.
+ *
+ * ## Desktop widths and arbitrary boxes (#1180)
+ *
+ * `--desktop` sets `mobile: false` and `deviceScaleFactor: 1`. Without it this script always
+ * emulated a touch device, which is right for the phone widths it was written for and wrong above
+ * them — a 1280px measurement taken with `mobile: true` is a tablet-emulated layout, not the one a
+ * desktop visitor sees.
+ *
+ * `--map-host <ip>` resolves `--base`'s hostname to `<ip>` inside this Chrome only, via Chrome's
+ * own `--host-resolver-rules`. That is how a vendor selected BY HOSTNAME is measured against a
+ * local server: `--base http://srimart-staging.nocaped.com:8787 --map-host 127.0.0.1`. A `Host`
+ * header injected through CDP does NOT reliably override the real one, and the server would go on
+ * resolving the wrong vendor while every measurement still looked plausible.
+ *
+ * `--collapse-filters` clicks "Hide filters" (#1173) so the collapsed browse sidebar, and the extra
+ * product column it pays for, can be measured. That state lives in `sessionStorage` and this script
+ * uses a throwaway profile, so it is otherwise unreachable.
+ *
+ * `--measure <selector>` (repeatable, or comma-separated) adds `measured` to each printed object:
+ * one `{ top, left, width, height }` per selector, or `null` where nothing matched. It is how
+ * `#1180` proves the admin nav and the page body share a left edge. **When no `--measure` is
+ * passed the key is omitted entirely**, so the default output stays byte-identical for the slices
+ * whose validation already reads this JSON.
  *
  * ## It measures; it does not judge
  *
@@ -130,6 +153,11 @@ interface Args {
   openHelpAssistant: boolean;
   blockUrls: string | null;
   signIn: { email: string; password: string } | null;
+  desktop: boolean;
+  measure: string[];
+  mapHost: string | null;
+  collapseFilters: boolean;
+  headers: Array<[string, string]>;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -148,6 +176,23 @@ function parseArgs(argv: string[]): Args {
   const openQuickView = argv.includes("--open-quick-view");
   const openHelpAssistant = argv.includes("--open-help-assistant");
   const blockUrls = value("--block-urls") ?? null;
+  const desktop = argv.includes("--desktop");
+  const mapHost = value("--map-host") ?? null;
+  const collapseFilters = argv.includes("--collapse-filters");
+  // Repeatable `--header name:value`. The value may itself contain ":" (a URL), so split on the
+  // FIRST one only — the same reason `--sign-in` uses `indexOf` rather than `split` (#981).
+  const headers = argv
+    .flatMap((a, i) => (a === "--header" ? [argv[i + 1] ?? ""] : []))
+    .flatMap((raw): Array<[string, string]> => {
+      const at = raw.indexOf(":");
+      return at > 0 ? [[raw.slice(0, at).trim(), raw.slice(at + 1).trim()]] : [];
+    });
+  // Repeatable and/or comma-separated: --measure main --measure 'nav > div,header'
+  const measure = argv
+    .flatMap((a, i) => (a === "--measure" ? [argv[i + 1] ?? ""] : []))
+    .flatMap((v) => v.split(","))
+    .map((v) => v.trim())
+    .filter(Boolean);
   // #981 — `--sign-in <email>:<password>`. The password may itself contain `:`, so split on the
   // FIRST colon only.
   const signInRaw = value("--sign-in") ?? null;
@@ -172,7 +217,7 @@ function parseArgs(argv: string[]): Args {
     (argv.includes("--sign-in") && signIn === null)
   ) {
     console.error(
-      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>]",
+      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>] [--desktop] [--measure <selector>] [--map-host <ip>] [--collapse-filters] [--header <name:value>]",
     );
     process.exit(2);
   }
@@ -205,6 +250,11 @@ function parseArgs(argv: string[]): Args {
     openHelpAssistant,
     blockUrls,
     signIn,
+    desktop,
+    measure,
+    mapHost,
+    collapseFilters,
+    headers,
   };
 }
 
@@ -536,7 +586,24 @@ const MEASURE = `(async () => {
   const headerAfter = header ? header.getBoundingClientRect() : null;
   const bannerAfter = banner ? banner.getBoundingClientRect() : null;
 
+  // #1180 — \`--measure <selector>\`. Omitted entirely when none was passed, so the default output
+  // stays byte-identical for the slices whose validation already reads this JSON.
+  const measureSelectors = window.__measureSelectors || [];
+  const measured = {};
+  for (const selector of measureSelectors) {
+    const el = document.querySelector(selector);
+    measured[selector] = el
+      ? (({ top, left, width, height }) => ({
+          top: Math.round(top),
+          left: Math.round(left),
+          width: Math.round(width),
+          height: Math.round(height),
+        }))(el.getBoundingClientRect())
+      : null;
+  }
+
   return {
+    ...(measureSelectors.length ? { measured } : {}),
     viewportWidth: window.innerWidth,
     documentScrollWidth: document.documentElement.scrollWidth,
     scrollYAfterScroll: Math.round(window.scrollY),
@@ -618,6 +685,20 @@ const OPEN_FILTERS = `(() => {
   return panels.length > 0;
 })()`;
 
+/**
+ * #1180 — clicks `CollapsibleSidebar`'s "Hide filters" button (#1173), putting the browse sidebar
+ * into its collapsed state so the extra product column can be measured. The state normally lives in
+ * `sessionStorage`, and this script uses a throwaway profile per run, so without this the page is
+ * always measured expanded. Returns false when the button is absent — it renders only after
+ * hydration and only from `md` up, so a narrow width or an un-hydrated page has none.
+ */
+const COLLAPSE_FILTERS = `(() => {
+  const button = document.querySelector(".filters-sidebar-hide");
+  if (!button) return false;
+  button.click();
+  return true;
+})()`;
+
 /** #979 — clicks the floating cart button; false when there is none. */
 const OPEN_CART = `(() => {
   const button = [...document.querySelectorAll('button[aria-haspopup="dialog"]')].find((b) =>
@@ -680,6 +761,15 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const profile = mkdtempSync(join(tmpdir(), "verify-mobile-layout-"));
   const port = 9300 + Math.floor(Math.random() * 500);
+  // #1180 — `--map-host <ip>` resolves --base's hostname to <ip> inside this Chrome only, so a
+  // vendor whose profile is selected BY HOSTNAME can be measured against a local server. Chrome's
+  // own resolver rule is used rather than an injected `Host` header: a header set through
+  // `Network.setExtraHTTPHeaders` does not reliably override the real `Host`, and the server would
+  // keep resolving the wrong vendor while every measurement looked plausible.
+  const mapHost = args.mapHost
+    ? [`--host-resolver-rules=MAP ${new URL(args.base).hostname} ${args.mapHost}`]
+    : [];
+
   const chrome = spawn(
     findChrome(),
     [
@@ -687,6 +777,7 @@ async function main() {
       `--remote-debugging-port=${port}`,
       `--user-data-dir=${profile}`,
       "--no-first-run",
+      ...mapHost,
       "about:blank",
     ],
     { stdio: "ignore" },
@@ -726,6 +817,17 @@ async function main() {
     if (args.blockUrls) {
       await cdp.send("Network.enable");
       await cdp.send("Network.setBlockedURLs", { urls: [args.blockUrls] });
+    }
+
+    // #1180 — `--header name:value`. Needed above all for `x-forwarded-proto: http` against a local
+    // `npm run preview`: Better Auth derives its origin from the forwarded proto, so over plain http
+    // it computes an `https://` origin, the origin check fails and every sign-in returns 403 (the
+    // same trap as #1177). NOTE `Host` cannot be set this way — Chrome ignores it; use `--map-host`.
+    if (args.headers.length > 0) {
+      await cdp.send("Network.enable");
+      await cdp.send("Network.setExtraHTTPHeaders", {
+        headers: Object.fromEntries(args.headers.map(([name, v]) => [name, v])),
+      });
     }
 
     /** Polls until the selector is displayed; throws naming the flag if it never is. */
@@ -775,13 +877,19 @@ async function main() {
     let cartFeedback: unknown = null;
     let printedFeedback = false;
     for (const width of args.widths) {
+      // #1180 — `mobile` was hardcoded `true`, which is right for the phone widths this script was
+      // written for and wrong above them: a 1280px measurement taken with `mobile: true` is a
+      // tablet-emulated layout, not the one a desktop visitor gets. `--desktop` measures the real
+      // desktop layout; without it nothing changes.
       await cdp.send("Emulation.setDeviceMetricsOverride", {
         width,
         height: HEIGHT,
-        deviceScaleFactor: 2,
-        mobile: true,
+        deviceScaleFactor: args.desktop ? 1 : 2,
+        mobile: !args.desktop,
       });
       await load(added && args.then ? args.then : args.path);
+      // Read by MEASURE. Set per load because a navigation clears it.
+      await cdp.evaluate(`window.__measureSelectors = ${JSON.stringify(args.measure)}; true`);
 
       if (args.addFirst && !added) {
         if (!(await cdp.evaluate<boolean>(CLICK_FIRST_ADD))) {
@@ -819,6 +927,16 @@ async function main() {
           throw new Error("--open-filters: no filter disclosure on the page");
         }
         await sleep(300);
+      }
+
+      if (args.collapseFilters) {
+        if (!(await cdp.evaluate<boolean>(COLLAPSE_FILTERS))) {
+          throw new Error(
+            "--collapse-filters: no displayed 'Hide filters' button (it renders after hydration, from md up)",
+          );
+        }
+        // The attribute is set on <html> and the grid restyles from it; let that settle.
+        await sleep(500);
       }
 
       if (args.openCart) {

@@ -7,6 +7,7 @@ import { FeedbackForm } from "@/components/storefront/FeedbackForm";
 import { ReviewLinkGroup } from "@/components/storefront/CustomerFeedbackCards";
 import { AccountNav } from "@/components/account/AccountNav";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 /**
  * Where a customer leaves feedback about the shop (P9.2, #818).
@@ -36,7 +37,7 @@ export default async function FeedbackPage() {
 
   if (!session?.user) {
     return (
-      <main className="mx-auto w-full max-w-2xl px-4 py-10">
+      <PageContainer width="narrow">
         <h1 className="text-2xl font-bold text-primary">Share your feedback</h1>
         <p className="mt-3 text-sm text-primary-muted">
           Please sign in to leave feedback about your experience with us.
@@ -48,7 +49,7 @@ export default async function FeedbackPage() {
           Sign in
         </Link>
         <ExternalInvite />
-      </main>
+      </PageContainer>
     );
   }
 
@@ -60,7 +61,7 @@ export default async function FeedbackPage() {
   return (
     <>
       <AccountNav loyaltyEnabled={profile?.loyaltyEnabled ?? false} />
-      <main className="mx-auto w-full max-w-2xl px-4 py-10">
+      <PageContainer width="narrow">
         <h1 className="text-2xl font-bold text-primary">Share your feedback</h1>
         <p className="mt-2 text-sm text-primary-muted">
           Tell us how we did. Every review is read by our team before it appears on the site.
@@ -81,7 +82,7 @@ export default async function FeedbackPage() {
         </div>
 
         <ExternalInvite />
-      </main>
+      </PageContainer>
     </>
   );
 }

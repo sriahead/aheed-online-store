@@ -6,6 +6,7 @@ import { AssistantSettingsForm } from "@/components/staff/AssistantSettingsForm"
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getAssistantService } from "@/lib/assistant-service";
 import { ASSISTANT_TOPIC_LABELS, type AssistantTopicName } from "@/lib/assistant-content";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,7 @@ export default async function AssistantAdminPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="standard">
       <h1 className="mb-2 text-3xl font-extrabold text-black">Help Assistant</h1>
       <p className="mb-8 max-w-2xl text-sm text-black/60">
         A guided help assistant on your storefront. It answers delivery, collection, rewards and
@@ -167,6 +168,6 @@ export default async function AssistantAdminPage() {
           </div>
         )}
       </section>
-    </main>
+    </PageContainer>
   );
 }

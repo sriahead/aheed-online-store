@@ -8,6 +8,7 @@ import { getShoppingListService } from "@/lib/shopping-lists-service";
 import { deleteList } from "@/features/lists/delete-list";
 import { renameList } from "@/features/lists/rename-list";
 import { MAX_LIST_NAME_LENGTH, MAX_SAVED_LISTS } from "@/lib/saved-list";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 /**
  * Saved shopping lists (P10, #116).
@@ -28,7 +29,7 @@ export default async function AccountListsPage() {
   const lists = await getShoppingListService().list();
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="standard">
       <Link
         href="/account"
         className="mb-4 inline-flex items-center gap-1 text-sm text-primary-muted hover:text-primary"
@@ -119,6 +120,6 @@ export default async function AccountListsPage() {
           You have reached the limit of {MAX_SAVED_LISTS} saved lists. Delete one to save another.
         </p>
       )}
-    </main>
+    </PageContainer>
   );
 }

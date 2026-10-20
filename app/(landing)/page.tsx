@@ -14,6 +14,7 @@ import {
 } from "@/components/storefront/CustomerFeedbackCards";
 import { getCustomerFeedbackRepository } from "@/lib/customer-feedback-service";
 import { getVendorReviewLinkRepository } from "@/lib/vendor-review-links-service";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 /** How many approved cards the stack holds. Beyond this the fan is unreadable anyway. */
 const FEEDBACK_CARD_LIMIT = 12;
@@ -100,7 +101,7 @@ export default async function HomePage() {
   const minimumOrderPence = deliveryRules.minimumOrderPence;
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 space-y-8">
+    <PageContainer width="wide" padY="tight" className="space-y-8">
       {/* Hero Brand & Banner */}
       <section className="relative rounded-3xl bg-primary text-white p-6 md:p-10 overflow-hidden shadow-xl border border-black/10">
         {/* Background glow placeholder */}
@@ -257,6 +258,6 @@ export default async function HomePage() {
           which is sufficient because only a signed-in customer can submit in the first
           place. */}
       {approvedFeedback.length === 0 && <ReviewLinkGroup reviewLinks={reviewLinks} />}
-    </main>
+    </PageContainer>
   );
 }

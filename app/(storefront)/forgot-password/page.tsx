@@ -1,5 +1,6 @@
 import { ForgotPasswordForm } from "@/features/auth/components/ForgotPasswordForm";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // #729 — the title now names the request's vendor, which only exists per request; and Prisma's
 // @prisma/client/wasm can't load during next build's static prerendering (see /search).
@@ -13,9 +14,11 @@ export async function generateMetadata() {
 
 export default function ForgotPasswordPage() {
   return (
-    <main className="mx-auto max-w-sm px-4 py-8">
-      <h1 className="mb-6 text-2xl font-semibold text-primary">Forgot your password?</h1>
-      <ForgotPasswordForm />
-    </main>
+    <PageContainer width="narrow">
+      <div className="mx-auto max-w-sm">
+        <h1 className="mb-6 text-2xl font-semibold text-primary">Forgot your password?</h1>
+        <ForgotPasswordForm />
+      </div>
+    </PageContainer>
   );
 }

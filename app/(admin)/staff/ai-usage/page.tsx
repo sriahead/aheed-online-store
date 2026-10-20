@@ -10,6 +10,7 @@ import {
 import type { AiFeature } from "@/lib/repositories/ai-usage";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { AiBudgetForm } from "@/components/staff/AiBudgetForm";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and today's ledger — must render per-request.
 export const dynamic = "force-dynamic";
@@ -53,7 +54,7 @@ export default async function StaffAiUsagePage() {
   const remaining = Math.max(0, overview.budgetNeurons - overview.usedNeuronsToday);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
+    <PageContainer width="standard">
       <h1 className="mb-1 text-2xl font-semibold text-primary">AI allowance</h1>
       <p className="mb-6 text-sm text-primary-muted">
         What this store&apos;s AI features have used today, measured in neurons (Cloudflare&apos;s
@@ -140,6 +141,6 @@ export default async function StaffAiUsagePage() {
           Last 7 days means today and the six days before it, in UTC.
         </p>
       </section>
-    </main>
+    </PageContainer>
   );
 }
