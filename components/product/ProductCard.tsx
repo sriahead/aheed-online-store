@@ -4,6 +4,8 @@ import Link from "next/link";
 import { AlertTriangle, Eye } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { CartQuantityStepper } from "@/components/cart/CartQuantityStepper";
+import { FavouriteButton } from "./FavouriteButton";
+import type { FavouriteState } from "@/lib/favourites";
 import { RestockNotice } from "@/components/product/RestockNotice";
 import { Card } from "@/components/ui/Card";
 import { ProductImage } from "./ProductImage";
@@ -55,11 +57,19 @@ export function ProductCard({
   product,
   cdnBaseUrl,
   cartQuantity = 0,
+  favouriteState,
 }: {
   product: ProductSummary;
   cdnBaseUrl: string;
   /** Quantity of this product currently in the cart; 0 when it isn't. */
   cartQuantity?: number;
+  /**
+   * #232 — whether this product is favourited, or the shopper is signed out. ONE prop rather than
+   * an `isFavourite`/`canFavourite` pair, which would admit a meaningless fourth combination
+   * (favourited but signed out) that every reader would have to interpret. Resolved once per page
+   * render from `listFavouriteProductIds`, never once per card.
+   */
+  favouriteState: FavouriteState;
 }) {
   const { openQuickView } = useQuickView();
   const hasDiscount = product.originalPrice != null && product.originalPrice > product.basePrice;
@@ -201,6 +211,16 @@ export function ProductCard({
               <Eye className="h-4 w-4" aria-hidden />
             </span>
           </button>
+
+          {/* #232 — the favourite control. It owns its own absolute placement because that
+              placement is a function of the quick-view button directly above: one 44px box inboard
+              below `sm`, the corner itself from `sm` up, where that button is hidden. See
+              FavouriteButton.tsx. */}
+          <FavouriteButton
+            productId={product.id}
+            productName={product.name}
+            state={favouriteState}
+          />
         </div>
 
         {/* Content */}

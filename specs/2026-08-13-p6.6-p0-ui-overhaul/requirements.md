@@ -29,10 +29,23 @@ R4. The header renders a link to `/account` for a signed-in user and a link to `
 
 R5. The header renders a cart trigger displaying the current cart's item count.
 
-R6. The header renders a wishlist link. **Deferred — not satisfied by the artifact.** No wishlist
-    exists anywhere in `app/`, `components/`, `features/` or `lib/`; the obligation is tracked at
-    **#232** and is deliberately retained here rather than rewritten away. This requirement is
-    expected to fail until #232 ships.
+R6. The shopper can reach a saved-products list from the storefront chrome. **Satisfied since
+    #232 (2026-10-20), by a different control than this requirement originally named.**
+
+    The original wording was "the header renders a wishlist link", and it stood deferred and
+    expected to fail while no wishlist existed anywhere in `app/`, `components/`, `features/` or
+    `lib/`. `#232` shipped the feature as **Favourites**: a heart on every product card, and a
+    listing at `/account/favourites` reached from the `/account` hub and — once `#1187` lands —
+    from the Quick Shop landing page the header links to.
+
+    **Amended deliberately and on the record, not rewritten to fit the artifact.** The owner
+    accepted those entry points instead of a dedicated header control at Gate 1 on 2026-10-20; the
+    reasoning is in `specs/2026-10-20-p232-1185-favourites-card-controls/plan.md`, which also notes
+    that a fifth control on a header row already measured at 360px in `#655` is a cost with no
+    clear gain. A gate edited silently certifies nothing — this one names what changed, who decided
+    it, and where to read why.
+
+    (`#232`'s own body cites this obligation as "R1". It is R6; R1 is the header logo requirement.)
 
 ## Hero (original R2)
 

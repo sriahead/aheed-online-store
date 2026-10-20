@@ -762,6 +762,52 @@ export async function listProductsByUnitPrice(
 }
 
 /**
+ * #232 — the summaries for a known set of product ids, for a surface that already decided WHICH
+ * products it wants and in what order (today: `lib/repositories/favourites.ts`).
+ *
+ * LIVES HERE RATHER THAN IN THE CALLER, because this file owns what a product summary is: the
+ * `productSummarySelect` shape, the `toProductSummary` mapping and the one-query-per-page
+ * `listActiveTiersForProducts` follow-up that puts the multi-buy tier on a card. A caller that
+ * hand-rolled its own `select` would render a product that quietly disagreed with every other grid
+ * in the app — most visibly by losing the "3 for GBP 10" badge, which is exactly what passing
+ * `null` for the tier does.
+ *
+ * ORDER IS THE CALLER'S, NOT THIS FUNCTION'S. Postgres makes no promise about the order of an `IN`
+ * result, and the caller's order here is favourited-newest-first, which this file knows nothing
+ * about. The returned array follows `productIds`, and an id that matches nothing — inactive, or in
+ * a hidden department — is dropped rather than returned as a gap, so a favourited product that has
+ * since been delisted simply stops appearing.
+ *
+ * `take` is deliberately absent: the caller already bounded the set by choosing the ids.
+ */
+export async function listProductsByIds(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  productIds: string[],
+): Promise<ProductSummary[]> {
+  if (productIds.length === 0) return [];
+
+  const rows = await prisma.product.findMany({
+    where: {
+      vendorId,
+      isActive: true,
+      category: visibleCategoryWhere,
+      id: { in: productIds },
+    },
+    select: productSummarySelect,
+  });
+
+  const tiers = await listActiveTiersForProducts(
+    prisma,
+    vendorId,
+    rows.map((r) => r.id),
+  );
+
+  const byId = new Map(rows.map((r) => [r.id, toProductSummary(r, tiers.get(r.id) ?? null)]));
+  return productIds.map((id) => byId.get(id)).filter((p): p is ProductSummary => p !== undefined);
+}
+
+/**
  * #955 — every active product's slug for this vendor, for `app/sitemap.ts`.
  *
  * SLUG ONLY, AND DELIBERATELY NOT `productSummarySelect`. A sitemap needs one string per product

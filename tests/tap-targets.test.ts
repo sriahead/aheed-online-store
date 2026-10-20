@@ -31,6 +31,9 @@ const surfaces: Record<string, string[]> = {
   "components/product/QuickViewDrawer.tsx": ["quick-view-close", "quick-view-body"],
   "components/product/ProductImageGallery.tsx": ["gallery-arrow"],
   "components/cart/AddToCartButton.tsx": ["quick-view-add"],
+  // #232 — the product card's favourite control. It owns its own placement (one 44px box inboard
+  // below `sm`, the corner from `sm` up) because the corner is the quick-view button's below `sm`.
+  "components/product/FavouriteButton.tsx": ["product-card-favourite"],
   // #981 — the review controls #964 and #979 left behind, on BOTH surfaces that render them.
   "app/(storefront)/products/[slug]/page.tsx": ["product-reviews"],
   "components/storefront/FeedbackForm.tsx": ["feedback-form"],

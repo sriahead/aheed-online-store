@@ -48,7 +48,12 @@ function product(cardSpecifications: ProductSummary["cardSpecifications"]): Prod
 
 function renderCard(specs: ProductSummary["cardSpecifications"]) {
   return render(
-    <ProductCard product={product(specs)} cdnBaseUrl="https://cdn.example" cartQuantity={0} />,
+    <ProductCard
+      product={product(specs)}
+      cdnBaseUrl="https://cdn.example"
+      cartQuantity={0}
+      favouriteState="off"
+    />,
   ).container;
 }
 

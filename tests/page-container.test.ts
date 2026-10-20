@@ -77,6 +77,11 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   // --- storefront: standard
   "app/(storefront)/account/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/data/page.tsx": { width: "standard", padY: "default" },
+  // #232 — `wide`, not `standard` like its sibling account pages: this one renders a product GRID
+  // through `ProductGrid`, so it belongs with the other listings (`/categories`, `/search`,
+  // `/bundles`) rather than with the record-detail pages around it. A `standard` 1024px column
+  // would drop the grid a column against every other place the same cards appear.
+  "app/(storefront)/account/favourites/page.tsx": { width: "wide", padY: "default" },
   "app/(storefront)/account/lists/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/lists/[listId]/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/loyalty/page.tsx": { width: "standard", padY: "default" },

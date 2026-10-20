@@ -76,6 +76,7 @@ model User {
   feedback            CustomerFeedback[]
   feedbackModerated   CustomerFeedback[]      @relation("FeedbackModerator")
   netContentReviews   NetContentSuggestion[]  @relation("NetContentReviewer")
+  favourites          Favourite[]
 }
 
 model Session {
@@ -184,6 +185,7 @@ model Vendor {
   vendorExpressSchedules    VendorExpressSchedule[]
   customerAddresses         CustomerAddress[]
   shoppingLists             ShoppingList[]
+  favourites                Favourite[]
   customerFeedback          CustomerFeedback[]
   feedbackAttempts          CustomerFeedbackAttempt[]
   reviewLinks               VendorReviewLink[]
@@ -783,6 +785,7 @@ model Product {
   netContentSuggestions     NetContentSuggestion[]
   inventory                 Inventory?
   reviews                   Review[]
+  favourites                Favourite[]
   cartItems                 CartItem[]
   orderItems                OrderItem[]
   bundleItems               BundleItem[]
@@ -1036,6 +1039,48 @@ model Review {
 
   @@unique([vendorId, userId, productId])
   @@index([vendorId, productId, createdAt])
+}
+
+// P10 (#232) — a product a shopper wants to come back to. Shown as "Favourites"; P6.6 called the
+// same obligation a wishlist, and that word survives only in the older spec.
+//
+// SHAPED ON `Review` ABOVE, deliberately: it is the existing precedent for a vendor-scoped row
+// keyed by user AND product, and it already carries the composite unique this needs. The two differ
+// only in payload — a review has a rating and a comment, a favourite has nothing but its own
+// existence, so the row IS the fact.
+//
+// AUTHENTICATED-ONLY, by owner decision at Gate 1 (2026-10-20). `userId` is a plain required FK
+// rather than the nullable user/guest-token pair `Cart` carries. A guest cart exists because an
+// anonymous shopper must be able to buy; a guest favourite would need a second guest-ownership
+// lifecycle, a merge-on-sign-in path and an orphan sweep, for a feature whose whole value is
+// returning later. The storefront shows a guest a sign-in link where the toggle would be, which is
+// the same split `ShoppingList` already uses.
+//
+// `onDelete: Cascade` ON ALL THREE RELATIONS. A favourite is meaningless without its product, its
+// owner or its vendor, and nothing reads it after any of the three is gone — unlike `Review`, whose
+// product and vendor relations deliberately restrict, because deleting a product that carries
+// published reviews should not silently discard them. Products are not hard-deleted by the app
+// today (only `ProductPriceTier` is), so this is a correctness guarantee rather than a hot path.
+//
+// THE UNIQUE CONSTRAINT IS THE CONCURRENCY CONTROL, not just a data-integrity rule. Two taps racing
+// each other both try to insert; the loser's duplicate-key error is treated as success, because the
+// product ends up favourited either way. `isDuplicateFavourite` in lib/favourites.ts owns that
+// decision, and it must accept BOTH codes the two Prisma adapters report (raw SQLSTATE "23505" and
+// Prisma's P2002) — see CLAUDE.md and scripts/verify-favourites.ts, which observes a real one.
+//
+// The index leads with the read path: "this shopper's favourites for this vendor, newest first".
+model Favourite {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([vendorId, userId, productId])
+  @@index([vendorId, userId, createdAt])
 }
 
 // P9.2 (#818) — business-level customer feedback, moderated before publication.

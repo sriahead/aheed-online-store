@@ -2,6 +2,7 @@ import { getCategoryRepository } from "@/lib/categories-service";
 import { getProductRepository } from "@/lib/products-service";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getRequestCartQuantities } from "@/lib/cart-summary";
+import { getRequestFavouriteState } from "@/lib/favourites-summary";
 import { getEnv } from "@/lib/config";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { ProductRow } from "@/components/product/ProductRow";
@@ -45,6 +46,8 @@ export default async function CategoriesPage() {
   // P8.5a (#345): request-memoised, shared with the header's cart read — the
   // cards need it to render the cart-aware stepper rather than a plain add.
   const cartQuantities = await getRequestCartQuantities();
+  // #232 — request-memoised, so both product rows below share ONE favourite query.
+  const favouriteState = await getRequestFavouriteState();
   const { CDN_BASE_URL } = getEnv();
 
   return (
@@ -70,6 +73,7 @@ export default async function CategoriesPage() {
         cdnBaseUrl={CDN_BASE_URL ?? ""}
         viewAllLink="/search"
         cartQuantities={cartQuantities}
+        favouriteState={favouriteState}
       />
       <ProductRow
         title="Featured Products"
@@ -77,6 +81,7 @@ export default async function CategoriesPage() {
         cdnBaseUrl={CDN_BASE_URL ?? ""}
         viewAllLink="/search?featured=1"
         cartQuantities={cartQuantities}
+        favouriteState={favouriteState}
       />
     </PageContainer>
   );

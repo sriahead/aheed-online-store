@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.33.0"
-updated: 2026-10-19
+version: "1.34.0"
+updated: 2026-10-20
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, KMS coverage vs gitignore, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -883,6 +883,34 @@ Added for `#981`/`#982` (2026-10-07):
   successfully. Restarting (kill `node`/`workerd`, confirm nothing listens on 8787, `npm run
   preview` again) resolved it both times; there is no known way to prevent it, only to detect it
   (`curl -m 20 http://localhost:8787/api/health` before trusting a batch) and restart.
+
+## Driving a SECOND vendor locally, and two sign-in failures that are not what they say (#1180)
+
+Vendor selection is by hostname (`lib/tenant.ts`), so `http://127.0.0.1:8787` only ever reaches the
+fallback vendor — Aheed. Two things follow for any check that must cover both vendors, which
+`specs/design-system.md` requires for layout work.
+
+**Reach the second vendor with `--map-host`, not a `Host` header.**
+`npx tsx scripts/verify-mobile-layout.ts --base http://srimart-staging.nocaped.com:8787 --map-host 127.0.0.1`
+passes Chrome's own `--host-resolver-rules`, so the real `Host` is sent. **A `Host` header injected
+through CDP `Network.setExtraHTTPHeaders` is ignored by Chrome** — the server goes on resolving the
+wrong vendor while every measurement still looks plausible, which is a false pass, not an error.
+`curl -H "Host: …"` does work, so it is fine for reading rendered HTML; it just cannot measure
+layout.
+
+**A 403 on sign-in is an origin problem, not a credential one.** Better Auth derives its origin from
+the forwarded proto, so over plain local `http` it computes an `https://` origin and refuses. Add
+`--header x-forwarded-proto:http` (the same trap `#1177` hit from the other direction). A **401**
+after that really is the credential — most often the account simply is not in the dev database;
+`npx tsx scripts/demo-accounts.ts add` seeds the roster, `demo-srimart-admin@example.com` included.
+
+**A 429 is very often NOT rate limiting.** `authOnRequest` in `lib/auth.ts` refuses a sensitive auth
+path with **429** when the vendor cannot be resolved at all — the fail-closed path from `#469`. So
+pointing `--base` at a hostname no `VendorDomain` row matches (an invented `aheed-local`, say)
+produces an endless, convincing "Too Many Requests" that no amount of waiting clears. Check the
+host resolves to a vendor **before** concluding you are throttled. The real limit, when it is the
+real limit, is 5 attempts per 60 s per vendor+IP (`lib/repositories/auth-rate-limit.ts`) — and a
+loop of `curl` probes exhausts it, so leave a minute before the measurement that matters.
 
 ## Browser uploads and CDN images cannot be proven under `npm run preview` (#1069)
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getProductRepository } from "@/lib/products-service";
 import { getRequestCartQuantities } from "@/lib/cart-summary";
+import { getRequestFavouriteState } from "@/lib/favourites-summary";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { getBrandRepository } from "@/lib/brands-service";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
@@ -207,6 +208,8 @@ export default async function SearchPage({
   });
   // P8.5a (#345): request-memoised, shared with the header's cart read.
   const cartQuantities = await getRequestCartQuantities();
+  // #232 — request-memoised too, so a page rendering several grids issues ONE favourite query.
+  const favouriteState = await getRequestFavouriteState();
 
   const { CDN_BASE_URL } = getEnv();
   // #962 — request-memoised; the header already resolved this profile in the same render.
@@ -343,6 +346,7 @@ export default async function SearchPage({
                     product={product}
                     cdnBaseUrl={CDN_BASE_URL ?? ""}
                     cartQuantity={cartQuantities.get(product.id) ?? 0}
+                    favouriteState={favouriteState(product.id)}
                   />
                 ))}
               </ProductGrid>

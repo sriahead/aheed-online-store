@@ -93,22 +93,31 @@ describe("AddToCartButton outcome feedback", () => {
     expect((button as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("the card variant says 'Added' only for an added outcome", async () => {
+  // #1185 — the card's control is now a bare `+` with no text at all, so there is no "Added" for
+  // it to say wrongly. The assertion that still matters is the one this case was really about: a
+  // non-added outcome is reported in the SHARED region, which is the card's only channel because
+  // the button is unmounted by the revalidation before any flash on it could be read (#956).
+  it("the card variant reports a non-added outcome in the shared region, and carries no text", async () => {
     addToCart.mockResolvedValue({ kind: "none", reason: "SOLD_OUT" });
     const { region } = renderButton("card");
     const add = screen.getByRole("button", { name: `Add ${NAME} to cart` });
     fireEvent.click(add);
     await waitFor(() => expect(region.textContent).toBe(`${NAME} is sold out. Nothing was added.`));
-    expect(add.textContent).toBe("Add");
+    expect(add.textContent).toBe("");
   });
 });
 
 describe("AddToCartButton accessible names", () => {
-  it("card: Add is named for the product, and so are the pre-add quantity buttons", () => {
+  // #1185 removed the card's pre-add minus/plus picker, reversing #956's Gate 1 decision by owner
+  // instruction on 2026-10-20. The product-naming obligation #956 established is unchanged and is
+  // what this case now covers: with no visible text left, `label` is the control's ONLY accessible
+  // name, so dropping it would recreate #956's "every card's button is named Add" defect in a worse
+  // form. The absence of the picker is asserted in tests/product-card-controls.test.tsx.
+  it("card: the single add control is named for the product", () => {
     renderButton("card");
     expect(screen.getByRole("button", { name: `Add ${NAME} to cart` })).toBeTruthy();
-    expect(screen.getByRole("button", { name: `Decrease quantity of ${NAME}` })).toBeTruthy();
-    expect(screen.getByRole("button", { name: `Increase quantity of ${NAME}` })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: `Decrease quantity of ${NAME}` })).toBeNull();
+    expect(screen.queryByRole("button", { name: `Increase quantity of ${NAME}` })).toBeNull();
   });
 
   it.each(["card", "drawer", "full"] as const)(

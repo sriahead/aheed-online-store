@@ -77,7 +77,12 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
 describe("ProductCard — title anchor with Quick View layered on top (#955)", () => {
   it("renders the title as an anchor to the product page, not a button (R1)", () => {
     const { container } = render(
-      <ProductCard product={product()} cdnBaseUrl="https://cdn.example" cartQuantity={0} />,
+      <ProductCard
+        product={product()}
+        cdnBaseUrl="https://cdn.example"
+        cartQuantity={0}
+        favouriteState="off"
+      />,
     );
 
     const titleAnchor = container.querySelector('h3 a[href="/products/golden-paneer-500g"]');
@@ -89,7 +94,12 @@ describe("ProductCard — title anchor with Quick View layered on top (#955)", (
 
   it("opens Quick View and prevents navigation when the title is clicked (R2)", () => {
     const { container } = render(
-      <ProductCard product={product()} cdnBaseUrl="https://cdn.example" cartQuantity={0} />,
+      <ProductCard
+        product={product()}
+        cdnBaseUrl="https://cdn.example"
+        cartQuantity={0}
+        favouriteState="off"
+      />,
     );
 
     const titleAnchor = container.querySelector("h3 a") as HTMLAnchorElement;
@@ -105,7 +115,12 @@ describe("ProductCard — title anchor with Quick View layered on top (#955)", (
 
   it("does not stretch the anchor over the whole card (R4)", () => {
     const { container } = render(
-      <ProductCard product={product()} cdnBaseUrl="https://cdn.example" cartQuantity={0} />,
+      <ProductCard
+        product={product()}
+        cdnBaseUrl="https://cdn.example"
+        cartQuantity={0}
+        favouriteState="off"
+      />,
     );
 
     const titleAnchor = container.querySelector("h3 a") as HTMLAnchorElement;
@@ -118,7 +133,12 @@ describe("ProductCard — title anchor with Quick View layered on top (#955)", (
 
   it("renders no <button> as a descendant of another <button> or <a>, with product not in cart", () => {
     const { container } = render(
-      <ProductCard product={product()} cdnBaseUrl="https://cdn.example" cartQuantity={0} />,
+      <ProductCard
+        product={product()}
+        cdnBaseUrl="https://cdn.example"
+        cartQuantity={0}
+        favouriteState="off"
+      />,
     );
 
     const buttons = Array.from(container.querySelectorAll("button"));
@@ -132,7 +152,12 @@ describe("ProductCard — title anchor with Quick View layered on top (#955)", (
 
   it("renders no <button> as a descendant of another <button> or <a>, with product already in cart", () => {
     const { container } = render(
-      <ProductCard product={product()} cdnBaseUrl="https://cdn.example" cartQuantity={2} />,
+      <ProductCard
+        product={product()}
+        cdnBaseUrl="https://cdn.example"
+        cartQuantity={2}
+        favouriteState="off"
+      />,
     );
 
     const buttons = Array.from(container.querySelectorAll("button"));
@@ -146,7 +171,12 @@ describe("ProductCard — title anchor with Quick View layered on top (#955)", (
 
   it("still renders both Quick View triggers (R5)", () => {
     const { container } = render(
-      <ProductCard product={product()} cdnBaseUrl="https://cdn.example" cartQuantity={0} />,
+      <ProductCard
+        product={product()}
+        cdnBaseUrl="https://cdn.example"
+        cartQuantity={0}
+        favouriteState="off"
+      />,
     );
 
     const buttons = Array.from(container.querySelectorAll("button"));
