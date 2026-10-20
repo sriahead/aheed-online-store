@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.119.0"
-updated: 2026-10-19
+version: "1.120.0"
+updated: 2026-10-20
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,6 +39,41 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
+- **2026-10-20, `#1177` Orient and Build (supersedes the "`staging` is ahead of `main` by two
+  slices" bullet below — it is stale).** `#1169` **and** `#1173` are **in production**. Promotion
+  PR #1176 merged as `b5c27e8` at 2026-10-19T23:01Z, closing exactly `[1169, 1173]`; both are
+  `Done`. `deploy-production` run `39338898037` and `deploy-docs-internal` run `39338897892`
+  succeeded. Production `/api/health` on **both** vendor hosts serves `b5c27e8` with `db.ok: true`,
+  `reference.reachable: true`, `drift: false` and two `sources`. `origin/main` and `origin/staging`
+  are **level** — `git log origin/main..origin/staging` is empty. The row is `specs/roadmap.md`
+  1.167.0, added on `feature/p1177-staff-nav-grouping` carrying `sdd:audit`'s flag.
+  - **In flight:** `#1177` (grouped staff panel navigation), branch
+    `feature/p1177-staff-nav-grouping`, spec `376d169` + build `12b3a0f`, **not yet validated**.
+    Board `In Progress`, Phase `P10`, Complexity `M`.
+  - **A standing rule changed.** A new `/staff/*` page is now registered **once**, in
+    `components/staff/nav-items.ts`, which feeds both app surfaces — not in `PanelNav.tsx` and the
+    hub separately. `CLAUDE.md` and `docs/developer-portal/app-conventions.md` 1.17.0 carry it.
+    Any older instruction to edit both surfaces is superseded.
+  - **The exported production `DIRECT_URL` is now narrowed, not just observed.** It was set again
+    this session (`ep-young-glitter-zadlkttm`, production) while `.env` and `.dev.vars` both
+    correctly named dev. This is the **fourth** session. Newly ruled out: Windows `User` scope,
+    Windows `Machine` scope, `env` blocks in any `.claude/settings*.json`, and the PowerShell and
+    bash profiles. It is injected into the process by whatever launches the session; that is where
+    to look next. The `printenv` + `env -u` rule in `CLAUDE.md` still covers it.
+  - **Open board `High` items are still only `#697` and `#1021`**, both owner/data actions rather
+    than code. `#901` is the one `In Progress` board item and gates `#697`: its production pilot
+    left 25 PENDING net-content suggestions that nobody has accepted.
+  - **`#1123` is the only dated failure.** `sync-reference-data.yml` on `main` is `cron: "0 4 3 * *"`
+    and feeds `secrets.UK_LOCATION_REF_DIRECT_URL` into **both** reference keys (lines 86-87,
+    110-111), so the first failing run is **2026-11-03**. Confirmed live: `UK_LOCATION_REF_DATABASE_URL`
+    exists in **neither** GitHub environment although `deploy-staging.yml:55` and
+    `deploy-production.yml:52` reference it. **Unresolved discrepancy:** the issue states the
+    GitHub env secret was "deliberately left alone" during the 2026-10-16 credential update, but
+    both copies of `UK_LOCATION_REF_DIRECT_URL` show `2026-10-16T09:14:30Z`/`:42Z`, 12 seconds
+    apart — which reads as a scripted set on that day. Values are not readable. Settle this at
+    Gate 1 before trusting the issue's "no code change needed" framing.
+  - **Branch count is over the reminder:** 35 local, 35 origin (threshold 30). `/prune-branches` is
+    a user-approved action and was not run.
 - **2026-10-19, `#1161`/`#1162`/`#1119` Document pass (supersedes the "staging is ahead by exactly
   one slice" claim in the next bullet).** `#1135` **is in production**. Promotion PR #1164 merged
   as `943efa0`. `deploy-production` run `39236441711` succeeded and its log shows
