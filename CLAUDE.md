@@ -133,6 +133,12 @@ Rulesets, workflows, deploy ordering: `docs/developer-portal/sdd/operator-runboo
 
 - `feature/<slug>` into **`staging`** by PR, then **`staging` into `main`** by PR. **Never push
   directly to either** — both carry rulesets requiring a PR and blocking a merge with red checks.
+- **The two merges use different methods, and it matters.** `feature → staging` is
+  `gh pr merge <N> --squash`; **`staging → main` is `gh pr merge <N> --merge`**. Every promotion in
+  `main`'s history is a merge commit with two parents. A squashed promotion would leave `main` with
+  no parent link to `staging`, so the slice would read as unpromoted forever and every later
+  promotion PR would drag it along again. Two `--squash` attempts on PR #1179 silently did nothing
+  (`#1180`). Never `--delete-branch` a promotion: `staging` is permanent.
 - Every PR references its issue (`Closes #NN`) and touches `CHANGELOG.md`. **Check the base branch
   of every PR you open** — nothing constrains a PR's source, and three have reached `main` directly.
 - **Quality checks live in `.github/workflows/quality.yml`**, used by all three callers — **add a
@@ -157,6 +163,11 @@ session belongs in this file.
 - **Gate 4 lands in `/build-notes`**, not the final `/document`.
 - **`sdd:preclear`** must exit 0 before it is safe to `/clear`; **`sdd:audit`** is the only check
   after Ship. A skip line is not a pass.
+- **`sdd:audit` matches a roadmap row on the SLICE FOLDER PATH, not the issue number.** A row
+  naming only `` `#1180` `` does not satisfy it; the row must contain
+  `specs/<YYYY-MM-DD-feature>/`. It also expects **two** rows per slice — the `staging` merge and
+  the promotion — and flags a slice folder whose promotion has not happened yet, so **exit 1 with
+  one gap naming the in-flight slice is the normal mid-loop state**, not something to fix (`#1180`).
 - **The delivery board** (Project #2) carries **Status, Priority and Phase**; scope lives in
   `specs/`. An open `High` item goes to Propose ahead of any ranking you generate. **`Done` means in
   production**, so open issues for staging-merged slices are expected.
