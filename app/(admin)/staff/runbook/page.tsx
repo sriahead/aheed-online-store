@@ -5,6 +5,7 @@ import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { RunbookClient } from "@/components/staff/RunbookClient";
 import { docsForViewer } from "@/lib/runbook-audiences";
 import { DOC_ARTICLES as INTERNAL_DOCS } from "./docs";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 /** The generated bundle is `any[]`; this is the shape both the filter and the reader rely on. */
 type DocArticle = {
@@ -43,8 +44,8 @@ export default async function RunbookPage() {
   const filteredDocs = docsForViewer(INTERNAL_DOCS as DocArticle[], auth.via === "platform-admin");
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-8">
+    <PageContainer width="wide">
       <RunbookClient docs={filteredDocs} />
-    </main>
+    </PageContainer>
   );
 }

@@ -9,6 +9,7 @@ import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { CampaignForm } from "@/components/staff/CampaignForm";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { STORE_TIMEZONE } from "@/lib/local-datetime";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and one live category/campaign — must render per-request.
 export const dynamic = "force-dynamic";
@@ -56,7 +57,7 @@ export default async function EditCampaignPage({
     campaign?.imageKey && CDN_BASE_URL ? composePublicUrl(CDN_BASE_URL, campaign.imageKey) : null;
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <PageContainer width="narrow">
       <h1 className="mb-1 text-2xl font-semibold text-primary">{category.name}</h1>
       <p className="mb-6 text-sm text-primary-muted">
         Shown in the homepage hero when active. Leave inactive to fall back to the department&apos;s
@@ -69,6 +70,6 @@ export default async function EditCampaignPage({
         imageUrl={imageUrl}
         timezone={timezone}
       />
-    </main>
+    </PageContainer>
   );
 }

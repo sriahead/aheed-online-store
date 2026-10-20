@@ -6,6 +6,7 @@ import { getBrandRepository } from "@/lib/brands-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { AddBrandForm, BrandRowForms } from "@/components/staff/BrandManager";
 import { Card } from "@/components/ui/Card";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's brands — must render per-request.
 export const dynamic = "force-dynamic";
@@ -37,7 +38,7 @@ export default async function StaffBrandsPage() {
   const brands = await getBrandRepository().listForAdmin();
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
+    <PageContainer width="wide">
       <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-primary">
         <Tag className="h-5 w-5" aria-hidden="true" />
         Brands
@@ -68,6 +69,6 @@ export default async function StaffBrandsPage() {
           ))}
         </ul>
       )}
-    </main>
+    </PageContainer>
   );
 }

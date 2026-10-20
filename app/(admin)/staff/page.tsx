@@ -7,6 +7,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { visibleGroups, type StaffNavTier } from "@/components/staff/nav-items";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's live order counts — must render per-request.
 export const dynamic = "force-dynamic";
@@ -60,7 +61,7 @@ export default async function StaffHomePage() {
   const awaitingAction = await getOrderRepository().countForStaff();
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="wide">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Store admin</h1>
       <p className="mb-6 text-sm text-primary-muted">
         {awaitingAction === 0
@@ -126,6 +127,6 @@ export default async function StaffHomePage() {
           </Link>
         )}
       </div>
-    </main>
+    </PageContainer>
   );
 }

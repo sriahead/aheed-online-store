@@ -27,6 +27,7 @@ import { expandSearchTerms } from "@/lib/search-expansion";
 import { listCurrentVendorAttributeDefinitions } from "@/lib/attributes-service";
 import { resolveAttributeFilters } from "@/lib/attribute-filters";
 import type { FilterParamValue } from "@/components/product/filter-params";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
 // can't load during next build's Node-based static prerendering.
@@ -216,7 +217,7 @@ export default async function SearchPage({
   const heading = searchHeading(query, selectedCategory?.name);
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6">
+    <PageContainer width="wide" padY="tight">
       {/* Departments: horizontal strip on top (arrow-scrolled). */}
       {/* #1173 — highlights the selected department (a subcategory's parent), like /categories. */}
       <DepartmentScroller
@@ -359,6 +360,6 @@ export default async function SearchPage({
           )}
         </div>
       </div>
-    </main>
+    </PageContainer>
   );
 }

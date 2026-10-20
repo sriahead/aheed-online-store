@@ -14,6 +14,7 @@ import {
   REFERRAL_COOKIE,
   FILTERS_COLLAPSED_KEY,
 } from "@/lib/storage-keys";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export default async function PrivacyPage() {
   const marketingEnabled = profile?.marketingConsentEnabled ?? false;
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8 text-primary">
+    <PageContainer width="narrow" className="text-primary">
       <nav className="mb-6 text-xs text-primary-muted">
         <Link href="/" className="hover:underline">
           Home
@@ -301,6 +302,6 @@ export default async function PrivacyPage() {
           </p>
         </section>
       </article>
-    </main>
+    </PageContainer>
   );
 }

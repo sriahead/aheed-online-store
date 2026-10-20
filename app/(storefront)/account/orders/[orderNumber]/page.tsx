@@ -14,6 +14,7 @@ import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { reorderItems } from "@/features/orders/reorder-items";
 import { saveOrderAsList } from "@/features/lists/save-order-as-list";
 import { MAX_SAVED_LISTS } from "@/lib/saved-list";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and one owned order — must render per-request.
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export default async function AccountOrderPage({
   if (!order) notFound();
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="standard">
       <div className="mb-4 flex items-center justify-between">
         <Link
           href="/account/orders"
@@ -120,6 +121,6 @@ export default async function AccountOrderPage({
       />
 
       <OrderAddressCard address={order.address} />
-    </main>
+    </PageContainer>
   );
 }

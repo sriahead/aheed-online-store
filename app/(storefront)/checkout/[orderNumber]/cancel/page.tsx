@@ -7,6 +7,7 @@ import { getOrderRepository } from "@/lib/orders-service";
 import { getAuth } from "@/lib/auth";
 import { formatPrice } from "@/components/product/format-price";
 import { cancelOrder } from "@/features/checkout/cancel-order";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,7 @@ export default async function CancelOrderPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-8">
+    <PageContainer width="narrow">
       <div className="mb-6 flex items-center gap-3">
         <AlertCircle className="h-8 w-8 shrink-0 text-accent" aria-hidden />
         <div>
@@ -108,6 +109,6 @@ export default async function CancelOrderPage({
           No — keep it and go to my basket
         </Link>
       </div>
-    </main>
+    </PageContainer>
   );
 }

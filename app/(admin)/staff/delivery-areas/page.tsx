@@ -15,6 +15,7 @@ import {
   DeliveryAreaRowForm,
   type StoreDefaultCharges,
 } from "@/components/staff/DeliveryAreaManager";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's delivery areas — must render per-request.
 export const dynamic = "force-dynamic";
@@ -65,7 +66,7 @@ export default async function StaffDeliveryAreasPage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
+    <PageContainer width="standard">
       <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-primary">
         <Truck className="h-5 w-5" aria-hidden="true" />
         Delivery areas
@@ -147,6 +148,6 @@ export default async function StaffDeliveryAreasPage() {
           </table>
         )}
       </section>
-    </main>
+    </PageContainer>
   );
 }

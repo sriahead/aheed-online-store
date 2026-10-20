@@ -6,6 +6,7 @@ import { listInventoryForStaff } from "@/lib/products-service";
 import { InventoryTable } from "./InventoryTable";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { getEnv } from "@/lib/config";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const metadata: Metadata = { title: "Live Inventory & Availability" };
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export default async function InventoryPage(props: { searchParams?: Promise<{ q?
   const env = getEnv();
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="wide">
       <div className="mb-2">
         <h1 className="text-2xl font-bold text-primary">Live Inventory & Availability</h1>
       </div>
@@ -38,6 +39,6 @@ export default async function InventoryPage(props: { searchParams?: Promise<{ q?
       <Suspense fallback={<div>Loading inventory...</div>}>
         <InventoryTable initialItems={page.items} cdnBaseUrl={env.CDN_BASE_URL ?? ""} />
       </Suspense>
-    </main>
+    </PageContainer>
   );
 }

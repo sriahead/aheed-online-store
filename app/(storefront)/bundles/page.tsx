@@ -8,6 +8,7 @@ import { ProductGrid } from "@/components/product/ProductGrid";
 import { DEFAULT_PRODUCT_GRID_DENSITY } from "@/lib/product-grid-density";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { hasAvailableItems } from "@/lib/bundle-pricing";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
 // can't load during next build's Node-based static prerendering.
@@ -51,7 +52,7 @@ export default async function BundlesPage() {
     (await getCurrentVendorProfile())?.productGridDensity ?? DEFAULT_PRODUCT_GRID_DENSITY;
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6">
+    <PageContainer width="wide" padY="tight">
       {/*
         #681 — the same chrome the other browse surfaces carry, so this stops reading as a separate
         site. The department strip is a way BACK OUT to a filtered product listing, not a filter
@@ -103,6 +104,6 @@ export default async function BundlesPage() {
           )}
         </div>
       </div>
-    </main>
+    </PageContainer>
   );
 }

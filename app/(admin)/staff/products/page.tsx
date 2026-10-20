@@ -15,6 +15,7 @@ import {
 import { formatPrice } from "@/components/product/format-price";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { BackfillImagesButton } from "@/components/staff/BackfillImagesButton";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's live catalogue — must render per-request.
 export const dynamic = "force-dynamic";
@@ -76,7 +77,7 @@ export default async function StaffProductsPage({
     query.search !== null || query.status !== PRODUCT_STATUS_ALL || query.category !== CATEGORY_ALL;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
+    <PageContainer width="wide">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="mb-1 text-2xl font-semibold text-primary">Products</h1>
@@ -220,6 +221,6 @@ export default async function StaffProductsPage({
           Older products
         </Link>
       )}
-    </main>
+    </PageContainer>
   );
 }

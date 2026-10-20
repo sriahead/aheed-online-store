@@ -3,6 +3,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { FaqManager } from "@/components/staff/FaqManager";
 import { getVendorFaqRepository } from "@/lib/vendor-faqs-service";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function FaqsAdminPage() {
   const faqs = await getVendorFaqRepository().listAll();
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="standard">
       <h1 className="mb-2 text-3xl font-extrabold text-black">Help Centre Answers</h1>
       <p className="mb-8 max-w-2xl text-sm text-black/60">
         Delivery charges, minimums, collection and loyalty are already answered on your Help Centre
@@ -42,6 +43,6 @@ export default async function FaqsAdminPage() {
         ask you. Active answers also appear in the help assistant when it is switched on.
       </p>
       <FaqManager faqs={faqs} />
-    </main>
+    </PageContainer>
   );
 }

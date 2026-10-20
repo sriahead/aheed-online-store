@@ -11,6 +11,7 @@ import {
   FulfilmentSettingsForm,
   FulfilmentSlotRowForm,
 } from "@/components/staff/FulfilmentManager";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's schedule — must render per-request.
 export const dynamic = "force-dynamic";
@@ -58,7 +59,7 @@ export default async function StaffFulfilmentPage() {
   const collectionSlots = slots.filter((slot) => slot.method === "COLLECTION");
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
+    <PageContainer width="wide">
       <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-primary">
         <CalendarClock className="h-5 w-5" aria-hidden="true" />
         Fulfilment scheduling
@@ -153,6 +154,6 @@ export default async function StaffFulfilmentPage() {
           </p>
         )}
       </section>
-    </main>
+    </PageContainer>
   );
 }

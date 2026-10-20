@@ -7,6 +7,7 @@ import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { isCampaignLive } from "@/lib/campaign-liveness";
 import { listCampaignsForVendor } from "@/lib/campaigns-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's campaigns — must render per-request.
 export const dynamic = "force-dynamic";
@@ -60,7 +61,7 @@ export default async function StaffPromotionsPage() {
   const now = new Date();
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <PageContainer width="wide">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Promotions</h1>
       <p className="mb-6 text-sm text-primary-muted">
         A photo and headline for the homepage hero, per department. The real price shown alongside
@@ -98,6 +99,6 @@ export default async function StaffPromotionsPage() {
           })}
         </ul>
       )}
-    </main>
+    </PageContainer>
   );
 }

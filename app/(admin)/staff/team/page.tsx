@@ -4,6 +4,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { getVendorTeam } from "@/lib/roles-service";
 import { AssignRoleForm } from "@/components/staff/team/AssignRoleForm";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export default async function TeamPage() {
   const team = await getVendorTeam();
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="wide">
       <h1 className="mb-6 text-2xl font-semibold text-primary">Team & Access</h1>
 
       <div className="mb-10 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
@@ -77,6 +78,6 @@ export default async function TeamPage() {
           </tbody>
         </table>
       </div>
-    </main>
+    </PageContainer>
   );
 }

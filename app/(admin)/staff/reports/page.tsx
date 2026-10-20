@@ -9,6 +9,7 @@ import { getDiscountRepository } from "@/lib/discounts-service";
 import { getCatalogueHealthForVendor, getLoyaltyLiabilityForVendor } from "@/lib/reports-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { TrendingUp, ShoppingBag, Banknote, Package, Sparkles, TicketPercent } from "lucide-react";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export default async function ReportsPage() {
   const avgBasketPence = totalOrders > 0 ? Math.round(totalRevenuePence / totalOrders) : 0;
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="wide">
       <div className="flex items-center gap-2 mb-6">
         <TrendingUp className="h-6 w-6 text-primary" aria-hidden />
         <h1 className="text-2xl font-semibold text-primary">Store reports</h1>
@@ -225,7 +226,7 @@ export default async function ReportsPage() {
           </div>
         )}
       </section>
-    </main>
+    </PageContainer>
   );
 }
 

@@ -16,6 +16,7 @@ import { getVendorReviewLinkRepository } from "@/lib/vendor-review-links-service
 import { getStorage } from "@/lib/storage";
 import { markFileKeys } from "@/lib/vendor-mark";
 import { calendarDayInZone } from "@/lib/local-datetime";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ export default async function StorefrontAdminPage() {
   const markUrl = markKeys ? getStorage().publicUrl(markKeys.icon192) : null;
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="standard">
       <h1 className="mb-8 text-3xl font-extrabold text-black">Storefront Branding</h1>
       <StorefrontConfigForm
         initialConfig={config}
@@ -99,6 +100,6 @@ export default async function StorefrontAdminPage() {
       <div className="mt-10 border-t border-black/10 pt-8">
         <ReviewLinksManager links={reviewLinks} />
       </div>
-    </main>
+    </PageContainer>
   );
 }

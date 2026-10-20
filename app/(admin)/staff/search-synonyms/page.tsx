@@ -10,6 +10,7 @@ import {
   ProposeSynonymsForm,
   SynonymRowForm,
 } from "@/components/staff/SynonymDictionary";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's dictionary — must render per-request.
 export const dynamic = "force-dynamic";
@@ -42,7 +43,7 @@ export default async function StaffSearchSynonymsPage() {
   const settled = rows.filter((row) => row.status !== "PENDING");
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
+    <PageContainer width="wide">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Search dictionary</h1>
       <p className="mb-6 text-sm text-primary-muted">
         Words your shoppers use that your product names don&apos;t. An entry widens the search — the
@@ -78,6 +79,6 @@ export default async function StaffSearchSynonymsPage() {
           </ul>
         )}
       </section>
-    </main>
+    </PageContainer>
   );
 }

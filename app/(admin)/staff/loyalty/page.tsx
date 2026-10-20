@@ -4,6 +4,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
 import { LoyaltyConfigForm } from "@/components/staff/LoyaltyConfigForm";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's live config — must render per-request.
 export const dynamic = "force-dynamic";
@@ -35,13 +36,13 @@ export default async function StaffLoyaltyPage() {
   const [config, tiers] = await Promise.all([loyalty.config(), loyalty.tiers()]);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <PageContainer width="standard">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Loyalty config</h1>
       <p className="mb-6 text-sm text-primary-muted">
         How this store&apos;s customers earn and spend points. Changes apply to future orders only —
         points already earned keep the rate they were earned at.
       </p>
       <LoyaltyConfigForm config={config} tiers={tiers} />
-    </main>
+    </PageContainer>
   );
 }

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getRecentErrorEvents } from "@/lib/error-events-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function ErrorEventsPage() {
   const events = await getRecentErrorEvents(LIMIT);
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-8">
+    <PageContainer width="wide">
       <h1 className="mb-2 text-2xl font-semibold text-primary">Error Events</h1>
       <p className="mb-6 text-sm text-primary-muted">
         The most recent {LIMIT} server-side errors, newest first. Independent of Cloudflare Workers
@@ -83,6 +84,6 @@ export default async function ErrorEventsPage() {
           </tbody>
         </table>
       </div>
-    </main>
+    </PageContainer>
   );
 }

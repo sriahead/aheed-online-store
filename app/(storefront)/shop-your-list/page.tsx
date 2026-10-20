@@ -6,6 +6,7 @@ import { getShoppingListService } from "@/lib/shopping-lists-service";
 import { ShopYourList } from "@/components/cart/ShopYourList";
 import { getProductRepository } from "@/lib/products-service";
 import { MAX_EXAMPLE_NAMES } from "@/lib/shopping-list-examples";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 /**
  * "Shop your list" (P3d, #114) — the second way to fill a cart, alongside
@@ -37,7 +38,7 @@ export default async function ShopYourListPage() {
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6">
+    <PageContainer width="narrow" padY="tight">
       {/* #1145 — no intro paragraph: the textarea's own label says what to do. */}
       <h1 className="mb-5 text-xl font-bold text-primary">Quick Shop</h1>
 
@@ -81,6 +82,6 @@ export default async function ShopYourListPage() {
       <Link href="/cart" className="mt-6 inline-block text-xs font-semibold text-primary underline">
         Back to your cart
       </Link>
-    </main>
+    </PageContainer>
   );
 }
