@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.17.0"
-updated: 2026-10-19
+version: "2.18.0"
+updated: 2026-10-20
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -14,10 +14,15 @@ tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
 # Store Admin Management Guide
 
 This guide covers every page reserved strictly for a **store admin**, one section per menu item.
-Pages accessible to both staff and admins — such as Catalogue, Categories, Brands, Bundles,
-Promotions, Inventory, Orders, Search Dictionary moderation, and the Runbook — are described in the Staff Daily
-Operations Playbook rather than repeated here. You can open all of those as well (generating new AI
-proposals within Search Dictionary remains an admin-only capability).
+Pages accessible to both staff and admins — such as Products, Categories, Brands, Bundles,
+Promotions, Live Inventory & Availability, Orders, Search dictionary moderation, and the Runbook —
+are described in the Staff Daily Operations Playbook rather than repeated here. You can open all of
+those as well (generating new AI proposals within Search dictionary remains an admin-only
+capability).
+
+The menu is grouped. You see six groups beside **Overview**: **Orders & Fulfilment**,
+**Catalogue**, **Offers & Loyalty**, **Customers & Content**, **Store setup** and
+**Insights & Help**. Staff see five of them — **Store setup** is entirely yours.
 
 **Two things this panel does not do, so you are not looking for a control that is not there:**
 

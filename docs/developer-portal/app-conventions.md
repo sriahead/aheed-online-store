@@ -4,8 +4,8 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.16.0"
-updated: 2026-10-18
+version: "1.17.0"
+updated: 2026-10-20
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, fulfilment-method preference, autocomplete tokens, shared-source copy rules and React hooks — with the tests that enforce each invariant mechanically.
 tags: [conventions, repositories, server-actions, staff-panel]
@@ -194,25 +194,34 @@ Runtime failures that survive a green build are in `runtime-pitfalls.md`. Folder
   page in this section** — that is what closed #350, and `tests/panel-refusal-coverage.test.ts` is
   what keeps it true from here, not a prose list. When adding a new `/staff/*` page, copy an
   existing one's refusal branch; the test will tell you if you forgot.
-- **There are TWO navigation surfaces and a new page must be added to BOTH** —
-  `components/staff/PanelNav.tsx` (the persistent nav) and `app/(admin)/staff/page.tsx` (the hub's
-  cards). Until P9.2 (#612) neither was a superset of the other: the nav omitted `brands`,
+- **Register a new page ONCE, in `components/staff/nav-items.ts`** (#1177). That module holds every
+  `/staff/*` destination — route, label, description, icon, tier and which of the six groups it
+  belongs to — and **both** app surfaces render from it: `components/staff/PanelNav.tsx` (the
+  persistent nav, as grouped dropdowns) and `app/(admin)/staff/page.tsx` (the hub, as headed card
+  sections). **Do not add a link to either file by hand** — `tests/staff-nav-parity.test.ts` fails
+  if either carries a `/staff/*` href of its own, because that is how the grouping would start to
+  drift between them.
+  **`tier` must match the page's own `requireVendorRole` arguments**, and the test reads that gate
+  rather than trusting the module; the page's gate is the access decision, and hiding a link is
+  courtesy. Two routes are outside the module **by name, each for a stated reason**: `/staff` (the
+  hub cannot link to itself, so only the nav carries it, as "Overview") and `/staff/errors`
+  (platform-admin only — `PanelNav`'s `currentTier` prop cannot express that, so the hub carries it
+  alone behind its own `auth.via === "platform-admin"` check).
+  **The history this replaced is worth keeping.** Until P9.2 (#612) the two surfaces were
+  hand-maintained lists and neither was a superset of the other: the nav omitted `brands`,
   `customers` and `payments` while the hub omitted `bundles`, `promotions` and `storefront`, so
   three pages vanished from the chrome the moment a user navigated off the hub and three more were
   unreachable from it. **Nothing detected that for months because each file is individually
   correct** — the defect existed only in the *relationship* between them, which is the class of
-  thing a per-file review structurally cannot catch, and which is why the fix was a test rather than
-  an edit. `tests/staff-nav-parity.test.ts` now pins the two together and fails if either surface
-  gains or loses a link the other lacks; it parses the literal hrefs out of both files rather than
-  rendering them, because each gates part of its list behind a role check and rendering would test
-  one viewer's slice rather than the full declared set. Three routes are excluded **by name, each
-  for a stated reason**: `/staff` (the hub cannot link to itself), `/staff/errors` (platform-admin
-  only — `PanelNav`'s `currentTier` prop cannot express that, so the hub carries it alone behind its
-  own `auth.via === "platform-admin"` check) and `/staff/search-synonyms` (#602's open work). If you
-  add a page and the parity test fails, add it to the other surface — do not add it to the exclusion
-  list, which exists for routes that genuinely cannot appear on both.
-- **As of #633 there are THREE surfaces, not two: a new `/staff/*` page must also be DOCUMENTED, and
-  `tests/operator-doc-coverage.test.ts` fails until it is.** That test enumerates route directories
+  thing a per-file review structurally cannot catch. A parity test closed it; #1177 removed the
+  relationship instead, after #626 showed the test itself could be blind (its tier branches were
+  never compared) and after a third thing to keep in sync — the group — would have had nothing
+  checking it at all. One more mismatch surfaced at that rewrite: the hub had `/staff/feedback`
+  behind its `isAdmin` block although the page admits STAFF, so a staff member saw the link and no
+  card.
+- **A new `/staff/*` page must also be DOCUMENTED (#633), and
+  `tests/operator-doc-coverage.test.ts` fails until it is.** With the module above that makes two
+  places to edit — the module, which feeds both app surfaces, and one operator guide. That test enumerates route directories
   from the filesystem — no hardcoded list — and requires each to carry exactly one section in one of
   the three operator guides (`docs/staff-playbook/staff-tabs-guide.md`,
   `docs/store-admin-guide/admin-tabs-guide.md`, `docs/platform-admin-guide/platform-admin-guide.md`),

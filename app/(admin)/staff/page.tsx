@@ -2,36 +2,11 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  BookA,
-  BookOpen,
-  Boxes,
-  Bug,
-  ClipboardList,
-  Contact,
-  FolderTree,
-  HelpCircle,
-  Layers,
-  MessagesSquare,
-  Gauge,
-  Megaphone,
-  MessageSquareQuote,
-  Package,
-  Ruler,
-  ShieldAlert,
-  SlidersHorizontal,
-  Sparkles,
-  Store,
-  Tag,
-  TicketPercent,
-  TrendingUp,
-  Truck,
-  CalendarClock,
-  Users,
-} from "lucide-react";
+import { Bug } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
+import { visibleGroups, type StaffNavTier } from "@/components/staff/nav-items";
 
 // Reads the session and this vendor's live order counts — must render per-request.
 export const dynamic = "force-dynamic";
@@ -46,9 +21,21 @@ export const metadata: Metadata = { title: "Store admin" };
  * a URL from memory. This page (and the layout's nav) is what makes them a
  * panel.
  *
- * STAFF and ADMIN, matching /staff/orders: the two admin-only cards are hidden
- * from a STAFF viewer, exactly as the layout's nav hides their links. Hiding is
+ * STAFF and ADMIN, matching /staff/orders: admin-only cards are hidden from a
+ * STAFF viewer, exactly as the layout's nav hides their links. Hiding is
  * courtesy — each page still gates itself.
+ *
+ * SINCE #1177 THE CARDS ARE NOT WRITTEN HERE. They come from
+ * `components/staff/nav-items.ts`, grouped, which is the same module the bar in
+ * `components/staff/PanelNav.tsx` renders from — so the two surfaces cannot
+ * disagree about what the panel contains, or about which group a page sits in.
+ * Add a page in the module, not here.
+ *
+ * That module also fixed a live mismatch this file had carried: /staff/feedback
+ * admits STAFF (`requireVendorRole("STAFF", "ADMIN")`) and the bar's staff tier
+ * listed it, but the card here sat inside the `isAdmin` block, so a staff member
+ * saw the link and no card. Tier now comes from each page's own gate, so that
+ * class of drift cannot be expressed.
  */
 export default async function StaffHomePage() {
   const auth = await requireVendorRole("STAFF", "ADMIN");
@@ -69,6 +56,7 @@ export default async function StaffHomePage() {
       isAdmin = false;
     }
   }
+  const tier: StaffNavTier = isAdmin ? "admin" : "staff";
   const awaitingAction = await getOrderRepository().countForStaff();
 
   return (
@@ -80,267 +68,35 @@ export default async function StaffHomePage() {
           : `${awaitingAction} ${awaitingAction === 1 ? "order is" : "orders are"} awaiting action.`}
       </p>
 
+      {visibleGroups(tier).map((group) => (
+        <section key={group.id} className="mb-8">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-primary-muted">
+            {group.label}
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {group.items.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
+                >
+                  <Icon
+                    className={`mb-3 h-6 w-6 ${item.tone === "action" ? "text-action" : "text-accent"}`}
+                    aria-hidden
+                  />
+                  <p className="font-semibold text-primary">{item.label}</p>
+                  <p className="mt-1 text-sm text-primary-muted">{item.description}</p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+
       <div className="grid gap-4 sm:grid-cols-2">
-        <Link
-          href="/staff/inventory"
-          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-        >
-          <Layers className="mb-3 h-6 w-6 text-action" aria-hidden />
-          <p className="font-semibold text-primary">Live Inventory & Availability</p>
-          <p className="mt-1 text-sm text-primary-muted">
-            Quickly adjust stock levels and toggle product availability.
-          </p>
-        </Link>
-
-        <Link
-          href="/staff/orders"
-          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-        >
-          <ClipboardList className="mb-3 h-6 w-6 text-action" aria-hidden />
-          <p className="font-semibold text-primary">Orders</p>
-          <p className="mt-1 text-sm text-primary-muted">
-            Work the queue, search past orders, and open one for its full history.
-          </p>
-        </Link>
-
-        {isAdmin && (
-          <Link
-            href="/staff/fulfilment"
-            className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-          >
-            <CalendarClock className="mb-3 h-6 w-6 text-accent" aria-hidden />
-            <p className="font-semibold text-primary">Fulfilment</p>
-            <p className="mt-1 text-sm text-primary-muted">
-              Delivery and collection time slots, and express collection hours.
-            </p>
-          </Link>
-        )}
-
-        <Link
-          href="/staff/products"
-          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-        >
-          <Package className="mb-3 h-6 w-6 text-accent" aria-hidden />
-          <p className="font-semibold text-primary">Products</p>
-          <p className="mt-1 text-sm text-primary-muted">
-            Add products, correct prices, and set what&apos;s in stock.
-          </p>
-        </Link>
-
-        <Link
-          href="/staff/categories"
-          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-        >
-          <FolderTree className="mb-3 h-6 w-6 text-accent" aria-hidden />
-          <p className="font-semibold text-primary">Categories</p>
-          <p className="mt-1 text-sm text-primary-muted">
-            The departments shoppers browse by, and how they&apos;re ordered.
-          </p>
-        </Link>
-
-        <Link
-          href="/staff/brands"
-          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-        >
-          <Tag className="mb-3 h-6 w-6 text-accent" aria-hidden />
-          <p className="font-semibold text-primary">Brands</p>
-          <p className="mt-1 text-sm text-primary-muted">
-            The brands shoppers can filter by, and which products carry them.
-          </p>
-        </Link>
-
-        <Link
-          href="/staff/attributes"
-          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-        >
-          <SlidersHorizontal className="mb-3 h-6 w-6 text-accent" aria-hidden />
-          <p className="font-semibold text-primary">Product filters</p>
-          <p className="mt-1 text-sm text-primary-muted">
-            Your own shopper filters, such as Colour or Size, and the values each one offers.
-          </p>
-        </Link>
-
-        <Link
-          href="/staff/promotions"
-          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-        >
-          <Megaphone className="mb-3 h-6 w-6 text-accent" aria-hidden />
-          <p className="font-semibold text-primary">Promotions</p>
-          <p className="mt-1 text-sm text-primary-muted">
-            Department campaigns and the banners that front them.
-          </p>
-        </Link>
-
-        <Link
-          href="/staff/bundles"
-          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-        >
-          <Boxes className="mb-3 h-6 w-6 text-accent" aria-hidden />
-          <p className="font-semibold text-primary">Bundles</p>
-          <p className="mt-1 text-sm text-primary-muted">
-            Multi-product deals, their pricing and what they contain.
-          </p>
-        </Link>
-
-        <Link
-          href="/staff/search-synonyms"
-          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-        >
-          <BookA className="mb-3 h-6 w-6 text-accent" aria-hidden />
-          <p className="font-semibold text-primary">Search dictionary</p>
-          <p className="mt-1 text-sm text-primary-muted">
-            Words your shoppers use that your product names don&apos;t.
-          </p>
-        </Link>
-
-        <Link
-          href="/staff/net-content"
-          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-        >
-          <Ruler className="mb-3 h-6 w-6 text-accent" aria-hidden />
-          <p className="font-semibold text-primary">Net content review</p>
-          <p className="mt-1 text-sm text-primary-muted">
-            Check AI-suggested pack sizes before they reach a product.
-          </p>
-        </Link>
-
-        <Link
-          href="/staff/runbook"
-          className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-        >
-          <BookOpen className="mb-3 h-6 w-6 text-action" aria-hidden />
-          <p className="font-semibold text-primary">Internal Operational Runbook</p>
-          <p className="mt-1 text-sm text-primary-muted">
-            Zero-trust guide to store operations and procedures.
-          </p>
-        </Link>
-
-        {isAdmin && (
-          <>
-            <Link
-              href="/staff/payments"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <ShieldAlert className="mb-3 h-6 w-6 text-action" aria-hidden />
-              <p className="font-semibold text-primary">Payment Issues</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                Payment events that were refused, and the orders they may have left stranded.
-              </p>
-            </Link>
-            <Link
-              href="/staff/storefront"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <Store className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Storefront</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                This store&apos;s branding, logo and shopfront configuration.
-              </p>
-            </Link>
-            <Link
-              href="/staff/faqs"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <HelpCircle className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Help Centre Answers</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                Your own answers to the questions shoppers ask, shown on the Help Centre.
-              </p>
-            </Link>
-            <Link
-              href="/staff/assistant"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <MessagesSquare className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Help Assistant</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                Switch the storefront help assistant on or off, and see what shoppers ask it.
-              </p>
-            </Link>
-            <Link
-              href="/staff/ai-usage"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <Gauge className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">AI Allowance</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                How much of today&apos;s AI budget this store has used, by feature.
-              </p>
-            </Link>
-            <Link
-              href="/staff/feedback"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <MessageSquareQuote className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Customer Feedback</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                Reviews customers left about the shop. Nothing appears on the storefront until you
-                approve it.
-              </p>
-            </Link>
-            <Link
-              href="/staff/delivery-areas"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <Truck className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Delivery areas</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                The postcode areas this store delivers to. A customer outside them cannot check out.
-              </p>
-            </Link>
-            <Link
-              href="/staff/loyalty"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <Sparkles className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Loyalty</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                Earn and redemption rates, tier thresholds and multipliers.
-              </p>
-            </Link>
-            <Link
-              href="/staff/discounts"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <TicketPercent className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Discount codes</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                Create, review and deactivate this store&apos;s codes.
-              </p>
-            </Link>
-            <Link
-              href="/staff/reports"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <TrendingUp className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Reports</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                Sales, total orders, and average basket value financials.
-              </p>
-            </Link>
-            <Link
-              href="/staff/customers"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <Contact className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Customers</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                Who buys from this store, what they spend, and their loyalty standing.
-              </p>
-            </Link>
-            <Link
-              href="/staff/team"
-              className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-            >
-              <Users className="mb-3 h-6 w-6 text-accent" aria-hidden />
-              <p className="font-semibold text-primary">Team & Access</p>
-              <p className="mt-1 text-sm text-primary-muted">
-                Manage staff access, roles, and administrative privileges.
-              </p>
-            </Link>
-          </>
-        )}
-
         {/*
          * Platform admins only, and checked against `auth.via` directly rather than reusing
          * `isAdmin` above — that flag is true for a VENDOR admin too, whereas
