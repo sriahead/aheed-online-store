@@ -1,171 +1,167 @@
 "use client";
 
-import { useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ClipboardList,
-  LayoutDashboard,
-  Package,
-  Sparkles,
-  TicketPercent,
-  Layers,
-  BookA,
-  BookOpen,
-  TrendingUp,
-  Users,
-  ChevronLeft,
-  ChevronRight,
-  Store,
-  Megaphone,
-  Boxes,
-  Tag,
-  Contact,
-  ShieldAlert,
-  Truck,
-  CalendarClock,
-  MessageSquareQuote,
-  Ruler,
-  SlidersHorizontal,
-  HelpCircle,
-  MessagesSquare,
-  Gauge,
-} from "lucide-react";
+import { ChevronDown, LayoutDashboard } from "lucide-react";
+import { visibleGroups, type StaffNavGroup, type StaffNavTier } from "./nav-items";
 
 export interface PanelNavProps {
   canSeeOrders: boolean;
-  currentTier: "staff" | "admin";
+  currentTier: StaffNavTier;
 }
 
-function NavLink({ href, icon: Icon, label }: { href: string; icon: any; label: string }) {
-  const pathname = usePathname();
-  // Exact match for overview, prefix match for everything else so /staff/orders/123 stays active
-  const isActive = href === "/staff" ? pathname === href : pathname.startsWith(href);
-
-  return (
-    <Link
-      href={href}
-      className={`inline-flex items-center gap-2 border-b-2 px-1 pb-3 pt-4 text-sm font-bold transition-colors whitespace-nowrap ${
-        isActive
-          ? "border-primary text-primary"
-          : "border-transparent text-black/60 hover:border-black/20 hover:text-black/80"
-      }`}
-    >
-      <Icon className="h-4 w-4" aria-hidden />
-      {label}
-    </Link>
-  );
+/** Exact match for the overview, prefix match elsewhere so /staff/orders/123 stays active. */
+function isRouteActive(href: string, pathname: string): boolean {
+  return href === "/staff" ? pathname === href : pathname.startsWith(href);
 }
 
 /**
- * The persistent admin-panel nav.
+ * The persistent admin-panel nav (#1177).
  *
- * THIS IS ONE OF TWO NAVIGATION SURFACES, and they must list the same pages. The other is the hub
- * at `app/(admin)/staff/page.tsx`. Before P9.2 (#612) neither was a superset of the other — this
- * nav omitted brands, customers and payments while the hub omitted bundles, promotions and
- * storefront, so three pages vanished from the chrome the moment a user navigated off the hub and
- * three more were unreachable from it. `tests/staff-nav-parity.test.ts` now pins the two together:
- * add a link here and the test fails until the hub gains it too.
+ * IT NO LONGER OWNS THE LIST. Every destination comes from `components/staff/nav-items.ts`, which
+ * the hub at `app/(admin)/staff/page.tsx` renders from too. Before #1177 these were two
+ * hand-maintained flat lists — 25 links for an admin, 13 for staff — and keeping them in agreement
+ * was a thing a test had to police rather than a property of the code; it failed twice (#612,
+ * #626). Add a page in the module, not here. `tests/staff-nav-parity.test.ts` fails if this file
+ * carries a `/staff/*` href of its own; `/staff` below is the one allowed exception.
  *
- * One page is deliberately excluded from that parity set, not forgotten:
- * `/staff/errors` is platform-admin-only (this nav's `currentTier` cannot express that, so the hub
- * carries it behind its own check).
- *
- * THE PARITY TEST ABOVE IS TIER-BLIND, AND THAT COST US ONE LINK (#626, fixed in #633). It collects
- * every href in each file and compares the two sets, so the staff-tier branch below was never
- * compared against anything — it omitted `/staff/payments` for months even though that page admits
- * STAFF (`requireVendorRole("STAFF", "ADMIN")`) and the hub renders its card to them, so the link
- * vanished the moment a staff member navigated off the hub. `tests/staff-nav-parity.test.ts` now
- * additionally derives the expected staff-tier set from the pages' OWN gates, so a future
- * reallocation between the tiers is self-verifying rather than trusted.
+ * THE CLOSED PANELS ARE HIDDEN, NOT UNMOUNTED, and that is load-bearing rather than incidental:
+ * it keeps the full destination set readable from a single `curl` of any panel page, so "no route
+ * became unreachable" is checkable without driving a browser (spec R6).
  */
 export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
-  const trackRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
+  const close = useCallback(() => setOpenGroup(null), []);
+
+  /**
+   * Close on navigation.
+   *
+   * `openGroup` is DELIBERATELY not a dependency. Listing it would re-run this effect the moment a
+   * group opened and close it again immediately — the standing rule in `CLAUDE.md` (React &
+   * Next.js Hooks), and the defect class behind #1144. `close` is stable via `useCallback`, so the
+   * effect genuinely depends on `pathname` alone.
+   *
+   * `react-hooks/set-state-in-effect` is silenced rather than satisfied, which `CLAUDE.md`
+   * prescribes for exactly this case: closing on navigation IS synchronising React state to an
+   * external change (the URL), and the alternatives the rule suggests — closing in each link's
+   * onClick, or keying the state off the pathname — either miss a navigation the nav did not
+   * originate (browser back, a redirect, a link elsewhere on the page) or reintroduce the
+   * re-render loop the dependency note above is about.
+   */
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see the note above
+    close();
+  }, [pathname, close]);
+
+  // Dismissal: a pointer outside the nav, or Escape (which returns focus to the trigger).
+  useEffect(() => {
+    if (!openGroup) return;
+
+    function onPointerDown(event: PointerEvent) {
+      if (!navRef.current?.contains(event.target as Node)) {
+        setOpenGroup(null);
+      }
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setOpenGroup((current) => {
+        if (current) triggerRefs.current[current]?.focus();
+        return null;
+      });
+    }
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openGroup]);
+
+  // Every hook runs before this: a conditional return above them would break the rules of hooks.
   if (!canSeeOrders) return null;
 
-  const nudge = (direction: 1 | -1) =>
-    trackRef.current?.scrollBy({ left: direction * 260, behavior: "smooth" });
+  const groups = visibleGroups(currentTier);
 
   return (
-    <nav aria-label="Store admin" className="bg-white border-b border-black/10 shadow-sm w-full">
-      <div className="mx-auto flex w-full max-w-5xl items-center px-4 relative group">
-        <button
-          type="button"
-          aria-label="Scroll left"
-          onClick={() => nudge(-1)}
-          className="absolute left-0 sm:-left-3 z-10 hidden sm:flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-white text-black/60 shadow hover:bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"
+    <nav aria-label="Store admin" className="w-full border-b border-black/10 bg-white shadow-sm">
+      <div className="relative mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-6 gap-y-1 px-4">
+        <Link
+          href="/staff"
+          className={`inline-flex items-center gap-2 border-b-2 px-1 pb-3 pt-4 text-sm font-bold transition-colors ${
+            pathname === "/staff"
+              ? "border-primary text-primary"
+              : "border-transparent text-black/60 hover:border-black/20 hover:text-black/80"
+          }`}
         >
-          <ChevronLeft className="h-4 w-4" aria-hidden />
-        </button>
+          <LayoutDashboard className="h-4 w-4" aria-hidden />
+          Overview
+        </Link>
 
-        <div
-          ref={trackRef}
-          className="no-scrollbar flex w-full gap-6 overflow-x-auto scroll-smooth"
-        >
-          {currentTier === "staff" ? (
-            <>
-              <NavLink href="/staff" icon={LayoutDashboard} label="Overview" />
-              <NavLink
-                href="/staff/inventory"
-                icon={Layers}
-                label="Live Inventory & Availability"
-              />
-              <NavLink href="/staff/orders" icon={ClipboardList} label="Fulfillment & Orders" />
-              <NavLink href="/staff/products" icon={Package} label="Catalogue" />
-              <NavLink href="/staff/net-content" icon={Ruler} label="Net Content" />
-              <NavLink href="/staff/categories" icon={LayoutDashboard} label="Categories" />
-              <NavLink href="/staff/brands" icon={Tag} label="Brands" />
-              <NavLink href="/staff/attributes" icon={SlidersHorizontal} label="Product filters" />
-              <NavLink href="/staff/promotions" icon={Megaphone} label="Promotions" />
-              <NavLink href="/staff/bundles" icon={Boxes} label="Bundles" />
-              <NavLink href="/staff/search-synonyms" icon={BookA} label="Search Dictionary" />
-              <NavLink href="/staff/feedback" icon={MessageSquareQuote} label="Customer Feedback" />
-              <NavLink href="/staff/runbook" icon={BookOpen} label="Internal Operational Runbook" />
-            </>
-          ) : (
-            <>
-              <NavLink href="/staff" icon={LayoutDashboard} label="Overview" />
-              <NavLink
-                href="/staff/inventory"
-                icon={Layers}
-                label="Live Inventory & Availability"
-              />
-              <NavLink href="/staff/orders" icon={ClipboardList} label="Orders" />
-              <NavLink href="/staff/fulfilment" icon={CalendarClock} label="Fulfilment" />
-              <NavLink href="/staff/payments" icon={ShieldAlert} label="Payment Issues" />
-              <NavLink href="/staff/products" icon={Package} label="Catalogue" />
-              <NavLink href="/staff/net-content" icon={Ruler} label="Net Content" />
-              <NavLink href="/staff/categories" icon={LayoutDashboard} label="Categories" />
-              <NavLink href="/staff/brands" icon={Tag} label="Brands" />
-              <NavLink href="/staff/attributes" icon={SlidersHorizontal} label="Product filters" />
-              <NavLink href="/staff/promotions" icon={Megaphone} label="Promotions" />
-              <NavLink href="/staff/bundles" icon={Boxes} label="Bundles" />
-              <NavLink href="/staff/storefront" icon={Store} label="Storefront" />
-              <NavLink href="/staff/faqs" icon={HelpCircle} label="Help Centre Answers" />
-              <NavLink href="/staff/assistant" icon={MessagesSquare} label="Help Assistant" />
-              <NavLink href="/staff/ai-usage" icon={Gauge} label="AI Allowance" />
-              <NavLink href="/staff/delivery-areas" icon={Truck} label="Delivery areas" />
-              <NavLink href="/staff/loyalty" icon={Sparkles} label="Loyalty" />
-              <NavLink href="/staff/discounts" icon={TicketPercent} label="Discounts" />
-              <NavLink href="/staff/reports" icon={TrendingUp} label="Reports" />
-              <NavLink href="/staff/customers" icon={Contact} label="Customers" />
-              <NavLink href="/staff/team" icon={Users} label="Team" />
-              <NavLink href="/staff/search-synonyms" icon={BookA} label="Search Dictionary" />
-              <NavLink href="/staff/feedback" icon={MessageSquareQuote} label="Customer Feedback" />
-              <NavLink href="/staff/runbook" icon={BookOpen} label="Runbook" />
-            </>
-          )}
-        </div>
+        {groups.map((group: StaffNavGroup) => {
+          const isOpen = openGroup === group.id;
+          const hasActiveRoute = group.items.some((item) => isRouteActive(item.href, pathname));
+          const panelId = `panel-nav-${group.id}`;
 
-        <button
-          type="button"
-          aria-label="Scroll right"
-          onClick={() => nudge(1)}
-          className="absolute right-0 sm:-right-3 z-10 hidden sm:flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-white text-black/60 shadow hover:bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <ChevronRight className="h-4 w-4" aria-hidden />
-        </button>
+          return (
+            <div key={group.id} className="relative">
+              <button
+                type="button"
+                ref={(node) => {
+                  triggerRefs.current[group.id] = node;
+                }}
+                aria-expanded={isOpen}
+                aria-controls={panelId}
+                onClick={() => setOpenGroup(isOpen ? null : group.id)}
+                className={`inline-flex items-center gap-2 border-b-2 px-1 pb-3 pt-4 text-sm font-bold transition-colors ${
+                  hasActiveRoute || isOpen
+                    ? "border-primary text-primary"
+                    : "border-transparent text-black/60 hover:border-black/20 hover:text-black/80"
+                }`}
+              >
+                {group.label}
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                  aria-hidden
+                />
+              </button>
+
+              <div
+                id={panelId}
+                hidden={!isOpen}
+                className="absolute left-0 top-full z-20 mt-1 w-max max-w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-black/10 bg-white py-2 shadow-lg"
+              >
+                <ul>
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = isRouteActive(item.href, pathname);
+
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          aria-current={active ? "page" : undefined}
+                          className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-black/5 ${
+                            active ? "font-bold text-primary" : "text-black/70"
+                          }`}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                          {item.label}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </nav>
   );

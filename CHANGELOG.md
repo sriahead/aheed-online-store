@@ -6,6 +6,15 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **The staff panel's navigation is grouped, and both of its surfaces now render from one module** (issue `#1177`; `specs/2026-10-20-p1177-staff-nav-grouping/`). No schema change, no migration, no new dependency. Closes item 1b of the 2026-10-13 user-testing triage: *"many tab items in the admin or staff view — categorise as per their relevancy."*
+  - **Six groups.** Orders & Fulfilment, Catalogue, Offers & Loyalty, Customers & Content, Store setup, Insights & Help — beside a standalone Overview. A store admin's bar goes from 25 flat links in a horizontal scroller to seven items; the hub's 24 undifferentiated cards become headed sections in the same order. Vendor staff see five groups: every page in **Store setup** is admin-only, so that group does not render for them at all.
+  - **One source of truth.** `components/staff/nav-items.ts` holds every destination's route, label, description, icon, tier and group, and both `components/staff/PanelNav.tsx` and `app/(admin)/staff/page.tsx` render from it. Neither may carry a `/staff/*` link of its own any more. `tests/staff-nav-parity.test.ts` was rewritten to match: it derives the expected routes from the filesystem and each item's tier from that page's own `requireVendorRole` gate, instead of comparing the two files to each other. That closes a hole the old test had — a route missing from **both** surfaces used to pass silently.
+  - **Fixed in passing, because the module made it unexpressible:** the hub had `/staff/feedback` inside its `isAdmin` block although the page admits STAFF, so a staff member saw the link in the bar and no card on the hub.
+  - **Unified labels.** One label per route, where the two surfaces had disagreed: `/staff/orders` is "Orders", `/staff/runbook` is "Runbook", `/staff/products` is "Products" (its old "Catalogue" label now names the group), `/staff/net-content` is "Net content review", `/staff/discounts` is "Discount codes", `/staff/search-synonyms` is "Search dictionary", `/staff/team` is "Team & Access", and `/staff/categories` uses the folder-tree icon rather than repeating Overview's.
+  - Adding a `/staff/*` page is now: one entry in the module, plus one operator-guide section. `CLAUDE.md` and `docs/developer-portal/app-conventions.md` are corrected accordingly.
+
 ### Added
 
 - **Shoppers can add a note to an item a store allows it on, and the AI allowance follows the Workers plan** (issues `#1135`, `#1028`, `#1029`, `#1031`; `specs/2026-10-19-p1135-custom-notes-ai-allowance/`). One migration (`20261019120000_p1135_custom_item_notes`, four `ADD COLUMN`s only). No new dependency, no raw SQL.

@@ -4,8 +4,8 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.12.0"
-updated: "2026-10-18"
+version: "2.13.0"
+updated: "2026-10-20"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
 tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback"]
@@ -17,10 +17,18 @@ Welcome to the **Staff Panel**. This guide covers every page you can open, one s
 item. If a page is not listed here, your account cannot open it — the Store Admin Management Guide
 covers the owner-only pages.
 
-Your core operational pages are **Overview**, **Live Inventory & Availability**, **Fulfillment & Orders**,
-**Catalogue** (Products, Categories, Brands, Bundles, Promotions), and **Search Dictionary**,
-plus this **Runbook**. Configuration of storefront settings, payments, delivery areas, loyalty,
-and discount codes belongs to a store admin.
+The panel's menu is grouped, and you see five groups beside **Overview**:
+
+- **Orders & Fulfilment** — Orders. (Fulfilment and Payment Issues belong to a store admin.)
+- **Catalogue** — Products, Live Inventory & Availability, Categories, Brands, Product filters,
+  Net content review.
+- **Offers & Loyalty** — Promotions, Bundles. (Loyalty and Discount codes belong to a store admin.)
+- **Customers & Content** — Customer Feedback, Search dictionary. (Customers, Help Centre Answers
+  and Help Assistant belong to a store admin.)
+- **Insights & Help** — this **Runbook**. (Reports belong to a store admin.)
+
+A sixth group, **Store setup**, is entirely a store admin's: storefront settings, delivery areas,
+team access and the AI allowance. You will not see it at all.
 
 ## Overview
 
