@@ -3,6 +3,7 @@ import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButto
 import { getEnv } from "@/lib/config";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { marketingConsentStatement } from "@/lib/marketing-consent";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // getEnv() reads GOOGLE_CLIENT_ID from the Cloudflare request-scoped binding,
 // which only exists at runtime (wrangler secrets aren't available at build
@@ -27,15 +28,17 @@ export default async function RegisterPage() {
     : null;
 
   return (
-    <main className="mx-auto max-w-sm px-4 py-8">
-      <h1 className="mb-6 text-2xl font-semibold text-primary">Create account</h1>
-      <RegisterForm marketingStatement={marketingStatement} />
-      {googleEnabled && (
-        <>
-          <p className="my-4 text-center text-sm text-black/60">or</p>
-          <GoogleSignInButton />
-        </>
-      )}
-    </main>
+    <PageContainer width="narrow">
+      <div className="mx-auto max-w-sm">
+        <h1 className="mb-6 text-2xl font-semibold text-primary">Create account</h1>
+        <RegisterForm marketingStatement={marketingStatement} />
+        {googleEnabled && (
+          <>
+            <p className="my-4 text-center text-sm text-black/60">or</p>
+            <GoogleSignInButton />
+          </>
+        )}
+      </div>
+    </PageContainer>
   );
 }

@@ -202,6 +202,12 @@ Policy: `specs/tech-stack.md`. Failures: `docs/developer-portal/runtime-pitfalls
   `requireVendorRole` refusal branch render the `PanelRefusal` component, never `return null`.
   Three tests enforce this. **No test checks whether a documented capability exists**, so trace
   every capability sentence to a real control.
+- **Its top-level container is `components/layout/PageContainer.tsx`** (`#1180`), never a
+  hand-written `mx-auto … max-w-… px-4` — that applies to every page in the app, not just
+  `/staff/*`. Pick `wide` (matches the chrome; tables, lists, dashboards), `standard` (settings,
+  record detail) or `narrow` (forms, auth, reading copy); `width` is required on purpose.
+  `tests/page-container.test.ts` fails on a hand-rolled container and on a `className` smuggling
+  `max-w-`/`mx-auto`/`px-` back in. Scale and rationale: `specs/design-system.md`.
 
 ## Design tokens & per-vendor branding
 

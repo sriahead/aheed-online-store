@@ -8,6 +8,7 @@ import { getOrderRepository } from "@/lib/orders-service";
 import { formatOrderDate } from "@/lib/order-status";
 import { formatPrice } from "@/components/product/format-price";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and the viewer's own orders — must render per-request.
 export const dynamic = "force-dynamic";
@@ -42,7 +43,7 @@ export default async function OrdersPage({
   });
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="standard">
       <h1 className="mb-6 text-2xl font-semibold text-primary">Your orders</h1>
 
       {items.length === 0 ? (
@@ -102,6 +103,6 @@ export default async function OrdersPage({
           Older orders
         </Link>
       )}
-    </main>
+    </PageContainer>
   );
 }

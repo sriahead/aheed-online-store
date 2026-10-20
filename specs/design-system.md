@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.22.0"
-updated: 2026-10-19
+version: "1.23.0"
+updated: 2026-10-20
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -396,6 +396,46 @@ background.
   at `bottom-24`/`sm:bottom-28` with `h-12`. So scrolled to the end, no footer content sits under
   Rewards, the cart or the contact trigger. **Moving any floating button higher means raising this
   padding too.**
+
+## Page width: one container, three steps (#1180, 2026-10-20)
+
+**Every page's top-level container is `components/layout/PageContainer.tsx`.** A page does not write
+its own `mx-auto … max-w-… px-4`; `tests/page-container.test.ts` fails if it does.
+
+| `width` | Class | For |
+|---|---|---|
+| `wide` | `max-w-7xl` (1280) | Matches the chrome exactly. Dashboards, lists, tables, product grids, browse. |
+| `standard` | `max-w-5xl` (1024) | Account pages, settings, record detail. |
+| `narrow` | `max-w-2xl` (672) | Forms, auth, checkout, reading copy. |
+
+**All three render `mx-auto w-full px-4`, and that shared gutter is the point** — not the
+`max-width`. A `narrow` page still shares a left edge and a gutter with the header; it just stops
+sooner. Alignment comes from the gutter being identical, which is why the three variants are
+allowed to differ in width at all.
+
+**`width` is required and has no default.** A default is how a page silently inherits a width
+nobody chose, which is the drift this replaced: before `#1180` there were four different content
+widths under the `max-w-7xl` chrome in the admin alone, and seven across the storefront. The admin
+hub sat 128px inboard of the nav heading it; `/staff/categories` rendered its table in 672px.
+
+**`className` appends and cannot override.** The repo carries no `clsx` and no `tailwind-merge`, so
+two competing `max-w-*` classes would resolve by stylesheet source order rather than by intent —
+silently, and potentially differently per build. The guard test rejects `max-w-`, `mx-auto` and
+`px-` in that prop. Non-layout extras (`text-primary`, `space-y-8`) pass through.
+
+**Vertical padding is preserved per page (`padY`: `default` = `py-8`, `tight` = `py-6`), not
+standardised.** Vertical rhythm was never the thing misaligned, and flattening it would move the
+shopper's browse pages for no reason the problem asked for.
+
+**One nested width is intentional.** `/login`, `/register`, `/forgot-password` and
+`/reset-password` keep a `max-w-sm` card *inside* a `narrow` container. A card is not a page
+container; stretching a sign-in form to 672px would be a visible downgrade sold as consistency.
+
+**Reading copy goes `narrow`, not wider.** `/help`, `/privacy` and `/terms` moved from `max-w-4xl`
+(896px) to 672px — roughly 75-80 characters, the readable measure. Wider is not better for prose.
+
+**Chrome that is still not on this scale:** `StorefrontFooter.tsx` is `max-w-6xl` while every other
+chrome element is `max-w-7xl`. Left alone by `#1180` deliberately — it is chrome, not a page.
 
 ## Product grids (#962, 2026-10-02)
 

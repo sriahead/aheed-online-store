@@ -8,6 +8,7 @@ import {
 } from "@/lib/categories-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { CategoryForm } from "@/components/staff/CategoryForm";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and one live category — must render per-request.
 export const dynamic = "force-dynamic";
@@ -45,13 +46,13 @@ export default async function EditCategoryPage({ params }: { params: Promise<{ i
   if (!category) notFound();
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <PageContainer width="narrow">
       <h1 className="mb-1 text-2xl font-semibold text-primary">{category.name}</h1>
       <p className="mb-6 text-sm text-primary-muted">
         Hiding a category hides its products and sub-categories from shoppers too, without changing
         them. Show it again to bring them all back.
       </p>
       <CategoryForm category={category} categories={categories} hiddenCounts={hiddenCounts} />
-    </main>
+    </PageContainer>
   );
 }

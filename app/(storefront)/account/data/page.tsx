@@ -16,6 +16,7 @@ import { EraseDataForm } from "@/components/account/EraseDataForm";
 import { MarketingConsentForm } from "@/components/account/MarketingConsentForm";
 import { getMarketingConsentRepository } from "@/lib/marketing-consent-service";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and the viewer's own account state — must render per request.
 export const dynamic = "force-dynamic";
@@ -54,7 +55,7 @@ export default async function AccountDataPage() {
   const listFlags = { loyalty: loyaltyEnabled, marketing: showMarketing };
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="standard">
       <h1 className="mb-6 text-2xl font-semibold text-primary">Your data</h1>
 
       <section className="mb-6 rounded-2xl border border-black/10 bg-surface-muted p-5">
@@ -113,6 +114,6 @@ export default async function AccountDataPage() {
       <Link href="/account" className="text-sm font-medium text-primary underline">
         Back to your account
       </Link>
-    </main>
+    </PageContainer>
   );
 }

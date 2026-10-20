@@ -17,6 +17,7 @@ import { ExpressCountdown } from "@/components/staff/ExpressCountdown";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { advanceStatus } from "@/features/orders/advance-status";
 import { advanceStatusBulk } from "@/features/orders/advance-status-bulk";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's live orders — must render per-request.
 export const dynamic = "force-dynamic";
@@ -72,7 +73,7 @@ export default async function StaffOrdersPage({
   const now = Date.now();
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
+    <PageContainer width="wide">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Orders</h1>
       <p className="mb-6 text-sm text-primary-muted">
         {query.status === "" && query.search === null
@@ -237,6 +238,6 @@ export default async function StaffOrdersPage({
           Older orders
         </Link>
       )}
-    </main>
+    </PageContainer>
   );
 }

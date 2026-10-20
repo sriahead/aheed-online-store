@@ -14,6 +14,7 @@ import { parseRestoreNotice } from "@/lib/restore-notice";
 import { RestoreNotice } from "@/components/cart/RestoreNotice";
 import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 /**
  * Canonical cart URL (P3a, #93). The drawer is the primary surface, but this
@@ -55,7 +56,7 @@ export default async function CartPage({
   const restoreNotice = parseRestoreNotice(params);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6">
+    <PageContainer width="standard" padY="tight">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold text-primary">Your cart</h1>
         {/* The other cart-entry path (P3d, #114) — discoverable without knowing the URL. */}
@@ -148,6 +149,6 @@ export default async function CartPage({
           )}
         </form>
       )}
-    </main>
+    </PageContainer>
   );
 }

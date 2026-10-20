@@ -9,6 +9,7 @@ import { getShoppingListService } from "@/lib/shopping-lists-service";
 import { itemsToLines } from "@/lib/saved-list";
 import { distinctTerms, resolveLines } from "@/lib/shopping-list";
 import { ListReview } from "@/components/cart/ListReview";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 /**
  * Open a saved list against today's catalogue (P10, #116).
@@ -54,7 +55,7 @@ export default async function SavedListPage({ params }: { params: Promise<{ list
   const resolved = resolveLines(lines, candidates, aliases);
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="standard">
       <Link
         href="/account/lists"
         className="mb-4 inline-flex items-center gap-1 text-sm text-primary-muted hover:text-primary"
@@ -75,6 +76,6 @@ export default async function SavedListPage({ params }: { params: Promise<{ list
       ) : (
         <ListReview lines={resolved} />
       )}
-    </main>
+    </PageContainer>
   );
 }

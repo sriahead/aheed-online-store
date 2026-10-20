@@ -11,6 +11,7 @@ import { ProductForm } from "@/components/staff/ProductForm";
 import { fetchVendorProfile } from "@/lib/vendor-service";
 import { labelSettingsFromProfile } from "@/lib/product-label-settings";
 import { listAttributeDefinitions } from "@/lib/attributes-service";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and one live product — must render per-request.
 export const dynamic = "force-dynamic";
@@ -64,7 +65,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   }));
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <PageContainer width="narrow">
       <h1 className="mb-1 text-2xl font-semibold text-primary">{product.name}</h1>
       <p className="mb-6 text-sm text-primary-muted">
         Changes apply to the shop immediately. Past orders keep the price they were charged.
@@ -77,6 +78,6 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         attributes={attributes}
         imageUrls={imageUrls}
       />
-    </main>
+    </PageContainer>
   );
 }

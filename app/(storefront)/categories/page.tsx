@@ -7,6 +7,7 @@ import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { ProductRow } from "@/components/product/ProductRow";
 import { BundleRow } from "@/components/bundle/BundleRow";
 import { getBundlesForStorefront } from "@/lib/bundles-service";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Without this, Next's build-time static optimization tries to prerender this
 // page in plain Node — but lib/db.ts loads Prisma via @prisma/client/wasm,
@@ -47,7 +48,7 @@ export default async function CategoriesPage() {
   const { CDN_BASE_URL } = getEnv();
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 space-y-8">
+    <PageContainer width="wide" padY="tight" className="space-y-8">
       <section className="bg-white rounded-2xl border border-black/10 p-5 shadow-sm">
         <h1 className="mb-4 text-xl font-bold text-primary">Shop by department</h1>
         <DepartmentScroller categories={categories} />
@@ -77,6 +78,6 @@ export default async function CategoriesPage() {
         viewAllLink="/search?featured=1"
         cartQuantities={cartQuantities}
       />
-    </main>
+    </PageContainer>
   );
 }

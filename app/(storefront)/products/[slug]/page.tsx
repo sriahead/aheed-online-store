@@ -10,6 +10,7 @@ import { buildProductMetadata } from "@/lib/page-metadata";
 import { formatPrice } from "@/components/product/format-price";
 import { deriveUnitPriceLabel } from "@/components/product/unit-price";
 import { ProductImageGallery } from "@/components/product/ProductImageGallery";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { RestockNotice } from "@/components/product/RestockNotice";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { ReviewForm } from "@/features/reviews/components/ReviewForm";
@@ -101,27 +102,28 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   ]);
 
   return (
-    <main className="mx-auto grid max-w-4xl gap-6 sm:grid-cols-2">
-      <ProductImageGallery images={product.images} cdnBaseUrl={CDN_BASE_URL ?? ""} />
-      <div className="flex flex-col gap-3">
-        <h1 className="text-2xl font-semibold text-primary">{product.name}</h1>
-        <p className="text-primary-muted">{product.description}</p>
-        <p className="text-sm text-primary-muted">{unitDisplay}</p>
-        <p className="text-xl font-semibold text-action">{formatPrice(product.basePrice)}</p>
-        <p className={product.inStock ? "text-action" : "text-danger"}>
-          {product.inStock ? "In stock" : "Out of stock"}
-        </p>
-        {!product.inStock && product.expectedRestockDay !== null && (
-          <p>
-            <RestockNotice
-              day={product.expectedRestockDay}
-              className="text-sm"
-              iconClassName="h-4 w-4"
-            />
+    <PageContainer width="standard">
+      <div className="grid gap-6 sm:grid-cols-2">
+        <ProductImageGallery images={product.images} cdnBaseUrl={CDN_BASE_URL ?? ""} />
+        <div className="flex flex-col gap-3">
+          <h1 className="text-2xl font-semibold text-primary">{product.name}</h1>
+          <p className="text-primary-muted">{product.description}</p>
+          <p className="text-sm text-primary-muted">{unitDisplay}</p>
+          <p className="text-xl font-semibold text-action">{formatPrice(product.basePrice)}</p>
+          <p className={product.inStock ? "text-action" : "text-danger"}>
+            {product.inStock ? "In stock" : "Out of stock"}
           </p>
-        )}
+          {!product.inStock && product.expectedRestockDay !== null && (
+            <p>
+              <RestockNotice
+                day={product.expectedRestockDay}
+                className="text-sm"
+                iconClassName="h-4 w-4"
+              />
+            </p>
+          )}
 
-        {/*
+          {/*
           #608 — this page rendered NO facet at all before now, not even Halal or Fresh, which the
           product CARD has shown since P2.5b1. So the detail page was the larger of the two gaps
           that issue names: a shopper who filtered a listing by a facet and then opened a product
@@ -132,119 +134,120 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           absence the data does not actually assert (a product is not marked "not vegetarian";
           it is simply not marked).
         */}
-        {(dietaryFacets.length > 0 || product.brand || product.origin) && (
-          <ul className="flex flex-wrap gap-2" aria-label="Product attributes">
-            {dietaryFacets.map((facet) => (
-              <li
-                key={facet}
-                className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-primary"
-              >
-                {facet}
-              </li>
-            ))}
-            {product.brand && (
-              <li className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-primary">
-                {product.brand.name}
-              </li>
-            )}
-            {product.origin && (
-              <li className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-primary">
-                {product.origin}
-              </li>
-            )}
-          </ul>
-        )}
+          {(dietaryFacets.length > 0 || product.brand || product.origin) && (
+            <ul className="flex flex-wrap gap-2" aria-label="Product attributes">
+              {dietaryFacets.map((facet) => (
+                <li
+                  key={facet}
+                  className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-primary"
+                >
+                  {facet}
+                </li>
+              ))}
+              {product.brand && (
+                <li className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-primary">
+                  {product.brand.name}
+                </li>
+              )}
+              {product.origin && (
+                <li className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-primary">
+                  {product.origin}
+                </li>
+              )}
+            </ul>
+          )}
 
-        {/*
+          {/*
           #239/#608 — the HMC reference travels WITH the claim, never behind it. #239 was a real
           incident of this codebase asserting "100% Certified HMC Halal" for a vendor with no basis
           for it; `lib/catalogue-form.ts` now requires this reference whenever the flag is ticked,
           and rendering it here is what makes the badge above an attributable claim rather than a
           decoration.
         */}
-        {/*
+          {/*
           #912 — the vendor's own filter values ("Colour: Black"), so a shopper who narrowed a
           listing by one sees why this product matched — the display half #569's facets lacked.
           A description list because each entry IS a name/value pair; rendered only when the
           product carries at least one, never as an empty heading.
         */}
-        {product.specifications.length > 0 && (
-          <section aria-labelledby="specifications-heading">
-            <h2 id="specifications-heading" className="text-sm font-semibold text-primary">
-              Specifications
-            </h2>
-            <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-              {product.specifications.map((spec) => (
-                <div key={spec.name} className="contents">
-                  <dt className="text-primary-muted">{spec.name}</dt>
-                  <dd className="text-primary">{spec.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        )}
+          {product.specifications.length > 0 && (
+            <section aria-labelledby="specifications-heading">
+              <h2 id="specifications-heading" className="text-sm font-semibold text-primary">
+                Specifications
+              </h2>
+              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                {product.specifications.map((spec) => (
+                  <div key={spec.name} className="contents">
+                    <dt className="text-primary-muted">{spec.name}</dt>
+                    <dd className="text-primary">{spec.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
 
-        {product.isHmcCertified && product.hmcReference && (
-          <p className="text-sm text-primary-muted">
-            HMC certification reference: {product.hmcReference}
-          </p>
-        )}
-        {/* Real add-to-cart (P3a) — full-width variant, no wrapping <Link> here. */}
-        <AddToCartButton
-          productId={product.id}
-          productName={product.name}
-          disabled={!product.inStock}
-          variant="full"
-          acceptsNote={product.acceptsNote}
-        />
-      </div>
+          {product.isHmcCertified && product.hmcReference && (
+            <p className="text-sm text-primary-muted">
+              HMC certification reference: {product.hmcReference}
+            </p>
+          )}
+          {/* Real add-to-cart (P3a) — full-width variant, no wrapping <Link> here. */}
+          <AddToCartButton
+            productId={product.id}
+            productName={product.name}
+            disabled={!product.inStock}
+            variant="full"
+            acceptsNote={product.acceptsNote}
+          />
+        </div>
 
-      {/* #981 — `product-reviews` is the measuring hook. The product page carries the same
+        {/* #981 — `product-reviews` is the measuring hook. The product page carries the same
       under-44px review controls as Quick View (it renders the same `ReviewForm` and the same
       `StarRatingInput`), and `scripts/verify-mobile-layout.ts` reports a control only when it
       sits inside a `data-tap-surface`. */}
-      <section data-tap-surface="product-reviews" className="col-span-full flex flex-col gap-4">
-        <h2 className="text-xl font-semibold text-primary">Reviews</h2>
+        <section data-tap-surface="product-reviews" className="col-span-full flex flex-col gap-4">
+          <h2 className="text-xl font-semibold text-primary">Reviews</h2>
 
-        {session?.user ? (
-          <ReviewForm productId={product.id} productSlug={slug} existingReview={existingReview} />
-        ) : (
-          <p className="text-primary-muted">
-            <Link
-              href="/login"
-              className="inline-flex min-h-tap min-w-tap items-center justify-center font-semibold text-action lg:min-h-0 lg:min-w-0"
-            >
-              Log in
-            </Link>{" "}
-            to leave a review.
-          </p>
-        )}
+          {session?.user ? (
+            <ReviewForm productId={product.id} productSlug={slug} existingReview={existingReview} />
+          ) : (
+            <p className="text-primary-muted">
+              <Link
+                href="/login"
+                className="inline-flex min-h-tap min-w-tap items-center justify-center font-semibold text-action lg:min-h-0 lg:min-w-0"
+              >
+                Log in
+              </Link>{" "}
+              to leave a review.
+            </p>
+          )}
 
-        <ul className="flex flex-col gap-3">
-          {reviews.map((review) => (
-            <li key={review.id} className="rounded-2xl border border-black/10 p-3">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-primary">
-                  {review.reviewerName} — {review.rating}/5
-                </span>
-                {session?.user && review.userId === session.user.id && (
-                  <form action={deleteReview}>
-                    <input type="hidden" name="reviewId" value={review.id} />
-                    <input type="hidden" name="productSlug" value={slug} />
-                    <button
-                      type="submit"
-                      className="flex min-h-tap min-w-tap items-center justify-center text-sm text-danger lg:min-h-0 lg:min-w-0"
-                    >
-                      Delete
-                    </button>
-                  </form>
-                )}
-              </div>
-              {review.comment && <p className="text-primary-muted">{review.comment}</p>}
-            </li>
-          ))}
-        </ul>
-      </section>
-    </main>
+          <ul className="flex flex-col gap-3">
+            {reviews.map((review) => (
+              <li key={review.id} className="rounded-2xl border border-black/10 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-primary">
+                    {review.reviewerName} — {review.rating}/5
+                  </span>
+                  {session?.user && review.userId === session.user.id && (
+                    <form action={deleteReview}>
+                      <input type="hidden" name="reviewId" value={review.id} />
+                      <input type="hidden" name="productSlug" value={slug} />
+                      <button
+                        type="submit"
+                        className="flex min-h-tap min-w-tap items-center justify-center text-sm text-danger lg:min-h-0 lg:min-w-0"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  )}
+                </div>
+                {review.comment && <p className="text-primary-muted">{review.comment}</p>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+    </PageContainer>
   );
 }

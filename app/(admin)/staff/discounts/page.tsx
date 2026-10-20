@@ -4,6 +4,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { getDiscountRepository } from "@/lib/discounts-service";
 import { DiscountCodesPanel } from "@/components/staff/DiscountCodesPanel";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's live codes — must render per-request.
 export const dynamic = "force-dynamic";
@@ -40,13 +41,13 @@ export default async function StaffDiscountsPage() {
   const codes = await getDiscountRepository().list();
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <PageContainer width="standard">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Discount codes</h1>
       <p className="mb-6 text-sm text-primary-muted">
         Codes apply to future orders only. A code can be deactivated but not edited — orders that
         already used it keep the discount they were given.
       </p>
       <DiscountCodesPanel codes={codes} />
-    </main>
+    </PageContainer>
   );
 }

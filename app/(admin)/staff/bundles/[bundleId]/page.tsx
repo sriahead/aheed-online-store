@@ -10,6 +10,7 @@ import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { BundleForm } from "@/components/staff/BundleForm";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and one live bundle — must render per-request.
 export const dynamic = "force-dynamic";
@@ -59,7 +60,7 @@ export default async function EditBundlePage({
     bundle?.imageKey && CDN_BASE_URL ? composePublicUrl(CDN_BASE_URL, bundle.imageKey) : null;
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <PageContainer width="narrow">
       <div className="mb-1 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-primary">
           {bundle ? bundle.name : "New bundle"}
@@ -88,6 +89,6 @@ export default async function EditBundlePage({
         products={products.items.map((product) => ({ id: product.id, name: product.name }))}
         imageUrl={imageUrl}
       />
-    </main>
+    </PageContainer>
   );
 }

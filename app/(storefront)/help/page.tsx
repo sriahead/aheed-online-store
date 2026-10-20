@@ -5,6 +5,7 @@ import { getLoyaltyRepository } from "@/lib/loyalty-service";
 import { getVendorFaqRepository } from "@/lib/vendor-faqs-service";
 import { helpDeliveryFacts, freeDeliveryOffered, pointsExpirySentence } from "@/lib/help-facts";
 import { formatPrice } from "@/components/product/format-price";
+import { PageContainer } from "@/components/layout/PageContainer";
 import Link from "next/link";
 import {
   ShieldAlert,
@@ -80,7 +81,7 @@ export default async function HelpPage() {
   const shopperGuide = getPublicShopperGuide();
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-8 space-y-12">
+    <PageContainer width="narrow" className="space-y-12">
       <header className="space-y-2">
         <h1 className="text-3xl font-bold text-black/90">Help Centre</h1>
         <p className="text-black/60">
@@ -346,6 +347,6 @@ export default async function HelpPage() {
           <DocumentSectionRenderer content={shopperGuide.content} />
         </section>
       )}
-    </div>
+    </PageContainer>
   );
 }

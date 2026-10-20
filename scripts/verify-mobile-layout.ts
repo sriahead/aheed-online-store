@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 /**
  * Measure the storefront at real phone and tablet widths:
- * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>]`.
+ * `npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390,768 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>] [--desktop] [--measure <selector>]`.
  *
  * ## Why this exists (#960, #961, #962)
  *
@@ -15,6 +15,19 @@ import { join } from "node:path";
  * the locally installed Chrome headless over the DevTools protocol and sets the viewport with
  * `Emulation.setDeviceMetricsOverride`, which is a real layout at that width with `mobile: true`.
  * It uses Node's built-in `WebSocket` (Node 22+) and adds no dependency.
+ *
+ * ## Desktop widths and arbitrary boxes (#1180)
+ *
+ * `--desktop` sets `mobile: false` and `deviceScaleFactor: 1`. Without it this script always
+ * emulated a touch device, which is right for the phone widths it was written for and wrong above
+ * them — a 1280px measurement taken with `mobile: true` is a tablet-emulated layout, not the one a
+ * desktop visitor sees.
+ *
+ * `--measure <selector>` (repeatable, or comma-separated) adds `measured` to each printed object:
+ * one `{ top, left, width, height }` per selector, or `null` where nothing matched. It is how
+ * `#1180` proves the admin nav and the page body share a left edge. **When no `--measure` is
+ * passed the key is omitted entirely**, so the default output stays byte-identical for the slices
+ * whose validation already reads this JSON.
  *
  * ## It measures; it does not judge
  *
@@ -130,6 +143,8 @@ interface Args {
   openHelpAssistant: boolean;
   blockUrls: string | null;
   signIn: { email: string; password: string } | null;
+  desktop: boolean;
+  measure: string[];
 }
 
 function parseArgs(argv: string[]): Args {
@@ -148,6 +163,13 @@ function parseArgs(argv: string[]): Args {
   const openQuickView = argv.includes("--open-quick-view");
   const openHelpAssistant = argv.includes("--open-help-assistant");
   const blockUrls = value("--block-urls") ?? null;
+  const desktop = argv.includes("--desktop");
+  // Repeatable and/or comma-separated: --measure main --measure 'nav > div,header'
+  const measure = argv
+    .flatMap((a, i) => (a === "--measure" ? [argv[i + 1] ?? ""] : []))
+    .flatMap((v) => v.split(","))
+    .map((v) => v.trim())
+    .filter(Boolean);
   // #981 — `--sign-in <email>:<password>`. The password may itself contain `:`, so split on the
   // FIRST colon only.
   const signInRaw = value("--sign-in") ?? null;
@@ -172,7 +194,7 @@ function parseArgs(argv: string[]): Args {
     (argv.includes("--sign-in") && signIn === null)
   ) {
     console.error(
-      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>]",
+      "Usage: npx tsx scripts/verify-mobile-layout.ts --base <url> --path <path> --widths 360,390 [--add-first [--then <path>]] [--open-location] [--open-location-menu] [--open-filters] [--open-cart] [--open-quick-view] [--open-help-assistant] [--block-urls <pattern>] [--sign-in <email>:<password>] [--desktop] [--measure <selector>]",
     );
     process.exit(2);
   }
@@ -205,6 +227,8 @@ function parseArgs(argv: string[]): Args {
     openHelpAssistant,
     blockUrls,
     signIn,
+    desktop,
+    measure,
   };
 }
 
@@ -536,7 +560,24 @@ const MEASURE = `(async () => {
   const headerAfter = header ? header.getBoundingClientRect() : null;
   const bannerAfter = banner ? banner.getBoundingClientRect() : null;
 
+  // #1180 — \`--measure <selector>\`. Omitted entirely when none was passed, so the default output
+  // stays byte-identical for the slices whose validation already reads this JSON.
+  const measureSelectors = window.__measureSelectors || [];
+  const measured = {};
+  for (const selector of measureSelectors) {
+    const el = document.querySelector(selector);
+    measured[selector] = el
+      ? (({ top, left, width, height }) => ({
+          top: Math.round(top),
+          left: Math.round(left),
+          width: Math.round(width),
+          height: Math.round(height),
+        }))(el.getBoundingClientRect())
+      : null;
+  }
+
   return {
+    ...(measureSelectors.length ? { measured } : {}),
     viewportWidth: window.innerWidth,
     documentScrollWidth: document.documentElement.scrollWidth,
     scrollYAfterScroll: Math.round(window.scrollY),
@@ -775,13 +816,19 @@ async function main() {
     let cartFeedback: unknown = null;
     let printedFeedback = false;
     for (const width of args.widths) {
+      // #1180 — `mobile` was hardcoded `true`, which is right for the phone widths this script was
+      // written for and wrong above them: a 1280px measurement taken with `mobile: true` is a
+      // tablet-emulated layout, not the one a desktop visitor gets. `--desktop` measures the real
+      // desktop layout; without it nothing changes.
       await cdp.send("Emulation.setDeviceMetricsOverride", {
         width,
         height: HEIGHT,
-        deviceScaleFactor: 2,
-        mobile: true,
+        deviceScaleFactor: args.desktop ? 1 : 2,
+        mobile: !args.desktop,
       });
       await load(added && args.then ? args.then : args.path);
+      // Read by MEASURE. Set per load because a navigation clears it.
+      await cdp.evaluate(`window.__measureSelectors = ${JSON.stringify(args.measure)}; true`);
 
       if (args.addFirst && !added) {
         if (!(await cdp.evaluate<boolean>(CLICK_FIRST_ADD))) {

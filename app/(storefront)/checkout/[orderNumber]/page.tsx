@@ -8,6 +8,7 @@ import { getAuth } from "@/lib/auth";
 import { OrderItemsCard } from "@/components/orders/OrderItemsCard";
 import { OrderAddressCard } from "@/components/orders/OrderAddressCard";
 import { OrderPointsNote } from "@/components/orders/OrderPointsNote";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function OrderConfirmationPage({
   if (!order) redirect(`/orders/lookup?orderNumber=${encodeURIComponent(orderNumber)}`);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <PageContainer width="narrow">
       {/* Status comes from the DB on every request — never from the fact that the
           shopper arrived at the provider's success_url. That redirect routinely
           races the webhook, and a closed tab means it never happens at all. */}
@@ -108,6 +109,6 @@ export default async function OrderConfirmationPage({
       >
         {order.status === "CANCELLED" ? "Back to your cart" : "Continue shopping"}
       </Link>
-    </main>
+    </PageContainer>
   );
 }

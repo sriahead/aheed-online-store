@@ -10,6 +10,7 @@ import { checkOrderLookupRateLimitForVendor } from "@/lib/order-lookup-rate-limi
 import { formatPrice } from "@/components/product/format-price";
 import { GuestEraseForm } from "@/components/orders/GuestEraseForm";
 import { Package, Truck, CheckCircle2, Search, MapPin, AlertCircle, Download } from "lucide-react";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -98,7 +99,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
   const currentIndex = orderResult ? getStepIndex(orderResult.status) : 0;
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 text-primary">
+    <PageContainer width="narrow" className="text-primary">
       <nav className="mb-6 text-xs text-primary-muted">
         <Link href="/" className="hover:underline">
           Home
@@ -294,6 +295,6 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
           </div>
         )}
       </div>
-    </main>
+    </PageContainer>
   );
 }

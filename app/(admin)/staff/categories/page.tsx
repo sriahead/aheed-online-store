@@ -6,6 +6,7 @@ import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { CategoryForm } from "@/components/staff/CategoryForm";
 import { CategoryListClient } from "@/components/staff/CategoryListClient";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's categories — must render per-request.
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export default async function StaffCategoriesPage() {
   const categories = await listCategoriesForAdmin(auth.vendorId);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <PageContainer width="wide">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Categories</h1>
       <p className="mb-6 text-sm text-primary-muted">
         Departments shoppers browse by. Two levels deep, top level first.
@@ -49,6 +50,6 @@ export default async function StaffCategoriesPage() {
       </section>
 
       <CategoryListClient categories={categories} />
-    </main>
+    </PageContainer>
   );
 }

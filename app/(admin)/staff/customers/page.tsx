@@ -7,6 +7,7 @@ import { listCustomersForVendor } from "@/lib/customers-service";
 import { formatPrice } from "@/components/product/format-price";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { Card } from "@/components/ui/Card";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's live order history — must render per-request.
 export const dynamic = "force-dynamic";
@@ -55,7 +56,7 @@ export default async function StaffCustomersPage({
   });
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
+    <PageContainer width="wide">
       <div className="mb-6">
         <h1 className="mb-1 text-2xl font-semibold text-primary">Customers</h1>
         <p className="text-sm text-primary-muted">
@@ -142,6 +143,6 @@ export default async function StaffCustomersPage({
           </Link>
         )}
       </div>
-    </main>
+    </PageContainer>
   );
 }

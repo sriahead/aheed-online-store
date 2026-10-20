@@ -4,6 +4,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { getCustomerFeedbackRepository } from "@/lib/customer-feedback-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { moderateFeedback, approveFeedbackBulk } from "@/features/admin/feedback";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 /**
  * Customer feedback moderation (P9.2, #818).
@@ -56,7 +57,7 @@ export default async function StaffFeedbackPage() {
   const pending = feedback.filter((entry) => entry.status === "PENDING");
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="wide">
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-primary">Customer feedback</h1>
         <p className="mt-2 text-sm text-primary-muted">
@@ -193,6 +194,6 @@ export default async function StaffFeedbackPage() {
           </ul>
         </>
       )}
-    </main>
+    </PageContainer>
   );
 }

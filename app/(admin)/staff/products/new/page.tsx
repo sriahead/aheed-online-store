@@ -9,6 +9,7 @@ import { ProductForm } from "@/components/staff/ProductForm";
 import { fetchVendorProfile } from "@/lib/vendor-service";
 import { labelSettingsFromProfile } from "@/lib/product-label-settings";
 import { listAttributeDefinitions } from "@/lib/attributes-service";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's categories — must render per-request.
 export const dynamic = "force-dynamic";
@@ -45,7 +46,7 @@ export default async function NewProductPage() {
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <PageContainer width="narrow">
       <h1 className="mb-1 text-2xl font-semibold text-primary">New product</h1>
       <p className="mb-6 text-sm text-primary-muted">
         It goes live as soon as it&apos;s visible and has stock.
@@ -73,6 +74,6 @@ export default async function NewProductPage() {
           attributes={attributes}
         />
       )}
-    </main>
+    </PageContainer>
   );
 }

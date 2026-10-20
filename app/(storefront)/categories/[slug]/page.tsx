@@ -24,6 +24,7 @@ import { nextCategoryPageHref, prevCategoryPageHref } from "@/components/product
 import type { FilterParamValue } from "@/components/product/filter-params";
 import { listCurrentVendorAttributeDefinitions } from "@/lib/attributes-service";
 import { resolveAttributeFilters } from "@/lib/attribute-filters";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
 // can't load during next build's Node-based static prerendering.
@@ -168,7 +169,7 @@ export default async function CategoryPage({
   const isFirstPage = !query.cursor;
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6">
+    <PageContainer width="wide" padY="tight">
       {/* Departments: horizontal strip on top (arrow-scrolled). Highlights
           the DEPARTMENT even when viewing one of its subcategories. */}
       <DepartmentScroller categories={allCategories} activeSlug={scrollerActiveSlug} />
@@ -241,6 +242,6 @@ export default async function CategoryPage({
           )}
         </section>
       </div>
-    </main>
+    </PageContainer>
   );
 }

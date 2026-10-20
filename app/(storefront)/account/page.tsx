@@ -6,6 +6,7 @@ import { getAuth } from "@/lib/auth";
 import { LogoutButton } from "@/features/auth/components/LogoutButton";
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function AccountPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <PageContainer width="standard">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Your account</h1>
       <p className="mb-6 text-sm text-primary-muted">
         {/* #1134 — loyalty is named only where the store runs it. */}
@@ -151,6 +152,6 @@ export default async function AccountPage() {
       <div className="mt-8 border-t border-black/10 pt-6">
         <LogoutButton />
       </div>
-    </main>
+    </PageContainer>
   );
 }

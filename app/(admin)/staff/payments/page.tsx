@@ -10,6 +10,7 @@ import { reconcileRefusal, recoverRefusedOrder } from "@/features/payments/recon
 import { retryReconciliation } from "@/features/payments/retry-reconciliation";
 import { getPaymentReconciliationService } from "@/lib/payment-reconciliation-service";
 import type { ReconciliationOutcome } from "@/lib/repositories/payment-reconciliations";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's live refusal rows — must render per-request.
 export const dynamic = "force-dynamic";
@@ -67,7 +68,7 @@ export default async function StaffPaymentsPage() {
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-8">
+    <PageContainer width="wide">
       <h1 className="mb-2 flex items-center gap-2 text-2xl font-semibold text-primary">
         <ShieldAlert className="h-6 w-6 text-action" aria-hidden />
         Payment issues
@@ -231,6 +232,6 @@ export default async function StaffPaymentsPage() {
           ))}
         </ul>
       )}
-    </main>
+    </PageContainer>
   );
 }

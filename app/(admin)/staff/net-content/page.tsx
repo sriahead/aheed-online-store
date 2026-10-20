@@ -17,6 +17,7 @@ import {
   NetContentReviewRow,
   type NetContentReviewRowData,
 } from "@/components/staff/NetContentReviewRow";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's suggestions — must render per-request.
 export const dynamic = "force-dynamic";
@@ -84,7 +85,7 @@ export default async function StaffNetContentPage() {
   });
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
+    <PageContainer width="wide">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Net content review</h1>
       <p className="mb-6 text-sm text-primary-muted">
         AI suggestions for each product&apos;s pack size. Nothing changes on a product until you
@@ -124,7 +125,7 @@ export default async function StaffNetContentPage() {
           </ul>
         )}
       </section>
-    </main>
+    </PageContainer>
   );
 }
 
