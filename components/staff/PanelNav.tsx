@@ -63,7 +63,14 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
     if (!openGroup) return;
 
     function onPointerDown(event: PointerEvent) {
-      if (!navRef.current?.contains(event.target as Node)) {
+      // `navRef` MUST be attached to the <nav> below. When it was not (#1177 validation), this read
+      // `undefined?.contains(...)` -> `undefined`, so `!undefined` was always true and the panel
+      // closed on EVERY pointerdown — including on its own links. The panel then unmounted between
+      // mousedown and mouseup, no `click` ever reached the anchor, and not one grouped link
+      // navigated with a mouse. Keyboard still worked (Enter dispatches click with no pointerdown),
+      // which is exactly why only a live pointer check caught it.
+      const nav = navRef.current;
+      if (!nav || !nav.contains(event.target as Node)) {
         setOpenGroup(null);
       }
     }
@@ -90,8 +97,26 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
   const groups = visibleGroups(currentTier);
 
   return (
-    <nav aria-label="Store admin" className="w-full border-b border-black/10 bg-white shadow-sm">
-      <div className="relative mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-6 gap-y-1 px-4">
+    <nav
+      ref={navRef}
+      aria-label="Store admin"
+      className="w-full border-b border-black/10 bg-white shadow-sm"
+    >
+      {/*
+       * `max-w-7xl`, WIDER THAN THE max-w-5xl CONTENT COLUMN BELOW IT, deliberately (#1177
+       * validation). The seven triggers measure 954.77px plus six 24px gaps = 1098.77px, and
+       * `max-w-5xl` minus `px-4` leaves only 992px — so the bar wrapped onto a second row at 1280px
+       * with one lonely group on it. Tightening cannot close a 107px gap: even `gap-x-2` with a
+       * smaller chevron lands within a pixel or two of the limit, which would re-wrap on the next
+       * label change. `max-w-6xl` fits with 21px of headroom, which is the same trap one step later.
+       * Chrome spanning wider than its content column is a normal admin-panel pattern and leaves
+       * 149px for a future group.
+       *
+       * `flex-wrap` stays for narrow viewports, where wrapping is the correct behaviour — it is why
+       * there is no horizontal scroller any more. Note that `scrollWidth <= clientWidth` therefore
+       * proves nothing about the one-line requirement; measure the items' distinct `top` values.
+       */}
+      <div className="relative mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-6 gap-y-1 px-4">
         <Link
           href="/staff"
           className={`inline-flex items-center gap-2 border-b-2 px-1 pb-3 pt-4 text-sm font-bold transition-colors ${

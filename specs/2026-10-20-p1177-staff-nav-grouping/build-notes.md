@@ -111,6 +111,60 @@ plus one operator-guide section — not an edit to `PanelNav.tsx` and the hub.
   branch. The same edit adds the six group names, matching what R14 did for the staff guide.
 - Nothing else. No requirement was reinterpreted, narrowed or skipped.
 
+## Fixes after validation pass 1 (2026-10-20)
+
+Validation pass 1 was **not independent** — it ran in the same Opus session that wrote the code,
+at the owner's choice. It failed two rows. Both were implementation errors against sound
+requirements, so neither row was loosened.
+
+**1. R10 — `navRef` was never attached, so no grouped link navigated with a mouse.**
+
+`PanelNav.tsx` declared `navRef` and read it in the outside-click handler, but the `<nav>` element
+never carried `ref={navRef}`. `navRef.current` was therefore permanently `null`,
+`navRef.current?.contains(target)` evaluated to `undefined`, and `!undefined` is `true` — so the
+handler closed the panel on **every** `pointerdown`, including on its own links. Instrumented in
+Chrome:
+
+```
+doc-pointerdown   expanded=true   panelHidden=false
+pointerdown  (on the anchor)
+doc-mousedown     expanded=false  panelHidden=true    <- closed mid-gesture
+doc-mouseup       expanded=false  panelHidden=true
+doc-click         target=DIV                          <- no click reached the <a>
+```
+
+The panel unmounted between `mousedown` and `mouseup`, so no `click` ever reached the anchor and
+**not one grouped link navigated**. `a.click()` dispatched directly navigated fine, which isolated
+it to the pointer path. Reproduced on three separate groups.
+
+Worth keeping: **keyboard still worked**, because `Enter` on a focused link dispatches `click` with
+no preceding `pointerdown`. A code read, a unit test, or a keyboard-only accessibility check would
+all have passed. Only the live pointer row caught it — which is the whole reason R9 and R10 were
+written as live rows when Gate 1 accepted the dropdown risk.
+
+Fixed by attaching the ref and reading it through a local `const nav`, with the failure recorded in
+the handler so the coupling between the two is visible at the point it matters.
+
+**2. R8 — the bar wrapped onto two rows at 1280px.**
+
+The nav kept the old design's `max-w-5xl` container: 1024px minus `px-4` leaves **992px**, while the
+seven triggers measure **954.77px** plus six 24px gaps = **1098.77px**. Items sat at two distinct
+`top` values (y=120, y=174) with *Insights & Help* alone on the second row.
+
+`scrollWidth <= clientWidth` passed throughout, and that is the trap: `flex-wrap` removes overflow
+**by** wrapping, so the no-scroll check cannot detect this. The one-line clause is what failed.
+
+This one needed a decision rather than a correction, so it went back to the owner rather than being
+improvised here. Options measured and offered: `max-w-7xl`, `max-w-6xl`, amending R8 to allow
+wrapping, or shortening the group labels. **The owner chose `max-w-7xl`** (1248px usable, 149px
+headroom). `max-w-6xl` was rejected as the same trap one step later — it fits with 21px to spare, so
+one longer label would silently re-wrap. Shortening the labels was rejected because the six names
+are the Gate 1 taxonomy, pinned by the parity test and written into three operator guides, making it
+a spec change rather than a fix.
+
+The chrome bar is now wider than the `max-w-5xl` content column beneath it. That is intentional and
+visible, and the reasoning is recorded in the component.
+
 ## Known-shaky areas
 
 - **R9 and R10 are the risk this slice accepted at Gate 1, and nothing mechanical covers them.**
@@ -118,7 +172,19 @@ plus one operator-guide section — not an edit to `PanelNav.tsx` and the hub.
   live rows by design. `#1144` (the storefront header's method menu, open and unreproduced) is the
   same defect class. **Run R10 twice as `validation.md` says**: once from a panel page and once
   again from the destination, because a close that only works on first navigation would pass a
-  single attempt. Look here first if anything is wrong.
+  single attempt. Look here first if anything is wrong. **Pass 1 found a real defect here** (the
+  missing `navRef`, above), so this is not a hypothetical risk — it already fired once.
+- **Drive R9/R10 with real CDP pointer events, never `element.click()`.** A direct DOM click
+  bypasses `pointerdown` entirely and navigated happily while the feature was completely broken for
+  a mouse user. If a future check uses `.click()` for convenience it will report a pass on exactly
+  this defect.
+- **R9's "a click outside closes it" passed in pass 1 while the dismissal logic was inverted**, because
+  a handler that closes on *every* pointerdown also closes on outside ones. That row cannot
+  distinguish correct dismissal from indiscriminate dismissal on its own — read it together with
+  R10, which is what actually constrains the handler.
+- **`scrollWidth <= clientWidth` does not prove the bar is on one line.** `flex-wrap` removes
+  overflow by wrapping, so that check passed while the bar sat on two rows. Measure the distinct
+  `top` values of the nav's items, as R8's row now does.
 - **The full `npx vitest run` is nondeterministic, and it bit once during this build.** The first
   run reported 2 failures in `tests/storefront-chrome-rewards-gate.test.tsx`
   (`queryAllByLabelText` found 2 launchers, expected 1). That file **passes alone**, passes alone
