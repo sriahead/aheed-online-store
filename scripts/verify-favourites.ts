@@ -1,7 +1,7 @@
 import "dotenv/config"; // load .env in THIS process, regardless of how it's launched
 import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
-import { PrismaNeon } from "@prisma/adapter-neon";
+import { PrismaNeon, PrismaNeonHttp } from "@prisma/adapter-neon";
 import { checkDestructiveTarget } from "@/lib/db-target-guard";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import {
@@ -23,6 +23,20 @@ import {
  * because "a hand-built double only reproduces its author's guess". So this script provokes a real
  * duplicate insert and PRINTS the code it actually saw. A green run with the duplicate case skipped
  * is a failure, not a pass; that case is the only real evidence behind the guard.
+ *
+ * ## THE ADAPTER IS THE POINT, AND THIS SCRIPT GOT IT WRONG ONCE
+ *
+ * Validation pass 1 (2026-10-20) found this script building `PrismaNeon` — the WEBSOCKET adapter —
+ * while `lib/repositories/favourites.ts` runs on `getPrisma()`, which is `PrismaNeonHttp`
+ * (`lib/db.ts`). It therefore observed `P2002` and reported "ALL CHECKS PASSED" without ever
+ * raising the `"23505"` that the shipped path actually produces. Substituting the wrong real client
+ * is a subtler version of the mistake CLAUDE.md warns about, and it looked green.
+ *
+ * So now:
+ *   - the functional suite runs on **`PrismaNeonHttp`**, the adapter the application uses;
+ *   - the duplicate-key probe runs on **BOTH** adapters and asserts `isUniqueViolation` accepts
+ *     each, printing both codes, because the predicate has to cover both and only one of them
+ *     ships. If a future Prisma or adapter release changes either code, this is what notices.
  *
  * It is possible at all because every export in `lib/repositories/favourites.ts` takes its client,
  * `vendorId` and `userId` explicitly and reads no request context. That is the property
@@ -90,8 +104,15 @@ async function main() {
 
   console.log(`Target endpoint: ${verdict.endpoint}`);
 
-  const adapter = new PrismaNeon({ connectionString: targetUrl });
-  const prisma = new PrismaClient({ adapter });
+  // `checkDestructiveTarget` already refused a missing URL, but it reports that through its
+  // verdict rather than a type guard, so narrow it explicitly for the adapters below.
+  if (!targetUrl) throw new Error("unreachable: the guard above refuses a missing target URL");
+
+  // THE ADAPTER THE APPLICATION ACTUALLY USES. `lib/db.ts`'s `getPrisma()` builds
+  // `PrismaNeonHttp`, and every function in `lib/repositories/favourites.ts` runs on it — so the
+  // functional suite below must too, or it proves something about a client no request ever uses.
+  const prisma = new PrismaClient({ adapter: new PrismaNeonHttp(targetUrl, {}) });
+  console.log("Functional suite adapter: PrismaNeonHttp (what getPrisma() builds)\n");
 
   // The repository's parameter types are the app's `getPrisma()` client. This is the plain Node
   // client; the two differ in how they were constructed, not in the model API these functions use.
@@ -140,24 +161,51 @@ async function main() {
       `count=${count}`,
     );
 
-    console.log("\n2. the real duplicate-key error, and the code this adapter reports");
-    let observedCode: unknown = "(none — NO ERROR WAS RAISED)";
-    let accepted = false;
-    try {
-      // Deliberately bypasses `addFavourite`'s catch to see the raw error.
-      await prisma.favourite.create({ data: { vendorId, userId, productId } });
-    } catch (error) {
-      observedCode =
-        typeof error === "object" && error !== null && "code" in error
-          ? (error as { code: unknown }).code
-          : "(no .code property)";
-      accepted = isUniqueViolation(error);
+    console.log("\n2. the real duplicate-key error, on BOTH adapters");
+    // One row exists at this point, so a second raw insert collides on
+    // @@unique([vendorId, userId, productId]). Each adapter is asked to raise it, because the two
+    // report the SAME Postgres error under different `.code` values and `isUniqueViolation` has to
+    // cover both. Pass 1 of validation only exercised the WebSocket one and looked green.
+    const probes: { label: string; client: PrismaClient; shipped: boolean }[] = [
+      { label: "PrismaNeonHttp (getPrisma, SHIPPED PATH)", client: prisma, shipped: true },
+      {
+        label: "PrismaNeon      (getPrismaWs, not used here)",
+        client: new PrismaClient({ adapter: new PrismaNeon({ connectionString: targetUrl }) }),
+        shipped: false,
+      },
+    ];
+
+    const codesSeen: string[] = [];
+    for (const probe of probes) {
+      let observedCode: unknown = "(none — NO ERROR WAS RAISED)";
+      let accepted = false;
+      try {
+        // Deliberately bypasses `addFavourite`'s catch to see the raw error.
+        await probe.client.favourite.create({ data: { vendorId, userId, productId } });
+      } catch (error) {
+        observedCode =
+          typeof error === "object" && error !== null && "code" in error
+            ? (error as { code: unknown }).code
+            : "(no .code property)";
+        accepted = isUniqueViolation(error);
+      }
+      codesSeen.push(String(observedCode));
+      console.log(`  ${probe.label}: observed .code = ${JSON.stringify(observedCode)}`);
+      check(
+        `${probe.shipped ? "SHIPPED PATH" : "other adapter"} — duplicate raised a code isUniqueViolation accepts`,
+        accepted,
+        `code=${JSON.stringify(observedCode)}`,
+      );
+      if (!probe.shipped) await probe.client.$disconnect();
     }
-    console.log(`  observed .code = ${JSON.stringify(observedCode)}`);
+
+    // The whole reason the predicate takes a set rather than one literal. If this ever fails
+    // because both adapters agree, the predicate can be simplified — but find out here, not by
+    // guessing.
     check(
-      "a duplicate insert raised an error whose code isUniqueViolation accepts",
-      accepted,
-      `code=${JSON.stringify(observedCode)}`,
+      "the two adapters really do report different codes (the premise of the shared predicate)",
+      new Set(codesSeen).size === 2,
+      `codes=${JSON.stringify(codesSeen)}`,
     );
 
     console.log("\n3. the read path sees it");

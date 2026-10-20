@@ -284,3 +284,31 @@ counter-skew the control.
   This pass created a throwaway verified shopper, used it, and deleted it; the cascade delete
   removed its favourite row, leaving the dev table at 0 and incidentally proving
   `onDelete: Cascade` on the user relation.
+
+## Fix pass 1 (2026-10-20) — both pass-1 findings addressed, NOT yet re-validated
+
+**Finding 1 (R7).** `scripts/verify-favourites.ts` now runs its functional suite on
+`PrismaNeonHttp` — the adapter `getPrisma()` builds and the repository actually uses — and probes
+the duplicate key on **both** adapters, printing each code and asserting `isUniqueViolation`
+accepts each. A third check asserts the two codes genuinely differ, which is the premise of the
+shared predicate: if a future release makes them agree, that check says so rather than leaving the
+set-based predicate unexplained. Root-cause fix to the evidence artifact; no check was loosened.
+
+**Finding 2 (R11).** The inboard offset below `sm` is now `right-12` (48px), not `right-tap`
+(44px). Code fix plus a corrected number in the requirement: R11's *property* (the spans must not
+intersect) was right and is unchanged; its arithmetic assumed both controls were 44px wide, and
+measurement showed 46px because neither sits inside `.skew-card-inner` and the card's skew widens
+their bounding boxes. R11's validation row now **measures** the two boxes with
+`scripts/verify-mobile-layout.ts` instead of reading the class, since reading the class is exactly
+what hid this. `specs/design-system.md` 1.24.0's bullet and
+`tests/favourite-heart.test.tsx` carry the 48px figure and why it is not the tap token.
+
+**Green after the fix:** `typecheck`, `lint`, `format:check`, and
+`tests/favourite-heart.test.tsx` + `tests/tap-targets.test.ts` (47 tests).
+
+**NOT re-run, and required before Ship:** `/validate` from the top. In particular the two rows
+these fixes touch are unproven as fixed — the 360px measurement showing
+`heart.left + heart.width <= eye.left`, and a real run of `scripts/verify-favourites.ts` observing
+`"23505"` on the shipped adapter. Neither has been executed since the change; the preview server
+was stopped before the fix was written. No CHANGELOG change: neither fix alters observable
+behaviour that the entry describes (the heart's offset moves 4px and the entry does not state it).

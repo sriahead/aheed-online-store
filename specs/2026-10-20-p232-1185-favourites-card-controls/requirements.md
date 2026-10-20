@@ -68,12 +68,16 @@ R10. `components/product/ProductCard.tsx` renders a favourite control in each of
      - `"signed-out"` renders a link whose `href` is `/login` and whose accessible name contains
        the product name.
 
-R11. The favourite control's class list places it at the image block's top-right corner from the
-     `sm` breakpoint up, and one 44px box inboard of that corner below `sm`, so it does not overlap
-     the existing below-`sm` quick-view button at `ProductCard.tsx` `absolute top-0 right-0`. The
-     base-breakpoint offset is expressed with the 44px spacing token (`right-tap`, from
-     `--spacing-tap: 2.75rem` in `design-system/tokens/tokens.css`) or its literal equivalent
-     `right-11`, and is reset by `sm:right-0`.
+R11. The favourite control sits at the image block's top-right corner from the `sm` breakpoint up
+     (`sm:right-0`) and inboard of that corner below `sm`, and **measured at a 360px viewport its
+     horizontal span does not intersect the quick-view button's** — the property, not the class.
+     The base-breakpoint offset is `right-12` (48px).
+     (Corrected at Fix after validation pass 1 measured the property false. The offset was
+     `right-tap` (44px), chosen on the assumption that both controls were 44px wide. They measure
+     **46px**: neither sits inside `.skew-card-inner`, so the card's skew widens each bounding box,
+     and a 44px offset left the heart's right edge 2px inside the quick-view button. This is a code
+     fix plus a corrected number in the requirement — the requirement's *property* was right and is
+     unchanged; only its arithmetic, which assumed an unmeasured width, was wrong.)
 
 R12. `app/(storefront)/categories/[slug]/page.tsx`, `app/(storefront)/search/page.tsx` and
      `components/product/ProductRow.tsx` each pass `favouriteState` to `ProductCard`, resolved from

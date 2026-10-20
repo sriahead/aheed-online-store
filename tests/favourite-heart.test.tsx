@@ -11,8 +11,8 @@ import { favouriteControlLabel } from "@/lib/favourites";
  * because that pair would admit a fourth, meaningless combination — favourited but signed out —
  * which every reader of the component would then have to decide what to do with.
  *
- * The placement case (R11) is the one worth explaining: the card's top-right 44px box is ALREADY
- * the below-`sm` quick-view button, so the heart sits one 44px box inboard below `sm` and takes the
+ * The placement case (R11) is the one worth explaining: the card's top-right corner is ALREADY
+ * the below-`sm` quick-view button, so the heart sits 48px inboard below `sm` and takes the
  * corner only from `sm` up, where that button is hidden. Both halves have to be present — with only
  * `sm:right-0` the two controls overlap on a phone, and that is invisible in a desktop browser,
  * which is exactly why it is asserted here rather than left to a visual check.
@@ -77,8 +77,10 @@ describe("FavouriteButton — placement and tap size (R11, R16)", () => {
     renderHeart("off");
     const className = screen.getByRole("button").className;
 
-    // One 44px box inboard at the base breakpoint...
-    expect(className).toMatch(/\bright-(tap|11)\b/);
+    // 48px inboard at the base breakpoint. NOT the 44px tap token: validation pass 1 measured
+    // both controls at 46px wide (the card's skew widens them), so a 44px offset overlapped the
+    // quick-view button by 2px. The geometry itself is measured by validation.md's R11 row.
+    expect(className).toContain("right-12");
     // ...and the corner itself from `sm`.
     expect(className).toContain("sm:right-0");
     // Never an unprefixed `right-0`, which would put it under the quick-view button on a phone.

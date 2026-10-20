@@ -194,8 +194,10 @@ compact desktop size from `lg`. Those controls are:
   a `sm:`-and-up pre-add minus/plus picker, which `#956` had deliberately kept and the owner removed
   on 2026-10-20. The card still swaps to `CartQuantityStepper` on the first add, so the pre-add
   picker was the only quantity choice lost, and `#961` had already hidden it below `sm`;
-- the product card's favourite control (`#232`), one 44px box inboard of the corner below `sm` and
-  at the corner from `sm` up, because the corner is the Quick View button's below `sm`;
+- the product card's favourite control (`#232`), 48px inboard of the corner below `sm` and at the
+  corner from `sm` up, because the corner is the Quick View button's below `sm`. **48px, not the
+  44px tap token:** neither control sits inside `.skew-card-inner`, so the card's skew renders both
+  46px wide, and a 44px offset overlapped them by 2px (measured at `#232`'s validation);
 - the in-cart `CartQuantityStepper`'s minus and plus;
 - the card's mobile Quick View button;
 - the header's Shop, Shop List, Sign In and Account links.
