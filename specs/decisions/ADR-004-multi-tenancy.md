@@ -4,8 +4,8 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.13.0"
-updated: 2026-09-19
+version: "1.14.0"
+updated: 2026-10-21
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
@@ -436,6 +436,62 @@ Custom-domain vendors have isolated sessions today. If platform-wide SSO across 
 becomes a stated requirement, add a **central auth origin** (e.g. `accounts.aheedfoodcentre.…`) with
 an OIDC/token-exchange flow. It is additive to decision 4's single resolver seam — not a rewrite —
 and is deliberately out of scope now.
+
+## Implementation note — a vendor HOST is not data-only, and a wildcard cannot make it one (2026-10-21, #1198)
+
+**Decisions 3 and 7 are CORRECTED here, not merely qualified.** Per `CLAUDE.md`, where a document
+and the code disagree the code wins, and on this point the code disagreed with both.
+
+**What decision 7 claims:** "Onboarding is data-only. A new vendor = a `Vendor` row + branding +
+config + delivery area + catalogue (+ `customDomain` if any + its `trustedOrigins` entry, all read
+from the DB) — **no code change, no deploy**."
+
+**What is actually true.** The *application* half holds: `VendorDomain.host` is a unique column, the
+resolver reads it per request, and `trustedOrigins` and the cookie domain are derived from the
+database. The *routing* half does not. Every vendor host is declared individually in
+`wrangler.toml` as its own `custom_domain = true` route — four blocks, two per environment — so
+adding a vendor host is a commit, a PR to `staging`, a promotion PR to `main`, and a deploy of both
+environments. **And omitting an existing host is destructive rather than inert:** a
+`wrangler deploy` that does not declare a host which already has a custom domain tears that domain
+down, so the file is load-bearing for vendors already trading.
+
+**What decision 3 claims:** "One wildcard DNS record + one Worker route + one wildcard cert covers
+all subdomain vendors."
+
+**Why that does not hold for this platform, measured 2026-10-21 against the live Cloudflare
+account** rather than assumed. Two of the three facts were not what the 2026-08-08 decision
+expected:
+
+- `nocaped.com` **is** an active `full` zone, on the **Free** plan.
+- **Proxied wildcard DNS is no longer Enterprise-only** — it is available on all plans. So a
+  wildcard genuinely was on the table, and this was not the blocker.
+- **Worker Custom Domains cannot be wildcards at all.** "Custom Domains do not support wildcard DNS
+  records. An incoming request must exactly match the domain or subdomain." This is why the current
+  per-host shape exists; it is the only thing `custom_domain = true` can express, not an oversight.
+  A wildcard needs a plain `routes` pattern instead, which requires a pre-existing proxied DNS
+  record.
+- **A wildcard covers exactly ONE subdomain label, and so does Universal SSL.** `*.nocaped.com`
+  covers `srimart.nocaped.com` but **not** `staging.aheedfoodcentre.nocaped.com`, which is two
+  labels deep. That host serves a valid certificate today only because a Custom Domain issues one
+  per hostname. Switching it to a wildcard route would have required renaming a live staging host or
+  buying Advanced Certificate Manager on a Free-plan zone.
+
+**The decision taken instead (owner, 2026-10-21):** leave the routing shape alone and make the
+omission non-silent. `scripts/verify-worker-routes.ts` reads `VendorDomain` for the target
+environment, parses `wrangler.toml`'s route patterns for that `--env`, and **fails the deploy** when
+a routable host has no route; `--write` emits the correct block. Both deploy workflows run it after
+`prisma migrate deploy` and before `wrangler deploy`. Hosts carrying a port or ending in
+`localhost` are excluded, because the dev seed writes `localhost:8787` as a real `VendorDomain`
+host.
+
+So the honest statement of decision 7 is: **a new vendor is data plus one reviewed, machine-checked
+`wrangler.toml` change.** `scripts/provision-vendor.ts` (#1197) makes the data half a manifest file
+rather than an edit to `prisma/seed.ts`; the host half still costs a deploy. A vendor on its own
+registrable domain needs a per-domain route regardless of any wildcard, so this is not purely a
+subdomain-family problem.
+
+**Do not re-propose a wildcard without first solving the one-label certificate constraint** — that
+is the thing that defeated it, and it is not visible from the application code.
 
 ## Resolved decisions (2026-08-08)
 
