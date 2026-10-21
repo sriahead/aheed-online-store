@@ -284,3 +284,28 @@ staging hostnames rather than `localhost` ones, so R11 passes but not via the `l
 and R12's specific warning text has no stale pattern to fire on here. That behaviour is proven instead
 by `tests/worker-routes.test.ts`'s "reports a routed host with no vendor row as stale" case. Nothing
 to fix — the validation row is environment-shape-dependent, as already noted above.
+
+## `/ship` pass — 2026-10-21, real CI caught a gap neither `/validate` nor Build checked for
+
+PR #1207's `quality / kms` check failed on `npm run kms:coverage`:
+`prisma/manifests: baseline 0, measured 1 (increased)`. This is **not** the pre-existing `misc:`
+failure this file already documents above (that one is a gitignored local scratch file and does not
+exist in a fresh CI checkout — confirmed again here: CI's own log named only `prisma/manifests`, never
+`misc`). This one is real and caused by this slice: `prisma/manifests/` is a brand-new directory, its
+`README.md` has no front-matter (matching the same pattern `docs/ui-ref/README.md` and others already
+follow, per `kms:validate`'s own "no front-matter (warning, not blocking)" list), and nobody ever ran
+`npm run kms:coverage` against it — it isn't one of `validation.md`'s 28 rows, and `CLAUDE.md` marks it
+"CI-only otherwise," so neither Build nor three `/validate` passes exercised it locally.
+
+**This is the one case where re-baselining is the correct fix, not the forbidden one.** The existing
+"do NOT attribute it to this slice" / "do not run `--update`" instruction earlier in this file is
+scoped specifically to the `misc` entry — a developer-local artifact with nothing to re-baseline
+honestly. `prisma/manifests` is different: the directory is new, genuinely has one file without
+front-matter by design (a plain README, same as its siblings), and that's exactly the "if the change
+is intended, re-baseline" case the script's own error message describes. Fixed by running
+`npm run kms:coverage -- --update` and keeping only the `prisma/manifests: 1` line it added — the
+`misc: 1` line it also added (from this machine's local scratch file) was reverted by hand, so the
+baseline doesn't carry a developer-specific artifact. `total` moved 15 → 16, matching the sum of the
+now nine listed directories. Verified locally afterward: `misc` is the only remaining failure (expected,
+local-only), and CI's log before the fix showed zero mention of it — confirming the committed baseline
+change alone resolves what CI actually sees.
