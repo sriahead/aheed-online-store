@@ -135,11 +135,11 @@ as a requirement rather than assumed, because a re-run is the whole point.
 - **`#1200`** — restricted-category include/exclude. Owner- and legal-gated.
 - **`#1201`** — the Excel adapter, plus the three client answers it needs (opening stock balance,
   whether a barcode/supplier export exists, whether the £0.00 and `DEFAULT` rows are live products).
-- **Backups and recovery remain undocumented.** No backup, point-in-time-recovery or restore
-  procedure exists anywhere in `docs/developer-portal/`, `specs/decisions/` or
-  `specs/architecture.md`, and the Neon retention settings have not been read. Out of scope here,
-  but a client handover that promises a recovery responsibility needs it answered. Recorded in
-  `specs/roadmap.md`'s P11 section as a known gap.
+- **Backups and recovery remain undocumented — tracked as `#436`**, not a new finding. That issue
+  ("Verify Neon backups/PITR and perform a real restore test", `P09.2`, open) already requires
+  verifying capability, recording retention, defining RPO/RTO and performing a real restore. Out of
+  scope for this slice, but **a client handover that promises a recovery responsibility needs `#436`
+  closed first**, so it is a candidate to pull forward into P11 rather than something to re-file.
 - **ADR-004 decisions 3 and 7 are corrected, not satisfied.** A new vendor still costs a row plus a
   commit plus two deploys. If "no deploy" is wanted later, the wildcard analysis above is the
   starting point and the SSL-depth constraint is the thing to solve first.

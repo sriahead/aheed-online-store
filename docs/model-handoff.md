@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.125.0"
+version: "1.126.0"
 updated: 2026-10-21
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -203,6 +203,16 @@ reconciliation. If overall project state did not materially change, leave this f
     shell does **not** clear it for tool calls: each call spawns a child of the launching process
     and re-inherits. Until the launcher is found, the only reliable mitigation is prefixing
     `env -u DIRECT_URL -u DATABASE_URL`.
+    **2026-10-21 additions (fifth session, `#1198`'s build).** Set again, same host. Nothing new
+    about the launcher — but the **mitigation itself was nearly defeated**, and that is the durable
+    part: `printenv DIRECT_URL DATABASE_URL` exits **non-zero when ANY named variable is missing**,
+    so the combined form `CLAUDE.md` used to recommend printed the live production value *and* a
+    "neither exported" all-clear when only `DATABASE_URL` was absent. A read-only query was one step
+    from running against production on the strength of that. `CLAUDE.md`'s Config & secrets section
+    now requires checking **one variable at a time** and never branching on `printenv`'s exit code.
+    The guard shipped in `#490` (`scripts/lib/protected-hosts.ts`) refuses this host by name before
+    any client is constructed, and was verified doing so against this exact exported value — so
+    bulk-write scripts are now covered even when the human check is misread.
     **The production Neon password was disclosed in the 2026-10-20 session transcript** by a
     diagnostic that echoed the variable's value instead of masking it (the `#175` mistake, repeated).
     **Rotation is OUTSTANDING** and needs all three: the GitHub environment `DIRECT_URL`, the
@@ -1043,6 +1053,46 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **`P11 — Repeatable Vendor Onboarding` is OPEN (new, 2026-10-21), and its first slice is BUILT
+  BUT NOT VALIDATED.** Opened after `/discover` on an external brief to onboard a new
+  inventory-and-stock-management client with their real 6,167-row stock export (eleventh Discover
+  pass, `docs/research/discovery-log.md`). Milestone #24; Project #2's Phase field gained a `P11`
+  option additively, all 19 pre-existing options passed through with their own ids and all 452 set
+  Phase values across 601 items verified unchanged.
+  - **Slice 1 — `specs/2026-10-21-p11-onboarding-foundation/`**, closing **`#490`**, **`#1198`**,
+    **`#1197`**. Built on branch `feature/p11-onboarding-foundation`, commits `ce9ff81` (spec) and
+    `099ad05` (implementation). **Not validated, not merged, no PR.** 30 requirements; `lint`,
+    `typecheck`, `format:check`, `kms:validate` and vitest (292 files / 3642 tests, `--maxWorkers=4`)
+    green, docs site 255 pages. **The seven database-dependent requirements (R6, R7, R11, R12, R18,
+    R19, R21) are deliberately unexercised** — see that slice's `build-notes.md`, which points
+    validation at the risk.
+  - **Branch caveat.** That branch's first commit is `643237b`, the undelivered `#1186`/`#1187`
+    documentation tail, which rides along because cherry-picking the P11 commits onto `staging`
+    would conflict on `specs/roadmap.md` (both touched its front-matter and change-log tail, in a
+    file carrying 1,063 pre-existing mojibake sequences, `#762`). `docs/p1186-1187-document` still
+    points at `b882491` and has no PR. Decide whether to split before opening the PR.
+  - **Two owner decisions gate the rest of P11**, both board Status `Deferred`: **`#1196`** —
+    storefront or stock management, which sizes `#1199` (VAT) entirely; and **`#1200`** — which of
+    the 51 restricted and non-deliverable catalogue lines may be sold. **`#1201`** (the Excel
+    adapter) is blocked on both plus three client answers. A decision page for the owner and client
+    is published as a private Artifact.
+  - **ADR-004 decisions 3 and 7 are now CORRECTED (1.14.0), and this is durable truth worth not
+    rediscovering.** A new vendor host is **not** data-only: every host is an individual
+    `custom_domain = true` route in `wrangler.toml`, and a deploy omitting a live host tears its
+    custom domain down. A wildcard was investigated against the live Cloudflare account and
+    rejected: `nocaped.com` is an active `full` zone on the **Free** plan and proxied wildcard DNS
+    is no longer Enterprise-only, but **Worker Custom Domains cannot be wildcards at all**, and a
+    wildcard route plus Universal SSL each cover exactly **one** subdomain label — while
+    `staging.aheedfoodcentre.nocaped.com` is two deep and serves a certificate only because a Custom
+    Domain issues one per hostname. Do not re-propose a wildcard without solving that first.
+  - **Deferred items filed at `/build-notes`:** `#1202` (the seed's `SEED_REMOVE_GENERATED` delete
+    path is still print-and-trust), `#1203` (`AHEED_VENDOR_ID` declared twice), `#1204`
+    (`kms:coverage` walks gitignored `/misc/`, so it fails locally **and its message recommends the
+    harmful fix** — do not re-baseline), `#1205` (no in-app vendor creation; needs the
+    platform-admin authorisation story `/staff/*` lacks). **`#436`** (Neon backups/PITR, `P09.2`,
+    open) already tracks the backup gap — **a client handover promising a recovery responsibility
+    needs it closed**, so it is a candidate to pull into P11 rather than re-file.
 
 - **Owner's 2026-10-17 "Website Updates" brief, split into three slices.** The owner approved
   the clubbing at `/propose`.

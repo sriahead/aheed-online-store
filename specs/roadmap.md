@@ -881,10 +881,11 @@ phase, not an obstacle to it.
 need, until a second isolated-database client is real; and **Tier 3 / bespoke customisation**, whose
 blocker is the absent variant dimension already owned by **#398**.
 
-**Known gap, unverified at the time of writing.** No backup, point-in-time-recovery or restore
-procedure is documented anywhere in `docs/developer-portal/`, `specs/decisions/` or
-`specs/architecture.md`, and Neon's retention for these projects has not been read. A client
-handover that claims a recovery responsibility needs that answered first.
+**Known gap, and it is already tracked as `#436`** (`P09.2`, open: "Verify Neon backups/PITR and
+perform a real restore test"). No backup, point-in-time-recovery or restore procedure is documented
+in `docs/developer-portal/`, `specs/decisions/` or `specs/architecture.md`, and Neon's retention for
+these projects has not been read. **A client handover that claims a recovery responsibility needs
+`#436` closed first**, which is a reason to pull it forward rather than to re-file it here.
 
 ## Roadmap Change Log
 
