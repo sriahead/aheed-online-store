@@ -224,3 +224,63 @@ correctly named dev. The guard refused it by host before constructing a client. 
 this slice should run `printenv DIRECT_URL DATABASE_URL` **one variable at a time** before any
 database step — a combined `printenv A B` returns non-zero when only the second is missing, which is
 how a check of mine printed a false all-clear mid-build.
+
+## `/fix` pass — 2026-10-21, after an independent `/validate` from a fresh context
+
+`/validate` ran from a fresh context, independently re-exercised every database-dependent row
+(R10/R11 via a throwaway `VendorDomain` row, R19/R21 via two real `provision-vendor.ts` runs, R7/R18
+via two real `npm run db:seed` runs), reverting the dev database to baseline after each. Two things
+it found needed a real fix, not a re-read:
+
+**R19 failed for real: the committed `prisma/manifests/example.json` had `loyaltyTiers: []`.**
+Provisioning it left `VendorLoyaltyTier` at 0, contradicting R19/validation.md's "non-zero counts for
+the seven row types." This was a fixture gap, not a provisioning bug — `upsertVendorSatellites`
+faithfully writes whatever `loyaltyTiers` the manifest supplies, and the manifest's own tagline
+("replace every value in this file") says it's meant to demonstrate every field's shape. **Fix:**
+added one sample tier (`REGULAR`, matching the shape of Aheed's real `SILVER`/`GOLD` tiers in
+`prisma/seed.ts`) to the example manifest. `config.loyaltyEnabled` stays `false` — a vendor can have
+tiers configured before the storefront feature is switched on, so this isn't a contradiction.
+Re-verified: two consecutive `scripts/provision-vendor.ts` runs now produce `vendorLoyaltyTier: 1`
+for the test vendor both times (R19 and R21 both pass independently).
+
+**R6's own validation design was unprovable against the actual code shape — a real gap, fixed by
+reshaping, not by loosening the row.** `validation.md`'s `C1` is deliberately safe-by-construction:
+"`assertNotDeployedDatabase` throws before a Prisma client is constructed, so no connection is
+attempted and no credential is used." That was false for the `SEED_SCALE_PRODUCTS`-set case as
+shipped: `main()`'s first line was `await prisma.healthCheck.count()`, and the guard only lived
+~100 lines later inside `maybeSeedGeneratedCatalogue`. Pointing `DIRECT_URL` at a protected host with
+a bogus password (as `C1` requires, since a real validation run won't use real staging/production
+credentials) made `healthCheck.count()` fail on an auth error **before** the guard was ever reached —
+masking it exactly as this file's original R6 entry already suspected ("That masks the guard rather
+than demonstrating it"). Worse: against a *fresh* protected database with *valid* credentials, the
+entire ordinary fixture seed would run and write real rows before the generated-path guard fired at
+all, which is a weaker safety property than `#490` intended.
+
+**Fix:** added a second call to the already-fully-tested, pure `assertNotDeployedDatabase` at the
+very top of `main()`, gated on `SEED_SCALE_PRODUCTS` being set, before any query. The original call
+inside `maybeSeedGeneratedCatalogue` is unchanged and still fires directly in front of the generated
+write — this is deliberate duplication (defense in depth), not dead code: one call makes the refusal
+provable without real credentials and fail before any write at all; the other keeps the guard sitting
+directly in front of the write it protects, per R6's own wording. Re-verified end-to-end on the
+non-protected branch: `SEED_SCALE_PRODUCTS=2000` against dev (matching the existing generated count,
+so a true no-op) ran cleanly through both checks, all the way to `generated catalogue already holds
+2000 product(s) ... — skipping row creation`, confirming neither check false-positives on a safe
+host. **The protected-host branch (`C1` itself) could not be re-run here** — auto-mode blocks any
+command naming a real staging/production hostname, bogus password or not, as "Modify Shared
+Resources." That command now needs the owner to run it directly; it should succeed cleanly (refusal
+printed, non-zero exit, no auth error) now that the check fires before any connection is attempted.
+
+**R7 and R18 are now independently confirmed**, not just inherited from this section's earlier
+in-session check: two consecutive plain `npm run db:seed` runs during `/validate` left all eight
+tracked counts identical, and the completion line (`total putObject calls this run: N`) printed with
+exit 0 both times. The earlier `TypeError: fetch failed` / `ConnectTimeoutError` seen partway through
+one seed attempt was transient sandbox network flakiness unrelated to this slice — re-running
+`scripts/verify-storage-credentials.ts` twice showed the *same* symptom hit a *different* environment
+each time, and a same-session retry of the failed seed run completed cleanly. Not a code defect, not
+worth chasing further.
+
+**R11/R12 remain as this file originally described them**: this dev database holds the two real
+staging hostnames rather than `localhost` ones, so R11 passes but not via the `localhost` exclusion,
+and R12's specific warning text has no stale pattern to fire on here. That behaviour is proven instead
+by `tests/worker-routes.test.ts`'s "reports a routed host with no vendor row as stale" case. Nothing
+to fix — the validation row is environment-shape-dependent, as already noted above.

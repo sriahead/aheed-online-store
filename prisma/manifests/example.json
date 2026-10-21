@@ -41,7 +41,15 @@
     "storeDescription": null
   },
   "deliveryPrefixes": ["EX1", "EX2"],
-  "loyaltyTiers": [],
+  "loyaltyTiers": [
+    {
+      "key": "REGULAR",
+      "name": "Regular",
+      "thresholdPence": 5000,
+      "multiplierBps": 12500,
+      "sortOrder": 1
+    }
+  ],
   "discountCodes": [],
   "footer": {
     "location": {

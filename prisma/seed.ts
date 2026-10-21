@@ -63,6 +63,16 @@ async function putTracked(key: string, body: string, contentType: string): Promi
 const AHEED_VENDOR_ID = "a4ed0000-0000-4000-a000-000000000001";
 
 async function main() {
+  // #490 fast-fail: checked here, before ANY query, so a protected host is refused before
+  // a single row of the ordinary fixture catalogue is written — not just before the generated
+  // write inside maybeSeedGeneratedCatalogue. Without this, SEED_SCALE_PRODUCTS pointed at a
+  // protected host would still run healthCheck.count() and the whole ordinary seed first, which
+  // both defeats "fail before anything is written" and makes the guard unprovable without real
+  // staging/production credentials, since an auth error on healthCheck masks it.
+  if (process.env.SEED_SCALE_PRODUCTS?.trim()) {
+    assertNotDeployedDatabase(connectionString);
+  }
+
   const count = await prisma.healthCheck.count();
   if (count === 0) {
     await prisma.healthCheck.create({ data: { label: "walking-skeleton" } });
@@ -1129,7 +1139,9 @@ async function maybeSeedGeneratedCatalogue(
   // and still useful), but print-and-trust is a control CLAUDE.md records as having already failed
   // once here (#1134). The refusal is deliberately INSIDE this function and AFTER the early return
   // above, so a plain `npm run db:seed` with no scale var set never reaches it, and so no generated
-  // row or storage object can be written on the far side of it.
+  // row or storage object can be written on the far side of it. `main()` already checked this
+  // before its first query — repeated here so the guard still sits directly in front of the write
+  // it protects, not only at the top of the file.
   assertNotDeployedDatabase(connectionString);
 
   await seedGeneratedCatalogue(vendorId, catalogue, requested);
