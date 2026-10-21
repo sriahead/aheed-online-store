@@ -4,10 +4,10 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.171.0"
+version: "1.172.0"
 updated: 2026-10-21
 visibility: internal
-summary: Master backlog and phase sequencing (M0, P0-P10, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is now a historical record; launch work lives in P9 and post-launch work in P10.
+summary: Master backlog and phase sequencing (M0, P0-P11, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, vendor onboarding P11.
 tags: [roadmap, phases, backlog]
 ---
 
@@ -241,6 +241,12 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
 - **P10 â€” Post-launch improvements.** Added 2026-08-28 by **#426**. Absorbs P8.3's catch-all, P8.6
   and P8.7. Real engineering improvements that are **not launch gates** unless new evidence changes
   their risk. Full scope in the dedicated section below.
+- **P11 — Repeatable vendor onboarding.** Added 2026-10-21. Onboard a vendor through a repeatable,
+  re-runnable procedure with no hand-written production database writes and no avoidable deployment
+  risk: provisioning and catalogue import from a manifest plus a supplied file, the domain
+  procedure, and explicit owner rulings on VAT and restricted-product scope. **Not a new data
+  model** — the storefront-versus-stock-management question is itself one of the rulings. Full
+  scope in the dedicated section below.
 
 > **The #408 brief and how it was split.** #408 (2026-08-27) filed fourteen issues, **#394**â€“**#407**,
 > covering navigation, product discovery, halal meat merchandising, fulfilment, checkout and
@@ -834,6 +840,52 @@ evidence would close it is a placeholder, and placeholders in a milestone are wh
 - **Analytics and reporting evolution** â€” keep transactional workloads separate from future analytics
   workloads as volume grows.
 
+## P11 — Repeatable Vendor Onboarding
+
+Added 2026-10-21, after `/discover` on an external brief to provision a new inventory and
+stock-management client (dedicated domain, isolated database, three client tiers) with their real
+6,167-row stock export. The eleventh Discover pass is in `docs/research/discovery-log.md`; its eight
+findings are the evidence behind every issue below.
+
+**Objective:** onboard a vendor through a repeatable, re-runnable procedure, with no hand-written
+production database writes and no avoidable deployment risk. **Not** a new data model.
+
+**Tracked issues.** **#490** (extract the staging/production host guard that already exists in
+`scripts/verify-repository-injection.ts` so the seed's bulk path refuses a live database — moved
+here from P09.3 as P11's *first* deliverable, because it is the safety prerequisite for everything
+else), **#1197** (provisioning and catalogue import), **#1198** (domain onboarding, and correcting
+ADR-004 decisions 3 and 7), **#1199** (VAT — blocked by #1196), **#1196** (owner ruling: storefront
+or stock management) and **#1200** (owner ruling: restricted and non-deliverable categories).
+
+**What already exists, so this phase does not rebuild it.** `prisma/seed.ts` is already an
+idempotent, host-parameterised vendor-and-catalogue provisioner whose per-vendor functions all take
+`vendorId` plus a data fixture (`seedCatalogue`, `upsertVendorSatellites`, `upsertVendorDomain`,
+`seedAttributes`, `seedBrands`, `seedFooterDefaults`, `seedFulfilmentSchedule`). It runs in Node on
+`PrismaNeon` against `DIRECT_URL`, which is where a bulk import belongs — never the Worker. `#489`
+proved idempotent bulk generation keyed on a slug prefix, deterministic, with a removal path, and
+`seedCatalogue` already uploads images before any DB write and wraps each category in one
+transaction so a mid-run failure cannot orphan a Category. **The missing pieces are a data source
+other than a TypeScript literal, per-product rather than per-category idempotency, and the file
+adapter** — materially smaller than the original discovery note implied, and the correction is
+recorded on #1197.
+
+**Two of the six issues are owner-gated and carry board Status `Deferred`.** #1196 decides whether
+the platform is sold as a storefront or as stock management, which sizes #1199 entirely; #1200 needs
+an include/exclude ruling per restricted category, with legal review before any "include". **No
+import or schema work proceeds while those are Deferred** — that sequencing is the point of the
+phase, not an obstacle to it.
+
+**Deliberately out of scope.** Age verification and per-line fulfilment; the replenishment aggregate
+(cost, supplier, case size, reorder levels, stock movements); VAT on `Order`/`OrderItem` unless
+#1196 rules that way; a dedicated per-client Worker environment and the migration fan-out it would
+need, until a second isolated-database client is real; and **Tier 3 / bespoke customisation**, whose
+blocker is the absent variant dimension already owned by **#398**.
+
+**Known gap, unverified at the time of writing.** No backup, point-in-time-recovery or restore
+procedure is documented anywhere in `docs/developer-portal/`, `specs/decisions/` or
+`specs/architecture.md`, and Neon's retention for these projects has not been read. A client
+handover that claims a recovery responsibility needs that answered first.
+
 ## Roadmap Change Log
 
 | Date | Change | Reason |
@@ -1216,3 +1268,4 @@ is unrelated guest-cart retention, and no correctly-numbered issue for this exis
 | 2026-10-20 | **Favourites and the product card's single `+` (`#232`, `#1185`) promoted to production** (promotion PR #1190, "Promote Favourites and the product card's single + to production (#232, #1185)", merge `4e53a68`, `staging -> main`, 2026-10-20; `specs/2026-10-20-p232-1185-favourites-card-controls/`). Carries one commit, `ad2cea7`. One migration, applied to production in the deploy run's own log (`Applying migration 20261020150000_p232_favourite` / `All migrations have been successfully applied.`). `closingIssuesReferences` listed exactly `[232, 1185]` — **both**, verified before the merge was requested, with the keywords on separate lines (`#112`, `#953`). Both closed at 2026-10-20T18:46 and moved to `Done`. `deploy-production` (run `39477660839`) **success**. Production `/api/health` on **both** vendor hosts serves `4e53a68` with `db.ok: true`, `reference.reachable: true` and two populated `sources`. `/account/favourites` answers **307** on production. **Read off live production HTML, not assumed:** the category page renders one heart per card, each carrying `right-12 sm:right-0`, and **zero** pre-add quantity pickers; counts are internally consistent at 2 hearts / 2 quick-view / 2 add controls, production's Fresh Fruit holding 2 real products where the seeded environments hold 77. The promotion is a true merge commit with **two parents**. Not a phase closure (`P10` stays open). Row added on `docs/p232-1185-document`, which rides `#1187`'s branch. |
 | 2026-10-21 | **The Quick Shop hub and the Regulars placeholder (`#1186`, `#1187`), built, validated, merged to staging** (**PR #1193**, merge `6e8bad1`, `staging`, 2026-10-21; `specs/2026-10-20-p1186-1187-quick-shop-hub/`). Slices 2 and 3 of the Quick Shop programme, **combined into one slice on purpose**: `#1187` required that it "land last, once all four tiles have real destinations", and combining it with `#1186` satisfies that by construction, so no deployed state ever put a dead tile in front of a shopper. No migration, no schema change, no new dependency. `/quick-shop` is a four-tile hub reusing `/account/page.tsx`'s existing tile markup; it reads **no session and no database** (all four tiles render for everyone, the two authenticated-only ones redirect on tap as `/account/favourites` already did) and declares no `export const dynamic`, because the `(storefront)` layout already forces it for the group — verified by `next build` listing both new routes as `ƒ (Dynamic)`. `/account/regulars` is authenticated-only and a **placeholder**: "regularly ordered" has no definition, and the five decisions a derivation needs (threshold, window, per-`vendorId` scoping under ADR-004, which order states count per `#795`, and where a per-shopper aggregate is bounded or cached) are recorded in `lib/regulars.ts` and filed as **`#1192`**. **`#1187`'s own premise was wrong in a way that shrank the fix:** it described `/shop-your-list`'s "Your saved lists" block and `/account/lists` as two list concepts, but both render the same rows from the same `getShoppingListService().list()` call, so adding "Smart Lists" would have left one concept wearing three labels — the exact `#1145` failure re-created a fortnight later. Renaming that one `<h2>` to "Your lists" was the whole fix, and the generalised rule is now in `docs/developer-portal/app-conventions.md` 1.19.0. **Validation pass 1 FAILED** on one real regression found by running an instrument rather than reading code: `scripts/verify-mobile-layout.ts` selected the header link by `a[href="/shop-your-list"]`, so the repoint left it silently emitting `"shoppingList": null`. Fixed at the root by matching the **accessible name** instead (the destination has moved twice, the name has not, and two tests pin it); proven by old-selector `null` versus new-selector `{"top":139,…}` whose `top` equals `headerSearch.button.top`. Three `validation.md` rows were themselves defective and the rows were corrected, not the artifact. `deploy-staging` (run `39564880676`) **success**. Validation was **not independent** (same Opus 5 context built, fixed and validated it, owner's choice — the third consecutive slice). | A hub with a dead tile is worse than no hub, so the two issues had to ship together; and the rename was only safe once someone checked whether the "other" list was the same query |
 | 2026-10-21 | **The Quick Shop hub and the Regulars placeholder (`#1186`, `#1187`) promoted to production** (promotion PR #1194, "Promote the Quick Shop hub and the Regulars placeholder to production (#1186, #1187)", merge `098c224`, `staging -> main`, 2026-10-21; `specs/2026-10-20-p1186-1187-quick-shop-hub/`). Carries one commit, `6e8bad1`. No migration, no schema change, no new dependency. `closingIssuesReferences` listed exactly `[1186, 1187]`; both closed and moved to `Done`, and `#1184`, `#1188`, `#1191` and `#1192` all stayed **open** as intended. `deploy-production` (run `39566151259`) **success**. Production `/api/health` on **both** vendor hosts serves `098c224` with `db.ok: true`, `reference.reachable: true` and two populated `sources`, read twice on Aheed and three times on SriMart; `/quick-shop` renders its `<h1>` and all four tile hrefs live. The merge commit has **two parents** (`4e53a68` + `6e8bad1`), and `origin/main` and `origin/staging` are level. **The first `--merge` attempt was refused** — `main`'s ruleset blocked it while the promotion's own `quality / quality` check was still running, which is the gate working; `--admin` and `--auto` were both declined in favour of waiting for the real result. **This promotion also discharged the previous slice's carry-forward**: `#232`/`#1185`'s roadmap rows for PR #1189/#1190 had never been pushed and lived only on a local branch, so `origin/staging` cited those two PRs **zero** times until `6e8bad1` landed. Not a phase closure (`P10` stays open). | The Quick Shop programme is complete as specified, and the documentation of the slice before it finally reached `origin` rather than dying on an unpushed local branch |
+| 2026-10-21 | **`P11 — Repeatable Vendor Onboarding` opened**, with six issues: **#490** (moved here from P09.3 as P11's first deliverable — the staging/production host guard the bulk import depends on), **#1197** (provisioning and catalogue import), **#1198** (domain onboarding and the ADR-004 decisions 3/7 correction), **#1199** (VAT, blocked by #1196), and the two owner-gated rulings **#1196** (storefront or stock management) and **#1200** (restricted and non-deliverable categories), both parked at board Status `Deferred`. Project #2's Phase field gained a `P11` option additively — all nineteen pre-existing options passed through with their own ids, and all 452 set Phase values across 601 items were verified unchanged afterwards, the same procedure the 2026-09-09 option addition used. No spec, no schema change and no import code exists yet; #1197 and #1198 are the two issues ready for `/propose`. | An external brief to onboard a new client with a real 6,167-row stock export found vendor provisioning, catalogue import and domain onboarding all unowned, and ADR-004 decision 7's "no code change, no deploy" false for the one thing a client asks for first (eleventh Discover pass, `docs/research/discovery-log.md`) |
