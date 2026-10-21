@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.47.0"
-updated: 2026-10-19
+version: "2.48.0"
+updated: 2026-10-21
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -747,6 +747,22 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   API key into the session output: read single keys with `grep '^KEY=' .env`, never source an env
   file. And a `validation.md` row can assume a state the dev database is no longer in (R4/R5 expect
   *restored*, the database was *hidden*); check the starting state before the first row, and say so.
+- **A thirteenth instance, P11 slice 1's `/validate` (2026-10-21): a row's own stated safety
+  property didn't hold for the code as shipped, and the named function was not the bug.**
+  `validation.md`'s `C1` documentation claimed `assertNotDeployedDatabase` throws "before a Prisma
+  client is constructed, so no connection is attempted and no credential is used" — true for the
+  call site inside `maybeSeedGeneratedCatalogue`, but `prisma/seed.ts`'s `main()` ran
+  `healthCheck.count()` roughly 100 lines earlier, so a bogus-password repro of `C1` failed on an
+  auth error before the guard was ever reached, masking the refusal instead of proving it. Not a
+  bare-word match this time: `assertNotDeployedDatabase` was itself correct and already fully
+  unit-tested; the claim that was wrong was about *when in the call sequence* it ran. Caught by
+  tracing `main()`'s actual statement order, not by re-reading the guard function in isolation.
+  Fixed with a real code change (a second, earlier call to the same guard), not a row rewrite, and
+  re-proven with an isolated fixture `secrets/staging.vars` rather than a real host. **The general
+  lesson: a validation row asserting an ordering/safety property ("X happens before Y," "nothing
+  happens until Z") is a claim about the artifact's call graph, not just about the function it
+  names — verify the actual sequence, not only that the named function works correctly on its
+  own.**
 - **A row that needs a real narrow viewport (phone-width overflow, tap targets) is not a
   Claude-in-Chrome job — check `docs/developer-portal/local-dev-playbook.md`'s "Measuring the
   storefront at real phone widths" section first.** Desktop Chrome, including a Claude in Chrome

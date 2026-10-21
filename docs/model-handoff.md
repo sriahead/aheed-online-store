@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.127.0"
+version: "1.128.0"
 updated: 2026-10-21
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -1054,39 +1054,42 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`P11 — Repeatable Vendor Onboarding` is OPEN (new, 2026-10-21), and its first slice is BUILT
-  BUT NOT VALIDATED.** Opened after `/discover` on an external brief to onboard a new
-  inventory-and-stock-management client with their real 6,167-row stock export (eleventh Discover
-  pass, `docs/research/discovery-log.md`). Milestone #24; Project #2's Phase field gained a `P11`
-  option additively, all 19 pre-existing options passed through with their own ids and all 452 set
-  Phase values across 601 items verified unchanged.
+- **`P11 — Repeatable Vendor Onboarding` is OPEN (2026-10-21), and its first slice is MERGED TO
+  `staging`, NOT YET PROMOTED to `main`.** Opened after `/discover` on an external brief to onboard
+  a new inventory-and-stock-management client with their real 6,167-row stock export (eleventh
+  Discover pass, `docs/research/discovery-log.md`). Milestone #24; Project #2's Phase field gained
+  a `P11` option additively, all 19 pre-existing options passed through with their own ids and all
+  452 set Phase values across 601 items verified unchanged.
   - **Slice 1 — `specs/2026-10-21-p11-onboarding-foundation/`**, closing **`#490`**, **`#1198`**,
-    **`#1197`**. Built on branch `feature/p11-onboarding-foundation`, commits `ce9ff81` (spec) and
-    `099ad05` (implementation). **Not validated, not merged, no PR.** 30 requirements; `lint`,
-    `typecheck`, `format:check`, `kms:validate` and vitest (292 files / 3642 tests, `--maxWorkers=4`)
-    green, docs site 255 pages.
-    - **The database-dependent requirements were run in-session on 2026-10-21 and PASS — but that is
-      NOT Gate 3.** It ran in the same context that wrote the code, so it cannot catch what that
-      context is blind to. **The slice remains BUILT, NOT INDEPENDENTLY VALIDATED**, and still needs
-      `/validate` from a fresh context on Sonnet 5. R7, R10, R11, R12, R13, R18, R19 and R21 passed;
-      **R6 is PARTIAL** — the guard's refusal is proven (including against the real exported
-      production `DIRECT_URL`), but its end-to-end seed form needs valid staging credentials this
-      validation would not use. R11 passed by a different mechanism than its validation row
-      describes, because this dev database holds the real staging hostnames rather than the
-      `localhost` ones the row assumes. Full record and both caveats:
-      `specs/2026-10-21-p11-onboarding-foundation/build-notes.md`.
-    - **The branch split was tested and rejected on evidence.** A `git rebase --onto origin/staging
-      643237b` conflicts on `specs/roadmap.md` at commit 3 of 6 — five of `643237b`'s seven files
-      (`ARTIFACT_INDEX.md`, `CLAUDE.md`, `app/(admin)/staff/runbook/docs.ts`,
-      `docs/model-handoff.md`, `specs/roadmap.md`) are also touched by the P11 commits, and the
-      change-log conflict would force a hand-decision about `#1186`/`#1187`'s own PR #1193/#1194
-      rows, which must reach `staging` regardless. The scratch branch was deleted and the real
-      branch is untouched. **Ship the docs tail along with P11 and say so in the PR body.**
-  - **Branch caveat.** That branch's first commit is `643237b`, the undelivered `#1186`/`#1187`
-    documentation tail, which rides along because cherry-picking the P11 commits onto `staging`
-    would conflict on `specs/roadmap.md` (both touched its front-matter and change-log tail, in a
-    file carrying 1,063 pre-existing mojibake sequences, `#762`). `docs/p1186-1187-document` still
-    points at `b882491` and has no PR. Decide whether to split before opening the PR.
+    **`#1197`**. PR **#1207** merged (squash) to `staging` as `12083ee`, 2026-10-21.
+    `deploy-staging` succeeded; `/api/health` on staging confirmed `commit: "12083ee"`,
+    `db.ok: true`, `reference.reachable: true`, two populated `sources`. All three issues moved to
+    board status **In Review** (not `Done` — that's reserved for the `main` promotion, still
+    outstanding).
+    - **`/validate` ran from a fresh context and found two real gaps, both fixed before shipping —
+      this was not a rubber-stamp of the in-session Build-time check.** (1) R6: the host guard's
+      own safety claim ("no connection is attempted") was false whenever `SEED_SCALE_PRODUCTS` was
+      set, because `prisma/seed.ts`'s `main()` queried the database ~100 lines before the guard was
+      ever reached — a bogus password masked the refusal behind an unrelated auth error instead of
+      proving it. Fixed by adding a second, early call to the guard at the very top of `main()`;
+      re-proven end-to-end with an isolated fixture `secrets/staging.vars` (no real host or
+      credential touched). (2) R19: the committed `prisma/manifests/example.json` shipped with
+      `loyaltyTiers: []`, so the worked example never demonstrated that field. Fixed by adding one
+      sample tier. Both re-verified independently (two consecutive `npm run db:seed` runs, two
+      consecutive `scripts/provision-vendor.ts` runs, dev database restored to baseline each time).
+      Full record: `specs/2026-10-21-p11-onboarding-foundation/build-notes.md`.
+    - **`/ship` caught a third gap real CI surfaces that nothing local did: `kms:coverage` failed on
+      `prisma/manifests: baseline 0, measured 1`.** New directory, its `README.md` has no
+      front-matter (matching sibling READMEs elsewhere) — a legitimate re-baseline, re-ran via
+      `kms:coverage -- --update` and hand-kept to only the `prisma/manifests` line. **This is a
+      different entry from `#1204`'s `misc:` ratchet failure** (still open, still correctly
+      untouched — that one's recommended fix is the harmful one; this one's was the correct one).
+      `kms:coverage` is not one of `validation.md`'s rows and is "CI-only otherwise" per
+      `CLAUDE.md` — worth remembering that a new top-level directory can ratchet-fail in CI with
+      nothing local to catch it first.
+    - **The undelivered `#1186`/`#1187` documentation tail (`643237b`) rode this branch as
+      planned** and is now on `staging` with it, per the carry-forward rule. `docs/p1186-1187-document`
+      still points at `b882491` and has no PR of its own — expected, not a gap.
   - **Two owner decisions gate the rest of P11**, both board Status `Deferred`: **`#1196`** —
     storefront or stock management, which sizes `#1199` (VAT) entirely; and **`#1200`** — which of
     the 51 restricted and non-deliverable catalogue lines may be sold. **`#1201`** (the Excel

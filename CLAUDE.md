@@ -145,7 +145,11 @@ Detail and the deployed-binding traps: `docs/developer-portal/env-setup.md`.
 `npm run lint` · `typecheck` · `format:check` · `npx vitest run` · `build` (pinned `--webpack`;
 Turbopack cannot resolve `@prisma/client/wasm`) · `preview` · `db:generate` (after every `npm ci`) ·
 `kms:validate` · `kms:build-index` · `kms:check-generated` · `kms:coverage` (CI-only otherwise; a new
-slice's `plan.md` without front-matter fails it) · `sdd:audit` · `sdd:preclear` ·
+slice's `plan.md` without front-matter fails it, and so does any new top-level directory containing
+a file without front-matter, e.g. a plain `README.md` — run it locally once per new directory rather
+than waiting for CI to catch it; the fix is `kms:coverage -- --update`, kept scoped to only the
+directory you actually added — `#490`/`#1197`'s `prisma/manifests/` found this) · `sdd:audit` ·
+`sdd:preclear` ·
 `branches:count` · `branches:prune` (dry run; `-- --apply` deletes — see `/prune-branches`).
 After editing `docs/` or `specs/`, also run `kms:assemble:internal` **and** a real Next build in
 `kms/site-internal` — `gates` never builds the docs site.
