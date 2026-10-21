@@ -4,8 +4,8 @@ title: "Discovery log"
 audience: [dev, product]
 type: doc
 status: approved
-version: "1.10.0"
-updated: 2026-10-12
+version: "1.11.0"
+updated: 2026-10-21
 visibility: internal
 summary: "Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action."
 tags: [research, discovery, opportunities, risk, sdd]
@@ -35,6 +35,599 @@ milestone close). Nothing here is approved scope — see `docs/research/README.m
 
 **Next action:** RESEARCH MORE | PROPOSE | ADD TO ROADMAP/BACKLOG | READY FOR SPEC | DO NOT PURSUE
 ```
+
+---
+
+## 2026-10-21 — eleventh Discover pass (external brief: provisioning a new inventory and stock-management client, with their stock export)
+
+**Trigger:** explicit `/discover` on a pasted brief asking, as a Senior Solutions Architect, for
+three things: a technical configuration checklist for a new client instance (dedicated domain,
+isolated database, environment variables, SSL, CI/CD, backups), a delivery and onboarding checklist
+(deploy, test, migrate the initial stock list, hand over), and an architecture and support strategy
+for three client tiers — Tier 1 shared multi-tenant, Tier 2 dedicated single-tenant, Tier 3 bespoke
+customisable. The brief names thirteen stock fields and supplies a real file,
+`docs/StockList.xls`, untracked in the working tree.
+
+**What the brief is, in this repo's terms.** It mixes four kinds of work:
+
+1. **A commercial decision** — whether the platform is sold as a stock-management system at all.
+   The thirteen named fields are a wholesale-and-retail stock model; this repo is a consumer
+   storefront. That mismatch is the first entry below, and it is not a configuration question.
+2. **Platform capability that does not exist** — there is no way to create a vendor, no way to
+   import a catalogue, and no way to add a client's domain without a commit and a deploy. Three
+   entries below.
+3. **Data work on a file that cannot do what the brief assumes** — the supplied export is a
+   point-in-time report, not a migration source. Two entries below.
+4. **An architecture question whose answer is already in the repo** — the tier strategy. Last entry
+   below. The short answer is: not a fork, and the existing mechanism is `VendorConfig`.
+
+**What the brief gets wrong about this codebase.** It assumes a checklist is what is missing. A
+checklist cannot be written honestly yet, because four of the steps it would contain
+(provision the vendor, point the domain, import the catalogue, isolate the database) have no
+implementation to document. The checklist is an output of the proposals below, not a substitute for
+them.
+
+**Method note.** `docs/StockList.xls` is a legacy BIFF workbook (Excel 97-2003, one sheet
+`StockList`, 14 columns, 6,167 data rows after the header on row 4, printed `13/05/2025 16:04:43`,
+created 2003-10-02, last saved 2025-05-13). Every figure below is a count taken from that file with
+`xlrd`, in an isolated scratchpad copy, not an estimate.
+
+---
+
+### 2026-10-21 — the brief buys a stock-management system; the schema holds none of the five figures the client's own report already prints
+
+**Trigger:** explicit `/discover` — the brief's central premise.
+**Status of the area:** **genuinely unowned.** No open or closed issue mentions cost price, supplier,
+purchase orders, stock movements or stocktakes; `specs/` and `docs/developer-portal/` contain no
+match for `stock management`, `goods-in`, `stocktake` or `purchase order`.
+
+**Observed (verifiable today):** the supplied file's last seven rows are not products — they are
+the report's own footer: `Total Quantity -463605`, `Total Cost -£364,844.74`,
+`Total VAT -£11,232.37`, `Gross Price £0.00`, `Estimated Profit -£732,305.79`,
+`Estimated Margin -£22,132,633.68`, `Estimated Sale -£1,097,166.62`. So the client's existing
+system computes cost, VAT, profit and margin.
+
+This repo computes none of them, and has nowhere to put their inputs. `prisma/schema.prisma` has no
+cost-price column, no VAT-rate column, no barcode, no PLU or SKU, no supplier model, no case or
+pack size, no reorder quantity, and no stock-movement model of any kind. `Inventory`
+(`prisma/schema.prisma:1007-1025`) is one mutable `quantity Int @default(0)` plus
+`lowStockThreshold` and `expectedRestockDate` — five columns, no history, so there is no goods-in,
+no stocktake, no shrinkage and no audit of who changed a figure. `Product` carries `basePrice` as a
+single integer-pence retail price and nothing behind it. The only occurrence of `vat` in the whole
+schema is `VendorConfig.vatNumber` (`:490`), a registration number on a footer.
+
+The obvious workaround does not work either. `ProductAttributeValue` holds **either** an `optionId`
+(a curated option row) **or** a `numericValue Decimal(10,2)`, with exactly one enforced by the
+database `CHECK` constraint `ProductAttributeValue_one_value_check`, and
+`@@unique([productId, attributeId])` permits one value per filter per product. There is **no
+free-text attribute value**, so a barcode, a PLU or a supplier name has nowhere to live; and
+`Decimal(10,2)` tops out at eight integer digits, so an EAN-13 does not fit in the numeric branch.
+`specs/architecture.md` §"Vendor-defined filters sit beside the label booleans" states these are
+shopper-facing facets and says in terms: "Do not migrate one mechanism into the other as a side
+effect."
+
+**Interpretation:** five of the thirteen fields the brief names (Barcode, Cost/Case, Unit/Case,
+Min/Ord Qty, Supplier) and one more (VAT) describe a buying-and-replenishment domain the platform
+does not model. Mapping them onto today's schema is not a migration — it is a new aggregate, and it
+is larger than everything else in the brief put together. A stock-management product also inverts
+the platform's centre of gravity: today every write is a shopper action or a staff edit, and
+`Inventory.quantity` is decremented inside `placeOrder`'s transaction. Replenishment means the
+authoritative stock figure comes from goods received and counted, not from sales — which is a
+different system of record, not an extra screen.
+
+**Confidence:** Known for every schema fact and every figure from the file. That the client expects
+replenishment and margin reporting rather than a storefront with a stock number is **Inferred** from
+their field list and their report footer; it has not been confirmed with them.
+
+**Why it matters commercially:** this decides what is being sold. Sold as "an online store for your
+existing stock list", the platform delivers that and the remaining entries below are the work.
+Sold as "inventory and stock management", it does not, and the gap surfaces at handover — when the
+client asks for the margin report their 2003-era till system already prints. Taking the engagement
+on the second framing without pricing the new aggregate is the commercial risk in this brief.
+
+**Options considered:** build the replenishment aggregate (cost, supplier, case size, reorder
+levels, stock movements) — real work, needs its own `/propose`, and it is a milestone not a slice;
+scope the engagement to the storefront and say plainly that buying, margin and VAT reporting stay
+in the client's existing system, importing retail price and a stock figure only — the cheapest
+honest option, and the one to recommend; store the extra fields as inert columns nobody reads —
+rejected, it manufactures the appearance of a capability, which is the `#239` failure mode;
+do nothing and discover the mismatch at handover.
+
+**Cost of delay:** this is the one finding that gets more expensive by waiting, because it is a
+scoping decision made before a contract rather than after. Every other entry below is cheaper work
+whose shape depends on the answer here.
+
+**Next action:** PROPOSE — filed as **`#1196`** (owner ruling on engagement scope).
+
+---
+
+### 2026-10-21 — nothing in the codebase can create a vendor, and nothing can import a catalogue; both are hand-written database writes today
+
+**Trigger:** explicit `/discover` — the brief's "provision the application" and "migrate their
+initial stock list data" steps.
+**Status of the area:** **genuinely unowned.** ADR-004 decision 7 asserts the capability
+("Onboarding is data-only. A new vendor = a `Vendor` row + branding + config + delivery area +
+catalogue ... **no code change, no deploy**"), but nothing implements it, and no issue tracks the
+gap.
+
+**Observed (verifiable today):** `lib/repositories/vendor.ts` exports twenty functions —
+`fetchVendorProfile`, `getVendorConfig`, `updateVendorStorefrontConfig`, `applyThemeToVendor`,
+`listActiveVendorIds` and so on — and **not one of them creates a vendor**. A repo-wide search for
+`vendor.create`, `vendor.upsert` and `createVendor` across `lib/`, `app/`, `features/`, `scripts/`
+and `prisma/` returns five hits in total: `prisma/seed.ts:73` and `:107` (the dev seed), and
+`scripts/verify-customer-feedback.ts:92`/`:95` plus `scripts/verify-department-spotlights.ts:83`
+(throwaway verification fixtures). There is no `/staff/*` page for it —
+`components/staff/nav-items.ts` registers twenty-three pages, none of them vendor creation — and no
+script. `scripts/provision-project.sh` is named provisioning but provisions the **GitHub delivery
+board** (labels, milestones, phase epics, Project #2 fields); it has nothing to do with a client.
+
+Catalogue import is the same. There is no CSV, XLS or bulk path anywhere in `features/admin/`,
+`app/(admin)/staff/products` or `app/(admin)/staff/inventory`; the only `bulk*` symbols in
+`features/` are `bulkAddMessage` for delivery-area postcodes, `approveFeedbackBulk` and
+`bulkManageSynonyms`. Products are created one at a time through the staff form, and that path is
+routed to the WebSocket client on purpose: `lib/products-service.ts:279` passes `getPrismaWs()` to
+`createProductForVendor`, because the repository function nested-creates the `Inventory` row (and
+optionally `ProductPriceTier`) in one implicit transaction. So the only correct product-create path
+in the application is **one interactive transaction per product**.
+
+**Interpretation:** the brief's "provision the application for them" has no mechanism behind it.
+Today a new client is onboarded by hand-writing Prisma or SQL against the production database —
+which is precisely the operation `CLAUDE.md` has two separate rules guarding against, and the
+operation that migrated production by accident at `#1134`. Importing 6,167 products through the
+application path would mean 6,167 WebSocket interactive transactions from a Worker with a socket
+limit; the import belongs in a Node script against `DIRECT_URL` instead, which is the same shape as
+the migration rule already in `CLAUDE.md`. That is a design constraint, not an obstacle — but
+nothing in the repo does it, and the one existing bulk-write precedent, `prisma/seed.ts`, is 2,754
+lines of hand-authored dev fixture, not a tool that takes a client's file.
+
+The import is also where this pass's data findings land as requirements. Three in particular are
+hard rules, not edge cases: the last seven rows must be discarded (they are a report footer, and
+`Estimated Margin` would import as a product priced at minus £22,132,633.68); product identity must
+come from PLU and not from the name (255 slugs collide across 585 rows — the next entry); and the
+opening stock balance must be a decision rather than a column copy (the entry after that).
+
+**Confidence:** Known. Every absence above is a search over the current tree, and the WebSocket
+routing is a comment-documented decision at a named line.
+
+**Why it matters commercially:** this is the whole of the brief's second section. Until it exists,
+every client onboarding is a bespoke manual operation against a live database by whoever knows the
+schema — which does not scale past the second client, cannot be handed to anyone else, and has no
+audit trail. It is also the cheapest high-value work in this pass: the data model needs nothing new,
+only a tool over what is already there.
+
+**Options considered:** a `/staff/*` platform-admin surface for vendor creation — the most useful
+end state, but it needs a platform-admin authorisation story distinct from `VendorMembership` and is
+the larger half; a Node provisioning script taking a vendor manifest plus a catalogue file, run by
+the operator against `DIRECT_URL` — the cheapest thing that removes hand-written SQL, and the one to
+recommend first; a one-off script for this client only — rejected, that is how the second client
+costs the same as the first; keep doing it by hand — rejected on the `#1134` precedent.
+
+**Cost of delay:** every manual onboarding is both a risk and a sunk cost that the tool would have
+absorbed, and the first one sets the precedent for the rest.
+
+**Next action:** PROPOSE — filed as **`#1197`**.
+
+---
+
+### 2026-10-21 — a new client's domain cannot be added without a commit and two deploys, so ADR-004 decision 7's "no deploy" is false for the first thing a client asks for
+
+**Trigger:** explicit `/discover` — the brief's "dedicated domain" and "domain routing"
+requirements.
+**Status of the area:** **genuinely unowned.** No open issue mentions domain onboarding, wildcard
+routes, DNS or certificates for a new vendor; the four issues matching those words are about edge
+caching (`#880`, `#599`), double vendor resolution (`#595`) and the Resend sending domain (`#104`).
+
+**Observed (verifiable today):** `wrangler.toml` declares each vendor host as its own route block
+with `custom_domain = true` — four in total, two per environment:
+`staging.aheedfoodcentre.nocaped.com` and `srimart-staging.nocaped.com` under `[env.staging]`,
+`aheedfoodcentre.nocaped.com` and `srimart.nocaped.com` under `[env.production]`. There is **no
+wildcard pattern** anywhere in the file. The committed comment above the second staging block states
+the mechanism outright: "ADR-004 slice 3b — SriMart, a 2nd vendor resolved by host (VendorDomain).
+This staging host **must be declared here so `wrangler deploy` doesn't tear down the custom
+domain**."
+
+ADR-004 decision 3 claims the opposite shape — "One wildcard DNS record + one Worker route + one
+wildcard cert covers all subdomain vendors" — and decision 7 concludes "**no code change, no
+deploy**." The schema half of that is real: `VendorDomain.host` is a unique column and
+`Vendor.customDomain` exists, so the application resolves any host from data. The routing half is
+not.
+
+**Interpretation:** the tenancy boundary that matters to a client is the only one still welded to a
+commit. Onboarding client number three means editing `wrangler.toml`, a PR to `staging`, a
+promotion PR to `main`, and a deploy of both environments — four steps on the branch strategy
+`CLAUDE.md` describes, to add one hostname. Worse, the committed comment records that getting it
+wrong is destructive rather than inert: a `wrangler deploy` that omits an existing host tears that
+host's custom domain down, so the file is load-bearing for vendors already trading.
+
+Whether a wildcard route would fix it is **not** something this pass can settle from the repo.
+`custom_domain = true` cannot take a wildcard; a wildcard `routes` pattern such as
+`*.nocaped.com/*` can, but it requires the zone to be on the Cloudflare account and changes the
+certificate and DNS story. And it would only cover the subdomain family — a client on **their own**
+registrable domain, which is exactly what this brief asks for, needs a route per domain no matter
+what, plus a Better Auth `trustedOrigins` entry, which ADR-004 decision 4 already requires be read
+from the database rather than hardcoded.
+
+**Confidence:** Known that every host is individually declared, that no wildcard exists, and that
+the two ADR-004 claims do not hold as written. The wildcard remedy and its certificate implications
+are **Needs validation** — they depend on Cloudflare account state this pass cannot read.
+
+**Why it matters commercially:** "their own dedicated domain" is the first line of the brief's
+client requirements and the most visible part of a handover. Today it is a four-step release, not a
+configuration change, and the release can break a live vendor. It also quietly caps how many clients
+the platform can take on before onboarding becomes a release-engineering activity.
+
+**Options considered:** a wildcard route for the subdomain family, keeping per-domain blocks only
+for vanity domains — the likely answer, needs the Cloudflare zone question settled first; a
+generated `wrangler.toml` route list built from `VendorDomain` at deploy time, so the commit is
+mechanical and cannot omit a live host — removes the destructive failure mode without needing a
+wildcard, and is worth evaluating alongside; accept the per-host commit and document it honestly as
+a release step, correcting ADR-004 decisions 3 and 7 — the do-nothing option, and it is still better
+than the present state, where the ADR says the opposite of the code; do nothing and leave the ADR
+wrong.
+
+**Cost of delay:** it compounds per client, and ADR-004 asserting a capability the code does not
+have is exactly the failure `CLAUDE.md` warns about when it says the code wins — somebody will plan
+an onboarding against decision 7 and find out at the deploy.
+
+**Next action:** PROPOSE — filed as **`#1198`**.
+
+---
+
+### 2026-10-21 — the supplied export is a point-in-time report, not a migration source: five of its thirteen columns are empty or constant, and no product has more than one unit of stock
+
+**Trigger:** explicit `/discover` — the brief's "migrating their initial stock list data" step.
+**Status of the area:** **genuinely unowned**, and not a repo matter at all — this is the client's
+data.
+
+**Observed (verifiable today):** counts over all 6,167 data rows of `docs/StockList.xls`.
+
+| Column the brief names | What the file actually contains |
+| --- | --- |
+| Barcode | **0 of 6,167 populated** — the column is entirely empty |
+| Supplier | **0 of 6,167 populated** — the column is entirely empty |
+| Min/Ord Qty | `1` on every one of the 6,160 parseable rows (min 1, max 1) |
+| Cost/Case | `£1.00` on 6,014 of 6,160 rows (97.6%); the maximum in the file is £24.00 |
+| Min/Ord Lvl | `0` on 5,430 rows (88.1%), `1` on 729, `8` on exactly one |
+| Unit/Case | `1` on 4,445 rows (72.2%); then 6 (456), 12 (426), 10 (182), 24 (158); max 2,101 |
+| Current Stock | **5,798 of 6,160 are negative (94.1%)**, 361 are zero, and the maximum anywhere in the file is **1.0**; the minimum is -3,658 |
+| Price | 3 real products priced at £0.00 (PLU 7957 `FRUITS`; PLU 3275 `J/W TUNA BRAIN 120G`) |
+| Dept | `DEFAULT` holds 1,089 rows (17.7%) of 28 department values |
+| Description | 6,160 of 6,167 are upper-case, maximum 49 characters, mean 17.8 |
+
+The report's own footer corroborates the stock reading rather than contradicting it:
+`Total Quantity -463605`, `Estimated Profit -£732,305.79`. A ledger whose total quantity is minus
+463,605 has recorded sales and never recorded receipts.
+
+**Interpretation:** this is a till-system stock report, and its stock column is a net sales counter,
+not an on-hand balance — which is why nothing in it exceeds one unit. Copying it into
+`Inventory.quantity` would render the **entire catalogue out of stock on day one**, because
+`Inventory.quantity Int @default(0)` is what gates add-to-cart. So the opening balance is a decision
+the client has to make (a physical stock count, or start every line at zero, or treat the catalogue
+as unlimited and manage availability by hand), not a column to map.
+
+For the five empty-or-constant columns the reading is simpler: the brief names fields their own
+export does not carry. Building a barcode-scanning or supplier-reordering capability from this file
+is not possible — there is no barcode and no supplier in it. Either another export exists that
+carries them, or the client's live system holds them and this report omits them, or they were never
+populated. Which of the three it is changes the scope of the previous entry materially, and nothing
+in this file answers it.
+
+The usable columns are narrower than the brief implies but genuinely usable: PLU as a stable
+identity, Description as a starting name, Price as retail pence, Dept and SubDept as a two-level
+taxonomy that maps cleanly onto `Category.parentId`, and VAT as a rate — with the caveats in the
+next two entries.
+
+**Confidence:** Known for every count. That the stock column is a sales counter rather than a
+corrupted balance is **Inferred**, though the maximum of 1.0 across 6,167 rows and the footer's
+negative total make it the only reading that fits. What the client intends to do about the empty
+columns is **Needs validation** — it is a question for them.
+
+**Why it matters commercially:** the brief treats data migration as a checklist step. On this file
+it is the step most likely to produce a handover the client rejects, because the two things a
+shopper notices first — is it in stock, and what is it called — are the two the file supplies
+worst. Discovering that after provisioning the infrastructure wastes the infrastructure work.
+
+**Options considered:** ask the client for a different export (one carrying barcodes, suppliers and
+a true on-hand balance) before any import is specified — the cheapest and the one to recommend;
+import price and taxonomy only, open with every line at zero stock and have staff set availability
+as they go — viable, and the honest fallback if no better export exists; import the stock column as
+given — rejected, it opens a shop where nothing is buyable; synthesise plausible stock figures —
+rejected outright, it is fabricated data in a system of record.
+
+**Cost of delay:** low in engineering terms, high in sequencing terms — the answer changes what the
+importer must do, so asking late means building it twice.
+
+**Next action:** RESEARCH MORE — ask the client three questions: does an export exist that carries
+Barcode and Supplier; what should the opening stock balance be; and are the £0.00 and `DEFAULT`
+lines live products. Record their answers here before the importer is specified.
+
+---
+
+### 2026-10-21 — product names in the source are till-roll codes: 585 rows collide into 255 slugs, and three sub-department names are reused under different departments
+
+**Trigger:** explicit `/discover` — mapping the file onto `Product` and `Category`.
+**Status of the area:** **genuinely unowned.** Evidence belongs with the provisioning-and-import
+proposal above rather than as separate work.
+
+**Observed (verifiable today):** the file's 6,167 descriptions contain 5,847 distinct values, so
+320 are exact duplicates; slugifying them the way `Product.slug` requires produces **255 colliding
+slugs covering 585 rows**. `PANEER` appears 7 times at £4.99, £2.99, £1.98, £1.90, £2.00 and £1.93
+across two departments; `DATES` 6 times across four; `RICE`, `MILO`, `IWISA` and `AURA` 5 times
+each. `Product` carries `@@unique([vendorId, slug])`, so 330 of those rows cannot be inserted
+without a disambiguation rule.
+
+PLU is not a clean key either: 6,129 distinct values over 6,167 rows, so 38 duplicates — PLU 6942
+appears **four** times (all `KINGS KITHUL`, all £4.99), and PLU 8518 is `REGAL MARBLE DELUXE
+MADEIRA` at £2.99 under CAKES **and** `REGAL SPRITS` at £1.99 under CRISPS & SNACKS. Two different
+products share one PLU.
+
+The taxonomy collides the same way. The file has 28 department values and **113 distinct
+department/sub-department pairs, but only 105 distinct sub-department names** — `MISC` appears under
+five departments (MISC, CAKES, HEALTH & BEAUTY, GROCERIES, SEASONAL), `DESSERTS` under four,
+`FISH` under two. `Category` carries `@@unique([vendorId, slug])` on a self-referencing tree, so a
+slug derived from the sub-department name alone silently merges five distinct `MISC`
+sub-departments into one category, and products land under the wrong parent.
+
+And the duplicate-key failure will not look the way an importer's author expects.
+`CLAUDE.md` records that the two Prisma adapters report the same Postgres unique violation under
+different `error.code` values — raw SQLSTATE `"23505"` on the HTTP adapter versus Prisma `P2002` on
+the WebSocket one — and that `#232`'s verification script constructed the wrong adapter, observed
+`P2002`, never raised the `"23505"` the shipped path produces, and printed `ALL CHECKS PASSED`.
+An importer is exactly the kind of code that guards a write on `error.code`.
+
+**Interpretation:** these are till-keyboard labels, not product names — upper-case, truncated at 49
+characters, and unique only in the context of the key they sit on. Three consequences follow. The
+importer needs a composite identity (PLU plus department, or PLU plus a sequence) and a slug
+disambiguation rule, not `slugify(description)`. The category importer must key on the
+department/sub-department **pair**, not the sub-department name. And the duplicate-handling branch
+must be verified against the adapter the importer actually constructs, with both codes accepted.
+
+Separately, and independently of any importer: 585 products whose names collide is a
+**customer-facing catalogue problem**. Six products all called `PANEER` at six different prices, on
+one search results page, is unshoppable. The names need editorial work by someone who knows the
+stock, and no import can do it.
+
+**Confidence:** Known for every count and every schema constraint. The adapter-code trap is Known
+from `CLAUDE.md` and `#232`'s recorded incident, not re-measured here.
+
+**Why it matters commercially:** this is where a naive import either fails loudly at row 300 or —
+worse — succeeds with products merged, miscategorised and mispriced, which is a data-integrity
+problem discovered by a customer. It also sets a realistic expectation: the client's 6,167 lines
+will not become 6,167 shoppable products without human naming work, and that effort should be
+quoted rather than discovered.
+
+**Options considered:** composite identity plus a deterministic slug suffix, with the pair-keyed
+category rule and both error codes accepted — the right answer, and it belongs in the importer's
+`requirements.md`; import only the 5,582 non-colliding rows and leave the rest for manual entry —
+viable as a phase one, and it keeps the first import honest; let the unique constraint reject
+duplicates and have staff fix them afterwards — rejected, there is no screen that surfaces a failed
+import row; relax the constraints — rejected, per-vendor slug uniqueness is ADR-004 decision 2.
+
+**Cost of delay:** none, provided it reaches the importer's spec. If it does not, it becomes a
+silent-merge defect in a client's live catalogue.
+
+**Next action:** PROPOSE — as a named requirement of the provisioning-and-import proposal above, not
+as separate work. Carried as requirements 2 to 5 of **`#1197`** rather than filed again.
+
+---
+
+### 2026-10-21 — the client's file carries a per-product VAT rate in four spellings; the platform has nowhere to store one and no order records VAT at all
+
+**Trigger:** explicit `/discover` — the brief's VAT field.
+**Status of the area:** **genuinely unowned.** `vat` occurs once in the entire schema, as
+`VendorConfig.vatNumber`, and zero times in `lib/`, `features/`, `components/` or `app/` as a rate.
+
+**Observed (verifiable today):** the platform side first. `Order`
+(`prisma/schema.prisma:1334-1369`) carries `currency`, `subtotalPence`, `discountPence`,
+`deliveryFeePence` and `totalPence` — **no VAT column**. `OrderItem` (`:1389-1406`) carries
+`unitPricePence`, `quantity` and `lineTotalPence` — no rate, no VAT amount. `Product` carries
+`basePrice` and nothing tax-related. So no order, receipt or report in this platform can state a VAT
+figure, and `VendorConfig.vatNumber` renders a registration number in a footer beside totals that
+contain no VAT analysis.
+
+The data side. VAT is populated on 6,160 rows, and the three UK rates appear as **four distinct
+strings**: `0` on 5,062 rows, `20.00` on 1,037, `5` on 45, and `20` on 16. `20` and `20.00` are the
+same rate written two ways, so an importer keyed on the string creates two standard rates. The rate
+also cannot be inferred from the taxonomy: after normalising those two spellings, **80 of the 113
+department/sub-department pairs carry more than one VAT rate** — `('CHILLED FOODS', 'CHEESES')` is
+39 rows at 0% and 1 at 20%, `('CAKES', 'CAKE')` is 14 at 0% and 6 at 20%.
+
+Two groups of rates in the file are wrong on their face. All 26 TOBACCO rows should be standard-rated;
+**11 of them carry 0%**. The single ALCOHOL row (`STELLA BOTTLE`) also carries **0%**.
+
+**Interpretation:** three separate things, and only the first is this repo's.
+
+The platform cannot record VAT. For a purely consumer storefront that is defensible — UK retail
+prices are quoted VAT-inclusive and a consumer is owed no VAT breakdown — and it is presumably why
+the gap has survived to P10. It stops being defensible the moment the product is sold as inventory
+and stock management, because then margin and VAT liability are outputs the client expects, and the
+first entry in this pass is the same finding seen from the cost side.
+
+The source rates need normalising, not copying: three rates, four spellings, and the rate is a
+per-product fact that no department-level default can reconstruct.
+
+The eleven zero-rated tobacco rows and the zero-rated alcohol row are the client's own data problem,
+and worth telling them about regardless of what gets built. They are not for this platform to
+silently correct — a system that rewrites a client's tax codes without being asked is worse than one
+that reports them.
+
+**Confidence:** Known for every schema fact and every count. That the 11 tobacco rows and the
+alcohol row are mis-rated is Known as a matter of UK VAT; whether the client's live system has since
+corrected them is **Needs validation** — this export is from May 2025.
+
+**Why it matters commercially:** it is the difference between a storefront and a book of account.
+If the engagement stays a storefront, the honest answer is "VAT stays in your existing system" and
+nothing need be built. If it does not, a VAT rate on `Product` plus a VAT breakdown on `Order` and
+`OrderItem` is a prerequisite for every figure the client's current report prints — and retrofitting
+tax onto an order model that has shipped is materially harder than adding it before the client's
+first order.
+
+**Options considered:** a `vatRate` on `Product` plus VAT columns on `Order`/`OrderItem`, imported
+from the normalised source rate — the right shape if stock management is in scope, and it needs its
+own `/propose` because it touches money on a shipped order model; import the rate into an unread
+column so the data is not lost — rejected on the same ground as the first entry, an inert column
+reads as a capability; discard VAT at import and leave it with the client's existing system —
+correct if the engagement stays a storefront, and the cheapest option; do nothing and carry the
+field name in a checklist with nothing behind it — the worst outcome, because it survives into the
+handover document.
+
+**Cost of delay:** it rises once the client places real orders. VAT on a historic order cannot be
+backfilled from a rate table, because the rate at the time of sale is the one that matters.
+
+**Next action:** PROPOSE — filed as **`#1199`**.
+
+---
+
+### 2026-10-21 — 27 age-restricted lines and 24 non-deliverable ones in the client's catalogue, against zero age or licensing controls anywhere in the platform
+
+**Trigger:** explicit `/discover` — departments found while classifying the file's taxonomy.
+**Status of the area:** **genuinely unowned.** A case-insensitive search for `age-restrict`,
+`age-verif`, `over 18`, `Challenge 25`, `licensab`, `alcohol` and `tobacco` across `lib/`, `app/`,
+`features/`, `components/` and `prisma/schema.prisma` returns **zero matches** — the concepts do not
+appear in this codebase at all.
+
+**Observed (verifiable today):** the file's departments include TOBACCO (26 rows) and ALCOHOL
+(1 row) — 27 age-restricted lines. It also includes PHONE CARDS (15), NEWS (5), E-PAY (1), INSTANT
+LOTTERY (1) and STAMPS (1) — 24 lines that are not deliverable physical goods in the ordinary sense.
+`Product` has no age-restriction flag, no licensing flag and no "collection only" flag;
+`VendorConfig` has `offerCollection` and `collectionMinimumOrderPence` but nothing per-product.
+`FulfilmentMethod` is `DELIVERY` or collection, chosen per **order**, so there is no mechanism by
+which one basket line could require a different fulfilment route from another.
+
+**Interpretation:** importing the client's catalogue as-is would put tobacco and alcohol on a
+storefront that cannot ask a shopper's age, cannot require age verification at handover, and cannot
+record that a check happened — and would list lottery tickets, postage stamps and electronic top-ups
+as deliverable products. In the UK, selling age-restricted goods remotely requires age verification
+at the point of delivery, and the absence of any record of a check is itself the compliance failure,
+independent of whether a sale to a minor actually occurs. Lottery is separately licensed and is not
+a thing a grocery storefront may sell at all.
+
+This has not bitten yet for a reason worth stating: Aheed's and SriMart's live catalogues contain no
+such lines, so the gap has been invisible. A client whose stock list includes them changes that on
+the first import.
+
+Note the smaller trap too — the brief's thirteen fields contain nothing that would flag any of this.
+Department is the only signal, and `DEFAULT` holds 1,089 rows, so a department-name exclusion rule
+is a filter, not a guarantee.
+
+**Confidence:** Known for the row counts and for the complete absence of controls. Known for the UK
+requirement in outline; the exact obligations for remote sale of tobacco and alcohol, and what
+constitutes an adequate record, are **Needs validation** and are a question for the owner, not an
+engineering judgement.
+
+**Why it matters commercially:** it is the one finding in this pass with a regulatory rather than a
+quality consequence, and the one that cannot be fixed after the fact. It is also cheap to contain
+at the import boundary: refusing to import the 51 lines costs nothing and removes the exposure
+entirely, whereas building age verification is a real project.
+
+**Options considered:** exclude the age-restricted and non-deliverable departments at import and say
+so explicitly in the handover, so the client knows those lines stay in their till system — the
+cheapest containment, and the one to recommend; add an `isAgeRestricted` flag plus an
+age-verification step at handover and a record of the check — a genuine project needing its own
+`/propose`, and premature until a client actually wants to sell these lines online; import them with
+no controls — rejected, it is a compliance exposure created knowingly; rely on the client not
+noticing — rejected.
+
+**Cost of delay:** the containment must exist before the first import, not after. After is an
+incident.
+
+**Next action:** PROPOSE — filed as **`#1200`**.
+
+---
+
+### 2026-10-21 — the three-tier strategy does not need a fork, a feature-flag layer or a modular monolith: Tier 1 and Tier 2 differ only in where `DATABASE_URL` points, and that is the part nothing implements
+
+**Trigger:** explicit `/discover` — the brief's third section.
+**Status of the area:** **partly already implemented** (the per-vendor configuration mechanism is
+`VendorConfig`, shipped and in production), **partly already tracked** (Tier 3's real blocker is the
+variant model, `#398`, and the 2026-09-07 entry in this log already ruled on it), and **partly
+genuinely unowned** (the per-client environment and migration fan-out, below).
+
+**Observed (verifiable today):** the brief's three candidate strategies are all answered by code
+that already exists.
+
+**One codebase with configuration is already the architecture, and it is not a flag layer.**
+`VendorConfig` (`prisma/schema.prisma:450-555`) carries, per vendor: thirteen boolean capability
+switches (`offerCollection`, `loyaltyEnabled`, `assistantEnabled`, `marketingConsentEnabled`,
+`offerDeliverySlots`, `expressCollectionEnabled`, `showSecureCheckoutNote` and six product-label
+switches), the delivery and loyalty economics as integers, `timezone`, `storeDescription`,
+`productGridDensity` and `aiDailyNeuronBudget`. Look and feel is `VendorBranding` plus `Theme` and
+`VendorTheme`; per-vendor product filters are `VendorAttribute`. Every one of these is a database
+row read per request, and `CLAUDE.md`'s standing rule is that vendor name, branding and delivery
+rules come from the database and are never hardcoded. So "single codebase with feature flags" is not
+a proposal — it is a description of the last six months of this repo, and it already serves two
+vendors with different industries.
+
+**The database boundary is the only real difference between Tier 1 and Tier 2.** `DATABASE_URL` is
+one secret per Worker environment, and `wrangler.toml` defines exactly two:
+`aheed-store-staging` and `aheed-store-production`. An isolated database per client is therefore not
+a schema change and not a code change — it is a new `[env.<client>]` block, a new Neon project, a
+new GitHub environment, and a new set of secrets in **two** stores.
+
+**And that is where the unowned cost sits.** `.github/workflows/deploy-production.yml` hardcodes
+`environment: production` (`:28`), runs **one** `npx prisma migrate deploy` against
+`secrets.DIRECT_URL` (`:59-62`), and deploys with `wrangler deploy --env production` (`:68`).
+`deploy-staging.yml` is its mirror. Nothing fans out. So N isolated databases means N migration runs
+and N deploys, with no mechanism to run them, no mechanism to report that client 4's migration
+failed while clients 1 to 3 succeeded, and — per `CLAUDE.md` — a `prisma migrate status` that
+reports "Database schema is up to date!" moments before refusing. The two-store secret split
+(Cloudflare for runtime, GitHub environments for CI) multiplies by N as well.
+
+**Interpretation and the recommendation.** Keep one codebase. Forking is the worst of the three
+options the brief lists, and this repo can say why concretely rather than in principle: the rules
+that keep it correct are enforced by tests over the whole tree —
+`tests/repository-purity.test.ts` and `tests/repository-client-injection.test.ts` for the
+`vendorId`-and-client-injection contract, `tests/repository-vendor-scoping.test.ts` for tenant
+isolation, `tests/staff-nav-parity.test.ts`, `tests/page-container.test.ts`,
+`tests/dependency-pins.test.ts`. A fork inherits those tests and then diverges from them silently;
+ADR-004 decision 2 chose row-level tenancy with central repository enforcement precisely so a
+missing filter cannot leak, and a fork is the one change that voids that reasoning. A modular
+monolith is also the wrong frame — the repo already has the seam the brief is reaching for, and it
+is the repository layer, not a module boundary.
+
+So the honest tier model is: **Tier 1 and Tier 2 are the same build, differing only in which
+database and which Worker environment they are deployed to.** Tier 2 buys isolation of data and
+blast radius; it buys no code difference, and should be priced as recurring operational cost (one
+more Neon project, one more Worker environment, one more migration target, one more pair of secret
+stores) rather than as engineering. "Configuration hell" is avoided by the rule already in force:
+if onboarding a client needs anything outside the database and the config layer, the abstraction has
+been violated — which is ADR-004's own rule of thumb, and the three entries above are each a place
+it is currently violated.
+
+**Tier 3 is the one that genuinely does not work, and it is already ruled on.** The 2026-09-07 entry
+in this log found that `Product` has one `basePrice`, `Inventory.productId` is `@unique`, and
+`CartItem` is `@@unique([cartId, productId])` — there is no variant dimension anywhere, so a
+non-grocery vendor cannot express size-by-colour or storage tiers. It recorded the verdict DO NOT
+PURSUE as design-system work and left the decision with `#398` in P10, which still needs its own
+`/propose`. Nothing has changed. Selling a "bespoke customisable" tier before `#398` is decided
+sells customisation the data model cannot absorb, and the pressure to deliver it is exactly what
+makes someone fork.
+
+**Confidence:** Known for every schema, config and workflow fact cited. That no client wants Tier 3
+badly enough to force `#398` is **Needs validation** — this brief is the second piece of evidence
+in six weeks that someone is being sold multi-vertical reuse.
+
+**Why it matters commercially:** it reframes the brief's hardest question as its cheapest. The
+answer is not an architecture programme — it is three concrete gaps (vendor provisioning, domain
+routing, catalogue import) plus a decision on whether Tier 2's recurring operational cost is priced
+into the contract. Answering it as an architecture programme would spend a milestone arriving where
+the repo already is.
+
+**Options considered:** fork per client — rejected, it voids the tree-wide tests that hold tenancy
+correct and ADR-004 decision 2's entire rationale; a separate feature-flag system — rejected,
+`VendorConfig` is that system and a second one would fork the configuration story instead of the
+code; a modular monolith refactor — rejected as a non-answer, the seam already exists at the
+repository layer; keep one codebase, treat Tier 2 as a deployment target, and gate Tier 3 on `#398`
+— the recommendation, and it requires no new architecture; build the migration fan-out and
+per-client environment tooling now — premature as its own project, but it is the thing to size once
+a second isolated-database client is real.
+
+**Cost of delay:** none for the architecture decision — this entry records it. The fan-out cost
+becomes real at the second Tier 2 client, not the first.
+
+**Next action:** DO NOT PURSUE — as an architecture programme, a fork, or a new flag layer. The
+recommendation is recorded here so it is not rediscovered; the three implementation gaps are the
+entries above, and Tier 3 stays with `#398`.
 
 ---
 

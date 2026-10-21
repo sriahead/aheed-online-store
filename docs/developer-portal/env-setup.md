@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.20.0"
-updated: 2026-10-19
+version: "1.21.0"
+updated: 2026-10-21
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -198,6 +198,30 @@ npm run db:seed
   single vendor, an unmatched host falls back to it (transition safety).
 - The SriMart Worker custom domains (`srimart.nocaped.com`, `srimart-staging.nocaped.com`) are
   declared in `wrangler.toml` so `wrangler deploy` doesn't tear them down.
+
+### A third vendor onward: `scripts/provision-vendor.ts` (#1197)
+
+The env vars above seed the **Aheed and SriMart fixtures**, and those two deliberately stay in
+`prisma/seed.ts`. They are the multi-tenant test data — SriMart's brand colours differ, it runs no
+loyalty scheme and offers no product labels — and `CLAUDE.md` requires branding checks be verified
+against a second vendor precisely because several false-positive against Aheed. Converting them to
+manifests would put that coverage at risk for no gain.
+
+**Any vendor after those two is a manifest file, not an edit to `prisma/seed.ts`:**
+
+```bash
+npx tsx scripts/provision-vendor.ts <manifest.json> --validate-only   # parses, no DB needed
+npx tsx scripts/provision-vendor.ts <manifest.json>                   # provisions
+```
+
+It writes `Vendor`, branding, config, delivery areas, fulfilment slots, loyalty tiers, discount
+codes, the footer rows and `VendorDomain`. It writes **no `Category` and no `Product`** — a newly
+provisioned vendor has an empty catalogue, and importing one is `#1201`. See
+`prisma/manifests/README.md` for the schema and the two manual follow-ups, and the operator
+runbook's "Adding a vendor host" for the `wrangler.toml` half, which is **not** data-only.
+
+It refuses to run against a host named in `secrets/staging.vars` or `secrets/production.vars`
+(`#490`), before constructing a client, with no override.
 
 ### Generated catalogue for scale testing (#489)
 

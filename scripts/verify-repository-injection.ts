@@ -38,9 +38,9 @@
  */
 
 import "dotenv/config";
-import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
+import { assertNotDeployedDatabase, normalizeHost, protectedHosts } from "./lib/protected-hosts";
 import { listCustomersForAdmin } from "@/lib/repositories/customers";
 import { getCatalogueHealth, getLoyaltyLiability } from "@/lib/repositories/reports";
 import { checkOrderLookupRateLimit } from "@/lib/repositories/order-lookup-rate-limit";
@@ -82,60 +82,25 @@ async function check(label: string, fn: () => Promise<string>) {
   }
 }
 
-/** Host only, lowercased, with Neon's `-pooler` suffix stripped so the pooled
- *  and direct URLs for one project compare equal. */
-function normalizeHost(url: string): string | null {
-  const match = /@([^:/?]+)/.exec(url);
-  if (!match) return null;
-  return match[1].toLowerCase().replace(/-pooler\./, ".");
-}
-
-/** Every host named by secrets/staging.vars and secrets/production.vars. */
-function protectedHosts(): { hosts: Set<string>; readFiles: string[] } {
-  const hosts = new Set<string>();
-  const readFiles: string[] = [];
-  for (const file of ["secrets/staging.vars", "secrets/production.vars"]) {
-    let contents: string;
-    try {
-      contents = readFileSync(file, "utf8");
-    } catch {
-      continue; // absent — handled by the caller, never silently ignored
-    }
-    readFiles.push(file);
-    for (const line of contents.split(/\r?\n/)) {
-      const m = /^\s*(?:DATABASE_URL|DIRECT_URL)\s*=\s*"?([^"\s]+)"?/.exec(line);
-      const host = m && normalizeHost(m[1]);
-      if (host) hosts.add(host);
-    }
-  }
-  return { hosts, readFiles };
-}
-
 async function main() {
   const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error("DIRECT_URL/DATABASE_URL is empty — check .env is present and loading.");
-  }
 
-  const host = normalizeHost(connectionString);
-  console.log("database:", host ?? "(unparseable)", "\n");
+  // The host, for the log line only. The REFUSAL is `assertNotDeployedDatabase` below — this call
+  // must never grow into a second, divergent copy of the rule.
+  console.log(
+    "database:",
+    (connectionString && normalizeHost(connectionString)) ?? "(unparseable)",
+    "\n",
+  );
 
-  // ---- guard, before any client is constructed -----------------------------
-  const { hosts, readFiles } = protectedHosts();
-  if (readFiles.length === 0) {
-    throw new Error(
-      "Neither secrets/staging.vars nor secrets/production.vars could be read, so this " +
-        "script cannot confirm it is NOT pointed at a deployed database. It writes rows, " +
-        "so it refuses rather than guessing. Restore those files and re-run.",
-    );
-  }
-  if (host && hosts.has(host)) {
-    throw new Error(
-      `REFUSING TO RUN: ${host} is a host named in ${readFiles.join(" / ")}, i.e. staging or ` +
-        `production. This script creates and deletes real rows and is only for a dev database.`,
-    );
-  }
-  console.log(`host is not staging/production (checked against ${readFiles.join(", ")})\n`);
+  // ---- guard, before any client is constructed (#490) ----------------------
+  // Extracted to scripts/lib/protected-hosts.ts so prisma/seed.ts's generated-catalogue path gets
+  // the same control instead of printing a host and trusting a human. Behaviour here is unchanged.
+  const { readFiles } = assertNotDeployedDatabase(connectionString);
+  console.log(
+    `host is not staging/production — checked against ${protectedHosts().hosts.size} protected ` +
+      `host(s) from ${readFiles.join(", ")}\n`,
+  );
 
   // The client a Workers request would never build: bare specifier, real Node.
   const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString }) });

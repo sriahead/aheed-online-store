@@ -60,3 +60,12 @@ kms/site-*/public/_pagefind/
 # shared by every vendor (ADR-004). A committed copy here would be a second,
 # unversioned source of truth for an asset the database already owns.
 /misc/
+
+# Client-supplied stock export (added 2026-10-21, eleventh Discover pass). A
+# prospective client's live retail prices, cost figures and 6,167-line product
+# list — their commercial data, not ours, and a git commit is permanent even if
+# the file is deleted later. It is an INPUT to a one-off import (#1197), never a
+# source of truth: the catalogue's system of record is the database.
+# Deliberately one named path rather than a docs/*.xls glob — a second export
+# under a different name should get its own decision, not silent coverage.
+docs/StockList.xls

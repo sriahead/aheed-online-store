@@ -127,10 +127,18 @@ Detail and the deployed-binding traps: `docs/developer-portal/env-setup.md`.
 - Before live-database work, diff `.env` and `.dev.vars` against `secrets/staging.vars` and
   `secrets/production.vars` — two files agreeing is not evidence they are right.
 - **Check the process environment too: an exported variable beats `.env`.** Before any Prisma CLI
-  command, run `printenv DIRECT_URL DATABASE_URL`; if either is set, prefix the command with
+  command, check `DIRECT_URL` and `DATABASE_URL`; if either is set, prefix the command with
   `env -u DIRECT_URL -u DATABASE_URL`, and read `prisma migrate status`'s datasource host before any
   `deploy`. A session-inherited production `DIRECT_URL` migrated production at `#1134` while both
   files correctly named dev.
+- **Check them ONE AT A TIME, and never branch on `printenv`'s exit code.** `printenv A B` prints
+  whichever variables are set but exits **non-zero if ANY is missing**, so
+  `printenv DIRECT_URL DATABASE_URL || echo "neither set"` prints the live production value *and*
+  "neither set" when only `DATABASE_URL` is absent. That false all-clear happened at `#1198`'s build
+  (2026-10-21) with a production `DIRECT_URL` exported, and a read-only query was one step from
+  running against production. Use a per-variable loop and test each with
+  `if printenv "$v" >/dev/null 2>&1`, or read `env | grep -c '^DIRECT_URL='`. Print the **host only**
+  (`printenv DIRECT_URL | sed -E 's#.*@([^:/?]+).*#\1#'`), never the whole value — `#175`.
 
 ## Commands
 
@@ -266,6 +274,12 @@ Policy: `specs/tech-stack.md`. Failures: `docs/developer-portal/runtime-pitfalls
   fact that the failing set changes between runs. **Do not bisect against them**; reverting code
   made the failure set grow in `#1180`, which is the opposite of what a real culprit does. Capping
   the pool returned the same tree to 286 files / 3583 tests green. `--minWorkers` is not a flag.
+- **Git Bash rewrites any argument that looks like a POSIX path, and the result reads as a product
+  bug.** `curl -o /dev/null` becomes `C:/Program Files/Git/dev/null` and fails with
+  `curl: (43) bad argument` reporting **HTTP `000`** for a page that is actually fine; a
+  `--path /cart` argument becomes `C:/Program Files/Git/cart`. Both happened at `#1187`, and the
+  `000` was briefly mistaken for a broken production deploy. Prefix with `MSYS_NO_PATHCONV=1`, or
+  drop `-o` and pipe the body instead. `-o NUL` does **not** avoid it.
 - **Stopping `npm run preview` does not stop it** — kill the whole `node`/`workerd` chain first, or
   the next build fails with `EBUSY`.
 - **Server actions and staff pages are drivable with `curl`, no browser needed.**
