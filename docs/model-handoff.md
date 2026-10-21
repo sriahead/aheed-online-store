@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.128.0"
-updated: 2026-10-21
+version: "1.129.0"
+updated: 2026-10-22
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -1054,8 +1054,12 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`P11 — Repeatable Vendor Onboarding` is OPEN (2026-10-21), and its first slice is MERGED TO
-  `staging`, NOT YET PROMOTED to `main`.** Opened after `/discover` on an external brief to onboard
+- **`P11 — Repeatable Vendor Onboarding` is OPEN (2026-10-21), and its first slice is IN
+  PRODUCTION (2026-10-22).** Promotion PR **#1208** merged as `7b703b9` (`staging -> main`, two
+  parents); `deploy-production` run `39689968404` succeeded, including the first production run of
+  the route-verification step; both production hosts serve `7b703b9` with `db.ok: true` and two
+  reference `sources`; `#490`, `#1197`, `#1198` are closed and `Done`. The "In Review" and
+  "outstanding" wording in the bullets below predates the promotion. Opened after `/discover` on an external brief to onboard
   a new inventory-and-stock-management client with their real 6,167-row stock export (eleventh
   Discover pass, `docs/research/discovery-log.md`). Milestone #24; Project #2's Phase field gained
   a `P11` option additively, all 19 pre-existing options passed through with their own ids and all
