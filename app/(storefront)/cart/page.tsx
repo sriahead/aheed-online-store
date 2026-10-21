@@ -59,13 +59,17 @@ export default async function CartPage({
     <PageContainer width="standard" padY="tight">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold text-primary">Your cart</h1>
-        {/* The other cart-entry path (P3d, #114) — discoverable without knowing the URL. */}
+        {/* The other cart-entry path (P3d, #114) — discoverable without knowing the URL. #1187
+            relabelled it "Smart Lists" to match the page it opens, and deliberately left it
+            pointing at the paste page rather than the new hub: this link exists to get a shopper
+            with a list straight to the textarea, and it is what keeps that a one-tap journey now
+            the header button opens the hub instead. */}
         <Link
           href="/shop-your-list"
           className="flex items-center gap-1.5 rounded-xl border border-primary/20 px-3 py-1.5 text-xs font-bold text-primary"
         >
           <ListChecks className="h-4 w-4" aria-hidden />
-          Quick Shop
+          Smart Lists
         </Link>
       </div>
 
