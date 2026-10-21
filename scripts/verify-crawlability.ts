@@ -50,6 +50,10 @@ const EXCLUDED_PREFIXES = [
   "/orders",
   "/feedback",
   "/shop-your-list",
+  // #1187 — the Quick Shop hub. Navigation with no indexable content of its own, so it is kept out
+  // of app/sitemap.ts's STATIC_PATHS for the same reason /shop-your-list is; this asserts it stays
+  // out. Its two authenticated tiles are already covered by the /account prefix above.
+  "/quick-shop",
   "/forgot-password",
   "/reset-password",
 ];

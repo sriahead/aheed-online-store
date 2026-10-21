@@ -121,23 +121,96 @@ corrected rows.
 Both are on the board, `P10`/`Backlog`, verified by a GraphQL `node` query rather than
 `gh project item-list`, which lags its own writes.
 
+## Fix pass — 2026-10-21, after validation pass 1 FAILED
+
+Validation found **one real regression** and confirmed 28 of 30 rows. What changed:
+
+**1. `scripts/verify-mobile-layout.ts` — the regression, fixed at the root.** Its `shoppingList`
+measurement selected the header link with `header a[href="/shop-your-list"]`. R15 repointed that
+link, so the selector could never match again — `/cart`'s only `/shop-your-list` link is in the page
+body, outside `<header>`. Confirmed by running it: the output carried `"shoppingList": null`. It
+fails **silently**, and `null` reads as "this page has no such link" rather than "this selector is
+stale", which is the exact green-but-meaningless failure mode this project keeps meeting.
+
+**The fix is not to chase the new URL.** It now matches on the **accessible name**,
+`header a[aria-label="Quick Shop"]`. The destination has moved twice (`#1142`, `#1187`) while the
+name has been "Quick Shop" since `#1145` and is pinned by *two* tests —
+`tests/header-shopping-list.test.tsx` and `tests/quick-shop-hub.test.tsx`, the latter also asserting
+it equals the visible text (WCAG 2.5.3). So the name is the stable handle and the URL is not. The
+output key keeps its original spelling so `#1142`'s and `#1180`'s recorded comparisons still read
+against the same field; the docstring at the top of the file says so.
+
+This is the **second** call site in the same family: `tests/header-shopping-list.test.tsx` was the
+first, caught during Build by the suite. Both were missed because the spec enumerated `app/` and
+`components/` but not `tests/` and `scripts/` — see the third deviation above. A repo-wide sweep for
+`a[href=` and the two route literals across both directories now confirms there is no third.
+
+**2. `scripts/verify-crawlability.ts` — new coverage, not a regression.** `/quick-shop` was absent
+from `EXCLUDED_PREFIXES`, the list asserting which routes stay out of the sitemap. The app was
+already correct (the live sitemap contains zero `quick-shop` occurrences, and R22 passed), but
+nothing asserted it would stay that way. Added for the same reason `/shop-your-list` is on that
+list.
+
+**3. Three `validation.md` rows were wrong, and the rows were corrected — not the artifact.**
+Stating which, because loosening a row to make it pass is only legitimate when the row itself was
+defective:
+
+- **R16** required `grep -n 'pasting'` to print nothing. It prints one hit — the docstring quoting
+  the old `title` as the record of why it changed, this repo's documented convention. The
+  requirement was always satisfied: the attribute is `title="Favourites, regulars, lists and
+  bundles"`. The row now reads the attribute instead of grepping the file.
+- **R23** told the validator to read `SEED_SRIMART_HOST` from `.env`/`.dev.vars`. **That key is in
+  neither file** — it is a seed-time variable, so the row was unrunnable as written. SriMart is
+  `srimart.localhost:8787` under `npm run preview`, via `lib/tenant.ts`'s host-with-port
+  `VendorDomain` fallback (`#514`); `scripts/verify-crawlability.ts:37` already hardcodes that
+  origin. The row now names it.
+- **Setup step 4 (was 3)** said to sign in with `$DEMO_ACCOUNT_PASSWORD` without naming a file.
+  `.env` and `.dev.vars` hold **different values**, and only `.dev.vars` works under preview
+  (per-key precedence, Cloudflare context first). `.env`'s value returns a clean `401` that looks
+  like a broken auth path. The row now names the file and records that
+  `scripts/demo-accounts.ts add` never resets an existing account's password — it calls `signUp`
+  only when the user is absent, so a `[reconciled]` line says nothing about which password is
+  stored.
+
+**4. Two setup steps added from what the live run actually needed.** A new step 1 requires checking
+the process environment for an exported `DIRECT_URL` **by host only, never the whole value** —
+because one was live during this run, pointing at **production**. Every script in the pass had to be
+prefixed with `env -u DIRECT_URL -u DATABASE_URL`. The Worker was unaffected (runtime reads
+`DATABASE_URL` from `.dev.vars` and never `DIRECT_URL`, confirmed against dev by a distinct
+`db.checkedAt` and the dev CDN), so it is a scripts-only hazard — but it is the `#1134` condition
+sitting in the shell.
+
+No shipped behaviour changed in this pass: both edited files are dev instruments, so `CHANGELOG.md`
+is untouched by the fix.
+
+### What the live run proved that Build could not
+
+`demo-srimart-admin@example.com` now exists in dev, closing a gap open for three slices. With it,
+R23's second-vendor half is **measured**: the SriMart host renders the hub with all five new
+sentences byte-identical to Aheed's and zero vendor or grocery literals. R18's live half was made
+non-vacuous by creating a saved list, confirming `<h2>Your lists</h2>` renders once with the list
+name and `"Your saved lists"` is gone; the row was deleted afterwards.
+
 ## Known-shaky areas
 
-- **Nothing here has been exercised under `npm run preview`.** Every live row in `validation.md`
-  (R2, R9, R10, R13, R17, R18, R20, R23) is unrun. The two session-gated behaviours — the guest
-  redirect and the signed-in 200 — are covered only by `tests/quick-shop-hub.test.tsx`, which
-  **mocks `getAuth`**. That proves the control flow, not that a real Better Auth session resolves on
-  this route. Start there.
-- **R18's live half needs a precondition that is easy to miss.** The "Your lists" `<h2>` renders
-  only when `savedLists.length > 0` (`shop-your-list/page.tsx:45`). With no saved list on the test
-  account, a `curl | grep` for it returns nothing and looks like a defect. `validation.md`'s setup
-  step 4 covers this; skipping it makes that half vacuous, not passing.
-- **The two-vendor check is unverified for the third consecutive slice unless setup step 1 is run.**
-  `demo-srimart-admin@example.com` is absent from the dev database. This slice touches
-  `ShoppingListLink`, which renders in **every** storefront header on both vendors, so SriMart is
-  the case most worth seeing. `npx tsx scripts/demo-accounts.ts add` in a clean shell with
-  `DEMO_ACCOUNT_PASSWORD` set closes it. The SriMart host is not a fixed literal — read it from
-  `SEED_SRIMART_HOST` in `.env`/`.dev.vars` rather than guessing a hostname.
+- **RESOLVED at validation pass 1 (2026-10-21): the live rows have now been run under
+  `npm run preview`.** R2, R9, R10, R13, R14, R15, R16, R17, R18, R19, R20, R22 and R23 were all
+  exercised against a real Worker on the dev database. The guest redirect is a real `307` to
+  `/login` and the signed-in page a real `200` carrying the heading and the exact sentence — not
+  just the mocked control flow in `tests/quick-shop-hub.test.tsx`. **Still open:** R27 (the PR's
+  `closingIssuesReferences`, no PR yet) and R30's CI half (nothing pushed; local green is not CI).
+- **RESOLVED: R18's live half is no longer vacuous, but the precondition is still real.** The "Your
+  lists" `<h2>` renders only when `savedLists.length > 0` (`shop-your-list/page.tsx:45`), so with no
+  saved list a `curl | grep` returns nothing and looks like a defect. A list was created in dev,
+  the heading confirmed rendering once with the list name, and the row then deleted. Anyone
+  re-running R18 must redo that setup (step 5) or the check is vacuous rather than passing.
+- **RESOLVED: the two-vendor check is now measured, and the three-slice fixture gap is closed.**
+  `demo-srimart-admin@example.com` was added to the dev database on 2026-10-21, so all five demo
+  accounts exist. The SriMart hub renders with all five new sentences byte-identical to Aheed's and
+  zero vendor or grocery literals. **The host is a fixed literal after all:**
+  `srimart.localhost:8787`, resolved by `lib/tenant.ts`'s host-with-port `VendorDomain` fallback
+  (`#514`) — an earlier draft of this file and of R23 wrongly sent the reader to a non-existent
+  `SEED_SRIMART_HOST`.
 - **Copy is the thin spot, and `tests/vendor-neutral-copy.test.ts` cannot help.** It is a
   **denylist**: a green run says the known-bad strings are absent, not that five new sentences are
   neutral. The four tile descriptions, the hub's intro sentence and the placeholder need reading by

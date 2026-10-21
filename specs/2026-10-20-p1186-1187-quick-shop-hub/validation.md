@@ -42,25 +42,43 @@ chain before any build — stopping `preview` does not stop it, and the next bui
 
 Setup, all one-off, in this order:
 
-1. `npx tsx scripts/demo-accounts.ts add` in a clean shell, with `DEMO_ACCOUNT_PASSWORD` set
-   (min 8 chars). `demo-srimart-admin@example.com` has been absent from the dev database for two
-   slices, which is what left the last two two-vendor checks unverified. `demo-customer@example.com`
-   is the account the signed-in rows below use.
-2. `export BASE=http://localhost:8787` — what `npm run preview` serves. Every `$BASE` below is this.
-3. **Create the session cookie jar once; the rows marked `-b jar.txt` all depend on it:**
+1. **Check the process environment before running ANY Node script or Prisma command here.** Run
+   `echo "$DIRECT_URL" | grep -oE '@[a-z0-9.-]+\.neon\.tech'` — **the host only, never the whole
+   value, which contains the password.** If anything prints, that exported value beats `.env`, and
+   at `#1134` a session-inherited production `DIRECT_URL` migrated production. Compare the host
+   against `secrets/production.vars` and `secrets/staging.vars`; if it is not the dev host, prefix
+   every command in this file with `env -u DIRECT_URL -u DATABASE_URL`. **This was live during the
+   2026-10-21 validation run** — an exported production `DIRECT_URL` was present, and every script
+   below had to be guarded. The running Worker is unaffected either way (runtime reads
+   `DATABASE_URL` from `.dev.vars` and never `DIRECT_URL`), so this is a scripts-only hazard.
+2. `npx tsx scripts/demo-accounts.ts add` in a clean shell, with `DEMO_ACCOUNT_PASSWORD` set
+   (min 8 chars), guarded per step 1. The script prints its target with the password masked —
+   confirm it names the dev host. `demo-srimart-admin@example.com` had been absent from the dev
+   database for three slices, which is what left the previous two-vendor checks unverified; it was
+   added on 2026-10-21, so this step may now be a no-op. `demo-customer@example.com` is the account
+   the signed-in rows below use.
+3. `export BASE=http://localhost:8787` — what `npm run preview` serves. Every `$BASE` below is this.
+4. **Create the session cookie jar once; the rows marked `-b jar.txt` all depend on it.** Take the
+   password from **`.dev.vars`, not `.env`** — the two files hold *different* `DEMO_ACCOUNT_PASSWORD`
+   values, and `.dev.vars` is the one in force under `npm run preview` (per-key precedence:
+   Cloudflare request context first). `.env`'s value returns a clean `401` that looks exactly like a
+   broken auth path. Note also that **`scripts/demo-accounts.ts add` never resets an existing
+   account's password** — it calls `signUp` only when the user is absent, so a `[reconciled]` line
+   tells you nothing about which password is stored.
    ```
+   PW=$(grep -h '^DEMO_ACCOUNT_PASSWORD=' .dev.vars | head -1 | sed 's/^DEMO_ACCOUNT_PASSWORD=//' | tr -d '"')
    curl -s -c jar.txt -X POST $BASE/api/auth/sign-in/email \
      -H 'content-type: application/json' \
-     -d "{\"email\":\"demo-customer@example.com\",\"password\":\"$DEMO_ACCOUNT_PASSWORD\"}"
+     -d "{\"email\":\"demo-customer@example.com\",\"password\":\"$PW\"}"
    ```
    Confirm it worked before going further: `curl -s -o /dev/null -w '%{http_code}\n' -b jar.txt
    $BASE/account` prints `200`, not a 3xx. A silently-empty jar makes every signed-in row below
    fail as if the page were broken.
-4. **R18 needs at least one saved list on that account**, or its `<h2>` block does not render at all
+5. **R18 needs at least one saved list on that account**, or its `<h2>` block does not render at all
    (`shop-your-list/page.tsx:45` guards on `savedLists.length > 0`). Add one from `/cart` →
    Smart Lists → save, or confirm one exists: `curl -s -b jar.txt $BASE/account/lists | grep -c
    'no saved lists yet'` prints `0`.
-5. Run `npx vitest run --maxWorkers=4` **alone**, never beside or straight after a build. At the
+6. Run `npx vitest run --maxWorkers=4` **alone**, never beside or straight after a build. At the
    default worker count a loaded machine produces 2-10 scattered, moving, plausible failures that
    look exactly like a real regression. The tells are the durations (5-9 s for a trivial assertion)
    and that the failing set changes between runs. Do not bisect against them.
@@ -78,20 +96,20 @@ Setup, all one-off, in this order:
 | R7  | Integration  | `grep -nE '^export const (dynamic\|revalidate)' "app/(storefront)/quick-shop/page.tsx"` prints nothing and exits 1; `grep -n 'force-dynamic' "app/(storefront)/layout.tsx"` hits (the group already forces it). |
 | R8  | Integration  | `grep -n 'export const dynamic = "force-dynamic"' "app/(storefront)/account/regulars/page.tsx"` hits; `curl -s --cookie jar.txt $BASE/account/regulars \| grep -c '<title>Your regulars'` prints `1`. |
 | R9  | E2E          | Under `npm run preview`, with **no** cookie jar: `curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' $BASE/account/regulars` prints a 3xx whose redirect URL path is `/login`. (This is the same shape `#232` used for `/account/favourites`.) |
-| R10 | E2E          | With the jar from setup step 3: `curl -s -o body.html -w '%{http_code}\n' -b jar.txt $BASE/account/regulars` prints `200`, then `grep -c '>Your regulars<' body.html` and `grep -cF 'Your regularly ordered items will appear here once you start shopping.' body.html` each print at least `1`. |
+| R10 | E2E          | With the jar from setup step 4: `curl -s -o body.html -w '%{http_code}\n' -b jar.txt $BASE/account/regulars` prints `200`, then `grep -c '>Your regulars<' body.html` and `grep -cF 'Your regularly ordered items will appear here once you start shopping.' body.html` each print at least `1`. |
 | R11 | Unit         | `npx vitest run --maxWorkers=4 tests/quick-shop-hub.test.tsx` exits 0 — it imports `REGULARS_PLACEHOLDER_MESSAGE` from `@/lib/regulars` and asserts the rendered Regulars page contains that exact value. Then `grep -c 'Your regularly ordered items will appear here' "app/(storefront)/account/regulars/page.tsx"` prints `0` (the page holds the import, not a second copy) while `grep -c 'Your regularly ordered items will appear here' lib/regulars.ts` prints `1`. |
 | R12 | Integration  | `npx vitest run --maxWorkers=4 tests/page-container.test.ts` exits 0 (asserts `width="standard"` for this page from its registry row); `curl -s -b jar.txt $BASE/account/regulars \| grep -o 'href="/account"[^>]*>.\{0,40\}'` shows the `Your account` back link. |
 | R13 | E2E          | `curl -s -b jar.txt $BASE/account \| grep -o 'href="/account/regulars"'` prints one match, and the surrounding anchor's text is `Your regulars` (`curl -s -b jar.txt $BASE/account \| grep -o 'href="/account/regulars"[^<]*<[^>]*>[^<]*<[^<]*Your regulars'` hits). |
 | R14 | Integration  | Comments stripped first, the same way as R17/R18 — the replacement comment legitimately quotes the old copy as the record of why it went, which is this repo's documented convention (see `tests/vendor-neutral-copy.test.ts`'s header). Run `node scripts/../- <<'EOF'`-style one-liner or simply: `npx tsx -e "import{readFileSync}from'fs';const s=readFileSync('app/(storefront)/account/page.tsx','utf8').replace(/\/\*[\s\S]*?\*\/\|\{\/\*[\s\S]*?\*\/\}\|\/\/.*$/gm,'');process.exit(/recurring shopping lists\|quick shopping/.test(s)?1:0)"` — exits 0. A bare `grep` on this file prints one hit, inside that comment, and is **not** a failure. |
 | R15 | Integration  | `grep -n 'href="/quick-shop"' components/layout/ShoppingListLink.tsx` hits; `grep -c 'shop-your-list' components/layout/ShoppingListLink.tsx` prints `0`. |
-| R16 | Security & Accessibility | `npx vitest run --maxWorkers=4 tests/quick-shop-hub.test.tsx` exits 0 — it renders `ShoppingListLink` and asserts `getByRole("link").getAttribute("aria-label")` equals its `textContent.trim()` equals `Quick Shop`. Then `grep -n 'pasting' components/layout/ShoppingListLink.tsx` prints nothing and exits 1. |
+| R16 | Security & Accessibility | `npx vitest run --maxWorkers=4 tests/quick-shop-hub.test.tsx` exits 0 — it renders `ShoppingListLink` and asserts `getByRole("link").getAttribute("aria-label")` equals its `textContent.trim()` equals `Quick Shop`. For the `title` half, read the attribute itself rather than grepping the file: `grep -n 'title=' components/layout/ShoppingListLink.tsx` shows `title="Favourites, regulars, lists and bundles"` and no `pasting`. **A bare `grep -n 'pasting' <file>` prints one hit and is NOT a failure** — it is the docstring quoting the old `title` as the record of why it changed, this repo's documented convention (`tests/vendor-neutral-copy.test.ts`'s header). An earlier draft of this row required that grep to print nothing, which would have failed a correct implementation. |
 | R17 | E2E          | `curl -s -o sl.html $BASE/shop-your-list`, then `grep -c '<h1[^>]*>Smart Lists</h1>' sl.html` and `grep -c '<title>Smart Lists' sl.html` each print `1`. For the "no `Quick Shop` outside a comment" half, run `npx tsx -e "import{readFileSync}from'fs';const s=readFileSync('app/(storefront)/shop-your-list/page.tsx','utf8').replace(/\/\*[\s\S]*?\*\/\|\/\/.*$/gm,'');process.exit(s.includes('Quick Shop')?1:0)"` — it exits 0 when the only survivors are comments, 1 otherwise. A bare `grep` cannot answer this row, because the file's comments legitimately quote the old name. |
-| R18 | Integration  | Source first, deterministically: `grep -c '<h2[^>]*>Your lists</h2>' "app/(storefront)/shop-your-list/page.tsx"` prints `1`. Repo-wide, with comments stripped the same way as R17: no `.tsx` file under `app/` or `components/` still contains `Your saved lists` — `npx tsx -e "…"` over both trees exits 0. Then confirm it renders, with the saved list from setup step 4 in place: `curl -s -b jar.txt $BASE/shop-your-list \| grep -c '>Your lists<'` prints at least `1`. If setup step 4 was skipped this live half is vacuous, not passing. |
+| R18 | Integration  | Source first, deterministically: `grep -c '<h2[^>]*>Your lists</h2>' "app/(storefront)/shop-your-list/page.tsx"` prints `1`. Repo-wide, with comments stripped the same way as R17: no `.tsx` file under `app/` or `components/` still contains `Your saved lists` — `npx tsx -e "…"` over both trees exits 0. Then confirm it renders, with the saved list from setup step 5 in place: `curl -s -b jar.txt $BASE/shop-your-list \| grep -c '>Your lists<'` prints at least `1`. If setup step 5 was skipped this live half is vacuous, not passing. |
 | R19 | Integration  | `grep -n 'href="/shop-your-list"' "app/(storefront)/cart/page.tsx" "app/(storefront)/account/lists/page.tsx"` prints one hit in each file; `grep -n 'Smart Lists' "app/(storefront)/cart/page.tsx" "app/(storefront)/account/lists/page.tsx"` prints one hit in each; `grep -c 'Quick Shop' "app/(storefront)/cart/page.tsx" "app/(storefront)/account/lists/page.tsx"` prints `0` for both. |
 | R20 | Regression   | `curl -s -b jar.txt $BASE/account/lists \| grep -o '<h1[^>]*>Your lists</h1>'` prints one match, and `git diff origin/staging -- "app/(storefront)/account/lists/page.tsx"` shows no change to the `<h1>` line. |
 | R21 | Integration  | `git diff origin/staging -- tests/page-container.test.ts` shows exactly two added `EXPECTED` keys, both `{ width: "standard", padY: "default" }`; `npx vitest run --maxWorkers=4 tests/page-container.test.ts` exits 0. Prove the registry is load-bearing: temporarily delete one of the two rows and confirm the "every page on disk has an expected width recorded" case **fails**, then restore it. |
 | R22 | Regression   | `git diff origin/staging -- app/sitemap.ts` is empty, and `grep -n 'STATIC_PATHS' -A2 app/sitemap.ts` shows neither `/quick-shop` nor `/account/regulars`. |
-| R23 | Security & Accessibility | `npx vitest run --maxWorkers=4 tests/vendor-neutral-copy.test.ts` exits 0. Then read the five new sentences in `git diff origin/staging` and confirm each names no vendor and no product category — that test is a **denylist**, so a green run is not evidence about new copy, only about the known-bad strings. Second vendor, measured not assumed: get the host from the dev config rather than guessing one (`grep SEED_SRIMART_HOST .env .dev.vars`), then `npx tsx scripts/verify-mobile-layout.ts --base http://<that-host>:8787 --map-host 127.0.0.1 --path /quick-shop --widths 390 --desktop` renders the hub under SriMart's branding. Confirm the four tile labels and sentences are byte-identical to Aheed's — the copy is vendor-neutral, so any difference is a defect. |
+| R23 | Security & Accessibility | `npx vitest run --maxWorkers=4 tests/vendor-neutral-copy.test.ts` exits 0. Then read the five new sentences in `git diff origin/staging` and confirm each names no vendor and no product category — that test is a **denylist**, so a green run is not evidence about new copy, only about the known-bad strings. Second vendor, measured not assumed: **SriMart is `srimart.localhost:8787` under `npm run preview`** — `lib/tenant.ts` falls back to a `VendorDomain` lookup on the host *with* its port for exactly this case (`#514`), and `scripts/verify-crawlability.ts:37` already hardcodes that origin. (An earlier draft of this row said to read `SEED_SRIMART_HOST` from `.env`/`.dev.vars`. **That key is in neither file** — it is a seed-time variable, not a dev-runtime one — so the row was unrunnable as written.) `curl -s -H 'Host: srimart.localhost:8787' http://localhost:8787/quick-shop` returns 200; all five new sentences are byte-identical to Aheed's (`grep -cF` each prints the same count), and `grep -coE "Aheed|grocery|groceries"` on that body prints `0`. The copy is vendor-neutral, so any difference between the two vendors is a defect. |
 | R24 | Unit         | `npx vitest run --maxWorkers=4 tests/quick-shop-hub.test.tsx` exits 0, and the mutation check is recorded in `build-notes.md`: for each of the three subjects (an href, a tile label, the placeholder constant) the assertion was seen to **fail** with the subject changed and pass with it restored. An un-mutated new test file does not satisfy this row. |
 | R25 | Regression   | `git diff --stat origin/staging -- prisma/ package.json package-lock.json` prints nothing, and `git status --porcelain prisma/migrations` is empty. |
 | R26 | Regression   | `git diff origin/staging -- tests/quick-shop-copy.test.tsx` is empty, and `npx vitest run --maxWorkers=4 tests/quick-shop-copy.test.tsx` exits 0. |
