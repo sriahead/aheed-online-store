@@ -18,9 +18,11 @@ import { PageContainer } from "@/components/layout/PageContainer";
  */
 export const dynamic = "force-dynamic";
 
-// #1145 — the feature's one shopper-facing name. The URL stays /shop-your-list so bookmarks, the
-// sitemap and existing links keep working.
-export const metadata: Metadata = { title: "Quick Shop" };
+// #1145 gave the feature one shopper-facing name; #1187 splits that name deliberately, now that a
+// hub exists: "Quick Shop" is the hub at /quick-shop, and this page — one of its four tiles — is
+// "Smart Lists". The URL stays /shop-your-list so bookmarks, the sitemap and existing links keep
+// working, which is the same reasoning #1145 used.
+export const metadata: Metadata = { title: "Smart Lists" };
 
 /** Rows shown before the shopper has to click through to /account/lists (#806). */
 const QUICK_PICK_LIMIT = 5;
@@ -40,11 +42,15 @@ export default async function ShopYourListPage() {
   return (
     <PageContainer width="narrow" padY="tight">
       {/* #1145 — no intro paragraph: the textarea's own label says what to do. */}
-      <h1 className="mb-5 text-xl font-bold text-primary">Quick Shop</h1>
+      <h1 className="mb-5 text-xl font-bold text-primary">Smart Lists</h1>
 
       {savedLists.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-sm font-bold text-primary">Your saved lists</h2>
+          {/* #1187 — this block and /account/lists are the SAME data (both from
+              getShoppingListService().list()), so they carry the same name. It read "Your saved
+              lists" while that page read "Your lists", which would have left one concept wearing
+              three labels once this page became "Smart Lists" — the #1145 failure, re-created. */}
+          <h2 className="text-sm font-bold text-primary">Your lists</h2>
           <ul className="mt-2 space-y-2">
             {savedLists.slice(0, QUICK_PICK_LIMIT).map((list) => (
               <li key={list.id} className="rounded-2xl border border-black/10 bg-surface-muted p-3">

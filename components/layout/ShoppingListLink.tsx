@@ -6,6 +6,12 @@ import { ShoppingBag } from "lucide-react";
  * the two read as one way to find products. It moved out of the right-hand nav, which freed the
  * shared header row for the search field.
  *
+ * Since #1187 it opens the Quick Shop **hub** (`/quick-shop`) rather than the paste-a-list page,
+ * which is now "Smart Lists" and is one of the hub's four tiles. A shopper who only ever pastes a
+ * list pays one extra tap for that; `/cart`'s own link still reaches the paste page directly. The
+ * `title` changed with the destination — it used to say "Shop by pasting your list", which stopped
+ * being true of this link the moment it opened a hub.
+ *
  * Deliberately NOT part of the search `<form>`: a Quick Shop click is a navigation, not a search,
  * so it must not submit the bar's `q` and `category`.
  *
@@ -15,10 +21,10 @@ import { ShoppingBag } from "lucide-react";
 export function ShoppingListLink() {
   return (
     <Link
-      href="/shop-your-list"
+      href="/quick-shop"
       aria-label="Quick Shop"
       className="flex min-h-tap min-w-tap shrink-0 justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
-      title="Shop by pasting your list"
+      title="Favourites, regulars, lists and bundles"
     >
       <ShoppingBag className="w-4 h-4 text-primary" aria-hidden />
       <span className="hidden sm:inline whitespace-nowrap">Quick Shop</span>

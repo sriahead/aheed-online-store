@@ -132,8 +132,11 @@ import { join } from "node:path";
  *   per item `{ name, width, height, atCentre }`, where `atCentre` is whether the element at the
  *   item's centre (`elementFromPoint`) is that item or inside it — false means something covers or
  *   clips it. Read at scroll 0. `null` on a page with no menu (a vendor without collection).
- * - `shoppingList`: the displayed `a[href="/shop-your-list"]` inside `header`, as `{ top, left,
+ * - `shoppingList`: the displayed `a[aria-label="Quick Shop"]` inside `header`, as `{ top, left,
  *   width, height }` at scroll 0, or `null`. Compare its `top` with `headerSearch.button.top`.
+ *   Matched on the accessible name because the destination has moved twice (#1142, #1187) while the
+ *   name has not; the output key keeps its original spelling so `#1142`'s and `#1180`'s recorded
+ *   comparisons still read against the same field.
  */
 
 const HEIGHT = 844;
@@ -574,7 +577,14 @@ const MEASURE = `(async () => {
         : [],
     };
   }
-  const listLink = [...document.querySelectorAll('header a[href="/shop-your-list"]')].find((el) =>
+  // #1187 — selected by ACCESSIBLE NAME, not by href. This read \`a[href="/shop-your-list"]\` until
+  // the header's link was repointed at /quick-shop, and then matched nothing: \`shoppingList\` went
+  // permanently \`null\`, which reads as "this page has no such link" rather than "this selector is
+  // stale". The destination has now moved twice (#1142, #1187) while the accessible name has been
+  // "Quick Shop" since #1145 and is pinned by two tests — tests/header-shopping-list.test.tsx and
+  // tests/quick-shop-hub.test.tsx both assert it, the latter also asserting it equals the visible
+  // text (WCAG 2.5.3). So the name is the stable handle here and the URL is not.
+  const listLink = [...document.querySelectorAll('header a[aria-label="Quick Shop"]')].find((el) =>
     shown(el),
   );
   const shoppingList = listLink

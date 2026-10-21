@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.122.0"
-updated: 2026-10-20
+version: "1.124.0"
+updated: 2026-10-21
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,52 +39,86 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-20, `#232`/`#1185` Build notes (supersedes the "Nothing is in flight" line in the
-  `#1180` entry below).** Slice 1 of the **Quick Shop programme** is built but **not validated and
-  not merged**, on `feature/p232-1185-favourites-card-controls`
-  (`specs/2026-10-20-p232-1185-favourites-card-controls/`). Gate 1 approved 2026-10-20.
-  - **`#1180`'s carry-forward is resolved.** `be4ece1` ("docs: final documentation pass for #1180")
-    is the first commit on this branch, so `#1180`'s roadmap rows reach `origin` with this slice's
-    PR. `npm run sdd:audit` exits 0 only *with* that commit — `origin/main`'s roadmap still has no
-    row citing PR #1182 or #1183, so **do not drop or rebase it away.**
-  - **The programme is three slices plus one deferral**, all filed and on the board as `Backlog`,
-    Phase `P10`: `#232` + `#1185` (this slice), `#1186` (Regulars placeholder), `#1187` (Quick Shop
-    four-tile hub and the Smart Lists rename, which must land **last**, once all four tiles have
-    destinations), `#1184` (reading a list from a photo, deferred out of the programme), and
-    `#1188` (favourites paging, deferred from `#232`).
-  - **ONE REQUIREMENT IS COMPLETELY UNVERIFIED AND IT IS THE LOAD-BEARING ONE.** The migration
-    `20261020150000_p232_favourite` **has not been applied to any database** — `prisma migrate
-    status` still lists it as pending on dev. So `scripts/verify-favourites.ts` has never run (it
-    fails with `relation "public.Favourite" does not exist`), and that script is the only real
-    evidence behind the duplicate-key guard. `prisma migrate deploy` is blocked in this environment
-    even against dev, so it must be handed to the owner as a `! <command>`. Nothing in this slice
-    has touched a database: every green check is a type check, a unit test over rendered DOM, a
-    build or a grep.
-  - **Favourites is authenticated-only**, resolving `#232`'s long-open guest question by owner
-    decision. A guest sees the heart as a `/login` link. `#232`'s body cites its own obligation as
-    P6.6 "R1"; **it is R6**, and that file's R6 is amended on the record to accept the
-    `/account` and hub entry points instead of a header control.
-  - **`#1185` reverses `#956`'s Gate 1 decision** on the card's pre-add quantity picker, by owner
-    instruction. Recorded in the code and in `specs/design-system.md` 1.24.0 so it is not
-    "restored" as a regression.
-  - **A new standing hazard is now in `CLAUDE.md`:** `prisma migrate dev --create-only` refuses on
-    dev (`#895`, reproduced verbatim) and offers only `migrate reset`, which drops every dev row.
-    Hand-author migrations instead. `prisma migrate status` gives no warning beforehand.
-  - **The exported production `DIRECT_URL` recurred for a FIFTH session**, and the production
-    password was **disclosed in this session's transcript again** by a `printenv` that echoed the
-    value — the same mistake as 2026-10-20's earlier session and `#175`. Check the host only
-    (`echo "$DIRECT_URL" | grep -oE '@[a-z0-9.-]+\.neon\.tech'`). **Rotation is still
-    OUTSTANDING and is now verified, not assumed:** the `production` GitHub environment's
-    `DIRECT_URL` was last updated **2026-08-05T23:56:44Z**, months before the first disclosure. All
-    three steps remain to be done — GitHub `DIRECT_URL`, the Cloudflare Worker `DATABASE_URL`, and
-    a Worker redeploy.
-  - **`gh project item-list` lags its own writes.** After `item-add` returned an item id and two
-    `item-edit` calls succeeded, `item-list` at `--limit 600` *and* `--limit 700` still reported 588
-    items and omitted the new one entirely. Verify a board write with a GraphQL
-    `node(id: "PVTI_…")` query instead; `--limit` alone is not sufficient.
+- **2026-10-21, `#1186`/`#1187` Build notes. BUILT, NOT VALIDATED AND NOT MERGED — nothing here is
+  in production.** The Quick Shop programme's remaining two slices were specced and built as **one**
+  slice, `specs/2026-10-20-p1186-1187-quick-shop-hub/`, on branch
+  `feature/p1186-1187-quick-shop-hub` (three commits over `origin/staging`). `/quick-shop` is a
+  four-tile hub; `/account/regulars` is an authenticated-only placeholder; `/shop-your-list` keeps
+  its URL and becomes "Smart Lists". Local gates green (`lint`, `typecheck`, `format:check`;
+  **290 files / 3620 tests** with `--maxWorkers=4` run alone; `npm run build` compiles and lists
+  both new routes as dynamic). **No live `npm run preview` check has been run** — every live row in
+  that slice's `validation.md` is unrun, and the two session-gated behaviours are covered only by a
+  test that mocks `getAuth`.
+  - **The owner answered all three of this slice's open questions at `/propose` (2026-10-20), and
+    they are recorded as comments on `#1186` and `#1187`**, not only in a conversation. Regulars is
+    authenticated-only; the hub is static and shows all four tiles with the authenticated-only ones
+    redirecting on tap; the hub replaces the header's direct link. Any earlier note that `#1187` is
+    blocked is superseded.
+  - **`#1187`'s own premise was partly wrong, and the correction is now a standing rule.**
+    `/shop-your-list`'s "Your saved lists" block and `/account/lists` are not two list concepts —
+    they are the same rows from the same `getShoppingListService().list()` call. The fix was one
+    `<h2>`. Recorded in `docs/developer-portal/app-conventions.md` **1.19.0** as two rules: check
+    whether the "other" thing is the same data before renaming a surface, and a link's label is its
+    destination's own heading.
+  - **The previous slice's documentation rides this branch.** `#232`/`#1185`'s roadmap rows for PR
+    #1189/#1190 were never pushed; they are commit `4962919` here. Until this branch merges,
+    `origin/staging`'s `specs/roadmap.md` cites those two PRs **zero** times, so `sdd:audit` run
+    against `origin` would disagree with `sdd:audit` run on this branch.
+  - **Two issues filed rather than absorbed: `#1191`** (Favourites *and* Regulars are both absent
+    from `components/account/AccountNav.tsx`, and `tests/account-nav.test.tsx` has no parity check
+    against the pages on disk, unlike the staff-nav and page-container registries) and **`#1192`**
+    (the Regulars derivation, filed because `#1186` closes with the placeholder and the real feature
+    would otherwise be untracked). Both `P10`/`Backlog`, verified by GraphQL `node`.
+  - **Open board `High` items are unchanged: `#697` and `#1021`**, both owner/data actions. `#901`
+    is still the one other `In Progress` item and still gates `#697`.
+  - **`demo-srimart-admin@example.com` is still absent from the dev database**, and this is now the
+    **third** consecutive slice whose two-vendor check depends on it. One command in a clean shell:
+    `npx tsx scripts/demo-accounts.ts add` with `DEMO_ACCOUNT_PASSWORD` set.
+  - **The production Neon credential rotation is STILL outstanding.** Re-verified 2026-10-20, not
+    copied: the `production` GitHub environment's `DIRECT_URL` was last updated
+    **2026-08-05T23:56:44Z**. All three steps remain.
+- **2026-10-20, `#232`/`#1185` Document (supersedes this entry's own "built but not validated and
+  not merged" predecessor, and the `#1180` entry's "Nothing is in flight").** **Favourites and the
+  product card's single `+` are IN PRODUCTION.** Promotion PR #1190 merged as `4e53a68`
+  (`staging -> main`, a true merge commit with two parents), closing exactly `[232, 1185]`; both are
+  `Done`. `deploy-production` run `39477660839` **success**, and its log shows
+  `20261020150000_p232_favourite` applied to the production database. Production `/api/health` on
+  **both** vendor hosts serves `4e53a68` with `db.ok: true`, `reference.reachable: true` and two
+  populated `sources`; `/account/favourites` answers 307. `npm run sdd:audit` exits **0**.
+  `specs/roadmap.md` 1.170.0 carries both rows.
+  - **The Quick Shop programme is BUILT OUT — superseded 2026-10-21, see the entry above this
+    one.** This bullet's "one slice of three done" and the "`#1187` has an unanswered owner
+    question" bullet that followed it are both **stale**: the owner answered all three questions at
+    `/propose` on 2026-10-20, and `#1186` and `#1187` were specced and built together as one slice
+    on `feature/p1186-1187-quick-shop-hub`. Combining them is what satisfies `#1187`'s own "must
+    land LAST" constraint by construction, so the dead-tile hazard that bullet warned about cannot
+    occur. `#1184` (reading a list from a photo) and `#1188` (favourites paging) remain deferred out
+    of the programme and are **not** closed by it.
+  - **Favourites is authenticated-only**, which resolved `#232`'s long-open guest question by owner
+    decision. P6.6's **R6** (not R1, as `#232`'s own body claims) is amended on the record to accept
+    the `/account` and hub entry points instead of a header control.
+  - **Two standing hazards were added to `CLAUDE.md` this loop.** `migrate dev --create-only`
+    **refuses on dev** (`#895`, reproduced verbatim) and offers only `migrate reset`, which drops
+    every dev row — hand-author migrations instead, and note `prisma migrate status` gives no
+    warning first. And the card's add control is now a single `+`, reversing `#956`.
+  - **Validation ran twice and was NOT independent either time** — the same Opus 5 context built,
+    fixed and validated the slice, by owner choice. Pass 1 failed with two findings worth
+    remembering as patterns: a verification script that exercised the **wrong database adapter**
+    (`PrismaNeon`/`P2002` instead of the shipped `PrismaNeonHttp`/`"23505"`) and reported
+    `ALL CHECKS PASSED`; and a 2px control overlap invisible to a class-list check, because the
+    card's skew renders those controls 46px wide rather than the 44px token assumed.
+  - **Run `kms:build-index` after a slice's LAST doc edit, not before.** This slice ran it at Build,
+    edited `specs/design-system.md` again at Fix, and left `app/(admin)/staff/runbook/docs.ts` stale
+    while `ARTIFACT_INDEX.md` stayed current — the `#537` shape, caught only at validation pass 2.
+  - **The production Neon credential rotation is STILL outstanding**, and the password was disclosed
+    in session transcripts twice on 2026-10-20. Verified, not assumed: the `production` GitHub
+    environment's `DIRECT_URL` was last updated **2026-08-05T23:56:44Z**. All three steps remain —
+    GitHub `DIRECT_URL`, the Cloudflare Worker `DATABASE_URL`, and a Worker redeploy. Check the host
+    only (`echo "$DIRECT_URL" | grep -oE '@[a-z0-9.-]+\.neon\.tech'`), never the whole value.
+  - **`gh project item-list` lags its own writes** — it omitted a just-added item at `--limit 700`.
+    Verify a board write with a GraphQL `node(id: "PVTI_…")` query instead.
   - **Open board `High` items are unchanged: `#697` and `#1021`**, both owner/data actions rather
-    than code. `#901` remains the one `In Progress` item and still gates `#697`.
-
+    than code. `#901` is still the one `In Progress` item and still gates `#697`.
 - **2026-10-20, `#1180` Document (supersedes the "`staging` is ahead of `main` by two slices"
   bullet below — it is stale).** `#1180` **and** `#1177` are **in production**, as are `#1169` and
   `#1173` before them. Promotion PR #1183 merged as `39b238d` at 2026-10-20T12:45:58Z, closing

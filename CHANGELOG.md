@@ -6,7 +6,20 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Quick Shop is now a hub with four tiles, and Regulars is the fourth** (issues `#1187`, `#1186`; `specs/2026-10-20-p1186-1187-quick-shop-hub/`). No schema change, no migration, no new dependency. Finishes the Quick Shop programme that `#232`/`#1185` opened.
+  - **What a shopper sees.** The header's Quick Shop button opened a textarea; it now opens `/quick-shop`, with tiles for Your favourites, Your regulars, Smart Lists and Value Bundles. `/bundles` gets its first header-reachable entry point. A shopper who only ever pastes a list pays one extra tap — `/cart`'s own link still goes straight to the paste page, which is what keeps that journey one tap.
+  - **Both issues shipped as one slice on purpose.** `#1187` required that the hub "lands last, once all four tiles have real destinations"; combining it with `#1186` satisfies that by construction, so no deployed state ever put a dead tile in front of a shopper.
+  - **`/account/regulars` is a placeholder, and deliberately so.** "Regularly ordered" has no definition yet: a derivation needs a threshold, a window, vendor scoping (per ADR-004 a shopper may hold orders with more than one vendor), a ruling on which order states count — `#795`'s cancelled-but-unrefunded question applies to a line item too — and somewhere to bound or cache a per-shopper aggregate over order history. All five are recorded in `lib/regulars.ts` and need their own `/propose`. The page is authenticated-only, like favourites: order history requires an account, so a guest-reachable version could never hold content.
+  - **The hub reads no session and queries no database.** All four tiles render for everyone; the two authenticated-only ones redirect on tap, as `/account/favourites` already did. It is also the one page here with no `export const dynamic` — the `(storefront)` layout already forces it for the group, confirmed by `next build` listing both new routes as server-rendered on demand.
+
 ### Changed
+
+- **The paste-a-list page is "Smart Lists", and saved lists have one name again** (issue `#1187`; same slice as above). `/shop-your-list` keeps its URL, so bookmarks, the sitemap and every inbound link keep working — the reasoning `#1145` used.
+  - **`#1187`'s own framing was wrong in a way that made the fix smaller.** It called `/shop-your-list`'s "Your saved lists" block and `/account/lists` two different list concepts. They are the same data from the same `getShoppingListService().list()` call — the block is a truncated preview linking into that page. So adding "Smart Lists" would have left **one concept wearing three labels**, which is exactly what `#1145` was opened to fix, re-created a fortnight later. Renaming that one `<h2>` to "Your lists" is the whole fix.
+  - **Each tile's label is its destination page's own heading**, not a shorter synonym — a tile that disagrees with the page it opens is the same disease. The `/account` Lists tile also stopped saying "recurring shopping lists, and quick shopping", which collided by name with Regulars and Quick Shop once both existed.
+  - `components/account/AccountNav.tsx` is deliberately untouched: `/account/favourites` is already absent from it and nothing catches that, so the gap is tracked as its own issue rather than fixed in passing.
 
 - **A product card's add control is a single `+`** (issue `#1185`; `specs/2026-10-20-p232-1185-favourites-card-controls/`). No schema change of its own, no new dependency. Shipped with `#232` below, because both rewrite the same region of `components/product/ProductCard.tsx`.
   - **What went.** The "Add" text button, and the `sm:`-and-up pre-add minus/plus picker that chose a quantity before anything was added. One tap on the `+` adds one item, and the card then swaps to the existing `CartQuantityStepper` exactly as it did before — so the only thing lost is choosing a quantity *before* the first add.

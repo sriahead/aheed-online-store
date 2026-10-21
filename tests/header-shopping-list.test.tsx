@@ -8,7 +8,9 @@ import { cleanup, render, screen } from "@testing-library/react";
  * P8.5f hid the "Shop List" link on the landing page, so the owner found no Shopping List entry
  * there. It now renders on every non-portal route, with an `aria-label` because its visible text
  * is hidden below `sm`, and the label and visible text agree (WCAG 2.5.3, label in name). #1145
- * renamed it from "Shopping List" to "Quick Shop". Everything else `Header` renders is stubbed: each piece has its own
+ * renamed it from "Shopping List" to "Quick Shop", and #1187 repointed it from the paste-a-list
+ * page to the new Quick Shop hub — the name stayed, the destination changed.
+ * Everything else `Header` renders is stubbed: each piece has its own
  * test, and this one is about which links and departments the header puts in front of a shopper.
  */
 
@@ -84,7 +86,9 @@ describe("Header Shopping List link (#1131 R25)", () => {
       const links = screen.getAllByRole("link", { name: "Quick Shop" });
       expect(links).toHaveLength(2);
       for (const link of links) {
-        expect(link.getAttribute("href")).toBe("/shop-your-list");
+        // #1187 — was `/shop-your-list`. The button now opens the Quick Shop hub, and the paste
+        // page it used to open is one of that hub's four tiles, retitled "Smart Lists".
+        expect(link.getAttribute("href")).toBe("/quick-shop");
         expect(link.getAttribute("aria-label")).toBe("Quick Shop");
         // The visible text is contained in the accessible name.
         expect(link.textContent?.trim().toLowerCase()).toBe("quick shop");
