@@ -1,0 +1,79 @@
+{
+  "id": "e8a3b100-0000-4000-a000-000000000003",
+  "slug": "example-grocer",
+  "name": "Example Grocer",
+  "host": "example-grocer.nocaped.com",
+  "branding": {
+    "name": "Example Grocer",
+    "tagline": "A worked example — replace every value in this file",
+    "logoStorageKey": null,
+    "brandGreenDark": "#14532d",
+    "brandGreen": "#2f855a",
+    "brandOrange": "#b45309",
+    "brandRed": "#b91c1c",
+    "brandCream": "#f7f5ef",
+    "brandGreenTint": "#e7f1ea",
+    "brandOrangeTint": "#fdf1df",
+    "brandRedTint": "#fbe9e9"
+  },
+  "config": {
+    "localityName": "Example Town",
+    "senderName": "Example Grocer",
+    "senderEmail": "orders@example.invalid",
+    "searchPlaceholder": "Search the aisles",
+    "bannerNote": null,
+    "heroSubtitle": null,
+    "deliveryFeePence": 349,
+    "freeDeliveryThresholdPence": 3000,
+    "minimumOrderPence": 1000,
+    "loyaltyEnabled": false,
+    "pointsPerPoundEarned": 1,
+    "pencePerPointRedeemed": 1,
+    "minRedeemPoints": 100,
+    "tierWindowDays": 30,
+    "pointsExpiryMonths": null,
+    "showHalalLabel": false,
+    "showFreshLabel": false,
+    "showOrganicLabel": false,
+    "showVegetarianLabel": false,
+    "showGlutenFreeLabel": false,
+    "showHmcCertification": false,
+    "storeDescription": null
+  },
+  "deliveryPrefixes": ["EX1", "EX2"],
+  "loyaltyTiers": [
+    {
+      "key": "REGULAR",
+      "name": "Regular",
+      "thresholdPence": 5000,
+      "multiplierBps": 12500,
+      "sortOrder": 1
+    }
+  ],
+  "discountCodes": [],
+  "footer": {
+    "location": {
+      "addressLine1": "1 Example Street",
+      "city": "Example Town",
+      "postcode": "EX1 1AA"
+    },
+    "config": {
+      "contactPhone": "[PHONE]",
+      "contactEmail": "[EMAIL]",
+      "companyNumber": "[NUMBER]",
+      "vatNumber": "[NUMBER]",
+      "openingHoursNote": "Click & Collect orders are ready during opening hours."
+    },
+    "showSecureCheckoutNote": false,
+    "weeklyHours": [
+      { "dayOfWeek": 1, "openTime": "09:00", "closeTime": "18:00" },
+      { "dayOfWeek": 2, "openTime": "09:00", "closeTime": "18:00" },
+      { "dayOfWeek": 3, "openTime": "09:00", "closeTime": "18:00" },
+      { "dayOfWeek": 4, "openTime": "09:00", "closeTime": "18:00" },
+      { "dayOfWeek": 5, "openTime": "09:00", "closeTime": "18:00" },
+      { "dayOfWeek": 6, "openTime": "09:00", "closeTime": "17:00" },
+      { "dayOfWeek": 0, "openTime": "10:00", "closeTime": "16:00" }
+    ],
+    "paymentBadges": ["VISA", "MASTERCARD"]
+  }
+}

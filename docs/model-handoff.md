@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.124.0"
+version: "1.127.0"
 updated: 2026-10-21
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,16 +39,17 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-21, `#1186`/`#1187` Build notes. BUILT, NOT VALIDATED AND NOT MERGED — nothing here is
-  in production.** The Quick Shop programme's remaining two slices were specced and built as **one**
-  slice, `specs/2026-10-20-p1186-1187-quick-shop-hub/`, on branch
-  `feature/p1186-1187-quick-shop-hub` (three commits over `origin/staging`). `/quick-shop` is a
-  four-tile hub; `/account/regulars` is an authenticated-only placeholder; `/shop-your-list` keeps
-  its URL and becomes "Smart Lists". Local gates green (`lint`, `typecheck`, `format:check`;
-  **290 files / 3620 tests** with `--maxWorkers=4` run alone; `npm run build` compiles and lists
-  both new routes as dynamic). **No live `npm run preview` check has been run** — every live row in
-  that slice's `validation.md` is unrun, and the two session-gated behaviours are covered only by a
-  test that mocks `getAuth`.
+- **2026-10-21, `#1186`/`#1187` Document (supersedes this entry's own "BUILT, NOT VALIDATED AND NOT
+  MERGED" predecessor). The Quick Shop hub and the Regulars placeholder are IN PRODUCTION.** The
+  programme's remaining two slices shipped as **one**,
+  `specs/2026-10-20-p1186-1187-quick-shop-hub/`. Promotion PR #1194 merged as `098c224`
+  (`staging -> main`, a true merge commit with two parents), closing exactly `[1186, 1187]`; both
+  are `Done`. `deploy-production` run `39566151259` **success**. Production `/api/health` on
+  **both** vendor hosts serves `098c224` with `db.ok: true`, `reference.reachable: true` and two
+  populated `sources`; `/quick-shop` renders its `<h1>` and all four tile hrefs live.
+  `npm run sdd:audit` exits **0** and `specs/roadmap.md` 1.171.0 carries both rows.
+  **The Quick Shop programme is complete as specified** — `#1184` (photo/OCR) and `#1188`
+  (favourites paging) were deferred out of it and remain open.
   - **The owner answered all three of this slice's open questions at `/propose` (2026-10-20), and
     they are recorded as comments on `#1186` and `#1187`**, not only in a conversation. Regulars is
     authenticated-only; the hub is static and shows all four tiles with the authenticated-only ones
@@ -60,23 +61,59 @@ reconciliation. If overall project state did not materially change, leave this f
     `<h2>`. Recorded in `docs/developer-portal/app-conventions.md` **1.19.0** as two rules: check
     whether the "other" thing is the same data before renaming a surface, and a link's label is its
     destination's own heading.
-  - **The previous slice's documentation rides this branch.** `#232`/`#1185`'s roadmap rows for PR
-    #1189/#1190 were never pushed; they are commit `4962919` here. Until this branch merges,
-    `origin/staging`'s `specs/roadmap.md` cites those two PRs **zero** times, so `sdd:audit` run
-    against `origin` would disagree with `sdd:audit` run on this branch.
-  - **Two issues filed rather than absorbed: `#1191`** (Favourites *and* Regulars are both absent
+  - **The previous slice's carry-forward is DISCHARGED.** `#232`/`#1185`'s roadmap rows for PR
+    #1189/#1190 had never been pushed and lived only on a local branch; `origin/staging` cited those
+    two PRs **zero** times until `6e8bad1` landed. They are on `origin` now. The lesson generalises:
+    a `docs/<slice>-document` branch that is never carried is invisible to `sdd:audit` run against
+    the remote while still passing locally, so **check `git show origin/staging:specs/roadmap.md`
+    rather than the working tree** when confirming a previous loop was documented.
+  - **Validation found one real regression, and the shape of it is worth remembering.**
+    `scripts/verify-mobile-layout.ts` identified the header link by `a[href="/shop-your-list"]`, so
+    the repoint left it matching nothing and emitting `"shoppingList": null` — silently, because
+    `null` reads as "no such link on this page". A dev instrument that identifies a UI element by
+    URL breaks invisibly the next time that URL moves; it now matches on the **accessible name**,
+    which two tests pin and which survived both repoints. Recorded in
+    `docs/developer-portal/app-conventions.md`.
+  - **Three issues filed rather than absorbed: `#1191`** (Favourites *and* Regulars are both absent
     from `components/account/AccountNav.tsx`, and `tests/account-nav.test.tsx` has no parity check
-    against the pages on disk, unlike the staff-nav and page-container registries) and **`#1192`**
-    (the Regulars derivation, filed because `#1186` closes with the placeholder and the real feature
-    would otherwise be untracked). Both `P10`/`Backlog`, verified by GraphQL `node`.
+    against the pages on disk, unlike the staff-nav and page-container registries), **`#1192`**
+    (the Regulars derivation, filed because `#1186` closed with the placeholder and the real feature
+    would otherwise be untracked) and **`#1195`** (see below). All `P10`/`Backlog`, verified by
+    GraphQL `node`.
+  - **`#1195` SUPERSEDES THE HUB THAT JUST SHIPPED, by owner decision on seeing it live.** Quick
+    Shop becomes a **three-tab section under `/account`** (`/account/quick-shop`, defaulting to
+    Smart Lists), and **Value Bundles is dropped from the concept** — `/bundles` is untouched,
+    public and still in the sitemap. The issue carries the two constraints that shaped it: a Quick
+    Shop bar beside `AccountNav` would stack two navs on Favourites and Regulars, and the tile
+    destinations were three different widths so a persistent bar would shift as you switch. **Two
+    things remain undecided there** — whether Smart Lists keeps guest access (it is public today;
+    `canSave` gates only *saving*, so moving it under `/account` makes paste-a-list sign-in-only),
+    and whether `#1191` folds in, since both change `AccountNav`. Do not start it without those.
   - **Open board `High` items are unchanged: `#697` and `#1021`**, both owner/data actions. `#901`
     is still the one other `In Progress` item and still gates `#697`.
-  - **`demo-srimart-admin@example.com` is still absent from the dev database**, and this is now the
-    **third** consecutive slice whose two-vendor check depends on it. One command in a clean shell:
-    `npx tsx scripts/demo-accounts.ts add` with `DEMO_ACCOUNT_PASSWORD` set.
-  - **The production Neon credential rotation is STILL outstanding.** Re-verified 2026-10-20, not
-    copied: the `production` GitHub environment's `DIRECT_URL` was last updated
-    **2026-08-05T23:56:44Z**. All three steps remain.
+  - **RESOLVED: all five demo accounts now exist in the dev database**, `demo-srimart-admin`
+    included (added 2026-10-21), after three consecutive slices whose two-vendor check was blocked
+    by its absence. Two traps found while using them: **`scripts/demo-accounts.ts add` never resets
+    an existing account's password** (it calls `signUp` only when the user is absent, so a
+    `[reconciled]` line says nothing about the stored password), and **`.env` and `.dev.vars` hold
+    DIFFERENT `DEMO_ACCOUNT_PASSWORD` values** — only `.dev.vars` works under `npm run preview`,
+    and `.env`'s gives a clean `401` that looks exactly like a broken auth path. SriMart is reached
+    at **`srimart.localhost:8787`** under preview (`lib/tenant.ts`'s host-with-port `VendorDomain`
+    fallback, `#514`); there is no `SEED_SRIMART_HOST` in either env file.
+  - **The production Neon credential rotation is STILL outstanding, and got worse on 2026-10-21.**
+    Re-verified, not copied: the `production` GitHub environment's `DIRECT_URL` was last updated
+    **2026-08-05T23:56:44Z**. All three steps remain (GitHub `DIRECT_URL`, the Cloudflare Worker
+    `DATABASE_URL`, a Worker redeploy).
+    - **A production `DIRECT_URL` was EXPORTED in the working shell during this session** — the
+      live `#1134` condition. Nothing was run against it: every Node script in the validation pass
+      was prefixed with `env -u DIRECT_URL -u DATABASE_URL`, and the host was diffed against
+      `secrets/production.vars` before any of them. The Worker is unaffected either way (runtime
+      reads `DATABASE_URL` from `.dev.vars` and never `DIRECT_URL`), so this is a **scripts-only**
+      hazard — but it is why the check belongs before every Prisma or Node command, not once.
+    - **The password was disclosed into a transcript a third time**, by a bare
+      `printenv DIRECT_URL`. `CLAUDE.md` already says to check the **host only**
+      (`echo "$DIRECT_URL" | grep -oE '@[a-z0-9.-]+\.neon\.tech'`); that rule exists precisely
+      because the whole value leaks the credential. Rotation is now overdue on three disclosures.
 - **2026-10-20, `#232`/`#1185` Document (supersedes this entry's own "built but not validated and
   not merged" predecessor, and the `#1180` entry's "Nothing is in flight").** **Favourites and the
   product card's single `+` are IN PRODUCTION.** Promotion PR #1190 merged as `4e53a68`
@@ -166,6 +203,16 @@ reconciliation. If overall project state did not materially change, leave this f
     shell does **not** clear it for tool calls: each call spawns a child of the launching process
     and re-inherits. Until the launcher is found, the only reliable mitigation is prefixing
     `env -u DIRECT_URL -u DATABASE_URL`.
+    **2026-10-21 additions (fifth session, `#1198`'s build).** Set again, same host. Nothing new
+    about the launcher — but the **mitigation itself was nearly defeated**, and that is the durable
+    part: `printenv DIRECT_URL DATABASE_URL` exits **non-zero when ANY named variable is missing**,
+    so the combined form `CLAUDE.md` used to recommend printed the live production value *and* a
+    "neither exported" all-clear when only `DATABASE_URL` was absent. A read-only query was one step
+    from running against production on the strength of that. `CLAUDE.md`'s Config & secrets section
+    now requires checking **one variable at a time** and never branching on `printenv`'s exit code.
+    The guard shipped in `#490` (`scripts/lib/protected-hosts.ts`) refuses this host by name before
+    any client is constructed, and was verified doing so against this exact exported value — so
+    bulk-write scripts are now covered even when the human check is misread.
     **The production Neon password was disclosed in the 2026-10-20 session transcript** by a
     diagnostic that echoed the variable's value instead of masking it (the `#175` mistake, repeated).
     **Rotation is OUTSTANDING** and needs all three: the GitHub environment `DIRECT_URL`, the
@@ -1006,6 +1053,61 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **`P11 — Repeatable Vendor Onboarding` is OPEN (new, 2026-10-21), and its first slice is BUILT
+  BUT NOT VALIDATED.** Opened after `/discover` on an external brief to onboard a new
+  inventory-and-stock-management client with their real 6,167-row stock export (eleventh Discover
+  pass, `docs/research/discovery-log.md`). Milestone #24; Project #2's Phase field gained a `P11`
+  option additively, all 19 pre-existing options passed through with their own ids and all 452 set
+  Phase values across 601 items verified unchanged.
+  - **Slice 1 — `specs/2026-10-21-p11-onboarding-foundation/`**, closing **`#490`**, **`#1198`**,
+    **`#1197`**. Built on branch `feature/p11-onboarding-foundation`, commits `ce9ff81` (spec) and
+    `099ad05` (implementation). **Not validated, not merged, no PR.** 30 requirements; `lint`,
+    `typecheck`, `format:check`, `kms:validate` and vitest (292 files / 3642 tests, `--maxWorkers=4`)
+    green, docs site 255 pages.
+    - **The database-dependent requirements were run in-session on 2026-10-21 and PASS — but that is
+      NOT Gate 3.** It ran in the same context that wrote the code, so it cannot catch what that
+      context is blind to. **The slice remains BUILT, NOT INDEPENDENTLY VALIDATED**, and still needs
+      `/validate` from a fresh context on Sonnet 5. R7, R10, R11, R12, R13, R18, R19 and R21 passed;
+      **R6 is PARTIAL** — the guard's refusal is proven (including against the real exported
+      production `DIRECT_URL`), but its end-to-end seed form needs valid staging credentials this
+      validation would not use. R11 passed by a different mechanism than its validation row
+      describes, because this dev database holds the real staging hostnames rather than the
+      `localhost` ones the row assumes. Full record and both caveats:
+      `specs/2026-10-21-p11-onboarding-foundation/build-notes.md`.
+    - **The branch split was tested and rejected on evidence.** A `git rebase --onto origin/staging
+      643237b` conflicts on `specs/roadmap.md` at commit 3 of 6 — five of `643237b`'s seven files
+      (`ARTIFACT_INDEX.md`, `CLAUDE.md`, `app/(admin)/staff/runbook/docs.ts`,
+      `docs/model-handoff.md`, `specs/roadmap.md`) are also touched by the P11 commits, and the
+      change-log conflict would force a hand-decision about `#1186`/`#1187`'s own PR #1193/#1194
+      rows, which must reach `staging` regardless. The scratch branch was deleted and the real
+      branch is untouched. **Ship the docs tail along with P11 and say so in the PR body.**
+  - **Branch caveat.** That branch's first commit is `643237b`, the undelivered `#1186`/`#1187`
+    documentation tail, which rides along because cherry-picking the P11 commits onto `staging`
+    would conflict on `specs/roadmap.md` (both touched its front-matter and change-log tail, in a
+    file carrying 1,063 pre-existing mojibake sequences, `#762`). `docs/p1186-1187-document` still
+    points at `b882491` and has no PR. Decide whether to split before opening the PR.
+  - **Two owner decisions gate the rest of P11**, both board Status `Deferred`: **`#1196`** —
+    storefront or stock management, which sizes `#1199` (VAT) entirely; and **`#1200`** — which of
+    the 51 restricted and non-deliverable catalogue lines may be sold. **`#1201`** (the Excel
+    adapter) is blocked on both plus three client answers. A decision page for the owner and client
+    is published as a private Artifact.
+  - **ADR-004 decisions 3 and 7 are now CORRECTED (1.14.0), and this is durable truth worth not
+    rediscovering.** A new vendor host is **not** data-only: every host is an individual
+    `custom_domain = true` route in `wrangler.toml`, and a deploy omitting a live host tears its
+    custom domain down. A wildcard was investigated against the live Cloudflare account and
+    rejected: `nocaped.com` is an active `full` zone on the **Free** plan and proxied wildcard DNS
+    is no longer Enterprise-only, but **Worker Custom Domains cannot be wildcards at all**, and a
+    wildcard route plus Universal SSL each cover exactly **one** subdomain label — while
+    `staging.aheedfoodcentre.nocaped.com` is two deep and serves a certificate only because a Custom
+    Domain issues one per hostname. Do not re-propose a wildcard without solving that first.
+  - **Deferred items filed at `/build-notes`:** `#1202` (the seed's `SEED_REMOVE_GENERATED` delete
+    path is still print-and-trust), `#1203` (`AHEED_VENDOR_ID` declared twice), `#1204`
+    (`kms:coverage` walks gitignored `/misc/`, so it fails locally **and its message recommends the
+    harmful fix** — do not re-baseline), `#1205` (no in-app vendor creation; needs the
+    platform-admin authorisation story `/staff/*` lacks). **`#436`** (Neon backups/PITR, `P09.2`,
+    open) already tracks the backup gap — **a client handover promising a recovery responsibility
+    needs it closed**, so it is a candidate to pull into P11 rather than re-file.
 
 - **Owner's 2026-10-17 "Website Updates" brief, split into three slices.** The owner approved
   the clubbing at `/propose`.

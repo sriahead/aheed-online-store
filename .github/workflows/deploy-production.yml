@@ -61,6 +61,20 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
 
+      # #1198 — refuse to deploy a wrangler.toml that does not route a vendor currently trading in
+      # THIS environment. A wrangler deploy that omits a host which already has a custom domain
+      # tears that domain down, and nothing compared the file against VendorDomain before this.
+      #
+      # Deliberately here rather than in quality.yml, which CLAUDE.md otherwise requires: the check
+      # needs this environment's DIRECT_URL, which a PR runner does not have, so there it could only
+      # skip — and a skip line is not a pass. It must stay AFTER migrate (so VendorDomain is current)
+      # and BEFORE the deploy below (the step that can destroy a domain).
+      - name: Verify Worker routes cover every trading vendor
+        run: npx tsx scripts/verify-worker-routes.ts --env production
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DIRECT_URL }}
+
       - name: Deploy to Workers
         run: |
           echo "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID --env production

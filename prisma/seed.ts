@@ -5,7 +5,14 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { getStorage } from "@/lib/storage";
+import { assertNotDeployedDatabase } from "../scripts/lib/protected-hosts";
 import { AHEED_FOOTER_DEFAULTS, seedFooterDefaults } from "./seed-footer";
+import {
+  seedFulfilmentSchedule,
+  upsertVendorDomain,
+  upsertVendorSatellites,
+  type VendorSatellites,
+} from "./provision-vendor";
 import { deriveUnitPricePenceForSort } from "@/components/product/unit-price";
 import {
   GENERATED_SLUG_PREFIX,
@@ -56,6 +63,16 @@ async function putTracked(key: string, body: string, contentType: string): Promi
 const AHEED_VENDOR_ID = "a4ed0000-0000-4000-a000-000000000001";
 
 async function main() {
+  // #490 fast-fail: checked here, before ANY query, so a protected host is refused before
+  // a single row of the ordinary fixture catalogue is written — not just before the generated
+  // write inside maybeSeedGeneratedCatalogue. Without this, SEED_SCALE_PRODUCTS pointed at a
+  // protected host would still run healthCheck.count() and the whole ordinary seed first, which
+  // both defeats "fail before anything is written" and makes the guard unprovable without real
+  // staging/production credentials, since an auth error on healthCheck masks it.
+  if (process.env.SEED_SCALE_PRODUCTS?.trim()) {
+    assertNotDeployedDatabase(connectionString);
+  }
+
   const count = await prisma.healthCheck.count();
   if (count === 0) {
     await prisma.healthCheck.create({ data: { label: "walking-skeleton" } });
@@ -81,7 +98,7 @@ async function main() {
   await seedSubcategoryProducts(AHEED_VENDOR_ID, AHEED_SUBCATEGORY_PRODUCTS);
   await seedFeaturedProducts(AHEED_VENDOR_ID, AHEED_FEATURED_SLUGS);
   await refreshProductImages(CATALOGUE);
-  await upsertVendorSatellites(AHEED_VENDOR_ID, AHEED_SATELLITES);
+  await upsertVendorSatellites(prisma, AHEED_VENDOR_ID, AHEED_SATELLITES);
   await seedFooterDefaults(prisma, AHEED_VENDOR_ID, AHEED_FOOTER_DEFAULTS);
   // After the catalogue: bundles resolve their constituents by product slug.
   await seedBundles(AHEED_VENDOR_ID, AHEED_BUNDLES);
@@ -96,7 +113,7 @@ async function main() {
   const srimartHost = process.env.SEED_SRIMART_HOST?.trim();
 
   if (aheedHost) {
-    await upsertVendorDomain(AHEED_VENDOR_ID, aheedHost);
+    await upsertVendorDomain(prisma, AHEED_VENDOR_ID, aheedHost);
   } else {
     console.log(
       "SEED_AHEED_HOST unset — skipping VendorDomain (single-vendor host fallback stays)",
@@ -114,12 +131,12 @@ async function main() {
     await seedSubcategoryProducts(SRIMART_VENDOR_ID, SRIMART_SUBCATEGORY_PRODUCTS);
     await seedFeaturedProducts(SRIMART_VENDOR_ID, SRIMART_FEATURED_SLUGS);
     await refreshProductImages(SRIMART_CATALOGUE);
-    await upsertVendorSatellites(SRIMART_VENDOR_ID, SRIMART_SATELLITES);
+    await upsertVendorSatellites(prisma, SRIMART_VENDOR_ID, SRIMART_SATELLITES);
     await seedBundles(SRIMART_VENDOR_ID, SRIMART_BUNDLES);
     await seedPriceTiers(SRIMART_VENDOR_ID, SRIMART_PRICE_TIERS);
     await seedAttributes(SRIMART_VENDOR_ID, SRIMART_ATTRIBUTES);
     await seedSearchSynonyms(SRIMART_VENDOR_ID);
-    await upsertVendorDomain(SRIMART_VENDOR_ID, srimartHost);
+    await upsertVendorDomain(prisma, SRIMART_VENDOR_ID, srimartHost);
   } else if (srimartHost && !aheedHost) {
     console.log("SEED_SRIMART_HOST set but SEED_AHEED_HOST is not — skipping SriMart to stay safe");
   } else if (aheedHost && !srimartHost) {
@@ -214,239 +231,6 @@ async function seedThemes() {
     });
   }
   console.log(`seeded ${THEMES.length} Theme rows`);
-}
-
-async function upsertVendorDomain(vendorId: string, host: string) {
-  const normalized = host.toLowerCase();
-  await prisma.vendorDomain.upsert({
-    where: { host: normalized },
-    create: { vendorId, host: normalized, isCanonical: true },
-    update: { vendorId, isCanonical: true },
-  });
-  console.log(`mapped host ${normalized} -> ${vendorId}`);
-}
-
-// ADR-004 slice 4 — per-vendor branding/config/delivery satellites (slice 1 shipped
-// them empty). Brand primitives mirror the eight --color-brand-* tokens in
-// design-system/tokens/tokens.css; injected as CSS custom properties per request.
-type VendorSatellites = {
-  branding: {
-    name: string;
-    tagline: string;
-    logoStorageKey: string | null;
-    brandGreenDark: string;
-    brandGreen: string;
-    brandOrange: string;
-    brandRed: string;
-    brandCream: string;
-    brandGreenTint: string;
-    brandOrangeTint: string;
-    brandRedTint: string;
-  };
-  config: {
-    localityName: string;
-    senderName: string;
-    senderEmail: string;
-    searchPlaceholder: string;
-    // P7.5c+f — per-vendor storefront copy (#239). Nullable in the schema
-    // because a null HIDES its element; both seeded vendors set them.
-    bannerNote: string | null;
-    heroSubtitle: string | null;
-    // P3a — delivery rules are vendor data, not constants. Deliberately
-    // different per vendor so the cart proves it reads them from the DB.
-    deliveryFeePence: number;
-    freeDeliveryThresholdPence: number | null;
-    minimumOrderPence: number;
-    // P5a — loyalty is vendor data too (#135). Aheed runs a scheme; SriMart
-    // deliberately does not, which is what proves the per-vendor switch rather
-    // than assuming it.
-    loyaltyEnabled: boolean;
-    pointsPerPoundEarned: number;
-    pencePerPointRedeemed: number;
-    minRedeemPoints: number;
-    tierWindowDays: number;
-    pointsExpiryMonths: number | null;
-    // #905 — which product labels the staff form offers, and the store description the AI
-    // prompts are given. Deliberately opposite per vendor: Aheed (grocer) offers all six,
-    // SriMart (electronics) none, which is what proves the gate is per-vendor data.
-    showHalalLabel: boolean;
-    showFreshLabel: boolean;
-    showOrganicLabel: boolean;
-    showVegetarianLabel: boolean;
-    showGlutenFreeLabel: boolean;
-    showHmcCertification: boolean;
-    storeDescription: string | null;
-  };
-  deliveryPrefixes: string[];
-  loyaltyTiers: {
-    key: string;
-    name: string;
-    thresholdPence: number;
-    multiplierBps: number;
-    sortOrder: number;
-  }[];
-  // P5b — discount codes are vendor data too (#145). Aheed gets one sample code;
-  // SriMart deliberately gets none, which is what proves codes are per-vendor
-  // rather than a platform-wide list.
-  discountCodes: {
-    code: string;
-    description: string;
-    kind: "PERCENTAGE" | "FIXED_AMOUNT";
-    value: number;
-    minSubtotalPence: number;
-    remainingRedemptions: number | null;
-    maxPerCustomer: number | null;
-  }[];
-};
-
-/**
- * Weekly fulfilment slots and express windows (P10, #750).
- *
- * `#401` and `#402` shipped `VendorFulfilmentSlot`, `VendorExpressSchedule` and the four
- * `VendorConfig` flags that gate them with NO writer at all — not a staff page, and not this file.
- * Live staging therefore carried both flags `false` and zero rows of either kind, so the delivery
- * calendar and express collection could never render. `/staff/fulfilment` is the real writer; this
- * gives a freshly seeded environment something to render before anyone opens it.
- *
- * WHY `offerCollection` IS READ RATHER THAN SEEDED. It is not set anywhere in this file — both
- * vendors take Prisma's `false` default here, and the live value is whatever an admin has since
- * chosen in Storefront's delivery rules (Aheed's staging row is `true`, SriMart's is `false`).
- * Seeding collection slots or express windows for a vendor that does not offer collection would
- * write rows nothing can ever render, so the collection half is conditional on the stored value.
- *
- * IDEMPOTENCE. `VendorFulfilmentSlot` and `VendorExpressSchedule` carry no unique constraint, so
- * there is no natural key to upsert on. Each row is matched on the tuple that identifies it in
- * practice — method, day and start time — and created only when absent, so a re-run adds nothing and
- * leaves a capacity an admin has since tuned exactly as they left it.
- */
-async function seedFulfilmentSchedule(vendorId: string) {
-  const config = await prisma.vendorConfig.findUnique({
-    where: { vendorId },
-    select: { offerCollection: true },
-  });
-  const offerCollection = config?.offerCollection ?? false;
-
-  // Weekday mornings and afternoons, plus Saturday morning — a plausible week for a local grocer
-  // rather than an exhaustive timetable. 1 = Monday.
-  const deliverySlots = [1, 2, 3, 4, 5].flatMap((dayOfWeek) => [
-    { dayOfWeek, startTime: "09:00", endTime: "12:00", capacity: 10 },
-    { dayOfWeek, startTime: "13:00", endTime: "17:00", capacity: 10 },
-  ]);
-  deliverySlots.push({ dayOfWeek: 6, startTime: "09:00", endTime: "12:00", capacity: 8 });
-
-  for (const slot of deliverySlots) {
-    const existing = await prisma.vendorFulfilmentSlot.findFirst({
-      where: {
-        vendorId,
-        method: "DELIVERY",
-        dayOfWeek: slot.dayOfWeek,
-        startTime: slot.startTime,
-      },
-      select: { id: true },
-    });
-    if (!existing) {
-      await prisma.vendorFulfilmentSlot.create({ data: { vendorId, method: "DELIVERY", ...slot } });
-    }
-  }
-
-  if (offerCollection) {
-    const collectionSlots = [1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
-      dayOfWeek,
-      startTime: "10:00",
-      endTime: "18:00",
-      capacity: 20,
-    }));
-
-    for (const slot of collectionSlots) {
-      const existing = await prisma.vendorFulfilmentSlot.findFirst({
-        where: {
-          vendorId,
-          method: "COLLECTION",
-          dayOfWeek: slot.dayOfWeek,
-          startTime: slot.startTime,
-        },
-        select: { id: true },
-      });
-      if (!existing) {
-        await prisma.vendorFulfilmentSlot.create({
-          data: { vendorId, method: "COLLECTION", ...slot },
-        });
-      }
-    }
-
-    // Express runs the same hours the shop is open for collection.
-    for (const dayOfWeek of [1, 2, 3, 4, 5, 6]) {
-      const existing = await prisma.vendorExpressSchedule.findFirst({
-        where: { vendorId, dayOfWeek, openTime: "10:00" },
-        select: { id: true },
-      });
-      if (!existing) {
-        await prisma.vendorExpressSchedule.create({
-          data: { vendorId, dayOfWeek, openTime: "10:00", closeTime: "18:00" },
-        });
-      }
-    }
-  }
-
-  // Enabling the flags is the point of the exercise: rows alone still render nothing. Express stays
-  // off for a vendor without collection, where it could never be offered anyway.
-  await prisma.vendorConfig.update({
-    where: { vendorId },
-    data: {
-      offerDeliverySlots: true,
-      expressCollectionEnabled: offerCollection,
-    },
-  });
-}
-
-async function upsertVendorSatellites(vendorId: string, s: VendorSatellites) {
-  await prisma.vendorBranding.upsert({
-    where: { vendorId },
-    create: { vendorId, ...s.branding },
-    update: { ...s.branding },
-  });
-  await prisma.vendorConfig.upsert({
-    where: { vendorId },
-    create: { vendorId, ...s.config },
-    update: { ...s.config },
-  });
-  for (const prefix of s.deliveryPrefixes) {
-    await prisma.vendorDeliveryArea.upsert({
-      where: { vendorId_prefix: { vendorId, prefix } },
-      create: { vendorId, prefix },
-      update: {},
-    });
-  }
-  await seedFulfilmentSchedule(vendorId);
-  // Upsert by (vendorId, key) so re-running never duplicates a tier and never
-  // clobbers a threshold an admin has since tuned away from the seed value...
-  // except that it does update, deliberately: the seed is the declared baseline,
-  // and a staging re-seed resetting tiers to it is the intended behaviour.
-  for (const tier of s.loyaltyTiers) {
-    await prisma.vendorLoyaltyTier.upsert({
-      where: { vendorId_key: { vendorId, key: tier.key } },
-      create: { vendorId, ...tier },
-      update: {
-        name: tier.name,
-        thresholdPence: tier.thresholdPence,
-        multiplierBps: tier.multiplierBps,
-        sortOrder: tier.sortOrder,
-      },
-    });
-  }
-  // Unlike the tiers above, `update` is EMPTY on purpose. A tier's threshold is
-  // pure configuration, so resetting it to the declared baseline is the intended
-  // re-seed behaviour; a code's `remainingRedemptions` counts DOWN as shoppers
-  // use it, so rewriting it would silently refill a partly-claimed code and
-  // hand out uses that were already spent.
-  for (const code of s.discountCodes) {
-    await prisma.discountCode.upsert({
-      where: { vendorId_code: { vendorId, code: code.code } },
-      create: { vendorId, ...code },
-      update: {},
-    });
-  }
-  console.log(`seeded branding/config/delivery/loyalty/discounts for ${vendorId}`);
 }
 
 // Aheed's primitives are the exact current tokens.css hex; tagline preserves the
@@ -1349,6 +1133,17 @@ async function maybeSeedGeneratedCatalogue(
   if (!Number.isFinite(requested) || requested < 0) {
     throw new Error(`${envVar} must be a non-negative integer — got "${raw}"`);
   }
+
+  // #490 — REFUSE a deployed database rather than printing the host and trusting a human to read
+  // it. #489 R13 shipped the printed-host version (still printed by seedGeneratedCatalogue below,
+  // and still useful), but print-and-trust is a control CLAUDE.md records as having already failed
+  // once here (#1134). The refusal is deliberately INSIDE this function and AFTER the early return
+  // above, so a plain `npm run db:seed` with no scale var set never reaches it, and so no generated
+  // row or storage object can be written on the far side of it. `main()` already checked this
+  // before its first query — repeated here so the guard still sits directly in front of the write
+  // it protects, not only at the top of the file.
+  assertNotDeployedDatabase(connectionString);
+
   await seedGeneratedCatalogue(vendorId, catalogue, requested);
 }
 

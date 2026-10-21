@@ -1,5 +1,5 @@
 {
-  "total": 15,
+  "total": 16,
   "directories": {
     ".": 5,
     ".github": 2,
@@ -7,6 +7,7 @@
     "docs/ui-ref-revised": 1,
     "hooks": 1,
     "kms/site-internal": 3,
+    "prisma/manifests": 1,
     "specs/2026-08-19-p7-closeout": 1,
     "specs/2026-09-17-claude-md-guardrail-refactor": 1
   }

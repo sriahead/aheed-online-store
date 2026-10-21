@@ -4,8 +4,8 @@ title: SDD Operator Runbook
 audience: [dev]
 type: runbook
 status: approved
-version: "1.1.0"
-updated: 2026-10-05
+version: "1.2.0"
+updated: 2026-10-21
 visibility: internal
 summary: Human-executable manual for the SDD delivery loop — Orient, Propose, Spec, Build, Document, Validate, Fix, Ship, Document — covering what each stage does behind the scenes, how to run it by hand, how to verify it worked, and how to diagnose and recover when it doesn't.
 tags: [runbook, sdd, workflow, process, operations]
@@ -978,6 +978,62 @@ silently to whichever branch is easiest.
 | Is this newly-learned trap worth adding to the shared runbook, or just this slice's own notes? | Would the next unrelated slice hit the same thing? | Add here (shared) / leave slice-local | Let a transferable lesson live only in one slice's history |
 
 ---
+
+## Adding a vendor host (#1198)
+
+**Read this before editing `wrangler.toml`.** Omitting a host is destructive, not inert.
+
+Every vendor host is its own `custom_domain = true` route block in `wrangler.toml`, two per
+environment. A `wrangler deploy` that does **not** declare a host which already has a custom domain
+**tears that custom domain down** — so the file is load-bearing for vendors that are already
+trading, and a hand edit that drops a line takes a live storefront offline.
+
+`scripts/verify-worker-routes.ts` is what makes that non-silent. Both deploy workflows run it after
+`prisma migrate deploy` and before `wrangler deploy`, and it **fails the deploy** when a
+`VendorDomain` row has no matching route for that environment.
+
+### Procedure
+
+1. **Provision the vendor** (writes the `VendorDomain` row, among others):
+
+   ```bash
+   npx tsx scripts/provision-vendor.ts <manifest.json>
+   ```
+
+2. **Generate the route block** for each environment and paste it into `wrangler.toml`. Do not
+   hand-author it:
+
+   ```bash
+   npx tsx scripts/verify-worker-routes.ts --env staging --write
+   npx tsx scripts/verify-worker-routes.ts --env production --write
+   ```
+
+   `--write` emits every routable host, so the output is the complete block rather than just the
+   new line — which is what stops an edit from dropping an existing host.
+
+3. **Check it locally** before opening the PR:
+
+   ```bash
+   npx tsx scripts/verify-worker-routes.ts --env staging
+   ```
+
+4. **PR to `staging`, then the promotion PR to `main`**, per the branch strategy. The host is live
+   only after the environment it belongs to has deployed.
+
+### Reading its output
+
+- `FAIL … have no route` — a trading vendor is unrouted. Deploying would leave it unreachable. Fix
+  with step 2.
+- `WARNING … is routed but has no VendorDomain row` — not a failure. A host may legitimately be
+  declared ahead of its vendor row, which is the order SriMart's was populated in. If the vendor
+  does exist, the pattern is stale and should be removed — carefully, see the tear-down note above.
+- Hosts carrying a port or ending in `localhost` are ignored, because the dev seed writes
+  `localhost:8787` and `srimart.localhost:8787` as real `VendorDomain` rows.
+
+**Why this is not data-only, and why a wildcard route was rejected:** ADR-004's 2026-10-21
+implementation note. The short version is that Worker Custom Domains cannot be wildcards, and a
+wildcard route plus Universal SSL each cover only one subdomain label, while
+`staging.aheedfoodcentre.nocaped.com` is two deep.
 
 ## Keeping this runbook current
 
