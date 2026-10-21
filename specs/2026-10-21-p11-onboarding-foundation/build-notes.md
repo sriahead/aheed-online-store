@@ -111,6 +111,79 @@ as a deviation:
    `protected-hosts.ts` to inspect for it. `tests/protected-hosts.test.ts` proves the behaviour
    directly, which is what R4 actually asks for.
 
+## Database-check record — run in-session 2026-10-21, NOT an independent validation
+
+Added after the build, at the owner's instruction, because the seven database-dependent
+requirements were the outstanding risk and they should not wait on branch cleanup.
+
+**This is not Gate 3.** It was run in the **same context that wrote the code**, so it cannot catch
+what that context is blind to — a misread requirement stays misread. Gate 3 still needs
+`/validate` from a fresh context on Sonnet 5 against `validation.md`. Treat the rows below as
+"the code does what its author believed", not "the spec is satisfied independently".
+
+**Every command was prefixed `env -u DIRECT_URL -u DATABASE_URL`.** A production `DIRECT_URL` was
+exported in the session shell; with the prefix, scripts resolved `.env`'s dev host
+(`ep-dry-morning-…`), and without it they resolved production (`ep-young-glitter-…`). Both were
+confirmed by probe before anything ran.
+
+| Req | Result | Evidence |
+| --- | --- | --- |
+| R6 | **PARTIAL** | See below — the refusal is proven, the end-to-end seed run is not. |
+| R7 | PASS | Plain `npm run db:seed` on dev, exit 0, connected to the dev host; the extracted `upsertVendorSatellites` logged its line, so the extraction runs. |
+| R10 | PASS | `--env production` against the dev database exited 1 and named both unrouted hosts. |
+| R11 | PASS, **but not for the reason the row assumed** — see below. |
+| R12 | PASS | Same run as R10: two `WARNING … is routed but has no VendorDomain row` lines, exit code set by R10's failure, not by the warnings. |
+| R13 | PASS | `--write` emitted both staging patterns plus `custom_domain = true`, exit 0. |
+| R18 | PASS | Counts across **14** models byte-identical after seed run 1 and run 2. |
+| R19 | PASS | Every delta matched prediction exactly, including **`category` and `product` unchanged** (252 / 2315). |
+| R21 | PASS | Second provision of the same manifest left all 14 counts identical. |
+
+**End-to-end, which no single requirement covers:** after provisioning, `verify-worker-routes --env
+staging` failed with exactly `example-grocer.nocaped.com`, then returned to `OK` once the test
+vendor was removed. That is `#1197` and `#1198` working as one control.
+
+**The test vendor was deleted afterwards** (`vendor.delete` by id, cascade), and all 14 counts
+returned to the post-seed baseline — so provisioning is fully reversible, and the dev database is
+back to a state where R11 passes.
+
+### R6 is partial, and this is the honest reason
+
+The guard's refusal **is** proven: `tests/protected-hosts.test.ts` covers all three throw
+conditions, and it was additionally run against the **real exported production `DIRECT_URL`** with
+the real `secrets/*.vars`, producing `REFUSING TO RUN: ep-young-glitter-… is a host named in …`.
+
+What was **not** run is R6's end-to-end form — `SEED_SCALE_PRODUCTS` set with `DIRECT_URL` naming a
+protected host — because a meaningful run needs **valid** staging credentials, and this validation
+would not use them. With a deliberately bogus password the seed fails earlier with an auth error
+instead, since `prisma/seed.ts` constructs its client at module scope and `main()` reads
+`healthCheck.count()` before reaching the generated path. That masks the guard rather than
+demonstrating it.
+
+**A related fact a validator should not misread as a defect:** the guard protects **only** the
+generated-catalogue path, by design. `npm run db:seed` writing the ordinary fixture catalogue to a
+fresh staging or production project is a **documented, legitimate** operation
+(`docs/developer-portal/env-setup.md`, "Bootstrapping a fresh environment database"). Guarding the
+whole seed would break that procedure, which is why `#490`'s scope was the generated path.
+
+### R11 passed via a different mechanism than its validation row describes
+
+The row assumes a dev database seeded with `localhost:8787` hosts, which the exclusion rule then
+filters out. **This dev database instead holds the two real staging hostnames**
+(`staging.aheedfoodcentre.nocaped.com`, `srimart-staging.nocaped.com`), which simply *have* routes —
+so exit 0 was correct but the `localhost` exclusion was never exercised live. That path is covered
+by `tests/worker-routes.test.ts` instead. The validation row is over-specified about the
+environment; the known-shaky section above predicted exactly this.
+
+### Pre-existing finding, filed as `#1206`
+
+The dev database holds **613 `Vendor` rows — 611 leaked test fixtures** from
+`tests/slot-capacity.test.ts`, `tests/express-sla.test.ts` and
+`tests/concurrency-slot-booking.test.ts`, accumulating since 2026-08-08. Those three build a client
+from `process.env.DATABASE_URL` with **no check on which database it is**, so a suite run with a
+production `DATABASE_URL` exported would write vendors to production — and this environment has had
+the sibling variable exported to production in five sessions. Not caused by this slice and not fixed
+by it; `#490`'s guard was scoped to `scripts/` and `prisma/seed.ts`.
+
 ## Known-shaky areas
 
 **Everything that touches a database is unexercised. Look here first.** R6, R7, R11, R12, R18, R19

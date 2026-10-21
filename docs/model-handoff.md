@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.126.0"
+version: "1.127.0"
 updated: 2026-10-21
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -1064,9 +1064,24 @@ All facts in this section require live verification:
     **`#1197`**. Built on branch `feature/p11-onboarding-foundation`, commits `ce9ff81` (spec) and
     `099ad05` (implementation). **Not validated, not merged, no PR.** 30 requirements; `lint`,
     `typecheck`, `format:check`, `kms:validate` and vitest (292 files / 3642 tests, `--maxWorkers=4`)
-    green, docs site 255 pages. **The seven database-dependent requirements (R6, R7, R11, R12, R18,
-    R19, R21) are deliberately unexercised** — see that slice's `build-notes.md`, which points
-    validation at the risk.
+    green, docs site 255 pages.
+    - **The database-dependent requirements were run in-session on 2026-10-21 and PASS — but that is
+      NOT Gate 3.** It ran in the same context that wrote the code, so it cannot catch what that
+      context is blind to. **The slice remains BUILT, NOT INDEPENDENTLY VALIDATED**, and still needs
+      `/validate` from a fresh context on Sonnet 5. R7, R10, R11, R12, R13, R18, R19 and R21 passed;
+      **R6 is PARTIAL** — the guard's refusal is proven (including against the real exported
+      production `DIRECT_URL`), but its end-to-end seed form needs valid staging credentials this
+      validation would not use. R11 passed by a different mechanism than its validation row
+      describes, because this dev database holds the real staging hostnames rather than the
+      `localhost` ones the row assumes. Full record and both caveats:
+      `specs/2026-10-21-p11-onboarding-foundation/build-notes.md`.
+    - **The branch split was tested and rejected on evidence.** A `git rebase --onto origin/staging
+      643237b` conflicts on `specs/roadmap.md` at commit 3 of 6 — five of `643237b`'s seven files
+      (`ARTIFACT_INDEX.md`, `CLAUDE.md`, `app/(admin)/staff/runbook/docs.ts`,
+      `docs/model-handoff.md`, `specs/roadmap.md`) are also touched by the P11 commits, and the
+      change-log conflict would force a hand-decision about `#1186`/`#1187`'s own PR #1193/#1194
+      rows, which must reach `staging` regardless. The scratch branch was deleted and the real
+      branch is untouched. **Ship the docs tail along with P11 and say so in the PR body.**
   - **Branch caveat.** That branch's first commit is `643237b`, the undelivered `#1186`/`#1187`
     documentation tail, which rides along because cherry-picking the P11 commits onto `staging`
     would conflict on `specs/roadmap.md` (both touched its front-matter and change-log tail, in a
