@@ -266,6 +266,12 @@ Policy: `specs/tech-stack.md`. Failures: `docs/developer-portal/runtime-pitfalls
   fact that the failing set changes between runs. **Do not bisect against them**; reverting code
   made the failure set grow in `#1180`, which is the opposite of what a real culprit does. Capping
   the pool returned the same tree to 286 files / 3583 tests green. `--minWorkers` is not a flag.
+- **Git Bash rewrites any argument that looks like a POSIX path, and the result reads as a product
+  bug.** `curl -o /dev/null` becomes `C:/Program Files/Git/dev/null` and fails with
+  `curl: (43) bad argument` reporting **HTTP `000`** for a page that is actually fine; a
+  `--path /cart` argument becomes `C:/Program Files/Git/cart`. Both happened at `#1187`, and the
+  `000` was briefly mistaken for a broken production deploy. Prefix with `MSYS_NO_PATHCONV=1`, or
+  drop `-o` and pipe the body instead. `-o NUL` does **not** avoid it.
 - **Stopping `npm run preview` does not stop it** — kill the whole `node`/`workerd` chain first, or
   the next build fails with `EBUSY`.
 - **Server actions and staff pages are drivable with `curl`, no browser needed.**

@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.34.0"
-updated: 2026-10-20
+version: "1.35.0"
+updated: 2026-10-21
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, KMS coverage vs gitignore, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -903,6 +903,21 @@ the forwarded proto, so over plain local `http` it computes an `https://` origin
 `--header x-forwarded-proto:http` (the same trap `#1177` hit from the other direction). A **401**
 after that really is the credential — most often the account simply is not in the dev database;
 `npx tsx scripts/demo-accounts.ts add` seeds the roster, `demo-srimart-admin@example.com` included.
+
+**But a 401 with the account present means you are using the wrong password file (`#1187`).** `.env`
+and `.dev.vars` hold **different** `DEMO_ACCOUNT_PASSWORD` values, and `.dev.vars` is the one in
+force under `npm run preview` (per-key precedence, Cloudflare request context first). `.env`'s value
+returns a clean 401 that is indistinguishable from a broken auth path. Take it from `.dev.vars`:
+
+```bash
+PW=$(grep -h '^DEMO_ACCOUNT_PASSWORD=' .dev.vars | head -1 | sed 's/^DEMO_ACCOUNT_PASSWORD=//' | tr -d '"')
+```
+
+**And `add` never resets an existing account's password.** It calls `signUp` only when the user is
+absent; for one that already exists it updates role, `emailVerified` and name and nothing else. The
+`[reconciled]` it prints therefore tells you the roster is correct and tells you **nothing** about
+which password is stored — re-running it cannot fix a password mismatch. Remove and re-add the
+account if you need the password reset.
 
 **A 429 is very often NOT rate limiting.** `authOnRequest` in `lib/auth.ts` refuses a sensitive auth
 path with **429** when the vendor cannot be resolved at all — the fail-closed path from `#469`. So

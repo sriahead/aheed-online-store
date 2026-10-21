@@ -4,7 +4,7 @@ title: "Application Conventions — per-layer invariants and the tests that enfo
 audience: [dev]
 type: doc
 status: approved
-version: "1.19.0"
+version: "1.20.0"
 updated: 2026-10-21
 visibility: internal
 summary: What makes a file correct in each layer of this app — "use server" modules, lib/repositories, staff pages under app/(admin), vendor-neutral copy, fulfilment-method preference, autocomplete tokens, shared-source copy rules and React hooks — with the tests that enforce each invariant mechanically.
@@ -327,6 +327,21 @@ store's staff reads must be right for **any** vendor.
     Bundles". A shopper tapping one name and landing on another is the `#1145` failure in miniature,
     and no test catches it — `tests/quick-shop-hub.test.tsx` pins the four labels, but nothing
     compares them to the destination headings automatically.
+- **A check that finds a UI element by its URL breaks silently when the URL moves (`#1187`).**
+  `scripts/verify-mobile-layout.ts` located the header's Quick Shop link with
+  `header a[href="/shop-your-list"]`. When `#1187` repointed that link at the new hub, the selector
+  matched nothing and the script reported `"shoppingList": null` — and `null` is indistinguishable
+  from "this page has no such link", so it would have gone on reporting a plausible nothing for
+  every later run. **Prefer the accessible name**: the destination has now moved twice (`#1142`,
+  `#1187`) while the name has been "Quick Shop" since `#1145`, and two tests pin it
+  (`tests/header-shopping-list.test.tsx`, and `tests/quick-shop-hub.test.tsx`, which also asserts
+  it equals the visible text per WCAG 2.5.3). The same reasoning applies to a test: a route literal
+  is the most volatile handle on an element, and the accessible name is the one the product is
+  contractually obliged to keep.
+  - **Enumerate call sites across `tests/` and `scripts/`, not just `app/` and `components/`.**
+    `#1187`'s spec promised to "name every call site rather than relying on grep alone" and still
+    missed two, both outside the app tree: a test pinning the old `href` (caught by the suite) and
+    the instrument above (caught only by running it).
 - **Assert copy with string equality, not a pattern.** `tests/help-vendor-facts.test.tsx` asserted
   `/expire 12 months/i`, which the **incorrect** sentence satisfied too, so that defect shipped and
   survived three slices under a green test. A regex also admits a longer sentence that re-introduces
