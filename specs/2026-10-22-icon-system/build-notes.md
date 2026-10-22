@@ -119,9 +119,10 @@ neither scope nor acceptance intent:
   `.next/static/**/*.js` gzip sum **546,214** bytes over 124 files, Worker `gzip:` **5,014.91 KiB**; HEAD
   **546,895** over 123 files (**+681**, budget 15,360) and **5,019.49 KiB** (**+4.58 KiB**, budget 100). The
   baseline this Build first recorded (546,053 and 5,026.59 KiB) was off by 11.7 KiB on the Worker figure, and
-  the "-9.86 KiB" it produced was not real; wrangler's gzip figure varies between builds by about that much,
-  so compare a fresh BASE and HEAD built back to back and treat differences under about 15 KiB on the
-  Worker figure as noise.
+  the "-9.86 KiB" it produced was not real. **The cause of that 11.7 KiB gap is not determined.** It is not
+  run-to-run noise: two HEAD builds back to back agree to 0.04 KiB. The first baseline was built in the main
+  checkout before the lockfile was re-installed with `npm ci`; the fresh BASE was built in a clean worktree.
+  Compare a BASE and a HEAD built the same way, back to back, and do not reuse a stored baseline.
 - **`app/(admin)/staff/runbook/docs.ts` is generated and now holds this slice's plan text.** Run
   `npm run kms:build-index` after the last doc edit, not before (the #232 shape).
 - **The licence text is the upstream `main` branch's `LICENSE` at build time** (Lucide's currently reads
@@ -224,3 +225,27 @@ Two findings were real and one row was wrong; none needed a redesign.
   instead of a stack trace (unit-tested).
 - **No observable behaviour changed** (the fixes are a CLI option, tests and docs), so there is no CHANGELOG
   entry, and the bundle is unaffected by construction (scripts and tests are not bundled).
+
+## Validation run 2 (after Fix 1)
+
+Run on commit `f9351d19`, from the top. **Still not independent** (same Sonnet 5.5 context, no `/clear`).
+**Result: PASS for every P1 and "all" row that can run in this environment; the rows below remain unverified.**
+
+- **Pre-flight, each alone, exit 0:** `lint`, `format:check`, `icons:check`, `kms:validate`,
+  `kms:check-generated`, `npx tsc --noEmit` (no output), `npm run build`; docs-site build exits 0.
+  `npx vitest run --maxWorkers=4`: **307 files passed, 4548 tests passed, 3 skipped** (run 1: 306 and 4540; the
+  difference is the new `department-scroller` file and the four unsafe-markup process cases plus their
+  control).
+- **Rows re-run and passing:** R1 to R10 (R10 by hand both ways: a bogus id, and a poisoned body through
+  `--sets-dir`), R11 to R21 and R23 (named test files, in the full run), R16 and R21 type errors confirmed on
+  temporary lines and reverted, R22 (grep clean; `tests/department-scroller.test.tsx` renders the client
+  component and asserts its `svg[data-icon]`), R24, R25, R26 (pinned and installed both 1.2.122, zero parity
+  exceptions), R27 (licences byte-identical to upstream; a missing `ISC.txt` fails the build with one named
+  line and no stack trace), R29, R30 (staff-nav-parity test unchanged since BASE), R31 (re-derived from a real
+  BASE worktree: 102 names, no diff), R37, R50 (git half), R52, R53, R54, R55 (now `kms:check-generated`).
+- **R37, fresh:** BASE client **546,214**, Worker **5,014.91 KiB**; HEAD client **546,895** (**+681**, budget
+  15,360), Worker **5,019.45 KiB** (**+4.54 KiB**, budget 100).
+- **Unverified, unchanged from run 1 and for the same reason (no `.env`, `.dev.vars` or `secrets/`, so no
+  `npm run preview`):** R28 (licence file served on both hosts), the live half of R33, R34 and R35 (BASE
+  against HEAD markup on both vendors, signed in and staff), the HTML half of R50. **GitHub CI is not
+  confirmed:** no run exists for this branch because no pull request is open.
