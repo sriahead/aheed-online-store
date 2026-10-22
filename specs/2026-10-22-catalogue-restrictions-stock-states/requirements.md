@@ -70,7 +70,10 @@ It returns:
 | `UNTRACKED` | `MAX_ADD_QUANTITY`, whatever `quantity` is |
 
 R7. `lib/cart-rules.ts` no longer exports `effectiveStock`. `grep -rn "effectiveStock" lib app
-features components` returns nothing.
+features components` returns nothing except inside the generated `app/(admin)/staff/runbook/docs.ts`.
+That file embeds the specs as text, and historical specs quote the old name. *(Amended at Validate,
+2026-10-22: the original wording had no exclusion and failed on that generated file alone. R8's
+guard test already carries the same exclusion; see `build-notes.md` deviation 1.)*
 
 R8. A test in `tests/` fails if any file under `lib/`, `app/`, `features/` or `components/`
 (excluding `*.test.*`) contains the regex `inventory\??\.quantity\s*\?\?\s*0\)\s*>\s*0` or
@@ -226,7 +229,11 @@ test in `tests/` enforces this.
 
 R29. `/staff/products/[id]` shows the product's restriction (or "None") and its newest 20 audit
 entries with time, action, from → to, actor name (or "Import"), source and reason.
-- For an ADMIN it renders a restriction selector offering only allowed values (R17).
+- For an ADMIN it renders a restriction selector offering only allowed values (R17): the values
+  strictly stricter than the current one. The current value itself is `NO_CHANGE`, not a change,
+  so it is not offered. When nothing is stricter (`PROHIBITED`), no selector renders.
+  *(Clarified at Validate, 2026-10-22: the validation row had listed the current value as
+  offered.)*
 - For an overridable restriction it renders a clear-and-enable control with the confirmation
   checkbox and reason field.
 - For a hard block it renders explanatory text and **no** enable control.

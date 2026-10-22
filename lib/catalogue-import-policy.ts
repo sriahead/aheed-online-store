@@ -26,7 +26,7 @@ export interface ImportRowSignals {
   pricePence: number;
 }
 
-/** Trim, collapse inner whitespace, upper-case: `" tobacco "` and `"TOBACCO"` are one department. */
+/** Trim, collapse inner whitespace, upper-case: `" frozen  food "` and `"FROZEN FOOD"` are one department. */
 export function normaliseDepartment(value: string): string {
   return value.trim().replace(/\s+/g, " ").toUpperCase();
 }

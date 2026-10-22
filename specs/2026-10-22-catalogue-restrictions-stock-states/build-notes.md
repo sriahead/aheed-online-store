@@ -257,3 +257,117 @@ R18, R19, R26, R27, plus the R29 IMPORT-row fixture and the R12 storefront fixtu
   tokens only (`text-danger`, `bg-danger-tint`, `bg-surface-muted`), but nothing was eyeballed.
 - **Not yet run:** `npm run build` (webpack), `npm run preview`, and `kms:assemble:internal` plus
   the `kms/site-internal` Next build after the guide edit. Run them in Validate.
+
+## Validation run 1 (2026-10-22) — NOT independent
+
+**Not a fresh context.** It ran in the same conversation that built the slice, on Opus rather than
+Sonnet. That follows the owner's standing practice of skipping the pre-validation clear below ~60%
+context. Live evidence (preview HTML, DB reads, the verification script) was preferred over code
+reading wherever a row allowed it.
+
+**Pre-flight, all green:**
+- `npm run lint`, `npm run format:check` and `npx tsc --noEmit`;
+- `npx vitest run --maxWorkers=4`: 298 files, 3823 tests, all passing;
+- `npm run build`;
+- `kms:assemble:internal` plus `next build` in `kms/site-internal`.
+
+**Three rows failed; fixed in `/fix`:**
+- **R30 (a real defect):** `lib/catalogue-import-policy.ts` named a restricted department
+  ("tobacco") in a doc comment. Replaced with a neutral example.
+- **R7 (a spec wording defect):** the grep matched only the generated
+  `app/(admin)/staff/runbook/docs.ts`, which embeds historical specs as text. R7 and its row are
+  amended with the same exclusion R8's guard test already carries.
+- **The R29 row (a spec wording defect):** the row listed the current class as offered by the
+  selector; the requirement says "only allowed values" (R17), and NO_CHANGE is not a change. The
+  row and the requirement are clarified. The page behaviour is unchanged and was correct.
+
+**Passed, with evidence:**
+- **R1, R2, R3:** static checks against the schema and the migration SQL.
+- **R4(a):** before any fixture existed, all 2321 dev `Inventory` rows were `TRACKED`, and 0
+  restricted products were active.
+- **R4(b), R4(c):** script checks. **New evidence for CLAUDE.md:** the `CHECK` violation surfaces
+  as `.code = "23514"` through `PrismaNeonHttp`, but through `PrismaNeon` (WebSocket) the error
+  carries **no `.code` at all**, only the message
+  `new row for relation "Product" violates check constraint …`. Nothing in this slice branches on
+  it. Any future predicate on this error must not rely on `.code` alone.
+- **R5:** no shadow database is available, so I used the substitute: `prisma migrate diff
+  --from-url <dev DIRECT_URL> --to-schema-datamodel prisma/schema.prisma --script`. It printed
+  `-- This is an empty migration.`, so the applied dev schema equals `schema.prisma`, with the
+  `CHECK` invisible to Prisma.
+- **R6, R8, R13, R14, R16, R17, R23, R28, R31–R33:** their tests exist and pass.
+  - **R8 and R28 were mutation-checked:** a probe file under `lib/` made each guard fail and named
+    the probe; the probe was then removed.
+- **R9, R11, R15, R21:** static greps pass. R15's form paths write `input.stockMode`, as recorded
+  in deviation 2.
+- **R10, R11, R15, R18, R19, R26, R27:** the script printed `ALL CHECKS PASSED` twice, the second
+  run proving it idempotent.
+- **R12, under preview:**
+  - **(a)** untracked: "In stock", Add enabled, no "Only" text.
+  - **(b)** unknown: "Out of stock", Add button `disabled`.
+  - **(c)** is shown on the **category page card** (`/categories/fresh-fruit`): the TRACKED
+    fixture's card reads "Only 2 left" and the UNTRACKED card has no count. The product detail
+    page has never shown "Only N left" (only the card and quick view do), so (c) cannot be read
+    there.
+  - The "add the untracked product and reach /checkout" step was covered at the repository level
+    by R10c (an order was placed), not through the storefront UI.
+- **R15a:** the new-product select offers all three values, with TRACKED selected. As STAFF, an
+  existing TRACKED quantity-6 fixture was saved as UNTRACKED, and it reloads as UNTRACKED with
+  quantity 6.
+- **R15b, server half:** only TRACKED rows render the +/- control. The other rows render "Not
+  tracked" or "Unknown — not for sale", and restricted rows render their class.
+- **R20:** every path, as both roles. The product form (replayed with all fields plus
+  `isActive=on`) and the inventory toggle (`Next-Action`) refuse every restricted class for
+  STAFF and ADMIN.
+  - STAFF clear, STAFF bulk Enable and STAFF set-restriction changed nothing.
+  - ADMIN clear and bulk on hard blocks changed nothing.
+  - ADMIN clear without the tick, or with a blank reason, was refused.
+  - ADMIN clear with tick and reason enabled exactly the review and not-deliverable products, each
+    with one `RESTRICTION_CLEARED` (source `PRODUCT_FORM`) audit row carrying the reason.
+  - The DB confirmed that no refused attempt wrote an audit row.
+- **R22:** all controls render for STAFF and ADMIN.
+  - `perPage=100` shows 100 rows; `perPage=7` falls back to 25.
+  - The `restriction=any` and `none` results partition the 30 fixtures with no overlap;
+    `restriction=bogus` equals unfiltered.
+  - `stock=UNKNOWN` includes products that have no `Inventory` row.
+- **R24:** in the STAFF preview, hard blocks are listed under "will be skipped" and overridable
+  products are marked "only an admin can enable it", with no confirmation or reason offered. The
+  ADMIN preview lists "only if you confirm" and offers the confirmation sentence plus the required
+  reason.
+- **R25 and R26 (UI):** the ADMIN Apply carried a tampered `plan` field claiming the
+  AGE_RESTRICTED product as ENABLE. The summary read "4 updated, 2 skipped, 0 failed", with the
+  age and prohibited products skipped as "Hard-blocked". The DB showed exactly two
+  `RESTRICTION_CLEARED` `BULK_ACTION` rows, from the store admin with the given reason.
+- **R29:** per class, both roles:
+  - ADMIN selector values were none → all four; NEEDS_REVIEW → the three stricter;
+    NOT_DELIVERABLE → `PROHIBITED, AGE_RESTRICTED`; AGE_RESTRICTED → `PROHIBITED`; PROHIBITED →
+    no selector.
+  - The clear control renders only for ADMIN on NEEDS_REVIEW and NOT_DELIVERABLE. The hard-block
+    explanation renders on both hard blocks, for both roles. STAFF sees no control.
+  - The history renders "Import · Catalogue import" for the null-actor row, and the admin's name,
+    source and reason for the clears.
+- **R34:** `tests/staff-nav-parity.test.ts` passes. The capability trace for the
+  `staff-tabs-guide.md` sentences:
+
+  | Guide sentence | Control |
+  | --- | --- |
+  | Stock tracking select | `ProductForm.tsx` `select[name=stockMode]` |
+  | Stock and Restriction filters, Per page | `staff/products/page.tsx` `select[name=stock]`, `select[name=restriction]`, `select[name=perPage]` |
+  | Restriction section, clear button, tighten selector, history | `ProductRestrictionPanel.tsx` |
+  | Select all, With selected, Preview, Apply, Cancel, summary lists | `BulkProductActions.tsx` |
+  | Mode label and restriction label, refusal message | `InventoryTable.tsx` |
+
+  "Entries cannot be edited or removed" corresponds to the absence of any such control (R28).
+- **R35, R38;** R36's issue half (the three 2026-10-22 ruling comments on #1196, #1200 and #1201).
+- **R37:** every Prisma command and script in this slice ran against `ep-dry-morning-zab7dx08` (the
+  dev host in `.env`). No `DIRECT_URL`/`DATABASE_URL` was exported. No staging (`ep-empty-scene`)
+  or production (`ep-young-glitter`) command ran.
+
+**Unverified, with the reason:**
+- **R15b, client half:** the inventory toggle snapping back to Hidden after a refusal is
+  client-side optimistic state. A browser extension was connected, but signing it in would mean
+  typing the demo password from `.env` into the browser, which the browser credential rules do not
+  allow for that file. The server refusal it reacts to is proven (R19/R20).
+- **R36, PR half (closing keywords):** checked at Ship.
+- **R39, CI half:** checked at Ship.
+- **The SriMart second-vendor UI eyeball** that CLAUDE.md asks for was not done. The new UI uses
+  semantic tokens only.
