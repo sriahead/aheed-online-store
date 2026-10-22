@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.135.0"
+version: "1.136.0"
 updated: 2026-10-22
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,29 +39,32 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-22, `#1223` icon system: PR 1 of 5 (Phase 1, the foundation) is BUILT, NOT VALIDATED, NOT
-  MERGED.** Branch `feature/icon-system` (pushed once at the spec commit; later commits are local until
-  pushed), spec `specs/2026-10-22-icon-system/`, decision `specs/decisions/ADR-008-icon-system.md`. The
-  spec is one folder for **five PRs** (P1 foundation, P2a storefront migration, P2b admin migration and
-  the import ban, P3 colour, P4a illustrations); `build-notes.md` says which requirements belong to the PR
-  under validation. `#1224` (AI-generated per-vendor illustrations) is a later slice gated on an
-  experiment. Owner answers still open: whether a footer link to `/third-party-icon-licenses.txt` is
-  wanted.
-  - **The `#1216` docs commit (`a8d4762`) rides this branch** under the carry-forward rule, so the first PR
-    from it also delivers the missing `#1216` roadmap row to `staging`.
+- **2026-10-22, `#1223` icon system: PR 1 of 5 (Phase 1, the foundation) is MERGED TO `staging`, NOT
+  PROMOTED.** PR #1225, squash merge `c439d3b`; `deploy-staging` and `deploy-docs-internal` succeeded.
+  Spec `specs/2026-10-22-icon-system/`, decision `specs/decisions/ADR-008-icon-system.md`, roadmap row in
+  `specs/roadmap.md` 1.177.0. The spec covers **five PRs** (P1 foundation, P2a storefront migration, P2b
+  admin migration and the `lucide-react` import ban, P3 colour, P4a illustrations); **P2a, P2b, P3 and
+  P4a are unbuilt.** The PR used `Refs #1223`, not `Closes`, so the issue stays open through promotion.
+  `#1224` (AI-generated per-vendor illustrations) is a later slice gated on an experiment. Owner answer
+  still open: whether a footer link to `/third-party-icon-licenses.txt` is wanted.
+  - **Phase 1 is validated except its live rows, tracked as `#1226`:** R28, R33's live half, **R34 and R35
+    (BASE-against-HEAD markup on both vendors; nothing was compared)**, R50's HTML half and staging
+    `/api/health`. A cloud session has no `.env`, `.dev.vars` or `secrets/` and its egress proxy refuses
+    the staging hosts, so these must run from the owner's machine. **Run R34/R35 before P2a builds on
+    Phase 1.**
   - **The first audit's icon count was wrong: 102, not 141** (it also walked the `docs/ui-ref` mockups).
     `#1223`'s body still says 141. Any count of `lucide-react` usage must be scoped to `app`,
     `components`, `features` and `lib`, and parsed with the TypeScript compiler, not a line grep.
   - **`@iconify-json/lucide` is pinned to 1.2.122 on purpose.** It is the release matching the installed
     `lucide-react` 1.30.0; the newest redrew six icons. Bumping `lucide-react` means re-running
     `tests/icon-lucide-parity.test.ts` and probably moving that pin. Icons are used only through
-    `components/icons` (`CLAUDE.md`); files that still import `lucide-react` are P2's work.
-  - **A cloud session cannot validate this slice's live rows.** It has no `.env`, `.dev.vars` or
-    `secrets/`, so `npm run preview`, sign-in, and the BASE-against-HEAD markup comparison
-    (`scripts/verify-icon-markup.ts`, R34 and R35) must run from the owner's machine.
+    `components/icons` (`CLAUDE.md`); the ~99 files that still import `lucide-react` are P2's work.
   - **Do not `npm install` a package in the cloud container and commit the lockfile as it comes out.** Its
     npm (10.9.4) strips the `libc` markers from 68 platform packages. The lockfile here was restored and the
     new packages grafted in by hand; the method is in `build-notes.md`.
+  - **A cloud session cannot use `gh`'s GraphQL** (`gh pr create`, `gh pr merge`, `gh pr checks`, Project #2
+    edits all 403). PR create, merge and CI polling worked through `gh api` REST; **moving a board item
+    needs the owner or a local session.**
 - **2026-10-21, `#1186`/`#1187` Document (supersedes this entry's own "BUILT, NOT VALIDATED AND NOT
   MERGED" predecessor). The Quick Shop hub and the Regulars placeholder are IN PRODUCTION.** The
   programme's remaining two slices shipped as **one**,
