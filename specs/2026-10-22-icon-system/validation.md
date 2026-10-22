@@ -1,0 +1,168 @@
+# Colourful, vendor-themed, provider-agnostic icon system (validation)
+
+> **Testing Strategy (Lean 80/20 Model)**
+> Provide enough testing to give confidence without creating unnecessary or duplicate tests. Avoid testing the same behaviour multiple times at different levels unless doing so provides additional confidence.
+> 
+> **The Main Principle:**
+> - **Build:** Did we build the component correctly?
+> - **Validate:** Does the feature work correctly in the real system?
+> - **Release:** Is the complete system safe, reliable, and ready for users?
+
+## Testing Areas
+
+Every feature should have appropriate **Unit** and **Integration** testing, followed by relevant validation testing. Broader testing mainly happens before release. However, testing is risk-based: features involving auth, payments, UI changes, performance-sensitive APIs, databases, or external dependencies require additional relevant testing earlier.
+
+1. **Unit Testing**
+   - *When needed:* Every feature.
+   - *Purpose:* Test isolated business logic, utilities, and components.
+2. **Integration Testing**
+   - *When needed:* Every feature. (Includes Contract testing).
+   - *Purpose:* Verify the component works with its immediate dependencies (e.g., database, external services).
+3. **System / End-to-End Testing**
+   - *When needed:* For critical user journeys and validation testing.
+   - *Purpose:* Validate that the feature works correctly in the real system.
+4. **Regression & Acceptance Testing**
+   - *When needed:* Mainly before release, or when changing core flows. (Includes Smoke and Sanity testing).
+   - *Purpose:* Ensure existing functionality remains unbroken and acceptance criteria are met.
+5. **Performance & Resilience Testing**
+   - *When needed:* Mainly before release, or for performance-sensitive APIs. (Includes Load, Stress, and Spike testing).
+   - *Purpose:* Ensure the system meets throughput/latency targets and degrades gracefully.
+6. **Security & Accessibility Testing**
+   - *When needed:* Mainly before release, or earlier for features involving auth, payments, or UI changes.
+   - *Purpose:* Ensure the system is safe and accessible to all users.
+
+---
+
+## Setup (read before any row)
+
+**Which rows apply to which PR.** Run every row tagged with the PR under validation and with every
+earlier tag (`requirements.md` lists the tag on each requirement). A row that cannot run for want of a
+file the PR was not meant to add is "not applicable to this PR", never a pass.
+
+**Table cells and pipes.** Inside a table cell a literal pipe is written `\|` (GitHub renders it as a pipe). When a command below shows `\|` between alternatives or before `wc`, type a plain `|`.
+
+**Nothing here writes to a database.** Rows that need a running server use `npm run preview` against
+the **dev** database only. Before any Prisma CLI or Node script, run
+`for v in DIRECT_URL DATABASE_URL; do if printenv "$v" >/dev/null 2>&1; then echo "$v SET"; fi; done`.
+If it prints a name, prefix every command with `env -u DIRECT_URL -u DATABASE_URL`. This slice's rows
+touch no Prisma command, so the check is a precaution.
+
+**Named test files** (the builder creates these exact names so a validator with no memory can find them):
+`tests/icon-generator.test.ts`, `tests/icon-generated-data.test.ts`, `tests/icon-registry.test.ts`,
+`tests/icon.test.tsx`, `tests/icon-lucide-parity.test.ts`, `tests/icon-imports.test.ts`,
+`tests/icon-tone-contrast.test.ts`, `tests/department-illustrations.test.tsx`,
+`tests/icon-lucide-manifest.test.ts`. Run vitest alone and capped: `npx vitest run --maxWorkers=4 <files>`.
+
+**BASE checkout and the two servers.**
+
+```
+BASE="$(git log --diff-filter=A --format=%H -1 -- specs/2026-10-22-icon-system/requirements.md)^"
+git worktree add ../icon-base "$BASE"
+# the worktree has no untracked config: copy it
+cp .env .dev.vars ../icon-base/ && (cd ../icon-base && npm ci && npm run db:generate)
+```
+
+Only one `npm run preview` can hold port 8787. Run the BASE capture to completion, stop it (kill the
+whole `node`/`workerd` chain, or the next build fails with `EBUSY`), then repeat at HEAD. The SriMart
+host is `srimart.localhost:8787` (`lib/tenant.ts`'s host-with-port fallback). **Use
+`demo-customer@example.com`, `demo-store-admin@example.com` (Aheed) and `demo-srimart-admin@example.com`
+with the `DEMO_ACCOUNT_PASSWORD` from `.dev.vars` only** (`.env` holds a different value and returns a
+clean 401 that looks like a broken auth path). Prefix any Git Bash command that has a path-like
+argument with `MSYS_NO_PATHCONV=1`.
+
+**Path lists used by R34 and R35.**
+
+- Storefront, Aheed (`PATHS_A`): `/`, `/categories`, `/categories/fruit-veg`, `/search?q=rice`, `/cart`,
+  `/login`, `/register`, `/help`, `/privacy`, `/products/bananas-1kg`.
+- Storefront, SriMart (`PATHS_S`): `/`, `/categories`, `/categories/sri-electronics`, `/search?q=cable`,
+  `/cart`, `/login`, `/register`, `/help`, `/privacy`, `/products/sri-usb-c-cable-2m`.
+- Signed in, Aheed customer (`demo-customer@example.com`): `/account`, `/account/orders`,
+  `/account/lists`, `/account/loyalty`, `/account/favourites`, `/quick-shop`, `/shop-your-list`.
+- Staff, Aheed store admin (`demo-store-admin@example.com`): `/staff`, `/staff/products`,
+  `/staff/orders`, `/staff/categories`, `/staff/reports`.
+- Staff, SriMart admin (`demo-srimart-admin@example.com`): `/staff`, `/staff/products`.
+
+**Bundle measurement** (R37), run in the repository root after `npm run build` for the client figure and
+after `npm run preview`'s build step (`npx opennextjs-cloudflare build`) for the worker figure:
+
+```
+find .next/static -name '*.js' -print0 | xargs -0 -n1 sh -c 'gzip -9 -c "$0" | wc -c' | awk '{s+=$1} END{print s}'
+gzip -9 -c .open-next/worker.js | wc -c
+```
+
+Run the same two commands in `../icon-base` for the BASE figures, and compare with the figures
+`build-notes.md` recorded at the start of Build (they must agree within 2 KB; if not, trust the fresh
+BASE run and report the discrepancy).
+
+**Evidence for the owner (not pass or fail).** After P3 and after P4a, capture a desktop screenshot of
+`/` and `/categories` on both vendors with the preinstalled Chromium
+(`/opt/pw-browsers/chromium-1194/chrome-linux/chrome --headless --no-sandbox --window-size=1280,900
+--screenshot=<file> <url>`) and attach them to the PR. They inform the owner's review; no row passes or
+fails on them.
+
+---
+
+## Validation Steps
+
+| Req | Testing Area | How to verify |
+|-----|--------------|---------------|
+| R1  | Unit | `npm run kms:validate` exits 0 with `invalid front-matter (failing): 0`. Then open `specs/decisions/ADR-008-icon-system.md` and confirm, by reading, that it states all five items of R1 (build-time bundling and the CSP reason; semantic-name registry; tiers plus the illustration mechanism; functional tier Lucide only; ISC, MIT and Apache-2.0). Any missing item is a FAIL. |
+| R2  | Unit | Extract the section: `awk '/^## Icons/{f=1;next} /^## /{f=0} f' specs/design-system.md > /tmp/icons-section.txt`. `grep -c 'components/icons' /tmp/icons-section.txt` is at least 1; the section contains the numbers `12`, `16`, `20`, `24`, `32`, `48` and the words `functional`, `status`, `decorative`; `grep -c 'no wrapper component' /tmp/icons-section.txt` prints `0`; `grep -cE 'directly from .?lucide-react' /tmp/icons-section.txt` prints `0`. |
+| R3  | Unit | `grep -nE '@iconify/utils|@iconify-json/(lucide|ph|noto)' specs/tech-stack.md` shows four lines, each with a version matching `[0-9]+\.[0-9]+\.[0-9]+` and one of `ISC`, `MIT`, `Apache-2.0`; read the surrounding text for `devDependencies` and the statement excluding Creative Commons Attribution sets unless the owner approves. |
+| R4  | Unit | `awk '/^## Design tokens/{f=1;next} /^## /{f=0} f' CLAUDE.md \| grep -n 'components/icons'` prints one bullet that also contains `ADR-008` (reading across the bullet's wrapped lines is allowed). |
+| R5  | Unit | `node -e "const p=require('./package.json');for(const n of ['@iconify/utils','@iconify-json/lucide','@iconify-json/ph','@iconify-json/noto']){const v=p.devDependencies[n];if(!/^\d+\.\d+\.\d+$/.test(v)\|\|p.dependencies?.[n])throw new Error(n+' '+v)}"` exits 0; `npx vitest run --maxWorkers=4 tests/dependency-pins.test.ts` exits 0 and its source names the four versions. |
+| R6  | Unit | `grep -nE '@iconify/react\|@iconify/tailwind4\|unplugin-icons' package.json` prints nothing (exit 1). |
+| R7  | Unit | `npm run icons:build; echo "exit=$?"` prints `exit=0`; `git status --porcelain > /tmp/s1; npm run icons:build >/dev/null; git status --porcelain > /tmp/s2; diff /tmp/s1 /tmp/s2` prints nothing. |
+| R8  | Unit | `npm run icons:check; echo "exit=$?"` prints `exit=0`. Then `cp components/icons/generated/icon-data.ts /tmp/icon-data.bak; printf ' ' >> components/icons/generated/icon-data.ts; npm run icons:check; echo "exit=$?"` prints a non-zero exit and output naming `icon-data.ts`; restore with `cp /tmp/icon-data.bak components/icons/generated/icon-data.ts`. Repeat the append, check and restore for `public/third-party-icon-licenses.txt`. |
+| R9  | Unit | `awk '/^  quality:/{f=1} /^  kms:/{f=0} f' .github/workflows/quality.yml \| grep -nE 'icons:check\|typecheck'` shows both `npm run typecheck` and `npm run icons:check` inside the `quality` job. |
+| R10 | Integration | `npx vitest run --maxWorkers=4 tests/icon-generator.test.ts` exits 0; read the test to confirm it spawns the real `scripts/build-icons.ts` (`child_process`) with `--registry` for each of the four failure cases and asserts a non-zero exit code and that stderr names both the semantic name and the id. Then run the real script by hand once against a one-entry registry with a bogus id: `npx tsx scripts/build-icons.ts --registry <that file>; echo "exit=$?"` prints a non-zero exit. |
+| R11 | Unit | `npx vitest run --maxWorkers=4 tests/icon-generated-data.test.ts` exits 0; the test builds an entry for the Lucide id `trash-2` and asserts its body equals the body of the alias's parent in `node_modules/@iconify-json/lucide/icons.json`. |
+| R12 | Unit | Same file as R11: the test asserts set equality in both directions between `Object.keys(ICON_REGISTRY)` and the generated data's keys; it exits 0. |
+| R13 | Unit | `npx vitest run --maxWorkers=4 tests/icon.test.tsx` exits 0; the test loops over every Lucide-provider entry and asserts the six root attributes and that no descendant element has `fill="none"` or a `stroke-width` attribute unless the installed `lucide-react` renders the same attribute on the same element (each such case is listed in the test with a reason; report the count). Also render `Icon` with `className="fill-current"` for the `heart` and `star` names and confirm the root still has `fill="none"` and the class (so the override applies on the root). **Page evidence:** after P2a, open `/products/bananas-1kg` (Aheed) with a rating present, or the favourite heart on a product card, and confirm in the HTML from R33 that the heart and star `<svg>` roots carry `fill="none"` and a `fill-` class. |
+| R14 | Unit | Same file as R11: for every `ph` entry the root has `fill="currentColor"`; for duotone entries the body contains `var(--icon-secondary,currentColor)` and `var(--icon-secondary-opacity,.2)` and `grep -c 'opacity=\"\\.2\"'` over the generated file prints `0`. `npx vitest run --maxWorkers=4 tests/icon-generated-data.test.ts` exits 0. |
+| R15 | Unit | `npx vitest run --maxWorkers=4 tests/icon-registry.test.ts` exits 0; the test asserts the key regular expression, the forbidden substrings and the entry shape for every entry. |
+| R16 | Unit | Same file as R15 loops over every `functional` entry asserting provider `lucide` (exit 0). Type check: append a temporary line to `tests/icon-registry.test.ts` that builds a `functional` entry with `provider: "ph"` and run `npx tsc --noEmit`; it exits non-zero with an error on that line; remove the line and confirm `npm run typecheck` exits 0 again. |
+| R17 | Unit | `npx vitest run --maxWorkers=4 tests/icon.test.tsx` exits 0; read the `search` test and confirm it asserts `data-icon`, `xmlns`, `focusable="false"`, `viewBox` and `width="24" height="24"`. |
+| R18 | Unit | Same file: the size test asserts 12, 16, 20, 24, 32, 48 for the six tokens (exit 0). |
+| R19 | Unit | Same file: one test without `label` asserts `aria-hidden="true"` and no `role`; one with `label` asserts `role="img"`, `aria-label` and no `aria-hidden` (exit 0). |
+| R20 | Unit | Same file: tests assert the class is appended, `style` is merged with tone variables and `strokeWidth={1.25}` yields `stroke-width="1.25"` on a Lucide entry (exit 0). |
+| R21 | Unit | Same file: the unknown-name test asserts `data-icon-fallback="true"` and no throw; run `npx tsc --noEmit` after temporarily adding `<Icon name="not-a-name" />` to a scratch `.tsx` and confirm a type error, then remove it. |
+| R22 | Unit | `grep -n 'use client' components/icons/Icon.tsx` prints nothing; `grep -nE "from \"react\"" components/icons/Icon.tsx` shows no `useState`, `useEffect`, `useRef`, `useMemo`, `useCallback`; `npx vitest run --maxWorkers=4 tests/icon.test.tsx tests/department-illustrations.test.tsx` exits 0 and the second file renders `DepartmentScroller` (a client component) containing an `Icon`. |
+| R23 | Unit | `npx vitest run --maxWorkers=4 tests/icon.test.tsx` exits 0; the tone test covers all six tones against the table in `plan.md` (class and secondary variables, including `--icon-secondary:var(--color-accent)` and `--icon-secondary-opacity:.7` for `action`, and nothing for `current`). |
+| R24 | Unit | `grep -nE '#[0-9a-fA-F]{3,8}\b' components/icons/Icon.tsx components/icons/generated/icon-data.ts` prints nothing (exit 1). |
+| R25 | Unit | `grep -rnE '(text\|bg\|fill\|stroke\|border)-(primary\|action\|accent\|danger)(-[a-z]+)?/[0-9]+' components/icons` prints nothing (exit 1). |
+| R26 | Unit | `npx vitest run --maxWorkers=4 tests/icon-lucide-parity.test.ts` exits 0. Read the test to confirm it compares against the installed `lucide-react` export, and read `LUCIDE_PARITY_EXCEPTIONS`: each entry has a reason. Report the number of exceptions (zero is expected, any other count is reported, not failed, provided each has a reason and the test passes). |
+| R27 | Integration | `grep -nE '^(Lucide\|Phosphor\|Noto Emoji)' public/third-party-icon-licenses.txt` shows a section per set (Noto only from P4a); for each, `curl -sS <url from that set's info.json licence url, raw form>` and `diff` the upstream text with the section's licence block, which must match verbatim (all copyright lines). Then temporarily move `scripts/icon-licences/MIT.txt` aside and run `npm run icons:build; echo "exit=$?"` (non-zero), and restore it. |
+| R28 | E2E | With `npm run preview` running: `curl -sS -o /dev/null -w '%{http_code} %{content_type}\n' http://localhost:8787/third-party-icon-licenses.txt` and the same for `http://srimart.localhost:8787/third-party-icon-licenses.txt` print `200 text/plain`; `curl -sS http://localhost:8787/third-party-icon-licenses.txt \| grep -c -E 'Lucide\|Phosphor'` is at least 2 (and `Noto Emoji` counted from P4a). Use `MSYS_NO_PATHCONV=1` under Git Bash and drop `-o /dev/null` in favour of piping the body to `wc -c` if `/dev/null` is rewritten. |
+| R29 | Unit | `npx vitest run --maxWorkers=4 tests/category-icon.test.ts` exits 0 and asserts a mapped slug returns a semantic name string and an unmapped slug returns `tag`; `grep -rn 'svg\.lucide-' tests` prints nothing (exit 1). |
+| R30 | Unit | `grep -n 'lucide-react' components/staff/nav-items.ts` prints nothing; `npx vitest run --maxWorkers=4 tests/staff-nav-parity.test.ts` exits 0, and `git diff BASE..HEAD -- tests/staff-nav-parity.test.ts` shows no weakened assertion (reading the diff: a deleted or loosened `expect` is a FAIL). |
+| R31 | Unit | `npx vitest run --maxWorkers=4 tests/icon-lucide-manifest.test.ts` exits 0. Independently regenerate the list at BASE from the worktree: `cd ../icon-base && grep -rhoE "from ['\"]lucide-react['\"]" app components features lib \| wc -l` is only a sanity figure; the authoritative check is the test's own recount, so also run the extraction command written in the fixture's `producedBy` field and `diff` its output with `tests/fixtures/lucide-icons-in-use.json`'s names (no difference). |
+| R32 | Unit | `npx vitest run --maxWorkers=4 tests/icon-imports.test.ts` exits 0; then run `grep -rlE "from ['\"](lucide-react\|@iconify[^'\"]*)['\"]" app features lib components --include=*.ts --include=*.tsx \| grep -v '^components/icons/'` which prints nothing (exit 1). Read the test to confirm its self-test feeds an in-memory violating file and expects a failure. |
+| R33 | Integration | `npx tsx scripts/verify-icon-markup.ts --base http://localhost:8787 --path / 1>/tmp/out.json 2>/tmp/err.txt; echo "exit=$?"` prints `exit=0`; `node -e "const a=JSON.parse(require('fs').readFileSync('/tmp/out.json','utf8'));if(!Array.isArray(a)\|\|!a.length)process.exit(1)"` exits 0 (stdout is pure JSON, so progress text is on stderr); the keys of the first element are exactly `geometry, width, height, className, ariaHidden`; no class token in the output starts with `lucide`. |
+| R34 | E2E | Capture at BASE: start `npm run preview` in `../icon-base`; for each path of `PATHS_A` run `npx tsx scripts/verify-icon-markup.ts --base http://localhost:8787 --path <p> > base-a-N.json`, and for `PATHS_S` against `http://srimart.localhost:8787` (the script at HEAD is used for both captures; copy it into the worktree's scratch location rather than checking it out there). Stop the server. Repeat at HEAD. For every path, `node` sorts both arrays by their JSON strings and compares for equality; `diff` of the two sorted outputs prints nothing for all 20 paths. Also read the PR diff of `app`, `components` and `features` and confirm no migrated icon changed its `className` text and none gained a `size` prop (a changed `width`/`height` in the comparison would expose it too). Any difference is a FAIL unless it is explained by a documented, reasoned exception in `build-notes.md` that this validator agrees is purely geometry-neutral. |
+| R35 | E2E | Same procedure with `--sign-in demo-customer@example.com:<DEMO_ACCOUNT_PASSWORD from .dev.vars>` for the signed-in Aheed list, `--sign-in demo-store-admin@example.com:...` for the Aheed staff list, and `--sign-in demo-srimart-admin@example.com:...` against `http://srimart.localhost:8787` for the SriMart staff list; all 14 paths produce no difference. (Sign-in on the SriMart host needs `x-forwarded-proto: http`; see the playbook note.) |
+| R36 | Unit | `grep -rn 'LucideIcon' app components features lib` prints nothing (exit 1); `grep -rnE 'icon[:=] ?\{?[A-Z]' components app --include=*.tsx --include=*.ts` prints nothing that passes an imported component as an icon value (each remaining hit must be a string literal semantic name); `npm run typecheck` exits 0. |
+| R37 | Performance | Run the bundle commands of Setup at HEAD and at BASE (and compare with `build-notes.md`). After P2b the client sum minus BASE is at most 15,360 and the worker figure minus BASE is at most 102,400; after P3 at most 25,600 and 102,400; after P4a at most 30,720 and 102,400. Report all four numbers per PR. |
+| R38 | Unit | For each row of the "Phase 3 surfaces" table in `plan.md`: `grep -nE "<Icon " <file>` shows the listed icons now rendered through `Icon` with the listed `tone`, `grep -n 'lucide-react' <file>` shows only functional or status icons remain (or nothing), and `node -e` over `components/icons/registry.ts` (or the registry test's dump) confirms each used name has `tier: "decorative"` and `provider: "ph"`; `git diff BASE..HEAD -- components/account components/staff components/layout/PanelNav.tsx "app/(storefront)/quick-shop"` shows only the mechanical P2 changes (no `provider` or `tone` change). Registry check: `git show <P2b head>:components/icons/registry.ts` versus HEAD's: every key present in the first has the same `provider` and `tier` in the second (a changed pre-existing key is a FAIL). |
+| R39 | E2E | With the P3 build under `npm run preview`: `curl -sS http://localhost:8787/ > /tmp/home-a.html` and `curl -sS http://srimart.localhost:8787/ > /tmp/home-s.html`; for each, `node` extracts every `<svg ... data-icon="NAME">` element, and for names that the registry marks decorative asserts the element contains `--icon-secondary` and does not match `#[0-9a-fA-F]{3,8}\b`; at least three such elements exist per page (the trust strip). |
+| R40 | E2E | `grep -o -- '--color-accent:[^;"]*' /tmp/home-a.html \| head -1` and the same on `/tmp/home-s.html` print two different values; `git diff BASE..HEAD --stat -- lib/vendor-theme.ts design-system/tokens/tokens.css` prints nothing. |
+| R41 | Unit | `npx vitest run --maxWorkers=4 tests/icon-tone-contrast.test.ts` exits 0; read the test to confirm it covers the three primitive sets quoted in R41 (default, Forest Green, Berry Bold) and the four tokens against white, cream and the matching tint (`primary` against all three tints). |
+| R42 | Unit | `npx vitest run --maxWorkers=4 tests/department-illustrations.test.tsx` exits 0; the test asserts the 16 slug-to-id pairs of R42 exactly (no extras: it compares the full object), a path for each, and `null` for `does-not-exist`. |
+| R43 | Unit | `ls public/illustrations/departments \| wc -l` prints `16`; `for f in public/illustrations/departments/*.svg; do head -c 4 "$f"; grep -c 'viewBox' "$f"; wc -c < "$f"; done` shows `<svg`, a count of at least 1 and a size at most 16384 for every file; `cat public/illustrations/departments/*.svg \| wc -c` is at most 98304; `grep -lE '<script\|<foreignObject\|javascript:\|\son[a-z]+=' public/illustrations/departments/*.svg` prints nothing. |
+| R44 | Unit | `npx vitest run --maxWorkers=4 tests/department-illustrations.test.tsx` exits 0; its `DepartmentScroller` test asserts `<img src="/illustrations/departments/fruit-veg.svg"` with `alt=""` and no `<svg` inside that tile for a mapped slug, and `data-icon="tag"` with no `<img` for an unmapped one. |
+| R45 | Unit | Same file: asserts `h-16 w-16` on each tile, `h-12 w-12` on each illustration, and tile classes `bg-action-tint`, `bg-accent-tint`, `bg-action-tint` for zero-based indices 0, 1, 2. |
+| R46 | Unit | `grep -c 'DepartmentGlyph' components/layout/DepartmentHero.tsx` is at least 2 (an import plus both uses; read the file and confirm the two uses are the no-image branch and the `ImageWithFallback` `fallback`), and `grep -nE '<Icon\b\|categoryIconName' components/layout/DepartmentHero.tsx` shows no direct corner-glyph rendering. Same test file as R44: renders `DepartmentGlyph` for a mapped slug asserting the illustration `<img>` with `h-24 w-24 md:h-32 md:w-32`, and for an unmapped slug asserting `data-icon="tag"` and `stroke-width="1.25"`; and renders `DepartmentHero` with a mapped department having no `imageKey` asserting that `<img>`. |
+| R47 | Unit | Same file: renders a strip of eight mapped slugs and asserts every `<img>` has `width`, `height` and `decoding="async"`, the first six `loading="eager"`, the last two `loading="lazy"`. |
+| R48 | Unit | `cp public/illustrations/departments/fruit-veg.svg /tmp/fv.bak; printf ' ' >> public/illustrations/departments/fruit-veg.svg; npm run icons:check; echo "exit=$?"` prints a non-zero exit and output naming `fruit-veg.svg`; restore with `cp /tmp/fv.bak public/illustrations/departments/fruit-veg.svg` and confirm `npm run icons:check` exits 0. |
+| R49 | Unit | `npx vitest run --maxWorkers=4 tests/vendor-neutral-copy.test.ts` exits 0; `grep -rnE 'fruit-veg\|halal\|bakery\|dairy\|Aheed\|SriMart' components/icons --include=*.ts --include=*.tsx \| grep -v 'components/icons/illustrations.ts'` prints nothing (generated data and registry contain no vendor or category word; the illustration map is the one place slugs appear). |
+| R50 | E2E | `git diff BASE..HEAD --stat -- next.config.mjs` prints nothing. For `/` and `/categories` on both vendors, save the HTML and run `grep -oE 'https?://[^"'"'"' )]+' <file> \| sed -E 's#(https?://[^/]+).*#\1#' \| sort -u`: every host is the page's own origin, `*.nocaped.com`, or a host that the same command prints for BASE's capture of the same page (a host new at HEAD is a FAIL); `grep -ci iconify <file>` prints `0` for each file. |
+| R51 | E2E | With the P4a build under `npm run preview`: `curl -sS http://srimart.localhost:8787/categories \| grep -oE '/illustrations/departments/[a-z0-9-]+\.svg' \| sort -u` prints only `/illustrations/departments/sri-electronics.svg` and/or `/illustrations/departments/sri-home.svg`; the same command against `http://localhost:8787/categories` prints no path whose file name starts `sri-` and at least one Aheed illustration. |
+| R52 | Unit | `grep -n '1223' CHANGELOG.md` prints at least one line under the `[Unreleased]` heading (confirm by reading that the line is above the first dated release heading). |
+| R53 | Unit | `node -e "const p=require('./package.json');if(!p.dependencies['lucide-react'])process.exit(1)"` exits 0. |
+| R54 | Regression | In order, each alone: `npm run lint`, `npm run typecheck`, `npm run format:check`, `npm run icons:check`, `npm run kms:validate`, `npm run kms:check-generated`, `npm run build` all exit 0; `npx vitest run --maxWorkers=4` exits 0 or fails only `tests/add-to-cart-feedback.test.tsx:93`, in which case `npx vitest run tests/add-to-cart-feedback.test.tsx` run three times passes all three. Quote the final `Test Files` and `Tests` lines. |
+| R55 | Regression | `npm run kms:build-index` after the last doc edit leaves `git status --porcelain` unchanged for `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`; then `npm run kms:assemble:internal; echo "assemble=$?"` prints `assemble=0` and `(cd kms/site-internal && npx next build --webpack; echo "build=$?")` prints `build=0` (read the real status, not the exit of a pipe). |
+
+<!--
+  One row per requirement, same order as requirements.md. A DB-touching or Workers-runtime row says
+  `npm run preview` explicitly: `npm run dev` cannot load @prisma/client/wasm.
+-->

@@ -145,6 +145,11 @@ tokens — close enough that a parallel token set would just be indirection:
 
 ## Icons
 
+> **Superseded in part (ADR-008, issue #1223, build pending).** The owner has approved an icon wrapper,
+> a semantic-name registry and colourful decorative icons; this section is rewritten to describe them at
+> Build (`specs/2026-10-22-icon-system/requirements.md` R2). Until that lands, the text below describes
+> the shipped state only, and new work must follow ADR-008, not the paragraph below.
+
 **lucide-react** — confirmed as the mockup's actual choice (`docs/ui-ref/src/components/*.tsx`
 import every icon from it). Components import icons directly from `lucide-react`; no wrapper
 component, no hand-rolled SVG set.
