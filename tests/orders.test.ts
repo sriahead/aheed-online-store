@@ -38,7 +38,8 @@ type FakeState = {
     name: string;
     basePrice: number;
     isActive: boolean;
-    inventory: { quantity: number } | null;
+    restriction?: string | null;
+    inventory: { quantity: number; stockMode?: string } | null;
     /** #1135 — absent means "does not take notes", as for every pre-#1135 case. */
     allowsCustomNote?: boolean;
     category?: { allowsCustomNote: boolean; parent: { allowsCustomNote: boolean } | null };
@@ -92,7 +93,17 @@ function orderItemRows(): { productId: string; quantity: number; customNote?: st
 function fakePrisma() {
   const tx = {
     cart: { findFirst: async () => state.cart },
-    product: { findMany: async () => state.products },
+    // #1211 — every pre-#1211 fixture describes an unrestricted, TRACKED product, so the double
+    // supplies those two fields rather than every case restating them. A case that needs another
+    // stock mode or a restriction sets it on the fixture and it wins over these defaults.
+    product: {
+      findMany: async () =>
+        state.products.map((p) => ({
+          restriction: null,
+          ...p,
+          inventory: p.inventory && { stockMode: "TRACKED", ...p.inventory },
+        })),
+    },
     // P8.5d (#348) — placeOrder reads multi-buy tiers inside the transaction.
     // Empty by default: every pre-P8.5d case below asserts base-price totals,
     // and no tier means lib/tier-pricing.ts returns exactly unitPrice ×

@@ -9,7 +9,7 @@ import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { keysetCursorArgs, runKeysetPage } from "@/lib/repositories/pagination";
 import { buildOrderNumber, computeTotals, type DeliveryRules } from "@/lib/order-totals";
 import { getPaymentService } from "@/lib/payments";
-import { effectiveStock } from "@/lib/cart-rules";
+import { PURCHASABILITY_SELECT, purchasableQuantity } from "@/lib/cart-rules";
 import {
   buildStaffTimeline,
   buildTimeline,
@@ -228,8 +228,8 @@ export async function placeOrder(
           id: true,
           name: true,
           basePrice: true,
-          isActive: true,
-          inventory: { select: { quantity: true } },
+          // #1211 — restriction, isActive and stock mode, for the one purchasability rule.
+          ...PURCHASABILITY_SELECT,
           // #1135 — whether a line's note still travels is decided here, at this instant.
           ...NOTE_ACCEPTANCE_SELECT,
         },
@@ -255,7 +255,7 @@ export async function placeOrder(
             "An item in your cart is no longer available.",
           );
         }
-        const available = product.isActive && effectiveStock(product.inventory?.quantity) > 0;
+        const available = purchasableQuantity(product) > 0;
         if (!available) {
           throw new CheckoutError(
             "LINE_UNAVAILABLE",
@@ -268,6 +268,9 @@ export async function placeOrder(
           unitPricePence: product.basePrice,
           quantity: item.quantity,
           available,
+          // #1211 — only a TRACKED product's quantity is decremented (and later restored). An
+          // UNTRACKED line writes no inventory at all; UNKNOWN never gets this far (0 above).
+          tracked: product.inventory?.stockMode === "TRACKED",
           // Explicit because a tiered line is not unitPrice × quantity. When no
           // tier applies this is exactly that product, so nothing changes.
           lineTotalPence: tieredLineTotalPence(
@@ -303,8 +306,16 @@ export async function placeOrder(
       // evaluated atomically by Postgres, so two concurrent checkouts for the last
       // item cannot both succeed. count === 0 means someone got there first.
       for (const line of lines) {
+        if (!line.tracked) continue;
         const { count } = await tx.inventory.updateMany({
-          where: { vendorId, productId: line.productId, quantity: { gte: line.quantity } },
+          // #1211 — `stockMode` in the WHERE: a product switched away from TRACKED mid-checkout
+          // matches nothing and reads as "just sold out", never as a silent oversell.
+          where: {
+            vendorId,
+            productId: line.productId,
+            stockMode: "TRACKED",
+            quantity: { gte: line.quantity },
+          },
           data: { quantity: { decrement: line.quantity } },
         });
         if (count === 0) {
@@ -624,7 +635,8 @@ async function releaseOrder(
     });
     for (const item of items) {
       await tx.inventory.updateMany({
-        where: { vendorId, productId: item.productId },
+        // #1211 — only a TRACKED quantity is restored; an UNTRACKED one is ignored, not counted.
+        where: { vendorId, productId: item.productId, stockMode: "TRACKED" },
         data: { quantity: { increment: item.quantity } },
       });
     }
@@ -1971,7 +1983,8 @@ export async function cancelConfirmedOrder(
     });
     for (const item of items) {
       await tx.inventory.updateMany({
-        where: { vendorId, productId: item.productId },
+        // #1211 — only a TRACKED quantity is restored; an UNTRACKED one is ignored, not counted.
+        where: { vendorId, productId: item.productId, stockMode: "TRACKED" },
         data: { quantity: { increment: item.quantity } },
       });
     }

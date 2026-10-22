@@ -13,15 +13,6 @@ export function isMergeResolution(value: unknown): value is MergeResolution {
 }
 
 /**
- * Effective stock for a product. A product with NO Inventory row is treated as
- * out of stock — never as unlimited. `Product.inventory` is optional in the
- * schema, so this is a real case, not a defensive nicety.
- */
-export function effectiveStock(inventoryQuantity: number | null | undefined): number {
-  return typeof inventoryQuantity === "number" && inventoryQuantity > 0 ? inventoryQuantity : 0;
-}
-
-/**
  * Quantity after adding `delta` to `current`, clamped to [1, stock]. Returns 0
  * when nothing can be held (out of stock) — callers treat 0 as "refuse the add".
  * Quantity never lands on 0 by decrement: removal is an explicit, separate path.
@@ -35,6 +26,89 @@ export function clampQuantity(current: number, delta: number, stock: number): nu
 
 /** The largest quantity one add may request — the pre-add picker's own upper bound. */
 export const MAX_ADD_QUANTITY = 99;
+
+/**
+ * #1211 (ADR-007) — `Inventory.stockMode` and `Product.restriction`, restated as string unions so
+ * this module stays free of any Prisma import. Prisma's generated enum types are these same string
+ * literals, so a selected row passes straight in.
+ */
+export type StockMode = "UNKNOWN" | "TRACKED" | "UNTRACKED";
+export type ProductRestriction =
+  "PROHIBITED" | "AGE_RESTRICTED" | "NOT_DELIVERABLE" | "NEEDS_REVIEW";
+
+export const STOCK_MODES: readonly StockMode[] = ["TRACKED", "UNTRACKED", "UNKNOWN"];
+
+export function isStockMode(value: unknown): value is StockMode {
+  return typeof value === "string" && (STOCK_MODES as readonly string[]).includes(value);
+}
+
+export type StockInput = { stockMode: StockMode; quantity: number } | null | undefined;
+
+/**
+ * The exact Product fields `purchasableQuantity` reads, as a Prisma `select` fragment. Spread it
+ * into every query that feeds the rule, so a caller cannot forget `restriction` or `stockMode`.
+ */
+export const PURCHASABILITY_SELECT = {
+  isActive: true,
+  restriction: true,
+  inventory: { select: { quantity: true, stockMode: true } },
+} as const;
+
+/**
+ * The Product half of PURCHASABILITY_SELECT, for a query that already selects a wider `inventory`
+ * (it must then add `stockMode` itself). A named fragment rather than an inline
+ * `isActive: true, restriction: true`, because tests/storefront-product-visibility.test.ts reads
+ * every inline `isActive: true` in the storefront repository as a WHERE that must carry category
+ * visibility — and a `select` is not one.
+ */
+export const ELIGIBILITY_SELECT = { isActive: true, restriction: true } as const;
+
+/** A product with NO Inventory row has no stated mode — that is UNKNOWN, never "tracked at 0". */
+export function stockModeOf(inventory: StockInput): StockMode {
+  return inventory?.stockMode ?? "UNKNOWN";
+}
+
+/**
+ * #1211 — THE purchasability rule. How many of this product a shopper may hold, where 0 means "not
+ * purchasable". The cart, checkout, bundles, every storefront mapper and `placeOrder` call this and
+ * nothing else; tests/purchasability-single-source.test.ts fails on a re-derived quantity check.
+ *
+ * - restricted or inactive: 0, whatever the stock says.
+ * - UNKNOWN (or no Inventory row): 0. Availability is never assumed.
+ * - TRACKED: the quantity, floored at 0.
+ * - UNTRACKED: MAX_ADD_QUANTITY, the per-line cap, whatever the (ignored) quantity is.
+ */
+export function purchasableQuantity(input: {
+  isActive: boolean;
+  restriction: ProductRestriction | null;
+  inventory: StockInput;
+}): number {
+  if (input.restriction !== null || !input.isActive) return 0;
+  const mode = stockModeOf(input.inventory);
+  if (mode === "UNTRACKED") return MAX_ADD_QUANTITY;
+  if (mode === "TRACKED") return Math.max(input.inventory?.quantity ?? 0, 0);
+  return 0;
+}
+
+/**
+ * #1211 — "Only N left" and the low-stock badge. TRACKED only: an UNTRACKED product's
+ * `stockQuantity` is the per-line cap, not a count, and must never read as "Only 99 left".
+ * Only meaningful while there is still stock to run out of — a zero-stock product renders the
+ * out-of-stock control instead.
+ */
+export function showsLowStock(product: {
+  inStock: boolean;
+  stockMode: StockMode;
+  stockQuantity: number;
+  lowStockThreshold: number;
+}): boolean {
+  return (
+    product.inStock &&
+    product.stockMode === "TRACKED" &&
+    product.stockQuantity > 0 &&
+    product.stockQuantity <= product.lowStockThreshold
+  );
+}
 
 /**
  * #956 — what one add actually did, so the button can say so. Before this the

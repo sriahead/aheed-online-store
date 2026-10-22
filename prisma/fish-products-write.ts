@@ -48,6 +48,8 @@ export function toProductInput(
     isFeatured: false,
     isActive: options.active,
     quantity: options.stock,
+    // #1211 — a deliberate stock count is tracking; never the column's UNKNOWN default.
+    stockMode: "TRACKED",
     lowStockThreshold: LOW_STOCK_THRESHOLD,
     expectedRestockDay: null,
   };

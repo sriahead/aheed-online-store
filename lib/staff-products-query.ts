@@ -30,6 +30,27 @@ export const PRODUCT_STATUS_ALL = "all";
  */
 export const CATEGORY_ALL = "all";
 
+/** #1211 — "no restriction filter", and the two non-class selections. */
+export const RESTRICTION_ALL = "all";
+export const RESTRICTION_FILTERS = [
+  "any",
+  "none",
+  "PROHIBITED",
+  "AGE_RESTRICTED",
+  "NOT_DELIVERABLE",
+  "NEEDS_REVIEW",
+] as const;
+export type RestrictionFilter = (typeof RESTRICTION_FILTERS)[number];
+
+/** #1211 — "no stock-mode filter". */
+export const STOCK_ALL = "all";
+export const STOCK_FILTERS = ["TRACKED", "UNTRACKED", "UNKNOWN"] as const;
+export type StockFilter = (typeof STOCK_FILTERS)[number];
+
+/** #1211 — the page sizes the list offers; anything else is the default. */
+export const PER_PAGE_OPTIONS = [25, 100] as const;
+export const DEFAULT_PER_PAGE = 25;
+
 /**
  * The shape of a category this module needs to resolve a filter — an id and its
  * parent, nothing else.
@@ -79,6 +100,15 @@ export interface StaffProductsQuery {
    * Every path here yields either undefined or at least one id.
    */
   categoryIds: string[] | undefined;
+  /** #1211 — the normalised restriction selection (`"all"` or one of RESTRICTION_FILTERS). */
+  restrictionFilter: string;
+  /** #1211 — the repository argument: undefined means no filter. */
+  restriction: RestrictionFilter | undefined;
+  /** #1211 — the normalised stock selection (`"all"` or one of STOCK_FILTERS). */
+  stockFilter: string;
+  stockMode: StockFilter | undefined;
+  /** #1211 — 25 or 100; any other value is 25. */
+  perPage: number;
 }
 
 /** A URL-encoded query string carrying the current filter, for the next-page link. */
@@ -88,6 +118,9 @@ export function staffProductsHref(query: StaffProductsQuery, cursor?: string | n
   if (query.status && query.status !== PRODUCT_STATUS_ALL) params.set("status", query.status);
   if (query.search) params.set("q", query.search);
   if (query.category && query.category !== CATEGORY_ALL) params.set("category", query.category);
+  if (query.restriction) params.set("restriction", query.restriction);
+  if (query.stockMode) params.set("stock", query.stockMode);
+  if (query.perPage !== DEFAULT_PER_PAGE) params.set("perPage", String(query.perPage));
   if (cursor) params.set("cursor", cursor);
   const qs = params.toString();
   return qs ? `/staff/products?${qs}` : "/staff/products";
@@ -109,6 +142,9 @@ export function parseStaffProductsQuery(
     status?: string;
     q?: string;
     category?: string;
+    restriction?: string;
+    stock?: string;
+    perPage?: string;
   },
   categories: readonly CategoryChoice[],
 ): StaffProductsQuery {
@@ -155,11 +191,30 @@ export function parseStaffProductsQuery(
         ? [selected.id, ...categories.filter((c) => c.parentId === selected.id).map((c) => c.id)]
         : [selected.id];
 
+  // #1211 — exact matches only; a typo or a forged value is no filter, like status above.
+  const rawRestriction = (input.restriction ?? "").trim();
+  const restriction = (RESTRICTION_FILTERS as readonly string[]).includes(rawRestriction)
+    ? (rawRestriction as RestrictionFilter)
+    : undefined;
+  const rawStock = (input.stock ?? "").trim();
+  const stockMode = (STOCK_FILTERS as readonly string[]).includes(rawStock)
+    ? (rawStock as StockFilter)
+    : undefined;
+  const rawPerPage = Number((input.perPage ?? "").trim());
+  const perPage = (PER_PAGE_OPTIONS as readonly number[]).includes(rawPerPage)
+    ? rawPerPage
+    : DEFAULT_PER_PAGE;
+
   return {
     isActive,
     search: rawSearch === "" ? null : rawSearch,
     status,
     category: selected?.id ?? CATEGORY_ALL,
     categoryIds,
+    restrictionFilter: restriction ?? RESTRICTION_ALL,
+    restriction,
+    stockFilter: stockMode ?? STOCK_ALL,
+    stockMode,
+    perPage,
   };
 }

@@ -39,6 +39,7 @@ const mockProductSummary: ProductSummary = {
   reviewCount: 15,
   inStock: true,
   stockQuantity: 20,
+  stockMode: "TRACKED",
   lowStockThreshold: 3,
   expectedRestockDay: null,
   tier: null,

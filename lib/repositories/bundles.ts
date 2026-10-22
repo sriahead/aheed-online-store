@@ -1,6 +1,11 @@
 import type { Prisma } from "@prisma/client";
 import type { getPrisma, getPrismaWs } from "@/lib/db";
-import { effectiveStock } from "@/lib/cart-rules";
+import {
+  PURCHASABILITY_SELECT,
+  purchasableQuantity,
+  type ProductRestriction,
+  type StockMode,
+} from "@/lib/cart-rules";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import type { BundleItemInput } from "@/lib/bundle-pricing";
 
@@ -62,8 +67,7 @@ const BUNDLE_INCLUDE = {
           unitLabel: true,
           basePrice: true,
           originalPrice: true,
-          isActive: true,
-          inventory: { select: { quantity: true } },
+          ...PURCHASABILITY_SELECT,
         },
       },
     },
@@ -80,7 +84,8 @@ type RawBundleItem = {
     basePrice: number;
     originalPrice: number | null;
     isActive: boolean;
-    inventory: { quantity: number } | null;
+    restriction: ProductRestriction | null;
+    inventory: { quantity: number; stockMode: StockMode } | null;
   };
 };
 
@@ -94,9 +99,9 @@ function toItemInput(row: RawBundleItem): BundleItemInput {
     originalPrice: row.product.originalPrice,
     quantity: row.quantity,
     isActive: row.product.isActive,
-    // Normalised the same way ProductSummary does, so a missing Inventory row
-    // or a negative count reads as 0 rather than leaking into the pricing math.
-    stockQuantity: effectiveStock(row.product.inventory?.quantity ?? 0),
+    // #1211 — the one purchasability rule, so a restricted, UNKNOWN or sold-out
+    // component reads as 0 and an UNTRACKED one as the per-line cap.
+    stockQuantity: purchasableQuantity(row.product),
   };
 }
 

@@ -47,14 +47,14 @@ enum VendorRole {
 }
 
 model User {
-  id                  String                  @id
+  id                  String                       @id
   name                String
-  email               String                  @unique
-  emailVerified       Boolean                 @default(false)
+  email               String                       @unique
+  emailVerified       Boolean                      @default(false)
   image               String?
-  role                Role                    @default(CUSTOMER)
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
+  role                Role                         @default(CUSTOMER)
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
   sessions            Session[]
   accounts            Account[]
   reviews             Review[]
@@ -62,20 +62,21 @@ model User {
   carts               Cart[]
   addresses           Address[]
   orders              Order[]
-  statusChanges       OrderStatusEvent[]      @relation("OrderStatusEventActor")
+  statusChanges       OrderStatusEvent[]           @relation("OrderStatusEventActor")
   loyaltyAccounts     LoyaltyAccount[]
   loyaltyEntries      LoyaltyLedgerEntry[]
   marketingConsents   MarketingConsentEvent[]
   discountUses        DiscountRedemption[]
   /// #987 — the referral codes this user owns, at most one per vendor.
-  referralCodes       DiscountCode[]          @relation("ReferralCodeOwner")
-  roleChangesTargeted VendorRoleAuditLog[]    @relation("TargetUser")
-  roleChangesActedOn  VendorRoleAuditLog[]    @relation("ActorUser")
+  referralCodes       DiscountCode[]               @relation("ReferralCodeOwner")
+  roleChangesTargeted VendorRoleAuditLog[]         @relation("TargetUser")
+  roleChangesActedOn  VendorRoleAuditLog[]         @relation("ActorUser")
+  restrictionChanges  ProductRestrictionAuditLog[]
   customerAddresses   CustomerAddress[]
   shoppingLists       ShoppingList[]
   feedback            CustomerFeedback[]
-  feedbackModerated   CustomerFeedback[]      @relation("FeedbackModerator")
-  netContentReviews   NetContentSuggestion[]  @relation("NetContentReviewer")
+  feedbackModerated   CustomerFeedback[]           @relation("FeedbackModerator")
+  netContentReviews   NetContentSuggestion[]       @relation("NetContentReviewer")
   favourites          Favourite[]
 }
 
@@ -133,13 +134,13 @@ enum VendorStatus {
 }
 
 model Vendor {
-  id                        String                     @id @default(uuid())
-  slug                      String                     @unique
+  id                        String                       @id @default(uuid())
+  slug                      String                       @unique
   name                      String
-  status                    VendorStatus               @default(ACTIVE)
-  customDomain              String?                    @unique // used in slice 3 (host→tenant resolution)
-  createdAt                 DateTime                   @default(now())
-  updatedAt                 DateTime                   @updatedAt
+  status                    VendorStatus                 @default(ACTIVE)
+  customDomain              String?                      @unique // used in slice 3 (host→tenant resolution)
+  createdAt                 DateTime                     @default(now())
+  updatedAt                 DateTime                     @updatedAt
   branding                  VendorBranding?
   config                    VendorConfig?
   location                  VendorLocation?
@@ -166,6 +167,7 @@ model Vendor {
   discountCodes             DiscountCode[]
   discountUses              DiscountRedemption[]
   roleAuditLogs             VendorRoleAuditLog[]
+  restrictionAuditLogs      ProductRestrictionAuditLog[]
   lookupAttempts            OrderLookupAttempt[]
   codeAttempts              DiscountCodeAttempt[]
   campaigns                 DepartmentCampaign[]
@@ -752,14 +754,14 @@ enum NetContentUnit {
 }
 
 model Product {
-  id                        String                  @id @default(uuid())
+  id                        String                       @id @default(uuid())
   vendorId                  String
-  vendor                    Vendor                  @relation(fields: [vendorId], references: [id])
+  vendor                    Vendor                       @relation(fields: [vendorId], references: [id])
   slug                      String
   name                      String
   description               String
   categoryId                String
-  category                  Category                @relation(fields: [categoryId, vendorId], references: [id, vendorId])
+  category                  Category                     @relation(fields: [categoryId, vendorId], references: [id, vendorId])
   basePrice                 Int // pence
   unitLabel                 String // "£2.40 / kg"
   // #398 (derivation half, P9.3) — net content, so unitLabel's implied price can be CHECKED
@@ -777,10 +779,17 @@ model Product {
   // deriveUnitPriceLabel(), directly from basePrice and net content, so a rounding artefact in
   // this column can never reach a price a shopper actually reads. Null whenever net content is.
   unitPricePencePerBaseUnit Int?
-  isActive                  Boolean                 @default(true)
+  isActive                  Boolean                      @default(true)
+  // #1211 (ADR-007) — why this product may not be sold yet. Null = unrestricted. A restricted
+  // product is NEVER active: the migration adds CHECK "Product_restricted_inactive_check", which
+  // Prisma cannot model, so the rule holds below the application too. PROHIBITED and
+  // AGE_RESTRICTED are hard blocks with no override path; the other two clear only through an
+  // audited ADMIN confirmation (lib/product-restriction.ts).
+  restriction               ProductRestriction?
+  restrictionAuditLogs      ProductRestrictionAuditLog[]
   // #1135 — this product takes a shopper note even when its category does not.
-  allowsCustomNote          Boolean                 @default(false)
-  createdAt                 DateTime                @default(now())
+  allowsCustomNote          Boolean                      @default(false)
+  createdAt                 DateTime                     @default(now())
   images                    ProductImage[]
   netContentSuggestions     NetContentSuggestion[]
   inventory                 Inventory?
@@ -791,38 +800,38 @@ model Product {
   bundleItems               BundleItem[]
   priceTier                 ProductPriceTier?
   attributeValues           ProductAttributeValue[]
-  averageRating             Float                   @default(0) // denormalized, recomputed on every review write
-  reviewCount               Int                     @default(0)
+  averageRating             Float                        @default(0) // denormalized, recomputed on every review write
+  reviewCount               Int                          @default(0)
   // P2.5b1 — visual redesign foundation (specs/2026-08-07-p2-5b1-visual-foundation/).
   // originalPrice, when set, is basePrice's pre-discount price — a discount badge is
   // derived from the difference at render time, not a separate boolean flag that could
   // drift out of sync with the actual prices.
   origin                    String?
   originalPrice             Int? // pence, pre-discount price
-  isHalal                   Boolean                 @default(false)
-  isFresh                   Boolean                 @default(false)
-  isOrganic                 Boolean                 @default(false)
+  isHalal                   Boolean                      @default(false)
+  isFresh                   Boolean                      @default(false)
+  isOrganic                 Boolean                      @default(false)
   // P2.6 slice 6 (#569) — dietary facets, deliberately the same boolean shape as the
   // three flags above rather than a generic attribute model. An attribute table would
   // make every facet an EXISTS join, harder to index, and would fork the codebase so
   // isHalal and isVegetarian are queried two different ways for no gain a shopper sees.
-  isVegetarian              Boolean                 @default(false)
-  isGlutenFree              Boolean                 @default(false)
+  isVegetarian              Boolean                      @default(false)
+  isGlutenFree              Boolean                      @default(false)
   // HMC is a NAMED THIRD-PARTY CERTIFYING BODY, not a synonym for isHalal, and #239 was
   // a real incident where this codebase asserted "100% Certified HMC Halal" for a vendor
   // with no basis for it. So the flag never travels alone: lib/catalogue-form.ts requires
   // both fields below when it is ticked, and nulls both when it is not. A certification
   // claim with no provenance behind it is exactly what that rule exists to prevent.
-  isHmcCertified            Boolean                 @default(false)
+  isHmcCertified            Boolean                      @default(false)
   hmcReference              String?
   hmcVerifiedAt             DateTime?
   brandId                   String?
-  brand                     Brand?                  @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  brand                     Brand?                       @relation(fields: [brandId], references: [id], onDelete: SetNull)
   // #211 — vendor curation flag driving the homepage "Featured Products" rail.
   // Independent of originalPrice's discount-badge derivation: featured and
   // "on offer" are two separate concepts.
-  isFeatured                Boolean                 @default(false)
-  imageNeedsReview          Boolean                 @default(false)
+  isFeatured                Boolean                      @default(false)
+  imageNeedsReview          Boolean                      @default(false)
   // #523 — how many times the image pipeline has tried this product and failed.
   //
   // Workers AI permanently refuses some legitimate names: `Halal Chicken Thighs 1kg`
@@ -834,7 +843,7 @@ model Product {
   //
   // Reset to 0 whenever an image is successfully saved, so a product that later loses
   // its image is retried rather than being permanently excluded by a historic failure.
-  imageAttemptFailures      Int                     @default(0)
+  imageAttemptFailures      Int                          @default(0)
 
   @@unique([vendorId, slug])
   @@index([vendorId, categoryId, isActive])
@@ -1016,9 +1025,63 @@ model Inventory {
   // the product back, the same convention as Order.fulfilmentDate (#811). Read and write it only
   // through lib/local-datetime.ts's calendar-day helpers. Null = no expected date.
   expectedRestockDate DateTime?
+  // #1211 (ADR-007 Decision 4) — whether `quantity` means anything. UNKNOWN is the default so a
+  // code path that creates a row without choosing fails CLOSED (unbuyable), never open. Rows that
+  // existed before the migration were given TRACKED, which is how they already behaved. Only
+  // lib/cart-rules.ts's purchasableQuantity() turns this into "can a shopper buy it".
+  stockMode           StockMode @default(UNKNOWN)
   updatedAt           DateTime  @updatedAt
 
   @@index([vendorId])
+}
+
+/// #1211 (ADR-007) — the restriction classes, most severe first. Severity order is load-bearing:
+/// a restriction may be tightened but never loosened except by an audited clear.
+enum ProductRestriction {
+  PROHIBITED
+  AGE_RESTRICTED
+  NOT_DELIVERABLE
+  NEEDS_REVIEW
+}
+
+/// #1211 — storefront purchase states only; this is NOT stock management (ADR-007 Decision 1).
+enum StockMode {
+  UNKNOWN
+  TRACKED
+  UNTRACKED
+}
+
+enum ProductRestrictionAuditAction {
+  RESTRICTION_SET
+  RESTRICTION_CLEARED
+}
+
+enum ProductRestrictionChangeSource {
+  PRODUCT_FORM
+  BULK_ACTION
+  IMPORT
+}
+
+/// #1211 — append-only record of every restriction decision. Nothing in the application updates
+/// or deletes a row (tests/product-restriction-audit-append-only.test.ts). productId has no
+/// onDelete, so the database refuses to delete a product with a trail; no application path deletes
+/// products. A null actorUserId means the change was written by a catalogue import.
+model ProductRestrictionAuditLog {
+  id              String                         @id @default(uuid())
+  vendorId        String
+  vendor          Vendor                         @relation(fields: [vendorId], references: [id])
+  productId       String
+  product         Product                        @relation(fields: [productId], references: [id])
+  action          ProductRestrictionAuditAction
+  fromRestriction ProductRestriction?
+  toRestriction   ProductRestriction?
+  actorUserId     String?
+  actor           User?                          @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  source          ProductRestrictionChangeSource
+  reason          String?
+  createdAt       DateTime                       @default(now())
+
+  @@index([vendorId, productId, createdAt])
 }
 
 // P2.5a — ratings & reviews (specs/2026-08-07-p2-5a-ratings-reviews/). One review

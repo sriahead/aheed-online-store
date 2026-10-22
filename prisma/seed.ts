@@ -886,7 +886,7 @@ async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
               },
             },
             inventory: {
-              create: { vendorId, quantity: product.quantity },
+              create: { vendorId, quantity: product.quantity, stockMode: "TRACKED" }, // #1211
             },
           },
         });
@@ -1262,6 +1262,7 @@ async function seedGeneratedCatalogue(
         vendorId,
         productId: id,
         quantity: product.quantity,
+        stockMode: "TRACKED", // #1211 — seeded counts are tracked; never the UNKNOWN default
       })),
     });
   }
@@ -2525,7 +2526,7 @@ async function seedSubcategoryProducts(vendorId: string, map: Record<string, Cat
               source: "PLACEHOLDER", // #900
             },
           },
-          inventory: { create: { vendorId, quantity: product.quantity } },
+          inventory: { create: { vendorId, quantity: product.quantity, stockMode: "TRACKED" } }, // #1211
         },
       });
       created++;

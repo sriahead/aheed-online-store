@@ -272,6 +272,7 @@ async function main() {
         isFeatured: false,
         isActive: false,
         quantity: 1,
+        stockMode: "TRACKED" as const,
         lowStockThreshold: 1,
         expectedRestockDay: null,
         tier: null,

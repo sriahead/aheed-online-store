@@ -34,6 +34,7 @@ function productForm(overrides: RawForm = {}): RawForm {
     basePrice: "2.40",
     unitLabel: "£2.40 / kg",
     quantity: "10",
+    stockMode: "TRACKED",
     lowStockThreshold: "3",
     isActive: "on",
     ...overrides,
@@ -132,6 +133,20 @@ describe("parseProductForm — field rules (R5)", () => {
     expect(rejectedField(parseProductForm(productForm({ quantity: "-1" })))).toBe("quantity");
     expect(rejectedField(parseProductForm(productForm({ quantity: "1.5" })))).toBe("quantity");
     expect(rejectedField(parseProductForm(productForm({ quantity: "" })))).toBe("quantity");
+  });
+
+  it("#1211 (R15a) — accepts each stock mode and refuses a missing or unknown one", () => {
+    for (const stockMode of ["TRACKED", "UNTRACKED", "UNKNOWN"]) {
+      const parsed = parseProductForm(productForm({ stockMode, quantity: "4" }));
+      expect(parsed.ok && parsed.value.stockMode).toBe(stockMode);
+      // A mode change never alters the count the form submitted.
+      expect(parsed.ok && parsed.value.quantity).toBe(4);
+    }
+    expect(rejectedField(parseProductForm(productForm({ stockMode: "FOO" })))).toBe("stockMode");
+    expect(rejectedField(parseProductForm(productForm({ stockMode: "tracked" })))).toBe(
+      "stockMode",
+    );
+    expect(rejectedField(parseProductForm(productForm({ stockMode: "" })))).toBe("stockMode");
   });
 
   it("rejects a negative low-stock threshold", () => {

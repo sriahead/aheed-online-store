@@ -221,3 +221,63 @@ describe("staffProductsHref", () => {
     expect(href).toContain("cursor=cur42");
   });
 });
+
+describe("parseStaffProductsQuery — restriction, stock and page size (#1211, R22)", () => {
+  it("defaults to no restriction filter, no stock filter and 25 per page", () => {
+    const query = parseStaffProductsQuery({}, CATEGORIES);
+    expect(query.restriction).toBeUndefined();
+    expect(query.stockMode).toBeUndefined();
+    expect(query.restrictionFilter).toBe("all");
+    expect(query.stockFilter).toBe("all");
+    expect(query.perPage).toBe(25);
+  });
+
+  it("accepts any, none and each restriction class exactly", () => {
+    for (const value of [
+      "any",
+      "none",
+      "PROHIBITED",
+      "AGE_RESTRICTED",
+      "NOT_DELIVERABLE",
+      "NEEDS_REVIEW",
+    ]) {
+      expect(parseStaffProductsQuery({ restriction: value }, CATEGORIES).restriction).toBe(value);
+    }
+  });
+
+  it("treats an unknown restriction or stock value as unfiltered", () => {
+    const query = parseStaffProductsQuery({ restriction: "bogus", stock: "tracked" }, CATEGORIES);
+    expect(query.restriction).toBeUndefined();
+    expect(query.restrictionFilter).toBe("all");
+    expect(query.stockMode).toBeUndefined();
+  });
+
+  it("accepts each stock mode", () => {
+    for (const value of ["TRACKED", "UNTRACKED", "UNKNOWN"]) {
+      expect(parseStaffProductsQuery({ stock: value }, CATEGORIES).stockMode).toBe(value);
+    }
+  });
+
+  it("offers 25 or 100 per page and treats anything else as 25", () => {
+    expect(parseStaffProductsQuery({ perPage: "100" }, CATEGORIES).perPage).toBe(100);
+    expect(parseStaffProductsQuery({ perPage: "7" }, CATEGORIES).perPage).toBe(25);
+    expect(parseStaffProductsQuery({ perPage: "1000" }, CATEGORIES).perPage).toBe(25);
+    expect(parseStaffProductsQuery({ perPage: "abc" }, CATEGORIES).perPage).toBe(25);
+  });
+
+  it("carries the new filters into the next-page link, omitting defaults", () => {
+    const href = staffProductsHref(
+      parseStaffProductsQuery(
+        { restriction: "NEEDS_REVIEW", stock: "UNKNOWN", perPage: "100" },
+        CATEGORIES,
+      ),
+      "c1",
+    );
+    expect(href).toContain("restriction=NEEDS_REVIEW");
+    expect(href).toContain("stock=UNKNOWN");
+    expect(href).toContain("perPage=100");
+    expect(staffProductsHref(parseStaffProductsQuery({ perPage: "25" }, CATEGORIES))).toBe(
+      "/staff/products",
+    );
+  });
+});

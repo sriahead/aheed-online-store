@@ -41,19 +41,29 @@ Every feature should have appropriate **Unit** and **Integration** testing, foll
   `env -u DIRECT_URL -u DATABASE_URL`. Then confirm that `npx prisma migrate status`'s datasource
   host matches the dev host in `secrets/` (print the **host only**). Stop if it names staging or
   production.
-- **Fixtures.** `scripts/verify-restrictions-stock-states.ts` (built in this slice) creates its own
-  fixture products under Aheed, prefixed `zz-1211-`. It **deletes them, their inventory rows and
-  their audit rows on exit, including on failure**. Rows R4, R10, R11, R15, R18, R19, R26 and R27
-  are checks inside that script. Each check prints `PASS <Rn> …` or `FAIL <Rn> …`, and the script
-  exits non-zero on any FAIL.
+- **Fixtures.** `scripts/verify-restrictions-stock-states.ts` (built in this slice) keeps its own
+  fixture products under the first vendor, slugged `zz-1211-*`. **They are persistent, not
+  deleted** (amended at Build, recorded in `build-notes.md`). The original wording here said the
+  script deletes them and their audit rows, which R28 forbids: the audit log is append-only
+  everywhere, scripts included, and its `Restrict` FK then blocks deleting the product.
+  - Every run **resets** each fixture to a known state first.
+  - Audit assertions count only rows created since the run started.
+  - Orders it places are cancelled, and every fixture is left **hidden** on exit, including on
+    failure (`finally`).
+  - `--leave-storefront-fixtures` leaves the three R12 fixtures active for the storefront check.
+
+  Rows R4(b,c), R10, R11, R15, R18, R19, R26 and R27 are checks inside that script. Each check
+  prints `PASS <Rn> …` or `FAIL <Rn> …`, and the script exits non-zero on any FAIL. Run it with
+  `npx tsx scripts/verify-restrictions-stock-states.ts`.
 - **The script must exercise the adapter each check targets.** It constructs **both** `getPrisma()`
   (`PrismaNeonHttp`) and `getPrismaWs()` (`PrismaNeon`), and names which one each check used. A
   check that used the wrong adapter is a FAIL, not a pass (CLAUDE.md, `#232`).
 - **UI rows** run under `npm run preview`, never `npm run dev`. Sign in as Aheed's demo ADMIN and
   STAFF accounts. Server actions may be driven with `curl` per
   `docs/developer-portal/local-dev-playbook.md`; prefix `MSYS_NO_PATHCONV=1` in Git Bash.
-- **Reset first.** Run the script's cleanup before starting. A previous run's fixtures must not
-  carry over.
+- **Reset first.** The script resets its fixtures at the start of every run, so a previous run's
+  state does not carry over. Any `zz-1211-*` product you changed by hand through the UI is reset
+  by the next script run.
 
 ## Validation Steps
 

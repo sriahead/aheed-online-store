@@ -1,6 +1,7 @@
 import { parsePriceInput } from "@/components/product/parse-price-input";
 import { isNetContentUnit, type NetContentUnit } from "@/components/product/unit-price";
 import { calendarDayToUtcMidnight } from "@/lib/local-datetime";
+import { isStockMode, type StockMode } from "@/lib/cart-rules";
 
 /**
  * Catalogue admin field rules (P6b1, #159) — pure, DB-free, unit-tested.
@@ -69,6 +70,8 @@ export interface ProductFormValues {
   /** #1135 — shoppers may attach a note to this product's basket line. */
   allowsCustomNote: boolean;
   quantity: number;
+  /** #1211 — the product's stock mode, chosen explicitly on the form (a new product defaults to TRACKED). */
+  stockMode: StockMode;
   lowStockThreshold: number;
   /**
    * #876 — the vendor-local calendar day (`YYYY-MM-DD`) the product is expected back, or null.
@@ -298,6 +301,16 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
   const quantity = wholeNumber(raw, "quantity", "Stock", 0);
   if (!quantity.ok) return quantity;
 
+  // #1211 — required, never defaulted here: the form always submits it, so a missing or unknown
+  // value is a broken caller, and the safe answer to that is a refusal, not a guess.
+  const stockModeRaw = text(raw, "stockMode");
+  if (!isStockMode(stockModeRaw)) {
+    return {
+      ok: false,
+      error: { field: "stockMode", message: "Choose how this product's stock is tracked." },
+    };
+  }
+
   const lowStockThreshold = wholeNumber(raw, "lowStockThreshold", "Low-stock threshold", 0);
   if (!lowStockThreshold.ok) return lowStockThreshold;
 
@@ -351,6 +364,7 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
       isActive: checkbox(raw, "isActive"),
       allowsCustomNote: checkbox(raw, "allowsCustomNote"),
       quantity: quantity.value,
+      stockMode: stockModeRaw,
       lowStockThreshold: lowStockThreshold.value,
       expectedRestockDay: restockRaw === "" ? null : restockRaw,
       tier: tier.value,
@@ -625,6 +639,7 @@ export const PRODUCT_FIELDS = [
   "isActive",
   "allowsCustomNote",
   "quantity",
+  "stockMode",
   "lowStockThreshold",
   "expectedRestockDay",
   "tierGroupQuantity",
