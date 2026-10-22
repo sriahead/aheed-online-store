@@ -28,8 +28,10 @@ Follow the **Orient** stage of `specs/sdd-workflow.md` (read it if not already i
    so a gap is real work, not a warning — fix it on the current branch (post-merge doc changes ride
    the next slice's branch) rather than noting it and moving on.
 7. Check the delivery board for the status **and priority** layers
-   (`gh project item-list 2 --owner sriahead --format json --limit 600` — **pass `--limit`**; the
-   default page silently truncates this board, giving a confident wrong answer). Scope comes from
+   (`gh project item-list 2 --owner sriahead --format json --limit 2000` — **pass `--limit`**; the
+   default page silently truncates this board, giving a confident wrong answer). **If the returned
+   `items` count equals the limit, the read was truncated** — raise the limit and re-read; `600`
+   returned exactly 600 of 607 items on 2026-10-21 and hid a `High` item (`#1200`). Scope comes from
    `specs/` and the filesystem, never the board — if they disagree, the board needs reconciling.
    Read the owner-maintained `Priority` field and filter on `priority == "High"`; an open High item
    goes to `/propose` ahead of an assistant-generated ranking. Items with Status `Deferred` (in the

@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.48.0"
-updated: 2026-10-21
+version: "2.49.0"
+updated: 2026-10-22
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -247,8 +247,10 @@ Check the actual repo before proposing or building anything — not what a doc *
   noting it and moving on. This is the only check that runs *after* Ship, so treat a failure as
   real work, not a warning.
 - Read the delivery board's Status and Priority with
-  `gh project item-list 2 --owner sriahead --format json --limit 600` — the default page silently
-  truncates this board. Trust `specs/` and the filesystem for scope; a board that disagrees with the
+  `gh project item-list 2 --owner sriahead --format json --limit 2000` — the default page silently
+  truncates this board, and so does any fixed limit the board outgrows: if the returned `items`
+  count equals the limit, raise it and re-read (`600` hid a `High` item at 607 items, 2026-10-21).
+  Trust `specs/` and the filesystem for scope; a board that disagrees with the
   repo needs reconciling. Lead the orientation report with open items whose Priority is `High`, then
   give sequencing, blocker and owner-gated commentary within that set rather than replacing it with
   an assistant-generated priority list. Report `Deferred` items separately, as parked by the owner

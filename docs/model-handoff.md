@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.129.0"
+version: "1.130.0"
 updated: 2026-10-22
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -2047,7 +2047,8 @@ with `db.ok: true` and storage configured. That does not verify any item above.
    shipped and `staging` promoted to `main` via PR #759. Compare `origin/main` with `origin/staging`
    live (step 3) rather than trusting that either state here — a new hold or divergence may exist by
    the time this is read.
-5. Query Project #2 with `--limit 600`; filter `Priority == High` and read Status, Phase and
+5. Query Project #2 with `--limit 2000` (if the returned count equals the limit, it truncated —
+   raise it); filter `Priority == High` and read Status, Phase and
    Complexity. Re-open issue bodies before accepting stale/duplicate findings.
 6. Read `docs/research/discovery-log.md` for newer evidence touching the selected scope.
 7. Verify health/deployment state and any scope-dependent secret, database or Cloudflare fact live.
