@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.132.0"
+version: "1.133.0"
 updated: 2026-10-22
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -1054,6 +1054,30 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
+- **P11 `#1216` — placeholder manifests, catalogue importer, onboarding runbook — BUILT, NOT VALIDATED,
+  NOT PUSHED (2026-10-22).**
+  - **Where it is:** local branch `feature/client-onboarding-process`, cut from
+    `docs/1211-document-pass` (`staging` at `af67cfd` plus the `#1211` post-merge documentation commit,
+    which therefore rides this branch). Spec `specs/2026-10-22-aheedsuperstore-onboarding/`; read its
+    `build-notes.md` first. **No push, no PR, no deploy** until the owner approves each.
+  - **Next stages:** `/clear`, then `/validate` from a fresh context. The database rows in
+    `validation.md` need `.env`, `secrets/*.vars` and the client's stock file, so run them on the
+    owner's machine; a cloud session must report them UNVERIFIED. The client file is **not** in the
+    repository and must not be committed.
+  - **Owner decisions of 2026-10-22 that shape it:** Aheed Super Store is a **test vendor added
+    alongside** existing vendors in the **dev** database (`ep-dry-morning-zab7dx08`, confirm it is dev
+    before any write); products import **hidden, stock `UNKNOWN`**, categories **inactive** and named
+    exactly as the client wrote them (category standardisation is `#1218`, later); `aheedfoodcentre.co.uk`
+    is a **future** client production domain and is **not** a Cloudflare zone in the account; no push,
+    PR, deploy or deletion without explicit approval.
+  - **Related, separate:** `#1217` provider-agnostic outgoing email (Cloudflare Email Sending first,
+    Resend kept as fallback, non-production recipients restricted to an allowlist) is specified in the
+    plan's section 5.5 and **not started**; Cloudflare's docs host was unreachable from the planning
+    session, so its prerequisites are unverified. `#1219` deployed dev environment, `#1220` enrichment
+    before activation, `#1221` slug identity and the operator-run placeholder gate.
+  - **Environment fact worth knowing:** cloud sessions cannot use GitHub GraphQL, so `gh pr view`,
+    `gh project ...` and `closingIssuesReferences` fail there; use `gh api` REST routes, and set board
+    Status/Phase by hand.
 - **P11 slice 2 — `#1211`, catalogue safety layer — MERGED TO STAGING, NOT PROMOTED (2026-10-22).**
   - **Where it is:** PR **#1215** (squash `af67cfd`, `staging`); `deploy-staging` run
     `39742147580` succeeded, which applied migration `20261022120000_p1211_restrictions_stock_states`
