@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-22T12:45:46.283Z` · commit `d7d46a79` · `255` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-22T13:36:41.545Z` · commit `6a09b001` · `255` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -39,7 +39,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [SDD Operator Runbook](docs/developer-portal/sdd/operator-runbook.md) | runbook | 1.2.0 | 2026-10-21 | approved | internal | Human-executable manual for the SDD delivery loop — Orient, Propose, Spec, Build, Document, Validate, Fix, Ship, Document — covering what each stage does behind the scenes, how to run it by hand, how to verify it worked, and how to diagnose and recover when it doesn't. |
 | [Walking-Skeleton Runbook (M0)](docs/developer-portal/walking-skeleton-runbook.md) | runbook | 1.0.0 | 2026-08-06 | approved | internal | Step-by-step runbook to stand up the M0 walking skeleton — Cloudflare, R2, Neon, and GitHub environment provisioning through to a green production health check. |
 | [Marketing & Analytics Data Guide](docs/marketing-analytics/marketing-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for marketing analysts on how to track user behavior, promotions, and campaign performance. |
-| [Model handoff: repository orientation snapshot](docs/model-handoff.md) | doc | 1.133.0 | 2026-10-22 | approved | internal | Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live. |
+| [Model handoff: repository orientation snapshot](docs/model-handoff.md) | doc | 1.134.0 | 2026-10-22 | approved | internal | Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live. |
 | [Source-to-Destination Ledger: Orders & Fulfilment Pilot](docs/operations-research/order-fulfilment-ledger.md) | doc | 1.0.0 | 2026-09-22 | approved | internal | Ledger mapping original SDLC artifacts to the synthesized canonical Order Fulfilment Operations document. |
 | [Research & retrospectives — what lives here](docs/research/README.md) | doc | 1.0.0 | 2026-09-02 | approved | internal | Explains what the Discover and Learn phases write into this directory, what belongs in a canonical project document instead, and the rule that nothing here is approved scope until it passes through /propose. |
 | [Discovery log](docs/research/discovery-log.md) | doc | 1.11.0 | 2026-10-21 | approved | internal | Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action. |
@@ -259,8 +259,8 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [ADR-007 — Storefront scope, restricted products and explicit stock states](specs/decisions/ADR-007-storefront-scope-restrictions-stock-states.md) | adr | 1.0.0 | 2026-10-22 | approved | internal | Owner rulings of 2026-10-22 on |
 | [Design System](specs/design-system.md) | doc | 1.24.0 | 2026-10-20 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases. |
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
-| [Roadmap](specs/roadmap.md) | doc | 1.175.0 | 2026-10-22 | approved | internal | Master backlog and phase sequencing (M0, P0-P11, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, vendor onboarding P11. |
-| [SDD Workflow](specs/sdd-workflow.md) | doc | 2.49.0 | 2026-10-22 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands. |
+| [Roadmap](specs/roadmap.md) | doc | 1.176.0 | 2026-10-22 | approved | internal | Master backlog and phase sequencing (M0, P0-P11, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, vendor onboarding P11. |
+| [SDD Workflow](specs/sdd-workflow.md) | doc | 2.50.0 | 2026-10-22 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands. |
 | [Tech Stack](specs/tech-stack.md) | doc | 1.6.0 | 2026-10-22 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
 
 ## Track 2 — Staff / Operations (`staff-ops`)  ·  audience: staff

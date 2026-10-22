@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.49.0"
+version: "2.50.0"
 updated: 2026-10-22
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
@@ -375,6 +375,13 @@ not present.
   co-occurrence "on one line" in a document that hard-wraps needs to mean "in the same
   bullet/paragraph," not "on the same physical source line"** — word it that way, or check
   adjacency (matches within N lines of each other) instead of exact line identity.
+- **A requirement about what a command PRINTS or EXITS WITH is not proved by testing the function behind
+  it (#1216, 2026-10-22).** R5 required `--emit-route` to put nothing but the route block on stdout.
+  The exported `emitRouteCommand` returned exactly that and its tests passed, while `main()` wrote a
+  "manifest is valid" line to stdout before calling it — found only when `/validate` ran the real
+  script. Make the validation row run the script (`npx tsx …`, capture stdout and the exit code
+  separately), and when a command's output is pasted somewhere (a `wrangler.toml` block), put every
+  progress line on stderr from the start.
 - If the slice also changes a **standing decision** (architecture, tech choice, design tokens), also
   write or update the relevant **persistent doc** (`specs/architecture.md`, `tech-stack.md`,
   `design-system.md`, ...) — the dated folder is the one-time slice, the persistent doc is what
