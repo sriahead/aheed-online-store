@@ -108,15 +108,38 @@ The manifest schema is strict and numeric fields must be real integers, so a pla
 a string. The extension in the proposal makes placeholder-bearing manifests validate with a warning
 and **refuse to run against any deployed database** until every `‹OWNER TO CONFIRM›` is replaced.
 
-## 6. Email
+## 6. Email (outgoing and incoming are separate systems)
+
+**Decision of 2026-10-22:** outgoing email is **provider-agnostic**. The application depends on one
+`EmailService` interface; each provider is an adapter chosen by configuration. **Cloudflare Email
+Sending is the initial provider**; Resend (the current one) and others stay swappable. Incoming mail
+(Cloudflare Email Routing and Gmail forwarding) is a **manual DNS and mailbox concern with no code**
+and is kept apart on purpose: the two never share configuration.
+
+### 6.1 Outgoing (application mail: password reset, verification, order emails)
 
 | # | Prerequisite | Who | Notes |
 | --- | --- | --- | --- |
-| 6.1 | A **sender address on the client's domain**, e.g. `orders@‹domain›` | Owner | `senderEmail` in the manifest. |
-| 6.2 | The sending domain is **verified in Resend** (SPF, DKIM, return path DNS records) | Owner | Resend rejects unverified domains. This is the same class of blocker as open issue `#104` (verified email domain) for Aheed Food Centre. Not verified. |
-| 6.3 | `RESEND_API_KEY` and `RESEND_FROM_EMAIL` present as Worker secrets per environment | Owner | `wrangler secret put … --env <env>`. Two stores: setting one does not populate the other. |
-| 6.4 | A decision on whether `RESEND_FROM_EMAIL` is platform-wide or per vendor | Owner | The code today reads one env value. `senderEmail`/`senderName` are per-vendor config; check what each email actually uses before promising per-vendor senders. **Open question.** |
-| 6.5 | Inbound mail (support address) | Owner | Out of scope for the platform; the client's mail host. |
+| 6.1.1 | The sending domain is onboarded to Cloudflare Email Sending, with its **SPF and DKIM** records published | Owner | **Not verified, and the Cloudflare page could not be read from this session** (the docs host is blocked by the session proxy). Treat domain onboarding steps, DNS records, limits, plan and beta status as unknown until read. |
+| 6.1.2 | A `send_email` Worker binding per environment | Repo/Owner | `wrangler.toml` supports `[[env.<env>.send_email]]` with `name` and optional `allowed_sender_addresses`; the installed `wrangler` schema notes it is **not inherited**, so every environment declares its own. |
+| 6.1.3 | One platform sender address per environment (`EMAIL_FROM_ADDRESS`) | Owner | **Today every vendor shares one From.** Per-vendor From is a separate decision (needs per-domain verification). |
+| 6.1.4 | A staging/dev policy for recipients | Owner | Decide whether non-production environments may mail arbitrary addresses; the adapter must be able to restrict recipients. Unknown whether Cloudflare restricts this; verify. |
+| 6.1.5 | A fallback or rollback provider is configured but dormant | Owner | Keep Resend's key available until Cloudflare sending is proven in production; switching is a config change. |
+| 6.1.6 | Bounce, complaint and delivery visibility | Owner | Decide how failures are seen. Today the Resend adapter only logs non-OK responses. |
+
+### 6.2 Incoming (client mailbox: `info@`, `orders@` and the like) — manual, no code
+
+| # | Step | Who | Notes |
+| --- | --- | --- | --- |
+| 6.2.1 | The client's domain is an **active zone** in the Cloudflare account | Owner | Not true yet for `aheedfoodcentre.co.uk`. |
+| 6.2.2 | Enable Email Routing on the zone; accept the MX and SPF records it adds | Owner | Email Routing takes over the zone's `MX`. **Do not enable it on `nocaped.com`**, which uses Zoho Mail. |
+| 6.2.3 | Verify the destination Gmail address; create the forwarding rules | Owner | |
+| 6.2.4 | In Gmail, "Send mail as" the client address so staff can reply from it | Owner | This is the client's *human* mailbox. It is not the application's sender. |
+| 6.2.5 | Make one **combined SPF record** covering every sender for the domain | Owner | A domain may have only one SPF record; a second one invalidates both. |
+
+### 6.3 What does not change
+`senderEmail`/`senderName` stay per-vendor config and are **not** the From address today (only
+`senderName` appears in subjects). They are marked placeholders in a test manifest.
 
 ## 7. Catalogue import
 

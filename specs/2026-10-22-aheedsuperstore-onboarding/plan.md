@@ -171,6 +171,52 @@ keys); and the GitHub `dev` environment secrets. Isolation checks: its host, buc
 secrets share nothing with staging or production, and `wrangler deploy --env dev` cannot affect
 either other environment's routes.
 
+### 5.5 Slice 3 — provider-agnostic outgoing email (own spec; Cloudflare Email Sending first)
+
+**Owner decision 2026-10-22:** keep outgoing email provider-agnostic, use Cloudflare Email Sending as
+the initial provider, keep it separate from incoming routing and Gmail forwarding, and make switching
+to Resend or another provider a configuration change.
+
+**What exists (verified in code).** `lib/email.ts` already defines the port,
+`EmailService.send({ to, subject, html })`, but the Resend call is inline in `getEmailService()` and
+`lib/config.ts` carries `RESEND_*` names. Callers (`lib/auth.ts`, `features/checkout/send-confirmation.ts`,
+`features/orders/send-status-email.ts`, `lib/error-rate.ts`, `app/api/jobs/check-error-rate/route.ts`,
+`app/(landing)/page.tsx`) all go through `getEmailService()`, so **the core logic does not need to
+change**; only what sits behind the factory does.
+
+**Design.**
+- `lib/email/types.ts` — the port: `EmailMessage { to, subject, html, text?, replyTo?, headers? }`
+  and `EmailService.send(message): Promise<EmailSendResult>` where the result is
+  `{ ok: true, providerMessageId } | { ok: false, reason }`. Adapters **never throw to callers** (today's
+  behaviour: log and continue), but report the outcome so it can be asserted in tests.
+- `lib/email/adapters/resend.ts` — the current behaviour moved verbatim.
+- `lib/email/adapters/cloudflare.ts` — uses the `send_email` binding (`env.<BINDING>.send({ from, to,
+  subject, html, text, replyTo, headers })`, result `{ messageId }`, per the installed
+  `@cloudflare/workers-types`). Binding reached through `getCloudflareContext()`, like `lib/config.ts`.
+- `lib/email/adapters/console.ts` — logs instead of sending; the default in dev and CI, replacing
+  today's "skipped" branch.
+- `lib/email/index.ts` — `getEmailService()` picks the adapter from `EMAIL_PROVIDER`
+  (`cloudflare` | `resend` | `console`). A new zod schema `EMAIL_PROVIDER`, `EMAIL_FROM_ADDRESS`,
+  `EMAIL_FROM_NAME`, `EMAIL_BINDING_NAME` (default `EMAIL`). **Provider-specific values stay in that
+  provider's block** (`RESEND_API_KEY` only validated when `resend` is selected). Production requires
+  an explicit provider and a From address, so a missing config fails closed rather than silently not sending.
+- **Backwards compatibility:** if `EMAIL_PROVIDER` is unset and `RESEND_API_KEY` is present, behave as
+  `resend` with `RESEND_FROM_EMAIL` as the From address, so existing environments keep working with no
+  config change until the owner migrates deliberately.
+- **Separation from incoming mail:** nothing in `lib/email/` reads Email Routing or Gmail settings.
+  Incoming is documented manual DNS work (prerequisites §6.2).
+- **Tests:** a shared contract suite run against every adapter with a fake transport; provider
+  selection; fail-closed production config; the legacy-Resend fallback; recipient restriction in
+  non-production; the existing `tests/email.test.ts`, `order-*-email` and `auth` tests keep passing.
+- **Unknowns blocking the build:** the Cloudflare Email Sending docs page could not be read from this
+  session (proxy blocks `developers.cloudflare.com`). Before Build, someone must confirm: domain
+  onboarding and DNS records; whether sending to arbitrary recipients is permitted on this account's
+  plan, and any beta flag; rate limits; whether `from` must match a verified domain or an
+  `allowed_sender_addresses` entry; local-dev behaviour of the binding (`remote` flag).
+- **Infrastructure (owner):** the sending domain onboarded in Cloudflare; the `send_email` binding
+  declared per environment; `EMAIL_PROVIDER`/`EMAIL_FROM_ADDRESS` per environment; a rollback to Resend
+  by changing `EMAIL_PROVIDER` only. No production environment changes without approval.
+
 ### Not included
 - No wildcard route (ADR-004's 2026-10-21 note).
 - No change to the host guard, which keeps no override.
