@@ -1057,10 +1057,9 @@ All facts in this section require live verification:
 - **P11 slice 2 — `#1211`, catalogue safety layer — BUILT, NOT VALIDATED, NOT PUSHED (2026-10-22).**
   - **Where it is:** branch `feature/catalogue-restrictions-stock-states`, spec
     `specs/2026-10-22-catalogue-restrictions-stock-states/`. Read its `build-notes.md` first.
-  - **The new migration `20261022120000_p1211_restrictions_stock_states` is NOT applied anywhere,
-    dev included.** Validate applies it to dev first, after the host check. Until then,
-    `tests/concurrency-slot-booking.test.ts` fails locally (missing `stockMode` column); CI skips
-    it.
+  - **The new migration `20261022120000_p1211_restrictions_stock_states` is applied to DEV ONLY**
+    (host `ep-dry-morning-zab7dx08`, verified against `secrets/` on 2026-10-22). It is NOT applied
+    to staging or production; the deploy workflows will apply it on merge and promotion.
   - **Owner rulings of 2026-10-22, now standing decisions** (ADR-007, recorded as comments on the
     issues):
     - **`#1196`:** the platform is a **storefront, not stock management**. Close it once ADR-007

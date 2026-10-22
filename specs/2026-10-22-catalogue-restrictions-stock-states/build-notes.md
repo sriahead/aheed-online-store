@@ -7,8 +7,15 @@ Issue `#1211`. Built on `feature/catalogue-restrictions-stock-states` from `stag
 the spec commit is `62039c8`. Owner rulings: `specs/decisions/ADR-007-…`.
 
 **State at Clear:**
-- **The migration is NOT applied to any database yet, including dev.** Applying it to dev is the
-  first validation step (R4); see "Known-shaky areas".
+- **The migration IS applied to dev, and only to dev** (2026-10-22, after the build commit). The
+  user ran `! npx prisma migrate deploy` from `.env`. Prisma reported datasource host
+  `ep-dry-morning-zab7dx08`, which is the `.env` dev host. It is not staging (`ep-empty-scene-…`)
+  and not production (`ep-young-glitter-…`). No `DIRECT_URL`/`DATABASE_URL` was exported in the
+  shell. The output was "Applying migration `20261022120000_p1211_restrictions_stock_states` … All
+  migrations have been successfully applied", with no reset prompt. **R4(a) was NOT snapshotted
+  beforehand:** the pre-migration `Inventory` row count was not recorded. Validate checks R4(a) as
+  "every row that is not a `zz-1211-*` fixture has `stockMode = 'TRACKED'`", run before the
+  verification script creates any fixture.
 - **Nothing was pushed.** No PR exists. No staging or production command ran in this slice (R37).
 - **Local gates, as of the build commit:**
   - `npm run lint`, `npm run typecheck`, `npm run format:check` and `npm run kms:validate` are all
@@ -17,7 +24,8 @@ the spec commit is `62039c8`. Owner rulings: `specs/decisions/ADR-007-…`.
     `tests/concurrency-slot-booking.test.ts`, which writes to the real dev DB through
     `DATABASE_URL` and fails with `The column stockMode does not exist in the current database`.
     It's expected until the migration is applied to dev, and CI skips this test because it has no
-    `DATABASE_URL`.
+    `DATABASE_URL`. **After the dev migration it passes** (re-run alone, 1 passed). The full suite
+    has not been re-run since.
 
 ## What changed and why
 
@@ -226,14 +234,9 @@ R18, R19, R26, R27, plus the R29 IMPORT-row fixture and the R12 storefront fixtu
 
 ## Known-shaky areas
 
-- **Apply the migration to dev first, and confirm the host.**
-  - Run the per-variable `printenv` check from `validation.md` Setup first.
-  - Then run `npx prisma migrate status` and confirm the datasource host is the dev host from
-    `secrets/`.
-  - Then `npx prisma migrate deploy`. Auto mode has blocked `migrate deploy` even on dev before, so
-    hand the user a `! …` command if needed.
-  - **`#895`:** dev also carries a modified, already-applied migration. `migrate deploy` (unlike
-    `migrate dev`) should not demand a reset; if it does, stop. **Never accept `migrate reset`.**
+- **The migration is already applied to dev** (see the top of this file). Still run the
+  per-variable `printenv` check and confirm `npx prisma migrate status` names the dev host before
+  any script run. **Never accept `migrate reset`** (`#895`).
 - **`placeOrder` from a Node script is unproven.** The script deletes `STRIPE_SECRET_KEY` from its
   process to get the stub payment adapter, and calls `placeOrder` through a PrismaNeon client cast
   to the app type. No script in this repo had driven `placeOrder` before. If R10 fails on setup
