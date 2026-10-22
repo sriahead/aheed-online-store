@@ -12,6 +12,9 @@ import { fetchVendorProfile } from "@/lib/vendor-service";
 import { labelSettingsFromProfile } from "@/lib/product-label-settings";
 import { listAttributeDefinitions } from "@/lib/attributes-service";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { ProductRestrictionPanel } from "@/components/staff/ProductRestrictionPanel";
+import { listRestrictionAudit } from "@/lib/product-restrictions-service";
+import { actorFromVia } from "@/lib/product-restriction";
 
 // Reads the session and one live product — must render per-request.
 export const dynamic = "force-dynamic";
@@ -46,12 +49,14 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     );
   }
 
-  const [product, categories, brands, profile, attributes] = await Promise.all([
+  const [product, categories, brands, profile, attributes, audit] = await Promise.all([
     getProductForAdmin(auth.vendorId, id),
     listCategoriesForAdmin(auth.vendorId),
     getBrandRepository().listSummaries(),
     fetchVendorProfile(auth.vendorId),
     listAttributeDefinitions(auth.vendorId),
+    // #1211 — vendor-scoped, so another vendor's id returns nothing (and notFound() below fires).
+    listRestrictionAudit(auth.vendorId, id),
   ]);
   if (!product) notFound();
 
@@ -77,6 +82,12 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         labels={labelSettingsFromProfile(profile)}
         attributes={attributes}
         imageUrls={imageUrls}
+      />
+      <ProductRestrictionPanel
+        productId={product.id}
+        restriction={product.restriction}
+        actor={actorFromVia(auth.via)}
+        audit={audit}
       />
     </PageContainer>
   );

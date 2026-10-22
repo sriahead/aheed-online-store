@@ -28,7 +28,8 @@ function fakes({ accepts, inCart }: { accepts: boolean; inCart: number | null })
         {
           id: PRODUCT,
           isActive: true,
-          inventory: { quantity: 10 },
+          restriction: null,
+          inventory: { quantity: 10, stockMode: "TRACKED" },
           allowsCustomNote: accepts,
           category: { allowsCustomNote: false, parent: null },
         },

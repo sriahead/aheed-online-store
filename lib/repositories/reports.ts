@@ -53,8 +53,10 @@ export async function getCatalogueHealth(
   const [totalProducts, activeProducts, inventory] = await Promise.all([
     prisma.product.count({ where: { vendorId } }),
     prisma.product.count({ where: { vendorId, isActive: true } }),
+    // #1211 (R14) — only TRACKED rows carry a real count. An UNTRACKED quantity is ignored by
+    // design and an UNKNOWN one means nobody has said, so neither is "out" or "low".
     prisma.inventory.findMany({
-      where: { vendorId },
+      where: { vendorId, stockMode: "TRACKED" },
       select: { quantity: true, lowStockThreshold: true },
     }),
   ]);

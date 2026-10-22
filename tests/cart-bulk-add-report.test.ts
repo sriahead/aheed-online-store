@@ -63,7 +63,8 @@ describe("addCartItems report", () => {
           products.map((p) => ({
             id: p.id,
             isActive: p.active ?? true,
-            inventory: { quantity: p.stock },
+            restriction: null,
+            inventory: { quantity: p.stock, stockMode: "TRACKED" },
           })),
         ),
       },

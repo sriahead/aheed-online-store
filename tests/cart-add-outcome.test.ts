@@ -85,7 +85,12 @@ describe("addCartItem", () => {
     const prisma = {
       product: {
         findMany: vi.fn(async () => [
-          { id: PRODUCT, isActive: true, inventory: { quantity: stock } },
+          {
+            id: PRODUCT,
+            isActive: true,
+            restriction: null,
+            inventory: { quantity: stock, stockMode: "TRACKED" },
+          },
         ]),
       },
       cart: { findUnique: vi.fn(async () => ({ id: "cart-1", items: [] })) },

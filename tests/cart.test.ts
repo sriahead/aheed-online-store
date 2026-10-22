@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   assertSingleIdentity,
   clampQuantity,
-  effectiveStock,
   fulfilmentProgress,
   isMergePending,
   isMergeResolution,
@@ -14,19 +13,6 @@ import {
 // tests/tenant.test.ts this needs no @prisma/client/wasm mocking.
 
 const stock = (map: Record<string, number>) => (id: string) => map[id] ?? 0;
-
-describe("effectiveStock", () => {
-  it("treats a missing Inventory row as OUT OF STOCK, never unlimited", () => {
-    expect(effectiveStock(null)).toBe(0);
-    expect(effectiveStock(undefined)).toBe(0);
-  });
-
-  it("passes through a real quantity and floors negatives at 0", () => {
-    expect(effectiveStock(7)).toBe(7);
-    expect(effectiveStock(0)).toBe(0);
-    expect(effectiveStock(-3)).toBe(0);
-  });
-});
 
 describe("clampQuantity", () => {
   it("increments on re-add", () => {

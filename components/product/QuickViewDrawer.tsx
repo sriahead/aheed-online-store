@@ -11,6 +11,7 @@ import { StarRatingInput } from "./StarRatingInput";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { formatPrice } from "./format-price";
 import { deriveUnitPriceLabel, isNetContentUnit } from "./unit-price";
+import { showsLowStock } from "@/lib/cart-rules";
 import { tierThresholdQuantity } from "@/lib/tier-pricing";
 import { submitReview } from "@/features/reviews/submit-review";
 import { deleteReview } from "@/features/reviews/delete-review";
@@ -189,10 +190,8 @@ export function QuickViewDrawer() {
       ? displayProduct.hmcReference
       : undefined);
 
-  const isLowStock =
-    displayProduct?.inStock &&
-    displayProduct.stockQuantity > 0 &&
-    displayProduct.stockQuantity <= displayProduct.lowStockThreshold;
+  // #1211 — the same rule as the card: TRACKED stock only.
+  const isLowStock = displayProduct ? showsLowStock(displayProduct) : false;
 
   const displayImages =
     data?.product?.images ?? (initialProduct?.primaryImage ? [initialProduct.primaryImage] : []);

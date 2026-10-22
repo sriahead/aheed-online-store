@@ -36,6 +36,7 @@ const VALUES: ProductWriteInput = {
   isFeatured: false,
   isActive: true,
   quantity: 1,
+  stockMode: "TRACKED" as const,
   lowStockThreshold: 0,
   expectedRestockDay: null,
   tier: null,

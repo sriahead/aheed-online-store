@@ -687,8 +687,20 @@ describe("category predicate (R11, R12)", () => {
     expect(buildFilterWhere({ categoryIds: ["a"], isHalal: true, inStockOnly: true })).toEqual({
       categoryId: { in: ["a"] },
       isHalal: true,
-      inventory: { quantity: { gt: 0 } },
+      inventory: {
+        OR: [{ stockMode: "UNTRACKED" }, { stockMode: "TRACKED", quantity: { gt: 0 } }],
+      },
     });
+  });
+
+  it("#1211 (R13) — in-stock means UNTRACKED or TRACKED-with-stock, never UNKNOWN, OR nested", () => {
+    const where = buildFilterWhere({ inStockOnly: true });
+    // Never a top-level OR: it would collide with another fragment's (architecture.md).
+    expect(Object.keys(where)).not.toContain("OR");
+    expect(where.inventory).toEqual({
+      OR: [{ stockMode: "UNTRACKED" }, { stockMode: "TRACKED", quantity: { gt: 0 } }],
+    });
+    expect(JSON.stringify(where)).not.toContain("UNKNOWN");
   });
 
   it("searchProducts applies the category predicate (R13, R14)", async () => {

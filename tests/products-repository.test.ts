@@ -59,7 +59,10 @@ describe("getAvailableFacets context (R18)", () => {
         isActive: true,
         categoryId: { in: ["cat-1"] },
         basePrice: { gte: 100, lte: 500 },
-        inventory: { quantity: { gt: 0 } },
+        // #1211 — in stock = UNTRACKED, or TRACKED with stock; UNKNOWN never matches.
+        inventory: {
+          OR: [{ stockMode: "UNTRACKED" }, { stockMode: "TRACKED", quantity: { gt: 0 } }],
+        },
       });
     }
   });

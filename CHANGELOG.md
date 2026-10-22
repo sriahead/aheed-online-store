@@ -8,6 +8,23 @@ every branch merges.
 
 ### Added
 
+- **A product can be restricted, stock has three explicit purchase states, and staff can review the catalogue in bulk — the safety layer a client import needs before it runs** (issue `#1211`; `specs/2026-10-22-catalogue-restrictions-stock-states/`; owner rulings `specs/decisions/ADR-007-storefront-scope-restrictions-stock-states.md`). **One additive migration** (`20261022120000_p1211_restrictions_stock_states`): four enums, two columns, one table and a `CHECK`. No `DROP`, no `UPDATE`.
+  - **Restricted means hidden, enforced by Postgres.** `Product.restriction` plus `CHECK "Product_restricted_inactive_check"`.
+    - `PROHIBITED` and `AGE_RESTRICTED` are **hard blocks** with no override path for any role. The second stays blocked until age verification exists (`#1212`).
+    - `NOT_DELIVERABLE` and `NEEDS_REVIEW` clear only through an **ADMIN** confirmation that the product is legally sellable and can be fulfilled, plus a reason. The clear is one conditional write and appends to a new append-only `ProductRestrictionAuditLog`.
+    - A restriction can be tightened, never loosened, except by that audited clear.
+  - **Stock is `TRACKED`, `UNTRACKED` or `UNKNOWN`** (`Inventory.stockMode`), and **unknown is never available**.
+    - The column defaults to `UNKNOWN`, so a code path that forgets to choose fails closed.
+    - Existing rows became `TRACKED`, which is how they already behaved.
+    - `UNTRACKED` sells without a count, and is never decremented or restored.
+  - **One purchasability rule.** `purchasableQuantity()` in `lib/cart-rules.ts` replaces `effectiveStock` and the three inline `(inventory?.quantity ?? 0) > 0` derivations. The cart, `placeOrder`, bundles and every storefront mapper call it, and a guard test fails if a re-derivation comes back. "Only N left" shows for `TRACKED` stock only.
+  - **Bulk review on `/staff/products`.** Restriction and stock filters, 25 or 100 per page, and Make available / Hide / Mark stock as not tracked, all behind a preview that lists every restricted product by name. Apply recomputes the plan from the database, so bulk can never do what a single update could not. The summary reports updated, skipped and failed products.
+  - **`lib/catalogue-import-policy.ts`** is the contract `#1201`'s importer must use.
+    - Every imported row is created hidden with stock `UNKNOWN`.
+    - A re-import never activates a product, never clears a restriction, and never touches stock.
+    - Department → restriction maps are per-client input, never platform code.
+  - **Records the owner's rulings.** `#1196` is ruled storefront-only, not stock management. `#1200` is ruled "import everything hidden", replacing its exclude-at-import recommendation. Deferred: `#1212`, `#1213`, `#1214`.
+
 - **A vendor is provisioned from a manifest, and a deploy can no longer tear down a trading vendor's domain** (issues `#490`, `#1198`, `#1197`; `specs/2026-10-21-p11-onboarding-foundation/`). First slice of `P11 — Repeatable Vendor Onboarding`. No schema change, no migration, no new dependency. In production since `7b703b9` (promotion PR #1208, 2026-10-21); the route check ran green on that first production deploy.
   - **`scripts/verify-worker-routes.ts` fails a deploy that would unroute a trading vendor** (`#1198`). Every vendor host is its own `custom_domain = true` block in `wrangler.toml`, and a `wrangler deploy` that omits a host which already has a custom domain **tears that domain down** — the file's own committed comment says so, and nothing compared it against `VendorDomain` until now. The script reads the rows for the environment being deployed, parses that `--env`'s route patterns, and exits non-zero naming every unrouted host; `--write` emits the correct block so adding a vendor is paste-not-author. Hosts carrying a port or ending in `localhost` are excluded, because the dev seed writes `localhost:8787` as a real row.
   - **A wildcard route was available and was rejected on evidence, not assumption.** The Cloudflare account was read rather than guessed: `nocaped.com` is an active `full` zone on the Free plan, and proxied wildcard DNS is no longer Enterprise-only. It lost because **Worker Custom Domains cannot be wildcards at all**, and a wildcard route plus Universal SSL each cover exactly **one** subdomain label — `staging.aheedfoodcentre.nocaped.com` is two deep and serves a certificate today only because a Custom Domain issues one per hostname. A wildcard would have meant renaming a live staging host or buying Advanced Certificate Manager. **ADR-004 decisions 3 and 7 are corrected** (1.14.0) rather than left claiming the opposite of the code.

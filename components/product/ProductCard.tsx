@@ -12,6 +12,7 @@ import { ProductImage } from "./ProductImage";
 import { ProductRating } from "./ProductRating";
 import { useQuickView } from "./quick-view-context";
 import { composePublicUrl } from "@/lib/storage";
+import { showsLowStock } from "@/lib/cart-rules";
 import { tierThresholdQuantity } from "@/lib/tier-pricing";
 import { formatPrice } from "./format-price";
 import { deriveUnitPriceLabel } from "./unit-price";
@@ -88,13 +89,9 @@ export function ProductCard({
    */
   const tierQuantity = tierThresholdQuantity(product.tier);
   const hasTier = tierQuantity !== null && product.tier !== null;
-  // Only meaningful while there is still stock to run out of — a zero-stock
-  // product renders the out-of-stock control instead, and "Only 0 left" would
-  // be both wrong and alarming.
-  const isLowStock =
-    product.inStock &&
-    product.stockQuantity > 0 &&
-    product.stockQuantity <= product.lowStockThreshold;
+  // #1211 — one rule (lib/cart-rules.ts): TRACKED stock only, and only while
+  // there is still stock to run out of.
+  const isLowStock = showsLowStock(product);
   // #398 (derivation half), R34 — the derived unit price where a product HAS net content,
   // computed at render time (never from the stored sort-key column, R32); unitLabel unchanged
   // otherwise. `product.netContentAmount`/`netContentUnit` are both null or both set.

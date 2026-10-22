@@ -193,13 +193,7 @@ export async function listInventoryForStaff(
 
 export async function listProductsForAdmin(
   vendorId: string,
-  options: {
-    take: number;
-    cursor?: string;
-    search?: string | null;
-    isActive?: boolean;
-    categoryIds?: readonly string[];
-  },
+  options: Parameters<typeof listProductsForAdminRepo>[2],
 ): Promise<AdminProductPage> {
   return listProductsForAdminRepo(getPrisma(), vendorId, options);
 }
