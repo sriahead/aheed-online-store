@@ -36,6 +36,8 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
+      # #1223: the committed icon data and the licence notice are generated; fail on a stale file.
+      - run: npm run icons:check
       - run: npm test
 
   kms:

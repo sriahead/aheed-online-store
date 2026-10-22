@@ -1,18 +1,6 @@
 import Link from "next/link";
 import { headers, cookies } from "next/headers";
-import {
-  MapPin,
-  Search,
-  User,
-  CircleUserRound,
-  Sparkles,
-  HelpCircle,
-  UserCheck,
-  LogOut,
-  Store,
-  Clock,
-  Phone,
-} from "lucide-react";
+
 import { getAuth } from "@/lib/auth";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getEnv } from "@/lib/config";
@@ -35,6 +23,7 @@ import { toSearchDepartments } from "./search-departments";
 import { ShoppingListLink } from "./ShoppingListLink";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { ViewSwitcher } from "./ViewSwitcher";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Storefront header — a Server Component (no "use client"), so it reads the
@@ -179,7 +168,7 @@ export async function Header({
               renders nothing at all when they have none. */}
           <div className="flex items-center gap-4 text-white/90">
             <span className="flex items-center gap-1 font-medium text-white">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <Icon name="sparkles" className="w-3.5 h-3.5 text-amber-300" />
               {/* #1078 — the vendor's own headline, or the line derived from its name and area. */}
               {bannerHeadlineText({
                 bannerHeadline: profile?.bannerHeadline ?? null,
@@ -192,7 +181,7 @@ export async function Header({
               <>
                 <span className="hidden md:inline text-white/50">|</span>
                 <span className="hidden md:inline-flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-action-tint" />
+                  <Icon name="map-pin" className="w-3.5 h-3.5 text-action-tint" />
                   {bannerNote}
                 </span>
               </>
@@ -209,7 +198,7 @@ export async function Header({
                 aria-label={`Call ${name}`}
                 className="flex items-center gap-1 text-white/80 hover:text-white px-2 py-0.5 rounded font-medium text-[11px]"
               >
-                <Phone className="w-3 h-3 text-action-tint" aria-hidden />
+                <Icon name="phone" className="w-3 h-3 text-action-tint" />
                 <span>{bannerPhone}</span>
               </a>
             )}
@@ -217,7 +206,7 @@ export async function Header({
               href="/help"
               className="flex items-center gap-1 text-white/80 hover:text-white px-2 py-0.5 rounded font-medium text-[11px]"
             >
-              <HelpCircle className="w-3 h-3 text-action-tint" />
+              <Icon name="circle-question-mark" className="w-3 h-3 text-action-tint" />
               <span>Help Guide</span>
             </Link>
           </div>
@@ -296,7 +285,7 @@ export async function Header({
                 className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
                 title="Browse all departments"
               >
-                <Store className="w-4 h-4 text-primary" />
+                <Icon name="store" className="w-4 h-4 text-primary" />
                 <span className="hidden sm:inline">Shop</span>
               </Link>
             )}
@@ -308,7 +297,7 @@ export async function Header({
                 className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 p-1 pr-3 rounded-xl border border-black/10 transition-colors text-xs font-bold text-black/80 hover:text-primary"
               >
                 <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
-                  {firstName?.charAt(0) ?? <User className="h-3.5 w-3.5" />}
+                  {firstName?.charAt(0) ?? <Icon name="user" className="h-3.5 w-3.5" />}
                 </div>
                 <span className="hidden sm:inline">{firstName}</span>
               </Link>
@@ -318,7 +307,7 @@ export async function Header({
                 className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
               >
                 {/* #1173 — the account symbol, matching the round signed-in avatar. */}
-                <CircleUserRound className="w-4 h-4 text-primary" />
+                <Icon name="circle-user-round" className="w-4 h-4 text-primary" />
                 <span className="hidden sm:inline">Sign In</span>
               </Link>
             )}

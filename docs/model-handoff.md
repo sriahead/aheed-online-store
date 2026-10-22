@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.133.0"
+version: "1.135.0"
 updated: 2026-10-22
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,6 +39,29 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
+- **2026-10-22, `#1223` icon system: PR 1 of 5 (Phase 1, the foundation) is BUILT, NOT VALIDATED, NOT
+  MERGED.** Branch `feature/icon-system` (pushed once at the spec commit; later commits are local until
+  pushed), spec `specs/2026-10-22-icon-system/`, decision `specs/decisions/ADR-008-icon-system.md`. The
+  spec is one folder for **five PRs** (P1 foundation, P2a storefront migration, P2b admin migration and
+  the import ban, P3 colour, P4a illustrations); `build-notes.md` says which requirements belong to the PR
+  under validation. `#1224` (AI-generated per-vendor illustrations) is a later slice gated on an
+  experiment. Owner answers still open: whether a footer link to `/third-party-icon-licenses.txt` is
+  wanted.
+  - **The `#1216` docs commit (`a8d4762`) rides this branch** under the carry-forward rule, so the first PR
+    from it also delivers the missing `#1216` roadmap row to `staging`.
+  - **The first audit's icon count was wrong: 102, not 141** (it also walked the `docs/ui-ref` mockups).
+    `#1223`'s body still says 141. Any count of `lucide-react` usage must be scoped to `app`,
+    `components`, `features` and `lib`, and parsed with the TypeScript compiler, not a line grep.
+  - **`@iconify-json/lucide` is pinned to 1.2.122 on purpose.** It is the release matching the installed
+    `lucide-react` 1.30.0; the newest redrew six icons. Bumping `lucide-react` means re-running
+    `tests/icon-lucide-parity.test.ts` and probably moving that pin. Icons are used only through
+    `components/icons` (`CLAUDE.md`); files that still import `lucide-react` are P2's work.
+  - **A cloud session cannot validate this slice's live rows.** It has no `.env`, `.dev.vars` or
+    `secrets/`, so `npm run preview`, sign-in, and the BASE-against-HEAD markup comparison
+    (`scripts/verify-icon-markup.ts`, R34 and R35) must run from the owner's machine.
+  - **Do not `npm install` a package in the cloud container and commit the lockfile as it comes out.** Its
+    npm (10.9.4) strips the `libc` markers from 68 platform packages. The lockfile here was restored and the
+    new packages grafted in by hand; the method is in `build-notes.md`.
 - **2026-10-21, `#1186`/`#1187` Document (supersedes this entry's own "BUILT, NOT VALIDATED AND NOT
   MERGED" predecessor). The Quick Shop hub and the Regulars placeholder are IN PRODUCTION.** The
   programme's remaining two slices shipped as **one**,
@@ -1054,30 +1077,35 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **P11 `#1216` — placeholder manifests, catalogue importer, onboarding runbook — BUILT, NOT VALIDATED,
-  NOT PUSHED (2026-10-22).**
-  - **Where it is:** local branch `feature/client-onboarding-process`, cut from
-    `docs/1211-document-pass` (`staging` at `af67cfd` plus the `#1211` post-merge documentation commit,
-    which therefore rides this branch). Spec `specs/2026-10-22-aheedsuperstore-onboarding/`; read its
-    `build-notes.md` first. **No push, no PR, no deploy** until the owner approves each.
-  - **Next stages:** `/clear`, then `/validate` from a fresh context. The database rows in
-    `validation.md` need `.env`, `secrets/*.vars` and the client's stock file, so run them on the
-    owner's machine; a cloud session must report them UNVERIFIED. The client file is **not** in the
-    repository and must not be committed.
-  - **Owner decisions of 2026-10-22 that shape it:** Aheed Super Store is a **test vendor added
-    alongside** existing vendors in the **dev** database (`ep-dry-morning-zab7dx08`, confirm it is dev
-    before any write); products import **hidden, stock `UNKNOWN`**, categories **inactive** and named
-    exactly as the client wrote them (category standardisation is `#1218`, later); `aheedfoodcentre.co.uk`
-    is a **future** client production domain and is **not** a Cloudflare zone in the account; no push,
-    PR, deploy or deletion without explicit approval.
-  - **Related, separate:** `#1217` provider-agnostic outgoing email (Cloudflare Email Sending first,
-    Resend kept as fallback, non-production recipients restricted to an allowlist) is specified in the
-    plan's section 5.5 and **not started**; Cloudflare's docs host was unreachable from the planning
-    session, so its prerequisites are unverified. `#1219` deployed dev environment, `#1220` enrichment
-    before activation, `#1221` slug identity and the operator-run placeholder gate.
-  - **Environment fact worth knowing:** cloud sessions cannot use GitHub GraphQL, so `gh pr view`,
-    `gh project ...` and `closingIssuesReferences` fail there; use `gh api` REST routes, and set board
-    Status/Phase by hand.
+- **P11 `#1216` — placeholder manifests, catalogue importer, onboarding runbook — MERGED TO STAGING, NOT
+  PROMOTED, DATABASE ROWS UNVERIFIED (2026-10-22).**
+  - **Where it is:** PR **#1222** (squash `6a09b00`, `staging`); `deploy-staging` run `39787197314`
+    completed success (no migration in this slice). Spec `specs/2026-10-22-aheedsuperstore-onboarding/`;
+    read its `build-notes.md` first. **It is not on `main`; `#1216` stays open until promotion.**
+  - **Validation was not independent and every dev-database row is UNVERIFIED** (`validation.md` R4,
+    R19-R25 database parts, R27, R29, R33, R34, R37 database modes). Run them on a machine with `.env`,
+    `secrets/*.vars` and the client's stock file (never in the repo), starting with
+    `verify-catalogue-import.ts --unique-probe`, which reveals the real `.code` the Neon WebSocket adapter
+    raises for a unique violation (`isUniqueViolation` accepts `"23505"` and `"P2002"`; a miss fails safe).
+    Nothing has been written to any database by this slice. The `aheedsuperstore` test vendor has **not**
+    been created.
+  - **Owner decisions that stand:** the test vendor is added alongside existing vendors in the **dev**
+    database (`ep-dry-morning-zab7dx08`, confirm it is dev first); products import **hidden, stock
+    `UNKNOWN`**, categories **inactive** and named **exactly as the client wrote them**; the placeholder
+    gate is operator-run, not CI (`#1221`); no push to `main`, deploy or deletion without approval.
+  - **Deferred, tracked:** `#1218` category standardisation + versioned import template, `#1219`
+    deployed isolated dev environment, `#1220` enrichment before activation (unit label, description,
+    images, VAT), `#1221` slug identity and the placeholder gate. **`#1217`** provider-agnostic outgoing
+    email (Cloudflare Email Sending first, Resend kept as fallback, non-production recipients
+    allowlisted) is specified in the plan's section 5.5 and **not started**; Cloudflare's docs host was
+    unreachable from the planning session, so its prerequisites are unverified.
+  - **Cloud-session environment facts:** no GitHub GraphQL (`gh pr view`, `gh project ...`,
+    `closingIssuesReferences` fail; use `gh api` REST and set board Status/Phase by hand); no `.env`, so
+    the host guard refuses every database run; `developers.cloudflare.com` and the staging hosts'
+    `/api/health` are blocked by the session proxy; the container's npm (10.9.4) rewrites unrelated
+    `package-lock.json` lines (`devOptional`, `libc`), so edit the lockfile by hand or use the
+    repository's npm; and the stop hook's "unpushed commits / no remote branch" warning is a false alarm
+    whenever the branch is already on `origin` (check `git ls-remote --heads origin <branch>`).
 - **P11 slice 2 — `#1211`, catalogue safety layer — MERGED TO STAGING, NOT PROMOTED (2026-10-22).**
   - **Where it is:** PR **#1215** (squash `af67cfd`, `staging`); `deploy-staging` run
     `39742147580` succeeded, which applied migration `20261022120000_p1211_restrictions_stock_states`

@@ -170,6 +170,16 @@ pointer to this section. The version-adjacent failures these policies exist to p
 Turbopack's resolver, the `proxy.ts` incompatibility, ESLint 9 flat config, the live-DB test guard
 — are in `docs/developer-portal/runtime-pitfalls.md`.
 
+- **Icon data (#1223, ADR-008): four exact-pinned `devDependencies`.** `@iconify/utils` 3.1.7 (MIT),
+  `@iconify-json/lucide` 1.2.122 (ISC), `@iconify-json/ph` 1.2.2 (MIT, Phosphor) and
+  `@iconify-json/noto` 1.2.9 (Apache-2.0, Noto Emoji). `scripts/build-icons.ts` reads them at build time
+  and commits only the icons `components/icons/registry.ts` names, so none of them reaches the Worker or
+  a browser. They are pinned because that committed output is derived from them, and
+  `@iconify-json/lucide` is held at the release whose artwork matches the installed `lucide-react`
+  (`tests/icon-lucide-parity.test.ts` fails on any drift). **Sets licensed Creative Commons Attribution
+  (Streamline, Solar, Twemoji) are excluded unless the owner approves a visible credit.** There is no
+  runtime Iconify dependency and none may be added: `@iconify/react`, the Iconify API and CSS-mask
+  plugins are rejected in ADR-008, and the CSP would block the API.
 - **Spreadsheet reading for catalogue imports (#1216): `@e965/xlsx` 0.20.3, exact-pinned, a
   `devDependency`, Apache-2.0.** It is the one package that reads `.xls` (legacy BIFF), `.xlsx` and
   `.csv` for `scripts/import-catalogue.ts`. It has no dependencies and `npm audit` reports no

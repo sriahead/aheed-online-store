@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { categoryIcon } from "@/components/product/category-icon";
+import { categoryIconName } from "@/components/product/category-icon";
+import { Icon } from "@/components/icons/Icon";
 import { HorizontalScroller } from "@/components/layout/HorizontalScroller";
 import type { CategorySummary } from "@/lib/repositories/categories";
 
@@ -30,7 +31,6 @@ export function DepartmentScroller({
       itemWidthClassName="px-6"
     >
       {categories.map((category) => {
-        const Icon = categoryIcon(category.slug);
         const isActive = category.slug === activeSlug;
         return (
           <Link
@@ -44,7 +44,7 @@ export function DepartmentScroller({
                 isActive ? "ring-2 ring-action/60" : ""
               }`}
             >
-              <Icon className="h-7 w-7 text-primary" aria-hidden />
+              <Icon name={categoryIconName(category.slug)} className="h-7 w-7 text-primary" />
             </div>
             <span className="line-clamp-2 text-xs font-medium leading-tight text-primary">
               {category.name}

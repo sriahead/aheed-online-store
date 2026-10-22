@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Bug } from "lucide-react";
+
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { visibleGroups, type StaffNavTier } from "@/components/staff/nav-items";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and this vendor's live order counts — must render per-request.
 export const dynamic = "force-dynamic";
@@ -76,8 +77,6 @@ export default async function StaffHomePage() {
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {group.items.map((item) => {
-              const Icon = item.icon;
-
               return (
                 <Link
                   key={item.href}
@@ -85,8 +84,8 @@ export default async function StaffHomePage() {
                   className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
                 >
                   <Icon
+                    name={item.icon}
                     className={`mb-3 h-6 w-6 ${item.tone === "action" ? "text-action" : "text-accent"}`}
-                    aria-hidden
                   />
                   <p className="font-semibold text-primary">{item.label}</p>
                   <p className="mt-1 text-sm text-primary-muted">{item.description}</p>
@@ -119,7 +118,7 @@ export default async function StaffHomePage() {
             href="/staff/errors"
             className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
           >
-            <Bug className="mb-3 h-6 w-6 text-danger" aria-hidden />
+            <Icon name="bug" className="mb-3 h-6 w-6 text-danger" />
             <p className="font-semibold text-primary">Error events</p>
             <p className="mt-1 text-sm text-primary-muted">
               Recent server-side errors across the platform. Platform admins only.
