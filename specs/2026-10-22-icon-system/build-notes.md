@@ -113,12 +113,15 @@ neither scope nor acceptance intent:
   `/api/auth/sign-in/email` with `origin` and `x-forwarded-proto: http`, then the cookie), and the local
   server test asserts those headers, but not a real session. The 30 second retry on 429 is unexercised.
 - **Client bundle shape.** `Icon` imports the whole `ICON_DATA` (about 33 KB raw), so any client component
-  that renders an `Icon` puts every icon body in its chunk. P1 measured **+842 bytes** of client JS
-  against BASE (budget 15,360). It will grow as P2 moves more client files; if P2b nears the budget the
-  fix is splitting the data by tier, not removing icons. **R37 baselines (commit `c8fd46a`):** client `.next/static/**/*.js` gzip sum **546,053 bytes** over 124 files; Worker
-  `wrangler deploy --dry-run` **20,420.33 KiB total, 5,026.59 KiB gzip**. After P1: **546,895** over 123
-  files (+842) and **20,371.55 KiB / 5,016.73 KiB gzip** (-9.86 KiB). The validator rebuilds BASE and
-  should agree within 2 KB.
+  that renders an `Icon` puts every icon body in its chunk. It will grow as P2 moves more client files; if
+  P2b nears the budget the fix is splitting the data by tier, not removing icons. **R37, corrected by
+  validation run 1 (fresh builds of both commits with the commands in `validation.md`):** BASE client
+  `.next/static/**/*.js` gzip sum **546,214** bytes over 124 files, Worker `gzip:` **5,014.91 KiB**; HEAD
+  **546,895** over 123 files (**+681**, budget 15,360) and **5,019.49 KiB** (**+4.58 KiB**, budget 100). The
+  baseline this Build first recorded (546,053 and 5,026.59 KiB) was off by 11.7 KiB on the Worker figure, and
+  the "-9.86 KiB" it produced was not real; wrangler's gzip figure varies between builds by about that much,
+  so compare a fresh BASE and HEAD built back to back and treat differences under about 15 KiB on the
+  Worker figure as noise.
 - **`app/(admin)/staff/runbook/docs.ts` is generated and now holds this slice's plan text.** Run
   `npm run kms:build-index` after the last doc edit, not before (the #232 shape).
 - **The licence text is the upstream `main` branch's `LICENSE` at build time** (Lucide's currently reads
@@ -195,3 +198,29 @@ runs on pull requests and no PR is open), so CI is not confirmed either way.
 **Call sites** (grep, since graft was unavailable): no remaining reference to the old `categoryIcon` outside
 historical specs; `nav-items.ts` has exactly two consumers, both migrated; `ViewSwitcher` still reads
 `view.icon` as a component, which is P2b work (R36).
+
+## Fix 1 (after validation run 1)
+
+Two findings were real and one row was wrong; none needed a redesign.
+
+- **R10, the code was wrong.** The unsafe-markup case ran through the library with an in-memory set, not
+  through the process, because the CLI could only read the real (safe) `node_modules` sets, so no test could
+  hand the real script a poisoned body. Reshaped rather than loosened: `scripts/build-icons.ts` now takes
+  `--sets-dir <dir>` (icon sets read from `<dir>/<set>/icons.json` and `info.json`), backed by
+  `loadersFromDirectory` in `scripts/lib/icon-build.ts`. `tests/icon-generator.test.ts` now spawns the real
+  script for the four unsafe bodies (script, foreignObject, `javascript:`, an `on*` handler), each exiting
+  non-zero with the name and id in stderr, plus the same fixture with a safe body exiting 0 so the rule is
+  proved to be what failed. R10's text and row now name `--sets-dir`. This was not in the Build's deviation
+  list and should have been.
+- **R22, both were wrong.** No test rendered `DepartmentScroller`; added
+  `tests/department-scroller.test.tsx` (jsdom), which renders the `"use client"` component and asserts its
+  `svg[data-icon]` names, that an unmapped slug gets the neutral `tag`, and that the tile keeps its
+  pre-migration classes (`h-7 w-7 text-primary`) and `aria-hidden`. The row had pointed at a P4a test file
+  that cannot exist in P1; it now names the new test.
+- **R55, the row was wrong.** `ARTIFACT_INDEX.md`'s footer embeds a build timestamp and commit, so "git
+  status unchanged" can never hold; the row and requirement now require `kms:check-generated` to exit 0,
+  which normalises the footer.
+- **Cosmetic:** a missing licence text now throws `IconLicenceError`, which the CLI prints as one line
+  instead of a stack trace (unit-tested).
+- **No observable behaviour changed** (the fixes are a CLI option, tests and docs), so there is no CHANGELOG
+  entry, and the bundle is unaffected by construction (scripts and tests are not bundled).

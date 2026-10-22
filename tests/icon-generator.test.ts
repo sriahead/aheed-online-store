@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -71,24 +71,54 @@ describe("scripts/build-icons.ts (real process)", () => {
     expect(result.stderr).toContain("bad");
   });
 
-  it("rejects unsafe markup (checked through the library with a poisoned set)", async () => {
-    // The CLI reads real node_modules, so the poisoned-body cases go through the library seam; the
-    // exit-code behaviour of an `IconBuildError` is already proved by the cases above.
-    const { buildIconData, IconBuildError } = await import("../scripts/lib/icon-build");
-    const poison = (body: string) =>
-      buildIconData(
-        { evil: { tier: "decorative", provider: "lucide", id: "x" } },
-        { loadSet: () => ({ icons: { x: { body } }, width: 24, height: 24 }) },
+  describe("unsafe markup, through the real process (R10)", () => {
+    /**
+     * The real icon sets are safe, so the unsafe-markup rule can only be exercised by giving the real
+     * script a poisoned set. `--sets-dir <dir>` reads `<dir>/<set>/icons.json` and `info.json` instead of
+     * node_modules; this builds one such directory per body and spawns the script against it.
+     */
+    function runWithBody(label: string, body: string) {
+      const dir = join(scratch, `sets-${label}`);
+      mkdirSync(join(dir, "lucide"), { recursive: true });
+      writeFileSync(
+        join(dir, "lucide", "icons.json"),
+        JSON.stringify({ icons: { x: { body } }, width: 24, height: 24 }),
       );
-    for (const body of [
-      "<script>alert(1)</script>",
-      '<foreignObject width="1" height="1"/>',
-      '<a href="javascript:alert(1)"/>',
-      '<path d="M0 0" onload="x()"/>',
-    ]) {
-      expect(() => poison(body), body).toThrow(IconBuildError);
+      writeFileSync(join(dir, "lucide", "info.json"), JSON.stringify({ name: "Fixture" }));
+      const registry = fixture(`evil-${label}`, {
+        evil: { tier: "decorative", provider: "lucide", id: "x" },
+      });
+      return run(["--registry", registry, "--sets-dir", dir]);
     }
-    expect(() => poison('<path d="M0 0"/>')).not.toThrow();
+
+    it.each([
+      ["script", "<script>alert(1)</script>"],
+      ["foreignobject", '<foreignObject width="1" height="1"/>'],
+      ["javascript-url", '<a href="javascript:alert(1)"/>'],
+      ["event-handler", '<path d="M0 0" onload="x()"/>'],
+    ])("exits non-zero naming the name and id for %s", (label, body) => {
+      const result = runWithBody(label, body);
+      expect(result.status, result.stderr).not.toBe(0);
+      expect(result.stderr).toContain("evil");
+      expect(result.stderr).toContain("(x)");
+    });
+
+    it("exits 0 for the same fixture set with a safe body, so the rule is what failed", () => {
+      const result = runWithBody("safe", '<path d="M0 0L1 1"/>');
+      expect(result.status, result.stderr).toBe(0);
+    });
+  });
+
+  it("a missing licence text is an IconLicenceError, not a bare Error (clean message, no stack)", async () => {
+    const { buildLicences, IconLicenceError } = await import("../scripts/lib/icon-build");
+    const emptyDir = join(scratch, "no-licences");
+    mkdirSync(emptyDir, { recursive: true });
+    expect(() =>
+      buildLicences(
+        { a: { tier: "functional", provider: "lucide", id: "search" } },
+        { licenceDir: emptyDir },
+      ),
+    ).toThrow(IconLicenceError);
   });
 
   it("is deterministic and `--check` agrees with a fresh build (R7, R8)", () => {

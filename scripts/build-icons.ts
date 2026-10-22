@@ -5,6 +5,8 @@ import {
   buildArtefacts,
   buildIconData,
   IconBuildError,
+  IconLicenceError,
+  loadersFromDirectory,
   type RegistryInput,
 } from "./lib/icon-build";
 
@@ -15,6 +17,9 @@ import {
  *                                                  public/third-party-icon-licenses.txt
  * `npx tsx scripts/build-icons.ts --check`         write nothing; exit 1 and name every stale file
  * `npx tsx scripts/build-icons.ts --registry <f>`  validate a JSON registry (a fixture) and exit; writes nothing
+ * `... --sets-dir <dir>`                           read icon sets from `<dir>/<set>/icons.json` and `info.json`
+ *                                                  instead of node_modules (a test seam: it lets a test give the
+ *                                                  real script a poisoned set, which the real sets cannot be)
  *
  * Progress goes to stderr and failures exit non-zero naming the semantic name and id. Nothing here
  * touches a database or the network: it reads the pinned `@iconify-json/*` packages in node_modules and
@@ -37,14 +42,16 @@ async function loadRegistry(): Promise<RegistryInput> {
 
 async function main(): Promise<number> {
   const registry = await loadRegistry();
+  const setsDir = argValue("--sets-dir");
+  const options = setsDir ? loadersFromDirectory(setsDir) : {};
 
   if (argValue("--registry")) {
-    const data = buildIconData(registry);
+    const data = buildIconData(registry, options);
     console.error(`registry ok: ${Object.keys(data).length} icon(s) resolve`);
     return 0;
   }
 
-  const files = buildArtefacts(registry);
+  const files = buildArtefacts(registry, options);
   const check = process.argv.includes("--check");
   const stale: string[] = [];
 
@@ -78,7 +85,8 @@ main().then(
   (code) => process.exit(code),
   (error: unknown) => {
     // The message names the semantic name and id for an IconBuildError; anything else is printed whole.
-    console.error(error instanceof IconBuildError ? `icons: ${error.message}` : error);
+    const known = error instanceof IconBuildError || error instanceof IconLicenceError;
+    console.error(known ? `icons: ${error.message}` : error);
     process.exit(1);
   },
 );

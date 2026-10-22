@@ -55,7 +55,9 @@ R10. [P1] `scripts/build-icons.ts` exits non-zero and prints the semantic name a
     alias resolution; a duotone entry whose body lacks the `opacity=".2"` layer; or a body containing any
     of `<script`, `<foreignObject`, `javascript:` or an attribute matching `\son[a-z]+=`.
     `tests/icon-generator.test.ts` runs the real script as a child process for each case and asserts the
-    exit code and stderr.
+    exit code and stderr. The unsafe-markup cases need a poisoned icon set, which the real sets cannot supply,
+    so the script also accepts `--sets-dir <dir>` (icon sets read from `<dir>/<set>/icons.json` and
+    `info.json` instead of `node_modules`); the same fixture with a safe body must exit 0.
 R11. [P1] A registry entry for the Lucide id `check-circle-2` (stored in Iconify's data as an alias of
     `circle-check` in the pinned release) builds successfully and its generated body equals the body of the
     alias's parent icon.
@@ -233,6 +235,7 @@ R54. [all] `npm run lint`, `npm run typecheck`, `npx vitest run --maxWorkers=4`,
     `npm run icons:check`, `npm run kms:validate`, `npm run kms:check-generated` and `npm run build` all
     exit 0; the only tolerated test failure is the known flake `tests/add-to-cart-feedback.test.tsx:93`
     (`#983`), which must pass when that file is rerun alone.
-R55. [all] After the last edit to `docs/` or `specs/`, `npm run kms:build-index` has been run (so
-    `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts` are current) and
+R55. [all] After the last edit to `docs/` or `specs/`, `npm run kms:build-index` has been run and
+    `npm run kms:check-generated` exits 0 (so `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts`
+    are current; the index footer's timestamp is normalised by that check) and
     `npm run kms:assemble:internal` followed by `(cd kms/site-internal && npx next build --webpack)` exits 0.

@@ -61,6 +61,29 @@ export class IconBuildError extends Error {
   }
 }
 
+/** A problem with the notice file's inputs (a missing licence text), as opposed to a bad icon. */
+export class IconLicenceError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "IconLicenceError";
+  }
+}
+
+/**
+ * Loaders that read icon sets from `<dir>/<set>/icons.json` and `<dir>/<set>/info.json` instead of
+ * `node_modules/@iconify-json`. This is what `scripts/build-icons.ts --sets-dir <dir>` uses, and it exists
+ * so a test can run the REAL script against a set with a poisoned body (R10): the unsafe-markup rule
+ * cannot be exercised through the process with the real, safe sets.
+ */
+export function loadersFromDirectory(dir: string): Pick<BuildOptions, "loadSet" | "loadInfo"> {
+  const read = (set: string, file: string): unknown =>
+    JSON.parse(readFileSync(join(dir, set, file), "utf8"));
+  return {
+    loadSet: (set) => read(set, "icons.json") as IconSetJson,
+    loadInfo: (set) => read(set, "info.json") as SetInfo,
+  };
+}
+
 export type RegistryInput = Record<
   string,
   RegistryEntry | { tier: string; provider: string; id: string }
@@ -239,9 +262,10 @@ export function buildLicences(registry: RegistryInput, options: BuildOptions = {
   for (const set of sets) {
     const info = loadInfo(set);
     const spdx = info.license?.spdx;
-    if (!spdx) throw new Error(`icon set "${set}" declares no SPDX licence in its info.json`);
+    if (!spdx)
+      throw new IconLicenceError(`icon set "${set}" declares no SPDX licence in its info.json`);
     if (seenSpdx.has(spdx)) {
-      throw new Error(
+      throw new IconLicenceError(
         `sets "${seenSpdx.get(spdx)}" and "${set}" share the licence ${spdx}; scripts/icon-licences/ holds one text per SPDX id, so give each set its own file naming first`,
       );
     }
@@ -250,7 +274,7 @@ export function buildLicences(registry: RegistryInput, options: BuildOptions = {
     try {
       text = readFileSync(join(licenceDir, `${spdx}.txt`), "utf8");
     } catch {
-      throw new Error(
+      throw new IconLicenceError(
         `no licence text for ${spdx} (set "${set}"): add scripts/icon-licences/${spdx}.txt with the upstream LICENSE verbatim (${info.license?.url ?? "no url"})`,
       );
     }
