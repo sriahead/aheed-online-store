@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.131.0"
+version: "1.132.0"
 updated: 2026-10-22
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -1054,25 +1054,24 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **P11 slice 2 — `#1211`, catalogue safety layer — BUILT, NOT VALIDATED, NOT PUSHED (2026-10-22).**
-  - **Where it is:** branch `feature/catalogue-restrictions-stock-states`, spec
-    `specs/2026-10-22-catalogue-restrictions-stock-states/`. Read its `build-notes.md` first.
-  - **The new migration `20261022120000_p1211_restrictions_stock_states` is applied to DEV ONLY**
-    (host `ep-dry-morning-zab7dx08`, verified against `secrets/` on 2026-10-22). It is NOT applied
-    to staging or production; the deploy workflows will apply it on merge and promotion.
-  - **Owner rulings of 2026-10-22, now standing decisions** (ADR-007, recorded as comments on the
-    issues):
-    - **`#1196`:** the platform is a **storefront, not stock management**. Close it once ADR-007
-      reaches `staging`.
-    - **`#1200`:** import everything, hidden. `PROHIBITED` and `AGE_RESTRICTED` are hard blocks.
-      `NOT_DELIVERABLE` and `NEEDS_REVIEW` clear only by an audited ADMIN confirmation. `#1200`
-      closes when `#1211` reaches production.
-    - **Stock has three explicit states;** `UNKNOWN` is never purchasable.
-  - **`#1201` (the Excel importer) is still BLOCKED,** only on the client's answers now: opening
-    stock, a barcode/supplier export, and the `DEFAULT`/£0.00 rows. When unblocked it must write
-    through `lib/catalogue-import-policy.ts`.
-  - **Deferred, filed at Build:** `#1212` (age verification, `#1200` option 2), `#1213`
-    (filter-wide bulk actions), `#1214` (correcting a mis-tagged hard block).
+- **P11 slice 2 — `#1211`, catalogue safety layer — MERGED TO STAGING, NOT PROMOTED (2026-10-22).**
+  - **Where it is:** PR **#1215** (squash `af67cfd`, `staging`); `deploy-staging` run
+    `39742147580` succeeded, which applied migration `20261022120000_p1211_restrictions_stock_states`
+    to staging. It is NOT on `main`, so production does not have the migration yet. Spec:
+    `specs/2026-10-22-catalogue-restrictions-stock-states/` (`build-notes.md`, "Validation run 1").
+  - **Validation was not independent** (same context as Build, on Opus). Unverified: R15b client
+    half, the SriMart second-vendor UI check, and the pre-migration `Inventory` count.
+  - **`#1211` stays open and its board item should read In Review** until the promotion PR merges.
+    The board move could not be made from the cloud session (GraphQL blocked): verify live.
+  - **Owner rulings of 2026-10-22, standing decisions** (ADR-007): `#1196` is storefront-only, not
+    stock management (close it once ADR-007 is confirmed on `staging`); `#1200` is import everything
+    hidden and closes when `#1211` reaches production; stock has three explicit states and
+    `UNKNOWN` is never purchasable.
+  - **`#1201` (the Excel importer) is still BLOCKED** on the client's answers (opening stock, a
+    barcode/supplier export, the `DEFAULT`/£0.00 rows). When unblocked it must write through
+    `lib/catalogue-import-policy.ts`.
+  - **Deferred, tracked:** `#1212` (age verification), `#1213` (filter-wide bulk actions), `#1214`
+    (correcting a mis-tagged hard block).
 - **`P11 — Repeatable Vendor Onboarding` is OPEN (2026-10-21), and its first slice is IN
   PRODUCTION (2026-10-22).** Promotion PR **#1208** merged as `7b703b9` (`staging -> main`, two
   parents); `deploy-production` run `39689968404` succeeded, including the first production run of
