@@ -11,6 +11,14 @@ import {
   type VendorSatellites,
 } from "../prisma/provision-vendor";
 import { assertNotDeployedDatabase } from "./lib/protected-hosts";
+import {
+  DEPLOY_ENVIRONMENTS,
+  findPlaceholderPaths,
+  pathResolves,
+  type CommandResult,
+  type DeployEnvironment,
+} from "./lib/manifest-readiness";
+import { isRoutableHost, renderRoutesBlock } from "./verify-worker-routes";
 
 /**
  * Provision a vendor from a manifest file (#1197, P11).
@@ -33,6 +41,12 @@ import { assertNotDeployedDatabase } from "./lib/protected-hosts";
  *
  * `--validate-only` parses and exits WITHOUT constructing a Prisma client, so it needs no database
  * and no credentials — useful in review, and it is how the example manifest is checked.
+ *
+ * PLACEHOLDERS (#1216). A manifest may list, in `placeholders`, the paths of values the owner has not
+ * confirmed yet (a delivery fee, a sender address, a footer). Provisioning a dev database with them is
+ * allowed and prints the list. `--check-ready` exits 1 while any remain, and `--emit-route --env
+ * staging|production` prints the `wrangler.toml` route block only for a ready manifest — the gate
+ * between "provisioned for review" and "routed on a deployed host". Neither needs a database.
  */
 
 // ---- manifest schema ------------------------------------------------------
@@ -124,7 +138,7 @@ const footerSchema = z
   })
   .strict();
 
-const manifestSchema = z
+export const manifestSchema = z
   .object({
     id: z.string().uuid(),
     slug: z
@@ -163,10 +177,65 @@ const manifestSchema = z
         .strict(),
     ),
     footer: footerSchema,
+    /** Paths (dotted, e.g. "config.senderEmail") of values still awaiting the owner's confirmation. */
+    placeholders: z.array(z.string().min(1)).default([]),
   })
-  .strict();
+  .strict()
+  .superRefine((manifest, ctx) => {
+    manifest.placeholders.forEach((path, index) => {
+      if (!pathResolves(manifest, path)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `"${path}" does not name a field of this manifest`,
+          path: ["placeholders", index],
+        });
+      }
+    });
+  });
 
-type Manifest = z.infer<typeof manifestSchema>;
+export type Manifest = z.infer<typeof manifestSchema>;
+
+// ---- readiness commands (#1216) --------------------------------------------
+
+/** `--check-ready`: exit 0 only when nothing is awaiting the owner. Needs no database. */
+export function checkReadyCommand(manifest: Manifest): CommandResult {
+  const paths = findPlaceholderPaths(manifest);
+  if (paths.length === 0)
+    return { code: 0, stdout: "manifest is ready: no placeholders remain\n", stderr: "" };
+  return {
+    code: 1,
+    stdout: "",
+    stderr:
+      `NOT READY: ${paths.length} value(s) still await the owner's confirmation:\n` +
+      paths.map((p) => `  ${p}`).join("\n") +
+      "\n",
+  };
+}
+
+/** `--emit-route --env <staging|production>`: the route block, only for a ready, routable manifest. */
+export function emitRouteCommand(manifest: Manifest, env: string | undefined): CommandResult {
+  if (!(DEPLOY_ENVIRONMENTS as readonly string[]).includes(env ?? "")) {
+    return {
+      code: 1,
+      stdout: "",
+      stderr: `--env must be one of: ${DEPLOY_ENVIRONMENTS.join(", ")} (got ${env ?? "nothing"})\n`,
+    };
+  }
+  const ready = checkReadyCommand(manifest);
+  if (ready.code !== 0) return { code: 1, stdout: "", stderr: ready.stderr };
+  if (!isRoutableHost(manifest.host)) {
+    return {
+      code: 1,
+      stdout: "",
+      stderr: `host "${manifest.host}" is not a deployable host (it has a port or ends in localhost)\n`,
+    };
+  }
+  return {
+    code: 0,
+    stdout: renderRoutesBlock(env as DeployEnvironment, [manifest.host]),
+    stderr: "",
+  };
+}
 
 // ---- provisioning ---------------------------------------------------------
 
@@ -195,11 +264,15 @@ export async function provisionVendor(prisma: PrismaClient, manifest: Manifest):
 async function main() {
   const args = process.argv.slice(2);
   const validateOnly = args.includes("--validate-only");
-  const path = args.find((a) => !a.startsWith("--"));
+  const checkReady = args.includes("--check-ready");
+  const emitRoute = args.includes("--emit-route");
+  const envIndex = args.indexOf("--env");
+  const envValue = envIndex >= 0 ? args[envIndex + 1] : undefined;
+  const path = args.find((a, i) => !a.startsWith("--") && args[i - 1] !== "--env");
 
   if (!path) {
     console.error(
-      "usage: npx tsx scripts/provision-vendor.ts <manifest.json> [--validate-only]\n" +
+      "usage: npx tsx scripts/provision-vendor.ts <manifest.json> [--validate-only | --check-ready | --emit-route --env staging|production]\n" +
         "       e.g. npx tsx scripts/provision-vendor.ts prisma/manifests/example.json",
     );
     process.exit(1);
@@ -213,7 +286,20 @@ async function main() {
     }
     process.exit(1);
   }
-  console.log(`manifest ${path} is valid (vendor "${parsed.data.slug}")`);
+  // --check-ready and --emit-route promise a clean stdout (`--emit-route` output is pasted into
+  // wrangler.toml), so their progress line goes to stderr. #1216 R5.
+  const progress = checkReady || emitRoute ? console.error : console.log;
+  progress(`manifest ${path} is valid (vendor "${parsed.data.slug}")`);
+
+  if (checkReady || emitRoute) {
+    // Before any client construction: neither command touches a database.
+    const result = checkReady
+      ? checkReadyCommand(parsed.data)
+      : emitRouteCommand(parsed.data, envValue);
+    process.stdout.write(result.stdout);
+    process.stderr.write(result.stderr);
+    process.exit(result.code);
+  }
 
   if (validateOnly) {
     // Deliberately before any client construction, so this path needs no DATABASE_URL at all.
@@ -232,7 +318,18 @@ async function main() {
   });
   try {
     await provisionVendor(prisma, parsed.data);
-    console.log("\nprovisioned. Catalogue is intentionally empty — the import is #1201.");
+    console.log(
+      "\nprovisioned. Catalogue is intentionally empty — import it with scripts/import-catalogue.ts.",
+    );
+    const pending = findPlaceholderPaths(parsed.data);
+    if (pending.length > 0) {
+      console.log(
+        `\nplaceholder value(s) still to confirm:\n${pending.map((p) => `  ${p}`).join("\n")}`,
+      );
+      console.log(
+        "(these values are real in the database now; --check-ready fails until they are confirmed)",
+      );
+    }
   } finally {
     await prisma.$disconnect();
   }

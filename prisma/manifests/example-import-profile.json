@@ -1,0 +1,23 @@
+{
+  "columns": {
+    "plu": "Code",
+    "name": "Item",
+    "price": "Price",
+    "department": "Department",
+    "subDepartment": "Sub-department",
+    "vat": "VAT"
+  },
+  "unit": {
+    "pattern": "\\d+(?:\\.\\d+)?\\s?(?:kg|g|ml|cl|l|pk|pack)\\b",
+    "defaultLabel": "each"
+  },
+  "policy": {
+    "byDepartment": {
+      "EXAMPLE RESTRICTED DEPARTMENT": "AGE_RESTRICTED",
+      "EXAMPLE PROHIBITED DEPARTMENT": "PROHIBITED",
+      "EXAMPLE NOT DELIVERABLE DEPARTMENT": "NOT_DELIVERABLE"
+    },
+    "uncertainDepartments": ["EXAMPLE CATCH-ALL DEPARTMENT"],
+    "unrestrictedDepartments": ["EXAMPLE DEPARTMENT ONE", "EXAMPLE DEPARTMENT TWO"]
+  }
+}

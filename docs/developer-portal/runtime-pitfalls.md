@@ -4,8 +4,8 @@ title: "Runtime Pitfalls — code that passes every check and still fails on Wor
 audience: [dev]
 type: doc
 status: approved
-version: "1.3.0"
-updated: 2026-10-04
+version: "1.4.0"
+updated: 2026-10-22
 visibility: internal
 summary: The failure catalogue for this stack — Prisma and Neon on V8 isolates, storage credentials, edge caching, dependency traps, Workers AI and Better Auth. Everything here passes lint, typecheck, test and build, and fails at runtime anyway.
 tags: [runtime, workers, prisma, troubleshooting]
@@ -63,6 +63,7 @@ are in `local-dev-playbook.md`. Design intent — what was decided and why — s
   Prisma's own docs or `PrismaClientKnownRequestError`'s shape under the WebSocket adapter would
   suggest** — reproduce it live (a real duplicate/invalid submission through `npm run preview`), not
   by constructing the error object from a guess.
+  **Constraint violations differ too (`#1211`, 2026-10-22):** a `CHECK` violation (`Product_restricted_inactive_check`) surfaces as `.code = "23514"` through `PrismaNeonHttp`, but through `PrismaNeon` (WebSocket) it carries **no `.code` at all**, only the message `new row for relation "Product" violates check constraint …`. A predicate on this error must not rely on `.code` alone; nothing ships one yet.
 - **Validate DB-touching code with `npm run preview` (OpenNext + local Workers/Miniflare), never
   `npm run dev`.** Plain `next dev` runs in real Node, which cannot load `@prisma/client/wasm`'s
   WASM query engine — any DB-touching route silently renders an error state, with no crash and no
